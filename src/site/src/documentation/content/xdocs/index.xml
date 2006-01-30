@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" 
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document> 
+
+  <header> 
+    <title>Welcome to Hadoop!</title> 
+  </header> 
+
+  <body> 
+
+    <section>
+      <title>News</title>
+
+      <section>
+      <title>1 February, 2006: Hadoop split from Nutch</title>
+      <p>Hadoop is a new <a href="ext:lucene">Lucene</a> sub-project
+      that contains the distributed computing platform that was
+      formerly a part of <a href="ext:nutch">Nutch</a>.  This
+      includes the Hadoop Distributed Filesystem (HDFS) and an
+      implementation of MapReduce.</p>
+      </section>
+
+    </section>
+
+  </body>
+
+</document>

@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>Hadoop Version Control System</title>
+  </header>
+  
+  <body>
+  
+    <section>
+      <title>Overview</title>
+      <p>
+        The Hadoop source code resides in the Apache <a href="http://subversion.tigris.org/">Subversion (SVN)</a> repository.
+        The command-line SVN client can be obtained <a href="http://subversion.tigris.org/project_packages.html">here</a>.
+        The TortoiseSVN GUI client for Windows can be obtained <a href="http://tortoisesvn.tigris.org/">here</a>. There
+        are also SVN plugins available for both <a href="http://subclipse.tigris.org/">Eclipse</a> and 
+        <a href="http://svnup.tigris.org/">IntelliJ IDEA</a>.
+      </p>
+    </section>
+    
+    <section>
+      <title>Web Access (read-only)</title>
+      <p>
+        The source code can be browsed via the Web at 
+        <a href="http://svn.apache.org/viewcvs.cgi/lucene/hadoop/">http://svn.apache.org/viewcvs.cgi/lucene/hadoop/</a>.
+        No SVN client software is required.
+      </p>
+    </section>
+    
+    <section>
+      <title>Anonymous Access (read-only)</title>
+      <p>
+        The SVN URL for anonymous users is 
+        <a href="http://svn.apache.org/repos/asf/lucene/hadoop/">http://svn.apache.org/repos/asf/lucene/hadoop/</a>.
+        Instructions for anonymous SVN access are 
+        <a href="http://www.apache.org/dev/version-control.html#anon-svn">here</a>.
+      </p>
+    </section>
+    
+    <section>
+      <title>Committer Access (read-write)</title>
+      <p>
+        The SVN URL for committers is 
+        <a href="https://svn.apache.org/repos/asf/lucene/hadoop/">https://svn.apache.org/repos/asf/lucene/hadoop/</a>.
+        Instructions for committer SVN access are 
+        <a href="http://www.apache.org/dev/version-control.html#https-svn">here</a>.
+      </p>
+    </section>
+    
+  </body>
+  
+</document>

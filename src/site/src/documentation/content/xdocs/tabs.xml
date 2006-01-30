@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE tabs PUBLIC "-//APACHE//DTD Cocoon Documentation Tab V1.0//EN" 
+          "tab-cocoon-v10.dtd">
+
+<tabs software="Nutch"
+      title="Nutch"
+      copyright="The Apache Software Foundation"
+      xmlns:xlink="http://www.w3.org/1999/xlink">
+
+  <!-- The rules are:
+    @dir will always have /index.html added.
+    @href is not modified unless it is root-relative and obviously specifies a
+    directory (ends in '/'), in which case /index.html will be added
+  -->
+
+  <tab label="Main" dir=""/>  
+  <tab label="Wiki" href="http://wiki.apache.org/hadoop"/>
+  
+</tabs>

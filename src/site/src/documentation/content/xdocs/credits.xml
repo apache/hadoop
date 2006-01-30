@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" 
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document> 
+
+<header>
+  <title>Hadoop credits</title> 
+</header> 
+
+<body>
+
+<section>
+<title>Committers</title>
+<ul>
+  <li>Andrzej Bialecki</li>
+  <li>Mike Cafarella</li>
+  <li><a href="http://www.nutch.org/blog/cutting.html">Doug Cutting</a></li>
+</ul>
+</section>
+
+</body>
+</document>

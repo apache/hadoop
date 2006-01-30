@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" 
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>Hadoop Mailing Lists</title>
+  </header>
+  
+  <body>
+  
+    <section>
+      <title>Users</title>
+
+      <p>If you use Hadoop, please subscribe to the Hadoop user mailing list.</p>
+
+      <p>
+        The Hadoop user mailing list is :
+        <a href="mailto:hadoop-user@lucene.apache.org">hadoop-user@lucene.apache.org</a>.
+      </p>      
+      <ul>
+        <li><a href="mailto:hadoop-user-subscribe@lucene.apache.org">Subscribe to List</a></li>
+        <li><a href="mailto:hadoop-user-unsubscribe@lucene.apache.org">Unsubscribe from List</a></li>
+        <li><a href="http://lucene.apache.org/mail/hadoop-user/">View List Archive</a></li>
+      </ul>
+      <note>In order to post to the list, it is necessary to first subscribe to it.</note>
+    </section>
+  
+    <section>
+      <title>Developers</title>
+
+      <p>If you'd like to contribute to Hadoop, please subscribe to the
+      Hadoop developer mailing list.</p>
+
+      <p>
+        The Hadoop developer mailing list is :
+        <a href="mailto:hadoop-dev@lucene.apache.org">hadoop-dev@lucene.apache.org</a>.
+      </p>      
+      <ul>
+        <li><a href="mailto:hadoop-dev-subscribe@lucene.apache.org">Subscribe to List</a></li>
+        <li><a href="mailto:hadoop-dev-unsubscribe@lucene.apache.org">Unsubscribe from List</a></li>
+        <li><a href="http://lucene.apache.org/mail/hadoop-dev/">View List Archive</a></li>
+      </ul>
+      <note>In order to post to the list, it is necessary to first subscribe to it.</note>
+    </section>
+  
+    <section>
+      <title>Commits</title>
+
+      <p>If you'd like to see changes made in Hadoop's <a
+      href="version_control.html">version control system</a>
+      then subscribe to the Hadoop commit mailing list.</p>
+
+      <ul>
+        <li><a href="mailto:hadoop-commits-subscribe@lucene.apache.org">Subscribe to List</a></li>
+        <li><a href="mailto:hadoop-commits-unsubscribe@lucene.apache.org">Unsubscribe from List</a></li>
+        <li><a href="http://lucene.apache.org/mail/hadoop-commits/">View List Archive</a></li>
+      </ul>
+    </section>
+  
+  </body>
+  
+</document>
