@@ -325,9 +325,9 @@ public class Configuration {
     if (properties == null) {
       Properties defaults = new Properties();     // keep defaults separate
       Properties newProps = new Properties(defaults);
-      loadResources(defaults, defaultResources, false);
-      loadResources(newProps, appResources, false);
-      loadResources(newProps, finalResources, true);
+      loadResources(defaults, defaultResources, false, false);
+      loadResources(newProps, appResources, false, false);
+      loadResources(newProps, finalResources, true, true);
       properties = newProps;
     }
     return properties;
@@ -335,14 +335,14 @@ public class Configuration {
 
   private void loadResources(Properties props,
                              ArrayList resources,
-                             boolean reverse) {
+                             boolean reverse, boolean quiet) {
     ListIterator i = resources.listIterator(reverse ? resources.size() : 0);
     while (reverse ? i.hasPrevious() : i.hasNext()) {
-      loadResource(props, reverse ? i.previous() : i.next());
+      loadResource(props, reverse ? i.previous() : i.next(), quiet);
     }
   }
 
-  private void loadResource(Properties properties, Object name) {
+  private void loadResource(Properties properties, Object name, boolean quiet) {
     try {
       DocumentBuilder builder =
         DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -363,6 +363,8 @@ public class Configuration {
       }
 
       if (doc == null) {
+        if (quiet)
+          return;
         throw new RuntimeException(name + " not found");
       }
 
