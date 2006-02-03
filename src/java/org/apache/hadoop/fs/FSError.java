@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.
+package org.apache.hadoop.fs;
 
 /** Thrown for unexpected filesystem errors, presumed to reflect disk errors
  * in the native filesystem. */

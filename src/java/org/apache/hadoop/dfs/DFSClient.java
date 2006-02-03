@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.dfs.
+package org.apache.hadoop.dfs;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
+import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.net.*;
@@ -75,12 +75,12 @@ public class DFSClient implements FSConstants {
      * inner subclass of InputStream that does the right out-of-band
      * work.
      */
-    public NFSInputStream open(UTF8 src) throws IOException {
+    public FSInputStream open(UTF8 src) throws IOException {
         // Get block info from namenode
         return new DFSInputStream(src.toString());
     }
 
-    public NFSOutputStream create(UTF8 src, boolean overwrite) throws IOException {
+    public FSOutputStream create(UTF8 src, boolean overwrite) throws IOException {
         return new DFSOutputStream(src, overwrite);
     }
 
@@ -224,7 +224,7 @@ public class DFSClient implements FSConstants {
      * DFSInputStream provides bytes from a named file.  It handles 
      * negotiation of the namenode and various datanodes as necessary.
      ****************************************************************/
-    class DFSInputStream extends NFSInputStream {
+    class DFSInputStream extends FSInputStream {
         boolean closed = false;
 
         private String src;
@@ -489,7 +489,7 @@ public class DFSClient implements FSConstants {
     /****************************************************************
      * DFSOutputStream creates files from a stream of bytes.
      ****************************************************************/
-    class DFSOutputStream extends NFSOutputStream {
+    class DFSOutputStream extends FSOutputStream {
         boolean closed = false;
 
         private byte outBuf[] = new byte[BUFFER_SIZE];

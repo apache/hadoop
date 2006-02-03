@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.io.File;
 
-import org.apache.hadoop.fs.NutchFileSystem;
+import org.apache.hadoop.fs.FileSystem;
 
-/** An input data format.  Input files are stored in a {@link NutchFileSystem}.
+/** An input data format.  Input files are stored in a {@link FileSystem}.
  * The processing of an input file may be split across multiple machines.
  * Files are processed as sequences of records, implementing {@link
  * RecordReader}.  Files must thus be split on record boundaries. */
@@ -34,17 +34,17 @@ public interface InputFormat {
    * @param numSplits the desired number of splits
    * @return the splits
    */
-  FileSplit[] getSplits(NutchFileSystem fs, JobConf job, int numSplits)
+  FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits)
     throws IOException;
 
   /** Construct a {@link RecordReader} for a {@link FileSplit}.
    *
-   * @param fs the {@link NutchFileSystem}
+   * @param fs the {@link FileSystem}
    * @param split the {@link FileSplit}
    * @param job the job that this split belongs to
    * @return a {@link RecordReader}
    */
-  RecordReader getRecordReader(NutchFileSystem fs, FileSplit split,
+  RecordReader getRecordReader(FileSystem fs, FileSplit split,
                                JobConf job, Reporter reporter)
     throws IOException;
 }

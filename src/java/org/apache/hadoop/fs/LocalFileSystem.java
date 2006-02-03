@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.
+package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.*;
@@ -27,13 +27,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.UTF8;
 
 /****************************************************************
- * Implement the NutchFileSystem interface for the local disk.
+ * Implement the FileSystem interface for the local disk.
  * This is pretty easy.  The interface exists so we can use either
  * remote or local Files very easily.
  *
  * @author Mike Cafarella
  *****************************************************************/
-public class LocalFileSystem extends NutchFileSystem {
+public class LocalFileSystem extends FileSystem {
     TreeMap sharedLockDataSet = new TreeMap();
     TreeMap nonsharedLockDataSet = new TreeMap();
     TreeMap lockObjSet = new TreeMap();
@@ -70,12 +70,12 @@ public class LocalFileSystem extends NutchFileSystem {
     public String getName() { return "local"; }
 
     /*******************************************************
-     * For open()'s NFSInputStream
+     * For open()'s FSInputStream
      *******************************************************/
-    class LocalNFSFileInputStream extends NFSInputStream {
+    class LocalFSFileInputStream extends FSInputStream {
         FileInputStream fis;
 
-        public LocalNFSFileInputStream(File f) throws IOException {
+        public LocalFSFileInputStream(File f) throws IOException {
           this.fis = new FileInputStream(f);
         }
 
@@ -116,20 +116,20 @@ public class LocalFileSystem extends NutchFileSystem {
     /**
      * Open the file at f
      */
-    public NFSInputStream openRaw(File f) throws IOException {
+    public FSInputStream openRaw(File f) throws IOException {
         if (! f.exists()) {
             throw new FileNotFoundException(f.toString());
         }
-        return new LocalNFSFileInputStream(f);
+        return new LocalFSFileInputStream(f);
     }
 
     /*********************************************************
-     * For create()'s NFSOutputStream.
+     * For create()'s FSOutputStream.
      *********************************************************/
-    class LocalNFSFileOutputStream extends NFSOutputStream {
+    class LocalFSFileOutputStream extends FSOutputStream {
       FileOutputStream fos;
 
-      public LocalNFSFileOutputStream(File f) throws IOException {
+      public LocalFSFileOutputStream(File f) throws IOException {
         this.fos = new FileOutputStream(f);
       }
 
@@ -159,7 +159,7 @@ public class LocalFileSystem extends NutchFileSystem {
       }
     }
 
-    public NFSOutputStream createRaw(File f, boolean overwrite)
+    public FSOutputStream createRaw(File f, boolean overwrite)
       throws IOException {
         if (f.exists() && ! overwrite) {
             throw new IOException("File already exists:"+f);
@@ -168,7 +168,7 @@ public class LocalFileSystem extends NutchFileSystem {
         if (parent != null)
           parent.mkdirs();
 
-        return new LocalNFSFileOutputStream(f);
+        return new LocalFSFileOutputStream(f);
     }
 
     /**
@@ -316,21 +316,21 @@ public class LocalFileSystem extends NutchFileSystem {
     /**
      * We can write output directly to the final location
      */
-    public File startLocalOutput(File nfsOutputFile, File tmpLocalFile) throws IOException {
-        return nfsOutputFile;
+    public File startLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException {
+        return fsOutputFile;
     }
 
     /**
      * It's in the right place - nothing to do.
      */
-    public void completeLocalOutput(File nfsWorkingFile, File tmpLocalFile) throws IOException {
+    public void completeLocalOutput(File fsWorkingFile, File tmpLocalFile) throws IOException {
     }
 
     /**
      * We can read directly from the real local fs.
      */
-    public File startLocalInput(File nfsInputFile, File tmpLocalFile) throws IOException {
-        return nfsInputFile;
+    public File startLocalInput(File fsInputFile, File tmpLocalFile) throws IOException {
+        return fsInputFile;
     }
 
     /**
@@ -379,7 +379,7 @@ public class LocalFileSystem extends NutchFileSystem {
 
     /** Moves files to a bad file directory on the same device, so that their
      * storage will not be reused. */
-    public void reportChecksumFailure(File f, NFSInputStream in,
+    public void reportChecksumFailure(File f, FSInputStream in,
                                       long start, long length, int crc) {
       try {
         // canonicalize f   

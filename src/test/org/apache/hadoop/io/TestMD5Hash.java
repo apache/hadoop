@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import org.apache.hadoop.io.TestWritable;
 import junit.framework.TestCase;

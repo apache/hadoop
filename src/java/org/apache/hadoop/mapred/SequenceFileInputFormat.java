@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.io.File;
 
-import org.apache.hadoop.fs.NutchFileSystem;
+import org.apache.hadoop.fs.FileSystem;
 
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.MapFile;
@@ -35,7 +35,7 @@ public class SequenceFileInputFormat extends InputFormatBase {
     setMinSplitSize(SequenceFile.SYNC_INTERVAL);
   }
 
-  protected File[] listFiles(NutchFileSystem fs, JobConf job)
+  protected File[] listFiles(FileSystem fs, JobConf job)
     throws IOException {
 
     File[] files = super.listFiles(fs, job);
@@ -48,7 +48,7 @@ public class SequenceFileInputFormat extends InputFormatBase {
     return files;
   }
 
-  public RecordReader getRecordReader(NutchFileSystem fs, FileSplit split,
+  public RecordReader getRecordReader(FileSystem fs, FileSplit split,
                                       JobConf job, Reporter reporter)
     throws IOException {
 

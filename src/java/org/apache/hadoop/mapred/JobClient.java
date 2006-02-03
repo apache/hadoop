@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
@@ -165,7 +165,7 @@ public class JobClient implements MRConstants {
     }
 
     JobSubmissionProtocol jobSubmitClient;
-    NutchFileSystem fs = null;
+    FileSystem fs = null;
 
     private Configuration conf;
     static Random r = new Random();
@@ -207,10 +207,10 @@ public class JobClient implements MRConstants {
      * Get a filesystem handle.  We need this to prepare jobs
      * for submission to the MapReduce system.
      */
-    public synchronized NutchFileSystem getFs() throws IOException {
+    public synchronized FileSystem getFs() throws IOException {
       if (this.fs == null) {
         String fsName = jobSubmitClient.getFilesystemName();
-        this.fs = NutchFileSystem.getNamed(fsName, this.conf);
+        this.fs = FileSystem.getNamed(fsName, this.conf);
       }
       return fs;
     }
@@ -249,7 +249,7 @@ public class JobClient implements MRConstants {
         }
 
         // Write job file to JobTracker's fs
-        NFSDataOutputStream out = getFs().create(submitJobFile);
+        FSDataOutputStream out = getFs().create(submitJobFile);
         try {
           job.write(out);
         } finally {

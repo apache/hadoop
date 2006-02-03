@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.*;
@@ -49,9 +49,9 @@ public class SequenceFile {
 
   /** Write key/value pairs to a sequence-format file. */
   public static class Writer {
-    private NFSDataOutputStream out;
+    private FSDataOutputStream out;
     private DataOutputBuffer buffer = new DataOutputBuffer();
-    private NutchFileSystem nfs = null;
+    private FileSystem fs = null;
     private File target = null;
 
     private Class keyClass;
@@ -78,32 +78,32 @@ public class SequenceFile {
     }
 
     /** Create the named file. */
-    public Writer(NutchFileSystem nfs, String name,
+    public Writer(FileSystem fs, String name,
                   Class keyClass, Class valClass)
       throws IOException {
-      this(nfs, name, keyClass, valClass, false);
+      this(fs, name, keyClass, valClass, false);
     }
     
     /** Create the named file.
      * @param compress if true, values are compressed.
      */
-    public Writer(NutchFileSystem nfs, String name,
+    public Writer(FileSystem fs, String name,
                   Class keyClass, Class valClass, boolean compress)
       throws IOException {
-      this.nfs = nfs;
+      this.fs = fs;
       this.target = new File(name);
-      init(nfs.create(target), keyClass, valClass, compress);
+      init(fs.create(target), keyClass, valClass, compress);
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */
-    private Writer(NFSDataOutputStream out,
+    private Writer(FSDataOutputStream out,
                    Class keyClass, Class valClass, boolean compress)
       throws IOException {
       init(out, keyClass, valClass, compress);
     }
     
     /** Write and flush the file header. */
-    private void init(NFSDataOutputStream out,
+    private void init(FSDataOutputStream out,
                       Class keyClass, Class valClass,
                       boolean compress) throws IOException {
       this.out = out;
@@ -202,10 +202,10 @@ public class SequenceFile {
   /** Writes key/value pairs from a sequence-format file. */
   public static class Reader {
     private String file;
-    private NFSDataInputStream in;
+    private FSDataInputStream in;
     private DataOutputBuffer outBuf = new DataOutputBuffer();
     private DataInputBuffer inBuf = new DataInputBuffer();
-    private NutchFileSystem nfs = null;
+    private FileSystem fs = null;
 
     private byte[] version = new byte[VERSION.length];
 
@@ -226,25 +226,25 @@ public class SequenceFile {
     private Configuration conf;
 
     /** Open the named file. */
-    public Reader(NutchFileSystem nfs, String file, Configuration conf) throws IOException {
-      this(nfs, file, conf.getInt("io.file.buffer.size", 4096));
+    public Reader(FileSystem fs, String file, Configuration conf) throws IOException {
+      this(fs, file, conf.getInt("io.file.buffer.size", 4096));
       this.conf = conf;
     }
 
-    private Reader(NutchFileSystem nfs, String name, int bufferSize) throws IOException {
-      this.nfs = nfs;
+    private Reader(FileSystem fs, String name, int bufferSize) throws IOException {
+      this.fs = fs;
       this.file = name;
       File file = new File(name);
-      this.in = nfs.open(file, bufferSize);
-      this.end = nfs.getLength(file);
+      this.in = fs.open(file, bufferSize);
+      this.end = fs.getLength(file);
       init();
     }
     
-    private Reader(NutchFileSystem nfs, String file, int bufferSize, long start, long length)
+    private Reader(FileSystem fs, String file, int bufferSize, long start, long length)
       throws IOException {
-      this.nfs = nfs;
+      this.fs = fs;
       this.file = file;
-      this.in = nfs.open(new File(file), bufferSize);
+      this.in = fs.open(new File(file), bufferSize);
       seek(start);
       init();
 
@@ -465,7 +465,7 @@ public class SequenceFile {
     private int memory; // bytes
     private int factor; // merged per pass
 
-    private NutchFileSystem nfs = null;
+    private FileSystem fs = null;
 
     private Class keyClass;
     private Class valClass;
@@ -473,13 +473,13 @@ public class SequenceFile {
     private Configuration conf;
 
     /** Sort and merge files containing the named classes. */
-    public Sorter(NutchFileSystem nfs, Class keyClass, Class valClass, Configuration conf)  {
-      this(nfs, new WritableComparator(keyClass), valClass, conf);
+    public Sorter(FileSystem fs, Class keyClass, Class valClass, Configuration conf)  {
+      this(fs, new WritableComparator(keyClass), valClass, conf);
     }
 
     /** Sort and merge using an arbitrary {@link WritableComparator}. */
-    public Sorter(NutchFileSystem nfs, WritableComparator comparator, Class valClass, Configuration conf) {
-      this.nfs = nfs;
+    public Sorter(FileSystem fs, WritableComparator comparator, Class valClass, Configuration conf) {
+      this.fs = fs;
       this.comparator = comparator;
       this.keyClass = comparator.getKeyClass();
       this.valClass = valClass;
@@ -502,7 +502,7 @@ public class SequenceFile {
 
     /** Perform a file sort.*/
     public void sort(String inFile, String outFile) throws IOException {
-      if (nfs.exists(new File(outFile))) {
+      if (fs.exists(new File(outFile))) {
         throw new IOException("already exists: " + outFile);
       }
 
@@ -539,11 +539,11 @@ public class SequenceFile {
       private int[] lengths = new int[starts.length];
       
       private Reader in;
-      private NFSDataOutputStream out;
+      private FSDataOutputStream out;
         private String outName;
 
       public SortPass(Configuration conf) throws IOException {
-        in = new Reader(nfs, inFile, conf);
+        in = new Reader(fs, inFile, conf);
       }
       
       public int run() throws IOException {
@@ -610,7 +610,7 @@ public class SequenceFile {
       private void flush(int count, boolean done) throws IOException {
         if (out == null) {
           outName = done ? outFile : outFile+".0";
-          out = nfs.create(new File(outName));
+          out = fs.create(new File(outName));
         }
 
         if (!done) {                              // an intermediate file
@@ -697,7 +697,7 @@ public class SequenceFile {
       private boolean last;
 
       private MergeQueue queue;
-      private NFSDataInputStream in;
+      private FSDataInputStream in;
       private String inName;
 
       public MergePass(int pass, boolean last) throws IOException {
@@ -708,19 +708,19 @@ public class SequenceFile {
           new MergeQueue(factor, last ? outFile : outFile+"."+pass, last);
 
         this.inName = outFile+"."+(pass-1);
-        this.in = nfs.open(new File(inName));
+        this.in = fs.open(new File(inName));
       }
 
       public void close() throws IOException {
         in.close();                               // close and delete input
-        nfs.delete(new File(inName));
+        fs.delete(new File(inName));
 
         queue.close();                            // close queue
       }
 
       public int run() throws IOException {
         int segments = 0;
-        long end = nfs.getLength(new File(inName));
+        long end = fs.getLength(new File(inName));
 
         while (in.getPos() < end) {
           LOG.finer("merging segment " + segments);
@@ -734,7 +734,7 @@ public class SequenceFile {
 
             totalCount+= count;
 
-            Reader reader = new Reader(nfs, inName, memory/(factor+1),
+            Reader reader = new Reader(fs, inName, memory/(factor+1),
                                        in.getPos(), length);
             reader.sync = null;                   // disable sync on temp files
 
@@ -794,7 +794,7 @@ public class SequenceFile {
         for (int i = 0; i < inFiles.length; i++) {
           String inFile = inFiles[i];
           MergeStream ms =
-            new MergeStream(new Reader(nfs, inFile, memory/(factor+1)));
+            new MergeStream(new Reader(fs, inFile, memory/(factor+1)));
           if (ms.next())
             queue.put(ms);
         }
@@ -827,7 +827,7 @@ public class SequenceFile {
     }
 
     private class MergeQueue extends PriorityQueue {
-      private NFSDataOutputStream out;
+      private FSDataOutputStream out;
       private boolean done;
       private boolean compress;
 
@@ -843,7 +843,7 @@ public class SequenceFile {
       public MergeQueue(int size, String outName, boolean done)
         throws IOException {
         initialize(size);
-        this.out = nfs.create(new File(outName), true, memory/(factor+1));
+        this.out = fs.create(new File(outName), true, memory/(factor+1));
         this.done = done;
       }
 

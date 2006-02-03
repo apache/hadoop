@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package org.apache.hadoop.mapred.
+ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
@@ -60,7 +60,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
     boolean justStarted = true;
 
     static Random r = new Random();
-    NutchFileSystem fs = null;
+    FileSystem fs = null;
     static final String SUBDIR = "taskTracker";
 
     private Configuration fConf;
@@ -233,7 +233,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
             // Xmit the heartbeat
             //
             if (justStarted) {
-                this.fs = NutchFileSystem.getNamed(jobClient.getFilesystemName(), this.fConf);
+                this.fs = FileSystem.getNamed(jobClient.getFilesystemName(), this.fConf);
             }
             
             int resultCode = jobClient.emitHeartbeat(new TaskTrackerStatus(taskTrackerName, localHostname, mapOutputPort, taskReports), justStarted);

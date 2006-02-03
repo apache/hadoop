@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.*;
 import java.net.*;
@@ -22,7 +22,7 @@ import java.util.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.NutchFileSystem;
+import org.apache.hadoop.fs.FileSystem;
 
 /** A Map task. */
 public class MapTask extends Task {
@@ -68,7 +68,7 @@ public class MapTask extends Task {
     try {
       for (int i = 0; i < partitions; i++) {
         outs[i] =
-          new SequenceFile.Writer(NutchFileSystem.getNamed("local", job),
+          new SequenceFile.Writer(FileSystem.getNamed("local", job),
                                   this.mapOutputFile.getOutputFile(getTaskId(), i).toString(),
                                   job.getOutputKeyClass(),
                                   job.getOutputValueClass());
@@ -97,7 +97,7 @@ public class MapTask extends Task {
 
       final RecordReader rawIn =                  // open input
         job.getInputFormat().getRecordReader
-        (NutchFileSystem.get(job), split, job, reporter);
+        (FileSystem.get(job), split, job, reporter);
 
       RecordReader in = new RecordReader() {      // wrap in progress reporter
           private float perByte = 1.0f /(float)split.getLength();

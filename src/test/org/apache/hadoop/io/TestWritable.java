@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.Random;
 import junit.framework.TestCase;
 import org.apache.hadoop.io.*;
-import org.apache.nutch.parse.ParseData;
 import org.apache.hadoop.conf.Configuration;
 
 /** Unit tests for Writable. */
@@ -70,10 +69,6 @@ public class TestWritable extends TestCase {
       dib.reset(dob.getData(), dob.getLength());
     
       Writable after = (Writable)before.getClass().newInstance();
-      if(after instanceof ParseData) {
-        ParseData parseData = (ParseData) after;
-        parseData.setConf(new Configuration());
-      }
       after.readFields(dib);
 
       assertEquals(before, after);

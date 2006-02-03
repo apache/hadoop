@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.
+package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.net.*;
@@ -34,7 +34,7 @@ import org.apache.hadoop.util.LogFormatter;
  * <p>
  * A local implementation exists for testing and for small Nutch instances.
  * <p>
- * The standard job of NutchFileSystem is to take the location-
+ * The standard job of FileSystem is to take the location-
  * independent NutchFile objects, and resolve them using local
  * knowledge and local instances of ShareGroup.
  * <p>
@@ -42,7 +42,7 @@ import org.apache.hadoop.util.LogFormatter;
  * implementation is {@link DistributedFileSystem}.
  * @author Mike Cafarella
  *****************************************************************/
-public abstract class NutchFileSystem {
+public abstract class FileSystem {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.dfs.DistributedFileSystem");
 
     private static final HashMap NAME_TO_FS = new HashMap();
@@ -53,48 +53,48 @@ public abstract class NutchFileSystem {
      *
      * @deprecated use fs.default.name config option instead
      */
-    public static NutchFileSystem parseArgs(String argv[], int i, Configuration conf) throws IOException {
+    public static FileSystem parseArgs(String argv[], int i, Configuration conf) throws IOException {
         /**
         if (argv.length - i < 1) {
             throw new IOException("Must indicate filesystem type for DFS");
         }
         */
         int orig = i;
-        NutchFileSystem nfs = null;
+        FileSystem fs = null;
         String cmd = argv[i];
         if ("-dfs".equals(cmd)) {
             i++;
             InetSocketAddress addr = DataNode.createSocketAddr(argv[i++]);
-            nfs = new DistributedFileSystem(addr, conf);
+            fs = new DistributedFileSystem(addr, conf);
         } else if ("-local".equals(cmd)) {
             i++;
-            nfs = new LocalFileSystem(conf);
+            fs = new LocalFileSystem(conf);
         } else {
-            nfs = get(conf);                          // using default
-            LOG.info("No FS indicated, using default:"+nfs.getName());
+            fs = get(conf);                          // using default
+            LOG.info("No FS indicated, using default:"+fs.getName());
 
         }
         System.arraycopy(argv, i, argv, orig, argv.length - i);
         for (int j = argv.length - i; j < argv.length; j++) {
             argv[j] = null;
         }
-        return nfs;
+        return fs;
     }
 
     /** Returns the configured filesystem implementation.*/
-    public static NutchFileSystem get(Configuration conf) throws IOException {
+    public static FileSystem get(Configuration conf) throws IOException {
       return getNamed(conf.get("fs.default.name", "local"), conf);
     }
 
     protected Configuration conf;
     /** Returns a name for this filesystem, suitable to pass to {@link
-     * NutchFileSystem#getNamed(String).*/
+     * FileSystem#getNamed(String).*/
     public abstract String getName();
   
     /** Returns a named filesystem.  Names are either the string "local" or a
      * host:port pair, naming an DFS name server.*/
-    public static NutchFileSystem getNamed(String name, Configuration conf) throws IOException {
-      NutchFileSystem fs = (NutchFileSystem)NAME_TO_FS.get(name);
+    public static FileSystem getNamed(String name, Configuration conf) throws IOException {
+      FileSystem fs = (FileSystem)NAME_TO_FS.get(name);
       int ioFileBufferSize = conf.getInt("io.file.buffer.size", 4096);
       if (fs == null) {
         if ("local".equals(name)) {
@@ -119,11 +119,11 @@ public abstract class NutchFileSystem {
     }
 
     ///////////////////////////////////////////////////////////////
-    // NutchFileSystem
+    // FileSystem
     ///////////////////////////////////////////////////////////////
     /**
      */
-    public NutchFileSystem(Configuration conf) {
+    public FileSystem(Configuration conf) {
         this.conf = conf;
     }
 
@@ -135,56 +135,56 @@ public abstract class NutchFileSystem {
      * This call is most helpful with DFS, where it returns 
      * hostnames of machines that contain the given file.
      *
-     * The NutchFileSystem will simply return an elt containing 'localhost'.
+     * The FileSystem will simply return an elt containing 'localhost'.
      */
     public abstract String[][] getFileCacheHints(File f, long start, long len) throws IOException;
 
     /**
-     * Opens an NFSDataInputStream at the indicated File.
+     * Opens an FSDataInputStream at the indicated File.
      * @param f the file name to open
      * @param overwrite if a file with this name already exists, then if true,
      *   the file will be overwritten, and if false an error will be thrown.
      * @param bufferSize the size of the buffer to be used.
      */
-    public NFSDataInputStream open(File f, int bufferSize) throws IOException {
-      return new NFSDataInputStream(this, f, bufferSize, this.conf);
+    public FSDataInputStream open(File f, int bufferSize) throws IOException {
+      return new FSDataInputStream(this, f, bufferSize, this.conf);
     }
     
     /**
-     * Opens an NFSDataInputStream at the indicated File.
+     * Opens an FSDataInputStream at the indicated File.
      * @param f the file name to open
      * @param overwrite if a file with this name already exists, then if true,
      *   the file will be overwritten, and if false an error will be thrown.
      * @param bufferSize the size of the buffer to be used.
      */
-    public NFSDataInputStream open(File f) throws IOException {
-      return new NFSDataInputStream(this, f, conf);
+    public FSDataInputStream open(File f) throws IOException {
+      return new FSDataInputStream(this, f, conf);
     }
 
     /**
      * Opens an InputStream for the indicated File, whether local
      * or via DFS.
      */
-    public abstract NFSInputStream openRaw(File f) throws IOException;
+    public abstract FSInputStream openRaw(File f) throws IOException;
 
     /**
-     * Opens an NFSDataOutputStream at the indicated File.
+     * Opens an FSDataOutputStream at the indicated File.
      * Files are overwritten by default.
      */
-    public NFSDataOutputStream create(File f) throws IOException {
+    public FSDataOutputStream create(File f) throws IOException {
       return create(f, true,this.conf.getInt("io.file.buffer.size", 4096));
     }
 
     /**
-     * Opens an NFSDataOutputStream at the indicated File.
+     * Opens an FSDataOutputStream at the indicated File.
      * @param f the file name to open
      * @param overwrite if a file with this name already exists, then if true,
      *   the file will be overwritten, and if false an error will be thrown.
      * @param bufferSize the size of the buffer to be used.
      */
-    public NFSDataOutputStream create(File f, boolean overwrite,
+    public FSDataOutputStream create(File f, boolean overwrite,
                                       int bufferSize) throws IOException {
-      return new NFSDataOutputStream(this, f, overwrite, this.conf);
+      return new FSDataOutputStream(this, f, overwrite, this.conf);
     }
 
     /** Opens an OutputStream at the indicated File.
@@ -192,7 +192,7 @@ public abstract class NutchFileSystem {
      * @param overwrite if a file with this name already exists, then if true,
      *   the file will be overwritten, and if false an error will be thrown.
      */
-    public abstract NFSOutputStream createRaw(File f, boolean overwrite)
+    public abstract FSOutputStream createRaw(File f, boolean overwrite)
       throws IOException;
 
     /**
@@ -312,21 +312,21 @@ public abstract class NutchFileSystem {
     public abstract void release(File f) throws IOException;
 
     /**
-     * The src file is on the local disk.  Add it to NFS at
+     * The src file is on the local disk.  Add it to FS at
      * the given dst name and the source is kept intact afterwards
      */
     // not implemneted yet
     public abstract void copyFromLocalFile(File src, File dst) throws IOException;
 
     /**
-     * The src file is on the local disk.  Add it to NFS at
+     * The src file is on the local disk.  Add it to FS at
      * the given dst name, removing the source afterwards.
      */
     public abstract void moveFromLocalFile(File src, File dst) throws IOException;
 
     /**
-     * The src file is under NFS2, and the dst is on the local disk.
-     * Copy it from NFS control to the local dst name.
+     * The src file is under FS2, and the dst is on the local disk.
+     * Copy it from FS control to the local dst name.
      */
     public abstract void copyToLocalFile(File src, File dst) throws IOException;
 
@@ -339,33 +339,33 @@ public abstract class NutchFileSystem {
 
     /**
      * Returns a local File that the user can write output to.  The caller
-     * provides both the eventual NFS target name and the local working
-     * file.  If the NFS is local, we write directly into the target.  If
-     * the NFS is remote, we write into the tmp local area.
+     * provides both the eventual FS target name and the local working
+     * file.  If the FS is local, we write directly into the target.  If
+     * the FS is remote, we write into the tmp local area.
      */
-    public abstract File startLocalOutput(File nfsOutputFile, File tmpLocalFile) throws IOException;
+    public abstract File startLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException;
 
     /**
-     * Called when we're all done writing to the target.  A local NFS will
+     * Called when we're all done writing to the target.  A local FS will
      * do nothing, because we've written to exactly the right place.  A remote
-     * NFS will copy the contents of tmpLocalFile to the correct target at
-     * nfsOutputFile.
+     * FS will copy the contents of tmpLocalFile to the correct target at
+     * fsOutputFile.
      */
-    public abstract void completeLocalOutput(File nfsOutputFile, File tmpLocalFile) throws IOException;
+    public abstract void completeLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException;
 
     /**
      * Returns a local File that the user can read from.  The caller 
-     * provides both the eventual NFS target name and the local working
-     * file.  If the NFS is local, we read directly from the source.  If
-     * the NFS is remote, we write data into the tmp local area.
+     * provides both the eventual FS target name and the local working
+     * file.  If the FS is local, we read directly from the source.  If
+     * the FS is remote, we write data into the tmp local area.
      */
-    public abstract File startLocalInput(File nfsInputFile, File tmpLocalFile) throws IOException;
+    public abstract File startLocalInput(File fsInputFile, File tmpLocalFile) throws IOException;
 
     /**
-     * Called when we're all done writing to the target.  A local NFS will
+     * Called when we're all done writing to the target.  A local FS will
      * do nothing, because we've written to exactly the right place.  A remote
-     * NFS will copy the contents of tmpLocalFile to the correct target at
-     * nfsOutputFile.
+     * FS will copy the contents of tmpLocalFile to the correct target at
+     * fsOutputFile.
      */
     public abstract void completeLocalInput(File localFile) throws IOException;
 
@@ -383,7 +383,7 @@ public abstract class NutchFileSystem {
      * @param length the length of the bad data in the file
      * @param crc the expected CRC32 of the data
      */
-    public abstract void reportChecksumFailure(File f, NFSInputStream in,
+    public abstract void reportChecksumFailure(File f, FSInputStream in,
                                                long start, long length,
                                                int crc);
 

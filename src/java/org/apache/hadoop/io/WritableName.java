@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import java.util.HashMap;
 import java.io.IOException;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 /** That what may be configured. */
 public interface JobConfigurable {

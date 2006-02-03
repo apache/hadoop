@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 /** An interface which extends both {@link Writable} and {@link Comparable}.
  *

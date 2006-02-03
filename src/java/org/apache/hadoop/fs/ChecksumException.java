@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.
+package org.apache.hadoop.fs;
 
 import java.io.IOException;
 

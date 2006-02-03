@@ -29,6 +29,8 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.apache.hadoop.util.LogFormatter;
+
 /** Provides access to configuration parameters.
  * <p>An ordered list of configuration parameter files with
  * default and always-overrides site parameters.

@@ -13,16 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.
+package org.apache.hadoop.fs;
 
 import java.io.*;
 
 /****************************************************************
- * NFSOutputStream is an OutputStream that can track its position.
+ * FSInputStream is a generic old InputStream with a little bit
+ * of RAF-style seek ability.
  *
  * @author Mike Cafarella
  *****************************************************************/
-public abstract class NFSOutputStream extends OutputStream {
+public abstract class FSInputStream extends InputStream implements Seekable {
+    /**
+     * Seek to the given offset from the start of the file.
+     * The next read() will be from that location.  Can't
+     * seek past the end of the file.
+     */
+    public abstract void seek(long pos) throws IOException;
+
     /**
      * Return the current offset from the start of the file
      */

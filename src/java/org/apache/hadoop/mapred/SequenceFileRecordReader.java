@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.io.File;
 
-import org.apache.hadoop.fs.NutchFileSystem;
+import org.apache.hadoop.fs.FileSystem;
 
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
@@ -36,7 +36,7 @@ public class SequenceFileRecordReader implements RecordReader {
 
   public SequenceFileRecordReader(Configuration conf, FileSplit split)
     throws IOException {
-    NutchFileSystem fs = NutchFileSystem.get(conf);
+    FileSystem fs = FileSystem.get(conf);
     this.in = new SequenceFile.Reader(fs, split.getFile().toString(), conf);
     this.end = split.getStart() + split.getLength();
 

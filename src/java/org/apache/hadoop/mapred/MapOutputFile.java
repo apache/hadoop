@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
@@ -94,7 +94,7 @@ public class MapOutputFile implements Writable, Configurable {
     // write the length-prefixed file content to the wire
     File file = getOutputFile(mapTaskId, partition);
     out.writeLong(file.length());
-    NFSDataInputStream in = NutchFileSystem.getNamed("local", this.jobConf).open(file);
+    FSDataInputStream in = FileSystem.getNamed("local", this.jobConf).open(file);
     try {
       byte[] buffer = new byte[8192];
       int l;
@@ -118,7 +118,7 @@ public class MapOutputFile implements Writable, Configurable {
     long length = in.readLong();
     float progPerByte = 1.0f / length;
     long unread = length;
-    NFSDataOutputStream out = NutchFileSystem.getNamed("local", this.jobConf).create(file);
+    FSDataOutputStream out = FileSystem.getNamed("local", this.jobConf).create(file);
     try {
       byte[] buffer = new byte[8192];
       while (unread > 0) {

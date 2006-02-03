@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.dfs.
+package org.apache.hadoop.dfs;
 
 import java.io.*;
 import org.apache.hadoop.io.*;

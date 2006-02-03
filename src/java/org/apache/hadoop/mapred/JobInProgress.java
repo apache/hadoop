@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
@@ -67,7 +67,7 @@ public class JobInProgress {
         this.startTime = System.currentTimeMillis();
 
         this.localJobFile = new JobConf(conf).getLocalFile(JobTracker.SUBDIR, jobid + ".xml");
-        NutchFileSystem fs = NutchFileSystem.get(conf);
+        FileSystem fs = FileSystem.get(conf);
         fs.copyToLocalFile(new File(jobFile), localJobFile);
 
         JobConf jd = new JobConf(localJobFile);
@@ -99,7 +99,7 @@ public class JobInProgress {
         String jobFile = profile.getJobFile();
 
         JobConf jd = new JobConf(localJobFile);
-        NutchFileSystem fs = NutchFileSystem.get(conf);
+        FileSystem fs = FileSystem.get(conf);
         FileSplit[] splits =
             jd.getInputFormat().getSplits(fs, jd, numMapTasks);
 
@@ -427,7 +427,7 @@ public class JobInProgress {
         //
         if (deleteUponCompletion != null) {
             JobConf jd = new JobConf(deleteUponCompletion);
-            NutchFileSystem fs = NutchFileSystem.get(conf);
+            FileSystem fs = FileSystem.get(conf);
             fs.delete(new File(jd.getJar()));
             fs.delete(new File(deleteUponCompletion));
             deleteUponCompletion = null;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.*;
@@ -36,17 +36,17 @@ public class TestArrayFile extends TestCase {
 
   public void testArrayFile() throws Exception {
       Configuration conf = new Configuration();
-    NutchFileSystem nfs = new LocalFileSystem(conf);
+    FileSystem fs = new LocalFileSystem(conf);
     RandomDatum[] data = generate(10000);
-    writeTest(nfs, data, FILE);
-    readTest(nfs, data, FILE, conf);
+    writeTest(fs, data, FILE);
+    readTest(fs, data, FILE, conf);
   }
 
   public void testEmptyFile() throws Exception {
     Configuration conf = new Configuration();
-    NutchFileSystem nfs = new LocalFileSystem(conf);
-    writeTest(nfs, new RandomDatum[0], FILE);
-    ArrayFile.Reader reader = new ArrayFile.Reader(nfs, FILE, conf);
+    FileSystem fs = new LocalFileSystem(conf);
+    writeTest(fs, new RandomDatum[0], FILE);
+    ArrayFile.Reader reader = new ArrayFile.Reader(fs, FILE, conf);
     assertNull(reader.get(0, new RandomDatum()));
     reader.close();
   }
@@ -62,22 +62,22 @@ public class TestArrayFile extends TestCase {
     return data;
   }
 
-  private static void writeTest(NutchFileSystem nfs, RandomDatum[] data, String file)
+  private static void writeTest(FileSystem fs, RandomDatum[] data, String file)
     throws IOException {
-    MapFile.delete(nfs, file);
+    MapFile.delete(fs, file);
     LOG.fine("creating with " + data.length + " records");
-    ArrayFile.Writer writer = new ArrayFile.Writer(nfs, file, RandomDatum.class);
+    ArrayFile.Writer writer = new ArrayFile.Writer(fs, file, RandomDatum.class);
     writer.setIndexInterval(100);
     for (int i = 0; i < data.length; i++)
       writer.append(data[i]);
     writer.close();
   }
 
-  private static void readTest(NutchFileSystem nfs, RandomDatum[] data, String file, Configuration conf)
+  private static void readTest(FileSystem fs, RandomDatum[] data, String file, Configuration conf)
     throws IOException {
     RandomDatum v = new RandomDatum();
     LOG.fine("reading " + data.length + " records");
-    ArrayFile.Reader reader = new ArrayFile.Reader(nfs, file, conf);
+    ArrayFile.Reader reader = new ArrayFile.Reader(fs, file, conf);
     for (int i = 0; i < data.length; i++) {       // try forwards
       reader.get(i, v);
       if (!v.equals(data[i])) {
@@ -110,7 +110,7 @@ public class TestArrayFile extends TestCase {
 
     Configuration conf = new Configuration();
     int i = 0;
-    NutchFileSystem nfs = NutchFileSystem.parseArgs(args, i, conf);
+    FileSystem fs = FileSystem.parseArgs(args, i, conf);
     try {
         for (; i < args.length; i++) {       // parse command line
             if (args[i] == null) {
@@ -137,14 +137,14 @@ public class TestArrayFile extends TestCase {
         RandomDatum[] data = generate(count);
 
         if (create) {
-            writeTest(nfs, data, file);
+            writeTest(fs, data, file);
         }
 
         if (check) {
-            readTest(nfs, data, file, conf);
+            readTest(fs, data, file, conf);
         }
     } finally {
-        nfs.close();
+        fs.close();
     }
   }
 }

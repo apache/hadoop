@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.*;
@@ -42,35 +42,35 @@ public class TestSequenceFile extends TestCase {
  
     int seed = new Random().nextInt();
 
-    NutchFileSystem nfs = new LocalFileSystem(new Configuration());
+    FileSystem fs = new LocalFileSystem(new Configuration());
     try {
         //LOG.setLevel(Level.FINE);
-        writeTest(nfs, count, seed, file, false);
-        readTest(nfs, count, seed, file);
+        writeTest(fs, count, seed, file, false);
+        readTest(fs, count, seed, file);
 
-        sortTest(nfs, count, megabytes, factor, false, file);
-        checkSort(nfs, count, seed, file);
+        sortTest(fs, count, megabytes, factor, false, file);
+        checkSort(fs, count, seed, file);
 
-        sortTest(nfs, count, megabytes, factor, true, file);
-        checkSort(nfs, count, seed, file);
+        sortTest(fs, count, megabytes, factor, true, file);
+        checkSort(fs, count, seed, file);
 
-        mergeTest(nfs, count, seed, file, false, factor, megabytes);
-        checkSort(nfs, count, seed, file);
+        mergeTest(fs, count, seed, file, false, factor, megabytes);
+        checkSort(fs, count, seed, file);
 
-        mergeTest(nfs, count, seed, file, true, factor, megabytes);
-        checkSort(nfs, count, seed, file);
+        mergeTest(fs, count, seed, file, true, factor, megabytes);
+        checkSort(fs, count, seed, file);
     } finally {
-        nfs.close();
+        fs.close();
     }
   }
 
-  private static void writeTest(NutchFileSystem nfs, int count, int seed,
+  private static void writeTest(FileSystem fs, int count, int seed,
                                 String file, boolean compress)
     throws IOException {
     new File(file).delete();
     LOG.fine("creating with " + count + " records");
     SequenceFile.Writer writer =
-      new SequenceFile.Writer(nfs, file, RandomDatum.class, RandomDatum.class,
+      new SequenceFile.Writer(fs, file, RandomDatum.class, RandomDatum.class,
                               compress);
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
     for (int i = 0; i < count; i++) {
@@ -83,12 +83,12 @@ public class TestSequenceFile extends TestCase {
     writer.close();
   }
 
-  private static void readTest(NutchFileSystem nfs, int count, int seed, String file)
+  private static void readTest(FileSystem fs, int count, int seed, String file)
     throws IOException {
     RandomDatum k = new RandomDatum();
     RandomDatum v = new RandomDatum();
     LOG.fine("reading " + count + " records");
-    SequenceFile.Reader reader = new SequenceFile.Reader(nfs, file, conf);
+    SequenceFile.Reader reader = new SequenceFile.Reader(fs, file, conf);
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
     for (int i = 0; i < count; i++) {
       generator.next();
@@ -106,17 +106,17 @@ public class TestSequenceFile extends TestCase {
   }
 
 
-  private static void sortTest(NutchFileSystem nfs, int count, int megabytes, 
+  private static void sortTest(FileSystem fs, int count, int megabytes, 
                                int factor, boolean fast, String file)
     throws IOException {
     new File(file+".sorted").delete();
-    SequenceFile.Sorter sorter = newSorter(nfs, fast, megabytes, factor);
+    SequenceFile.Sorter sorter = newSorter(fs, fast, megabytes, factor);
     LOG.fine("sorting " + count + " records");
     sorter.sort(file, file+".sorted");
     LOG.fine("done sorting " + count + " records");
   }
 
-  private static void checkSort(NutchFileSystem nfs, int count, int seed, String file)
+  private static void checkSort(FileSystem fs, int count, int seed, String file)
     throws IOException {
     LOG.fine("sorting " + count + " records in memory for check");
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
@@ -132,7 +132,7 @@ public class TestSequenceFile extends TestCase {
     RandomDatum k = new RandomDatum();
     RandomDatum v = new RandomDatum();
     Iterator iterator = map.entrySet().iterator();
-    SequenceFile.Reader reader = new SequenceFile.Reader(nfs, file + ".sorted", conf);
+    SequenceFile.Reader reader = new SequenceFile.Reader(fs, file + ".sorted", conf);
     for (int i = 0; i < count; i++) {
       Map.Entry entry = (Map.Entry)iterator.next();
       RandomDatum key = (RandomDatum)entry.getKey();
@@ -150,7 +150,7 @@ public class TestSequenceFile extends TestCase {
     LOG.fine("sucessfully checked " + count + " records");
   }
 
-  private static void mergeTest(NutchFileSystem nfs, int count, int seed, 
+  private static void mergeTest(FileSystem fs, int count, int seed, 
                                 String file, boolean fast, int factor, 
                                 int megabytes)
     throws IOException {
@@ -164,10 +164,10 @@ public class TestSequenceFile extends TestCase {
     for (int i = 0; i < factor; i++) {
       names[i] = file+"."+i;
       sortedNames[i] = names[i] + ".sorted";
-      nfs.delete(new File(names[i]));
-      nfs.delete(new File(sortedNames[i]));
+      fs.delete(new File(names[i]));
+      fs.delete(new File(sortedNames[i]));
       writers[i] =
-        new SequenceFile.Writer(nfs, names[i], RandomDatum.class,RandomDatum.class);
+        new SequenceFile.Writer(fs, names[i], RandomDatum.class,RandomDatum.class);
     }
 
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
@@ -185,21 +185,21 @@ public class TestSequenceFile extends TestCase {
 
     for (int i = 0; i < factor; i++) {
       LOG.fine("sorting file " + i + " with " + count/factor + " records");
-      newSorter(nfs, fast, megabytes, factor).sort(names[i], sortedNames[i]);
+      newSorter(fs, fast, megabytes, factor).sort(names[i], sortedNames[i]);
     }
 
     LOG.fine("merging " + factor + " files with " + count/factor + " records");
-    nfs.delete(new File(file+".sorted"));
-    newSorter(nfs, fast, megabytes, factor).merge(sortedNames, file+".sorted");
+    fs.delete(new File(file+".sorted"));
+    newSorter(fs, fast, megabytes, factor).merge(sortedNames, file+".sorted");
   }
 
-  private static SequenceFile.Sorter newSorter(NutchFileSystem nfs, 
+  private static SequenceFile.Sorter newSorter(FileSystem fs, 
                                                boolean fast,
                                                int megabytes, int factor) {
     SequenceFile.Sorter sorter = 
       fast
-      ? new SequenceFile.Sorter(nfs, new RandomDatum.Comparator(),RandomDatum.class, conf)
-      : new SequenceFile.Sorter(nfs, RandomDatum.class, RandomDatum.class, conf);
+      ? new SequenceFile.Sorter(fs, new RandomDatum.Comparator(),RandomDatum.class, conf)
+      : new SequenceFile.Sorter(fs, RandomDatum.class, RandomDatum.class, conf);
     sorter.setMemory(megabytes * 1024*1024);
     sorter.setFactor(factor);
     return sorter;
@@ -224,7 +224,7 @@ public class TestSequenceFile extends TestCase {
         System.exit(-1);
     }
     int i = 0;
-    NutchFileSystem nfs = NutchFileSystem.parseArgs(args, i, conf);      
+    FileSystem fs = FileSystem.parseArgs(args, i, conf);      
     try {
       for (; i < args.length; i++) {       // parse command line
           if (args[i] == null) {
@@ -265,21 +265,21 @@ public class TestSequenceFile extends TestCase {
         LOG.setLevel(Level.FINE);
 
         if (create && !merge) {
-            writeTest(nfs, count, seed, file, compress);
-            readTest(nfs, count, seed, file);
+            writeTest(fs, count, seed, file, compress);
+            readTest(fs, count, seed, file);
         }
 
         if (merge) {
-            mergeTest(nfs, count, seed, file, fast, factor, megabytes);
+            mergeTest(fs, count, seed, file, fast, factor, megabytes);
         } else {
-            sortTest(nfs, count, megabytes, factor, fast, file);
+            sortTest(fs, count, megabytes, factor, fast, file);
         }
     
         if (check) {
-            checkSort(nfs, count, seed, file);
+            checkSort(fs, count, seed, file);
         }
       } finally {
-          nfs.close();
+          fs.close();
       }
   }
 }

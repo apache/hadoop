@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.
+package org.apache.hadoop.dfs;
 
 import java.io.*;
 import java.net.*;
 import java.util.*;
 
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.dfs.*;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
 
 /****************************************************************
- * Implementation of the abstract NutchFileSystem for the DFS system.
+ * Implementation of the abstract FileSystem for the DFS system.
  * This is the distributed file system.  It can be distributed over
  * 1 or more machines 
  * @author Mike Cafarella
  *****************************************************************/
-public class DistributedFileSystem extends NutchFileSystem {
+public class DistributedFileSystem extends FileSystem {
     private static final String HOME_DIR =
       "/user/" + System.getProperty("user.name") + "/";
 
@@ -63,11 +63,11 @@ public class DistributedFileSystem extends NutchFileSystem {
       return dfs.getHints(getPath(f), start, len);
     }
 
-    public NFSInputStream openRaw(File f) throws IOException {
+    public FSInputStream openRaw(File f) throws IOException {
       return dfs.open(getPath(f));
     }
 
-    public NFSOutputStream createRaw(File f, boolean overwrite)
+    public FSOutputStream createRaw(File f, boolean overwrite)
       throws IOException {
       return dfs.create(getPath(f), overwrite);
     }
@@ -195,7 +195,7 @@ public class DistributedFileSystem extends NutchFileSystem {
     }
 
     /**
-     * Takes a hierarchy of files from the NFS system and writes to
+     * Takes a hierarchy of files from the FS system and writes to
      * the given local target.
      */
     public void copyToLocalFile(File src, File dst) throws IOException {
@@ -221,7 +221,7 @@ public class DistributedFileSystem extends NutchFileSystem {
             byte buf[] = new byte[this.conf.getInt("io.file.buffer.size", 4096)];
             InputStream in = open(src);
             try {
-                OutputStream out = NutchFileSystem.getNamed("local", this.conf).create(dst);
+                OutputStream out = FileSystem.getNamed("local", this.conf).create(dst);
                 try {
                     int bytesRead = in.read(buf);
                     while (bytesRead >= 0) {
@@ -241,9 +241,9 @@ public class DistributedFileSystem extends NutchFileSystem {
      * Output will go to the tmp working area.  There may be some source
      * material that we obtain first.
      */
-    public File startLocalOutput(File nfsOutputFile, File tmpLocalFile) throws IOException {
-        if (exists(nfsOutputFile)) {
-            copyToLocalFile(nfsOutputFile, tmpLocalFile);
+    public File startLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException {
+        if (exists(fsOutputFile)) {
+            copyToLocalFile(fsOutputFile, tmpLocalFile);
         }
         return tmpLocalFile;
     }
@@ -251,15 +251,15 @@ public class DistributedFileSystem extends NutchFileSystem {
     /**
      * Move completed local data to DFS destination
      */
-    public void completeLocalOutput(File nfsOutputFile, File tmpLocalFile) throws IOException {
-        moveFromLocalFile(tmpLocalFile, nfsOutputFile);
+    public void completeLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException {
+        moveFromLocalFile(tmpLocalFile, fsOutputFile);
     }
 
     /**
      * Fetch remote DFS file, place at tmpLocalFile
      */
-    public File startLocalInput(File nfsInputFile, File tmpLocalFile) throws IOException {
-        copyToLocalFile(nfsInputFile, tmpLocalFile);
+    public File startLocalInput(File fsInputFile, File tmpLocalFile) throws IOException {
+        copyToLocalFile(fsInputFile, tmpLocalFile);
         return tmpLocalFile;
     }
 
@@ -307,7 +307,7 @@ public class DistributedFileSystem extends NutchFileSystem {
       return path.toString();
     }
 
-    public void reportChecksumFailure(File f, NFSInputStream in,
+    public void reportChecksumFailure(File f, FSInputStream in,
                                       long start, long length, int crc) {
       
       // ignore for now, causing task to fail, and hope that when task is

@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.net.*;
@@ -170,7 +171,7 @@ public class ReduceTask extends Task {
     Class valueClass = job.getOutputValueClass();
     Reducer reducer = (Reducer)job.newInstance(job.getReducerClass());
     reducer.configure(job);
-    NutchFileSystem lfs = NutchFileSystem.getNamed("local", job);
+    FileSystem lfs = FileSystem.getNamed("local", job);
 
     copyPhase.complete();                         // copy is already complete
 
@@ -254,7 +255,7 @@ public class ReduceTask extends Task {
     // make output collector
     String name = getOutputName(getPartition());
     final RecordWriter out =
-      job.getOutputFormat().getRecordWriter(NutchFileSystem.get(job), job, name);
+      job.getOutputFormat().getRecordWriter(FileSystem.get(job), job, name);
     OutputCollector collector = new OutputCollector() {
         public void collect(WritableComparable key, Writable value)
           throws IOException {

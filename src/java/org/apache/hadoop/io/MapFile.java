@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.Arrays;
@@ -64,27 +64,27 @@ public class MapFile {
 
 
     /** Create the named map for keys of the named class. */
-    public Writer(NutchFileSystem nfs, String dirName,
+    public Writer(FileSystem fs, String dirName,
                   Class keyClass, Class valClass)
       throws IOException {
-      this(nfs, dirName, WritableComparator.get(keyClass), valClass, false);
+      this(fs, dirName, WritableComparator.get(keyClass), valClass, false);
     }
 
     /** Create the named map for keys of the named class. */
-    public Writer(NutchFileSystem nfs, String dirName,
+    public Writer(FileSystem fs, String dirName,
                   Class keyClass, Class valClass, boolean compress)
       throws IOException {
-      this(nfs, dirName, WritableComparator.get(keyClass), valClass, compress);
+      this(fs, dirName, WritableComparator.get(keyClass), valClass, compress);
     }
 
     /** Create the named map using the named key comparator. */
-    public Writer(NutchFileSystem nfs, String dirName,
+    public Writer(FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass)
       throws IOException {
-      this(nfs, dirName, comparator, valClass, false);
+      this(fs, dirName, comparator, valClass, false);
     }
     /** Create the named map using the named key comparator. */
-    public Writer(NutchFileSystem nfs, String dirName,
+    public Writer(FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass,
                   boolean compress)
       throws IOException {
@@ -93,17 +93,17 @@ public class MapFile {
       this.lastKey = comparator.newKey();
 
       File dir = new File(dirName);
-      nfs.mkdirs(dir);
+      fs.mkdirs(dir);
 
       File dataFile = new File(dir, DATA_FILE_NAME);
       File indexFile = new File(dir, INDEX_FILE_NAME);
 
       Class keyClass = comparator.getKeyClass();
       this.data =
-        new SequenceFile.Writer(nfs, dataFile.getPath(), keyClass, valClass,
+        new SequenceFile.Writer(fs, dataFile.getPath(), keyClass, valClass,
                                 compress);
       this.index =
-        new SequenceFile.Writer(nfs, indexFile.getPath(),
+        new SequenceFile.Writer(fs, indexFile.getPath(),
                                 keyClass, LongWritable.class);
     }
     
@@ -190,20 +190,20 @@ public class MapFile {
     public Class getValueClass() { return data.getValueClass(); }
 
     /** Construct a map reader for the named map.*/
-    public Reader(NutchFileSystem nfs, String dirName, Configuration conf) throws IOException {
-      this(nfs, dirName, null, conf);
+    public Reader(FileSystem fs, String dirName, Configuration conf) throws IOException {
+      this(fs, dirName, null, conf);
       INDEX_SKIP = conf.getInt("io.map.index.skip", 0);
     }
 
     /** Construct a map reader for the named map using the named comparator.*/
-    public Reader(NutchFileSystem nfs, String dirName, WritableComparator comparator, Configuration conf)
+    public Reader(FileSystem fs, String dirName, WritableComparator comparator, Configuration conf)
       throws IOException {
       File dir = new File(dirName);
       File dataFile = new File(dir, DATA_FILE_NAME);
       File indexFile = new File(dir, INDEX_FILE_NAME);
 
       // open the data
-      this.data = new SequenceFile.Reader(nfs, dataFile.getPath(),  conf);
+      this.data = new SequenceFile.Reader(fs, dataFile.getPath(),  conf);
       this.firstPosition = data.getPosition();
 
       if (comparator == null)
@@ -214,7 +214,7 @@ public class MapFile {
       this.getKey = this.comparator.newKey();
 
       // open the index
-      this.index = new SequenceFile.Reader(nfs, indexFile.getPath(), conf);
+      this.index = new SequenceFile.Reader(fs, indexFile.getPath(), conf);
     }
 
     private void readIndex() throws IOException {
@@ -386,29 +386,29 @@ public class MapFile {
   }
 
   /** Renames an existing map directory. */
-  public static void rename(NutchFileSystem nfs, String oldName, String newName)
+  public static void rename(FileSystem fs, String oldName, String newName)
     throws IOException {
     File oldDir = new File(oldName);
     File newDir = new File(newName);
-    if (!nfs.rename(oldDir, newDir)) {
+    if (!fs.rename(oldDir, newDir)) {
       throw new IOException("Could not rename " + oldDir + " to " + newDir);
     }
   }
 
   /** Deletes the named map file. */
-  public static void delete(NutchFileSystem nfs, String name) throws IOException {
+  public static void delete(FileSystem fs, String name) throws IOException {
     File dir = new File(name);
     File data = new File(dir, DATA_FILE_NAME);
     File index = new File(dir, INDEX_FILE_NAME);
 
-    nfs.delete(data);
-    nfs.delete(index);
-    nfs.delete(dir);
+    fs.delete(data);
+    fs.delete(index);
+    fs.delete(dir);
   }
 
   /**
    * This method attempts to fix a corrupt MapFile by re-creating its index.
-   * @param nfs filesystem
+   * @param fs filesystem
    * @param dir directory containing the MapFile data and index
    * @param keyClass key class (has to be a subclass of Writable)
    * @param valueClass value class (has to be a subclass of Writable)
@@ -416,21 +416,21 @@ public class MapFile {
    * @return number of valid entries in this MapFile, or -1 if no fixing was needed
    * @throws Exception
    */
-  public static long fix(NutchFileSystem nfs, File dir,
+  public static long fix(FileSystem fs, File dir,
           Class keyClass, Class valueClass, boolean dryrun, Configuration conf) throws Exception {
     String dr = (dryrun ? "[DRY RUN ] " : "");
     File data = new File(dir, DATA_FILE_NAME);
     File index = new File(dir, INDEX_FILE_NAME);
     int indexInterval = 128;
-    if (!nfs.exists(data)) {
+    if (!fs.exists(data)) {
       // there's nothing we can do to fix this!
       throw new Exception(dr + "Missing data file in " + dir + ", impossible to fix this.");
     }
-    if (nfs.exists(index)) {
+    if (fs.exists(index)) {
       // no fixing needed
       return -1;
     }
-    SequenceFile.Reader dataReader = new SequenceFile.Reader(nfs, data.toString(), conf);
+    SequenceFile.Reader dataReader = new SequenceFile.Reader(fs, data.toString(), conf);
     if (!dataReader.getKeyClass().equals(keyClass)) {
       throw new Exception(dr + "Wrong key class in " + dir + ", expected" + keyClass.getName() +
               ", got " + dataReader.getKeyClass().getName());
@@ -443,7 +443,7 @@ public class MapFile {
     Writable key = (Writable)keyClass.getConstructor(new Class[0]).newInstance(new Object[0]);
     Writable value = (Writable)valueClass.getConstructor(new Class[0]).newInstance(new Object[0]);
     SequenceFile.Writer indexWriter = null;
-    if (!dryrun) indexWriter = new SequenceFile.Writer(nfs, index.toString(), keyClass, LongWritable.class);
+    if (!dryrun) indexWriter = new SequenceFile.Writer(fs, index.toString(), keyClass, LongWritable.class);
     try {
       long pos = 0L;
       LongWritable position = new LongWritable();
@@ -477,10 +477,10 @@ public class MapFile {
 
     Configuration conf = new Configuration();
     int ioFileBufferSize = conf.getInt("io.file.buffer.size", 4096);
-    NutchFileSystem nfs = new LocalFileSystem(conf);
-    MapFile.Reader reader = new MapFile.Reader(nfs, in, conf);
+    FileSystem fs = new LocalFileSystem(conf);
+    MapFile.Reader reader = new MapFile.Reader(fs, in, conf);
     MapFile.Writer writer =
-      new MapFile.Writer(nfs, out, reader.getKeyClass(), reader.getValueClass());
+      new MapFile.Writer(fs, out, reader.getKeyClass(), reader.getValueClass());
 
     WritableComparable key =
       (WritableComparable)reader.getKeyClass().newInstance();

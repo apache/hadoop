@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.
+package org.apache.hadoop.fs;
 
 import java.io.*;
 
@@ -31,32 +31,32 @@ public class FileUtil {
     public static boolean fullyDelete(File dir, Configuration conf) throws IOException {
         return fullyDelete(new LocalFileSystem(conf), dir);
     }
-    public static boolean fullyDelete(NutchFileSystem nfs, File dir) throws IOException {
+    public static boolean fullyDelete(FileSystem fs, File dir) throws IOException {
         // 20041022, xing.
-        // Currently nfs.detele(File) means fully delete for both
+        // Currently fs.detele(File) means fully delete for both
         // LocalFileSystem.java and DistributedFileSystem.java. So we are okay now.
         // If implementation changes in future, it should be modified too.
-        return nfs.delete(dir);
+        return fs.delete(dir);
     }
 
     /**
      * Copy a file's contents to a new location.
      * Returns whether a target file was overwritten
      */
-    public static boolean copyContents(NutchFileSystem nfs, File src, File dst, boolean overwrite, Configuration conf) throws IOException {
-        if (nfs.exists(dst) && !overwrite) {
+    public static boolean copyContents(FileSystem fs, File src, File dst, boolean overwrite, Configuration conf) throws IOException {
+        if (fs.exists(dst) && !overwrite) {
             return false;
         }
 
         File dstParent = dst.getParentFile();
-        if ((dstParent != null) && (!nfs.exists(dstParent))) {
-            nfs.mkdirs(dstParent);
+        if ((dstParent != null) && (!fs.exists(dstParent))) {
+            fs.mkdirs(dstParent);
         }
 
-        if (nfs.isFile(src)) {
-            NFSInputStream in = nfs.openRaw(src);
+        if (fs.isFile(src)) {
+            FSInputStream in = fs.openRaw(src);
             try {
-                NFSOutputStream out = nfs.createRaw(dst, true);
+                FSOutputStream out = fs.createRaw(dst, true);
                 byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
                 try {
                     int readBytes = in.read(buf);
@@ -72,12 +72,12 @@ public class FileUtil {
                 in.close();
             }
         } else {
-            nfs.mkdirs(dst);
-            File contents[] = nfs.listFilesRaw(src);
+            fs.mkdirs(dst);
+            File contents[] = fs.listFilesRaw(src);
             if (contents != null) {
                 for (int i = 0; i < contents.length; i++) {
                     File newDst = new File(dst, contents[i].getName());
-                    if (! copyContents(nfs, contents[i], newDst, overwrite, conf)) {
+                    if (! copyContents(fs, contents[i], newDst, overwrite, conf)) {
                         return false;
                     }
                 }
@@ -90,32 +90,32 @@ public class FileUtil {
      * Copy a file and/or directory and all its contents (whether
      * data or other files/dirs)
      */
-    public static void recursiveCopy(NutchFileSystem nfs, File src, File dst, Configuration conf) throws IOException {
+    public static void recursiveCopy(FileSystem fs, File src, File dst, Configuration conf) throws IOException {
         //
         // Resolve the real target.
         //
-        if (nfs.exists(dst) && nfs.isDirectory(dst)) {
+        if (fs.exists(dst) && fs.isDirectory(dst)) {
             dst = new File(dst, src.getName());
-        } else if (nfs.exists(dst)) {
+        } else if (fs.exists(dst)) {
             throw new IOException("Destination " + dst + " already exists");
         }
 
         //
         // Copy the items
         //
-        if (! nfs.isDirectory(src)) {
+        if (! fs.isDirectory(src)) {
             //
             // If the source is a file, then just copy the contents
             //
-            copyContents(nfs, src, dst, true, conf);
+            copyContents(fs, src, dst, true, conf);
         } else {
             //
             // If the source is a dir, then we need to copy all the subfiles.
             //
-            nfs.mkdirs(dst);
-            File contents[] = nfs.listFiles(src);
+            fs.mkdirs(dst);
+            File contents[] = fs.listFiles(src);
             for (int i = 0; i < contents.length; i++) {
-                recursiveCopy(nfs, contents[i], new File(dst, contents[i].getName()), conf);
+                recursiveCopy(fs, contents[i], new File(dst, contents[i].getName()), conf);
             }
         }
     }

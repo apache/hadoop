@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.dfs.
+package org.apache.hadoop.dfs;
 
 import junit.framework.TestCase;
 import junit.framework.AssertionFailedError;
-import org.apache.hadoop.fs.NFSInputStream;
-import org.apache.hadoop.fs.NFSOutputStream;
+import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.util.LogFormatter;
@@ -65,7 +65,7 @@ import java.lang.reflect.InvocationTargetException;
  * <p>Bring the namenode down and restart it to verify that datanodes reconnect.
  * <p>
  * <p>For a another approach to filesystem testing, see the high level
- * (NutchFS level) test {@link org.apache.hadoop.fs.TestNutchFileSystem}.
+ * (NutchFS level) test {@link org.apache.hadoop.fs.TestFileSystem}.
  * @author Paul Baclace
  */
 public class TestDFS extends TestCase implements FSConstants {
@@ -255,7 +255,7 @@ public class TestDFS extends TestCase implements FSConstants {
         for (int iFileNumber = 0; iFileNumber < numFiles; iFileNumber++) {
           testFileName = new UTF8("/f" + iFileNumber);
           testfilesList.add(testFileName);
-          NFSOutputStream nos = dfsClient.create(testFileName, false);
+          FSOutputStream nos = dfsClient.create(testFileName, false);
           try {
             for (long nBytesWritten = 0L;
                  nBytesWritten < nBytes;
@@ -304,7 +304,7 @@ public class TestDFS extends TestCase implements FSConstants {
         ListIterator li = testfilesList.listIterator();
         while (li.hasNext()) {
           testFileName = (UTF8) li.next();
-          NFSInputStream nis = dfsClient.open(testFileName);
+          FSInputStream nis = dfsClient.open(testFileName);
           byte[] bufferGolden = new byte[bufferSize];
           int m = 42;
           try {

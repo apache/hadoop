@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import java.io.*;
 
@@ -30,14 +30,14 @@ public class SetFile extends MapFile {
   public static class Writer extends MapFile.Writer {
 
     /** Create the named set for keys of the named class. */
-    public Writer(NutchFileSystem nfs, String dirName, Class keyClass) throws IOException {
-      super(nfs, dirName, keyClass, NullWritable.class);
+    public Writer(FileSystem fs, String dirName, Class keyClass) throws IOException {
+      super(fs, dirName, keyClass, NullWritable.class);
     }
 
     /** Create the named set using the named key comparator. */
-    public Writer(NutchFileSystem nfs, String dirName, WritableComparator comparator)
+    public Writer(FileSystem fs, String dirName, WritableComparator comparator)
       throws IOException {
-      super(nfs, dirName, comparator, NullWritable.class);
+      super(fs, dirName, comparator, NullWritable.class);
     }
 
     /** Append a key to a set.  The key must be strictly greater than the
@@ -51,14 +51,14 @@ public class SetFile extends MapFile {
   public static class Reader extends MapFile.Reader {
 
     /** Construct a set reader for the named set.*/
-    public Reader(NutchFileSystem nfs, String dirName, Configuration conf) throws IOException {
-      super(nfs, dirName, conf);
+    public Reader(FileSystem fs, String dirName, Configuration conf) throws IOException {
+      super(fs, dirName, conf);
     }
 
     /** Construct a set reader for the named set using the named comparator.*/
-    public Reader(NutchFileSystem nfs, String dirName, WritableComparator comparator, Configuration conf)
+    public Reader(FileSystem fs, String dirName, WritableComparator comparator, Configuration conf)
       throws IOException {
-      super(nfs, dirName, comparator, conf);
+      super(fs, dirName, comparator, conf);
     }
 
     // javadoc inherited

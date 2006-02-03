@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.*;
 import java.util.*;
@@ -33,7 +33,7 @@ public class TestSequenceFileInputFormat extends TestCase {
 
   public void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
-    NutchFileSystem fs = NutchFileSystem.getNamed("local", conf);
+    FileSystem fs = FileSystem.getNamed("local", conf);
     File dir = new File(System.getProperty("test.build.data",".") + "/mapred");
     File file = new File(dir, "test.seq");
     

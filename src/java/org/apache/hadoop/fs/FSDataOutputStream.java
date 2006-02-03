@@ -13,33 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.
+package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.zip.Checksum;
 import java.util.zip.CRC32;
 import org.apache.hadoop.conf.Configuration;
 
-/** Utility that wraps a {@link NFSOutputStream} in a {@link DataOutputStream},
+/** Utility that wraps a {@link FSOutputStream} in a {@link DataOutputStream},
  * buffers output through a {@link BufferedOutputStream} and creates a checksum
  * file. */
-public class NFSDataOutputStream extends DataOutputStream {
+public class FSDataOutputStream extends DataOutputStream {
   public static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};
   
   /** Store checksums for data. */
   private static class Summer extends FilterOutputStream {
 
-    private NFSDataOutputStream sums;
+    private FSDataOutputStream sums;
     private Checksum sum = new CRC32();
     private int inSum;
     private int bytesPerSum;
 
-    public Summer(NutchFileSystem fs, File file, boolean overwrite, Configuration conf)
+    public Summer(FileSystem fs, File file, boolean overwrite, Configuration conf)
       throws IOException {
       super(fs.createRaw(file, overwrite));
       this.bytesPerSum = conf.getInt("io.bytes.per.checksum", 512);
       this.sums =
-        new NFSDataOutputStream(fs.createRaw(fs.getChecksumFile(file), true), conf);
+        new FSDataOutputStream(fs.createRaw(fs.getChecksumFile(file), true), conf);
 
       sums.write(CHECKSUM_VERSION, 0, CHECKSUM_VERSION.length);
       sums.writeInt(this.bytesPerSum);
@@ -121,7 +121,7 @@ public class NFSDataOutputStream extends DataOutputStream {
 
   }
 
-  public NFSDataOutputStream(NutchFileSystem fs, File file,
+  public FSDataOutputStream(FileSystem fs, File file,
                              boolean overwrite, Configuration conf)
     throws IOException {
     super(new Buffer(new PositionCache(new Summer(fs, file, overwrite, conf)),
@@ -129,12 +129,12 @@ public class NFSDataOutputStream extends DataOutputStream {
   }
 
   /** Construct without checksums. */
-  public NFSDataOutputStream(NFSOutputStream out, Configuration conf) throws IOException {
+  public FSDataOutputStream(FSOutputStream out, Configuration conf) throws IOException {
     this(out, conf.getInt("io.file.buffer.size", 4096));
   }
 
   /** Construct without checksums. */
-  public NFSDataOutputStream(NFSOutputStream out, int bufferSize)
+  public FSDataOutputStream(FSOutputStream out, int bufferSize)
     throws IOException {
     super(new Buffer(new PositionCache(out), bufferSize));
   }

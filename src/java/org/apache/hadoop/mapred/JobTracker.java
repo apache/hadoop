@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 
 import org.apache.hadoop.io.*;
@@ -257,7 +257,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // Some jobs are stored in a local system directory.  We can delete
     // the files when we're done with the job.
     static final String SUBDIR = "jobTracker";
-    NutchFileSystem fs;
+    FileSystem fs;
     File systemDir;
     private Configuration conf;
 
@@ -280,7 +280,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         this.conf = conf;
         JobConf jobConf = new JobConf(conf);
         this.systemDir = jobConf.getSystemDir();
-        this.fs = NutchFileSystem.get(conf);
+        this.fs = FileSystem.get(conf);
         FileUtil.fullyDelete(fs, systemDir);
         fs.mkdirs(systemDir);
 

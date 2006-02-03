@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ipc.
+package org.apache.hadoop.ipc;
 
 import java.net.Socket;
 import java.net.InetSocketAddress;

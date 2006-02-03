@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.
+package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.*;
@@ -27,7 +27,7 @@ import org.apache.hadoop.mapred.lib.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 
-public class TestNutchFileSystem extends TestCase {
+public class TestFileSystem extends TestCase {
   private static final Logger LOG = InputFormatBase.LOG;
 
   private static Configuration conf = new Configuration();
@@ -49,7 +49,7 @@ public class TestNutchFileSystem extends TestCase {
   public static void testFs(long megaBytes, int numFiles, long seed)
     throws Exception {
 
-    NutchFileSystem fs = NutchFileSystem.get(conf);
+    FileSystem fs = FileSystem.get(conf);
 
     if (seed == 0)
       seed = new Random().nextLong();
@@ -62,7 +62,7 @@ public class TestNutchFileSystem extends TestCase {
     seekTest(fs, false);
   }
 
-  public static void createControlFile(NutchFileSystem fs,
+  public static void createControlFile(FileSystem fs,
                                        long megaBytes, int numFiles,
                                        long seed) throws Exception {
 
@@ -102,12 +102,12 @@ public class TestNutchFileSystem extends TestCase {
   public static class WriteMapper extends Configured implements Mapper {
     private Random random = new Random();
     private byte[] buffer = new byte[BUFFER_SIZE];
-    private NutchFileSystem fs;
+    private FileSystem fs;
     private boolean fastCheck;
     
     {
       try {
-        fs = NutchFileSystem.get(conf);
+        fs = FileSystem.get(conf);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -158,7 +158,7 @@ public class TestNutchFileSystem extends TestCase {
     }
   }
 
-  public static void writeTest(NutchFileSystem fs, boolean fastCheck)
+  public static void writeTest(FileSystem fs, boolean fastCheck)
     throws Exception {
 
     fs.delete(DATA_DIR);
@@ -186,12 +186,12 @@ public class TestNutchFileSystem extends TestCase {
     private Random random = new Random();
     private byte[] buffer = new byte[BUFFER_SIZE];
     private byte[] check  = new byte[BUFFER_SIZE];
-    private NutchFileSystem fs;
+    private FileSystem fs;
     private boolean fastCheck;
 
     {
       try {
-        fs = NutchFileSystem.get(conf);
+        fs = FileSystem.get(conf);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -250,7 +250,7 @@ public class TestNutchFileSystem extends TestCase {
     }
   }
 
-  public static void readTest(NutchFileSystem fs, boolean fastCheck)
+  public static void readTest(FileSystem fs, boolean fastCheck)
     throws Exception {
 
     fs.delete(READ_DIR);
@@ -278,12 +278,12 @@ public class TestNutchFileSystem extends TestCase {
   public static class SeekMapper extends Configured implements Mapper {
     private Random random = new Random();
     private byte[] check  = new byte[BUFFER_SIZE];
-    private NutchFileSystem fs;
+    private FileSystem fs;
     private boolean fastCheck;
 
     {
       try {
-        fs = NutchFileSystem.get(conf);
+        fs = FileSystem.get(conf);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -309,7 +309,7 @@ public class TestNutchFileSystem extends TestCase {
 
       reporter.setStatus("opening " + name);
 
-      NFSDataInputStream in = fs.open(new File(DATA_DIR, name));
+      FSDataInputStream in = fs.open(new File(DATA_DIR, name));
         
       try {
         for (int i = 0; i < SEEKS_PER_FILE; i++) {
@@ -342,7 +342,7 @@ public class TestNutchFileSystem extends TestCase {
     }
   }
 
-  public static void seekTest(NutchFileSystem fs, boolean fastCheck)
+  public static void seekTest(FileSystem fs, boolean fastCheck)
     throws Exception {
 
     fs.delete(READ_DIR);
@@ -375,7 +375,7 @@ public class TestNutchFileSystem extends TestCase {
     boolean fastCheck = false;
     long seed = new Random().nextLong();
 
-    String usage = "Usage: TestNutchFileSystem -files N -megaBytes M [-noread] [-nowrite] [-noseek] [-fastcheck]";
+    String usage = "Usage: TestFileSystem -files N -megaBytes M [-noread] [-nowrite] [-noseek] [-fastcheck]";
     
     if (args.length == 0) {
         System.err.println(usage);
@@ -401,7 +401,7 @@ public class TestNutchFileSystem extends TestCase {
     LOG.info("files = " + files);
     LOG.info("megaBytes = " + megaBytes);
   
-    NutchFileSystem fs = NutchFileSystem.get(conf);
+    FileSystem fs = FileSystem.get(conf);
 
     if (!noWrite) {
       createControlFile(fs, megaBytes*MEGA, files, seed);

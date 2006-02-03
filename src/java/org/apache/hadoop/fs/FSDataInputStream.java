@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.
+package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.Arrays;
@@ -22,26 +22,26 @@ import java.util.zip.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.LogFormatter;
 
-/** Utility that wraps a {@link NFSInputStream} in a {@link DataInputStream}
+/** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
  * and buffers input through a {@link BufferedInputStream}. */
-public class NFSDataInputStream extends DataInputStream {
+public class FSDataInputStream extends DataInputStream {
   private static final Logger LOG =
     LogFormatter.getLogger("org.apache.hadoop.fs.DataInputStream");
 
-  private static final byte[] VERSION = NFSDataOutputStream.CHECKSUM_VERSION;
+  private static final byte[] VERSION = FSDataOutputStream.CHECKSUM_VERSION;
   private static final int HEADER_LENGTH = 8;
   
   private int bytesPerSum = 1;
   
   /** Verify that data matches checksums. */
   private class Checker extends FilterInputStream implements Seekable {
-    private NutchFileSystem fs;
+    private FileSystem fs;
     private File file;
-    private NFSDataInputStream sums;
+    private FSDataInputStream sums;
     private Checksum sum = new CRC32();
     private int inSum;
 
-    public Checker(NutchFileSystem fs, File file, Configuration conf)
+    public Checker(FileSystem fs, File file, Configuration conf)
       throws IOException {
       super(fs.openRaw(file));
       
@@ -49,7 +49,7 @@ public class NFSDataInputStream extends DataInputStream {
       this.file = file;
       File sumFile = fs.getChecksumFile(file);
       try {
-        this.sums = new NFSDataInputStream(fs.openRaw(sumFile), conf);
+        this.sums = new FSDataInputStream(fs.openRaw(sumFile), conf);
         byte[] version = new byte[VERSION.length];
         sums.readFully(version);
         if (!Arrays.equals(version, VERSION))
@@ -117,14 +117,14 @@ public class NFSDataInputStream extends DataInputStream {
       inSum = 0;
       if (crc != sumValue) {
         long pos = getPos() - delta;
-        fs.reportChecksumFailure(file, (NFSInputStream)in,
+        fs.reportChecksumFailure(file, (FSInputStream)in,
                                  pos, bytesPerSum, crc);
         throw new ChecksumException("Checksum error: "+file+" at "+pos);
       }
     }
 
     public long getPos() throws IOException {
-      return ((NFSInputStream)in).getPos();
+      return ((FSInputStream)in).getPos();
     }
 
     public void close() throws IOException {
@@ -213,14 +213,14 @@ public class NFSDataInputStream extends DataInputStream {
 }
   
   
-  public NFSDataInputStream(NutchFileSystem fs, File file, int bufferSize, Configuration conf)
+  public FSDataInputStream(FileSystem fs, File file, int bufferSize, Configuration conf)
       throws IOException {
     super(null);
     this.in = new Buffer(new PositionCache(new Checker(fs, file, conf)), bufferSize);
   }
   
   
-  public NFSDataInputStream(NutchFileSystem fs, File file, Configuration conf)
+  public FSDataInputStream(FileSystem fs, File file, Configuration conf)
     throws IOException {
     super(null);
     int bufferSize = conf.getInt("io.file.buffer.size", 4096);
@@ -228,11 +228,11 @@ public class NFSDataInputStream extends DataInputStream {
   }
     
   /** Construct without checksums. */
-  public NFSDataInputStream(NFSInputStream in, Configuration conf) throws IOException {
+  public FSDataInputStream(FSInputStream in, Configuration conf) throws IOException {
     this(in, conf.getInt("io.file.buffer.size", 4096));
   }
   /** Construct without checksums. */
-  public NFSDataInputStream(NFSInputStream in, int bufferSize)
+  public FSDataInputStream(FSInputStream in, int bufferSize)
     throws IOException {
     super(null);
     this.in = new Buffer(new PositionCache(in), bufferSize);

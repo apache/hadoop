@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.io.File;
@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
-import org.apache.hadoop.fs.NutchFileSystem;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.util.LogFormatter;
 
 /** A base class for {@link InputFormat}. */
@@ -40,7 +40,7 @@ public abstract class InputFormatBase implements InputFormat {
     this.minSplitSize = minSplitSize;
   }
 
-  public abstract RecordReader getRecordReader(NutchFileSystem fs,
+  public abstract RecordReader getRecordReader(FileSystem fs,
                                                FileSplit split,
                                                JobConf job,
                                                Reporter reporter)
@@ -57,7 +57,7 @@ public abstract class InputFormatBase implements InputFormat {
    * @return array of File objects, never zero length.
    * @throws IOException if zero items.
    */
-  protected File[] listFiles(NutchFileSystem fs, JobConf job)
+  protected File[] listFiles(FileSystem fs, JobConf job)
     throws IOException {
     File[] dirs = job.getInputDirs();
     String subdir = job.get("mapred.input.subdir");
@@ -87,9 +87,9 @@ public abstract class InputFormatBase implements InputFormat {
     return (File[])result.toArray(new File[result.size()]);
   }
 
-  /** Splits files returned by {#listFiles(NutchFileSystem,JobConf) when
+  /** Splits files returned by {#listFiles(FileSystem,JobConf) when
    * they're too big.*/ 
-  public FileSplit[] getSplits(NutchFileSystem fs, JobConf job, int numSplits)
+  public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits)
     throws IOException {
 
     File[] files = listFiles(fs, job);

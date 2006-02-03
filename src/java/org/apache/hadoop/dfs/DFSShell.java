@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.
-
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.ipc.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.dfs.*;
+package org.apache.hadoop.dfs;
 
 import java.io.*;
 import java.net.*;
 import java.util.*;
+
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.ipc.*;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.*;
 
 /**************************************************
  * This class provides some DFS administrative access.
@@ -30,26 +30,26 @@ import java.util.*;
  * @author Mike Cafarella
  **************************************************/
 public class DFSShell {
-    NutchFileSystem nfs;
+    FileSystem fs;
 
     /**
      */
-    public DFSShell(NutchFileSystem nfs) {
-        this.nfs = nfs;
+    public DFSShell(FileSystem fs) {
+        this.fs = fs;
     }
 
     /**
      * Add a local file to the indicated name in DFS. src is kept.
      */
     void copyFromLocal(File src, String dstf) throws IOException {
-        nfs.copyFromLocalFile(src, new File(dstf));
+        fs.copyFromLocalFile(src, new File(dstf));
     }
 
     /**
      * Add a local file to the indicated name in DFS. src is removed.
      */
     void moveFromLocal(File src, String dstf) throws IOException {
-        nfs.moveFromLocalFile(src, new File(dstf));
+        fs.moveFromLocalFile(src, new File(dstf));
     }
 
     /**
@@ -57,7 +57,7 @@ public class DFSShell {
      * srcf is kept.
      */
     void copyToLocal(String srcf, File dst) throws IOException {
-        nfs.copyToLocalFile(new File(srcf), dst);
+        fs.copyToLocalFile(new File(srcf), dst);
     }
 
     /**
@@ -72,7 +72,7 @@ public class DFSShell {
      * Get a listing of all files in DFS at the indicated name
      */
     public void ls(String src) throws IOException {
-        File items[] = nfs.listFiles(new File(src));
+        File items[] = fs.listFiles(new File(src));
         if (items == null) {
             System.out.println("Could not get listing for " + src);
         } else {
@@ -87,7 +87,7 @@ public class DFSShell {
     /**
      */
     public void du(String src) throws IOException {
-        File items[] = nfs.listFiles(new File(src));
+        File items[] = fs.listFiles(new File(src));
         if (items == null) {
             System.out.println("Could not get listing for " + src);
         } else {
@@ -104,14 +104,14 @@ public class DFSShell {
      */
     public void mkdir(String src) throws IOException {
         File f = new File(src);
-        nfs.mkdirs(f);
+        fs.mkdirs(f);
     }
     
     /**
      * Rename an DFS file
      */
     public void rename(String srcf, String dstf) throws IOException {
-        if (nfs.rename(new File(srcf), new File(dstf))) {
+        if (fs.rename(new File(srcf), new File(dstf))) {
             System.out.println("Renamed " + srcf + " to " + dstf);
         } else {
             System.out.println("Rename failed");
@@ -122,7 +122,7 @@ public class DFSShell {
      * Copy an DFS file
      */
     public void copy(String srcf, String dstf, Configuration conf) throws IOException {
-        if (FileUtil.copyContents(nfs, new File(srcf), new File(dstf), true, conf)) {
+        if (FileUtil.copyContents(fs, new File(srcf), new File(dstf), true, conf)) {
             System.out.println("Copied " + srcf + " to " + dstf);
         } else {
             System.out.println("Copy failed");
@@ -133,7 +133,7 @@ public class DFSShell {
      * Delete an DFS file
      */
     public void delete(String srcf) throws IOException {
-        if (nfs.delete(new File(srcf))) {
+        if (fs.delete(new File(srcf))) {
             System.out.println("Deleted " + srcf);
         } else {
             System.out.println("Delete failed");
@@ -169,18 +169,18 @@ public class DFSShell {
     }
 
     /**
-     * Gives a report on how the NutchFileSystem is doing
+     * Gives a report on how the FileSystem is doing
      */
     public void report() throws IOException {
-        if (nfs instanceof DistributedFileSystem) {
-            DistributedFileSystem dfsfs = (DistributedFileSystem) nfs;
+        if (fs instanceof DistributedFileSystem) {
+            DistributedFileSystem dfsfs = (DistributedFileSystem) fs;
             DFSClient dfs = dfsfs.getClient();
             long total = dfs.totalRawCapacity();
             long used = dfs.totalRawUsed();
             DatanodeInfo info[] = dfs.datanodeReport();
 
             long totalEffectiveBytes = 0;
-            File topItems[] = nfs.listFiles(new File("/"));
+            File topItems[] = fs.listFiles(new File("/"));
             for (int i = 0; i < topItems.length; i++) {
                 DFSFile cur = (DFSFile) topItems[i];
                 totalEffectiveBytes += cur.getContentsLength();
@@ -225,9 +225,9 @@ public class DFSShell {
 
         Configuration conf = new Configuration();
         int i = 0;
-        NutchFileSystem nfs = NutchFileSystem.parseArgs(argv, i, conf);
+        FileSystem fs = FileSystem.parseArgs(argv, i, conf);
         try {
-            DFSShell tc = new DFSShell(nfs);
+            DFSShell tc = new DFSShell(fs);
 
             String cmd = argv[i++];
             if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd)) {
@@ -257,7 +257,7 @@ public class DFSShell {
             }
             System.exit(0);
         } finally {
-            nfs.close();
+            fs.close();
         }
     }
 }

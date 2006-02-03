@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
@@ -363,7 +363,7 @@ class TaskInProgress {
         } else {
             try {
                 if (isMapTask()) {
-                    NutchFileSystem fs = NutchFileSystem.get(conf);
+                    FileSystem fs = FileSystem.get(conf);
                     String hints[][] = fs.getFileCacheHints(split.getFile(), split.getStart(), split.getLength());
                     for (int i = 0; i < hints.length; i++) {
                         for (int j = 0; j < hints[i].length; j++) {

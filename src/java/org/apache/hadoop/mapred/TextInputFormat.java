@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.io.File;
 
-import org.apache.hadoop.fs.NutchFileSystem;
-import org.apache.hadoop.fs.NFSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataInputStream;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -32,7 +32,7 @@ import org.apache.hadoop.io.UTF8;
  * the position in the file, and values are the line of text.. */
 public class TextInputFormat extends InputFormatBase {
 
-  public RecordReader getRecordReader(NutchFileSystem fs, FileSplit split,
+  public RecordReader getRecordReader(FileSystem fs, FileSplit split,
                                       JobConf job, Reporter reporter)
     throws IOException {
 
@@ -42,7 +42,7 @@ public class TextInputFormat extends InputFormatBase {
     final long end = start + split.getLength();
 
     // open the file and seek to the start of the split
-    final NFSDataInputStream in = fs.open(split.getFile());
+    final FSDataInputStream in = fs.open(split.getFile());
     
     if (start != 0) {
       in.seek(start-1);
@@ -76,7 +76,7 @@ public class TextInputFormat extends InputFormatBase {
       };
   }
 
-  private static String readLine(NFSDataInputStream in) throws IOException {
+  private static String readLine(FSDataInputStream in) throws IOException {
     StringBuffer buffer = new StringBuffer();
     while (true) {
 

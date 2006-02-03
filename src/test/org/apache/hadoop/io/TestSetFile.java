@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.*;
@@ -22,6 +22,7 @@ import junit.framework.TestCase;
 import java.util.logging.*;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.LogFormatter;
 
 /** Support for flat files of binary key/value pairs. */
@@ -35,13 +36,13 @@ public class TestSetFile extends TestCase {
   public TestSetFile(String name) { super(name); }
 
   public void testSetFile() throws Exception {
-    NutchFileSystem nfs = new LocalFileSystem(conf);
+    FileSystem fs = new LocalFileSystem(conf);
     try {
         RandomDatum[] data = generate(10000);
-        writeTest(nfs, data, FILE);
-        readTest(nfs, data, FILE);
+        writeTest(fs, data, FILE);
+        readTest(fs, data, FILE);
     } finally {
-        nfs.close();
+        fs.close();
     }
   }
 
@@ -58,21 +59,21 @@ public class TestSetFile extends TestCase {
     return data;
   }
 
-  private static void writeTest(NutchFileSystem nfs, RandomDatum[] data, String file)
+  private static void writeTest(FileSystem fs, RandomDatum[] data, String file)
     throws IOException {
-    MapFile.delete(nfs, file);
+    MapFile.delete(fs, file);
     LOG.fine("creating with " + data.length + " records");
-    SetFile.Writer writer = new SetFile.Writer(nfs, file, RandomDatum.class);
+    SetFile.Writer writer = new SetFile.Writer(fs, file, RandomDatum.class);
     for (int i = 0; i < data.length; i++)
       writer.append(data[i]);
     writer.close();
   }
 
-  private static void readTest(NutchFileSystem nfs, RandomDatum[] data, String file)
+  private static void readTest(FileSystem fs, RandomDatum[] data, String file)
     throws IOException {
     RandomDatum v = new RandomDatum();
     LOG.fine("reading " + data.length + " records");
-    SetFile.Reader reader = new SetFile.Reader(nfs, file, conf);
+    SetFile.Reader reader = new SetFile.Reader(fs, file, conf);
     for (int i = 0; i < data.length; i++) {
       if (!reader.seek(data[i]))
         throw new RuntimeException("wrong value at " + i);
@@ -96,7 +97,7 @@ public class TestSetFile extends TestCase {
     }
       
     int i = 0;
-    NutchFileSystem nfs = NutchFileSystem.parseArgs(args, i, conf);      
+    FileSystem fs = FileSystem.parseArgs(args, i, conf);      
     try {
       for (; i < args.length; i++) {       // parse command line
         if (args[i] == null) {
@@ -122,15 +123,15 @@ public class TestSetFile extends TestCase {
         RandomDatum[] data = generate(count);
 
         if (create) {
-          writeTest(nfs, data, file);
+          writeTest(fs, data, file);
         }
 
         if (check) {
-          readTest(nfs, data, file);
+          readTest(fs, data, file);
         }
       }
     } finally {
-      nfs.close();
+      fs.close();
     }
   }
 }

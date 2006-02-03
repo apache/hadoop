@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.*;
 import java.util.*;
@@ -30,7 +30,7 @@ public class LocalJobRunner implements JobSubmissionProtocol {
   public static final Logger LOG =
     LogFormatter.getLogger("org.apache.hadoop.mapred.LocalJobRunner");
 
-  private NutchFileSystem fs;
+  private FileSystem fs;
   private HashMap jobs = new HashMap();
   private Configuration conf;
 
@@ -84,7 +84,7 @@ public class LocalJobRunner implements JobSubmissionProtocol {
           File mapOut = this.mapoutputFile.getOutputFile(mapId, 0);
           File reduceIn = this.mapoutputFile.getInputFile(mapId, reduceId);
           reduceIn.getParentFile().mkdirs();
-          if (!NutchFileSystem.getNamed("local", this.job).rename(mapOut, reduceIn))
+          if (!FileSystem.getNamed("local", this.job).rename(mapOut, reduceIn))
             throw new IOException("Couldn't rename " + mapOut);
           this.mapoutputFile.removeAll(mapId);
         }
@@ -151,7 +151,7 @@ public class LocalJobRunner implements JobSubmissionProtocol {
   }
 
   public LocalJobRunner(Configuration conf) throws IOException {
-    this.fs = NutchFileSystem.get(conf);
+    this.fs = FileSystem.get(conf);
     this.conf = conf;
   }
 

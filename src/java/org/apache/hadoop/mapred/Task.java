@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.net.*;

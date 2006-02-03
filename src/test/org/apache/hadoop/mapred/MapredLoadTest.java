@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
@@ -145,7 +145,7 @@ public class MapredLoadTest {
         //
         // Write the answer key to a file.  
         //
-        NutchFileSystem fs = NutchFileSystem.get(conf);
+        FileSystem fs = FileSystem.get(conf);
         File testdir = new File("mapred.loadtest");
         fs.mkdirs(testdir);
 

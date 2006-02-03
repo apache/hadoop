@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.
+package org.apache.hadoop.io;
 
 import java.io.*;
 import org.apache.hadoop.fs.*;
@@ -30,8 +30,8 @@ public class ArrayFile extends MapFile {
     private LongWritable count = new LongWritable(0);
 
     /** Create the named file for values of the named class. */
-    public Writer(NutchFileSystem nfs, String file, Class valClass) throws IOException {
-      super(nfs, file, LongWritable.class, valClass);
+    public Writer(FileSystem fs, String file, Class valClass) throws IOException {
+      super(fs, file, LongWritable.class, valClass);
     }
 
     /** Append a value to the file. */
@@ -46,8 +46,8 @@ public class ArrayFile extends MapFile {
     private LongWritable key = new LongWritable();
 
     /** Construct an array reader for the named file.*/
-    public Reader(NutchFileSystem nfs, String file, Configuration conf) throws IOException {
-      super(nfs, file, conf);
+    public Reader(FileSystem fs, String file, Configuration conf) throws IOException {
+      super(fs, file, conf);
     }
 
     /** Positions the reader before its <code>n</code>th value. */

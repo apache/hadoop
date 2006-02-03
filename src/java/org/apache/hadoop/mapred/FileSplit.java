@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.
+package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.io.File;
@@ -23,11 +23,11 @@ import java.io.DataOutput;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.fs.NutchFileSystem;
+import org.apache.hadoop.fs.FileSystem;
 
 /** A section of an input file.  Returned by {@link
- * InputFormat#getSplits(NutchFileSystem, JobConf, int)} and passed to
- * InputFormat#getRecordReader(NutchFileSystem,FileSplit,JobConf,Reporter). */
+ * InputFormat#getSplits(FileSystem, JobConf, int)} and passed to
+ * InputFormat#getRecordReader(FileSystem,FileSplit,JobConf,Reporter). */
 public class FileSplit implements Writable {
   private File file;
   private long start;

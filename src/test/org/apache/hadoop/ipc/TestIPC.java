@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ipc.
+package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
