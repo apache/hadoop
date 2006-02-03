@@ -31,59 +31,83 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.hadoop.util.LogFormatter;
 
-/** Provides access to configuration parameters.
- * <p>An ordered list of configuration parameter files with
- * default and always-overrides site parameters.
- * <p>Default values for all parameters are specified in a file named
- * <tt>hadoop-default.xml</tt> located on the classpath.  Overrides for these
- * defaults should be in an optional file named <tt>hadoop-site.xml</tt>, also
- * located on the classpath.  Typically these files reside in the
- * <tt>conf/</tt> subdirectory at the top-level of a Hadoop installation.
- * <p>The resource files are read upon first access of values (set, get,
- * or write) after {@link #addConfResource(String)} or
- * {@link #addConfResource(File)}.
+/** Provides access to configuration parameters.  Configurations are specified
+ * by resources.  A resource contains a set of name/value pairs.
+ *
+ * <p>Each resources is named by either a String or by a File.  If named by a
+ * String, then the classpath is examined for a file with that name.  If a
+ * File, then the filesystem is examined directly, without referring to the
+ * CLASSPATH.
+ *
+ * <p>Configuration resources are of three types: default, application and
+ * final.  Default values are loaded first.  Final values are loaded last, and
+ * thus override all other types.  Application values are loaded after defaults
+ * and before finals, and can thus override default values but not final
+ * values.
+ *
+ * <p>Hadoop's default resource is the String "hadoop-default.xml" and its
+ * final resource is the String "hadoop-site.xml".  Other tools built on Hadoop
+ * may specify additional default resources.
  */
 public class Configuration {
   private static final Logger LOG =
     LogFormatter.getLogger("org.apache.hadoop.conf.Configuration");
 
-  private ArrayList resourceNames = new ArrayList();
+  private ArrayList defaultResources = new ArrayList();
+  private ArrayList appResources = new ArrayList();
+  private ArrayList finalResources = new ArrayList();
+
   private Properties properties;
   private ClassLoader classLoader = 
     Thread.currentThread().getContextClassLoader();
 
   /** A new configuration. */
   public Configuration() {
-    resourceNames.add("hadoop-default.xml");
-    resourceNames.add("hadoop-site.xml");
+    defaultResources.add("hadoop-default.xml");
+    finalResources.add("hadoop-site.xml");
   }
 
   /** A new configuration with the same settings cloned from another. */
   public Configuration(Configuration other) {
-    this.resourceNames = (ArrayList)other.resourceNames.clone();
+    this.defaultResources = (ArrayList)other.defaultResources.clone();
+    this.appResources = (ArrayList)other.appResources.clone();
+    this.finalResources = (ArrayList)other.finalResources.clone();
     if (other.properties != null)
       this.properties = (Properties)other.properties.clone();
   }
 
-  /** Adds a resource name to the chain of resources read.  Such resources are
-   * located on the CLASSPATH.  The first resource is always
-   * <tt>hadoop-default.xml</tt>, and the last is always
-   * <tt>hadoop-site.xml</tt>.  New resources are inserted between these, so
-   * they can override defaults, but not site-specifics. */
-  public synchronized void addConfResource(String name) {
-    addConfResourceInternal(name);
+  /** Add an application resource. */
+  public void addAppResource(String name) {
+    addResource(appResources, name);
   }
 
-  /** Adds a file to the chain of resources read.  The first resource is always
-   * <tt>hadoop-default.xml</tt>, and the last is always
-   * <tt>hadoop-site.xml</tt>.  New resources are inserted between these, so
-   * they can override defaults, but not site-specifics. */
-  public synchronized void addConfResource(File file) {
-    addConfResourceInternal(file);
+  /** Add an application resource. */
+  public void addAppResource(File file) {
+    addResource(appResources, file);
   }
 
-  private synchronized void addConfResourceInternal(Object name) {
-    resourceNames.add(resourceNames.size()-1, name); // add second to last
+  /** Add a default resource. */
+  public void addDefaultResource(String name) {
+    addResource(defaultResources, name);
+  }
+
+  /** Add a default resource. */
+  public void addDefaultResource(File file) {
+    addResource(defaultResources, file);
+  }
+
+  /** Add a final resource. */
+  public void addFinalResource(String name) {
+    addResource(finalResources, name);
+  }
+
+  /** Add a final resource. */
+  public void addFinalResource(File file) {
+    addResource(finalResources, file);
+  }
+
+  private synchronized void addResource(ArrayList resources, Object resource) {
+    resources.add(resource);                      // add to resources
     properties = null;                            // trigger reload
   }
   
@@ -299,25 +323,26 @@ public class Configuration {
 
   private synchronized Properties getProps() {
     if (properties == null) {
-      Properties defaults = new Properties();
+      Properties defaults = new Properties();     // keep defaults separate
       Properties newProps = new Properties(defaults);
-      ListIterator i = resourceNames.listIterator();
-      while (i.hasNext()) {
-        if (i.nextIndex() == 0) {                 // load defaults
-          loadResource(defaults, i.next(), false);
-        } else if (i.nextIndex()==resourceNames.size()-1) { // load site
-          loadResource(newProps, i.next(), true);
-        } else {                                  // load intermediate
-          loadResource(newProps, i.next(), false);
-        }
-      }
+      loadResources(defaults, defaultResources, false);
+      loadResources(newProps, appResources, false);
+      loadResources(newProps, finalResources, true);
       properties = newProps;
     }
     return properties;
   }
 
-  private void loadResource(Properties properties,
-                            Object name, boolean quietFail) {
+  private void loadResources(Properties props,
+                             ArrayList resources,
+                             boolean reverse) {
+    ListIterator i = resources.listIterator(reverse ? resources.size() : 0);
+    while (reverse ? i.hasPrevious() : i.hasNext()) {
+      loadResource(props, reverse ? i.previous() : i.next());
+    }
+  }
+
+  private void loadResource(Properties properties, Object name) {
     try {
       DocumentBuilder builder =
         DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -338,8 +363,6 @@ public class Configuration {
       }
 
       if (doc == null) {
-        if (quietFail)
-          return;
         throw new RuntimeException(name + " not found");
       }
 
@@ -420,11 +443,20 @@ public class Configuration {
     }
   }
 
-
   public String toString() {
-    StringBuffer sb = new StringBuffer(resourceNames.size()*30);
+    StringBuffer sb = new StringBuffer();
     sb.append("Configuration: ");
-    ListIterator i = resourceNames.listIterator();
+    sb.append("defaults: ");
+    toString(defaultResources, sb);
+    sb.append("app: ");
+    toString(appResources, sb);
+    sb.append("final: ");
+    toString(finalResources, sb);
+    return sb.toString();
+  }
+
+  private void toString(ArrayList resources, StringBuffer sb) {
+    ListIterator i = resources.listIterator();
     while (i.hasNext()) {
       if (i.nextIndex() != 0) {
         sb.append(" , ");
@@ -436,7 +468,6 @@ public class Configuration {
         sb.append((String)obj);
       }
     }
-    return sb.toString();
   }
 
   /** For debugging.  List non-default properties to the terminal and exit. */
