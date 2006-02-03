@@ -27,15 +27,15 @@ import org.apache.hadoop.util.LogFormatter;
 /****************************************************************
  * An abstract base class for a fairly simple
  * distributed file system.
- * A Nutch installation might consist
+ * A Hadoop installation might consist
  * of multiple machines, which should swap files transparently.
- * This interface allows other Nutch systems to find and place
- * files into the distributed Nutch-controlled file world.
+ * This interface allows other Hadoop systems to find and place
+ * files into the distributed Hadoop-controlled file world.
  * <p>
- * A local implementation exists for testing and for small Nutch instances.
+ * A local implementation exists for testing and for small Hadoop instances.
  * <p>
  * The standard job of FileSystem is to take the location-
- * independent NutchFile objects, and resolve them using local
+ * independent HadoopFile objects, and resolve them using local
  * knowledge and local instances of ShareGroup.
  * <p>
  * The local implementation is {@link LocalFileSystem} and distributed

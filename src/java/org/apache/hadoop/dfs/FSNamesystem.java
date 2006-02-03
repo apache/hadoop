@@ -191,7 +191,7 @@ public class FSNamesystem implements FSConstants {
 
     /////////////////////////////////////////////////////////
     //
-    // These methods are called by NutchFS clients
+    // These methods are called by HadoopFS clients
     //
     /////////////////////////////////////////////////////////
     /**

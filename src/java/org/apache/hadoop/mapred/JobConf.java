@@ -90,7 +90,7 @@ public class JobConf extends Configuration {
 
   public File getSystemDir() {
     return new File(get("mapred.system.dir",
-                                        "/tmp/nutch/mapred/system"));
+                                        "/tmp/hadoop/mapred/system"));
   }
 
   public String[] getLocalDirs() throws IOException {

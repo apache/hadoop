@@ -27,7 +27,7 @@ import java.util.*;
 import java.util.logging.*;
 
 /********************************************************
- * DFSClient can connect to a Nutch Filesystem and perform basic file tasks.
+ * DFSClient can connect to a Hadoop Filesystem and perform basic file tasks.
  * Connects to a namenode daemon.
  * @author Mike Cafarella, Tessa MacDuff
  ********************************************************/

@@ -35,10 +35,10 @@ import org.apache.hadoop.util.LogFormatter;
  * <p>An ordered list of configuration parameter files with
  * default and always-overrides site parameters.
  * <p>Default values for all parameters are specified in a file named
- * <tt>nutch-default.xml</tt> located on the classpath.  Overrides for these
- * defaults should be in an optional file named <tt>nutch-site.xml</tt>, also
+ * <tt>hadoop-default.xml</tt> located on the classpath.  Overrides for these
+ * defaults should be in an optional file named <tt>hadoop-site.xml</tt>, also
  * located on the classpath.  Typically these files reside in the
- * <tt>conf/</tt> subdirectory at the top-level of a Nutch installation.
+ * <tt>conf/</tt> subdirectory at the top-level of a Hadoop installation.
  * <p>The resource files are read upon first access of values (set, get,
  * or write) after {@link #addConfResource(String)} or
  * {@link #addConfResource(File)}.
@@ -54,8 +54,8 @@ public class Configuration {
 
   /** A new configuration. */
   public Configuration() {
-    resourceNames.add("nutch-default.xml");
-    resourceNames.add("nutch-site.xml");
+    resourceNames.add("hadoop-default.xml");
+    resourceNames.add("hadoop-site.xml");
   }
 
   /** A new configuration with the same settings cloned from another. */
@@ -67,16 +67,16 @@ public class Configuration {
 
   /** Adds a resource name to the chain of resources read.  Such resources are
    * located on the CLASSPATH.  The first resource is always
-   * <tt>nutch-default.xml</tt>, and the last is always
-   * <tt>nutch-site.xml</tt>.  New resources are inserted between these, so
+   * <tt>hadoop-default.xml</tt>, and the last is always
+   * <tt>hadoop-site.xml</tt>.  New resources are inserted between these, so
    * they can override defaults, but not site-specifics. */
   public synchronized void addConfResource(String name) {
     addConfResourceInternal(name);
   }
 
   /** Adds a file to the chain of resources read.  The first resource is always
-   * <tt>nutch-default.xml</tt>, and the last is always
-   * <tt>nutch-site.xml</tt>.  New resources are inserted between these, so
+   * <tt>hadoop-default.xml</tt>, and the last is always
+   * <tt>hadoop-site.xml</tt>.  New resources are inserted between these, so
    * they can override defaults, but not site-specifics. */
   public synchronized void addConfResource(File file) {
     addConfResourceInternal(file);
@@ -344,8 +344,8 @@ public class Configuration {
       }
 
       Element root = doc.getDocumentElement();
-      if (!"nutch-conf".equals(root.getTagName()))
-        LOG.severe("bad conf file: top-level element not <nutch-conf>");
+      if (!"configuration".equals(root.getTagName()))
+        LOG.severe("bad conf file: top-level element not <configuration>");
       NodeList props = root.getChildNodes();
       for (int i = 0; i < props.getLength(); i++) {
         Node propNode = props.item(i);
@@ -384,7 +384,7 @@ public class Configuration {
     try {
       Document doc =
         DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
-      Element conf = doc.createElement("nutch-conf");
+      Element conf = doc.createElement("configuration");
       doc.appendChild(conf);
       conf.appendChild(doc.createTextNode("\n"));
       for (Enumeration e = properties.keys(); e.hasMoreElements();) {

@@ -21,7 +21,7 @@ import java.io.*;
 import java.util.*;
 
 /**************************************************
- * A Block is a Nutch FS primitive, identified by a 
+ * A Block is a Hadoop FS primitive, identified by a 
  * long.
  *
  * @author Mike Cafarella

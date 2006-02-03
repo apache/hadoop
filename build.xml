@@ -147,9 +147,6 @@
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
 
-    <copy file="${test.src.dir}/hadoop-site.xml"
-          todir="${test.build.classes}"/>
-
     <junit printsummary="yes" haltonfailure="no" fork="yes" dir="${basedir}"
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
@@ -195,7 +192,7 @@
 	
   <target name="default-doc">
     <style basedir="${conf.dir}" destdir="${docs.dir}"
-           includes="hadoop-default.xml" style="conf/hadoop-conf.xsl"/>
+           includes="hadoop-default.xml" style="conf/configuration.xsl"/>
   </target>
 
   <!-- ================================================================== -->

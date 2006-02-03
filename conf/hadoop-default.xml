@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="nutch-conf.xsl"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 
 <!-- Do not modify this file directly.  Instead, copy entries that you -->
-<!-- wish to modify from this file into nutch-site.xml and change them -->
-<!-- there.  If nutch-site.xml does not already exist, create it.      -->
+<!-- wish to modify from this file into hadoop-site.xml and change them -->
+<!-- there.  If hadoop-site.xml does not already exist, create it.      -->
 
-<nutch-conf>
+<configuration>
 
 <!-- file properties -->
 
@@ -97,14 +97,14 @@
 
 <property>
   <name>dfs.name.dir</name>
-  <value>/tmp/nutch/dfs/name</value>
+  <value>/tmp/hadoop/dfs/name</value>
   <description>Determines where on the local filesystem the DFS name node
       should store the name table.</description>
 </property>
 
 <property>
   <name>dfs.data.dir</name>
-  <value>/tmp/nutch/dfs/data</value>
+  <value>/tmp/hadoop/dfs/data</value>
   <description>Determines where on the local filesystem an DFS data node
   should store its blocks.  If this is a comma- or space-delimited
   list of directories, then data will be stored in all named
@@ -155,7 +155,7 @@
 
 <property>
   <name>mapred.local.dir</name>
-  <value>/tmp/nutch/mapred/local</value>
+  <value>/tmp/hadoop/mapred/local</value>
   <description>The local directory where MapReduce stores intermediate
   data files.  May be a space- or comma- separated list of
   directories on different devices in order to spread disk i/o.
@@ -164,14 +164,14 @@
 
 <property>
   <name>mapred.system.dir</name>
-  <value>/tmp/nutch/mapred/system</value>
+  <value>/tmp/hadoop/mapred/system</value>
   <description>The shared directory where MapReduce stores control files.
   </description>
 </property>
 
 <property>
   <name>mapred.temp.dir</name>
-  <value>/tmp/nutch/mapred/temp</value>
+  <value>/tmp/hadoop/mapred/temp</value>
   <description>A shared directory for temporary files.
   </description>
 </property>
@@ -234,4 +234,4 @@
   <description>Defines the timeout for IPC calls in milliseconds.</description>
 </property>
 
-</nutch-conf>
+</configuration>

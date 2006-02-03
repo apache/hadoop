@@ -26,7 +26,7 @@ import java.math.*;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
- * a Nutch Map-Reduce system (and DFS, too).  It goes through
+ * a Hadoop Map-Reduce system (and DFS, too).  It goes through
  * the following steps:
  *
  * 1) Take inputs 'range' and 'counts'.

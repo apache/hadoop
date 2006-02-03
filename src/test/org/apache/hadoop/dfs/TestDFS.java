@@ -65,7 +65,7 @@ import java.lang.reflect.InvocationTargetException;
  * <p>Bring the namenode down and restart it to verify that datanodes reconnect.
  * <p>
  * <p>For a another approach to filesystem testing, see the high level
- * (NutchFS level) test {@link org.apache.hadoop.fs.TestFileSystem}.
+ * (HadoopFS level) test {@link org.apache.hadoop.fs.TestFileSystem}.
  * @author Paul Baclace
  */
 public class TestDFS extends TestCase implements FSConstants {
@@ -199,8 +199,8 @@ public class TestDFS extends TestCase implements FSConstants {
     // downsize for testing (just to save resources)
     conf.setInt("dfs.namenode.handler.count", 3);
     if (false) { //  use MersenneTwister, if present
-      conf.set("nutch.random.class",
-                          "org.apache.nutch.util.MersenneTwister");
+      conf.set("hadoop.random.class",
+                          "org.apache.hadoop.util.MersenneTwister");
     }
     conf.setLong("dfs.blockreport.intervalMsec", 50*1000L);
     conf.setLong("dfs.datanode.startupMsec", 15*1000L);
@@ -425,7 +425,7 @@ public class TestDFS extends TestCase implements FSConstants {
   /**
    * Make a data generator.
    * Allows optional use of high quality PRNG by setting property
-   * nutch.random.class to the full class path of a subclass of
+   * hadoop.random.class to the full class path of a subclass of
    * java.util.Random such as "...util.MersenneTwister".
    * The property test.dfs.random.seed can supply a seed for reproducible
    * testing (a default is set here if property is not set.)
@@ -436,7 +436,7 @@ public class TestDFS extends TestCase implements FSConstants {
       if (randomDataGeneratorCtor == null) {
         // lazy init
         String rndDataGenClassname =
-            conf.get("nutch.random.class", "java.util.Random");
+            conf.get("hadoop.random.class", "java.util.Random");
         Class clazz = Class.forName(rndDataGenClassname);
         randomDataGeneratorCtor = clazz.getConstructor(new Class[]{Long.TYPE});
       }

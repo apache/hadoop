@@ -51,7 +51,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     public NameNode(Configuration conf) throws IOException {
         this(new File(conf.get("dfs.name.dir",
-                                          "/tmp/nutch/dfs/name")),
+                                          "/tmp/hadoop/dfs/name")),
              DataNode.createSocketAddr
              (conf.get("fs.default.name", "local")).getPort(), conf);
     }
