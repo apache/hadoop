@@ -1,0 +1,135 @@
+#!/bin/bash
+# 
+# The Hadoop command script
+#
+# Environment Variables
+#
+#   JAVA_HOME The java implementation to use.  Overrides JAVA_HOME.
+#
+#   HADOOP_HEAPSIZE  The maximum amount of heap to use, in MB. 
+#                   Default is 1000.
+#
+#   HADOOP_OPTS      Extra Java runtime options.
+#
+
+# resolve links - $0 may be a softlink
+THIS="$0"
+while [ -h "$THIS" ]; do
+  ls=`ls -ld "$THIS"`
+  link=`expr "$ls" : '.*-> \(.*\)$'`
+  if expr "$link" : '.*/.*' > /dev/null; then
+    THIS="$link"
+  else
+    THIS=`dirname "$THIS"`/"$link"
+  fi
+done
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  echo "Usage: hadoop COMMAND"
+  echo "where COMMAND is one of:"
+  echo "  namenode          run the DFS namenode"
+  echo "  datanode          run an DFS datanode"
+  echo "  dfs              run an DFS admin client"
+  echo "  jobtracker        run the MapReduce job Tracker node" 
+  echo "  tasktracker       run a MapReduce task Tracker node" 
+  echo "  job               manipulate MapReduce jobs" 
+  echo " or"
+  echo "  CLASSNAME         run the class named CLASSNAME"
+  echo "Most commands print help when invoked w/o parameters."
+  exit 1
+fi
+
+# get arguments
+COMMAND=$1
+shift
+
+# some directories
+THIS_DIR=`dirname "$THIS"`
+HADOOP_HOME=`cd "$THIS_DIR/.." ; pwd`
+
+# some Java parameters
+if [ "$JAVA_HOME" != "" ]; then
+  #echo "run java in $JAVA_HOME"
+  JAVA_HOME=$JAVA_HOME
+fi
+  
+if [ "$JAVA_HOME" = "" ]; then
+  echo "Error: JAVA_HOME is not set."
+  exit 1
+fi
+
+JAVA=$JAVA_HOME/bin/java
+JAVA_HEAP_MAX=-Xmx1000m 
+
+# check envvars which might override default args
+if [ "$HADOOP_HEAPSIZE" != "" ]; then
+  #echo "run with heapsize $HADOOP_HEAPSIZE"
+  JAVA_HEAP_MAX="-Xmx""$HADOOP_HEAPSIZE""m"
+  #echo $JAVA_HEAP_MAX
+fi
+
+# CLASSPATH initially contains $HADOOP_CONF_DIR, or defaults to $HADOOP_HOME/conf
+CLASSPATH=${HADOOP_CONF_DIR:=$HADOOP_HOME/conf}
+CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
+
+# for developers, add Hadoop classes to CLASSPATH
+if [ -d "$HADOOP_HOME/build/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/classes
+fi
+if [ -d "$HADOOP_HOME/build/plugins" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build
+fi
+if [ -d "$HADOOP_HOME/build/test/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/test/classes
+fi
+
+# so that filenames w/ spaces are handled correctly in loops below
+IFS=
+
+# for releases, add Hadoop jar to CLASSPATH
+for f in $HADOOP_HOME/hadoop-*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# add plugins to classpath
+if [ -d "$HADOOP_HOME/plugins" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME
+fi
+
+# add libs to CLASSPATH
+for f in $HADOOP_HOME/lib/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+for f in $HADOOP_HOME/lib/jetty-ext/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# restore ordinary behaviour
+unset IFS
+
+# figure out which class to run
+if [ "$COMMAND" = "namenode" ] ; then
+  CLASS='org.apache.hadoop.dfs.NameNode'
+elif [ "$COMMAND" = "datanode" ] ; then
+  CLASS='org.apache.hadoop.dfs.DataNode'
+elif [ "$COMMAND" = "dfs" ] ; then
+  CLASS=org.apache.hadoop.fs.DFSShell
+elif [ "$COMMAND" = "jobtracker" ] ; then
+  CLASS=org.apache.hadoop.mapred.JobTracker
+elif [ "$COMMAND" = "tasktracker" ] ; then
+  CLASS=org.apache.hadoop.mapred.TaskTracker
+elif [ "$COMMAND" = "job" ] ; then
+  CLASS=org.apache.hadoop.mapred.JobClient
+else
+  CLASS=$COMMAND
+fi
+
+# cygwin path translation
+if expr `uname` : 'CYGWIN*' > /dev/null; then
+  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+fi
+
+# run it
+exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"

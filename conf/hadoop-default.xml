@@ -1,0 +1,237 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="nutch-conf.xsl"?>
+
+<!-- Do not modify this file directly.  Instead, copy entries that you -->
+<!-- wish to modify from this file into nutch-site.xml and change them -->
+<!-- there.  If nutch-site.xml does not already exist, create it.      -->
+
+<nutch-conf>
+
+<!-- file properties -->
+
+<property>
+  <name>file.content.limit</name>
+  <value>65536</value>
+  <description>The length limit for downloaded content, in bytes.
+  If this value is larger than zero, content longer than it will be
+  truncated; otherwise (zero or negative), no truncation at all.
+  </description>
+</property>
+
+<property>
+  <name>file.content.ignored</name>
+  <value>true</value>
+  <description>If true, no file content will be saved during fetch.
+  And it is probably what we want to set most of time, since file:// URLs
+  are meant to be local and we can always use them directly at parsing
+  and indexing stages. Otherwise file contents will be saved.
+  !! NO IMPLEMENTED YET !!
+  </description>
+</property>
+
+<!-- i/o properties -->
+
+<property>
+  <name>io.sort.factor</name>
+  <value>10</value>
+  <description>The number of streams to merge at once while sorting
+  files.  This determines the number of open file handles.</description>
+</property>
+
+<property>
+  <name>io.sort.mb</name>
+  <value>100</value>
+  <description>The total amount of buffer memory to use while sorting 
+  files, in megabytes.  By default, gives each merge stream 1MB, which
+  should minimize seeks.</description>
+</property>
+
+<property>
+  <name>io.file.buffer.size</name>
+  <value>4096</value>
+  <description>The size of buffer for use in sequence files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+  
+<property>
+  <name>io.bytes.per.checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  io.file.buffer.size.</description>
+</property>
+
+<property>
+  <name>io.skip.checksum.errors</name>
+  <value>false</value>
+  <description>If true, when a checksum error is encountered while
+  reading a sequence file, entries are skipped, instead of throwing an
+  exception.</description>
+</property>
+  
+<property>
+  <name>io.map.index.skip</name>
+  <value>0</value>
+  <description>Number of index entries to skip between each entry.
+  Zero by default. Setting this to values larger than zero can
+  facilitate opening large map files using less memory.</description>
+</property>
+
+<!-- file system properties -->
+
+<property>
+  <name>fs.default.name</name>
+  <value>local</value>
+  <description>The name of the default file system.  Either the
+  literal string "local" or a host:port for DFS.</description>
+</property>
+
+<property>
+  <name>dfs.datanode.port</name>
+  <value>50010</value>
+  <description>The port number that the dfs datanode server uses as a starting 
+	       point to look for a free port to listen on.
+</description>
+</property>
+
+<property>
+  <name>dfs.name.dir</name>
+  <value>/tmp/nutch/dfs/name</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the name table.</description>
+</property>
+
+<property>
+  <name>dfs.data.dir</name>
+  <value>/tmp/nutch/dfs/data</value>
+  <description>Determines where on the local filesystem an DFS data node
+  should store its blocks.  If this is a comma- or space-delimited
+  list of directories, then data will be stored in all named
+  directories, typically on different devices.</description>
+</property>
+
+<property>
+  <name>dfs.replication</name>
+  <value>3</value>
+  <description>How many copies we try to have at all times. The actual
+  number of replications is at max the number of datanodes in the
+  cluster.</description>
+</property>
+
+<!-- map/reduce properties -->
+
+<property>
+  <name>mapred.job.tracker</name>
+  <value>local</value>
+  <description>The host and port that the MapReduce job tracker runs
+  at.  If "local", then jobs are run in-process as a single map
+  and reduce task.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.tracker.info.port</name>
+  <value>50030</value>
+  <description>The port that the MapReduce job tracker info webserver runs at.
+  </description>
+</property>
+
+<property>
+  <name>mapred.task.tracker.output.port</name>
+  <value>50040</value>
+  <description>The port number that the MapReduce task tracker output server uses as a starting
+               point to look for a free port to listen on.
+  </description>
+</property>
+
+<property>
+  <name>mapred.task.tracker.report.port</name>
+  <value>50050</value>
+  <description>The port number that the MapReduce task tracker report server uses as a starting
+               point to look for a free port to listen on.
+  </description>
+</property>
+
+<property>
+  <name>mapred.local.dir</name>
+  <value>/tmp/nutch/mapred/local</value>
+  <description>The local directory where MapReduce stores intermediate
+  data files.  May be a space- or comma- separated list of
+  directories on different devices in order to spread disk i/o.
+  </description>
+</property>
+
+<property>
+  <name>mapred.system.dir</name>
+  <value>/tmp/nutch/mapred/system</value>
+  <description>The shared directory where MapReduce stores control files.
+  </description>
+</property>
+
+<property>
+  <name>mapred.temp.dir</name>
+  <value>/tmp/nutch/mapred/temp</value>
+  <description>A shared directory for temporary files.
+  </description>
+</property>
+
+<property>
+  <name>mapred.map.tasks</name>
+  <value>2</value>
+  <description>The default number of map tasks per job.  Typically set
+  to a prime several times greater than number of available hosts.
+  Ignored when mapred.job.tracker is "local".  
+  </description>
+</property>
+
+<property>
+  <name>mapred.reduce.tasks</name>
+  <value>1</value>
+  <description>The default number of reduce tasks per job.  Typically set
+  to a prime close to the number of available hosts.  Ignored when
+  mapred.job.tracker is "local".
+  </description>
+</property>
+
+<property>
+  <name>mapred.task.timeout</name>
+  <value>600000</value>
+  <description>The number of milliseconds before a task will be
+  terminated if it neither reads an input, writes an output, nor
+  updates its status string.
+  </description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.tasks.maximum</name>
+  <value>2</value>
+  <description>The maximum number of tasks that will be run
+  simultaneously by a task tracker.
+  </description>
+</property>
+
+<property>
+  <name>mapred.child.heap.size</name>
+  <value>200m</value>
+  <description>The heap size (-Xmx) that will be used for task tracker
+  child processes.</description>
+</property>
+
+<property>
+  <name>mapred.combine.buffer.size</name>
+  <value>100000</value>
+  <description>The number of entries the combining collector caches before
+  combining them and writing to disk.</description>
+</property>
+
+
+<!-- ipc properties -->
+
+<property>
+  <name>ipc.client.timeout</name>
+  <value>60000</value>
+  <description>Defines the timeout for IPC calls in milliseconds.</description>
+</property>
+
+</nutch-conf>

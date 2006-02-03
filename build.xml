@@ -1,0 +1,277 @@
+<?xml version="1.0"?>
+
+<project name="Hadoop" default="compile">
+
+  <!-- Load all the default properties, and any the user wants    -->
+  <!-- to contribute (without having to type -D or edit this file -->
+  <property file="${user.home}/build.properties" />
+  <property file="${basedir}/build.properties" />
+ 
+  <property name="Name" value="Hadoop"/>
+  <property name="name" value="hadoop"/>
+  <property name="version" value="0.1-dev"/>
+  <property name="final.name" value="${name}-${version}"/>
+  <property name="year" value="2006"/>
+
+  <property name="basedir" value="./"/>
+  <property name="src.dir" value="src/java"/>
+  <property name="lib.dir" value="lib"/>
+  <property name="conf.dir" value="conf"/>
+  <property name="docs.dir" value="docs"/>
+  <property name="docs.src" value="${basedir}/src/web"/>
+
+  <property name="build.dir" value="build"/>
+  <property name="build.classes" value="${build.dir}/classes"/>
+  <property name="build.webapps" value="${build.dir}/webapps"/>
+  <property name="build.docs" value="${build.dir}/docs"/>
+  <property name="build.javadoc" value="${build.docs}/api"/>
+  <property name="build.encoding" value="ISO-8859-1"/>
+
+  <property name="test.src.dir" value="src/test"/>
+  <property name="test.build.dir" value="${build.dir}/test"/>
+  <property name="test.build.data" value=" ${test.build.dir}/data"/>
+  <property name="test.build.classes" value="${test.build.dir}/classes"/>
+  <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
+
+  <property name="web.src.dir" value="src/web"/>
+  <property name="src.webapps" value="src/webapps"/>
+
+  <property name="javadoc.link.java"
+	    value="http://java.sun.com/j2se/1.4.2/docs/api/"/>
+  <property name="javadoc.packages" value="org.apache.hadoop.*"/>
+
+  <property name="dist.dir" value="${build.dir}/${final.name}"/>
+
+  <property name="javac.debug" value="on"/>
+  <property name="javac.optimize" value="on"/>
+  <property name="javac.deprecation" value="off"/>
+  <property name="javac.version" value="1.4"/>
+
+  <!-- the normal classpath -->
+  <path id="classpath">
+    <pathelement location="${build.classes}"/>
+    <fileset dir="${lib.dir}">
+      <include name="*.jar" />
+    </fileset>
+  </path>
+
+  <!-- the unit test classpath -->
+  <path id="test.classpath">
+    <pathelement location="${test.build.classes}" />
+    <pathelement location="${conf.dir}"/>
+    <pathelement location="${test.src.dir}"/>
+    <path refid="classpath"/>
+  </path>
+
+  <!-- ====================================================== -->
+  <!-- Stuff needed by all targets                            -->
+  <!-- ====================================================== -->
+  <target name="init">
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${build.classes}"/>
+    <mkdir dir="${build.webapps}"/>
+
+    <mkdir dir="${test.build.dir}"/>
+    <mkdir dir="${test.build.classes}"/>
+
+    <touch datetime="01/25/1971 2:00 pm">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+    </touch>
+
+    <copy todir="${build.webapps}/jobtracker">
+      <fileset dir="${src.webapps}/jobtracker"/>
+    </copy>
+
+    <copy todir="${conf.dir}" verbose="true">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
+  </target>
+
+  <!-- ====================================================== -->
+  <!-- Compile the Java files                                 -->
+  <!-- ====================================================== -->
+  <target name="compile" depends="init">
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${src.dir}"
+     includes="org/apache/hadoop/**/*.java"
+     destdir="${build.classes}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <classpath refid="classpath"/>
+    </javac>    
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Make hadoop.jar                                                     -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="jar" depends="compile">
+    <copy file="${conf.dir}/hadoop-default.xml"
+          todir="${build.classes}"/>
+    <jar jarfile="${build.dir}/${final.name}.jar"
+         basedir="${build.classes}">
+      <manifest>
+      </manifest>
+    </jar>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Compile test code                                                  --> 
+  <!-- ================================================================== -->
+  <target name="compile-test" depends="compile">
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${test.src.dir}"
+     includes="org/apache/hadoop/**/*.java"
+     destdir="${test.build.classes}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <classpath refid="test.classpath"/>
+    </javac>    
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Run unit tests                                                     --> 
+  <!-- ================================================================== -->
+  <target name="test" depends="compile, compile-test">
+
+    <delete dir="${test.build.data}"/>
+    <mkdir dir="${test.build.data}"/>
+
+    <copy file="${test.src.dir}/hadoop-site.xml"
+          todir="${test.build.classes}"/>
+
+    <junit printsummary="yes" haltonfailure="no" fork="yes" dir="${basedir}"
+      errorProperty="tests.failed" failureProperty="tests.failed">
+      <sysproperty key="test.build.data" value="${test.build.data}"/>
+      <sysproperty key="test.src.dir" value="${test.src.dir}"/>
+      <classpath refid="test.classpath"/>
+      <formatter type="plain" />
+      <batchtest todir="${test.build.dir}" unless="testcase">
+        <fileset dir="${test.src.dir}"
+                 includes="**/Test*.java" excludes="**/${test.exclude}.java" />
+      </batchtest>
+      <batchtest todir="${test.build.dir}" if="testcase">
+        <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
+      </batchtest>
+    </junit>
+
+    <fail if="tests.failed">Tests failed!</fail>
+
+  </target>   
+
+  <target name="nightly" depends="test, tar">
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Documentation                                                      -->
+  <!-- ================================================================== -->
+  <target name="javadoc" depends="compile">
+    <mkdir dir="${build.javadoc}"/>
+    <javadoc
+      overview="${src.dir}/overview.html"
+      destdir="${build.javadoc}"
+      author="true"
+      version="true"
+      use="true"
+      windowtitle="${Name} ${version} API"
+      doctitle="${Name} ${version} API"
+      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      >
+    	<packageset dir="${src.dir}"/>
+        <link href="${javadoc.link.java}"/>
+        <classpath refid="classpath"/>
+    </javadoc>
+  </target>	
+	
+  <target name="default-doc">
+    <style basedir="${conf.dir}" destdir="${docs.dir}"
+           includes="hadoop-default.xml" style="conf/hadoop-conf.xsl"/>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- D I S T R I B U T I O N                                            -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="package" depends="jar, javadoc">
+    <mkdir dir="${dist.dir}"/>
+    <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/docs"/>
+    <mkdir dir="${dist.dir}/docs/api"/>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
+      <fileset dir="lib"/>
+    </copy>
+
+    <copy todir="${dist.dir}/webapps">
+      <fileset dir="${build.webapps}"/>
+    </copy>
+
+    <copy file="${build.dir}/${final.name}.jar" todir="${dist.dir}"/>
+
+    <copy todir="${dist.dir}/bin">
+      <fileset dir="bin"/>
+    </copy>
+
+    <copy todir="${dist.dir}/conf">
+      <fileset dir="${conf.dir}" excludes="**/*.template"/>
+    </copy>
+
+    <chmod perm="ugo+x" type="file">
+        <fileset dir="${dist.dir}/bin"/>
+    </chmod>
+
+    <copy todir="${dist.dir}/docs/api">
+      <fileset dir="${build.javadoc}"/>
+    </copy>
+
+    <copy todir="${dist.dir}">
+      <fileset dir=".">
+        <include name="*.txt" />
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/src" includeEmptyDirs="true">
+      <fileset dir="src"/>
+    </copy>
+
+    <copy todir="${dist.dir}/" file="build.xml"/>
+    <copy todir="${dist.dir}/" file="default.properties"/>
+
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Make release tarball                                               -->
+  <!-- ================================================================== -->
+  <target name="tar" depends="package">
+    <tar compression="gzip" longfile="gnu"
+      destfile="${build.dir}/${final.name}.tar.gz">
+      <tarfileset dir="${build.dir}" mode="664">
+	<exclude name="${final.name}/bin/*" />
+        <include name="${final.name}/**" />
+      </tarfileset>
+      <tarfileset dir="${build.dir}" mode="755">
+        <include name="${final.name}/bin/*" />
+      </tarfileset>
+    </tar>
+  </target>
+	
+  <!-- ================================================================== -->
+  <!-- Clean.  Delete the build files, and their directories              -->
+  <!-- ================================================================== -->
+  <target name="clean">
+    <delete dir="${build.dir}"/>
+  </target>
+
+</project>
