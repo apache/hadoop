@@ -116,6 +116,9 @@
           todir="${build.classes}"/>
     <copy file="${conf.dir}/mapred-default.xml"
           todir="${build.classes}"/>
+    <tar compression="gzip" destfile="${build.classes}/bin.tgz">
+      <tarfileset dir="bin" mode="755"/>
+    </tar>
     <jar jarfile="${build.dir}/${final.name}.jar"
          basedir="${build.classes}">
       <manifest>
