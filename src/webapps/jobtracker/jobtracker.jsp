@@ -4,7 +4,7 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
-  import="org.apache.nutch.mapred.*"
+  import="org.apache.hadoop.mapred.*"
 %>
 <%!
   JobTracker tracker = JobTracker.getTracker();
@@ -73,7 +73,7 @@
 
 <html>
 
-<title>Nutch MapReduce General Administration</title>
+<title>Hadoop MapReduce General Administration</title>
 
 <body>
 <h1>JobTracker '<%=trackerLabel%>'</h1>
@@ -105,6 +105,6 @@ This JobTracker has been up since <%= new Date(tracker.getStartTime())%>.<br>
     generateJobTable(out, "Failed", tracker.failedJobs());
 %>
 <hr>
-<a href="http://www.nutch.org/">Nutch</a>, 2005.<br>
+<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
 </body>
 </html>

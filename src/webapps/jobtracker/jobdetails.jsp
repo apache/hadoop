@@ -4,7 +4,7 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
-  import="org.apache.nutch.mapred.*"
+  import="org.apache.hadoop.mapred.*"
 %>
 <%
   String jobid = request.getParameter("jobid");
@@ -18,7 +18,7 @@
 %>
 
 <html>
-<title>Nutch MapReduce Job Details</title>
+<title>Hadoop MapReduce Job Details</title>
 <body>
 <%
   if (job == null) {
@@ -111,6 +111,6 @@
 
 <hr>
 <a href="/jobtracker.jsp">Go back to JobTracker</a><br>
-<a href="http://www.nutch.org/">Nutch</a>, 2005.<br>
+<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
 </body>
 </html>
