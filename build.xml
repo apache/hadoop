@@ -246,7 +246,6 @@
     </copy>
 
     <copy todir="${dist.dir}/" file="build.xml"/>
-    <copy todir="${dist.dir}/" file="default.properties"/>
 
   </target>
 
