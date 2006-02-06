@@ -114,6 +114,8 @@
   <target name="jar" depends="compile">
     <copy file="${conf.dir}/hadoop-default.xml"
           todir="${build.classes}"/>
+    <copy file="${conf.dir}/mapred-default.xml"
+          todir="${build.classes}"/>
     <jar jarfile="${build.dir}/${final.name}.jar"
          basedir="${build.classes}">
       <manifest>

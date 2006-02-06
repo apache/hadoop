@@ -39,22 +39,19 @@ import org.apache.hadoop.util.LogFormatter;
  * File, then the filesystem is examined directly, without referring to the
  * CLASSPATH.
  *
- * <p>Configuration resources are of three types: default, application and
- * final.  Default values are loaded first.  Final values are loaded last, and
- * thus override all other types.  Application values are loaded after defaults
- * and before finals, and can thus override default values but not final
- * values.
+ * <p>Configuration resources are of two types: default and
+ * final.  Default values are loaded first and final values are loaded last, and
+ * thus override default values.
  *
  * <p>Hadoop's default resource is the String "hadoop-default.xml" and its
  * final resource is the String "hadoop-site.xml".  Other tools built on Hadoop
- * may specify additional default resources.
+ * may specify additional resources.
  */
 public class Configuration {
   private static final Logger LOG =
     LogFormatter.getLogger("org.apache.hadoop.conf.Configuration");
 
   private ArrayList defaultResources = new ArrayList();
-  private ArrayList appResources = new ArrayList();
   private ArrayList finalResources = new ArrayList();
 
   private Properties properties;
@@ -70,20 +67,9 @@ public class Configuration {
   /** A new configuration with the same settings cloned from another. */
   public Configuration(Configuration other) {
     this.defaultResources = (ArrayList)other.defaultResources.clone();
-    this.appResources = (ArrayList)other.appResources.clone();
     this.finalResources = (ArrayList)other.finalResources.clone();
     if (other.properties != null)
       this.properties = (Properties)other.properties.clone();
-  }
-
-  /** Add an application resource. */
-  public void addAppResource(String name) {
-    addResource(appResources, name);
-  }
-
-  /** Add an application resource. */
-  public void addAppResource(File file) {
-    addResource(appResources, file);
   }
 
   /** Add a default resource. */
@@ -323,10 +309,8 @@ public class Configuration {
 
   private synchronized Properties getProps() {
     if (properties == null) {
-      Properties defaults = new Properties();     // keep defaults separate
-      Properties newProps = new Properties(defaults);
-      loadResources(defaults, defaultResources, false, false);
-      loadResources(newProps, appResources, false, false);
+      Properties newProps = new Properties();
+      loadResources(newProps, defaultResources, false, false);
       loadResources(newProps, finalResources, true, true);
       properties = newProps;
     }
@@ -450,8 +434,6 @@ public class Configuration {
     sb.append("Configuration: ");
     sb.append("defaults: ");
     toString(defaultResources, sb);
-    sb.append("app: ");
-    toString(appResources, sb);
     sb.append("final: ");
     toString(finalResources, sb);
     return sb.toString();

@@ -629,7 +629,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
           Task task = umbilical.getTask(taskid);
           JobConf job = new JobConf(task.getJobFile());
 
-          conf.addAppResource(new File(task.getJobFile()));
+          conf.addFinalResource(new File(task.getJobFile()));
 
           startPinging(umbilical, taskid);        // start pinging parent
 

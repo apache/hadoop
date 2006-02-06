@@ -63,7 +63,7 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf) {
     super(conf);
-    addAppResource("mapred-default.xml");
+    addDefaultResource("mapred-default.xml");
   }
 
 
@@ -81,8 +81,8 @@ public class JobConf extends Configuration {
    */
   public JobConf(File config) {
     super();
-    addAppResource("mapred-default.xml");
-    addAppResource(config);
+    addDefaultResource("mapred-default.xml");
+    addDefaultResource(config);
   }
 
   public String getJar() { return get("mapred.jar"); }
