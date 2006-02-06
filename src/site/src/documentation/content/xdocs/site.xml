@@ -24,7 +24,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
 
   <docs label="Documentation">    
     <wiki        label="Wiki"             href="ext:wiki" />    
-    <apidocs     label="API Docs"         href="apidocs/index.html" />
+    <apidocs     label="API Docs"         href="docs/api/" />
   </docs>
 
   <resources label="Resources">

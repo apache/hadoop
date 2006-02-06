@@ -72,7 +72,7 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 <a href="http://wiki.apache.org/hadoop/">Wiki</a>
 </div>
 <div class="menuitem">
-<a href="apidocs/index.html">API Docs</a>
+<a href="docs/api/">API Docs</a>
 </div>
 </div>
 <div onclick="SwitchMenu('menu_1.3', 'skin/')" id="menu_1.3Title" class="menutitle">Resources</div>
@@ -119,7 +119,13 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 <a href="#News">News</a>
 <ul class="minitoc">
 <li>
-<a href="#1+February%2C+2006%3A+Hadoop+split+from+Nutch">1 February, 2006: Hadoop split from Nutch</a>
+<a href="#6+February%2C+2006%3A+nightly+builds">6 February, 2006: nightly builds</a>
+</li>
+<li>
+<a href="#3+February%2C+2006%3A+Hadoop+code+moved+out+of+Nutch">3 February, 2006: Hadoop code moved out of Nutch</a>
+</li>
+<li>
+<a href="#30+March%2C+2006%3A+Hadoop+project+approved">30 March, 2006: Hadoop project approved</a>
 </li>
 </ul>
 </li>
@@ -130,13 +136,22 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 <a name="N1000C"></a><a name="News"></a>
 <h2 class="h3">News</h2>
 <div class="section">
-<a name="N10012"></a><a name="1+February%2C+2006%3A+Hadoop+split+from+Nutch"></a>
-<h3 class="h4">1 February, 2006: Hadoop split from Nutch</h3>
-<p>Hadoop is a new <a href="http://lucene.apache.org/java/">Lucene</a> sub-project
-      that contains the distributed computing platform that was
-      formerly a part of <a href="http://lucene.apache.org/nutch/">Nutch</a>.  This
-      includes the Hadoop Distributed Filesystem (HDFS) and an
-      implementation of MapReduce.</p>
+<a name="N10012"></a><a name="6+February%2C+2006%3A+nightly+builds"></a>
+<h3 class="h4">6 February, 2006: nightly builds</h3>
+<p>Hadoop now has nightly builds.  This automatically creates a
+      <a href="http://cvs.apache.org/dist/lucene/hadoop/nightly/">downloadable version of Hadoop every
+      night</a>.  All unit tests must pass, or a message is sent to
+      the developers mailing list and no new version is created.  This
+      also updates the <a href="docs/api/">javadoc</a>.</p>
+<a name="N10024"></a><a name="3+February%2C+2006%3A+Hadoop+code+moved+out+of+Nutch"></a>
+<h3 class="h4">3 February, 2006: Hadoop code moved out of Nutch</h3>
+<p>The Hadoop code has now been moved into its own Subversion
+      tree, renamed into packages under <span class="codefrag">org.apache.hadoop</span>.
+      All unit tests pass, but little else has yet been tested.</p>
+<a name="N10031"></a><a name="30+March%2C+2006%3A+Hadoop+project+approved"></a>
+<h3 class="h4">30 March, 2006: Hadoop project approved</h3>
+<p>The Lucene PMC has elected to split the Nutch MapReduce and
+      distributed filesytem code into a new project named Hadoop.</p>
 </div>
 
   
