@@ -21,8 +21,6 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.LogFormatter;
 
 import java.io.*;
-import java.net.*;
-import java.util.*;
 import java.util.logging.*;
 
 /**********************************************************

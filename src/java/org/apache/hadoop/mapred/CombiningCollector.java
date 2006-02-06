@@ -17,11 +17,9 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-import java.net.*;
 import java.util.*;
 
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.conf.*;
 
 /** Implements partial value reduction during mapping.  This can minimize the
  * size of intermediate data.  Buffers a list of values for each unique key,

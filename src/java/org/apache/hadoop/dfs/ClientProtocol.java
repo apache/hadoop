@@ -16,7 +16,6 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
-import org.apache.hadoop.io.*;
 
 /**********************************************************************
  * Protocol that an DFS client uses to communicate with the NameNode.

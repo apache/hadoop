@@ -20,7 +20,6 @@ import java.io.*;
 import java.util.*;
 import java.util.zip.*;
 import java.util.logging.*;
-import java.nio.channels.*;
 import java.net.InetAddress;
 import java.rmi.server.UID;
 import java.security.MessageDigest;

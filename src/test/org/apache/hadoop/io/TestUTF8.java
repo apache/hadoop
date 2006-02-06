@@ -18,7 +18,6 @@ package org.apache.hadoop.io;
 
 import junit.framework.TestCase;
 import java.util.Random;
-import java.util.Arrays;
 
 /** Unit tests for UTF8. */
 public class TestUTF8 extends TestCase {

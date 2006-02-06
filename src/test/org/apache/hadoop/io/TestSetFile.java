@@ -23,7 +23,6 @@ import java.util.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSetFile extends TestCase {

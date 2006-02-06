@@ -18,11 +18,9 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.mapred.lib.*;
 
 import java.io.*;
 import java.util.*;
-import java.math.*;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises

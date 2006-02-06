@@ -17,7 +17,6 @@
 package org.apache.hadoop.io;
 
 import java.io.*;
-import java.util.*;
 import junit.framework.TestCase;
 import java.util.logging.*;
 

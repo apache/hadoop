@@ -17,8 +17,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-import java.net.*;
-import java.util.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;

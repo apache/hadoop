@@ -15,15 +15,11 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.fs.*;
 
 import java.io.*;
-import java.net.*;
-import java.util.*;
 import java.util.logging.*;
 
 /** Base class that runs a task in a separate process.  Tasks are run in a

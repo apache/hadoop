@@ -21,7 +21,6 @@ import java.util.*;
 import junit.framework.TestCase;
 import java.util.logging.*;
 
-import org.apache.hadoop.fs.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.*;
 import org.apache.hadoop.io.*;

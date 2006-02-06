@@ -19,7 +19,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.io.DataInput;
 
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 
 /** Reads key/value pairs from an input file {@link FileSplit}.

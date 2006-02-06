@@ -18,8 +18,6 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
-import java.net.*;
-import java.util.*;
 
 /**************************************************
  * Describes the current status of a job.  This is

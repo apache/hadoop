@@ -18,9 +18,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 /** Expert: Permits greater control of map processing. For example,
  * implementations might perform multi-threaded, asynchronous mappings. */
 public interface MapRunnable extends JobConfigurable {

@@ -17,7 +17,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.File;
 
 import org.apache.hadoop.fs.FileSystem;
 

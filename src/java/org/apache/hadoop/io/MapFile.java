@@ -17,7 +17,6 @@
 package org.apache.hadoop.io;
 
 import java.io.*;
-import java.util.Arrays;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 

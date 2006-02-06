@@ -19,8 +19,6 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.Random;
 import junit.framework.TestCase;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.conf.Configuration;
 
 /** Unit tests for Writable. */
 public class TestWritable extends TestCase {

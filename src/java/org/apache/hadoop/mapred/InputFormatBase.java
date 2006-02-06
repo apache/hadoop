@@ -19,7 +19,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.io.File;
 
-import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 

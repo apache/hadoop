@@ -15,14 +15,9 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 
 import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.logging.*;
 
 /** Runs a map task. */
 class MapTaskRunner extends TaskRunner {

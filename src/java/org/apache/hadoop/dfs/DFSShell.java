@@ -16,11 +16,8 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
-import java.net.*;
 import java.util.*;
 
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 

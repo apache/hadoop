@@ -16,11 +16,7 @@
 
 package org.apache.hadoop.io;
 
-import java.lang.reflect.Proxy;
-import java.lang.reflect.Method;
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 
 import java.io.*;
 import java.util.*;

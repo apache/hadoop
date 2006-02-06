@@ -15,23 +15,12 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.ipc.*;
-import org.apache.hadoop.conf.*;
-
-import org.mortbay.util.*;
 import org.mortbay.http.*;
 import org.mortbay.http.handler.*;
 import org.mortbay.jetty.servlet.*;
-import org.mortbay.jetty.*;
 
 import java.io.*;
 import java.net.*;
-import java.util.*;
-import java.util.logging.*;
-
-import javax.servlet.*;
-import javax.servlet.http.*;
 
 /*******************************************************
  * JobTrackerInfoServer provides stats about the JobTracker

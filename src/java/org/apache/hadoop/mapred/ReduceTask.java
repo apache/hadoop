@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
-import java.net.*;
 import java.util.*;
 import java.text.*;
 

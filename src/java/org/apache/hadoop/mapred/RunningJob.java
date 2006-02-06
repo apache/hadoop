@@ -16,10 +16,7 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.*;
-
 import java.io.*;
-import java.net.*;
 
 /** 
  * Includes details on a running MapReduce job.  A client can

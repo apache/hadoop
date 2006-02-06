@@ -21,8 +21,6 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
-import java.net.*;
-import java.util.*;
 
 /** Base class for tasks. */
 public abstract class Task implements Writable, Configurable {

@@ -17,7 +17,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.DataInput;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
