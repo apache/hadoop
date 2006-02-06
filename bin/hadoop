@@ -29,8 +29,8 @@ if [ $# = 0 ]; then
   echo "Usage: hadoop COMMAND"
   echo "where COMMAND is one of:"
   echo "  namenode          run the DFS namenode"
-  echo "  datanode          run an DFS datanode"
-  echo "  dfs              run an DFS admin client"
+  echo "  datanode          run a DFS datanode"
+  echo "  dfs               run a DFS admin client"
   echo "  jobtracker        run the MapReduce job Tracker node" 
   echo "  tasktracker       run a MapReduce task Tracker node" 
   echo "  job               manipulate MapReduce jobs" 
@@ -77,7 +77,7 @@ CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 if [ -d "$HADOOP_HOME/build/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/classes
 fi
-if [ -d "$HADOOP_HOME/build/plugins" ]; then
+if [ -d "$HADOOP_HOME/build/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build
 fi
 if [ -d "$HADOOP_HOME/build/test/classes" ]; then
@@ -91,11 +91,6 @@ IFS=
 for f in $HADOOP_HOME/hadoop-*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
-
-# add plugins to classpath
-if [ -d "$HADOOP_HOME/plugins" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME
-fi
 
 # add libs to CLASSPATH
 for f in $HADOOP_HOME/lib/*.jar; do
