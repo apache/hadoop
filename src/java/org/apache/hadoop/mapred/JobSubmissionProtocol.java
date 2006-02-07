@@ -24,7 +24,7 @@ import java.util.*;
  * JobClient can use these methods to submit a Job for execution, and learn about
  * the current system status.
  */ 
-public interface JobSubmissionProtocol {
+interface JobSubmissionProtocol {
     /**
      * Submit a Job for execution.  Returns the latest profile for
      * that job.

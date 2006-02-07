@@ -26,7 +26,16 @@ import java.io.*;
  *
  * @author Mike Cafarella
  **************************************************/
-public class JobStatus implements Writable {
+class JobStatus implements Writable {
+
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (JobStatus.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new JobStatus(); }
+         });
+    }
+
     public static final int RUNNING = 1;
     public static final int SUCCEEDED = 2;
     public static final int FAILED = 3;

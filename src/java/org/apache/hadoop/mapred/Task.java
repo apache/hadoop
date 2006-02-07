@@ -23,7 +23,7 @@ import org.apache.hadoop.util.*;
 import java.io.*;
 
 /** Base class for tasks. */
-public abstract class Task implements Writable, Configurable {
+abstract class Task implements Writable, Configurable {
   ////////////////////////////////////////////
   // Fields
   ////////////////////////////////////////////

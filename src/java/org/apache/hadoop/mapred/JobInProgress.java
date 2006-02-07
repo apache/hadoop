@@ -29,7 +29,7 @@ import java.util.logging.*;
 // and its latest JobStatus, plus a set of tables for 
 // doing bookkeeping of its Tasks.
 ///////////////////////////////////////////////////////
-public class JobInProgress {
+class JobInProgress {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.mapred.JobInProgress");
 
     JobProfile profile;

@@ -23,7 +23,16 @@ import org.apache.hadoop.io.*;
 
 /** The location of a map output file, as passed to a reduce task via the
  * {@link InterTrackerProtocol}. */ 
-public class MapOutputLocation implements Writable {
+class MapOutputLocation implements Writable {
+
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (MapOutputLocation.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new MapOutputLocation(); }
+         });
+    }
+
   private String mapTaskId;
   private String host;
   private int port;

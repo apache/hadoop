@@ -26,7 +26,16 @@ import java.net.*;
  *
  * @author Mike Cafarella
  **************************************************/
-public class JobProfile implements Writable {
+class JobProfile implements Writable {
+
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (JobProfile.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new JobProfile(); }
+         });
+    }
+
     String jobid;
     String jobFile;
     String url;

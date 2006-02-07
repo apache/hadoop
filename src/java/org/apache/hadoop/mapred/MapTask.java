@@ -23,7 +23,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
 /** A Map task. */
-public class MapTask extends Task {
+class MapTask extends Task {
+
+  static {                                        // register a ctor
+    WritableFactories.setFactory
+      (MapTask.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new MapTask(); }
+       });
+  }
+
   private FileSplit split;
   private MapOutputFile mapOutputFile;
   private Configuration conf;

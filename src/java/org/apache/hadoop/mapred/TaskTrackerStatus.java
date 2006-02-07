@@ -28,7 +28,16 @@ import java.util.*;
  *
  * @author Mike Cafarella
  **************************************************/
-public class TaskTrackerStatus implements Writable {
+class TaskTrackerStatus implements Writable {
+
+    static {                                        // register a ctor
+      WritableFactories.setFactory
+        (TaskTrackerStatus.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new TaskTrackerStatus(); }
+         });
+    }
+
     String trackerName;
     String host;
     int port;

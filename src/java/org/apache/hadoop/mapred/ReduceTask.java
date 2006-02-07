@@ -26,7 +26,16 @@ import java.util.*;
 import java.text.*;
 
 /** A Reduce task. */
-public class ReduceTask extends Task {
+class ReduceTask extends Task {
+
+  static {                                        // register a ctor
+    WritableFactories.setFactory
+      (ReduceTask.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new ReduceTask(); }
+       });
+  }
+
   private String[][] mapTaskIds;
   private int partition;
   private boolean sortComplete;

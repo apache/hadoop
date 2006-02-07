@@ -22,7 +22,7 @@ import java.io.*;
  * Protocol that a TaskTracker and the central JobTracker use to communicate.
  * The JobTracker is the Server, which implements this protocol.
  */ 
-public interface InterTrackerProtocol {
+interface InterTrackerProtocol {
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
 

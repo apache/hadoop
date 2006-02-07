@@ -29,7 +29,7 @@ import java.net.*;
  *
  * @author Mike Cafarella
  *******************************************************/
-public class JobTrackerInfoServer {
+class JobTrackerInfoServer {
 
     public static class RedirectHandler extends AbstractHttpHandler {
         public void handle(String pathInContext, String pathParams, HttpRequest request, HttpResponse response) throws HttpException, IOException {

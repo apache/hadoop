@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.LogFormatter;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
-public class LocalJobRunner implements JobSubmissionProtocol {
+class LocalJobRunner implements JobSubmissionProtocol {
   public static final Logger LOG =
     LogFormatter.getLogger("org.apache.hadoop.mapred.LocalJobRunner");
 

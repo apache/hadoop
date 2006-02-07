@@ -25,7 +25,7 @@ import java.io.*;
  *
  * @author Mike Cafarella
  **************************************************/
-public class TaskStatus implements Writable {
+class TaskStatus implements Writable {
     public static final int RUNNING = 0;
     public static final int SUCCEEDED = 1;
     public static final int FAILED = 2;

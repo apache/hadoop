@@ -24,7 +24,16 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 
 /** A local file to be transferred via the {@link MapOutputProtocol}. */ 
-public class MapOutputFile implements Writable, Configurable {
+class MapOutputFile implements Writable, Configurable {
+
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (MapOutputFile.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new MapOutputFile(); }
+         });
+    }
+
   private String mapTaskId;
   private String reduceTaskId;
   private int partition;

@@ -22,7 +22,7 @@ import java.io.IOException;
  * parent is a daemon which which polls the central master for a new map or
  * reduce task and runs it as a child process.  All communication between child
  * and parent is via this protocol. */ 
-public interface TaskUmbilicalProtocol {
+interface TaskUmbilicalProtocol {
 
   /** Called when a child task process starts, to get its task.*/
   Task getTask(String taskid) throws IOException;

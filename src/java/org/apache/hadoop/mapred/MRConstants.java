@@ -20,7 +20,7 @@ package org.apache.hadoop.mapred;
  * 
  * @author Mike Cafarella
  *******************************/
-public interface MRConstants {
+interface MRConstants {
     //
     // Timeouts, constants
     //

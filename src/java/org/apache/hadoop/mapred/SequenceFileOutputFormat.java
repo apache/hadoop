@@ -27,6 +27,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
 
+/** An {@link OutputFormat} that writes {@link SequenceFile}s. */
 public class SequenceFileOutputFormat implements OutputFormat {
 
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
