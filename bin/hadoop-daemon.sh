@@ -36,9 +36,13 @@ while [ -h "$this" ]; do
   fi
 done
 
+# the root of the Hadoop installation
+root=`dirname $this`/..
+
 # get log directory
 if [ "$HADOOP_LOG_DIR" = "" ]; then
-  HADOOP_LOG_DIR=$PWD
+  HADOOP_LOG_DIR=$root/logs
+  mkdir -p $HADOOP_LOG_DIR
 fi
 
 if [ "$HADOOP_PID_DIR" = "" ]; then
@@ -64,7 +68,6 @@ case $startStop in
       fi
     fi
 
-    root=`dirname $this`/..
     if [ "$HADOOP_MASTER" != "" ]; then
       echo rsync from $HADOOP_MASTER
       rsync -a --delete --exclude=.svn $HADOOP_MASTER/ $root
