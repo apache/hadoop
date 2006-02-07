@@ -88,7 +88,7 @@ public abstract class FileSystem {
 
     protected Configuration conf;
     /** Returns a name for this filesystem, suitable to pass to {@link
-     * FileSystem#getNamed(String).*/
+     * FileSystem#getNamed(String,Configuration)}.*/
     public abstract String getName();
   
     /** Returns a named filesystem.  Names are either the string "local" or a
@@ -142,8 +142,6 @@ public abstract class FileSystem {
     /**
      * Opens an FSDataInputStream at the indicated File.
      * @param f the file name to open
-     * @param overwrite if a file with this name already exists, then if true,
-     *   the file will be overwritten, and if false an error will be thrown.
      * @param bufferSize the size of the buffer to be used.
      */
     public FSDataInputStream open(File f, int bufferSize) throws IOException {
@@ -152,10 +150,7 @@ public abstract class FileSystem {
     
     /**
      * Opens an FSDataInputStream at the indicated File.
-     * @param f the file name to open
-     * @param overwrite if a file with this name already exists, then if true,
-     *   the file will be overwritten, and if false an error will be thrown.
-     * @param bufferSize the size of the buffer to be used.
+     * @param f the file to open
      */
     public FSDataInputStream open(File f) throws IOException {
       return new FSDataInputStream(this, f, conf);

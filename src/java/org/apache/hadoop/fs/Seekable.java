@@ -17,7 +17,7 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 
-/* Stream which permits seeking. */
+/** Stream that permits seeking. */
 public interface Seekable {
   /**
    * Seek to the given offset from the start of the file.

@@ -20,9 +20,7 @@ import java.io.*;
 import java.util.*;
 import java.nio.channels.*;
 
-import org.apache.hadoop.dfs.DFSFile;
-import org.apache.hadoop.dfs.DF;
-import org.apache.hadoop.dfs.DFSFileInfo;
+import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.UTF8;
 
@@ -211,25 +209,7 @@ public class LocalFileSystem extends FileSystem {
     /**
      */
     public File[] listFilesRaw(File f) throws IOException {
-        File[] files = f.listFiles();
-        if (files == null) return null;
-        // 20041022, xing, Watch out here:
-        // currently DFSFile.java does not support those methods
-        //    public boolean canRead()
-        //    public boolean canWrite()
-        //    public boolean createNewFile()
-        //    public boolean delete()
-        //    public void deleteOnExit()
-        //    public boolean isHidden()
-        // so you can not rely on returned list for these operations.
-        DFSFile[] nfiles = new DFSFile[files.length];
-        for (int i = 0; i < files.length; i++) {
-            long len = files[i].length();
-            UTF8 name = new UTF8(files[i].toString());
-            DFSFileInfo info = new DFSFileInfo(name, len, len, files[i].isDirectory());
-            nfiles[i] = new DFSFile(info);
-        }
-        return nfiles;
+        return f.listFiles();
     }
 
     /**

@@ -37,7 +37,8 @@ public interface TaskUmbilicalProtocol {
 
   /** Report error messages back to parent.  Calls should be sparing, since all
    *  such messages are held in the job tracker.
-   *  @param trace, the stack trace text
+   *  @param taskid the id of the task involved
+   *  @param trace the text to report
    */
   void reportDiagnosticInfo(String taskid, String trace) throws IOException;
 

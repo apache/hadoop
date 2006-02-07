@@ -4,10 +4,10 @@
 <p>A system for scalable, fault-tolerant, distributed computation over
 large data collections.</p>
 
-<p>Applications implement {@link org.apache.nutch.mapReduce.Mapper} and
-{@link org.apache.nutch.mapReduce.Reducer} interfaces.  These are submitted
-as a {@link org.apache.nutch.mapred.JobConf} and are applied to data
-stored in a {@link org.apache.nutch.fs.NutchFileSystem}.</p>
+<p>Applications implement {@link org.apache.hadoop.mapred.Mapper} and
+{@link org.apache.hadoop.mapred.Reducer} interfaces.  These are submitted
+as a {@link org.apache.hadoop.mapred.JobConf} and are applied to data
+stored in a {@link org.apache.hadoop.fs.FileSystem}.</p>
 
 <p>See <a href="http://labs.google.com/papers/mapreduce.html">Google's
 original Map/Reduce paper</a> for background information.</p>
