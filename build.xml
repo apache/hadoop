@@ -29,7 +29,7 @@
 
   <property name="test.src.dir" value="src/test"/>
   <property name="test.build.dir" value="${build.dir}/test"/>
-  <property name="test.build.data" value=" ${test.build.dir}/data"/>
+  <property name="test.build.data" value="${test.build.dir}/data"/>
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
 
