@@ -78,14 +78,7 @@ public class ArrayWritable implements Writable {
   public void readFields(DataInput in) throws IOException {
     values = new Writable[in.readInt()];          // construct values
     for (int i = 0; i < values.length; i++) {
-      Writable value;                             // construct value
-      try {
-        value = (Writable)valueClass.newInstance();
-      } catch (InstantiationException e) {
-        throw new RuntimeException(e.toString());
-      } catch (IllegalAccessException e) {
-        throw new RuntimeException(e.toString());
-      }
+      Writable value = WritableFactories.newInstance(valueClass);
       value.readFields(in);                       // read a value
       values[i] = value;                          // store it in values
     }

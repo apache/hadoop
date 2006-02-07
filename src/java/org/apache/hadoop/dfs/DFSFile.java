@@ -24,7 +24,7 @@ import java.io.*;
  *
  * @author Mike Cafarella
  *****************************************************************/
-public class DFSFile extends File {
+class DFSFile extends File {
     DFSFileInfo info;
 
     /** Separator used in DFS filenames. */

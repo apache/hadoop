@@ -31,7 +31,7 @@ import java.util.logging.*;
  * Connects to a namenode daemon.
  * @author Mike Cafarella, Tessa MacDuff
  ********************************************************/
-public class DFSClient implements FSConstants {
+class DFSClient implements FSConstants {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.fs.DFSClient");
     static int MAX_BLOCK_ACQUIRE_FAILURES = 10;
     ClientProtocol namenode;

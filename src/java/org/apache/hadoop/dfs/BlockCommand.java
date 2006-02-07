@@ -25,7 +25,16 @@ import java.io.*;
  * 
  * @author Michael Cafarella
  ****************************************************/
-public class BlockCommand implements Writable {
+class BlockCommand implements Writable {
+
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (BlockCommand.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new BlockCommand(); }
+         });
+    }
+  
     boolean transferBlocks = false;
     boolean invalidateBlocks = false;
     Block blocks[];

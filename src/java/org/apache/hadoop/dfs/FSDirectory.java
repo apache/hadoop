@@ -30,7 +30,7 @@ import java.util.*;
  * 
  * @author Mike Cafarella
  *************************************************/
-public class FSDirectory implements FSConstants {
+class FSDirectory implements FSConstants {
     static String FS_IMAGE = "fsimage";
     static String NEW_FS_IMAGE = "fsimage.new";
     static String OLD_FS_IMAGE = "fsimage.old";

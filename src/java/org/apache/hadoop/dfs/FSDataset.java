@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.*;
  *
  * @author Mike Cafarella
  ***************************************************/
-public class FSDataset implements FSConstants {
+class FSDataset implements FSConstants {
     static final double USABLE_DISK_PCT = 0.98;
 
   /**

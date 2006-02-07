@@ -25,7 +25,16 @@ import java.util.*;
  *
  * @author Mike Cafarella
  **************************************************/
-public class DatanodeInfo implements Writable, Comparable {
+class DatanodeInfo implements Writable, Comparable {
+
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (DatanodeInfo.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new DatanodeInfo(); }
+         });
+    }
+
     private UTF8 name;
     private long capacityBytes, remainingBytes, lastUpdate;
     private volatile TreeSet blocks;

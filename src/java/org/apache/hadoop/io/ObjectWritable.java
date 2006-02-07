@@ -227,18 +227,12 @@ public class ObjectWritable implements Writable, Configurable {
       instance = UTF8.readString(in);
       
     } else {                                      // Writable
-      try {
-        Writable writable = (Writable)declaredClass.newInstance();
-        if(writable instanceof Configurable) {
-          ((Configurable) writable).setConf(conf);
-        }
-        writable.readFields(in);
-        instance = writable;
-      } catch (InstantiationException e) {
-        throw new RuntimeException(e);
-      } catch (IllegalAccessException e) {
-        throw new RuntimeException(e);
+      Writable writable = WritableFactories.newInstance(declaredClass);
+      if(writable instanceof Configurable) {
+        ((Configurable) writable).setConf(conf);
       }
+      writable.readFields(in);
+      instance = writable;
     }
 
     if (objectWritable != null) {                 // store values

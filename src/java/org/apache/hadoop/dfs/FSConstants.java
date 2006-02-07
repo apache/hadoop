@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
  *
  * @author Mike Cafarella
  ************************************/
-public interface FSConstants {
+interface FSConstants {
     public static int BLOCK_SIZE = 32 * 1000 * 1000;
     //public static int BLOCK_SIZE = 19;
 

@@ -23,7 +23,7 @@ import java.io.*;
  *
  * @author Mike Cafarella
  **********************************************************************/
-public interface ClientProtocol {
+interface ClientProtocol {
 
     /**
      * Open an existing file.  Get back block and datanode info

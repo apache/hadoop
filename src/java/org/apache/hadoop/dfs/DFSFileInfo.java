@@ -25,7 +25,15 @@ import java.io.*;
  * 
  * @author Mike Cafarella
  ******************************************************/
-public class DFSFileInfo implements Writable {
+class DFSFileInfo implements Writable {
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (DFSFileInfo.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new DFSFileInfo(); }
+         });
+    }
+
     UTF8 path;
     long len;
     long contentsLen;

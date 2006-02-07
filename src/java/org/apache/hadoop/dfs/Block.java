@@ -26,7 +26,16 @@ import java.util.*;
  *
  * @author Mike Cafarella
  **************************************************/
-public class Block implements Writable, Comparable {
+class Block implements Writable, Comparable {
+
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (Block.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new Block(); }
+         });
+    }
+
     static Random r = new Random();
 
     /**

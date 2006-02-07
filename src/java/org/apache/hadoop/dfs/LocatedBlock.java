@@ -25,7 +25,16 @@ import java.io.*;
  * 
  * @author Michael Cafarella
  ****************************************************/
-public class LocatedBlock implements Writable {
+class LocatedBlock implements Writable {
+
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (LocatedBlock.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new LocatedBlock(); }
+         });
+    }
+
     Block b;
     DatanodeInfo locs[];
 

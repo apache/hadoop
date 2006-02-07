@@ -24,7 +24,7 @@ import java.io.*;
  *
  * @author Michael Cafarella
  **********************************************************************/
-public interface DatanodeProtocol {
+interface DatanodeProtocol {
 
     public void sendHeartbeat(String sender, long capacity, long remaining) throws IOException;
     public Block[] blockReport(String sender, Block blocks[]) throws IOException;
