@@ -223,7 +223,7 @@
   <!-- ================================================================== -->
   <!-- Documentation                                                      -->
   <!-- ================================================================== -->
-  <target name="javadoc" depends="compile">
+  <target name="javadoc" depends="compile, default-doc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
       overview="${src.dir}/overview.html"
@@ -247,7 +247,7 @@
   </target>	
 	
   <target name="default-doc">
-    <style basedir="${conf.dir}" destdir="${docs.dir}"
+    <style basedir="${conf.dir}" destdir="${build.docs}"
            includes="hadoop-default.xml" style="conf/configuration.xsl"/>
   </target>
 
@@ -287,8 +287,8 @@
         <fileset dir="${dist.dir}/bin"/>
     </chmod>
 
-    <copy todir="${dist.dir}/docs/api">
-      <fileset dir="${build.javadoc}"/>
+    <copy todir="${dist.dir}/docs">
+      <fileset dir="${build.docs}"/>
     </copy>
 
     <copy todir="${dist.dir}">

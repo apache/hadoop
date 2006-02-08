@@ -80,11 +80,15 @@ following:
 
 <li>The {@link org.apache.hadoop.dfs.NameNode} (Distributed Filesystem
 master) host and port.  This is specified with the configuration
-property <tt>fs.default.name</tt>.</li>
+property <tt><a
+href="../hadoop-default.html#fs.default.name">fs.default.name</a></tt>.
+</li>
 
 <li>The {@link org.apache.hadoop.mapred.JobTracker} (MapReduce master)
 host and port.  This is specified with the configuration property
-<tt>mapred.job.tracker</tt>.</li>
+<tt><a
+href="../hadoop-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>.
+</li>
 
 <li>A <em>slaves</em> file that lists the names of all the hosts in
 the cluster.  The default slaves file is <tt>~/.slaves</tt>.
@@ -115,11 +119,11 @@ way, put the following in conf/hadoop-site.xml:
 
 </configuration></xmp>
 
-<p>Note that we also set the DFS replication level to 1 in order to
-reduce the number of warnings.</p>
+<p>(We also set the DFS replication level to 1 in order to
+reduce the number of warnings.)</p>
 
-Now check that the command <br><tt>ssh localhost</tt><br> does not
-require a password.  If it does, execute the following commands:<p>
+<p>Now check that the command <br><tt>ssh localhost</tt><br> does not
+require a password.  If it does, execute the following commands:</p>
 
 <p><tt>ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa<br>
 cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
@@ -163,23 +167,33 @@ described above, except:</p>
 
 <ol>
 
-<li>Specify hostname or IP address of the master server in the values for
-<tt>fs.default.name</tt> and <tt>mapred.job.tracker</tt> in
-<tt>conf/hadoop-site.xml</tt>.  These are specified as
+<li>Specify hostname or IP address of the master server in the values
+for <tt><a
+href="../hadoop-default.html#fs.default.name">fs.default.name</a></tt>
+and <tt><a
+href="../hadoop-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>
+in <tt>conf/hadoop-site.xml</tt>.  These are specified as
 <tt><em>host</em>:<em>port</em></tt> pairs.</li>
 
-<li>Specify directories for <tt>dfs.name.dir</tt> and
-<tt>dfs.data.dir</tt> in <tt>conf/hadoop-site.xml</tt>.  These are
-used to hold distributed filesystem data on the master node and slave nodes
-respectively.  Note that <tt>dfs.data.dir</tt> may contain a space- or
-comma-separated list of directory names, so that data may be stored on
-multiple devices.</li>
+<li>Specify directories for <tt><a
+href="../hadoop-default.html#dfs.name.dir">dfs.name.dir</a></tt> and
+<tt><a
+href="../hadoop-default.html#dfs.data.dir">dfs.data.dir</a></tt> in
+<tt>conf/hadoop-site.xml</tt>.  These are used to hold distributed
+filesystem data on the master node and slave nodes respectively.  Note
+that <tt>dfs.data.dir</tt> may contain a space- or comma-separated
+list of directory names, so that data may be stored on multiple
+devices.</li>
 
-<li>Specify <tt>mapred.local.dir</tt> in
-<tt>conf/hadoop-site.xml</tt>.  This determines where temporary
+<li>Specify <tt><a
+href="../hadoop-default.html#mapred.local.dir">mapred.local.dir</a></tt>
+in <tt>conf/hadoop-site.xml</tt>.  This determines where temporary
 MapReduce data is written.  It also may be a list of directories.</li>
 
-<li>Specify <tt>mapred.map.tasks</tt> and <tt>mapred.reduce.tasks</tt>
+<li>Specify <tt><a
+href="../hadoop-default.html#mapred.map.tasks">mapred.map.tasks</a></tt>
+and <tt><a
+href="../hadoop-default.html#mapred.reduce.tasks">mapred.reduce.tasks</a></tt>
 in <tt>conf/mapred-default.xml</tt>.  As a rule of thumb, use 10x the
 number of slave processors for <tt>mapred.map.tasks</tt>, and 2x the
 number of slave processors for <tt>mapred.reduce.tasks</tt>.</li>

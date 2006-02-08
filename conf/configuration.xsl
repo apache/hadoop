@@ -12,7 +12,7 @@
 </tr>
 <xsl:for-each select="property">
 <tr>
-  <td><xsl:value-of select="name"/></td>
+  <td><a name="{name}"><xsl:value-of select="name"/></a></td>
   <td><xsl:value-of select="value"/></td>
   <td><xsl:value-of select="description"/></td>
 </tr>
