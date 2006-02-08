@@ -7,28 +7,6 @@
 
 <configuration>
 
-<!-- file properties -->
-
-<property>
-  <name>file.content.limit</name>
-  <value>65536</value>
-  <description>The length limit for downloaded content, in bytes.
-  If this value is larger than zero, content longer than it will be
-  truncated; otherwise (zero or negative), no truncation at all.
-  </description>
-</property>
-
-<property>
-  <name>file.content.ignored</name>
-  <value>true</value>
-  <description>If true, no file content will be saved during fetch.
-  And it is probably what we want to set most of time, since file:// URLs
-  are meant to be local and we can always use them directly at parsing
-  and indexing stages. Otherwise file contents will be saved.
-  !! NO IMPLEMENTED YET !!
-  </description>
-</property>
-
 <!-- i/o properties -->
 
 <property>
