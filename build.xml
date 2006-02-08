@@ -273,7 +273,7 @@
 
     <copy file="${build.dir}/${final.name}.jar" todir="${dist.dir}"/>
 
-    <copy file="${build.dir}/${name}-examples.jar" todir="${dist.dir}"/>
+    <copy file="${build.dir}/${final.name}-examples.jar" todir="${dist.dir}"/>
 
     <copy todir="${dist.dir}/bin">
       <fileset dir="bin"/>
