@@ -61,8 +61,8 @@ class JobTrackerInfoServer {
 	    } catch (UnsupportedEncodingException e) {
 	    }
 	}
-	File jobtracker = new File(path, "jobtracker");
-        WebApplicationContext context = server.addWebApplication(null, "/", jobtracker.getCanonicalPath());
+        WebApplicationContext context =
+          server.addWebApplication(null,"/",new File(path).getCanonicalPath());
 
         SocketListener socketListener = new SocketListener();
         socketListener.setPort(port);

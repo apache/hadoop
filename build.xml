@@ -23,6 +23,7 @@
 
   <property name="build.dir" value="build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
+  <property name="build.src" value="${build.dir}/src"/>
   <property name="build.webapps" value="${build.dir}/webapps"/>
   <property name="build.examples" value="${build.dir}/examples"/>
   <property name="build.docs" value="${build.dir}/docs"/>
@@ -53,7 +54,7 @@
   <path id="classpath">
     <pathelement location="${build.classes}"/>
     <fileset dir="${lib.dir}">
-      <include name="*.jar" />
+      <include name="**/*.jar" />
     </fileset>
   </path>
 
@@ -71,7 +72,8 @@
   <target name="init">
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
-    <mkdir dir="${build.webapps}"/>
+    <mkdir dir="${build.src}"/>
+    <mkdir dir="${build.webapps}/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
 
     <mkdir dir="${test.build.dir}"/>
@@ -81,8 +83,8 @@
       <fileset dir="${conf.dir}" includes="**/*.template"/>
     </touch>
 
-    <copy todir="${build.webapps}/jobtracker">
-      <fileset dir="${src.webapps}/jobtracker"/>
+    <copy todir="${build.webapps}/">
+      <fileset file="${src.webapps}/index.html"/>
     </copy>
 
     <copy todir="${conf.dir}" verbose="true">
@@ -95,9 +97,19 @@
   <!-- Compile the Java files                                 -->
   <!-- ====================================================== -->
   <target name="compile" depends="init">
+    <jspc 
+     srcdir="${src.webapps}"
+     includes="**/*.jsp"
+     destdir="${build.src}"
+     package="org.apache.hadoop.mapred"
+     uriroot="${src.webapps}/jobtracker"
+     webxml="${build.webapps}/WEB-INF/web.xml">
+      <classpath refid="classpath"/>
+    </jspc>
+
     <javac 
      encoding="${build.encoding}" 
-     srcdir="${src.dir}"
+     srcdir="${src.dir};${build.src}"
      includes="org/apache/hadoop/**/*.java"
      destdir="${build.classes}"
      debug="${javac.debug}"
@@ -107,6 +119,7 @@
      deprecation="${javac.deprecation}">
       <classpath refid="classpath"/>
     </javac>    
+
   </target>
 
   <target name="compile-examples" depends="compile">
