@@ -34,6 +34,7 @@ if [ $# = 0 ]; then
   echo "  jobtracker        run the MapReduce job Tracker node" 
   echo "  tasktracker       run a MapReduce task Tracker node" 
   echo "  job               manipulate MapReduce jobs" 
+  echo "  jar <jar>         run a jar file"
   echo " or"
   echo "  CLASSNAME         run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -117,6 +118,15 @@ elif [ "$COMMAND" = "tasktracker" ] ; then
   CLASS=org.apache.hadoop.mapred.TaskTracker
 elif [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
+elif [ "$COMMAND" = "jar" ] ; then
+  JAR="$1"
+  shift
+  CLASS=`"$0" org.apache.hadoop.util.PrintJarMainClass "$JAR"`
+  if [ $? != 0 ]; then
+    echo "Error: Could not find main class in jar file $JAR"
+    exit 1
+  fi
+  CLASSPATH=${CLASSPATH}:${JAR}
 else
   CLASS=$COMMAND
 fi

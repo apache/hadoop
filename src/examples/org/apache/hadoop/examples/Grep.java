@@ -13,19 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred.demo;
+package org.apache.hadoop.examples;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 
 import org.apache.hadoop.mapred.lib.RegexMapper;
 import org.apache.hadoop.mapred.lib.InverseMapper;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
+import org.apache.hadoop.mapred.lib.IdentityReducer;
 
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.WritableComparator;
 
 import org.apache.hadoop.conf.Configuration;
 

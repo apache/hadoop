@@ -15,6 +15,7 @@
 
   <property name="basedir" value="./"/>
   <property name="src.dir" value="src/java"/>
+  <property name="examples.dir" value="src/examples"/>
   <property name="lib.dir" value="lib"/>
   <property name="conf.dir" value="conf"/>
   <property name="docs.dir" value="docs"/>
@@ -23,6 +24,7 @@
   <property name="build.dir" value="build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
   <property name="build.webapps" value="${build.dir}/webapps"/>
+  <property name="build.examples" value="${build.dir}/examples"/>
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
@@ -70,6 +72,7 @@
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.webapps}"/>
+    <mkdir dir="${build.examples}"/>
 
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
@@ -106,6 +109,21 @@
     </javac>    
   </target>
 
+  <target name="compile-examples" depends="compile">
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${examples.dir}"
+     includes="org/apache/hadoop/**/*.java"
+     destdir="${build.examples}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <classpath refid="classpath"/>
+    </javac>    
+  </target>
+
   <!-- ================================================================== -->
   <!-- Make hadoop.jar                                                     -->
   <!-- ================================================================== -->
@@ -122,6 +140,21 @@
     <jar jarfile="${build.dir}/${final.name}.jar"
          basedir="${build.classes}">
       <manifest>
+      </manifest>
+    </jar>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Make the Hadoop examples jar.                                      -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="examples" depends="jar, compile-examples">
+    <jar jarfile="${build.dir}/${final.name}-examples.jar"
+         basedir="${build.examples}">
+      <manifest>
+        <attribute name="Main-Class" 
+                   value="org/apache/hadoop/examples/ExampleDriver"/>
       </manifest>
     </jar>
   </target>
@@ -147,7 +180,7 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="test" depends="compile, compile-test">
+  <target name="test" depends="compile, examples, compile-test">
 
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
@@ -190,8 +223,13 @@
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       >
     	<packageset dir="${src.dir}"/>
+    	<packageset dir="${examples.dir}"/>
         <link href="${javadoc.link.java}"/>
         <classpath refid="classpath"/>
+
+    	<group title="Core" packages="org.apache.hadoop.*"/>
+    	<group title="Examples" packages="org.apache.hadoop.examples"/>
+
     </javadoc>
   </target>	
 	
@@ -205,7 +243,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc">
+  <target name="package" depends="jar, javadoc, examples">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/bin"/>
@@ -221,6 +259,8 @@
     </copy>
 
     <copy file="${build.dir}/${final.name}.jar" todir="${dist.dir}"/>
+
+    <copy file="${build.dir}/${name}-examples.jar" todir="${dist.dir}"/>
 
     <copy todir="${dist.dir}/bin">
       <fileset dir="bin"/>
