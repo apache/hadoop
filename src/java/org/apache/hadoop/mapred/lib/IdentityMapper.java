@@ -38,5 +38,5 @@ public class IdentityMapper implements Mapper {
     throws IOException {
     output.collect(key, val);
   }
-
+	public void close() {}
 }

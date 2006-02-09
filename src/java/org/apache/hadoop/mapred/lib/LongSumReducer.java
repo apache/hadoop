@@ -45,4 +45,7 @@ public class LongSumReducer implements Reducer {
     // output sum
     output.collect(key, new LongWritable(sum));
   }
+  
+  public void close() {}
+  
 }

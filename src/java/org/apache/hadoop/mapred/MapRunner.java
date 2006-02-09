@@ -38,18 +38,22 @@ public class MapRunner implements MapRunnable {
   public void run(RecordReader input, OutputCollector output,
                   Reporter reporter)
     throws IOException {
-    while (true) {
-      // allocate new key & value instances
-      WritableComparable key =
-        (WritableComparable)job.newInstance(inputKeyClass);
-      Writable value = (Writable)job.newInstance(inputValueClass);
+    try {
+      while (true) {
+        // allocate new key & value instances
+        WritableComparable key =
+          (WritableComparable)job.newInstance(inputKeyClass);
+        Writable value = (Writable)job.newInstance(inputValueClass);
 
-      // read next key & value
-      if (!input.next(key, value))
-        return;
+        // read next key & value
+        if (!input.next(key, value))
+          return;
 
-      // map pair to output
-      mapper.map(key, value, output, reporter);
+        // map pair to output
+        mapper.map(key, value, output, reporter);
+      }
+    } finally {
+        mapper.close();
     }
   }
 

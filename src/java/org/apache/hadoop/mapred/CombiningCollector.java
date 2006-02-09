@@ -77,5 +77,10 @@ class CombiningCollector implements OutputCollector {
     keyToValues.clear();
     count = 0;
   }
+  
+  public synchronized void close() 
+  { 
+	  combiner.close(); 
+  } 
 
 }

@@ -53,4 +53,7 @@ public class RegexMapper implements Mapper {
       output.collect(new UTF8(matcher.group(group)), new LongWritable(1));
     }
   }
+  
+  public void close() {}
+  
 }

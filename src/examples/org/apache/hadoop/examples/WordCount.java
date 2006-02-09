@@ -68,6 +68,9 @@ public class WordCount {
     public void configure(JobConf job) {
     }
     
+    public void close() {
+    }
+
   }
   
   /**
@@ -86,6 +89,9 @@ public class WordCount {
     }
     
     public void configure(JobConf job) {
+    }
+    
+    public void close() {
     }
     
   }

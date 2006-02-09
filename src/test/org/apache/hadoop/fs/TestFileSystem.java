@@ -155,6 +155,10 @@ public class TestFileSystem extends TestCase {
 
       reporter.setStatus("wrote " + name);
     }
+    
+    public void close() {
+    }
+    
   }
 
   public static void writeTest(FileSystem fs, boolean fastCheck)
@@ -247,6 +251,10 @@ public class TestFileSystem extends TestCase {
 
       reporter.setStatus("read " + name);
     }
+    
+    public void close() {
+    }
+    
   }
 
   public static void readTest(FileSystem fs, boolean fastCheck)
@@ -339,6 +347,10 @@ public class TestFileSystem extends TestCase {
         in.close();
       }
     }
+    
+    public void close() {
+    }
+    
   }
 
   public static void seekTest(FileSystem fs, boolean fastCheck)

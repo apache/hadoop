@@ -38,4 +38,7 @@ public class InverseMapper implements Mapper {
     throws IOException {
     output.collect((WritableComparable)value, key);
   }
+  
+  public void close() {}
+  
 }

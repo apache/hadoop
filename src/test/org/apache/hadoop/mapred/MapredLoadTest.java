@@ -69,6 +69,9 @@ public class MapredLoadTest {
                 out.collect(new IntWritable(Math.abs(r.nextInt())), new IntWritable(randomVal));
             }
         }
+				public void close() {
+				}
+
     }
     static class RandomGenReducer implements Reducer {
         public void configure(JobConf job) {
@@ -81,6 +84,8 @@ public class MapredLoadTest {
                 out.collect(new UTF8("" + val), new UTF8(""));
             }
         }
+				public void close() {
+				}
     }
     static class RandomCheckMapper implements Mapper {
         public void configure(JobConf job) {
@@ -92,6 +97,8 @@ public class MapredLoadTest {
 
             out.collect(new IntWritable(Integer.parseInt(str.toString().trim())), new IntWritable(1));
         }
+				public void close() {
+				}
     }
     static class RandomCheckReducer implements Reducer {
         public void configure(JobConf job) {
@@ -106,6 +113,8 @@ public class MapredLoadTest {
             }
             out.collect(new IntWritable(keyint), new IntWritable(count));
         }
+			public void close() {
+			}
     }
 
     int range;

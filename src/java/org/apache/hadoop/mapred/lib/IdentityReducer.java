@@ -41,5 +41,7 @@ public class IdentityReducer implements Reducer {
       output.collect(key, (Writable)values.next());
     }
   }
-
+	
+	public void close() {}
+	
 }

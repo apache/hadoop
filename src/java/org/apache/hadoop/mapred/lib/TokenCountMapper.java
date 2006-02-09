@@ -48,6 +48,9 @@ public class TokenCountMapper implements Mapper {
     while (st.hasMoreTokens()) {
       // output <token,1> pairs
       output.collect(new UTF8(st.nextToken()), new LongWritable(1));
-    }
+    }  
   }
+  
+  public void close() {}
+  
 }

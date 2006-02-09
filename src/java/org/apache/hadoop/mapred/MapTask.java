@@ -133,6 +133,9 @@ class MapTask extends Task {
         }
 
       } finally {
+        if (combining) { 
+          ((CombiningCollector)collector).close(); 
+        } 
         in.close();                               // close input
       }
     } finally {
