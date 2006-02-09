@@ -302,7 +302,7 @@ public class JobConf extends Configuration {
           itr.hasMoreElements();) {
         URL url = (URL) itr.nextElement();
         if ("jar".equals(url.getProtocol())) {
-          return url.getPath().replace("file:", "").replaceAll("!.*$", "");
+          return url.getPath().replaceFirst("file:", "").replaceAll("!.*$", "");
         }
       }
     } catch (IOException e) {
