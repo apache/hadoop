@@ -51,7 +51,7 @@ public class Grep {
       new File("grep-temp-"+
                Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
 
-    JobConf grepJob = new JobConf(defaults);
+    JobConf grepJob = new JobConf(defaults, Grep.class);
 
     grepJob.setInputDir(new File(args[0]));
 
@@ -70,7 +70,7 @@ public class Grep {
 
     JobClient.runJob(grepJob);
 
-    JobConf sortJob = new JobConf(defaults);
+    JobConf sortJob = new JobConf(defaults, Grep.class);
 
     sortJob.setInputDir(tempDir);
     sortJob.setInputFormat(SequenceFileInputFormat.class);

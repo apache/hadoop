@@ -110,12 +110,8 @@ public class WordCount {
   public static void main(String[] args) throws IOException {
     Configuration defaults = new Configuration();
     
-    JobConf countJob = new JobConf(defaults);
-    
-    URL jar_url = WordCount.class.getClassLoader().
-    getResource("hadoop-examples.jar");
-    countJob.setJar(jar_url.getPath());
-    
+    JobConf countJob = new JobConf(defaults, WordCount.class);
+ 
     // the keys are words (strings)
     countJob.setOutputKeyClass(UTF8.class);
     // the values are counts (ints)

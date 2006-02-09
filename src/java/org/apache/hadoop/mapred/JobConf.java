@@ -23,6 +23,9 @@ import java.io.File;
 import java.util.StringTokenizer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Enumeration;
+
+import java.net.URL;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +59,17 @@ public class JobConf extends Configuration {
   public JobConf(Configuration conf) {
     super(conf);
     addDefaultResource("mapred-default.xml");
+  }
+
+
+  /** Construct a map/reduce job configuration.
+   * 
+   * @param conf a Configuration whose settings will be inherited.
+   * @param aClass a class whose containing jar is used as the job's jar.
+   */
+  public JobConf(Configuration conf, Class aClass) {
+    this(conf);
+    setJar(findContainingJar(aClass));
   }
 
 
@@ -270,6 +284,31 @@ public class JobConf extends Configuration {
     if (result instanceof JobConfigurable)
       ((JobConfigurable)result).configure(this);
     return result;
+  }
+
+  /** Find a jar that contains a class of the same name, if any.
+   * It will return a jar file, even if that is not the first thing
+   * on the class path that has a class with the same name.
+   * @author Owen O'Malley
+   * @param my_class the class to find
+   * @return a jar file that contains the class, or null
+   * @throws IOException
+   */
+  private static String findContainingJar(Class my_class) {
+    ClassLoader loader = my_class.getClassLoader();
+    String class_file = my_class.getName().replaceAll("\\.", "/") + ".class";
+    try {
+      for(Enumeration itr = loader.getResources(class_file);
+          itr.hasMoreElements();) {
+        URL url = (URL) itr.nextElement();
+        if ("jar".equals(url.getProtocol())) {
+          return url.getPath().replace("file:", "").replaceAll("!.*$", "");
+        }
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return null;
   }
 
 }
