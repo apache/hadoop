@@ -69,7 +69,10 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf, Class aClass) {
     this(conf);
-    setJar(findContainingJar(aClass));
+    String jar = findContainingJar(aClass);
+    if (jar != null) {
+      setJar(jar);
+    }
   }
 
 
@@ -302,7 +305,11 @@ public class JobConf extends Configuration {
           itr.hasMoreElements();) {
         URL url = (URL) itr.nextElement();
         if ("jar".equals(url.getProtocol())) {
-          return url.getPath().replaceFirst("file:", "").replaceAll("!.*$", "");
+          String toReturn = url.getPath();
+          if (toReturn.startsWith("file:")) {
+            toReturn = toReturn.substring("file:".length());
+          }
+          return toReturn.replaceAll("!.*$", "");
         }
       }
     } catch (IOException e) {
