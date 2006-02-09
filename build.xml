@@ -96,16 +96,18 @@
   <!-- ====================================================== -->
   <!-- Compile the Java files                                 -->
   <!-- ====================================================== -->
-  <target name="compile" depends="init">
-    <jspc 
-     srcdir="${src.webapps}"
-     includes="**/*.jsp"
-     destdir="${build.src}"
-     package="org.apache.hadoop.mapred"
-     uriroot="${src.webapps}/jobtracker"
-     webxml="${build.webapps}/WEB-INF/web.xml">
+  <taskdef classname="org.apache.jasper.JspC" name="jsp-compile" >
       <classpath refid="classpath"/>
-    </jspc>
+  </taskdef>
+
+  <target name="compile" depends="init">
+
+    <jsp-compile
+     uriroot="${src.webapps}/mapred"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.mapred"
+     webxml="${build.webapps}/WEB-INF/web.xml">
+    </jsp-compile>
 
     <javac 
      encoding="${build.encoding}" 
