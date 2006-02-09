@@ -76,7 +76,7 @@ abstract class TaskRunner extends Thread {
       JobConf job = new JobConf(t.getJobFile());
       String jar = job.getJar();
       if (jar != null) {                      // if jar exists, it into workDir
-        runChild(new String[] { "unzip", jar}, workDir);
+        runChild(new String[] { "unzip", "-o", "-q", jar}, workDir);
         File[] libs = new File(workDir, "lib").listFiles();
         if (libs != null) {
           for (int i = 0; i < libs.length; i++) {
