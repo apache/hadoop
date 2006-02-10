@@ -65,18 +65,37 @@ public class DFSShell {
         System.err.println("Option '-moveToLocal' is not implemented yet.");
     }
 
+    void cat(String srcf) throws IOException {
+      FSDataInputStream in = null;
+      try {
+        in = fs.open(new File(srcf));
+        DataInputStream din = new DataInputStream(new BufferedInputStream(in));
+        String line;
+        while((line = din.readLine()) != null) {
+          System.out.println(line);      
+        }
+      } finally {
+        in.close();
+      }
+    }
+
     /**
      * Get a listing of all files in DFS at the indicated name
      */
-    public void ls(String src) throws IOException {
+    public void ls(String src, boolean recursive) throws IOException {
         File items[] = fs.listFiles(new File(src));
         if (items == null) {
             System.out.println("Could not get listing for " + src);
         } else {
-            System.out.println("Found " + items.length + " items");
+            if(!recursive) {
+            	System.out.println("Found " + items.length + " items");
+            }
             for (int i = 0; i < items.length; i++) {
                 File cur = items[i];
                 System.out.println(cur.getPath() + "\t" + (cur.isDirectory() ? "<dir>" : ("" + cur.length())));
+                if(recursive && cur.isDirectory()) {
+									 ls(cur.getPath(), recursive);
+                }
             }
         }
     }
@@ -213,9 +232,9 @@ public class DFSShell {
     public static void main(String argv[]) throws IOException {
         if (argv.length < 1) {
             System.out.println("Usage: java DFSShell [-local | -dfs <namenode:port>]" +
-                    " [-ls <path>] [-du <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]" +
+                    " [-ls <path>] [-lsr <path>] [-du <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]" +
                     " [-put <localsrc> <dst>] [-copyFromLocal <localsrc> <dst>] [-moveFromLocal <localsrc> <dst>]" + 
-                    " [-get <src> <localdst>] [-copyToLocal <src> <localdst>] [-moveToLocal <src> <localdst>]" +
+                    " [-get <src> <localdst>] [-cat <src>] [-copyToLocal <src> <localdst>] [-moveToLocal <src> <localdst>]" +
                     " [-mkdir <path>] [-report]");
             return;
         }
@@ -233,11 +252,16 @@ public class DFSShell {
                 tc.moveFromLocal(new File(argv[i++]), argv[i++]);
             } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd)) {
                 tc.copyToLocal(argv[i++], new File(argv[i++]));
+            } else if ("-cat".equals(cmd)) {
+                tc.cat(argv[i++]);
             } else if ("-moveToLocal".equals(cmd)) {
                 tc.moveToLocal(argv[i++], new File(argv[i++]));
             } else if ("-ls".equals(cmd)) {
                 String arg = i < argv.length ? argv[i++] : "";
-                tc.ls(arg);
+                tc.ls(arg, false);
+            } else if ("-lsr".equals(cmd)) {
+                String arg = i < argv.length ? argv[i++] : "";
+                tc.ls(arg, true);
             } else if ("-mv".equals(cmd)) {
                 tc.rename(argv[i++], argv[i++]);
             } else if ("-cp".equals(cmd)) {
