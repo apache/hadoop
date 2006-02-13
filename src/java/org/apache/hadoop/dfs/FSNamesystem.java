@@ -24,7 +24,10 @@ import java.util.*;
 import java.util.logging.*;
 
 /***************************************************
- * The FSNamesystem tracks several important tables.
+ * FSNamesystem does the actual bookkeeping work for the
+ * DataNode.
+ *
+ * It tracks several important tables.
  *
  * 1)  valid fsname --> blocklist  (kept on disk, logged)
  * 2)  Set of all valid blocks (inverted #1)

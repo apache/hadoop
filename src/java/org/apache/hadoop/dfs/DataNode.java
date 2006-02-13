@@ -25,13 +25,34 @@ import java.util.*;
 import java.util.logging.*;
 
 /**********************************************************
- * DataNode controls just one critical table:
- *   block-> BLOCK_SIZE stream of bytes
+ * DataNode is a class (and program) that stores a set of
+ * blocks for a DFS deployment.  A single deployment can
+ * have one or many DataNodes.  Each DataNode communicates
+ * regularly with a single NameNode.  It also communicates
+ * with client code and other DataNodes from time to time.
  *
- * This info is stored on disk (the NameNode is responsible for
- * asking other machines to replicate the data).  The DataNode
+ * DataNodes store a series of named blocks.  The DataNode
+ * allows client code to read these blocks, or to write new
+ * block data.  The DataNode may also, in response to instructions
+ * from its NameNode, delete blocks or copy blocks to/from other
+ * DataNodes.
+ *
+ * The DataNode maintains just one critical table:
+ *   block-> stream of bytes (of BLOCK_SIZE or less)
+ *
+ * This info is stored on a local disk.  The DataNode
  * reports the table's contents to the NameNode upon startup
  * and every so often afterwards.
+ *
+ * DataNodes spend their lives in an endless loop of asking
+ * the NameNode for something to do.  A NameNode cannot connect
+ * to a DataNode directly; a NameNode simply returns values from
+ * functions invoked by a DataNode.
+ *
+ * DataNodes maintain an open server socket so that client code 
+ * or other DataNodes can read/write data.  The host/port for
+ * this server is reported to the NameNode, which then sends that
+ * information to clients or other DataNodes that might be interested.
  *
  * @author Mike Cafarella
  **********************************************************/
@@ -73,7 +94,8 @@ public class DataNode implements FSConstants, Runnable {
     private Configuration fConf;
 
     /**
-     * Create given a configuration and a dataDir.
+     * Create the DataNode given a configuration and a dataDir.
+     * 'dataDir' is where the blocks are stored.
      */
     public DataNode(Configuration conf, String datadir) throws IOException {
         this(InetAddress.getLocalHost().getHostName(), 
@@ -82,7 +104,8 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     /**
-     * Needs a directory to find its data (and config info)
+     * A DataNode can also be created with configuration information
+     * explicitly given.
      */
     public DataNode(String machineName, File datadir, InetSocketAddress nameNodeAddr, Configuration conf) throws IOException {
         this.namenode = (DatanodeProtocol) RPC.getProxy(DatanodeProtocol.class, nameNodeAddr, conf);
@@ -112,6 +135,7 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     /**
+     * Return the namenode's identifier
      */
     public String getNamenode() {
         //return namenode.toString();
@@ -132,7 +156,8 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     /**
-     * Main loop for the DataNode.  Runs until shutdown.
+     * Main loop for the DataNode.  Runs until shutdown,
+     * forever calling remote NameNode functions.
      */
     public void offerService() throws Exception {
         long wakeups = 0;
@@ -243,7 +268,10 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     /**
-     * Server used for receiving/sending a block of data
+     * Server used for receiving/sending a block of data.
+     * This is created to listen for requests from clients or 
+     * other DataNodes.  This small server does not use the 
+     * Hadoop IPC mechanism.
      */
     class DataXceiveServer implements Runnable {
         boolean shouldListen = true;
@@ -285,6 +313,7 @@ public class DataNode implements FSConstants, Runnable {
         }
 
         /**
+         * Read/write data from/to the DataXceiveServer.
          */
         public void run() {
             try {
@@ -582,7 +611,8 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     /**
-     * Used for transferring a block of data
+     * Used for transferring a block of data.  This class
+     * sends a piece of data to another DataNode.
      */
     class DataTransfer implements Runnable {
         InetSocketAddress curTarget;
@@ -744,7 +774,7 @@ public class DataNode implements FSConstants, Runnable {
         "}";
   }
 
-  /**
+    /**
      */
     public static void main(String args[]) throws IOException {
         LogFormatter.setShowThreadIDs(true);

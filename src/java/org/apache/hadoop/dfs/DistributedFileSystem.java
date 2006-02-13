@@ -26,8 +26,12 @@ import org.apache.hadoop.conf.Configuration;
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
- * This is the distributed file system.  It can be distributed over
- * 1 or more machines 
+ * This object is the way end-user code interacts with a Hadoop
+ * DistributedFileSystem.
+ *
+ * It's substantially a wrapper around the DFSClient class, with
+ * a few extra functions.
+ *
  * @author Mike Cafarella
  *****************************************************************/
 public class DistributedFileSystem extends FileSystem {

@@ -21,7 +21,9 @@ import java.io.*;
 import java.util.*;
 
 /**************************************************
- * DatanodeInfo tracks stats on a given node
+ * DatanodeInfo tracks stats on a given DataNode,
+ * such as available storage capacity, last update
+ * time, etc.
  *
  * @author Mike Cafarella
  **************************************************/

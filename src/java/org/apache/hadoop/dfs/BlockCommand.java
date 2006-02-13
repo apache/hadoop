@@ -20,10 +20,13 @@ import org.apache.hadoop.io.*;
 import java.io.*;
 
 /****************************************************
- * A BlockCommand is an instruction to a datanode regarding
- * some blocks under its control
+ * A BlockCommand is an instruction to a datanode 
+ * regarding some blocks under its control.  It tells
+ * the DataNode to either invalidate a set of indicated
+ * blocks, or to copy a set of indicated blocks to 
+ * another DataNode.
  * 
- * @author Michael Cafarella
+ * @author Mike Cafarella
  ****************************************************/
 class BlockCommand implements Writable {
 

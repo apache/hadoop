@@ -27,8 +27,15 @@ import java.util.*;
 import java.util.logging.*;
 
 /********************************************************
- * DFSClient can connect to a Hadoop Filesystem and perform basic file tasks.
- * Connects to a namenode daemon.
+ * DFSClient can connect to a Hadoop Filesystem and 
+ * perform basic file tasks.  It uses the ClientProtocol
+ * to communicate with a NameNode daemon, and connects 
+ * directly to DataNodes to read/write block data.
+ *
+ * Hadoop DFS users should obtain an instance of 
+ * DistributedFileSystem, which uses DFSClient to handle
+ * filesystem tasks.
+ *
  * @author Mike Cafarella, Tessa MacDuff
  ********************************************************/
 class DFSClient implements FSConstants {
@@ -41,7 +48,8 @@ class DFSClient implements FSConstants {
     Daemon leaseChecker;
 
 
-    /** Create a new DFSClient connected to the given namenode server.
+    /** 
+     * Create a new DFSClient connected to the given namenode server.
      */
     public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf) {
         this.namenode = (ClientProtocol) RPC.getProxy(ClientProtocol.class, nameNodeAddr, conf);

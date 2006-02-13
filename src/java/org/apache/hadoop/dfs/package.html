@@ -5,5 +5,12 @@
 org.apache.hadoop.fs.FileSystem}.  This is loosely modelled after
 Google's <a href="http://labs.google.com/papers/gfs.html">GFS</a>.</p>
 
+<p>The most important difference is that unlike GFS, Hadoop DFS files 
+have strictly one writer at any one time.  Bytes are always appended 
+to the end of the writer's stream.  There is no notion of "record appends"
+or "mutations" that are then checked or reordered.  Writers simply emit 
+a byte stream.  That byte stream is guaranteed to be stored in the 
+order written.</p>
+
 </body>
 </html>
