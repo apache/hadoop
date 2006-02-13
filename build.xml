@@ -13,15 +13,14 @@
   <property name="final.name" value="${name}-${version}"/>
   <property name="year" value="2006"/>
 
-  <property name="basedir" value="./"/>
-  <property name="src.dir" value="src/java"/>
-  <property name="examples.dir" value="src/examples"/>
-  <property name="lib.dir" value="lib"/>
-  <property name="conf.dir" value="conf"/>
-  <property name="docs.dir" value="docs"/>
+  <property name="src.dir" value="${basedir}/src/java"/>
+  <property name="examples.dir" value="${basedir}/src/examples"/>
+  <property name="lib.dir" value="${basedir}/lib"/>
+  <property name="conf.dir" value="${basedir}/conf"/>
+  <property name="docs.dir" value="${basedir}/docs"/>
   <property name="docs.src" value="${basedir}/src/web"/>
 
-  <property name="build.dir" value="build"/>
+  <property name="build.dir" value="${basedir}/build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
   <property name="build.src" value="${build.dir}/src"/>
   <property name="build.webapps" value="${build.dir}/webapps"/>
@@ -30,14 +29,14 @@
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
 
-  <property name="test.src.dir" value="src/test"/>
+  <property name="test.src.dir" value="${basedir}/src/test"/>
   <property name="test.build.dir" value="${build.dir}/test"/>
   <property name="test.build.data" value="${test.build.dir}/data"/>
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
 
-  <property name="web.src.dir" value="src/web"/>
-  <property name="src.webapps" value="src/webapps"/>
+  <property name="web.src.dir" value="${basedir}/src/web"/>
+  <property name="src.webapps" value="${basedir}/src/webapps"/>
 
   <property name="javadoc.link.java"
 	    value="http://java.sun.com/j2se/1.4.2/docs/api/"/>
