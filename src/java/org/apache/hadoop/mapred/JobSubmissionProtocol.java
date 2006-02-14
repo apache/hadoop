@@ -32,6 +32,12 @@ interface JobSubmissionProtocol {
     public JobStatus submitJob(String jobFile) throws IOException;
 
     /**
+     * Get the current status of the cluster
+     * @return summary of the state of the cluster
+     */
+    public ClusterStatus getClusterStatus();
+    
+    /**
      * Kill the indicated job
      */
     public void killJob(String jobid);

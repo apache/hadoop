@@ -651,6 +651,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         return job.getStatus();
     }
 
+    public synchronized ClusterStatus getClusterStatus() {
+        return new ClusterStatus(taskTrackers.size(),
+                                 totalMaps,
+                                 totalReduces,
+                                 maxCurrentTasks);
+    }
+    
     public synchronized void killJob(String jobid) {
         JobInProgress job = (JobInProgress) jobs.get(jobid);
         job.kill();

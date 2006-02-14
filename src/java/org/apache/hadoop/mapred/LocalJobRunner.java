@@ -32,6 +32,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
   private FileSystem fs;
   private HashMap jobs = new HashMap();
   private Configuration conf;
+  private int map_tasks = 0;
+  private int reduce_tasks = 0;
 
   private class Job extends Thread
     implements TaskUmbilicalProtocol {
@@ -73,7 +75,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
           mapIds.add("map_" + newId());
           MapTask map = new MapTask(file, (String)mapIds.get(i), splits[i]);
           map.setConf(job);
+          map_tasks += 1;
           map.run(job, this);
+          map_tasks -= 1;
         }
 
         // move map output to reduce input
@@ -98,7 +102,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
                          mapDependencies,
                          0);
         reduce.setConf(job);
+        reduce_tasks += 1;
         reduce.run(job, this);
+        reduce_tasks -= 1;
         this.mapoutputFile.removeAll(reduceId);
         
         this.status.runState = JobStatus.SUCCEEDED;
@@ -183,5 +189,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
   public String getFilesystemName() throws IOException {
     return fs.getName();
+  }
+  
+  public ClusterStatus getClusterStatus() {
+    return new ClusterStatus(1, map_tasks, reduce_tasks, 1);
   }
 }

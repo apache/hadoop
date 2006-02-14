@@ -279,6 +279,10 @@ public class JobClient implements MRConstants {
         }
     }
 
+    public ClusterStatus getClusterStatus() throws IOException {
+      return jobSubmitClient.getClusterStatus();
+    }
+    
     /** Utility that submits a job, then polls for progress until the job is
      * complete. */
     public static void runJob(JobConf job) throws IOException {
