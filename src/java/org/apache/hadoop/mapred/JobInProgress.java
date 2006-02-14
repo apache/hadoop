@@ -275,10 +275,12 @@ class JobInProgress {
             if (maps[i].hasTaskWithCacheHit(taskTracker, tts)) {
                 if (cacheTarget < 0) {
                     cacheTarget = i;
+                    break;
                 }
             } else if (maps[i].hasTask()) {
                 if (stdTarget < 0) {
                     stdTarget = i;
+                    break;
                 }
             }
             totalProgress += maps[i].getProgress();

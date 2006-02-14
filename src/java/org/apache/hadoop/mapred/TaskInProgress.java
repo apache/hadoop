@@ -49,6 +49,7 @@ class TaskInProgress {
     // Defines the TIP
     String jobFile = null;
     FileSplit split = null;
+    String hints[][] = null;
     TaskInProgress predecessors[] = null;
     int partition;
     JobTracker jobtracker;
@@ -360,12 +361,16 @@ class TaskInProgress {
         } else {
             try {
                 if (isMapTask()) {
-                    FileSystem fs = FileSystem.get(conf);
-                    String hints[][] = fs.getFileCacheHints(split.getFile(), split.getStart(), split.getLength());
-                    for (int i = 0; i < hints.length; i++) {
-                        for (int j = 0; j < hints[i].length; j++) {
-                            if (hints[i][j].equals(tts.getHost())) {
-                                return true;
+                    if (hints == null) {
+                        FileSystem fs = FileSystem.get(conf);
+                        hints = fs.getFileCacheHints(split.getFile(), split.getStart(), split.getLength());
+                    }
+                    if (hints != null) {
+                        for (int i = 0; i < hints.length; i++) {
+                            for (int j = 0; j < hints[i].length; j++) {
+                                if (hints[i][j].equals(tts.getHost())) {
+                                    return true;
+                                }
                             }
                         }
                     }
