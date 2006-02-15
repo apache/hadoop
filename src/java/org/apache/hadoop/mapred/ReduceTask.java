@@ -285,7 +285,7 @@ class ReduceTask extends Task {
       }
 
     } finally {
-    	reducer.close();
+      reducer.close();
       in.close();
       lfs.delete(new File(sortedFile));           // remove sorted
       out.close(reporter);

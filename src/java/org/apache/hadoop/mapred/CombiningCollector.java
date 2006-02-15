@@ -78,9 +78,8 @@ class CombiningCollector implements OutputCollector {
     count = 0;
   }
   
-  public synchronized void close() 
-  { 
-	  combiner.close(); 
-  } 
+  public synchronized void close() throws IOException { 
+    combiner.close(); 
+  }
 
 }
