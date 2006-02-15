@@ -592,7 +592,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
      * A tracker wants to know if any of its Tasks have been
      * closed (because the job completed, whether successfully or not)
      */
-    public String pollForTaskWithClosedJob(String taskTracker) {
+    public synchronized String pollForTaskWithClosedJob(String taskTracker) {
         TreeSet taskIds = (TreeSet) trackerToTaskMap.get(taskTracker);
         if (taskIds != null) {
             for (Iterator it = taskIds.iterator(); it.hasNext(); ) {
