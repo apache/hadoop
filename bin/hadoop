@@ -49,6 +49,10 @@ shift
 THIS_DIR=`dirname "$THIS"`
 HADOOP_HOME=`cd "$THIS_DIR/.." ; pwd`
 
+if [ -f "$HADOOP_HOME/conf/hadoop-env.sh" ]; then
+  source ${HADOOP_HOME}/conf/hadoop-env.sh
+fi
+
 # some Java parameters
 if [ "$JAVA_HOME" != "" ]; then
   #echo "run java in $JAVA_HOME"
