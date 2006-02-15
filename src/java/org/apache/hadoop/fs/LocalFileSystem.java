@@ -25,9 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.UTF8;
 
 /****************************************************************
- * Implement the FileSystem interface for the local disk.
- * This is pretty easy.  The interface exists so we can use either
- * remote or local Files very easily.
+ * Implement the FileSystem API for the native filesystem.
  *
  * @author Mike Cafarella
  *****************************************************************/
@@ -38,8 +36,7 @@ public class LocalFileSystem extends FileSystem {
     // by default use copy/delete instead of rename
     boolean useCopyForRename = true;
     
-    /**
-     */
+    /** Construct a local filesystem client. */
     public LocalFileSystem(Configuration conf) throws IOException {
         super(conf);
         // if you find an OS which reliably supports non-POSIX
@@ -111,9 +108,6 @@ public class LocalFileSystem extends FileSystem {
         public long skip(long n) throws IOException { return fis.skip(n); }
     }
     
-    /**
-     * Open the file at f
-     */
     public FSInputStream openRaw(File f) throws IOException {
         if (! f.exists()) {
             throw new FileNotFoundException(f.toString());
@@ -169,58 +163,39 @@ public class LocalFileSystem extends FileSystem {
         return new LocalFSFileOutputStream(f);
     }
 
-    /**
-     * Rename files/dirs
-     */
     public boolean renameRaw(File src, File dst) throws IOException {
         if (useCopyForRename) {
-            FileUtil.copyContents(this, src, dst, true, conf);
+            FileUtil.copyContents(this, src, dst, true, getConf());
             return fullyDelete(src);
         } else return src.renameTo(dst);
     }
 
-    /**
-     * Get rid of File f, whether a true file or dir.
-     */
     public boolean deleteRaw(File f) throws IOException {
         if (f.isFile()) {
             return f.delete();
         } else return fullyDelete(f);
     }
 
-    /**
-     */
     public boolean exists(File f) throws IOException {
         return f.exists();
     }
 
-    /**
-     */
     public boolean isDirectory(File f) throws IOException {
         return f.isDirectory();
     }
 
-    /**
-     */
     public long getLength(File f) throws IOException {
         return f.length();
     }
 
-    /**
-     */
     public File[] listFilesRaw(File f) throws IOException {
         return f.listFiles();
     }
 
-    /**
-     */
     public void mkdirs(File f) throws IOException {
         f.mkdirs();
     }
 
-    /**
-     * Obtain a filesystem lock at File f.
-     */
     public synchronized void lock(File f, boolean shared) throws IOException {
         f.createNewFile();
 
@@ -237,9 +212,6 @@ public class LocalFileSystem extends FileSystem {
         lockObjSet.put(f, lockObj);
     }
 
-    /**
-     * Release a held lock
-     */
     public synchronized void release(File f) throws IOException {
         FileLock lockObj = (FileLock) lockObjSet.get(f);
         FileInputStream sharedLockData = (FileInputStream) sharedLockDataSet.get(f);
@@ -263,71 +235,51 @@ public class LocalFileSystem extends FileSystem {
         }
     }
 
-    /**
-     * In the case of the local filesystem, we can just rename the file.
-     */
+    // In the case of the local filesystem, we can just rename the file.
     public void moveFromLocalFile(File src, File dst) throws IOException {
         if (! src.equals(dst)) {
             if (useCopyForRename) {
-                FileUtil.copyContents(this, src, dst, true, this.conf);
+                FileUtil.copyContents(this, src, dst, true, getConf());
                 fullyDelete(src);
             } else src.renameTo(dst);
         }
     }
 
-    /**
-     * Similar to moveFromLocalFile(), except the source is kept intact.
-     */
+    // Similar to moveFromLocalFile(), except the source is kept intact.
     public void copyFromLocalFile(File src, File dst) throws IOException {
         if (! src.equals(dst)) {
-            FileUtil.copyContents(this, src, dst, true, this.conf);
+            FileUtil.copyContents(this, src, dst, true, getConf());
         }
     }
 
-    /**
-     * We can't delete the src file in this case.  Too bad.
-     */
+    // We can't delete the src file in this case.  Too bad.
     public void copyToLocalFile(File src, File dst) throws IOException {
         if (! src.equals(dst)) {
-            FileUtil.copyContents(this, src, dst, true, this.conf);
+            FileUtil.copyContents(this, src, dst, true, getConf());
         }
     }
 
-    /**
-     * We can write output directly to the final location
-     */
+    // We can write output directly to the final location
     public File startLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException {
         return fsOutputFile;
     }
 
-    /**
-     * It's in the right place - nothing to do.
-     */
+    // It's in the right place - nothing to do.
     public void completeLocalOutput(File fsWorkingFile, File tmpLocalFile) throws IOException {
     }
 
-    /**
-     * We can read directly from the real local fs.
-     */
+    // We can read directly from the real local fs.
     public File startLocalInput(File fsInputFile, File tmpLocalFile) throws IOException {
         return fsInputFile;
     }
 
-    /**
-     * We're done reading.  Nothing to clean up.
-     */
+    // We're done reading.  Nothing to clean up.
     public void completeLocalInput(File localFile) throws IOException {
         // Ignore the file, it's at the right destination!
     }
 
-    /**
-     * Shut down the FS.  Not necessary for regular filesystem.
-     */
-    public void close() throws IOException {
-    }
+    public void close() throws IOException {}
 
-    /**
-     */
     public String toString() {
         return "LocalFS";
     }
@@ -391,5 +343,11 @@ public class LocalFileSystem extends FileSystem {
         LOG.warning("Error moving bad file " + f + ": " + e);
       }
     }
+
+    public long getBlockSize() {
+      // default to 32MB: large enough to minimize the impact of seeks
+      return getConf().getLong("fs.local.block.size", 32 * 1024 * 1024);
+    }
+
 
 }

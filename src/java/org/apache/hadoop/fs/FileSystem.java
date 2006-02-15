@@ -43,7 +43,7 @@ import org.apache.hadoop.util.LogFormatter;
  * implementation is {@link DistributedFileSystem}.
  * @author Mike Cafarella
  *****************************************************************/
-public abstract class FileSystem {
+public abstract class FileSystem extends Configured {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.dfs.DistributedFileSystem");
 
     private static final HashMap NAME_TO_FS = new HashMap();
@@ -87,7 +87,6 @@ public abstract class FileSystem {
       return getNamed(conf.get("fs.default.name", "local"), conf);
     }
 
-    protected Configuration conf;
     /** Returns a name for this filesystem, suitable to pass to {@link
      * FileSystem#getNamed(String,Configuration)}.*/
     public abstract String getName();
@@ -96,7 +95,6 @@ public abstract class FileSystem {
      * host:port pair, naming an DFS name server.*/
     public static FileSystem getNamed(String name, Configuration conf) throws IOException {
       FileSystem fs = (FileSystem)NAME_TO_FS.get(name);
-      int ioFileBufferSize = conf.getInt("io.file.buffer.size", 4096);
       if (fs == null) {
         if ("local".equals(name)) {
           fs = new LocalFileSystem(conf);
@@ -122,10 +120,9 @@ public abstract class FileSystem {
     ///////////////////////////////////////////////////////////////
     // FileSystem
     ///////////////////////////////////////////////////////////////
-    /**
-     */
-    public FileSystem(Configuration conf) {
-        this.conf = conf;
+
+    protected FileSystem(Configuration conf) {
+      super(conf);
     }
 
     /**
@@ -146,7 +143,7 @@ public abstract class FileSystem {
      * @param bufferSize the size of the buffer to be used.
      */
     public FSDataInputStream open(File f, int bufferSize) throws IOException {
-      return new FSDataInputStream(this, f, bufferSize, this.conf);
+      return new FSDataInputStream(this, f, bufferSize, getConf());
     }
     
     /**
@@ -154,7 +151,7 @@ public abstract class FileSystem {
      * @param f the file to open
      */
     public FSDataInputStream open(File f) throws IOException {
-      return new FSDataInputStream(this, f, conf);
+      return new FSDataInputStream(this, f, getConf());
     }
 
     /**
@@ -168,7 +165,7 @@ public abstract class FileSystem {
      * Files are overwritten by default.
      */
     public FSDataOutputStream create(File f) throws IOException {
-      return create(f, true,this.conf.getInt("io.file.buffer.size", 4096));
+      return create(f, true, getConf().getInt("io.file.buffer.size", 4096));
     }
 
     /**
@@ -180,7 +177,7 @@ public abstract class FileSystem {
      */
     public FSDataOutputStream create(File f, boolean overwrite,
                                       int bufferSize) throws IOException {
-      return new FSDataOutputStream(this, f, overwrite, this.conf);
+      return new FSDataOutputStream(this, f, overwrite, getConf());
     }
 
     /** Opens an OutputStream at the indicated File.
@@ -256,8 +253,10 @@ public abstract class FileSystem {
      */
     public abstract boolean exists(File f) throws IOException;
 
+    /** True iff the named path is a directory. */
     public abstract boolean isDirectory(File f) throws IOException;
 
+    /** True iff the named path is a regular file. */
     public boolean isFile(File f) throws IOException {
         if (exists(f) && ! isDirectory(f)) {
             return true;
@@ -266,8 +265,10 @@ public abstract class FileSystem {
         }
     }
     
+    /** The number of bytes in a file. */
     public abstract long getLength(File f) throws IOException;
 
+    /** List files in a directory. */
     public File[] listFiles(File f) throws IOException {
       return listFiles(f, new FileFilter() {
           public boolean accept(File file) {
@@ -276,8 +277,10 @@ public abstract class FileSystem {
         });
     }
 
+    /** List files in a directory. */
     public abstract File[] listFilesRaw(File f) throws IOException;
 
+    /** Filter files in a directory. */
     public File[] listFiles(File f, FileFilter filter) throws IOException {
         Vector results = new Vector();
         File listing[] = listFilesRaw(f);
@@ -311,7 +314,6 @@ public abstract class FileSystem {
      * The src file is on the local disk.  Add it to FS at
      * the given dst name and the source is kept intact afterwards
      */
-    // not implemneted yet
     public abstract void copyFromLocalFile(File src, File dst) throws IOException;
 
     /**
@@ -382,5 +384,9 @@ public abstract class FileSystem {
     public abstract void reportChecksumFailure(File f, FSInputStream in,
                                                long start, long length,
                                                int crc);
+
+    /** Return the number of bytes that large input files should be optimally
+     * be split into to minimize i/o time. */
+    public abstract long getBlockSize();
 
 }

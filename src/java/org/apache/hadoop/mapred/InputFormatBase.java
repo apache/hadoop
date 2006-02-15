@@ -105,7 +105,17 @@ public abstract class InputFormatBase implements InputFormat {
       totalSize += fs.getLength(files[i]);
     }
 
-    long bytesPerSplit = Math.max(totalSize / numSplits, minSplitSize);
+    long bytesPerSplit = totalSize / numSplits;   // start w/ desired num splits
+
+    long fsBlockSize = fs.getBlockSize();
+    if (bytesPerSplit > fsBlockSize) {            // no larger than fs blocks
+      bytesPerSplit = fsBlockSize;
+    }
+
+    if (bytesPerSplit < minSplitSize) {           // no smaller than min size
+      bytesPerSplit = minSplitSize;
+    }
+
     long maxPerSplit = bytesPerSplit + (long)(bytesPerSplit*SPLIT_SLOP);
 
     //LOG.info("bytesPerSplit = " + bytesPerSplit);

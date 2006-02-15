@@ -29,9 +29,6 @@ import org.apache.hadoop.conf.Configuration;
  * This object is the way end-user code interacts with a Hadoop
  * DistributedFileSystem.
  *
- * It's substantially a wrapper around the DFSClient class, with
- * a few extra functions.
- *
  * @author Mike Cafarella
  *****************************************************************/
 public class DistributedFileSystem extends FileSystem {
@@ -43,9 +40,7 @@ public class DistributedFileSystem extends FileSystem {
 
     DFSClient dfs;
 
-    /**
-     * Create the ShareSet automatically, and then go on to
-     * the regular constructor.
+    /** Construct a client for the filesystem at <code>namenode</code>.
      */
     public DistributedFileSystem(InetSocketAddress namenode, Configuration conf) throws IOException {
       super(conf);
@@ -90,27 +85,19 @@ public class DistributedFileSystem extends FileSystem {
         return dfs.delete(getPath(f));
     }
 
-    /**
-     */
     public boolean exists(File f) throws IOException {
         return dfs.exists(getPath(f));
     }
 
-    /**
-     */
     public boolean isDirectory(File f) throws IOException {
         return dfs.isDirectory(getPath(f));
     }
 
-    /**
-     */
     public long getLength(File f) throws IOException {
         DFSFileInfo info[] = dfs.listFiles(getPath(f));
         return info[0].getLen();
     }
 
-    /**
-     */
     public File[] listFilesRaw(File f) throws IOException {
         DFSFileInfo info[] = dfs.listFiles(getPath(f));
         if (info == null) {
@@ -124,36 +111,22 @@ public class DistributedFileSystem extends FileSystem {
         }
     }
 
-    /**
-     */
     public void mkdirs(File f) throws IOException {
         dfs.mkdirs(getPath(f));
     }
 
-    /**
-     * Obtain a filesystem lock at File f.
-     */
     public void lock(File f, boolean shared) throws IOException {
         dfs.lock(getPath(f), ! shared);
     }
 
-    /**
-     * Release a held lock
-     */
     public void release(File f) throws IOException {
         dfs.release(getPath(f));
     }
 
-    /**
-     * Remove the src when finished.
-     */
     public void moveFromLocalFile(File src, File dst) throws IOException {
         doFromLocalFile(src, dst, true);
     }
 
-    /**
-     * keep the src when finished.
-     */
     public void copyFromLocalFile(File src, File dst) throws IOException {
         doFromLocalFile(src, dst, false);
     }
@@ -177,7 +150,7 @@ public class DistributedFileSystem extends FileSystem {
                 doFromLocalFile(contents[i], new File(dst, contents[i].getName()), deleteSource);
             }
         } else {
-            byte buf[] = new byte[this.conf.getInt("io.file.buffer.size", 4096)];
+            byte buf[] = new byte[getConf().getInt("io.file.buffer.size", 4096)];
             InputStream in = new BufferedInputStream(new FileInputStream(src));
             try {
                 OutputStream out = create(dst);
@@ -198,10 +171,6 @@ public class DistributedFileSystem extends FileSystem {
             src.delete();
     }
 
-    /**
-     * Takes a hierarchy of files from the FS system and writes to
-     * the given local target.
-     */
     public void copyToLocalFile(File src, File dst) throws IOException {
         if (dst.exists()) {
             if (! dst.isDirectory()) {
@@ -222,10 +191,10 @@ public class DistributedFileSystem extends FileSystem {
                 copyToLocalFile(contents[i], new File(dst, contents[i].getName()));
             }
         } else {
-            byte buf[] = new byte[this.conf.getInt("io.file.buffer.size", 4096)];
+            byte buf[] = new byte[getConf().getInt("io.file.buffer.size", 4096)];
             InputStream in = open(src);
             try {
-                OutputStream out = FileSystem.getNamed("local", this.conf).create(dst);
+                OutputStream out = FileSystem.getNamed("local", getConf()).create(dst);
                 try {
                     int bytesRead = in.read(buf);
                     while (bytesRead >= 0) {
@@ -241,10 +210,6 @@ public class DistributedFileSystem extends FileSystem {
         }
     }
 
-    /**
-     * Output will go to the tmp working area.  There may be some source
-     * material that we obtain first.
-     */
     public File startLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException {
         if (exists(fsOutputFile)) {
             copyToLocalFile(fsOutputFile, tmpLocalFile);
@@ -272,25 +237,18 @@ public class DistributedFileSystem extends FileSystem {
      */
     public void completeLocalInput(File localFile) throws IOException {
         // Get rid of the local copy - we don't need it anymore.
-        FileUtil.fullyDelete(localFile, this.conf);
+        FileUtil.fullyDelete(localFile, getConf());
     }
 
-    /**
-     * Shut down the FS.  Not necessary for regular filesystem.
-     */
     public void close() throws IOException {
         dfs.close();
     }
 
-    /**
-     */
     public String toString() {
         return "DFS[" + dfs + "]";
     }
 
-    /**
-     */
-    public DFSClient getClient() {
+    DFSClient getClient() {
         return dfs;
     }
     
@@ -321,4 +279,9 @@ public class DistributedFileSystem extends FileSystem {
       // directory on their datanode, and then re-replicate the blocks, so that
       // no data is lost. a task may fail, but on retry it should succeed.
     }
+
+    public long getBlockSize() {
+      return dfs.BLOCK_SIZE;
+    }
+
 }
