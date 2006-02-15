@@ -407,7 +407,8 @@ class TaskInProgress {
         // REMIND - mjc - these constants should be examined
         // in more depth eventually...
         //
-        if (isMapTask() && 
+        if (isMapTask() &&
+            conf.getBoolean("mapred.speculative.execution", true) &&
             (averageProgress - progress >= SPECULATIVE_GAP) &&
             (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG)) {
             return true;

@@ -203,6 +203,13 @@
   combining them and writing to disk.</description>
 </property>
 
+<property>
+  <name>mapred.speculative.execution</name>
+  <value>true</value>
+  <description>If true, then multiple instances of some map tasks may
+  be executed in parallel.</description>
+</property>
+
 
 <!-- ipc properties -->
 

@@ -103,6 +103,9 @@ public class TestFileSystem extends TestCase {
     private byte[] buffer = new byte[BUFFER_SIZE];
     private FileSystem fs;
     private boolean fastCheck;
+
+    // a random suffix per task
+    private String suffix = "-"+random.nextLong();
     
     {
       try {
@@ -131,7 +134,9 @@ public class TestFileSystem extends TestCase {
       random.setSeed(seed);
       reporter.setStatus("creating " + name);
 
-      OutputStream out = fs.create(new File(DATA_DIR, name));
+      // write to temp file initially to permit parallel execution
+      File tempFile = new File(DATA_DIR, name+suffix);
+      OutputStream out = fs.create(tempFile);
 
       long written = 0;
       try {
@@ -150,6 +155,8 @@ public class TestFileSystem extends TestCase {
       } finally {
         out.close();
       }
+      // rename to final location
+      fs.rename(tempFile, new File(DATA_DIR, name));
 
       collector.collect(new UTF8("bytes"), new LongWritable(written));
 
