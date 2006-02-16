@@ -13,8 +13,8 @@
   JobProfile profile = (job != null) ? (job.getProfile()) : null;
   JobStatus status = (job != null) ? (job.getStatus()) : null;
 
-  Vector mapTaskReports[] = (job != null) ? tracker.getMapTaskReport(jobid) : null;
-  Vector reduceTaskReports[] = (job != null) ? tracker.getReduceTaskReport(jobid) : null;
+  TaskReport[] mapTaskReports = (job != null) ? tracker.getMapTaskReports(jobid) : null;
+  TaskReport[] reduceTaskReports = (job != null) ? tracker.getReduceTaskReports(jobid) : null;
 %>
 
 <html>
@@ -45,28 +45,21 @@
 <h2>Map Tasks</h2>
   <center>
   <table border=2 cellpadding="5" cellspacing="2">
-  <tr><td align="center">Map Task Id</td><td>Pct Complete</td><td>Diagnostic Data</td></tr>
+  <tr><td align="center">Task Id</td><td>Complete</td><td>State</td><td>Errors</td></tr>
 
   <%
+
     for (int i = 0; i < mapTaskReports.length; i++) {
-      Vector v = mapTaskReports[i];
-      String tipid = (String) v.elementAt(0);
-      String progress = (String) v.elementAt(1);
-      int diagnosticSize = ((Integer) v.elementAt(2)).intValue();
+      TaskReport report = mapTaskReports[i];
 
-      out.print("<tr><td>" + tipid + "</td><td>" + progress + "</td><td>");
-      for (int j = 0; j < diagnosticSize; j++) {
-        Vector taskData = (Vector) v.elementAt(3 + ((2 * j)));
-        String taskStateString = (String) v.elementAt(3 + ((2 * j) + 1));
-        out.print(taskStateString);
-        out.print("<b>");
+      out.print("<tr><td>" + report.getTaskId() + "</td>");
+      out.print("<td>" + report.getProgress() + "</td>");
+      out.print("<td>" + report.getState() + "</td>");
 
-        for (Iterator it2 = taskData.iterator(); it2.hasNext(); ) {
-          out.print("" + it2.next());
-          out.println("<b>");
-        }
+      String[] diagnostics = report.getDiagnostics();
+      for (int j = 0; j < diagnostics.length ; j++) {
+        out.print("<td>" + diagnostics[j] + "</td>");
       }
-      out.print("</td>");
       out.print("</tr>\n");
     }
   %>
@@ -78,28 +71,20 @@
 <h2>Reduce Tasks</h2>
   <center>
   <table border=2 cellpadding="5" cellspacing="2">
-  <tr><td align="center">Reduce Task Id</td><td>Pct Complete</td><td>Diagnostic Data</td></tr>
+  <tr><td align="center">Task Id</td><td>Complete</td><td>State</td><td>Errors</td></tr>
 
   <%
     for (int i = 0; i < reduceTaskReports.length; i++) {
-      Vector v = reduceTaskReports[i];
-      String tipid = (String) v.elementAt(0);
-      String progress = (String) v.elementAt(1);
-      int diagnosticSize = ((Integer) v.elementAt(2)).intValue();
+      TaskReport report = reduceTaskReports[i];
 
-      out.print("<tr><td>" + tipid + "</td><td>" + progress + "</td><td>");
-      for (int j = 0; j < diagnosticSize; j++) {
-        Vector taskData = (Vector) v.elementAt(3 + ((2 * j)));
-        String taskStateString = (String) v.elementAt(3 + ((2 * j) + 1));
-        out.print(taskStateString);
-        out.print("<b>");
+      out.print("<tr><td>" + report.getTaskId() + "</td>");
+      out.print("<td>" + report.getProgress() + "</td>");
+      out.print("<td>" + report.getState() + "</td>");
 
-        for (Iterator it2 = taskData.iterator(); it2.hasNext(); ) {
-          out.print("" + it2.next());
-          out.println("<b>");
-        }
+      String[] diagnostics = report.getDiagnostics();
+      for (int j = 0; j < diagnostics.length ; j++) {
+        out.print("<td>" + diagnostics[j] + "</td>");
       }
-      out.print("</td>");
       out.print("</tr>\n");
     }
   %>

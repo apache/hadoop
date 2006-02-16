@@ -55,8 +55,8 @@ interface JobSubmissionProtocol {
     /**
      * Grab a bunch of info on the tasks that make up the job
      */
-    public Vector[] getMapTaskReport(String jobid);
-    public Vector[] getReduceTaskReport(String jobid);
+    public TaskReport[] getMapTaskReports(String jobid);
+    public TaskReport[] getReduceTaskReports(String jobid);
 
     /**
      * A MapReduce system always operates on a single filesystem.  This 

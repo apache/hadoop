@@ -175,11 +175,11 @@ class LocalJobRunner implements JobSubmissionProtocol {
     return new JobProfile(id, job.file, "http://localhost:8080/");
   }
 
-  public Vector[] getMapTaskReport(String id) {
-    return new Vector[0];
+  public TaskReport[] getMapTaskReports(String id) {
+    return new TaskReport[0];
   }
-  public Vector[] getReduceTaskReport(String id) {
-    return new Vector[0];
+  public TaskReport[] getReduceTaskReports(String id) {
+    return new TaskReport[0];
   }
 
   public JobStatus getJobStatus(String id) {

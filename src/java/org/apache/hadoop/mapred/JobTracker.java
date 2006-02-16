@@ -679,10 +679,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             return null;
         }
     }
-    public synchronized Vector[] getMapTaskReport(String jobid) {
+    public synchronized TaskReport[] getMapTaskReports(String jobid) {
         JobInProgress job = (JobInProgress) jobs.get(jobid);
         if (job == null) {
-            return new Vector[0];
+            return new TaskReport[0];
         } else {
             Vector reports = new Vector();
             Vector completeMapTasks = job.reportTasksInProgress(true, true);
@@ -695,14 +695,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 TaskInProgress tip = (TaskInProgress) it.next();
                 reports.add(tip.generateSingleReport());
             }
-            return (Vector[]) reports.toArray(new Vector[reports.size()]);
+            return (TaskReport[]) reports.toArray(new TaskReport[reports.size()]);
         }
     }
 
-    public synchronized Vector[] getReduceTaskReport(String jobid) {
+    public synchronized TaskReport[] getReduceTaskReports(String jobid) {
         JobInProgress job = (JobInProgress) jobs.get(jobid);
         if (job == null) {
-            return new Vector[0];
+            return new TaskReport[0];
         } else {
             Vector reports = new Vector();
             Vector completeReduceTasks = job.reportTasksInProgress(false, true);
@@ -715,7 +715,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 TaskInProgress tip = (TaskInProgress) it.next();
                 reports.add(tip.generateSingleReport());
             }
-            return (Vector[]) reports.toArray(new Vector[reports.size()]);
+            return (TaskReport[]) reports.toArray(new TaskReport[reports.size()]);
         }
     }
 

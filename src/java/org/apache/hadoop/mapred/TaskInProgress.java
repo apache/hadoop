@@ -60,6 +60,7 @@ class TaskInProgress {
     // Status of the TIP
     int numTaskFailures = 0;
     double progress = 0;
+    String state = "";
     long startTime = 0;
     int completes = 0;
     boolean failed = false;
@@ -215,23 +216,14 @@ class TaskInProgress {
      * task ID and overall status, plus reports for all the
      * component task-threads that have ever been started.
      */
-    Vector generateSingleReport() {
-        Vector report = new Vector();
-        report.add(getTIPId());
-        report.add("" + progress);
-
-        report.add(new Integer(taskDiagnosticData.size()));
-        for (Iterator it = taskDiagnosticData.keySet().iterator(); it.hasNext(); ) {
-            String taskid = (String) it.next();
-            Vector taskData = (Vector) taskDiagnosticData.get(taskid);
-
-            TaskStatus taskStatus = (TaskStatus) taskStatuses.get(taskid);
-            String taskStateString = taskStatus.getStateString();
-
-            report.add(taskData);
-            report.add(taskStateString);
-        }
-        return report;
+    TaskReport generateSingleReport() {
+      ArrayList diagnostics = new ArrayList();
+      for (Iterator i = taskDiagnosticData.values().iterator(); i.hasNext();) {
+        diagnostics.addAll((Vector)i.next());
+      }
+      return new TaskReport
+        (getTIPId(), (float)progress, state,
+         (String[])diagnostics.toArray(new String[diagnostics.size()]));
     }
 
     ////////////////////////////////////////////////
@@ -333,17 +325,23 @@ class TaskInProgress {
             this.progress = 0;
         } else {
             double bestProgress = 0;
+            String bestState = "";
             for (Iterator it = taskStatuses.keySet().iterator(); it.hasNext(); ) {
                 String taskid = (String) it.next();
                 TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
                 if (status.getRunState() == TaskStatus.SUCCEEDED) {
                     bestProgress = 1;
+                    bestState = status.getStateString();
                     break;
                 } else if (status.getRunState() == TaskStatus.RUNNING) {
-                    bestProgress = Math.max(bestProgress, status.getProgress());
+                  if (status.getProgress() >= bestProgress) {
+                    bestProgress = status.getProgress();
+                    bestState = status.getStateString();
+                  }
                 }
             }
             this.progress = bestProgress;
+            this.state = bestState;
         }
     }
 
