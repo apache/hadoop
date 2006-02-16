@@ -48,6 +48,9 @@ Unpack the release and connect to its top-level directory.</p>
 href="http://lucene.apache.org/hadoop/version_control.html">subversion</a>
 and build it with <a href="http://ant.apache.org/">Ant</a>.</p>
 
+<p>Edit the file <tt>conf/hadoop-env.sh</tt> to define at least
+<tt>JAVA_HOME</tt>.</p>
+
 <p>Try the following command:</p>
 <tt>bin/hadoop</tt>
 <p>This will display the documentation for the Hadoop command script.</p>
@@ -91,7 +94,7 @@ href="../hadoop-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>.
 </li>
 
 <li>A <em>slaves</em> file that lists the names of all the hosts in
-the cluster.  The default slaves file is <tt>~/.slaves</tt>.
+the cluster.  The default slaves file is <tt>conf/slaves</tt>.
 
 </ol>
 
@@ -128,10 +131,6 @@ require a password.  If it does, execute the following commands:</p>
 <p><tt>ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa<br>
 cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
 </tt></p>
-
-<p>Finally, you can create a <tt>.slaves</tt> file with the command:</p>
-
-<p><tt>echo localhost > ~/.slaves</tt></p>
 
 <h3>Bootstrapping</h3>
 
@@ -199,7 +198,7 @@ number of slave processors for <tt>mapred.map.tasks</tt>, and 2x the
 number of slave processors for <tt>mapred.reduce.tasks</tt>.</li>
 
 <li>List all slave hostnames or IP addresses in your
-<tt>~/.slaves</tt> file, one per line.</li>
+<tt>conf/slaves</tt> file, one per line.</li>
 
 </ol>
 
