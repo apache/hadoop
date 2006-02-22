@@ -319,26 +319,48 @@ public class JobClient implements MRConstants {
       }
     }
 
+    static Configuration getConfiguration(String jobTrackerSpec)
+    {
+      Configuration conf = new Configuration();
+      if(jobTrackerSpec != null) {        
+        if(jobTrackerSpec.indexOf(":") >= 0) {
+          conf.set("mapred.job.tracker", jobTrackerSpec);
+        } else {
+          String classpathFile = "hadoop-" + jobTrackerSpec + ".xml";
+          URL validate = conf.getResource(classpathFile);
+          if(validate == null) {
+            throw new RuntimeException(classpathFile + " not found on CLASSPATH");
+          }
+          conf.addFinalResource(classpathFile);
+        }
+      }
+      return conf;
+    }
+        
 
     /**
      */
     public static void main(String argv[]) throws IOException {
         if (argv.length < 2) {
-            System.out.println("JobClient -submit <job> | -status <id> | -kill <id>");
+            System.out.println("JobClient -submit <job> | -status <id> | -kill <id> [-jt <jobtracker:port>|<config>]");
             System.exit(-1);
         }
 
         // Process args
         String jobTrackerStr = argv[0];
+        String jobTrackerSpec = null;
         String submitJobFile = null;
         String jobid = null;
         boolean getStatus = false;
         boolean killJob = false;
 
         for (int i = 0; i < argv.length; i++) {
-            if ("-submit".equals(argv[i])) {
+            if ("-jt".equals(argv[i])) {
+                jobTrackerSpec = argv[i+1];
+                i++;
+            } else if ("-submit".equals(argv[i])) {
                 submitJobFile = argv[i+1];
-                i+=2;
+                i++;
             } else if ("-status".equals(argv[i])) {
                 jobid = argv[i+1];
                 getStatus = true;
@@ -351,7 +373,7 @@ public class JobClient implements MRConstants {
         }
 
         // Submit the request
-        JobClient jc = new JobClient(new Configuration());
+        JobClient jc = new JobClient(getConfiguration(jobTrackerSpec));
         try {
             if (submitJobFile != null) {
                 RunningJob job = jc.submitJob(submitJobFile);
