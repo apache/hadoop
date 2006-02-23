@@ -154,8 +154,9 @@ public class FSDataInputStream extends DataInputStream {
     // This is the only read() method called by BufferedInputStream, so we trap
     // calls to it in order to cache the position.
     public int read(byte b[], int off, int len) throws IOException {
-      int result = in.read(b, off, len);
-      position += result;
+      int result;
+      if( (result = in.read(b, off, len)) > 0 )
+        position += result;
       return result;
     }
 
