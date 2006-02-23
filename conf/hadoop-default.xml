@@ -190,10 +190,21 @@
 </property>
 
 <property>
-  <name>mapred.child.heap.size</name>
-  <value>200m</value>
-  <description>The heap size (-Xmx) that will be used for task tracker
-  child processes.</description>
+  <name>mapred.child.java.opts</name>
+  <value>-Xmx200m</value>
+  <description>Java opts for the task tracker child processes.  Subsumes
+  'mapred.child.heap.size' (If a mapred.child.heap.size value is found
+  in a configuration, its maximum heap size will be used and a warning
+  emitted that heap.size has been deprecated). Also, the following symbols,
+  if present, will be interpolated: @taskid@ is replaced by current TaskID;
+  and @port@ will be replaced by mapred.task.tracker.report.port + 1 (A second
+  child will fail with a port-in-use if mapred.tasktracker.tasks.maximum is
+  greater than one). Any other occurrences of '@' will go unchanged. For
+  example, to enable verbose gc logging to a file named for the taskid in
+  /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
+
+        -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+  </description>
 </property>
 
 <property>
