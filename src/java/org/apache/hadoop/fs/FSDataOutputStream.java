@@ -122,19 +122,20 @@ public class FSDataOutputStream extends DataOutputStream {
   }
 
   public FSDataOutputStream(FileSystem fs, File file,
-                             boolean overwrite, Configuration conf)
+                            boolean overwrite, Configuration conf,
+                            int bufferSize)
     throws IOException {
     super(new Buffer(new PositionCache(new Summer(fs, file, overwrite, conf)),
-            conf.getInt("io.file.buffer.size", 4096)));
+                     bufferSize));
   }
 
   /** Construct without checksums. */
-  public FSDataOutputStream(FSOutputStream out, Configuration conf) throws IOException {
+  private FSDataOutputStream(FSOutputStream out, Configuration conf) throws IOException {
     this(out, conf.getInt("io.file.buffer.size", 4096));
   }
 
   /** Construct without checksums. */
-  public FSDataOutputStream(FSOutputStream out, int bufferSize)
+  private FSDataOutputStream(FSOutputStream out, int bufferSize)
     throws IOException {
     super(new Buffer(new PositionCache(out), bufferSize));
   }

@@ -177,7 +177,7 @@ public abstract class FileSystem extends Configured {
      */
     public FSDataOutputStream create(File f, boolean overwrite,
                                       int bufferSize) throws IOException {
-      return new FSDataOutputStream(this, f, overwrite, getConf());
+      return new FSDataOutputStream(this, f, overwrite, getConf(), bufferSize);
     }
 
     /** Opens an OutputStream at the indicated File.
