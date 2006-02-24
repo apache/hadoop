@@ -656,7 +656,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
                   try {
                     umbilical.ping(taskid);
                   } catch (Throwable t) {
-                    LOG.warning("Parent died.  Exiting "+taskid);
+                    LOG.log(Level.WARNING, "Parent died.  Exiting "+taskid, t);
                     System.exit(1);
                   }
                   try {
