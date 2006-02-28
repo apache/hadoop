@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 
 import java.net.URL;
+import java.net.URLDecoder;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.conf.Configuration;
@@ -309,6 +310,7 @@ public class JobConf extends Configuration {
           if (toReturn.startsWith("file:")) {
             toReturn = toReturn.substring("file:".length());
           }
+          toReturn = URLDecoder.decode(toReturn, "UTF-8");
           return toReturn.replaceAll("!.*$", "");
         }
       }
