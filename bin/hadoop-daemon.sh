@@ -37,16 +37,16 @@ while [ -h "$this" ]; do
 done
 
 # the root of the Hadoop installation
-HADOOP_HOME=`dirname $this`/..
+HADOOP_HOME=`dirname "$this"`/..
 
 if [ -f "$HADOOP_HOME/conf/hadoop-env.sh" ]; then
-  source ${HADOOP_HOME}/conf/hadoop-env.sh
+  source "${HADOOP_HOME}/conf/hadoop-env.sh"
 fi
 
 # get log directory
 if [ "$HADOOP_LOG_DIR" = "" ]; then
-  HADOOP_LOG_DIR=$HADOOP_HOME/logs
-  mkdir -p $HADOOP_LOG_DIR
+  HADOOP_LOG_DIR="$HADOOP_HOME/logs"
+  mkdir -p "$HADOOP_LOG_DIR"
 fi
 
 if [ "$HADOOP_PID_DIR" = "" ]; then
@@ -77,11 +77,11 @@ case $startStop in
       rsync -a --delete --exclude=.svn $HADOOP_MASTER/ $HADOOP_HOME
     fi
 
-    cd $HADOOP_HOME
+    cd "$HADOOP_HOME"
     echo starting $command, logging to $log
-    nohup bin/hadoop $command "$@" >& $log < /dev/null &
+    nohup bin/hadoop $command "$@" >& "$log" < /dev/null &
     echo $! > $pid
-    sleep 1; head $log
+    sleep 1; head "$log"
     ;;
           
   (stop)

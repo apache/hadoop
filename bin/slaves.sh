@@ -28,18 +28,18 @@ while [ -h "$this" ]; do
 done
 
 # the root of the Hadoop installation
-HADOOP_HOME=`dirname $this`/..
+HADOOP_HOME=`dirname "$this"`/..
 
 if [ -f "$HADOOP_HOME/conf/hadoop-env.sh" ]; then
-  source ${HADOOP_HOME}/conf/hadoop-env.sh
+  source "${HADOOP_HOME}/conf/hadoop-env.sh"
 fi
 
 if [ "$HADOOP_SLAVES" = "" ]; then
-  export HADOOP_SLAVES=$HADOOP_HOME/conf/slaves
+  export HADOOP_SLAVES="$HADOOP_HOME/conf/slaves"
 fi
 
-for slave in `cat $HADOOP_SLAVES`; do
- ssh -o ConnectTimeout=1 $slave "$@" \
+for slave in `cat "$HADOOP_SLAVES"`; do
+ ssh -o ConnectTimeout=1 $slave $"${@// /\\ }" \
    2>&1 | sed "s/^/$slave: /" &
 done
 
