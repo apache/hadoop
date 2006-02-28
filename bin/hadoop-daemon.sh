@@ -74,7 +74,7 @@ case $startStop in
 
     if [ "$HADOOP_MASTER" != "" ]; then
       echo rsync from $HADOOP_MASTER
-      rsync -a --delete --exclude=.svn $HADOOP_MASTER/ $HADOOP_HOME
+      rsync -a -e ssh --delete --exclude=.svn $HADOOP_MASTER/ "$HADOOP_HOME"
     fi
 
     cd "$HADOOP_HOME"
