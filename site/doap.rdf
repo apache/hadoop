@@ -13,10 +13,10 @@
 
   =======================================================================
 -->
-  <Project rdf:about="http://Hadooop.rdf.apache.org/">
+  <Project rdf:about="http://lucene.apache.org/hadoop/">
     <created>2006-02-28</created>
     <license rdf:resource="http://usefulinc.com/doap/licenses/asl20" />
-    <name>http://Hadooop</name>
+    <name>Apache Hadoop</name>
     <homepage rdf:resource="http://lucene.apache.org/hadoop/" />
     <asfext:pmc rdf:resource="http://lucene.apache.org" />
     <shortdesc>A distributed computing platform.</shortdesc>
