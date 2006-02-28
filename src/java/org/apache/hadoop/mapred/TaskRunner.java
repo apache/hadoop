@@ -20,8 +20,10 @@ import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.fs.*;
 
 import java.io.*;
+import java.util.jar.*;
 import java.util.logging.*;
 import java.util.Vector;
+import java.util.Enumeration;
 
 /** Base class that runs a task in a separate process.  Tasks are run in a
  * separate process in order to isolate the map/reduce system code from bugs in
@@ -77,7 +79,7 @@ abstract class TaskRunner extends Thread {
       JobConf job = new JobConf(t.getJobFile());
       String jar = job.getJar();
       if (jar != null) {                      // if jar exists, it into workDir
-        runChild(new String[] { "unzip", "-o", "-q", jar}, workDir);
+        unJar(new File(jar), workDir);
         File[] libs = new File(workDir, "lib").listFiles();
         if (libs != null) {
           for (int i = 0; i < libs.length; i++) {
@@ -219,6 +221,37 @@ abstract class TaskRunner extends Thread {
         
     }
     return text;
+  }
+
+  private void unJar(File jarFile, File toDir) throws IOException {
+    JarFile jar = new JarFile(jarFile);
+    try {
+      Enumeration entries = jar.entries();
+      while (entries.hasMoreElements()) {
+        JarEntry entry = (JarEntry)entries.nextElement();
+        if (!entry.isDirectory()) {
+          InputStream in = jar.getInputStream(entry);
+          try {
+            File file = new File(toDir, entry.getName());
+            file.getParentFile().mkdirs();
+            OutputStream out = new FileOutputStream(file);
+            try {
+              byte[] buffer = new byte[8192];
+              int i;
+              while ((i = in.read(buffer)) != -1) {
+                out.write(buffer, 0, i);
+              }
+            } finally {
+              out.close();
+            }
+          } finally {
+            in.close();
+          }
+        }
+      }
+    } finally {
+      jar.close();
+    }
   }
 
   /**
