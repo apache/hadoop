@@ -38,8 +38,12 @@ if [ "$HADOOP_SLAVES" = "" ]; then
   export HADOOP_SLAVES="$HADOOP_HOME/conf/slaves"
 fi
 
+if [ "$HADOOP_SSH_OPTS" = "" ]; then
+  export HADOOP_SSH_OPTS="-o ConnectTimeout=1"
+fi
+
 for slave in `cat "$HADOOP_SLAVES"`; do
- ssh -o ConnectTimeout=1 $slave $"${@// /\\ }" \
+ ssh $HADOOP_SSH_OPTS $slave $"${@// /\\ }" \
    2>&1 | sed "s/^/$slave: /" &
 done
 
