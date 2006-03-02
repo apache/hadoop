@@ -14,8 +14,8 @@
 # Extra Java runtime options.  Empty by default.
 # export HADOOP_OPTS=-server
 
-# Extra ssh options.  Default is '-o ConnectTimeout=1'.
-# export HADOOP_SSH_OPTS="-o ConnectTimeout=1"
+# Extra ssh options.  Default: '-o ConnectTimeout=1 -o SendEnv=HADOOP_CONF_DIR'.
+# export HADOOP_SSH_OPTS="-o ConnectTimeout=1 -o SendEnv=HADOOP_CONF_DIR"
 
 # Where log files are stored.  $HADOOP_HOME/logs by default.
 # export HADOOP_LOG_DIR=${HADOOP_HOME}/logs

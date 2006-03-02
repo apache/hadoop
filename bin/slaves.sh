@@ -5,6 +5,7 @@
 # Environment Variables
 #
 #   HADOOP_SLAVES    File naming remote hosts.  Default is ~/.slaves
+#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 ##
 
 usage="Usage: slaves.sh command..."
@@ -30,16 +31,24 @@ done
 # the root of the Hadoop installation
 HADOOP_HOME=`dirname "$this"`/..
 
-if [ -f "$HADOOP_HOME/conf/hadoop-env.sh" ]; then
-  source "${HADOOP_HOME}/conf/hadoop-env.sh"
+# Allow alternate conf dir location.
+HADOOP_CONF_DIR="${HADOOP_CONF_DIR:=$HADOOP_HOME/conf}"
+
+if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
+  source "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
 if [ "$HADOOP_SLAVES" = "" ]; then
-  export HADOOP_SLAVES="$HADOOP_HOME/conf/slaves"
+  export HADOOP_SLAVES="${HADOOP_CONF_DIR}/slaves"
 fi
 
+# By default, forward HADOOP_CONF_DIR environment variable to the
+# remote slave. Remote slave must have following added to its
+# /etc/ssh/sshd_config:
+#   AcceptEnv HADOOP_CONF_DIR
+# See'man ssh_config for more on SendEnv and AcceptEnv.
 if [ "$HADOOP_SSH_OPTS" = "" ]; then
-  export HADOOP_SSH_OPTS="-o ConnectTimeout=1"
+  export HADOOP_SSH_OPTS="-o ConnectTimeout=1 -o SendEnv=HADOOP_CONF_DIR"
 fi
 
 for slave in `cat "$HADOOP_SLAVES"`; do

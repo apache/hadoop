@@ -4,12 +4,14 @@
 #
 # Environment Variables
 #
-#   JAVA_HOME The java implementation to use.  Overrides JAVA_HOME.
+#   JAVA_HOME        The java implementation to use.  Overrides JAVA_HOME.
 #
 #   HADOOP_HEAPSIZE  The maximum amount of heap to use, in MB. 
-#                   Default is 1000.
+#                    Default is 1000.
 #
 #   HADOOP_OPTS      Extra Java runtime options.
+#
+#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #
 
 # resolve links - $0 may be a softlink
@@ -49,8 +51,11 @@ shift
 THIS_DIR=`dirname "$THIS"`
 HADOOP_HOME=`cd "$THIS_DIR/.." ; pwd`
 
-if [ -f "$HADOOP_HOME/conf/hadoop-env.sh" ]; then
-  source "${HADOOP_HOME}/conf/hadoop-env.sh"
+# Allow alternate conf dir location.
+HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
+
+if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
+  source ${HADOOP_CONF_DIR}/hadoop-env.sh
 fi
 
 # some Java parameters
@@ -74,8 +79,8 @@ if [ "$HADOOP_HEAPSIZE" != "" ]; then
   #echo $JAVA_HEAP_MAX
 fi
 
-# CLASSPATH initially contains $HADOOP_CONF_DIR, or defaults to $HADOOP_HOME/conf
-CLASSPATH=${HADOOP_CONF_DIR:=$HADOOP_HOME/conf}
+# CLASSPATH initially contains $HADOOP_CONF_DIR
+CLASSPATH="${HADOOP_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add Hadoop classes to CLASSPATH

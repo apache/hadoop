@@ -4,6 +4,7 @@
 #
 # Environment Variables
 #
+#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #   HADOOP_LOG_DIR   Where log files are stored.  PWD by default.
 #   HADOOP_MASTER    host:path where hadoop code should be rsync'd from
 #   HADOOP_PID_DIR   The pid files are stored. /tmp by default.
@@ -39,8 +40,11 @@ done
 # the root of the Hadoop installation
 HADOOP_HOME=`dirname "$this"`/..
 
-if [ -f "$HADOOP_HOME/conf/hadoop-env.sh" ]; then
-  source "${HADOOP_HOME}/conf/hadoop-env.sh"
+# Allow alternate conf dir location.
+HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
+
+if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
+  source "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
 # get log directory
