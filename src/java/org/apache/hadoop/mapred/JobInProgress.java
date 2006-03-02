@@ -44,6 +44,7 @@ class JobInProgress {
     int numReduceTasks = 0;
 
     JobTracker jobtracker = null;
+    TreeMap cachedHints = new TreeMap();
 
     long startTime;
     long finishTime;
@@ -62,7 +63,7 @@ class JobInProgress {
         this.conf = conf;
         this.jobtracker = jobtracker;
         this.profile = new JobProfile(jobid, jobFile, url);
-        this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.RUNNING);
+        this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
         this.startTime = System.currentTimeMillis();
 
         this.localJobFile = new JobConf(conf).getLocalFile(JobTracker.SUBDIR, jobid + ".xml");
@@ -92,9 +93,10 @@ class JobInProgress {
     }
 
     /**
-     * Construct the splits, etc
+     * Construct the splits, etc.  This is invoked from an async
+     * thread so that split-computation doesn't block anyone.
      */
-    void initTasks() throws IOException {
+    public void initTasks() throws IOException {
         if (tasksInited) {
             return;
         }
@@ -153,7 +155,31 @@ class JobInProgress {
             reduces[i] = new TaskInProgress(jobFile, maps, i, jobtracker, conf, this);
         }
 
+        //
+        // Obtain some tasktracker-cache information for the map task splits.
+        //
+        for (int i = 0; i < maps.length; i++) {
+            String hints[][] = fs.getFileCacheHints(splits[i].getFile(), splits[i].getStart(), splits[i].getLength());
+            cachedHints.put(maps[i].getTIPId(), hints);
+        }
+
+        this.status = new JobStatus(status.getJobId(), 0.0f, 0.0f, JobStatus.RUNNING);
         tasksInited = true;
+    }
+
+    /**
+     * This is called by TaskInProgress objects.  The JobInProgress
+     * prefetches and caches a lot of these hints.  If the hint is
+     * not available, then we pass it through to the filesystem.
+     */
+    String[][] getFileCacheHints(String tipID, File f, long start, long len) throws IOException {
+        String results[][] = (String[][]) cachedHints.get(tipID);
+        if (tipID == null) {
+            FileSystem fs = FileSystem.get(conf);
+            results = fs.getFileCacheHints(f, start, len);
+            cachedHints.put(tipID, results);
+        }
+        return results;
     }
 
     /////////////////////////////////////////////////////
@@ -252,12 +278,8 @@ class JobInProgress {
      */
     public Task obtainNewMapTask(String taskTracker, TaskTrackerStatus tts) {
         if (! tasksInited) {
-            try {
-                initTasks();
-            } catch (IOException ie) {
-                ie.printStackTrace();
-                LOG.info("Cannot create task split for " + profile.getJobId());
-            }
+            LOG.info("Cannot create task split for " + profile.getJobId());
+            return null;
         }
 
         Task t = null;
@@ -271,30 +293,62 @@ class JobInProgress {
         // we call obtainNewMapTask() really fast, twice in a row.
         // There's not enough time for the "recentTasks"
         //
+
+        //
+        // Compute avg progress through the map tasks
+        //
+        for (int i = 0; i < maps.length; i++) {        
+            totalProgress += maps[i].getProgress();
+        }
+        double avgProgress = totalProgress / maps.length;
+
+        //
+        // See if there is a split over a block that is stored on
+        // the TaskTracker checking in.  That means the block
+        // doesn't have to be transmitted from another node.
+        //
         for (int i = 0; i < maps.length; i++) {
             if (maps[i].hasTaskWithCacheHit(taskTracker, tts)) {
                 if (cacheTarget < 0) {
                     cacheTarget = i;
                     break;
                 }
-            } else if (maps[i].hasTask()) {
-                if (stdTarget < 0) {
-                    stdTarget = i;
-                    break;
-                }
             }
-            totalProgress += maps[i].getProgress();
         }
-        double avgProgress = totalProgress / maps.length;
 
-        for (int i = 0; i < maps.length; i++) {        
-            if (maps[i].hasSpeculativeTask(avgProgress)) {
-                if (specTarget < 0) {
-                    specTarget = i;
+        //
+        // If there's no cached target, see if there's
+        // a std. task to run.
+        //
+        if (cacheTarget < 0) {
+            for (int i = 0; i < maps.length; i++) {
+                if (maps[i].hasTask()) {
+                    if (stdTarget < 0) {
+                        stdTarget = i;
+                        break;
+                    }
                 }
             }
         }
-        
+
+        //
+        // If no cached-target and no std target, see if
+        // there's a speculative task to run.
+        //
+        if (cacheTarget < 0 && stdTarget < 0) {
+            for (int i = 0; i < maps.length; i++) {        
+                if (maps[i].hasSpeculativeTask(avgProgress)) {
+                    if (specTarget < 0) {
+                        specTarget = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        //
+        // Run whatever we found
+        //
         if (cacheTarget >= 0) {
             t = maps[cacheTarget].getTaskToRun(taskTracker, tts, avgProgress);
         } else if (stdTarget >= 0) {
@@ -312,12 +366,8 @@ class JobInProgress {
      */
     public Task obtainNewReduceTask(String taskTracker, TaskTrackerStatus tts) {
         if (! tasksInited) {
-            try {
-                initTasks();
-            } catch (IOException ie) {
-                ie.printStackTrace();
-                LOG.info("Cannot create task split for " + profile.getJobId());
-            }
+            LOG.info("Cannot create task split for " + profile.getJobId());
+            return null;
         }
 
         Task t = null;

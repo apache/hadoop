@@ -550,6 +550,10 @@ class FSNamesystem implements FSConstants {
         int endBlock = -1;
         Block blocks[] = dir.getFile(src);
 
+        if (blocks == null) {                     // no blocks
+            return new UTF8[0][];
+        }
+
         //
         // First, figure out where the range falls in
         // the blocklist.
@@ -579,7 +583,7 @@ class FSNamesystem implements FSConstants {
         if (startBlock < 0 || endBlock < 0) {
             return new UTF8[0][];
         } else {
-            UTF8 hosts[][] = new UTF8[endBlock - startBlock + 1][];
+            UTF8 hosts[][] = new UTF8[(endBlock - startBlock) + 1][];
             for (int i = startBlock; i <= endBlock; i++) {
                 TreeSet containingNodes = (TreeSet) blocksMap.get(blocks[i]);
                 Vector v = new Vector();
@@ -587,7 +591,7 @@ class FSNamesystem implements FSConstants {
                     DatanodeInfo cur = (DatanodeInfo) it.next();
                     v.add(cur.getHost());
                 }
-                hosts[i] = (UTF8[]) v.toArray(new UTF8[v.size()]);
+                hosts[i-startBlock] = (UTF8[]) v.toArray(new UTF8[v.size()]);
             }
             return hosts;
         }

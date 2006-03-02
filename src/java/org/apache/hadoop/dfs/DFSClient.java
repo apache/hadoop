@@ -585,7 +585,7 @@ class DFSClient implements FSConstants {
                     // Connection failed.  Let's wait a little bit and retry
                     try {
                         if (System.currentTimeMillis() - start > 5000) {
-                            LOG.info("Waiting to find target node");
+                            LOG.info("Waiting to find target node: " + target);
                         }
                         Thread.sleep(6000);
                     } catch (InterruptedException iex) {
