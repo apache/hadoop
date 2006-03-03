@@ -39,7 +39,7 @@ import java.util.logging.*;
 //
 ////////////////////////////////////////////////////////
 class TaskInProgress {
-    static final int MAX_TASK_EXECS = 10;
+    static final int MAX_TASK_EXECS = 1;
     static final int MAX_TASK_FAILURES = 4;    
     static final double SPECULATIVE_GAP = 0.2;
     static final long SPECULATIVE_LAG = 60 * 1000;
@@ -157,12 +157,14 @@ class TaskInProgress {
     public boolean isFailed() {
         return failed;
     }
+
     /**
      * Number of times the TaskInProgress has failed.
      */
     public int numTaskFailures() {
-        return numTaskFailures();
+        return numTaskFailures;
     }
+
     /**
      * Get the overall progress (from 0 to 1.0) for this TIP
      */
@@ -405,6 +407,7 @@ class TaskInProgress {
         // in more depth eventually...
         //
         if (isMapTask() &&
+            recentTasks.size() <= MAX_TASK_EXECS &&
             conf.getBoolean("mapred.speculative.execution", true) &&
             (averageProgress - progress >= SPECULATIVE_GAP) &&
             (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG)) {

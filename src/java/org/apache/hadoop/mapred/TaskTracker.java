@@ -106,6 +106,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
         // Clear out state tables
         this.tasks = new TreeMap();
         this.runningTasks = new TreeMap();
+        this.mapTotal = 0;
+        this.reduceTotal = 0;
 
         // port numbers
         this.taskReportPort = this.fConf.getInt("mapred.task.tracker.report.port", 50050);
@@ -326,8 +328,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
                                 staleState = true;
                             }
                         } catch (Exception ex) {
-                            ex.printStackTrace();
-                            LOG.info("Lost connection to JobTracker [" + jobTrackAddr + "].  Retrying...");
+                            LOG.log(Level.INFO, "Lost connection to JobTracker [" + jobTrackAddr + "].  Retrying...", ex);
                             try {
                                 Thread.sleep(5000);
                             } catch (InterruptedException ie) {
@@ -632,7 +633,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
      */
     synchronized void reportTaskFinished(String taskid) {
         TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
-        tip.taskFinished();
+        if (tip != null) {
+          tip.taskFinished();
+        } else {
+          LOG.warning("Unknown child task finshed: "+taskid+". Ignored.");
+        }
     }
 
     /** 
