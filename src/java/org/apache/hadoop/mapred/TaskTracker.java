@@ -566,7 +566,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
      */
     public synchronized void progress(String taskid, float progress, String state) throws IOException {
         TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
-        tip.reportProgress(progress, state);
+        if (tip != null) {
+          tip.reportProgress(progress, state);
+        } else {
+          LOG.warning("Progress from unknown child task: "+taskid+". Ignored.");
+        }
     }
 
     /**
@@ -575,7 +579,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
      */
     public synchronized void reportDiagnosticInfo(String taskid, String info) throws IOException {
         TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
-        tip.reportDiagnosticInfo(info);
+        if (tip != null) {
+          tip.reportDiagnosticInfo(info);
+        } else {
+          LOG.warning("Error from unknown child task: "+taskid+". Ignored.");
+        }
     }
 
     /** Child checking to see if we're alive.  Normally does nothing.*/
@@ -590,7 +598,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
      */
     public synchronized void done(String taskid) throws IOException {
         TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
-        tip.reportDone();
+        if (tip != null) {
+          tip.reportDone();
+        } else {
+          LOG.warning("Unknown child task done: "+taskid+". Ignored.");
+        }
     }
 
     /** A child task had a local filesystem error.  Exit, so that no future
