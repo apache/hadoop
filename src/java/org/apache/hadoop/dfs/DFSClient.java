@@ -42,6 +42,7 @@ class DFSClient implements FSConstants {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.fs.DFSClient");
     static int MAX_BLOCK_ACQUIRE_FAILURES = 10;
     ClientProtocol namenode;
+    String localName;
     boolean running = true;
     Random r = new Random();
     String clientName;
@@ -53,6 +54,11 @@ class DFSClient implements FSConstants {
      */
     public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf) {
         this.namenode = (ClientProtocol) RPC.getProxy(ClientProtocol.class, nameNodeAddr, conf);
+        try {
+            this.localName = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException uhe) {
+            this.localName = "";
+        }
         this.clientName = "DFSClient_" + r.nextInt();
         this.leaseChecker = new Daemon(new LeaseChecker());
         this.leaseChecker.start();
@@ -188,8 +194,8 @@ class DFSClient implements FSConstants {
     }
 
     /**
-     * Pick the best/closest node  which to stream the data.
-     * For now, just pick the first on the list.
+     * Pick the best node from which to stream the data.
+     * That's the local one, if available.
      */
     private DatanodeInfo bestNode(DatanodeInfo nodes[], TreeSet deadNodes) throws IOException {
         if ((nodes == null) || 
@@ -197,9 +203,25 @@ class DFSClient implements FSConstants {
             throw new IOException("No live nodes contain current block");
         }
         DatanodeInfo chosenNode = null;
-        do {
-            chosenNode = nodes[Math.abs(r.nextInt()) % nodes.length];
-        } while (deadNodes.contains(chosenNode));
+        for (int i = 0; i < nodes.length; i++) {
+            if (deadNodes.contains(nodes[i])) {
+                continue;
+            }
+            String nodename = nodes[i].getName().toString();
+            int colon = nodename.indexOf(':');
+            if (colon >= 0) {
+                nodename = nodename.substring(0, colon);
+            }
+            if (localName.equals(nodename)) {
+                chosenNode = nodes[i];
+                break;
+            }
+        }
+        if (chosenNode == null) {
+            do {
+                chosenNode = nodes[Math.abs(r.nextInt()) % nodes.length];
+            } while (deadNodes.contains(chosenNode));
+        }
         return chosenNode;
     }
 
