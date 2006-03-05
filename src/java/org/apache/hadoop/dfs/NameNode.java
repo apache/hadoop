@@ -131,8 +131,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     /**
      */
-    public LocatedBlock create(String src, String clientName, boolean overwrite) throws IOException {
-        Object results[] = namesystem.startFile(new UTF8(src), new UTF8(clientName), overwrite);
+    public LocatedBlock create(String src, String clientName, String clientMachine, boolean overwrite) throws IOException {
+        Object results[] = namesystem.startFile(new UTF8(src), new UTF8(clientName), new UTF8(clientMachine), overwrite);
         if (results == null) {
             throw new IOException("Cannot create file " + src + " on client " + clientName);
         } else {
@@ -144,15 +144,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     /**
      */
-    public LocatedBlock addBlock(String src) throws IOException {
+    public LocatedBlock addBlock(String src, String clientMachine) throws IOException {
         int retries = 5;
-        Object results[] = namesystem.getAdditionalBlock(new UTF8(src));
+        Object results[] = namesystem.getAdditionalBlock(new UTF8(src), new UTF8(clientMachine));
         while (results != null && results[0] == null && retries > 0) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException ie) {
             }
-            results = namesystem.getAdditionalBlock(new UTF8(src));
+            results = namesystem.getAdditionalBlock(new UTF8(src), new UTF8(clientMachine));
             retries--;
         }
 

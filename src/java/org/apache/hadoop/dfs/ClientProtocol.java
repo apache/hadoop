@@ -51,7 +51,7 @@ interface ClientProtocol {
      * create multi-block files must also use reportWrittenBlock()
      * and addBlock().
      */
-    public LocatedBlock create(String src, String clientName, boolean overwrite) throws IOException;
+    public LocatedBlock create(String src, String clientName, String clientMachine, boolean overwrite) throws IOException;
 
     /**
      * A client that has written a block of data can report completion
@@ -81,7 +81,7 @@ interface ClientProtocol {
      * A null response means the NameNode could not allocate a block,
      * and that the caller should try again.
      */
-    public LocatedBlock addBlock(String src) throws IOException;
+    public LocatedBlock addBlock(String src, String clientMachine) throws IOException;
 
     /**
      * A client that wants to abandon writing to the current file

@@ -574,9 +574,9 @@ class DFSClient implements FSConstants {
                 LocatedBlock lb = null;                
                 while (! blockComplete) {
                     if (firstTime) {
-                        lb = namenode.create(src.toString(), clientName.toString(), overwrite);
+                        lb = namenode.create(src.toString(), clientName.toString(), localName, overwrite);
                     } else {
-                        lb = namenode.addBlock(src.toString());
+                        lb = namenode.addBlock(src.toString(), localName);
                     }
 
                     if (lb == null) {
