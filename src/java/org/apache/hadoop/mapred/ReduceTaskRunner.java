@@ -55,9 +55,13 @@ class ReduceTaskRunner extends TaskRunner {
     while (needed.size() > 0) {
       getTask().reportProgress(getTracker());
 
-      // get list of available map output locations from job tracker
-      String[][] neededStrings = new String[needed.size()][];
-      for (int i = 0; i < needed.size(); i++) {
+      // query for a just a random subset of needed segments so that we don't
+      // overwhelm jobtracker.  ideally perhaps we could send a more compact
+      // representation of all needed, i.e., a bit-vector
+      Collections.shuffle(needed);
+      int checkSize = Math.min(10, needed.size());
+      String[][] neededStrings = new String[checkSize][];
+      for (int i = 0; i < checkSize; i++) {
           neededStrings[i] = (String[]) needed.elementAt(i);
       }
       MapOutputLocation[] locs =
@@ -68,7 +72,7 @@ class ReduceTaskRunner extends TaskRunner {
           if (killed) {
             return false;
           }
-          Thread.sleep(1000);
+          Thread.sleep(10000);
         } catch (InterruptedException e) {
         }
         continue;
