@@ -551,6 +551,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         // Get map + reduce counts for the current tracker.
         //
         TaskTrackerStatus tts = (TaskTrackerStatus) taskTrackers.get(taskTracker);
+        if (tts == null) {
+          LOG.warning("Unknown task tracker polling; ignoring: " + taskTracker);
+          return null;
+        }
+
         int numMaps = tts.countMapTasks();
         int numReduces = tts.countReduceTasks();
 
