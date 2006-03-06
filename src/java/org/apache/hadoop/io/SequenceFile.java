@@ -58,7 +58,7 @@ public class SequenceFile {
 
     private boolean deflateValues;
     private DataOutputBuffer deflateIn = new DataOutputBuffer();
-    private byte[] deflateOut = new byte[1024];
+    private byte[] deflateOut = new byte[8192];
     private Deflater deflater = new Deflater(Deflater.BEST_SPEED);
 
     // Insert a globally unique 16-byte value every few entries, so that one
@@ -219,7 +219,7 @@ public class SequenceFile {
     private int keyLength;
 
     private boolean inflateValues;
-    private byte[] inflateIn = new byte[1024];
+    private byte[] inflateIn = new byte[8192];
     private DataOutputBuffer inflateOut = new DataOutputBuffer();
     private Inflater inflater = new Inflater();
     private Configuration conf;
