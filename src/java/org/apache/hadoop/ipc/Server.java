@@ -33,6 +33,7 @@ import java.util.logging.Logger;
 import java.util.logging.Level;
 
 import org.apache.hadoop.util.LogFormatter;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.UTF8;
@@ -52,6 +53,7 @@ public abstract class Server {
   private int handlerCount;                       // number of handler threads
   private int maxQueuedCalls;                     // max number of queued calls
   private Class paramClass;                       // class of call parameters
+  private Configuration conf;
 
   private int timeout;
 
@@ -229,6 +231,7 @@ public abstract class Server {
    * the number of handler threads that will be used to process calls.
    */
   protected Server(int port, Class paramClass, int handlerCount, Configuration conf) {
+    this.conf = conf;
     this.port = port;
     this.paramClass = paramClass;
     this.handlerCount = handlerCount;
@@ -280,6 +283,9 @@ public abstract class Server {
     Writable param;                               // construct param
     try {
       param = (Writable)paramClass.newInstance();
+      if (param instanceof Configurable) {
+        ((Configurable)param).setConf(conf);
+      }
     } catch (InstantiationException e) {
       throw new RuntimeException(e.toString());
     } catch (IllegalAccessException e) {
