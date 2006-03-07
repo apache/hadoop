@@ -266,6 +266,9 @@ public class DistributedFileSystem extends FileSystem {
         path.append(DFSFile.DFS_FILE_SEPARATOR);
         path.append(l.get(i));
       }
+      if (f.isAbsolute() && path.length() == 0) {
+        path.append(DFSFile.DFS_FILE_SEPARATOR);
+      }
       return path.toString();
     }
 
