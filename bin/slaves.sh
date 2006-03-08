@@ -6,6 +6,7 @@
 #
 #   HADOOP_SLAVES    File naming remote hosts.  Default is ~/.slaves
 #   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
+#   HADOOP_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
 ##
 
 usage="Usage: slaves.sh command..."
@@ -54,6 +55,9 @@ fi
 for slave in `cat "$HADOOP_SLAVES"`; do
  ssh $HADOOP_SSH_OPTS $slave $"${@// /\\ }" \
    2>&1 | sed "s/^/$slave: /" &
+ if [ "$HADOOP_SLAVE_SLEEP" != "" ]; then
+   sleep $HADOOP_SLAVE_SLEEP
+ fi
 done
 
 wait
