@@ -184,9 +184,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * The client needs to give up on the block.
      */
     public void abandonBlock(Block b, String src) throws IOException {
-        if (! namesystem.abandonBlock(b, new UTF8(src))) {
-            throw new IOException("Cannot abandon block during write to " + src);
-        }
+        namesystem.abandonBlock(b, new UTF8(src));
     }
     /**
      */

@@ -286,7 +286,7 @@ public class DataNode implements FSConstants, Runnable {
             try {
                 while (shouldListen) {
                     Socket s = ss.accept();
-                    s.setSoTimeout(READ_TIMEOUT);
+                    //s.setSoTimeout(READ_TIMEOUT);
                     new Daemon(new DataXceiver(s)).start();
                 }
                 ss.close();
@@ -368,10 +368,10 @@ public class DataNode implements FSConstants, Runnable {
                                     // Connect to backup machine
                                     mirrorTarget = createSocketAddr(targets[1].getName().toString());
                                     try {
-                                        Socket s = new Socket(mirrorTarget.getAddress(), mirrorTarget.getPort());
-                                        s.setSoTimeout(READ_TIMEOUT);
-                                        out2 = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
-                                        in2 = new DataInputStream(new BufferedInputStream(s.getInputStream()));
+                                        Socket s2 = new Socket(mirrorTarget.getAddress(), mirrorTarget.getPort());
+                                        //s2.setSoTimeout(READ_TIMEOUT);
+                                        out2 = new DataOutputStream(new BufferedOutputStream(s2.getOutputStream()));
+                                        in2 = new DataInputStream(new BufferedInputStream(s2.getInputStream()));
 
                                         // Write connection header
                                         out2.write(OP_WRITE_BLOCK);
@@ -507,6 +507,7 @@ public class DataNode implements FSConstants, Runnable {
                             mirrors.add(curTarget);
                             LocatedBlock newLB = new LocatedBlock(b, (DatanodeInfo[]) mirrors.toArray(new DatanodeInfo[mirrors.size()]));
                             newLB.write(reply);
+                            reply.flush();
                         } finally {
                             reply.close();
                         }

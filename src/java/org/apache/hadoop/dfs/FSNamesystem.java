@@ -1277,15 +1277,14 @@ class FSNamesystem implements FSConstants {
         //
         // Build list of machines we can actually choose from
         //
-        long latestRemaining = 0;
         Vector targetList = new Vector();
         for (Iterator it = datanodeMap.values().iterator(); it.hasNext(); ) {
             DatanodeInfo node = (DatanodeInfo) it.next();
             if (! forbiddenMachines.contains(node.getHost())) {
                 targetList.add(node);
-                latestRemaining += node.getRemaining();
             }
         }
+        Collections.shuffle(targetList);
 
         //
         // Now pick one
@@ -1309,12 +1308,9 @@ class FSNamesystem implements FSConstants {
             //
             // Otherwise, choose node according to target capacity
             //
-            double target = Math.abs(r.nextDouble()) * latestRemaining;
             for (Iterator it = targetList.iterator(); it.hasNext(); ) {
                 DatanodeInfo node = (DatanodeInfo) it.next();
-                target -= node.getRemaining();
-                if ((node.getRemaining() > BLOCK_SIZE * MIN_BLOCKS_FOR_WRITE) &&
-                    (target <= 0)) {
+                if ((node.getRemaining() > BLOCK_SIZE * MIN_BLOCKS_FOR_WRITE)) {
                     return node;
                 }
             }
