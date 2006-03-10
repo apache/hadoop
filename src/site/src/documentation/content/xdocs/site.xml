@@ -42,7 +42,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
   <external-refs>
     <lucene    href="http://lucene.apache.org/java/" />
     <nutch     href="http://lucene.apache.org/nutch/" />
-    <wiki      href="http://wiki.apache.org/hadoop/" />
+    <wiki      href="http://wiki.apache.org/lucene-hadoop/" />
     <nightly   href="http://cvs.apache.org/dist/lucene/hadoop/nightly/" />
   </external-refs>
  

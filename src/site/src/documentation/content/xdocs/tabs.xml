@@ -15,6 +15,6 @@
   -->
 
   <tab label="Main" dir=""/>  
-  <tab label="Wiki" href="http://wiki.apache.org/hadoop"/>
+  <tab label="Wiki" href="http://wiki.apache.org/lucene-hadoop"/>
   
 </tabs>
