@@ -67,9 +67,14 @@ class MapOutputFile implements Writable, Configurable {
     throws IOException {
     return this.jobConf.getLocalFile(reduceTaskId, mapTaskId+".out");
   }
-  public File getInputFile(String mapTaskId[], String reduceTaskId)
+  public File getInputFile(String mapTaskIds[], String reduceTaskId)
     throws IOException {
-    return this.jobConf.getLocalFile(reduceTaskId, mapTaskId, ".out");
+    for (int i = 0; i < mapTaskIds.length; i++) {
+      File file = jobConf.getLocalFile(reduceTaskId, mapTaskIds[i]+".out");
+      if (file.exists())
+        return file;
+    }
+    throw new IOException("Input file not found!");
   }
 
   /** Removes all of the files related to a task. */

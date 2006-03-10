@@ -368,8 +368,9 @@ public class DataNode implements FSConstants, Runnable {
                                     // Connect to backup machine
                                     mirrorTarget = createSocketAddr(targets[1].getName().toString());
                                     try {
-                                        Socket s2 = new Socket(mirrorTarget.getAddress(), mirrorTarget.getPort());
-                                        //s2.setSoTimeout(READ_TIMEOUT);
+                                        Socket s2 = new Socket();
+                                        s2.connect(mirrorTarget, READ_TIMEOUT);
+                                        s2.setSoTimeout(READ_TIMEOUT);
                                         out2 = new DataOutputStream(new BufferedOutputStream(s2.getOutputStream()));
                                         in2 = new DataInputStream(new BufferedInputStream(s2.getInputStream()));
 
@@ -507,7 +508,6 @@ public class DataNode implements FSConstants, Runnable {
                             mirrors.add(curTarget);
                             LocatedBlock newLB = new LocatedBlock(b, (DatanodeInfo[]) mirrors.toArray(new DatanodeInfo[mirrors.size()]));
                             newLB.write(reply);
-                            reply.flush();
                         } finally {
                             reply.close();
                         }
@@ -638,7 +638,9 @@ public class DataNode implements FSConstants, Runnable {
         public void run() {
 	    xmitsInProgress++;
             try {
-                Socket s = new Socket(curTarget.getAddress(), curTarget.getPort());
+                Socket s = new Socket();
+                s.connect(curTarget, READ_TIMEOUT);
+                s.setSoTimeout(READ_TIMEOUT);
                 DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
                 try {
                     long filelen = data.getLength(b);
@@ -673,6 +675,7 @@ public class DataNode implements FSConstants, Runnable {
                 }
                 LOG.info("Transmitted block " + b + " to " + curTarget);
             } catch (IOException ie) {
+              LOG.log(Level.WARNING, "Failed to transfer "+b+" to "+curTarget, ie);
             } finally {
 		xmitsInProgress--;
 	    }

@@ -124,35 +124,7 @@ public class JobConf extends Configuration {
   /** Constructs a local file name.  Files are distributed among configured
    * local directories.*/
   public File getLocalFile(String subdir, String name) throws IOException {
-      String param[] = new String[1];
-      param[0] = name;
-      return getLocalFile(subdir, param, "", false);
-  }
-  // REMIND - mjc - rename this!  getLocalFile() is not quite the same.
-  public File getLocalFile(String subdir, String names[], String ending) throws IOException {
-      return getLocalFile(subdir, names, ending, true);
-  }
-  File getLocalFile(String subdir, String names[], String ending, boolean existingFileTest) throws IOException {
-    String[] localDirs = getLocalDirs();
-    for (int k = 0; k < names.length; k++) {
-        String path = subdir + File.separator + names[k] + ending;
-        int hashCode = path.hashCode();
-        for (int i = 0; i < localDirs.length; i++) {  // try each local dir
-            int index = (hashCode+i & Integer.MAX_VALUE) % localDirs.length;
-            File file = new File(localDirs[index], path);
-            File dir = file.getParentFile();
-            if (existingFileTest) {
-                if (file.exists()) {
-                    return file;
-                }
-            } else {
-                if (dir.exists() || dir.mkdirs()) {
-                    return file;
-                }
-            }
-        }
-    }
-    throw new IOException("No valid local directories.");
+    return getFile("mapred.local.dir", name + File.separator + subdir);
   }
 
   public void setInputDir(File dir) { set("mapred.input.dir", dir); }

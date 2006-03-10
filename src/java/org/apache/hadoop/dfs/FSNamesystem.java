@@ -783,7 +783,7 @@ class FSNamesystem implements FSConstants {
      * 1) Record the heartbeat, so the datanode isn't timed out
      * 2) Adjust usage stats for future block allocation
      */
-    public void gotHeartbeat(UTF8 name, long capacity, long remaining) {
+    public synchronized void gotHeartbeat(UTF8 name, long capacity, long remaining) {
         synchronized (heartbeats) {
             synchronized (datanodeMap) {
                 long capacityDiff = 0;
@@ -1285,7 +1285,7 @@ class FSNamesystem implements FSConstants {
             }
         }
         Collections.shuffle(targetList);
-
+        
         //
         // Now pick one
         //
