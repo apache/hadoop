@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="nutch-conf.xsl"?>
+
+<!-- Values used when running unit tests.  This is mostly empty, to -->
+<!-- use of the default values, overriding the potentially -->
+<!-- user-editted mapred-default.xml in the conf/ directory.  -->
+
+<configuration>
+
+</configuration>

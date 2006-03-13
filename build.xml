@@ -34,6 +34,8 @@
   <property name="test.build.data" value="${test.build.dir}/data"/>
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
+  <property name="test.include" value="Test*"/>
+  <property name="test.classpath.id" value="test.classpath"/>
 
   <property name="web.src.dir" value="${basedir}/src/web"/>
   <property name="src.webapps" value="${basedir}/src/webapps"/>
@@ -55,14 +57,21 @@
     <fileset dir="${lib.dir}">
       <include name="**/*.jar" />
     </fileset>
+    <pathelement location="${conf.dir}"/>
   </path>
 
-  <!-- the unit test classpath -->
+  <!-- the unit test classpath: uses test.src.dir for configuration -->
   <path id="test.classpath">
     <pathelement location="${test.build.classes}" />
-    <pathelement location="${conf.dir}"/>
     <pathelement location="${test.src.dir}"/>
     <path refid="classpath"/>
+  </path>
+
+  <!-- the cluster test classpath: uses conf.dir for configuration -->
+  <path id="test.cluster.classpath">
+    <path refid="classpath"/>
+    <pathelement location="${test.build.classes}" />
+    <pathelement location="${test.src.dir}"/>
   </path>
 
   <!-- ====================================================== -->
@@ -200,11 +209,12 @@
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
-      <classpath refid="test.classpath"/>
+      <classpath refid="${test.classpath.id}"/>
       <formatter type="plain" />
       <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${test.src.dir}"
-                 includes="**/Test*.java" excludes="**/${test.exclude}.java" />
+	         includes="**/${test.include}.java"
+		 excludes="**/${test.exclude}.java" />
       </batchtest>
       <batchtest todir="${test.build.dir}" if="testcase">
         <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
@@ -214,6 +224,14 @@
     <fail if="tests.failed">Tests failed!</fail>
 
   </target>   
+
+  <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
+  <target name="test-cluster">
+    <antcall target="test">
+      <param name="test.include" value="*"/>
+      <param name="test.classpath.id" value="test.cluster.classpath"/>
+    </antcall>
+  </target>
 
   <target name="nightly" depends="test, tar">
   </target>

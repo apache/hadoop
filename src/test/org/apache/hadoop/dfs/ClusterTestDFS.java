@@ -37,7 +37,7 @@ import java.lang.reflect.InvocationTargetException;
 
 /**
  * Test DFS.
- * TestDFS is a JUnit test for DFS using "pseudo multiprocessing" (or 
+ * ClusterTestDFS is a JUnit test for DFS using "pseudo multiprocessing" (or 
  more strictly, pseudo distributed) meaning all daemons run in one process 
  and sockets are used to communicate between daemons.  The test permutes
  * various block sizes, number of files, file sizes, and number of
@@ -68,9 +68,9 @@ import java.lang.reflect.InvocationTargetException;
  * (HadoopFS level) test {@link org.apache.hadoop.fs.TestFileSystem}.
  * @author Paul Baclace
  */
-public class TestDFS extends TestCase implements FSConstants {
+public class ClusterTestDFS extends TestCase implements FSConstants {
   private static final Logger LOG =
-      LogFormatter.getLogger("org.apache.hadoop.dfs.TestDFS");
+      LogFormatter.getLogger("org.apache.hadoop.dfs.ClusterTestDFS");
 
   private static Configuration conf = new Configuration();
   private static int BUFFER_SIZE =
@@ -518,12 +518,12 @@ public class TestDFS extends TestCase implements FSConstants {
   }
 
   public static void main(String[] args) throws Exception {
-    String usage = "Usage: TestDFS (no args)";
+    String usage = "Usage: ClusterTestDFS (no args)";
     if (args.length != 0) {
       System.err.println(usage);
       System.exit(-1);
     }
-    String[] testargs = {"org.apache.hadoop.dfs.TestDFS"};
+    String[] testargs = {"org.apache.hadoop.dfs.ClusterTestDFS"};
     junit.textui.TestRunner.main(testargs);
   }
 
