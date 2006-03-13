@@ -7,4 +7,14 @@
 
 <configuration>
 
+<property>
+  <name>mapred.local.dir</name>
+  <value>build/test/mapred/local</value>
+</property>
+
+<property>
+  <name>mapred.system.dir</name>
+  <value>build/test/mapred/system</value>
+</property>
+
 </configuration>
