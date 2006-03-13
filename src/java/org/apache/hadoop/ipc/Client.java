@@ -126,7 +126,7 @@ public class Client {
         (new BufferedOutputStream
          (new FilterOutputStream(socket.getOutputStream()) {
              public void write(byte[] buf, int o, int len) throws IOException {
-               super.write(buf, o, len);
+               out.write(buf, o, len);
                if (writingCall != null) {
                  writingCall.touch();
                }
