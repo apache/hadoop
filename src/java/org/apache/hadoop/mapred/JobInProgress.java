@@ -38,8 +38,8 @@ class JobInProgress {
     File localJobFile = null;
     File localJarFile = null;
 
-    TaskInProgress maps[] = null;
-    TaskInProgress reduces[] = null;
+    TaskInProgress maps[] = new TaskInProgress[0];
+    TaskInProgress reduces[] = new TaskInProgress[0];
     int numMapTasks = 0;
     int numReduceTasks = 0;
 
