@@ -17,6 +17,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.logging.Level;
 
 import java.io.*;
 import org.apache.hadoop.io.*;
@@ -108,12 +109,28 @@ class MapOutputFile implements Writable, Configurable {
     // write the length-prefixed file content to the wire
     File file = getOutputFile(mapTaskId, partition);
     out.writeLong(file.length());
-    FSDataInputStream in = FileSystem.getNamed("local", this.jobConf).open(file);
+
+    FSDataInputStream in = null;
+    try {
+      in = FileSystem.getNamed("local", this.jobConf).open(file);
+    } catch (IOException e) {
+      // log a SEVERE exception in order to cause TaskTracker to exit
+      TaskTracker.LOG.log(Level.SEVERE, "Can't open map output:" + file, e);
+      throw e;
+    }
     try {
       byte[] buffer = new byte[8192];
-      int l;
-      while ((l = in.read(buffer)) != -1) {
+      int l  = 0;
+      
+      while (l != -1) {
         out.write(buffer, 0, l);
+        try {
+          l = in.read(buffer);
+        } catch (IOException e) {
+          // log a SEVERE exception in order to cause TaskTracker to exit
+          TaskTracker.LOG.log(Level.SEVERE,"Can't read map output:" + file, e);
+          throw e;
+        }
       }
     } finally {
       in.close();

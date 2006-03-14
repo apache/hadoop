@@ -305,6 +305,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
               }
             }
             lastHeartbeat = now;
+
+            if (LogFormatter.hasLoggedSevere()) {
+              LOG.info("Severe problem detected.  TaskTracker exiting.");
+              return STALE_STATE;
+            }
         }
 
         return 0;
