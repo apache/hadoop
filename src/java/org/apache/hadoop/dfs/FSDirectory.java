@@ -59,6 +59,14 @@ class FSDirectory implements FSConstants {
         }
 
         /**
+         * Check whether it's a directory
+         * @return
+         */
+        synchronized public boolean isDir() {
+          return (blocks == null);
+        }
+
+        /**
          * This is the external interface
          */
         INode getNode(String target) {
@@ -612,11 +620,7 @@ class FSDirectory implements FSConstants {
                 DFSFileInfo listing[] = new DFSFileInfo[contents.size()];
                 int i = 0;
                 for (Iterator it = contents.iterator(); it.hasNext(); i++) {
-                    INode cur = (INode) it.next();
-                    UTF8 curName = new UTF8(cur.computeName());
-                    listing[i] = new DFSFileInfo(curName, cur.computeFileLength(), cur.computeContentsLength(), isDir(curName));
-                    //listing[i] = new DFSFileInfo(curName, cur.computeFileLength(), 0, isDir(curName));
-                    //listing[i] = new DFSFileInfo(curName, cur.computeFileLength(), 0, false);
+                    listing[i] = new DFSFileInfo( (INode) it.next() );
                 }
                 return listing;
             }
@@ -655,16 +659,12 @@ class FSDirectory implements FSConstants {
     }
 
     /**
-     * Check whether it's a directory
+     * Check whether the path specifies a directory
      */
     public boolean isDir(UTF8 src) {
         synchronized (rootDir) {
             INode node = rootDir.getNode(normalizePath(src));
-            if (node != null && node.blocks == null) {
-                return true;
-            } else {
-                return false;
-            }
+            return node != null && node.isDir();
         }
     }
 
