@@ -124,6 +124,14 @@ public class WritableComparator implements Comparator {
     return l1 - l2;
   }
 
+  /** Compute hash for binary data. */
+  public static int hashBytes(byte[] bytes, int length) {
+    int hash = 1;
+    for (int i = 0; i < length; i++)
+      hash = (31 * hash) + (int)bytes[i];
+    return hash;
+  }
+
   /** Parse an unsigned short from a byte array. */
   public static int readUnsignedShort(byte[] bytes, int start) {
     return (((bytes[start]   & 0xff) <<  8) +

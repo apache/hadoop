@@ -149,10 +149,7 @@ public class UTF8 implements WritableComparable {
   }
 
   public int hashCode() {
-    int hash = 1;
-    for (int i = 0; i < length; i++)
-      hash = (31 * hash) + (int)bytes[i];
-    return hash;
+    return WritableComparator.hashBytes(bytes, length);
   }
 
   /** A WritableComparator optimized for UTF8 keys. */
