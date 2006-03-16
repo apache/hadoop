@@ -47,37 +47,37 @@ class TaskInProgress {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.mapred.TaskInProgress");
 
     // Defines the TIP
-    String jobFile = null;
-    FileSplit split = null;
-    String hints[][] = null;
-    TaskInProgress predecessors[] = null;
-    int partition;
-    JobTracker jobtracker;
-    String id;
-    String totalTaskIds[];
-    JobInProgress job;
+    private String jobFile = null;
+    private FileSplit split = null;
+    private String hints[][] = null;
+    private TaskInProgress predecessors[] = null;
+    private int partition;
+    private JobTracker jobtracker;
+    private String id;
+    private String totalTaskIds[];
+    private JobInProgress job;
 
     // Status of the TIP
-    int numTaskFailures = 0;
-    double progress = 0;
-    String state = "";
-    long startTime = 0;
-    int completes = 0;
-    boolean failed = false;
-    TreeSet usableTaskIds = new TreeSet();
-    TreeSet recentTasks = new TreeSet();
-    Configuration conf;
+    private int numTaskFailures = 0;
+    private double progress = 0;
+    private String state = "";
+    private long startTime = 0;
+    private int completes = 0;
+    private boolean failed = false;
+    private TreeSet usableTaskIds = new TreeSet();
+    private TreeSet recentTasks = new TreeSet();
+    private JobConf conf;
     
-    TreeMap taskDiagnosticData = new TreeMap();
-    TreeMap taskStatuses = new TreeMap();
+    private TreeMap taskDiagnosticData = new TreeMap();
+    private TreeMap taskStatuses = new TreeMap();
 
-    TreeSet machinesWhereFailed = new TreeSet();
-    TreeSet tasksReportedClosed = new TreeSet();
+    private TreeSet machinesWhereFailed = new TreeSet();
+    private TreeSet tasksReportedClosed = new TreeSet();
 
     /**
      * Constructor for MapTask
      */
-    public TaskInProgress(String jobFile, FileSplit split, JobTracker jobtracker, Configuration conf, JobInProgress job) {
+    public TaskInProgress(String jobFile, FileSplit split, JobTracker jobtracker, JobConf conf, JobInProgress job) {
         this.jobFile = jobFile;
         this.split = split;
         this.jobtracker = jobtracker;
@@ -89,7 +89,7 @@ class TaskInProgress {
     /**
      * Constructor for ReduceTask
      */
-    public TaskInProgress(String jobFile, TaskInProgress predecessors[], int partition, JobTracker jobtracker, Configuration conf, JobInProgress job) {
+    public TaskInProgress(String jobFile, TaskInProgress predecessors[], int partition, JobTracker jobtracker, JobConf conf, JobInProgress job) {
         this.jobFile = jobFile;
         this.predecessors = predecessors;
         this.partition = partition;
@@ -408,7 +408,7 @@ class TaskInProgress {
         //
         if (isMapTask() &&
             recentTasks.size() <= MAX_TASK_EXECS &&
-            conf.getBoolean("mapred.speculative.execution", true) &&
+            conf.getSpeculativeExecution() &&
             (averageProgress - progress >= SPECULATIVE_GAP) &&
             (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG)) {
             return true;

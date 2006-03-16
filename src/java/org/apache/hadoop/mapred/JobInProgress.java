@@ -50,43 +50,46 @@ class JobInProgress {
     long finishTime;
     String deleteUponCompletion = null;
 
-    Configuration conf;
+    private JobConf conf;
     boolean tasksInited = false;
 
     /**
      * Create a JobInProgress with the given job file, plus a handle
      * to the tracker.
      */
-    public JobInProgress(String jobFile, JobTracker jobtracker, Configuration conf) throws IOException {
+    public JobInProgress(String jobFile, JobTracker jobtracker, 
+                         Configuration default_conf) throws IOException {
         String jobid = "job_" + jobtracker.createUniqueId();
         String url = "http://" + jobtracker.getJobTrackerMachine() + ":" + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + jobid;
-        this.conf = conf;
         this.jobtracker = jobtracker;
         this.profile = new JobProfile(jobid, jobFile, url);
         this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
         this.startTime = System.currentTimeMillis();
 
-        this.localJobFile = new JobConf(conf).getLocalFile(JobTracker.SUBDIR, jobid + ".xml");
-        this.localJarFile = new JobConf(conf).getLocalFile(JobTracker.SUBDIR, jobid + ".jar");
-        FileSystem fs = FileSystem.get(conf);
+        JobConf default_job_conf = new JobConf(default_conf);
+        this.localJobFile = default_job_conf.getLocalFile(JobTracker.SUBDIR, 
+            jobid + ".xml");
+        this.localJarFile = default_job_conf.getLocalFile(JobTracker.SUBDIR, 
+            jobid + ".jar");
+        FileSystem fs = FileSystem.get(default_conf);
         fs.copyToLocalFile(new File(jobFile), localJobFile);
 
-        JobConf jd = new JobConf(localJobFile);
+        conf = new JobConf(localJobFile);
 
-        String jarFile = jd.getJar();
+        String jarFile = conf.getJar();
         if (jarFile != null) {
           fs.copyToLocalFile(new File(jarFile), localJarFile);
-          jd.setJar(localJarFile.getCanonicalPath());
+          conf.setJar(localJarFile.getCanonicalPath());
         }
 
-        this.numMapTasks = jd.getNumMapTasks();
-        this.numReduceTasks = jd.getNumReduceTasks();
+        this.numMapTasks = conf.getNumMapTasks();
+        this.numReduceTasks = conf.getNumReduceTasks();
 
         //
         // If a jobFile is in the systemDir, we can delete it (and
         // its JAR) upon completion
         //
-        File systemDir = jd.getSystemDir();
+        File systemDir = conf.getSystemDir();
         if (jobFile.startsWith(systemDir.getPath())) {
             this.deleteUponCompletion = jobFile;
         }

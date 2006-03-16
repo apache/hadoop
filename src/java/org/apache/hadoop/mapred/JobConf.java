@@ -244,6 +244,22 @@ public class JobConf extends Configuration {
     setClass("mapred.combiner.class", theClass, Reducer.class);
   }
   
+  /**
+   * Should speculative execution be used for this job?
+   * @return Defaults to true
+   */
+  public boolean getSpeculativeExecution() { 
+    return getBoolean("mapred.speculative.execution", true);
+  }
+  
+  /**
+   * Turn on or off speculative execution for this job.
+   * In general, it should be turned off for map jobs that have side effects.
+   */
+  public void setSpeculativeExecution(boolean new_val) {
+    setBoolean("mapred.speculative.execution", new_val);
+  }
+  
   public int getNumMapTasks() { return getInt("mapred.map.tasks", 1); }
   public void setNumMapTasks(int n) { setInt("mapred.map.tasks", n); }
 
