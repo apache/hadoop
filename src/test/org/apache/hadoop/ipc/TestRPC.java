@@ -54,6 +54,7 @@ public class TestRPC extends TestCase {
     int add(int v1, int v2) throws IOException;
     int add(int[] values) throws IOException;
     int error() throws IOException;
+    void testServerGet() throws IOException;
   }
 
   public class TestImpl implements TestProtocol {
@@ -78,6 +79,12 @@ public class TestRPC extends TestCase {
 
     public int error() throws IOException {
       throw new IOException("bobo");
+    }
+
+    public void testServerGet() throws IOException {
+      if (!(Server.get() instanceof RPC.Server)) {
+        throw new IOException("Server.get() failed");
+      }
     }
 
   }
@@ -112,6 +119,8 @@ public class TestRPC extends TestCase {
       caught = true;
     }
     assertTrue(caught);
+
+    proxy.testServerGet();
 
     // try some multi-calls
     Method echo =

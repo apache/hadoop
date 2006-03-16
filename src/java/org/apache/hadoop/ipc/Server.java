@@ -49,6 +49,16 @@ public abstract class Server {
   public static final Logger LOG =
     LogFormatter.getLogger("org.apache.hadoop.ipc.Server");
 
+  private static final ThreadLocal SERVER = new ThreadLocal();
+
+  /** Returns the server instance called under or null.  May be called under
+   * {@link #call(Writable)} implementations, and under {@link Writable}
+   * methods of paramters and return values.  Permits applications to access
+   * the server context.*/
+  public static Server get() {
+    return (Server)SERVER.get();
+  }
+
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads
   private int maxQueuedCalls;                     // max number of queued calls
@@ -124,6 +134,7 @@ public abstract class Server {
 
     public void run() {
       LOG.info(getName() + ": starting");
+      SERVER.set(Server.this);
       try {
         while (running) {
           int id;
@@ -177,6 +188,7 @@ public abstract class Server {
 
     public void run() {
       LOG.info(getName() + ": starting");
+      SERVER.set(Server.this);
       while (running) {
         try {
           Call call;

@@ -192,40 +192,68 @@ public class RPC {
   public static Server getServer(final Object instance, final int port,
                                  final int numHandlers,
                                  final boolean verbose, Configuration conf) {
-    return new Server(port, Invocation.class, numHandlers, conf) {
+    return new Server(instance, conf, port, numHandlers, verbose);
+  }
         
-        Class implementation = instance.getClass();
+  /** An RPC Server. */
+  public static class Server extends org.apache.hadoop.ipc.Server {
+    private Object instance;
+    private Class implementation;
+    private boolean verbose;
 
-        public Writable call(Writable param) throws IOException {
-          try {
-            Invocation call = (Invocation)param;
-            if (verbose) log("Call: " + call);
+    /** Construct an RPC server.
+     * @param instance the instance whose methods will be called
+     * @param conf the configuration to use
+     * @param port the port to listen for connections on
+     */
+    public Server(Object instance, Configuration conf, int port) {
+      this(instance, conf, port, 1, false);
+    }
 
-            Method method =
-              implementation.getMethod(call.getMethodName(),
-                                       call.getParameterClasses());
+    /** Construct an RPC server.
+     * @param instance the instance whose methods will be called
+     * @param conf the configuration to use
+     * @param port the port to listen for connections on
+     * @param numHandlers the number of method handler threads to run
+     * @param verbose whether each call should be logged
+     */
+    public Server(Object instance, Configuration conf, int port,
+                  int numHandlers, boolean verbose) {
+      super(port, Invocation.class, numHandlers, conf);
+      this.instance = instance;
+      this.implementation = instance.getClass();
+      this.verbose = verbose;
+    }
 
-            Object value = method.invoke(instance, call.getParameters());
-            if (verbose) log("Return: "+value);
+    public Writable call(Writable param) throws IOException {
+      try {
+        Invocation call = (Invocation)param;
+        if (verbose) log("Call: " + call);
+        
+        Method method =
+          implementation.getMethod(call.getMethodName(),
+                                   call.getParameterClasses());
 
-            return new ObjectWritable(method.getReturnType(), value);
+        Object value = method.invoke(instance, call.getParameters());
+        if (verbose) log("Return: "+value);
 
-          } catch (InvocationTargetException e) {
-            Throwable target = e.getTargetException();
-            if (target instanceof IOException) {
-              throw (IOException)target;
-            } else {
-              IOException ioe = new IOException(target.toString());
-              ioe.setStackTrace(target.getStackTrace());
-              throw ioe;
-            }
-          } catch (Throwable e) {
-            IOException ioe = new IOException(e.toString());
-            ioe.setStackTrace(e.getStackTrace());
-            throw ioe;
-          }
+        return new ObjectWritable(method.getReturnType(), value);
+
+      } catch (InvocationTargetException e) {
+        Throwable target = e.getTargetException();
+        if (target instanceof IOException) {
+          throw (IOException)target;
+        } else {
+          IOException ioe = new IOException(target.toString());
+          ioe.setStackTrace(target.getStackTrace());
+          throw ioe;
         }
-      };
+      } catch (Throwable e) {
+        IOException ioe = new IOException(e.toString());
+        ioe.setStackTrace(e.getStackTrace());
+        throw ioe;
+      }
+    }
   }
 
   private static void log(String value) {
