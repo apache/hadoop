@@ -268,7 +268,9 @@ class TaskInProgress {
             status.setRunState(TaskStatus.FAILED);
         }
         this.recentTasks.remove(taskid);
-        this.completes--;
+        if (this.completes > 0) {
+            this.completes--;
+        }
 
         numTaskFailures++;
         if (numTaskFailures >= MAX_TASK_FAILURES) {
