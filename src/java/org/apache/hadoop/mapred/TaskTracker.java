@@ -70,6 +70,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
 
     private int maxCurrentTasks;
 
+    class MapOutputServer extends RPC.Server {
+      private MapOutputServer(int port, int threads) {
+        super(TaskTracker.this, fConf, port, threads, false);
+      }
+      public TaskTracker getTaskTracker() {
+        return TaskTracker.this;
+      }
+    }
+
     /**
      * Start with the local machine name, and the default JobTracker
      */
@@ -127,7 +136,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
         }
         while (true) {
             try {
-                this.mapOutputServer = RPC.getServer(this, this.mapOutputPort, maxCurrentTasks, false, this.fConf);
+                this.mapOutputServer = new MapOutputServer(mapOutputPort, maxCurrentTasks);
                 this.mapOutputServer.start();
                 break;
             } catch (BindException e) {
@@ -305,11 +314,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
               }
             }
             lastHeartbeat = now;
-
-            if (LogFormatter.hasLoggedSevere()) {
-              LOG.info("Severe problem detected.  TaskTracker exiting.");
-              return STALE_STATE;
-            }
         }
 
         return 0;
@@ -539,6 +543,22 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
         }
 
         /**
+         * The map output has been lost.
+         */
+        public synchronized void mapOutputLost() throws IOException {
+            if (runstate == TaskStatus.SUCCEEDED) {
+              LOG.info("Reporting output lost:"+task.getTaskId());
+              runstate = TaskStatus.FAILED;       // change status to failure
+              synchronized (TaskTracker.this) {   // force into next heartbeat
+                runningTasks.put(task.getTaskId(), this);
+                mapTotal++;
+              }
+            } else {
+              LOG.warning("Output already reported lost:"+task.getTaskId());
+            }
+        }
+
+        /**
          * We no longer need anything from this task.  Either the 
          * controlling job is all done and the files have been copied
          * away, or the task failed and we don't need the remains.
@@ -642,6 +662,18 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
           tip.taskFinished();
         } else {
           LOG.warning("Unknown child task finshed: "+taskid+". Ignored.");
+        }
+    }
+
+    /**
+     * A completed map task's output has been lost.
+     */
+    public synchronized void mapOutputLost(String taskid) throws IOException {
+        TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
+        if (tip != null) {
+          tip.mapOutputLost();
+        } else {
+          LOG.warning("Unknown child with bad map output: "+taskid+". Ignored.");
         }
     }
 

@@ -23,6 +23,8 @@ import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.mapred.TaskTracker.MapOutputServer;
 
 /** A local file to be transferred via the {@link MapOutputProtocol}. */ 
 class MapOutputFile implements Writable, Configurable {
@@ -106,16 +108,15 @@ class MapOutputFile implements Writable, Configurable {
     UTF8.writeString(out, reduceTaskId);
     out.writeInt(partition);
     
-    // write the length-prefixed file content to the wire
     File file = getOutputFile(mapTaskId, partition);
-    out.writeLong(file.length());
-
     FSDataInputStream in = null;
     try {
+      // write the length-prefixed file content to the wire
+      out.writeLong(file.length());
       in = FileSystem.getNamed("local", this.jobConf).open(file);
-    } catch (IOException e) {
-      // log a SEVERE exception in order to cause TaskTracker to exit
+    } catch (FileNotFoundException e) {
       TaskTracker.LOG.log(Level.SEVERE, "Can't open map output:" + file, e);
+      ((MapOutputServer)Server.get()).getTaskTracker().mapOutputLost(mapTaskId);
       throw e;
     }
     try {
@@ -127,8 +128,8 @@ class MapOutputFile implements Writable, Configurable {
         try {
           l = in.read(buffer);
         } catch (IOException e) {
-          // log a SEVERE exception in order to cause TaskTracker to exit
           TaskTracker.LOG.log(Level.SEVERE,"Can't read map output:" + file, e);
+          ((MapOutputServer)Server.get()).getTaskTracker().mapOutputLost(mapTaskId);
           throw e;
         }
       }
