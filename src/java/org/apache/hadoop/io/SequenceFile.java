@@ -57,9 +57,11 @@ public class SequenceFile {
     private Class valClass;
 
     private boolean deflateValues;
-    private DataOutputBuffer deflateIn = new DataOutputBuffer();
-    private byte[] deflateOut = new byte[8192];
     private Deflater deflater = new Deflater(Deflater.BEST_SPEED);
+    private DeflaterOutputStream deflateFilter =
+      new DeflaterOutputStream(buffer, deflater);
+    private DataOutputStream deflateOut =
+      new DataOutputStream(new BufferedOutputStream(deflateFilter));
 
     // Insert a globally unique 16-byte value every few entries, so that one
     // can seek into the middle of a file and then synchronize with record
@@ -155,15 +157,10 @@ public class SequenceFile {
         throw new IOException("zero length keys not allowed: " + key);
 
       if (deflateValues) {
-        deflateIn.reset();
-        val.write(deflateIn);
         deflater.reset();
-        deflater.setInput(deflateIn.getData(), 0, deflateIn.getLength());
-        deflater.finish();
-        while (!deflater.finished()) {
-          int count = deflater.deflate(deflateOut);
-          buffer.write(deflateOut, 0, count);
-        }
+        val.write(deflateOut);
+        deflateOut.flush();
+        deflateFilter.finish();
       } else {
         val.write(buffer);
       }
