@@ -33,9 +33,9 @@ public abstract class InputFormatBase implements InputFormat {
 
   private static final double SPLIT_SLOP = 0.1;   // 10% slop
 
-  private int minSplitSize = 1;
+  private long minSplitSize = 1;
 
-  protected void setMinSplitSize(int minSplitSize) {
+  protected void setMinSplitSize(long minSplitSize) {
     this.minSplitSize = minSplitSize;
   }
 
@@ -112,8 +112,11 @@ public abstract class InputFormatBase implements InputFormat {
       bytesPerSplit = fsBlockSize;
     }
 
-    if (bytesPerSplit < minSplitSize) {           // no smaller than min size
-      bytesPerSplit = minSplitSize;
+    long configuredMinSplitSize = job.getLong("mapred.min.split.size", 0);
+    if( configuredMinSplitSize < minSplitSize )
+    	configuredMinSplitSize = minSplitSize;
+    if (bytesPerSplit < configuredMinSplitSize) { // no smaller than min size
+      bytesPerSplit = configuredMinSplitSize;
     }
 
     long maxPerSplit = bytesPerSplit + (long)(bytesPerSplit*SPLIT_SLOP);
@@ -135,7 +138,9 @@ public abstract class InputFormatBase implements InputFormat {
       if (bytesRemaining != 0) {
         splits.add(new FileSplit(file, length-bytesRemaining, bytesRemaining));
       }
+      //LOG.info( "Generating splits for " + i + "th file: " + file.getName() );
     }
+    //LOG.info( "Total # of splits: " + splits.size() );
     return (FileSplit[])splits.toArray(new FileSplit[splits.size()]);
   }
 
