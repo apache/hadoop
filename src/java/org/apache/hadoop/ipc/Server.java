@@ -22,6 +22,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.StringWriter;
+import java.io.PrintWriter;
 
 import java.net.Socket;
 import java.net.ServerSocket;
@@ -214,10 +216,10 @@ public abstract class Server {
             value = call(call.param);             // make the call
           } catch (IOException e) {
             LOG.log(Level.INFO, getName() + " call error: " + e, e);
-            error = e.getMessage();
+            error = getStackTrace(e);
           } catch (Exception e) {
             LOG.log(Level.INFO, getName() + " call error: " + e, e);
-            error = e.toString();
+            error = getStackTrace(e);
           }
             
           DataOutputStream out = call.connection.out;
@@ -236,6 +238,15 @@ public abstract class Server {
       }
       LOG.info(getName() + ": exiting");
     }
+
+    private String getStackTrace(Throwable throwable) {
+      StringWriter stringWriter = new StringWriter();
+      PrintWriter printWriter = new PrintWriter(stringWriter);
+      throwable.printStackTrace(printWriter);
+      printWriter.flush();
+      return stringWriter.toString();
+    }
+
   }
   
   /** Constructs a server listening on the named port.  Parameters passed must

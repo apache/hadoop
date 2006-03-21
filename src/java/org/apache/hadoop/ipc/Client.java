@@ -29,6 +29,8 @@ import java.io.BufferedOutputStream;
 import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
 
+import java.rmi.RemoteException;
+
 import java.util.Hashtable;
 import java.util.logging.Logger;
 import java.util.logging.Level;
@@ -298,7 +300,7 @@ public class Client {
       } while (!call.done && wait > 0);
 
       if (call.error != null) {
-        throw new IOException(call.error);
+        throw new RemoteException(call.error);
       } else if (!call.done) {
         throw new IOException("timed out waiting for response");
       } else {
