@@ -66,9 +66,8 @@ public class DFSShell {
     }
 
     void cat(String srcf) throws IOException {
-      FSDataInputStream in = null;
+      FSDataInputStream in = fs.open(new File(srcf));
       try {
-        in = fs.open(new File(srcf));
         DataInputStream din = new DataInputStream(new BufferedInputStream(in));
         String line;
         while((line = din.readLine()) != null) {
@@ -242,10 +241,10 @@ public class DFSShell {
         Configuration conf = new Configuration();
         int i = 0;
         FileSystem fs = FileSystem.parseArgs(argv, i, conf);
+        String cmd = argv[i++];
         try {
             DFSShell tc = new DFSShell(fs);
 
-            String cmd = argv[i++];
             if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd)) {
                 tc.copyFromLocal(new File(argv[i++]), argv[i++]);
             } else if ("-moveFromLocal".equals(cmd)) {
@@ -277,6 +276,9 @@ public class DFSShell {
                 tc.report();
             }
             System.exit(0);
+        } catch (IOException e ) {
+          System.err.println( cmd.substring(1) + ": " + e.getLocalizedMessage() );  
+          System.exit(-1);
         } finally {
             fs.close();
         }
