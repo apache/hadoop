@@ -241,6 +241,7 @@ class TaskInProgress {
         String taskid = status.getTaskId();
         String diagInfo = status.getDiagnosticInfo();
         if (diagInfo != null && diagInfo.length() > 0) {
+            LOG.info("Error from "+taskid+": "+diagInfo);
             Vector diagHistory = (Vector) taskDiagnosticData.get(taskid);
             if (diagHistory == null) {
                 diagHistory = new Vector();
