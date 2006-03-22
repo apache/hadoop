@@ -143,7 +143,11 @@ public class JobConf extends Configuration {
     return result;
   }
 
-  public File getOutputDir() { return new File(get("mapred.output.dir")); }
+  public File getOutputDir() { 
+    String name = get("mapred.output.dir");
+    return name == null ? null: new File(name);
+  }
+
   public void setOutputDir(File dir) { set("mapred.output.dir", dir); }
 
   public InputFormat getInputFormat() {

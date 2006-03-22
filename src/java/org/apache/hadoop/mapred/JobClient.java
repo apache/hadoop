@@ -247,8 +247,20 @@ public class JobClient implements MRConstants {
           getFs().copyFromLocalFile(new File(originalJarPath), submitJarFile);
         }
 
-        // Write job file to JobTracker's fs
-        FSDataOutputStream out = getFs().create(submitJobFile);
+        FileSystem fs = getFs();
+
+        // Ensure that the output directory is set and not already there
+        File outDir = job.getOutputDir();
+        if (outDir == null && job.getNumReduceTasks() != 0) {
+            throw new IOException("Output directory not set in JobConf.");
+        }
+        if (outDir != null && fs.exists(outDir)) {
+            throw new IOException("Output directory " + outDir + 
+                                  " already exists.");
+        }
+
+        // Write job file to JobTracker's fs        
+        FSDataOutputStream out = fs.create(submitJobFile);
         try {
           job.write(out);
         } finally {
@@ -347,7 +359,6 @@ public class JobClient implements MRConstants {
         }
 
         // Process args
-        String jobTrackerStr = argv[0];
         String jobTrackerSpec = null;
         String submitJobFile = null;
         String jobid = null;
