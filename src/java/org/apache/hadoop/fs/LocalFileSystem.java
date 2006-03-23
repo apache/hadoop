@@ -22,7 +22,6 @@ import java.nio.channels.*;
 
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.UTF8;
 
 /****************************************************************
  * Implement the FileSystem API for the native filesystem.
@@ -30,6 +29,7 @@ import org.apache.hadoop.io.UTF8;
  * @author Mike Cafarella
  *****************************************************************/
 public class LocalFileSystem extends FileSystem {
+    private File workingDir = new File(System.getProperty("user.dir"));
     TreeMap sharedLockDataSet = new TreeMap();
     TreeMap nonsharedLockDataSet = new TreeMap();
     TreeMap lockObjSet = new TreeMap();
@@ -109,6 +109,7 @@ public class LocalFileSystem extends FileSystem {
     }
     
     public FSInputStream openRaw(File f) throws IOException {
+        f = makeAbsolute(f);
         if (! f.exists()) {
             throw new FileNotFoundException(f.toString());
         }
@@ -151,8 +152,17 @@ public class LocalFileSystem extends FileSystem {
       }
     }
 
+    private File makeAbsolute(File f) {
+      if (f.isAbsolute()) {
+        return f;
+      } else {
+        return new File(workingDir, f.toString());
+      }
+    }
+    
     public FSOutputStream createRaw(File f, boolean overwrite)
       throws IOException {
+        f = makeAbsolute(f);
         if (f.exists() && ! overwrite) {
             throw new IOException("File already exists:"+f);
         }
@@ -164,6 +174,8 @@ public class LocalFileSystem extends FileSystem {
     }
 
     public boolean renameRaw(File src, File dst) throws IOException {
+        src = makeAbsolute(src);
+        dst = makeAbsolute(dst);
         if (useCopyForRename) {
             FileUtil.copyContents(this, src, dst, true, getConf());
             return fullyDelete(src);
@@ -171,32 +183,54 @@ public class LocalFileSystem extends FileSystem {
     }
 
     public boolean deleteRaw(File f) throws IOException {
+        f = makeAbsolute(f);
         if (f.isFile()) {
             return f.delete();
         } else return fullyDelete(f);
     }
 
     public boolean exists(File f) throws IOException {
+        f = makeAbsolute(f);
         return f.exists();
     }
 
     public boolean isDirectory(File f) throws IOException {
+        f = makeAbsolute(f);
         return f.isDirectory();
     }
 
     public long getLength(File f) throws IOException {
+        f = makeAbsolute(f);
         return f.length();
     }
 
     public File[] listFilesRaw(File f) throws IOException {
+        f = makeAbsolute(f);
         return f.listFiles();
     }
 
     public void mkdirs(File f) throws IOException {
+        f = makeAbsolute(f);
         f.mkdirs();
     }
 
+    /**
+     * Set the working directory to the given directory.
+     * Sets both a local variable and the system property.
+     * Note that the system property is only used if the application explictly
+     * calls java.io.File.getAbsolutePath().
+     */
+    public void setWorkingDirectory(File new_dir) {
+      workingDir = makeAbsolute(new_dir);
+      System.setProperty("user.dir", workingDir.toString());
+    }
+    
+    public File getWorkingDirectory() {
+      return workingDir;
+    }
+    
     public synchronized void lock(File f, boolean shared) throws IOException {
+        f = makeAbsolute(f);
         f.createNewFile();
 
         FileLock lockObj = null;
@@ -213,6 +247,7 @@ public class LocalFileSystem extends FileSystem {
     }
 
     public synchronized void release(File f) throws IOException {
+        f = makeAbsolute(f);
         FileLock lockObj = (FileLock) lockObjSet.get(f);
         FileInputStream sharedLockData = (FileInputStream) sharedLockDataSet.get(f);
         FileOutputStream nonsharedLockData = (FileOutputStream) nonsharedLockDataSet.get(f);
@@ -238,6 +273,8 @@ public class LocalFileSystem extends FileSystem {
     // In the case of the local filesystem, we can just rename the file.
     public void moveFromLocalFile(File src, File dst) throws IOException {
         if (! src.equals(dst)) {
+            src = makeAbsolute(src);
+            dst = makeAbsolute(dst);
             if (useCopyForRename) {
                 FileUtil.copyContents(this, src, dst, true, getConf());
                 fullyDelete(src);
@@ -248,6 +285,8 @@ public class LocalFileSystem extends FileSystem {
     // Similar to moveFromLocalFile(), except the source is kept intact.
     public void copyFromLocalFile(File src, File dst) throws IOException {
         if (! src.equals(dst)) {
+            src = makeAbsolute(src);
+            dst = makeAbsolute(dst);
             FileUtil.copyContents(this, src, dst, true, getConf());
         }
     }
@@ -255,13 +294,15 @@ public class LocalFileSystem extends FileSystem {
     // We can't delete the src file in this case.  Too bad.
     public void copyToLocalFile(File src, File dst) throws IOException {
         if (! src.equals(dst)) {
+            src = makeAbsolute(src);
+            dst = makeAbsolute(dst);
             FileUtil.copyContents(this, src, dst, true, getConf());
         }
     }
 
     // We can write output directly to the final location
     public File startLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException {
-        return fsOutputFile;
+        return makeAbsolute(fsOutputFile);
     }
 
     // It's in the right place - nothing to do.
@@ -270,7 +311,7 @@ public class LocalFileSystem extends FileSystem {
 
     // We can read directly from the real local fs.
     public File startLocalInput(File fsInputFile, File tmpLocalFile) throws IOException {
-        return fsInputFile;
+        return makeAbsolute(fsInputFile);
     }
 
     // We're done reading.  Nothing to clean up.
@@ -292,6 +333,7 @@ public class LocalFileSystem extends FileSystem {
      * @throws IOException
      */
     private boolean fullyDelete(File dir) throws IOException {
+        dir = makeAbsolute(dir);
         File contents[] = dir.listFiles();
         if (contents != null) {
             for (int i = 0; i < contents.length; i++) {
@@ -315,7 +357,7 @@ public class LocalFileSystem extends FileSystem {
                                       long start, long length, int crc) {
       try {
         // canonicalize f   
-        f = f.getCanonicalFile();
+        f = makeAbsolute(f).getCanonicalFile();
       
         // find highest writable parent dir of f on the same device
         String device = new DF(f.toString()).getMount();

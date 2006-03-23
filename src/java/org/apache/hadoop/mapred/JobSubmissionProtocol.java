@@ -17,7 +17,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-import java.util.*;
 
 /** 
  * Protocol that a JobClient and the central JobTracker use to communicate.  The

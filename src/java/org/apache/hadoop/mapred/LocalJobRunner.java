@@ -44,6 +44,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private JobStatus status = new JobStatus();
     private ArrayList mapIds = new ArrayList();
     private MapOutputFile mapoutputFile;
+    private JobProfile profile;
 
     public Job(String file, Configuration conf) throws IOException {
       this.file = file;
@@ -54,8 +55,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
       File localFile = new JobConf(conf).getLocalFile("localRunner", id+".xml");
       fs.copyToLocalFile(new File(file), localFile);
       this.job = new JobConf(localFile);
-      
-      
+      profile = new JobProfile(job.getUser(), id, file, 
+                               "http://localhost:8080/");
       this.status.jobid = id;
       this.status.runState = JobStatus.RUNNING;
 
@@ -64,15 +65,30 @@ class LocalJobRunner implements JobSubmissionProtocol {
       this.start();
     }
 
+    JobProfile getProfile() {
+      return profile;
+    }
+    
+    private void setWorkingDirectory(JobConf conf, FileSystem fs) {
+      String dir = conf.getWorkingDirectory();
+      if (dir != null) {
+        fs.setWorkingDirectory(new File(dir));
+      }
+    }
+    
     public void run() {
       try {
         // split input into minimum number of splits
-        FileSplit[] splits = job.getInputFormat().getSplits(fs, job, 1);
+        FileSplit[] splits;
+        setWorkingDirectory(job, fs);
+        splits = job.getInputFormat().getSplits(fs, job, 1);
 
+        
         // run a map task for each split
         job.setNumReduceTasks(1);                 // force a single reduce task
         for (int i = 0; i < splits.length; i++) {
           mapIds.add("map_" + newId());
+          setWorkingDirectory(job, fs);
           MapTask map = new MapTask(file, (String)mapIds.get(i), splits[i]);
           map.setConf(job);
           map_tasks += 1;
@@ -97,10 +113,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
         for (int i = 0; i < mapIds.size(); i++) {
             mapDependencies[i][0] = (String) mapIds.get(i);
         }
-        ReduceTask reduce =
-          new ReduceTask(file, reduceId,
-                         mapDependencies,
-                         0);
+        setWorkingDirectory(job, fs);
+        ReduceTask reduce = new ReduceTask(file, reduceId,
+            mapDependencies,0);
         reduce.setConf(job);
         reduce_tasks += 1;
         reduce.run(job, this);
@@ -172,7 +187,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
   public JobProfile getJobProfile(String id) {
     Job job = (Job)jobs.get(id);
-    return new JobProfile(id, job.file, "http://localhost:8080/");
+    return job.getProfile();
   }
 
   public TaskReport[] getMapTaskReports(String id) {

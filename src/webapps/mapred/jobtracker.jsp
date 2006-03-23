@@ -4,11 +4,13 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
+  import="java.text.DecimalFormat"
   import="org.apache.hadoop.mapred.*"
 %>
 <%!
   JobTracker tracker = JobTracker.getTracker();
   String trackerLabel = tracker.getJobTrackerMachine() + ":" + tracker.getTrackerPort();
+  private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
 
   public void generateTaskTrackerTable(JspWriter out) throws IOException {
     Collection c = tracker.taskTrackers();
@@ -44,14 +46,16 @@
       out.print("<center>\n");
       out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
       out.print("<tr><td align=\"center\" colspan=\"8\"><b>" + label + " Jobs </b></td></tr>\n");
-
       if (jobs.size() > 0) {
-        out.print("<tr><td><b>Jobid</b></td><td><b>% complete</b></td><td><b>Required maps</b></td><td><b>maps completed</b></td><td><b>Required reduces</b></td><td><b>reduces completed</b></td></tr>\n");
+        out.print("<tr><td><b>Jobid</b></td><td><b>User</b></td>");
+        out.print("<td><b>% complete</b></td><td><b>Required maps</b></td>");
+        out.print("<td><b>maps completed</b></td>");
+        out.print("<td><b>Required reduces</b></td>");
+        out.print("<td><b>reduces completed</b></td></tr>\n");
         for (Iterator it = jobs.iterator(); it.hasNext(); ) {
           JobInProgress job = (JobInProgress) it.next();
           JobProfile profile = job.getProfile();
           JobStatus status = job.getStatus();
-
           String jobid = profile.getJobId();
           double completedRatio = (0.5 * (100 * status.mapProgress())) +
                                  (0.5 * (100 * status.reduceProgress()));
@@ -61,7 +65,12 @@
           int completedMaps = job.finishedMaps();
           int completedReduces = job.finishedReduces();
 
-          out.print("<tr><td><a href=\"jobdetails.jsp?jobid=" + jobid + "\">" + jobid + "</a></td><td>" + completedRatio + "%</td><td>" + desiredMaps + "</td><td>" + completedMaps + "</td><td>" + desiredReduces + "</td><td> " + completedReduces + "</td></tr>\n");
+          out.print("<tr><td><a href=\"jobdetails.jsp?jobid=" + jobid + "\">" + 
+                    jobid + "</a></td><td>"+ profile.getUser() + "</td><td>" +
+                    percentFormat.format(completedRatio) + "%</td><td>" + 
+                    desiredMaps + "</td><td>" + completedMaps + "</td><td>" + 
+                    desiredReduces + "</td><td> " + completedReduces + 
+                    "</td></tr>\n");
         }
       } else {
         out.print("<tr><td align=\"center\" colspan=\"8\"><i>none</i></td></tr>\n");

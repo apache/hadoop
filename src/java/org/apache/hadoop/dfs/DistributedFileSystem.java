@@ -32,10 +32,9 @@ import org.apache.hadoop.conf.Configuration;
  * @author Mike Cafarella
  *****************************************************************/
 public class DistributedFileSystem extends FileSystem {
-    private static final String HOME_DIR =
-      "/user/" + System.getProperty("user.name") + "/";
+    private File workingDir = 
+      new File("/user/", System.getProperty("user.name"));
 
-    private Random r = new Random();
     private String name;
 
     DFSClient dfs;
@@ -50,11 +49,24 @@ public class DistributedFileSystem extends FileSystem {
 
     public String getName() { return name; }
 
-    private UTF8 getPath(File file) {
-      String path = getDFSPath(file);
-      if (!path.startsWith(DFSFile.DFS_FILE_SEPARATOR)) {
-        path = getDFSPath(new File(HOME_DIR, path)); // make absolute
+    public File getWorkingDirectory() {
+      return workingDir;
+    }
+    
+    private File makeAbsolute(File f) {
+      if (f.isAbsolute()) {
+        return f;
+      } else {
+        return new File(workingDir, f.toString());
       }
+    }
+    
+    public void setWorkingDirectory(File dir) {
+      workingDir = makeAbsolute(dir);
+    }
+    
+    private UTF8 getPath(File file) {
+      String path = getDFSPath(makeAbsolute(file));
       return new UTF8(path);
     }
 

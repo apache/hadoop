@@ -40,6 +40,7 @@ public class TestRPC extends TestCase {
 
   // quiet during testing, since output ends up on console
   static {
+    conf.setInt("ipc.client.timeout", 5000);
     LOG.setLevel(Level.WARNING);
     Client.LOG.setLevel(Level.WARNING);
     Server.LOG.setLevel(Level.WARNING);

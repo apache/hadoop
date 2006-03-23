@@ -59,9 +59,15 @@ public abstract class InputFormatBase implements InputFormat {
   protected File[] listFiles(FileSystem fs, JobConf job)
     throws IOException {
     File[] dirs = job.getInputDirs();
+    String workDir = job.getWorkingDirectory();
     String subdir = job.get("mapred.input.subdir");
     ArrayList result = new ArrayList();
     for (int i = 0; i < dirs.length; i++) {
+      // if it is relative, make it absolute using the directory from the 
+      // JobConf
+      if (workDir != null && !dirs[i].isAbsolute()) {
+        dirs[i] = new File(workDir, dirs[i].toString());
+      }
       File[] dir = fs.listFiles(dirs[i]);
       if (dir != null) {
         for (int j = 0; j < dir.length; j++) {

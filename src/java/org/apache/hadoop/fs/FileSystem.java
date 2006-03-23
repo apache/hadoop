@@ -295,6 +295,19 @@ public abstract class FileSystem extends Configured {
     }
 
     /**
+     * Set the current working directory for the given file system.
+     * All relative paths will be resolved relative to it.
+     * @param new_dir
+     */
+    public abstract void setWorkingDirectory(File new_dir);
+    
+    /**
+     * Get the current working directory for the given file system
+     * @return the directory pathname
+     */
+    public abstract File getWorkingDirectory();
+    
+    /**
      * Make the given file and all non-existent parents into
      * directories.
      */

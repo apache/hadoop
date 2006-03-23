@@ -700,6 +700,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
           startPinging(umbilical, taskid);        // start pinging parent
 
           try {
+              // If the user set a working directory, use it
+              String workDir = job.getWorkingDirectory();
+              if (workDir != null) {
+                FileSystem file_sys = FileSystem.get(job);
+                file_sys.setWorkingDirectory(new File(workDir));
+              }
               task.run(job, umbilical);           // run the task
           } catch (FSError e) {
             LOG.log(Level.SEVERE, "FSError from child", e);

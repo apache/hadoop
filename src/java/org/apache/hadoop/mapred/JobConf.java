@@ -143,6 +143,38 @@ public class JobConf extends Configuration {
     return result;
   }
 
+  /**
+   * Get the reported username for this job.
+   * @return the username
+   */
+  public String getUser() {
+    return get("user.name");
+  }
+  
+  /**
+   * Set the reported username for this job.
+   * @param user the username
+   */
+  public void setUser(String user) {
+    set("user.name", user);
+  }
+  
+  /**
+   * Set the current working directory for the default file system
+   * @param dir the new current working directory
+   */
+  public void setWorkingDirectory(String dir) {
+    set("mapred.working.dir", dir);
+  }
+  
+  /**
+   * Get the current working directory for the default file system.
+   * @return the directory name
+   */
+  public String getWorkingDirectory() {
+    return get("mapred.working.dir"); 
+  }
+  
   public File getOutputDir() { 
     String name = get("mapred.output.dir");
     return name == null ? null: new File(name);

@@ -62,7 +62,6 @@ class JobInProgress {
         String jobid = "job_" + jobtracker.createUniqueId();
         String url = "http://" + jobtracker.getJobTrackerMachine() + ":" + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + jobid;
         this.jobtracker = jobtracker;
-        this.profile = new JobProfile(jobid, jobFile, url);
         this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
         this.startTime = System.currentTimeMillis();
 
@@ -75,6 +74,7 @@ class JobInProgress {
         fs.copyToLocalFile(new File(jobFile), localJobFile);
 
         conf = new JobConf(localJobFile);
+        this.profile = new JobProfile(conf.getUser(), jobid, jobFile, url);
 
         String jarFile = conf.getJar();
         if (jarFile != null) {

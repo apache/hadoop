@@ -247,7 +247,14 @@ public class JobClient implements MRConstants {
           getFs().copyFromLocalFile(new File(originalJarPath), submitJarFile);
         }
 
-        FileSystem fs = getFs();
+        FileSystem fileSys = getFs();
+
+        // Set the user's name and working directory
+        String user = System.getProperty("user.name");
+        job.setUser(user != null ? user : "Dr Who");
+        if (job.getWorkingDirectory() == null) {
+          job.setWorkingDirectory(fileSys.getWorkingDirectory().toString());          
+        }
 
         // Ensure that the output directory is set and not already there
         File outDir = job.getOutputDir();
@@ -260,7 +267,7 @@ public class JobClient implements MRConstants {
         }
 
         // Write job file to JobTracker's fs        
-        FSDataOutputStream out = fs.create(submitJobFile);
+        FSDataOutputStream out = fileSys.create(submitJobFile);
         try {
           job.write(out);
         } finally {
