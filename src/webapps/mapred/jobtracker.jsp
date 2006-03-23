@@ -48,6 +48,7 @@
       out.print("<tr><td align=\"center\" colspan=\"8\"><b>" + label + " Jobs </b></td></tr>\n");
       if (jobs.size() > 0) {
         out.print("<tr><td><b>Jobid</b></td><td><b>User</b></td>");
+        out.print("<td><b>Name</b></td>");
         out.print("<td><b>% complete</b></td><td><b>Required maps</b></td>");
         out.print("<td><b>maps completed</b></td>");
         out.print("<td><b>Required reduces</b></td>");
@@ -64,9 +65,11 @@
           int desiredReduces = job.desiredReduces();
           int completedMaps = job.finishedMaps();
           int completedReduces = job.finishedReduces();
+          String name = profile.getJobName();
 
           out.print("<tr><td><a href=\"jobdetails.jsp?jobid=" + jobid + "\">" + 
                     jobid + "</a></td><td>"+ profile.getUser() + "</td><td>" +
+                    ("".equals(name) ? "&nbsp;" : name) + "</td><td>" +
                     percentFormat.format(completedRatio) + "%</td><td>" + 
                     desiredMaps + "</td><td>" + completedMaps + "</td><td>" + 
                     desiredReduces + "</td><td> " + completedReduces + 

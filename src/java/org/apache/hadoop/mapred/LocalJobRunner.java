@@ -56,7 +56,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
       fs.copyToLocalFile(new File(file), localFile);
       this.job = new JobConf(localFile);
       profile = new JobProfile(job.getUser(), id, file, 
-                               "http://localhost:8080/");
+                               "http://localhost:8080/", job.getJobName());
       this.status.jobid = id;
       this.status.runState = JobStatus.RUNNING;
 

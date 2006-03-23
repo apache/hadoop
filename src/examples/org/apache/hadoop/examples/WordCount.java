@@ -17,7 +17,6 @@
 package org.apache.hadoop.examples;
 
 import java.io.*;
-import java.net.URL;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -110,24 +109,25 @@ public class WordCount {
   public static void main(String[] args) throws IOException {
     Configuration defaults = new Configuration();
     
-    JobConf countJob = new JobConf(defaults, WordCount.class);
+    JobConf conf = new JobConf(defaults, WordCount.class);
+    conf.setJobName("wordcount");
  
     // the keys are words (strings)
-    countJob.setOutputKeyClass(UTF8.class);
+    conf.setOutputKeyClass(UTF8.class);
     // the values are counts (ints)
-    countJob.setOutputValueClass(IntWritable.class);
+    conf.setOutputValueClass(IntWritable.class);
     
-    countJob.setMapperClass(MapClass.class);        
-    countJob.setCombinerClass(Reduce.class);
-    countJob.setReducerClass(Reduce.class);
+    conf.setMapperClass(MapClass.class);        
+    conf.setCombinerClass(Reduce.class);
+    conf.setReducerClass(Reduce.class);
     
     List other_args = new ArrayList();
     for(int i=0; i < args.length; ++i) {
       try {
         if ("-m".equals(args[i])) {
-          countJob.setNumMapTasks(Integer.parseInt(args[++i]));
+          conf.setNumMapTasks(Integer.parseInt(args[++i]));
         } else if ("-r".equals(args[i])) {
-          countJob.setNumReduceTasks(Integer.parseInt(args[++i]));
+          conf.setNumReduceTasks(Integer.parseInt(args[++i]));
         } else {
           other_args.add(args[i]);
         }
@@ -146,13 +146,13 @@ public class WordCount {
           other_args.size() + " instead of 2.");
       printUsage();
     }
-    countJob.setInputDir(new File((String) other_args.get(0)));
-    countJob.setOutputDir(new File((String) other_args.get(1)));
+    conf.setInputDir(new File((String) other_args.get(0)));
+    conf.setOutputDir(new File((String) other_args.get(1)));
     
     // Uncomment to run locally in a single process
     // countJob.set("mapred.job.tracker", "local");
     
-    JobClient.runJob(countJob);
+    JobClient.runJob(conf);
   }
   
 }

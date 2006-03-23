@@ -302,6 +302,23 @@ public class JobConf extends Configuration {
   public int getNumReduceTasks() { return getInt("mapred.reduce.tasks", 1); }
   public void setNumReduceTasks(int n) { setInt("mapred.reduce.tasks", n); }
 
+  /**
+   * Get the user-specified job name. This is only used to identify the 
+   * job to the user.
+   * @return the job's name, defaulting to ""
+   */
+  public String getJobName() {
+    return get("mapred.job.name", "");
+  }
+  
+  /**
+   * Set the user-specified job name.
+   * @param name the job's new name
+   */
+  public void setJobName(String name) {
+    set("mapred.job.name", name);
+  }
+  
   public Object newInstance(Class theClass) {
     Object result;
     try {

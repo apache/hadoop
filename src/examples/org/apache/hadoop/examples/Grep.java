@@ -17,18 +17,15 @@ package org.apache.hadoop.examples;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 
 import org.apache.hadoop.mapred.lib.RegexMapper;
 import org.apache.hadoop.mapred.lib.InverseMapper;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
-import org.apache.hadoop.mapred.lib.IdentityReducer;
 
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.WritableComparator;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -52,6 +49,7 @@ public class Grep {
                Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
 
     JobConf grepJob = new JobConf(defaults, Grep.class);
+    grepJob.setJobName("grep-search");
 
     grepJob.setInputDir(new File(args[0]));
 
@@ -71,6 +69,7 @@ public class Grep {
     JobClient.runJob(grepJob);
 
     JobConf sortJob = new JobConf(defaults, Grep.class);
+    sortJob.setJobName("grep-sort");
 
     sortJob.setInputDir(tempDir);
     sortJob.setInputFormat(SequenceFileInputFormat.class);

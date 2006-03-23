@@ -40,6 +40,7 @@ class JobProfile implements Writable {
     String jobid;
     String jobFile;
     String url;
+    String name;
 
     /**
      */
@@ -48,11 +49,13 @@ class JobProfile implements Writable {
 
     /**
      */
-    public JobProfile(String user, String jobid, String jobFile, String url) {
+    public JobProfile(String user, String jobid, String jobFile, String url,
+                      String name) {
         this.user = user;
         this.jobid = jobid;
         this.jobFile = jobFile;
         this.url = url;
+        this.name = name;
     }
 
     /**
@@ -85,6 +88,13 @@ class JobProfile implements Writable {
         }
     }
 
+    /**
+     * Get the user-specified job name.
+     */
+    public String getJobName() {
+      return name;
+    }
+    
     ///////////////////////////////////////
     // Writable
     ///////////////////////////////////////
@@ -93,12 +103,14 @@ class JobProfile implements Writable {
         UTF8.writeString(out, jobFile);
         UTF8.writeString(out, url);
         UTF8.writeString(out, user);
+        UTF8.writeString(out, name);
     }
     public void readFields(DataInput in) throws IOException {
         this.jobid = UTF8.readString(in);
         this.jobFile = UTF8.readString(in);
         this.url = UTF8.readString(in);
         this.user = UTF8.readString(in);
+        this.name = UTF8.readString(in);
     }
 }
 

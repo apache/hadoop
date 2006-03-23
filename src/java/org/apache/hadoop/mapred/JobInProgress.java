@@ -74,8 +74,8 @@ class JobInProgress {
         fs.copyToLocalFile(new File(jobFile), localJobFile);
 
         conf = new JobConf(localJobFile);
-        this.profile = new JobProfile(conf.getUser(), jobid, jobFile, url);
-
+        this.profile = new JobProfile(conf.getUser(), jobid, jobFile, url,
+                                      conf.getJobName());
         String jarFile = conf.getJar();
         if (jarFile != null) {
           fs.copyToLocalFile(new File(jarFile), localJarFile);
