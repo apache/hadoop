@@ -40,7 +40,7 @@ import java.util.logging.*;
  ********************************************************/
 class DFSClient implements FSConstants {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.fs.DFSClient");
-    static int MAX_BLOCK_ACQUIRE_FAILURES = 10;
+    static int MAX_BLOCK_ACQUIRE_FAILURES = 3;
     ClientProtocol namenode;
     String localName;
     boolean running = true;
@@ -358,17 +358,15 @@ class DFSClient implements FSConstants {
                     chosenNode = bestNode(nodes[targetBlock], deadNodes);
                     targetAddr = DataNode.createSocketAddr(chosenNode.getName().toString());
                 } catch (IOException ie) {
-                    /**
                     if (failures >= MAX_BLOCK_ACQUIRE_FAILURES) {
                         throw new IOException("Could not obtain block " + blocks[targetBlock]);
                     }
-                    **/
                     if (nodes[targetBlock] == null || nodes[targetBlock].length == 0) {
                         LOG.info("No node available for block " + blocks[targetBlock]);
                     }
                     LOG.info("Could not obtain block from any node:  " + ie);
                     try {
-                        Thread.sleep(10000);
+                        Thread.sleep(3000);
                     } catch (InterruptedException iex) {
                     }
                     deadNodes.clear();
