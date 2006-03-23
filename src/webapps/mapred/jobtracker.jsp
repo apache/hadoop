@@ -78,6 +78,17 @@
       out.print("</table>\n");
       out.print("</center>\n");
   }
+
+  public void generateSummaryTable(JspWriter out) throws IOException {
+    ClusterStatus status = tracker.getClusterStatus();
+    out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n"+
+              "<tr><th>Maps</th><th>Reduces</th>" + 
+              "<th>Capacity</th><th>Nodes</th></tr>\n");
+    out.print("<tr><td>" + status.getMapTasks() + "</td><td>" +
+              status.getReduceTasks() + "</td><td>" + 
+              status.getMaxTasks() + "</td><td>" +
+              status.getTaskTrackers() + "</td></tr></table>\n");
+  }
 %>
 
 <html>
@@ -88,6 +99,13 @@
 <h1>JobTracker '<%=trackerLabel%>'</h1>
 
 This JobTracker has been up since <%= new Date(tracker.getStartTime())%>.<br>
+<hr>
+<h2>Cluster Summary</h2>
+<center>
+<% 
+   generateSummaryTable(out); 
+%>
+</center>
 <hr>
 
 
