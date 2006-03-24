@@ -28,7 +28,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
 
 /** An {@link OutputFormat} that writes {@link SequenceFile}s. */
-public class SequenceFileOutputFormat implements OutputFormat {
+public class SequenceFileOutputFormat extends OutputFormatBase {
 
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
                                       String name) throws IOException {

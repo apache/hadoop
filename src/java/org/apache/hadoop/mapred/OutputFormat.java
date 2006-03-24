@@ -33,5 +33,15 @@ public interface OutputFormat {
    */
   RecordWriter getRecordWriter(FileSystem fs, JobConf job, String name)
     throws IOException;
+
+  /** Check whether the output specification for a job is appropriate.  Called
+   * when a job is submitted.  Typically checks that it does not already exist,
+   * throwing an exception when it already exists, so that output is not
+   * overwritten.
+   *
+   * @param job the job whose output will be written
+   * @throws IOException when output should not be attempted
+   */
+  void checkOutputSpecs(FileSystem fs, JobConf job) throws IOException;
 }
 

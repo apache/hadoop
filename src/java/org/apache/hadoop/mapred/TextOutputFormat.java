@@ -26,7 +26,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 
 /** An {@link OutputFormat} that writes plain text files. */
-public class TextOutputFormat implements OutputFormat {
+public class TextOutputFormat extends OutputFormatBase {
 
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
                                       String name) throws IOException {

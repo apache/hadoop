@@ -256,15 +256,8 @@ public class JobClient implements MRConstants {
           job.setWorkingDirectory(fileSys.getWorkingDirectory().toString());          
         }
 
-        // Ensure that the output directory is set and not already there
-        File outDir = job.getOutputDir();
-        if (outDir == null && job.getNumReduceTasks() != 0) {
-            throw new IOException("Output directory not set in JobConf.");
-        }
-        if (outDir != null && fs.exists(outDir)) {
-            throw new IOException("Output directory " + outDir + 
-                                  " already exists.");
-        }
+        // Check the output specification
+        job.getOutputFormat().checkOutputSpecs(fs, job);
 
         // Write job file to JobTracker's fs        
         FSDataOutputStream out = fileSys.create(submitJobFile);

@@ -28,7 +28,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
 
 /** An {@link OutputFormat} that writes {@link MapFile}s. */
-public class MapFileOutputFormat implements OutputFormat {
+public class MapFileOutputFormat extends OutputFormatBase {
 
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
                                       String name) throws IOException {
