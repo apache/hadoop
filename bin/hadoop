@@ -30,6 +30,7 @@ done
 if [ $# = 0 ]; then
   echo "Usage: hadoop COMMAND"
   echo "where COMMAND is one of:"
+  echo "  namenode -format  format the DFS filesystem"
   echo "  namenode          run the DFS namenode"
   echo "  datanode          run a DFS datanode"
   echo "  dfs               run a DFS admin client"
