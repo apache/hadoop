@@ -65,12 +65,17 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /** only used for testing purposes  */
     private boolean stopRequested = false;
 
+    /** Format a new filesystem.  Destroys any filesystem that may already
+     * exist at this location.  **/
+    public static void format(Configuration conf) throws IOException {
+      FSDirectory.format(getDir(conf));
+    }
+
     /**
      * Create a NameNode at the default location
      */
     public NameNode(Configuration conf) throws IOException {
-        this(new File(conf.get("dfs.name.dir",
-                                          "/tmp/hadoop/dfs/name")),
+        this(getDir(conf),
              DataNode.createSocketAddr
              (conf.get("fs.default.name", "local")).getPort(), conf);
     }
@@ -83,6 +88,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
         this.server = RPC.getServer(this, port, handlerCount, false, conf);
         this.server.start();
+    }
+
+    /** Return the configured directory where name data is stored. */
+    private static File getDir(Configuration conf) {
+      return new File(conf.get("dfs.name.dir", "/tmp/hadoop/dfs/name"));
     }
 
     /**
@@ -364,8 +374,24 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     /**
      */
-    public static void main(String argv[]) throws IOException, InterruptedException {
-        NameNode namenode = new NameNode(new Configuration());
+    public static void main(String argv[]) throws Exception {
+        Configuration conf = new Configuration();
+
+        if (argv.length == 1 && argv[0].equals("-format")) {
+          File dir = getDir(conf);
+          if (dir.exists()) {
+            System.err.print("Re-format filesystem in " + dir +" ? (Y or N) ");
+            if (!(System.in.read() == 'Y')) {
+              System.err.println("Format aborted.");
+              System.exit(1);
+            }
+          }
+          format(conf);
+          System.err.println("Formatted "+dir);
+          System.exit(0);
+        }
+
+        NameNode namenode = new NameNode(conf);
         namenode.join();
     }
 }

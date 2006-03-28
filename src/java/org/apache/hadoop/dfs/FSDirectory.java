@@ -245,14 +245,11 @@ class FSDirectory implements FSConstants {
     DataOutputStream editlog = null;
     boolean ready = false;
 
-    /**
-     * Create a FileSystem directory, and load its info
-     * from the indicated place.
-     */
+    /** Access an existing dfs name directory. */
     public FSDirectory(File dir) throws IOException {
         File fullimage = new File(dir, "image");
         if (! fullimage.exists()) {
-            fullimage.mkdirs();
+          throw new IOException("NameNode not formatted: " + dir);
         }
         File edits = new File(dir, "edits");
         if (loadFSImage(fullimage, edits)) {
@@ -263,6 +260,19 @@ class FSDirectory implements FSConstants {
             this.ready = true;
             this.notifyAll();
             this.editlog = new DataOutputStream(new FileOutputStream(edits));
+        }
+    }
+
+    /** Create a new dfs name directory.  Caution: this destroys all files
+     * in this filesystem. */
+    public static void format(File dir) throws IOException {
+        File image = new File(dir, "image");
+        File edits = new File(dir, "edits");
+
+        if (!((!image.exists() || image.delete()) &&
+              (!edits.exists() || edits.delete()) &&
+              image.mkdirs())) {
+          throw new IOException("Unable to format: "+dir);
         }
     }
 

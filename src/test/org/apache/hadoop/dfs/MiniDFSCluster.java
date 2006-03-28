@@ -83,7 +83,7 @@ public class MiniDFSCluster {
   /**
    * Create the config and start up the servers.
    */
-  public MiniDFSCluster(int namenodePort, Configuration conf) {
+  public MiniDFSCluster(int namenodePort, Configuration conf) throws IOException {
     this.conf = conf;
     conf.set("fs.default.name", 
              "localhost:"+ Integer.toString(namenodePort));
@@ -95,6 +95,7 @@ public class MiniDFSCluster {
     // this timeout seems to control the minimum time for the test, so
     // set it down at 5 seconds.
     conf.setInt("ipc.client.timeout", 5000);
+    NameNode.format(conf);
     nameNode = new NameNodeRunner();
     nameNodeThread = new Thread(nameNode);
     nameNodeThread.start();

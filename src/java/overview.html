@@ -134,6 +134,11 @@ cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
 
 <h3>Bootstrapping</h3>
 
+<p>A new distributed filesystem must formatted with the following
+command, run on the master node:</p>
+
+<p><tt>bin/hadoop namenode -format</tt></p>
+
 <p>The Hadoop daemons are started with the following command:</p>
 
 <p><tt>bin/start-all.sh</tt></p>
