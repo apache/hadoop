@@ -46,7 +46,7 @@ public class TestLocalDFS extends TestCase {
       writeFile(fileSys, file1);
       assertTrue(fileSys.exists(new File(orig_path, file1.getPath())));
       fileSys.delete(file1);
-      File subdir1 = new File("/somewhere");
+      File subdir1 = new File("/somewhere").getAbsoluteFile();
       fileSys.setWorkingDirectory(subdir1);
       writeFile(fileSys, file1);
       cleanupFile(fileSys, new File(subdir1, file1.getPath()));

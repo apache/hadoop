@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
  *****************************************************************/
 public class DistributedFileSystem extends FileSystem {
     private File workingDir = 
-      new File("/user/", System.getProperty("user.name"));
+      new File("/user", System.getProperty("user.name")).getAbsoluteFile();
 
     private String name;
 
@@ -57,7 +57,7 @@ public class DistributedFileSystem extends FileSystem {
       if (f.isAbsolute()) {
         return f;
       } else {
-        return new File(workingDir, f.toString());
+        return new File(workingDir, f.getPath());
       }
     }
     
