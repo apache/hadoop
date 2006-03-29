@@ -56,7 +56,7 @@ HADOOP_HOME=`cd "$THIS_DIR/.." ; pwd`
 HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
 
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  source ${HADOOP_CONF_DIR}/hadoop-env.sh
+  source "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
 # some Java parameters
