@@ -276,7 +276,7 @@ public class Configuration {
       File file = new File(dirs[index], path);
       File dir = file.getParentFile();
       if (dir.exists() || dir.mkdirs()) {
-        return file;
+        return file.getAbsoluteFile();
       }
     }
     throw new IOException("No valid local directories in property: "+dirsProp);
