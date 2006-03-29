@@ -360,7 +360,7 @@ public class LocalFileSystem extends FileSystem {
         f = makeAbsolute(f).getCanonicalFile();
       
         // find highest writable parent dir of f on the same device
-        String device = new DF(f.toString()).getMount();
+        String device = new DF(f.toString(), getConf()).getMount();
         File parent = f.getParentFile();
         File dir;
         do {

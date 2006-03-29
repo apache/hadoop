@@ -365,7 +365,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
           if (i != iDatanodeClosed) {
             try {
               if (checkDataDirsEmpty) {
-                File dataDir = new File(dataNode.data.dirpath);
+                File dataDir = new File(dataNode.data.diskUsage.getDirPath());
                 assertNoBlocks(dataDir);
 
               }

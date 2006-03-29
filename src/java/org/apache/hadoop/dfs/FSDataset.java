@@ -182,7 +182,7 @@ class FSDataset implements FSConstants {
     //
     //////////////////////////////////////////////////////
 
-    String dirpath = null;
+    DF diskUsage;
     File data = null, tmp = null;
     long reserved = 0;
     FSDir dirTree;
@@ -192,7 +192,7 @@ class FSDataset implements FSConstants {
      * An FSDataset has a directory where it loads its data files.
      */
     public FSDataset(File dir, Configuration conf) throws IOException {
-        this.dirpath = dir.getCanonicalPath();
+        diskUsage = new DF( dir.getCanonicalPath(), conf); 
         this.data = new File(dir, "data");
         if (! data.exists()) {
             data.mkdirs();
@@ -209,14 +209,14 @@ class FSDataset implements FSConstants {
      * Return total capacity, used and unused
      */
     public long getCapacity() throws IOException {
-        return new DF(dirpath).getCapacity();
+        return diskUsage.getCapacity();
     }
 
     /**
      * Return how many bytes can still be stored in the FSDataset
      */
     public long getRemaining() throws IOException {
-        return ((long) Math.round(USABLE_DISK_PCT * new DF(dirpath).getAvailable())) - reserved;
+        return ((long) Math.round(USABLE_DISK_PCT * diskUsage.getAvailable())) - reserved;
     }
 
     /**
@@ -397,7 +397,7 @@ class FSDataset implements FSConstants {
         for (int i = 0; i < invalidBlks.length; i++) {
             File f = getFile(invalidBlks[i]);
 
-            long len = f.length();
+            // long len = f.length();
             if (!f.delete()) {
                 throw new IOException("Unexpected error trying to delete block " + invalidBlks[i] + " at file " + f);
             }
@@ -422,7 +422,7 @@ class FSDataset implements FSConstants {
 
     public String toString() {
       return "FSDataset{" +
-        "dirpath='" + dirpath + "'" +
+        "dirpath='" + diskUsage.getDirPath() + "'" +
         "}";
     }
 

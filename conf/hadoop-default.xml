@@ -97,6 +97,12 @@
   cluster.</description>
 </property>
 
+<property>
+  <name>dfs.df.interval</name>
+  <value>3000</value>
+  <description>Disk usage statistics refresh interval in msec.</description>
+</property>
+
 <!-- map/reduce properties -->
 
 <property>
