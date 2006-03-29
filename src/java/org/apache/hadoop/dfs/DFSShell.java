@@ -158,7 +158,7 @@ public class DFSShell {
     /**
      * Return an abbreviated English-language desc of the byte length
      */
-    String byteDesc(long len) {
+    static String byteDesc(long len) {
         double val = 0.0;
         String ending = "";
         if (len < 1024 * 1024) {
@@ -174,7 +174,7 @@ public class DFSShell {
         return limitDecimal(val, 2) + ending;
     }
 
-    String limitDecimal(double d, int placesAfterDecimal) {
+    static String limitDecimal(double d, int placesAfterDecimal) {
         String strVal = Double.toString(d);
         int decpt = strVal.indexOf(".");
         if (decpt >= 0) {
@@ -187,42 +187,28 @@ public class DFSShell {
      * Gives a report on how the FileSystem is doing
      */
     public void report() throws IOException {
-        if (fs instanceof DistributedFileSystem) {
-            DistributedFileSystem dfsfs = (DistributedFileSystem) fs;
-            DFSClient dfs = dfsfs.getClient();
-            long total = dfs.totalRawCapacity();
-            long used = dfs.totalRawUsed();
-            DatanodeInfo info[] = dfs.datanodeReport();
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem)fs;
+        long raw = dfs.getRawCapacity();
+        long rawUsed = dfs.getRawUsed();
+        long used = dfs.getUsed();
 
-            long totalEffectiveBytes = 0;
-            File topItems[] = fs.listFiles(new File("/"));
-            for (int i = 0; i < topItems.length; i++) {
-                DFSFile cur = (DFSFile) topItems[i];
-                totalEffectiveBytes += cur.getContentsLength();
-            }
+        System.out.println("Total raw bytes: " + raw + " (" + byteDesc(raw) + ")");
+        System.out.println("Used raw bytes: " + rawUsed + " (" + byteDesc(rawUsed) + ")");
+        System.out.println("% used: " + limitDecimal(((1.0 * rawUsed) / raw) * 100, 2) + "%");
+        System.out.println();
+        System.out.println("Total effective bytes: " + used + " (" + byteDesc(used) + ")");
+        System.out.println("Effective replication multiplier: " + (1.0 * rawUsed / used));
 
-            System.out.println("Total raw bytes: " + total + " (" + byteDesc(total) + ")");
-            System.out.println("Used raw bytes: " + used + " (" + byteDesc(used) + ")");
-            System.out.println("% used: " + limitDecimal(((1.0 * used) / total) * 100, 2) + "%");
-            System.out.println();
-            System.out.println("Total effective bytes: " + totalEffectiveBytes + " (" + byteDesc(totalEffectiveBytes) + ")");
-            System.out.println("Effective replication multiplier: " + (1.0 * used / totalEffectiveBytes));
-
-            System.out.println("-------------------------------------------------");
-            System.out.println("Datanodes available: " + info.length);
-            System.out.println();
-            for (int i = 0; i < info.length; i++) {
-                System.out.println("Name: " + info[i].getName().toString());
-                long c = info[i].getCapacity();
-                long r = info[i].getRemaining();
-                long u = c - r;
-                System.out.println("Total raw bytes: " + c + " (" + byteDesc(c) + ")");
-                System.out.println("Used raw bytes: " + u + " (" + byteDesc(u) + ")");
-                System.out.println("% used: " + limitDecimal(((1.0 * u) / c) * 100, 2) + "%");
-                System.out.println("Last contact with namenode: " + new Date(info[i].lastUpdate()));
-                System.out.println();
-            }
+        System.out.println("-------------------------------------------------");
+        DataNodeReport info[] = dfs.getDataNodeStats();
+        System.out.println("Datanodes available: " + info.length);
+        System.out.println();
+        for (int i = 0; i < info.length; i++) {
+          System.out.println(info[i]);
+          System.out.println();
         }
+      }
     }
 
     /**

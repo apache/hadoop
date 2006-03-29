@@ -299,4 +299,41 @@ public class DistributedFileSystem extends FileSystem {
       return dfs.BLOCK_SIZE;
     }
 
+    /** Return the total raw capacity of the filesystem, disregarding
+     * replication .*/
+    public long getRawCapacity() throws IOException{
+        return dfs.totalRawCapacity();
+    }
+
+    /** Return the total raw used space in the filesystem, disregarding
+     * replication .*/
+    public long getRawUsed() throws IOException{
+        return dfs.totalRawUsed();
+    }
+
+    /** Return the total size of all files in the filesystem.*/
+    public long getUsed()throws IOException{
+        long used = 0;
+        DFSFileInfo dfsFiles[] = dfs.listFiles(getPath(new File("/")));
+        for(int i=0;i<dfsFiles.length;i++){
+            used += dfsFiles[i].getContentsLen();
+        }
+        return used;
+    }
+
+    /** Return statistics for each datanode.*/
+    public DataNodeReport[] getDataNodeStats() throws IOException {
+      DatanodeInfo[]  dnReport = dfs.datanodeReport();
+      DataNodeReport[] reports = new DataNodeReport[dnReport.length];
+
+      for (int i = 0; i < dnReport.length; i++) {
+        reports[i] = new DataNodeReport();
+        reports[i].name = dnReport[i].getName().toString();
+        reports[i].host = dnReport[i].getHost().toString();
+        reports[i].capacity = dnReport[i].getCapacity();
+        reports[i].remaining = dnReport[i].getRemaining();
+        reports[i].lastUpdate = dnReport[i].lastUpdate();
+      }
+      return reports;
+    }
 }
