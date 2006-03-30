@@ -155,15 +155,17 @@ public class DistributedFileSystem extends FileSystem {
             }
         }
 
-        if (src.isDirectory()) {
+        FileSystem localFs = getNamed("local", getConf());
+
+        if (localFs.isDirectory(src)) {
             mkdirs(dst);
-            File contents[] = src.listFiles();
+            File contents[] = localFs.listFiles(src);
             for (int i = 0; i < contents.length; i++) {
                 doFromLocalFile(contents[i], new File(dst, contents[i].getName()), deleteSource);
             }
         } else {
             byte buf[] = new byte[getConf().getInt("io.file.buffer.size", 4096)];
-            InputStream in = new BufferedInputStream(new FileInputStream(src));
+            InputStream in = localFs.open(src);
             try {
                 OutputStream out = create(dst);
                 try {
@@ -180,7 +182,7 @@ public class DistributedFileSystem extends FileSystem {
             } 
         }
         if (deleteSource)
-            src.delete();
+            localFs.delete(src);
     }
 
     public void copyToLocalFile(File src, File dst) throws IOException {
@@ -196,8 +198,10 @@ public class DistributedFileSystem extends FileSystem {
         }
         dst = dst.getCanonicalFile();
 
+        FileSystem localFs = getNamed("local", getConf());
+
         if (isDirectory(src)) {
-            dst.mkdirs();
+            localFs.mkdirs(dst);
             File contents[] = listFiles(src);
             for (int i = 0; i < contents.length; i++) {
                 copyToLocalFile(contents[i], new File(dst, contents[i].getName()));
@@ -206,7 +210,7 @@ public class DistributedFileSystem extends FileSystem {
             byte buf[] = new byte[getConf().getInt("io.file.buffer.size", 4096)];
             InputStream in = open(src);
             try {
-                OutputStream out = FileSystem.getNamed("local", getConf()).create(dst);
+                OutputStream out = localFs.create(dst);
                 try {
                     int bytesRead = in.read(buf);
                     while (bytesRead >= 0) {
