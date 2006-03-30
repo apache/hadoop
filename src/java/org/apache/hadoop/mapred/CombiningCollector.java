@@ -51,12 +51,16 @@ class CombiningCollector implements OutputCollector {
 
     // buffer new value in map
     ArrayList values = (ArrayList)keyToValues.get(key);
-    if (values == null) {                         // no values yet for this key
-      values = new ArrayList(1);                  // make a new list
-      values.add(value);                          // add this value
-      keyToValues.put(key, values);               // add to map
+    Writable valueClone = WritableUtils.clone(value, job);
+    if (values == null) {
+      // this is a new key, so create a new list
+      values = new ArrayList(1);
+      values.add(valueClone);
+      Writable keyClone = WritableUtils.clone(key, job);
+      keyToValues.put(keyClone, values);
     } else {
-      values.add(value);                          // other values: just add new
+      // other values for this key, so just add.
+      values.add(valueClone);
     }
 
     count++;

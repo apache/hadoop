@@ -17,7 +17,7 @@
 package org.apache.hadoop.io;
 
 import java.io.*;
-
+import org.apache.hadoop.mapred.JobConf;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -189,5 +189,46 @@ public final class WritableUtils  {
     System.out.println();
   }
 
-
+  /**
+   * A pair of input/output buffers that we use to clone writables.
+   */
+  private static class CopyInCopyOutBuffer {
+    DataOutputBuffer outBuffer = new DataOutputBuffer();
+    DataInputBuffer inBuffer = new DataInputBuffer();
+    /**
+     * Move the data from the output buffer to the input buffer.
+     */
+    void moveData() {
+      inBuffer.reset(outBuffer.getData(), outBuffer.getLength());
+    }
+  }
+  
+  /**
+   * Allocate a buffer for each thread that tries to clone objects.
+   */
+  private static ThreadLocal cloneBuffers = new ThreadLocal() {
+    protected synchronized Object initialValue() {
+      return new CopyInCopyOutBuffer();
+    }
+  };
+  
+  /**
+   * Make a copy of a writable object using serialization to a buffer.
+   * @param orig The object to copy
+   * @return The copied object
+   */
+  public static Writable clone(Writable orig, JobConf conf) {
+    try {
+      Writable newInst = (Writable)conf.newInstance(orig.getClass());
+      CopyInCopyOutBuffer buffer = (CopyInCopyOutBuffer)cloneBuffers.get();
+      buffer.outBuffer.reset();
+      orig.write(buffer.outBuffer);
+      buffer.moveData();
+      newInst.readFields(buffer.inBuffer);
+      return newInst;
+    } catch (IOException e) {
+      throw new RuntimeException("Error writing/reading clone buffer", e);
+    }
+  }
+  
 }
