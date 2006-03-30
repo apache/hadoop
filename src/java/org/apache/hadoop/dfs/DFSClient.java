@@ -261,7 +261,6 @@ class DFSClient implements FSConstants {
 
         private String src;
         private DataInputStream blockStream;
-        private DataOutputStream partnerStream;
         private Block blocks[] = null;
         private DatanodeInfo nodes[][] = null;
         private long pos = 0;
@@ -274,7 +273,6 @@ class DFSClient implements FSConstants {
             this.src = src;
             openInfo();
             this.blockStream = null;
-            this.partnerStream = null;
             for (int i = 0; i < blocks.length; i++) {
                 this.filelen += blocks[i].getNumBytes();
             }
@@ -358,11 +356,13 @@ class DFSClient implements FSConstants {
                     chosenNode = bestNode(nodes[targetBlock], deadNodes);
                     targetAddr = DataNode.createSocketAddr(chosenNode.getName().toString());
                 } catch (IOException ie) {
+                    String blockInfo =
+                      blocks[targetBlock]+" file="+src+" offset="+target;
                     if (failures >= MAX_BLOCK_ACQUIRE_FAILURES) {
-                        throw new IOException("Could not obtain block " + blocks[targetBlock]);
+                        throw new IOException("Could not obtain block: " + blockInfo);
                     }
                     if (nodes[targetBlock] == null || nodes[targetBlock].length == 0) {
-                        LOG.info("No node available for block " + blocks[targetBlock]);
+                        LOG.info("No node available for block: " + blockInfo);
                     }
                     LOG.info("Could not obtain block from any node:  " + ie);
                     try {
@@ -404,7 +404,6 @@ class DFSClient implements FSConstants {
                     this.pos = target;
                     this.blockEnd = targetBlockEnd;
                     this.blockStream = in;
-                    this.partnerStream = out;
                 } catch (IOException ex) {
                     // Put chosen node into dead list, continue
                     LOG.info("Failed to connect to " + targetAddr + ":" + ex);
@@ -535,7 +534,6 @@ class DFSClient implements FSConstants {
         private File backupFile;
         private OutputStream backupStream;
         private Block block;
-        private DatanodeInfo targets[]; 
         private long filePos = 0;
         private int bytesWrittenToBlock = 0;
 
