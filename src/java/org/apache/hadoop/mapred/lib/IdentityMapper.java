@@ -20,16 +20,14 @@ import java.io.IOException;
 
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.MapReduceBase;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /** Implements the identity function, mapping inputs directly to outputs. */
-public class IdentityMapper implements Mapper {
-
-  public void configure(JobConf job) {}
+public class IdentityMapper extends MapReduceBase implements Mapper {
 
   /** The identify function.  Input key/value pair is written directly to
    * output.*/
@@ -38,5 +36,4 @@ public class IdentityMapper implements Mapper {
     throws IOException {
     output.collect(key, val);
   }
-	public void close() {}
 }

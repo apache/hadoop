@@ -21,8 +21,8 @@ import java.util.StringTokenizer;
 
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.MapReduceBase;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
@@ -32,15 +32,12 @@ import org.apache.hadoop.io.UTF8;
 
 /** A {@link Mapper} that maps text values into <token,freq> pairs.  Uses
  * {@link StringTokenizer} to break text into tokens. */
-public class TokenCountMapper implements Mapper {
-
-  public void configure(JobConf job) {}
+public class TokenCountMapper extends MapReduceBase implements Mapper {
 
   public void map(WritableComparable key, Writable value,
                   OutputCollector output, Reporter reporter)
     throws IOException {
     // get input text
-    long position = ((LongWritable)key).get();    // key is position in file
     String text = ((UTF8)value).toString();       // value is line of text
 
     // tokenize the value
@@ -50,7 +47,5 @@ public class TokenCountMapper implements Mapper {
       output.collect(new UTF8(st.nextToken()), new LongWritable(1));
     }  
   }
-  
-  public void close() {}
   
 }

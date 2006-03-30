@@ -22,6 +22,7 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.MapReduceBase;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
@@ -34,7 +35,7 @@ import java.util.regex.Matcher;
 
 
 /** A {@link Mapper} that extracts text matching a regular expression. */
-public class RegexMapper implements Mapper {
+public class RegexMapper extends MapReduceBase implements Mapper {
 
   private Pattern pattern;
   private int group;
@@ -53,7 +54,5 @@ public class RegexMapper implements Mapper {
       output.collect(new UTF8(matcher.group(group)), new LongWritable(1));
     }
   }
-  
-  public void close() {}
-  
+
 }

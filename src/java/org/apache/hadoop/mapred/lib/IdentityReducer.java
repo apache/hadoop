@@ -22,16 +22,14 @@ import java.util.Iterator;
 
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.MapReduceBase;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /** Performs no reduction, writing all input values directly to the output. */
-public class IdentityReducer implements Reducer {
-
-  public void configure(JobConf job) {}
+public class IdentityReducer extends MapReduceBase implements Reducer {
 
   /** Writes all keys and values directly to output. */
   public void reduce(WritableComparable key, Iterator values,
@@ -41,7 +39,5 @@ public class IdentityReducer implements Reducer {
       output.collect(key, (Writable)values.next());
     }
   }
-	
-	public void close() {}
 	
 }

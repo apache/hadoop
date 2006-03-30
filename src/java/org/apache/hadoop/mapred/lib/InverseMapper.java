@@ -20,17 +20,15 @@ import java.io.IOException;
 
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.MapReduceBase;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 
 
 /** A {@link Mapper} that swaps keys and values. */
-public class InverseMapper implements Mapper {
-
-  public void configure(JobConf job) {}
+public class InverseMapper extends MapReduceBase implements Mapper {
 
   /** The inverse function.  Input keys and values are swapped.*/
   public void map(WritableComparable key, Writable value,
@@ -38,7 +36,5 @@ public class InverseMapper implements Mapper {
     throws IOException {
     output.collect((WritableComparable)value, key);
   }
-  
-  public void close() {}
   
 }

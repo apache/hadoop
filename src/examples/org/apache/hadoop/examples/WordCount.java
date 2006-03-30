@@ -30,6 +30,7 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.MapReduceBase;
 
 /**
  * This is an example Hadoop Map/Reduce application.
@@ -49,9 +50,10 @@ public class WordCount {
    * For each line of input, break the line into words and emit them as
    * (<b>word</b>, <b>1</b>).
    */
-  public static class MapClass implements Mapper {
+  public static class MapClass extends MapReduceBase implements Mapper {
     
     private final static IntWritable one = new IntWritable(1);
+    private UTF8 word = new UTF8();
     
     public void map(WritableComparable key, Writable value, 
         OutputCollector output, 
@@ -59,23 +61,16 @@ public class WordCount {
       String line = ((UTF8)value).toString();
       StringTokenizer itr = new StringTokenizer(line);
       while (itr.hasMoreTokens()) {
-        String word = itr.nextToken();
-        output.collect(new UTF8(word), one);
+        word.set(itr.nextToken());
+        output.collect(word, one);
       }
     }
-    
-    public void configure(JobConf job) {
-    }
-    
-    public void close() {
-    }
-
   }
   
   /**
    * A reducer class that just emits the sum of the input values.
    */
-  public static class Reduce implements Reducer {
+  public static class Reduce extends MapReduceBase implements Reducer {
     
     public void reduce(WritableComparable key, Iterator values,
         OutputCollector output, 
@@ -86,13 +81,6 @@ public class WordCount {
       }
       output.collect(key, new IntWritable(sum));
     }
-    
-    public void configure(JobConf job) {
-    }
-    
-    public void close() {
-    }
-    
   }
   
   static void printUsage() {
@@ -150,7 +138,7 @@ public class WordCount {
     conf.setOutputDir(new File((String) other_args.get(1)));
     
     // Uncomment to run locally in a single process
-    // countJob.set("mapred.job.tracker", "local");
+    // conf.set("mapred.job.tracker", "local");
     
     JobClient.runJob(conf);
   }
