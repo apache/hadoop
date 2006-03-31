@@ -1310,7 +1310,7 @@ class FSNamesystem implements FSConstants {
             //
             for (Iterator it = targetList.iterator(); it.hasNext(); ) {
                 DatanodeInfo node = (DatanodeInfo) it.next();
-                if ((node.getRemaining() > BLOCK_SIZE * MIN_BLOCKS_FOR_WRITE)) {
+                if (node.getRemaining() > BLOCK_SIZE * MIN_BLOCKS_FOR_WRITE) {
                     return node;
                 }
             }
@@ -1322,7 +1322,7 @@ class FSNamesystem implements FSConstants {
             //
             for (Iterator it = targetList.iterator(); it.hasNext(); ) {
                 DatanodeInfo node = (DatanodeInfo) it.next();
-                if (node.getRemaining() > BLOCK_SIZE * MIN_BLOCKS_FOR_WRITE) {
+                if (node.getRemaining() > BLOCK_SIZE) {
                     return node;
                 }
             }
