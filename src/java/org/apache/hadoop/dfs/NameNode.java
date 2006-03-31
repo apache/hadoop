@@ -68,7 +68,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /** Format a new filesystem.  Destroys any filesystem that may already
      * exist at this location.  **/
     public static void format(Configuration conf) throws IOException {
-      FSDirectory.format(getDir(conf));
+      FSDirectory.format(getDir(conf), conf);
     }
 
     /**

@@ -20,6 +20,9 @@ import org.apache.hadoop.io.*;
 import java.io.*;
 import java.util.*;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
+
 /*************************************************
  * FSDirectory stores the filesystem directory state.
  * It handles writing/loading values to disk, and logging
@@ -265,13 +268,15 @@ class FSDirectory implements FSConstants {
 
     /** Create a new dfs name directory.  Caution: this destroys all files
      * in this filesystem. */
-    public static void format(File dir) throws IOException {
+    public static void format(File dir, Configuration conf)
+      throws IOException {
         File image = new File(dir, "image");
         File edits = new File(dir, "edits");
 
-        if (!((!image.exists() || image.delete()) &&
+        if (!((!image.exists() || FileUtil.fullyDelete(image, conf)) &&
               (!edits.exists() || edits.delete()) &&
               image.mkdirs())) {
+          
           throw new IOException("Unable to format: "+dir);
         }
     }
