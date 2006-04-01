@@ -28,7 +28,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
   </docs>
 
   <resources label="Resources">
-    <download    label="Download"         href="ext:nightly" />
+    <download    label="Download"         href="ext:releases" />
     <contact     label="Mailing Lists"    href="mailing_lists.html" />
     <issues      label="Issue Tracking"   href="issue_tracking.html" />
     <vcs         label="Version Control"  href="version_control.html" />
@@ -44,6 +44,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <nutch     href="http://lucene.apache.org/nutch/" />
     <wiki      href="http://wiki.apache.org/lucene-hadoop/" />
     <nightly   href="http://cvs.apache.org/dist/lucene/hadoop/nightly/" />
+    <releases  href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/" />
   </external-refs>
  
 </site>
