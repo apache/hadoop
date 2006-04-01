@@ -403,7 +403,7 @@ public class DataNode implements FSConstants, Runnable {
                                 // maybe to network.
                                 //
                                 try {
-                                    boolean anotherChunk = true;
+                                    boolean anotherChunk = len != 0;
                                     byte buf[] = new byte[BUFFER_SIZE];
 
                                     while (anotherChunk) {
