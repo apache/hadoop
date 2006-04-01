@@ -265,6 +265,9 @@ public abstract class FileSystem extends Configured {
         }
     }
     
+    /** True iff the named path is absolute. */
+    public abstract boolean isAbsolute(File f);
+
     /** The number of bytes in a file. */
     public abstract long getLength(File f) throws IOException;
 

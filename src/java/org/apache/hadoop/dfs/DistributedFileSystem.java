@@ -54,7 +54,7 @@ public class DistributedFileSystem extends FileSystem {
     }
     
     private File makeAbsolute(File f) {
-      if (f.isAbsolute()) {
+      if (isAbsolute(f)) {
         return f;
       } else {
         return new File(workingDir, f.getPath());
@@ -102,10 +102,23 @@ public class DistributedFileSystem extends FileSystem {
     }
 
     public boolean isDirectory(File f) throws IOException {
+        if (f instanceof DFSFile) {
+          return ((DFSFile)f).isDirectory();
+        }
         return dfs.isDirectory(getPath(f));
     }
 
+    public boolean isAbsolute(File f) {
+      return f.isAbsolute() ||
+        f.getPath().startsWith("/") ||
+        f.getPath().startsWith("\\");
+    }
+
     public long getLength(File f) throws IOException {
+        if (f instanceof DFSFile) {
+          return ((DFSFile)f).length();
+        }
+
         DFSFileInfo info[] = dfs.listFiles(getPath(f));
         return info[0].getLen();
     }
@@ -282,7 +295,7 @@ public class DistributedFileSystem extends FileSystem {
         path.append(DFSFile.DFS_FILE_SEPARATOR);
         path.append(l.get(i));
       }
-      if (f.isAbsolute() && path.length() == 0) {
+      if (isAbsolute(f) && path.length() == 0) {
         path.append(DFSFile.DFS_FILE_SEPARATOR);
       }
       return path.toString();

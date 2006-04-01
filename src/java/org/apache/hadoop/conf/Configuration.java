@@ -273,10 +273,10 @@ public class Configuration {
     int hashCode = path.hashCode();
     for (int i = 0; i < dirs.length; i++) {  // try each local dir
       int index = (hashCode+i & Integer.MAX_VALUE) % dirs.length;
-      File file = new File(dirs[index], path);
+      File file = new File(dirs[index], path).getAbsoluteFile();
       File dir = file.getParentFile();
       if (dir.exists() || dir.mkdirs()) {
-        return file.getAbsoluteFile();
+        return file;
       }
     }
     throw new IOException("No valid local directories in property: "+dirsProp);

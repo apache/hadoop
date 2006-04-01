@@ -153,7 +153,7 @@ public class LocalFileSystem extends FileSystem {
     }
 
     private File makeAbsolute(File f) {
-      if (f.isAbsolute()) {
+      if (isAbsolute(f)) {
         return f;
       } else {
         return new File(workingDir, f.toString());
@@ -197,6 +197,10 @@ public class LocalFileSystem extends FileSystem {
     public boolean isDirectory(File f) throws IOException {
         f = makeAbsolute(f);
         return f.isDirectory();
+    }
+
+    public boolean isAbsolute(File f) {
+      return f.isAbsolute();
     }
 
     public long getLength(File f) throws IOException {

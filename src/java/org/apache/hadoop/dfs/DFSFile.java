@@ -57,6 +57,9 @@ class DFSFile extends File {
     public boolean isHidden() {
         return false;
     }
+    public boolean isAbsolute() {
+        return true;
+    }
 
     /**
      * We need to reimplement some of them

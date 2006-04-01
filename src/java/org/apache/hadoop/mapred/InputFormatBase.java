@@ -65,7 +65,7 @@ public abstract class InputFormatBase implements InputFormat {
     for (int i = 0; i < dirs.length; i++) {
       // if it is relative, make it absolute using the directory from the 
       // JobConf
-      if (workDir != null && !dirs[i].isAbsolute()) {
+      if (workDir != null && !fs.isAbsolute(dirs[i])) {
         dirs[i] = new File(workDir, dirs[i].toString());
       }
       File[] dir = fs.listFiles(dirs[i]);

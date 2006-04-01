@@ -99,8 +99,8 @@ public class JobConf extends Configuration {
   public void setJar(String jar) { set("mapred.jar", jar); }
 
   public File getSystemDir() {
-    return new File(get("mapred.system.dir",
-                                        "/tmp/hadoop/mapred/system"));
+    return new File(get("mapred.system.dir", "/tmp/hadoop/mapred/system"))
+      .getAbsoluteFile();
   }
 
   public String[] getLocalDirs() throws IOException {
