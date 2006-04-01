@@ -809,7 +809,12 @@ class DFSClient implements FSConstants {
 
             flush();
             if (filePos == 0 || bytesWrittenToBlock != 0) {
-              endBlock();
+              try {
+                endBlock();
+              } catch (IOException e) {
+                namenode.abandonFileInProgress(src.toString());
+                throw e;
+              }
             }
 
             backupStream.close();
