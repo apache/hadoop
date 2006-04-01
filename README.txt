@@ -4,4 +4,4 @@ For the latest information about Hadoop, please visit our website at:
 
 and our wiki, at:
 
-   http://wiki.apache.org/hadoop/
+   http://wiki.apache.org/lucene-hadoop/
