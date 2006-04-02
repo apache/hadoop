@@ -1,0 +1,13 @@
+Hadoop Change Log
+
+Unreleased changes (in trunk):
+
+ 1. Added CHANGES.txt, logging all significant changes to Hadoop.  (cutting)
+
+ 2. 
+
+
+Release 0.1.0 - 2006-04-01
+
+ 1. The first release of Hadoop.
+
