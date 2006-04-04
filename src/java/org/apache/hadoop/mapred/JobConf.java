@@ -124,7 +124,7 @@ public class JobConf extends Configuration {
   /** Constructs a local file name.  Files are distributed among configured
    * local directories.*/
   public File getLocalFile(String subdir, String name) throws IOException {
-    return getFile("mapred.local.dir", name + File.separator + subdir);
+    return getFile("mapred.local.dir", subdir + File.separator + name);
   }
 
   public void setInputDir(File dir) { set("mapred.input.dir", dir); }

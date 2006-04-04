@@ -8,6 +8,10 @@ Unreleased changes (in trunk):
     Closeable interface.  This permits subclasses which override this
     method to throw that exception. (cutting)
 
+ 3. Fix HADOOP-117.  Pathnames were mistakenly transposed in
+    JobConf.getLocalFile() causing many mapred temporary files to not
+    be removed.  (Raghavendra Prabhu via cutting)
+
 
 Release 0.1.0 - 2006-04-01
 
