@@ -1,0 +1,25 @@
+Hadoop Change Log
+
+
+Release 0.1.1 - 2006-04-08
+
+ 1. Added CHANGES.txt, logging all significant changes to Hadoop.  (cutting)
+
+ 2. Fix MapReduceBase.close() to throw IOException, as declared in the
+    Closeable interface.  This permits subclasses which override this
+    method to throw that exception. (cutting)
+
+ 3. Fix HADOOP-117.  Pathnames were mistakenly transposed in
+    JobConf.getLocalFile() causing many mapred temporary files to not
+    be removed.  (Raghavendra Prabhu via cutting)
+ 
+ 4. Fix HADOOP-116. Clean up job submission files when jobs complete.
+    (cutting)
+
+ 5. Fix HADOOP-125. Fix handling of absolute paths on Windows (cutting)
+
+
+Release 0.1.0 - 2006-04-01
+
+ 1. The first release of Hadoop.
+
