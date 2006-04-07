@@ -471,12 +471,13 @@ class JobInProgress {
     synchronized void garbageCollect() {
       try {
         // Definitely remove the local-disk copy of the job file
+        FileSystem localFs = FileSystem.getNamed("local", conf);
         if (localJobFile != null) {
-            localJobFile.delete();
+            localFs.delete(localJobFile);
             localJobFile = null;
         }
         if (localJarFile != null) {
-            localJarFile.delete();
+            localFs.delete(localJarFile);
             localJarFile = null;
         }
 
