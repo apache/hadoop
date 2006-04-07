@@ -23,9 +23,17 @@
     <description>Hadoop is a Lucene sub-project that contains the distributed computing platform that was formerly a part of Nutch. This includes the Hadoop Distributed Filesystem (HDFS) and an implementation of MapReduce.</description>
     <bug-database rdf:resource="http://nagoya.apache.org/jira/browse/HADOOP" />
     <mailing-list rdf:resource="http://lucene.apache.org/hadoop/mailing_lists.html" />
-    <download-page rdf:resource="http://cvs.apache.org/dist/lucene/hadoop/nightly/" />
+    <download-page rdf:resource="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/" />
     <programming-language>Java</programming-language>
     <category rdf:resource="http://projects.apache.org/category/database" />
+    <release>
+      <Version>
+        <branch>branch-0.1</branch>
+        <name>nutch-0.1.1</name>
+        <created>2006-04-07</created>
+        <revision>0.1.1</revision>
+      </Version>
+    </release>
     <repository>
       <SVNRepository>
         <location rdf:resource="http://svn.apache.org/repos/asf/lucene/hadoop/"/>
