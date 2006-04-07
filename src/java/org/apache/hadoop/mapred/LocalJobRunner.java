@@ -45,6 +45,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private ArrayList mapIds = new ArrayList();
     private MapOutputFile mapoutputFile;
     private JobProfile profile;
+    private File localFile;
+    private FileSystem localFs;
 
     public Job(String file, Configuration conf) throws IOException {
       this.file = file;
@@ -52,7 +54,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
       this.mapoutputFile = new MapOutputFile();
       this.mapoutputFile.setConf(conf);
 
-      File localFile = new JobConf(conf).getLocalFile("localRunner", id+".xml");
+      this.localFile = new JobConf(conf).getLocalFile("localRunner", id+".xml");
+      this.localFs = FileSystem.getNamed("local", conf);
+
       fs.copyToLocalFile(new File(file), localFile);
       this.job = new JobConf(localFile);
       profile = new JobProfile(job.getUser(), id, file, 
@@ -103,7 +107,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
           File mapOut = this.mapoutputFile.getOutputFile(mapId, 0);
           File reduceIn = this.mapoutputFile.getInputFile(mapId, reduceId);
           reduceIn.getParentFile().mkdirs();
-          if (!FileSystem.getNamed("local", this.job).rename(mapOut, reduceIn))
+          if (!localFs.rename(mapOut, reduceIn))
             throw new IOException("Couldn't rename " + mapOut);
           this.mapoutputFile.removeAll(mapId);
         }
@@ -126,7 +130,15 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
       } catch (Throwable t) {
         this.status.runState = JobStatus.FAILED;
-        t.printStackTrace();
+        LOG.log(Level.WARNING, id, t);
+
+      } finally {
+        try {
+          fs.delete(new File(file).getParentFile()); // delete submit dir
+          localFs.delete(localFile);              // delete local copy
+        } catch (IOException e) {
+          LOG.warning("Error cleaning up "+id+": "+e);
+        }
       }
     }
 

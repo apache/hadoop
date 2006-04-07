@@ -48,7 +48,6 @@ class JobInProgress {
 
     long startTime;
     long finishTime;
-    String deleteUponCompletion = null;
 
     private JobConf conf;
     boolean tasksInited = false;
@@ -84,15 +83,6 @@ class JobInProgress {
 
         this.numMapTasks = conf.getNumMapTasks();
         this.numReduceTasks = conf.getNumReduceTasks();
-
-        //
-        // If a jobFile is in the systemDir, we can delete it (and
-        // its JAR) upon completion
-        //
-        File systemDir = conf.getSystemDir();
-        if (jobFile.startsWith(systemDir.getPath())) {
-            this.deleteUponCompletion = jobFile;
-        }
     }
 
     /**
@@ -423,6 +413,7 @@ class JobInProgress {
         if (status.getRunState() == JobStatus.RUNNING && allDone) {
             this.status = new JobStatus(status.getJobId(), 1.0f, 1.0f, JobStatus.SUCCEEDED);
             this.finishTime = System.currentTimeMillis();
+            garbageCollect();
         }
     }
 
@@ -443,6 +434,8 @@ class JobInProgress {
             for (int i = 0; i < reduces.length; i++) {
                 reduces[i].kill();
             }
+
+            garbageCollect();
         }
     }
 
@@ -475,11 +468,8 @@ class JobInProgress {
      * from all tables.  Be sure to remove all of this job's tasks
      * from the various tables.
      */
-    public synchronized void garbageCollect() throws IOException {
-        //
-        // Remove this job from all tables
-        //
-
+    synchronized void garbageCollect() {
+      try {
         // Definitely remove the local-disk copy of the job file
         if (localJobFile != null) {
             localJobFile.delete();
@@ -490,17 +480,13 @@ class JobInProgress {
             localJarFile = null;
         }
 
-        //
-        // If the job file was in the temporary system directory,
-        // we should delete it upon garbage collect.
-        //
-        if (deleteUponCompletion != null) {
-            JobConf jd = new JobConf(deleteUponCompletion);
-            FileSystem fs = FileSystem.get(conf);
-            fs.delete(new File(jd.getJar()));
-            fs.delete(new File(deleteUponCompletion));
-            deleteUponCompletion = null;
-        }
+        // JobClient always creates a new directory with job files
+        // so we remove that directory to cleanup
+        FileSystem fs = FileSystem.get(conf);
+        fs.delete(new File(profile.getJobFile()).getParentFile());
+
+      } catch (IOException e) {
+        LOG.warning("Error cleaning up "+profile.getJobId()+": "+e);
+      }
     }
 }
-
