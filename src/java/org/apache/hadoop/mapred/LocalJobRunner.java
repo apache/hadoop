@@ -92,7 +92,6 @@ class LocalJobRunner implements JobSubmissionProtocol {
         job.setNumReduceTasks(1);                 // force a single reduce task
         for (int i = 0; i < splits.length; i++) {
           mapIds.add("map_" + newId());
-          setWorkingDirectory(job, fs);
           MapTask map = new MapTask(file, (String)mapIds.get(i), splits[i]);
           map.setConf(job);
           map_tasks += 1;

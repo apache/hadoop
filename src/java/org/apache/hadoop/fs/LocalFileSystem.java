@@ -29,7 +29,8 @@ import org.apache.hadoop.conf.Configuration;
  * @author Mike Cafarella
  *****************************************************************/
 public class LocalFileSystem extends FileSystem {
-    private File workingDir = new File(System.getProperty("user.dir"));
+    private File workingDir
+      = new File(System.getProperty("user.dir")).getAbsoluteFile();
     TreeMap sharedLockDataSet = new TreeMap();
     TreeMap nonsharedLockDataSet = new TreeMap();
     TreeMap lockObjSet = new TreeMap();
@@ -156,7 +157,7 @@ public class LocalFileSystem extends FileSystem {
       if (isAbsolute(f)) {
         return f;
       } else {
-        return new File(workingDir, f.toString());
+        return new File(workingDir, f.toString()).getAbsoluteFile();
       }
     }
     
@@ -200,7 +201,9 @@ public class LocalFileSystem extends FileSystem {
     }
 
     public boolean isAbsolute(File f) {
-      return f.isAbsolute();
+      return f.isAbsolute() ||
+        f.getPath().startsWith("/") ||
+        f.getPath().startsWith("\\");
     }
 
     public long getLength(File f) throws IOException {
@@ -226,7 +229,6 @@ public class LocalFileSystem extends FileSystem {
      */
     public void setWorkingDirectory(File new_dir) {
       workingDir = makeAbsolute(new_dir);
-      System.setProperty("user.dir", workingDir.toString());
     }
     
     public File getWorkingDirectory() {

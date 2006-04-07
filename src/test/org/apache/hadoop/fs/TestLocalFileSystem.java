@@ -42,7 +42,7 @@ public class TestLocalFileSystem extends TestCase {
       
       // create a directory and check for it
       File dir1 = new File("dir1");
-      File dir1Absolute = dir1.getAbsoluteFile();
+      File dir1Absolute = new File(subdirAbsolute, dir1.getPath());
       fileSys.mkdirs(dir1);
       assertTrue(fileSys.isDirectory(dir1));
       assertTrue(fileSys.isDirectory(dir1Absolute));
@@ -55,8 +55,7 @@ public class TestLocalFileSystem extends TestCase {
       // create files and manipulate them.
       File file1 = new File("file1");
       File file2 = new File("sub/file2");
-      File file2_abs = file2.getAbsoluteFile();
-      assertEquals(file2_abs, new File(subdirAbsolute, file2.getPath()));
+      File file2_abs = new File(subdirAbsolute, file2.getPath());
       writeFile(fileSys, file1);
       fileSys.copyFromLocalFile(file1, file2);
       assertTrue(fileSys.exists(file1));
