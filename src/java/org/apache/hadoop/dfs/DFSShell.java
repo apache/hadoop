@@ -137,11 +137,7 @@ public class DFSShell {
      * Copy an DFS file
      */
     public void copy(String srcf, String dstf, Configuration conf) throws IOException {
-        if (FileUtil.copyContents(fs, new File(srcf), new File(dstf), true, conf)) {
-            System.out.println("Copied " + srcf + " to " + dstf);
-        } else {
-            System.out.println("Copy failed");
-        }
+      DistributedFileSystem.doCopy(fs, new File(srcf), fs, new File(dstf), true, conf);
     }
 
     /**
