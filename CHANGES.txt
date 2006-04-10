@@ -6,6 +6,9 @@ Trunk (unreleased)
  1. Fix HADOOP-126. 'bin/hadoop dfs -cp' now correctly copies .crc
     files.  (Konstantin Shvachko via cutting)
 
+ 2. Fix HADOOP-51. Change DFS to support per-file replication counts.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

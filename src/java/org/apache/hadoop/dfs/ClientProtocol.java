@@ -51,7 +51,12 @@ interface ClientProtocol {
      * create multi-block files must also use reportWrittenBlock()
      * and addBlock().
      */
-    public LocatedBlock create(String src, String clientName, String clientMachine, boolean overwrite) throws IOException;
+    public LocatedBlock create( String src, 
+                                String clientName, 
+                                String clientMachine, 
+                                boolean overwrite, 
+                                short replication
+                              ) throws IOException;
 
     /**
      * A client that has written a block of data can report completion

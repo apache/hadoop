@@ -15,10 +15,9 @@
  */
 package org.apache.hadoop.dfs;
 
-import org.apache.hadoop.io.*;
-
 import java.io.*;
 import java.util.*;
+import org.apache.hadoop.io.*;
 
 /**************************************************
  * A Block is a Hadoop FS primitive, identified by a 
@@ -113,6 +112,10 @@ class Block implements Writable, Comparable {
     public void readFields(DataInput in) throws IOException {
         this.blkid = in.readLong();
         this.len = in.readLong();
+        if( len < 0 || len > FSConstants.BLOCK_SIZE )
+          throw new IOException("Unexpected block size: " + len 
+                                + ". System block size = " 
+                                + FSConstants.BLOCK_SIZE + ".");
     }
 
     /////////////////////////////////////

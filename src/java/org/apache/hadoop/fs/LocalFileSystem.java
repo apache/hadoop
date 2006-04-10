@@ -161,7 +161,7 @@ public class LocalFileSystem extends FileSystem {
       }
     }
     
-    public FSOutputStream createRaw(File f, boolean overwrite)
+    public FSOutputStream createRaw(File f, boolean overwrite, short replication)
       throws IOException {
         f = makeAbsolute(f);
         if (f.exists() && ! overwrite) {

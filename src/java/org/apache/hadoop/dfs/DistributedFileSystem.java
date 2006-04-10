@@ -78,9 +78,9 @@ public class DistributedFileSystem extends FileSystem {
       return dfs.open(getPath(f));
     }
 
-    public FSOutputStream createRaw(File f, boolean overwrite)
+    public FSOutputStream createRaw(File f, boolean overwrite, short replication)
       throws IOException {
-      return dfs.create(getPath(f), overwrite);
+      return dfs.create(getPath(f), overwrite, replication);
     }
 
     /**
@@ -287,7 +287,7 @@ public class DistributedFileSystem extends FileSystem {
     }
 
     public long getBlockSize() {
-      return dfs.BLOCK_SIZE;
+      return FSConstants.BLOCK_SIZE;
     }
 
     /** Return the total raw capacity of the filesystem, disregarding

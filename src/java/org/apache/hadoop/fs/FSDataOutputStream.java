@@ -34,13 +34,17 @@ public class FSDataOutputStream extends DataOutputStream {
     private int inSum;
     private int bytesPerSum;
 
-    public Summer(FileSystem fs, File file, boolean overwrite, Configuration conf)
+    public Summer(FileSystem fs, 
+                  File file, 
+                  boolean overwrite, 
+                  short replication,
+                  Configuration conf)
       throws IOException {
-      super(fs.createRaw(file, overwrite));
+      super(fs.createRaw(file, overwrite, replication));
       this.bytesPerSum = conf.getInt("io.bytes.per.checksum", 512);
-      this.sums =
-        new FSDataOutputStream(fs.createRaw(fs.getChecksumFile(file), true), conf);
-
+      this.sums = new FSDataOutputStream(
+            fs.createRaw(FileSystem.getChecksumFile(file), true, replication), 
+            conf);
       sums.write(CHECKSUM_VERSION, 0, CHECKSUM_VERSION.length);
       sums.writeInt(this.bytesPerSum);
     }
@@ -123,10 +127,12 @@ public class FSDataOutputStream extends DataOutputStream {
 
   public FSDataOutputStream(FileSystem fs, File file,
                             boolean overwrite, Configuration conf,
-                            int bufferSize)
-    throws IOException {
-    super(new Buffer(new PositionCache(new Summer(fs, file, overwrite, conf)),
-                     bufferSize));
+                            int bufferSize, short replication )
+  throws IOException {
+    super(new Buffer(
+            new PositionCache(
+                new Summer(fs, file, overwrite, replication, conf)), 
+            bufferSize));
   }
 
   /** Construct without checksums. */

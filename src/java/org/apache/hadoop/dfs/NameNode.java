@@ -141,15 +141,23 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     /**
      */
-    public LocatedBlock create(String src, String clientName, String clientMachine, boolean overwrite) throws IOException {
-        Object results[] = namesystem.startFile(new UTF8(src), new UTF8(clientName), new UTF8(clientMachine), overwrite);
-        if (results == null) {
+    public LocatedBlock create(String src, 
+                               String clientName, 
+                               String clientMachine, 
+                               boolean overwrite,
+                               short replication
+    ) throws IOException {
+        Object results[] = namesystem.startFile(new UTF8(src), 
+                                                new UTF8(clientName), 
+                                                new UTF8(clientMachine), 
+                                                overwrite,
+                                                replication);
+        if (results == null)
             throw new IOException("Cannot create file " + src + " on client " + clientName);
-        } else {
-            Block b = (Block) results[0];
-            DatanodeInfo targets[] = (DatanodeInfo[]) results[1];
-            return new LocatedBlock(b, targets);
-        }
+
+        Block b = (Block) results[0];
+        DatanodeInfo targets[] = (DatanodeInfo[]) results[1];
+        return new LocatedBlock(b, targets);
     }
 
     /**

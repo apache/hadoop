@@ -56,7 +56,8 @@ public class FileUtil {
         if (fs.isFile(src)) {
             FSInputStream in = fs.openRaw(src);
             try {
-                FSOutputStream out = fs.createRaw(dst, true);
+                FSOutputStream out = fs.createRaw(dst, true, 
+                                      (short)conf.getInt("dfs.replication", 3));
                 byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
                 try {
                     int readBytes = in.read(buf);

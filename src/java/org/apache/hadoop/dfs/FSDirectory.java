@@ -34,9 +34,12 @@ import org.apache.hadoop.fs.FileUtil;
  * @author Mike Cafarella
  *************************************************/
 class FSDirectory implements FSConstants {
-    static String FS_IMAGE = "fsimage";
-    static String NEW_FS_IMAGE = "fsimage.new";
-    static String OLD_FS_IMAGE = "fsimage.old";
+    // Versions are negative.
+    // Decrement DFS_CURRENT_VERSION to define new version.
+    private static final int DFS_CURRENT_VERSION = -1;
+    private static final String FS_IMAGE = "fsimage";
+    private static final String NEW_FS_IMAGE = "fsimage.new";
+    private static final String OLD_FS_IMAGE = "fsimage.old";
 
     private static final byte OP_ADD = 0;
     private static final byte OP_RENAME = 1;
@@ -48,17 +51,28 @@ class FSDirectory implements FSConstants {
      * hierarchy.
      ******************************************************/
     class INode {
-        public String name;
-        public INode parent;
-        public TreeMap children = new TreeMap();
-        public Block blocks[];
+        private String name;
+        private INode parent;
+        private TreeMap children = new TreeMap();
+        private Block blocks[];
+        private short blockReplication;
 
         /**
          */
-        INode(String name, INode parent, Block blocks[]) {
+        INode(String name, Block blocks[], short replication) {
             this.name = name;
-            this.parent = parent;
+            this.parent = null;
             this.blocks = blocks;
+            this.blockReplication = replication;
+        }
+
+        /**
+         */
+        INode(String name) {
+            this.name = name;
+            this.parent = null;
+            this.blocks = null;
+            this.blockReplication = 0;
         }
 
         /**
@@ -68,12 +82,21 @@ class FSDirectory implements FSConstants {
         synchronized public boolean isDir() {
           return (blocks == null);
         }
+        
+        /**
+         * Get block replication for the file 
+         * @return block replication
+         */
+        public short getReplication() {
+          return this.blockReplication;
+        }
 
         /**
          * This is the external interface
          */
         INode getNode(String target) {
-            if (! target.startsWith("/") || target.length() == 0) {
+            if ( target == null || 
+                ! target.startsWith("/") || target.length() == 0) {
                 return null;
             } else if (parent == null && "/".equals(target)) {
                 return this;
@@ -103,35 +126,44 @@ class FSDirectory implements FSConstants {
             }
 
             // Check with children
-            INode child = (INode) children.get(components.elementAt(index+1));
+            INode child = this.getChild((String)components.elementAt(index+1));
             if (child == null) {
                 return null;
             } else {
                 return child.getNode(components, index+1);
             }
         }
+        
+        INode getChild( String name) {
+          return (INode) children.get( name );
+        }
 
         /**
+         * Add new INode to the file tree.
+         * Find the parent and insert 
+         * 
+         * @param path file path
+         * @param newNode INode to be added
+         * @return null if the node already exists; inserted INode, otherwise
+         * @author shv
          */
-        INode addNode(String target, Block blks[]) {
-            if (getNode(target) != null) {
-                return null;
-            } else {
-                String parentName = DFSFile.getDFSParent(target);
-                if (parentName == null) {
-                    return null;
-                }
-
-                INode parentNode = getNode(parentName);
-                if (parentNode == null) {
-                    return null;
-                } else {
-                    String targetName = new File(target).getName();
-                    INode newItem = new INode(targetName, parentNode, blks);
-                    parentNode.children.put(targetName, newItem);
-                    return newItem;
-                }
-            }
+        INode addNode(String path, INode newNode) {
+          File target = new File( path );
+          // find parent
+          String parentName = DFSFile.getDFSParent(path);
+          if (parentName == null)
+            return null;
+          INode parentNode = getNode(parentName);
+          if (parentNode == null)
+            return null;
+          // check whether the parent already has a node with that name
+          String name = newNode.name = target.getName();
+          if( parentNode.getChild( name ) != null )
+            return null;
+          // insert into the parent children list
+          parentNode.children.put(name, newNode);
+          newNode.parent = parentNode;
+          return newNode;
         }
 
         /**
@@ -226,6 +258,7 @@ class FSDirectory implements FSConstants {
             if (parent != null) {
                 fullName = parentPrefix + "/" + name;
                 new UTF8(fullName).write(out);
+                out.writeShort(blockReplication);
                 if (blocks == null) {
                     out.writeInt(0);
                 } else {
@@ -242,20 +275,21 @@ class FSDirectory implements FSConstants {
         }
     }
 
-    INode rootDir = new INode("", null, null);
-    TreeSet activeBlocks = new TreeSet();
+    
+    INode rootDir = new INode("");
+    TreeMap activeBlocks = new TreeMap();
     TreeMap activeLocks = new TreeMap();
     DataOutputStream editlog = null;
     boolean ready = false;
 
     /** Access an existing dfs name directory. */
-    public FSDirectory(File dir) throws IOException {
+    public FSDirectory(File dir, Configuration conf) throws IOException {
         File fullimage = new File(dir, "image");
         if (! fullimage.exists()) {
           throw new IOException("NameNode not formatted: " + dir);
         }
         File edits = new File(dir, "edits");
-        if (loadFSImage(fullimage, edits)) {
+        if (loadFSImage(fullimage, edits, conf)) {
             saveFSImage(fullimage, edits);
         }
 
@@ -263,6 +297,7 @@ class FSDirectory implements FSConstants {
             this.ready = true;
             this.notifyAll();
             this.editlog = new DataOutputStream(new FileOutputStream(edits));
+            editlog.writeInt( DFS_CURRENT_VERSION );
         }
     }
 
@@ -309,7 +344,10 @@ class FSDirectory implements FSConstants {
      * filenames and blocks.  Return whether we should
      * "re-save" and consolidate the edit-logs
      */
-    boolean loadFSImage(File fsdir, File edits) throws IOException {
+    boolean loadFSImage( File fsdir, 
+                         File edits, 
+                         Configuration conf
+                       ) throws IOException {
         //
         // Atomic move sequence, to recover from interrupted save
         //
@@ -338,28 +376,51 @@ class FSDirectory implements FSConstants {
         if (curFile.exists()) {
             DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(curFile)));
             try {
-                int numFiles = in.readInt();
+                // read image version
+                int imgVersion = in.readInt();
+                // read number of files
+                int numFiles = 0;
+                // version 0 does not store version #
+                // starts directly with the number of files
+                if( imgVersion >= 0 ) {  
+                  numFiles = imgVersion;
+                  imgVersion = 0;
+                } else 
+                  numFiles = in.readInt();
+                  
+                if( imgVersion < DFS_CURRENT_VERSION ) // future version
+                  throw new IOException(
+                              "Unsupported version of the file system image: "
+                              + imgVersion
+                              + ". Current version = " 
+                              + DFS_CURRENT_VERSION + "." );
+                
+                // read file info
+                short replication = (short)conf.getInt("dfs.replication", 3);
                 for (int i = 0; i < numFiles; i++) {
                     UTF8 name = new UTF8();
                     name.readFields(in);
+                    // version 0 does not support per file replication
+                    if( !(imgVersion >= 0) )
+                      replication = in.readShort(); // other versions do
                     int numBlocks = in.readInt();
-                    if (numBlocks == 0) {
-                        unprotectedAddFile(name, null);
-                    } else {
-                        Block blocks[] = new Block[numBlocks];
+                    Block blocks[] = null;
+                    if (numBlocks > 0) {
+                        blocks = new Block[numBlocks];
                         for (int j = 0; j < numBlocks; j++) {
                             blocks[j] = new Block();
                             blocks[j].readFields(in);
                         }
-                        unprotectedAddFile(name, blocks);
                     }
+                    unprotectedAddFile(name, 
+                            new INode( name.toString(), blocks, replication ));
                 }
             } finally {
                 in.close();
             }
         }
 
-        if (edits.exists() && loadFSEdits(edits) > 0) {
+        if (edits.exists() && loadFSEdits(edits, conf) > 0) {
             return true;
         } else {
             return false;
@@ -372,11 +433,32 @@ class FSDirectory implements FSConstants {
      * This is where we apply edits that we've been writing to disk all
      * along.
      */
-    int loadFSEdits(File edits) throws IOException {
+    int loadFSEdits(File edits, Configuration conf) throws IOException {
         int numEdits = 0;
+        int logVersion = 0;
 
         if (edits.exists()) {
-            DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(edits)));
+            DataInputStream in = new DataInputStream(
+                                    new BufferedInputStream(
+                                        new FileInputStream(edits)));
+            // Read log file version. Could be missing. 
+            in.mark( 4 );
+            if( in.available() > 0 ) {
+              logVersion = in.readByte();
+              in.reset();
+              if( logVersion >= 0 )
+                logVersion = 0;
+              else
+                logVersion = in.readInt();
+              if( logVersion < DFS_CURRENT_VERSION ) // future version
+                  throw new IOException(
+                            "Unexpected version of the file system log file: "
+                            + logVersion
+                            + ". Current version = " 
+                            + DFS_CURRENT_VERSION + "." );
+            }
+            
+            short replication = (short)conf.getInt("dfs.replication", 3);
             try {
                 while (in.available() > 0) {
                     byte opcode = in.readByte();
@@ -384,13 +466,32 @@ class FSDirectory implements FSConstants {
                     switch (opcode) {
                     case OP_ADD: {
                         UTF8 name = new UTF8();
-                        name.readFields(in);
-                        ArrayWritable aw = new ArrayWritable(Block.class);
+                        ArrayWritable aw = null;
+                        Writable writables[];
+                        // version 0 does not support per file replication
+                        if( logVersion >= 0 )
+                          name.readFields(in);  // read name only
+                        else {  // other versions do
+                          // get name and replication
+                          aw = new ArrayWritable(UTF8.class);
+                          aw.readFields(in);
+                          writables = aw.get(); 
+                          if( writables.length != 2 )
+                            throw new IOException("Incorrect data fortmat. " 
+                                           + "Name & replication pair expected");
+                          name = (UTF8) writables[0];
+                          replication = Short.parseShort(
+                                              ((UTF8)writables[1]).toString());
+                        }
+                        // get blocks
+                        aw = new ArrayWritable(Block.class);
                         aw.readFields(in);
-                        Writable writables[] = (Writable[]) aw.get();
+                        writables = aw.get();
                         Block blocks[] = new Block[writables.length];
                         System.arraycopy(writables, 0, blocks, 0, blocks.length);
-                        unprotectedAddFile(name, blocks);
+                        // add to the file tree
+                        unprotectedAddFile(name, 
+                            new INode( name.toString(), blocks, replication ));
                         break;
                     } 
                     case OP_RENAME: {
@@ -422,6 +523,9 @@ class FSDirectory implements FSConstants {
                 in.close();
             }
         }
+        
+        if( logVersion != DFS_CURRENT_VERSION ) // other version
+          numEdits++; // save this image asap
         return numEdits;
     }
 
@@ -438,6 +542,7 @@ class FSDirectory implements FSConstants {
         //
         DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(newFile)));
         try {
+            out.writeInt(DFS_CURRENT_VERSION);
             out.writeInt(rootDir.numItemsInTree() - 1);
             rootDir.saveImage("", out);
         } finally {
@@ -481,31 +586,35 @@ class FSDirectory implements FSConstants {
     /**
      * Add the given filename to the fs.
      */
-    public boolean addFile(UTF8 src, Block blocks[]) {
+    public boolean addFile(UTF8 path, Block[] blocks, short replication) {
         waitForReady();
 
         // Always do an implicit mkdirs for parent directory tree
-        mkdirs(DFSFile.getDFSParent(src.toString()));
-        if (unprotectedAddFile(src, blocks)) {
-            logEdit(OP_ADD, src, new ArrayWritable(Block.class, blocks));
-            return true;
-        } else {
-            return false;
-        }
+        String pathString = path.toString();
+        mkdirs(DFSFile.getDFSParent(pathString));
+        INode newNode = new INode( new File(pathString).getName(), blocks, replication);
+        if( ! unprotectedAddFile(path, newNode) )
+          return false;
+        // add create file record to log
+        UTF8 nameReplicationPair[] = new UTF8[] { 
+                              path, 
+                              new UTF8( Short.toString(replication))};
+        logEdit(OP_ADD,
+                new ArrayWritable( UTF8.class, nameReplicationPair ), 
+                new ArrayWritable( Block.class, newNode.blocks ));
+        return true;
     }
     
     /**
      */
-    boolean unprotectedAddFile(UTF8 name, Block blocks[]) {
-        synchronized (rootDir) {
-            if (blocks != null) {
-                // Add file->block mapping
-                for (int i = 0; i < blocks.length; i++) {
-                    activeBlocks.add(blocks[i]);
-                }
-            }
-            return (rootDir.addNode(name.toString(), blocks) != null);
-        }
+    boolean unprotectedAddFile(UTF8 path, INode newNode) {
+      synchronized (rootDir) {
+        int nrBlocks = (newNode.blocks == null) ? 0 : newNode.blocks.length;
+        // Add file->block mapping
+        for (int i = 0; i < nrBlocks; i++)
+            activeBlocks.put(newNode.blocks[i], newNode);
+        return (rootDir.addNode(path.toString(), newNode) != null);
+      }
     }
 
     /**
@@ -525,26 +634,22 @@ class FSDirectory implements FSConstants {
      */
     boolean unprotectedRenameTo(UTF8 src, UTF8 dst) {
         synchronized(rootDir) {
-            INode removedNode = rootDir.getNode(src.toString());
-            if (removedNode == null) {
+          String srcStr = src.toString();
+          String dstStr = dst.toString();
+            INode renamedNode = rootDir.getNode(srcStr);
+            if (renamedNode == null) {
                 return false;
             }
-            removedNode.removeNode();
+            renamedNode.removeNode();
             if (isDir(dst)) {
-                dst = new UTF8(dst.toString() + "/" + new File(src.toString()).getName());
+              dstStr += "/" + new File(srcStr).getName();
             }
-            INode newNode = rootDir.addNode(dst.toString(), removedNode.blocks);
-            if (newNode != null) {
-                newNode.children = removedNode.children;
-                for (Iterator it = newNode.children.values().iterator(); it.hasNext(); ) {
-                    INode child = (INode) it.next();
-                    child.parent = newNode;
-                }
-                return true;
-            } else {
-                rootDir.addNode(src.toString(), removedNode.blocks);
-                return false;
+            // the renamed node can be reused now
+            if( rootDir.addNode(dstStr, renamedNode ) == null ) {
+              rootDir.addNode(srcStr, renamedNode); // put it back
+              return false;
             }
+            return true;
         }
     }
 
@@ -730,7 +835,7 @@ class FSDirectory implements FSConstants {
      */
     INode unprotectedMkdir(String src) {
         synchronized (rootDir) {
-            return rootDir.addNode(src, null);
+            return rootDir.addNode(src, new INode(new File(src).getName()));
         }
     }
 
@@ -749,11 +854,20 @@ class FSDirectory implements FSConstants {
      */
     public boolean isValidBlock(Block b) {
         synchronized (rootDir) {
-            if (activeBlocks.contains(b)) {
+            if (activeBlocks.containsKey(b)) {
                 return true;
             } else {
                 return false;
             }
         }
+    }
+
+    /**
+     * Returns whether the given block is one pointed-to by a file.
+     */
+    public INode getFileByBlock(Block b) {
+      synchronized (rootDir) {
+        return (INode)activeBlocks.get(b);
+      }
     }
 }

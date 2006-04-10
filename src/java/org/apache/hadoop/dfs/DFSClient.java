@@ -95,8 +95,36 @@ class DFSClient implements FSConstants {
         return new DFSInputStream(src.toString());
     }
 
-    public FSOutputStream create(UTF8 src, boolean overwrite) throws IOException {
-        return new DFSOutputStream(src, overwrite);
+    /**
+     * Create a new dfs file and return an output stream for writing into it. 
+     * 
+     * @param src stream name
+     * @param overwrite do not check for file existence if true
+     * @return output stream
+     * @throws IOException
+     */
+    public FSOutputStream create( UTF8 src, 
+                                  boolean overwrite
+                                ) throws IOException {
+      return create( src, overwrite, (short)conf.getInt("dfs.replication", 3));
+    }
+    
+    /**
+    /**
+     * Create a new dfs file with the specified block replication 
+     * and return an output stream for writing into the file.  
+     * 
+     * @param src stream name
+     * @param overwrite do not check for file existence if true
+     * @param replication block replication
+     * @return output stream
+     * @throws IOException
+     */
+    public FSOutputStream create( UTF8 src, 
+                                  boolean overwrite, 
+                                  short replication
+                                ) throws IOException {
+        return new DFSOutputStream(src, overwrite, replication);
     }
 
     /**
@@ -527,6 +555,7 @@ class DFSClient implements FSConstants {
 
         private UTF8 src;
         private boolean overwrite;
+        private short replication;
         private boolean firstTime = true;
         private DataOutputStream blockStream;
         private DataInputStream blockReplyStream;
@@ -539,9 +568,10 @@ class DFSClient implements FSConstants {
         /**
          * Create a new output stream to the given DataNode.
          */
-        public DFSOutputStream(UTF8 src, boolean overwrite) throws IOException {
+        public DFSOutputStream(UTF8 src, boolean overwrite, short replication) throws IOException {
             this.src = src;
             this.overwrite = overwrite;
+            this.replication = replication;
             this.backupFile = newBackupFile();
             this.backupStream = new FileOutputStream(backupFile);
         }
@@ -570,7 +600,7 @@ class DFSClient implements FSConstants {
                 LocatedBlock lb = null;                
                 while (! blockComplete) {
                     if (firstTime) {
-                        lb = namenode.create(src.toString(), clientName.toString(), localName, overwrite);
+                        lb = namenode.create(src.toString(), clientName.toString(), localName, overwrite, replication);
                     } else {
                         lb = namenode.addBlock(src.toString(), localName);
                     }

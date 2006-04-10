@@ -74,6 +74,8 @@ class FSNamesystem implements FSConstants {
     // Keeps track of files that are being created, plus the
     // blocks that make them up.
     //
+    // Maps file names to FileUnderConstruction objects
+    //
     TreeMap pendingCreates = new TreeMap();
 
     //
@@ -130,10 +132,7 @@ class FSNamesystem implements FSConstants {
     Daemon hbthread = null, lmthread = null;
     boolean fsRunning = true;
     long systemStart = 0;
-    private Configuration conf;
 
-    //  DESIRED_REPLICATION is how many copies we try to have at all times
-    private int desiredReplication;
     //  The maximum number of replicates we should allow for a single block
     private int maxReplication;
     //  How many outgoing replication streams a given node should have at one time
@@ -148,18 +147,23 @@ class FSNamesystem implements FSConstants {
      * is stored
      */
     public FSNamesystem(File dir, Configuration conf) throws IOException {
-        this.dir = new FSDirectory(dir);
+        this.dir = new FSDirectory(dir, conf);
         this.hbthread = new Daemon(new HeartbeatMonitor());
         this.lmthread = new Daemon(new LeaseMonitor());
         hbthread.start();
         lmthread.start();
         this.systemStart = System.currentTimeMillis();
-        this.conf = conf;
-        
-        this.desiredReplication = conf.getInt("dfs.replication", 3);
-        this.maxReplication = desiredReplication;
+
+        this.maxReplication = conf.getInt("dfs.replication.max", 3);
+        this.minReplication = conf.getInt("dfs.replication.min", 1);
+        if( maxReplication < minReplication )
+          throw new IOException(
+              "Unexpected configuration parameters: dfs.replication.min = " 
+              + minReplication
+              + " must be at less than dfs.replication.max = " 
+              + maxReplication );
+
         this.maxReplicationStreams = conf.getInt("dfs.max-repl-streams", 2);
-        this.minReplication = 1;
         this.heartBeatRecheck= 1000;
     }
 
@@ -232,51 +236,68 @@ class FSNamesystem implements FSConstants {
      * of machines, or null if src is invalid for creation (based on
      * {@link FSDirectory#isValidToCreate(UTF8)}.
      */
-    public synchronized Object[] startFile(UTF8 src, UTF8 holder, UTF8 clientMachine, boolean overwrite) {
-        Object results[] = null;
-        if (pendingCreates.get(src) == null) {
-            boolean fileValid = dir.isValidToCreate(src);
-            if (overwrite && ! fileValid) {
-                delete(src);
-                fileValid = true;
-            }
-
-            if (fileValid) {
-                results = new Object[2];
-
-                // Get the array of replication targets 
-                DatanodeInfo targets[] = chooseTargets(this.desiredReplication, null, clientMachine);
-                if (targets.length < this.minReplication) {
-                    LOG.warning("Target-length is " + targets.length +
-                        ", below MIN_REPLICATION (" + this.minReplication+ ")");
-                    return null;
-                }
-
-                // Reserve space for this pending file
-                pendingCreates.put(src, new Vector());
-                synchronized (leases) {
-                    Lease lease = (Lease) leases.get(holder);
-                    if (lease == null) {
-                        lease = new Lease(holder);
-                        leases.put(holder, lease);
-                        sortedLeases.add(lease);
-                    } else {
-                        sortedLeases.remove(lease);
-                        lease.renew();
-                        sortedLeases.add(lease);
-                    }
-                    lease.startedCreate(src);
-                }
-
-                // Create next block
-                results[0] = allocateBlock(src);
-                results[1] = targets;
-            } else { // ! fileValid
-              LOG.warning("Cannot start file because it is invalid. src=" + src);
-            }
-        } else {
-            LOG.warning("Cannot start file because pendingCreates is non-null. src=" + src);
+    public synchronized Object[] startFile( UTF8 src, 
+                                            UTF8 holder, 
+                                            UTF8 clientMachine, 
+                                            boolean overwrite,
+                                            short replication 
+                                          ) throws IOException {
+        if (pendingCreates.get(src) != null) {
+          LOG.warning("Cannot start file because pendingCreates is non-null. src=" + src);
+          return null;
         }
+
+        if( replication > maxReplication )
+          throw new IOException(
+            "Cannot create file " + src + " on client " + clientMachine + ".\n"
+            + "Requested replication " + replication
+            + " exceeds maximum " + maxReplication );
+        
+        if( replication < minReplication )
+          throw new IOException(
+            "Cannot create file " + src + " on client " + clientMachine + ".\n"
+            + "Requested replication " + replication
+            + " is less than the required minimum " + minReplication );
+        
+        boolean fileValid = dir.isValidToCreate(src);
+        if (overwrite && ! fileValid) {
+            delete(src);
+            fileValid = true;
+        }
+  
+        if ( ! fileValid) {
+          LOG.warning("Cannot start file because it is invalid. src=" + src);
+          return null;
+        }
+
+        // Get the array of replication targets 
+        DatanodeInfo targets[] = chooseTargets(replication, null, clientMachine);
+        if (targets.length < this.minReplication) {
+            LOG.warning("Target-length is " + targets.length +
+                ", below MIN_REPLICATION (" + this.minReplication+ ")");
+            return null;
+        }
+
+        // Reserve space for this pending file
+        pendingCreates.put(src, new FileUnderConstruction( replication ));
+        synchronized (leases) {
+            Lease lease = (Lease) leases.get(holder);
+            if (lease == null) {
+                lease = new Lease(holder);
+                leases.put(holder, lease);
+                sortedLeases.add(lease);
+            } else {
+                sortedLeases.remove(lease);
+                lease.renew();
+                sortedLeases.add(lease);
+            }
+            lease.startedCreate(src);
+        }
+
+        // Create next block
+        Object results[] = new Object[2];
+        results[0] = allocateBlock(src);
+        results[1] = targets;
         return results;
     }
 
@@ -293,7 +314,8 @@ class FSNamesystem implements FSConstants {
      */
     public synchronized Object[] getAdditionalBlock(UTF8 src, UTF8 clientMachine) {
         Object results[] = null;
-        if (dir.getFile(src) == null && pendingCreates.get(src) != null) {
+        FileUnderConstruction pendingFile = (FileUnderConstruction) pendingCreates.get(src);
+        if (dir.getFile(src) == null && pendingFile != null) {
             results = new Object[2];
 
             //
@@ -301,7 +323,7 @@ class FSNamesystem implements FSConstants {
             //
             if (checkFileProgress(src)) {
                 // Get the array of replication targets 
-                DatanodeInfo targets[] = chooseTargets(this.desiredReplication, null, clientMachine);
+                DatanodeInfo targets[] = chooseTargets(pendingFile.getReplication(), null, clientMachine);
                 if (targets.length < this.minReplication) {
                     return null;
                 }
@@ -350,83 +372,89 @@ class FSNamesystem implements FSConstants {
      */
     public synchronized int completeFile(UTF8 src, UTF8 holder) {
         if (dir.getFile(src) != null || pendingCreates.get(src) == null) {
-	    LOG.info("Failed to complete " + src + "  because dir.getFile()==" + dir.getFile(src) + " and " + pendingCreates.get(src));
+            LOG.info( "Failed to complete " + src + 
+                      "  because dir.getFile()==" + dir.getFile(src) + 
+                      " and " + pendingCreates.get(src));
             return OPERATION_FAILED;
         } else if (! checkFileProgress(src)) {
             return STILL_WAITING;
-        } else {
-            Vector pendingVector = (Vector) pendingCreates.get(src);
-            Block pendingBlocks[] = (Block[]) pendingVector.toArray(new Block[pendingVector.size()]);
+        }
+        
+        FileUnderConstruction pendingFile = (FileUnderConstruction) pendingCreates.get(src);
+        int nrBlocks = pendingFile.size();
+        Block pendingBlocks[] = (Block[]) pendingFile.toArray(new Block[nrBlocks]);
 
-            //
-            // We have the pending blocks, but they won't have
-            // length info in them (as they were allocated before
-            // data-write took place).  So we need to add the correct
-            // length info to each
-            //
-            // REMIND - mjc - this is very inefficient!  We should
-            // improve this!
-            //
-            for (int i = 0; i < pendingBlocks.length; i++) {
-                Block b = pendingBlocks[i];
-                TreeSet containingNodes = (TreeSet) blocksMap.get(b);
-                DatanodeInfo node = (DatanodeInfo) containingNodes.first();
-                for (Iterator it = node.getBlockIterator(); it.hasNext(); ) {
-                    Block cur = (Block) it.next();
-                    if (b.getBlockId() == cur.getBlockId()) {
-                        b.setNumBytes(cur.getNumBytes());
-                        break;
-                    }
+        //
+        // We have the pending blocks, but they won't have
+        // length info in them (as they were allocated before
+        // data-write took place).  So we need to add the correct
+        // length info to each
+        //
+        // REMIND - mjc - this is very inefficient!  We should
+        // improve this!
+        //
+        for (int i = 0; i < nrBlocks; i++) {
+            Block b = (Block)pendingBlocks[i];
+            TreeSet containingNodes = (TreeSet) blocksMap.get(b);
+            DatanodeInfo node = (DatanodeInfo) containingNodes.first();
+            for (Iterator it = node.getBlockIterator(); it.hasNext(); ) {
+                Block cur = (Block) it.next();
+                if (b.getBlockId() == cur.getBlockId()) {
+                    b.setNumBytes(cur.getNumBytes());
+                    break;
                 }
             }
-            
-            //
-            // Now we can add the (name,blocks) tuple to the filesystem
-            //
-            if (dir.addFile(src, pendingBlocks)) {
-                // The file is no longer pending
-                pendingCreates.remove(src);
-                for (int i = 0; i < pendingBlocks.length; i++) {
-                    pendingCreateBlocks.remove(pendingBlocks[i]);
-                }
-
-                synchronized (leases) {
-                    Lease lease = (Lease) leases.get(holder);
-                    if (lease != null) {
-                        lease.completedCreate(src);
-                        if (! lease.hasLocks()) {
-                            leases.remove(holder);
-                            sortedLeases.remove(lease);
-                        }
-                    }
-                }
-
-                //
-                // REMIND - mjc - this should be done only after we wait a few secs.
-                // The namenode isn't giving datanodes enough time to report the
-                // replicated blocks that are automatically done as part of a client
-                // write.
-                //
-
-                // Now that the file is real, we need to be sure to replicate
-                // the blocks.
-                for (int i = 0; i < pendingBlocks.length; i++) {
-                    TreeSet containingNodes = (TreeSet) blocksMap.get(pendingBlocks[i]);
-                    if (containingNodes.size() < this.desiredReplication) {
-                        synchronized (neededReplications) {
-                            LOG.info("Completed file " + src + ", at holder " + holder + ".  There is/are only " + containingNodes.size() + " copies of block " + pendingBlocks[i] + ", so replicating up to " + this.desiredReplication);
-                            neededReplications.add(pendingBlocks[i]);
-                        }
-                    }
-                }
-                return COMPLETE_SUCCESS;
-            } else {
-                System.out.println("AddFile() for " + src + " failed");
-            }
-	    LOG.info("Dropped through on file add....");
+        }
+        
+        //
+        // Now we can add the (name,blocks) tuple to the filesystem
+        //
+        if ( ! dir.addFile(src, pendingBlocks, pendingFile.getReplication())) {
+          System.out.println("AddFile() for " + src + " failed");
+          return OPERATION_FAILED;
         }
 
-        return OPERATION_FAILED;
+        // The file is no longer pending
+        pendingCreates.remove(src);
+        for (int i = 0; i < nrBlocks; i++) {
+            pendingCreateBlocks.remove(pendingBlocks[i]);
+        }
+
+        synchronized (leases) {
+            Lease lease = (Lease) leases.get(holder);
+            if (lease != null) {
+                lease.completedCreate(src);
+                if (! lease.hasLocks()) {
+                    leases.remove(holder);
+                    sortedLeases.remove(lease);
+                }
+            }
+        }
+
+        //
+        // REMIND - mjc - this should be done only after we wait a few secs.
+        // The namenode isn't giving datanodes enough time to report the
+        // replicated blocks that are automatically done as part of a client
+        // write.
+        //
+
+        // Now that the file is real, we need to be sure to replicate
+        // the blocks.
+        for (int i = 0; i < nrBlocks; i++) {
+            TreeSet containingNodes = (TreeSet) blocksMap.get(pendingBlocks[i]);
+            if (containingNodes.size() < pendingFile.getReplication()) {
+                synchronized (neededReplications) {
+                    LOG.info("Completed file " + src 
+                              + ", at holder " + holder 
+                              + ".  There is/are only " + containingNodes.size() 
+                              + " copies of block " + pendingBlocks[i] 
+                              + ", so replicating up to " 
+                              + pendingFile.getReplication());
+                    neededReplications.add(pendingBlocks[i]);
+                }
+            }
+        }
+        return COMPLETE_SUCCESS;
     }
 
     /**
@@ -434,7 +462,7 @@ class FSNamesystem implements FSConstants {
      */
     synchronized Block allocateBlock(UTF8 src) {
         Block b = new Block();
-        Vector v = (Vector) pendingCreates.get(src);
+        FileUnderConstruction v = (FileUnderConstruction) pendingCreates.get(src);
         v.add(b);
         pendingCreateBlocks.add(b);
         return b;
@@ -445,7 +473,7 @@ class FSNamesystem implements FSConstants {
      * replicated.  If not, return false.
      */
     synchronized boolean checkFileProgress(UTF8 src) {
-        Vector v = (Vector) pendingCreates.get(src);
+        FileUnderConstruction v = (FileUnderConstruction) pendingCreates.get(src);
 
         for (Iterator it = v.iterator(); it.hasNext(); ) {
             Block b = (Block) it.next();
@@ -744,7 +772,7 @@ class FSNamesystem implements FSConstants {
         return dir.releaseLock(src, holder);
     }
     private void internalReleaseCreate(UTF8 src) {
-        Vector v = (Vector) pendingCreates.remove(src);
+        FileUnderConstruction v = (FileUnderConstruction) pendingCreates.remove(src);
         for (Iterator it2 = v.iterator(); it2.hasNext(); ) {
             Block b = (Block) it2.next();
             pendingCreateBlocks.remove(b);
@@ -950,47 +978,46 @@ class FSNamesystem implements FSConstants {
         }
 
         synchronized (neededReplications) {
-            if (dir.isValidBlock(block)) {
-                if (containingNodes.size() >= this.desiredReplication) {
-                    neededReplications.remove(block);
-                    pendingReplications.remove(block);
-                } else if (containingNodes.size() < this.desiredReplication) {
-                    if (! neededReplications.contains(block)) {
-                        neededReplications.add(block);
-                    }
-                }
+            FSDirectory.INode fileINode = dir.getFileByBlock(block);
+            if( fileINode == null )  // block does not belong to any file
+                return;
+            short fileReplication = fileINode.getReplication();
+            if (containingNodes.size() >= fileReplication ) {
+                neededReplications.remove(block);
+                pendingReplications.remove(block);
+            } else // containingNodes.size() < fileReplication
+                neededReplications.add(block);
 
-                //
-                // Find how many of the containing nodes are "extra", if any.
-                // If there are any extras, call chooseExcessReplicates() to
-                // mark them in the excessReplicateMap.
-                //
-                Vector nonExcess = new Vector();
-                for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
-                    DatanodeInfo cur = (DatanodeInfo) it.next();
-                    TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getName());
-                    if (excessBlocks == null || ! excessBlocks.contains(block)) {
-                        nonExcess.add(cur);
-                    }
+            //
+            // Find how many of the containing nodes are "extra", if any.
+            // If there are any extras, call chooseExcessReplicates() to
+            // mark them in the excessReplicateMap.
+            //
+            Vector nonExcess = new Vector();
+            for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
+                DatanodeInfo cur = (DatanodeInfo) it.next();
+                TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getName());
+                if (excessBlocks == null || ! excessBlocks.contains(block)) {
+                    nonExcess.add(cur);
                 }
-                if (nonExcess.size() > this.maxReplication) {
-                    chooseExcessReplicates(nonExcess, block, this.maxReplication);    
-                }
+            }
+            if (nonExcess.size() > fileReplication) {
+                chooseExcessReplicates(nonExcess, block, fileReplication);    
             }
         }
     }
 
     /**
-     * We want a max of "maxReps" replicates for any block, but we now have too many.  
+     * We want "replication" replicates for the block, but we now have too many.  
      * In this method, copy enough nodes from 'srcNodes' into 'dstNodes' such that:
      *
-     * srcNodes.size() - dstNodes.size() == maxReps
+     * srcNodes.size() - dstNodes.size() == replication
      *
      * For now, we choose nodes randomly.  In the future, we might enforce some
      * kind of policy (like making sure replicates are spread across racks).
      */
-    void chooseExcessReplicates(Vector nonExcess, Block b, int maxReps) {
-        while (nonExcess.size() - maxReps > 0) {
+    void chooseExcessReplicates(Vector nonExcess, Block b, short replication) {
+        while (nonExcess.size() - replication > 0) {
             int chosenNode = r.nextInt(nonExcess.size());
             DatanodeInfo cur = (DatanodeInfo) nonExcess.elementAt(chosenNode);
             nonExcess.removeElementAt(chosenNode);
@@ -1037,7 +1064,8 @@ class FSNamesystem implements FSConstants {
         // necessary.  In that case, put block on a possibly-will-
         // be-replicated list.
         //
-        if (dir.isValidBlock(block) && (containingNodes.size() < this.desiredReplication)) {
+        FSDirectory.INode fileINode = dir.getFileByBlock(block);
+        if( fileINode != null && (containingNodes.size() < fileINode.getReplication())) {
             synchronized (neededReplications) {
                 neededReplications.add(block);
             }
@@ -1157,12 +1185,13 @@ class FSNamesystem implements FSConstants {
                     }
 
                     Block block = (Block) it.next();
-                    if (! dir.isValidBlock(block)) {
+                    FSDirectory.INode fileINode = dir.getFileByBlock(block);
+                    if( fileINode == null ) { // block does not belong to any file
                         it.remove();
                     } else {
                         TreeSet containingNodes = (TreeSet) blocksMap.get(block);
                         if (containingNodes.contains(srcNode)) {
-                            DatanodeInfo targets[] = chooseTargets(Math.min(this.desiredReplication - containingNodes.size(), this.maxReplicationStreams - xmitsInProgress), containingNodes, null);
+                            DatanodeInfo targets[] = chooseTargets(Math.min(fileINode.getReplication() - containingNodes.size(), this.maxReplicationStreams - xmitsInProgress), containingNodes, null);
                             if (targets.length > 0) {
                                 // Build items to return
                                 replicateBlocks.add(block);
@@ -1186,7 +1215,7 @@ class FSNamesystem implements FSConstants {
                         DatanodeInfo targets[] = (DatanodeInfo[]) replicateTargetSets.elementAt(i);
                         TreeSet containingNodes = (TreeSet) blocksMap.get(block);
 
-                        if (containingNodes.size() + targets.length >= this.desiredReplication) {
+                        if (containingNodes.size() + targets.length >= dir.getFileByBlock(block).getReplication()) {
                             neededReplications.remove(block);
                             pendingReplications.add(block);
                         }
@@ -1225,12 +1254,10 @@ class FSNamesystem implements FSConstants {
 
         for (int i = 0; i < desiredReplicates; i++) {
             DatanodeInfo target = chooseTarget(forbiddenNodes, alreadyChosen, clientMachine);
-            if (target != null) {
-                targets.add(target);
-                alreadyChosen.add(target);
-            } else {
-                break; // calling chooseTarget again won't help
-            }
+            if (target == null)
+              break; // calling chooseTarget again won't help
+            targets.add(target);
+            alreadyChosen.add(target);
         }
         return (DatanodeInfo[]) targets.toArray(new DatanodeInfo[targets.size()]);
     }
@@ -1335,5 +1362,26 @@ class FSNamesystem implements FSConstants {
                 ( forbidden2 != null ? forbidden2.size() : 0 ));
             return null;
         }
+    }
+
+    /**
+     * Information about the file while it is being written to.
+     * Note that at that time the file is not visible to the outside.
+     * 
+     * This class contains a <code>Vector</code> of {@link Block}s that has
+     * been written into the file so far, and file replication. 
+     * 
+     * @author shv
+     */
+    private class FileUnderConstruction extends Vector {
+      private short blockReplication; // file replication
+      
+      FileUnderConstruction( short replication ) throws IOException {
+        this.blockReplication = replication;
+      }
+      
+      public short getReplication() {
+        return this.blockReplication;
+      }
     }
 }

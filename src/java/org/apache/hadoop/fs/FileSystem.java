@@ -165,7 +165,9 @@ public abstract class FileSystem extends Configured {
      * Files are overwritten by default.
      */
     public FSDataOutputStream create(File f) throws IOException {
-      return create(f, true, getConf().getInt("io.file.buffer.size", 4096));
+      return create(f, true, 
+                    getConf().getInt("io.file.buffer.size", 4096),
+                    (short)getConf().getInt("dfs.replication", 3));
     }
 
     /**
@@ -175,17 +177,38 @@ public abstract class FileSystem extends Configured {
      *   the file will be overwritten, and if false an error will be thrown.
      * @param bufferSize the size of the buffer to be used.
      */
-    public FSDataOutputStream create(File f, boolean overwrite,
-                                      int bufferSize) throws IOException {
-      return new FSDataOutputStream(this, f, overwrite, getConf(), bufferSize);
+    public FSDataOutputStream create( File f, 
+                                      boolean overwrite,
+                                      int bufferSize
+                                    ) throws IOException {
+      return create( f, overwrite, bufferSize, 
+                    (short)getConf().getInt("dfs.replication", 3));
+    }
+    
+    /**
+     * Opens an FSDataOutputStream at the indicated File.
+     * @param f the file name to open
+     * @param overwrite if a file with this name already exists, then if true,
+     *   the file will be overwritten, and if false an error will be thrown.
+     * @param bufferSize the size of the buffer to be used.
+     * @param replication required block replication for the file. 
+     */
+    public FSDataOutputStream create( File f, 
+                                      boolean overwrite,
+                                      int bufferSize,
+                                      short replication
+                                    ) throws IOException {
+      return new FSDataOutputStream(this, f, overwrite, getConf(), 
+                                    bufferSize, replication );
     }
 
     /** Opens an OutputStream at the indicated File.
      * @param f the file name to open
      * @param overwrite if a file with this name already exists, then if true,
      *   the file will be overwritten, and if false an error will be thrown.
+     * @param replication required block replication for the file. 
      */
-    public abstract FSOutputStream createRaw(File f, boolean overwrite)
+    public abstract FSOutputStream createRaw(File f, boolean overwrite, short replication)
       throws IOException;
 
     /**
@@ -196,7 +219,8 @@ public abstract class FileSystem extends Configured {
         if (exists(f)) {
             return false;
         } else {
-            OutputStream out = createRaw(f, false);
+            OutputStream out = createRaw(f, false, 
+                                (short)getConf().getInt("dfs.replication", 3));
             try {
             } finally {
               out.close();
