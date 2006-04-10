@@ -4,7 +4,8 @@
 #
 # Environment Variables
 #
-#   HADOOP_SLAVES    File naming remote hosts.  Default is ~/.slaves
+#   HADOOP_SLAVES    File naming remote hosts.
+#     Default is ${HADOOP_CONF_DIR}/slaves.
 #   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #   HADOOP_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
 ##
