@@ -5,7 +5,5 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-"$bin"/hadoop-daemon.sh stop jobtracker
-"$bin"/hadoop-daemons.sh stop tasktracker
-"$bin"/hadoop-daemon.sh stop namenode
-"$bin"/hadoop-daemons.sh stop datanode
+"$bin"/stop-mapred.sh
+"$bin"/stop-dfs.sh
