@@ -8,6 +8,7 @@
 #     Default is ${HADOOP_CONF_DIR}/slaves.
 #   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #   HADOOP_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
+#   HADOOP_SSH_OPTS Options passed to ssh when running remote commands.
 ##
 
 usage="Usage: slaves.sh command..."
@@ -42,15 +43,6 @@ fi
 
 if [ "$HADOOP_SLAVES" = "" ]; then
   export HADOOP_SLAVES="${HADOOP_CONF_DIR}/slaves"
-fi
-
-# By default, forward HADOOP_CONF_DIR environment variable to the
-# remote slave. Remote slave must have following added to its
-# /etc/ssh/sshd_config:
-#   AcceptEnv HADOOP_CONF_DIR
-# See'man ssh_config for more on SendEnv and AcceptEnv.
-if [ "$HADOOP_SSH_OPTS" = "" ]; then
-  export HADOOP_SSH_OPTS="-o ConnectTimeout=1 -o SendEnv=HADOOP_CONF_DIR"
 fi
 
 for slave in `cat "$HADOOP_SLAVES"`; do
