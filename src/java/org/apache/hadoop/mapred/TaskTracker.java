@@ -422,7 +422,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
         /**
          */
         public TaskStatus createStatus() {
-            TaskStatus status = new TaskStatus(task.getTaskId(), task.isMapTask(), progress, runstate, diagnosticInfo.toString(), (stateString == null) ? "" : stateString);
+            TaskStatus status = new TaskStatus(task.getTaskId(), task.isMapTask(), progress, runstate, diagnosticInfo.toString(), (stateString == null) ? "" : stateString, "");
             if (diagnosticInfo.length() > 0) {
                 diagnosticInfo = new StringBuffer();
             }

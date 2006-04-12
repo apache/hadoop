@@ -37,16 +37,20 @@ class TaskStatus implements Writable {
     private int runState;
     private String diagnosticInfo;
     private String stateString;
+    private String hostname;
 
     public TaskStatus() {}
 
-    public TaskStatus(String taskid, boolean isMap, float progress, int runState, String diagnosticInfo, String stateString) {
+    public TaskStatus(String taskid, boolean isMap, float progress,
+                      int runState, String diagnosticInfo,
+                      String stateString, String hostname) {
         this.taskid = taskid;
         this.isMap = isMap;
         this.progress = progress;
         this.runState = runState;
         this.diagnosticInfo = diagnosticInfo;
         this.stateString = stateString;
+	this.hostname = hostname;
     }
     
     public String getTaskId() { return taskid; }
@@ -54,6 +58,8 @@ class TaskStatus implements Writable {
     public float getProgress() { return progress; }
     public void setProgress(float progress) { this.progress = progress; } 
     public int getRunState() { return runState; }
+    public String getHostname() {return hostname;}
+    public void setHostname(String host) { this.hostname = host;}
     public void setRunState(int runState) { this.runState = runState; }
     public String getDiagnosticInfo() { return diagnosticInfo; }
     public void setDiagnosticInfo(String info) { this.diagnosticInfo = info; }

@@ -45,17 +45,16 @@
 <h2>Map Tasks</h2>
   <center>
   <table border=2 cellpadding="5" cellspacing="2">
-  <tr><td align="center">Task Id</td><td>Complete</td><td>State</td><td>Errors</td></tr>
+  <tr><td align="center">Task</td><td>Complete</td><td>Status</td><td>Errors</td></tr>
 
   <%
 
     for (int i = 0; i < mapTaskReports.length; i++) {
       TaskReport report = mapTaskReports[i];
 
-      out.print("<tr><td>" + report.getTaskId() + "</td>");
+      out.print("<tr><td><a href=\"taskdetails.jsp?jobid=" + jobid + "&taskid=" + report.getTaskId() + "\">"  + report.getTaskId() + "</a></td>");
       out.print("<td>" + report.getProgress() + "</td>");
-      out.print("<td>" + report.getState() + "</td>");
-
+      out.print("<td>"  + report.getState() + "</td>");
       String[] diagnostics = report.getDiagnostics();
       for (int j = 0; j < diagnostics.length ; j++) {
         out.print("<td>" + diagnostics[j] + "</td>");
@@ -71,13 +70,13 @@
 <h2>Reduce Tasks</h2>
   <center>
   <table border=2 cellpadding="5" cellspacing="2">
-  <tr><td align="center">Task Id</td><td>Complete</td><td>State</td><td>Errors</td></tr>
+  <tr><td align="center">Task</td><td>Complete</td><td>State</td><td>Errors</td></tr>
 
   <%
     for (int i = 0; i < reduceTaskReports.length; i++) {
       TaskReport report = reduceTaskReports[i];
 
-      out.print("<tr><td>" + report.getTaskId() + "</td>");
+      out.print("<tr><td><a href=\"taskdetails.jsp?jobid=" + jobid + "&taskid=" + report.getTaskId() + "\">" + report.getTaskId() + "</a></td>");
       out.print("<td>" + report.getProgress() + "</td>");
       out.print("<td>" + report.getState() + "</td>");
 

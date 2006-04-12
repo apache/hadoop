@@ -825,6 +825,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         }
     }
 
+    /** Get all the TaskStatuses from the tipid. */
+    TaskStatus[] getTaskStatuses(String jobid, String tipid){
+	JobInProgress job = (JobInProgress) jobs.get(jobid);
+	if (job == null){
+	    return new TaskStatus[0];
+	}
+	TaskInProgress tip = (TaskInProgress) job.getTaskInProgress(tipid);
+	if (tip == null){
+	    return new TaskStatus[0];
+	}
+	return tip.getTaskStatuses();
+    }
+
     ///////////////////////////////////////////////////////////////
     // JobTracker methods
     ///////////////////////////////////////////////////////////////
@@ -851,6 +864,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     void updateTaskStatuses(TaskTrackerStatus status) {
         for (Iterator it = status.taskReports(); it.hasNext(); ) {
             TaskStatus report = (TaskStatus) it.next();
+            report.setHostname(status.getHost());
             TaskInProgress tip = (TaskInProgress) taskidToTIPMap.get(report.getTaskId());
             if (tip == null) {
                 LOG.info("Serious problem.  While updating status, cannot find taskid " + report.getTaskId());

@@ -490,4 +490,21 @@ class JobInProgress {
         LOG.warning("Error cleaning up "+profile.getJobId()+": "+e);
       }
     }
+
+    /**
+      * Return the TaskInProgress that matches the tipid.
+      */
+    public TaskInProgress getTaskInProgress(String tipid){
+        for (int i = 0; i < maps.length; i++) {
+	    if (tipid.equals(maps[i].getTIPId())){
+                return maps[i];
+	    }               
+	}
+	for (int i = 0; i < reduces.length; i++) {
+	    if (tipid.equals(reduces[i].getTIPId())){
+		return reduces[i];
+            }
+	}
+	return null;
+    }
 }

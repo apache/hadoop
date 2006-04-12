@@ -307,6 +307,13 @@ class TaskInProgress {
     }
 
     /**
+     * Get the Status of the tasks managed by this TIP
+     */
+    public TaskStatus[] getTaskStatuses() {
+	return (TaskStatus[])taskStatuses.values().toArray(new TaskStatus[taskStatuses.size()]);
+    }
+
+     /**
      * The TIP's been ordered kill()ed.
      */
     public void kill() {
