@@ -53,6 +53,7 @@ class ReduceTaskRunner extends TaskRunner {
 
     InterTrackerProtocol jobClient = getTracker().getJobClient();
     while (needed.size() > 0) {
+      LOG.info(task.getTaskId()+" Need "+needed.size()+" map output(s).");
       getTask().reportProgress(getTracker());
 
       // query for a just a random subset of needed segments so that we don't
@@ -72,6 +73,7 @@ class ReduceTaskRunner extends TaskRunner {
           if (killed) {
             return false;
           }
+          LOG.info(task.getTaskId()+" No map outputs available; sleeping...");
           Thread.sleep(10000);
         } catch (InterruptedException e) {
         }
@@ -103,6 +105,8 @@ class ReduceTaskRunner extends TaskRunner {
         try {
           copyPhase.phase().setStatus(loc.toString());
           
+          LOG.info(task.getTaskId()+" Copying "+loc.getMapTaskId()
+                   +" output from "+loc.getHost()+".");
           client.getFile(loc.getMapTaskId(), task.getTaskId(),
                          new IntWritable(task.getPartition()));
 
