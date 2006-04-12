@@ -20,6 +20,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <news        label="News"             href="index.html" />    
     <about       label="About"            href="about.html" />    
     <credits     label="Credits"          href="credits.html" />    
+    <store       label="Buy Stuff"        href="ext:store" />    
   </project>
 
   <docs label="Documentation">    
@@ -45,6 +46,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <wiki      href="http://wiki.apache.org/lucene-hadoop/" />
     <nightly   href="http://cvs.apache.org/dist/lucene/hadoop/nightly/" />
     <releases  href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/" />
+    <store     href="http://www.cafepress.com/hadoop/" />
   </external-refs>
  
 </site>
