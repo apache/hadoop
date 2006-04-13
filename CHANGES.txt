@@ -9,6 +9,18 @@ Trunk (unreleased)
  2. Fix HADOOP-51. Change DFS to support per-file replication counts.
     (Konstantin Shvachko via cutting)
 
+ 3. Fix HADOOP-131.  Add scripts to start/stop dfs and mapred daemons.
+    Use these in start/stop-all scripts.  (Chris Mattmann via cutting)
+
+ 4. Stop using ssh options by default that are not yet in widely used
+    versions of ssh.  Folks can still enable their use by uncommenting
+    a line in conf/hadoop-env.sh. (cutting)
+
+ 5. Fix HADOOP-92.  Show information about all attempts to run each
+    task in the web ui.  (Mahadev konar via cutting)
+
+ 6. Fix HADOOP-128.  Improved DFS error handling. (Owen O'Malley via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 
