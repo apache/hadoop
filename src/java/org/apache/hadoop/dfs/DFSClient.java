@@ -564,6 +564,7 @@ class DFSClient implements FSConstants {
         private Block block;
         private long filePos = 0;
         private int bytesWrittenToBlock = 0;
+        private String datanodeName;
 
         /**
          * Create a new output stream to the given DataNode.
@@ -628,7 +629,8 @@ class DFSClient implements FSConstants {
                 try {
                     s = new Socket();
                     s.connect(target, READ_TIMEOUT);
-                    s.setSoTimeout(READ_TIMEOUT);
+                    s.setSoTimeout(replication * READ_TIMEOUT);
+                    datanodeName = nodes[0].getName().toString();
                 } catch (IOException ie) {
                     // Connection failed.  Let's wait a little bit and retry
                     try {
@@ -764,8 +766,10 @@ class DFSClient implements FSConstants {
             //
             // Send it to datanode
             //
-            boolean mustRecover = true;
-            while (mustRecover) {
+            boolean sentOk = false;
+            int remainingAttempts = 
+               conf.getInt("dfs.client.block.write.retries", 3);
+            while (!sentOk) {
                 nextBlockOutputStream();
                 InputStream in = new FileInputStream(backupFile);
                 try {
@@ -777,9 +781,13 @@ class DFSClient implements FSConstants {
                         bytesRead = in.read(buf);
                     }
                     internalClose();
-                    mustRecover = false;
+                    sentOk = true;
                 } catch (IOException ie) {
                     handleSocketException(ie);
+                    remainingAttempts -= 1;
+                    if (remainingAttempts == 0) {
+                      throw ie;
+                    }
                 } finally {
                   in.close();
                 }
@@ -798,6 +806,7 @@ class DFSClient implements FSConstants {
          * Close down stream to remote datanode.
          */
         private synchronized void internalClose() throws IOException {
+          try {
             blockStream.writeLong(0);
             blockStream.flush();
 
@@ -806,6 +815,13 @@ class DFSClient implements FSConstants {
                 LOG.info("Did not receive WRITE_COMPLETE flag: " + complete);
                 throw new IOException("Did not receive WRITE_COMPLETE_FLAG: " + complete);
             }
+          } catch (IOException ie) {
+            throw (IOException)
+                  new IOException("failure closing block of file " +
+                                  src.toString() + " to node " +
+                                  (datanodeName == null ? "?" : datanodeName)
+                                 ).initCause(ie);
+          }
                     
             LocatedBlock lb = new LocatedBlock();
             lb.readFields(blockReplyStream);

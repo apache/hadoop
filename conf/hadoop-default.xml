@@ -118,6 +118,14 @@
   <description>Disk usage statistics refresh interval in msec.</description>
 </property>
 
+<property>
+  <name>dfs.client.block.write.retries</name>
+  <value>3</value>
+  <description>The number of retries for writing blocks to the data nodes, 
+  before we signal failure to the application.
+  </description>
+</property>
+
 <!-- map/reduce properties -->
 
 <property>
