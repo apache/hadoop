@@ -57,7 +57,7 @@
       out.print("<td>");
       writeString(out, status.getRunState()); 
       out.print("</td>");
-      out.print("<td>" + status.getDiagnosticInfo() + "</td>");
+      out.print("<td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
       out.print("</tr>\n");
     }
   %>

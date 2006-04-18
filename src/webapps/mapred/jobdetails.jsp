@@ -57,7 +57,7 @@
       out.print("<td>"  + report.getState() + "</td>");
       String[] diagnostics = report.getDiagnostics();
       for (int j = 0; j < diagnostics.length ; j++) {
-        out.print("<td>" + diagnostics[j] + "</td>");
+        out.print("<td><pre>" + diagnostics[j] + "</pre></td>");
       }
       out.print("</tr>\n");
     }
@@ -82,7 +82,7 @@
 
       String[] diagnostics = report.getDiagnostics();
       for (int j = 0; j < diagnostics.length ; j++) {
-        out.print("<td>" + diagnostics[j] + "</td>");
+        out.print("<td><pre>" + diagnostics[j] + "</pre></td>");
       }
       out.print("</tr>\n");
     }

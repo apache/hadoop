@@ -37,6 +37,9 @@ Trunk (unreleased)
  9. Fix HADOOP-144.  Use mapred task id for dfs client id, to
     facilitate debugging.  (omalley via cutting)
 
+10. Fix HADOOP-143.  Do not line-wrap stack-traces in web ui.
+    (omalley via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 
