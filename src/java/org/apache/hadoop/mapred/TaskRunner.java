@@ -188,8 +188,8 @@ abstract class TaskRunner extends Thread {
             heapSize + ((end < 0)? "": javaOpts.substring(end));
     }
     LOG.warning("mapred.child.heap.size is deprecated. Use " +
-        "mapred.child.heap.size instead. Meantime, interpolated " +
-        "child.heap.size into child.java.opt: " + javaOpts);
+        "mapred.child.java.opt instead. Meantime, mapred.child.heap.size " +
+        "is interpolated into mapred.child.java.opt: " + javaOpts);
     return javaOpts;
   }
 
