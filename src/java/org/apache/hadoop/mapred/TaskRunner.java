@@ -260,7 +260,6 @@ abstract class TaskRunner extends Thread {
   private void runChild(String[] args, File dir) throws IOException {
     this.process = Runtime.getRuntime().exec(args, null, dir);
     try {
-      StringBuffer errorBuf = new StringBuffer();
       new Thread() {
         public void run() {
           logStream(process.getErrorStream());    // copy log output
@@ -269,8 +268,10 @@ abstract class TaskRunner extends Thread {
         
       logStream(process.getInputStream());        // normally empty
       
-      if (this.process.waitFor() != 0) {
-        throw new IOException("Task process exit with nonzero status.");
+      int exit_code = process.waitFor();
+      if (exit_code != 0) {
+        throw new IOException("Task process exit with nonzero status of " +
+                              exit_code + ".");
       }
       
     } catch (InterruptedException e) {

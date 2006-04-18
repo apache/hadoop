@@ -154,7 +154,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
       // Ignore for now
     }
 
-    public void ping(String taskid) throws IOException {}
+    public boolean ping(String taskid) throws IOException {
+      return true;
+    }
 
     public void done(String taskId) throws IOException {
       int taskIndex = mapIds.indexOf(taskId);

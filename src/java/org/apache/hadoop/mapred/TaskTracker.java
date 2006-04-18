@@ -653,10 +653,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
     }
 
     /** Child checking to see if we're alive.  Normally does nothing.*/
-    public synchronized void ping(String taskid) throws IOException {
-      if (tasks.get(taskid) == null) {
-        throw new IOException("No such task id."); // force child exit
-      }
+    public synchronized boolean ping(String taskid) throws IOException {
+      return tasks.get(taskid) != null;
     }
 
     /**
@@ -748,12 +746,23 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
                                          final String taskid) {
           Thread thread = new Thread(new Runnable() {
               public void run() {
+                final int MAX_RETRIES = 3;
+                int remainingRetries = MAX_RETRIES;
                 while (true) {
                   try {
-                    umbilical.ping(taskid);
+                    if (!umbilical.ping(taskid)) {
+                      LOG.log(Level.WARNING, "Parent died.  Exiting "+taskid);
+                      System.exit(66);
+                    }
+                    remainingRetries = MAX_RETRIES;
                   } catch (Throwable t) {
-                    LOG.log(Level.WARNING, "Parent died.  Exiting "+taskid, t);
-                    System.exit(1);
+                    String msg = StringUtils.stringifyException(t);
+                    LOG.info("Ping exception: " + msg);
+                    remainingRetries -=1;
+                    if (remainingRetries == 0) {
+                      LOG.log(Level.WARNING, "Last retry, killing "+taskid);
+                      System.exit(65);
+                    }
                   }
                   try {
                     Thread.sleep(1000);

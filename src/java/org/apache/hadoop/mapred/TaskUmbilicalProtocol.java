@@ -42,8 +42,10 @@ interface TaskUmbilicalProtocol {
    */
   void reportDiagnosticInfo(String taskid, String trace) throws IOException;
 
-  /** Periodically called by child to check if parent is still alive. */
-  void ping(String taskid) throws IOException;
+  /** Periodically called by child to check if parent is still alive. 
+   * @return True if the task is known
+   */
+  boolean ping(String taskid) throws IOException;
 
   /** Report that the task is successfully completed.  Failure is assumed if
    * the task process exits without calling this. */
