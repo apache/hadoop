@@ -398,6 +398,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
             t.setJobFile(localJobFile.toString());
 
             JobConf jc = new JobConf(localJobFile);
+            jc.set("mapred.task.id", task.getTaskId());
             String jarFile = jc.getJar();
             if (jarFile != null) {
               fs.copyToLocalFile(new Path(jarFile), localJarFile);

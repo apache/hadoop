@@ -60,7 +60,12 @@ class DFSClient implements FSConstants {
         } catch (UnknownHostException uhe) {
             this.localName = "";
         }
-        this.clientName = "DFSClient_" + r.nextInt();
+        String taskId = conf.get("mapred.task.id");
+        if (taskId != null) {
+            this.clientName = "DFSClient_" + taskId; 
+        } else {
+            this.clientName = "DFSClient_" + r.nextInt();
+        }
         this.leaseChecker = new Daemon(new LeaseChecker());
         this.leaseChecker.start();
     }
