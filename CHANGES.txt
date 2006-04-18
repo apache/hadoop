@@ -54,9 +54,12 @@ Trunk (unreleased)
 
 15. Fix HADOOP-115.  Correct an error message.  (Stack via cutting)
 
-16. "Fix HADOOP-133.  Retry pings from child to parent, in case of
+16. Fix HADOOP-133.  Retry pings from child to parent, in case of
     (local) communcation problems.  Also log exit status, so that one
     can distinguish patricide from other deaths.  (omalley via cutting)
+
+17. Fix HADOOP-142.  Avoid re-running a task on a host where it has
+    previously failed.  (omalley via cutting)
 
 
 Release 0.1.1 - 2006-04-08

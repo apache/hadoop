@@ -77,19 +77,24 @@ class TaskInProgress {
     /**
      * Constructor for MapTask
      */
-    public TaskInProgress(String jobFile, FileSplit split, JobTracker jobtracker, JobConf conf, JobInProgress job) {
+    public TaskInProgress(String jobFile, FileSplit split, 
+                          JobTracker jobtracker, JobConf conf, 
+                          JobInProgress job, int partition) {
         this.jobFile = jobFile;
         this.split = split;
         this.jobtracker = jobtracker;
         this.job = job;
         this.conf = conf;
+        this.partition = partition;
         init();
     }
         
     /**
      * Constructor for ReduceTask
      */
-    public TaskInProgress(String jobFile, TaskInProgress predecessors[], int partition, JobTracker jobtracker, JobConf conf, JobInProgress job) {
+    public TaskInProgress(String jobFile, TaskInProgress predecessors[], 
+                          int partition, JobTracker jobtracker, JobConf conf,
+                          JobInProgress job) {
         this.jobFile = jobFile;
         this.predecessors = predecessors;
         this.partition = partition;
@@ -455,5 +460,22 @@ class TaskInProgress {
             jobtracker.createTaskEntry(taskid, taskTracker, this);
         }
         return t;
+    }
+    
+    /**
+     * Has this task already failed on this machine?
+     * @param tracker The task tracker name
+     * @return Has it failed?
+     */
+    public boolean hasFailedOnMachine(String tracker) {
+      return machinesWhereFailed.contains(tracker);
+    }
+    
+    /**
+     * Get the id of this map or reduce task.
+     * @return The index of this tip in the maps/reduces lists.
+     */
+    public int getIdWithinJob() {
+      return partition;
     }
 }
