@@ -46,6 +46,9 @@ Trunk (unreleased)
 12. Fix HADOOP-138.  Stop multiple tasks in a single heartbeat, rather
     than one per heartbeat.  (Stefan via cutting)
 
+13. Fix HADOOP-139.  Remove a potential deadlock in
+    LocalFileSystem.lock().  (Igor Bolotin via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

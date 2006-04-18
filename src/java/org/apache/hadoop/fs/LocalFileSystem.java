@@ -224,45 +224,54 @@ public class LocalFileSystem extends FileSystem {
       return workingDir;
     }
     
-    public synchronized void lock(Path p, boolean shared) throws IOException {
-        File f = pathToFile(p);
-        f.createNewFile();
+    public void lock(Path p, boolean shared) throws IOException {
+      File f = pathToFile(p);
+      f.createNewFile();
 
-        FileLock lockObj = null;
-        if (shared) {
-            FileInputStream lockData = new FileInputStream(f);
-            lockObj = lockData.getChannel().lock(0L, Long.MAX_VALUE, shared);
-            sharedLockDataSet.put(f, lockData);
-        } else {
-            FileOutputStream lockData = new FileOutputStream(f);
-            lockObj = lockData.getChannel().lock(0L, Long.MAX_VALUE, shared);
-            nonsharedLockDataSet.put(f, lockData);
+      if (shared) {
+        FileInputStream lockData = new FileInputStream(f);
+        FileLock lockObj =
+          lockData.getChannel().lock(0L, Long.MAX_VALUE, shared);
+        synchronized (this) {
+          sharedLockDataSet.put(f, lockData);
+          lockObjSet.put(f, lockObj);
         }
-        lockObjSet.put(f, lockObj);
+      } else {
+        FileOutputStream lockData = new FileOutputStream(f);
+        FileLock lockObj = lockData.getChannel().lock(0L, Long.MAX_VALUE, shared);
+        synchronized (this) {
+          nonsharedLockDataSet.put(f, lockData);
+          lockObjSet.put(f, lockObj);
+        }
+      }
     }
 
-    public synchronized void release(Path p) throws IOException {
-        File f = pathToFile(p);
-        FileLock lockObj = (FileLock) lockObjSet.get(f);
-        FileInputStream sharedLockData = (FileInputStream) sharedLockDataSet.get(f);
-        FileOutputStream nonsharedLockData = (FileOutputStream) nonsharedLockDataSet.get(f);
+    public void release(Path p) throws IOException {
+      File f = pathToFile(p);
 
-        if (lockObj == null) {
-            throw new IOException("Given target not held as lock");
-        }
-        if (sharedLockData == null && nonsharedLockData == null) {
-            throw new IOException("Given target not held as lock");
-        }
+      FileLock lockObj;
+      FileInputStream sharedLockData;
+      FileOutputStream nonsharedLockData;
+      synchronized (this) {
+        lockObj = (FileLock) lockObjSet.remove(f);
+        sharedLockData = (FileInputStream) sharedLockDataSet.remove(f);
+        nonsharedLockData = (FileOutputStream) nonsharedLockDataSet.remove(f);
+      }
+ 
+      if (lockObj == null) {
+        throw new IOException("Given target not held as lock");
+      }
+      if (sharedLockData == null && nonsharedLockData == null) {
+        throw new IOException("Given target not held as lock");
+      }
 
-        lockObj.release();
-        lockObjSet.remove(f);
-        if (sharedLockData != null) {
-            sharedLockData.close();
-            sharedLockDataSet.remove(f);
-        } else {
-            nonsharedLockData.close();
-            nonsharedLockDataSet.remove(f);
-        }
+      lockObj.release();
+
+      if (sharedLockData != null) {
+        sharedLockData.close();
+      } else {
+        nonsharedLockData.close();
+      }
     }
 
     // In the case of the local filesystem, we can just rename the file.
