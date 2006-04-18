@@ -49,6 +49,11 @@ Trunk (unreleased)
 13. Fix HADOOP-139.  Remove a potential deadlock in
     LocalFileSystem.lock().  (Igor Bolotin via cutting)
 
+14. Fix HADOOP-134.  Don't hang jobs when the tasktracker is
+    misconfigured to use an un-writable local directory.  (omalley via cutting)
+
+15. Fix HADOOP-115.  Correct an error message.  (Stack via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 
