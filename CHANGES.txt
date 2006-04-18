@@ -43,6 +43,9 @@ Trunk (unreleased)
 11. Fix HADOOP-118.  In DFS, improve clean up of abandoned file
     creations.  (omalley via cutting)
 
+12. Fix HADOOP-138.  Stop multiple tasks in a single heartbeat, rather
+    than one per heartbeat.  (Stefan via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

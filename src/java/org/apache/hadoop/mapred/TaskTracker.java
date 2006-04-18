@@ -306,11 +306,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
             //
             // Check for any Tasks whose job may have ended
             //
-            String toCloseId = jobClient.pollForTaskWithClosedJob(taskTrackerName);
-            if (toCloseId != null) {
+            String[] toCloseIds = jobClient.pollForTaskWithClosedJob(taskTrackerName);
+            if (toCloseIds != null) {
               synchronized (this) {
-                TaskInProgress tip = (TaskInProgress) tasks.get(toCloseId);
-                tip.jobHasFinished();
+                for (int i = 0; i < toCloseIds.length; i++) {
+                  TaskInProgress tip = (TaskInProgress) tasks.get(toCloseIds[i]);
+                  tip.jobHasFinished();                        
+                }
               }
             }
             lastHeartbeat = now;

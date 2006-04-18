@@ -43,7 +43,7 @@ interface InterTrackerProtocol {
    * be closed because their job is complete.  This is used to, e.g., 
    * notify a map task that its output is no longer needed and may 
    * be removed. */
-  String pollForTaskWithClosedJob(String trackerName);
+  String[] pollForTaskWithClosedJob(String trackerName);
 
   /** Called by a reduce task to find which map tasks are completed.
    *
