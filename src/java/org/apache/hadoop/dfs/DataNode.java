@@ -80,14 +80,6 @@ public class DataNode implements FSConstants, Runnable {
         return new InetSocketAddress(host, port);
     }
 
-    private static String stringifyException(Exception e) {
-      StringWriter stm = new StringWriter();
-      PrintWriter wrt = new PrintWriter(stm);
-      e.printStackTrace(wrt);
-      wrt.close();
-      return stm.toString();
-    }
-
     private static Vector subThreadList = null;
     DatanodeProtocol namenode;
     FSDataset data;
@@ -510,7 +502,7 @@ public class DataNode implements FSConstants, Runnable {
                 } catch (IOException ie) {
                   if (out2 != null) {
                     LOG.info("Exception connecting to mirror " + mirrorNode 
-                             + "\n" + stringifyException(ie));
+                             + "\n" + StringUtils.stringifyException(ie));
                     try {
                       out2.close();
                       in2.close();
@@ -548,7 +540,7 @@ public class DataNode implements FSConstants, Runnable {
                         out2.write(buf, 0, bytesRead);
                       } catch (IOException out2e) {
                         LOG.info("Exception writing to mirror " + mirrorNode 
-                            + "\n" + stringifyException(out2e));
+                            + "\n" + StringUtils.stringifyException(out2e));
                         //
                         // If stream-copy fails, continue 
                         // writing to disk.  We shouldn't 
@@ -577,7 +569,7 @@ public class DataNode implements FSConstants, Runnable {
                       out2.writeLong(len);
                     } catch (IOException ie) {
                       LOG.info("Exception writing to mirror " + mirrorNode 
-                          + "\n" + stringifyException(ie));
+                          + "\n" + StringUtils.stringifyException(ie));
                       try {
                         out2.close();
                         in2.close();
@@ -612,7 +604,7 @@ public class DataNode implements FSConstants, Runnable {
                   }
                 } catch (IOException ie) {
                   LOG.info("Exception writing to mirror " + mirrorNode 
-                      + "\n" + stringifyException(ie));
+                      + "\n" + StringUtils.stringifyException(ie));
                   try {
                     out2.close();
                     in2.close();
