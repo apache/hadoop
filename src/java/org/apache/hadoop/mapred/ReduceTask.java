@@ -184,7 +184,7 @@ class ReduceTask extends Task {
     copyPhase.complete();                         // copy is already complete
 
     // open a file to collect map output
-    String file = job.getLocalFile(getTaskId(), "all.1").toString();
+    Path file = job.getLocalPath(getTaskId()+Path.SEPARATOR+"all.1");
     SequenceFile.Writer writer =
       new SequenceFile.Writer(lfs, file, keyClass, valueClass);
     try {
@@ -196,14 +196,13 @@ class ReduceTask extends Task {
       DataOutputBuffer buffer = new DataOutputBuffer();
 
       for (int i = 0; i < mapTaskIds.length; i++) {
-        File partFile =
+        Path partFile =
           this.mapOutputFile.getInputFile(mapTaskIds[i], getTaskId());
         float progPerByte = 1.0f / lfs.getLength(partFile);
         Progress phase = appendPhase.phase();
         phase.setStatus(partFile.toString());
 
-        SequenceFile.Reader in =
-          new SequenceFile.Reader(lfs, partFile.toString(), job);
+        SequenceFile.Reader in = new SequenceFile.Reader(lfs, partFile, job);
         try {
           int keyLen;
           while((keyLen = in.next(buffer)) > 0) {
@@ -241,7 +240,7 @@ class ReduceTask extends Task {
       };
     sortProgress.setName("Sort progress reporter for task "+getTaskId());
 
-    String sortedFile = job.getLocalFile(getTaskId(), "all.2").toString();
+    Path sortedFile = job.getLocalPath(getTaskId()+Path.SEPARATOR+"all.2");
 
     WritableComparator comparator = job.getOutputKeyComparator();
     
@@ -252,7 +251,7 @@ class ReduceTask extends Task {
       SequenceFile.Sorter sorter =
         new SequenceFile.Sorter(lfs, comparator, valueClass, job);
       sorter.sort(file, sortedFile);              // sort
-      lfs.delete(new File(file));                 // remove unsorted
+      lfs.delete(file);                           // remove unsorted
 
     } finally {
       sortComplete = true;
@@ -275,7 +274,7 @@ class ReduceTask extends Task {
     // apply reduce function
     SequenceFile.Reader in = new SequenceFile.Reader(lfs, sortedFile, job);
     Reporter reporter = getReporter(umbilical, getProgress());
-    long length = lfs.getLength(new File(sortedFile));
+    long length = lfs.getLength(sortedFile);
     try {
       ValuesIterator values = new ValuesIterator(in, length, comparator,
                                                  umbilical);
@@ -287,7 +286,7 @@ class ReduceTask extends Task {
     } finally {
       reducer.close();
       in.close();
-      lfs.delete(new File(sortedFile));           // remove sorted
+      lfs.delete(sortedFile);                     // remove sorted
       out.close(reporter);
     }
     done(umbilical);

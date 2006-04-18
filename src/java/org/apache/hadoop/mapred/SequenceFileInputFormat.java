@@ -17,9 +17,9 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.File;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.MapFile;
@@ -31,14 +31,14 @@ public class SequenceFileInputFormat extends InputFormatBase {
     setMinSplitSize(SequenceFile.SYNC_INTERVAL);
   }
 
-  protected File[] listFiles(FileSystem fs, JobConf job)
+  protected Path[] listPaths(FileSystem fs, JobConf job)
     throws IOException {
 
-    File[] files = super.listFiles(fs, job);
+    Path[] files = super.listPaths(fs, job);
     for (int i = 0; i < files.length; i++) {
-      File file = files[i];
-      if (file.isDirectory()) {                   // it's a MapFile
-        files[i] = new File(file, MapFile.DATA_FILE_NAME); // use the data file
+      Path file = files[i];
+      if (fs.isDirectory(file)) {                 // it's a MapFile
+        files[i] = new Path(file, MapFile.DATA_FILE_NAME); // use the data file
       }
     }
     return files;

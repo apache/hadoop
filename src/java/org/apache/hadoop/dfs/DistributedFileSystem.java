@@ -32,10 +32,11 @@ import org.apache.hadoop.conf.Configuration;
  * @author Mike Cafarella
  *****************************************************************/
 public class DistributedFileSystem extends FileSystem {
-    private File workingDir = 
-      new File("/user", System.getProperty("user.name")).getAbsoluteFile();
+    private Path workingDir = 
+      new Path("/user", System.getProperty("user.name"));
 
     private String name;
+    private FileSystem localFs;
 
     DFSClient dfs;
 
@@ -45,40 +46,40 @@ public class DistributedFileSystem extends FileSystem {
       super(conf);
       this.dfs = new DFSClient(namenode, conf);
       this.name = namenode.getHostName() + ":" + namenode.getPort();
+      this.localFs = getNamed("local", conf);
     }
 
     public String getName() { return name; }
 
-    public File getWorkingDirectory() {
+    public Path getWorkingDirectory() {
       return workingDir;
     }
     
-    private File makeAbsolute(File f) {
-      if (isAbsolute(f)) {
+    private Path makeAbsolute(Path f) {
+      if (f.isAbsolute()) {
         return f;
       } else {
-        return new File(workingDir, f.getPath());
+        return new Path(workingDir, f);
       }
     }
     
-    public void setWorkingDirectory(File dir) {
+    public void setWorkingDirectory(Path dir) {
       workingDir = makeAbsolute(dir);
     }
     
-    private UTF8 getPath(File file) {
-      String path = getDFSPath(makeAbsolute(file));
-      return new UTF8(path);
+    private UTF8 getPath(Path file) {
+      return new UTF8(makeAbsolute(file).toString());
     }
 
-    public String[][] getFileCacheHints(File f, long start, long len) throws IOException {
+    public String[][] getFileCacheHints(Path f, long start, long len) throws IOException {
       return dfs.getHints(getPath(f), start, len);
     }
 
-    public FSInputStream openRaw(File f) throws IOException {
+    public FSInputStream openRaw(Path f) throws IOException {
       return dfs.open(getPath(f));
     }
 
-    public FSOutputStream createRaw(File f, boolean overwrite, short replication)
+    public FSOutputStream createRaw(Path f, boolean overwrite, short replication)
       throws IOException {
       return dfs.create(getPath(f), overwrite, replication);
     }
@@ -86,161 +87,85 @@ public class DistributedFileSystem extends FileSystem {
     /**
      * Rename files/dirs
      */
-    public boolean renameRaw(File src, File dst) throws IOException {
+    public boolean renameRaw(Path src, Path dst) throws IOException {
       return dfs.rename(getPath(src), getPath(dst));
     }
 
     /**
-     * Get rid of File f, whether a true file or dir.
+     * Get rid of Path f, whether a true file or dir.
      */
-    public boolean deleteRaw(File f) throws IOException {
+    public boolean deleteRaw(Path f) throws IOException {
         return dfs.delete(getPath(f));
     }
 
-    public boolean exists(File f) throws IOException {
+    public boolean exists(Path f) throws IOException {
         return dfs.exists(getPath(f));
     }
 
-    public boolean isDirectory(File f) throws IOException {
-        if (f instanceof DFSFile) {
-          return ((DFSFile)f).isDirectory();
+    public boolean isDirectory(Path f) throws IOException {
+        if (f instanceof DfsPath) {
+          return ((DfsPath)f).isDirectory();
         }
         return dfs.isDirectory(getPath(f));
     }
 
-    public boolean isAbsolute(File f) {
-      return f.isAbsolute() ||
-        f.getPath().startsWith("/") ||
-        f.getPath().startsWith("\\");
-    }
-
-    public long getLength(File f) throws IOException {
-        if (f instanceof DFSFile) {
-          return ((DFSFile)f).length();
+    public long getLength(Path f) throws IOException {
+        if (f instanceof DfsPath) {
+          return ((DfsPath)f).length();
         }
 
-        DFSFileInfo info[] = dfs.listFiles(getPath(f));
+        DFSFileInfo info[] = dfs.listPaths(getPath(f));
         return info[0].getLen();
     }
 
-    public File[] listFilesRaw(File f) throws IOException {
-        DFSFileInfo info[] = dfs.listFiles(getPath(f));
+    public Path[] listPathsRaw(Path f) throws IOException {
+        DFSFileInfo info[] = dfs.listPaths(getPath(f));
         if (info == null) {
-            return new File[0];
+            return new Path[0];
         } else {
-            File results[] = new DFSFile[info.length];
+            Path results[] = new DfsPath[info.length];
             for (int i = 0; i < info.length; i++) {
-                results[i] = new DFSFile(info[i]);
+                results[i] = new DfsPath(info[i]);
             }
             return results;
         }
     }
 
-    public void mkdirs(File f) throws IOException {
-        dfs.mkdirs(getPath(f));
+    public boolean mkdirs(Path f) throws IOException {
+        return dfs.mkdirs(getPath(f));
     }
 
-    public void lock(File f, boolean shared) throws IOException {
+    public void lock(Path f, boolean shared) throws IOException {
         dfs.lock(getPath(f), ! shared);
     }
 
-    public void release(File f) throws IOException {
+    public void release(Path f) throws IOException {
         dfs.release(getPath(f));
     }
 
-    public void moveFromLocalFile(File src, File dst) throws IOException {
-        doFromLocalFile(src, dst, true);
+    public void moveFromLocalFile(Path src, Path dst) throws IOException {
+      FileUtil.copy(localFs, src, this, dst, true, getConf());
     }
 
-    public void copyFromLocalFile(File src, File dst) throws IOException {
-        doFromLocalFile(src, dst, false);
+    public void copyFromLocalFile(Path src, Path dst) throws IOException {
+      FileUtil.copy(localFs, src, this, dst, false, getConf());
     }
 
-    private void doFromLocalFile(File src, File dst, boolean deleteSource) throws IOException {
-        FileSystem localFs = getNamed("local", getConf());
-        doCopy( localFs, src, this, dst, deleteSource, getConf() );
+    public void copyToLocalFile(Path src, Path dst) throws IOException {
+      FileUtil.copy(this, src, localFs, dst, false, getConf());
     }
 
-    public static void doCopy(FileSystem srcFS, 
-                        File src, 
-                        FileSystem dstFS, 
-                        File dst, 
-                        boolean deleteSource,
-                        Configuration conf
-                       ) throws IOException {
-        if (dstFS.exists(dst)) {
-            if (! dstFS.isDirectory(dst)) {
-                throw new IOException("Target " + dst + " already exists");
-            } else {
-                dst = new File(dst, src.getName());
-                if (dstFS.exists(dst)) {
-                    throw new IOException("Target " + dst + " already exists");
-                }
-            }
-        }
-
-        if (srcFS.isDirectory(src)) {
-            dstFS.mkdirs(dst);
-            File contents[] = srcFS.listFiles(src);
-            for (int i = 0; i < contents.length; i++) {
-                doCopy( srcFS, contents[i], dstFS, new File(dst, contents[i].getName()), deleteSource, conf);
-            }
-        } else {
-            byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
-            InputStream in = srcFS.open(src);
-            try {
-                OutputStream out = dstFS.create(dst);
-                try {
-                    int bytesRead = in.read(buf);
-                    while (bytesRead >= 0) {
-                        out.write(buf, 0, bytesRead);
-                        bytesRead = in.read(buf);
-                    }
-                } finally {
-                    out.close();
-                }
-            } finally {
-                in.close();
-            } 
-        }
-        if (deleteSource)
-          srcFS.delete(src);
-    }
-
-    public void copyToLocalFile(File src, File dst) throws IOException {
-        dst = dst.getCanonicalFile();
-        FileSystem localFs = getNamed("local", getConf());
-        doCopy( this, src, localFs, dst, false, getConf() );
-    }
-
-    public File startLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException {
-        if (exists(fsOutputFile)) {
-            copyToLocalFile(fsOutputFile, tmpLocalFile);
-        }
-        return tmpLocalFile;
+    public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
+      throws IOException {
+      return tmpLocalFile;
     }
 
     /**
      * Move completed local data to DFS destination
      */
-    public void completeLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException {
-        moveFromLocalFile(tmpLocalFile, fsOutputFile);
-    }
-
-    /**
-     * Fetch remote DFS file, place at tmpLocalFile
-     */
-    public File startLocalInput(File fsInputFile, File tmpLocalFile) throws IOException {
-        copyToLocalFile(fsInputFile, tmpLocalFile);
-        return tmpLocalFile;
-    }
-
-    /**
-     * We're done with the local stuff, so delete it
-     */
-    public void completeLocalInput(File localFile) throws IOException {
-        // Get rid of the local copy - we don't need it anymore.
-        FileUtil.fullyDelete(localFile, getConf());
+    public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
+      throws IOException {
+      moveFromLocalFile(tmpLocalFile, fsOutputFile);
     }
 
     public void close() throws IOException {
@@ -255,27 +180,7 @@ public class DistributedFileSystem extends FileSystem {
         return dfs;
     }
     
-    private String getDFSPath(File f) {
-      List l = new ArrayList();
-      l.add(f.getName());
-      File parent = f.getParentFile();
-      while (parent != null) {
-        l.add(parent.getName());
-        parent = parent.getParentFile();
-      }
-      StringBuffer path = new StringBuffer();
-      path.append(l.get(l.size() - 1));
-      for (int i = l.size() - 2; i >= 0; i--) {
-        path.append(DFSFile.DFS_FILE_SEPARATOR);
-        path.append(l.get(i));
-      }
-      if (isAbsolute(f) && path.length() == 0) {
-        path.append(DFSFile.DFS_FILE_SEPARATOR);
-      }
-      return path.toString();
-    }
-
-    public void reportChecksumFailure(File f, FSInputStream in,
+    public void reportChecksumFailure(Path f, FSInputStream in,
                                       long start, long length, int crc) {
       
       // ignore for now, causing task to fail, and hope that when task is
@@ -305,7 +210,7 @@ public class DistributedFileSystem extends FileSystem {
     /** Return the total size of all files in the filesystem.*/
     public long getUsed()throws IOException{
         long used = 0;
-        DFSFileInfo dfsFiles[] = dfs.listFiles(getPath(new File("/")));
+        DFSFileInfo dfsFiles[] = dfs.listPaths(getPath(new Path("/")));
         for(int i=0;i<dfsFiles.length;i++){
             used += dfsFiles[i].getContentsLen();
         }

@@ -21,6 +21,19 @@ Trunk (unreleased)
 
  6. Fix HADOOP-128.  Improved DFS error handling. (Owen O'Malley via cutting)
 
+ 7. Fix HADOOP-129.  Replace uses of java.io.File with new class named
+    Path.  This fixes bugs where java.io.File methods were called
+    directly when FileSystem methods were desired, and reduces the
+    likelihood of such bugs in the future.  It also makes the handling
+    of pathnames more consistent between local and dfs FileSystems and
+    between Windows and Unix. java.io.File-based methods are still
+    available for back-compatibility, but are deprecated and will be
+    removed once 0.2 is released. (cutting)
+
+ 8. Change dfs.data.dir and mapred.local.dir to be comma-separated
+    lists of directories, no longer be space-separated. This fixes
+    several bugs on Windows. (cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

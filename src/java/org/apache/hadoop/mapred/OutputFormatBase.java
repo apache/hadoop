@@ -17,9 +17,9 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.File;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 /** A base class for {@link OutputFormat}. */
 public abstract class OutputFormatBase implements OutputFormat {
@@ -29,7 +29,7 @@ public abstract class OutputFormatBase implements OutputFormat {
 
   public void checkOutputSpecs(FileSystem fs, JobConf job) throws IOException {
     // Ensure that the output directory is set and not already there
-    File outDir = job.getOutputDir();
+    Path outDir = job.getOutputPath();
     if (outDir == null && job.getNumReduceTasks() != 0) {
       throw new IOException("Output directory not set in JobConf.");
     }

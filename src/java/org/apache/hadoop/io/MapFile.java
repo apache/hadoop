@@ -91,19 +91,17 @@ public class MapFile {
       this.comparator = comparator;
       this.lastKey = comparator.newKey();
 
-      File dir = new File(dirName);
+      Path dir = new Path(dirName);
       fs.mkdirs(dir);
 
-      File dataFile = new File(dir, DATA_FILE_NAME);
-      File indexFile = new File(dir, INDEX_FILE_NAME);
+      Path dataFile = new Path(dir, DATA_FILE_NAME);
+      Path indexFile = new Path(dir, INDEX_FILE_NAME);
 
       Class keyClass = comparator.getKeyClass();
       this.data =
-        new SequenceFile.Writer(fs, dataFile.getPath(), keyClass, valClass,
-                                compress);
+        new SequenceFile.Writer(fs, dataFile, keyClass, valClass, compress);
       this.index =
-        new SequenceFile.Writer(fs, indexFile.getPath(),
-                                keyClass, LongWritable.class);
+        new SequenceFile.Writer(fs, indexFile, keyClass, LongWritable.class);
     }
     
     /** The number of entries that are added before an index entry is added.*/
@@ -197,12 +195,12 @@ public class MapFile {
     /** Construct a map reader for the named map using the named comparator.*/
     public Reader(FileSystem fs, String dirName, WritableComparator comparator, Configuration conf)
       throws IOException {
-      File dir = new File(dirName);
-      File dataFile = new File(dir, DATA_FILE_NAME);
-      File indexFile = new File(dir, INDEX_FILE_NAME);
+      Path dir = new Path(dirName);
+      Path dataFile = new Path(dir, DATA_FILE_NAME);
+      Path indexFile = new Path(dir, INDEX_FILE_NAME);
 
       // open the data
-      this.data = new SequenceFile.Reader(fs, dataFile.getPath(),  conf);
+      this.data = new SequenceFile.Reader(fs, dataFile,  conf);
       this.firstPosition = data.getPosition();
 
       if (comparator == null)
@@ -213,7 +211,7 @@ public class MapFile {
       this.getKey = this.comparator.newKey();
 
       // open the index
-      this.index = new SequenceFile.Reader(fs, indexFile.getPath(), conf);
+      this.index = new SequenceFile.Reader(fs, indexFile, conf);
     }
 
     private void readIndex() throws IOException {
@@ -387,8 +385,8 @@ public class MapFile {
   /** Renames an existing map directory. */
   public static void rename(FileSystem fs, String oldName, String newName)
     throws IOException {
-    File oldDir = new File(oldName);
-    File newDir = new File(newName);
+    Path oldDir = new Path(oldName);
+    Path newDir = new Path(newName);
     if (!fs.rename(oldDir, newDir)) {
       throw new IOException("Could not rename " + oldDir + " to " + newDir);
     }
@@ -396,9 +394,9 @@ public class MapFile {
 
   /** Deletes the named map file. */
   public static void delete(FileSystem fs, String name) throws IOException {
-    File dir = new File(name);
-    File data = new File(dir, DATA_FILE_NAME);
-    File index = new File(dir, INDEX_FILE_NAME);
+    Path dir = new Path(name);
+    Path data = new Path(dir, DATA_FILE_NAME);
+    Path index = new Path(dir, INDEX_FILE_NAME);
 
     fs.delete(data);
     fs.delete(index);
@@ -415,11 +413,11 @@ public class MapFile {
    * @return number of valid entries in this MapFile, or -1 if no fixing was needed
    * @throws Exception
    */
-  public static long fix(FileSystem fs, File dir,
+  public static long fix(FileSystem fs, Path dir,
           Class keyClass, Class valueClass, boolean dryrun, Configuration conf) throws Exception {
     String dr = (dryrun ? "[DRY RUN ] " : "");
-    File data = new File(dir, DATA_FILE_NAME);
-    File index = new File(dir, INDEX_FILE_NAME);
+    Path data = new Path(dir, DATA_FILE_NAME);
+    Path index = new Path(dir, INDEX_FILE_NAME);
     int indexInterval = 128;
     if (!fs.exists(data)) {
       // there's nothing we can do to fix this!
@@ -429,7 +427,7 @@ public class MapFile {
       // no fixing needed
       return -1;
     }
-    SequenceFile.Reader dataReader = new SequenceFile.Reader(fs, data.toString(), conf);
+    SequenceFile.Reader dataReader = new SequenceFile.Reader(fs, data, conf);
     if (!dataReader.getKeyClass().equals(keyClass)) {
       throw new Exception(dr + "Wrong key class in " + dir + ", expected" + keyClass.getName() +
               ", got " + dataReader.getKeyClass().getName());
@@ -442,7 +440,7 @@ public class MapFile {
     Writable key = (Writable)keyClass.getConstructor(new Class[0]).newInstance(new Object[0]);
     Writable value = (Writable)valueClass.getConstructor(new Class[0]).newInstance(new Object[0]);
     SequenceFile.Writer indexWriter = null;
-    if (!dryrun) indexWriter = new SequenceFile.Writer(fs, index.toString(), keyClass, LongWritable.class);
+    if (!dryrun) indexWriter = new SequenceFile.Writer(fs, index, keyClass, LongWritable.class);
     try {
       long pos = 0L;
       LongWritable position = new LongWritable();

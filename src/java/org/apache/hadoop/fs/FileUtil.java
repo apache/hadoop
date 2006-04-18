@@ -24,100 +24,165 @@ import org.apache.hadoop.conf.Configuration;
  * A collection of file-processing util methods
  */
 public class FileUtil {
-    /**
-     * Delete a directory and all its contents.  If
-     * we return false, the directory may be partially-deleted.
-     */
-    public static boolean fullyDelete(File dir, Configuration conf) throws IOException {
-        return fullyDelete(new LocalFileSystem(conf), dir);
-    }
-    public static boolean fullyDelete(FileSystem fs, File dir) throws IOException {
-        // 20041022, xing.
-        // Currently fs.detele(File) means fully delete for both
-        // LocalFileSystem.java and DistributedFileSystem.java. So we are okay now.
-        // If implementation changes in future, it should be modified too.
-        return fs.delete(dir);
-    }
+  
+  /** @deprecated Call {@link #fullyDelete(File)}. */
+  public static boolean fullyDelete(File dir, Configuration conf)
+    throws IOException {
+    return fullyDelete(dir);
+  }
 
-    /**
-     * Copy a file's contents to a new location.
-     * Returns whether a target file was overwritten
-     */
-    public static boolean copyContents(FileSystem fs, File src, File dst, boolean overwrite, Configuration conf) throws IOException {
-        if (fs.exists(dst) && !overwrite) {
+  /**
+   * Delete a directory and all its contents.  If
+   * we return false, the directory may be partially-deleted.
+   */
+  public static boolean fullyDelete(File dir) throws IOException {
+    File contents[] = dir.listFiles();
+    if (contents != null) {
+      for (int i = 0; i < contents.length; i++) {
+        if (contents[i].isFile()) {
+          if (! contents[i].delete()) {
             return false;
-        }
-
-        File dstParent = dst.getParentFile();
-        if ((dstParent != null) && (!fs.exists(dstParent))) {
-            fs.mkdirs(dstParent);
-        }
-
-        if (fs.isFile(src)) {
-            FSInputStream in = fs.openRaw(src);
-            try {
-                FSOutputStream out = fs.createRaw(dst, true, 
-                                      (short)conf.getInt("dfs.replication", 3));
-                byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
-                try {
-                    int readBytes = in.read(buf);
-
-                    while (readBytes >= 0) {
-                        out.write(buf, 0, readBytes);
-                        readBytes = in.read(buf);
-                    }
-                } finally {
-                    out.close();
-                }
-            } finally {
-                in.close();
-            }
+          }
         } else {
-            fs.mkdirs(dst);
-            File contents[] = fs.listFilesRaw(src);
-            if (contents != null) {
-                for (int i = 0; i < contents.length; i++) {
-                    File newDst = new File(dst, contents[i].getName());
-                    if (! copyContents(fs, contents[i], newDst, overwrite, conf)) {
-                        return false;
-                    }
-                }
-            }
+          if (! fullyDelete(contents[i])) {
+            return false;
+          }
         }
-        return true;
+      }
     }
+    return dir.delete();
+  }
 
-    /**
-     * Copy a file and/or directory and all its contents (whether
-     * data or other files/dirs)
-     */
-    public static void recursiveCopy(FileSystem fs, File src, File dst, Configuration conf) throws IOException {
-        //
-        // Resolve the real target.
-        //
-        if (fs.exists(dst) && fs.isDirectory(dst)) {
-            dst = new File(dst, src.getName());
-        } else if (fs.exists(dst)) {
-            throw new IOException("Destination " + dst + " already exists");
-        }
 
-        //
-        // Copy the items
-        //
-        if (! fs.isDirectory(src)) {
-            //
-            // If the source is a file, then just copy the contents
-            //
-            copyContents(fs, src, dst, true, conf);
-        } else {
-            //
-            // If the source is a dir, then we need to copy all the subfiles.
-            //
-            fs.mkdirs(dst);
-            File contents[] = fs.listFiles(src);
-            for (int i = 0; i < contents.length; i++) {
-                recursiveCopy(fs, contents[i], new File(dst, contents[i].getName()), conf);
-            }
-        }
+  /** Copy files between FileSystems. */
+  public static boolean copy(FileSystem srcFS, Path src, 
+                             FileSystem dstFS, Path dst, 
+                             boolean deleteSource,
+                             Configuration conf ) throws IOException {
+    dst = checkDest(src.getName(), dstFS, dst);
+
+    if (srcFS.isDirectory(src)) {
+      dstFS.mkdirs(dst);
+      Path contents[] = srcFS.listPaths(src);
+      for (int i = 0; i < contents.length; i++) {
+        copy(srcFS, contents[i], dstFS, new Path(dst, contents[i].getName()),
+             deleteSource, conf);
+      }
+    } else if (srcFS.isFile(src)) {
+      InputStream in = srcFS.open(src);
+      try {
+        copyContent(in, dstFS.create(dst), conf);
+      } finally {
+        in.close();
+      } 
     }
+    if (deleteSource) {
+      return srcFS.delete(src);
+    } else {
+      return true;
+    }
+  }
+
+  /** Copy local files to a FileSystem. */
+  public static boolean copy(File src,
+                             FileSystem dstFS, Path dst,
+                             boolean deleteSource,
+                             Configuration conf ) throws IOException {
+    dst = checkDest(src.getName(), dstFS, dst);
+
+    if (src.isDirectory()) {
+      dstFS.mkdirs(dst);
+      File contents[] = src.listFiles();
+      for (int i = 0; i < contents.length; i++) {
+        copy(contents[i], dstFS, new Path(dst, contents[i].getName()),
+             deleteSource, conf);
+      }
+    } else if (src.isFile()) {
+      InputStream in = new FileInputStream(src);
+      try {
+        copyContent(in, dstFS.create(dst), conf);
+      } finally {
+        in.close();
+      } 
+    }
+    if (deleteSource) {
+      return FileUtil.fullyDelete(src);
+    } else {
+      return true;
+    }
+  }
+
+  /** Copy FileSystem files to local files. */
+  public static boolean copy(FileSystem srcFS, Path src, 
+                             File dst, boolean deleteSource,
+                             Configuration conf ) throws IOException {
+
+    dst = checkDest(src.getName(), dst);
+
+    if (srcFS.isDirectory(src)) {
+      dst.mkdirs();
+      Path contents[] = srcFS.listPaths(src);
+      for (int i = 0; i < contents.length; i++) {
+        copy(srcFS, contents[i], new File(dst, contents[i].getName()),
+             deleteSource, conf);
+      }
+    } else if (srcFS.isFile(src)) {
+      InputStream in = srcFS.open(src);
+      try {
+        copyContent(in, new FileOutputStream(dst), conf);
+      } finally {
+        in.close();
+      } 
+    }
+    if (deleteSource) {
+      return srcFS.delete(src);
+    } else {
+      return true;
+    }
+  }
+
+  private static void copyContent(InputStream in, OutputStream out,
+                                  Configuration conf) throws IOException {
+    byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
+    try {
+      int bytesRead = in.read(buf);
+      while (bytesRead >= 0) {
+        out.write(buf, 0, bytesRead);
+        bytesRead = in.read(buf);
+      }
+    } finally {
+      out.close();
+    }
+  }
+
+  private static Path checkDest(String srcName, FileSystem dstFS, Path dst)
+    throws IOException {
+    if (dstFS.exists(dst)) {
+      if (!dstFS.isDirectory(dst)) {
+        throw new IOException("Target " + dst + " already exists");
+      } else {
+        dst = new Path(dst, srcName);
+        if (dstFS.exists(dst)) {
+          throw new IOException("Target " + dst + " already exists");
+        }
+      }
+    }
+    return dst;
+  }
+
+  private static File checkDest(String srcName, File dst)
+    throws IOException {
+    if (dst.exists()) {
+      if (!dst.isDirectory()) {
+        throw new IOException("Target " + dst + " already exists");
+      } else {
+        dst = new File(dst, srcName);
+        if (dst.exists()) {
+          throw new IOException("Target " + dst + " already exists");
+        }
+      }
+    }
+    return dst;
+  }
+
 }

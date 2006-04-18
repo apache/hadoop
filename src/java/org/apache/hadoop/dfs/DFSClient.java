@@ -157,7 +157,7 @@ class DFSClient implements FSConstants {
 
     /**
      */
-    public DFSFileInfo[] listFiles(UTF8 src) throws IOException {
+    public DFSFileInfo[] listPaths(UTF8 src) throws IOException {
         return namenode.getListing(src.toString());
     }
 

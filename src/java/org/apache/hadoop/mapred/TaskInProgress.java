@@ -372,7 +372,7 @@ class TaskInProgress {
             try {
                 if (isMapTask()) {
                     if (hints == null) {
-                        hints = job.getFileCacheHints(getTIPId(), split.getFile(), split.getStart(), split.getLength());
+                        hints = job.getFileCacheHints(getTIPId(), split.getPath(), split.getStart(), split.getLength());
                     }
                     if (hints != null) {
                         for (int i = 0; i < hints.length; i++) {

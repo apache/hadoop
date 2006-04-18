@@ -38,37 +38,37 @@ public class DFSShell {
     /**
      * Add a local file to the indicated name in DFS. src is kept.
      */
-    void copyFromLocal(File src, String dstf) throws IOException {
-        fs.copyFromLocalFile(src, new File(dstf));
+    void copyFromLocal(Path src, String dstf) throws IOException {
+        fs.copyFromLocalFile(src, new Path(dstf));
     }
 
     /**
      * Add a local file to the indicated name in DFS. src is removed.
      */
-    void moveFromLocal(File src, String dstf) throws IOException {
-        fs.moveFromLocalFile(src, new File(dstf));
+    void moveFromLocal(Path src, String dstf) throws IOException {
+        fs.moveFromLocalFile(src, new Path(dstf));
     }
 
     /**
      * Obtain the indicated DFS file and copy to the local name.
      * srcf is kept.
      */
-    void copyToLocal(String srcf, File dst) throws IOException {
-        fs.copyToLocalFile(new File(srcf), dst);
+    void copyToLocal(String srcf, Path dst) throws IOException {
+        fs.copyToLocalFile(new Path(srcf), dst);
     }
 
     /**
      * Obtain the indicated DFS file and copy to the local name.
      * srcf is removed.
      */
-    void moveToLocal(String srcf, File dst) throws IOException {
+    void moveToLocal(String srcf, Path dst) throws IOException {
         System.err.println("Option '-moveToLocal' is not implemented yet.");
     }
 
     void cat(String srcf) throws IOException {
-      FSDataInputStream in = fs.open(new File(srcf));
+      FSDataInputStream in = fs.open(new Path(srcf));
       try {
-        DataInputStream din = new DataInputStream(new BufferedInputStream(in));
+        BufferedReader din = new BufferedReader(new InputStreamReader(in));
         String line;
         while((line = din.readLine()) != null) {
           System.out.println(line);      
@@ -82,7 +82,7 @@ public class DFSShell {
      * Get a listing of all files in DFS at the indicated name
      */
     public void ls(String src, boolean recursive) throws IOException {
-        File items[] = fs.listFiles(new File(src));
+        Path items[] = fs.listPaths(new Path(src));
         if (items == null) {
             System.out.println("Could not get listing for " + src);
         } else {
@@ -90,10 +90,10 @@ public class DFSShell {
             	System.out.println("Found " + items.length + " items");
             }
             for (int i = 0; i < items.length; i++) {
-                File cur = items[i];
-                System.out.println(cur.getPath() + "\t" + (cur.isDirectory() ? "<dir>" : ("" + cur.length())));
-                if(recursive && cur.isDirectory()) {
-									 ls(cur.getPath(), recursive);
+                Path cur = items[i];
+                System.out.println(cur + "\t" + (fs.isDirectory(cur) ? "<dir>" : ("" + fs.getLength(cur))));
+                if(recursive && fs.isDirectory(cur)) {
+                  ls(cur.toString(), recursive);
                 }
             }
         }
@@ -102,14 +102,14 @@ public class DFSShell {
     /**
      */
     public void du(String src) throws IOException {
-        File items[] = fs.listFiles(new File(src));
+        Path items[] = fs.listPaths(new Path(src));
         if (items == null) {
             System.out.println("Could not get listing for " + src);
         } else {
             System.out.println("Found " + items.length + " items");
             for (int i = 0; i < items.length; i++) {
-                DFSFile cur = (DFSFile) items[i];
-                System.out.println(cur.getPath() + "\t" + cur.getContentsLength());
+                DfsPath cur = (DfsPath) items[i];
+                System.out.println(cur + "\t" + cur.getContentsLength());
             }
         }
     }
@@ -118,7 +118,7 @@ public class DFSShell {
      * Create the given dir
      */
     public void mkdir(String src) throws IOException {
-        File f = new File(src);
+        Path f = new Path(src);
         fs.mkdirs(f);
     }
     
@@ -126,7 +126,7 @@ public class DFSShell {
      * Rename an DFS file
      */
     public void rename(String srcf, String dstf) throws IOException {
-        if (fs.rename(new File(srcf), new File(dstf))) {
+        if (fs.rename(new Path(srcf), new Path(dstf))) {
             System.out.println("Renamed " + srcf + " to " + dstf);
         } else {
             System.out.println("Rename failed");
@@ -137,14 +137,14 @@ public class DFSShell {
      * Copy an DFS file
      */
     public void copy(String srcf, String dstf, Configuration conf) throws IOException {
-      DistributedFileSystem.doCopy(fs, new File(srcf), fs, new File(dstf), true, conf);
+      FileUtil.copy(fs, new Path(srcf), fs, new Path(dstf), false, conf);
     }
 
     /**
      * Delete an DFS file
      */
     public void delete(String srcf) throws IOException {
-        if (fs.delete(new File(srcf))) {
+        if (fs.delete(new Path(srcf))) {
             System.out.println("Deleted " + srcf);
         } else {
             System.out.println("Delete failed");
@@ -228,15 +228,15 @@ public class DFSShell {
             DFSShell tc = new DFSShell(fs);
 
             if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd)) {
-                tc.copyFromLocal(new File(argv[i++]), argv[i++]);
+                tc.copyFromLocal(new Path(argv[i++]), argv[i++]);
             } else if ("-moveFromLocal".equals(cmd)) {
-                tc.moveFromLocal(new File(argv[i++]), argv[i++]);
+                tc.moveFromLocal(new Path(argv[i++]), argv[i++]);
             } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd)) {
-                tc.copyToLocal(argv[i++], new File(argv[i++]));
+                tc.copyToLocal(argv[i++], new Path(argv[i++]));
             } else if ("-cat".equals(cmd)) {
                 tc.cat(argv[i++]);
             } else if ("-moveToLocal".equals(cmd)) {
-                tc.moveToLocal(argv[i++], new File(argv[i++]));
+                tc.moveToLocal(argv[i++], new Path(argv[i++]));
             } else if ("-ls".equals(cmd)) {
                 String arg = i < argv.length ? argv[i++] : "";
                 tc.ls(arg, false);

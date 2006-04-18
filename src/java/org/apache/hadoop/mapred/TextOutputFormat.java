@@ -17,9 +17,9 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.File;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.io.WritableComparable;
@@ -31,7 +31,7 @@ public class TextOutputFormat extends OutputFormatBase {
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
                                       String name) throws IOException {
 
-    File file = new File(job.getOutputDir(), name);
+    Path file = new Path(job.getOutputPath(), name);
 
     final FSDataOutputStream out = fs.create(file);
 

@@ -51,8 +51,6 @@ public abstract class FileSystem extends Configured {
      * Parse the cmd-line args, starting at i.  Remove consumed args
      * from array.  We expect param in the form:
      * '-local | -dfs <namenode:port>'
-     *
-     * @deprecated use fs.default.name config option instead
      */
     public static FileSystem parseArgs(String argv[], int i, Configuration conf) throws IOException {
         /**
@@ -107,12 +105,12 @@ public abstract class FileSystem extends Configured {
     }
 
     /** Return the name of the checksum file associated with a file.*/
-    public static File getChecksumFile(File file) {
-      return new File(file.getParentFile(), "."+file.getName()+".crc");
+    public static Path getChecksumFile(Path file) {
+      return new Path(file.getParent(), "."+file.getName()+".crc");
     }
 
     /** Return true iff file is a checksum file name.*/
-    public static boolean isChecksumFile(File file) {
+    public static boolean isChecksumFile(Path file) {
       String name = file.getName();
       return name.startsWith(".") && name.endsWith(".crc");
     }
@@ -135,49 +133,59 @@ public abstract class FileSystem extends Configured {
      *
      * The FileSystem will simply return an elt containing 'localhost'.
      */
-    public abstract String[][] getFileCacheHints(File f, long start, long len) throws IOException;
+    public abstract String[][] getFileCacheHints(Path f, long start, long len) throws IOException;
+
+    /** @deprecated Call {@link #open(Path)} instead. */
+    public FSDataInputStream open(File f) throws IOException {
+      return open(new Path(f.toString()));
+    }
 
     /**
-     * Opens an FSDataInputStream at the indicated File.
+     * Opens an FSDataInputStream at the indicated Path.
      * @param f the file name to open
      * @param bufferSize the size of the buffer to be used.
      */
-    public FSDataInputStream open(File f, int bufferSize) throws IOException {
+    public FSDataInputStream open(Path f, int bufferSize) throws IOException {
       return new FSDataInputStream(this, f, bufferSize, getConf());
     }
     
     /**
-     * Opens an FSDataInputStream at the indicated File.
+     * Opens an FSDataInputStream at the indicated Path.
      * @param f the file to open
      */
-    public FSDataInputStream open(File f) throws IOException {
+    public FSDataInputStream open(Path f) throws IOException {
       return new FSDataInputStream(this, f, getConf());
     }
 
     /**
-     * Opens an InputStream for the indicated File, whether local
+     * Opens an InputStream for the indicated Path, whether local
      * or via DFS.
      */
-    public abstract FSInputStream openRaw(File f) throws IOException;
+    public abstract FSInputStream openRaw(Path f) throws IOException;
+
+    /** @deprecated Call {@link #create(Path)} instead. */
+    public FSDataOutputStream create(File f) throws IOException {
+      return create(new Path(f.toString()));
+    }
 
     /**
-     * Opens an FSDataOutputStream at the indicated File.
+     * Opens an FSDataOutputStream at the indicated Path.
      * Files are overwritten by default.
      */
-    public FSDataOutputStream create(File f) throws IOException {
+    public FSDataOutputStream create(Path f) throws IOException {
       return create(f, true, 
                     getConf().getInt("io.file.buffer.size", 4096),
                     (short)getConf().getInt("dfs.replication", 3));
     }
 
     /**
-     * Opens an FSDataOutputStream at the indicated File.
+     * Opens an FSDataOutputStream at the indicated Path.
      * @param f the file name to open
      * @param overwrite if a file with this name already exists, then if true,
      *   the file will be overwritten, and if false an error will be thrown.
      * @param bufferSize the size of the buffer to be used.
      */
-    public FSDataOutputStream create( File f, 
+    public FSDataOutputStream create( Path f, 
                                       boolean overwrite,
                                       int bufferSize
                                     ) throws IOException {
@@ -186,14 +194,14 @@ public abstract class FileSystem extends Configured {
     }
     
     /**
-     * Opens an FSDataOutputStream at the indicated File.
+     * Opens an FSDataOutputStream at the indicated Path.
      * @param f the file name to open
      * @param overwrite if a file with this name already exists, then if true,
      *   the file will be overwritten, and if false an error will be thrown.
      * @param bufferSize the size of the buffer to be used.
      * @param replication required block replication for the file. 
      */
-    public FSDataOutputStream create( File f, 
+    public FSDataOutputStream create( Path f, 
                                       boolean overwrite,
                                       int bufferSize,
                                       short replication
@@ -202,20 +210,25 @@ public abstract class FileSystem extends Configured {
                                     bufferSize, replication );
     }
 
-    /** Opens an OutputStream at the indicated File.
+    /** Opens an OutputStream at the indicated Path.
      * @param f the file name to open
      * @param overwrite if a file with this name already exists, then if true,
      *   the file will be overwritten, and if false an error will be thrown.
      * @param replication required block replication for the file. 
      */
-    public abstract FSOutputStream createRaw(File f, boolean overwrite, short replication)
+    public abstract FSOutputStream createRaw(Path f, boolean overwrite, short replication)
       throws IOException;
 
+    /** @deprecated Call {@link #createNewFile(Path)} instead. */
+    public boolean createNewFile(File f) throws IOException {
+      return createNewFile(new Path(f.toString()));
+    }
+
     /**
-     * Creates the given File as a brand-new zero-length file.  If
+     * Creates the given Path as a brand-new zero-length file.  If
      * create fails, or if it already existed, return false.
      */
-    public boolean createNewFile(File f) throws IOException {
+    public boolean createNewFile(Path f) throws IOException {
         if (exists(f)) {
             return false;
         } else {
@@ -229,18 +242,23 @@ public abstract class FileSystem extends Configured {
         }
     }
 
+    /** @deprecated Call {@link #rename(Path, Path)} instead. */
+    public boolean rename(File src, File dst) throws IOException {
+      return rename(new Path(src.toString()), new Path(dst.toString()));
+    }
+
     /**
-     * Renames File src to File dst.  Can take place on local fs
+     * Renames Path src to Path dst.  Can take place on local fs
      * or remote DFS.
      */
-    public boolean rename(File src, File dst) throws IOException {
+    public boolean rename(Path src, Path dst) throws IOException {
       if (isDirectory(src)) {
         return renameRaw(src, dst);
       } else {
 
         boolean value = renameRaw(src, dst);
 
-        File checkFile = getChecksumFile(src);
+        Path checkFile = getChecksumFile(src);
         if (exists(checkFile))
           renameRaw(checkFile, getChecksumFile(dst)); // try to rename checksum
 
@@ -250,15 +268,18 @@ public abstract class FileSystem extends Configured {
     }
 
     /**
-     * Renames File src to File dst.  Can take place on local fs
+     * Renames Path src to Path dst.  Can take place on local fs
      * or remote DFS.
      */
-    public abstract boolean renameRaw(File src, File dst) throws IOException;
+    public abstract boolean renameRaw(Path src, Path dst) throws IOException;
 
-    /**
-     * Deletes File
-     */
+    /** @deprecated Call {@link #delete(Path)} instead. */
     public boolean delete(File f) throws IOException {
+      return delete(new Path(f.toString()));
+    }
+
+    /** Delete a file. */
+    public boolean delete(Path f) throws IOException {
       if (isDirectory(f)) {
         return deleteRaw(f);
       } else {
@@ -268,20 +289,33 @@ public abstract class FileSystem extends Configured {
     }
 
     /**
-     * Deletes File
+     * Deletes Path
      */
-    public abstract boolean deleteRaw(File f) throws IOException;
+    public abstract boolean deleteRaw(Path f) throws IOException;
 
-    /**
-     * Check if exists
-     */
-    public abstract boolean exists(File f) throws IOException;
+    /** @deprecated call {@link #exists(Path)} instead */
+    public boolean exists(File f) throws IOException {
+      return exists(new Path(f.toString()));
+    }
+
+    /** Check if exists. */
+    public abstract boolean exists(Path f) throws IOException;
+
+    /** @deprecated Call {@link #isDirectory(Path)} instead. */
+    public boolean isDirectory(File f) throws IOException {
+      return isDirectory(new Path(f.toString()));
+    }
 
     /** True iff the named path is a directory. */
-    public abstract boolean isDirectory(File f) throws IOException;
+    public abstract boolean isDirectory(Path f) throws IOException;
+
+    /** @deprecated Call {@link #isFile(Path)} instead. */
+    public boolean isFile(File f) throws IOException {
+      return isFile(new Path(f.toString()));
+    }
 
     /** True iff the named path is a regular file. */
-    public boolean isFile(File f) throws IOException {
+    public boolean isFile(Path f) throws IOException {
         if (exists(f) && ! isDirectory(f)) {
             return true;
         } else {
@@ -289,28 +323,59 @@ public abstract class FileSystem extends Configured {
         }
     }
     
-    /** True iff the named path is absolute. */
-    public abstract boolean isAbsolute(File f);
+    /** @deprecated Call {@link #getLength(Path)} instead. */
+    public long getLength(File f) throws IOException {
+      return getLength(new Path(f.toString()));
+    }
 
     /** The number of bytes in a file. */
-    public abstract long getLength(File f) throws IOException;
+    public abstract long getLength(Path f) throws IOException;
+
+    /** @deprecated Call {@link #listPaths(Path)} instead. */
+    public File[] listFiles(File f) throws IOException {
+      Path[] paths = listPaths(new Path(f.toString()));
+      if (paths == null)
+        return null;
+      File[] result = new File[paths.length];
+      for (int i = 0 ; i < paths.length; i++) {
+        result[i] = new File(paths[i].toString());
+      }
+      return result;
+    }
 
     /** List files in a directory. */
-    public File[] listFiles(File f) throws IOException {
-      return listFiles(f, new FileFilter() {
-          public boolean accept(File file) {
+    public Path[] listPaths(Path f) throws IOException {
+      return listPaths(f, new PathFilter() {
+          public boolean accept(Path file) {
             return !isChecksumFile(file);
           }
         });
     }
 
     /** List files in a directory. */
-    public abstract File[] listFilesRaw(File f) throws IOException;
+    public abstract Path[] listPathsRaw(Path f) throws IOException;
+
+    /** @deprecated Call {@link #listPaths(Path)} instead. */
+    public File[] listFiles(File f, final FileFilter filt) throws IOException {
+      Path[] paths = listPaths(new Path(f.toString()),
+                               new PathFilter() {
+                                 public boolean accept(Path p) {
+                                   return filt.accept(new File(p.toString()));
+                                 }
+                               });
+      if (paths == null)
+        return null;
+      File[] result = new File[paths.length];
+      for (int i = 0 ; i < paths.length; i++) {
+        result[i] = new File(paths[i].toString());
+      }
+      return result;
+    }
 
     /** Filter files in a directory. */
-    public File[] listFiles(File f, FileFilter filter) throws IOException {
+    public Path[] listPaths(Path f, PathFilter filter) throws IOException {
         Vector results = new Vector();
-        File listing[] = listFilesRaw(f);
+        Path listing[] = listPathsRaw(f);
         if (listing != null) {
           for (int i = 0; i < listing.length; i++) {
             if (filter.accept(listing[i])) {
@@ -318,7 +383,7 @@ public abstract class FileSystem extends Configured {
             }
           }
         }
-        return (File[]) results.toArray(new File[results.size()]);
+        return (Path[]) results.toArray(new Path[results.size()]);
     }
 
     /**
@@ -326,54 +391,75 @@ public abstract class FileSystem extends Configured {
      * All relative paths will be resolved relative to it.
      * @param new_dir
      */
-    public abstract void setWorkingDirectory(File new_dir);
+    public abstract void setWorkingDirectory(Path new_dir);
     
     /**
      * Get the current working directory for the given file system
      * @return the directory pathname
      */
-    public abstract File getWorkingDirectory();
+    public abstract Path getWorkingDirectory();
     
+    /** @deprecated Call {@link #mkdirs(Path)} instead. */
+    public boolean mkdirs(File f) throws IOException {
+      return mkdirs(new Path(f.toString()));
+    }
+
     /**
      * Make the given file and all non-existent parents into
      * directories.
      */
-    public abstract void mkdirs(File f) throws IOException;
+    public abstract boolean mkdirs(Path f) throws IOException;
+
+    /** @deprecated Call {@link #lock(Path,boolean)} instead. */
+    public void lock(File f, boolean shared) throws IOException {
+      lock(new Path(f.toString()), shared);
+    }
 
     /**
-     * Obtain a lock on the given File
+     * Obtain a lock on the given Path
      */
-    public abstract void lock(File f, boolean shared) throws IOException;
+    public abstract void lock(Path f, boolean shared) throws IOException;
+
+    /** @deprecated Call {@link #release(Path)} instead. */
+    public void release(File f) throws IOException {
+      release(new Path(f.toString()));
+    }
 
     /**
      * Release the lock
      */
-    public abstract void release(File f) throws IOException;
+    public abstract void release(Path f) throws IOException;
 
     /**
      * The src file is on the local disk.  Add it to FS at
      * the given dst name and the source is kept intact afterwards
      */
-    public abstract void copyFromLocalFile(File src, File dst) throws IOException;
+    public abstract void copyFromLocalFile(Path src, Path dst) throws IOException;
 
     /**
      * The src file is on the local disk.  Add it to FS at
      * the given dst name, removing the source afterwards.
      */
-    public abstract void moveFromLocalFile(File src, File dst) throws IOException;
+    public abstract void moveFromLocalFile(Path src, Path dst) throws IOException;
 
     /**
-     * The src file is under FS2, and the dst is on the local disk.
+     * The src file is under FS, and the dst is on the local disk.
      * Copy it from FS control to the local dst name.
      */
-    public abstract void copyToLocalFile(File src, File dst) throws IOException;
+    public abstract void copyToLocalFile(Path src, Path dst) throws IOException;
 
     /**
-     * the same as copyToLocalFile(File src, File dst), except that
+     * the same as copyToLocalFile(Path src, File dst), except that
      * the source is removed afterward.
      */
     // not implemented yet
-    //public abstract void moveToLocalFile(File src, File dst) throws IOException;
+    //public abstract void moveToLocalFile(Path src, File dst) throws IOException;
+
+    /** @deprecated Call {@link #startLocalOutput(Path, Path)} instead. */
+    public File startLocalOutput(File src, File dst) throws IOException {
+      return new File(startLocalOutput(new Path(src.toString()),
+                                       new Path(dst.toString())).toString());
+    }
 
     /**
      * Returns a local File that the user can write output to.  The caller
@@ -381,7 +467,12 @@ public abstract class FileSystem extends Configured {
      * file.  If the FS is local, we write directly into the target.  If
      * the FS is remote, we write into the tmp local area.
      */
-    public abstract File startLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException;
+    public abstract Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile) throws IOException;
+
+    /** @deprecated Call {@link #completeLocalOutput(Path, Path)} instead. */
+    public void completeLocalOutput(File src, File dst) throws IOException {
+      completeLocalOutput(new Path(src.toString()), new Path(dst.toString()));
+    }
 
     /**
      * Called when we're all done writing to the target.  A local FS will
@@ -389,23 +480,7 @@ public abstract class FileSystem extends Configured {
      * FS will copy the contents of tmpLocalFile to the correct target at
      * fsOutputFile.
      */
-    public abstract void completeLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException;
-
-    /**
-     * Returns a local File that the user can read from.  The caller 
-     * provides both the eventual FS target name and the local working
-     * file.  If the FS is local, we read directly from the source.  If
-     * the FS is remote, we write data into the tmp local area.
-     */
-    public abstract File startLocalInput(File fsInputFile, File tmpLocalFile) throws IOException;
-
-    /**
-     * Called when we're all done writing to the target.  A local FS will
-     * do nothing, because we've written to exactly the right place.  A remote
-     * FS will copy the contents of tmpLocalFile to the correct target at
-     * fsOutputFile.
-     */
-    public abstract void completeLocalInput(File localFile) throws IOException;
+    public abstract void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile) throws IOException;
 
     /**
      * No more filesystem operations are needed.  Will
@@ -421,7 +496,7 @@ public abstract class FileSystem extends Configured {
      * @param length the length of the bad data in the file
      * @param crc the expected CRC32 of the data
      */
-    public abstract void reportChecksumFailure(File f, FSInputStream in,
+    public abstract void reportChecksumFailure(Path f, FSInputStream in,
                                                long start, long length,
                                                int crc);
 

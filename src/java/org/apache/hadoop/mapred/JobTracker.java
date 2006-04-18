@@ -300,7 +300,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // the files when we're done with the job.
     static final String SUBDIR = "jobTracker";
     FileSystem fs;
-    File systemDir;
+    Path systemDir;
     private Configuration conf;
 
     /**
@@ -323,7 +323,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         JobConf jobConf = new JobConf(conf);
         this.systemDir = jobConf.getSystemDir();
         this.fs = FileSystem.get(conf);
-        FileUtil.fullyDelete(fs, systemDir);
+        fs.delete(systemDir);
         fs.mkdirs(systemDir);
 
         // Same with 'localDir' except it's always on the local disk.

@@ -30,14 +30,16 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.hadoop.util.LogFormatter;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 /** Provides access to configuration parameters.  Configurations are specified
  * by resources.  A resource contains a set of name/value pairs.
  *
- * <p>Each resources is named by either a String or by a File.  If named by a
+ * <p>Each resources is named by either a String or by a Path.  If named by a
  * String, then the classpath is examined for a file with that name.  If a
- * File, then the filesystem is examined directly, without referring to the
- * CLASSPATH.
+ * File, then the local filesystem is examined directly, without referring to
+ * the CLASSPATH.
  *
  * <p>Configuration resources are of two types: default and
  * final.  Default values are loaded first and final values are loaded last, and
@@ -78,7 +80,7 @@ public class Configuration {
   }
 
   /** Add a default resource. */
-  public void addDefaultResource(File file) {
+  public void addDefaultResource(Path file) {
     addResource(defaultResources, file);
   }
 
@@ -88,7 +90,7 @@ public class Configuration {
   }
 
   /** Add a final resource. */
-  public void addFinalResource(File file) {
+  public void addFinalResource(Path file) {
     addResource(finalResources, file);
   }
 
@@ -210,13 +212,13 @@ public class Configuration {
 
   /** Returns the value of the <code>name</code> property as an array of
    * strings.  If no such property is specified, then <code>null</code>
-   * is returned.  Values are whitespace or comma delimted.
+   * is returned.  Values are comma delimited.
    */
   public String[] getStrings(String name) {
     String valueString = get(name);
     if (valueString == null)
       return null;
-    StringTokenizer tokenizer = new StringTokenizer (valueString,", \t\n\r\f");
+    StringTokenizer tokenizer = new StringTokenizer (valueString,",");
     List values = new ArrayList();
     while (tokenizer.hasMoreTokens()) {
       values.add(tokenizer.nextToken());
@@ -263,17 +265,39 @@ public class Configuration {
     set(propertyName, theClass.getName());
   }
 
-  /** Returns a file name under a directory named in <i>dirsProp</i> with the
-   * given <i>path</i>.  If <i>dirsProp</i> contains multiple directories, then
-   * one is chosen based on <i>path</i>'s hash code.  If the selected directory
-   * does not exist, an attempt is made to create it.
+  /** Returns a local file under a directory named in <i>dirsProp</i> with
+   * the given <i>path</i>.  If <i>dirsProp</i> contains multiple directories,
+   * then one is chosen based on <i>path</i>'s hash code.  If the selected
+   * directory does not exist, an attempt is made to create it.
    */
-  public File getFile(String dirsProp, String path) throws IOException {
+  public Path getLocalPath(String dirsProp, String path)
+    throws IOException {
+    String[] dirs = getStrings(dirsProp);
+    int hashCode = path.hashCode();
+    FileSystem fs = FileSystem.getNamed("local", this);
+    for (int i = 0; i < dirs.length; i++) {  // try each local dir
+      int index = (hashCode+i & Integer.MAX_VALUE) % dirs.length;
+      Path file = new Path(dirs[index], path);
+      Path dir = file.getParent();
+      if (fs.exists(dir) || fs.mkdirs(dir)) {
+        return file;
+      }
+    }
+    throw new IOException("No valid local directories in property: "+dirsProp);
+  }
+
+  /** Returns a local file name under a directory named in <i>dirsProp</i> with
+   * the given <i>path</i>.  If <i>dirsProp</i> contains multiple directories,
+   * then one is chosen based on <i>path</i>'s hash code.  If the selected
+   * directory does not exist, an attempt is made to create it.
+   */
+  public File getFile(String dirsProp, String path)
+    throws IOException {
     String[] dirs = getStrings(dirsProp);
     int hashCode = path.hashCode();
     for (int i = 0; i < dirs.length; i++) {  // try each local dir
       int index = (hashCode+i & Integer.MAX_VALUE) % dirs.length;
-      File file = new File(dirs[index], path).getAbsoluteFile();
+      File file = new File(dirs[index], path);
       File dir = file.getParentFile();
       if (dir.exists() || dir.mkdirs()) {
         return file;
@@ -281,6 +305,7 @@ public class Configuration {
     }
     throw new IOException("No valid local directories in property: "+dirsProp);
   }
+
 
 
   /** Returns the URL for the named resource. */
@@ -358,11 +383,17 @@ public class Configuration {
           LOG.info("parsing " + url);
           doc = builder.parse(url.toString());
         }
-      } else if (name instanceof File) {          // a file resource
-        File file = (File)name;
-        if (file.exists()) {
+      } else if (name instanceof Path) {          // a file resource
+        Path file = (Path)name;
+        FileSystem fs = FileSystem.getNamed("local", this);
+        if (fs.exists(file)) {
           LOG.info("parsing " + file);
-          doc = builder.parse(file);
+          InputStream in = new BufferedInputStream(fs.openRaw(file));
+          try {
+            doc = builder.parse(in);
+          } finally {
+            in.close();
+          }
         }
       }
 
@@ -466,8 +497,8 @@ public class Configuration {
         sb.append(" , ");
       }
       Object obj = i.next();
-      if (obj instanceof File) {
-        sb.append((File)obj);
+      if (obj instanceof Path) {
+        sb.append((Path)obj);
       } else {
         sb.append((String)obj);
       }

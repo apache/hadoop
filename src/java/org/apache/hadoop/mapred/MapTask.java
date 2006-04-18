@@ -76,7 +76,7 @@ class MapTask extends Task {
       for (int i = 0; i < partitions; i++) {
         outs[i] =
           new SequenceFile.Writer(FileSystem.getNamed("local", job),
-                                  this.mapOutputFile.getOutputFile(getTaskId(), i).toString(),
+                                  this.mapOutputFile.getOutputFile(getTaskId(), i),
                                   job.getOutputKeyClass(),
                                   job.getOutputValueClass());
       }

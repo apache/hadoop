@@ -17,23 +17,29 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.File;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.File;                              // deprecated
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 /** A section of an input file.  Returned by {@link
  * InputFormat#getSplits(FileSystem, JobConf, int)} and passed to
  * InputFormat#getRecordReader(FileSystem,FileSplit,JobConf,Reporter). */
 public class FileSplit implements Writable {
-  private File file;
+  private Path file;
   private long start;
   private long length;
   
   FileSplit() {}
+
+  /** @deprecated Call {@link #FileSplit(Path,long,long)} instead. */
+  public FileSplit(File file, long start, long length) {
+    this(new Path(file.toString()), start, length);
+  }
 
   /** Constructs a split.
    *
@@ -41,14 +47,17 @@ public class FileSplit implements Writable {
    * @param start the position of the first byte in the file to process
    * @param length the number of bytes in the file to process
    */
-  public FileSplit(File file, long start, long length) {
+  public FileSplit(Path file, long start, long length) {
     this.file = file;
     this.start = start;
     this.length = length;
   }
   
+  /** @deprecated Call {@link #getPath()} instead. */
+  public File getFile() { return new File(file.toString()); }
+  
   /** The file containing this split's data. */
-  public File getFile() { return file; }
+  public Path getPath() { return file; }
   
   /** The position of the first byte in the file to process. */
   public long getStart() { return start; }
@@ -68,7 +77,7 @@ public class FileSplit implements Writable {
     out.writeLong(length);
   }
   public void readFields(DataInput in) throws IOException {
-    file = new File(UTF8.readString(in));
+    file = new Path(UTF8.readString(in));
     start = in.readLong();
     length = in.readLong();
   }

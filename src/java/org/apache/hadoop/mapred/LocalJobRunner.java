@@ -45,7 +45,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private ArrayList mapIds = new ArrayList();
     private MapOutputFile mapoutputFile;
     private JobProfile profile;
-    private File localFile;
+    private Path localFile;
     private FileSystem localFs;
 
     public Job(String file, Configuration conf) throws IOException {
@@ -54,10 +54,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
       this.mapoutputFile = new MapOutputFile();
       this.mapoutputFile.setConf(conf);
 
-      this.localFile = new JobConf(conf).getLocalFile("localRunner", id+".xml");
+      this.localFile = new JobConf(conf).getLocalPath("localRunner/"+id+".xml");
       this.localFs = FileSystem.getNamed("local", conf);
 
-      fs.copyToLocalFile(new File(file), localFile);
+      fs.copyToLocalFile(new Path(file), localFile);
       this.job = new JobConf(localFile);
       profile = new JobProfile(job.getUser(), id, file, 
                                "http://localhost:8080/", job.getJobName());
@@ -73,18 +73,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
       return profile;
     }
     
-    private void setWorkingDirectory(JobConf conf, FileSystem fs) {
-      String dir = conf.getWorkingDirectory();
-      if (dir != null) {
-        fs.setWorkingDirectory(new File(dir));
-      }
-    }
-    
     public void run() {
       try {
         // split input into minimum number of splits
         FileSplit[] splits;
-        setWorkingDirectory(job, fs);
         splits = job.getInputFormat().getSplits(fs, job, 1);
 
         
@@ -103,9 +95,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
         String reduceId = "reduce_" + newId();
         for (int i = 0; i < mapIds.size(); i++) {
           String mapId = (String)mapIds.get(i);
-          File mapOut = this.mapoutputFile.getOutputFile(mapId, 0);
-          File reduceIn = this.mapoutputFile.getInputFile(mapId, reduceId);
-          reduceIn.getParentFile().mkdirs();
+          Path mapOut = this.mapoutputFile.getOutputFile(mapId, 0);
+          Path reduceIn = this.mapoutputFile.getInputFile(mapId, reduceId);
+          localFs.mkdirs(reduceIn.getParent());
           if (!localFs.rename(mapOut, reduceIn))
             throw new IOException("Couldn't rename " + mapOut);
           this.mapoutputFile.removeAll(mapId);
@@ -116,9 +108,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
         for (int i = 0; i < mapIds.size(); i++) {
             mapDependencies[i][0] = (String) mapIds.get(i);
         }
-        setWorkingDirectory(job, fs);
-        ReduceTask reduce = new ReduceTask(file, reduceId,
-            mapDependencies,0);
+        ReduceTask reduce = new ReduceTask(file, reduceId, mapDependencies,0);
         reduce.setConf(job);
         reduce_tasks += 1;
         reduce.run(job, this);
@@ -133,7 +123,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
       } finally {
         try {
-          fs.delete(new File(file).getParentFile()); // delete submit dir
+          fs.delete(new Path(file).getParent());  // delete submit dir
           localFs.delete(localFile);              // delete local copy
         } catch (IOException e) {
           LOG.warning("Error cleaning up "+id+": "+e);

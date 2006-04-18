@@ -135,7 +135,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
   protected void prepareTempFileSpace() {
     if (baseDir.exists()) {
       try { // start from a blank slate
-        FileUtil.fullyDelete(baseDir, conf);
+        FileUtil.fullyDelete(baseDir);
       } catch (Exception ignored) {
       }
     }

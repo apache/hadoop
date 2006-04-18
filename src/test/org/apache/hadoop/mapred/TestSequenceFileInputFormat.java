@@ -34,8 +34,8 @@ public class TestSequenceFileInputFormat extends TestCase {
   public void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
     FileSystem fs = FileSystem.getNamed("local", conf);
-    File dir = new File(System.getProperty("test.build.data",".") + "/mapred");
-    File file = new File(dir, "test.seq");
+    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    Path file = new Path(dir, "test.seq");
     
     Reporter reporter = new Reporter() {
         public void setStatus(String status) throws IOException {}
@@ -47,7 +47,7 @@ public class TestSequenceFileInputFormat extends TestCase {
 
     fs.delete(dir);
 
-    job.setInputDir(dir);
+    job.setInputPath(dir);
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
@@ -57,7 +57,7 @@ public class TestSequenceFileInputFormat extends TestCase {
 
       // create a file with length entries
       SequenceFile.Writer writer =
-        new SequenceFile.Writer(fs, file.toString(),
+        new SequenceFile.Writer(fs, file,
                                 IntWritable.class, BytesWritable.class);
       try {
         for (int i = 0; i < length; i++) {

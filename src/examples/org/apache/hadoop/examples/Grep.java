@@ -29,7 +29,8 @@ import org.apache.hadoop.io.LongWritable;
 
 import org.apache.hadoop.conf.Configuration;
 
-import java.io.File;
+import org.apache.hadoop.fs.Path;
+
 import java.util.Random;
 
 /* Extracts matching regexs from input files and counts them. */
@@ -44,14 +45,14 @@ public class Grep {
 
     Configuration defaults = new Configuration();
 
-    File tempDir =
-      new File("grep-temp-"+
+    Path tempDir =
+      new Path("grep-temp-"+
                Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
 
     JobConf grepJob = new JobConf(defaults, Grep.class);
     grepJob.setJobName("grep-search");
 
-    grepJob.setInputDir(new File(args[0]));
+    grepJob.setInputPath(new Path(args[0]));
 
     grepJob.setMapperClass(RegexMapper.class);
     grepJob.set("mapred.mapper.regex", args[2]);
@@ -61,7 +62,7 @@ public class Grep {
     grepJob.setCombinerClass(LongSumReducer.class);
     grepJob.setReducerClass(LongSumReducer.class);
 
-    grepJob.setOutputDir(tempDir);
+    grepJob.setOutputPath(tempDir);
     grepJob.setOutputFormat(SequenceFileOutputFormat.class);
     grepJob.setOutputKeyClass(UTF8.class);
     grepJob.setOutputValueClass(LongWritable.class);
@@ -71,7 +72,7 @@ public class Grep {
     JobConf sortJob = new JobConf(defaults, Grep.class);
     sortJob.setJobName("grep-sort");
 
-    sortJob.setInputDir(tempDir);
+    sortJob.setInputPath(tempDir);
     sortJob.setInputFormat(SequenceFileInputFormat.class);
     sortJob.setInputKeyClass(UTF8.class);
     sortJob.setInputValueClass(LongWritable.class);
@@ -79,7 +80,7 @@ public class Grep {
     sortJob.setMapperClass(InverseMapper.class);
 
     sortJob.setNumReduceTasks(1);                 // write a single file
-    sortJob.setOutputDir(new File(args[1]));
+    sortJob.setOutputPath(new Path(args[1]));
     sortJob.setOutputKeyComparatorClass           // sort by decreasing freq
       (LongWritable.DecreasingComparator.class);
 

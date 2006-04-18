@@ -22,6 +22,7 @@ import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -150,10 +151,10 @@ class FSDirectory implements FSConstants {
         INode addNode(String path, INode newNode) {
           File target = new File( path );
           // find parent
-          String parentName = DFSFile.getDFSParent(path);
-          if (parentName == null)
+          Path parent = new Path(path).getParent();
+          if (parent == null)
             return null;
-          INode parentNode = getNode(parentName);
+          INode parentNode = getNode(parent.toString());
           if (parentNode == null)
             return null;
           // check whether the parent already has a node with that name
@@ -308,7 +309,7 @@ class FSDirectory implements FSConstants {
         File image = new File(dir, "image");
         File edits = new File(dir, "edits");
 
-        if (!((!image.exists() || FileUtil.fullyDelete(image, conf)) &&
+        if (!((!image.exists() || FileUtil.fullyDelete(image)) &&
               (!edits.exists() || edits.delete()) &&
               image.mkdirs())) {
           
@@ -591,7 +592,7 @@ class FSDirectory implements FSConstants {
 
         // Always do an implicit mkdirs for parent directory tree
         String pathString = path.toString();
-        mkdirs(DFSFile.getDFSParent(pathString));
+        mkdirs(new Path(pathString).getParent().toString());
         INode newNode = new INode( new File(pathString).getName(), blocks, replication);
         if( ! unprotectedAddFile(path, newNode) )
           return false;
@@ -808,10 +809,10 @@ class FSDirectory implements FSConstants {
         v.add(src);
 
         // All its parents
-        String parent = DFSFile.getDFSParent(src);
+        Path parent = new Path(src).getParent();
         while (parent != null) {
-            v.add(parent);
-            parent = DFSFile.getDFSParent(parent);
+            v.add(parent.toString());
+            parent = parent.getParent();
         }
 
         // Now go backwards through list of dirs, creating along

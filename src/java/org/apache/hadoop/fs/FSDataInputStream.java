@@ -36,18 +36,18 @@ public class FSDataInputStream extends DataInputStream {
   /** Verify that data matches checksums. */
   private class Checker extends FilterInputStream implements Seekable {
     private FileSystem fs;
-    private File file;
+    private Path file;
     private FSDataInputStream sums;
     private Checksum sum = new CRC32();
     private int inSum;
 
-    public Checker(FileSystem fs, File file, Configuration conf)
+    public Checker(FileSystem fs, Path file, Configuration conf)
       throws IOException {
       super(fs.openRaw(file));
       
       this.fs = fs;
       this.file = file;
-      File sumFile = fs.getChecksumFile(file);
+      Path sumFile = fs.getChecksumFile(file);
       try {
         this.sums = new FSDataInputStream(fs.openRaw(sumFile), conf);
         byte[] version = new byte[VERSION.length];
@@ -214,14 +214,14 @@ public class FSDataInputStream extends DataInputStream {
 }
   
   
-  public FSDataInputStream(FileSystem fs, File file, int bufferSize, Configuration conf)
+  public FSDataInputStream(FileSystem fs, Path file, int bufferSize, Configuration conf)
       throws IOException {
     super(null);
     this.in = new Buffer(new PositionCache(new Checker(fs, file, conf)), bufferSize);
   }
   
   
-  public FSDataInputStream(FileSystem fs, File file, Configuration conf)
+  public FSDataInputStream(FileSystem fs, Path file, Configuration conf)
     throws IOException {
     super(null);
     int bufferSize = conf.getInt("io.file.buffer.size", 4096);

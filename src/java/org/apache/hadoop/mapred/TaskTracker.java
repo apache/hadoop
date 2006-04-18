@@ -379,7 +379,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
             this.task = task;
             this.lastProgressReport = System.currentTimeMillis();
             this.jobConf = new JobConf(conf);
-            this.jobConf.deleteLocalFiles(SUBDIR + File.separator + task.getTaskId());
+            this.jobConf.deleteLocalFiles(SUBDIR + "/" + task.getTaskId());
             localizeTask(task);
         }
 
@@ -388,23 +388,23 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
          * So here, edit the Task's fields appropriately.
          */
         void localizeTask(Task t) throws IOException {
-            File localJobFile =
-              this.jobConf.getLocalFile(SUBDIR+File.separator+t.getTaskId(), "job.xml");
-            File localJarFile =
-              this.jobConf.getLocalFile(SUBDIR+File.separator+t.getTaskId(), "job.jar");
+            Path localJobFile =
+              this.jobConf.getLocalPath(SUBDIR+"/"+t.getTaskId()+"/"+"job.xml");
+            Path localJarFile =
+              this.jobConf.getLocalPath(SUBDIR+"/"+t.getTaskId()+"/"+"job.jar");
 
             String jobFile = t.getJobFile();
-            fs.copyToLocalFile(new File(jobFile), localJobFile);
-            t.setJobFile(localJobFile.getCanonicalPath());
+            fs.copyToLocalFile(new Path(jobFile), localJobFile);
+            t.setJobFile(localJobFile.toString());
 
             JobConf jc = new JobConf(localJobFile);
             String jarFile = jc.getJar();
             if (jarFile != null) {
-              fs.copyToLocalFile(new File(jarFile), localJarFile);
-              jc.setJar(localJarFile.getCanonicalPath());
+              fs.copyToLocalFile(new Path(jarFile), localJarFile);
+              jc.setJar(localJarFile.toString());
 
-              BufferedOutputStream out =
-                new BufferedOutputStream(new FileOutputStream(localJobFile));
+              FileSystem localFs = FileSystem.getNamed("local", fConf);
+              OutputStream out = localFs.create(localJobFile);
               try {
                 jc.write(out);
               } finally {
@@ -569,7 +569,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
                 runner.close();
             } catch (IOException ie) {
             }
-            this.jobConf.deleteLocalFiles(SUBDIR + File.separator + task.getTaskId());
+            this.jobConf.deleteLocalFiles(SUBDIR + "/" + task.getTaskId());
         }
     }
 
@@ -695,18 +695,14 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
           Task task = umbilical.getTask(taskid);
           JobConf job = new JobConf(task.getJobFile());
 
-          conf.addFinalResource(new File(task.getJobFile()));
+          conf.addFinalResource(new Path(task.getJobFile()));
 
           startPinging(umbilical, taskid);        // start pinging parent
 
           try {
-              // If the user set a working directory, use it
-              String workDir = job.getWorkingDirectory();
-              if (workDir != null) {
-                FileSystem file_sys = FileSystem.get(job);
-                file_sys.setWorkingDirectory(new File(workDir));
-              }
-              task.run(job, umbilical);           // run the task
+            // use job-specified working directory
+            FileSystem.get(job).setWorkingDirectory(job.getWorkingDirectory());
+            task.run(job, umbilical);             // run the task
           } catch (FSError e) {
             LOG.log(Level.SEVERE, "FSError from child", e);
             umbilical.fsError(e.getMessage());

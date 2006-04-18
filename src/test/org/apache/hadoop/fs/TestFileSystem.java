@@ -36,10 +36,10 @@ public class TestFileSystem extends TestCase {
   private static final int SEEKS_PER_FILE = 4;
 
   private static String ROOT = System.getProperty("test.build.data","fs_test");
-  private static File CONTROL_DIR = new File(ROOT, "fs_control");
-  private static File WRITE_DIR = new File(ROOT, "fs_write");
-  private static File READ_DIR = new File(ROOT, "fs_read");
-  private static File DATA_DIR = new File(ROOT, "fs_data");
+  private static Path CONTROL_DIR = new Path(ROOT, "fs_control");
+  private static Path WRITE_DIR = new Path(ROOT, "fs_write");
+  private static Path READ_DIR = new Path(ROOT, "fs_read");
+  private static Path DATA_DIR = new Path(ROOT, "fs_data");
 
   public void testFs() throws Exception {
     testFs(10 * MEGA, 100, 0);
@@ -67,13 +67,12 @@ public class TestFileSystem extends TestCase {
 
     LOG.info("creating control file: "+megaBytes+" bytes, "+numFiles+" files");
 
-    File controlFile = new File(CONTROL_DIR, "files");
+    Path controlFile = new Path(CONTROL_DIR, "files");
     fs.delete(controlFile);
     Random random = new Random(seed);
 
     SequenceFile.Writer writer =
-      new SequenceFile.Writer(fs, controlFile.toString(),
-                              UTF8.class, LongWritable.class);
+      new SequenceFile.Writer(fs, controlFile, UTF8.class, LongWritable.class);
 
     long totalSize = 0;
     long maxSize = ((megaBytes / numFiles) * 2) + 1;
@@ -135,7 +134,7 @@ public class TestFileSystem extends TestCase {
       reporter.setStatus("creating " + name);
 
       // write to temp file initially to permit parallel execution
-      File tempFile = new File(DATA_DIR, name+suffix);
+      Path tempFile = new Path(DATA_DIR, name+suffix);
       OutputStream out = fs.create(tempFile);
 
       long written = 0;
@@ -156,7 +155,7 @@ public class TestFileSystem extends TestCase {
         out.close();
       }
       // rename to final location
-      fs.rename(tempFile, new File(DATA_DIR, name));
+      fs.rename(tempFile, new Path(DATA_DIR, name));
 
       collector.collect(new UTF8("bytes"), new LongWritable(written));
 
@@ -177,7 +176,7 @@ public class TestFileSystem extends TestCase {
     JobConf job = new JobConf(conf);
     job.setBoolean("fs.test.fastCheck", fastCheck);
 
-    job.setInputDir(CONTROL_DIR);
+    job.setInputPath(CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
     job.setInputKeyClass(UTF8.class);
     job.setInputValueClass(LongWritable.class);
@@ -185,7 +184,7 @@ public class TestFileSystem extends TestCase {
     job.setMapperClass(WriteMapper.class);
     job.setReducerClass(LongSumReducer.class);
 
-    job.setOutputDir(WRITE_DIR);
+    job.setOutputPath(WRITE_DIR);
     job.setOutputKeyClass(UTF8.class);
     job.setOutputValueClass(LongWritable.class);
     job.setNumReduceTasks(1);
@@ -227,7 +226,7 @@ public class TestFileSystem extends TestCase {
       reporter.setStatus("opening " + name);
 
       DataInputStream in =
-        new DataInputStream(fs.open(new File(DATA_DIR, name)));
+        new DataInputStream(fs.open(new Path(DATA_DIR, name)));
 
       long read = 0;
       try {
@@ -273,7 +272,7 @@ public class TestFileSystem extends TestCase {
     job.setBoolean("fs.test.fastCheck", fastCheck);
 
 
-    job.setInputDir(CONTROL_DIR);
+    job.setInputPath(CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
     job.setInputKeyClass(UTF8.class);
     job.setInputValueClass(LongWritable.class);
@@ -281,7 +280,7 @@ public class TestFileSystem extends TestCase {
     job.setMapperClass(ReadMapper.class);
     job.setReducerClass(LongSumReducer.class);
 
-    job.setOutputDir(READ_DIR);
+    job.setOutputPath(READ_DIR);
     job.setOutputKeyClass(UTF8.class);
     job.setOutputValueClass(LongWritable.class);
     job.setNumReduceTasks(1);
@@ -323,7 +322,7 @@ public class TestFileSystem extends TestCase {
 
       reporter.setStatus("opening " + name);
 
-      FSDataInputStream in = fs.open(new File(DATA_DIR, name));
+      FSDataInputStream in = fs.open(new Path(DATA_DIR, name));
         
       try {
         for (int i = 0; i < SEEKS_PER_FILE; i++) {
@@ -368,7 +367,7 @@ public class TestFileSystem extends TestCase {
     JobConf job = new JobConf(conf);
     job.setBoolean("fs.test.fastCheck", fastCheck);
 
-    job.setInputDir(CONTROL_DIR);
+    job.setInputPath(CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
     job.setInputKeyClass(UTF8.class);
     job.setInputValueClass(LongWritable.class);
@@ -376,7 +375,7 @@ public class TestFileSystem extends TestCase {
     job.setMapperClass(SeekMapper.class);
     job.setReducerClass(LongSumReducer.class);
 
-    job.setOutputDir(READ_DIR);
+    job.setOutputPath(READ_DIR);
     job.setOutputKeyClass(UTF8.class);
     job.setOutputValueClass(LongWritable.class);
     job.setNumReduceTasks(1);

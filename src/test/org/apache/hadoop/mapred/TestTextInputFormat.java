@@ -34,8 +34,8 @@ public class TestTextInputFormat extends TestCase {
   public void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
     FileSystem fs = FileSystem.getNamed("local", conf);
-    File dir = new File(System.getProperty("test.build.data",".") + "/mapred");
-    File file = new File(dir, "test.txt");
+    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    Path file = new Path(dir, "test.txt");
 
     Reporter reporter = new Reporter() {
         public void setStatus(String status) throws IOException {}
@@ -46,7 +46,7 @@ public class TestTextInputFormat extends TestCase {
     Random random = new Random(seed);
 
     fs.delete(dir);
-    job.setInputDir(dir);
+    job.setInputPath(dir);
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;

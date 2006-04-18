@@ -16,6 +16,7 @@
 package org.apache.hadoop.dfs;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.Path;
 
 import java.io.*;
 
@@ -68,13 +69,13 @@ class DFSFileInfo implements Writable {
     /**
      */
     public String getName() {
-        return new File(path.toString()).getName();
+        return new Path(path.toString()).getName();
     }
 
     /**
      */
     public String getParent() {
-        return DFSFile.getDFSParent(path.toString());
+      return new Path(path.toString()).getParent().toString();
     }
 
     /**

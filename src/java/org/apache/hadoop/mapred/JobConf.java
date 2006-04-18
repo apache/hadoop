@@ -28,7 +28,9 @@ import java.util.Enumeration;
 import java.net.URL;
 import java.net.URLDecoder;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.io.Writable;
@@ -82,14 +84,14 @@ public class JobConf extends Configuration {
    * @param config a Configuration-format XML job description file
    */
   public JobConf(String config) {
-    this(new File(config));
+    this(new Path(config));
   }
 
   /** Construct a map/reduce configuration.
    *
    * @param config a Configuration-format XML job description file
    */
-  public JobConf(File config) {
+  public JobConf(Path config) {
     super();
     addDefaultResource("mapred-default.xml");
     addDefaultResource(config);
@@ -98,9 +100,8 @@ public class JobConf extends Configuration {
   public String getJar() { return get("mapred.jar"); }
   public void setJar(String jar) { set("mapred.jar", jar); }
 
-  public File getSystemDir() {
-    return new File(get("mapred.system.dir", "/tmp/hadoop/mapred/system"))
-      .getAbsoluteFile();
+  public Path getSystemDir() {
+    return new Path(get("mapred.system.dir", "/tmp/hadoop/mapred/system"));
   }
 
   public String[] getLocalDirs() throws IOException {
@@ -110,35 +111,50 @@ public class JobConf extends Configuration {
   public void deleteLocalFiles() throws IOException {
     String[] localDirs = getLocalDirs();
     for (int i = 0; i < localDirs.length; i++) {
-      FileUtil.fullyDelete(new File(localDirs[i]), this);
+      FileSystem.getNamed("local", this).delete(new Path(localDirs[i]));
     }
   }
 
   public void deleteLocalFiles(String subdir) throws IOException {
     String[] localDirs = getLocalDirs();
     for (int i = 0; i < localDirs.length; i++) {
-      FileUtil.fullyDelete(new File(localDirs[i], subdir), this);
+      FileSystem.getNamed("local", this).delete(new Path(localDirs[i], subdir));
     }
+  }
+
+  /** @deprecated Call {@link #getLocalPath(String)} instead. */
+  public File getLocalFile(String subdir, String name) throws IOException {
+    return new File(getLocalPath(subdir+Path.SEPARATOR+name).toString());
   }
 
   /** Constructs a local file name.  Files are distributed among configured
    * local directories.*/
-  public File getLocalFile(String subdir, String name) throws IOException {
-    return getFile("mapred.local.dir", subdir + File.separator + name);
+  public Path getLocalPath(String pathString) throws IOException {
+    return getLocalPath("mapred.local.dir", pathString);
   }
 
-  public void setInputDir(File dir) { set("mapred.input.dir", dir); }
+  /** @deprecated Call {@link #setInputPath(Path)} instead.*/
+  public void setInputDir(File dir) { setInputPath(new Path(dir.toString())); }
 
-  public void addInputDir(File dir) {
+  public void setInputPath(Path dir) {
+    dir = new Path(getWorkingDirectory(), dir);
+    set("mapred.input.dir", dir);
+  }
+
+  /** @deprecated Call {@link #addInputPath(Path)} instead.*/
+  public void addInputDir(File dir) { addInputPath(new Path(dir.toString())); }
+
+  public void addInputPath(Path dir) {
+    dir = new Path(getWorkingDirectory(), dir);
     String dirs = get("mapred.input.dir");
     set("mapred.input.dir", dirs == null ? dir.toString() : dirs + "," + dir);
   }
-  public File[] getInputDirs() {
+  public Path[] getInputPaths() {
     String dirs = get("mapred.input.dir", "");
     ArrayList list = Collections.list(new StringTokenizer(dirs, ","));
-    File[] result = new File[list.size()];
+    Path[] result = new Path[list.size()];
     for (int i = 0; i < list.size(); i++) {
-      result[i] = new File((String)list.get(i));
+      result[i] = new Path((String)list.get(i));
     }
     return result;
   }
@@ -163,24 +179,47 @@ public class JobConf extends Configuration {
    * Set the current working directory for the default file system
    * @param dir the new current working directory
    */
-  public void setWorkingDirectory(String dir) {
-    set("mapred.working.dir", dir);
+  public void setWorkingDirectory(Path dir) {
+    dir = new Path(getWorkingDirectory(), dir);
+    set("mapred.working.dir", dir.toString());
   }
   
   /**
    * Get the current working directory for the default file system.
    * @return the directory name
    */
-  public String getWorkingDirectory() {
-    return get("mapred.working.dir"); 
+  public Path getWorkingDirectory() {
+    String name = get("mapred.working.dir");
+    if (name != null) {
+      return new Path(name);
+    } else {
+      try {
+        Path dir = FileSystem.get(this).getWorkingDirectory();
+        set("mapred.working.dir", dir.toString());
+        return dir;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
   
-  public File getOutputDir() { 
+  /** @deprecated Call {@link #getOutputPath()} instead.*/
+  public File getOutputDir() { return new File(getOutputPath().toString()); }
+
+  public Path getOutputPath() { 
     String name = get("mapred.output.dir");
-    return name == null ? null: new File(name);
+    return name == null ? null: new Path(name);
   }
 
-  public void setOutputDir(File dir) { set("mapred.output.dir", dir); }
+  /** @deprecated Call {@link #setOutputPath(Path)} instead.*/
+  public void setOutputDir(File dir) {
+    setOutputPath(new Path(dir.toString()));
+  }
+
+  public void setOutputPath(Path dir) {
+    dir = new Path(getWorkingDirectory(), dir);
+    set("mapred.output.dir", dir);
+  }
 
   public InputFormat getInputFormat() {
     return (InputFormat)newInstance(getClass("mapred.input.format.class",

@@ -35,7 +35,7 @@ public class FSDataOutputStream extends DataOutputStream {
     private int bytesPerSum;
 
     public Summer(FileSystem fs, 
-                  File file, 
+                  Path file, 
                   boolean overwrite, 
                   short replication,
                   Configuration conf)
@@ -125,7 +125,7 @@ public class FSDataOutputStream extends DataOutputStream {
 
   }
 
-  public FSDataOutputStream(FileSystem fs, File file,
+  public FSDataOutputStream(FileSystem fs, Path file,
                             boolean overwrite, Configuration conf,
                             int bufferSize, short replication )
   throws IOException {

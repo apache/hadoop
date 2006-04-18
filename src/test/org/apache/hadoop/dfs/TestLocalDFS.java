@@ -4,6 +4,7 @@ import junit.framework.TestCase;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 /**
  * This class tests the DFS class via the FileSystem interface in a single node
@@ -12,13 +13,13 @@ import org.apache.hadoop.fs.FileSystem;
  */
 public class TestLocalDFS extends TestCase {
 
-  private void writeFile(FileSystem fileSys, File name) throws IOException {
+  private void writeFile(FileSystem fileSys, Path name) throws IOException {
     DataOutputStream stm = fileSys.create(name);
     stm.writeBytes("oom");
     stm.close();
   }
   
-  private void readFile(FileSystem fileSys, File name) throws IOException {
+  private void readFile(FileSystem fileSys, Path name) throws IOException {
     DataInputStream stm = fileSys.open(name);
     byte[] buffer = new byte[4];
     int bytesRead = stm.read(buffer, 0 ,4);
@@ -26,7 +27,7 @@ public class TestLocalDFS extends TestCase {
     stm.close();
   }
   
-  private void cleanupFile(FileSystem fileSys, File name) throws IOException {
+  private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
     fileSys.delete(name);
     assertTrue(!fileSys.exists(name));
@@ -40,22 +41,22 @@ public class TestLocalDFS extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster(65312, conf);
     FileSystem fileSys = cluster.getFileSystem();
     try {
-      File orig_path = fileSys.getWorkingDirectory();
+      Path orig_path = fileSys.getWorkingDirectory();
       assertTrue(orig_path.isAbsolute());
-      File file1 = new File("somewhat/random.txt");
+      Path file1 = new Path("somewhat/random.txt");
       writeFile(fileSys, file1);
-      assertTrue(fileSys.exists(new File(orig_path, file1.getPath())));
+      assertTrue(fileSys.exists(new Path(orig_path, file1.toString())));
       fileSys.delete(file1);
-      File subdir1 = new File("/somewhere").getAbsoluteFile();
+      Path subdir1 = new Path("/somewhere");
       fileSys.setWorkingDirectory(subdir1);
       writeFile(fileSys, file1);
-      cleanupFile(fileSys, new File(subdir1, file1.getPath()));
-      File subdir2 = new File("else");
+      cleanupFile(fileSys, new Path(subdir1, file1.toString()));
+      Path subdir2 = new Path("else");
       fileSys.setWorkingDirectory(subdir2);
       writeFile(fileSys, file1);
       readFile(fileSys, file1);
-      cleanupFile(fileSys, new File(new File(subdir1, subdir2.getPath()),
-                                     file1.getPath()));
+      cleanupFile(fileSys, new Path(new Path(subdir1, subdir2.toString()),
+                                     file1.toString()));
     } finally {
       fileSys.close();
       cluster.shutdown();

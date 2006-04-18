@@ -199,7 +199,7 @@ class FSDataset implements FSConstants {
         }
         this.tmp = new File(dir, "tmp");
         if (tmp.exists()) {
-            FileUtil.fullyDelete(tmp, conf);
+            FileUtil.fullyDelete(tmp);
         }
         this.tmp.mkdirs();
         this.dirTree = new FSDir(data);

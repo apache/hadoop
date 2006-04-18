@@ -40,7 +40,7 @@ public class TextInputFormat extends InputFormatBase {
     final long end = start + split.getLength();
 
     // open the file and seek to the start of the split
-    final FSDataInputStream in = fs.open(split.getFile());
+    final FSDataInputStream in = fs.open(split.getPath());
     
     if (start != 0) {
       in.seek(start-1);

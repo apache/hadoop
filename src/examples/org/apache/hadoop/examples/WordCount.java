@@ -20,6 +20,7 @@ import java.io.*;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
@@ -134,8 +135,8 @@ public class WordCount {
           other_args.size() + " instead of 2.");
       printUsage();
     }
-    conf.setInputDir(new File((String) other_args.get(0)));
-    conf.setOutputDir(new File((String) other_args.get(1)));
+    conf.setInputPath(new Path((String) other_args.get(0)));
+    conf.setOutputPath(new Path((String) other_args.get(1)));
     
     // Uncomment to run locally in a single process
     // conf.set("mapred.job.tracker", "local");

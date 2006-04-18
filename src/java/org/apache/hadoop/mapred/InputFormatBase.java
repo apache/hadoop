@@ -17,12 +17,13 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.File;
+import java.io.File;                              // deprecated
 
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.LogFormatter;
 
 /** A base class for {@link InputFormat}. */
@@ -45,35 +46,40 @@ public abstract class InputFormatBase implements InputFormat {
                                                Reporter reporter)
     throws IOException;
 
+  /** @deprecated Call {@link #listFiles(FileSystem,JobConf)} instead. */
+  protected File[] listFiles(FileSystem fs, JobConf job)
+    throws IOException {
+    Path[] paths = listPaths(fs, job);
+    File[] result = new File[paths.length];
+    for (int i = 0 ; i < paths.length; i++) {
+      result[i] = new File(paths[i].toString());
+    }
+    return result;
+  }
+
   /** List input directories.
    * Subclasses may override to, e.g., select only files matching a regular
    * expression.
    * Property mapred.input.subdir, if set, names a subdirectory that
    * is appended to all input dirs specified by job, and if the given fs
-   * lists those too, each is added to the returned array of File.
+   * lists those too, each is added to the returned array of Path.
    * @param fs
    * @param job
-   * @return array of File objects, never zero length.
+   * @return array of Path objects, never zero length.
    * @throws IOException if zero items.
    */
-  protected File[] listFiles(FileSystem fs, JobConf job)
+  protected Path[] listPaths(FileSystem fs, JobConf job)
     throws IOException {
-    File[] dirs = job.getInputDirs();
-    String workDir = job.getWorkingDirectory();
+    Path[] dirs = job.getInputPaths();
     String subdir = job.get("mapred.input.subdir");
     ArrayList result = new ArrayList();
     for (int i = 0; i < dirs.length; i++) {
-      // if it is relative, make it absolute using the directory from the 
-      // JobConf
-      if (workDir != null && !fs.isAbsolute(dirs[i])) {
-        dirs[i] = new File(workDir, dirs[i].toString());
-      }
-      File[] dir = fs.listFiles(dirs[i]);
+      Path[] dir = fs.listPaths(dirs[i]);
       if (dir != null) {
         for (int j = 0; j < dir.length; j++) {
-          File file = dir[j];
+          Path file = dir[j];
           if (subdir != null) {
-            File[] subFiles = fs.listFiles(new File(file, subdir));
+            Path[] subFiles = fs.listPaths(new Path(file, subdir));
             if (subFiles != null) {
               for (int k = 0; k < subFiles.length; k++) {
                 result.add(subFiles[k]);
@@ -89,18 +95,18 @@ public abstract class InputFormatBase implements InputFormat {
     if (result.size() == 0) {
       throw new IOException("No input directories specified in: "+job);
     }
-    return (File[])result.toArray(new File[result.size()]);
+    return (Path[])result.toArray(new Path[result.size()]);
   }
 
-  /** Splits files returned by {#listFiles(FileSystem,JobConf) when
+  /** Splits files returned by {#listPaths(FileSystem,JobConf) when
    * they're too big.*/ 
   public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits)
     throws IOException {
 
-    File[] files = listFiles(fs, job);
+    Path[] files = listPaths(fs, job);
 
     for (int i = 0; i < files.length; i++) {      // check we have valid files
-      File file = files[i];
+      Path file = files[i];
       if (fs.isDirectory(file) || !fs.exists(file)) {
         throw new IOException("Not a file: "+files[i]);
       }
@@ -132,7 +138,7 @@ public abstract class InputFormatBase implements InputFormat {
 
     ArrayList splits = new ArrayList(numSplits);  // generate splits
     for (int i = 0; i < files.length; i++) {
-      File file = files[i];
+      Path file = files[i];
       long length = fs.getLength(file);
 
       long bytesRemaining = length;

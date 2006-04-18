@@ -10,13 +10,13 @@ import junit.framework.*;
  */
 public class TestLocalFileSystem extends TestCase {
 
-  private void writeFile(FileSystem fs, File name) throws IOException {
+  private void writeFile(FileSystem fs, Path name) throws IOException {
     FSDataOutputStream stm = fs.create(name);
     stm.writeBytes("42\n");
     stm.close();
   }
   
-  private void cleanupFile(FileSystem fs, File name) throws IOException {
+  private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
     fs.delete(name);
     assertTrue(!fs.exists(name));
@@ -28,9 +28,8 @@ public class TestLocalFileSystem extends TestCase {
   public void testWorkingDirectory() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fileSys = FileSystem.getNamed("local", conf);
-    File origDir = fileSys.getWorkingDirectory();
-    File subdir = new File("build/test/data/work-dir/new subdir");
-    File subdirAbsolute = subdir.getAbsoluteFile();
+    Path origDir = fileSys.getWorkingDirectory();
+    Path subdir = new Path("build/test/data/work-dir/new subdir");
     try {
       // make sure it doesn't already exist
       assertTrue(!fileSys.exists(subdir));
@@ -41,33 +40,29 @@ public class TestLocalFileSystem extends TestCase {
       fileSys.setWorkingDirectory(subdir);
       
       // create a directory and check for it
-      File dir1 = new File("dir1");
-      File dir1Absolute = new File(subdirAbsolute, dir1.getPath());
+      Path dir1 = new Path("dir1");
       fileSys.mkdirs(dir1);
       assertTrue(fileSys.isDirectory(dir1));
-      assertTrue(fileSys.isDirectory(dir1Absolute));
       
       // delete the directory and make sure it went away
       fileSys.delete(dir1);
       assertTrue(!fileSys.exists(dir1));
-      assertTrue(!fileSys.exists(dir1Absolute));
       
       // create files and manipulate them.
-      File file1 = new File("file1");
-      File file2 = new File("sub/file2");
-      File file2_abs = new File(subdirAbsolute, file2.getPath());
+      Path file1 = new Path("file1");
+      Path file2 = new Path("sub/file2");
       writeFile(fileSys, file1);
       fileSys.copyFromLocalFile(file1, file2);
       assertTrue(fileSys.exists(file1));
       assertTrue(fileSys.isFile(file1));
-      cleanupFile(fileSys, file2_abs);
+      cleanupFile(fileSys, file2);
       fileSys.copyToLocalFile(file1, file2);
-      cleanupFile(fileSys, file2_abs);
+      cleanupFile(fileSys, file2);
       
       // try a rename
       fileSys.rename(file1, file2);
       assertTrue(!fileSys.exists(file1));
-      assertTrue(fileSys.exists(file2_abs));
+      assertTrue(fileSys.exists(file2));
       fileSys.rename(file2, file1);
       
       // try reading a file

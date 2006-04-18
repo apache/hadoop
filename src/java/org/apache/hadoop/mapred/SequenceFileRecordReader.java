@@ -33,7 +33,7 @@ public class SequenceFileRecordReader implements RecordReader {
   public SequenceFileRecordReader(Configuration conf, FileSplit split)
     throws IOException {
     FileSystem fs = FileSystem.get(conf);
-    this.in = new SequenceFile.Reader(fs, split.getFile().toString(), conf);
+    this.in = new SequenceFile.Reader(fs, split.getPath(), conf);
     this.end = split.getStart() + split.getLength();
 
     if (split.getStart() > in.getPosition())

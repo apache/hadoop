@@ -233,14 +233,14 @@ public class MapredLoadTest {
         // Write the answer key to a file.  
         //
         FileSystem fs = FileSystem.get(conf);
-        File testdir = new File("mapred.loadtest");
+        Path testdir = new Path("mapred.loadtest");
         fs.mkdirs(testdir);
 
-        File randomIns = new File(testdir, "genins");
+        Path randomIns = new Path(testdir, "genins");
         fs.mkdirs(randomIns);
 
-        File answerkey = new File(randomIns, "answer.key");
-        SequenceFile.Writer out = new SequenceFile.Writer(fs, answerkey.getPath(), IntWritable.class, IntWritable.class);
+        Path answerkey = new Path(randomIns, "answer.key");
+        SequenceFile.Writer out = new SequenceFile.Writer(fs, answerkey, IntWritable.class, IntWritable.class);
         try {
             for (int i = 0; i < range; i++) {
                 out.append(new IntWritable(i), new IntWritable(dist[i]));
@@ -267,18 +267,18 @@ public class MapredLoadTest {
         // Because there's just one reduce task, we emit a single big
         // file of random numbers.
         //
-        File randomOuts = new File(testdir, "genouts");
+        Path randomOuts = new Path(testdir, "genouts");
         fs.mkdirs(randomOuts);
 
 
         JobConf genJob = new JobConf(conf);
-        genJob.setInputDir(randomIns);
+        genJob.setInputPath(randomIns);
         genJob.setInputKeyClass(IntWritable.class);
         genJob.setInputValueClass(IntWritable.class);
         genJob.setInputFormat(SequenceFileInputFormat.class);
         genJob.setMapperClass(RandomGenMapper.class);
 
-        genJob.setOutputDir(randomOuts);
+        genJob.setOutputPath(randomOuts);
         genJob.setOutputKeyClass(IntWritable.class);
         genJob.setOutputValueClass(IntWritable.class);
         genJob.setOutputFormat(TextOutputFormat.class);
@@ -316,16 +316,16 @@ public class MapredLoadTest {
         // you have multiple reduces at once.
         //
         int intermediateReduces = 10;
-        File intermediateOuts = new File(testdir, "intermediateouts");
+        Path intermediateOuts = new Path(testdir, "intermediateouts");
         fs.mkdirs(intermediateOuts);
         JobConf checkJob = new JobConf(conf);
-        checkJob.setInputDir(randomOuts);
+        checkJob.setInputPath(randomOuts);
         checkJob.setInputKeyClass(LongWritable.class);
         checkJob.setInputValueClass(UTF8.class);
         checkJob.setInputFormat(TextInputFormat.class);
         checkJob.setMapperClass(RandomCheckMapper.class);
 
-        checkJob.setOutputDir(intermediateOuts);
+        checkJob.setOutputPath(intermediateOuts);
         checkJob.setOutputKeyClass(IntWritable.class);
         checkJob.setOutputValueClass(IntWritable.class);
         checkJob.setOutputFormat(SequenceFileOutputFormat.class);
@@ -341,16 +341,16 @@ public class MapredLoadTest {
         // But by having a single reduce task here, we end up merging
         // all the files.
         //
-        File finalOuts = new File(testdir, "finalouts");        
+        Path finalOuts = new Path(testdir, "finalouts");        
         fs.mkdirs(finalOuts);
         JobConf mergeJob = new JobConf(conf);
-        mergeJob.setInputDir(intermediateOuts);
+        mergeJob.setInputPath(intermediateOuts);
         mergeJob.setInputKeyClass(IntWritable.class);
         mergeJob.setInputValueClass(IntWritable.class);
         mergeJob.setInputFormat(SequenceFileInputFormat.class);
         mergeJob.setMapperClass(MergeMapper.class);
         
-        mergeJob.setOutputDir(finalOuts);
+        mergeJob.setOutputPath(finalOuts);
         mergeJob.setOutputKeyClass(IntWritable.class);
         mergeJob.setOutputValueClass(IntWritable.class);
         mergeJob.setOutputFormat(SequenceFileOutputFormat.class);
@@ -366,8 +366,8 @@ public class MapredLoadTest {
         // in the original key.
         //
         boolean success = true;
-        File recomputedkey = new File(finalOuts, "part-00000");
-        SequenceFile.Reader in = new SequenceFile.Reader(fs, recomputedkey.getPath(), conf);
+        Path recomputedkey = new Path(finalOuts, "part-00000");
+        SequenceFile.Reader in = new SequenceFile.Reader(fs, recomputedkey, conf);
         int totalseen = 0;
         try {
             IntWritable key = new IntWritable();
@@ -407,7 +407,7 @@ public class MapredLoadTest {
         //
         // Write to "results" whether the test succeeded or not.
         //
-        File resultFile = new File(testdir, "results");
+        Path resultFile = new Path(testdir, "results");
         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fs.create(resultFile)));
         try {
             bw.write("Success=" + success + "\n");

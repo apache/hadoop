@@ -29,8 +29,8 @@ import org.apache.hadoop.conf.Configuration;
  * @author Mike Cafarella
  *****************************************************************/
 public class LocalFileSystem extends FileSystem {
-    private File workingDir
-      = new File(System.getProperty("user.dir")).getAbsoluteFile();
+    private Path workingDir =
+      new Path(System.getProperty("user.dir"));
     TreeMap sharedLockDataSet = new TreeMap();
     TreeMap nonsharedLockDataSet = new TreeMap();
     TreeMap lockObjSet = new TreeMap();
@@ -52,8 +52,8 @@ public class LocalFileSystem extends FileSystem {
      * Return 1x1 'localhost' cell if the file exists.
      * Return null if otherwise.
      */
-    public String[][] getFileCacheHints(File f, long start, long len) throws IOException {
-        if (! f.exists()) {
+    public String[][] getFileCacheHints(Path f, long start, long len) throws IOException {
+        if (! exists(f)) {
             return null;
         } else {
             String result[][] = new String[1][];
@@ -65,14 +65,22 @@ public class LocalFileSystem extends FileSystem {
 
     public String getName() { return "local"; }
 
+    /** Convert a path to a File. */
+    public File pathToFile(Path path) {
+      if (!path.isAbsolute()) {
+        path = new Path(workingDir, path);
+      }
+      return new File(path.toString());
+    }
+
     /*******************************************************
      * For open()'s FSInputStream
      *******************************************************/
     class LocalFSFileInputStream extends FSInputStream {
         FileInputStream fis;
 
-        public LocalFSFileInputStream(File f) throws IOException {
-          this.fis = new FileInputStream(f);
+        public LocalFSFileInputStream(Path f) throws IOException {
+          this.fis = new FileInputStream(pathToFile(f));
         }
 
         public void seek(long pos) throws IOException {
@@ -109,10 +117,9 @@ public class LocalFileSystem extends FileSystem {
         public long skip(long n) throws IOException { return fis.skip(n); }
     }
     
-    public FSInputStream openRaw(File f) throws IOException {
-        f = makeAbsolute(f);
-        if (! f.exists()) {
-            throw new FileNotFoundException(f.toString());
+    public FSInputStream openRaw(Path f) throws IOException {
+        if (! exists(f)) {
+            throw new FileNotFoundException(toString());
         }
         return new LocalFSFileInputStream(f);
     }
@@ -123,8 +130,8 @@ public class LocalFileSystem extends FileSystem {
     class LocalFSFileOutputStream extends FSOutputStream {
       FileOutputStream fos;
 
-      public LocalFSFileOutputStream(File f) throws IOException {
-        this.fos = new FileOutputStream(f);
+      public LocalFSFileOutputStream(Path f) throws IOException {
+        this.fos = new FileOutputStream(pathToFile(f));
       }
 
       public long getPos() throws IOException {
@@ -153,90 +160,72 @@ public class LocalFileSystem extends FileSystem {
       }
     }
 
-    private File makeAbsolute(File f) {
-      if (isAbsolute(f)) {
-        return f;
-      } else {
-        return new File(workingDir, f.toString()).getAbsoluteFile();
-      }
-    }
-    
-    public FSOutputStream createRaw(File f, boolean overwrite, short replication)
+    public FSOutputStream createRaw(Path f, boolean overwrite, short replication)
       throws IOException {
-        f = makeAbsolute(f);
-        if (f.exists() && ! overwrite) {
+        if (exists(f) && ! overwrite) {
             throw new IOException("File already exists:"+f);
         }
-        File parent = f.getParentFile();
+        Path parent = f.getParent();
         if (parent != null)
-          parent.mkdirs();
+          mkdirs(parent);
 
         return new LocalFSFileOutputStream(f);
     }
 
-    public boolean renameRaw(File src, File dst) throws IOException {
-        src = makeAbsolute(src);
-        dst = makeAbsolute(dst);
+    public boolean renameRaw(Path src, Path dst) throws IOException {
         if (useCopyForRename) {
-            FileUtil.copyContents(this, src, dst, true, getConf());
-            return fullyDelete(src);
-        } else return src.renameTo(dst);
+          return FileUtil.copy(this, src, this, dst, true, getConf());
+        } else return pathToFile(src).renameTo(pathToFile(dst));
     }
 
-    public boolean deleteRaw(File f) throws IOException {
-        f = makeAbsolute(f);
+    public boolean deleteRaw(Path p) throws IOException {
+        File f = pathToFile(p);
         if (f.isFile()) {
             return f.delete();
-        } else return fullyDelete(f);
+        } else return FileUtil.fullyDelete(f);
     }
 
-    public boolean exists(File f) throws IOException {
-        f = makeAbsolute(f);
-        return f.exists();
+    public boolean exists(Path f) throws IOException {
+        return pathToFile(f).exists();
     }
 
-    public boolean isDirectory(File f) throws IOException {
-        f = makeAbsolute(f);
-        return f.isDirectory();
+    public boolean isDirectory(Path f) throws IOException {
+        return pathToFile(f).isDirectory();
     }
 
-    public boolean isAbsolute(File f) {
-      return f.isAbsolute() ||
-        f.getPath().startsWith("/") ||
-        f.getPath().startsWith("\\");
+    public long getLength(Path f) throws IOException {
+        return pathToFile(f).length();
     }
 
-    public long getLength(File f) throws IOException {
-        f = makeAbsolute(f);
-        return f.length();
+    public Path[] listPathsRaw(Path f) throws IOException {
+        String[] names = pathToFile(f).list();
+        if (names == null) {
+          return null;
+        }
+        Path[] results = new Path[names.length];
+        for (int i = 0; i < names.length; i++) {
+          results[i] = new Path(f, names[i]);
+        }
+        return results;
     }
 
-    public File[] listFilesRaw(File f) throws IOException {
-        f = makeAbsolute(f);
-        return f.listFiles();
-    }
-
-    public void mkdirs(File f) throws IOException {
-        f = makeAbsolute(f);
-        f.mkdirs();
+    public boolean mkdirs(Path f) throws IOException {
+      return pathToFile(f).mkdirs();
     }
 
     /**
      * Set the working directory to the given directory.
-     * Sets both a local variable and the system property.
-     * Note that the system property is only used if the application explictly
-     * calls java.io.File.getAbsolutePath().
      */
-    public void setWorkingDirectory(File new_dir) {
-      workingDir = makeAbsolute(new_dir);
+    public void setWorkingDirectory(Path newDir) {
+      workingDir = newDir;
     }
     
-    public File getWorkingDirectory() {
+    public Path getWorkingDirectory() {
       return workingDir;
     }
     
-    public synchronized void lock(File f, boolean shared) throws IOException {
-        f = makeAbsolute(f);
+    public synchronized void lock(Path p, boolean shared) throws IOException {
+        File f = pathToFile(p);
         f.createNewFile();
 
         FileLock lockObj = null;
@@ -252,8 +241,8 @@ public class LocalFileSystem extends FileSystem {
         lockObjSet.put(f, lockObj);
     }
 
-    public synchronized void release(File f) throws IOException {
-        f = makeAbsolute(f);
+    public synchronized void release(Path p) throws IOException {
+        File f = pathToFile(p);
         FileLock lockObj = (FileLock) lockObjSet.get(f);
         FileInputStream sharedLockData = (FileInputStream) sharedLockDataSet.get(f);
         FileOutputStream nonsharedLockData = (FileOutputStream) nonsharedLockDataSet.get(f);
@@ -277,52 +266,29 @@ public class LocalFileSystem extends FileSystem {
     }
 
     // In the case of the local filesystem, we can just rename the file.
-    public void moveFromLocalFile(File src, File dst) throws IOException {
-        if (! src.equals(dst)) {
-            src = makeAbsolute(src);
-            dst = makeAbsolute(dst);
-            if (useCopyForRename) {
-                FileUtil.copyContents(this, src, dst, true, getConf());
-                fullyDelete(src);
-            } else src.renameTo(dst);
-        }
+    public void moveFromLocalFile(Path src, Path dst) throws IOException {
+      rename(src, dst);
     }
 
     // Similar to moveFromLocalFile(), except the source is kept intact.
-    public void copyFromLocalFile(File src, File dst) throws IOException {
-        if (! src.equals(dst)) {
-            src = makeAbsolute(src);
-            dst = makeAbsolute(dst);
-            FileUtil.copyContents(this, src, dst, true, getConf());
-        }
+    public void copyFromLocalFile(Path src, Path dst) throws IOException {
+      FileUtil.copy(this, src, this, dst, false, getConf());
     }
 
     // We can't delete the src file in this case.  Too bad.
-    public void copyToLocalFile(File src, File dst) throws IOException {
-        if (! src.equals(dst)) {
-            src = makeAbsolute(src);
-            dst = makeAbsolute(dst);
-            FileUtil.copyContents(this, src, dst, true, getConf());
-        }
+    public void copyToLocalFile(Path src, Path dst) throws IOException {
+      FileUtil.copy(this, src, this, dst, false, getConf());
     }
 
     // We can write output directly to the final location
-    public File startLocalOutput(File fsOutputFile, File tmpLocalFile) throws IOException {
-        return makeAbsolute(fsOutputFile);
+    public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
+      throws IOException {
+      return fsOutputFile;
     }
 
     // It's in the right place - nothing to do.
-    public void completeLocalOutput(File fsWorkingFile, File tmpLocalFile) throws IOException {
-    }
-
-    // We can read directly from the real local fs.
-    public File startLocalInput(File fsInputFile, File tmpLocalFile) throws IOException {
-        return makeAbsolute(fsInputFile);
-    }
-
-    // We're done reading.  Nothing to clean up.
-    public void completeLocalInput(File localFile) throws IOException {
-        // Ignore the file, it's at the right destination!
+    public void completeLocalOutput(Path fsWorkingFile, Path tmpLocalFile)
+      throws IOException {
     }
 
     public void close() throws IOException {}
@@ -331,39 +297,14 @@ public class LocalFileSystem extends FileSystem {
         return "LocalFS";
     }
     
-    /**
-     * Implement our own version instead of using the one in FileUtil,
-     * to avoid infinite recursion.
-     * @param dir
-     * @return
-     * @throws IOException
-     */
-    private boolean fullyDelete(File dir) throws IOException {
-        dir = makeAbsolute(dir);
-        File contents[] = dir.listFiles();
-        if (contents != null) {
-            for (int i = 0; i < contents.length; i++) {
-                if (contents[i].isFile()) {
-                    if (! contents[i].delete()) {
-                        return false;
-                    }
-                } else {
-                    if (! fullyDelete(contents[i])) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return dir.delete();
-    }
 
     /** Moves files to a bad file directory on the same device, so that their
      * storage will not be reused. */
-    public void reportChecksumFailure(File f, FSInputStream in,
+    public void reportChecksumFailure(Path p, FSInputStream in,
                                       long start, long length, int crc) {
       try {
         // canonicalize f   
-        f = makeAbsolute(f).getCanonicalFile();
+        File f = pathToFile(p).getCanonicalFile();
       
         // find highest writable parent dir of f on the same device
         String device = new DF(f.toString(), getConf()).getMount();
@@ -384,11 +325,11 @@ public class LocalFileSystem extends FileSystem {
         f.renameTo(badFile);                      // rename it
 
         // move checksum file too
-        File checkFile = getChecksumFile(f);
+        File checkFile = pathToFile(getChecksumFile(p));
         checkFile.renameTo(new File(badDir, checkFile.getName()+suffix));
 
       } catch (IOException e) {
-        LOG.warning("Error moving bad file " + f + ": " + e);
+        LOG.warning("Error moving bad file " + p + ": " + e);
       }
     }
 

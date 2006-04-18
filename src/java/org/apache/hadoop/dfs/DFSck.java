@@ -105,7 +105,7 @@ public class DFSck {
    * @throws Exception
    */
   public Result fsck(String path) throws Exception {
-    DFSFileInfo[] files = dfs.listFiles(new UTF8(path));
+    DFSFileInfo[] files = dfs.listPaths(new UTF8(path));
     Result res = new Result();
     res.setReplication(conf.getInt("dfs.replication", 3));
     for (int i = 0; i < files.length; i++) {
@@ -119,7 +119,7 @@ public class DFSck {
       if (showFiles)
         System.out.println(file.getPath() + " <dir>");
       res.totalDirs++;
-      DFSFileInfo[] files = dfs.listFiles(new UTF8(file.getPath()));
+      DFSFileInfo[] files = dfs.listPaths(new UTF8(file.getPath()));
       for (int i = 0; i < files.length; i++) {
         check(files[i], res);
       }

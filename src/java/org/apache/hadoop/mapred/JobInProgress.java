@@ -35,8 +35,8 @@ class JobInProgress {
 
     JobProfile profile;
     JobStatus status;
-    File localJobFile = null;
-    File localJarFile = null;
+    Path localJobFile = null;
+    Path localJarFile = null;
 
     TaskInProgress maps[] = new TaskInProgress[0];
     TaskInProgress reduces[] = new TaskInProgress[0];
@@ -52,6 +52,8 @@ class JobInProgress {
     private JobConf conf;
     boolean tasksInited = false;
 
+    private LocalFileSystem localFs;
+  
     /**
      * Create a JobInProgress with the given job file, plus a handle
      * to the tracker.
@@ -63,22 +65,22 @@ class JobInProgress {
         this.jobtracker = jobtracker;
         this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
         this.startTime = System.currentTimeMillis();
+        this.localFs = (LocalFileSystem)FileSystem.getNamed("local", default_conf);
 
         JobConf default_job_conf = new JobConf(default_conf);
-        this.localJobFile = default_job_conf.getLocalFile(JobTracker.SUBDIR, 
-            jobid + ".xml");
-        this.localJarFile = default_job_conf.getLocalFile(JobTracker.SUBDIR, 
-            jobid + ".jar");
+        this.localJobFile = default_job_conf.getLocalPath(JobTracker.SUBDIR 
+                                                          +"/"+jobid + ".xml");
+        this.localJarFile = default_job_conf.getLocalPath(JobTracker.SUBDIR
+                                                          +"/"+ jobid + ".jar");
         FileSystem fs = FileSystem.get(default_conf);
-        fs.copyToLocalFile(new File(jobFile), localJobFile);
-
+        fs.copyToLocalFile(new Path(jobFile), localJobFile);
         conf = new JobConf(localJobFile);
         this.profile = new JobProfile(conf.getUser(), jobid, jobFile, url,
                                       conf.getJobName());
         String jarFile = conf.getJar();
         if (jarFile != null) {
-          fs.copyToLocalFile(new File(jarFile), localJarFile);
-          conf.setJar(localJarFile.getCanonicalPath());
+          fs.copyToLocalFile(new Path(jarFile), localJarFile);
+          conf.setJar(localJarFile.toString());
         }
 
         this.numMapTasks = conf.getNumMapTasks();
@@ -107,7 +109,7 @@ class JobInProgress {
         if (ifClassName != null && localJarFile != null) {
           try {
             ClassLoader loader =
-              new URLClassLoader(new URL[]{ localJarFile.toURL() });
+              new URLClassLoader(new URL[]{ localFs.pathToFile(localJarFile).toURL() });
             Class inputFormatClass = loader.loadClass(ifClassName);
             inputFormat = (InputFormat)inputFormatClass.newInstance();
           } catch (Exception e) {
@@ -152,7 +154,7 @@ class JobInProgress {
         // Obtain some tasktracker-cache information for the map task splits.
         //
         for (int i = 0; i < maps.length; i++) {
-            String hints[][] = fs.getFileCacheHints(splits[i].getFile(), splits[i].getStart(), splits[i].getLength());
+            String hints[][] = fs.getFileCacheHints(splits[i].getPath(), splits[i].getStart(), splits[i].getLength());
             cachedHints.put(maps[i].getTIPId(), hints);
         }
 
@@ -165,7 +167,7 @@ class JobInProgress {
      * prefetches and caches a lot of these hints.  If the hint is
      * not available, then we pass it through to the filesystem.
      */
-    String[][] getFileCacheHints(String tipID, File f, long start, long len) throws IOException {
+    String[][] getFileCacheHints(String tipID, Path f, long start, long len) throws IOException {
         String results[][] = (String[][]) cachedHints.get(tipID);
         if (tipID == null) {
             FileSystem fs = FileSystem.get(conf);
@@ -471,7 +473,6 @@ class JobInProgress {
     synchronized void garbageCollect() {
       try {
         // Definitely remove the local-disk copy of the job file
-        FileSystem localFs = FileSystem.getNamed("local", conf);
         if (localJobFile != null) {
             localFs.delete(localJobFile);
             localJobFile = null;
@@ -484,7 +485,7 @@ class JobInProgress {
         // JobClient always creates a new directory with job files
         // so we remove that directory to cleanup
         FileSystem fs = FileSystem.get(conf);
-        fs.delete(new File(profile.getJobFile()).getParentFile());
+        fs.delete(new Path(profile.getJobFile()).getParent());
 
       } catch (IOException e) {
         LOG.warning("Error cleaning up "+profile.getJobId()+": "+e);

@@ -38,7 +38,7 @@ public class TestSequenceFile extends TestCase {
     int count = 1024 * 10;
     int megabytes = 1;
     int factor = 5;
-    String file = System.getProperty("test.build.data",".") + "/test.seq";
+    Path file = new Path(System.getProperty("test.build.data",".")+"/test.seq");
  
     int seed = new Random().nextInt();
 
@@ -65,9 +65,9 @@ public class TestSequenceFile extends TestCase {
   }
 
   private static void writeTest(FileSystem fs, int count, int seed,
-                                String file, boolean compress)
+                                Path file, boolean compress)
     throws IOException {
-    new File(file).delete();
+    fs.delete(file);
     LOG.fine("creating with " + count + " records");
     SequenceFile.Writer writer =
       new SequenceFile.Writer(fs, file, RandomDatum.class, RandomDatum.class,
@@ -83,7 +83,7 @@ public class TestSequenceFile extends TestCase {
     writer.close();
   }
 
-  private static void readTest(FileSystem fs, int count, int seed, String file)
+  private static void readTest(FileSystem fs, int count, int seed, Path file)
     throws IOException {
     RandomDatum k = new RandomDatum();
     RandomDatum v = new RandomDatum();
@@ -107,16 +107,16 @@ public class TestSequenceFile extends TestCase {
 
 
   private static void sortTest(FileSystem fs, int count, int megabytes, 
-                               int factor, boolean fast, String file)
+                               int factor, boolean fast, Path file)
     throws IOException {
-    new File(file+".sorted").delete();
+    fs.delete(new Path(file+".sorted"));
     SequenceFile.Sorter sorter = newSorter(fs, fast, megabytes, factor);
     LOG.fine("sorting " + count + " records");
-    sorter.sort(file, file+".sorted");
+    sorter.sort(file, file.suffix(".sorted"));
     LOG.fine("done sorting " + count + " records");
   }
 
-  private static void checkSort(FileSystem fs, int count, int seed, String file)
+  private static void checkSort(FileSystem fs, int count, int seed, Path file)
     throws IOException {
     LOG.fine("sorting " + count + " records in memory for check");
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
@@ -132,7 +132,8 @@ public class TestSequenceFile extends TestCase {
     RandomDatum k = new RandomDatum();
     RandomDatum v = new RandomDatum();
     Iterator iterator = map.entrySet().iterator();
-    SequenceFile.Reader reader = new SequenceFile.Reader(fs, file + ".sorted", conf);
+    SequenceFile.Reader reader =
+      new SequenceFile.Reader(fs, file.suffix(".sorted"), conf);
     for (int i = 0; i < count; i++) {
       Map.Entry entry = (Map.Entry)iterator.next();
       RandomDatum key = (RandomDatum)entry.getKey();
@@ -151,21 +152,21 @@ public class TestSequenceFile extends TestCase {
   }
 
   private static void mergeTest(FileSystem fs, int count, int seed, 
-                                String file, boolean fast, int factor, 
+                                Path file, boolean fast, int factor, 
                                 int megabytes)
     throws IOException {
 
     LOG.fine("creating "+factor+" files with "+count/factor+" records");
 
     SequenceFile.Writer[] writers = new SequenceFile.Writer[factor];
-    String[] names = new String[factor];
-    String[] sortedNames = new String[factor];
+    Path[] names = new Path[factor];
+    Path[] sortedNames = new Path[factor];
     
     for (int i = 0; i < factor; i++) {
-      names[i] = file+"."+i;
-      sortedNames[i] = names[i] + ".sorted";
-      fs.delete(new File(names[i]));
-      fs.delete(new File(sortedNames[i]));
+      names[i] = file.suffix("."+i);
+      sortedNames[i] = names[i].suffix(".sorted");
+      fs.delete(names[i]);
+      fs.delete(sortedNames[i]);
       writers[i] =
         new SequenceFile.Writer(fs, names[i], RandomDatum.class,RandomDatum.class);
     }
@@ -189,8 +190,9 @@ public class TestSequenceFile extends TestCase {
     }
 
     LOG.fine("merging " + factor + " files with " + count/factor + " records");
-    fs.delete(new File(file+".sorted"));
-    newSorter(fs, fast, megabytes, factor).merge(sortedNames, file+".sorted");
+    fs.delete(new Path(file+".sorted"));
+    newSorter(fs, fast, megabytes, factor)
+      .merge(sortedNames, file.suffix(".sorted"));
   }
 
   private static SequenceFile.Sorter newSorter(FileSystem fs, 
@@ -216,7 +218,7 @@ public class TestSequenceFile extends TestCase {
     boolean fast = false;
     boolean merge = false;
     boolean compress = false;
-    String file = null;
+    Path file = null;
     String usage = "Usage: SequenceFile (-local | -dfs <namenode:port>) [-count N] [-megabytes M] [-factor F] [-nocreate] [-check] [-fast] [-merge] [-compress] file";
     
     if (args.length == 0) {
@@ -247,7 +249,7 @@ public class TestSequenceFile extends TestCase {
               compress = true;
           } else {
               // file is required parameter
-              file = args[i];
+              file = new Path(args[i]);
           }
         }
         LOG.info("count = " + count);

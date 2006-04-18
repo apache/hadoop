@@ -236,31 +236,32 @@ public class JobClient implements MRConstants {
         //
 
         // Create a number of filenames in the JobTracker's fs namespace
-        File submitJobDir = new File(job.getSystemDir(), "submit_" + Integer.toString(Math.abs(r.nextInt()), 36));
-        File submitJobFile = new File(submitJobDir, "job.xml");
-        File submitJarFile = new File(submitJobDir, "job.jar");
+        Path submitJobDir = new Path(job.getSystemDir(), "submit_" + Integer.toString(Math.abs(r.nextInt()), 36));
+        Path submitJobFile = new Path(submitJobDir, "job.xml");
+        Path submitJarFile = new Path(submitJobDir, "job.jar");
 
         String originalJarPath = job.getJar();
 
-        if (originalJarPath != null) {           // Copy jar to JobTracker's fs
-          job.setJar(submitJarFile.toString());
-          getFs().copyFromLocalFile(new File(originalJarPath), submitJarFile);
-        }
+        FileSystem localFs = FileSystem.getNamed("local", job);
+        FileSystem fs = getFs();
 
-        FileSystem fileSys = getFs();
+        if (originalJarPath != null) {           // copy jar to JobTracker's fs
+          job.setJar(submitJarFile.toString());
+          fs.copyFromLocalFile(new Path(originalJarPath), submitJarFile);
+        }
 
         // Set the user's name and working directory
         String user = System.getProperty("user.name");
         job.setUser(user != null ? user : "Dr Who");
         if (job.getWorkingDirectory() == null) {
-          job.setWorkingDirectory(fileSys.getWorkingDirectory().toString());          
+          job.setWorkingDirectory(fs.getWorkingDirectory());          
         }
 
         // Check the output specification
         job.getOutputFormat().checkOutputSpecs(fs, job);
 
         // Write job file to JobTracker's fs        
-        FSDataOutputStream out = fileSys.create(submitJobFile);
+        FSDataOutputStream out = fs.create(submitJobFile);
         try {
           job.write(out);
         } finally {
@@ -270,7 +271,7 @@ public class JobClient implements MRConstants {
         //
         // Now, actually submit the job (using the submit name)
         //
-        JobStatus status = jobSubmitClient.submitJob(submitJobFile.getPath());
+        JobStatus status = jobSubmitClient.submitJob(submitJobFile.toString());
         if (status != null) {
             return new NetworkedJob(status);
         } else {

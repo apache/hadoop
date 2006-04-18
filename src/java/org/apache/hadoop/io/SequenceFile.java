@@ -51,7 +51,7 @@ public class SequenceFile {
     private FSDataOutputStream out;
     private DataOutputBuffer buffer = new DataOutputBuffer();
     private FileSystem fs = null;
-    private File target = null;
+    private Path target = null;
 
     private Class keyClass;
     private Class valClass;
@@ -78,9 +78,14 @@ public class SequenceFile {
       }
     }
 
+    /** @deprecated Call {@link #Writer(FileSystem,Path,Class,Class)}. */
+    public Writer(FileSystem fs, String name, Class keyClass, Class valClass)
+      throws IOException {
+      this(fs, new Path(name), keyClass, valClass, false);
+    }
+
     /** Create the named file. */
-    public Writer(FileSystem fs, String name,
-                  Class keyClass, Class valClass)
+    public Writer(FileSystem fs, Path name, Class keyClass, Class valClass)
       throws IOException {
       this(fs, name, keyClass, valClass, false);
     }
@@ -88,11 +93,11 @@ public class SequenceFile {
     /** Create the named file.
      * @param compress if true, values are compressed.
      */
-    public Writer(FileSystem fs, String name,
+    public Writer(FileSystem fs, Path name,
                   Class keyClass, Class valClass, boolean compress)
       throws IOException {
       this.fs = fs;
-      this.target = new File(name);
+      this.target = name;
       init(fs.create(target), keyClass, valClass, compress);
     }
     
@@ -197,7 +202,7 @@ public class SequenceFile {
 
   /** Writes key/value pairs from a sequence-format file. */
   public static class Reader {
-    private String file;
+    private Path file;
     private FSDataInputStream in;
     private DataOutputBuffer outBuf = new DataOutputBuffer();
     private DataInputBuffer inBuf = new DataInputBuffer();
@@ -221,26 +226,32 @@ public class SequenceFile {
     private Inflater inflater = new Inflater();
     private Configuration conf;
 
+    /** @deprecated Call {@link #Reader(FileSystem,Path,Configuration)}.*/
+    public Reader(FileSystem fs, String file, Configuration conf)
+      throws IOException {
+      this(fs, new Path(file), conf);
+    }
+
     /** Open the named file. */
-    public Reader(FileSystem fs, String file, Configuration conf) throws IOException {
+    public Reader(FileSystem fs, Path file, Configuration conf)
+      throws IOException {
       this(fs, file, conf.getInt("io.file.buffer.size", 4096));
       this.conf = conf;
     }
 
-    private Reader(FileSystem fs, String name, int bufferSize) throws IOException {
+    private Reader(FileSystem fs, Path name, int bufferSize) throws IOException {
       this.fs = fs;
       this.file = name;
-      File file = new File(name);
       this.in = fs.open(file, bufferSize);
       this.end = fs.getLength(file);
       init();
     }
     
-    private Reader(FileSystem fs, String file, int bufferSize, long start, long length)
+    private Reader(FileSystem fs, Path file, int bufferSize, long start, long length)
       throws IOException {
       this.fs = fs;
       this.file = file;
-      this.in = fs.open(new File(file), bufferSize);
+      this.in = fs.open(file, bufferSize);
       seek(start);
       init();
 
@@ -438,7 +449,7 @@ public class SequenceFile {
 
     /** Returns the name of the file. */
     public String toString() {
-      return file;
+      return file.toString();
     }
 
   }
@@ -453,10 +464,10 @@ public class SequenceFile {
 
     private WritableComparator comparator;
 
-    private String inFile;                        // when sorting
-    private String[] inFiles;                     // when merging
+    private Path inFile;                        // when sorting
+    private Path[] inFiles;                     // when merging
 
-    private String outFile;
+    private Path outFile;
 
     private int memory; // bytes
     private int factor; // merged per pass
@@ -497,8 +508,8 @@ public class SequenceFile {
     public int getMemory() { return memory; }
 
     /** Perform a file sort.*/
-    public void sort(String inFile, String outFile) throws IOException {
-      if (fs.exists(new File(outFile))) {
+    public void sort(Path inFile, Path outFile) throws IOException {
+      if (fs.exists(outFile)) {
         throw new IOException("already exists: " + outFile);
       }
 
@@ -536,7 +547,7 @@ public class SequenceFile {
       
       private Reader in;
       private FSDataOutputStream out;
-        private String outName;
+      private Path outName;
 
       public SortPass(Configuration conf) throws IOException {
         in = new Reader(fs, inFile, conf);
@@ -605,8 +616,8 @@ public class SequenceFile {
 
       private void flush(int count, boolean done) throws IOException {
         if (out == null) {
-          outName = done ? outFile : outFile+".0";
-          out = fs.create(new File(outName));
+          outName = done ? outFile : outFile.suffix(".0");
+          out = fs.create(outName);
         }
 
         if (!done) {                              // an intermediate file
@@ -694,29 +705,29 @@ public class SequenceFile {
 
       private MergeQueue queue;
       private FSDataInputStream in;
-      private String inName;
+      private Path inName;
 
       public MergePass(int pass, boolean last) throws IOException {
         this.pass = pass;
         this.last = last;
 
         this.queue =
-          new MergeQueue(factor, last ? outFile : outFile+"."+pass, last);
+          new MergeQueue(factor, last?outFile:outFile.suffix("."+pass), last);
 
-        this.inName = outFile+"."+(pass-1);
-        this.in = fs.open(new File(inName));
+        this.inName = outFile.suffix("."+(pass-1));
+        this.in = fs.open(inName);
       }
 
       public void close() throws IOException {
         in.close();                               // close and delete input
-        fs.delete(new File(inName));
+        fs.delete(inName);
 
         queue.close();                            // close queue
       }
 
       public int run() throws IOException {
         int segments = 0;
-        long end = fs.getLength(new File(inName));
+        long end = fs.getLength(inName);
 
         while (in.getPos() < end) {
           LOG.finer("merging segment " + segments);
@@ -756,12 +767,12 @@ public class SequenceFile {
     }
 
     /** Merge the provided files.*/
-    public void merge(String[] inFiles, String outFile) throws IOException {
+    public void merge(Path[] inFiles, Path outFile) throws IOException {
       this.inFiles = inFiles;
       this.outFile = outFile;
       this.factor = inFiles.length;
 
-      if (new File(outFile).exists()) {
+      if (fs.exists(outFile)) {
         throw new IOException("already exists: " + outFile);
       }
 
@@ -788,7 +799,7 @@ public class SequenceFile {
       public void run() throws IOException {
         LOG.finer("merging files=" + inFiles.length);
         for (int i = 0; i < inFiles.length; i++) {
-          String inFile = inFiles[i];
+          Path inFile = inFiles[i];
           MergeStream ms =
             new MergeStream(new Reader(fs, inFile, memory/(factor+1)));
           if (ms.next())
@@ -836,10 +847,10 @@ public class SequenceFile {
         put(stream);
       }
 
-      public MergeQueue(int size, String outName, boolean done)
+      public MergeQueue(int size, Path outName, boolean done)
         throws IOException {
         initialize(size);
-        this.out = fs.create(new File(outName), true, memory/(factor+1));
+        this.out = fs.create(outName, true, memory/(factor+1));
         this.done = done;
       }
 

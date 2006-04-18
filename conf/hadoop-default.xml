@@ -84,7 +84,7 @@
   <name>dfs.data.dir</name>
   <value>/tmp/hadoop/dfs/data</value>
   <description>Determines where on the local filesystem an DFS data node
-  should store its blocks.  If this is a comma- or space-delimited
+  should store its blocks.  If this is a comma-delimited
   list of directories, then data will be stored in all named
   directories, typically on different devices.</description>
 </property>
@@ -164,7 +164,7 @@
   <name>mapred.local.dir</name>
   <value>/tmp/hadoop/mapred/local</value>
   <description>The local directory where MapReduce stores intermediate
-  data files.  May be a space- or comma- separated list of
+  data files.  May be a comma-separated list of
   directories on different devices in order to spread disk i/o.
   </description>
 </property>

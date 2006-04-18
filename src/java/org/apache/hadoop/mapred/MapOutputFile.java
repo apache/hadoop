@@ -57,24 +57,24 @@ class MapOutputFile implements Writable, Configurable {
    * @param mapTaskId a map task id
    * @param partition a reduce partition
    */
-  public File getOutputFile(String mapTaskId, int partition)
+  public Path getOutputFile(String mapTaskId, int partition)
     throws IOException {
-    return this.jobConf.getLocalFile(mapTaskId, "part-"+partition+".out");
+    return this.jobConf.getLocalPath(mapTaskId+"/part-"+partition+".out");
   }
 
   /** Create a local reduce input file name.
    * @param mapTaskId a map task id
    * @param reduceTaskId a reduce task id
    */
-  public File getInputFile(String mapTaskId, String reduceTaskId)
+  public Path getInputFile(String mapTaskId, String reduceTaskId)
     throws IOException {
-    return this.jobConf.getLocalFile(reduceTaskId, mapTaskId+".out");
+    return this.jobConf.getLocalPath(reduceTaskId+"/"+mapTaskId+".out");
   }
-  public File getInputFile(String mapTaskIds[], String reduceTaskId)
+  public Path getInputFile(String mapTaskIds[], String reduceTaskId)
     throws IOException {
     for (int i = 0; i < mapTaskIds.length; i++) {
-      File file = jobConf.getLocalFile(reduceTaskId, mapTaskIds[i]+".out");
-      if (file.exists())
+      Path file = jobConf.getLocalPath(reduceTaskId+"/"+mapTaskIds[i]+".out");
+      if (getLocalFs().exists(file))
         return file;
     }
     throw new IOException("Input file not found!");
@@ -103,17 +103,21 @@ class MapOutputFile implements Writable, Configurable {
     this.partition = partition;
   }
 
+  private FileSystem getLocalFs() throws IOException {
+    return FileSystem.getNamed("local", this.jobConf);
+  }
+
   public void write(DataOutput out) throws IOException {
     UTF8.writeString(out, mapTaskId);
     UTF8.writeString(out, reduceTaskId);
     out.writeInt(partition);
     
-    File file = getOutputFile(mapTaskId, partition);
+    Path file = getOutputFile(mapTaskId, partition);
     FSDataInputStream in = null;
     try {
       // write the length-prefixed file content to the wire
-      out.writeLong(file.length());
-      in = FileSystem.getNamed("local", this.jobConf).open(file);
+      out.writeLong(getLocalFs().getLength(file));
+      in = getLocalFs().open(file);
     } catch (FileNotFoundException e) {
       TaskTracker.LOG.log(Level.SEVERE, "Can't open map output:" + file, e);
       ((MapOutputServer)Server.get()).getTaskTracker().mapOutputLost(mapTaskId);
@@ -146,11 +150,11 @@ class MapOutputFile implements Writable, Configurable {
     ProgressReporter reporter = (ProgressReporter)REPORTERS.get();
 
     // read the length-prefixed file content into a local file
-    File file = getInputFile(mapTaskId, reduceTaskId);
+    Path file = getInputFile(mapTaskId, reduceTaskId);
     long length = in.readLong();
     float progPerByte = 1.0f / length;
     long unread = length;
-    FSDataOutputStream out = FileSystem.getNamed("local", this.jobConf).create(file);
+    FSDataOutputStream out = getLocalFs().create(file);
     try {
       byte[] buffer = new byte[8192];
       while (unread > 0) {
