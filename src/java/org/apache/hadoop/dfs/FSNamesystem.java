@@ -280,6 +280,7 @@ class FSNamesystem implements FSConstants {
 
         // Reserve space for this pending file
         pendingCreates.put(src, new FileUnderConstruction( replication ));
+        LOG.fine("Adding " + src + " to pendingCreates for " + holder);
         synchronized (leases) {
             Lease lease = (Lease) leases.get(holder);
             if (lease == null) {
@@ -314,7 +315,8 @@ class FSNamesystem implements FSConstants {
      */
     public synchronized Object[] getAdditionalBlock(UTF8 src, UTF8 clientMachine) {
         Object results[] = null;
-        FileUnderConstruction pendingFile = (FileUnderConstruction) pendingCreates.get(src);
+        FileUnderConstruction pendingFile = 
+          (FileUnderConstruction) pendingCreates.get(src);
         if (dir.getFile(src) == null && pendingFile != null) {
             results = new Object[2];
 
@@ -360,8 +362,11 @@ class FSNamesystem implements FSConstants {
     /**
      * Abandon the entire file in progress
      */
-    public synchronized void abandonFileInProgress(UTF8 src) throws IOException {
-        internalReleaseCreate(src);
+    public synchronized void abandonFileInProgress(UTF8 src, 
+                                                   UTF8 holder
+                                                   ) throws IOException {
+      LOG.info("abandoning file in progress on " + src.toString());
+      internalReleaseCreate(src, holder);
     }
 
     /**
@@ -416,6 +421,8 @@ class FSNamesystem implements FSConstants {
 
         // The file is no longer pending
         pendingCreates.remove(src);
+        LOG.fine("Removing " + src + " from pendingCreates for " + holder +
+                 ". (complete)");
         for (int i = 0; i < nrBlocks; i++) {
             pendingCreateBlocks.remove(pendingBlocks[i]);
         }
@@ -462,7 +469,8 @@ class FSNamesystem implements FSConstants {
      */
     synchronized Block allocateBlock(UTF8 src) {
         Block b = new Block();
-        FileUnderConstruction v = (FileUnderConstruction) pendingCreates.get(src);
+        FileUnderConstruction v = 
+          (FileUnderConstruction) pendingCreates.get(src);
         v.add(b);
         pendingCreateBlocks.add(b);
         return b;
@@ -473,7 +481,8 @@ class FSNamesystem implements FSConstants {
      * replicated.  If not, return false.
      */
     synchronized boolean checkFileProgress(UTF8 src) {
-        FileUnderConstruction v = (FileUnderConstruction) pendingCreates.get(src);
+        FileUnderConstruction v = 
+          (FileUnderConstruction) pendingCreates.get(src);
 
         for (Iterator it = v.iterator(); it.hasNext(); ) {
             Block b = (Block) it.next();
@@ -652,8 +661,8 @@ class FSNamesystem implements FSConstants {
         public void startedCreate(UTF8 src) {
             creates.add(src);
         }
-        public void completedCreate(UTF8 src) {
-            creates.remove(src);
+        public boolean completedCreate(UTF8 src) {
+            return creates.remove(src);
         }
         public boolean hasLocks() {
             return (locks.size() + creates.size()) > 0;
@@ -666,7 +675,7 @@ class FSNamesystem implements FSConstants {
             locks.clear();
             for (Iterator it = creates.iterator(); it.hasNext(); ) {
                 UTF8 src = (UTF8) it.next();
-                internalReleaseCreate(src);
+                internalReleaseCreate(src, holder);
             }
             creates.clear();
         }
@@ -674,7 +683,8 @@ class FSNamesystem implements FSConstants {
         /**
          */
         public String toString() {
-            return "[Lease.  Holder: " + holder.toString() + ", heldlocks: " + locks.size() + ", pendingcreates: " + creates.size() + "]";
+            return "[Lease.  Holder: " + holder.toString() + ", heldlocks: " +
+                   locks.size() + ", pendingcreates: " + creates.size() + "]";
         }
 
         /**
@@ -771,12 +781,41 @@ class FSNamesystem implements FSConstants {
     private int internalReleaseLock(UTF8 src, UTF8 holder) {
         return dir.releaseLock(src, holder);
     }
-    private void internalReleaseCreate(UTF8 src) {
-        FileUnderConstruction v = (FileUnderConstruction) pendingCreates.remove(src);
-        for (Iterator it2 = v.iterator(); it2.hasNext(); ) {
-            Block b = (Block) it2.next();
-            pendingCreateBlocks.remove(b);
+
+    /**
+     * Release a pending file creation lock.
+     * @param src The filename
+     * @param holder The datanode that was creating the file
+     */
+    private void internalReleaseCreate(UTF8 src, UTF8 holder) {
+      // find the lease
+      Lease lease = (Lease) leases.get(holder);
+      if (lease != null) {
+        // remove the file from the lease
+        if (lease.completedCreate(src)) {
+          // if we found the file in the lease, remove it from pendingCreates
+          FileUnderConstruction v = 
+            (FileUnderConstruction) pendingCreates.remove(src);
+          if (v != null) {
+            LOG.info("Removing " + src + " from pendingCreates for " + 
+                     holder + " (failure)");
+            for (Iterator it2 = v.iterator(); it2.hasNext(); ) {
+              Block b = (Block) it2.next();
+              pendingCreateBlocks.remove(b);
+            }
+          } else {
+            LOG.info("Attempt to release a create lock on " + src.toString() +
+                     " that was not in pendingCreates");
+          }
+        } else {
+          LOG.info("Attempt by " + holder.toString() + 
+                   " to release someone else's create lock on " + 
+                   src.toString());
         }
+      } else {
+        LOG.info("Attempt to release a lock from an unknown lease holder "
+                 + holder.toString() + " for " + src.toString());
+      }
     }
 
     /**

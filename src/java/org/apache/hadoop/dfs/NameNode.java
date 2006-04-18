@@ -208,8 +208,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
     /**
      */
-    public void abandonFileInProgress(String src) throws IOException {
-        namesystem.abandonFileInProgress(new UTF8(src));
+    public void abandonFileInProgress(String src, 
+                                      String holder) throws IOException {
+        namesystem.abandonFileInProgress(new UTF8(src), new UTF8(holder));
     }
     /**
      */

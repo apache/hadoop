@@ -95,8 +95,11 @@ interface ClientProtocol {
      *
      * Any blocks that have been written for the file will be 
      * garbage-collected.
+     * @param src The filename
+     * @param holder The datanode holding the lease
      */
-    public void abandonFileInProgress(String src) throws IOException;
+    public void abandonFileInProgress(String src, 
+                                      String holder) throws IOException;
 
     /**
      * The client is done writing data to the given filename, and would 

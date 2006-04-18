@@ -48,7 +48,48 @@ class DFSClient implements FSConstants {
     String clientName;
     Daemon leaseChecker;
     private Configuration conf;
+    
+    /**
+     * A map from name -> DFSOutputStream of files that are currently being
+     * written by this client.
+     */
+    private TreeMap pendingCreates = new TreeMap();
+    
+    /**
+     * A class to track the list of DFS clients, so that they can be closed
+     * on exit.
+     * @author Owen O'Malley
+     */
+    private static class ClientFinalizer extends Thread {
+      private List clients = new ArrayList();
 
+      public synchronized void addClient(DFSClient client) {
+        clients.add(client);
+      }
+
+      public synchronized void run() {
+        Iterator itr = clients.iterator();
+        while (itr.hasNext()) {
+          DFSClient client = (DFSClient) itr.next();
+          if (client.running) {
+            try {
+              client.close();
+            } catch (IOException ie) {
+              System.err.println("Error closing client");
+              ie.printStackTrace();
+            }
+          }
+        }
+      }
+    }
+
+    // add a cleanup thread
+    private static ClientFinalizer clientFinalizer = new ClientFinalizer();
+    static {
+      Runtime.getRuntime().addShutdownHook(clientFinalizer);
+    }
+
+        
     /** 
      * Create a new DFSClient connected to the given namenode server.
      */
@@ -70,14 +111,40 @@ class DFSClient implements FSConstants {
         this.leaseChecker.start();
     }
 
+    private void checkOpen() throws IOException {
+      if (!running) {
+        IOException result = new IOException("Filesystem closed");
+        throw result;
+      }
+    }
+    
     /**
+     * Close the file system, abadoning all of the leases and files being
+     * created.
      */
     public void close() throws IOException {
+      // synchronize in here so that we don't need to change the API
+      synchronized (this) {
+        checkOpen();
+        synchronized (pendingCreates) {
+          Iterator file_itr = pendingCreates.keySet().iterator();
+          while (file_itr.hasNext()) {
+            String name = (String) file_itr.next();
+            try {
+              namenode.abandonFileInProgress(name, clientName);
+            } catch (IOException ie) {
+              System.err.println("Exception abandoning create lock on " + name);
+              ie.printStackTrace();
+            }
+          }
+          pendingCreates.clear();
+        }
         this.running = false;
         try {
             leaseChecker.join();
         } catch (InterruptedException ie) {
         }
+      }
     }
 
     /**
@@ -96,7 +163,8 @@ class DFSClient implements FSConstants {
      * work.
      */
     public FSInputStream open(UTF8 src) throws IOException {
-        // Get block info from namenode
+        checkOpen();
+        //    Get block info from namenode
         return new DFSInputStream(src.toString());
     }
 
@@ -129,7 +197,12 @@ class DFSClient implements FSConstants {
                                   boolean overwrite, 
                                   short replication
                                 ) throws IOException {
-        return new DFSOutputStream(src, overwrite, replication);
+      checkOpen();
+      FSOutputStream result = new DFSOutputStream(src, overwrite, replication);
+      synchronized (pendingCreates) {
+        pendingCreates.put(src.toString(), result);
+      }
+      return result;
     }
 
     /**
@@ -137,6 +210,7 @@ class DFSClient implements FSConstants {
      * there.
      */
     public boolean rename(UTF8 src, UTF8 dst) throws IOException {
+        checkOpen();
         return namenode.rename(src.toString(), dst.toString());
     }
 
@@ -145,24 +219,28 @@ class DFSClient implements FSConstants {
      * there.
      */
     public boolean delete(UTF8 src) throws IOException {
+        checkOpen();
         return namenode.delete(src.toString());
     }
 
     /**
      */
     public boolean exists(UTF8 src) throws IOException {
+        checkOpen();
         return namenode.exists(src.toString());
     }
 
     /**
      */
     public boolean isDirectory(UTF8 src) throws IOException {
+        checkOpen();
         return namenode.isDir(src.toString());
     }
 
     /**
      */
     public DFSFileInfo[] listPaths(UTF8 src) throws IOException {
+        checkOpen();
         return namenode.getListing(src.toString());
     }
 
@@ -187,6 +265,7 @@ class DFSClient implements FSConstants {
     /**
      */
     public boolean mkdirs(UTF8 src) throws IOException {
+        checkOpen();
         return namenode.mkdirs(src.toString());
     }
 
@@ -456,6 +535,7 @@ class DFSClient implements FSConstants {
          * Close it down!
          */
         public synchronized void close() throws IOException {
+            checkOpen();
             if (closed) {
                 throw new IOException("Stream closed");
             }
@@ -473,6 +553,7 @@ class DFSClient implements FSConstants {
          * Basic read()
          */
         public synchronized int read() throws IOException {
+            checkOpen();
             if (closed) {
                 throw new IOException("Stream closed");
             }
@@ -493,6 +574,7 @@ class DFSClient implements FSConstants {
          * Read the entire buffer.
          */
         public synchronized int read(byte buf[], int off, int len) throws IOException {
+            checkOpen();
             if (closed) {
                 throw new IOException("Stream closed");
             }
@@ -646,7 +728,8 @@ class DFSClient implements FSConstants {
                     } catch (InterruptedException iex) {
                     }
                     if (firstTime) {
-                        namenode.abandonFileInProgress(src.toString());
+                        namenode.abandonFileInProgress(src.toString(), 
+                                                       clientName);
                     } else {
                         namenode.abandonBlock(block, src.toString());
                     }
@@ -684,6 +767,7 @@ class DFSClient implements FSConstants {
          * Writes the specified byte to this output stream.
          */
         public synchronized void write(int b) throws IOException {
+            checkOpen();
             if (closed) {
                 throw new IOException("Stream closed");
             }
@@ -701,6 +785,7 @@ class DFSClient implements FSConstants {
          */
       public synchronized void write(byte b[], int off, int len)
         throws IOException {
+            checkOpen();
             if (closed) {
                 throw new IOException("Stream closed");
             }
@@ -724,6 +809,7 @@ class DFSClient implements FSConstants {
          * Flush the buffer, getting a stream to a new block if necessary.
          */
         public synchronized void flush() throws IOException {
+            checkOpen();
             if (closed) {
                 throw new IOException("Stream closed");
             }
@@ -854,20 +940,22 @@ class DFSClient implements FSConstants {
          * resources associated with this stream.
          */
         public synchronized void close() throws IOException {
-            if (closed) {
-                throw new IOException("Stream closed");
-            }
-
+          checkOpen();
+          if (closed) {
+              throw new IOException("Stream closed");
+          }
+          
+          try {
             flush();
             if (filePos == 0 || bytesWrittenToBlock != 0) {
               try {
                 endBlock();
               } catch (IOException e) {
-                namenode.abandonFileInProgress(src.toString());
+                namenode.abandonFileInProgress(src.toString(), clientName);
                 throw e;
               }
             }
-
+            
             backupStream.close();
             backupFile.delete();
 
@@ -880,18 +968,23 @@ class DFSClient implements FSConstants {
             long localstart = System.currentTimeMillis();
             boolean fileComplete = false;
             while (! fileComplete) {
-                fileComplete = namenode.complete(src.toString(), clientName.toString());
-                if (!fileComplete) {
-                    try {
-                        Thread.sleep(400);
-                        if (System.currentTimeMillis() - localstart > 5000) {
-                            LOG.info("Could not complete file, retrying...");
-                        }
-                    } catch (InterruptedException ie) {
-                    }
+              fileComplete = namenode.complete(src.toString(), clientName.toString());
+              if (!fileComplete) {
+                try {
+                  Thread.sleep(400);
+                  if (System.currentTimeMillis() - localstart > 5000) {
+                    LOG.info("Could not complete file, retrying...");
+                  }
+                } catch (InterruptedException ie) {
                 }
+              }
             }
             closed = true;
+          } finally {
+            synchronized (pendingCreates) {
+              pendingCreates.remove(src.toString());
+            }
+          }
         }
     }
 }

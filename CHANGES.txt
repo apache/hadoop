@@ -40,6 +40,9 @@ Trunk (unreleased)
 10. Fix HADOOP-143.  Do not line-wrap stack-traces in web ui.
     (omalley via cutting)
 
+11. Fix HADOOP-118.  In DFS, improve clean up of abandoned file
+    creations.  (omalley via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

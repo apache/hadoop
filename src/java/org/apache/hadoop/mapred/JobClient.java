@@ -196,10 +196,6 @@ public class JobClient implements MRConstants {
     /**
      */
     public synchronized void close() throws IOException {
-        if (fs != null) {
-            fs.close();
-            fs = null;
-        }
     }
 
     /**
