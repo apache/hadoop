@@ -243,7 +243,9 @@ class FSNamesystem implements FSConstants {
                                             short replication 
                                           ) throws IOException {
         if (pendingCreates.get(src) != null) {
-          LOG.warning("Cannot start file because pendingCreates is non-null. src=" + src);
+          LOG.warning("Cannot create file " + src + " for " + holder +
+                       " on " + clientMachine + 
+                       " because pendingCreates is non-null.");
           return null;
         }
 

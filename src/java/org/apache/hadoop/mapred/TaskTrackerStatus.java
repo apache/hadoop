@@ -41,6 +41,7 @@ class TaskTrackerStatus implements Writable {
     String trackerName;
     String host;
     int port;
+    int failures;
     Vector taskReports;
     
     volatile long lastSeen;
@@ -52,13 +53,15 @@ class TaskTrackerStatus implements Writable {
 
     /**
      */
-    public TaskTrackerStatus(String trackerName, String host, int port, Vector taskReports) {
+    public TaskTrackerStatus(String trackerName, String host, int port, 
+                             Vector taskReports, int failures) {
         this.trackerName = trackerName;
         this.host = host;
         this.port = port;
 
         this.taskReports = new Vector();
         this.taskReports.addAll(taskReports);
+        this.failures = failures;
     }
 
     /**
@@ -77,6 +80,14 @@ class TaskTrackerStatus implements Writable {
         return port;
     }
 
+    /**
+     * Get the number of tasks that have failed on this tracker.
+     * @return The number of failed tasks
+     */
+    public int getFailures() {
+      return failures;
+    }
+    
     /**
      * All current tasks at the TaskTracker.  
      *
@@ -127,6 +138,7 @@ class TaskTrackerStatus implements Writable {
         out.writeInt(port);
 
         out.writeInt(taskReports.size());
+        out.writeInt(failures);
         for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
             ((TaskStatus) it.next()).write(out);
         }
@@ -143,6 +155,7 @@ class TaskTrackerStatus implements Writable {
         taskReports.clear();
 
         int numTasks = in.readInt();
+        this.failures = in.readInt();
         for (int i = 0; i < numTasks; i++) {
             TaskStatus tmp = new TaskStatus();
             tmp.readFields(in);

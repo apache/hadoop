@@ -61,6 +61,9 @@ Trunk (unreleased)
 17. Fix HADOOP-142.  Avoid re-running a task on a host where it has
     previously failed.  (omalley via cutting)
 
+18. Fix HADOOP-148.  Maintain a task failure count for each
+    tasktracker and display it in the web ui.  (omalley via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

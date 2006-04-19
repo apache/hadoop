@@ -20,9 +20,12 @@
     } else {
       out.print("<center>\n");
       out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
-      out.print("<tr><td align=\"center\" colspan=\"4\"><b>Task Trackers</b></td></tr>\n");
-      out.print("<tr><td><b>Name</b></td><td><b>Host</b></td><td><b># running tasks</b></td><td><b>Secs since heartbeat</b></td></tr>\n");
-
+      out.print("<tr><td align=\"center\" colspan=\"5\"><b>Task Trackers</b></td></tr>\n");
+      out.print("<tr><td><b>Name</b></td><td><b>Host</b></td>" +
+                "<td><b># running tasks</b></td><td><b>Failures</b></td>" +
+                "<td><b>Secs since heartbeat</b></td></tr>\n");
+      int maxFailures = 0;
+      String failureKing = null;
       for (Iterator it = c.iterator(); it.hasNext(); ) {
         TaskTrackerStatus tt = (TaskTrackerStatus) it.next();
         long sinceHeartbeat = System.currentTimeMillis() - tt.getLastSeen();
@@ -34,11 +37,23 @@
           it2.next();
           numCurTasks++;
         }
+        int numFailures = tt.getFailures();
+        if (numFailures > maxFailures) {
+          maxFailures = numFailures;
+          failureKing = tt.getTrackerName();
+        }
 
-        out.print("<tr><td>" + tt.getTrackerName() + "</td><td>" + tt.getHost() + "</td><td>" + numCurTasks + "</td><td>" + sinceHeartbeat + "</td></tr>\n");
+        out.print("<tr><td>" + tt.getTrackerName() + "</td><td>" + 
+                  tt.getHost() + "</td><td>" + numCurTasks +
+                  "</td><td>" + numFailures + 
+                  "</td><td>" + sinceHeartbeat + "</td></tr>\n");
       }
       out.print("</table>\n");
       out.print("</center>\n");
+      if (maxFailures > 0) {
+        out.print("Highest Failures: " + failureKing + " with " + maxFailures + 
+                  " failures<br>\n");
+      }
     }
   }
 
