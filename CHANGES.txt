@@ -64,6 +64,11 @@ Trunk (unreleased)
 18. Fix HADOOP-148.  Maintain a task failure count for each
     tasktracker and display it in the web ui.  (omalley via cutting)
 
+19. Fix HADOOP-151.  Close a potential socket leak, where new IPC
+    connection pools were created per configuration instance that RPCs
+    use.  Now a global RPC connection pool is used again, as
+    originally intended.  (cutting)
+
 
 Release 0.1.1 - 2006-04-08
 
