@@ -617,9 +617,11 @@ class FSNamesystem implements FSConstants {
             for (int i = startBlock; i <= endBlock; i++) {
                 TreeSet containingNodes = (TreeSet) blocksMap.get(blocks[i]);
                 Vector v = new Vector();
-                for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
+                if (containingNodes != null) {
+                  for (Iterator it =containingNodes.iterator(); it.hasNext();) {
                     DatanodeInfo cur = (DatanodeInfo) it.next();
                     v.add(cur.getHost());
+                  }
                 }
                 hosts[i-startBlock] = (UTF8[]) v.toArray(new UTF8[v.size()]);
             }
