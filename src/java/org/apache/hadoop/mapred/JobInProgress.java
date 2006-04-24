@@ -55,6 +55,7 @@ class JobInProgress {
     boolean tasksInited = false;
 
     private LocalFileSystem localFs;
+    private String uniqueString;
   
     /**
      * Create a JobInProgress with the given job file, plus a handle
@@ -62,7 +63,8 @@ class JobInProgress {
      */
     public JobInProgress(String jobFile, JobTracker jobtracker, 
                          Configuration default_conf) throws IOException {
-        String jobid = "job_" + jobtracker.createUniqueId();
+        uniqueString = jobtracker.createUniqueId();
+        String jobid = "job_" + uniqueString;
         String url = "http://" + jobtracker.getJobTrackerMachine() + ":" + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + jobid;
         this.jobtracker = jobtracker;
         this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
@@ -101,7 +103,6 @@ class JobInProgress {
         //
         // construct input splits
         //
-        String jobid = profile.getJobId();
         String jobFile = profile.getJobFile();
 
         JobConf jd = new JobConf(localJobFile);
@@ -141,8 +142,8 @@ class JobInProgress {
         // create a map task for each split
         this.maps = new TaskInProgress[numMapTasks];
         for (int i = 0; i < numMapTasks; i++) {
-            maps[i] = new TaskInProgress(jobFile, splits[i], jobtracker, conf, 
-                                         this, i);
+            maps[i] = new TaskInProgress(uniqueString, jobFile, splits[i], 
+                                         jobtracker, conf, this, i);
         }
 
         //
@@ -150,7 +151,8 @@ class JobInProgress {
         //
         this.reduces = new TaskInProgress[numReduceTasks];
         for (int i = 0; i < numReduceTasks; i++) {
-            reduces[i] = new TaskInProgress(jobFile, maps, i, jobtracker, conf, this);
+            reduces[i] = new TaskInProgress(uniqueString, jobFile, maps, i, 
+                                            jobtracker, conf, this);
         }
 
         //

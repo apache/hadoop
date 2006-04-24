@@ -80,6 +80,8 @@ Trunk (unreleased)
     retries when creating a file long enough for locks on abandoned
     files to expire.  (omalley via cutting)
 
+22. Fix HADOOP-150.  Improved task names that include job
+    names. (omalley via cutting)
 
 Release 0.1.1 - 2006-04-08
 

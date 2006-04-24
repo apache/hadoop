@@ -23,6 +23,7 @@ import org.apache.hadoop.util.LogFormatter;
 
 import java.io.*;
 import java.net.*;
+import java.text.NumberFormat;
 import java.util.*;
 import java.util.logging.*;
 
@@ -39,6 +40,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     static float TASK_ALLOC_EPSILON;
     static float PAD_FRACTION;
     static float MIN_SLOTS_FOR_PADDING;
+
+    /**
+     * Used for formatting the id numbers
+     */
+    private static NumberFormat idFormat = NumberFormat.getInstance();
+    static {
+      idFormat.setMinimumIntegerDigits(4);
+      idFormat.setGroupingUsed(false);
+    }
+    private int nextJobId = 1;
 
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.mapred.JobTracker");
 
@@ -847,10 +858,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         return (JobInProgress) jobs.get(jobid);
     }
     /**
-     * Grab random num for task id
+     * Grab random num for job id
      */
     String createUniqueId() {
-        return "" + Integer.toString(Math.abs(r.nextInt()),36);
+        return idFormat.format(nextJobId++);
     }
 
     ////////////////////////////////////////////////////
