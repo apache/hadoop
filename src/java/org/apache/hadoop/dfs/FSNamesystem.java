@@ -37,6 +37,10 @@ import java.util.logging.*;
  ***************************************************/
 class FSNamesystem implements FSConstants {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.fs.FSNamesystem");
+    static {
+      // for debugging the pending Creates problems
+      LOG.setLevel(Level.FINE);
+    }
 
     //
     // Stores the correct file name hierarchy
@@ -391,7 +395,22 @@ class FSNamesystem implements FSConstants {
                                                    ) throws IOException {
       LOG.info("abandoning file in progress on " + src.toString());
       synchronized (leases) {
-        internalReleaseCreate(src, holder);
+        // find the lease
+        Lease lease = (Lease) leases.get(holder);
+        if (lease != null) {
+          // remove the file from the lease
+          if (lease.completedCreate(src)) {
+            // if we found the file in the lease, remove it from pendingCreates
+            internalReleaseCreate(src, holder);
+          } else {
+            LOG.info("Attempt by " + holder.toString() + 
+                " to release someone else's create lock on " + 
+                src.toString());
+          }
+        } else {
+          LOG.info("Attempt to release a lock from an unknown lease holder "
+              + holder.toString() + " for " + src.toString());
+        }
       }
     }
 
@@ -818,33 +837,18 @@ class FSNamesystem implements FSConstants {
      * @param holder The datanode that was creating the file
      */
     private void internalReleaseCreate(UTF8 src, UTF8 holder) {
-      // find the lease
-      Lease lease = (Lease) leases.get(holder);
-      if (lease != null) {
-        // remove the file from the lease
-        if (lease.completedCreate(src)) {
-          // if we found the file in the lease, remove it from pendingCreates
-          FileUnderConstruction v = 
-            (FileUnderConstruction) pendingCreates.remove(src);
-          if (v != null) {
-            LOG.info("Removing " + src + " from pendingCreates for " + 
-                     holder + " (failure)");
-            for (Iterator it2 = v.getBlocks().iterator(); it2.hasNext(); ) {
-              Block b = (Block) it2.next();
-              pendingCreateBlocks.remove(b);
-            }
-          } else {
-            LOG.info("Attempt to release a create lock on " + src.toString() +
-                     " that was not in pendingCreates");
-          }
-        } else {
-          LOG.info("Attempt by " + holder.toString() + 
-                   " to release someone else's create lock on " + 
-                   src.toString());
+      FileUnderConstruction v = 
+        (FileUnderConstruction) pendingCreates.remove(src);
+      if (v != null) {
+        LOG.info("Removing " + src + " from pendingCreates for " + 
+            holder + " (failure)");
+        for (Iterator it2 = v.getBlocks().iterator(); it2.hasNext(); ) {
+          Block b = (Block) it2.next();
+          pendingCreateBlocks.remove(b);
         }
       } else {
-        LOG.info("Attempt to release a lock from an unknown lease holder "
-                 + holder.toString() + " for " + src.toString());
+        LOG.info("Attempt to release a create lock on " + src.toString()
+                 + " that was not in pendingCreates");
       }
     }
 

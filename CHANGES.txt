@@ -83,6 +83,10 @@ Trunk (unreleased)
 22. Fix HADOOP-150.  Improved task names that include job
     names. (omalley via cutting)
 
+23. Fix HADOOP-162.  Fix ConcurrentModificationException when
+    releasing file locks. (omalley via cutting)
+
+
 Release 0.1.1 - 2006-04-08
 
  1. Added CHANGES.txt, logging all significant changes to Hadoop.  (cutting)
