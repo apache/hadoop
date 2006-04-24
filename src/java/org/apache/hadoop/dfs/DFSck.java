@@ -20,7 +20,6 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -495,7 +494,9 @@ public class DFSck {
 
     /** Return the actual replication factor. */
     public float getReplicationFactor() {
-      return (float)(totalBlocks * replication + overReplicatedBlocks - underReplicatedBlocks) / (float)totalBlocks;
+      if (totalBlocks != 0)
+        return (float)(totalBlocks * replication + overReplicatedBlocks - underReplicatedBlocks) / (float)totalBlocks;
+      else return 0.0f;
     }
 
     /** Return the number of under-replicated blocks. Note: missing blocks are not counted here.*/
@@ -560,7 +561,8 @@ public class DFSck {
       StringBuffer res = new StringBuffer();
       res.append("Status: " + (isHealthy() ? "HEALTHY" : "CORRUPT"));
       res.append("\n Total size:\t" + totalSize + " B");
-      res.append("\n Total blocks:\t" + totalBlocks + " (avg. block size "
+      res.append("\n Total blocks:\t" + totalBlocks);
+      if (totalBlocks > 0) res.append(" (avg. block size "
               + (totalSize / totalBlocks) + " B)");
       res.append("\n Total dirs:\t" + totalDirs);
       res.append("\n Total files:\t" + totalFiles);
@@ -571,11 +573,13 @@ public class DFSck {
         res.append("\n  MISSING SIZE:\t\t" + missingSize + " B");
         res.append("\n  ********************************");
       }
-      res.append("\n Over-replicated blocks:\t" + overReplicatedBlocks
-              + " (" + ((float)(overReplicatedBlocks * 100) / (float)totalBlocks)
+      res.append("\n Over-replicated blocks:\t" + overReplicatedBlocks);
+      if (totalBlocks > 0) res.append(" ("
+              + ((float)(overReplicatedBlocks * 100) / (float)totalBlocks)
               + " %)");
-      res.append("\n Under-replicated blocks:\t" + underReplicatedBlocks
-              + " (" + ((float)(underReplicatedBlocks * 100) / (float)totalBlocks)
+      res.append("\n Under-replicated blocks:\t" + underReplicatedBlocks);
+      if (totalBlocks > 0) res.append(" ("
+              + ((float)(underReplicatedBlocks * 100) / (float)totalBlocks)
               + " %)");
       res.append("\n Target replication factor:\t" + replication);
       res.append("\n Real replication factor:\t" + getReplicationFactor());
