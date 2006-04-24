@@ -72,6 +72,14 @@ Trunk (unreleased)
 20. Fix HADOOP-69.  Don't throw a NullPointerException when getting
     hints for non-existing file split.  (Bryan Pendelton via cutting)
 
+21. Fix HADOOP-157.  When a task that writes dfs files (e.g., a reduce
+    task) failed and was retried, it would fail again and again,
+    eventually failing the job.  The problem was that dfs did not yet
+    know that the failed task had abandoned the files, and would not
+    yet let another task create files with the same names.  Dfs now
+    retries when creating a file long enough for locks on abandoned
+    files to expire.  (omalley via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

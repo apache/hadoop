@@ -29,8 +29,6 @@ import java.io.BufferedOutputStream;
 import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
 
-import java.rmi.RemoteException;
-
 import java.util.Hashtable;
 import java.util.logging.Logger;
 import java.util.logging.Level;
@@ -39,6 +37,7 @@ import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.UTF8;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
@@ -65,7 +64,7 @@ public class Client {
     int id;                                       // call id
     Writable param;                               // parameter
     Writable value;                               // value, null if error
-    String error;                                 // error, null if value
+    RemoteException error;                        // error, null if value
     long lastActivity;                            // time of last i/o
     boolean done;                                 // true when call is done
 
@@ -89,7 +88,7 @@ public class Client {
     }
 
     /** Update lastActivity with the current time. */
-    public synchronized void setResult(Writable value, String error) {
+    public synchronized void setResult(Writable value, RemoteException error) {
       this.value = value;
       this.error = error;
       this.done = true;
@@ -157,9 +156,10 @@ public class Client {
           Call call = (Call)calls.remove(new Integer(id));
           boolean isError = in.readBoolean();     // read if error
           if (isError) {
-            UTF8 utf8 = new UTF8();
-            utf8.readFields(in);                  // read error string
-            call.setResult(null, utf8.toString());
+            RemoteException ex = 
+              new RemoteException(WritableUtils.readString(in),
+                                  WritableUtils.readString(in));
+            call.setResult(null, ex);
           } else {
             Writable value = makeValue();
             try {
@@ -300,7 +300,7 @@ public class Client {
       } while (!call.done && wait > 0);
 
       if (call.error != null) {
-        throw new RemoteException(call.error);
+        throw call.error;
       } else if (!call.done) {
         throw new IOException("timed out waiting for response");
       } else {

@@ -282,11 +282,16 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
             synchronized (this) {
                 for (Iterator it = runningTasks.values().iterator(); it.hasNext(); ) {
                     TaskInProgress tip = (TaskInProgress) it.next();
+                    long timeSinceLastReport = System.currentTimeMillis() - 
+                                               tip.getLastProgressReport();
                     if ((tip.getRunState() == TaskStatus.RUNNING) &&
-                        (System.currentTimeMillis() - tip.getLastProgressReport() > this.taskTimeout) &&
+                        (timeSinceLastReport > this.taskTimeout) &&
                         !tip.wasKilled) {
-                        LOG.info("Task " + tip.getTask().getTaskId() + " timed out.  Killing.");
-                        tip.reportDiagnosticInfo("Timed out.");
+                        String msg = "Task failed to report status for " +
+                                     (timeSinceLastReport / 1000) + 
+                                     " seconds. Killing.";
+                        LOG.info(tip.getTask().getTaskId() + ": " + msg);
+                        tip.reportDiagnosticInfo(msg);
                         tip.killAndCleanup(true);
                     }
                 }

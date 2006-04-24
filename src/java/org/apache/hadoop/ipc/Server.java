@@ -38,6 +38,7 @@ import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.UTF8;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
@@ -210,15 +211,14 @@ public abstract class Server {
             LOG.fine(getName() + ": has #" + call.id + " from " +
                      call.connection.socket.getInetAddress().getHostAddress());
           
+          String errorClass = null;
           String error = null;
           Writable value = null;
           try {
             value = call(call.param);             // make the call
-          } catch (IOException e) {
+          } catch (Throwable e) {
             LOG.log(Level.INFO, getName() + " call error: " + e, e);
-            error = getStackTrace(e);
-          } catch (Exception e) {
-            LOG.log(Level.INFO, getName() + " call error: " + e, e);
+            errorClass = e.getClass().getName();
             error = getStackTrace(e);
           }
             
@@ -226,9 +226,12 @@ public abstract class Server {
           synchronized (out) {
             out.writeInt(call.id);                // write call id
             out.writeBoolean(error!=null);        // write error flag
-            if (error != null)
-              value = new UTF8(error);
-            value.write(out);                     // write value
+            if (error == null) {
+              value.write(out);
+            } else {
+              WritableUtils.writeString(out, errorClass);
+              WritableUtils.writeString(out, error);
+            }
             out.flush();
           }
 

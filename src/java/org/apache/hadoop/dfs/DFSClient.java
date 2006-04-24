@@ -353,6 +353,9 @@ class DFSClient implements FSConstants {
                         namenode.renewLease(clientName);
                         lastRenewed = System.currentTimeMillis();
                     } catch (IOException ie) {
+                      String err = StringUtils.stringifyException(ie);
+                      LOG.warning("Problem renewing lease for " + clientName +
+                                  ": " + err);
                     }
                 }
                 try {
@@ -679,31 +682,15 @@ class DFSClient implements FSConstants {
          */
         private synchronized void nextBlockOutputStream() throws IOException {
             boolean retry = false;
-            long start = System.currentTimeMillis();
+            long startTime = System.currentTimeMillis();
             do {
                 retry = false;
                 
-                long localstart = System.currentTimeMillis();
-                boolean blockComplete = false;
-                LocatedBlock lb = null;                
-                while (! blockComplete) {
-                    if (firstTime) {
-                        lb = namenode.create(src.toString(), clientName.toString(), localName, overwrite, replication);
-                    } else {
-                        lb = namenode.addBlock(src.toString(), localName);
-                    }
-
-                    if (lb == null) {
-                        try {
-                            Thread.sleep(400);
-                            if (System.currentTimeMillis() - localstart > 5000) {
-                                LOG.info("Waiting to find new output block node for " + (System.currentTimeMillis() - start) + "ms");
-                            }
-                        } catch (InterruptedException ie) {
-                        }
-                    } else {
-                        blockComplete = true;
-                    }
+                LocatedBlock lb;
+                if (firstTime) {
+                  lb = locateNewBlock();
+                } else {
+                  lb = locateFollowingBlock(startTime);
                 }
 
                 block = lb.getBlock();
@@ -721,7 +708,7 @@ class DFSClient implements FSConstants {
                 } catch (IOException ie) {
                     // Connection failed.  Let's wait a little bit and retry
                     try {
-                        if (System.currentTimeMillis() - start > 5000) {
+                        if (System.currentTimeMillis() - startTime > 5000) {
                             LOG.info("Waiting to find target node: " + target);
                         }
                         Thread.sleep(6000);
@@ -754,6 +741,65 @@ class DFSClient implements FSConstants {
                 blockReplyStream = new DataInputStream(new BufferedInputStream(s.getInputStream()));
             } while (retry);
             firstTime = false;
+        }
+
+        private LocatedBlock locateNewBlock() throws IOException {     
+          int retries = 3;
+          while (true) {
+            while (true) {
+              try {
+                return namenode.create(src.toString(), clientName.toString(),
+                    localName, overwrite, replication);
+              } catch (RemoteException e) {
+                if (--retries == 0 || 
+                    "org.apache.hadoop.dfs.NameNode.AlreadyBeingCreatedException".
+                        equals(e.getClassName())) {
+                  throw e;
+                } else {
+                  // because failed tasks take upto LEASE_PERIOD to
+                  // release their pendingCreates files, if the file
+                  // we want to create is already being created, 
+                  // wait and try again.
+                  LOG.info(StringUtils.stringifyException(e));
+                  try {
+                    Thread.sleep(LEASE_PERIOD);
+                  } catch (InterruptedException ie) {
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        private LocatedBlock locateFollowingBlock(long start
+                                                  ) throws IOException {     
+          int retries = 5;
+          while (true) {
+            long localstart = System.currentTimeMillis();
+            while (true) {
+              try {
+                return namenode.addBlock(src.toString(), 
+                                         clientName.toString());
+              } catch (RemoteException e) {
+                if (--retries == 0 || 
+                    "org.apache.hadoop.dfs.NameNode.NotReplicatedYetException".
+                        equals(e.getClassName())) {
+                  throw e;
+                } else {
+                  LOG.info(StringUtils.stringifyException(e));
+                  if (System.currentTimeMillis() - localstart > 5000) {
+                    LOG.info("Waiting for replication for " + 
+                             (System.currentTimeMillis() - localstart)/1000 + 
+                             " seconds");
+                  }
+                  try {
+                    Thread.sleep(400);
+                  } catch (InterruptedException ie) {
+                  }
+                }                
+              }
+            }
+          } 
         }
 
         /**

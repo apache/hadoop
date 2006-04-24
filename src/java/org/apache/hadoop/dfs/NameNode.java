@@ -18,7 +18,7 @@ package org.apache.hadoop.dfs;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
+import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.util.logging.*;
@@ -140,6 +140,37 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
 
     /**
+     * The exception that happens when you ask to create a file that already
+     * is being created, but is not closed yet.
+     * @author Owen O'Malley
+     */
+    public static class AlreadyBeingCreatedException extends IOException {
+      public AlreadyBeingCreatedException(String msg) {
+        super(msg);
+      }
+    }
+    
+    /**
+     * The lease that was being used to create this file has expired.
+     * @author Owen O'Malley
+     */
+    public static class LeaseExpiredException extends IOException {
+      public LeaseExpiredException(String msg) {
+        super(msg);
+      }
+    }
+    
+    /**
+     * The file has not finished being written to enough datanodes yet.
+     * @author Owen O'Malley
+     */
+    public static class NotReplicatedYetException extends IOException {
+      public NotReplicatedYetException(String msg) {
+        super(msg);
+      }
+    }
+    
+    /**
      */
     public LocatedBlock create(String src, 
                                String clientName, 
@@ -152,9 +183,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                                 new UTF8(clientMachine), 
                                                 overwrite,
                                                 replication);
-        if (results == null)
-            throw new IOException("Cannot create file " + src + " on client " + clientName);
-
         Block b = (Block) results[0];
         DatanodeInfo targets[] = (DatanodeInfo[]) results[1];
         return new LocatedBlock(b, targets);
@@ -162,27 +190,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     /**
      */
-    public LocatedBlock addBlock(String src, String clientMachine) throws IOException {
-        int retries = 5;
-        Object results[] = namesystem.getAdditionalBlock(new UTF8(src), new UTF8(clientMachine));
-        while (results != null && results[0] == null && retries > 0) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ie) {
-            }
-            results = namesystem.getAdditionalBlock(new UTF8(src), new UTF8(clientMachine));
-            retries--;
-        }
-
-        if (results == null) {
-            throw new IOException("Cannot obtain additional block for file " + src);
-        } else if (results[0] == null) {
-            return null;
-        } else {
-            Block b = (Block) results[0];
-            DatanodeInfo targets[] = (DatanodeInfo[]) results[1];
-            return new LocatedBlock(b, targets);
-        }
+    public LocatedBlock addBlock(String src, 
+                                 String clientName) throws IOException {
+        UTF8 src8 = new UTF8(src);
+        UTF8 client8 = new UTF8(clientName);
+        Object[] results = namesystem.getAdditionalBlock(src8, client8);
+        Block b = (Block) results[0];
+        DatanodeInfo targets[] = (DatanodeInfo[]) results[1];
+        return new LocatedBlock(b, targets);            
     }
 
     /**

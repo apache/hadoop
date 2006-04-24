@@ -86,7 +86,7 @@ interface ClientProtocol {
      * A null response means the NameNode could not allocate a block,
      * and that the caller should try again.
      */
-    public LocatedBlock addBlock(String src, String clientMachine) throws IOException;
+    public LocatedBlock addBlock(String src, String clientName) throws IOException;
 
     /**
      * A client that wants to abandon writing to the current file

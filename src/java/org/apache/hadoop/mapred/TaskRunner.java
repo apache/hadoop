@@ -269,7 +269,7 @@ abstract class TaskRunner extends Thread {
       logStream(process.getInputStream());        // normally empty
       
       int exit_code = process.waitFor();
-      if (exit_code != 0) {
+      if (!killed && exit_code != 0) {
         throw new IOException("Task process exit with nonzero status of " +
                               exit_code + ".");
       }
