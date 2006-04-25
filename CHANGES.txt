@@ -88,7 +88,7 @@ Trunk (unreleased)
 
 24. Fix HADOOP-132.  Initial check-in of new Metrics API, including 
     implementations for writing metric data to a file and for sending
-    it to Ganglia.
+    it to Ganglia.  (David Bowen via cutting)
 
 
 Release 0.1.1 - 2006-04-08
