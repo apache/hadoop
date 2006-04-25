@@ -90,6 +90,9 @@ Trunk (unreleased)
     implementations for writing metric data to a file and for sending
     it to Ganglia.  (David Bowen via cutting)
 
+25. Fix HADOOP-160.  Remove some uneeded synchronization around
+    time-consuming operations in the TaskTracker.  (omalley via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 
