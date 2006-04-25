@@ -86,6 +86,10 @@ Trunk (unreleased)
 23. Fix HADOOP-162.  Fix ConcurrentModificationException when
     releasing file locks. (omalley via cutting)
 
+24. Fix HADOOP-132.  Initial check-in of new Metrics API, including 
+    implementations for writing metric data to a file and for sending
+    it to Ganglia.
+
 
 Release 0.1.1 - 2006-04-08
 
