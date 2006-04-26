@@ -91,7 +91,11 @@ public class DFSShell {
             }
             for (int i = 0; i < items.length; i++) {
                 Path cur = items[i];
-                System.out.println(cur + "\t" + (fs.isDirectory(cur) ? "<dir>" : ("" + fs.getLength(cur))));
+                System.out.println(cur + "\t" 
+                                    + (fs.isDirectory(cur) ? 
+                                        "<dir>" : 
+                                        ("<r " + fs.getReplication(cur) 
+                                            + ">\t" + fs.getLength(cur))));
                 if(recursive && fs.isDirectory(cur)) {
                   ls(cur.toString(), recursive);
                 }

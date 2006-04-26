@@ -188,6 +188,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         return new LocatedBlock(b, targets);
     }
 
+    public boolean setReplication( String src, 
+                                short replication
+                              ) throws IOException {
+      return namesystem.setReplication( src, replication );
+    }
+    
     /**
      */
     public LocatedBlock addBlock(String src, 

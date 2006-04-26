@@ -183,7 +183,6 @@ class DFSClient implements FSConstants {
     }
     
     /**
-    /**
      * Create a new dfs file with the specified block replication 
      * and return an output stream for writing into the file.  
      * 
@@ -203,6 +202,21 @@ class DFSClient implements FSConstants {
         pendingCreates.put(src.toString(), result);
       }
       return result;
+    }
+
+    /**
+     * Set replication for an existing file.
+     * 
+     * @see ClientProtocol#setReplication(String, short)
+     * @param replication
+     * @throws IOException
+     * @return true is successful or false if file does not exist 
+     * @author shv
+     */
+    public boolean setReplication(UTF8 src, 
+                                  short replication
+                                ) throws IOException {
+      return namenode.setReplication(src.toString(), replication);
     }
 
     /**

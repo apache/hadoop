@@ -242,6 +242,47 @@ public abstract class FileSystem extends Configured {
         }
     }
 
+    /**
+     * Set replication for an existing file.
+     * 
+     * @param src file name
+     * @param replication new replication
+     * @throws IOException
+     * @return true if successful;
+     *         false if file does not exist or is a directory
+     */
+    public boolean setReplication(Path src, short replication) throws IOException {
+      boolean value = setReplicationRaw(src, replication);
+      if( ! value )
+        return false;
+
+      Path checkFile = getChecksumFile(src);
+      if (exists(checkFile))
+        setReplicationRaw(checkFile, replication);
+
+      return true;
+    }
+
+    /**
+     * Get replication.
+     * 
+     * @param src file name
+     * @return file replication
+     * @throws IOException
+     */
+    public abstract short getReplication(Path src) throws IOException;
+
+    /**
+     * Set replication for an existing file.
+     * 
+     * @param src file name
+     * @param replication new replication
+     * @throws IOException
+     * @return true if successful;
+     *         false if file does not exist or is a directory
+     */
+    public abstract boolean setReplicationRaw(Path src, short replication) throws IOException;
+
     /** @deprecated Call {@link #rename(Path, Path)} instead. */
     public boolean rename(File src, File dst) throws IOException {
       return rename(new Path(src.toString()), new Path(dst.toString()));

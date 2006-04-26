@@ -401,6 +401,7 @@ class FSDataset implements FSConstants {
             if (!f.delete()) {
                 throw new IOException("Unexpected error trying to delete block " + invalidBlks[i] + " at file " + f);
             }
+            DataNode.LOG.info("Deleting block " + invalidBlks[i]);
         }
     }
 

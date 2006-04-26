@@ -15,8 +15,6 @@
  */
 package org.apache.hadoop.dfs;
 
-import java.io.*;
-
 import org.apache.hadoop.fs.Path;
 
 
@@ -40,5 +38,8 @@ class DfsPath extends Path {
     }
     public long getContentsLength() {
         return info.getContentsLen();
+    }
+    public short getReplication() {
+      return info.getReplication();
     }
 }

@@ -35,8 +35,9 @@ import org.apache.hadoop.fs.Path;
  * @author Mike Cafarella
  *************************************************/
 class FSDirectory implements FSConstants {
-    // Versions are negative.
-    // Decrement DFS_CURRENT_VERSION to define new version.
+    // Version is reflected in the dfs image and edit log files.
+    // Versions are negative. 
+    // Decrement DFS_CURRENT_VERSION to define a new version.
     private static final int DFS_CURRENT_VERSION = -1;
     private static final String FS_IMAGE = "fsimage";
     private static final String NEW_FS_IMAGE = "fsimage.new";
@@ -46,6 +47,7 @@ class FSDirectory implements FSConstants {
     private static final byte OP_RENAME = 1;
     private static final byte OP_DELETE = 2;
     private static final byte OP_MKDIR = 3;
+    private static final byte OP_SET_REPLICATION = 4;
 
     /******************************************************
      * We keep an in-memory representation of the file/block
@@ -78,7 +80,6 @@ class FSDirectory implements FSConstants {
 
         /**
          * Check whether it's a directory
-         * @return
          */
         synchronized public boolean isDir() {
           return (blocks == null);
@@ -494,6 +495,16 @@ class FSDirectory implements FSConstants {
                         unprotectedAddFile(name, 
                             new INode( name.toString(), blocks, replication ));
                         break;
+                    }
+                    case OP_SET_REPLICATION: {
+                        UTF8 src = new UTF8();
+                        UTF8 repl = new UTF8();
+                        src.readFields(in);
+                        repl.readFields(in);
+                        unprotectedSetReplication(src.toString(), 
+                                                  fromLogReplication(repl),
+                                                  null);
+                        break;
                     } 
                     case OP_RENAME: {
                         UTF8 src = new UTF8();
@@ -599,12 +610,20 @@ class FSDirectory implements FSConstants {
         // add create file record to log
         UTF8 nameReplicationPair[] = new UTF8[] { 
                               path, 
-                              new UTF8( Short.toString(replication))};
+                              toLogReplication( replication )};
         logEdit(OP_ADD,
                 new ArrayWritable( UTF8.class, nameReplicationPair ), 
                 new ArrayWritable( Block.class, newNode.blocks ));
         return true;
     }
+    
+    private static UTF8 toLogReplication( short replication ) {
+      return new UTF8( Short.toString(replication));
+    }
+    
+    private static short fromLogReplication( UTF8 replication ) {
+      return Short.parseShort(replication.toString());
+    }    
     
     /**
      */
@@ -655,12 +674,58 @@ class FSDirectory implements FSConstants {
     }
 
     /**
+     * Set file replication
+     * 
+     * @param src file name
+     * @param replication new replication
+     * @param oldReplication old replication - output parameter
+     * @return array of file blocks
+     * @throws IOException
+     */
+    public Block[] setReplication(String src, 
+                              short replication,
+                              Vector oldReplication
+                             ) throws IOException {
+      waitForReady();
+      Block[] fileBlocks = unprotectedSetReplication(src, replication, oldReplication );
+      if( fileBlocks != null )  // 
+        logEdit(OP_SET_REPLICATION, 
+                new UTF8(src), 
+                toLogReplication( replication ));
+      return fileBlocks;
+    }
+
+    private Block[] unprotectedSetReplication( String src, 
+                                          short replication,
+                                          Vector oldReplication
+                                        ) throws IOException {
+      if( oldReplication == null )
+        oldReplication = new Vector();
+      oldReplication.setSize(1);
+      oldReplication.set( 0, new Integer(-1) );
+      Block[] fileBlocks = null;
+      synchronized(rootDir) {
+        INode fileNode = rootDir.getNode(src);
+        if (fileNode == null)
+          return null;
+        if( fileNode.isDir() )
+          return null;
+        oldReplication.set( 0, new Integer( fileNode.blockReplication ));
+        fileNode.blockReplication = replication;
+        fileBlocks = fileNode.blocks;
+      }
+      return fileBlocks;
+    }
+                                 
+    /**
      * Remove the file from management, return blocks
      */
     public Block[] delete(UTF8 src) {
         waitForReady();
-        logEdit(OP_DELETE, src, null);
-        return unprotectedDelete(src);
+        Block[] blocks = unprotectedDelete(src); 
+        if( blocks != null )
+          logEdit(OP_DELETE, src, null);
+        return blocks;
     }
 
     /**

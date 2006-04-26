@@ -234,7 +234,10 @@ public class DataNode implements FSConstants, Runnable {
 				break;
 			    } else {
 				if (xferTargets[i].length > 0) {
-				    LOG.info("Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
+				    LOG.info("Starting thread to transfer block " + blocks[i] 
+                   + " to " + xferTargets[i][0].getName()
+                   + (xferTargets[i].length > 1 ? " and " 
+                   + (xferTargets[i].length-1) + " more destination(s)" : "" ));
 				    new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
 				}
 			    }

@@ -84,6 +84,12 @@ public class DistributedFileSystem extends FileSystem {
       return dfs.create(getPath(f), overwrite, replication);
     }
 
+    public boolean setReplicationRaw( Path src, 
+                                      short replication
+                                    ) throws IOException {
+      return dfs.setReplication(getPath(src), replication);
+    }
+    
     /**
      * Rename files/dirs
      */
@@ -117,6 +123,15 @@ public class DistributedFileSystem extends FileSystem {
         DFSFileInfo info[] = dfs.listPaths(getPath(f));
         return info[0].getLen();
     }
+
+    public short getReplication(Path f) throws IOException {
+      if (f instanceof DfsPath) {
+        return ((DfsPath)f).getReplication();
+      }
+
+      DFSFileInfo info[] = dfs.listPaths(getPath(f));
+      return info[0].getReplication();
+  }
 
     public Path[] listPathsRaw(Path f) throws IOException {
         DFSFileInfo info[] = dfs.listPaths(getPath(f));

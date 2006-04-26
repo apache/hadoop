@@ -108,6 +108,10 @@ Trunk (unreleased)
 28. Fix HADOOP-169.  Don't fail a reduce task if a call to the
     jobtracker to locate map outputs fails.  (omalley via cutting)
 
+29. Fix HADOOP-170.  Permit FileSystem clients to examine and modify
+    the replication count of individual files.  Also fix a few
+    replication-related bugs. (Konstantin Shvachko via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

@@ -59,6 +59,25 @@ interface ClientProtocol {
                               ) throws IOException;
 
     /**
+     * Set replication for an existing file.
+     * 
+     * The NameNode sets replication to the new value and returns.
+     * The actual block replication is not expected to be performed during  
+     * this method call. The blocks will be populated or removed in the 
+     * background as the result of the routine block maintenance procedures.
+     * 
+     * @param src file name
+     * @param replication new replication
+     * @throws IOException
+     * @return true if successful;
+     *         false if file does not exist or is a directory
+     * @author shv
+     */
+    public boolean setReplication( String src, 
+                                short replication
+                              ) throws IOException;
+
+    /**
      * A client that has written a block of data can report completion
      * back to the NameNode with reportWrittenBlock().  Clients cannot
      * obtain an additional block until the previous one has either been 

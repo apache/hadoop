@@ -21,6 +21,7 @@ import java.util.*;
 import java.nio.channels.*;
 
 import org.apache.hadoop.fs.DF;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
 /****************************************************************
@@ -170,6 +171,19 @@ public class LocalFileSystem extends FileSystem {
           mkdirs(parent);
 
         return new LocalFSFileOutputStream(f);
+    }
+
+    /**
+     * Replication is not supported for the local file system.
+     */
+    public short getReplication(Path f) throws IOException {
+      return 1;
+    }
+    
+    public boolean setReplicationRaw( Path src, 
+                                      short replication
+                                    ) throws IOException {
+      return true;
     }
 
     public boolean renameRaw(Path src, Path dst) throws IOException {

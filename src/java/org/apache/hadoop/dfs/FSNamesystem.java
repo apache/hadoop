@@ -164,7 +164,7 @@ class FSNamesystem implements FSConstants {
           throw new IOException(
               "Unexpected configuration parameters: dfs.replication.min = " 
               + minReplication
-              + " must be at less than dfs.replication.max = " 
+              + " must be less than dfs.replication.max = " 
               + maxReplication );
 
         this.maxReplicationStreams = conf.getInt("dfs.max-repl-streams", 2);
@@ -231,6 +231,73 @@ class FSNamesystem implements FSConstants {
     }
 
     /**
+     * Set replication for an existing file.
+     * 
+     * The NameNode sets new replication and schedules either replication of 
+     * under-replicated data blocks or removal of the eccessive block copies 
+     * if the blocks are over-replicated.
+     * 
+     * @see ClientProtocol#setReplication(String, short)
+     * @param src file name
+     * @param replication new replication
+     * @return true if successful; 
+     *         false if file does not exist or is a directory
+     * @author shv
+     */
+    public boolean setReplication(String src, 
+                                  short replication
+                                ) throws IOException {
+      verifyReplication(src, replication, null );
+
+      Vector oldReplication = new Vector();
+      Block[] fileBlocks;
+      fileBlocks = dir.setReplication( src, replication, oldReplication );
+      if( fileBlocks == null )  // file not found or is a directory
+        return false;
+      int oldRepl = ((Integer)oldReplication.elementAt(0)).intValue();
+      if( oldRepl == replication ) // the same replication
+        return true;
+
+      synchronized( neededReplications ) {
+        if( oldRepl < replication ) { 
+          // old replication < the new one; need to replicate
+          LOG.info("Increasing replication for file " + src 
+                    + ". New replication is " + replication );
+          for( int idx = 0; idx < fileBlocks.length; idx++ )
+            neededReplications.add( fileBlocks[idx] );
+        } else {  
+          // old replication > the new one; need to remove copies
+          LOG.info("Reducing replication for file " + src 
+                    + ". New replication is " + replication );
+          for( int idx = 0; idx < fileBlocks.length; idx++ )
+            proccessOverReplicatedBlock( fileBlocks[idx], replication );
+        }
+      }
+      return true;
+    }
+    
+    /**
+     * Check whether the replication parameter is within the range
+     * determined by system configuration.
+     */
+    private void verifyReplication( String src, 
+                                    short replication, 
+                                    UTF8 clientName 
+                                  ) throws IOException {
+      String text = "File " + src 
+              + ((clientName != null) ? " on client " + clientName : "")
+              + ".\n"
+              + "Requested replication " + replication;
+
+      if( replication > maxReplication )
+        throw new IOException( text + " exceeds maximum " + maxReplication );
+      
+      if( replication < minReplication )
+        throw new IOException(  
+            text + " is less than the required minimum " + minReplication );
+    }
+    
+    /**
      * The client would like to create a new block for the indicated
      * filename.  Return an array that consists of the block, plus a set 
      * of machines.  The first on this list should be where the client 
@@ -255,17 +322,7 @@ class FSNamesystem implements FSConstants {
           throw new NameNode.AlreadyBeingCreatedException(msg);
         }
 
-        if( replication > maxReplication )
-          throw new IOException(
-            "Cannot create file " + src + " on client " + clientMachine + ".\n"
-            + "Requested replication " + replication
-            + " exceeds maximum " + maxReplication );
-        
-        if( replication < minReplication )
-          throw new IOException(
-            "Cannot create file " + src + " on client " + clientMachine + ".\n"
-            + "Requested replication " + replication
-            + " is less than the required minimum " + minReplication );
+        verifyReplication(src.toString(), replication, clientMachine );
         
         if (!dir.isValidToCreate(src)) {
           if (overwrite) {
@@ -1061,23 +1118,26 @@ class FSNamesystem implements FSConstants {
             } else // containingNodes.size() < fileReplication
                 neededReplications.add(block);
 
-            //
-            // Find how many of the containing nodes are "extra", if any.
-            // If there are any extras, call chooseExcessReplicates() to
-            // mark them in the excessReplicateMap.
-            //
-            Vector nonExcess = new Vector();
-            for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
-                DatanodeInfo cur = (DatanodeInfo) it.next();
-                TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getName());
-                if (excessBlocks == null || ! excessBlocks.contains(block)) {
-                    nonExcess.add(cur);
-                }
-            }
-            if (nonExcess.size() > fileReplication) {
-                chooseExcessReplicates(nonExcess, block, fileReplication);    
-            }
+            proccessOverReplicatedBlock( block, fileReplication );
         }
+    }
+    
+    /**
+     * Find how many of the containing nodes are "extra", if any.
+     * If there are any extras, call chooseExcessReplicates() to
+     * mark them in the excessReplicateMap.
+     */
+    private void proccessOverReplicatedBlock( Block block, short replication ) {
+      TreeSet containingNodes = (TreeSet) blocksMap.get(block);
+      Vector nonExcess = new Vector();
+      for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
+          DatanodeInfo cur = (DatanodeInfo) it.next();
+          TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getName());
+          if (excessBlocks == null || ! excessBlocks.contains(block)) {
+              nonExcess.add(cur);
+          }
+      }
+      chooseExcessReplicates(nonExcess, block, replication);    
     }
 
     /**
@@ -1263,7 +1323,12 @@ class FSNamesystem implements FSConstants {
                         it.remove();
                     } else {
                         TreeSet containingNodes = (TreeSet) blocksMap.get(block);
-                        if (containingNodes.contains(srcNode)) {
+                        TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(srcNode.getName());
+                        // srcNode must contain the block, and the block must 
+                        // not be scheduled for removal on that node
+                        if (containingNodes.contains(srcNode) 
+                              && ( excessBlocks == null 
+                               || ! excessBlocks.contains(block))) {
                             DatanodeInfo targets[] = chooseTargets(Math.min(fileINode.getReplication() - containingNodes.size(), this.maxReplicationStreams - xmitsInProgress), containingNodes, null);
                             if (targets.length > 0) {
                                 // Build items to return
@@ -1293,7 +1358,12 @@ class FSNamesystem implements FSConstants {
                             pendingReplications.add(block);
                         }
 
-			LOG.info("Pending transfer (block " + block.getBlockName() + ") from " + srcNode.getName() + " to " + targets.length + " destinations");
+                        LOG.info("Pending transfer (block " 
+                            + block.getBlockName() 
+                            + ") from " + srcNode.getName() 
+                            + " to " + targets[0].getName() 
+                            + (targets.length > 1 ? " and " + (targets.length-1) 
+                                + " more destination(s)" : "" ));
                     }
 
                     //
