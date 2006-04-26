@@ -34,28 +34,28 @@ interface JobSubmissionProtocol {
      * Get the current status of the cluster
      * @return summary of the state of the cluster
      */
-    public ClusterStatus getClusterStatus();
+    public ClusterStatus getClusterStatus() throws IOException;
     
     /**
      * Kill the indicated job
      */
-    public void killJob(String jobid);
+    public void killJob(String jobid) throws IOException;
 
     /**
      * Grab a handle to a job that is already known to the JobTracker
      */
-    public JobProfile getJobProfile(String jobid);
+    public JobProfile getJobProfile(String jobid) throws IOException;
 
     /**
      * Grab a handle to a job that is already known to the JobTracker
      */
-    public JobStatus getJobStatus(String jobid);
+    public JobStatus getJobStatus(String jobid) throws IOException;
 
     /**
      * Grab a bunch of info on the tasks that make up the job
      */
-    public TaskReport[] getMapTaskReports(String jobid);
-    public TaskReport[] getReduceTaskReports(String jobid);
+    public TaskReport[] getMapTaskReports(String jobid) throws IOException;
+    public TaskReport[] getReduceTaskReports(String jobid) throws IOException;
 
     /**
      * A MapReduce system always operates on a single filesystem.  This 

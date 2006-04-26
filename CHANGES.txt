@@ -101,6 +101,11 @@ Trunk (unreleased)
     Nutch only uses ObjectWritable in intermediate files, so this
     should not be a problem for Nutch.  (Stefan & cutting)
 
+27. Fix HADOOP-168.  MapReduce RPC protocol methods should all declare
+    IOException, so that timeouts are handled appropriately.
+    (omalley via cutting)
+
+
 Release 0.1.1 - 2006-04-08
 
  1. Added CHANGES.txt, logging all significant changes to Hadoop.  (cutting)

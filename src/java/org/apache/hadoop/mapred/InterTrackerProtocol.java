@@ -34,16 +34,17 @@ interface InterTrackerProtocol {
    * TaskTracker must also indicate whether this is the first interaction
    * (since state refresh)
    */
-  int emitHeartbeat(TaskTrackerStatus status, boolean initialContact);
+  int emitHeartbeat(TaskTrackerStatus status, 
+                    boolean initialContact) throws IOException;
 
   /** Called to get new tasks from from the job tracker for this tracker.*/
-  Task pollForNewTask(String trackerName);
+  Task pollForNewTask(String trackerName) throws IOException;
 
   /** Called to find which tasks that have been run by this tracker should now
    * be closed because their job is complete.  This is used to, e.g., 
    * notify a map task that its output is no longer needed and may 
    * be removed. */
-  String[] pollForTaskWithClosedJob(String trackerName);
+  String[] pollForTaskWithClosedJob(String trackerName) throws IOException;
 
   /** Called by a reduce task to find which map tasks are completed.
    *
@@ -51,7 +52,9 @@ interface InterTrackerProtocol {
    * @param mapTasksNeeded an array of UTF8 naming map task ids whose output is needed.
    * @return an array of MapOutputLocation
    */
-  MapOutputLocation[] locateMapOutputs(String taskId, String[][] mapTasksNeeded);
+  MapOutputLocation[] locateMapOutputs(String taskId, 
+                                       String[][] mapTasksNeeded
+                                       ) throws IOException;
 
   /**
    * The task tracker calls this once, to discern where it can find
