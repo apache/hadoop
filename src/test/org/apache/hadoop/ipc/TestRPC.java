@@ -28,6 +28,8 @@ import java.util.Arrays;
 
 import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
 
 /** Unit tests for RPC. */
 public class TestRPC extends TestCase {
@@ -52,6 +54,7 @@ public class TestRPC extends TestCase {
     void ping() throws IOException;
     String echo(String value) throws IOException;
     String[] echo(String[] value) throws IOException;
+    Writable echo(Writable value) throws IOException;
     int add(int v1, int v2) throws IOException;
     int add(int[] values) throws IOException;
     int error() throws IOException;
@@ -66,6 +69,9 @@ public class TestRPC extends TestCase {
 
     public String[] echo(String[] values) throws IOException { return values; }
 
+    public Writable echo(Writable writable) {
+      return writable;
+    }
     public int add(int v1, int v2) {
       return v1 + v2;
     }
@@ -105,6 +111,9 @@ public class TestRPC extends TestCase {
 
     String[] stringResults = proxy.echo(new String[]{"foo","bar"});
     assertTrue(Arrays.equals(stringResults, new String[]{"foo","bar"}));
+
+    UTF8 utf8Result = (UTF8)proxy.echo(new UTF8("hello world"));
+    assertEquals(utf8Result, new UTF8("hello world"));
 
     int intResult = proxy.add(1, 2);
     assertEquals(intResult, 3);

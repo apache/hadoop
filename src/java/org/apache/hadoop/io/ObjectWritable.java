@@ -77,51 +77,16 @@ public class ObjectWritable implements Writable, Configurable {
     PRIMITIVE_NAMES.put("void", Void.TYPE);
   }
 
-  private static class NullInstance implements Writable {
-    private Class declaredClass;
-    public NullInstance() {}
-    public NullInstance(Class declaredClass) {
-      this.declaredClass = declaredClass;
-    }
-    public void readFields(DataInput in) throws IOException {
-      String className = UTF8.readString(in);
-      declaredClass = (Class)PRIMITIVE_NAMES.get(className);
-      if (declaredClass == null) {
-        try {
-          declaredClass = Class.forName(className);
-        } catch (ClassNotFoundException e) {
-          throw new RuntimeException(e.toString());
-        }
-      }
-    }
-    public void write(DataOutput out) throws IOException {
-      UTF8.writeString(out, declaredClass.getName());
-    }
-  }
-
   /** Write a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding. */
   public static void writeObject(DataOutput out, Object instance,
                                  Class declaredClass) throws IOException {
 
     if (instance == null) {                       // null
-      instance = new NullInstance(declaredClass);
-      declaredClass = NullInstance.class;
+      instance = NullWritable.get();
     }
 
-    if (instance instanceof Writable) {           // Writable
-
-      // write instance's class, to support subclasses of the declared class
-      UTF8.writeString(out, instance.getClass().getName());
-      
-      ((Writable)instance).write(out);
-
-      return;
-    }
-
-    // write declared class for primitives, as they can't be subclassed, and
-    // the class of the instance may be a wrapper
-    UTF8.writeString(out, declaredClass.getName());
+    UTF8.writeString(out, declaredClass.getName()); // always write declared
 
     if (declaredClass.isArray()) {                // array
       int length = Array.getLength(instance);
@@ -157,6 +122,10 @@ public class ObjectWritable implements Writable, Configurable {
         throw new IllegalArgumentException("Not a primitive: "+declaredClass);
       }
       
+    } else if (Writable.class.isAssignableFrom(declaredClass)) { // Writable
+      UTF8.writeString(out, instance.getClass().getName());
+      ((Writable)instance).write(out);
+
     } else {
       throw new IOException("Can't write: "+instance+" as "+declaredClass);
     }
@@ -186,13 +155,7 @@ public class ObjectWritable implements Writable, Configurable {
 
     Object instance;
     
-    if (declaredClass == NullInstance.class) {         // null
-      NullInstance wrapper = new NullInstance();
-      wrapper.readFields(in);
-      declaredClass = wrapper.declaredClass;
-      instance = null;
-
-    } else if (declaredClass.isPrimitive()) {          // primitive types
+    if (declaredClass.isPrimitive()) {            // primitive types
 
       if (declaredClass == Boolean.TYPE) {             // boolean
         instance = Boolean.valueOf(in.readBoolean());
@@ -227,12 +190,23 @@ public class ObjectWritable implements Writable, Configurable {
       instance = UTF8.readString(in);
       
     } else {                                      // Writable
-      Writable writable = WritableFactories.newInstance(declaredClass);
-      if(writable instanceof Configurable) {
-        ((Configurable) writable).setConf(conf);
+      Class instanceClass = null;
+      try {
+        instanceClass = Class.forName(UTF8.readString(in));
+      } catch (ClassNotFoundException e) {
+        throw new RuntimeException(e.toString());
       }
-      writable.readFields(in);
-      instance = writable;
+      
+      if (instanceClass == NullWritable.class) {  // null
+        instance = null;
+      } else {
+        Writable writable = WritableFactories.newInstance(instanceClass);
+        if(writable instanceof Configurable) {
+          ((Configurable) writable).setConf(conf);
+        }
+        writable.readFields(in);
+        instance = writable;
+      }
     }
 
     if (objectWritable != null) {                 // store values

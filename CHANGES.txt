@@ -93,6 +93,13 @@ Trunk (unreleased)
 25. Fix HADOOP-160.  Remove some uneeded synchronization around
     time-consuming operations in the TaskTracker.  (omalley via cutting)
 
+26. Fix HADOOP-166.  RPCs failed when passed subclasses of a declared
+    parameter type.  This is fixed by changing ObjectWritable to store
+    both the declared type and the instance type for Writables.  Note
+    that this incompatibly changes the format of ObjectWritable and
+    will render unreadable any ObjectWritables stored in files.
+    Nutch only uses ObjectWritable in intermediate files, so this
+    should not be a problem for Nutch.  (Stefan & cutting)
 
 Release 0.1.1 - 2006-04-08
 
