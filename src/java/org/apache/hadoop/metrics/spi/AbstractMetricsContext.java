@@ -339,16 +339,16 @@ public abstract class AbstractMetricsContext implements MetricsContext {
      */
     private Number sum(Number a, Number b) {
         if (a instanceof Integer) {
-            return Integer.valueOf(a.intValue() + b.intValue());
+            return new Integer(a.intValue() + b.intValue());
         }
         else if (a instanceof Float) {
-            return Float.valueOf(a.floatValue() + b.floatValue());
+            return new Float(a.floatValue() + b.floatValue());
         }
         else if (a instanceof Short) {
-            return Short.valueOf((short)(a.shortValue() + b.shortValue()));
+            return new Short((short)(a.shortValue() + b.shortValue()));
         }
         else if (a instanceof Byte) {
-            return Byte.valueOf((byte)(a.byteValue() + b.byteValue()));
+            return new Byte((byte)(a.byteValue() + b.byteValue()));
         }
         else {
             // should never happen

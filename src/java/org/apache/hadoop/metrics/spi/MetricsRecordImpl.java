@@ -73,7 +73,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * @throws MetricsException if the tagName conflicts with the configuration
      */
     public void setTag(String tagName, int tagValue) {
-        tagTable.put(tagName, Integer.valueOf(tagValue));
+        tagTable.put(tagName, new Integer(tagValue));
     }
     
     /**
@@ -84,7 +84,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * @throws MetricsException if the tagName conflicts with the configuration
      */
     public void setTag(String tagName, short tagValue) {
-        tagTable.put(tagName, Short.valueOf(tagValue));
+        tagTable.put(tagName, new Short(tagValue));
     }
     
     /**
@@ -95,7 +95,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * @throws MetricsException if the tagName conflicts with the configuration
      */
     public void setTag(String tagName, byte tagValue) {
-        tagTable.put(tagName, Byte.valueOf(tagValue));
+        tagTable.put(tagName, new Byte(tagValue));
     }
     
     /**
@@ -107,7 +107,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * conflicts with the configuration
      */
     public void setMetric(String metricName, int metricValue) {
-        setAbsolute(metricName, Integer.valueOf(metricValue));
+        setAbsolute(metricName, new Integer(metricValue));
     }
     
     /**
@@ -119,7 +119,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * conflicts with the configuration
      */
     public void setMetric(String metricName, short metricValue) {
-        setAbsolute(metricName, Short.valueOf(metricValue));
+        setAbsolute(metricName, new Short(metricValue));
     }
     
     /**
@@ -131,7 +131,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * conflicts with the configuration
      */
     public void setMetric(String metricName, byte metricValue) {
-        setAbsolute(metricName, Byte.valueOf(metricValue));
+        setAbsolute(metricName, new Byte(metricValue));
     }
     
     /**
@@ -143,7 +143,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * conflicts with the configuration
      */
     public void setMetric(String metricName, float metricValue) {
-        setAbsolute(metricName, Float.valueOf(metricValue));
+        setAbsolute(metricName, new Float(metricValue));
     }
     
     /**
@@ -155,7 +155,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * conflicts with the configuration
      */
     public void incrMetric(String metricName, int metricValue) {
-        setIncrement(metricName, Integer.valueOf(metricValue));
+        setIncrement(metricName, new Integer(metricValue));
     }
     
     /**
@@ -167,7 +167,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * conflicts with the configuration
      */
     public void incrMetric(String metricName, short metricValue) {
-        setIncrement(metricName, Short.valueOf(metricValue));
+        setIncrement(metricName, new Short(metricValue));
     }
     
     /**
@@ -179,7 +179,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * conflicts with the configuration
      */
     public void incrMetric(String metricName, byte metricValue) {
-        setIncrement(metricName, Byte.valueOf(metricValue));
+        setIncrement(metricName, new Byte(metricValue));
     }
     
     /**
@@ -191,7 +191,7 @@ public class MetricsRecordImpl implements MetricsRecord {
      * conflicts with the configuration
      */
     public void incrMetric(String metricName, float metricValue) {
-        setIncrement(metricName, Float.valueOf(metricValue));
+        setIncrement(metricName, new Float(metricValue));
     }
     
     private void setAbsolute(String metricName, Number metricValue) {
