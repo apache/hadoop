@@ -105,6 +105,9 @@ Trunk (unreleased)
     IOException, so that timeouts are handled appropriately.
     (omalley via cutting)
 
+28. Fix HADOOP-169.  Don't fail a reduce task if a call to the
+    jobtracker to locate map outputs fails.  (omalley via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

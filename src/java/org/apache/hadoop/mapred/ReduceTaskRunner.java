@@ -65,10 +65,14 @@ class ReduceTaskRunner extends TaskRunner {
       for (int i = 0; i < checkSize; i++) {
           neededStrings[i] = (String[]) needed.elementAt(i);
       }
-      MapOutputLocation[] locs =
-        jobClient.locateMapOutputs(task.getTaskId(), neededStrings);
-
-      if (locs.length == 0) {
+      MapOutputLocation[] locs = null;
+      try {
+        locs = jobClient.locateMapOutputs(task.getTaskId(), neededStrings);
+      } catch (IOException ie) {
+        LOG.info("Problem locating map outputs: " + 
+                 StringUtils.stringifyException(ie));
+      }
+      if (locs == null || locs.length == 0) {
         try {
           if (killed) {
             return false;
