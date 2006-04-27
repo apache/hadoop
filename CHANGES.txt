@@ -112,6 +112,10 @@ Trunk (unreleased)
     the replication count of individual files.  Also fix a few
     replication-related bugs. (Konstantin Shvachko via cutting)
 
+30. Permit specification of a higher replication levels for job
+    submission files (job.xml and job.jar).  This helps with large
+    clusters, since these files are read by every node.
+
 
 Release 0.1.1 - 2006-04-08
 

@@ -180,6 +180,17 @@ public abstract class FileSystem extends Configured {
 
     /**
      * Opens an FSDataOutputStream at the indicated Path.
+     * Files are overwritten by default.
+     */
+    public FSDataOutputStream create(Path f, short replication)
+      throws IOException {
+      return create(f, true, 
+                    getConf().getInt("io.file.buffer.size", 4096),
+                    replication);
+    }
+
+    /**
+     * Opens an FSDataOutputStream at the indicated Path.
      * @param f the file name to open
      * @param overwrite if a file with this name already exists, then if true,
      *   the file will be overwritten, and if false an error will be thrown.

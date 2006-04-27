@@ -1392,6 +1392,13 @@ class FSNamesystem implements FSConstants {
      * @return array of DatanodeInfo instances uses as targets.
      */
     DatanodeInfo[] chooseTargets(int desiredReplicates, TreeSet forbiddenNodes, UTF8 clientMachine) {
+        if (desiredReplicates > datanodeMap.size()) {
+          LOG.warning("Replication requested of "+desiredReplicates
+                      +" is larger than cluster size ("+datanodeMap.size()
+                      +"). Using cluster size.");
+          desiredReplicates  = datanodeMap.size();
+        }
+
         TreeSet alreadyChosen = new TreeSet();
         Vector targets = new Vector();
 
