@@ -77,13 +77,36 @@ public class ObjectWritable implements Writable, Configurable {
     PRIMITIVE_NAMES.put("void", Void.TYPE);
   }
 
+  private static class NullInstance implements Writable {
+    private Class declaredClass;
+    public NullInstance() {}
+    public NullInstance(Class declaredClass) {
+      this.declaredClass = declaredClass;
+    }
+    public void readFields(DataInput in) throws IOException {
+      String className = UTF8.readString(in);
+      declaredClass = (Class)PRIMITIVE_NAMES.get(className);
+      if (declaredClass == null) {
+        try {
+          declaredClass = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+          throw new RuntimeException(e.toString());
+        }
+      }
+    }
+    public void write(DataOutput out) throws IOException {
+      UTF8.writeString(out, declaredClass.getName());
+    }
+  }
+
   /** Write a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding. */
   public static void writeObject(DataOutput out, Object instance,
                                  Class declaredClass) throws IOException {
 
     if (instance == null) {                       // null
-      instance = NullWritable.get();
+      instance = new NullInstance(declaredClass);
+      declaredClass = Writable.class;
     }
 
     UTF8.writeString(out, declaredClass.getName()); // always write declared
@@ -197,15 +220,16 @@ public class ObjectWritable implements Writable, Configurable {
         throw new RuntimeException(e.toString());
       }
       
-      if (instanceClass == NullWritable.class) {  // null
+      Writable writable = WritableFactories.newInstance(instanceClass);
+      if(writable instanceof Configurable) {
+        ((Configurable) writable).setConf(conf);
+      }
+      writable.readFields(in);
+      instance = writable;
+
+      if (instanceClass == NullInstance.class) {  // null
+        declaredClass = ((NullInstance)instance).declaredClass;
         instance = null;
-      } else {
-        Writable writable = WritableFactories.newInstance(instanceClass);
-        if(writable instanceof Configurable) {
-          ((Configurable) writable).setConf(conf);
-        }
-        writable.readFields(in);
-        instance = writable;
       }
     }
 

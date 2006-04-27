@@ -109,11 +109,20 @@ public class TestRPC extends TestCase {
     String stringResult = proxy.echo("foo");
     assertEquals(stringResult, "foo");
 
+    stringResult = proxy.echo((String)null);
+    assertEquals(stringResult, null);
+
     String[] stringResults = proxy.echo(new String[]{"foo","bar"});
     assertTrue(Arrays.equals(stringResults, new String[]{"foo","bar"}));
 
+    stringResults = proxy.echo((String[])null);
+    assertTrue(Arrays.equals(stringResults, null));
+
     UTF8 utf8Result = (UTF8)proxy.echo(new UTF8("hello world"));
     assertEquals(utf8Result, new UTF8("hello world"));
+
+    utf8Result = (UTF8)proxy.echo((UTF8)null);
+    assertEquals(utf8Result, null);
 
     int intResult = proxy.add(1, 2);
     assertEquals(intResult, 3);
