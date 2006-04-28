@@ -243,13 +243,8 @@ public abstract class FileSystem extends Configured {
         if (exists(f)) {
             return false;
         } else {
-            OutputStream out = createRaw(f, false, 
-                                (short)getConf().getInt("dfs.replication", 3));
-            try {
-            } finally {
-              out.close();
-            }
-            return true;
+          create(f,false,getConf().getInt("io.file.buffer.size", 4096)).close();
+          return true;
         }
     }
 
