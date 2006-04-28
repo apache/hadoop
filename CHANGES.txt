@@ -114,7 +114,9 @@ Trunk (unreleased)
 
 30. Permit specification of a higher replication levels for job
     submission files (job.xml and job.jar).  This helps with large
-    clusters, since these files are read by every node.
+    clusters, since these files are read by every node.  (cutting)
+
+31. HADOOP-173.  Optimize allocation of tasks with local data.  (cutting)
 
 
 Release 0.1.1 - 2006-04-08

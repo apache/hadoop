@@ -55,7 +55,6 @@ class TaskInProgress {
     // Defines the TIP
     private String jobFile = null;
     private FileSplit split = null;
-    private String hints[][] = null;
     private TaskInProgress predecessors[] = null;
     private int partition;
     private JobTracker jobtracker;
@@ -387,34 +386,7 @@ class TaskInProgress {
     // "Action" methods that actually require the TIP
     // to do something.
     /////////////////////////////////////////////////
-    /**
-     * Return whether this TIP has an DFS cache-driven task 
-     * to run at the given taskTracker.
-     */
-    boolean hasTaskWithCacheHit(String taskTracker, TaskTrackerStatus tts) {
-        if (failed || isComplete() || recentTasks.size() > 0) {
-            return false;
-        } else {
-            try {
-                if (isMapTask()) {
-                    if (hints == null) {
-                        hints = job.getFileCacheHints(getTIPId(), split.getPath(), split.getStart(), split.getLength());
-                    }
-                    if (hints != null) {
-                        for (int i = 0; i < hints.length; i++) {
-                            for (int j = 0; j < hints[i].length; j++) {
-                                if (hints[i][j].equals(tts.getHost())) {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (IOException ie) {
-            }
-            return false;
-        }
-    }
+
     /**
      * Return whether this TIP has a non-speculative task to run
      */
@@ -457,8 +429,7 @@ class TaskInProgress {
      */
     public Task getTaskToRun(String taskTracker, TaskTrackerStatus tts, double avgProgress) {
         Task t = null;
-        if (hasTaskWithCacheHit(taskTracker, tts) ||
-            hasTask() || 
+        if (hasTask() || 
             hasSpeculativeTask(avgProgress)) {
 
             String taskid = (String) usableTaskIds.first();
