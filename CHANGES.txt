@@ -118,6 +118,12 @@ Trunk (unreleased)
 
 31. HADOOP-173.  Optimize allocation of tasks with local data.  (cutting)
 
+32. HADOOP-167.  Reduce number of Configurations and JobConf's
+    created.  (omalley via cutting)
+
+33. NUTCH-256.  Change FileSystem#createNewFile() to create a .crc
+    file.  The lack of a .crc file was causing warnings.  (cutting)
+
 
 Release 0.1.1 - 2006-04-08
 
