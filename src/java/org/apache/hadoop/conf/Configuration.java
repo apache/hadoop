@@ -19,7 +19,7 @@ package org.apache.hadoop.conf;
 import java.util.*;
 import java.net.URL;
 import java.io.*;
-import java.util.logging.Logger;
+import java.util.logging.*;
 
 import javax.xml.parsers.*;
 
@@ -29,7 +29,7 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.hadoop.util.LogFormatter;
+import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -62,12 +62,19 @@ public class Configuration {
 
   /** A new configuration. */
   public Configuration() {
+    if (LOG.isLoggable(Level.FINE)) {
+      LOG.fine(StringUtils.stringifyException(new IOException("config()")));
+    }
     defaultResources.add("hadoop-default.xml");
     finalResources.add("hadoop-site.xml");
   }
 
   /** A new configuration with the same settings cloned from another. */
   public Configuration(Configuration other) {
+    if (LOG.isLoggable(Level.FINE)) {
+      LOG.fine(StringUtils.stringifyException
+                 (new IOException("config(config)")));
+    }
     this.defaultResources = (ArrayList)other.defaultResources.clone();
     this.finalResources = (ArrayList)other.finalResources.clone();
     if (other.properties != null)

@@ -34,8 +34,8 @@ class MapTask extends Task {
   }
 
   private FileSplit split;
-  private MapOutputFile mapOutputFile;
-  private Configuration conf;
+  private MapOutputFile mapOutputFile = new MapOutputFile();
+  private JobConf conf;
 
   public MapTask() {}
 
@@ -149,9 +149,12 @@ class MapTask extends Task {
   }
 
   public void setConf(Configuration conf) {
-    this.conf = conf;
-    this.mapOutputFile = new MapOutputFile();
-    this.mapOutputFile.setConf(conf);
+    if (conf instanceof JobConf) {
+      this.conf = (JobConf) conf;
+    } else {
+      this.conf = new JobConf(conf);
+    }
+    this.mapOutputFile.setConf(this.conf);
   }
 
   public Configuration getConf() {

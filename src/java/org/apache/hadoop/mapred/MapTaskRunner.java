@@ -23,7 +23,7 @@ import java.io.*;
 class MapTaskRunner extends TaskRunner {
   private MapOutputFile mapOutputFile;
 
-  public MapTaskRunner(Task task, TaskTracker tracker, Configuration conf) {
+  public MapTaskRunner(Task task, TaskTracker tracker, JobConf conf) {
     super(task, tracker, conf);
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);

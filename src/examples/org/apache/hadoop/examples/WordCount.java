@@ -96,9 +96,7 @@ public class WordCount {
    *                     job tracker.
    */
   public static void main(String[] args) throws IOException {
-    Configuration defaults = new Configuration();
-    
-    JobConf conf = new JobConf(defaults, WordCount.class);
+    JobConf conf = new JobConf(WordCount.class);
     conf.setJobName("wordcount");
  
     // the keys are words (strings)

@@ -172,7 +172,11 @@ class MapOutputFile implements Writable, Configurable {
   }
 
   public void setConf(Configuration conf) {
-    this.jobConf = new JobConf(conf);
+    if (conf instanceof JobConf) {
+      jobConf = (JobConf) conf;
+    } else {
+      this.jobConf = new JobConf(conf);
+    }
   }
 
   public Configuration getConf() {

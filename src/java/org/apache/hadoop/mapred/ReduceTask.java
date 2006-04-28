@@ -46,8 +46,8 @@ class ReduceTask extends Task {
   private Progress appendPhase = getProgress().addPhase("append");
   private Progress sortPhase  = getProgress().addPhase("sort");
   private Progress reducePhase = getProgress().addPhase("reduce");
-  private Configuration conf;
-  private MapOutputFile mapOutputFile;
+  private JobConf conf;
+  private MapOutputFile mapOutputFile = new MapOutputFile();
 
   public ReduceTask() {}
 
@@ -307,9 +307,12 @@ class ReduceTask extends Task {
   }
 
   public void setConf(Configuration conf) {
-    this.conf = conf;
-    this.mapOutputFile = new MapOutputFile();
-    this.mapOutputFile.setConf(conf);
+    if (conf instanceof JobConf) {
+      this.conf = (JobConf) conf;
+    } else {
+      this.conf = new JobConf(conf);
+    }
+    this.mapOutputFile.setConf(this.conf);
   }
 
   public Configuration getConf() {

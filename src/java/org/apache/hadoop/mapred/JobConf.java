@@ -29,7 +29,6 @@ import java.net.URL;
 import java.net.URLDecoder;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
@@ -49,10 +48,34 @@ import org.apache.hadoop.mapred.lib.HashPartitioner;
  * of input files, and where the output files should be written. */
 public class JobConf extends Configuration {
 
-  public JobConf() {
-    super();
+  private void initialize() {
+    addDefaultResource("mapred-default.xml");
   }
-    
+  
+  private void initialize(Class exampleClass) {
+    initialize();
+    String jar = findContainingJar(exampleClass);
+    if (jar != null) {
+      setJar(jar);
+    }   
+  }
+  
+  /**
+   * Construct a map/reduce job configuration.
+   */
+  public JobConf() {
+    initialize();
+  }
+
+  /** 
+   * Construct a map/reduce job configuration.
+   * @param conf a Configuration whose settings will be inherited.
+   * @param exampleClass a class whose containing jar is used as the job's jar.
+   */
+  public JobConf(Class exampleClass) {
+    initialize(exampleClass);
+  }
+  
   /**
    * Construct a map/reduce job configuration.
    * 
@@ -61,21 +84,18 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf) {
     super(conf);
-    addDefaultResource("mapred-default.xml");
+    initialize();
   }
 
 
   /** Construct a map/reduce job configuration.
    * 
    * @param conf a Configuration whose settings will be inherited.
-   * @param aClass a class whose containing jar is used as the job's jar.
+   * @param exampleClass a class whose containing jar is used as the job's jar.
    */
-  public JobConf(Configuration conf, Class aClass) {
+  public JobConf(Configuration conf, Class exampleClass) {
     this(conf);
-    String jar = findContainingJar(aClass);
-    if (jar != null) {
-      setJar(jar);
-    }
+    initialize(exampleClass);
   }
 
 

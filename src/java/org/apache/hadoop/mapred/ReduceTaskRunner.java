@@ -31,7 +31,7 @@ class ReduceTaskRunner extends TaskRunner {
     LogFormatter.getLogger("org.apache.hadoop.mapred.ReduceTaskRunner");
   private MapOutputFile mapOutputFile;
 
-  public ReduceTaskRunner(Task task, TaskTracker tracker, Configuration conf) {
+  public ReduceTaskRunner(Task task, TaskTracker tracker, JobConf conf) {
     super(task, tracker, conf);
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);

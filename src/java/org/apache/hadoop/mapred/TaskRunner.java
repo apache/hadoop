@@ -38,9 +38,9 @@ abstract class TaskRunner extends Thread {
   private Task t;
   private TaskTracker tracker;
 
-  protected Configuration conf;
+  protected JobConf conf;
 
-  public TaskRunner(Task t, TaskTracker tracker, Configuration conf) {
+  public TaskRunner(Task t, TaskTracker tracker, JobConf conf) {
     this.t = t;
     this.tracker = tracker;
     this.conf = conf;
@@ -76,8 +76,7 @@ abstract class TaskRunner extends Thread {
       classPath.append(System.getProperty("java.class.path"));
       classPath.append(sep);
 
-      JobConf job = new JobConf(t.getJobFile());
-      String jar = job.getJar();
+      String jar = conf.getJar();
       if (jar != null) {                      // if jar exists, it into workDir
         unJar(new File(jar), workDir);
         File[] libs = new File(workDir, "lib").listFiles();
@@ -124,10 +123,10 @@ abstract class TaskRunner extends Thread {
       //     </value>
       //
       String javaOpts = handleDeprecatedHeapSize(
-          job.get("mapred.child.java.opts", "-Xmx200m"),
-          job.get("mapred.child.heap.size"));
+          conf.get("mapred.child.java.opts", "-Xmx200m"),
+          conf.get("mapred.child.heap.size"));
       javaOpts = replaceAll(javaOpts, "@taskid@", t.getTaskId());
-      int port = job.getInt("mapred.task.tracker.report.port", 50050) + 1;
+      int port = conf.getInt("mapred.task.tracker.report.port", 50050) + 1;
       javaOpts = replaceAll(javaOpts, "@port@", Integer.toString(port));
       String [] javaOptsSplit = javaOpts.split(" ");
       for (int i = 0; i < javaOptsSplit.length; i++) {

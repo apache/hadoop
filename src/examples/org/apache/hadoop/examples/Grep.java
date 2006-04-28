@@ -27,8 +27,7 @@ import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.hadoop.conf.Configuration;
-
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import java.util.Random;
@@ -43,13 +42,11 @@ public class Grep {
       System.exit(-1);
     }
 
-    Configuration defaults = new Configuration();
-
     Path tempDir =
       new Path("grep-temp-"+
                Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
 
-    JobConf grepJob = new JobConf(defaults, Grep.class);
+    JobConf grepJob = new JobConf(Grep.class);
     grepJob.setJobName("grep-search");
 
     grepJob.setInputPath(new Path(args[0]));
@@ -69,7 +66,7 @@ public class Grep {
 
     JobClient.runJob(grepJob);
 
-    JobConf sortJob = new JobConf(defaults, Grep.class);
+    JobConf sortJob = new JobConf(Grep.class);
     sortJob.setJobName("grep-sort");
 
     sortJob.setInputPath(tempDir);
@@ -86,7 +83,7 @@ public class Grep {
 
     JobClient.runJob(sortJob);
 
-    new JobClient(defaults).getFs().delete(tempDir);
+    FileSystem.get(grepJob).delete(tempDir);
   }
 
 }

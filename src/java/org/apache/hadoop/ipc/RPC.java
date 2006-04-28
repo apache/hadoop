@@ -237,7 +237,10 @@ public class RPC {
           implementation.getMethod(call.getMethodName(),
                                    call.getParameterClasses());
 
+        long startTime = System.currentTimeMillis();
         Object value = method.invoke(instance, call.getParameters());
+        long callTime = System.currentTimeMillis() - startTime;
+        LOG.fine("Call: " + call.getMethodName() + " " + callTime);
         if (verbose) log("Return: "+value);
 
         return new ObjectWritable(method.getReturnType(), value);
