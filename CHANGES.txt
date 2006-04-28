@@ -124,6 +124,10 @@ Trunk (unreleased)
 33. NUTCH-256.  Change FileSystem#createNewFile() to create a .crc
     file.  The lack of a .crc file was causing warnings.  (cutting)
 
+34. HADOOP-174.  Change JobClient to not abort job until it has failed
+    to contact the job tracker for five attempts, not just one as
+    before.  (omalley via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

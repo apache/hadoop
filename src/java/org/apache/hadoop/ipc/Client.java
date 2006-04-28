@@ -302,7 +302,7 @@ public class Client {
       if (call.error != null) {
         throw call.error;
       } else if (!call.done) {
-        throw new IOException("timed out waiting for response");
+        throw new SocketTimeoutException("timed out waiting for rpc response");
       } else {
         return call.value;
       }

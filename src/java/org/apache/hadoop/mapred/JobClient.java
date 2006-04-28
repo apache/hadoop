@@ -18,7 +18,7 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
+import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.net.*;
@@ -302,6 +302,8 @@ public class JobClient implements MRConstants {
       boolean error = true;
       RunningJob running = null;
       String lastReport = null;
+      final int MAX_RETRIES = 5;
+      int retries = MAX_RETRIES;
       try {
         running = jc.submitJob(job);
         String jobId = running.getJobID();
@@ -310,7 +312,17 @@ public class JobClient implements MRConstants {
           try {
             Thread.sleep(1000);
           } catch (InterruptedException e) {}
-          running = jc.getJob(jobId);
+          try {
+            running = jc.getJob(jobId);
+            retries = MAX_RETRIES;
+          } catch (IOException ie) {
+            if (--retries == 0) {
+              LOG.info("Final attempt failed, killing job.");
+              throw ie;
+            }
+            LOG.info("Communication problem with server: " +
+                     StringUtils.stringifyException(ie));
+          }
           String report = null;
           report = " map "+Math.round(running.mapProgress()*100)+"%  reduce " + Math.round(running.reduceProgress()*100)+"%";
           if (!report.equals(lastReport)) {
