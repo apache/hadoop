@@ -158,7 +158,7 @@ class FSNamesystem implements FSConstants {
         lmthread.start();
         this.systemStart = System.currentTimeMillis();
 
-        this.maxReplication = conf.getInt("dfs.replication.max", 3);
+        this.maxReplication = conf.getInt("dfs.replication.max", 512);
         this.minReplication = conf.getInt("dfs.replication.min", 1);
         if( maxReplication < minReplication )
           throw new IOException(
