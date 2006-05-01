@@ -82,10 +82,14 @@
           int completedReduces = job.finishedReduces();
           String name = profile.getJobName();
 
-          out.print("<tr><td><a href=\"jobdetails.jsp?jobid=" + jobid + "\">" + 
-                    jobid + "</a></td><td>"+ profile.getUser() + "</td><td>" +
-                    ("".equals(name) ? "&nbsp;" : name) + "</td><td>" +
-                    percentFormat.format(completedRatio) + "%</td><td>" + 
+          out.print( "<tr><td>" + jobid + 
+                  "<br>" + "<a href=\"jobdetails.jsp?jobid=" + jobid + "&type=" + "map" + "&pagenum=" + 1 + "\">" + 
+                    "Maps" + "</a>" +  "<br>" +
+                  "<a href=\"jobdetails.jsp?jobid=" + jobid + "&type=" + "reduce" + "&pagenum=" + 1 + "\">" + 
+                    "Reduces" + "</a></td>" +
+                  "<td>" + profile.getUser() + "</td>" 
+                    + "<td>" + ("".equals(name) ? "&nbsp;" : name) + "</td>" + 
+                    "<td>" + percentFormat.format(completedRatio) + "%</td><td>" + 
                     desiredMaps + "</td><td>" + completedMaps + "</td><td>" + 
                     desiredReduces + "</td><td> " + completedReduces + 
                     "</td></tr>\n");

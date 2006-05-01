@@ -128,6 +128,10 @@ Trunk (unreleased)
     to contact the job tracker for five attempts, not just one as
     before.  (omalley via cutting)
 
+35. HADOOP-177.  Change MapReduce web interface to page through tasks.
+    Previously, when jobs had more than a few thousand tasks they
+    could crash web browsers.  (Mahadev Konar via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 
