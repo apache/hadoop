@@ -138,6 +138,10 @@ Trunk (unreleased)
     to namenode.  This fixes a problem where restarting the namenode
     triggered a lot of uneeded replication. (Hairong Kuang via cutting)
 
+37. HADOOP-183.  If the DFS namenode is restarted with different
+    minimum and/or maximum replication counts, existing files'
+    replication counts are now automatically adjusted to be within the
+    newly configured bounds. (Hairong Kuang via cutting)
 
 Release 0.1.1 - 2006-04-08
 

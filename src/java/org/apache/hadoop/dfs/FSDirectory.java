@@ -403,8 +403,10 @@ class FSDirectory implements FSConstants {
                     UTF8 name = new UTF8();
                     name.readFields(in);
                     // version 0 does not support per file replication
-                    if( !(imgVersion >= 0) )
+                    if( !(imgVersion >= 0) ) {
                       replication = in.readShort(); // other versions do
+                      replication = adjustReplication( replication, conf );
+                    }
                     int numBlocks = in.readInt();
                     Block blocks[] = null;
                     if (numBlocks > 0) {
@@ -484,6 +486,7 @@ class FSDirectory implements FSConstants {
                           name = (UTF8) writables[0];
                           replication = Short.parseShort(
                                               ((UTF8)writables[1]).toString());
+                          replication = adjustReplication( replication, conf );
                         }
                         // get blocks
                         aw = new ArrayWritable(Block.class);
@@ -501,8 +504,11 @@ class FSDirectory implements FSConstants {
                         UTF8 repl = new UTF8();
                         src.readFields(in);
                         repl.readFields(in);
+                        replication=adjustReplication(
+                                fromLogReplication(repl),
+                                conf);
                         unprotectedSetReplication(src.toString(), 
-                                                  fromLogReplication(repl),
+                                                  replication,
                                                   null);
                         break;
                     } 
@@ -541,6 +547,17 @@ class FSDirectory implements FSConstants {
         return numEdits;
     }
 
+    private static short adjustReplication( short replication, Configuration conf) {
+        short minReplication = (short)conf.getInt("dfs.replication.min", 1);
+        if( replication<minReplication ) {
+            replication = minReplication;
+        }
+        short maxReplication = (short)conf.getInt("dfs.replication.max", 512);
+        if( replication>maxReplication ) {
+            replication = maxReplication;
+        }
+        return replication;
+    }
     /**
      * Save the contents of the FS image
      */
