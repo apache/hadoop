@@ -132,6 +132,12 @@ Trunk (unreleased)
     Previously, when jobs had more than a few thousand tasks they
     could crash web browsers.  (Mahadev Konar via cutting)
 
+36. HADOOP-178.  In DFS, piggyback blockwork requests from datanodes
+    on heartbeat responses from namenode.  This reduces the volume of
+    RPC traffic.  Also move startup delay in blockwork from datanode
+    to namenode.  This fixes a problem where restarting the namenode
+    triggered a lot of uneeded replication. (Hairong Kuang via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

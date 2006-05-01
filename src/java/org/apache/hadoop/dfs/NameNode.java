@@ -61,7 +61,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     private FSNamesystem namesystem;
     private Server server;
     private int handlerCount = 2;
-
+    private long datanodeStartupPeriod;
+    private volatile long firstBlockReportTime;
+    
     /** only used for testing purposes  */
     private boolean stopRequested = false;
 
@@ -83,10 +85,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /**
      * Create a NameNode at the specified location and start it.
      */
-    public NameNode(File dir, int port, Configuration conf) throws IOException {
+    public NameNode(File dir, int port, Configuration conf) throws IOException {     
         this.namesystem = new FSNamesystem(dir, conf);
         this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
         this.server = RPC.getServer(this, port, handlerCount, false, conf);
+        this.datanodeStartupPeriod =
+            conf.getLong("dfs.datanode.startupMsec", DATANODE_STARTUP_PERIOD);
         this.server.start();
     }
 
@@ -353,34 +357,31 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     // DatanodeProtocol
     ////////////////////////////////////////////////////////////////
     /**
-     */
-    public void sendHeartbeat(String sender, long capacity, long remaining) {
-        namesystem.gotHeartbeat(new UTF8(sender), capacity, remaining);
-    }
-
-    public Block[] blockReport(String sender, Block blocks[]) {
-        LOG.info("Block report from "+sender+": "+blocks.length+" blocks.");
-        return namesystem.processReport(blocks, new UTF8(sender));
-    }
-
-    public void blockReceived(String sender, Block blocks[]) {
-        for (int i = 0; i < blocks.length; i++) {
-            namesystem.blockReceived(blocks[i], new UTF8(sender));
-        }
-    }
-
-    /**
-     */
-    public void errorReport(String sender, String msg) {
-        // Log error message from datanode
-        //LOG.info("Report from " + sender + ": " + msg);
-    }
-
-    /**
+     * Data node notify the name node that it is alive 
      * Return a block-oriented command for the datanode to execute.
      * This will be either a transfer or a delete operation.
      */
-    public BlockCommand getBlockwork(String sender, int xmitsInProgress) {
+    public BlockCommand sendHeartbeat(String sender, long capacity, long remaining,
+            int xmitsInProgress) {
+        namesystem.gotHeartbeat(new UTF8(sender), capacity, remaining);        
+        
+        //
+        // Only ask datanodes to perform block operations (transfer, delete) 
+        // after a startup quiet period.  The assumption is that all the
+        // datanodes will be started together, but the namenode may
+        // have been started some time before.  (This is esp. true in
+        // the case of network interruptions.)  So, wait for some time
+        // to pass from the time of connection to the first block-transfer.
+        // Otherwise we transfer a lot of blocks unnecessarily.
+        //
+        // Hairong: Ideally in addition we also look at the history. For example,
+        // we should wait until at least 98% of datanodes are connected to the server
+        //
+        if( firstBlockReportTime==0 ||
+            System.currentTimeMillis()-firstBlockReportTime < datanodeStartupPeriod) {
+            return null;
+        }
+        
         //
         // Ask to perform pending transfers, if any
         //
@@ -400,6 +401,26 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
             return new BlockCommand(blocks);
         }
         return null;
+    }
+
+    public Block[] blockReport(String sender, Block blocks[]) {
+        if( firstBlockReportTime==0)
+              firstBlockReportTime=System.currentTimeMillis();
+
+        return namesystem.processReport(blocks, new UTF8(sender));
+     }
+
+    public void blockReceived(String sender, Block blocks[]) {
+        for (int i = 0; i < blocks.length; i++) {
+            namesystem.blockReceived(blocks[i], new UTF8(sender));
+        }
+    }
+
+    /**
+     */
+    public void errorReport(String sender, String msg) {
+        // Log error message from datanode
+        //LOG.info("Report from " + sender + ": " + msg);
     }
 
     /**

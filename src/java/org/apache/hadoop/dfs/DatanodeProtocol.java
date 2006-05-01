@@ -30,9 +30,14 @@ import java.io.*;
 interface DatanodeProtocol {
     /**
      * sendHeartbeat() tells the NameNode that the DataNode is still
-     * alive and well.  Includes some status info, too.
+     * alive and well.  Includes some status info, too. 
+     * It also gives the NameNode a chance to return a "BlockCommand" object.
+     * A BlockCommand tells the DataNode to invalidate local block(s), 
+     * or to copy them to other DataNodes, etc.
      */
-    public void sendHeartbeat(String sender, long capacity, long remaining) throws IOException;
+    public BlockCommand sendHeartbeat(String sender, 
+            long capacity, long remaining,
+            int xmitsInProgress) throws IOException;
 
     /**
      * blockReport() tells the NameNode about all the locally-stored blocks.
@@ -56,13 +61,4 @@ interface DatanodeProtocol {
      * awry.  Useful for debugging.
      */
     public void errorReport(String sender, String msg) throws IOException;
-
-    /**
-     * The DataNode periodically calls getBlockwork().  It includes a
-     * small amount of status information, but mainly gives the NameNode
-     * a chance to return a "BlockCommand" object.  A BlockCommand tells
-     * the DataNode to invalidate local block(s), or to copy them to other 
-     * DataNodes, etc.
-     */
-    public BlockCommand getBlockwork(String sender, int xmitsInProgress) throws IOException;
 }
