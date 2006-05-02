@@ -103,6 +103,10 @@ public class ExampleDriver {
     "A map/reduce program that counts the words in the input files."));
     programs.put("grep", new ProgramDescription(Grep.class,
     "A map/reduce program that counts the matches of a regex in the input."));
+    programs.put("sort", new ProgramDescription(Sort.class,
+        "Sort binary keys and values."));
+    programs.put("writer", new ProgramDescription(RandomWriter.class,
+        "Write random binary key/value pairs"));
     
     // Make sure they gave us a program name.
     if (args.length == 0) {

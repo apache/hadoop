@@ -147,6 +147,10 @@ Trunk (unreleased)
     loop.  Also improve calculation of time to send next heartbeat.
     (omalley via cutting)
 
+39. HADOOP-187.  Add two MapReduce examples/benchmarks.  One creates
+    files containing random data.  The second sorts the output of the
+    first.  (omalley via cutting)
+
 Release 0.1.1 - 2006-04-08
 
  1. Added CHANGES.txt, logging all significant changes to Hadoop.  (cutting)
