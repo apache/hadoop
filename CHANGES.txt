@@ -151,6 +151,10 @@ Trunk (unreleased)
     files containing random data.  The second sorts the output of the
     first.  (omalley via cutting)
 
+40. HADOOP-185.  Fix so that, when a task tracker times out making the
+    RPC asking for a new task to run, the job tracker does not think
+    that it is actually running the task returned.  (omalley via cutting)
+
 Release 0.1.1 - 2006-04-08
 
  1. Added CHANGES.txt, logging all significant changes to Hadoop.  (cutting)
