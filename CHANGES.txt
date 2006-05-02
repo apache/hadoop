@@ -143,6 +143,10 @@ Trunk (unreleased)
     replication counts are now automatically adjusted to be within the
     newly configured bounds. (Hairong Kuang via cutting)
 
+38. HADOOP-186.  Better error handling in TaskTracker's top-level
+    loop.  Also improve calculation of time to send next heartbeat.
+    (omalley via cutting)
+
 Release 0.1.1 - 2006-04-08
 
  1. Added CHANGES.txt, logging all significant changes to Hadoop.  (cutting)
