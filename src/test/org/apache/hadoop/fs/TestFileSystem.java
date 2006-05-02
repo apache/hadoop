@@ -59,6 +59,10 @@ public class TestFileSystem extends TestCase {
     writeTest(fs, false);
     readTest(fs, false);
     seekTest(fs, false);
+    fs.delete(CONTROL_DIR);
+    fs.delete(DATA_DIR);
+    fs.delete(WRITE_DIR);
+    fs.delete(READ_DIR);
   }
 
   public static void createControlFile(FileSystem fs,

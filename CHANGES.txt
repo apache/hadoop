@@ -158,6 +158,9 @@ Trunk (unreleased)
 41. HADOOP-190.  If a child process hangs after it has reported
     completion, its output should not be lost.  (Stack via cutting)
 
+42. HADOOP-184. Re-structure some test code to better support testing
+    on a cluster.  (Mahadev Konar via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

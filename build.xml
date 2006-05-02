@@ -182,7 +182,7 @@
   <!-- ================================================================== -->
   <!-- Compile test code                                                  --> 
   <!-- ================================================================== -->
-  <target name="compile-test" depends="compile">
+  <target name="compile-test" depends="compile, jar">
     <javac 
      encoding="${build.encoding}" 
      srcdir="${test.src.dir}"
@@ -195,6 +195,13 @@
      deprecation="${javac.deprecation}">
       <classpath refid="test.classpath"/>
     </javac>    
+    <jar jarfile="${build.dir}/${final.name}-test.jar"
+         basedir="${test.build.classes}">
+         <manifest>
+           <attribute name="Main-Class"
+                      value="org/apache/hadoop/test/AllTestDriver"/>
+         </manifest>
+    </jar>
   </target>
 
   <!-- ================================================================== -->
@@ -290,6 +297,8 @@
     <copy file="${build.dir}/${final.name}.jar" todir="${dist.dir}"/>
 
     <copy file="${build.dir}/${final.name}-examples.jar" todir="${dist.dir}"/>
+    
+    <copy file="${build.dir}/${final.name}-test.jar" todir="${dist.dir}"/>
 
     <copy todir="${dist.dir}/bin">
       <fileset dir="bin"/>

@@ -18,9 +18,10 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
-
+import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
+
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -55,8 +56,9 @@ import java.util.*;
  * 7) A mapred job integrates all the count files into a single one.
  *
  **********************************************************/
-public class MapredLoadTest {
+public class TestMapRed extends TestCase {
     /**
+     * Modified to make it a junit test.
      * The RandomGen Job does the actual work of creating
      * a huge file of assorted numbers.  It receives instructions
      * as to how many times each number should be counted.  Then
@@ -197,24 +199,27 @@ public class MapredLoadTest {
         }
     }
 
-    int range;
-    int counts;
-    Random r = new Random();
-    Configuration conf;
+    private static int range = 10;
+    private static int counts = 100;
+    private static Random r = new Random();
+    private static Configuration conf = new Configuration();
 
     /**
-     * MapredLoadTest
-     */
-    public MapredLoadTest(int range, int counts, Configuration conf) throws IOException {
-        this.range = range;
-        this.counts = counts;
-        this.conf = conf;
+       public TestMapRed(int range, int counts, Configuration conf) throws IOException {
+       this.range = range;
+       this.counts = counts;
+       this.conf = conf;
+       }
+    **/
+
+    public void testMapred() throws Exception {
+	launch();
     }
 
     /**
      * 
      */
-    public void launch() throws IOException {
+    public static void launch() throws Exception {
         //
         // Generate distribution of ints.  This is the answer key.
         //
@@ -268,7 +273,7 @@ public class MapredLoadTest {
         // file of random numbers.
         //
         Path randomOuts = new Path(testdir, "genouts");
-        fs.mkdirs(randomOuts);
+        //fs.mkdirs(randomOuts);
 
 
         JobConf genJob = new JobConf(conf);
@@ -317,7 +322,7 @@ public class MapredLoadTest {
         //
         int intermediateReduces = 10;
         Path intermediateOuts = new Path(testdir, "intermediateouts");
-        fs.mkdirs(intermediateOuts);
+        //fs.mkdirs(intermediateOuts);
         JobConf checkJob = new JobConf(conf);
         checkJob.setInputPath(randomOuts);
         checkJob.setInputKeyClass(LongWritable.class);
@@ -342,7 +347,7 @@ public class MapredLoadTest {
         // all the files.
         //
         Path finalOuts = new Path(testdir, "finalouts");        
-        fs.mkdirs(finalOuts);
+        //fs.mkdirs(finalOuts);
         JobConf mergeJob = new JobConf(conf);
         mergeJob.setInputPath(intermediateOuts);
         mergeJob.setInputKeyClass(IntWritable.class);
@@ -415,6 +420,7 @@ public class MapredLoadTest {
         } finally {
             bw.close();
         }
+	fs.delete(testdir);
     }
 
     /**
@@ -422,7 +428,7 @@ public class MapredLoadTest {
      */
     public static void main(String[] argv) throws Exception {
         if (argv.length < 2) {
-            System.err.println("Usage: MapredLoadTest <range> <counts>");
+            System.err.println("Usage: TestMapRed <range> <counts>");
             System.err.println();
             System.err.println("Note: a good test will have a <counts> value that is substantially larger than the <range>");
             return;
@@ -431,8 +437,6 @@ public class MapredLoadTest {
         int i = 0;
         int range = Integer.parseInt(argv[i++]);
         int counts = Integer.parseInt(argv[i++]);
-
-        MapredLoadTest mlt = new MapredLoadTest(range, counts, new Configuration());
-        mlt.launch();
+	launch();
     }
 }
