@@ -308,26 +308,30 @@ public class JobClient implements MRConstants {
         running = jc.submitJob(job);
         String jobId = running.getJobID();
         LOG.info("Running job: " + jobId);
-        while (!running.isComplete()) {
+        while (true) {
           try {
             Thread.sleep(1000);
           } catch (InterruptedException e) {}
           try {
+            if (running.isComplete()) {
+              break;
+            }
             running = jc.getJob(jobId);
+            String report = (" map " + Math.round(running.mapProgress()*100)+
+                             "%  reduce " + 
+                             Math.round(running.reduceProgress()*100) + "%");
+            if (!report.equals(lastReport)) {
+              LOG.info(report);
+              lastReport = report;
+            }
             retries = MAX_RETRIES;
           } catch (IOException ie) {
             if (--retries == 0) {
-              LOG.info("Final attempt failed, killing job.");
+              LOG.warning("Final attempt failed, killing job.");
               throw ie;
             }
             LOG.info("Communication problem with server: " +
                      StringUtils.stringifyException(ie));
-          }
-          String report = null;
-          report = " map "+Math.round(running.mapProgress()*100)+"%  reduce " + Math.round(running.reduceProgress()*100)+"%";
-          if (!report.equals(lastReport)) {
-            LOG.info(report);
-            lastReport = report;
           }
         }
         if (!running.isSuccessful()) {
