@@ -573,7 +573,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
                   }
                   runstate = TaskStatus.FAILED;
               }
-              needCleanup = wasKilled || runstate == TaskStatus.FAILED;
+              
+              needCleanup = runstate == TaskStatus.FAILED;
             }
 
             //
