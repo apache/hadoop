@@ -353,4 +353,24 @@
     <delete dir="${build.dir}"/>
   </target>
 
+  <!-- ================================================================== -->
+  <!-- Contrib targets. For now, they must be called explicitely          -->
+  <!-- Using subant instead of ant as a workaround for 30569              -->
+  <!-- ================================================================== -->
+  <target name="deploy-contrib" depends="compile">
+     <subant target="deploy">        
+        <fileset file="src/contrib/build.xml"/>
+     </subant>  	
+  </target>
+  <target name="test-contrib" depends="compile">
+     <subant target="test">        
+        <fileset file="src/contrib/build.xml"/>
+     </subant>  	
+  </target>
+  <target name="clean-contrib" depends="compile">
+     <subant target="clean">        
+        <fileset file="src/contrib/build.xml"/>
+     </subant>  	
+  </target>
+
 </project>

@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+
+<project name="hadoopcontrib" default="deploy" basedir=".">
+
+  <!-- ====================================================== -->
+  <!-- Build & deploy all the contrib jars.                   -->
+  <!-- ====================================================== -->
+  
+  <target name="deploy">
+    <subant target="deploy">
+      <fileset dir="." includes="*/build.xml"/>
+    </subant>
+  </target>
+  
+  <!-- ====================================================== -->
+  <!-- Test all the contribs.                               -->
+  <!-- ====================================================== -->
+  <target name="test">
+    <subant target="test">
+      <fileset dir="." includes="*/build.xml"/>
+    </subant>
+  </target>
+  
+  
+  <!-- ====================================================== -->
+  <!-- Clean all the contribs.                              -->
+  <!-- ====================================================== -->
+  <target name="clean">
+    <subant target="clean">
+      <fileset dir="." includes="*/build.xml"/>
+    </subant>
+  </target>
+
+</project>

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+
+<project name="streaming" default="jar">
+
+  <import file="../build-contrib.xml"/>
+
+  <!-- Override jar target to specify main class -->
+  <target name="jar" depends="compile">
+    <jar
+      jarfile="${build.dir}/hadoop-${name}.jar"
+      basedir="${build.classes}"      
+    >
+  	<manifest>
+	    <attribute name="Main-Class" value="org.apache.hadoop.streaming.HadoopStreaming"/>
+	</manifest>
+    </jar>
+  </target>
+  
+</project>
