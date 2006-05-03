@@ -148,7 +148,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       public void addNewTask(String taskName) {
         synchronized (launchingTasks) {
           launchingTasks.put(taskName, 
-                             Long.valueOf(System.currentTimeMillis()));
+                             new Long(System.currentTimeMillis()));
         }
       }
       
