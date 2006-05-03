@@ -88,8 +88,7 @@ public class ObjectWritable implements Writable, Configurable {
       declaredClass = (Class)PRIMITIVE_NAMES.get(className);
       if (declaredClass == null) {
         try {
-          declaredClass =
-            Thread.currentThread().getContextClassLoader().loadClass(className);
+          declaredClass = Class.forName(className);
         } catch (ClassNotFoundException e) {
           throw new RuntimeException(e.toString());
         }
@@ -171,8 +170,7 @@ public class ObjectWritable implements Writable, Configurable {
     Class declaredClass = (Class)PRIMITIVE_NAMES.get(className);
     if (declaredClass == null) {
       try {
-        declaredClass =
-          Thread.currentThread().getContextClassLoader().loadClass(className);
+        declaredClass = Class.forName(className);
       } catch (ClassNotFoundException e) {
         throw new RuntimeException(e.toString());
       }
@@ -217,8 +215,7 @@ public class ObjectWritable implements Writable, Configurable {
     } else {                                      // Writable
       Class instanceClass = null;
       try {
-        instanceClass = Thread.currentThread().getContextClassLoader()
-          .loadClass(UTF8.readString(in));
+        instanceClass = Class.forName(UTF8.readString(in));
       } catch (ClassNotFoundException e) {
         throw new RuntimeException(e.toString());
       }

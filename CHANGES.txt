@@ -161,16 +161,11 @@ Trunk (unreleased)
 42. HADOOP-184. Re-structure some test code to better support testing
     on a cluster.  (Mahadev Konar via cutting)
 
-43. HADOOP-189.  Fix MapReduce in standalone configuration to
-    correctly handle job jar files that contain a lib directory with
-    nested jar files.  (cutting)
-
-44. HADOOP-191  Add streaming package, Hadoop's first contrib module.
+43. HADOOP-191  Add streaming package, Hadoop's first contrib module.
     This permits folks to easily submit MapReduce jobs whose map and
     reduce functions are implemented by shell commands.  Use
     'bin/hadoop jar build/hadoop-streaming.jar' to get details.
     (Michel Tourn via cutting)
-
 
 Release 0.1.1 - 2006-04-08
 
