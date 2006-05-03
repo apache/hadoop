@@ -161,6 +161,10 @@ Trunk (unreleased)
 42. HADOOP-184. Re-structure some test code to better support testing
     on a cluster.  (Mahadev Konar via cutting)
 
+40. HADOOP-189.  Fix MapReduce in standalone configuration to
+    correctly handle job jar files that contain a lib directory with
+    nested jar files.  (cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

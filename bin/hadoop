@@ -135,14 +135,7 @@ elif [ "$COMMAND" = "tasktracker" ] ; then
 elif [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
 elif [ "$COMMAND" = "jar" ] ; then
-  JAR="$1"
-  shift
-  CLASS=`"$0" org.apache.hadoop.util.PrintJarMainClass "$JAR"`
-  if [ $? != 0 ]; then
-    echo "Error: Could not find main class in jar file $JAR"
-    exit 1
-  fi
-  CLASSPATH=${CLASSPATH}:${JAR}
+  CLASS=org.apache.hadoop.util.RunJar
 else
   CLASS=$COMMAND
 fi
