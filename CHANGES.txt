@@ -184,6 +184,9 @@ Trunk (unreleased)
     every block in every file in the filesystem.  (Konstantin Shvachko
     via cutting)
 
+48. HADOOP-182.  Fix so that lost task trackers to not change the
+    status of reduce tasks or completed jobs.  Also fixes the progress
+    meter so that failed tasks are subtracted. (omalley via cutting)
 
 Release 0.1.1 - 2006-04-08
 

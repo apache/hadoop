@@ -95,8 +95,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
        * map: task-id (String) -> time-assigned (Long)
        */
       private Map launchingTasks = new LinkedHashMap();
-      private static final String errorMsg = "Error launching task";
-      private static final String errorHost = "n/a";
       
       public void run() {
         try {
@@ -119,21 +117,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                     tip = (TaskInProgress) taskidToTIPMap.get(taskId);
                   }
                   if (tip != null) {
-                    synchronized (tip) {
-                      JobInProgress job = tip.getJob();
-                      // record why the job failed, so that the user can
-                      // see the problem
-                      TaskStatus status = 
-                        new TaskStatus(taskId,
-                                       tip.isMapTask(),
-                                       0.0f,
-                                       TaskStatus.FAILED,
-                                       errorMsg,
-                                       errorMsg,
-                                       errorHost);
-                      tip.updateStatus(status);
-                      job.failedTask(tip, taskId, errorHost);
-                    }
+                     JobInProgress job = tip.getJob();
+                     job.failedTask(tip, taskId, "Error launching task", 
+                                    "n/a", "n/a");
                   }
                   itr.remove();
                 } else {
@@ -214,7 +200,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                                 if (now - newProfile.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL) {
                                     // Remove completely
                                     updateTaskTrackerStatus(trackerName, null);
-                                    lostTaskTracker(leastRecent.getTrackerName());
+                                    lostTaskTracker(leastRecent.getTrackerName(),
+                                                    leastRecent.getHost());
                                 } else {
                                     // Update time by inserting latest profile
                                     trackerExpiryQueue.add(newProfile);
@@ -582,14 +569,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     ////////////////////////////////////////////////////
     // InterTrackerProtocol
     ////////////////////////////////////////////////////
-    public void initialize(String taskTrackerName) {
-      synchronized (taskTrackers) {
-        boolean seenBefore = updateTaskTrackerStatus(taskTrackerName, null);
-        if (seenBefore) {
-          lostTaskTracker(taskTrackerName);
-        }
-      }
-    }
 
     /**
      * Update the last recorded status for the given task tracker.
@@ -632,7 +611,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 if (initialContact) {
                     // If it's first contact, then clear out any state hanging around
                     if (seenBefore) {
-                        lostTaskTracker(trackerName);
+                        lostTaskTracker(trackerName, trackerStatus.getHost());
                     }
                 } else {
                     // If not first contact, there should be some record of the tracker
@@ -981,13 +960,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             } else {
                 expireLaunchingTasks.removeTask(taskId);
                 JobInProgress job = tip.getJob();
-                job.updateTaskStatus(tip, report);
 
                 if (report.getRunState() == TaskStatus.SUCCEEDED) {
-                    job.completedTask(tip, report.getTaskId());
+                    job.completedTask(tip, report);
                 } else if (report.getRunState() == TaskStatus.FAILED) {
                     // Tell the job to fail the relevant task
-                    job.failedTask(tip, report.getTaskId(), status.getTrackerName());
+                    job.failedTask(tip, report.getTaskId(), report, 
+                                   status.getTrackerName());
                 }
             }
         }
@@ -998,7 +977,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
      * already been updated.  Just process the contained tasks and any
      * jobs that might be affected.
      */
-    void lostTaskTracker(String trackerName) {
+    void lostTaskTracker(String trackerName, String hostname) {
         LOG.info("Lost tracker '" + trackerName + "'");
         TreeSet lostTasks = (TreeSet) trackerToTaskMap.get(trackerName);
         trackerToTaskMap.remove(trackerName);
@@ -1008,9 +987,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 String taskId = (String) it.next();
                 TaskInProgress tip = (TaskInProgress) taskidToTIPMap.get(taskId);
 
-                // Tell the job to fail the relevant task
-                JobInProgress job = tip.getJob();
-                job.failedTask(tip, taskId, trackerName);
+                // Completed reduce tasks never need to be failed, because 
+                // their outputs go to dfs
+                if (tip.isMapTask() || !tip.isComplete()) {
+                  JobInProgress job = tip.getJob();
+                  // if the job is done, we don't want to change anything
+                  if (job.getStatus().getRunState() == JobStatus.RUNNING) {
+                    job.failedTask(tip, taskId, "Lost task tracker", 
+                                   hostname, trackerName);
+                  }
+                }
             }
         }
     }

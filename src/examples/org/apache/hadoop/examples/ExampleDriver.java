@@ -16,12 +16,6 @@
 
 package org.apache.hadoop.examples;
 import org.apache.hadoop.util.ProgramDriver;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.TreeMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
 
 public class ExampleDriver {
   

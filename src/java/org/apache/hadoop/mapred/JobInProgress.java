@@ -95,7 +95,7 @@ class JobInProgress {
      * Construct the splits, etc.  This is invoked from an async
      * thread so that split-computation doesn't block anyone.
      */
-    public void initTasks() throws IOException {
+    public synchronized void initTasks() throws IOException {
         if (tasksInited) {
             return;
         }
@@ -243,9 +243,12 @@ class JobInProgress {
     ////////////////////////////////////////////////////
     // Status update methods
     ////////////////////////////////////////////////////
-    public void updateTaskStatus(TaskInProgress tip, TaskStatus status) {
+    public synchronized void updateTaskStatus(TaskInProgress tip, 
+                                              TaskStatus status) {
         double oldProgress = tip.getProgress();   // save old progress
         tip.updateStatus(status);                 // update tip
+        LOG.fine("Taking progress for " + tip.getTIPId() + " from " + 
+                 oldProgress + " to " + tip.getProgress());
 
         //
         // Update JobInProgress status
@@ -416,7 +419,10 @@ class JobInProgress {
     /**
      * A taskid assigned to this JobInProgress has reported in successfully.
      */
-    public synchronized void completedTask(TaskInProgress tip, String taskid) {
+    public synchronized void completedTask(TaskInProgress tip, 
+                                           TaskStatus status) {
+        String taskid = status.getTaskId();
+        updateTaskStatus(tip, status);
         LOG.info("Taskid '" + taskid + "' has finished successfully.");
         tip.completed(taskid);
 
@@ -443,7 +449,8 @@ class JobInProgress {
         // If all tasks are complete, then the job is done!
         //
         if (status.getRunState() == JobStatus.RUNNING && allDone) {
-            this.status = new JobStatus(status.getJobId(), 1.0f, 1.0f, JobStatus.SUCCEEDED);
+            this.status = new JobStatus(this.status.getJobId(), 1.0f, 1.0f, 
+                                        JobStatus.SUCCEEDED);
             this.finishTime = System.currentTimeMillis();
             garbageCollect();
         }
@@ -483,8 +490,10 @@ class JobInProgress {
      * we need to schedule reexecution so that downstream reduce tasks can 
      * obtain the map task's output.
      */
-    public void failedTask(TaskInProgress tip, String taskid, String trackerName) {
+    public synchronized void failedTask(TaskInProgress tip, String taskid, 
+                                        TaskStatus status, String trackerName) {
         tip.failedSubTask(taskid, trackerName);
+        updateTaskStatus(tip, status);
         
         // After this, try to assign tasks with the one after this, so that
         // the failed task goes to the end of the list.
@@ -501,8 +510,31 @@ class JobInProgress {
             LOG.info("Aborting job " + profile.getJobId());
             kill();
         }
-    }
 
+        jobtracker.removeTaskEntry(taskid);
+ }
+
+    /**
+     * Fail a task with a given reason, but without a status object.
+     * @author Owen O'Malley
+     * @param tip The task's tip
+     * @param taskid The task id
+     * @param reason The reason that the task failed
+     * @param trackerName The task tracker the task failed on
+     */
+    public void failedTask(TaskInProgress tip, String taskid, 
+                           String reason, String hostname, String trackerName) {
+       TaskStatus status = new TaskStatus(taskid,
+                                          tip.isMapTask(),
+                                          0.0f,
+                                          TaskStatus.FAILED,
+                                          reason,
+                                          reason,
+                                          hostname);
+       failedTask(tip, taskid, status, trackerName);
+    }
+       
+                           
     /**
      * The job is dead.  We're now GC'ing it, getting rid of the job
      * from all tables.  Be sure to remove all of this job's tasks

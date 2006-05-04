@@ -333,9 +333,9 @@ public class DFSck {
       e.printStackTrace();
       success = false;
     } finally {
-      try {in.close(); } catch (Exception e1) {};
-      try {out.close(); } catch (Exception e1) {};
-      try {s.close(); } catch (Exception e1) {};
+      try {in.close(); } catch (Exception e1) {}
+      try {out.close(); } catch (Exception e1) {}
+      try {s.close(); } catch (Exception e1) {}
     }
     if (!success)
       throw new Exception("Could not copy block data for " + lblock.getBlock().getBlockName());

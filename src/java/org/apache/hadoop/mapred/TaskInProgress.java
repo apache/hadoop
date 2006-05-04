@@ -15,11 +15,8 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.LogFormatter;
 
-import java.io.*;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.logging.*;
@@ -304,11 +301,6 @@ class TaskInProgress {
             kill();
         }
         machinesWhereFailed.add(trackerName);
-
-        // Ask JobTracker to forget about this task
-        jobtracker.removeTaskEntry(taskid);
-
-        recomputeProgress();
     }
 
     /**

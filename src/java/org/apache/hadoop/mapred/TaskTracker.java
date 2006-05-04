@@ -575,6 +575,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
                     failures += 1;
                   }
                   runstate = TaskStatus.FAILED;
+                  progress = 0.0f;
               }
               
               needCleanup = runstate == TaskStatus.FAILED;
@@ -627,6 +628,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
             if (runstate == TaskStatus.SUCCEEDED) {
               LOG.info("Reporting output lost:"+task.getTaskId());
               runstate = TaskStatus.FAILED;       // change status to failure
+              progress = 0.0f;
               runningTasks.put(task.getTaskId(), this);
               mapTotal++;
             } else {
