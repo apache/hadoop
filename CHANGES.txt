@@ -171,6 +171,12 @@ Trunk (unreleased)
     correctly handle job jar files that contain a lib directory with
     nested jar files.  (cutting)
 
+45. HADOOP-65.  Initial version of record I/O framework that enables
+    the specification of record types and generates marshalling code
+    in both Java and C++.  Generated Java code implements
+    WritableComparable, but is not yet otherwise used by
+    Hadoop. (Milind Bhandarkar via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 

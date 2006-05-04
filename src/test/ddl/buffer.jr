@@ -1,0 +1,6 @@
+module org.apache.hadoop.record.test {
+    class RecBuffer {
+        buffer Data;
+    }
+}
+

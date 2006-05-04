@@ -108,7 +108,15 @@
       <classpath refid="classpath"/>
   </taskdef>
 
-  <target name="compile" depends="init">
+  <target name="record-parser" depends="init" if="javacc.home">
+      <javacc
+          target="${src.dir}/org/apache/hadoop/record/compiler/generated/rcc.jj"
+          outputdirectory="${src.dir}/org/apache/hadoop/record/compiler/generated"
+          javacchome="${javacc.home}"
+      />
+  </target>
+
+  <target name="compile" depends="init, record-parser">
 
     <jsp-compile
      uriroot="${src.webapps}/mapred"

@@ -1,0 +1,18 @@
+include "location.jr"
+
+module org.apache.hadoop.record.Links {
+    class Link {
+        ustring URL;
+        vector<org.apache.hadoop.record.Location.LinkLocation> Locations;
+        boolean IsRelative;
+        double Weight;
+    }
+
+    class HTTP_Transaction {
+        ustring URL;
+        ustring Request;
+        map<ustring,ustring> ResponseHeader;
+        buffer Source;
+    }
+} // end module
+
