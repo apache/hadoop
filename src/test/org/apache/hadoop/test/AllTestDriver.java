@@ -17,12 +17,6 @@
 package org.apache.hadoop.test;
 
 import org.apache.hadoop.util.ProgramDriver;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.TreeMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
 import org.apache.hadoop.mapred.TestMapRed;
 import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
@@ -33,6 +27,7 @@ import org.apache.hadoop.io.TestSetFile;
 import org.apache.hadoop.io.TestSequenceFile;
 import org.apache.hadoop.ipc.TestIPC;
 import org.apache.hadoop.ipc.TestRPC;
+import org.apache.hadoop.fs.TestDFSIO;
 
 public class AllTestDriver {
   
@@ -54,6 +49,7 @@ public class AllTestDriver {
 	    pgd.addClass("testipc", TestIPC.class, "A test for ipc.");
 	    pgd.addClass("testsequencefileinputformat", TestSequenceFileInputFormat.class, "A test for sequence file input format.");
 	    pgd.addClass("testtextinputformat", TestTextInputFormat.class, "A test for text input format.");
+      pgd.addClass("TestDFSIO", TestDFSIO.class, "Distributed i/o benchmark.");
 	    pgd.driver(argv);
 	}
 	catch(Throwable e){

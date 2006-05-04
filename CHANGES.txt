@@ -177,6 +177,13 @@ Trunk (unreleased)
     WritableComparable, but is not yet otherwise used by
     Hadoop. (Milind Bhandarkar via cutting)
 
+46. HADOOP-193.  Add a MapReduce-based FileSystem benchmark.
+    (Konstantin Shvachko via cutting)
+
+47. HADOOP-194.  Add a MapReduce-based FileSystem checker.  This reads
+    every block in every file in the filesystem.  (Konstantin Shvachko
+    via cutting)
+
 
 Release 0.1.1 - 2006-04-08
 
