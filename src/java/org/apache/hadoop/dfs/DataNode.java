@@ -65,6 +65,9 @@ public class DataNode implements FSConstants, Runnable {
     //private static long numGigs = Configuration.get().getLong("dfs.datanode.maxgigs", 100);
     //
 
+    // required for unknown reason to make WritableFactories work distributed
+    static { new BlockCommand(); }
+
     /**
      * Util method to build socket addr from string
      */

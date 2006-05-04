@@ -62,7 +62,7 @@ public class WritableName {
     if (writableClass != null)
       return writableClass;
     try {
-      return Class.forName(name);
+      return Thread.currentThread().getContextClassLoader().loadClass(name);
     } catch (ClassNotFoundException e) {
       throw new IOException(e.toString());
     }

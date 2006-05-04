@@ -167,6 +167,11 @@ Trunk (unreleased)
     'bin/hadoop jar build/hadoop-streaming.jar' to get details.
     (Michel Tourn via cutting)
 
+44. HADOOP-189.  Fix MapReduce in standalone configuration to
+    correctly handle job jar files that contain a lib directory with
+    nested jar files.  (cutting)
+
+
 Release 0.1.1 - 2006-04-08
 
  1. Added CHANGES.txt, logging all significant changes to Hadoop.  (cutting)

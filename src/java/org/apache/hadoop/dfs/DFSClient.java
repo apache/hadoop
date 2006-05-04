@@ -49,6 +49,9 @@ class DFSClient implements FSConstants {
     Daemon leaseChecker;
     private Configuration conf;
     
+    // required for unknown reason to make WritableFactories work distributed
+    static { new DFSFileInfo(); }
+
     /**
      * A map from name -> DFSOutputStream of files that are currently being
      * written by this client.

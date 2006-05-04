@@ -38,6 +38,9 @@ public class JobClient implements MRConstants {
 
     static long MAX_JOBPROFILE_AGE = 1000 * 2;
 
+    // required for unknown reason to make WritableFactories work distributed
+    static { new JobStatus(); new JobProfile(); }
+
     /**
      * A NetworkedJob is an implementation of RunningJob.  It holds
      * a JobProfile object to provide some info, and interacts with the

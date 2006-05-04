@@ -38,6 +38,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
 
     static final int STALE_STATE = 1;
 
+    // required for unknown reason to make WritableFactories work distributed
+    static { new MapTask(); new ReduceTask(); new MapOutputLocation(); }
+
     public static final Logger LOG =
     LogFormatter.getLogger("org.apache.hadoop.mapred.TaskTracker");
 

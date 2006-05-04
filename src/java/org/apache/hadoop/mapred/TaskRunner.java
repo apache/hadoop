@@ -18,6 +18,7 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.util.jar.*;
@@ -78,7 +79,7 @@ abstract class TaskRunner extends Thread {
 
       String jar = conf.getJar();
       if (jar != null) {                      // if jar exists, it into workDir
-        unJar(new File(jar), workDir);
+        RunJar.unJar(new File(jar), workDir);
         File[] libs = new File(workDir, "lib").listFiles();
         if (libs != null) {
           for (int i = 0; i < libs.length; i++) {
@@ -220,37 +221,6 @@ abstract class TaskRunner extends Thread {
         
     }
     return text;
-  }
-
-  private void unJar(File jarFile, File toDir) throws IOException {
-    JarFile jar = new JarFile(jarFile);
-    try {
-      Enumeration entries = jar.entries();
-      while (entries.hasMoreElements()) {
-        JarEntry entry = (JarEntry)entries.nextElement();
-        if (!entry.isDirectory()) {
-          InputStream in = jar.getInputStream(entry);
-          try {
-            File file = new File(toDir, entry.getName());
-            file.getParentFile().mkdirs();
-            OutputStream out = new FileOutputStream(file);
-            try {
-              byte[] buffer = new byte[8192];
-              int i;
-              while ((i = in.read(buffer)) != -1) {
-                out.write(buffer, 0, i);
-              }
-            } finally {
-              out.close();
-            }
-          } finally {
-            in.close();
-          }
-        }
-      }
-    } finally {
-      jar.close();
-    }
   }
 
   /**
