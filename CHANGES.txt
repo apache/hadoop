@@ -1,7 +1,6 @@
 Hadoop Change Log
 
-
-Trunk (unreleased)
+Release 0.2.0 - 2006-05-05
 
  1. Fix HADOOP-126. 'bin/hadoop dfs -cp' now correctly copies .crc
     files.  (Konstantin Shvachko via cutting)
