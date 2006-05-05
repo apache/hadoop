@@ -82,7 +82,7 @@ case $startStop in
     fi
 
     echo starting $command, logging to $log
-    nohup $HADOOP_HOME/bin/hadoop $command "$@" >& "$log" < /dev/null &
+    nohup "$HADOOP_HOME"/bin/hadoop $command "$@" >& "$log" < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;
