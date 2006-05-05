@@ -33,7 +33,10 @@ public class ExampleDriver {
 			 "A map/reduce program that counts the words in the input files.");
 	    pgd.addClass("grep", Grep.class, 
 			 "A map/reduce program that counts the matches of a regex in the input.");
-	    pgd.driver(argv);
+	    pgd.addClass("randomwriter", RandomWriter.class, 
+                        "A random writer benchmark that writes 10GB per node.");
+            pgd.addClass("sort", Sort.class, "A sort benchmark that sorts the data written by the random writer.");
+            pgd.driver(argv);
 	}
 	catch(Throwable e){
 	    e.printStackTrace();

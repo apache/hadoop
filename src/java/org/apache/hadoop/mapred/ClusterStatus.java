@@ -27,7 +27,7 @@ public class ClusterStatus implements Writable {
   private int reduce_tasks;
   private int max_tasks;
 
-  private ClusterStatus() {}
+  ClusterStatus() {}
   
   ClusterStatus(int trackers, int maps, int reduces, int max) {
     task_trackers = trackers;
