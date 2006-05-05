@@ -188,6 +188,12 @@ Trunk (unreleased)
     status of reduce tasks or completed jobs.  Also fixes the progress
     meter so that failed tasks are subtracted. (omalley via cutting)
 
+49. HADOOP-96.  Logging improvements.  Log files are now separate from
+    standard output and standard error files.  Logs are now rolled.
+    Logging of all DFS state changes can be enabled, to facilitate
+    debugging.  (Hairong Kuang via cutting)
+
+
 Release 0.1.1 - 2006-04-08
 
  1. Added CHANGES.txt, logging all significant changes to Hadoop.  (cutting)

@@ -839,7 +839,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
             System.exit(-1);
         }
 
-        TaskTracker tt = new TaskTracker(new JobConf());
+        JobConf conf=new JobConf();
+        LogFormatter.initFileHandler( conf, "tasktracker" );
+        TaskTracker tt = new TaskTracker(conf);
         tt.run();
     }
 }

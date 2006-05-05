@@ -13,4 +13,6 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-exec "$bin/slaves.sh" "$bin/hadoop-daemon.sh" "$@"
+HADOOP_HOME="$bin/.."
+
+exec "$bin/slaves.sh" cd "$HADOOP_HOME" \; "$bin/hadoop-daemon.sh" "$@"

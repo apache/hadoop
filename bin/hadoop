@@ -51,7 +51,7 @@ shift
 
 # some directories
 THIS_DIR=`dirname "$THIS"`
-HADOOP_HOME=`cd "$THIS_DIR/.." ; pwd`
+export HADOOP_HOME=`cd "$THIS_DIR/.." ; pwd`
 
 # Allow alternate conf dir location.
 HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
@@ -143,6 +143,8 @@ fi
 # cygwin path translation
 if expr `uname` : 'CYGWIN*' > /dev/null; then
   CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+  HADOOP_HOME=`cygpath -p -w "$HADOOP_HOME"`
+  HADOOP_LOG_DIR=`cygpath -p -w "$HADOOP_LOG_DIR"`
 fi
 
 # run it

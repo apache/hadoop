@@ -1015,6 +1015,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           System.exit(-1);
         }
 
-        startTracker(new Configuration());
+        Configuration conf=new Configuration();
+        LogFormatter.initFileHandler( conf, "jobtracker" );
+        startTracker(conf);
     }
 }

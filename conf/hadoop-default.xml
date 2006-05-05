@@ -7,6 +7,28 @@
 
 <configuration>
 
+<!--- logging properties -->
+
+<property>
+  <name>hadoop.logfile.size</name>
+  <value>10000000</value>
+  <description>The max size of each log file</description>
+</property>
+
+<property>
+  <name>hadoop.logfile.count</name>
+  <value>10</value>
+  <description>The max number of log files</description>
+</property>
+
+<property>
+  <name>dfs.namenode.logging.level</name>
+  <value>info</value>
+  <description>The logging level for dfs namenode. Other values are "dir"(trac
+e namespace mutations), "block"(trace block under/over replications and block
+creations/deletions), or "all".</description>
+</property>
+
 <!-- i/o properties -->
 
 <property>

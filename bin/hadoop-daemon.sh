@@ -38,7 +38,7 @@ while [ -h "$this" ]; do
 done
 
 # the root of the Hadoop installation
-HADOOP_HOME=`dirname "$this"`/..
+export HADOOP_HOME=`dirname "$this"`/..
 
 # Allow alternate conf dir location.
 HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
@@ -49,9 +49,9 @@ fi
 
 # get log directory
 if [ "$HADOOP_LOG_DIR" = "" ]; then
-  HADOOP_LOG_DIR="$HADOOP_HOME/logs"
-  mkdir -p "$HADOOP_LOG_DIR"
+  export HADOOP_LOG_DIR="$HADOOP_HOME/logs"
 fi
+mkdir -p "$HADOOP_LOG_DIR"
 
 if [ "$HADOOP_PID_DIR" = "" ]; then
   HADOOP_PID_DIR=/tmp
@@ -62,7 +62,7 @@ if [ "$HADOOP_IDENT_STRING" = "" ]; then
 fi
 
 # some variables
-log=$HADOOP_LOG_DIR/hadoop-$HADOOP_IDENT_STRING-$command-`hostname`.log
+log=$HADOOP_LOG_DIR/hadoop-$HADOOP_IDENT_STRING-$command-`hostname`.out
 pid=$HADOOP_PID_DIR/hadoop-$HADOOP_IDENT_STRING-$command.pid
 
 case $startStop in
@@ -81,9 +81,8 @@ case $startStop in
       rsync -a -e ssh --delete --exclude=.svn $HADOOP_MASTER/ "$HADOOP_HOME"
     fi
 
-    cd "$HADOOP_HOME"
     echo starting $command, logging to $log
-    nohup bin/hadoop $command "$@" >& "$log" < /dev/null &
+    nohup $HADOOP_HOME/bin/hadoop $command "$@" >& "$log" < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;

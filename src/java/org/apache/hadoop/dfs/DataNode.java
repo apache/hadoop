@@ -824,7 +824,9 @@ public class DataNode implements FSConstants, Runnable {
     /**
      */
     public static void main(String args[]) throws IOException {
+        Configuration conf = new Configuration();
         LogFormatter.setShowThreadIDs(true);
-        runAndWait(new Configuration());
+        LogFormatter.initFileHandler(conf, "datanode");
+        runAndWait(conf);
     }
 }

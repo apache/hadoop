@@ -57,6 +57,7 @@ import java.util.logging.*;
  **********************************************************/
 public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.dfs.NameNode");
+    public static final Logger stateChangeLog = LogFormatter.getLogger( "org.apache.hadoop.dfs.StateChange");
 
     private FSNamesystem namesystem;
     private Server server;
@@ -182,7 +183,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                boolean overwrite,
                                short replication
     ) throws IOException {
-        Object results[] = namesystem.startFile(new UTF8(src), 
+       stateChangeLog.fine("*DIR* NameNode.create: file "
+            +src+" for "+clientName+" at "+clientMachine);
+       Object results[] = namesystem.startFile(new UTF8(src), 
                                                 new UTF8(clientName), 
                                                 new UTF8(clientMachine), 
                                                 overwrite,
@@ -202,6 +205,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     public LocatedBlock addBlock(String src, 
                                  String clientName) throws IOException {
+        stateChangeLog.fine("*BLOCK* NameNode.addBlock: file "
+            +src+" for "+clientName);
         UTF8 src8 = new UTF8(src);
         UTF8 client8 = new UTF8(clientName);
         Object[] results = namesystem.getAdditionalBlock(src8, client8);
@@ -216,8 +221,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * to prevent weird heartbeat race conditions.
      */
     public void reportWrittenBlock(LocatedBlock lb) throws IOException {
-        Block b = lb.getBlock();
+        Block b = lb.getBlock();        
         DatanodeInfo targets[] = lb.getLocations();
+        stateChangeLog.fine("*BLOCK* NameNode.reportWrittenBlock"
+                +": " + b.getBlockName() +" is written to "
+                +targets.length + " locations" );
+
         for (int i = 0; i < targets.length; i++) {
             namesystem.blockReceived(b, targets[i].getName());
         }
@@ -227,6 +236,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * The client needs to give up on the block.
      */
     public void abandonBlock(Block b, String src) throws IOException {
+        stateChangeLog.fine("*BLOCK* NameNode.abandonBlock: "
+                +b.getBlockName()+" of file "+src );
         if (! namesystem.abandonBlock(b, new UTF8(src))) {
             throw new IOException("Cannot abandon block during write to " + src);
         }
@@ -235,11 +246,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     public void abandonFileInProgress(String src, 
                                       String holder) throws IOException {
+        stateChangeLog.fine("*DIR* NameNode.abandonFileInProgress:" + src );
         namesystem.abandonFileInProgress(new UTF8(src), new UTF8(holder));
     }
     /**
      */
     public boolean complete(String src, String clientName) throws IOException {
+        stateChangeLog.fine("*DIR* NameNode.complete: " + src + " for " + clientName );
         int returnCode = namesystem.completeFile(new UTF8(src), new UTF8(clientName));
         if (returnCode == STILL_WAITING) {
             return false;
@@ -269,12 +282,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /**
      */
     public boolean rename(String src, String dst) throws IOException {
+        stateChangeLog.fine("*DIR* NameNode.rename: " + src + " to " + dst );
         return namesystem.renameTo(new UTF8(src), new UTF8(dst));
     }
 
     /**
      */
     public boolean delete(String src) throws IOException {
+        stateChangeLog.fine("*DIR* NameNode.delete: " + src );
         return namesystem.delete(new UTF8(src));
     }
 
@@ -293,6 +308,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /**
      */
     public boolean mkdirs(String src) throws IOException {
+        stateChangeLog.fine("*DIR* NameNode.mkdirs: " + src );
         return namesystem.mkdirs(new UTF8(src));
     }
 
@@ -404,6 +420,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
 
     public Block[] blockReport(String sender, Block blocks[]) {
+        stateChangeLog.fine("*BLOCK* NameNode.blockReport: "
+                +"from "+sender+" "+blocks.length+" blocks" );
         if( firstBlockReportTime==0)
               firstBlockReportTime=System.currentTimeMillis();
 
@@ -411,6 +429,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      }
 
     public void blockReceived(String sender, Block blocks[]) {
+        stateChangeLog.fine("*BLOCK* NameNode.blockReceived: "
+                +"from "+sender+" "+blocks.length+" blocks." );
         for (int i = 0; i < blocks.length; i++) {
             namesystem.blockReceived(blocks[i], new UTF8(sender));
         }
@@ -441,6 +461,19 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
           System.err.println("Formatted "+dir);
           System.exit(0);
         }
+            
+        LogFormatter.initFileHandler( conf, "namenode" );
+        LogFormatter.setShowThreadIDs(true);
+        String confLevel = conf.get("dfs.namenode.logging.level", "info");
+        Level level;
+        if( confLevel.equals( "dir"))
+                level=Level.FINE;
+        else if( confLevel.equals( "block"))
+                level=Level.FINER;
+        else if( confLevel.equals( "all"))
+                level=Level.FINEST;
+        else level=Level.INFO;
+        stateChangeLog.setLevel( level);
 
         NameNode namenode = new NameNode(conf);
         namenode.join();

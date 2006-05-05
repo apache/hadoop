@@ -18,8 +18,11 @@ package org.apache.hadoop.util;
 
 import java.util.logging.*;
 import java.io.*;
+import java.net.InetAddress;
 import java.text.*;
 import java.util.Date;
+
+import org.apache.hadoop.conf.Configuration;
 
 /** Prints just the date and the log message. */
 
@@ -34,7 +37,7 @@ public class LogFormatter extends Formatter {
 
   private static boolean showTime = true;
   private static boolean showThreadIDs = false;
-
+  
   // install when this class is loaded
   static {
     Handler[] handlers = LogFormatter.getLogger("").getHandlers();
@@ -44,6 +47,63 @@ public class LogFormatter extends Formatter {
     }
   }
 
+  public static String initFileHandler( Configuration conf, String opName )
+      throws IOException {
+          String logDir=System.getenv("HADOOP_LOG_DIR");
+          String userHome=System.getProperty("user.dir");
+          if( logDir==null ) {
+        	  logDir=System.getenv("HADOOP_HOME");
+        	  if(logDir==null) {
+        		  logDir=userHome;
+        	  } else {
+                  logDir+=File.separator+"logs";   
+              }
+          }
+          
+          if(!logDir.equals(userHome)) {
+              File logDirFile = new File( logDir );
+              if(!logDirFile.exists()) {
+                  if(!logDirFile.mkdirs()) {
+                      logDir=userHome;
+                  }
+              } else if( !logDirFile.isDirectory()) {
+                  logDir=userHome;
+              }
+          }
+          
+          String hostname;
+          try {
+          	hostname=InetAddress.getLocalHost().getHostName();
+          	int index=hostname.indexOf('.');
+          	if( index != -1 ) {
+          		hostname=hostname.substring(0, index);
+          	}
+          } catch (java.net.UnknownHostException e) {
+          	hostname="localhost";
+          }
+          
+          String logFile = logDir+File.separator+"hadoop-"+System.getProperty( "user.name" )
+               +"-"+opName+"-"+hostname+".log";
+
+          int logFileSize = conf.getInt( "hadoop.logfile.size", 10000000 );
+          int logFileCount = conf.getInt( "hadoop.logfile.count", 10 );
+          
+          FileHandler fh=new FileHandler(logFile, logFileSize, logFileCount, false);
+          fh.setFormatter(new LogFormatter());
+          fh.setLevel(Level.FINEST);
+          
+          Logger rootLogger = LogFormatter.getLogger("");
+          rootLogger.info( "directing logs to directory "+logDir );
+          
+          Handler[] handlers = rootLogger.getHandlers();
+          for( int i=0; i<handlers.length; i++ ) {
+          	rootLogger.removeHandler( handlers[i]);
+          }
+          rootLogger.addHandler(fh);
+          
+          return logFile;
+  }
+      
   /** Gets a logger and, as a side effect, installs this as the default
    * formatter. */
   public static Logger getLogger(String name) {
@@ -77,8 +137,11 @@ public class LogFormatter extends Formatter {
     
     // the thread id
     if (showThreadIDs) {
-      buffer.append(" ");
-      buffer.append(record.getThreadID());
+      buffer.append(" 0x");
+      String threadID = Integer.toHexString(record.getThreadID());
+      for (int i = 0; i < 8 - threadID.length(); i++) 
+        buffer.append('0');
+      buffer.append(threadID);
     }
 
     // handle SEVERE specially
