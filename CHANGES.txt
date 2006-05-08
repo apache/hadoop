@@ -6,6 +6,8 @@ Trunk (unreleased)
  1. HADOOP-199.  Fix reduce progress (broken by HADOOP-182).
     (omalley via cutting)
 
+ 2. HADOOP-201.  Fix 'bin/hadoop dfs -report'.  (cutting)
+
 
 Release 0.2.0 - 2006-05-05
 

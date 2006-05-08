@@ -27,6 +27,10 @@ import org.apache.hadoop.fs.*;
  * @author Mike Cafarella
  **************************************************/
 public class DFSShell {
+
+    // required for unknown reason to make WritableFactories work distributed
+    static { new DatanodeInfo(); }
+
     FileSystem fs;
 
     /**
