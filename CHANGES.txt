@@ -3,7 +3,8 @@ Hadoop Change Log
 
 Trunk (unreleased)
 
- 1.
+ 1. HADOOP-199.  Fix reduce progress (broken by HADOOP-182).
+    (omalley via cutting)
 
 
 Release 0.2.0 - 2006-05-05
