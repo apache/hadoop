@@ -334,7 +334,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
 	conf.setLong("dfs.blockreport.intervalMsec", 50*1000L);
 	conf.setLong("dfs.datanode.startupMsec", 15*1000L);
 	conf.setInt("dfs.replication", 2);
-	//System.setProperty("HADOOP_LOG_DIR", baseDirSpecified+"/logs");
+	System.setProperty("hadoop.log.dir", baseDirSpecified+"/logs");
 	conf.setInt("hadoop.logfile.count", 1);
 	conf.setInt("hadoop.logfile.size", 1000000000);
 

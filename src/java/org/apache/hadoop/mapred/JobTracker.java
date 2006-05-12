@@ -967,6 +967,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                     // Tell the job to fail the relevant task
                     job.failedTask(tip, report.getTaskId(), report, 
                                    status.getTrackerName());
+                } else {
+                    job.updateTaskStatus(tip, report);
                 }
             }
         }

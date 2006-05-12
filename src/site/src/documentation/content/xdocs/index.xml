@@ -15,6 +15,17 @@
       <title>News</title>
 
       <section>
+      <title>5 May, 2006: release 0.2.0 available</title>
+      <p>We are now aiming for monthly releases.  There have been many
+      bug fixes and improvements in the past month.  MapReduce and DFS
+      are now fairly reliable on clusters with up to 200 nodes.  See
+      the <a href="http://tinyurl.com/qkgsg">change log</a> for
+      details. The release can be obtained from <a
+      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
+      nearby mirror</a>.
+      </p> </section>
+
+      <section>
       <title>2 April, 2006: release 0.1.0 available</title>
       <p>This is the first Hadoop release.  The release is available
       <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/">

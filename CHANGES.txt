@@ -1,5 +1,17 @@
 Hadoop Change Log
 
+
+Release 0.2.1 - 2006-05-12
+
+ 1. HADOOP-199.  Fix reduce progress (broken by HADOOP-182).
+    (omalley via cutting)
+
+ 2. HADOOP-201.  Fix 'bin/hadoop dfs -report'.  (cutting)
+
+ 3. HADOOP-207.  Fix JDK 1.4 incompatibility introduced by HADOOP-96.
+    System.getenv() does not work in JDK 1.4.  (Hairong Kuang via cutting)
+
+
 Release 0.2.0 - 2006-05-05
 
  1. Fix HADOOP-126. 'bin/hadoop dfs -cp' now correctly copies .crc

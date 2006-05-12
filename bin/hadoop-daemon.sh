@@ -58,7 +58,7 @@ if [ "$HADOOP_PID_DIR" = "" ]; then
 fi
 
 if [ "$HADOOP_IDENT_STRING" = "" ]; then
-  HADOOP_IDENT_STRING=$USER
+  export HADOOP_IDENT_STRING="$USER"
 fi
 
 # some variables
