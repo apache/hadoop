@@ -8,6 +8,9 @@ Trunk (unreleased)
 
  2. HADOOP-201.  Fix 'bin/hadoop dfs -report'.  (cutting)
 
+ 3. HADOOP-207.  Fix JDK 1.4 incompatibility introduced by HADOOP-96.
+    System.getenv() does not work in JDK 1.4.  (Hairong Kuang via cutting)
+
 
 Release 0.2.0 - 2006-05-05
 

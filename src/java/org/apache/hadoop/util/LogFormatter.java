@@ -49,10 +49,10 @@ public class LogFormatter extends Formatter {
 
   public static String initFileHandler( Configuration conf, String opName )
       throws IOException {
-          String logDir=System.getenv("HADOOP_LOG_DIR");
+          String logDir=System.getProperty("hadoop.log.dir");
           String userHome=System.getProperty("user.dir");
           if( logDir==null ) {
-        	  logDir=System.getenv("HADOOP_HOME");
+        	  logDir=System.getProperty("hadoop.home.dir");
         	  if(logDir==null) {
         		  logDir=userHome;
         	  } else {
@@ -82,7 +82,9 @@ public class LogFormatter extends Formatter {
           	hostname="localhost";
           }
           
-          String logFile = logDir+File.separator+"hadoop-"+System.getProperty( "user.name" )
+          String id = System.getProperty( "hadoop.id.str", 
+                                          System.getProperty("user.name") );
+          String logFile = logDir+File.separator+"hadoop-"+id
                +"-"+opName+"-"+hostname+".log";
 
           int logFileSize = conf.getInt( "hadoop.logfile.size", 10000000 );

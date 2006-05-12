@@ -143,9 +143,13 @@ fi
 # cygwin path translation
 if expr `uname` : 'CYGWIN*' > /dev/null; then
   CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-  HADOOP_HOME=`cygpath -p -w "$HADOOP_HOME"`
-  HADOOP_LOG_DIR=`cygpath -p -w "$HADOOP_LOG_DIR"`
+  HADOOP_HOME=`cygpath -d "$HADOOP_HOME"`
+  HADOOP_LOG_DIR=`cygpath -d "$HADOOP_LOG_DIR"`
 fi
+
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
 
 # run it
 exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"
