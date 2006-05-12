@@ -57,7 +57,8 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     
     //static class TagMap extends TreeMap<String,Object> {
     static class TagMap extends TreeMap {
-        TagMap() {
+		private static final long serialVersionUID = 3546309335061952993L;
+		TagMap() {
             super();
         }
         TagMap(TagMap orig) {
@@ -65,10 +66,14 @@ public abstract class AbstractMetricsContext implements MetricsContext {
         }
     }
     //static class MetricMap extends TreeMap<String,Number> {}
-    static class MetricMap extends TreeMap {}
+    static class MetricMap extends TreeMap {
+		private static final long serialVersionUID = -7495051861141631609L;
+    }
             
     //static class RecordMap extends HashMap<TagMap,MetricMap> {}
-    static class RecordMap extends HashMap {}
+    static class RecordMap extends HashMap {
+		private static final long serialVersionUID = 259835619700264611L;
+    }
     
     //private Map<String,RecordMap> bufferedData = new HashMap<String,RecordMap>();
     private Map bufferedData = new HashMap();
@@ -181,11 +186,20 @@ public abstract class AbstractMetricsContext implements MetricsContext {
      * @param recordName the name of the record
      * @throws MetricsException if recordName conflicts with configuration data
      */
-    public synchronized MetricsRecord createRecord(String recordName) {
+    public final synchronized MetricsRecord createRecord(String recordName) {
         if (bufferedData.get(recordName) == null) {
             bufferedData.put(recordName, new RecordMap());
         }
-        return new MetricsRecordImpl(recordName, this);
+        return newRecord(recordName);
+    }
+    
+    /**
+     * Subclasses should override this if they subclass MetricsRecordImpl.
+     * @param recordName the name of the record
+     * @return newly created instance of MetricsRecordImpl or subclass
+     */
+    protected MetricsRecordImpl newRecord(String recordName) {
+    	return new MetricsRecordImpl(recordName, this);
     }
     
     /**
@@ -222,7 +236,12 @@ public abstract class AbstractMetricsContext implements MetricsContext {
             timer = new Timer();
             TimerTask task = new TimerTask() {
                 public void run() {
-                    timerEvent();
+                	try {
+                		timerEvent();
+                	}
+                	catch (IOException ioe) {
+                		ioe.printStackTrace();
+                	}
                 }
             };
             long millis = period * 1000;
@@ -243,7 +262,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     /**
      * Timer callback.
      */
-    private synchronized void timerEvent() {
+    private synchronized void timerEvent() throws IOException {
         if (isMonitoring) {
             // Run all the registered updates
             // for (Updater updater : updaters) {
@@ -265,18 +284,13 @@ public abstract class AbstractMetricsContext implements MetricsContext {
                 String recordName = (String) recordIt.next();
                 RecordMap recordMap = (RecordMap) bufferedData.get(recordName);
                 synchronized (recordMap) {
-                    try {
-                        //for (TagMap tagMap : recordMap.keySet()) {
-                        Iterator tagIt = recordMap.keySet().iterator();
-                        while (tagIt.hasNext()) {
-                            TagMap tagMap = (TagMap) tagIt.next();
-                            MetricMap metricMap = (MetricMap) recordMap.get(tagMap);
-                            OutputRecord outRec = new OutputRecord(tagMap, metricMap);
-                            emitRecord(contextName, recordName, outRec);
-                        }
-                    }
-                    catch (IOException ioe) {
-                        ioe.printStackTrace();
+                    //for (TagMap tagMap : recordMap.keySet()) {
+                    Iterator tagIt = recordMap.keySet().iterator();
+                    while (tagIt.hasNext()) {
+                        TagMap tagMap = (TagMap) tagIt.next();
+                        MetricMap metricMap = (MetricMap) recordMap.get(tagMap);
+                        OutputRecord outRec = new OutputRecord(tagMap, metricMap);
+                        emitRecord(contextName, recordName, outRec);
                     }
                 }
             }
@@ -294,7 +308,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
      * Called each period after all records have been emitted, this method does nothing.
      * Subclasses may override it in order to perform some kind of flush.
      */
-    protected void flush() {
+    protected void flush() throws IOException {
     }
     
     /**

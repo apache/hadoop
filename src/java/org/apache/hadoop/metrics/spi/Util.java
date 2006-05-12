@@ -20,7 +20,6 @@
 package org.apache.hadoop.metrics.spi;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,32 +29,35 @@ import java.util.List;
 public class Util {
     
     /**
-     * Not intended to be instantiated
+     * This class is not intended to be instantiated
      */
     private Util() {}
     
     /**
      * Parses a space and/or comma separated sequence of server specifications
-     * of the form <i>hostname</i> or <i>hostname:port</i>.  
+     * of the form <i>hostname</i> or <i>hostname:port</i>.  If 
+     * the specs string is null, defaults to localhost:defaultPort.
      * 
-     * @return a list of SocketAddress objects.
+     * @return a list of InetSocketAddress objects.
      */
-    //public static List<SocketAddress> parse(String specs, int defaultPort) {
     public static List parse(String specs, int defaultPort) {
-        String[] specStrings = specs.split("[ ,]+");
-        //List<SocketAddress> result = new ArrayList<SocketAddress>();
-        List result = new ArrayList();
-        
-        //for (String specString : specStrings) {
-        for (int i = 0; i < specStrings.length; i++) {
-            String specString = specStrings[i];
-            int colon = specString.indexOf(':');
-            if (colon < 0 || colon == specString.length() - 1) {
-                result.add(new InetSocketAddress(specString, defaultPort));
-            } else {
-                String hostname = specString.substring(0, colon);
-                int port = Integer.parseInt(specString.substring(colon+1));
-                result.add(new InetSocketAddress(hostname, port));
+        List result = new ArrayList(1); // ArrayList<InetSocketAddress>
+        if (specs == null) {
+                result.add(new InetSocketAddress("localhost", defaultPort));
+        }
+        else {
+            String[] specStrings = specs.split("[ ,]+");
+            //for (String specString : specStrings) {
+            for (int i = 0; i < specStrings.length; i++) {
+                String specString = specStrings[i];
+                int colon = specString.indexOf(':');
+                if (colon < 0 || colon == specString.length() - 1) {
+                    result.add(new InetSocketAddress(specString, defaultPort));
+                } else {
+                    String hostname = specString.substring(0, colon);
+                    int port = Integer.parseInt(specString.substring(colon+1));
+                    result.add(new InetSocketAddress(hostname, port));
+                }
             }
         }
         return result;

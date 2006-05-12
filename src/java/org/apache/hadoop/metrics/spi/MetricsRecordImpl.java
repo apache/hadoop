@@ -39,7 +39,7 @@ public class MetricsRecordImpl implements MetricsRecord {
     
     
     /** Creates a new instance of FileRecord */
-    MetricsRecordImpl(String recordName, AbstractMetricsContext context)
+    protected MetricsRecordImpl(String recordName, AbstractMetricsContext context)
     {
         this.recordName = recordName;
         this.context = context;

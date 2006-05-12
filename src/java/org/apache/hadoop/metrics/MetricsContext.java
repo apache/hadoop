@@ -19,8 +19,6 @@
 package org.apache.hadoop.metrics;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * The main interface to the metrics package. 

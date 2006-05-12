@@ -6,6 +6,8 @@ Trunk (unreleased)
  1. HADOOP-208.  Enhance MapReduce web interface, adding new pages
     for failed tasks, and tasktrackers.  (omalley via cutting)
 
+ 2. HADOOP-204.  Tweaks to metrics package.  (David Bowen via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

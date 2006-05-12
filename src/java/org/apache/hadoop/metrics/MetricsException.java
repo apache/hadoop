@@ -23,7 +23,9 @@ package org.apache.hadoop.metrics;
  */
 public class MetricsException extends RuntimeException {
     
-    /** Creates a new instance of MetricsException */
+	private static final long serialVersionUID = -1643257498540498497L;
+
+	/** Creates a new instance of MetricsException */
     public MetricsException() {
     }
     

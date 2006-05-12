@@ -188,6 +188,20 @@
   </target>
 
   <!-- ================================================================== -->
+  <!-- Make the Hadoop metrics jar. (for use outside Hadoop)              -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="metrics.jar" depends="compile">
+    <jar jarfile="${build.dir}/hadoop-metrics-${version}.jar"
+         basedir="${build.classes}">
+      <include name="**/metrics/**" />
+      <exclude name="**/package.html" />
+    </jar>
+  </target>
+
+
+  <!-- ================================================================== -->
   <!-- Compile test code                                                  --> 
   <!-- ================================================================== -->
   <target name="compile-test" depends="compile, jar">
