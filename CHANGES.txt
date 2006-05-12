@@ -7,7 +7,7 @@ Trunk (unreleased)
     for failed tasks, and tasktrackers.  (omalley via cutting)
 
 
-Release 0.2.1 - 2006-05-05
+Release 0.2.1 - 2006-05-12
 
  1. HADOOP-199.  Fix reduce progress (broken by HADOOP-182).
     (omalley via cutting)
