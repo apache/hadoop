@@ -40,7 +40,7 @@
 <html>
 <title>Hadoop Task Details</title>
 <body>
-<h1>Job '<%=jobid%>'</h1>
+<h1>Job <%=jobid%></h1>
 
 <hr>
 
@@ -65,11 +65,7 @@
 </center>
 
 <hr>
-<%
-out.print("<a href=\"/jobdetails.jsp?jobid=" + jobid + "\">" + "Go back to the Job" + "</a><br>");	
-%>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
-<hr>
+<a href="/jobdetails.jsp?jobid=<%=jobid%>">Go back to the job</a><br>
 <a href="/jobtracker.jsp">Go back to JobTracker</a><br>
 <a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
 </body>

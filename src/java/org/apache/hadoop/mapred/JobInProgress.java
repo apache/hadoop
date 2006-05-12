@@ -222,6 +222,22 @@ class JobInProgress {
     }
 
     /**
+     * Get the list of map tasks
+     * @return the raw array of maps for this job
+     */
+    TaskInProgress[] getMapTasks() {
+      return maps;
+    }
+    
+    /**
+     * Get the list of reduce tasks
+     * @return the raw array of reduce tasks for this job
+     */
+    TaskInProgress[] getReduceTasks() {
+      return reduces;
+    }
+    
+    /**
      * Return a treeset of completed TaskInProgress objects
      */
     public Vector reportTasksInProgress(boolean shouldBeMap, boolean shouldBeComplete) {

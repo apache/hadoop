@@ -160,6 +160,15 @@ class TaskInProgress {
     public boolean isMapTask() {
         return split != null;
     }
+    
+    /**
+     * Is this tip currently running any tasks?
+     * @return true if any tasks are running
+     */
+    public boolean isRunning() {
+      return !recentTasks.isEmpty();
+    }
+    
     /**
      */
     public boolean isComplete() {

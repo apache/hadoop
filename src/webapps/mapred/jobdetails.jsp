@@ -4,100 +4,98 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
+  import="java.text.DecimalFormat"
   import="org.apache.hadoop.mapred.*"
-  import="java.lang.Integer"
+  import="org.apache.hadoop.util.*"
+%>
+
+<%!
+  private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
+  JobTracker tracker = JobTracker.getTracker();
+  String trackerName = 
+           StringUtils.simpleHostname(tracker.getJobTrackerMachine());
+  
+  private void printTaskSummary(JspWriter out,
+                                String jobId,
+                                String kind,
+                                double completePercent,
+                                TaskInProgress[] tasks
+                               ) throws IOException {
+    int totalTasks = tasks.length;
+    int runningTasks = 0;
+    int finishedTasks = 0;
+    int failures = 0;
+    for(int i=0; i < totalTasks; ++i) {
+      TaskInProgress task = tasks[i];
+      if (task.isComplete()) {
+        finishedTasks += 1;
+      } else if (task.isRunning()) {
+        runningTasks += 1;
+      }
+      failures += task.numTaskFailures();
+    }
+    out.print("<tr><th><a href=\"/jobtasks.jsp?jobid=" + jobId + 
+              "&type="+ kind + "&pagenum=1\">" + kind + "</a></th><td>" + 
+              percentFormat.format(100.0 * completePercent) +
+              "</td><td>" + totalTasks + "</td><td>" + 
+              (totalTasks - runningTasks - finishedTasks) + "</td><td>" +
+              runningTasks + "</td><td>" +
+              finishedTasks + 
+              "</td><td><a href=\"/jobfailures.jsp?jobid=" + jobId +
+              "&kind=" + kind + "\">" +
+              failures + "</a></td></tr>\n");
+  }
+           
+  private void printJobStatus(JspWriter out, 
+                              String jobId) throws IOException {
+    JobInProgress job = (JobInProgress) tracker.getJob(jobId);
+    if (job == null) {
+      out.print("<b>Job " + jobId + " not found.</b><br>\n");
+      return;
+    }
+    JobProfile profile = job.getProfile();
+    JobStatus status = job.getStatus();
+    out.print("<b>User:</b> " + profile.getUser() + "<br>\n");
+    out.print("<b>Job Name:</b> " + profile.getJobName() + "<br>\n");
+    out.print("<b>Job File:</b> " + profile.getJobFile() + "<br>\n");
+    out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
+    int runState = status.getRunState();
+    if (runState == JobStatus.RUNNING) {
+      out.print("<b>Status:</b> Running<br>\n");
+    } else {
+      if (runState == JobStatus.SUCCEEDED) {
+        out.print("<b>Status:</b> Succeeded<br>\n");
+      } else if (runState == JobStatus.FAILED) {
+        out.print("<b>Status:</b> Failed<br>\n");
+      }
+      out.print("<b>Finished at:</b> " + new Date(job.getFinishTime()) +
+                "<br>\n");
+    }
+    out.print("<hr>\n");
+    out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
+    out.print("<tr><th>Kind</th><th>% Complete</th><th>Num Tasks</th>" +
+              "<th>Pending</th><th>Running</th><th>Complete</th>" +
+              "<th><a href=\"/jobfailures.jsp?jobid=" + jobId + 
+              "\">Failures</a></th></tr>\n");
+    printTaskSummary(out, jobId, "map", status.mapProgress(), 
+                     job.getMapTasks());
+    printTaskSummary(out, jobId, "reduce", status.reduceProgress(),
+                     job.getReduceTasks());
+    out.print("</table>\n");
+  }
 %>
 
 <%
-  String jobid = request.getParameter("jobid");
-  String type = request.getParameter("type");
-  String pagenum = request.getParameter("pagenum");
-  int pnum = Integer.parseInt(pagenum);
-  int next_page = pnum+1;
-  int numperpage = 2000;
-  JobTracker tracker = JobTracker.getTracker();
-  JobInProgress job = (JobInProgress) tracker.getJob(jobid);
-  JobProfile profile = (job != null) ? (job.getProfile()) : null;
-  JobStatus status = (job != null) ? (job.getStatus()) : null;
-  TaskReport[] reports = null;
-  int start_index = (pnum - 1) * numperpage;
-  int end_index = start_index + numperpage;
-  int report_len = 0;
-  if ("map".equals(type)){
-     reports = (job != null) ? tracker.getMapTaskReports(jobid) : null;
-    }
-  else{
-    reports = (job != null) ? tracker.getReduceTaskReports(jobid) : null;
-  }
+    String jobid = request.getParameter("jobid");
 %>
 
 <html>
-<title>Hadoop MapReduce Job Details</title>
+<title>Hadoop <%=jobid%> on <%=trackerName%></title>
 <body>
-<%
-  if (job == null) {
-    %>
-    No job found<br>
-    <%
-  } else {
- %>
-<h1>Job '<%=jobid%>'</h1>
+<h1>Hadoop <%=jobid%> on <a href="/jobtracker.jsp"><%=trackerName%></a></h1>
 
-<b>Job File:</b> <%=profile.getJobFile()%><br>
-<b>The job started at:</b> <%= new Date(job.getStartTime())%><br>
-<%   
-  if (status.getRunState() == JobStatus.RUNNING) {
-    out.print("The job is still running.<br>\n");
-  } else if (status.getRunState() == JobStatus.SUCCEEDED) {
-    out.print("<b>The job completed at:</b> " + new Date(job.getFinishTime()) + 
-
-"<br>\n");
-  } else if (status.getRunState() == JobStatus.FAILED) {
-    out.print("<b>The job failed at:</b> " + new Date(job.getFinishTime()) + 
-
-"<br>\n");
-  }
-  report_len = reports.length;
-  
-  if (report_len <= start_index) {
-        out.print("<b>No such tasks</b>");
-  }else{
-    out.print("<hr>");
-    out.print("<h2>Tasks</h2>");
-    out.print("<center>");
-    out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
-    out.print("<tr><td align=\"center\">Task</td><td>Complete</td><td>Status</td><td>Errors</td></tr>");
-    if (end_index > report_len){
-        end_index = report_len;
-    }
-    for (int i = start_index ; i < end_index; i++) {
-          TaskReport report = reports[i];
-          out.print("<tr><td><a href=\"taskdetails.jsp?jobid=" + jobid + 
-"&taskid=" + report.getTaskId() + "\">"  + report.getTaskId() + "</a></td>");
-         out.print("<td>" + report.getProgress() + "</td>");
-         out.print("<td>"  + report.getState() + "</td>");
-         String[] diagnostics = report.getDiagnostics();
-         for (int j = 0; j < diagnostics.length ; j++) {
-                out.print("<td><pre>" + diagnostics[j] + "</pre></td>");
-         }
-            out.print("</tr>\n");
-    }
-    out.print("</table>");
-    out.print("</center>");
-  }
-  
-  %>
-  
- <%
-  if (end_index < report_len) {
-    out.print("<div style=\"text-align:right\">" + "<a href=\"/jobdetails.jsp?jobid="+ jobid + "&type=" + type +"&pagenum=" + next_page 
-            + "\">" + "Next" + "</a></div>");
-   }
-  if (start_index != 0) {
-      out.print("<div style=\"text-align:right\">" + "<a href=\"/jobdetails.jsp?jobid="+ jobid + "&type=" + type +"&pagenum=" + (pnum -1) 
-      + "\">" + "Prev" + "</a></div>");
-   }
-  }
+<% 
+    printJobStatus(out, jobid); 
 %>
 
 <hr>

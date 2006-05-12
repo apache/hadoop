@@ -37,5 +37,18 @@ public class StringUtils {
     wrt.close();
     return stm.toString();
   }
+  
+  /**
+   * Given a full hostname, return the word upto the first dot.
+   * @param fullHostname the full hostname
+   * @return the hostname to the first dot
+   */
+  public static String simpleHostname(String fullHostname) {
+    int offset = fullHostname.indexOf('.');
+    if (offset != -1) {
+      return fullHostname.substring(0, offset);
+    }
+    return fullHostname;
+  }
 
 }
