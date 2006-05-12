@@ -35,8 +35,6 @@ class Block implements Writable, Comparable {
          });
     }
 
-    static Random r = new Random();
-
     /**
      */
     public static boolean isBlockFilename(File f) {
@@ -53,7 +51,7 @@ class Block implements Writable, Comparable {
     /**
      */
     public Block() {
-        this.blkid = r.nextLong();
+        this.blkid = 0;
         this.len = 0;
     }
 

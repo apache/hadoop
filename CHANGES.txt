@@ -12,6 +12,10 @@ Trunk (unreleased)
     copy files within or between file systems in parallel.
     (Milind Bhandarkar via cutting)
 
+ 4. HADOOP-146.  Fix DFS to check when randomly generating a new block
+    id that no existing blocks already have that id.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

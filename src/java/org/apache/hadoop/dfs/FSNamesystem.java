@@ -585,11 +585,16 @@ class FSNamesystem implements FSConstants {
         return COMPLETE_SUCCESS;
     }
 
+    static Random randBlockId = new Random();
+    
     /**
      * Allocate a block at the given pending filename
      */
     synchronized Block allocateBlock(UTF8 src) {
-        Block b = new Block();
+        Block b = null;
+        do {
+            b = new Block(FSNamesystem.randBlockId.nextLong(), 0);
+        } while (dir.isValidBlock(b));
         FileUnderConstruction v = 
           (FileUnderConstruction) pendingCreates.get(src);
         v.getBlocks().add(b);
