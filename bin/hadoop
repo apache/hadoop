@@ -39,6 +39,7 @@ if [ $# = 0 ]; then
   echo "  tasktracker       run a MapReduce task Tracker node" 
   echo "  job               manipulate MapReduce jobs" 
   echo "  jar <jar>         run a jar file"
+  echo "  cp <srcurl> <desturl> copy file or directories recursively"
   echo " or"
   echo "  CLASSNAME         run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -136,6 +137,8 @@ elif [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
 elif [ "$COMMAND" = "jar" ] ; then
   CLASS=org.apache.hadoop.util.RunJar
+elif [ "$COMMAND" = "cp" ] ; then
+  CLASS=org.apache.hadoop.util.CopyFiles
 else
   CLASS=$COMMAND
 fi

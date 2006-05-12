@@ -8,6 +8,10 @@ Trunk (unreleased)
 
  2. HADOOP-204.  Tweaks to metrics package.  (David Bowen via cutting)
 
+ 3. HADOOP-209.  Add a MapReduce-based file copier.  This will
+    copy files within or between file systems in parallel.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 
