@@ -23,7 +23,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 
 import java.net.InetSocketAddress;
-import java.util.logging.Logger;
+import java.util.logging.*;
 import java.io.*;
 
 import org.apache.hadoop.io.*;
@@ -146,8 +146,11 @@ public class RPC {
 
     public Object invoke(Object proxy, Method method, Object[] args)
       throws Throwable {
+      long startTime = System.currentTimeMillis();
       ObjectWritable value = (ObjectWritable)
         client.call(new Invocation(method, args), address);
+      long callTime = System.currentTimeMillis() - startTime;
+      LOG.fine("Call: " + method.getName() + " " + callTime);
       return value.get();
     }
   }
@@ -240,7 +243,7 @@ public class RPC {
         long startTime = System.currentTimeMillis();
         Object value = method.invoke(instance, call.getParameters());
         long callTime = System.currentTimeMillis() - startTime;
-        LOG.fine("Call: " + call.getMethodName() + " " + callTime);
+        LOG.fine("Served: " + call.getMethodName() + " " + callTime);
         if (verbose) log("Return: "+value);
 
         return new ObjectWritable(method.getReturnType(), value);

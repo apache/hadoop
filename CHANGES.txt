@@ -16,6 +16,11 @@ Trunk (unreleased)
     id that no existing blocks already have that id.
     (Milind Bhandarkar via cutting)
 
+ 5. HADOOP-180. Make a daemon thread that does the actual task clean ups, so
+    that the main offerService thread in the taskTracker doesn't get stuck
+    and miss his heartbeat window. This was killing many task trackers as
+    big jobs finished (300+ tasks / node). (omalley via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 
