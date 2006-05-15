@@ -26,6 +26,9 @@ Trunk (unreleased)
     henceforth refer to them by number when collecting map output.
     (omalley via cutting)
 
+ 7. HADOOP-219. Fix a NullPointerException when handling a checksum
+    exception under SequenceFile.Sorter.sort().  (cutting & stack)
+
 
 Release 0.2.1 - 2006-05-12
 
