@@ -161,7 +161,8 @@ public class LocalFileSystem extends FileSystem {
       }
     }
 
-    public FSOutputStream createRaw(Path f, boolean overwrite, short replication)
+    public FSOutputStream createRaw(Path f, boolean overwrite, 
+                                    short replication, long blockSize)
       throws IOException {
         if (exists(f) && ! overwrite) {
             throw new IOException("File already exists:"+f);
@@ -356,9 +357,18 @@ public class LocalFileSystem extends FileSystem {
       }
     }
 
-    public long getBlockSize() {
+    public long getDefaultBlockSize() {
       // default to 32MB: large enough to minimize the impact of seeks
       return getConf().getLong("fs.local.block.size", 32 * 1024 * 1024);
+    }
+
+    public long getBlockSize(Path filename) {
+      // local doesn't really do blocks, so just use the global number
+      return getDefaultBlockSize();
+    }
+    
+    public short getDefaultReplication() {
+      return 1;
     }
 
 

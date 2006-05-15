@@ -263,6 +263,7 @@ class FSDataset implements FSConstants {
         if (isValidBlock(b)) {
             throw new IOException("Block " + b + " is valid, and cannot be written to.");
         }
+        long blockSize = b.getNumBytes();
 
         //
         // Serialize access to /tmp, and check if file already there.
@@ -279,7 +280,7 @@ class FSDataset implements FSConstants {
             //
             // Check if we have too little space
             //
-            if (getRemaining() < BLOCK_SIZE) {
+            if (getRemaining() < blockSize) {
                 throw new IOException("Insufficient space for an additional block");
             }
 
@@ -288,7 +289,7 @@ class FSDataset implements FSConstants {
             // 'reserved' size, & create file
             //
             ongoingCreates.add(b);
-            reserved += BLOCK_SIZE;
+            reserved += blockSize;
             f = getTmpFile(b);
 	    try {
 		if (f.exists()) {
@@ -304,7 +305,7 @@ class FSDataset implements FSConstants {
 	    } catch (IOException ie) {
                 System.out.println("Exception!  " + ie);
 		ongoingCreates.remove(b);		
-		reserved -= BLOCK_SIZE;
+		reserved -= blockSize;
                 throw ie;
 	    }
         }
@@ -358,7 +359,7 @@ class FSDataset implements FSConstants {
             if (! ongoingCreates.remove(b)) {
                 throw new IOException("Tried to finalize block " + b + ", but could not find it in ongoingCreates after file-move!");
             } 
-            reserved -= BLOCK_SIZE;
+            reserved -= b.getNumBytes();
         }
     }
 

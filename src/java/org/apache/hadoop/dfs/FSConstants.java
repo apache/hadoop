@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.Configuration;
  * @author Mike Cafarella
  ************************************/
 interface FSConstants {
-    public static int BLOCK_SIZE = 32 * 1000 * 1000;
     public static int MIN_BLOCKS_FOR_WRITE = 5;
 
     public static final long WRITE_COMPLETE = 0xcafae11a;

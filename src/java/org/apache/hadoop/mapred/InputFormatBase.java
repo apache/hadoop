@@ -32,7 +32,7 @@ public abstract class InputFormatBase implements InputFormat {
   public static final Logger LOG =
     LogFormatter.getLogger("org.apache.hadoop.mapred.InputFormatBase");
 
-  private static final double SPLIT_SLOP = 0.1;   // 10% slop
+  private static final double SPLIT_SLOP = 1.1;   // 10% slop
 
   private long minSplitSize = 1;
 
@@ -117,34 +117,22 @@ public abstract class InputFormatBase implements InputFormat {
       totalSize += fs.getLength(files[i]);
     }
 
-    long bytesPerSplit = totalSize / numSplits;   // start w/ desired num splits
+    long goalSize = totalSize / numSplits;   // start w/ desired num splits
 
-    long fsBlockSize = fs.getBlockSize();
-    if (bytesPerSplit > fsBlockSize) {            // no larger than fs blocks
-      bytesPerSplit = fsBlockSize;
-    }
-
-    long configuredMinSplitSize = job.getLong("mapred.min.split.size", 0);
-    if( configuredMinSplitSize < minSplitSize )
-    	configuredMinSplitSize = minSplitSize;
-    if (bytesPerSplit < configuredMinSplitSize) { // no smaller than min size
-      bytesPerSplit = configuredMinSplitSize;
-    }
-
-    long maxPerSplit = bytesPerSplit + (long)(bytesPerSplit*SPLIT_SLOP);
-
-    //LOG.info("bytesPerSplit = " + bytesPerSplit);
-    //LOG.info("maxPerSplit = " + maxPerSplit);
+    long minSize = Math.max(job.getLong("mapred.min.split.size", 1),
+                            minSplitSize);
 
     ArrayList splits = new ArrayList(numSplits);  // generate splits
     for (int i = 0; i < files.length; i++) {
       Path file = files[i];
       long length = fs.getLength(file);
+      long blockSize = fs.getBlockSize(file);
+      long splitSize = computeSplitSize(goalSize, minSize, blockSize);
 
       long bytesRemaining = length;
-      while (bytesRemaining >= maxPerSplit) {
-        splits.add(new FileSplit(file, length-bytesRemaining, bytesPerSplit));
-        bytesRemaining -= bytesPerSplit;
+      while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
+        splits.add(new FileSplit(file, length-bytesRemaining, splitSize));
+        bytesRemaining -= splitSize;
       }
       
       if (bytesRemaining != 0) {
@@ -156,5 +144,9 @@ public abstract class InputFormatBase implements InputFormat {
     return (FileSplit[])splits.toArray(new FileSplit[splits.size()]);
   }
 
+  private static long computeSplitSize(long goalSize, long minSize,
+                                       long blockSize) {
+    return Math.max(minSize, Math.min(goalSize, blockSize));
+  }
 }
 

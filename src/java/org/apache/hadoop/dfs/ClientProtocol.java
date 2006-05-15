@@ -55,7 +55,8 @@ interface ClientProtocol {
                                 String clientName, 
                                 String clientMachine, 
                                 boolean overwrite, 
-                                short replication
+                                short replication,
+                                long blockSize
                               ) throws IOException;
 
     /**
@@ -231,4 +232,12 @@ interface ClientProtocol {
      * One DatanodeInfo object is returned for each DataNode.
      */
     public DatanodeInfo[] getDatanodeReport() throws IOException;
+
+    /**
+     * Get the block size for the given file.
+     * @param filename The name of the file
+     * @return The number of bytes in each block
+     * @throws IOException
+     */
+    public long getBlockSize(String filename) throws IOException;
 }

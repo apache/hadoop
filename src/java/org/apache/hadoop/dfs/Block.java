@@ -110,10 +110,9 @@ class Block implements Writable, Comparable {
     public void readFields(DataInput in) throws IOException {
         this.blkid = in.readLong();
         this.len = in.readLong();
-        if( len < 0 || len > FSConstants.BLOCK_SIZE )
-          throw new IOException("Unexpected block size: " + len 
-                                + ". System block size = " 
-                                + FSConstants.BLOCK_SIZE + ".");
+        if( len < 0 ) {
+          throw new IOException("Unexpected block size: " + len);
+        }
     }
 
     /////////////////////////////////////

@@ -104,7 +104,7 @@ public class DistributedFSCheck extends TestCase {
     if( ! fs.isDirectory(rootFile) ) {
       nrFiles++;
       // For a regular file generate <fName,offset> pairs
-      long blockSize = fs.getBlockSize();
+      long blockSize = fs.getDefaultBlockSize();
       long fileLength = fs.getLength( rootFile );
       for( long offset = 0; offset < fileLength; offset += blockSize )
         writer.append(new UTF8(rootFile.toString()), new LongWritable(offset));
@@ -136,7 +136,7 @@ public class DistributedFSCheck extends TestCase {
       in = new DataInputStream(fs.open(new Path(name)));
       long actualSize = 0;
       try {
-        long blockSize = fs.getBlockSize();
+        long blockSize = fs.getDefaultBlockSize();
         int curSize = bufferSize;
         for(  actualSize = 0; 
               curSize == bufferSize && actualSize < blockSize;

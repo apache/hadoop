@@ -241,6 +241,18 @@ class FSDirectory implements FSConstants {
         }
 
         /**
+         * Get the block size of the first block
+         * @return the number of bytes
+         */
+        public long getBlockSize() {
+          if (blocks == null || blocks.length == 0) {
+            return 0;
+          } else {
+            return blocks[0].getNumBytes();
+          }
+        }
+        
+        /**
          */
         void listContents(Vector v) {
             if (parent != null && blocks != null) {
@@ -747,7 +759,27 @@ class FSDirectory implements FSConstants {
       }
       return fileBlocks;
     }
-                                 
+
+    /**
+     * Get the blocksize of a file
+     * @param filename the filename
+     * @return the number of bytes in the first block
+     * @throws IOException if it is a directory or does not exist.
+     */
+    public long getBlockSize(String filename) throws IOException {
+      synchronized (rootDir) {
+        INode fileNode = rootDir.getNode(filename);
+        if (fileNode == null) {
+          throw new IOException("Unknown file: " + filename);
+        }
+        if (fileNode.isDir()) {
+          throw new IOException("Getting block size of a directory: " + 
+                                filename);
+        }
+        return fileNode.getBlockSize();
+      }
+    }
+    
     /**
      * Remove the file from management, return blocks
      */

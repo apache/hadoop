@@ -54,6 +54,18 @@ public class DistributedFileSystem extends FileSystem {
       return workingDir;
     }
     
+    public long getDefaultBlockSize() {
+      return dfs.getDefaultBlockSize();
+    }
+    
+    public long getBlockSize(Path f) throws IOException {
+      return dfs.getBlockSize(f);
+    }
+    
+    public short getDefaultReplication() {
+      return dfs.getDefaultReplication();
+    }
+    
     private Path makeAbsolute(Path f) {
       if (f.isAbsolute()) {
         return f;
@@ -78,9 +90,10 @@ public class DistributedFileSystem extends FileSystem {
       return dfs.open(getPath(f));
     }
 
-    public FSOutputStream createRaw(Path f, boolean overwrite, short replication)
+    public FSOutputStream createRaw(Path f, boolean overwrite, 
+                                    short replication, long blockSize)
       throws IOException {
-      return dfs.create(getPath(f), overwrite, replication);
+      return dfs.create(getPath(f), overwrite, replication, blockSize);
     }
 
     public boolean setReplicationRaw( Path src, 
@@ -203,10 +216,6 @@ public class DistributedFileSystem extends FileSystem {
       // FIXME: we should move the bad block(s) involved to a bad block
       // directory on their datanode, and then re-replicate the blocks, so that
       // no data is lost. a task may fail, but on retry it should succeed.
-    }
-
-    public long getBlockSize() {
-      return FSConstants.BLOCK_SIZE;
     }
 
     /** Return the total raw capacity of the filesystem, disregarding

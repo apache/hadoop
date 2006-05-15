@@ -41,6 +41,7 @@ import java.util.logging.*;
 class DFSClient implements FSConstants {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.fs.DFSClient");
     static int MAX_BLOCK_ACQUIRE_FAILURES = 3;
+    private static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
     ClientProtocol namenode;
     String localName;
     boolean running = true;
@@ -48,6 +49,8 @@ class DFSClient implements FSConstants {
     String clientName;
     Daemon leaseChecker;
     private Configuration conf;
+    private long defaultBlockSize;
+    private short defaultReplication;
     
     // required for unknown reason to make WritableFactories work distributed
     static { new DFSFileInfo(); }
@@ -110,6 +113,8 @@ class DFSClient implements FSConstants {
         } else {
             this.clientName = "DFSClient_" + r.nextInt();
         }
+        defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+        defaultReplication = (short) conf.getInt("dfs.replication", 3);
         this.leaseChecker = new Daemon(new LeaseChecker());
         this.leaseChecker.start();
     }
@@ -151,6 +156,37 @@ class DFSClient implements FSConstants {
     }
 
     /**
+     * Get the default block size for this cluster
+     * @return the default block size in bytes
+     */
+    public long getDefaultBlockSize() {
+      return defaultBlockSize;
+    }
+    
+    public long getBlockSize(Path f) throws IOException {
+      // if we already know the answer, use it.
+      if (f instanceof DfsPath) {
+        return ((DfsPath) f).getBlockSize();
+      }
+      int retries = 4;
+      while (true) {
+        try {
+          return namenode.getBlockSize(f.toString());
+        } catch (IOException ie) {
+          LOG.info("Problem getting block size: " + 
+                   StringUtils.stringifyException(ie));
+          if (--retries == 0) {
+            throw ie;
+          }
+        }
+      }
+    }
+    
+    public short getDefaultReplication() {
+      return defaultReplication;
+    }
+    
+    /**
      * Get hints about the location of the indicated block(s).  The
      * array returned is as long as there are blocks in the indicated
      * range.  Each block may have one or more locations.
@@ -182,7 +218,7 @@ class DFSClient implements FSConstants {
     public FSOutputStream create( UTF8 src, 
                                   boolean overwrite
                                 ) throws IOException {
-      return create( src, overwrite, (short)conf.getInt("dfs.replication", 3));
+      return create( src, overwrite, defaultReplication, defaultBlockSize);
     }
     
     /**
@@ -197,10 +233,12 @@ class DFSClient implements FSConstants {
      */
     public FSOutputStream create( UTF8 src, 
                                   boolean overwrite, 
-                                  short replication
+                                  short replication,
+                                  long blockSize
                                 ) throws IOException {
       checkOpen();
-      FSOutputStream result = new DFSOutputStream(src, overwrite, replication);
+      FSOutputStream result = new DFSOutputStream(src, overwrite, 
+                                                  replication, blockSize);
       synchronized (pendingCreates) {
         pendingCreates.put(src.toString(), result);
       }
@@ -672,15 +710,19 @@ class DFSClient implements FSConstants {
         private long filePos = 0;
         private int bytesWrittenToBlock = 0;
         private String datanodeName;
+        private long blockSize;
 
         /**
          * Create a new output stream to the given DataNode.
          */
-        public DFSOutputStream(UTF8 src, boolean overwrite, short replication) throws IOException {
+        public DFSOutputStream(UTF8 src, boolean overwrite, 
+                               short replication, long blockSize
+                               ) throws IOException {
             this.src = src;
             this.overwrite = overwrite;
             this.replication = replication;
             this.backupFile = newBackupFile();
+            this.blockSize = blockSize;
             this.backupStream = new FileOutputStream(backupFile);
         }
 
@@ -766,7 +808,7 @@ class DFSClient implements FSConstants {
             while (true) {
               try {
                 return namenode.create(src.toString(), clientName.toString(),
-                    localName, overwrite, replication);
+                    localName, overwrite, replication, blockSize);
               } catch (RemoteException e) {
                 if (--retries == 0 || 
                     "org.apache.hadoop.dfs.NameNode.AlreadyBeingCreatedException".
@@ -835,7 +877,7 @@ class DFSClient implements FSConstants {
                 throw new IOException("Stream closed");
             }
 
-            if ((bytesWrittenToBlock + pos == BLOCK_SIZE) ||
+            if ((bytesWrittenToBlock + pos == blockSize) ||
                 (pos >= BUFFER_SIZE)) {
                 flush();
             }
@@ -861,7 +903,7 @@ class DFSClient implements FSConstants {
               len -= toWrite;
               filePos += toWrite;
 
-              if ((bytesWrittenToBlock + pos >= BLOCK_SIZE) ||
+              if ((bytesWrittenToBlock + pos >= blockSize) ||
                   (pos == BUFFER_SIZE)) {
                 flush();
               }
@@ -877,10 +919,10 @@ class DFSClient implements FSConstants {
                 throw new IOException("Stream closed");
             }
 
-            if (bytesWrittenToBlock + pos >= BLOCK_SIZE) {
-                flushData(BLOCK_SIZE - bytesWrittenToBlock);
+            if (bytesWrittenToBlock + pos >= blockSize) {
+                flushData((int) blockSize - bytesWrittenToBlock);
             }
-            if (bytesWrittenToBlock == BLOCK_SIZE) {
+            if (bytesWrittenToBlock == blockSize) {
                 endBlock();
             }
             flushData(pos);

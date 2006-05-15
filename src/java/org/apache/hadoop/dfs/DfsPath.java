@@ -18,7 +18,11 @@ package org.apache.hadoop.dfs;
 import org.apache.hadoop.fs.Path;
 
 
-/** DfsPath is a Path that's been annotated with some extra information. */
+/** 
+ * DfsPath is a Path that's been annotated with some extra information.
+ * The point of this class is to pass back the "common" metadata about 
+ * a file with the names in a directory listing to make accesses faster.
+ */
 class DfsPath extends Path {
     DFSFileInfo info;
 
@@ -41,5 +45,8 @@ class DfsPath extends Path {
     }
     public short getReplication() {
       return info.getReplication();
+    }
+    public long getBlockSize() {
+      return info.getBlockSize();
     }
 }

@@ -135,6 +135,12 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.block.size</name>
+  <value>67108864</value>
+  <description>The default block size for new files.</description>
+</property>
+
+<property>
   <name>dfs.df.interval</name>
   <value>3000</value>
   <description>Disk usage statistics refresh interval in msec.</description>

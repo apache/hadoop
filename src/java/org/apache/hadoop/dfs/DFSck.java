@@ -106,7 +106,7 @@ public class DFSck {
   public Result fsck(String path) throws Exception {
     DFSFileInfo[] files = dfs.listPaths(new UTF8(path));
     Result res = new Result();
-    res.setReplication(conf.getInt("dfs.replication", 3));
+    res.setReplication(dfs.getDefaultReplication());
     for (int i = 0; i < files.length; i++) {
       check(files[i], res);
     }

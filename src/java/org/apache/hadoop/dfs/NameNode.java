@@ -181,7 +181,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                String clientName, 
                                String clientMachine, 
                                boolean overwrite,
-                               short replication
+                               short replication,
+                               long blockSize
     ) throws IOException {
        stateChangeLog.fine("*DIR* NameNode.create: file "
             +src+" for "+clientName+" at "+clientMachine);
@@ -189,7 +190,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                                 new UTF8(clientName), 
                                                 new UTF8(clientMachine), 
                                                 overwrite,
-                                                replication);
+                                                replication,
+                                                blockSize);
         Block b = (Block) results[0];
         DatanodeInfo targets[] = (DatanodeInfo[]) results[1];
         return new LocatedBlock(b, targets);
@@ -279,6 +281,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
             return results;
         }
     }
+    
+    public long getBlockSize(String filename) throws IOException {
+      return namesystem.getBlockSize(filename);
+    }
+    
     /**
      */
     public boolean rename(String src, String dst) throws IOException {

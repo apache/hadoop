@@ -40,6 +40,7 @@ class DFSFileInfo implements Writable {
     long contentsLen;
     boolean isDir;
     short blockReplication;
+    long blockSize;
 
     /**
      */
@@ -58,6 +59,7 @@ class DFSFileInfo implements Writable {
         } else 
           this.len = this.contentsLen = node.computeFileLength();
         this.blockReplication = node.getReplication();
+        blockSize = node.getBlockSize();
     }
 
     /**
@@ -102,6 +104,14 @@ class DFSFileInfo implements Writable {
       return this.blockReplication;
     }
 
+    /**
+     * Get the block size of the file.
+     * @return the number of bytes
+     */
+    public long getBlockSize() {
+      return blockSize;
+    }
+    
     //////////////////////////////////////////////////
     // Writable
     //////////////////////////////////////////////////
@@ -111,6 +121,7 @@ class DFSFileInfo implements Writable {
         out.writeLong(contentsLen);
         out.writeBoolean(isDir);
         out.writeShort(blockReplication);
+        out.writeLong(blockSize);
     }
 
     public void readFields(DataInput in) throws IOException {
@@ -120,6 +131,7 @@ class DFSFileInfo implements Writable {
         this.contentsLen = in.readLong();
         this.isDir = in.readBoolean();
         this.blockReplication = in.readShort();
+        blockSize = in.readLong();
     }
 }
 

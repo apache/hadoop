@@ -175,7 +175,8 @@ public abstract class FileSystem extends Configured {
     public FSDataOutputStream create(Path f) throws IOException {
       return create(f, true, 
                     getConf().getInt("io.file.buffer.size", 4096),
-                    (short)getConf().getInt("dfs.replication", 3));
+                    getDefaultReplication(),
+                    getDefaultBlockSize());
     }
 
     /**
@@ -186,7 +187,8 @@ public abstract class FileSystem extends Configured {
       throws IOException {
       return create(f, true, 
                     getConf().getInt("io.file.buffer.size", 4096),
-                    replication);
+                    replication,
+                    getDefaultBlockSize());
     }
 
     /**
@@ -201,7 +203,8 @@ public abstract class FileSystem extends Configured {
                                       int bufferSize
                                     ) throws IOException {
       return create( f, overwrite, bufferSize, 
-                    (short)getConf().getInt("dfs.replication", 3));
+                     getDefaultReplication(),
+                     getDefaultBlockSize());
     }
     
     /**
@@ -215,10 +218,11 @@ public abstract class FileSystem extends Configured {
     public FSDataOutputStream create( Path f, 
                                       boolean overwrite,
                                       int bufferSize,
-                                      short replication
+                                      short replication,
+                                      long blockSize
                                     ) throws IOException {
       return new FSDataOutputStream(this, f, overwrite, getConf(), 
-                                    bufferSize, replication );
+                                    bufferSize, replication, blockSize );
     }
 
     /** Opens an OutputStream at the indicated Path.
@@ -227,7 +231,9 @@ public abstract class FileSystem extends Configured {
      *   the file will be overwritten, and if false an error will be thrown.
      * @param replication required block replication for the file. 
      */
-    public abstract FSOutputStream createRaw(Path f, boolean overwrite, short replication)
+    public abstract FSOutputStream createRaw(Path f, boolean overwrite, 
+                                             short replication,
+                                             long blockSize)
       throws IOException;
 
     /** @deprecated Call {@link #createNewFile(Path)} instead. */
@@ -547,8 +553,20 @@ public abstract class FileSystem extends Configured {
                                                long start, long length,
                                                int crc);
 
+    /**
+     * Get the size for a particular file.
+     * @param f the filename
+     * @return the number of bytes in a block
+     */
+    public abstract long getBlockSize(Path f) throws IOException;
+    
     /** Return the number of bytes that large input files should be optimally
      * be split into to minimize i/o time. */
-    public abstract long getBlockSize();
+    public abstract long getDefaultBlockSize();
+    
+    /**
+     * Get the default replication.
+     */
+    public abstract short getDefaultReplication();
 
 }

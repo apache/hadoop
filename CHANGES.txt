@@ -29,6 +29,12 @@ Trunk (unreleased)
  7. HADOOP-219. Fix a NullPointerException when handling a checksum
     exception under SequenceFile.Sorter.sort().  (cutting & stack)
 
+ 8. HADOOP-212. Permit alteration of the file block size in DFS.  The
+    default block size for new files may now be specified in the
+    configuration with the dfs.block.size property.  The block size
+    may also be specified when files are opened.
+    (omalley via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 
