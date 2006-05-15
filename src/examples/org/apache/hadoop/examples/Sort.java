@@ -69,7 +69,7 @@ public class Sort {
     int num_maps = cluster.getTaskTrackers() * 
          jobConf.getInt("test.sort.maps_per_host", 10);
     int num_reduces = cluster.getTaskTrackers() * 
-        jobConf.getInt("test.sort.reduces_per_host", 10);
+        jobConf.getInt("test.sort.reduces_per_host", cluster.getMaxTasks());
     List otherArgs = new ArrayList();
     for(int i=0; i < args.length; ++i) {
       try {
@@ -109,7 +109,7 @@ public class Sort {
         cluster.getTaskTrackers() +
         " nodes to sort from " + 
         jobConf.getInputPaths()[0] + " into " +
-        jobConf.getOutputPath() + ".");
+        jobConf.getOutputPath() + " with " + num_reduces + " reduces.");
     Date startTime = new Date();
     System.out.println("Job started: " + startTime);
     JobClient.runJob(jobConf);
