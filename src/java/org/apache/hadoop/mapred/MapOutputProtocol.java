@@ -26,6 +26,6 @@ interface MapOutputProtocol {
 
   /** Returns the output from the named map task destined for this partition.*/
   MapOutputFile getFile(String mapTaskId, String reduceTaskId,
-                        IntWritable partition) throws IOException;
+                        int mapId, int partition) throws IOException;
 
 }

@@ -96,7 +96,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
         for (int i = 0; i < mapIds.size(); i++) {
           String mapId = (String)mapIds.get(i);
           Path mapOut = this.mapoutputFile.getOutputFile(mapId, 0);
-          Path reduceIn = this.mapoutputFile.getInputFile(mapId, reduceId);
+          Path reduceIn = this.mapoutputFile.getInputFile(i, reduceId);
           localFs.mkdirs(reduceIn.getParent());
           if (!localFs.rename(mapOut, reduceIn))
             throw new IOException("Couldn't rename " + mapOut);
@@ -104,11 +104,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
         }
 
         // run a single reduce task
-        String mapDependencies[][] = new String[mapIds.size()][1];
-        for (int i = 0; i < mapIds.size(); i++) {
-            mapDependencies[i][0] = (String) mapIds.get(i);
-        }
-        ReduceTask reduce = new ReduceTask(file, reduceId, mapDependencies,0);
+        ReduceTask reduce = new ReduceTask(profile.getJobId(), file, 
+                                           reduceId, mapIds.size(),0);
         reduce.setConf(job);
         reduce_tasks += 1;
         reduce.run(job, this);

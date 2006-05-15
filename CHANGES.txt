@@ -21,6 +21,11 @@ Trunk (unreleased)
     and miss his heartbeat window. This was killing many task trackers as
     big jobs finished (300+ tasks / node). (omalley via cutting)
 
+ 6. HADOOP-200. Avoid transmitting entire list of map task names to
+    reduce tasks.  Instead just transmit the number of map tasks and
+    henceforth refer to them by number when collecting map output.
+    (omalley via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

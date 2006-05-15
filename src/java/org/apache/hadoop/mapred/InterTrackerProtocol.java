@@ -48,12 +48,14 @@ interface InterTrackerProtocol {
 
   /** Called by a reduce task to find which map tasks are completed.
    *
-   * @param taskId the reduce task id
-   * @param mapTasksNeeded an array of UTF8 naming map task ids whose output is needed.
+   * @param jobId the job id
+   * @param mapTasksNeeded an array of the mapIds that we need
+   * @param partition the reduce's id
    * @return an array of MapOutputLocation
    */
-  MapOutputLocation[] locateMapOutputs(String taskId, 
-                                       String[][] mapTasksNeeded
+  MapOutputLocation[] locateMapOutputs(String jobId, 
+                                       int[] mapTasksNeeded,
+                                       int partition
                                        ) throws IOException;
 
   /**

@@ -39,6 +39,7 @@ class MapOutputFile implements Writable, Configurable {
 
   private String mapTaskId;
   private String reduceTaskId;
+  private int mapId;
   private int partition;
   
   /** Permits reporting of file copy progress. */
@@ -66,18 +67,10 @@ class MapOutputFile implements Writable, Configurable {
    * @param mapTaskId a map task id
    * @param reduceTaskId a reduce task id
    */
-  public Path getInputFile(String mapTaskId, String reduceTaskId)
+  public Path getInputFile(int mapId, String reduceTaskId)
     throws IOException {
-    return this.jobConf.getLocalPath(reduceTaskId+"/"+mapTaskId+".out");
-  }
-  public Path getInputFile(String mapTaskIds[], String reduceTaskId)
-    throws IOException {
-    for (int i = 0; i < mapTaskIds.length; i++) {
-      Path file = jobConf.getLocalPath(reduceTaskId+"/"+mapTaskIds[i]+".out");
-      if (getLocalFs().exists(file))
-        return file;
-    }
-    throw new IOException("Input file not found!");
+    // TODO *oom* should use a format here
+    return this.jobConf.getLocalPath(reduceTaskId+"/map_"+mapId+".out");
   }
 
   /** Removes all of the files related to a task. */
@@ -97,9 +90,11 @@ class MapOutputFile implements Writable, Configurable {
   public MapOutputFile() { 
   }
   
-  public MapOutputFile(String mapTaskId, String reduceTaskId, int partition) {
+  public MapOutputFile(String mapTaskId, String reduceTaskId, 
+                       int mapId, int partition) {
     this.mapTaskId = mapTaskId;
     this.reduceTaskId = reduceTaskId;
+    this.mapId = mapId;
     this.partition = partition;
   }
 
@@ -110,6 +105,7 @@ class MapOutputFile implements Writable, Configurable {
   public void write(DataOutput out) throws IOException {
     UTF8.writeString(out, mapTaskId);
     UTF8.writeString(out, reduceTaskId);
+    out.writeInt(mapId);
     out.writeInt(partition);
     
     Path file = getOutputFile(mapTaskId, partition);
@@ -145,12 +141,13 @@ class MapOutputFile implements Writable, Configurable {
   public void readFields(DataInput in) throws IOException {
     this.mapTaskId = UTF8.readString(in);
     this.reduceTaskId = UTF8.readString(in);
+    this.mapId = in.readInt();
     this.partition = in.readInt();
 
     ProgressReporter reporter = (ProgressReporter)REPORTERS.get();
 
     // read the length-prefixed file content into a local file
-    Path file = getInputFile(mapTaskId, reduceTaskId);
+    Path file = getInputFile(mapId, reduceTaskId);
     long length = in.readLong();
     float progPerByte = 1.0f / length;
     long unread = length;

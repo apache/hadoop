@@ -730,9 +730,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
     // MapOutputProtocol
     /////////////////////////////////////////////////////////////////
     public MapOutputFile getFile(String mapTaskId, String reduceTaskId,
-      IntWritable partition) {
-    MapOutputFile mapOutputFile = new MapOutputFile(mapTaskId, reduceTaskId,
-        partition.get());
+                                 int mapId, int partition) {
+    MapOutputFile mapOutputFile = 
+      new MapOutputFile(mapTaskId, reduceTaskId, mapId, partition);
     mapOutputFile.setConf(this.fConf);
     return mapOutputFile;
   }

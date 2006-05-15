@@ -783,26 +783,27 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
      * yet closed, tasks.  This exists so the reduce task thread can locate
      * map task outputs.
      */
-    public synchronized MapOutputLocation[] locateMapOutputs(String taskId, String[][] mapTasksNeeded) {
-        ArrayList v = new ArrayList();
+    public synchronized MapOutputLocation[] 
+             locateMapOutputs(String jobId, int[] mapTasksNeeded, int reduce) {
+        ArrayList result = new ArrayList(mapTasksNeeded.length);
+        JobInProgress job = getJob(jobId);
         for (int i = 0; i < mapTasksNeeded.length; i++) {
-            for (int j = 0; j < mapTasksNeeded[i].length; j++) {
-                TaskInProgress tip = (TaskInProgress) taskidToTIPMap.get(mapTasksNeeded[i][j]);
-                if (tip != null && tip.isComplete(mapTasksNeeded[i][j])) {
-                    String trackerId = (String) taskidToTrackerMap.get(mapTasksNeeded[i][j]);
-                    TaskTrackerStatus tracker;
-                    synchronized (taskTrackers) {
-                      tracker = (TaskTrackerStatus) taskTrackers.get(trackerId);
-                    }
-                    v.add(new MapOutputLocation(mapTasksNeeded[i][j], tracker.getHost(), tracker.getPort()));
-                    break;
-                }
-            }
+          TaskStatus status = job.findFinishedMap(mapTasksNeeded[i]);
+          if (status != null) {
+             String trackerId = 
+               (String) taskidToTrackerMap.get(status.getTaskId());
+             TaskTrackerStatus tracker;
+             synchronized (taskTrackers) {
+               tracker = (TaskTrackerStatus) taskTrackers.get(trackerId);
+             }
+             result.add(new MapOutputLocation(status.getTaskId(), 
+                                              mapTasksNeeded[i],
+                                              tracker.getHost(), 
+                                              tracker.getPort()));
+          }
         }
-        // randomly shuffle results to load-balance map output requests
-        Collections.shuffle(v);
-
-        return (MapOutputLocation[]) v.toArray(new MapOutputLocation[v.size()]);
+        return (MapOutputLocation[]) 
+               result.toArray(new MapOutputLocation[result.size()]);
     }
 
     /**

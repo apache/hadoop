@@ -34,6 +34,7 @@ class MapOutputLocation implements Writable {
     }
 
   private String mapTaskId;
+  private int mapId;
   private String host;
   private int port;
 
@@ -42,14 +43,24 @@ class MapOutputLocation implements Writable {
   }
 
   /** Construct a location. */
-  public MapOutputLocation(String mapTaskId, String host, int port) {
+  public MapOutputLocation(String mapTaskId, int mapId, 
+                           String host, int port) {
     this.mapTaskId = mapTaskId;
+    this.mapId = mapId;
     this.host = host;
     this.port = port;
   }
 
   /** The map task id. */
   public String getMapTaskId() { return mapTaskId; }
+  
+  /**
+   * Get the map's id number.
+   * @return The numeric id for this map
+   */
+  public int getMapId() {
+    return mapId;
+  }
 
   /** The host the task completed on. */
   public String getHost() { return host; }
@@ -59,12 +70,14 @@ class MapOutputLocation implements Writable {
 
   public void write(DataOutput out) throws IOException {
     UTF8.writeString(out, mapTaskId);
+    out.writeInt(mapId);
     UTF8.writeString(out, host);
     out.writeInt(port);
   }
 
   public void readFields(DataInput in) throws IOException {
     this.mapTaskId = UTF8.readString(in);
+    this.mapId = in.readInt();
     this.host = UTF8.readString(in);
     this.port = in.readInt();
   }

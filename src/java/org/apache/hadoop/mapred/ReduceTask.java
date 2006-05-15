@@ -36,7 +36,8 @@ class ReduceTask extends Task {
        });
   }
 
-  private String[][] mapTaskIds;
+  private UTF8 jobId = new UTF8();
+  private int numMaps;
   private int partition;
   private boolean sortComplete;
 
@@ -51,10 +52,11 @@ class ReduceTask extends Task {
 
   public ReduceTask() {}
 
-  public ReduceTask(String jobFile, String taskId,
-                    String[][] mapTaskIds, int partition) {
+  public ReduceTask(String jobId, String jobFile, String taskId,
+                    int numMaps, int partition) {
     super(jobFile, taskId);
-    this.mapTaskIds = mapTaskIds;
+    this.jobId.set(jobId);
+    this.numMaps = numMaps;
     this.partition = partition;
   }
 
@@ -66,34 +68,30 @@ class ReduceTask extends Task {
       return false;
   }
 
-  public String[][] getMapTaskIds() { return mapTaskIds; }
+  /**
+   * Get the job name for this task.
+   * @return the job name
+   */
+  public UTF8 getJobId() {
+    return jobId;
+  }
+  
+  public int getNumMaps() { return numMaps; }
   public int getPartition() { return partition; }
 
   public void write(DataOutput out) throws IOException {
     super.write(out);
 
-    out.writeInt(mapTaskIds.length);              // write mapTaskIds
-    for (int i = 0; i < mapTaskIds.length; i++) {
-        out.writeInt(mapTaskIds[i].length);
-        for (int j = 0; j < mapTaskIds[i].length; j++) {
-            UTF8.writeString(out, mapTaskIds[i][j]);
-        }
-    }
-
+    jobId.write(out);
+    out.writeInt(numMaps);                        // write the number of maps
     out.writeInt(partition);                      // write partition
   }
 
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
 
-    mapTaskIds = new String[in.readInt()][];        // read mapTaskIds
-    for (int i = 0; i < mapTaskIds.length; i++) {
-        mapTaskIds[i] = new String[in.readInt()];
-        for (int j = 0; j < mapTaskIds[i].length; j++) {
-            mapTaskIds[i][j] = UTF8.readString(in);
-        }
-    }
-
+    jobId.readFields(in);
+    numMaps = in.readInt();
     this.partition = in.readInt();                // read partition
   }
 
@@ -189,15 +187,15 @@ class ReduceTask extends Task {
       new SequenceFile.Writer(lfs, file, keyClass, valueClass);
     try {
       // append all input files into a single input file
-      for (int i = 0; i < mapTaskIds.length; i++) {
+      for (int i = 0; i < numMaps; i++) {
         appendPhase.addPhase();                 // one per file
       }
       
       DataOutputBuffer buffer = new DataOutputBuffer();
 
-      for (int i = 0; i < mapTaskIds.length; i++) {
+      for (int i = 0; i < numMaps; i++) {
         Path partFile =
-          this.mapOutputFile.getInputFile(mapTaskIds[i], getTaskId());
+          this.mapOutputFile.getInputFile(i, getTaskId());
         float progPerByte = 1.0f / lfs.getLength(partFile);
         Progress phase = appendPhase.phase();
         phase.setStatus(partFile.toString());

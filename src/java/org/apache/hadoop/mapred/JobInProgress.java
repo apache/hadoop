@@ -151,7 +151,8 @@ class JobInProgress {
         //
         this.reduces = new TaskInProgress[numReduceTasks];
         for (int i = 0; i < numReduceTasks; i++) {
-            reduces[i] = new TaskInProgress(uniqueString, jobFile, maps, i, 
+            reduces[i] = new TaskInProgress(uniqueString, jobFile, 
+                                            numMapTasks, i, 
                                             jobtracker, conf, this);
         }
 
@@ -582,16 +583,34 @@ class JobInProgress {
       * Return the TaskInProgress that matches the tipid.
       */
     public TaskInProgress getTaskInProgress(String tipid){
-        for (int i = 0; i < maps.length; i++) {
-	    if (tipid.equals(maps[i].getTIPId())){
-                return maps[i];
-	    }               
-	}
-	for (int i = 0; i < reduces.length; i++) {
-	    if (tipid.equals(reduces[i].getTIPId())){
-		return reduces[i];
-            }
-	}
-	return null;
+      for (int i = 0; i < maps.length; i++) {
+        if (tipid.equals(maps[i].getTIPId())){
+          return maps[i];
+        }               
+      }
+      for (int i = 0; i < reduces.length; i++) {
+        if (tipid.equals(reduces[i].getTIPId())){
+          return reduces[i];
+        }
+      }
+      return null;
+    }
+    
+    /**
+     * Find the details of someplace where a map has finished
+     * @param mapId the id of the map
+     * @return the task status of the completed task
+     */
+    public TaskStatus findFinishedMap(int mapId) {
+       TaskInProgress tip = maps[mapId];
+       if (tip.isComplete()) {
+         TaskStatus[] statuses = tip.getTaskStatuses();
+         for(int i=0; i < statuses.length; i++) {
+           if (statuses[i].getRunState() == TaskStatus.SUCCEEDED) {
+             return statuses[i];
+           }
+         }
+       }
+       return null;
     }
 }
