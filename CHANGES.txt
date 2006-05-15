@@ -35,6 +35,9 @@ Trunk (unreleased)
     may also be specified when files are opened.
     (omalley via cutting)
 
+ 9. HADOOP-218. Avoid accessing configuration while looping through
+    tasks in JobTracker.  (Mahadev Konar via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

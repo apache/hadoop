@@ -69,7 +69,7 @@ class TaskInProgress {
     private TreeSet usableTaskIds = new TreeSet();
     private TreeSet recentTasks = new TreeSet();
     private JobConf conf;
-    
+    private boolean runSpeculative;
     private TreeMap taskDiagnosticData = new TreeMap();
     private TreeMap taskStatuses = new TreeMap();
 
@@ -129,6 +129,7 @@ class TaskInProgress {
      */
     void init(String jobUniqueString) {
         this.startTime = System.currentTimeMillis();
+        this.runSpeculative = conf.getSpeculativeExecution();
         String uniqueString = makeUniqueString(jobUniqueString);
         this.id = "tip_" + uniqueString;
         this.totalTaskIds = new String[MAX_TASK_EXECS + MAX_TASK_FAILURES];
@@ -417,7 +418,7 @@ class TaskInProgress {
         //
         if (isMapTask() &&
             recentTasks.size() <= MAX_TASK_EXECS &&
-            conf.getSpeculativeExecution() &&
+            runSpeculative &&
             (averageProgress - progress >= SPECULATIVE_GAP) &&
             (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG)) {
             return true;
