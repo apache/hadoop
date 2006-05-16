@@ -38,6 +38,9 @@ Trunk (unreleased)
  9. HADOOP-218. Avoid accessing configuration while looping through
     tasks in JobTracker.  (Mahadev Konar via cutting)
 
+10. HADOOP-161. Add hashCode() method to DFS's Block.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 
