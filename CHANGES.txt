@@ -45,6 +45,9 @@ Trunk (unreleased)
     used as reduce input types, thus permitting reduce input types to
     differ from reduce output types.  (Runping Qi via cutting)
 
+12. HADOOP-216. Add task progress to task status page.
+    (Bryan Pendelton via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

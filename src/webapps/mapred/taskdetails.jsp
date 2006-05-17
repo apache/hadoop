@@ -47,7 +47,7 @@
 <h2>All Task Attempts</h2>
 <center>
 <table border=2 cellpadding="5" cellspacing="2">
-<tr><td align="center">Task Attempts</td><td>Machine</td><td>Status</td><td>Errors</td></tr>
+<tr><td align="center">Task Attempts</td><td>Machine</td><td>Status</td><td>Progress</td><td>Errors</td></tr>
 
   <%
     for (int i = 0; i < ts.length; i++) {
@@ -57,6 +57,7 @@
       out.print("<td>");
       writeString(out, status.getRunState()); 
       out.print("</td>");
+      out.print("<td>"+status.getProgress()+"</td>");
       out.print("<td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
       out.print("</tr>\n");
     }
