@@ -41,6 +41,10 @@ Trunk (unreleased)
 10. HADOOP-161. Add hashCode() method to DFS's Block.
     (Milind Bhandarkar via cutting)
 
+11. HADOOP-115. Map output types may now be specified.  These are also
+    used as reduce input types, thus permitting reduce input types to
+    differ from reduce output types.  (Runping Qi via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

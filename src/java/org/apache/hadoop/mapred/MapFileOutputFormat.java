@@ -38,8 +38,8 @@ public class MapFileOutputFormat extends OutputFormatBase {
 
     final MapFile.Writer out =
       new MapFile.Writer(fs, file.toString(),
-                         job.getOutputKeyClass(),
-                         job.getOutputValueClass(),
+                         job.getMapOutputKeyClass(),
+                         job.getMapOutputValueClass(),
                          job.getBoolean("mapred.output.compress", false));
 
     return new RecordWriter() {

@@ -77,8 +77,8 @@ class MapTask extends Task {
         outs[i] =
           new SequenceFile.Writer(FileSystem.getNamed("local", job),
                                   this.mapOutputFile.getOutputFile(getTaskId(), i),
-                                  job.getOutputKeyClass(),
-                                  job.getOutputValueClass());
+                                  job.getMapOutputKeyClass(),
+                                  job.getMapOutputValueClass());
       }
 
       final Partitioner partitioner =

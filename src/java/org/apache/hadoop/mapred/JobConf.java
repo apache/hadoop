@@ -269,14 +269,67 @@ public class JobConf extends Configuration {
   public Class getInputValueClass() {
     return getClass("mapred.input.value.class", UTF8.class, Writable.class);
   }
+
   public void setInputValueClass(Class theClass) {
     setClass("mapred.input.value.class", theClass, Writable.class);
   }
-
+  
+  /**
+   * Get the key class for the map output data. If it is not set, use the
+   * (final) output ket class This allows the map output key class to be
+   * different than the final output key class
+   * 
+   * @return map output key class
+   */
+  public Class getMapOutputKeyClass() {
+    Class retv = getClass("mapred.mapoutput.key.class", null,
+			  WritableComparable.class);
+    if (retv == null) {
+      retv = getOutputKeyClass();
+    }
+    return retv;
+  }
+  
+  /**
+   * Set the key class for the map output data. This allows the user to
+   * specify the map output key class to be different than the final output
+   * value class
+   */
+  public void setMapOutputKeyClass(Class theClass) {
+    setClass("mapred.mapoutput.key.class", theClass,
+             WritableComparable.class);
+  }
+  
+  /**
+   * Get the value class for the map output data. If it is not set, use the
+   * (final) output value class This allows the map output value class to be
+   * different than the final output value class
+   * 
+   * @return map output value class
+   */
+  public Class getMapOutputValueClass() {
+    Class retv = getClass("mapred.mapoutput.value.class", null,
+			  Writable.class);
+    if (retv == null) {
+      retv = getOutputValueClass();
+    }
+    return retv;
+  }
+  
+  /**
+   * Set the value class for the map output data. This allows the user to
+   * specify the map output value class to be different than the final output
+   * value class
+   */
+  public void setMapOutputValueClass(Class theClass) {
+    setClass("mapred.mapoutput.value.class", theClass, Writable.class);
+  }
+  
   public Class getOutputKeyClass() {
     return getClass("mapred.output.key.class",
                     LongWritable.class, WritableComparable.class);
   }
+  
   public void setOutputKeyClass(Class theClass) {
     setClass("mapred.output.key.class", theClass, WritableComparable.class);
   }
@@ -286,7 +339,7 @@ public class JobConf extends Configuration {
                               WritableComparator.class);
     if (theClass != null)
       return (WritableComparator)newInstance(theClass);
-    return WritableComparator.get(getOutputKeyClass());
+    return WritableComparator.get(getMapOutputKeyClass());
   }
 
   public void setOutputKeyComparatorClass(Class theClass) {
@@ -300,6 +353,7 @@ public class JobConf extends Configuration {
   public void setOutputValueClass(Class theClass) {
     setClass("mapred.output.value.class", theClass, Writable.class);
   }
+
 
   public Class getMapperClass() {
     return getClass("mapred.mapper.class", IdentityMapper.class, Mapper.class);
