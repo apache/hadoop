@@ -81,7 +81,8 @@
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.src}"/>
-    <mkdir dir="${build.webapps}/WEB-INF"/>
+    <mkdir dir="${build.webapps}/task/WEB-INF"/>
+    <mkdir dir="${build.webapps}/job/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
 
     <mkdir dir="${test.build.dir}"/>
@@ -91,8 +92,11 @@
       <fileset dir="${conf.dir}" includes="**/*.template"/>
     </touch>
 
-    <copy todir="${build.webapps}/">
-      <fileset file="${src.webapps}/index.html"/>
+    <!-- copy all of the jsp and static files -->
+    <copy todir="${build.webapps}">
+      <fileset dir="${src.webapps}">
+        <exclude name="**/*.jsp" />
+      </fileset>
     </copy>
 
     <copy todir="${conf.dir}" verbose="true">
@@ -119,10 +123,17 @@
   <target name="compile" depends="init, record-parser">
 
     <jsp-compile
-     uriroot="${src.webapps}/mapred"
+     uriroot="${src.webapps}/task"
      outputdir="${build.src}"
      package="org.apache.hadoop.mapred"
-     webxml="${build.webapps}/WEB-INF/web.xml">
+     webxml="${build.webapps}/task/WEB-INF/web.xml">
+    </jsp-compile>
+
+    <jsp-compile
+     uriroot="${src.webapps}/job"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.mapred"
+     webxml="${build.webapps}/job/WEB-INF/web.xml">
     </jsp-compile>
 
     <javac 

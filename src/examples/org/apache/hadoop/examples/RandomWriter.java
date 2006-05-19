@@ -79,10 +79,12 @@ public class RandomWriter extends MapReduceBase implements Reducer {
                                 BytesWritable.class, BytesWritable.class);
       int itemCount = 0;
       while (numBytesToWrite > 0) {
-        int keyLength = random.nextInt(keySizeRange) + minKeySize;
+        int keyLength = minKeySize + 
+           (keySizeRange != 0 ? random.nextInt(keySizeRange) : 0);
         randomKey.setSize(keyLength);
         randomizeBytes(randomKey.get(), 0, randomKey.getSize());
-        int valueLength = random.nextInt(valueSizeRange) + minValueSize;
+        int valueLength = minValueSize +
+           (valueSizeRange != 0 ? random.nextInt(valueSizeRange) : 0);
         randomValue.setSize(valueLength);
         randomizeBytes(randomValue.get(), 0, randomValue.getSize());
         writer.append(randomKey, randomValue);

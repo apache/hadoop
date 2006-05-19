@@ -382,7 +382,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     });
 
     // Used to provide an HTML view on Job, Task, and TaskTracker structures
-    JobTrackerInfoServer infoServer;
+    StatusHttpServer infoServer;
     int infoPort;
 
     Server interTrackerServer;
@@ -434,7 +434,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         }
 
         this.infoPort = conf.getInt("mapred.job.tracker.info.port", 50030);
-        this.infoServer = new JobTrackerInfoServer(this, infoPort);
+        this.infoServer = new StatusHttpServer("job", infoPort);
         this.infoServer.start();
 
         this.startTime = System.currentTimeMillis();
@@ -799,7 +799,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
              result.add(new MapOutputLocation(status.getTaskId(), 
                                               mapTasksNeeded[i],
                                               tracker.getHost(), 
-                                              tracker.getPort()));
+                                              tracker.getHttpPort()));
           }
         }
         return (MapOutputLocation[]) 

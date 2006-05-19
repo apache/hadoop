@@ -79,6 +79,7 @@
 <h1><%= trackerLabel %> Hadoop Map/Reduce Administration</h1>
 
 This JobTracker has been up since <%= new Date(tracker.getStartTime())%>.<br>
+
 <hr>
 <h2>Cluster Summary</h2>
 <center>
@@ -98,12 +99,19 @@ This JobTracker has been up since <%= new Date(tracker.getStartTime())%>.<br>
 <%
     generateJobTable(out, "Completed", tracker.completedJobs());
 %>
+
 <hr>
 
 <h2>Failed Jobs</h2>
 <%
     generateJobTable(out, "Failed", tracker.failedJobs());
 %>
+
+<hr>
+
+<h2>Local logs</h2>
+<a href="/logs/">Log</a> directory
+
 <hr>
 <a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
 </body>

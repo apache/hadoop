@@ -41,6 +41,7 @@ class TaskTrackerStatus implements Writable {
     String trackerName;
     String host;
     int port;
+    int httpPort;
     int failures;
     Vector taskReports;
     
@@ -54,10 +55,11 @@ class TaskTrackerStatus implements Writable {
     /**
      */
     public TaskTrackerStatus(String trackerName, String host, int port, 
-                             Vector taskReports, int failures) {
+                             int httpPort, Vector taskReports, int failures) {
         this.trackerName = trackerName;
         this.host = host;
         this.port = port;
+        this.httpPort = httpPort;
 
         this.taskReports = new Vector();
         this.taskReports.addAll(taskReports);
@@ -80,6 +82,14 @@ class TaskTrackerStatus implements Writable {
         return port;
     }
 
+    /**
+     * Get the port that this task tracker is serving http requests on.
+     * @return the http port
+     */
+    public int getHttpPort() {
+      return httpPort;
+    }
+    
     /**
      * Get the number of tasks that have failed on this tracker.
      * @return The number of failed tasks
@@ -136,6 +146,7 @@ class TaskTrackerStatus implements Writable {
         UTF8.writeString(out, trackerName);
         UTF8.writeString(out, host);
         out.writeInt(port);
+        out.writeInt(httpPort);
 
         out.writeInt(taskReports.size());
         out.writeInt(failures);
@@ -150,6 +161,7 @@ class TaskTrackerStatus implements Writable {
         this.trackerName = UTF8.readString(in);
         this.host = UTF8.readString(in);
         this.port = in.readInt();
+        this.httpPort = in.readInt();
 
         taskReports = new Vector();
         taskReports.clear();
