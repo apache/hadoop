@@ -799,7 +799,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
              result.add(new MapOutputLocation(status.getTaskId(), 
                                               mapTasksNeeded[i],
                                               tracker.getHost(), 
-                                              tracker.getHttpPort()));
+                                              tracker.getPort()));
           }
         }
         return (MapOutputLocation[]) 
