@@ -645,15 +645,34 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         //
         int avgMaps = 0;
         int avgReduces = 0;
+        int remainingReduceLoad = 0;
+        int remainingMapLoad = 0;
         int numTaskTrackers;
         TaskTrackerStatus tts;
+        int avgMapLoad = 0;
+        int avgReduceLoad = 0;
+	
         synchronized (taskTrackers) {
           numTaskTrackers = taskTrackers.size();
           tts = (TaskTrackerStatus) taskTrackers.get(taskTracker);
         }
+        synchronized(jobsByArrival){
+            for (Iterator it = jobsByArrival.iterator(); it.hasNext(); ) {
+                    JobInProgress job = (JobInProgress) it.next();
+                    if (job.getStatus().getRunState() == JobStatus.RUNNING) {
+                         int totalMapTasks = job.desiredMaps();
+                         int totalReduceTasks = job.desiredReduces();
+                         remainingMapLoad += (totalMapTasks - job.finishedMaps());
+                         remainingReduceLoad += (totalReduceTasks - job.finishedReduces());
+                    }
+            }   
+        }
+        
         if (numTaskTrackers > 0) {
           avgMaps = totalMaps / numTaskTrackers;
           avgReduces = totalReduces / numTaskTrackers;
+          avgMapLoad = remainingMapLoad / numTaskTrackers;
+          avgReduceLoad = remainingReduceLoad / numTaskTrackers;
         }
         int totalCapacity = numTaskTrackers * maxCurrentTasks;
         //
@@ -676,15 +695,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
         //
         // We hand a task to the current taskTracker if the given machine 
-        // has a workload that's equal to or less than the averageMaps 
+        // has a workload that's equal to or less than the pendingMaps average.
+        // This way the maps are launched if the TaskTracker has running tasks 
+        // less than the pending average 
         // +/- TASK_ALLOC_EPSILON.  (That epsilon is in place in case
         // there is an odd machine that is failing for some reason but 
         // has not yet been removed from the pool, making capacity seem
         // larger than it really is.)
         //
+       
         synchronized (jobsByArrival) {
             if ((numMaps < maxCurrentTasks) &&
-                (numMaps <= (avgMaps + TASK_ALLOC_EPSILON))) {
+                (numMaps <= avgMapLoad + 1 + TASK_ALLOC_EPSILON)) {
 
                 int totalNeededMaps = 0;
                 for (Iterator it = jobsByArrival.iterator(); it.hasNext(); ) {
@@ -719,7 +741,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             // Same thing, but for reduce tasks
             //
             if ((numReduces < maxCurrentTasks) &&
-                (numReduces <= (avgReduces + TASK_ALLOC_EPSILON))) {
+                (numReduces <= avgReduceLoad + 1 + TASK_ALLOC_EPSILON)) {
 
                 int totalNeededReduces = 0;
                 for (Iterator it = jobsByArrival.iterator(); it.hasNext(); ) {

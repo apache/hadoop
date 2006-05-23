@@ -52,6 +52,10 @@ Trunk (unreleased)
     tasks and logs.  Also add log access to job tracker web interface.
     (omalley via cutting)
 
+14. HADOOP-205.  Incorporate pending tasks into tasktracker load
+    calculations.  (Mahadev Konar via cutting)
+
+
 Release 0.2.1 - 2006-05-12
 
  1. HADOOP-199.  Fix reduce progress (broken by HADOOP-182).
