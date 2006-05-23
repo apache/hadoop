@@ -229,9 +229,12 @@ class ReduceTask extends Task {
               reportProgress(umbilical);
               Thread.sleep(PROGRESS_INTERVAL);
             } catch (InterruptedException e) {
-              continue;
+                return;
             } catch (Throwable e) {
-              return;
+                System.out.println("Thread Exception in " +
+                                   "reporting sort progress\n" +
+                                   StringUtils.stringifyException(e));
+                continue;
             }
           }
         }

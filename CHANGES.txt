@@ -55,6 +55,9 @@ Trunk (unreleased)
 14. HADOOP-205.  Incorporate pending tasks into tasktracker load
     calculations.  (Mahadev Konar via cutting)
 
+15. HADOOP-247.  Fix sort progress to better handle exceptions.
+    (Mahadev Konar via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 
