@@ -62,6 +62,9 @@ Trunk (unreleased)
     reduce nodes by performing multiple transfers in parallel, each on
     a separate socket.  (Sameer Paranjpye via cutting)
 
+17. HADOOP-251.  Fix task processes to be tolerant of failed progress
+    reports to their parent process.  (omalley via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

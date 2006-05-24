@@ -21,9 +21,13 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
+import java.util.logging.Logger;
 
 /** Base class for tasks. */
 abstract class Task implements Writable, Configurable {
+  private static final Logger LOG =
+    LogFormatter.getLogger("org.apache.hadoop.mapred.TaskRunner");
+
   ////////////////////////////////////////////
   // Fields
   ////////////////////////////////////////////
@@ -101,15 +105,18 @@ abstract class Task implements Writable, Configurable {
     reportProgress(umbilical);
   }
 
-  public void reportProgress(TaskUmbilicalProtocol umbilical)
-    throws IOException {
+  public void reportProgress(TaskUmbilicalProtocol umbilical) {
     long now = System.currentTimeMillis();
     if (now > nextProgressTime)  {
       synchronized (this) {
         nextProgressTime = now + PROGRESS_INTERVAL;
         float progress = taskProgress.get();
         String status = taskProgress.toString();
-        umbilical.progress(getTaskId(), progress, status);
+        try {
+          umbilical.progress(getTaskId(), progress, status);
+        } catch (IOException ie) {
+          LOG.warning(StringUtils.stringifyException(ie));
+        }
       }
     }
   }
