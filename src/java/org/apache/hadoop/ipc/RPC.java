@@ -23,6 +23,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.logging.*;
 import java.io.*;
 
@@ -184,6 +185,64 @@ public class RPC {
         values[i] = ((ObjectWritable)wrappedValues[i]).get();
     
     return values;
+  }
+
+  
+  /** Expert: Make an RPC call over the specified socket. Assumes that no other calls 
+   * are in flight on this connection. */ 
+  public static Object callRaw(Method method, Object[] params,
+                               Socket sock, Configuration conf)
+    throws IOException {  
+    
+    Invocation inv = new Invocation(method, params);    
+    DataInputStream in =
+      new DataInputStream(new BufferedInputStream(sock.getInputStream()));              
+    DataOutputStream out = 
+      new DataOutputStream(new BufferedOutputStream(sock.getOutputStream()));    
+    String name = new String("Client connection to " +
+                             sock.getInetAddress().getHostName() +
+                             ":" + sock.getPort());
+    
+    try {
+      if (LOG.isLoggable(Level.FINE)) {
+        LOG.fine(name + " sending #0");
+      }
+ 
+      // write out method invocation
+      out.writeInt(0);
+      inv.write(out);
+      out.flush();
+      
+      // read return value
+      int callId = in.readInt();
+      
+      if (LOG.isLoggable(Level.FINE)) {
+        LOG.fine(name + " got response to call #" + callId);
+      }
+      
+      boolean isError = in.readBoolean();
+      if (isError) {
+        throw new RemoteException(WritableUtils.readString(in),
+                                  WritableUtils.readString(in));
+      }
+      else {
+
+        Writable wrappedValue = (Writable)ObjectWritable.class.newInstance();        
+        if (wrappedValue instanceof Configurable) {
+          ((Configurable) wrappedValue).setConf(conf);
+        }
+        wrappedValue.readFields(in);
+
+        return method.getReturnType() != Void.TYPE ?
+          ((ObjectWritable)wrappedValue).get() : null;
+      }
+    }
+    catch (InstantiationException e) {
+      throw new IOException(e.toString());
+    }
+    catch (IllegalAccessException e) {
+      throw new IOException(e.toString());
+    }
   }
   
 

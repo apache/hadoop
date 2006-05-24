@@ -90,7 +90,10 @@
 %>
 
 <html>
+<head>
+<meta http-equiv="refresh" content=60>
 <title>Hadoop <%=jobid%> on <%=trackerName%></title>
+</head>
 <body>
 <h1>Hadoop <%=jobid%> on <a href="/jobtracker.jsp"><%=trackerName%></a></h1>
 

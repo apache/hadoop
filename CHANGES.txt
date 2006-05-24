@@ -58,6 +58,10 @@ Trunk (unreleased)
 15. HADOOP-247.  Fix sort progress to better handle exceptions.
     (Mahadev Konar via cutting)
 
+16. HADOOP-195.  Improve performance of the transfer of map outputs to
+    reduce nodes by performing multiple transfers in parallel, each on
+    a separate socket.  (Sameer Paranjpye via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

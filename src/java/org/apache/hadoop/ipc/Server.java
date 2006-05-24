@@ -101,12 +101,27 @@ public abstract class Server {
     public void run() {
       LOG.info(getName() + ": starting");
       while (running) {
+        Socket acceptedSock = null;
         try {
-          new Connection(socket.accept()).start(); // start a new connection
+          acceptedSock = socket.accept();
+          new Connection(acceptedSock).start(); // start a new connection
         } catch (SocketTimeoutException e) {      // ignore timeouts
-        } catch (Exception e) {                   // log all other exceptions
-          LOG.log(Level.INFO, getName() + " caught: " + e, e);
+        } catch (OutOfMemoryError e) {
+          // we can run out of memory if we have too many threads
+          // log the event and sleep for a minute and give 
+          // some thread(s) a chance to finish
+          LOG.log(Level.WARNING,
+                  getName() + " out of memory, sleeping...", e);          
+          try {
+            acceptedSock.close();
+            Thread.sleep(60000);
+          } catch (InterruptedException ie) { // ignore interrupts
+          } catch (IOException ioe) { // ignore IOexceptions
+          }          
         }
+        catch (Exception e) {           // log all other exceptions
+          LOG.log(Level.INFO, getName() + " caught: " + e, e);
+        }        
       }
       try {
         socket.close();

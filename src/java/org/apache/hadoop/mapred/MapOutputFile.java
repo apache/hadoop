@@ -41,6 +41,7 @@ class MapOutputFile implements Writable, Configurable {
   private String reduceTaskId;
   private int mapId;
   private int partition;
+  private long size;
   
   /** Permits reporting of file copy progress. */
   public interface ProgressReporter {
@@ -101,6 +102,10 @@ class MapOutputFile implements Writable, Configurable {
   private FileSystem getLocalFs() throws IOException {
     return FileSystem.getNamed("local", this.jobConf);
   }
+  
+  public long getSize() {
+    return size;
+  }
 
   public void write(DataOutput out) throws IOException {
     UTF8.writeString(out, mapTaskId);
@@ -112,7 +117,8 @@ class MapOutputFile implements Writable, Configurable {
     FSDataInputStream in = null;
     try {
       // write the length-prefixed file content to the wire
-      out.writeLong(getLocalFs().getLength(file));
+      this.size = getLocalFs().getLength(file);
+      out.writeLong(this.size);
       in = getLocalFs().open(file);
     } catch (FileNotFoundException e) {
       TaskTracker.LOG.log(Level.SEVERE, "Can't open map output:" + file, e);
@@ -120,7 +126,7 @@ class MapOutputFile implements Writable, Configurable {
       throw e;
     }
     try {
-      byte[] buffer = new byte[8192];
+      byte[] buffer = new byte[65536];
       int l  = 0;
       
       while (l != -1) {
@@ -149,11 +155,13 @@ class MapOutputFile implements Writable, Configurable {
     // read the length-prefixed file content into a local file
     Path file = getInputFile(mapId, reduceTaskId);
     long length = in.readLong();
+    this.size = length;
+    
     float progPerByte = 1.0f / length;
     long unread = length;
     FSDataOutputStream out = getLocalFs().create(file);
     try {
-      byte[] buffer = new byte[8192];
+      byte[] buffer = new byte[65536];
       while (unread > 0) {
           int bytesToRead = (int)Math.min(unread, buffer.length);
           in.readFully(buffer, 0, bytesToRead);
