@@ -183,6 +183,12 @@ class FSNamesystem implements FSConstants {
           try {
             lmthread.join(3000);
           } catch (InterruptedException ie) {
+          } finally {
+              try {
+                dir.close();
+              } catch (IOException ex) {
+                  // do nothing
+              }
           }
         }
     }
