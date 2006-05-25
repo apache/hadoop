@@ -120,7 +120,7 @@ public class LocalFileSystem extends FileSystem {
     
     public FSInputStream openRaw(Path f) throws IOException {
         if (! exists(f)) {
-            throw new FileNotFoundException(toString());
+            throw new FileNotFoundException(f.toString());
         }
         return new LocalFSFileInputStream(f);
     }

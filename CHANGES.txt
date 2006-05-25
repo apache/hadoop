@@ -65,6 +65,10 @@ Trunk (unreleased)
 17. HADOOP-251.  Fix task processes to be tolerant of failed progress
     reports to their parent process.  (omalley via cutting)
 
+18. HADOOP-325.  Improve the FileNotFound exceptions thrown by
+    LocalFileSystem to include the name of the file.
+    (Benjamin Reed via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 
