@@ -24,6 +24,7 @@ import java.net.URLDecoder;
 import org.mortbay.http.HttpContext;
 import org.mortbay.http.handler.ResourceHandler;
 import org.mortbay.http.SocketListener;
+import org.mortbay.jetty.servlet.WebApplicationContext;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -35,17 +36,26 @@ import org.mortbay.http.SocketListener;
  * @author Owen O'Malley
  */
 public class StatusHttpServer {
-  private static org.mortbay.jetty.Server webServer = null;
   private static final boolean isWindows = 
     System.getProperty("os.name").startsWith("Windows");
+  private org.mortbay.jetty.Server webServer;
+  private SocketListener listener;
+  private boolean findPort;
+  private WebApplicationContext webAppContext;
   
   /**
    * Create a status server on the given port.
    * The jsp scripts are taken from src/webapps/<name>.
+   * @param name The name of the server
+   * @param port The port to use on the server
+   * @param findPort whether the server should start at the given port and 
+   *        increment by 1 until it finds a free port.
    */
-  public StatusHttpServer(String name, int port) throws IOException {
+  public StatusHttpServer(String name, int port, 
+                          boolean findPort) throws IOException {
     webServer = new org.mortbay.jetty.Server();
-    SocketListener listener = new SocketListener();
+    this.findPort = findPort;
+    listener = new SocketListener();
     listener.setPort(port);
     webServer.addListener(listener);
 
@@ -66,9 +76,29 @@ public class StatusHttpServer {
     webServer.addContext(staticContext);
 
     // set up the context for "/" jsp files
-    webServer.addWebApplication("/", appDir + File.separator + name);      
+    webAppContext = 
+      webServer.addWebApplication("/", appDir + File.separator + name);      
   }
 
+  /**
+   * Set a value in the webapp context. These values are available to the jsp
+   * pages as "application.getAttribute(name)".
+   * @param name The name of the attribute
+   * @param value The value of the attribute
+   */
+  public void setAttribute(String name, Object value) {
+    webAppContext.setAttribute(name,value);
+  }
+  
+  /**
+   * Get the value in the webapp context.
+   * @param name The name of the attribute
+   * @return The value of the attribute
+   */
+  public Object getAttribute(String name) {
+    return webAppContext.getAttribute(name);
+  }
+  
   /**
    * Get the pathname to the webapps files.
    * @return the pathname
@@ -87,11 +117,44 @@ public class StatusHttpServer {
   }
   
   /**
+   * Get the port that the server is on
+   * @return the port
+   */
+  public int getPort() {
+    return listener.getPort();
+  }
+
+  public void setThreads(int min, int max) {
+    listener.setMinThreads(min);
+    listener.setMaxThreads(max);
+  }
+  /**
    * Start the server. Does not wait for the server to start.
    */
   public void start() throws IOException {
     try {
-      webServer.start();
+      while (true) {
+        try {
+          webServer.start();
+          break;
+        } catch (org.mortbay.util.MultiException ex) {
+          // look for the multi exception containing a bind exception,
+          // in that case try the next port number.
+          boolean needNewPort = false;
+          for(int i=0; i < ex.size(); ++i) {
+            Exception sub = ex.getException(i);
+            if (sub instanceof java.net.BindException) {
+              needNewPort = true;
+              break;
+            }
+          }
+          if (!findPort || !needNewPort) {
+            throw ex;
+          } else {
+            listener.setPort(listener.getPort() + 1);
+          }
+        }
+      }
     } catch (IOException ie) {
       throw ie;
     } catch (Exception e) {

@@ -76,7 +76,8 @@ abstract class Task implements Writable, Configurable {
 
 
   /** Return an approprate thread runner for this task. */
-  public abstract TaskRunner createRunner(TaskTracker tracker);
+  public abstract TaskRunner createRunner(TaskTracker tracker
+                                          ) throws IOException;
 
   /** The number of milliseconds between progress reports. */
   public static final int PROGRESS_INTERVAL = 1000;

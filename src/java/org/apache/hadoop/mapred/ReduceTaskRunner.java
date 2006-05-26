@@ -15,15 +15,13 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.ipc.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
-import java.net.*;
 import java.util.*;
-import java.lang.reflect.Method;
 import java.text.DecimalFormat;
-
 
 /** Runs a reduce task. */
 class ReduceTaskRunner extends TaskRunner {
@@ -54,11 +52,6 @@ class ReduceTaskRunner extends TaskRunner {
   private int numCopiers;
 
   /**
-   * timeout for copy operations
-   */
-  private int copyTimeout;
-  
-  /**
    * the maximum amount of time (less 1 minute) to wait to 
    * contact a host after a copy from it fails. We wait for (1 min +
    * Random.nextInt(maxBackoff)) seconds.
@@ -82,6 +75,11 @@ class ReduceTaskRunner extends TaskRunner {
   private long lastPollTime;
   
   /**
+   * A reference to the local file system for writing the map outputs to.
+   */
+  private FileSystem localFileSys;
+  
+  /**
    * the minimum interval between jobtracker polls
    */
   private static final long MIN_POLL_INTERVAL = 5000;
@@ -91,22 +89,6 @@ class ReduceTaskRunner extends TaskRunner {
    */
   private static final int PROBE_SAMPLE_SIZE = 50;
 
-  // initialization code to resolve "getFile" to a method object
-  private static Method getFileMethod = null;
-  static {
-    Class[] paramTypes = { String.class, String.class,
-                           int.class, int.class };    
-    try {
-      getFileMethod = 
-        MapOutputProtocol.class.getDeclaredMethod("getFile", paramTypes);
-    }
-    catch (NoSuchMethodException e) {
-      LOG.severe(StringUtils.stringifyException(e));
-      throw new RuntimeException("Can't find \"getFile\" method "
-                                 + "of MapOutputProtocol", e);
-    }
-  }
-  
   /** Represents the result of an attempt to copy a map output */
   private class CopyResult {
     
@@ -174,47 +156,42 @@ class ReduceTaskRunner extends TaskRunner {
     private long copyOutput(MapOutputLocation loc)
     throws IOException {
 
-      Object[] params = new Object[4];
-      params[0] = loc.getMapTaskId();
-      params[1] = reduceTask.getTaskId();
-      params[2] = new Integer(loc.getMapId());
-      params[3] = new Integer(reduceTask.getPartition());
-      
-      LOG.info(reduceTask.getTaskId() + " copy started: " +
-               loc.getMapTaskId() + " from " + loc.getHost());
+      String reduceId = reduceTask.getTaskId();
+      LOG.info(reduceId + " Copying " + loc.getMapTaskId() +
+               " output from " + loc.getHost() + ".");
 
-      Socket sock = new Socket(loc.getHost(), loc.getPort());
       try {
-        sock.setSoTimeout(copyTimeout);
-
         // this copies the map output file
-        MapOutputFile file =
-          (MapOutputFile)RPC.callRaw(getFileMethod, params, sock, conf);
+        Path filename = conf.getLocalPath(reduceId + "/map_" +
+                                          loc.getMapId() + ".out");
+        long bytes = loc.getFile(localFileSys, filename,
+                                 reduceTask.getPartition());
 
-        LOG.info(reduceTask.getTaskId() + " copy finished: " +
-                 loc.getMapTaskId() + " from " + loc.getHost());      
+        LOG.info(reduceTask.getTaskId() + " done copying " + loc.getMapTaskId() +
+                 " output from " + loc.getHost() + ".");
 
-        return file.getSize();
+        return bytes;
       }
-      finally {
-        try {
-          sock.close();
-        } catch (IOException e) { } // IGNORE
+      catch (IOException e) {
+        LOG.warning(reduceTask.getTaskId() + " failed to copy " + loc.getMapTaskId() +
+                    " output from " + loc.getHost() + ".");
+        throw e;
       }
     }
 
   }
   
-  public ReduceTaskRunner(Task task, TaskTracker tracker, JobConf conf) {
+  public ReduceTaskRunner(Task task, TaskTracker tracker, 
+                          JobConf conf) throws IOException {
     super(task, tracker, conf);
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);
+    localFileSys = FileSystem.getNamed("local", conf);
 
     this.reduceTask = (ReduceTask)getTask();
     this.scheduledCopies = new ArrayList(100);
     this.copyResults = new ArrayList(100);    
     this.numCopiers = conf.getInt("mapred.reduce.parallel.copies", 5);
-    this.copyTimeout = conf.getInt("ipc.client.timeout", 10000);
     this.maxBackoff = conf.getInt("mapred.reduce.copy.backoff", 300);
 
     // hosts -> next contact time

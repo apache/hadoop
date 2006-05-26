@@ -224,28 +224,6 @@ class TaskInProgress {
     }
 
     /**
-     * A TaskInProgress might be speculatively executed, and so
-     * can have many taskids simultaneously.  Reduce tasks rely on knowing
-     * their predecessor ids, so they can be sure that all the previous
-     * work has been completed.
-     *
-     * But we don't know ahead of time which task id will actually be
-     * the one that completes for a given Map task.  We don't want the
-     * Reduce task to have to be recreated after Map-completion, or check
-     * in with the JobTracker.  So instead, each TaskInProgress preallocates
-     * all the task-ids it could ever want to run simultaneously.  Then the
-     * Reduce task can be told about all the ids task-ids for a given Map 
-     * TaskInProgress.  If any of the Map TIP's tasks complete, the Reduce
-     * task will know all is well, and can continue.
-     *
-     * Most of the time, only a small number of the possible task-ids will
-     * ever be used.
-     */
-    public String[] getAllPossibleTaskIds() {
-        return totalTaskIds;
-    }
-
-    /**
      * Creates a "status report" for this task.  Includes the
      * task ID and overall status, plus reports for all the
      * component task-threads that have ever been started.

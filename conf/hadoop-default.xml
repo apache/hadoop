@@ -302,6 +302,20 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>tasktracker.http.threads</name>
+  <value>40</value>
+  <description>The number of worker threads that for the http server. This is
+               used for map output fetching
+  </description>
+</property>
+
+<property>
+  <name>tasktracker.http.port</name>
+  <value>50060</value>
+  <description>The default port for task trackers to use as their http server.
+  </description>
+</property>
 
 <!-- ipc properties -->
 

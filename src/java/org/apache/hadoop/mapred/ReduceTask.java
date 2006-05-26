@@ -60,7 +60,7 @@ class ReduceTask extends Task {
     this.partition = partition;
   }
 
-  public TaskRunner createRunner(TaskTracker tracker) {
+  public TaskRunner createRunner(TaskTracker tracker) throws IOException {
     return new ReduceTaskRunner(this, tracker, this.conf);
   }
 

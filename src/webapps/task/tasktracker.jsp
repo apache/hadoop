@@ -27,7 +27,7 @@
  %>
 
 <%
-  TaskTracker tracker = TaskTracker.getTracker();
+  TaskTracker tracker = (TaskTracker) application.getAttribute("task.tracker");
   String trackerName = tracker.getName();
 %>
 

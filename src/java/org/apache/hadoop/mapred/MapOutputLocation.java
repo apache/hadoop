@@ -19,6 +19,9 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import java.io.*;
+import java.net.URL;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.*;
 
 /** The location of a map output file, as passed to a reduce task via the
@@ -83,7 +86,36 @@ class MapOutputLocation implements Writable {
   }
 
   public String toString() {
-    return mapTaskId+"@"+host+":"+port;
+    return "http://" + host + ":" + port + "/getMapOutput.jsp?map=" + 
+            mapTaskId;
   }
 
+  /**
+   * Get the map output into a local file from the remote server.
+   * We use the file system so that we generate checksum files on the data.
+   * @param fileSys the filesystem to write the file to
+   * @param localFilename the filename to write the data into
+   * @param reduce the reduce id to get for
+   * @throws IOException when something goes wrong
+   */
+  public long getFile(FileSystem fileSys, 
+                      Path localFilename, int reduce) throws IOException {
+    URL path = new URL(toString() + "&reduce=" + reduce);
+    InputStream input = path.openConnection().getInputStream();
+    OutputStream output = fileSys.create(localFilename);
+    long totalBytes = 0;
+    try {
+      byte[] buffer = new byte[64 * 1024];
+      int len = input.read(buffer);
+      while (len > 0) {
+        totalBytes += len;
+        output.write(buffer, 0 ,len);
+        len = input.read(buffer);
+      }
+    } finally {
+      input.close();
+      output.close();
+    }
+    return totalBytes;
+  }
 }

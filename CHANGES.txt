@@ -69,6 +69,10 @@ Trunk (unreleased)
     LocalFileSystem to include the name of the file.
     (Benjamin Reed via cutting)
 
+19. HADOOP-254.  Use HTTP to transfer map output data to reduce
+    nodes.  This, together with HADOOP-195, greatly improves the
+    performance of these transfers.  (omalley via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

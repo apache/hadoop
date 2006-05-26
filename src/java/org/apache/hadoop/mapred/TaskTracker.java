@@ -31,8 +31,8 @@ import java.util.logging.*;
  *
  * @author Mike Cafarella
  *******************************************************/
-public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutputProtocol, Runnable {
-    private static TaskTracker taskTracker = null;
+public class TaskTracker 
+             implements MRConstants, TaskUmbilicalProtocol, Runnable {
     static final long WAIT_FOR_DONE = 3 * 1000;
     private long taskTimeout; 
     private int httpPort;
@@ -100,36 +100,30 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
       taskCleanupThread.start();
     }
     
-    class MapOutputServer extends RPC.Server {
-      private MapOutputServer(int port, int threads) {
-        super(TaskTracker.this, fConf, port, threads, false);
-      }
-      public TaskTracker getTaskTracker() {
-        return TaskTracker.this;
-      }
-    }
-
     /**
      * Start with the local machine name, and the default JobTracker
      */
-    public TaskTracker(JobConf conf, int httpPort) throws IOException {
-      this(JobTracker.getAddress(conf), conf, httpPort);
-    }
-
-    /**
-     * Start with the local machine name, and the addr of the target JobTracker
-     */
-    public TaskTracker(InetSocketAddress jobTrackAddr, JobConf conf,
-                       int httpPort) throws IOException {
-        maxCurrentTasks = conf.getInt("mapred.tasktracker.tasks.maximum", 2);
-
-        this.fConf = conf;
-        this.jobTrackAddr = jobTrackAddr;
-        this.taskTimeout = conf.getInt("mapred.task.timeout", 10* 60 * 1000);
-        this.mapOutputFile = new MapOutputFile();
-        this.mapOutputFile.setConf(conf);
-        this.httpPort = httpPort;
-        initialize();
+    public TaskTracker(JobConf conf) throws IOException {
+      maxCurrentTasks = conf.getInt("mapred.tasktracker.tasks.maximum", 2);
+      this.fConf = conf;
+      this.jobTrackAddr = JobTracker.getAddress(conf);
+      this.taskTimeout = conf.getInt("mapred.task.timeout", 10* 60 * 1000);
+      this.mapOutputFile = new MapOutputFile();
+      this.mapOutputFile.setConf(conf);
+      int httpPort = conf.getInt("tasktracker.http.port", 50060);
+      StatusHttpServer server = new StatusHttpServer("task", httpPort, true);
+      int workerThreads = conf.getInt("tasktracker.http.threads", 40);
+      server.setThreads(1, workerThreads);
+      server.start();
+      this.httpPort = server.getPort();
+      // let the jsp pages get to the task tracker, config, and other relevant
+      // objects
+      FileSystem local = FileSystem.getNamed("local", conf);
+      server.setAttribute("task.tracker", this);
+      server.setAttribute("local.file.system", local);
+      server.setAttribute("conf", conf);
+      server.setAttribute("log", LOG);
+      initialize();
     }
 
     /**
@@ -163,16 +157,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
                 this.taskReportPort++;
             }
         
-        }
-        while (true) {
-            try {
-                this.mapOutputServer = new MapOutputServer(mapOutputPort, maxCurrentTasks);
-                this.mapOutputServer.start();
-                break;
-            } catch (BindException e) {
-                LOG.info("Could not open mapoutput server at " + this.mapOutputPort + ", trying new port");
-                this.mapOutputPort++;
-            }
         }
         this.taskTrackerName = "tracker_" + 
                                localHostname + ":" + taskReportPort;
@@ -730,17 +714,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
         }
     }
 
-    /////////////////////////////////////////////////////////////////
-    // MapOutputProtocol
-    /////////////////////////////////////////////////////////////////
-    public MapOutputFile getFile(String mapTaskId, String reduceTaskId,
-                                 int mapId, int partition) {
-    MapOutputFile mapOutputFile = 
-      new MapOutputFile(mapTaskId, reduceTaskId, mapId, partition);
-    mapOutputFile.setConf(this.fConf);
-    return mapOutputFile;
-  }
-
     // ///////////////////////////////////////////////////////////////
     // TaskUmbilicalProtocol
     /////////////////////////////////////////////////////////////////
@@ -910,14 +883,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
     }
 
     /**
-     * Get the task tracker for use with the webapp stuff.
-     * @return The task tracker object
-     */
-    static TaskTracker getTracker() {
-      return taskTracker;
-    }
-    
-    /**
      * Get the name for this task tracker.
      * @return the string like "tracker_mymachine:50010"
      */
@@ -958,10 +923,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol, MapOutpu
 
         JobConf conf=new JobConf();
         LogFormatter.initFileHandler( conf, "tasktracker" );
-        int httpPort = conf.getInt("tasktracker.http.port", 50060);
-        StatusHttpServer server = new StatusHttpServer("task", httpPort);
-        server.start();
-        taskTracker = new TaskTracker(conf, httpPort);
-        taskTracker.run();
+        new TaskTracker(conf).run();
     }
 }
