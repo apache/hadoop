@@ -19,6 +19,8 @@ import java.io.*;
 import java.util.*;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.conf.*;
 
 /**************************************************
@@ -167,7 +169,22 @@ class FSDataset implements FSConstants {
             blkid = blkid >> ((15 - halfByteIndex) * 4);
             return (int) ((0x000000000000000F) & blkid);
         }
-
+        
+        /**
+         * check if a data diretory is healthy
+         * @throws DiskErrorException
+         * @author hairong
+         */
+        public void checkDirTree() throws DiskErrorException {
+            DiskChecker.checkDir(dir);
+            
+            if (children != null) {
+                for (int i = 0; i < children.length; i++) {
+                    children[i].checkDirTree();
+                }
+            }
+        }
+        
         public String toString() {
           return "FSDir{" +
               "dir=" + dir +
@@ -421,6 +438,17 @@ class FSDataset implements FSConstants {
         // REMIND - mjc - should cache this result for performance
         return new File(tmp, b.getBlockName());
     }
+
+    /**
+     * check if a data diretory is healthy
+     * @throws DiskErrorException
+     * @author hairong
+     */
+    void checkDataDir() throws DiskErrorException {
+        dirTree.checkDirTree();
+        DiskChecker.checkDir( tmp );
+    }
+    
 
     public String toString() {
       return "FSDataset{" +

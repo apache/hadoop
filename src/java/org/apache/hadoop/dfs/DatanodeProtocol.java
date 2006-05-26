@@ -28,6 +28,9 @@ import java.io.*;
  * @author Michael Cafarella
  **********************************************************************/
 interface DatanodeProtocol {
+    // error code
+    final static int DISK_ERROR = 1;
+    final static int INVALID_BLOCK = 2;
     /**
      * sendHeartbeat() tells the NameNode that the DataNode is still
      * alive and well.  Includes some status info, too. 
@@ -60,5 +63,5 @@ interface DatanodeProtocol {
      * errorReport() tells the NameNode about something that has gone
      * awry.  Useful for debugging.
      */
-    public void errorReport(String sender, String msg) throws IOException;
+    public void errorReport(String sender, int errorCode, String msg) throws IOException;
 }

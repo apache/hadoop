@@ -1026,7 +1026,46 @@ class FSNamesystem implements FSConstants {
             }
         }
     }
+    
+    /**
+     * remove a datanode info
+     * @param name: datanode name
+     * @author hairong
+     */
 
+    synchronized void rmDataNodeByName( UTF8 name ) {
+        DatanodeInfo nodeInfo = (DatanodeInfo) datanodeMap.get(name);
+        if (nodeInfo != null) {
+            rmDataNode( nodeInfo );
+        } else {
+            NameNode.stateChangeLog.warning("BLOCK* NameSystem.rmDataNodeByName: "
+                    + nodeInfo.getName() + " does not exist");
+        }
+    }
+    
+    /**
+     * remove a datanode info
+     * @param nodeInfo: datanode info
+     * @author hairong
+     */
+    private synchronized void rmDataNode( DatanodeInfo nodeInfo ) {
+        heartbeats.remove( nodeInfo );
+        synchronized (datanodeMap) {
+            datanodeMap.remove(nodeInfo.getName());
+            NameNode.stateChangeLog.finer("BLOCK* NameSystem.heartbeatCheck: "
+                    + nodeInfo.getName() + " is removed from datanodeMap");
+        }
+        totalCapacity -= nodeInfo.getCapacity();
+        totalRemaining -= nodeInfo.getRemaining();
+
+        Block deadblocks[] = nodeInfo.getBlocks();
+        if (deadblocks != null) {
+            for (int i = 0; i < deadblocks.length; i++) {
+                removeStoredBlock(deadblocks[i], nodeInfo);
+            }
+        }
+    }
+        
     /**
      * Check if there are any expired heartbeats, and if so,
      * whether any blocks have to be re-replicated.
@@ -1038,27 +1077,9 @@ class FSNamesystem implements FSConstants {
             while ((heartbeats.size() > 0) &&
                    ((nodeInfo = (DatanodeInfo) heartbeats.first()) != null) &&
                    (nodeInfo.lastUpdate() < System.currentTimeMillis() - EXPIRE_INTERVAL)) {
-                heartbeats.remove(nodeInfo);
                 NameNode.stateChangeLog.info("BLOCK* NameSystem.heartbeatCheck: "
                            + "lost heartbeat from " + nodeInfo.getName());
-                synchronized (datanodeMap) {
-                    datanodeMap.remove(nodeInfo.getName());
-                    NameNode.stateChangeLog.finer("BLOCK* NameSystem.heartbeatCheck: "
-                            + nodeInfo.getName() + " is removed from datanodeMap");
-                }
-                totalCapacity -= nodeInfo.getCapacity();
-                totalRemaining -= nodeInfo.getRemaining();
-
-                Block deadblocks[] = nodeInfo.getBlocks();
-                if (deadblocks != null) {
-                    for (int i = 0; i < deadblocks.length; i++) {
-                        removeStoredBlock(deadblocks[i], nodeInfo);
-                    }
-                }
-
-                if (heartbeats.size() > 0) {
-                    nodeInfo = (DatanodeInfo) heartbeats.first();
-                }
+                rmDataNode(nodeInfo);
             }
         }
     }

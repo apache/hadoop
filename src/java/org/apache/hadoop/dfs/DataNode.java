@@ -18,6 +18,7 @@ package org.apache.hadoop.dfs;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 import java.io.*;
 import java.net.*;
@@ -153,6 +154,16 @@ public class DataNode implements FSConstants, Runnable {
         }
     }
 
+    void handleDiskError( String errMsgr ) {
+        LOG.warning( "Shuting down DataNode because "+errMsgr );
+        try {
+            namenode.errorReport(
+                    localName, DatanodeProtocol.DISK_ERROR, errMsgr);
+        } catch( IOException ignored) {              
+        }
+        shutdown();
+    }
+    
     /**
      * Main loop for the DataNode.  Runs until shutdown,
      * forever calling remote NameNode functions.
@@ -164,96 +175,110 @@ public class DataNode implements FSConstants, Runnable {
         //
         // Now loop for a long time....
         //
-        while (shouldRun) {
-            long now = System.currentTimeMillis();
 
-            //
-            // Every so often, send heartbeat or block-report
-            //
-            if (now - lastHeartbeat > HEARTBEAT_INTERVAL) {
+        try {
+            while (shouldRun) {
+                long now = System.currentTimeMillis();
+    
                 //
-                // All heartbeat messages include following info:
-                // -- Datanode name
-                // -- data transfer port
-                // -- Total capacity
-                // -- Bytes remaining
+                // Every so often, send heartbeat or block-report
                 //
-                BlockCommand cmd = namenode.sendHeartbeat(localName, 
-                        data.getCapacity(), data.getRemaining(), xmitsInProgress);
-                //LOG.info("Just sent heartbeat, with name " + localName);
-                lastHeartbeat = now;
-
-                if (cmd != null && cmd.transferBlocks()) {
+                if (now - lastHeartbeat > HEARTBEAT_INTERVAL) {
                     //
-                    // Send a copy of a block to another datanode
+                    // All heartbeat messages include following info:
+                    // -- Datanode name
+                    // -- data transfer port
+                    // -- Total capacity
+                    // -- Bytes remaining
                     //
-                    Block blocks[] = cmd.getBlocks();
-                    DatanodeInfo xferTargets[][] = cmd.getTargets();
+                    BlockCommand cmd = namenode.sendHeartbeat(localName, 
+                            data.getCapacity(), data.getRemaining(), xmitsInProgress);
+                    //LOG.info("Just sent heartbeat, with name " + localName);
+                    lastHeartbeat = now;
+    
+                    if( cmd != null ) {
+                        data.checkDataDir();
+                        if (cmd.transferBlocks()) {
+                            //
+                            // Send a copy of a block to another datanode
+                            //
+                            Block blocks[] = cmd.getBlocks();
+                            DatanodeInfo xferTargets[][] = cmd.getTargets();
                         
-                    for (int i = 0; i < blocks.length; i++) {
-                        if (!data.isValidBlock(blocks[i])) {
-                            String errStr = "Can't send invalid block " + blocks[i];
-                            LOG.info(errStr);
-                            namenode.errorReport(localName, errStr);
-                            break;
-                        } else {
-                            if (xferTargets[i].length > 0) {
-                                LOG.info("Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
-                                new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
+                            for (int i = 0; i < blocks.length; i++) {
+                                if (!data.isValidBlock(blocks[i])) {
+                                    String errStr = "Can't send invalid block " + blocks[i];
+                                    LOG.info(errStr);
+                                    namenode.errorReport(
+                                        localName, 
+                                        DatanodeProtocol.INVALID_BLOCK, 
+                                        errStr);
+                                    break;
+                                } else {
+                                    if (xferTargets[i].length > 0) {
+                                        LOG.info("Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
+                                        new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
+                                    }
+                                }
                             }
+                         } else if (cmd.invalidateBlocks()) {
+                            //
+                            // Some local block(s) are obsolete and can be 
+                            // safely garbage-collected.
+                            //
+                            data.invalidate(cmd.getBlocks());
+                         }
+                    }
+                }
+                
+                // send block report
+                if (now - lastBlockReport > blockReportInterval) {
+                    // before send block report, check if data directory is healthy
+                    data.checkDataDir();
+                    
+                     //
+                     // Send latest blockinfo report if timer has expired.
+                     // Get back a list of local block(s) that are obsolete
+                     // and can be safely GC'ed.
+                     //
+                     Block toDelete[] = namenode.blockReport(localName, data.getBlockReport());
+                     data.invalidate(toDelete);
+                     lastBlockReport = now;
+                     continue;
+                }
+                
+                // check if there are newly received blocks
+                Block [] blockArray=null;
+                synchronized( receivedBlockList ) {
+                    if (receivedBlockList.size() > 0) {
+                        //
+                        // Send newly-received blockids to namenode
+                        //
+                        blockArray = (Block[]) receivedBlockList.toArray(new Block[receivedBlockList.size()]);
+                        receivedBlockList.removeAllElements();
+                    }
+                }
+                if( blockArray != null ) {
+                    namenode.blockReceived(localName, blockArray);
+                }
+                
+                //
+                // There is no work to do;  sleep until hearbeat timer elapses, 
+                // or work arrives, and then iterate again.
+                //
+                long waitTime = HEARTBEAT_INTERVAL - (System.currentTimeMillis() - lastHeartbeat);
+                synchronized( receivedBlockList ) {
+                    if (waitTime > 0 && receivedBlockList.size() == 0) {
+                        try {
+                            receivedBlockList.wait(waitTime);
+                        } catch (InterruptedException ie) {
                         }
                     }
-                } else if (cmd != null && cmd.invalidateBlocks()) {
-                    //
-                    // Some local block(s) are obsolete and can be 
-                    // safely garbage-collected.
-                    //
-                    data.invalidate(cmd.getBlocks());
-                }
-            }
-            
-            // send block report
-            if (now - lastBlockReport > blockReportInterval) {
-                //
-                // Send latest blockinfo report if timer has expired.
-                // Get back a list of local block(s) that are obsolete
-                // and can be safely GC'ed.
-                //
-                Block toDelete[] = namenode.blockReport(localName, data.getBlockReport());
-                data.invalidate(toDelete);
-                lastBlockReport = now;
-                continue;
-            }
-            
-            // check if there are newly received blocks
-            Block [] blockArray=null;
-            synchronized( receivedBlockList ) {
-                if (receivedBlockList.size() > 0) {
-                    //
-                    // Send newly-received blockids to namenode
-                    //
-                    blockArray = (Block[]) receivedBlockList.toArray(new Block[receivedBlockList.size()]);
-                    receivedBlockList.removeAllElements();
-                }
-            }
-            if( blockArray != null ) {
-                namenode.blockReceived(localName, blockArray);
-            }
-            
-            //
-            // There is no work to do;  sleep until hearbeat timer elapses, 
-            // or work arrives, and then iterate again.
-            //
-            long waitTime = HEARTBEAT_INTERVAL - (System.currentTimeMillis() - lastHeartbeat);
-            synchronized( receivedBlockList ) {
-                if (waitTime > 0 && receivedBlockList.size() == 0) {
-                    try {
-                        receivedBlockList.wait(waitTime);
-                    } catch (InterruptedException ie) {
-                    }
-                }
-            } // synchronized
-        } // while (shouldRun)
+                } // synchronized
+            } // while (shouldRun)
+        } catch(DiskErrorException e) {
+            handleDiskError(e.getMessage());
+        }
     } // offerService
 
     /**
@@ -276,9 +301,14 @@ public class DataNode implements FSConstants, Runnable {
                 while (shouldListen) {
                     Socket s = ss.accept();
                     //s.setSoTimeout(READ_TIMEOUT);
+                    data.checkDataDir();
                     new Daemon(new DataXceiver(s)).start();
                 }
                 ss.close();
+            } catch (DiskErrorException de ) {
+                String errMsgr = de.getMessage();
+                LOG.warning("Exiting DataXceiveServer due to "+ errMsgr );
+                handleDiskError(errMsgr);
             } catch (IOException ie) {
                 LOG.info("Exiting DataXceiveServer due to " + ie.toString());
             }
@@ -791,6 +821,7 @@ public class DataNode implements FSConstants, Runnable {
     }
   }
 
+
   /**
    * Make an instance of DataNode after ensuring that given data directory
    * (and parent directories, if necessary) can be created.
@@ -803,14 +834,14 @@ public class DataNode implements FSConstants, Runnable {
   static DataNode makeInstanceForDir(String dataDir, Configuration conf) throws IOException {
     DataNode dn = null;
     File data = new File(dataDir);
-    data.mkdirs();
-    if (!data.isDirectory()) {
-      LOG.warning("Can't start DataNode in non-directory: "+dataDir);
-      return null;
-    } else {
-      dn = new DataNode(conf, dataDir);
+    try {
+        DiskChecker.checkDir( data );
+        dn = new DataNode(conf, dataDir);
+        return dn;
+    } catch( DiskErrorException e ) {
+        LOG.warning("Can't start DataNode because " + e.getMessage() );
+        return null;
     }
-    return dn;
   }
 
   public String toString() {

@@ -445,9 +445,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     /**
      */
-    public void errorReport(String sender, String msg) {
+    public void errorReport(String sender, int errorCode, String msg) {
         // Log error message from datanode
-        //LOG.info("Report from " + sender + ": " + msg);
+        LOG.warning("Report from " + sender + ": " + msg);
+        if( errorCode == DatanodeProtocol.DISK_ERROR ) {
+            namesystem.rmDataNodeByName(new UTF8(sender));            
+        }
+            
     }
 
     /**
