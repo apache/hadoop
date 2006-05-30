@@ -16,7 +16,6 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
-import java.util.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
@@ -82,6 +81,83 @@ public class DFSShell {
       }
     }
 
+    /**
+     * Parse the incoming command string
+     * @param cmd
+     * @param pos ignore anything before this pos in cmd
+     * @throws IOException 
+     */
+    private void setReplication(String[] cmd, int pos) throws IOException {
+      if(cmd.length-pos<2 || (cmd.length-pos==2 && cmd[pos].equalsIgnoreCase("-R"))) {
+        System.err.println("Usage: [-R] <repvalue> <path>");
+        System.exit(-1);
+      }
+      
+      boolean recursive = false;
+      short rep = 3;
+      
+      if("-R".equalsIgnoreCase(cmd[pos])) {
+        recursive=true;
+        pos++;
+        
+      }
+      
+      try {
+        rep = Short.parseShort(cmd[pos]);
+        pos++;
+      } catch (NumberFormatException e) {
+        System.err.println("Cannot set replication to: " + cmd[pos]);
+        System.exit(-1);
+      }
+      
+      setReplication(rep, new Path(cmd[pos]), recursive);
+    }
+    
+    /**
+     * Set the replication for the path argument
+     * if it's a directory and recursive is true,
+     * set replication for all the subdirs and those files too
+     */
+    public void setReplication(short newRep, Path src, boolean recursive) throws IOException {
+  	
+    	if(!fs.isDirectory(src)) {
+    		setFileReplication(src, newRep);
+    		return;
+    	}
+    	
+      Path items[] = fs.listPaths(src);
+      if (items == null) {
+      	System.out.println("Could not get listing for " + src);
+      } else {
+
+      	for (int i = 0; i < items.length; i++) {
+      		Path cur = items[i];
+       		if(!fs.isDirectory(cur)) {
+       			setFileReplication(cur, newRep);
+       		} else if(recursive) {
+       			setReplication(newRep, cur, recursive);
+       		}
+       	}
+       }
+    }
+    
+    /**
+     * Actually set the replication for this file
+     * If it fails either throw IOException or print an error msg
+     * @param file
+     * @param newRep
+     * @throws IOException
+     */
+    private void setFileReplication(Path file, short newRep) throws IOException {
+    	
+    	if(fs.setReplication(file, newRep)) {
+    		System.out.println("Replication " + newRep + " set: " + file);
+    	} else {
+    		System.err.println("Could not set replication for: " + file);
+    	}
+    }
+    
+    
     /**
      * Get a listing of all files in DFS at the indicated name
      */
@@ -224,7 +300,7 @@ public class DFSShell {
                     " [-ls <path>] [-lsr <path>] [-du <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]" +
                     " [-put <localsrc> <dst>] [-copyFromLocal <localsrc> <dst>] [-moveFromLocal <localsrc> <dst>]" + 
                     " [-get <src> <localdst>] [-cat <src>] [-copyToLocal <src> <localdst>] [-moveToLocal <src> <localdst>]" +
-                    " [-mkdir <path>] [-report]");
+                    " [-mkdir <path>] [-report] [-setrep [-R] <rep> <path/file>]");
             return;
         }
 
@@ -245,6 +321,8 @@ public class DFSShell {
                 tc.cat(argv[i++]);
             } else if ("-moveToLocal".equals(cmd)) {
                 tc.moveToLocal(argv[i++], new Path(argv[i++]));
+            } else if ("-setrep".equals(cmd)) {
+            		tc.setReplication(argv, i);           
             } else if ("-ls".equals(cmd)) {
                 String arg = i < argv.length ? argv[i++] : "";
                 tc.ls(arg, false);
@@ -273,4 +351,5 @@ public class DFSShell {
             fs.close();
         }
     }
+
 }

@@ -73,10 +73,13 @@ Trunk (unreleased)
     nodes.  This, together with HADOOP-195, greatly improves the
     performance of these transfers.  (omalley via cutting)
 
-20. HADOOP-163.  Cause datanodes that are unable to either read or
+20. HADOOP-163.  Cause datanodes that\ are unable to either read or
     write data to exit, so that the namenode will no longer target
     them for new blocks and will replicate their data on other nodes.
     (Hairong Kuang via cutting)
+
+21. HADOOP-222.  Add a -setrep option to the dfs commands that alters
+    file replication levels.  (Johan Oskarson via cutting)
 
 
 Release 0.2.1 - 2006-05-12
