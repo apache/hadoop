@@ -286,9 +286,15 @@ public class Configuration {
       int index = (hashCode+i & Integer.MAX_VALUE) % dirs.length;
       Path file = new Path(dirs[index], path);
       Path dir = file.getParent();
-      if (fs.exists(dir) || fs.mkdirs(dir)) {
+      if (fs.mkdirs(dir) || fs.exists(dir)) {
         return file;
       }
+    }
+    LOG.warning("Could not make " + path + 
+                " in local directories from " + dirsProp);
+    for(int i=0; i < dirs.length; i++) {
+      int index = (hashCode+i & Integer.MAX_VALUE) % dirs.length;
+      LOG.warning(dirsProp + "[" + index + "]=" + dirs[index]);
     }
     throw new IOException("No valid local directories in property: "+dirsProp);
   }
