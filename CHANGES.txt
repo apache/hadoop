@@ -81,6 +81,10 @@ Trunk (unreleased)
 21. HADOOP-222.  Add a -setrep option to the dfs commands that alters
     file replication levels.  (Johan Oskarson via cutting)
 
+22. HADOOP-75.  In DFS, only check for a complete file when the file
+    is closed, rather than as each block is written.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

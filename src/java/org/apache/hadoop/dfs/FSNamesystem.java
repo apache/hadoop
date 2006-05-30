@@ -421,12 +421,6 @@ class FSNamesystem implements FSConstants {
           throw new IOException("File " + src + " created during write");
         }
 
-        //
-        // If we fail this, bad things happen!
-        //
-        if (!checkFileProgress(src)) {
-          throw new NameNode.NotReplicatedYetException("Not replicated yet");
-        }
         
         // Get the array of replication targets 
         DatanodeInfo targets[] = chooseTargets(pendingFile.getReplication(), 
