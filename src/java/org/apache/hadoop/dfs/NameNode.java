@@ -145,37 +145,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
 
     /**
-     * The exception that happens when you ask to create a file that already
-     * is being created, but is not closed yet.
-     * @author Owen O'Malley
-     */
-    public static class AlreadyBeingCreatedException extends IOException {
-      public AlreadyBeingCreatedException(String msg) {
-        super(msg);
-      }
-    }
-    
-    /**
-     * The lease that was being used to create this file has expired.
-     * @author Owen O'Malley
-     */
-    public static class LeaseExpiredException extends IOException {
-      public LeaseExpiredException(String msg) {
-        super(msg);
-      }
-    }
-    
-    /**
-     * The file has not finished being written to enough datanodes yet.
-     * @author Owen O'Malley
-     */
-    public static class NotReplicatedYetException extends IOException {
-      public NotReplicatedYetException(String msg) {
-        super(msg);
-      }
-    }
-    
-    /**
      */
     public LocatedBlock create(String src, 
                                String clientName, 
@@ -230,7 +199,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                 +targets.length + " locations" );
 
         for (int i = 0; i < targets.length; i++) {
-            namesystem.blockReceived(b, targets[i].getName());
+            namesystem.blockReceived( targets[i], b );
         }
     }
 
@@ -379,14 +348,26 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     ////////////////////////////////////////////////////////////////
     // DatanodeProtocol
     ////////////////////////////////////////////////////////////////
+    /** 
+     */
+    public DatanodeRegistration register( DatanodeRegistration nodeReg
+                                        ) throws IOException {
+      verifyVersion( nodeReg.getVersion() );
+      namesystem.registerDatanode( nodeReg );
+      return nodeReg;
+    }
+    
     /**
      * Data node notify the name node that it is alive 
      * Return a block-oriented command for the datanode to execute.
      * This will be either a transfer or a delete operation.
      */
-    public BlockCommand sendHeartbeat(String sender, long capacity, long remaining,
-            int xmitsInProgress) {
-        namesystem.gotHeartbeat(new UTF8(sender), capacity, remaining);        
+    public BlockCommand sendHeartbeat(DatanodeRegistration nodeReg,
+                                      long capacity, 
+                                      long remaining,
+                                      int xmitsInProgress) throws IOException {
+        verifyRequest( nodeReg );
+        namesystem.gotHeartbeat( nodeReg, capacity, remaining );
         
         //
         // Only ask datanodes to perform block operations (transfer, delete) 
@@ -408,7 +389,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         //
         // Ask to perform pending transfers, if any
         //
-        Object xferResults[] = namesystem.pendingTransfers(new DatanodeInfo(new UTF8(sender)), xmitsInProgress);
+        Object xferResults[] = namesystem.pendingTransfers(
+                       new DatanodeInfo( nodeReg ), xmitsInProgress );
         if (xferResults != null) {
             return new BlockCommand((Block[]) xferResults[0], (DatanodeInfo[][]) xferResults[1]);
         }
@@ -419,39 +401,70 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         // a block report.  This is just a small fast removal of blocks that have
         // just been removed.
         //
-        Block blocks[] = namesystem.blocksToInvalidate(new UTF8(sender));
+        Block blocks[] = namesystem.blocksToInvalidate( nodeReg );
         if (blocks != null) {
             return new BlockCommand(blocks);
         }
         return null;
     }
 
-    public Block[] blockReport(String sender, Block blocks[]) {
+    public Block[] blockReport( DatanodeRegistration nodeReg,
+                                Block blocks[]) throws IOException {
+        verifyRequest( nodeReg );
         stateChangeLog.fine("*BLOCK* NameNode.blockReport: "
-                +"from "+sender+" "+blocks.length+" blocks" );
+                +"from "+nodeReg.getName()+" "+blocks.length+" blocks" );
         if( firstBlockReportTime==0)
               firstBlockReportTime=System.currentTimeMillis();
 
-        return namesystem.processReport(blocks, new UTF8(sender));
+        return namesystem.processReport( nodeReg, blocks );
      }
 
-    public void blockReceived(String sender, Block blocks[]) {
+    public void blockReceived(DatanodeRegistration nodeReg, 
+                              Block blocks[]) throws IOException {
+        verifyRequest( nodeReg );
         stateChangeLog.fine("*BLOCK* NameNode.blockReceived: "
-                +"from "+sender+" "+blocks.length+" blocks." );
+                +"from "+nodeReg.getName()+" "+blocks.length+" blocks." );
         for (int i = 0; i < blocks.length; i++) {
-            namesystem.blockReceived(blocks[i], new UTF8(sender));
+            namesystem.blockReceived( nodeReg, blocks[i] );
         }
     }
 
     /**
      */
-    public void errorReport(String sender, int errorCode, String msg) {
-        // Log error message from datanode
-        LOG.warning("Report from " + sender + ": " + msg);
-        if( errorCode == DatanodeProtocol.DISK_ERROR ) {
-            namesystem.rmDataNodeByName(new UTF8(sender));            
-        }
-            
+    public void errorReport(DatanodeRegistration nodeReg,
+                            int errorCode, 
+                            String msg) throws IOException {
+      // Log error message from datanode
+      verifyRequest( nodeReg );
+      LOG.warning("Report from " + nodeReg.getName() + ": " + msg);
+      if( errorCode == DatanodeProtocol.DISK_ERROR ) {
+          namesystem.removeDatanode( nodeReg );            
+      }
+    }
+
+    /** 
+     * Verify request.
+     * 
+     * Verifies correctness of the datanode version and registration ID.
+     * 
+     * @param nodeReg data node registration
+     * @throws IOException
+     */
+    public void verifyRequest( DatanodeRegistration nodeReg ) throws IOException {
+      verifyVersion( nodeReg.getVersion() );
+      if( ! namesystem.getRegistrationID().equals( nodeReg.getRegistrationID() ))
+          throw new UnregisteredDatanodeException( nodeReg );
+    }
+    
+    /**
+     * Verify version.
+     * 
+     * @param version
+     * @throws IOException
+     */
+    public void verifyVersion( int version ) throws IOException {
+      if( version != DFS_CURRENT_VERSION )
+        throw new IncorrectVersionException( version, "data node" );
     }
 
     /**

@@ -51,7 +51,7 @@ import org.apache.hadoop.conf.*;
  * <li>total number of bytes processed</li>
  * <li>throughput in mb/sec (total number of bytes / sum of processing times)</li>
  * <li>average i/o rate in mb/sec per file</li>
- * <li>standard i/o rate deviation</li>
+ * <li>standard deviation of i/o rate </li>
  * </ul>
  *
  * @author Konstantin Shvachko
@@ -309,11 +309,11 @@ public class TestDFSIO extends TestCase {
       System.exit(-1);
     }
     for (int i = 0; i < args.length; i++) {       // parse command line
-      if (args[i].startsWith("-r")) {
+      if (args[i].startsWith("-read")) {
         testType = TEST_TYPE_READ;
-      } else if (args[i].startsWith("-w")) {
+      } else if (args[i].equals("-write")) {
         testType = TEST_TYPE_WRITE;
-      } else if (args[i].startsWith("-clean")) {
+      } else if (args[i].equals("-clean")) {
         testType = TEST_TYPE_CLEANUP;
       } else if (args[i].startsWith("-seq")) {
         isSequential = true;
@@ -410,7 +410,7 @@ public class TestDFSIO extends TestCase {
       "Total MBytes processed: " + size/MEGA,
       "     Throughput mb/sec: " + size * 1000.0 / (time * MEGA),
       "Average IO rate mb/sec: " + med,
-      " Std IO rate deviation: " + stdDev,
+      " IO rate std deviation: " + stdDev,
       "    Test exec time sec: " + (float)execTime / 1000,
       "" };
 

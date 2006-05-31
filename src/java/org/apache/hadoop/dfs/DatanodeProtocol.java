@@ -28,9 +28,21 @@ import java.io.*;
  * @author Michael Cafarella
  **********************************************************************/
 interface DatanodeProtocol {
-    // error code
-    final static int DISK_ERROR = 1;
-    final static int INVALID_BLOCK = 2;
+  // error code
+  final static int DISK_ERROR = 1;
+  final static int INVALID_BLOCK = 2;
+  /** 
+   * Register Datanode.
+   *
+   * @see DataNode#register()
+   * @see FSNamesystem#registerDatanode(DatanodeRegistration)
+   * 
+   * @return updated {@link DatanodeRegistration}, which contains 
+   * new storageID if the datanode did not have one and
+   * registration ID for further communication.
+   */
+    public DatanodeRegistration register( DatanodeRegistration registration
+                                        ) throws IOException;
     /**
      * sendHeartbeat() tells the NameNode that the DataNode is still
      * alive and well.  Includes some status info, too. 
@@ -38,9 +50,9 @@ interface DatanodeProtocol {
      * A BlockCommand tells the DataNode to invalidate local block(s), 
      * or to copy them to other DataNodes, etc.
      */
-    public BlockCommand sendHeartbeat(String sender, 
-            long capacity, long remaining,
-            int xmitsInProgress) throws IOException;
+    public BlockCommand sendHeartbeat(DatanodeRegistration registration,
+                                      long capacity, long remaining,
+                                      int xmitsInProgress) throws IOException;
 
     /**
      * blockReport() tells the NameNode about all the locally-stored blocks.
@@ -49,7 +61,8 @@ interface DatanodeProtocol {
      * the locally-stored blocks.  It's invoked upon startup and then
      * infrequently afterwards.
      */
-    public Block[] blockReport(String sender, Block blocks[]) throws IOException;
+    public Block[] blockReport( DatanodeRegistration registration,
+                                Block blocks[]) throws IOException;
     
     /**
      * blockReceived() allows the DataNode to tell the NameNode about
@@ -57,11 +70,14 @@ interface DatanodeProtocol {
      * writes a new Block here, or another DataNode copies a Block to
      * this DataNode, it will call blockReceived().
      */
-    public void blockReceived(String sender, Block blocks[]) throws IOException;
+    public void blockReceived(DatanodeRegistration registration,
+                              Block blocks[]) throws IOException;
 
     /**
      * errorReport() tells the NameNode about something that has gone
      * awry.  Useful for debugging.
      */
-    public void errorReport(String sender, int errorCode, String msg) throws IOException;
+    public void errorReport(DatanodeRegistration registration,
+                            int errorCode, 
+                            String msg) throws IOException;
 }

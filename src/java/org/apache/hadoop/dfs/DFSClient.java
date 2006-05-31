@@ -375,11 +375,7 @@ class DFSClient implements FSConstants {
             if (deadNodes.contains(nodes[i])) {
                 continue;
             }
-            String nodename = nodes[i].getName().toString();
-            int colon = nodename.indexOf(':');
-            if (colon >= 0) {
-                nodename = nodename.substring(0, colon);
-            }
+            String nodename = nodes[i].getHost();
             if (localName.equals(nodename)) {
                 chosenNode = nodes[i];
                 break;
@@ -524,7 +520,7 @@ class DFSClient implements FSConstants {
 
                 try {
                     chosenNode = bestNode(nodes[targetBlock], deadNodes);
-                    targetAddr = DataNode.createSocketAddr(chosenNode.getName().toString());
+                    targetAddr = DataNode.createSocketAddr(chosenNode.getName());
                 } catch (IOException ie) {
                     String blockInfo =
                       blocks[targetBlock]+" file="+src+" offset="+target;
@@ -758,12 +754,12 @@ class DFSClient implements FSConstants {
                 //
                 // Connect to first DataNode in the list.  Abort if this fails.
                 //
-                InetSocketAddress target = DataNode.createSocketAddr(nodes[0].getName().toString());
+                InetSocketAddress target = DataNode.createSocketAddr(nodes[0].getName());
                 try {
                     s = new Socket();
                     s.connect(target, READ_TIMEOUT);
                     s.setSoTimeout(replication * READ_TIMEOUT);
-                    datanodeName = nodes[0].getName().toString();
+                    datanodeName = nodes[0].getName();
                 } catch (IOException ie) {
                     // Connection failed.  Let's wait a little bit and retry
                     try {
@@ -811,7 +807,7 @@ class DFSClient implements FSConstants {
                     localName, overwrite, replication, blockSize);
               } catch (RemoteException e) {
                 if (--retries == 0 || 
-                    "org.apache.hadoop.dfs.NameNode.AlreadyBeingCreatedException".
+                    AlreadyBeingCreatedException.class.getName().
                         equals(e.getClassName())) {
                   throw e;
                 } else {
@@ -841,7 +837,7 @@ class DFSClient implements FSConstants {
                                          clientName.toString());
               } catch (RemoteException e) {
                 if (--retries == 0 || 
-                    "org.apache.hadoop.dfs.NameNode.NotReplicatedYetException".
+                    NotReplicatedYetException.class.getName().
                         equals(e.getClassName())) {
                   throw e;
                 } else {

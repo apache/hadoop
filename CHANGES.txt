@@ -85,6 +85,11 @@ Trunk (unreleased)
     is closed, rather than as each block is written.
     (Milind Bhandarkar via cutting)
 
+23. HADOOP-124. Change DFS so that datanodes are identified by a
+    persistent ID rather than by host and port.  This solves a number
+    of filesystem integrity problems, when, e.g., datanodes are
+    restarted.  (Konstantin Shvachko via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

@@ -35,10 +35,6 @@ import org.apache.hadoop.fs.Path;
  * @author Mike Cafarella
  *************************************************/
 class FSDirectory implements FSConstants {
-    // Version is reflected in the dfs image and edit log files.
-    // Versions are negative. 
-    // Decrement DFS_CURRENT_VERSION to define a new version.
-    private static final int DFS_CURRENT_VERSION = -1;
     private static final String FS_IMAGE = "fsimage";
     private static final String NEW_FS_IMAGE = "fsimage.new";
     private static final String OLD_FS_IMAGE = "fsimage.old";
@@ -295,6 +291,7 @@ class FSDirectory implements FSConstants {
     TreeMap activeLocks = new TreeMap();
     DataOutputStream editlog = null;
     boolean ready = false;
+    int namespaceID = 0;  /// a persistent attribute of the namespace
 
     /** Access an existing dfs name directory. */
     public FSDirectory(File dir, Configuration conf) throws IOException {
@@ -328,6 +325,27 @@ class FSDirectory implements FSConstants {
           
           throw new IOException("Unable to format: "+dir);
         }
+    }
+    
+    /**
+     * Generate new namespaceID.
+     * 
+     * namespaceID is a persistent attribute of the namespace.
+     * It is generated when the namenode is formatted and remains the same
+     * during the life cycle of the namenode.
+     * When a datanodes register they receive it as the registrationID,
+     * which is checked every time the datanode is communicating with the 
+     * namenode. Datanodes that do not 'know' the namespaceID are rejected.
+     * 
+     * @return new namespaceID
+     */
+    private int newNamespaceID() {
+      Random r = new Random();
+      r.setSeed( System.currentTimeMillis() );
+      int newID = 0;
+      while( newID == 0)
+        newID = r.nextInt();
+      return newID;
     }
 
     /**
@@ -387,11 +405,16 @@ class FSDirectory implements FSConstants {
         //
         // Load in bits
         //
+        boolean needToSave = true;
+        int imgVersion = DFS_CURRENT_VERSION;
         if (curFile.exists()) {
             DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(curFile)));
             try {
-                // read image version
-                int imgVersion = in.readInt();
+                // read image version: first appeared in version -1
+                imgVersion = in.readInt();
+                // read namespaceID: first appeared in version -2
+                if( imgVersion <= -2 )
+                  namespaceID = in.readInt();
                 // read number of files
                 int numFiles = 0;
                 // version 0 does not store version #
@@ -402,6 +425,7 @@ class FSDirectory implements FSConstants {
                 } else 
                   numFiles = in.readInt();
                   
+                needToSave = ( imgVersion != DFS_CURRENT_VERSION );
                 if( imgVersion < DFS_CURRENT_VERSION ) // future version
                   throw new IOException(
                               "Unsupported version of the file system image: "
@@ -436,11 +460,10 @@ class FSDirectory implements FSConstants {
             }
         }
 
-        if (edits.exists() && loadFSEdits(edits, conf) > 0) {
-            return true;
-        } else {
-            return false;
-        }
+        if( namespaceID == 0 )
+          namespaceID = newNamespaceID();
+        
+        return needToSave || ( edits.exists() && loadFSEdits(edits, conf) > 0 );
     }
 
     /**
@@ -584,6 +607,7 @@ class FSDirectory implements FSConstants {
         DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(newFile)));
         try {
             out.writeInt(DFS_CURRENT_VERSION);
+            out.writeInt(this.namespaceID);
             out.writeInt(rootDir.numItemsInTree() - 1);
             rootDir.saveImage("", out);
         } finally {
@@ -967,9 +991,9 @@ class FSDirectory implements FSConstants {
                 lastSuccess = false;
             }
         }
-        if( !lastSuccess )
+/*        if( !lastSuccess )
             NameNode.stateChangeLog.warning("DIR* FSDirectory.mkdirs: "
-                    +"failed to create directory "+src );
+                    +"failed to create directory "+src );*/
         return lastSuccess;
     }
 

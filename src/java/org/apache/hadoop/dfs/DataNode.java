@@ -22,6 +22,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 import java.io.*;
 import java.net.*;
+import java.nio.channels.FileLock;
 import java.util.*;
 import java.util.logging.*;
 
@@ -59,7 +60,7 @@ import java.util.logging.*;
  **********************************************************/
 public class DataNode implements FSConstants, Runnable {
     public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.dfs.DataNode");
-  //
+    //
     // REMIND - mjc - I might bring "maxgigs" back so user can place 
     // artificial  limit on space
     //private static final long GIGABYTE = 1024 * 1024 * 1024;
@@ -87,12 +88,13 @@ public class DataNode implements FSConstants, Runnable {
     private static Vector subThreadList = null;
     DatanodeProtocol namenode;
     FSDataset data;
-    String localName;
+    DatanodeRegistration dnRegistration;
     boolean shouldRun = true;
     Vector receivedBlockList = new Vector();
     int xmitsInProgress = 0;
     Daemon dataXceiveServer = null;
     long blockReportInterval;
+    private DataStorage storage = null;
 
     /**
      * Create the DataNode given a configuration and a dataDir.
@@ -102,43 +104,80 @@ public class DataNode implements FSConstants, Runnable {
         this(InetAddress.getLocalHost().getHostName(), 
              new File(datadir),
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
+        // register datanode
+        register();
     }
 
     /**
      * A DataNode can also be created with configuration information
      * explicitly given.
+     * 
+     * @see DataStorage
      */
-    public DataNode(String machineName, File datadir, InetSocketAddress nameNodeAddr, Configuration conf) throws IOException {
-        this.namenode = (DatanodeProtocol) RPC.getProxy(DatanodeProtocol.class, nameNodeAddr, conf);
-        this.data = new FSDataset(datadir, conf);
-
-        ServerSocket ss = null;
-        int tmpPort = conf.getInt("dfs.datanode.port", 50010);
-        while (ss == null) {
-            try {
-                ss = new ServerSocket(tmpPort);
-                LOG.info("Opened server at " + tmpPort);
-            } catch (IOException ie) {
-                LOG.info("Could not open server at " + tmpPort + ", trying new port");
-                tmpPort++;
-            }
+    private DataNode(String machineName, 
+                    File datadir, 
+                    InetSocketAddress nameNodeAddr, 
+                    Configuration conf ) throws IOException {
+      // get storage info and lock the data dir
+      storage = new DataStorage( datadir );
+      // connect to name node
+      this.namenode = (DatanodeProtocol) RPC.getProxy(DatanodeProtocol.class, 
+                                                      nameNodeAddr, 
+                                                      conf);
+      // find free port
+      ServerSocket ss = null;
+      int tmpPort = conf.getInt("dfs.datanode.port", 50010);
+      while (ss == null) {
+        try {
+          ss = new ServerSocket(tmpPort);
+          LOG.info("Opened server at " + tmpPort);
+        } catch (IOException ie) {
+          LOG.info("Could not open server at " + tmpPort + ", trying new port");
+          tmpPort++;
         }
-        this.localName = machineName + ":" + tmpPort;
-        this.dataXceiveServer = new Daemon(new DataXceiveServer(ss));
-        this.dataXceiveServer.start();
+      }
+      // construct registration
+      this.dnRegistration = new DatanodeRegistration(
+                                        DFS_CURRENT_VERSION, 
+                                        machineName + ":" + tmpPort, 
+                                        storage.getStorageID(),
+                                        "" );
+      // initialize data node internal structure
+      this.data = new FSDataset(datadir, conf);
+      this.dataXceiveServer = new Daemon(new DataXceiveServer(ss));
+      this.dataXceiveServer.start();
 
-        long blockReportIntervalBasis =
-          conf.getLong("dfs.blockreport.intervalMsec", BLOCKREPORT_INTERVAL);
-        this.blockReportInterval =
-          blockReportIntervalBasis - new Random().nextInt((int)(blockReportIntervalBasis/10));
+      long blockReportIntervalBasis =
+        conf.getLong("dfs.blockreport.intervalMsec", BLOCKREPORT_INTERVAL);
+      this.blockReportInterval =
+        blockReportIntervalBasis - new Random().nextInt((int)(blockReportIntervalBasis/10));
     }
 
     /**
      * Return the namenode's identifier
      */
     public String getNamenode() {
-        //return namenode.toString();
-	return "<namenode>";
+      //return namenode.toString();
+      return "<namenode>";
+    }
+
+    /**
+     * Register datanode
+     * <p>
+     * The datanode needs to register with the namenode on startup in order
+     * 1) to report which storage it is serving now and 
+     * 2) to receive a registrationID 
+     * issued by the namenode to recognize registered datanodes.
+     * 
+     * @see FSNamesystem#registerDatanode(DatanodeRegistration)
+     * @throws IOException
+     */
+    private void register() throws IOException {
+      dnRegistration = namenode.register( dnRegistration );
+      if( storage.getStorageID().equals("") ) {
+        storage.setStorageID( dnRegistration.getStorageID());
+        storage.write();
+      }
     }
 
     /**
@@ -152,13 +191,17 @@ public class DataNode implements FSConstants, Runnable {
             this.dataXceiveServer.join();
         } catch (InterruptedException ie) {
         }
+        try {
+          this.storage.close();
+        } catch (IOException ie) {
+        }
     }
 
     void handleDiskError( String errMsgr ) {
         LOG.warning( "Shuting down DataNode because "+errMsgr );
         try {
             namenode.errorReport(
-                    localName, DatanodeProtocol.DISK_ERROR, errMsgr);
+                    dnRegistration, DatanodeProtocol.DISK_ERROR, errMsgr);
         } catch( IOException ignored) {              
         }
         shutdown();
@@ -169,116 +212,122 @@ public class DataNode implements FSConstants, Runnable {
      * forever calling remote NameNode functions.
      */
     public void offerService() throws Exception {
-        long lastHeartbeat = 0, lastBlockReport = 0;
-        LOG.info("using BLOCKREPORT_INTERVAL of " + blockReportInterval + "msec");
+      long lastHeartbeat = 0, lastBlockReport = 0;
+      LOG.info("using BLOCKREPORT_INTERVAL of " + blockReportInterval + "msec");
 
-        //
-        // Now loop for a long time....
-        //
+      //
+      // Now loop for a long time....
+      //
 
-        try {
-            while (shouldRun) {
-                long now = System.currentTimeMillis();
-    
+      try {
+        while (shouldRun) {
+          long now = System.currentTimeMillis();
+
+          //
+          // Every so often, send heartbeat or block-report
+          //
+          if (now - lastHeartbeat > HEARTBEAT_INTERVAL) {
+            //
+            // All heartbeat messages include following info:
+            // -- Datanode name
+            // -- data transfer port
+            // -- Total capacity
+            // -- Bytes remaining
+            //
+            BlockCommand cmd = namenode.sendHeartbeat(dnRegistration, 
+                                                      data.getCapacity(), 
+                                                      data.getRemaining(), 
+                                                      xmitsInProgress);
+            //LOG.info("Just sent heartbeat, with name " + localName);
+            lastHeartbeat = now;
+
+            if( cmd != null ) {
+              data.checkDataDir();
+              if (cmd.transferBlocks()) {
                 //
-                // Every so often, send heartbeat or block-report
+                // Send a copy of a block to another datanode
                 //
-                if (now - lastHeartbeat > HEARTBEAT_INTERVAL) {
-                    //
-                    // All heartbeat messages include following info:
-                    // -- Datanode name
-                    // -- data transfer port
-                    // -- Total capacity
-                    // -- Bytes remaining
-                    //
-                    BlockCommand cmd = namenode.sendHeartbeat(localName, 
-                            data.getCapacity(), data.getRemaining(), xmitsInProgress);
-                    //LOG.info("Just sent heartbeat, with name " + localName);
-                    lastHeartbeat = now;
-    
-                    if( cmd != null ) {
-                        data.checkDataDir();
-                        if (cmd.transferBlocks()) {
-                            //
-                            // Send a copy of a block to another datanode
-                            //
-                            Block blocks[] = cmd.getBlocks();
-                            DatanodeInfo xferTargets[][] = cmd.getTargets();
-                        
-                            for (int i = 0; i < blocks.length; i++) {
-                                if (!data.isValidBlock(blocks[i])) {
-                                    String errStr = "Can't send invalid block " + blocks[i];
-                                    LOG.info(errStr);
-                                    namenode.errorReport(
-                                        localName, 
-                                        DatanodeProtocol.INVALID_BLOCK, 
-                                        errStr);
-                                    break;
-                                } else {
-                                    if (xferTargets[i].length > 0) {
-                                        LOG.info("Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
-                                        new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
-                                    }
-                                }
-                            }
-                         } else if (cmd.invalidateBlocks()) {
-                            //
-                            // Some local block(s) are obsolete and can be 
-                            // safely garbage-collected.
-                            //
-                            data.invalidate(cmd.getBlocks());
-                         }
-                    }
-                }
-                
-                // send block report
-                if (now - lastBlockReport > blockReportInterval) {
-                    // before send block report, check if data directory is healthy
-                    data.checkDataDir();
+                Block blocks[] = cmd.getBlocks();
+                DatanodeInfo xferTargets[][] = cmd.getTargets();
                     
-                     //
-                     // Send latest blockinfo report if timer has expired.
-                     // Get back a list of local block(s) that are obsolete
-                     // and can be safely GC'ed.
-                     //
-                     Block toDelete[] = namenode.blockReport(localName, data.getBlockReport());
-                     data.invalidate(toDelete);
-                     lastBlockReport = now;
-                     continue;
-                }
-                
-                // check if there are newly received blocks
-                Block [] blockArray=null;
-                synchronized( receivedBlockList ) {
-                    if (receivedBlockList.size() > 0) {
-                        //
-                        // Send newly-received blockids to namenode
-                        //
-                        blockArray = (Block[]) receivedBlockList.toArray(new Block[receivedBlockList.size()]);
-                        receivedBlockList.removeAllElements();
+                for (int i = 0; i < blocks.length; i++) {
+                  if (!data.isValidBlock(blocks[i])) {
+                    String errStr = "Can't send invalid block " + blocks[i];
+                    LOG.info(errStr);
+                    namenode.errorReport( dnRegistration, 
+                                DatanodeProtocol.INVALID_BLOCK, 
+                                errStr);
+                    break;
+                  } else {
+                    if (xferTargets[i].length > 0) {
+                        LOG.info("Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
+                        new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
                     }
+                  }
                 }
-                if( blockArray != null ) {
-                    namenode.blockReceived(localName, blockArray);
-                }
+              } else if (cmd.invalidateBlocks()) {
+                //
+                // Some local block(s) are obsolete and can be 
+                // safely garbage-collected.
+                //
+                data.invalidate(cmd.getBlocks());
+              } else if( cmd.shutdownNode()) {
+                // shut down the data node
+                this.shutdown();
+                continue;
+              }
+            }
+          }
+            
+          // send block report
+          if (now - lastBlockReport > blockReportInterval) {
+            // before send block report, check if data directory is healthy
+            data.checkDataDir();
                 
-                //
-                // There is no work to do;  sleep until hearbeat timer elapses, 
-                // or work arrives, and then iterate again.
-                //
-                long waitTime = HEARTBEAT_INTERVAL - (System.currentTimeMillis() - lastHeartbeat);
-                synchronized( receivedBlockList ) {
-                    if (waitTime > 0 && receivedBlockList.size() == 0) {
-                        try {
-                            receivedBlockList.wait(waitTime);
-                        } catch (InterruptedException ie) {
-                        }
-                    }
-                } // synchronized
-            } // while (shouldRun)
-        } catch(DiskErrorException e) {
-            handleDiskError(e.getMessage());
-        }
+            //
+            // Send latest blockinfo report if timer has expired.
+            // Get back a list of local block(s) that are obsolete
+            // and can be safely GC'ed.
+            //
+            Block toDelete[] = namenode.blockReport(dnRegistration,
+                                                    data.getBlockReport());
+            data.invalidate(toDelete);
+            lastBlockReport = now;
+            continue;
+          }
+            
+          // check if there are newly received blocks
+          Block [] blockArray=null;
+          synchronized( receivedBlockList ) {
+            if (receivedBlockList.size() > 0) {
+              //
+              // Send newly-received blockids to namenode
+              //
+              blockArray = (Block[]) receivedBlockList.toArray(new Block[receivedBlockList.size()]);
+              receivedBlockList.removeAllElements();
+            }
+          }
+          if( blockArray != null ) {
+            namenode.blockReceived( dnRegistration, blockArray );
+          }
+            
+          //
+          // There is no work to do;  sleep until hearbeat timer elapses, 
+          // or work arrives, and then iterate again.
+          //
+          long waitTime = HEARTBEAT_INTERVAL - (System.currentTimeMillis() - lastHeartbeat);
+          synchronized( receivedBlockList ) {
+            if (waitTime > 0 && receivedBlockList.size() == 0) {
+              try {
+                receivedBlockList.wait(waitTime);
+              } catch (InterruptedException ie) {
+              }
+            }
+          } // synchronized
+        } // while (shouldRun)
+      } catch(DiskErrorException e) {
+        handleDiskError(e.getMessage());
+      }
     } // offerService
 
     /**
@@ -503,7 +552,7 @@ public class DataNode implements FSConstants, Runnable {
               DataOutputStream out2 = null;
               if (targets.length > 1) {
                 // Connect to backup machine
-                mirrorNode = targets[1].getName().toString();
+                mirrorNode = targets[1].getName();
                 mirrorTarget = createSocketAddr(mirrorNode);
                 try {
                   Socket s2 = new Socket();
@@ -699,7 +748,7 @@ public class DataNode implements FSConstants, Runnable {
          * entire target list, the block, and the data.
          */
         public DataTransfer(DatanodeInfo targets[], Block b) throws IOException {
-            this.curTarget = createSocketAddr(targets[0].getName().toString());
+            this.curTarget = createSocketAddr(targets[0].getName());
             this.targets = targets;
             this.b = b;
             this.buf = new byte[BUFFER_SIZE];
@@ -709,7 +758,7 @@ public class DataNode implements FSConstants, Runnable {
          * Do the deed, write the bytes
          */
         public void run() {
-	    xmitsInProgress++;
+      xmitsInProgress++;
             try {
                 Socket s = new Socket();
                 s.connect(curTarget, READ_TIMEOUT);
@@ -750,8 +799,8 @@ public class DataNode implements FSConstants, Runnable {
             } catch (IOException ie) {
               LOG.log(Level.WARNING, "Failed to transfer "+b+" to "+curTarget, ie);
             } finally {
-		xmitsInProgress--;
-	    }
+    xmitsInProgress--;
+      }
         }
     }
 
@@ -821,7 +870,6 @@ public class DataNode implements FSConstants, Runnable {
     }
   }
 
-
   /**
    * Make an instance of DataNode after ensuring that given data directory
    * (and parent directories, if necessary) can be created.
@@ -847,17 +895,18 @@ public class DataNode implements FSConstants, Runnable {
   public String toString() {
     return "DataNode{" +
         "data=" + data +
-        ", localName='" + localName + "'" +
+        ", localName='" + dnRegistration.getName() + "'" +
+        ", storageID='" + dnRegistration.getStorageID() + "'" +
         ", xmitsInProgress=" + xmitsInProgress +
         "}";
   }
 
-    /**
-     */
-    public static void main(String args[]) throws IOException {
-        Configuration conf = new Configuration();
-        LogFormatter.setShowThreadIDs(true);
-        LogFormatter.initFileHandler(conf, "datanode");
-        runAndWait(conf);
-    }
+  /**
+   */
+  public static void main(String args[]) throws IOException {
+    Configuration conf = new Configuration();
+    LogFormatter.setShowThreadIDs(true);
+    LogFormatter.initFileHandler(conf, "datanode");
+    runAndWait(conf);
+  }
 }

@@ -266,7 +266,7 @@ public class DFSck {
 
         try {
             chosenNode = bestNode(lblock.getLocations(), deadNodes);
-            targetAddr = DataNode.createSocketAddr(chosenNode.getName().toString());
+            targetAddr = DataNode.createSocketAddr(chosenNode.getName());
         } catch (IOException ie) {
             if (failures >= DFSClient.MAX_BLOCK_ACQUIRE_FAILURES) {
                 throw new IOException("Could not obtain block " + lblock);
@@ -358,7 +358,7 @@ public class DFSck {
           if (deadNodes.contains(nodes[i])) {
               continue;
           }
-          String nodename = nodes[i].getName().toString();
+          String nodename = nodes[i].getName();
           int colon = nodename.indexOf(':');
           if (colon >= 0) {
               nodename = nodename.substring(0, colon);

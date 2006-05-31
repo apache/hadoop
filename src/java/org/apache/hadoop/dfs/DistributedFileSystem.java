@@ -133,7 +133,7 @@ public class DistributedFileSystem extends FileSystem {
         }
 
         DFSFileInfo info[] = dfs.listPaths(getPath(f));
-        return info[0].getLen();
+        return (info == null) ? 0 : info[0].getLen();
     }
 
     public short getReplication(Path f) throws IOException {
@@ -247,8 +247,8 @@ public class DistributedFileSystem extends FileSystem {
 
       for (int i = 0; i < dnReport.length; i++) {
         reports[i] = new DataNodeReport();
-        reports[i].name = dnReport[i].getName().toString();
-        reports[i].host = dnReport[i].getHost().toString();
+        reports[i].name = dnReport[i].getName();
+        reports[i].host = dnReport[i].getHost();
         reports[i].capacity = dnReport[i].getCapacity();
         reports[i].remaining = dnReport[i].getRemaining();
         reports[i].lastUpdate = dnReport[i].lastUpdate();

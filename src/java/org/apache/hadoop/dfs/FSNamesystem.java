@@ -105,7 +105,7 @@ class FSNamesystem implements FSConstants {
             } else if (lu1 > lu2) {
                 return 1;
             } else {
-                return d1.getName().compareTo(d2.getName());
+                return d1.getStorageID().compareTo(d2.getStorageID());
             }
         }
     });
@@ -325,7 +325,7 @@ class FSNamesystem implements FSConstants {
             +src+" for "+holder+" at "+clientMachine);
       try {
         if (pendingCreates.get(src) != null) {
-           throw new NameNode.AlreadyBeingCreatedException(
+           throw new AlreadyBeingCreatedException(
                    "failed to create file " + src + " for " + holder +
                    " on client " + clientMachine + 
                    " because pendingCreates is non-null.");
@@ -410,10 +410,10 @@ class FSNamesystem implements FSConstants {
           (FileUnderConstruction) pendingCreates.get(src);
         // make sure that we still have the lease on this file
         if (pendingFile == null) {
-          throw new NameNode.LeaseExpiredException("No lease on " + src);
+          throw new LeaseExpiredException("No lease on " + src);
         }
         if (!pendingFile.getClientName().equals(clientName)) {
-          throw new NameNode.LeaseExpiredException("Lease mismatch on " + src + 
+          throw new LeaseExpiredException("Lease mismatch on " + src + 
               " owned by " + pendingFile.getClientName() + 
               " and appended by " + clientName);
         }
@@ -421,6 +421,12 @@ class FSNamesystem implements FSConstants {
           throw new IOException("File " + src + " created during write");
         }
 
+        //
+        // If we fail this, bad things happen!
+        //
+        if (!checkFileProgress(src)) {
+          throw new NotReplicatedYetException("Not replicated yet");
+        }
         
         // Get the array of replication targets 
         DatanodeInfo targets[] = chooseTargets(pendingFile.getReplication(), 
@@ -660,10 +666,10 @@ class FSNamesystem implements FSConstants {
                 if (containingNodes != null) {
                     for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
                         DatanodeInfo node = (DatanodeInfo) it.next();
-                        Vector invalidateSet = (Vector) recentInvalidateSets.get(node.getName());
+                        Vector invalidateSet = (Vector) recentInvalidateSets.get(node.getStorageID());
                         if (invalidateSet == null) {
                             invalidateSet = new Vector();
-                            recentInvalidateSets.put(node.getName(), invalidateSet);
+                            recentInvalidateSets.put(node.getStorageID(), invalidateSet);
                         }
                         invalidateSet.add(b);
                         NameNode.stateChangeLog.finer("BLOCK* NameSystem.delete: "
@@ -755,7 +761,7 @@ class FSNamesystem implements FSConstants {
                 if (containingNodes != null) {
                   for (Iterator it =containingNodes.iterator(); it.hasNext();) {
                     DatanodeInfo cur = (DatanodeInfo) it.next();
-                    v.add(cur.getHost());
+                    v.add(new UTF8( cur.getHost() ));
                   }
                 }
                 hosts[i-startBlock] = (UTF8[]) v.toArray(new UTF8[v.size()]);
@@ -973,35 +979,149 @@ class FSNamesystem implements FSConstants {
     //
     /////////////////////////////////////////////////////////
     /**
+     * Register Datanode.
+     * <p>
+     * The purpose of registration is to identify whether the new datanode
+     * serves a new data storage, and will report new data block copies,
+     * which the namenode was not aware of; or the datanode is a replacement
+     * node for the data storage that was previously served by a different
+     * or the same (in terms of host:port) datanode.
+     * The data storages are distinguished by their storageIDs. When a new
+     * data storage is reported the namenode issues a new unique storageID.
+     * <p>
+     * Finally, the namenode returns its namespaceID as the registrationID
+     * for the datanodes. 
+     * namespaceID is a persistent attribute of the name space.
+     * The registrationID is checked every time the datanode is communicating
+     * with the namenode. 
+     * Datanodes with inappropriate registrationID are rejected.
+     * If the namenode stops, and then restarts it can restore its 
+     * namespaceID and will continue serving the datanodes that has previously
+     * registered with the namenode without restarting the whole cluster.
+     * 
+     * @see DataNode#register()
+     * @author Konstantin Shvachko
+     */
+    public synchronized void registerDatanode( DatanodeRegistration nodeReg 
+                                              ) throws IOException {
+      NameNode.stateChangeLog.fine(
+          "BLOCK* NameSystem.registerDatanode: "
+          + "node registration from " + nodeReg.getName()
+          + " storage " + nodeReg.getStorageID() );
+
+      nodeReg.registrationID = getRegistrationID();
+      DatanodeInfo nodeS = (DatanodeInfo)datanodeMap.get(nodeReg.getStorageID());
+      DatanodeInfo nodeN = getDatanodeByName( nodeReg.getName() );
+      
+      if( nodeN != null && nodeS != null && nodeN == nodeS ) {
+        // The same datanode has been just restarted to serve the same data 
+        // storage. We do not need to remove old data blocks, the delta will  
+        // be calculated on the next block report from the datanode
+        NameNode.stateChangeLog.fine(
+            "BLOCK* NameSystem.registerDatanode: "
+            + "node restarted." );
+        return;
+      }
+      
+      if( nodeN != null ) {
+        // nodeN previously served a different data storage, 
+        // which is not served by anybody anymore.
+        removeDatanode( nodeN );
+        nodeN = null;
+      }
+      
+      // nodeN is not found
+      if( nodeS == null ) {
+        // this is a new datanode serving a new data storage
+        if( nodeReg.getStorageID().equals("") ) {
+          // this data storage has never registered
+          // it is either empty or was created by previous version of DFS
+          nodeReg.storageID = newStorageID();
+          NameNode.stateChangeLog.fine(
+              "BLOCK* NameSystem.registerDatanode: "
+              + "new storageID " + nodeReg.getStorageID() + " assigned." );
+        }
+        // register new datanode
+        datanodeMap.put(nodeReg.getStorageID(), 
+                        new DatanodeInfo( nodeReg ) );
+        NameNode.stateChangeLog.fine(
+            "BLOCK* NameSystem.registerDatanode: "
+            + "node registered." );
+        return;
+      }
+
+      // nodeS is found
+      // The registering datanode is a replacement node for the existing 
+      // data storage, which from now on will be served by a new node.
+      NameNode.stateChangeLog.fine(
+          "BLOCK* NameSystem.registerDatanode: "
+          + "node " + nodeS.name
+          + " is replaced by " + nodeReg.getName() + "." );
+      nodeS.name = nodeReg.getName();
+      return;
+    }
+    
+    /**
+     * Get registrationID for datanodes based on the namespaceID.
+     * 
+     * @see #registerDatanode(DatanodeRegistration)
+     * @see FSDirectory#newNamespaceID()
+     * @return registration ID
+     */
+    public String getRegistrationID() {
+      return "NS" + Integer.toString( dir.namespaceID );
+    }
+    
+    /**
+     * Generate new storage ID.
+     * 
+     * @return unique storage ID
+     * 
+     * Note: that collisions are still possible if somebody will try 
+     * to bring in a data storage from a different cluster.
+     */
+    private String newStorageID() {
+      String newID = null;
+      while( newID == null ) {
+        newID = "DS" + Integer.toString( r.nextInt() );
+        if( datanodeMap.get( newID ) != null )
+          newID = null;
+      }
+      return newID;
+    }
+    
+    /**
      * The given node has reported in.  This method should:
      * 1) Record the heartbeat, so the datanode isn't timed out
      * 2) Adjust usage stats for future block allocation
      */
-    public synchronized void gotHeartbeat(UTF8 name, long capacity, long remaining) {
-        synchronized (heartbeats) {
-            synchronized (datanodeMap) {
-                long capacityDiff = 0;
-                long remainingDiff = 0;
-                DatanodeInfo nodeinfo = (DatanodeInfo) datanodeMap.get(name);
+    public synchronized void gotHeartbeat(DatanodeID nodeID,
+                                          long capacity, 
+                                          long remaining) throws IOException {
+      synchronized (heartbeats) {
+        synchronized (datanodeMap) {
+          long capacityDiff = 0;
+          long remainingDiff = 0;
+          DatanodeInfo nodeinfo = getDatanode( nodeID );
 
-                if (nodeinfo == null) {
-                    NameNode.stateChangeLog.fine("BLOCK* NameSystem.gotHeartbeat: "
-                            +"brand-new heartbeat from "+name );
-                     nodeinfo = new DatanodeInfo(name, capacity, remaining);
-                    datanodeMap.put(name, nodeinfo);
-                    capacityDiff = capacity;
-                    remainingDiff = remaining;
-                } else {
-                    capacityDiff = capacity - nodeinfo.getCapacity();
-                    remainingDiff = remaining - nodeinfo.getRemaining();
-                    heartbeats.remove(nodeinfo);
-                    nodeinfo.updateHeartbeat(capacity, remaining);
-                }
-                heartbeats.add(nodeinfo);
-                totalCapacity += capacityDiff;
-                totalRemaining += remainingDiff;
-            }
+          if (nodeinfo == null) {
+            NameNode.stateChangeLog.fine("BLOCK* NameSystem.gotHeartbeat: "
+                    +"brand-new heartbeat from "+nodeID.getName() );
+            nodeinfo = new DatanodeInfo(nodeID, capacity, remaining);
+            datanodeMap.put(nodeinfo.getStorageID(), nodeinfo);
+            capacityDiff = capacity;
+            remainingDiff = remaining;
+          } else {
+            capacityDiff = capacity - nodeinfo.getCapacity();
+            remainingDiff = remaining - nodeinfo.getRemaining();
+            heartbeats.remove(nodeinfo);
+            nodeinfo.updateHeartbeat(capacity, remaining);
+          }
+          heartbeats.add(nodeinfo);
+          totalCapacity += capacityDiff;
+          totalRemaining += remainingDiff;
         }
+      }
     }
 
     /**
@@ -1020,77 +1140,73 @@ class FSNamesystem implements FSConstants {
             }
         }
     }
-    
+
     /**
      * remove a datanode info
      * @param name: datanode name
      * @author hairong
      */
+    synchronized public void removeDatanode( DatanodeID nodeID ) 
+    throws IOException {
+      DatanodeInfo nodeInfo = getDatanode( nodeID );
+      if (nodeInfo != null) {
+        removeDatanode( nodeInfo );
+      } else {
+          NameNode.stateChangeLog.warning("BLOCK* NameSystem.removeDatanode: "
+                  + nodeInfo.getName() + " does not exist");
+      }
+  }
+  
+  /**
+   * remove a datanode info
+   * @param nodeInfo: datanode info
+   * @author hairong
+   */
+    private void removeDatanode( DatanodeInfo nodeInfo ) {
+      heartbeats.remove(nodeInfo);
+      datanodeMap.remove(nodeInfo.getStorageID());
+      NameNode.stateChangeLog.finer("BLOCK* NameSystem.removeDatanode: "
+              + nodeInfo.getName() + " is removed from datanodeMap");
+      totalCapacity -= nodeInfo.getCapacity();
+      totalRemaining -= nodeInfo.getRemaining();
 
-    synchronized void rmDataNodeByName( UTF8 name ) {
-        DatanodeInfo nodeInfo = (DatanodeInfo) datanodeMap.get(name);
-        if (nodeInfo != null) {
-            rmDataNode( nodeInfo );
-        } else {
-            NameNode.stateChangeLog.warning("BLOCK* NameSystem.rmDataNodeByName: "
-                    + nodeInfo.getName() + " does not exist");
-        }
+      Block deadblocks[] = nodeInfo.getBlocks();
+      if( deadblocks != null )
+        for( int i = 0; i < deadblocks.length; i++ )
+          removeStoredBlock(deadblocks[i], nodeInfo);
     }
-    
-    /**
-     * remove a datanode info
-     * @param nodeInfo: datanode info
-     * @author hairong
-     */
-    private synchronized void rmDataNode( DatanodeInfo nodeInfo ) {
-        heartbeats.remove( nodeInfo );
-        synchronized (datanodeMap) {
-            datanodeMap.remove(nodeInfo.getName());
-            NameNode.stateChangeLog.finer("BLOCK* NameSystem.heartbeatCheck: "
-                    + nodeInfo.getName() + " is removed from datanodeMap");
-        }
-        totalCapacity -= nodeInfo.getCapacity();
-        totalRemaining -= nodeInfo.getRemaining();
 
-        Block deadblocks[] = nodeInfo.getBlocks();
-        if (deadblocks != null) {
-            for (int i = 0; i < deadblocks.length; i++) {
-                removeStoredBlock(deadblocks[i], nodeInfo);
-            }
-        }
-    }
-        
     /**
      * Check if there are any expired heartbeats, and if so,
      * whether any blocks have to be re-replicated.
      */
     synchronized void heartbeatCheck() {
-        synchronized (heartbeats) {
-            DatanodeInfo nodeInfo = null;
+      synchronized (heartbeats) {
+        DatanodeInfo nodeInfo = null;
 
-            while ((heartbeats.size() > 0) &&
-                   ((nodeInfo = (DatanodeInfo) heartbeats.first()) != null) &&
-                   (nodeInfo.lastUpdate() < System.currentTimeMillis() - EXPIRE_INTERVAL)) {
-                NameNode.stateChangeLog.info("BLOCK* NameSystem.heartbeatCheck: "
-                           + "lost heartbeat from " + nodeInfo.getName());
-                rmDataNode(nodeInfo);
-            }
+        while ((heartbeats.size() > 0) &&
+               ((nodeInfo = (DatanodeInfo) heartbeats.first()) != null) &&
+               (nodeInfo.lastUpdate() < System.currentTimeMillis() - EXPIRE_INTERVAL)) {
+          NameNode.stateChangeLog.info("BLOCK* NameSystem.heartbeatCheck: "
+              + "lost heartbeat from " + nodeInfo.getName());
+          removeDatanode( nodeInfo );
+          if (heartbeats.size() > 0) {
+              nodeInfo = (DatanodeInfo) heartbeats.first();
+          }
         }
+      }
     }
     
     /**
      * The given node is reporting all its blocks.  Use this info to 
      * update the (machine-->blocklist) and (block-->machinelist) tables.
      */
-    public synchronized Block[] processReport(Block newReport[], UTF8 name) {
+    public synchronized Block[] processReport(DatanodeID nodeID, 
+                                              Block newReport[]
+                                            ) throws IOException {
         NameNode.stateChangeLog.fine("BLOCK* NameSystem.processReport: "
-                +"from "+name+" "+newReport.length+" blocks" );
-        DatanodeInfo node = (DatanodeInfo) datanodeMap.get(name);
-        if (node == null) {
-            NameNode.stateChangeLog.severe("BLOCK* NameSystem.processReport: "
-                    +"from "+name+" but can not find its info" );
-            throw new IllegalArgumentException("Unexpected exception.  Received block report from node " + name + ", but there is no info for " + name);
-        }
+          +"from "+nodeID.getName()+" "+newReport.length+" blocks" );
+        DatanodeInfo node = getDatanode( nodeID );
 
         //
         // Modify the (block-->datanode) map, according to the difference
@@ -1150,7 +1266,7 @@ class FSNamesystem implements FSConstants {
             if (! dir.isValidBlock(b) && ! pendingCreateBlocks.contains(b)) {
                 obsolete.add(b);
                 NameNode.stateChangeLog.info("BLOCK* NameSystem.processReport: "
-                        +"ask "+name+" to delete "+b.getBlockName() );
+                        +"ask "+nodeID.getName()+" to delete "+b.getBlockName() );
             }
         }
         return (Block[]) obsolete.toArray(new Block[obsolete.size()]);
@@ -1215,7 +1331,7 @@ class FSNamesystem implements FSConstants {
       Vector nonExcess = new Vector();
       for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
           DatanodeInfo cur = (DatanodeInfo) it.next();
-          TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getName());
+          TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getStorageID());
           if (excessBlocks == null || ! excessBlocks.contains(block)) {
               nonExcess.add(cur);
           }
@@ -1238,10 +1354,10 @@ class FSNamesystem implements FSConstants {
             DatanodeInfo cur = (DatanodeInfo) nonExcess.elementAt(chosenNode);
             nonExcess.removeElementAt(chosenNode);
 
-            TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getName());
+            TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getStorageID());
             if (excessBlocks == null) {
                 excessBlocks = new TreeSet();
-                excessReplicateMap.put(cur.getName(), excessBlocks);
+                excessReplicateMap.put(cur.getStorageID(), excessBlocks);
             }
             excessBlocks.add(b);
             NameNode.stateChangeLog.finer("BLOCK* NameSystem.chooseExcessReplicates: "
@@ -1256,10 +1372,10 @@ class FSNamesystem implements FSConstants {
             // should be deleted.  Items are removed from the invalidate list
             // upon giving instructions to the namenode.
             //
-            Vector invalidateSet = (Vector) recentInvalidateSets.get(cur.getName());
+            Vector invalidateSet = (Vector) recentInvalidateSets.get(cur.getStorageID());
             if (invalidateSet == null) {
                 invalidateSet = new Vector();
-                recentInvalidateSets.put(cur.getName(), invalidateSet);
+                recentInvalidateSets.put(cur.getStorageID(), invalidateSet);
             }
             invalidateSet.add(b);
             NameNode.stateChangeLog.finer("BLOCK* NameSystem.chooseExcessReplicates: "
@@ -1299,13 +1415,13 @@ class FSNamesystem implements FSConstants {
         // We've removed a block from a node, so it's definitely no longer
         // in "excess" there.
         //
-        TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(node.getName());
+        TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(node.getStorageID());
         if (excessBlocks != null) {
             excessBlocks.remove(block);
             NameNode.stateChangeLog.finer("BLOCK* NameSystem.removeStoredBlock: "
                     +block.getBlockName()+" is removed from excessBlocks" );
             if (excessBlocks.size() == 0) {
-                excessReplicateMap.remove(node.getName());
+                excessReplicateMap.remove(node.getStorageID());
             }
         }
     }
@@ -1313,15 +1429,20 @@ class FSNamesystem implements FSConstants {
     /**
      * The given node is reporting that it received a certain block.
      */
-    public synchronized void blockReceived(Block block, UTF8 name) {
-        DatanodeInfo node = (DatanodeInfo) datanodeMap.get(name);
+    public synchronized void blockReceived( DatanodeID nodeID,  
+                                            Block block
+                                          ) throws IOException {
+        DatanodeInfo node = getDatanode( nodeID );
         if (node == null) {
             NameNode.stateChangeLog.warning("BLOCK* NameSystem.blockReceived: "
-                    +block.getBlockName()+" is received from an unrecorded node " + name );
-            throw new IllegalArgumentException("Unexpected exception.  Got blockReceived message from node " + name + ", but there is no info for " + name);
+             + block.getBlockName() + " is received from an unrecorded node " 
+             + nodeID.getName() );
+            throw new IllegalArgumentException(
+                "Unexpected exception.  Got blockReceived message from node " 
+                + block.getBlockName() + ", but there is no info for it");
         }
         NameNode.stateChangeLog.fine("BLOCK* NameSystem.blockReceived: "
-                +block.getBlockName()+" is received from " + name );
+                +block.getBlockName()+" is received from " + nodeID.getName() );
         //
         // Modify the blocks->datanode map
         // 
@@ -1374,8 +1495,9 @@ class FSNamesystem implements FSConstants {
     /**
      * Check if there are any recently-deleted blocks a datanode should remove.
      */
-    public synchronized Block[] blocksToInvalidate(UTF8 sender) {
-        Vector invalidateSet = (Vector) recentInvalidateSets.remove(sender);
+    public synchronized Block[] blocksToInvalidate( DatanodeID nodeID ) {
+        Vector invalidateSet = (Vector) recentInvalidateSets.remove( 
+                                                      nodeID.getStorageID() );
  
         if (invalidateSet == null ) 
             return null;
@@ -1387,7 +1509,7 @@ class FSNamesystem implements FSConstants {
                 blockList.append(((Block)invalidateSet.elementAt(i)).getBlockName());
             }
             NameNode.stateChangeLog.info("BLOCK* NameSystem.blockToInvalidate: "
-                   +"ask "+sender+" to delete " + blockList );
+                   +"ask "+nodeID.getName()+" to delete " + blockList );
         }
         return (Block[]) invalidateSet.toArray(new Block[invalidateSet.size()]);
     }
@@ -1402,114 +1524,117 @@ class FSNamesystem implements FSConstants {
      *     target sequence for the Block at the appropriate index.
      *
      */
-    public synchronized Object[] pendingTransfers(DatanodeInfo srcNode, int xmitsInProgress) {
-        synchronized (neededReplications) {
-            Object results[] = null;
-            int scheduledXfers = 0;
+    public synchronized Object[] pendingTransfers(DatanodeInfo srcNode,
+                                                  int xmitsInProgress) {
+    synchronized (neededReplications) {
+      Object results[] = null;
+      int scheduledXfers = 0;
 
-            if (neededReplications.size() > 0) {
-                //
-                // Go through all blocks that need replications.  See if any
-                // are present at the current node.  If so, ask the node to
-                // replicate them.
-                //
-                Vector replicateBlocks = new Vector();
-                Vector replicateTargetSets = new Vector();
-                for (Iterator it = neededReplications.iterator(); it.hasNext(); ) {
-                    //
-                    // We can only reply with 'maxXfers' or fewer blocks
-                    //
-                    if (scheduledXfers >= this.maxReplicationStreams - xmitsInProgress) {
-                        break;
-                    }
+      if (neededReplications.size() > 0) {
+        //
+        // Go through all blocks that need replications. See if any
+        // are present at the current node. If so, ask the node to
+        // replicate them.
+        //
+        Vector replicateBlocks = new Vector();
+        Vector replicateTargetSets = new Vector();
+        for (Iterator it = neededReplications.iterator(); it.hasNext();) {
+          //
+          // We can only reply with 'maxXfers' or fewer blocks
+          //
+          if (scheduledXfers >= this.maxReplicationStreams - xmitsInProgress) {
+            break;
+          }
 
-                    Block block = (Block) it.next();
-                    long blockSize = block.getNumBytes();
-                    FSDirectory.INode fileINode = dir.getFileByBlock(block);
-                    if( fileINode == null ) { // block does not belong to any file
-                        it.remove();
-                    } else {
-                        TreeSet containingNodes = (TreeSet) blocksMap.get(block);
-                        TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(srcNode.getName());
-                        // srcNode must contain the block, and the block must 
-                        // not be scheduled for removal on that node
-                        if (containingNodes.contains(srcNode) 
-                              && ( excessBlocks == null 
-                               || ! excessBlocks.contains(block))) {
-                            DatanodeInfo targets[] = 
-                              chooseTargets(Math.min(fileINode.getReplication() 
-                                                       - containingNodes.size(), 
-                                                     maxReplicationStreams
-                                                       - xmitsInProgress), 
-                                                     containingNodes, null, 
-                                                     blockSize);
-                            if (targets.length > 0) {
-                                // Build items to return
-                                replicateBlocks.add(block);
-                                replicateTargetSets.add(targets);
-                                scheduledXfers += targets.length;
-                            }
-                        }
-                    }
-                }
-
-                //
-                // Move the block-replication into a "pending" state.
-                // The reason we use 'pending' is so we can retry
-                // replications that fail after an appropriate amount of time.  
-                // (REMIND - mjc - this timer is not yet implemented.)
-                //
-                if (replicateBlocks.size() > 0) {
-                    int i = 0;
-                    for (Iterator it = replicateBlocks.iterator(); it.hasNext(); i++) {
-                        Block block = (Block) it.next();
-                        DatanodeInfo targets[] = (DatanodeInfo[]) replicateTargetSets.elementAt(i);
-                        TreeSet containingNodes = (TreeSet) blocksMap.get(block);
-
-                        if (containingNodes.size() + targets.length >= dir.getFileByBlock(block).getReplication()) {
-                            neededReplications.remove(block);
-                            pendingReplications.add(block);
-                            NameNode.stateChangeLog.finer("BLOCK* NameSystem.pendingTransfer: "
-                                    +block.getBlockName()
-                                    +" is removed from neededReplications to pendingReplications" );
-                        }
-
-                        if(NameNode.stateChangeLog.isLoggable(Level.INFO)) {
-                            StringBuffer targetList = new StringBuffer( "datanode(s)");
-                            for(int k=0; k<targets.length; k++) {
-                               targetList.append(' ');
-                               targetList.append(targets[k].getName());
-                            }
-                            NameNode.stateChangeLog.info("BLOCK* NameSystem.pendingTransfer: "
-                                    +"ask "+srcNode.getName()
-                                    +" to replicate "+block.getBlockName()
-                                    +" to "+targetList);
-                        }
-                    }
-
-                    //
-                    // Build returned objects from above lists
-                    //
-                    DatanodeInfo targetMatrix[][] = new DatanodeInfo[replicateTargetSets.size()][];
-                    for (i = 0; i < targetMatrix.length; i++) {
-                        targetMatrix[i] = (DatanodeInfo[]) replicateTargetSets.elementAt(i);
-                    }
-
-                    results = new Object[2];
-                    results[0] = replicateBlocks.toArray(new Block[replicateBlocks.size()]);
-                    results[1]  = targetMatrix;
-                }
+          Block block = (Block) it.next();
+          long blockSize = block.getNumBytes();
+          FSDirectory.INode fileINode = dir.getFileByBlock(block);
+          if (fileINode == null) { // block does not belong to any file
+            it.remove();
+          } else {
+            TreeSet containingNodes = (TreeSet) blocksMap.get(block);
+            TreeSet excessBlocks = (TreeSet) excessReplicateMap.get( 
+                                                      srcNode.getStorageID() );
+            // srcNode must contain the block, and the block must
+            // not be scheduled for removal on that node
+            if (containingNodes.contains(srcNode)
+                && (excessBlocks == null || ! excessBlocks.contains(block))) {
+              DatanodeInfo targets[] = chooseTargets(
+                  Math.min( fileINode.getReplication() - containingNodes.size(),
+                            this.maxReplicationStreams - xmitsInProgress), 
+                  containingNodes, null, blockSize);
+              if (targets.length > 0) {
+                // Build items to return
+                replicateBlocks.add(block);
+                replicateTargetSets.add(targets);
+                scheduledXfers += targets.length;
+              }
             }
-            return results;
+          }
         }
+
+        //
+        // Move the block-replication into a "pending" state.
+        // The reason we use 'pending' is so we can retry
+        // replications that fail after an appropriate amount of time.
+        // (REMIND - mjc - this timer is not yet implemented.)
+        //
+        if (replicateBlocks.size() > 0) {
+          int i = 0;
+          for (Iterator it = replicateBlocks.iterator(); it.hasNext(); i++) {
+            Block block = (Block) it.next();
+            DatanodeInfo targets[] = 
+                      (DatanodeInfo[]) replicateTargetSets.elementAt(i);
+            TreeSet containingNodes = (TreeSet) blocksMap.get(block);
+
+            if (containingNodes.size() + targets.length >= 
+                    dir.getFileByBlock( block).getReplication() ) {
+              neededReplications.remove(block);
+              pendingReplications.add(block);
+              NameNode.stateChangeLog.finer(
+                "BLOCK* NameSystem.pendingTransfer: "
+                + block.getBlockName()
+                + " is removed from neededReplications to pendingReplications");
+            }
+
+            if (NameNode.stateChangeLog.isLoggable(Level.INFO)) {
+              StringBuffer targetList = new StringBuffer("datanode(s)");
+              for (int k = 0; k < targets.length; k++) {
+                targetList.append(' ');
+                targetList.append(targets[k].getName());
+              }
+              NameNode.stateChangeLog.info(
+                      "BLOCK* NameSystem.pendingTransfer: " + "ask "
+                      + srcNode.getName() + " to replicate "
+                      + block.getBlockName() + " to " + targetList);
+            }
+          }
+
+          //
+          // Build returned objects from above lists
+          //
+          DatanodeInfo targetMatrix[][] = 
+                        new DatanodeInfo[replicateTargetSets.size()][];
+          for (i = 0; i < targetMatrix.length; i++) {
+            targetMatrix[i] = (DatanodeInfo[]) replicateTargetSets.elementAt(i);
+          }
+
+          results = new Object[2];
+          results[0] = replicateBlocks.toArray(new Block[replicateBlocks.size()]);
+          results[1] = targetMatrix;
+        }
+      }
+      return results;
     }
+  }
 
     /**
      * Get a certain number of targets, if possible.
      * If not, return as many as we can.
-     * @param desiredReplicates number of duplicates wanted.
-     * @param forbiddenNodes of DatanodeInfo instances that should not be
-     * considered targets.
+     * @param desiredReplicates
+     *          number of duplicates wanted.
+     * @param forbiddenNodes
+     *          of DatanodeInfo instances that should not be considered targets.
      * @return array of DatanodeInfo instances uses as targets.
      */
     DatanodeInfo[] chooseTargets(int desiredReplicates, TreeSet forbiddenNodes,
@@ -1684,5 +1809,46 @@ class FSNamesystem implements FSConstants {
       public UTF8 getClientMachine() {
         return clientMachine;
       }
+    }
+
+    /**
+     * Get data node by storage ID.
+     * 
+     * @param nodeID
+     * @return DatanodeInfo or null if the node is not found.
+     * @throws IOException
+     */
+    public DatanodeInfo getDatanode( DatanodeID nodeID ) throws IOException {
+      UnregisteredDatanodeException e = null;
+      DatanodeInfo node = (DatanodeInfo) datanodeMap.get(nodeID.getStorageID());
+      if (node == null) 
+        return null;
+      if (!node.getName().equals(nodeID.getName())) {
+        e = new UnregisteredDatanodeException( nodeID, node );
+        NameNode.stateChangeLog.severe("BLOCK* NameSystem.getDatanode: "
+            + e.getLocalizedMessage() );
+        throw e;
+      }
+      return node;
+    }
+    
+    /**
+     * Find data node by its name.
+     * 
+     * This method is called when the node is registering.
+     * Not performance critical.
+     * Otherwise an additional tree-like structure will be required.
+     * 
+     * @param name
+     * @return DatanodeInfo if found or null otherwise 
+     * @throws IOException
+     */
+    public DatanodeInfo getDatanodeByName( String name ) throws IOException {
+      for (Iterator it = datanodeMap.values().iterator(); it.hasNext(); ) {
+        DatanodeInfo node = (DatanodeInfo) it.next();
+        if( node.getName().equals(name) )
+           return node;
+      }
+      return null;
     }
 }

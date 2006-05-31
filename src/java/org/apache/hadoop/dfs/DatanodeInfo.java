@@ -27,7 +27,7 @@ import java.util.*;
  *
  * @author Mike Cafarella
  **************************************************/
-class DatanodeInfo implements Writable, Comparable {
+public class DatanodeInfo extends DatanodeID implements Writable, Comparable {
 
     static {                                      // register a ctor
       WritableFactories.setFactory
@@ -37,30 +37,36 @@ class DatanodeInfo implements Writable, Comparable {
          });
     }
 
-    private UTF8 name;
     private long capacityBytes, remainingBytes, lastUpdate;
     private volatile TreeSet blocks;
 
     /** Create an empty DatanodeInfo.
      */
     public DatanodeInfo() {
-        this(new UTF8(), 0, 0);
+        this(new String(), new String(), 0, 0);
+    }
+
+    public DatanodeInfo( DatanodeID nodeID ) {
+      this( nodeID.getName(), nodeID.getStorageID(), 0, 0);
+    }
+    
+   /**
+    * Create an empty DatanodeInfo.
+    */
+    public DatanodeInfo(DatanodeID nodeID, 
+                        long capacity, 
+                        long remaining) {
+      this( nodeID.getName(), nodeID.getStorageID(), capacity, remaining );
     }
 
    /**
-    * @param name hostname:portNumber as UTF8 object.
+    * @param name hostname:portNumber as String object.
     */
-    public DatanodeInfo(UTF8 name) {
-        this.name = name;
-        this.blocks = new TreeSet();
-        updateHeartbeat(0, 0);        
-    }
-
-   /**
-    * @param name hostname:portNumber as UTF8 object.
-    */
-    public DatanodeInfo(UTF8 name, long capacity, long remaining) {
-        this.name = name;
+    public DatanodeInfo(String name, 
+                        String storageID, 
+                        long capacity, 
+                        long remaining) {
+        super( name, storageID );
         this.blocks = new TreeSet();
         updateHeartbeat(capacity, remaining);
     }
@@ -88,28 +94,6 @@ class DatanodeInfo implements Writable, Comparable {
         this.lastUpdate = System.currentTimeMillis();
     }
 
-    /**
-     * @return hostname:portNumber as UTF8 object.
-     */
-    public UTF8 getName() {
-        return name;
-    }
-
-    /**
-     * @return hostname and no :portNumber as UTF8 object.
-     */
-    public UTF8 getHost() {
-        String nameStr = name.toString();
-        int colon = nameStr.indexOf(":");
-        if (colon < 0) {
-            return name;
-        } else {
-            return new UTF8(nameStr.substring(0, colon));
-        }
-    }
-    public String toString() {
-        return name.toString();
-    }
     public Block[] getBlocks() {
         return (Block[]) blocks.toArray(new Block[blocks.size()]);
     }
@@ -127,7 +111,7 @@ class DatanodeInfo implements Writable, Comparable {
     }
 
   /** Comparable.
-   * Basis of compare is the UTF8 name (host:portNumber) only.
+   * Basis of compare is the String name (host:portNumber) only.
    * @param o
    * @return as specified by Comparable.
    */
@@ -142,7 +126,8 @@ class DatanodeInfo implements Writable, Comparable {
     /**
      */
     public void write(DataOutput out) throws IOException {
-        name.write(out);
+        new UTF8( this.name ).write(out);
+        new UTF8( this.storageID ).write(out);
         out.writeLong(capacityBytes);
         out.writeLong(remainingBytes);
         out.writeLong(lastUpdate);
@@ -158,8 +143,11 @@ class DatanodeInfo implements Writable, Comparable {
     /**
      */
     public void readFields(DataInput in) throws IOException {
-        this.name = new UTF8();
-        this.name.readFields(in);
+        UTF8 uStr = new UTF8();
+        uStr.readFields(in);
+        this.name = uStr.toString();
+        uStr.readFields(in);
+        this.storageID = uStr.toString();
         this.capacityBytes = in.readLong();
         this.remainingBytes = in.readLong();
         this.lastUpdate = in.readLong();

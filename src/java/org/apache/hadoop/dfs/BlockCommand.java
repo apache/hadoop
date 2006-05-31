@@ -40,12 +40,14 @@ class BlockCommand implements Writable {
   
     boolean transferBlocks = false;
     boolean invalidateBlocks = false;
+    boolean shutdown = false;
     Block blocks[];
     DatanodeInfo targets[][];
 
     public BlockCommand() {
         this.transferBlocks = false;
-        this.invalidateBlocks = false;        
+        this.invalidateBlocks = false;
+        this.shutdown = false;
         this.blocks = new Block[0];
         this.targets = new DatanodeInfo[0][];
     }
@@ -53,6 +55,7 @@ class BlockCommand implements Writable {
     public BlockCommand(Block blocks[], DatanodeInfo targets[][]) {
         this.transferBlocks = true;
         this.invalidateBlocks = false;
+        this.shutdown = false;
         this.blocks = blocks;
         this.targets = targets;
     }
@@ -60,8 +63,14 @@ class BlockCommand implements Writable {
     public BlockCommand(Block blocks[]) {
         this.transferBlocks = false;
         this.invalidateBlocks = true;
+        this.shutdown = false;
         this.blocks = blocks;
         this.targets = new DatanodeInfo[0][];
+    }
+
+    public BlockCommand( boolean doShutdown ) {
+      this();
+      this.shutdown = doShutdown;
     }
 
     public boolean transferBlocks() {
@@ -72,6 +81,10 @@ class BlockCommand implements Writable {
         return invalidateBlocks;
     }
     
+    public boolean shutdownNode() {
+      return shutdown;
+  }
+  
     public Block[] getBlocks() {
         return blocks;
     }
