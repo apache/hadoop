@@ -18,6 +18,8 @@ package org.apache.hadoop.util;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.net.URLDecoder;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -246,8 +248,8 @@ public class CopyFiles extends MapReduceBase implements Reducer {
     URI srcurl = null;
     URI desturl = null;
     try {
-      srcurl = new URI(srcPath);
-      desturl = new URI(destPath);
+      srcurl = new URI(URLEncoder.encode(srcPath, "UTF-8"));
+      desturl = new URI(URLEncoder.encode(destPath, "UTF-8"));
     } catch (URISyntaxException ex) {
       throw new RuntimeException("URL syntax error.", ex);
     }
@@ -265,9 +267,9 @@ public class CopyFiles extends MapReduceBase implements Reducer {
     srcfs = FileSystem.getNamed(srcFileSysName, conf);
     FileSystem destfs = FileSystem.getNamed(destFileSysName, conf);
  
-    srcPath = srcurl.getPath();
+    srcPath = URLDecoder.decode(srcurl.getPath(), "UTF-8");
     if ("".equals(srcPath)) { srcPath = "/"; }
-    destPath = desturl.getPath();
+    destPath = URLDecoder.decode(desturl.getPath(), "UTF-8");
     if ("".equals(destPath)) { destPath = "/"; }
     
     boolean isFile = false;
