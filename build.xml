@@ -86,8 +86,7 @@
     <mkdir dir="${build.webapps}/task/WEB-INF"/>
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
-    <mkdir dir="${build.libhdfs}"/>
-
+ 
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
 
@@ -123,7 +122,7 @@
       />
   </target>
 
-  <target name="compile" depends="init, record-parser, compile-libhdfs">
+  <target name="compile" depends="init, record-parser">
 
     <jsp-compile
      uriroot="${src.webapps}/task"
@@ -315,11 +314,10 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc, examples, compile-test, compile-libhdfs">
+  <target name="package" depends="jar, javadoc, examples, compile-test">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/bin"/>
-    <mkdir dir="${dist.dir}/libhdfs"/>
     <mkdir dir="${dist.dir}/docs"/>
     <mkdir dir="${dist.dir}/docs/api"/>
 
@@ -348,18 +346,6 @@
     <chmod perm="ugo+x" type="file">
         <fileset dir="${dist.dir}/bin"/>
     </chmod>
-
-    <copy todir="${dist.dir}/libhdfs">
-      <fileset dir="${build.libhdfs}" followsymlinks="false"/>
-    </copy>
-
-    <chmod perm="ugo+x" type="file">
-        <fileset dir="${dist.dir}/libhdfs"/>
-    </chmod>
-
-    <exec dir="${dist.dir}/libhdfs" executable="ln">
-		<arg line="-sf libhdfs.so.${libhdfs.version} libhdfs.so"/>
-     </exec>
 
     <copy todir="${dist.dir}/docs">
       <fileset dir="${build.docs}"/>
@@ -426,6 +412,7 @@
   <!-- libhdfs targets. For now, they must be called explicitly.          -->
   <!-- ================================================================== -->
   <target name="compile-libhdfs" depends="init">
+    <mkdir dir="${build.libhdfs}"/>
     <exec dir="${basedir}/src/c++/libhdfs" executable="make">
       <env key="OS_NAME" value="${os.name}"/>
       <env key="OS_ARCH" value="${os.arch}"/>

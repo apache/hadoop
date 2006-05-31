@@ -56,25 +56,25 @@ import org.apache.hadoop.conf.*;
  *
  * @author Konstantin Shvachko
  */
-public class TestDFSCIO extends TestCase {
+public class DFSCIOTest extends TestCase {
   // Constants
   private static final int TEST_TYPE_READ = 0;
   private static final int TEST_TYPE_WRITE = 1;
   private static final int TEST_TYPE_CLEANUP = 2;
   private static final int DEFAULT_BUFFER_SIZE = 1000000;
   private static final String BASE_FILE_NAME = "test_io_";
-  private static final String DEFAULT_RES_FILE_NAME = "TestDFSCIO_results.log";
+  private static final String DEFAULT_RES_FILE_NAME = "DFSCIOTest_results.log";
   
   private static final Logger LOG = InputFormatBase.LOG;
   private static Configuration fsConfig = new Configuration();
   private static final long MEGA = 0x100000;
-  private static String TEST_ROOT_DIR = System.getProperty("test.build.data","/benchmarks/TestDFSCIO");
+  private static String TEST_ROOT_DIR = System.getProperty("test.build.data","/benchmarks/DFSCIOTest");
   private static Path CONTROL_DIR = new Path(TEST_ROOT_DIR, "io_control");
   private static Path WRITE_DIR = new Path(TEST_ROOT_DIR, "io_write");
   private static Path READ_DIR = new Path(TEST_ROOT_DIR, "io_read");
   private static Path DATA_DIR = new Path(TEST_ROOT_DIR, "io_data");
 
-  private static Path HDFS_TEST_DIR = new Path("/tmp/TestDFSCIO");
+  private static Path HDFS_TEST_DIR = new Path("/tmp/DFSCIOTest");
   private static String HDFS_LIB_VERSION = System.getProperty("libhdfs.version", "1");
   private static String CHMOD = new String("/usr/bin/chmod");
   private static Path HDFS_SHLIB = new Path(HDFS_TEST_DIR + "/libhdfs.so." + HDFS_LIB_VERSION );
@@ -262,7 +262,7 @@ public class TestDFSCIO extends TestCase {
   private static void runIOTest(  Class mapperClass, 
                                   Path outputDir
                                   ) throws IOException {
-    JobConf job = new JobConf( fsConfig, TestDFSCIO.class );
+    JobConf job = new JobConf( fsConfig, DFSCIOTest.class );
 
     job.setInputPath(CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
@@ -393,7 +393,7 @@ public class TestDFSCIO extends TestCase {
     String resFileName = DEFAULT_RES_FILE_NAME;
     boolean isSequential = false;
 
-    String version="TestDFSCIO.0.0.1";
+    String version="DFSCIOTest.0.0.1";
     String usage = "Usage: TestFDSIO -read | -write | -clean [-nrFiles N] [-fileSize MB] [-resFile resultFileName] [-bufferSize Bytes] ";
     
     System.out.println(version);
@@ -507,7 +507,7 @@ public class TestDFSCIO extends TestCase {
     double med = rate / 1000 / tasks;
     double stdDev = Math.sqrt( Math.abs(sqrate / 1000 / tasks - med*med ));
     String resultLines[] = {
-      "----- TestDFSCIO ----- : " + ((testType == TEST_TYPE_WRITE) ? "write" :
+      "----- DFSCIOTest ----- : " + ((testType == TEST_TYPE_WRITE) ? "write" :
                                     (testType == TEST_TYPE_READ) ? "read" : 
                                     "unknown"),
       "           Date & time: " + new Date(System.currentTimeMillis()),
