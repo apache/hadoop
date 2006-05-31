@@ -32,9 +32,10 @@ import org.apache.hadoop.util.CopyFiles;
 public class TestCopyFiles extends TestCase {
   
   private static final int NFILES = 20;
-  private static Path TEST_ROOT_DIR = new Path(
-          System.getProperty("test.build.data","/tmp"));
-  
+  private static String TEST_ROOT_DIR =
+    new Path(System.getProperty("test.build.data","/tmp"))
+    .toString().replace(" ","+");
+
   /** class MyFile contains enough information to recreate the contents of
    * a single file.
    */
