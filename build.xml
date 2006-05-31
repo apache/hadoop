@@ -12,6 +12,7 @@
   <property name="version" value="0.3-dev"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="year" value="2006"/>
+  <property name="libhdfs.version" value="1"/>
 
   <property name="src.dir" value="${basedir}/src/java"/>
   <property name="examples.dir" value="${basedir}/src/examples"/>
@@ -25,6 +26,7 @@
   <property name="build.src" value="${build.dir}/src"/>
   <property name="build.webapps" value="${build.dir}/webapps"/>
   <property name="build.examples" value="${build.dir}/examples"/>
+  <property name="build.libhdfs" value="${build.dir}/libhdfs"/>
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
@@ -84,6 +86,7 @@
     <mkdir dir="${build.webapps}/task/WEB-INF"/>
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
+    <mkdir dir="${build.libhdfs}"/>
 
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
@@ -120,7 +123,7 @@
       />
   </target>
 
-  <target name="compile" depends="init, record-parser">
+  <target name="compile" depends="init, record-parser, compile-libhdfs">
 
     <jsp-compile
      uriroot="${src.webapps}/task"
@@ -312,10 +315,11 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc, examples, compile-test">
+  <target name="package" depends="jar, javadoc, examples, compile-test, compile-libhdfs">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/libhdfs"/>
     <mkdir dir="${dist.dir}/docs"/>
     <mkdir dir="${dist.dir}/docs/api"/>
 
@@ -344,6 +348,18 @@
     <chmod perm="ugo+x" type="file">
         <fileset dir="${dist.dir}/bin"/>
     </chmod>
+
+    <copy todir="${dist.dir}/libhdfs">
+      <fileset dir="${build.libhdfs}" followsymlinks="false"/>
+    </copy>
+
+    <chmod perm="ugo+x" type="file">
+        <fileset dir="${dist.dir}/libhdfs"/>
+    </chmod>
+
+    <exec dir="${dist.dir}/libhdfs" executable="ln">
+		<arg line="-sf libhdfs.so.${libhdfs.version} libhdfs.so"/>
+     </exec>
 
     <copy todir="${dist.dir}/docs">
       <fileset dir="${build.docs}"/>
@@ -406,4 +422,26 @@
      </subant>  	
   </target>
 
+  <!-- ================================================================== -->
+  <!-- libhdfs targets. For now, they must be called explicitly.          -->
+  <!-- ================================================================== -->
+  <target name="compile-libhdfs" depends="init">
+    <exec dir="${basedir}/src/c++/libhdfs" executable="make">
+      <env key="OS_NAME" value="${os.name}"/>
+      <env key="OS_ARCH" value="${os.arch}"/>
+      <env key="SHLIB_VERSION" value="${libhdfs.version}"/>
+      <env key="LIBHDFS_BUILD_DIR" value="${build.libhdfs}"/>
+    </exec>
+  </target>
+  <target name="test-libhdfs" depends="compile-libhdfs">
+    <exec dir="${build.libhdfs}" executable="${build.libhdfs}/hdfs_test">
+      <env key="LD_PRELOAD" value="./libhdfs.so"/>
+    </exec>
+  </target>
+  <target name="clean-libhdfs">
+    <exec dir="${basedir}/src/c++/libhdfs" executable="make">
+    		<arg value="clean"/>
+    </exec>
+  </target>
+		
 </project>

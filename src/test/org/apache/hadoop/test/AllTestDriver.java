@@ -28,6 +28,7 @@ import org.apache.hadoop.io.TestSequenceFile;
 import org.apache.hadoop.ipc.TestIPC;
 import org.apache.hadoop.ipc.TestRPC;
 import org.apache.hadoop.fs.TestDFSIO;
+import org.apache.hadoop.fs.TestDFSCIO;
 
 public class AllTestDriver {
   
@@ -50,6 +51,7 @@ public class AllTestDriver {
 	    pgd.addClass("testsequencefileinputformat", TestSequenceFileInputFormat.class, "A test for sequence file input format.");
 	    pgd.addClass("testtextinputformat", TestTextInputFormat.class, "A test for text input format.");
       pgd.addClass("TestDFSIO", TestDFSIO.class, "Distributed i/o benchmark.");
+      pgd.addClass("TestDFSCIO", TestDFSCIO.class, "Distributed i/o benchmark of libhdfs.");
       pgd.addClass("DistributedFSCheck", TestDFSIO.class, "Distributed checkup of the file system consistency.");
 	    pgd.driver(argv);
 	}

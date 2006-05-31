@@ -90,6 +90,8 @@ Trunk (unreleased)
     of filesystem integrity problems, when, e.g., datanodes are
     restarted.  (Konstantin Shvachko via cutting)
 
+24. HADOOP-256.  Add a C API for DFS.  (Arun C Murthy via cutting)
+
 
 Release 0.2.1 - 2006-05-12
 
