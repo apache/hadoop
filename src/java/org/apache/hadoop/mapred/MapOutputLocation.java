@@ -91,15 +91,26 @@ class MapOutputLocation implements Writable {
   }
 
   /**
+   * An interface for callbacks when an method makes some progress.
+   * @author Owen O'Malley
+   */
+  public static interface Pingable {
+    void ping();
+  }
+  
+  /**
    * Get the map output into a local file from the remote server.
    * We use the file system so that we generate checksum files on the data.
    * @param fileSys the filesystem to write the file to
    * @param localFilename the filename to write the data into
    * @param reduce the reduce id to get for
+   * @param pingee a status object that wants to know when we make progress
    * @throws IOException when something goes wrong
    */
   public long getFile(FileSystem fileSys, 
-                      Path localFilename, int reduce) throws IOException {
+                      Path localFilename, 
+                      int reduce,
+                      Pingable pingee) throws IOException {
     URL path = new URL(toString() + "&reduce=" + reduce);
     InputStream input = path.openConnection().getInputStream();
     OutputStream output = fileSys.create(localFilename);
@@ -110,6 +121,9 @@ class MapOutputLocation implements Writable {
       while (len > 0) {
         totalBytes += len;
         output.write(buffer, 0 ,len);
+        if (pingee != null) {
+          pingee.ping();
+        }
         len = input.read(buffer);
       }
     } finally {
