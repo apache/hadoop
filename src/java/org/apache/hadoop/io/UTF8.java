@@ -20,8 +20,8 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 
-import java.util.logging.Logger;
-import org.apache.hadoop.util.LogFormatter;
+
+import org.apache.commons.logging.*;
 
 /** A WritableComparable for strings that uses the UTF8 encoding.
  * 
@@ -30,7 +30,7 @@ import org.apache.hadoop.util.LogFormatter;
  * @author Doug Cutting
  */
 public class UTF8 implements WritableComparable {
-  private static final Logger LOG= LogFormatter.getLogger("org.apache.hadoop.io.UTF8");
+  private static final Log LOG= LogFactory.getLog("org.apache.hadoop.io.UTF8");
   private static final DataOutputBuffer OBUF = new DataOutputBuffer();
   private static final DataInputBuffer IBUF = new DataInputBuffer();
 
@@ -66,7 +66,7 @@ public class UTF8 implements WritableComparable {
   /** Set to contain the contents of a string. */
   public void set(String string) {
     if (string.length() > 0xffff/3) {             // maybe too long
-      LOG.warning("truncating long string: " + string.length()
+      LOG.warn("truncating long string: " + string.length()
                   + " chars, starting with " + string.substring(0, 20));
       string = string.substring(0, 0xffff/3);
     }
@@ -231,7 +231,7 @@ public class UTF8 implements WritableComparable {
    */
   public static int writeString(DataOutput out, String s) throws IOException {
     if (s.length() > 0xffff/3) {         // maybe too long
-      LOG.warning("truncating long string: " + s.length()
+      LOG.warn("truncating long string: " + s.length()
                   + " chars, starting with " + s.substring(0, 20));
       s = s.substring(0, 0xffff/3);
     }

@@ -31,10 +31,9 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 
 import java.util.LinkedList;
-import java.util.logging.Logger;
-import java.util.logging.Level;
 
-import org.apache.hadoop.util.LogFormatter;
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -49,8 +48,8 @@ import org.apache.hadoop.io.UTF8;
  * @see Client
  */
 public abstract class Server {
-  public static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.ipc.Server");
+  public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.ipc.Server");
 
   private static final ThreadLocal SERVER = new ThreadLocal();
 
@@ -110,8 +109,7 @@ public abstract class Server {
           // we can run out of memory if we have too many threads
           // log the event and sleep for a minute and give 
           // some thread(s) a chance to finish
-          LOG.log(Level.WARNING,
-                  getName() + " out of memory, sleeping...", e);          
+          LOG.warn(getName() + " out of memory, sleeping...", e);          
           try {
             acceptedSock.close();
             Thread.sleep(60000);
@@ -120,7 +118,7 @@ public abstract class Server {
           }          
         }
         catch (Exception e) {           // log all other exceptions
-          LOG.log(Level.INFO, getName() + " caught: " + e, e);
+          LOG.info(getName() + " caught: " + e, e);
         }        
       }
       try {
@@ -162,8 +160,8 @@ public abstract class Server {
             continue;
           }
         
-          if (LOG.isLoggable(Level.FINE))
-            LOG.fine(getName() + " got #" + id);
+          if (LOG.isDebugEnabled())
+            LOG.debug(getName() + " got #" + id);
         
           Writable param = makeParam();           // read param
           param.readFields(in);        
@@ -186,7 +184,7 @@ public abstract class Server {
       } catch (SocketException eof) {
           // This is what happens on Win32 when the other side shuts down
       } catch (Exception e) {
-        LOG.log(Level.INFO, getName() + " caught: " + e, e);
+        LOG.info(getName() + " caught: " + e, e);
       } finally {
         try {
           socket.close();
@@ -222,8 +220,8 @@ public abstract class Server {
             callDequeued.notify();
           }
 
-          if (LOG.isLoggable(Level.FINE))
-            LOG.fine(getName() + ": has #" + call.id + " from " +
+          if (LOG.isDebugEnabled())
+            LOG.debug(getName() + ": has #" + call.id + " from " +
                      call.connection.socket.getInetAddress().getHostAddress());
           
           String errorClass = null;
@@ -232,7 +230,7 @@ public abstract class Server {
           try {
             value = call(call.param);             // make the call
           } catch (Throwable e) {
-            LOG.log(Level.INFO, getName() + " call error: " + e, e);
+            LOG.info(getName() + " call error: " + e, e);
             errorClass = e.getClass().getName();
             error = getStackTrace(e);
           }
@@ -251,7 +249,7 @@ public abstract class Server {
           }
 
         } catch (Exception e) {
-          LOG.log(Level.INFO, getName() + " caught: " + e, e);
+          LOG.info(getName() + " caught: " + e, e);
         }
       }
       LOG.info(getName() + ": exiting");

@@ -30,10 +30,9 @@ import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
 
 import java.util.Hashtable;
-import java.util.logging.Logger;
-import java.util.logging.Level;
 
-import org.apache.hadoop.util.LogFormatter;
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.io.Writable;
@@ -48,8 +47,8 @@ import org.apache.hadoop.io.UTF8;
  * @see Server
  */
 public class Client {
-  public static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.ipc.Client");
+  public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.ipc.Client");
 
   private Hashtable connections = new Hashtable();
 
@@ -150,8 +149,8 @@ public class Client {
             continue;
           }
 
-          if (LOG.isLoggable(Level.FINE))
-            LOG.fine(getName() + " got value #" + id);
+          if (LOG.isDebugEnabled())
+            LOG.debug(getName() + " got value #" + id);
 
           Call call = (Call)calls.remove(new Integer(id));
           boolean isError = in.readBoolean();     // read if error
@@ -178,7 +177,7 @@ public class Client {
       } catch (EOFException eof) {
           // This is what happens when the remote side goes down
       } catch (Exception e) {
-        LOG.log(Level.INFO, getName() + " caught: " + e, e);
+        LOG.info(getName() + " caught: " + e, e);
       } finally {
         close();
       }
@@ -193,8 +192,8 @@ public class Client {
       try {
         calls.put(new Integer(call.id), call);
         synchronized (out) {
-          if (LOG.isLoggable(Level.FINE))
-            LOG.fine(getName() + " sending #" + call.id);
+          if (LOG.isDebugEnabled())
+            LOG.debug(getName() + " sending #" + call.id);
           try {
             writingCall = call;
             out.writeInt(call.id);

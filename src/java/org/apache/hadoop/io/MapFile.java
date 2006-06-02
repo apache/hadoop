@@ -258,7 +258,7 @@ public class MapFile {
           count++;
         }
       } catch (EOFException e) {
-        SequenceFile.LOG.warning("Unexpected EOF reading " + index +
+        SequenceFile.LOG.warn("Unexpected EOF reading " + index +
                                  " at entry #" + count + ".  Ignoring.");
       } finally {
 	indexClosed = true;

@@ -111,7 +111,7 @@
   <!-- Compile the Java files                                 -->
   <!-- ====================================================== -->
   <taskdef classname="org.apache.jasper.JspC" name="jsp-compile" >
-      <classpath refid="classpath"/>
+      <classpath refid="test.classpath"/>
   </taskdef>
 
   <target name="record-parser" depends="init" if="javacc.home">

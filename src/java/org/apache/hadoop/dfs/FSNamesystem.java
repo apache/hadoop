@@ -15,13 +15,14 @@
  */
 package org.apache.hadoop.dfs;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.util.*;
-import java.util.logging.*;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -36,7 +37,7 @@ import java.util.logging.*;
  * 5)  LRU cache of updated-heartbeat machines
  ***************************************************/
 class FSNamesystem implements FSConstants {
-    public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.fs.FSNamesystem");
+    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FSNamesystem");
 
     //
     // Stores the correct file name hierarchy
@@ -321,7 +322,7 @@ class FSNamesystem implements FSConstants {
                                             short replication,
                                             long blockSize
                                           ) throws IOException {
-      NameNode.stateChangeLog.fine("DIR* NameSystem.startFile: file "
+      NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: file "
             +src+" for "+holder+" at "+clientMachine);
       try {
         if (pendingCreates.get(src) != null) {
@@ -362,7 +363,7 @@ class FSNamesystem implements FSConstants {
                                                      blockSize,
                                                      holder,
                                                      clientMachine));
-        NameNode.stateChangeLog.finer( "DIR* NameSystem.startFile: "
+        NameNode.stateChangeLog.debug( "DIR* NameSystem.startFile: "
                    +"add "+src+" to pendingCreates for "+holder );
         synchronized (leases) {
             Lease lease = (Lease) leases.get(holder);
@@ -384,7 +385,7 @@ class FSNamesystem implements FSConstants {
         results[1] = targets;
         return results;
       } catch (IOException ie) {
-          NameNode.stateChangeLog.warning("DIR* NameSystem.startFile: "
+          NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: "
                   +ie.getMessage());
         throw ie;
       }
@@ -404,7 +405,7 @@ class FSNamesystem implements FSConstants {
     public synchronized Object[] getAdditionalBlock(UTF8 src, 
                                                     UTF8 clientName
                                                     ) throws IOException {
-        NameNode.stateChangeLog.fine("BLOCK* NameSystem.getAdditionalBlock: file "
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: file "
             +src+" for "+clientName);
         FileUnderConstruction pendingFile = 
           (FileUnderConstruction) pendingCreates.get(src);
@@ -448,7 +449,7 @@ class FSNamesystem implements FSConstants {
         //
         // Remove the block from the pending creates list
         //
-        NameNode.stateChangeLog.fine("BLOCK* NameSystem.abandonBlock: "
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
                 +b.getBlockName()+"of file "+src );
         FileUnderConstruction pendingFile = 
           (FileUnderConstruction) pendingCreates.get(src);
@@ -459,7 +460,7 @@ class FSNamesystem implements FSConstants {
                 if (cur.compareTo(b) == 0) {
                     pendingCreateBlocks.remove(cur);
                     it.remove();
-                    NameNode.stateChangeLog.finer(
+                    NameNode.stateChangeLog.debug(
                              "BLOCK* NameSystem.abandonBlock: "
                             +b.getBlockName()
                             +" is removed from pendingCreateBlock and pendingCreates");
@@ -476,7 +477,7 @@ class FSNamesystem implements FSConstants {
     public synchronized void abandonFileInProgress(UTF8 src, 
                                                    UTF8 holder
                                                    ) throws IOException {
-      NameNode.stateChangeLog.fine("DIR* NameSystem.abandonFileInProgress:" + src );
+      NameNode.stateChangeLog.debug("DIR* NameSystem.abandonFileInProgress:" + src );
       synchronized (leases) {
         // find the lease
         Lease lease = (Lease) leases.get(holder);
@@ -504,9 +505,9 @@ class FSNamesystem implements FSConstants {
      * been reported by datanodes and are replicated correctly.
      */
     public synchronized int completeFile(UTF8 src, UTF8 holder) {
-        NameNode.stateChangeLog.fine("DIR* NameSystem.completeFile: " + src + " for " + holder );
+        NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder );
         if (dir.getFile(src) != null || pendingCreates.get(src) == null) {
-            NameNode.stateChangeLog.warning( "DIR* NameSystem.completeFile: "
+            NameNode.stateChangeLog.warn( "DIR* NameSystem.completeFile: "
                     + "failed to complete " + src
                     + " because dir.getFile()==" + dir.getFile(src) 
                     + " and " + pendingCreates.get(src));
@@ -552,7 +553,7 @@ class FSNamesystem implements FSConstants {
 
         // The file is no longer pending
         pendingCreates.remove(src);
-        NameNode.stateChangeLog.finer(
+        NameNode.stateChangeLog.debug(
              "DIR* NameSystem.completeFile: " + src
            + " is removed from pendingCreates");
         for (int i = 0; i < nrBlocks; i++) {
@@ -582,7 +583,7 @@ class FSNamesystem implements FSConstants {
         for (int i = 0; i < nrBlocks; i++) {
             TreeSet containingNodes = (TreeSet) blocksMap.get(pendingBlocks[i]);
             if (containingNodes.size() < pendingFile.getReplication()) {
-                   NameNode.stateChangeLog.finer(
+                   NameNode.stateChangeLog.debug(
                           "DIR* NameSystem.completeFile:"
                         + pendingBlocks[i].getBlockName()+" has only "+containingNodes.size()
                         +" replicas so is added to neededReplications");           
@@ -608,7 +609,7 @@ class FSNamesystem implements FSConstants {
           (FileUnderConstruction) pendingCreates.get(src);
         v.getBlocks().add(b);
         pendingCreateBlocks.add(b);
-        NameNode.stateChangeLog.finer("BLOCK* NameSystem.allocateBlock: "
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.allocateBlock: "
             +src+ ". "+b.getBlockName()+
             " is created and added to pendingCreates and pendingCreateBlocks" );      
         return b;
@@ -647,7 +648,7 @@ class FSNamesystem implements FSConstants {
      * Change the indicated filename.
      */
     public boolean renameTo(UTF8 src, UTF8 dst) {
-        NameNode.stateChangeLog.fine("DIR* NameSystem.renameTo: " + src + " to " + dst );
+        NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src + " to " + dst );
         return dir.renameTo(src, dst);
     }
 
@@ -656,7 +657,7 @@ class FSNamesystem implements FSConstants {
      * invalidate some blocks that make up the file.
      */
     public synchronized boolean delete(UTF8 src) {
-        NameNode.stateChangeLog.fine("DIR* NameSystem.delete: " + src );
+        NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src );
         Block deletedBlocks[] = (Block[]) dir.delete(src);
         if (deletedBlocks != null) {
             for (int i = 0; i < deletedBlocks.length; i++) {
@@ -672,7 +673,7 @@ class FSNamesystem implements FSConstants {
                             recentInvalidateSets.put(node.getStorageID(), invalidateSet);
                         }
                         invalidateSet.add(b);
-                        NameNode.stateChangeLog.finer("BLOCK* NameSystem.delete: "
+                        NameNode.stateChangeLog.debug("BLOCK* NameSystem.delete: "
                             + b.getBlockName() + " is added to invalidSet of " + node.getName() );
                     }
                 }
@@ -704,7 +705,7 @@ class FSNamesystem implements FSConstants {
      * Create all the necessary directories
      */
     public boolean mkdirs(UTF8 src) {
-        NameNode.stateChangeLog.fine("DIR* NameSystem.mkdirs: " + src );
+        NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src );
         return dir.mkdirs(src);
     }
 
@@ -936,7 +937,7 @@ class FSNamesystem implements FSConstants {
       FileUnderConstruction v = 
         (FileUnderConstruction) pendingCreates.remove(src);
       if (v != null) {
-         NameNode.stateChangeLog.finer(
+         NameNode.stateChangeLog.debug(
                       "DIR* NameSystem.internalReleaseCreate: " + src
                     + " is removed from pendingCreates for "
                     + holder + " (failure)");
@@ -945,7 +946,7 @@ class FSNamesystem implements FSConstants {
           pendingCreateBlocks.remove(b);
         }
       } else {
-          NameNode.stateChangeLog.warning("DIR* NameSystem.internalReleaseCreate: "
+          NameNode.stateChangeLog.warn("DIR* NameSystem.internalReleaseCreate: "
                  + "attempt to release a create lock on "+ src.toString()
                  + " that was not in pedingCreates");
       }
@@ -1004,7 +1005,7 @@ class FSNamesystem implements FSConstants {
      */
     public synchronized void registerDatanode( DatanodeRegistration nodeReg 
                                               ) throws IOException {
-      NameNode.stateChangeLog.fine(
+      NameNode.stateChangeLog.debug(
           "BLOCK* NameSystem.registerDatanode: "
           + "node registration from " + nodeReg.getName()
           + " storage " + nodeReg.getStorageID() );
@@ -1017,7 +1018,7 @@ class FSNamesystem implements FSConstants {
         // The same datanode has been just restarted to serve the same data 
         // storage. We do not need to remove old data blocks, the delta will  
         // be calculated on the next block report from the datanode
-        NameNode.stateChangeLog.fine(
+        NameNode.stateChangeLog.debug(
             "BLOCK* NameSystem.registerDatanode: "
             + "node restarted." );
         return;
@@ -1037,14 +1038,14 @@ class FSNamesystem implements FSConstants {
           // this data storage has never registered
           // it is either empty or was created by previous version of DFS
           nodeReg.storageID = newStorageID();
-          NameNode.stateChangeLog.fine(
+          NameNode.stateChangeLog.debug(
               "BLOCK* NameSystem.registerDatanode: "
               + "new storageID " + nodeReg.getStorageID() + " assigned." );
         }
         // register new datanode
         datanodeMap.put(nodeReg.getStorageID(), 
                         new DatanodeInfo( nodeReg ) );
-        NameNode.stateChangeLog.fine(
+        NameNode.stateChangeLog.debug(
             "BLOCK* NameSystem.registerDatanode: "
             + "node registered." );
         return;
@@ -1053,7 +1054,7 @@ class FSNamesystem implements FSConstants {
       // nodeS is found
       // The registering datanode is a replacement node for the existing 
       // data storage, which from now on will be served by a new node.
-      NameNode.stateChangeLog.fine(
+      NameNode.stateChangeLog.debug(
           "BLOCK* NameSystem.registerDatanode: "
           + "node " + nodeS.name
           + " is replaced by " + nodeReg.getName() + "." );
@@ -1105,7 +1106,7 @@ class FSNamesystem implements FSConstants {
           DatanodeInfo nodeinfo = getDatanode( nodeID );
 
           if (nodeinfo == null) {
-            NameNode.stateChangeLog.fine("BLOCK* NameSystem.gotHeartbeat: "
+            NameNode.stateChangeLog.debug("BLOCK* NameSystem.gotHeartbeat: "
                     +"brand-new heartbeat from "+nodeID.getName() );
             nodeinfo = new DatanodeInfo(nodeID, capacity, remaining);
             datanodeMap.put(nodeinfo.getStorageID(), nodeinfo);
@@ -1152,7 +1153,7 @@ class FSNamesystem implements FSConstants {
       if (nodeInfo != null) {
         removeDatanode( nodeInfo );
       } else {
-          NameNode.stateChangeLog.warning("BLOCK* NameSystem.removeDatanode: "
+          NameNode.stateChangeLog.warn("BLOCK* NameSystem.removeDatanode: "
                   + nodeInfo.getName() + " does not exist");
       }
   }
@@ -1165,7 +1166,7 @@ class FSNamesystem implements FSConstants {
     private void removeDatanode( DatanodeInfo nodeInfo ) {
       heartbeats.remove(nodeInfo);
       datanodeMap.remove(nodeInfo.getStorageID());
-      NameNode.stateChangeLog.finer("BLOCK* NameSystem.removeDatanode: "
+      NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeDatanode: "
               + nodeInfo.getName() + " is removed from datanodeMap");
       totalCapacity -= nodeInfo.getCapacity();
       totalRemaining -= nodeInfo.getRemaining();
@@ -1204,7 +1205,7 @@ class FSNamesystem implements FSConstants {
     public synchronized Block[] processReport(DatanodeID nodeID, 
                                               Block newReport[]
                                             ) throws IOException {
-        NameNode.stateChangeLog.fine("BLOCK* NameSystem.processReport: "
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
           +"from "+nodeID.getName()+" "+newReport.length+" blocks" );
         DatanodeInfo node = getDatanode( nodeID );
 
@@ -1286,15 +1287,15 @@ class FSNamesystem implements FSConstants {
             containingNodes.add(node);
             // 
             // Hairong: I would prefer to set the level of next logrecord
-            // to be finer.
+            // to be debug.
             // But at startup time, because too many new blocks come in
             // they simply take up all the space in the log file 
-            // So I set the level to be finest
+            // So I set the level to be trace
             //
-            NameNode.stateChangeLog.finest("BLOCK* NameSystem.addStoredBlock: "
+            NameNode.stateChangeLog.trace("BLOCK* NameSystem.addStoredBlock: "
                     +"blockMap updated: "+node.getName()+" is added to "+block.getBlockName() );
         } else {
-            NameNode.stateChangeLog.warning("BLOCK* NameSystem.addStoredBlock: "
+            NameNode.stateChangeLog.warn("BLOCK* NameSystem.addStoredBlock: "
                     + "Redundant addStoredBlock request received for " 
                     + block.getBlockName() + " on " + node.getName());
         }
@@ -1307,12 +1308,12 @@ class FSNamesystem implements FSConstants {
             if (containingNodes.size() >= fileReplication ) {
                 neededReplications.remove(block);
                 pendingReplications.remove(block);
-                NameNode.stateChangeLog.finest("BLOCK* NameSystem.addStoredBlock: "
+                NameNode.stateChangeLog.trace("BLOCK* NameSystem.addStoredBlock: "
                         +block.getBlockName()+" has "+containingNodes.size()
                         +" replicas so is removed from neededReplications and pendingReplications" );
             } else {// containingNodes.size() < fileReplication
                 neededReplications.add(block);
-                NameNode.stateChangeLog.finer("BLOCK* NameSystem.addStoredBlock: "
+                NameNode.stateChangeLog.debug("BLOCK* NameSystem.addStoredBlock: "
                     +block.getBlockName()+" has only "+containingNodes.size()
                     +" replicas so is added to neededReplications" );
             }
@@ -1360,7 +1361,7 @@ class FSNamesystem implements FSConstants {
                 excessReplicateMap.put(cur.getStorageID(), excessBlocks);
             }
             excessBlocks.add(b);
-            NameNode.stateChangeLog.finer("BLOCK* NameSystem.chooseExcessReplicates: "
+            NameNode.stateChangeLog.debug("BLOCK* NameSystem.chooseExcessReplicates: "
                     +"("+cur.getName()+", "+b.getBlockName()+") is added to excessReplicateMap" );
 
             //
@@ -1378,7 +1379,7 @@ class FSNamesystem implements FSConstants {
                 recentInvalidateSets.put(cur.getStorageID(), invalidateSet);
             }
             invalidateSet.add(b);
-            NameNode.stateChangeLog.finer("BLOCK* NameSystem.chooseExcessReplicates: "
+            NameNode.stateChangeLog.debug("BLOCK* NameSystem.chooseExcessReplicates: "
                     +"("+cur.getName()+", "+b.getBlockName()+") is added to recentInvalidateSets" );
         }
     }
@@ -1388,7 +1389,7 @@ class FSNamesystem implements FSConstants {
      * replication tasks, if the removed block is still valid.
      */
     synchronized void removeStoredBlock(Block block, DatanodeInfo node) {
-        NameNode.stateChangeLog.fine("BLOCK* NameSystem.removeStoredBlock: "
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
                 +block.getBlockName() + " from "+node.getName() );
         TreeSet containingNodes = (TreeSet) blocksMap.get(block);
         if (containingNodes == null || ! containingNodes.contains(node)) {
@@ -1406,7 +1407,7 @@ class FSNamesystem implements FSConstants {
             synchronized (neededReplications) {
                 neededReplications.add(block);
             }
-            NameNode.stateChangeLog.finer("BLOCK* NameSystem.removeStoredBlock: "
+            NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
                     +block.getBlockName()+" has only "+containingNodes.size()
                     +" replicas so is added to neededReplications" );
         }
@@ -1418,7 +1419,7 @@ class FSNamesystem implements FSConstants {
         TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(node.getStorageID());
         if (excessBlocks != null) {
             excessBlocks.remove(block);
-            NameNode.stateChangeLog.finer("BLOCK* NameSystem.removeStoredBlock: "
+            NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
                     +block.getBlockName()+" is removed from excessBlocks" );
             if (excessBlocks.size() == 0) {
                 excessReplicateMap.remove(node.getStorageID());
@@ -1434,14 +1435,14 @@ class FSNamesystem implements FSConstants {
                                           ) throws IOException {
         DatanodeInfo node = getDatanode( nodeID );
         if (node == null) {
-            NameNode.stateChangeLog.warning("BLOCK* NameSystem.blockReceived: "
+            NameNode.stateChangeLog.warn("BLOCK* NameSystem.blockReceived: "
              + block.getBlockName() + " is received from an unrecorded node " 
              + nodeID.getName() );
             throw new IllegalArgumentException(
                 "Unexpected exception.  Got blockReceived message from node " 
                 + block.getBlockName() + ", but there is no info for it");
         }
-        NameNode.stateChangeLog.fine("BLOCK* NameSystem.blockReceived: "
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockReceived: "
                 +block.getBlockName()+" is received from " + nodeID.getName() );
         //
         // Modify the blocks->datanode map
@@ -1502,7 +1503,7 @@ class FSNamesystem implements FSConstants {
         if (invalidateSet == null ) 
             return null;
         
-        if(NameNode.stateChangeLog.isLoggable(Level.INFO)) {
+        if(NameNode.stateChangeLog.isInfoEnabled()) {
             StringBuffer blockList = new StringBuffer();
             for( int i=0; i<invalidateSet.size(); i++ ) {
                 blockList.append(' ');
@@ -1591,13 +1592,13 @@ class FSNamesystem implements FSConstants {
                     dir.getFileByBlock( block).getReplication() ) {
               neededReplications.remove(block);
               pendingReplications.add(block);
-              NameNode.stateChangeLog.finer(
+              NameNode.stateChangeLog.debug(
                 "BLOCK* NameSystem.pendingTransfer: "
                 + block.getBlockName()
                 + " is removed from neededReplications to pendingReplications");
             }
 
-            if (NameNode.stateChangeLog.isLoggable(Level.INFO)) {
+            if (NameNode.stateChangeLog.isInfoEnabled()) {
               StringBuffer targetList = new StringBuffer("datanode(s)");
               for (int k = 0; k < targets.length; k++) {
                 targetList.append(' ');
@@ -1640,7 +1641,7 @@ class FSNamesystem implements FSConstants {
     DatanodeInfo[] chooseTargets(int desiredReplicates, TreeSet forbiddenNodes,
                                  UTF8 clientMachine, long blockSize) {
         if (desiredReplicates > datanodeMap.size()) {
-          LOG.warning("Replication requested of "+desiredReplicates
+          LOG.warn("Replication requested of "+desiredReplicates
                       +" is larger than cluster size ("+datanodeMap.size()
                       +"). Using cluster size.");
           desiredReplicates  = datanodeMap.size();
@@ -1679,7 +1680,7 @@ class FSNamesystem implements FSConstants {
         //
         int totalMachines = datanodeMap.size();
         if (totalMachines == 0) {
-            LOG.warning("While choosing target, totalMachines is " + totalMachines);
+            LOG.warn("While choosing target, totalMachines is " + totalMachines);
             return null;
         }
 
@@ -1752,10 +1753,10 @@ class FSNamesystem implements FSConstants {
                     return node;
                 }
             }
-            LOG.warning("Could not find any nodes with sufficient capacity");
+            LOG.warn("Could not find any nodes with sufficient capacity");
             return null;
         } else {
-            LOG.warning("Zero targets found, forbidden1.size=" +
+            LOG.warn("Zero targets found, forbidden1.size=" +
                 ( forbidden1 != null ? forbidden1.size() : 0 ) +
                 " forbidden2.size()=" +
                 ( forbidden2 != null ? forbidden2.size() : 0 ));
@@ -1825,7 +1826,7 @@ class FSNamesystem implements FSConstants {
         return null;
       if (!node.getName().equals(nodeID.getName())) {
         e = new UnregisteredDatanodeException( nodeID, node );
-        NameNode.stateChangeLog.severe("BLOCK* NameSystem.getDatanode: "
+        NameNode.stateChangeLog.fatal("BLOCK* NameSystem.getDatanode: "
             + e.getLocalizedMessage() );
         throw e;
       }

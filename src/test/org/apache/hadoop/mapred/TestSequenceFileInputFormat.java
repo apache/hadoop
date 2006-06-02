@@ -19,14 +19,15 @@ package org.apache.hadoop.mapred;
 import java.io.*;
 import java.util.*;
 import junit.framework.TestCase;
-import java.util.logging.*;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 
 public class TestSequenceFileInputFormat extends TestCase {
-  private static final Logger LOG = InputFormatBase.LOG;
+  private static final Log LOG = InputFormatBase.LOG;
 
   private static int MAX_LENGTH = 10000;
   private static Configuration conf = new Configuration();

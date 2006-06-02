@@ -283,7 +283,7 @@ public class TestMapRed extends TestCase {
         // file of random numbers.
         //
         File randomOuts = new File(testdir, "genouts");
-        //fs.mkdirs(randomOuts);
+        fs.delete(randomOuts);
 
 
         JobConf genJob = new JobConf(conf);
@@ -332,7 +332,7 @@ public class TestMapRed extends TestCase {
         //
         int intermediateReduces = 10;
         File intermediateOuts = new File(testdir, "intermediateouts");
-        //fs.mkdirs(intermediateOuts);
+        fs.delete(intermediateOuts);
         JobConf checkJob = new JobConf(conf);
         checkJob.setInputDir(randomOuts);
         checkJob.setInputKeyClass(RecInt.class);
@@ -357,7 +357,7 @@ public class TestMapRed extends TestCase {
         // all the files.
         //
         File finalOuts = new File(testdir, "finalouts");        
-        //fs.mkdirs(finalOuts);
+        fs.delete(finalOuts);
         JobConf mergeJob = new JobConf(conf);
         mergeJob.setInputDir(intermediateOuts);
         mergeJob.setInputKeyClass(RecInt.class);

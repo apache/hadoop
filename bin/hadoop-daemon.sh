@@ -62,6 +62,7 @@ if [ "$HADOOP_IDENT_STRING" = "" ]; then
 fi
 
 # some variables
+export HADOOP_LOGFILE=hadoop-$HADOOP_IDENT_STRING-$command-`hostname`.log
 log=$HADOOP_LOG_DIR/hadoop-$HADOOP_IDENT_STRING-$command-`hostname`.out
 pid=$HADOOP_PID_DIR/hadoop-$HADOOP_IDENT_STRING-$command.pid
 

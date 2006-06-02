@@ -16,16 +16,16 @@
 package org.apache.hadoop.mapred;
 
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
 
 import java.io.*;
 import java.net.*;
 import java.text.NumberFormat;
 import java.util.*;
-import java.util.logging.*;
 
 /*******************************************************
  * JobTracker is the central location for submitting and 
@@ -55,7 +55,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
     private int nextJobId = 1;
 
-    public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.mapred.JobTracker");
+    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobTracker");
 
     private static JobTracker tracker = null;
     public static void startTracker(Configuration conf) throws IOException {
@@ -66,7 +66,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           tracker = new JobTracker(conf);
           break;
         } catch (IOException e) {
-          LOG.log(Level.WARNING, "Starting tracker", e);
+          LOG.warn("Starting tracker", e);
         }
         try {
           Thread.sleep(1000);
@@ -102,14 +102,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             // Every 3 minutes check for any tasks that are overdue
             Thread.sleep(TASKTRACKER_EXPIRY_INTERVAL/3);
             long now = System.currentTimeMillis();
-            LOG.fine("Starting launching task sweep");
+            LOG.debug("Starting launching task sweep");
             synchronized (launchingTasks) {
               Iterator itr = launchingTasks.entrySet().iterator();
               while (itr.hasNext()) {
                 Map.Entry pair = (Map.Entry) itr.next();
                 String taskId = (String) pair.getKey();
                 long age = now - ((Long) pair.getValue()).longValue();
-                LOG.fine(taskId + " is " + age + " ms old.");
+                LOG.info(taskId + " is " + age + " ms debug.");
                 if (age > TASKTRACKER_EXPIRY_INTERVAL) {
                   LOG.info("Launching task " + taskId + " timed out.");
                   TaskInProgress tip = null;
@@ -293,7 +293,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                         job.initTasks();
                     }
                 } catch (Exception e) {
-                    LOG.log(Level.WARNING, "job init failed", e);
+                    LOG.warn("job init failed", e);
                     job.kill();
                 }
             }
@@ -679,7 +679,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         // Get map + reduce counts for the current tracker.
         //
         if (tts == null) {
-          LOG.warning("Unknown task tracker polling; ignoring: " + taskTracker);
+          LOG.warn("Unknown task tracker polling; ignoring: " + taskTracker);
           return null;
         }
 
@@ -1041,7 +1041,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         }
 
         Configuration conf=new Configuration();
-        LogFormatter.initFileHandler( conf, "jobtracker" );
         startTracker(conf);
     }
 }

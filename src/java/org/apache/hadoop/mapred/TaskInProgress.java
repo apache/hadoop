@@ -15,11 +15,10 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.util.LogFormatter;
+import org.apache.commons.logging.*;
 
 import java.text.NumberFormat;
 import java.util.*;
-import java.util.logging.*;
 
 
 ////////////////////////////////////////////////////////
@@ -47,7 +46,7 @@ class TaskInProgress {
       idFormat.setGroupingUsed(false);
     }
 
-    public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.mapred.TaskInProgress");
+    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.TaskInProgress");
 
     // Defines the TIP
     private String jobFile = null;

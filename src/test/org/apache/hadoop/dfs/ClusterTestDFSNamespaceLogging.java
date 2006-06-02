@@ -18,10 +18,12 @@ package org.apache.hadoop.dfs;
 
 import junit.framework.TestCase;
 import junit.framework.AssertionFailedError;
+
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.NameNode;
 
@@ -32,8 +34,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Test DFS logging
@@ -41,8 +41,8 @@ import java.util.logging.Logger;
  * @author Hairong Kuang
  */
 public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConstants {
-  private static final Logger LOG =
-      LogFormatter.getLogger("org.apache.hadoop.dfs.ClusterTestDFS");
+  private static final Log LOG =
+      LogFactory.getLog("org.apache.hadoop.dfs.ClusterTestDFS");
 
   private static Configuration conf = new Configuration();
 
@@ -337,11 +337,6 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
 	System.setProperty("hadoop.log.dir", baseDirSpecified+"/logs");
 	conf.setInt("hadoop.logfile.count", 1);
 	conf.setInt("hadoop.logfile.size", 1000000000);
-
-	// logging configuration for namenode
-    logFile = LogFormatter.initFileHandler( conf, "namenode" );
-    LogFormatter.setShowThreadIDs(true);
-    NameNode.stateChangeLog.setLevel( Level.FINEST);
   }
   
   private void startDFS( int dataNodeNum) throws IOException {

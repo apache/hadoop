@@ -16,6 +16,8 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
 
@@ -25,26 +27,15 @@ import java.net.InetSocketAddress;
 
 import junit.framework.TestCase;
 
-import java.util.logging.Logger;
-import java.util.logging.Level;
-
-import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.conf.Configuration;
 
 /** Unit tests for IPC. */
 public class TestIPC extends TestCase {
-  public static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.ipc.TestIPC");
+  public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.ipc.TestIPC");
 
   private static Configuration conf = new Configuration();
   
-  // quiet during testing, since output ends up on console
-  static {
-    LOG.setLevel(Level.WARNING);
-    Client.LOG.setLevel(Level.WARNING);
-    Server.LOG.setLevel(Level.WARNING);
-  }
-
   public TestIPC(String name) { super(name); }
 
   private static final Random RANDOM = new Random();
@@ -88,12 +79,12 @@ public class TestIPC extends TestCase {
           LongWritable value =
             (LongWritable)client.call(param, new InetSocketAddress(PORT));
           if (!param.equals(value)) {
-            LOG.severe("Call failed!");
+            LOG.fatal("Call failed!");
             failed = true;
             break;
           }
         } catch (Exception e) {
-          LOG.severe("Caught: " + e);
+          LOG.fatal("Caught: " + e);
           failed = true;
         }
       }
@@ -123,13 +114,13 @@ public class TestIPC extends TestCase {
           Writable[] values = client.call(params, addresses);
           for (int j = 0; j < addresses.length; j++) {
             if (!params[j].equals(values[j])) {
-              LOG.severe("Call failed!");
+              LOG.fatal("Call failed!");
               failed = true;
               break;
             }
           }
         } catch (Exception e) {
-          LOG.severe("Caught: " + e);
+          LOG.fatal("Caught: " + e);
           failed = true;
         }
       }
@@ -209,11 +200,6 @@ public class TestIPC extends TestCase {
   }
 	
   public static void main(String[] args) throws Exception {
-    // crank up the volume!
-    LOG.setLevel(Level.FINE);
-    Client.LOG.setLevel(Level.FINE);
-    Server.LOG.setLevel(Level.FINE);
-    LogFormatter.setShowThreadIDs(true);
 
     //new TestIPC("test").testSerial(5, false, 2, 10, 1000);
 

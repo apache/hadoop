@@ -17,7 +17,6 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
-import java.util.logging.Logger;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;

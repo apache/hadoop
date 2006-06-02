@@ -15,6 +15,8 @@
  */
  package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.util.*;
@@ -22,7 +24,6 @@ import org.apache.hadoop.util.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.logging.*;
 
 /*******************************************************
  * TaskTracker is a process that starts and tracks MR Tasks
@@ -42,8 +43,8 @@ public class TaskTracker
     // required for unknown reason to make WritableFactories work distributed
     static { new MapTask(); new ReduceTask(); new MapOutputLocation(); }
 
-    public static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.mapred.TaskTracker");
+    public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.mapred.TaskTracker");
 
     private boolean running = true;
 
@@ -90,7 +91,7 @@ public class TaskTracker
               TaskInProgress tip = (TaskInProgress) tasksToCleanup.take();
               tip.jobHasFinished();
             } catch (Throwable except) {
-              LOG.warning(StringUtils.stringifyException(except));
+              LOG.warn(StringUtils.stringifyException(except));
             }
           }
         }
@@ -407,7 +408,7 @@ public class TaskTracker
                                 staleState = true;
                             }
                         } catch (Exception ex) {
-                            LOG.log(Level.INFO, "Lost connection to JobTracker [" + jobTrackAddr + "].  Retrying...", ex);
+                            LOG.info("Lost connection to JobTracker [" + jobTrackAddr + "].  Retrying...", ex);
                             try {
                                 Thread.sleep(5000);
                             } catch (InterruptedException ie) {
@@ -689,7 +690,7 @@ public class TaskTracker
               runningTasks.put(task.getTaskId(), this);
               mapTotal++;
             } else {
-              LOG.warning("Output already reported lost:"+task.getTaskId());
+              LOG.warn("Output already reported lost:"+task.getTaskId());
             }
         }
 
@@ -700,7 +701,7 @@ public class TaskTracker
          */
         void cleanup() throws IOException {
             String taskId = task.getTaskId();
-            LOG.fine("Cleaning up " + taskId);
+            LOG.debug("Cleaning up " + taskId);
             synchronized (TaskTracker.this) {
                tasks.remove(taskId);
                synchronized (this) {
@@ -737,7 +738,7 @@ public class TaskTracker
         if (tip != null) {
           tip.reportProgress(progress, state);
         } else {
-          LOG.warning("Progress from unknown child task: "+taskid+". Ignored.");
+          LOG.warn("Progress from unknown child task: "+taskid+". Ignored.");
         }
     }
 
@@ -750,7 +751,7 @@ public class TaskTracker
         if (tip != null) {
           tip.reportDiagnosticInfo(info);
         } else {
-          LOG.warning("Error from unknown child task: "+taskid+". Ignored.");
+          LOG.warn("Error from unknown child task: "+taskid+". Ignored.");
         }
     }
 
@@ -767,14 +768,14 @@ public class TaskTracker
         if (tip != null) {
           tip.reportDone();
         } else {
-          LOG.warning("Unknown child task done: "+taskid+". Ignored.");
+          LOG.warn("Unknown child task done: "+taskid+". Ignored.");
         }
     }
 
     /** A child task had a local filesystem error.  Exit, so that no future
      * jobs are accepted. */
     public synchronized void fsError(String message) throws IOException {
-      LOG.severe("FSError, exiting: "+ message);
+      LOG.fatal("FSError, exiting: "+ message);
       running = false;
     }
 
@@ -792,7 +793,7 @@ public class TaskTracker
         if (tip != null) {
           tip.taskFinished();
         } else {
-          LOG.warning("Unknown child task finshed: "+taskid+". Ignored.");
+          LOG.warn("Unknown child task finshed: "+taskid+". Ignored.");
         }
     }
 
@@ -804,7 +805,7 @@ public class TaskTracker
         if (tip != null) {
           tip.mapOutputLost();
         } else {
-          LOG.warning("Unknown child with bad map output: "+taskid+". Ignored.");
+          LOG.warn("Unknown child with bad map output: "+taskid+". Ignored.");
         }
     }
 
@@ -813,7 +814,7 @@ public class TaskTracker
      */
     public static class Child {
         public static void main(String[] args) throws Throwable {
-          LogFormatter.showTime(false);
+          //LogFactory.showTime(false);
           LOG.info("Child starting");
 
           JobConf defaultConf = new JobConf();
@@ -836,10 +837,10 @@ public class TaskTracker
             FileSystem.get(job).setWorkingDirectory(job.getWorkingDirectory());
             task.run(job, umbilical);             // run the task
           } catch (FSError e) {
-            LOG.log(Level.SEVERE, "FSError from child", e);
+            LOG.fatal("FSError from child", e);
             umbilical.fsError(e.getMessage());
           } catch (Throwable throwable) {
-              LOG.log(Level.WARNING, "Error running child", throwable);
+              LOG.warn("Error running child", throwable);
               // Report back any failures, for diagnostic purposes
               ByteArrayOutputStream baos = new ByteArrayOutputStream();
               throwable.printStackTrace(new PrintStream(baos));
@@ -857,7 +858,7 @@ public class TaskTracker
                 while (true) {
                   try {
                     if (!umbilical.ping(taskid)) {
-                      LOG.log(Level.WARNING, "Parent died.  Exiting "+taskid);
+                      LOG.warn("Parent died.  Exiting "+taskid);
                       System.exit(66);
                     }
                     remainingRetries = MAX_RETRIES;
@@ -866,7 +867,7 @@ public class TaskTracker
                     LOG.info("Ping exception: " + msg);
                     remainingRetries -=1;
                     if (remainingRetries == 0) {
-                      LOG.log(Level.WARNING, "Last retry, killing "+taskid);
+                      LOG.warn("Last retry, killing "+taskid);
                       System.exit(65);
                     }
                   }
@@ -922,7 +923,6 @@ public class TaskTracker
         }
 
         JobConf conf=new JobConf();
-        LogFormatter.initFileHandler( conf, "tasktracker" );
         new TaskTracker(conf).run();
     }
 }

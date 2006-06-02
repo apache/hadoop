@@ -344,7 +344,7 @@ public class LocalFileSystem extends FileSystem {
         badDir.mkdirs();
         String suffix = "." + new Random().nextInt();
         File badFile = new File(badDir,f.getName()+suffix);
-        LOG.warning("Moving bad file " + f + " to " + badFile);
+        LOG.warn("Moving bad file " + f + " to " + badFile);
         in.close();                               // close it first
         f.renameTo(badFile);                      // rename it
 
@@ -353,7 +353,7 @@ public class LocalFileSystem extends FileSystem {
         checkFile.renameTo(new File(badDir, checkFile.getName()+suffix));
 
       } catch (IOException e) {
-        LOG.warning("Error moving bad file " + p + ": " + e);
+        LOG.warn("Error moving bad file " + p + ": " + e);
       }
     }
 

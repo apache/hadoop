@@ -19,7 +19,8 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.util.*;
 import junit.framework.TestCase;
-import java.util.logging.*;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.*;
@@ -27,7 +28,7 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 
 public class TestFileSystem extends TestCase {
-  private static final Logger LOG = InputFormatBase.LOG;
+  private static final Log LOG = InputFormatBase.LOG;
 
   private static Configuration conf = new Configuration();
   private static int BUFFER_SIZE = conf.getInt("io.file.buffer.size", 4096);

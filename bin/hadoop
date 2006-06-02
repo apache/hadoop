@@ -120,6 +120,14 @@ done
 # restore ordinary behaviour
 unset IFS
 
+# default log directory & file
+if [ "HADOOP_LOG_DIR" = "" ]; then
+  HADOOP_LOG_DIR="$HADOOP_HOME/logs"
+fi
+if [ "HADOOP_LOGFILE" = "" ]; then
+  HADOOP_LOGFILE='hadoop.log'
+fi
+
 # figure out which class to run
 if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.dfs.NameNode'
@@ -151,6 +159,7 @@ if expr `uname` : 'CYGWIN*' > /dev/null; then
 fi
 
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
 

@@ -19,11 +19,11 @@ package org.apache.hadoop.record.test;
 import java.io.*;
 import java.util.*;
 import junit.framework.TestCase;
-import java.util.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
+import org.apache.commons.logging.*;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputFormatBase;
@@ -33,7 +33,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 
 public class TestWritable extends TestCase {
-  private static final Logger LOG = InputFormatBase.LOG;
+  private static final Log LOG = InputFormatBase.LOG;
 
   private static int MAX_LENGTH = 10000;
   private static Configuration conf = new Configuration();

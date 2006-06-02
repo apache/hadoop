@@ -18,16 +18,16 @@ package org.apache.hadoop.mapred;
 
 import java.io.*;
 import java.util.*;
-import java.util.logging.*;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
 class LocalJobRunner implements JobSubmissionProtocol {
-  public static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.mapred.LocalJobRunner");
+  public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.mapred.LocalJobRunner");
 
   private FileSystem fs;
   private HashMap jobs = new HashMap();
@@ -116,14 +116,14 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
       } catch (Throwable t) {
         this.status.runState = JobStatus.FAILED;
-        LOG.log(Level.WARNING, id, t);
+        LOG.warn(id, t);
 
       } finally {
         try {
           fs.delete(new Path(file).getParent());  // delete submit dir
           localFs.delete(localFile);              // delete local copy
         } catch (IOException e) {
-          LOG.warning("Error cleaning up "+id+": "+e);
+          LOG.warn("Error cleaning up "+id+": "+e);
         }
       }
     }
@@ -165,7 +165,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     }
 
     public synchronized void fsError(String message) throws IOException {
-      LOG.severe("FSError: "+ message);
+      LOG.fatal("FSError: "+ message);
     }
 
   }

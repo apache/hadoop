@@ -19,11 +19,12 @@ package org.apache.hadoop.fs;
 import java.io.*;
 
 import junit.framework.TestCase;
-import java.util.logging.*;
 import java.util.Date;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
 import java.util.Vector;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.io.*;
@@ -49,7 +50,7 @@ public class DistributedFSCheck extends TestCase {
   private static final long MEGA = 0x100000;
   
   private static Configuration fsConfig = new Configuration();
-  private static final Logger LOG = InputFormatBase.LOG;
+  private static final Log LOG = InputFormatBase.LOG;
   private static Path TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/benchmarks/DistributedFSCheck"));
   private static Path MAP_INPUT_DIR = new Path(TEST_ROOT_DIR, "map_input");
   private static Path READ_DIR = new Path(TEST_ROOT_DIR, "io_read");

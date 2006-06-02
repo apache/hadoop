@@ -19,7 +19,8 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 import junit.framework.TestCase;
-import java.util.logging.*;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
@@ -27,7 +28,7 @@ import org.apache.hadoop.conf.*;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSequenceFile extends TestCase {
-  private static Logger LOG = SequenceFile.LOG;
+  private static Log LOG = SequenceFile.LOG;
 
   private static Configuration conf = new Configuration();
   
@@ -68,7 +69,7 @@ public class TestSequenceFile extends TestCase {
                                 Path file, boolean compress)
     throws IOException {
     fs.delete(file);
-    LOG.fine("creating with " + count + " records");
+    LOG.debug("creating with " + count + " records");
     SequenceFile.Writer writer =
       new SequenceFile.Writer(fs, file, RandomDatum.class, RandomDatum.class,
                               compress);
@@ -87,7 +88,7 @@ public class TestSequenceFile extends TestCase {
     throws IOException {
     RandomDatum k = new RandomDatum();
     RandomDatum v = new RandomDatum();
-    LOG.fine("reading " + count + " records");
+    LOG.debug("reading " + count + " records");
     SequenceFile.Reader reader = new SequenceFile.Reader(fs, file, conf);
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
     for (int i = 0; i < count; i++) {
@@ -111,14 +112,14 @@ public class TestSequenceFile extends TestCase {
     throws IOException {
     fs.delete(new Path(file+".sorted"));
     SequenceFile.Sorter sorter = newSorter(fs, fast, megabytes, factor);
-    LOG.fine("sorting " + count + " records");
+    LOG.debug("sorting " + count + " records");
     sorter.sort(file, file.suffix(".sorted"));
-    LOG.fine("done sorting " + count + " records");
+    LOG.info("done sorting " + count + " debug");
   }
 
   private static void checkSort(FileSystem fs, int count, int seed, Path file)
     throws IOException {
-    LOG.fine("sorting " + count + " records in memory for check");
+    LOG.info("sorting " + count + " records in memory for debug");
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
     SortedMap map = new TreeMap();
     for (int i = 0; i < count; i++) {
@@ -128,7 +129,7 @@ public class TestSequenceFile extends TestCase {
       map.put(key, value);
     }
 
-    LOG.fine("checking order of " + count + " records");
+    LOG.debug("checking order of " + count + " records");
     RandomDatum k = new RandomDatum();
     RandomDatum v = new RandomDatum();
     Iterator iterator = map.entrySet().iterator();
@@ -148,7 +149,7 @@ public class TestSequenceFile extends TestCase {
     }
 
     reader.close();
-    LOG.fine("sucessfully checked " + count + " records");
+    LOG.debug("sucessfully checked " + count + " records");
   }
 
   private static void mergeTest(FileSystem fs, int count, int seed, 
@@ -156,7 +157,7 @@ public class TestSequenceFile extends TestCase {
                                 int megabytes)
     throws IOException {
 
-    LOG.fine("creating "+factor+" files with "+count/factor+" records");
+    LOG.debug("creating "+factor+" files with "+count/factor+" records");
 
     SequenceFile.Writer[] writers = new SequenceFile.Writer[factor];
     Path[] names = new Path[factor];
@@ -185,11 +186,11 @@ public class TestSequenceFile extends TestCase {
       writers[i].close();
 
     for (int i = 0; i < factor; i++) {
-      LOG.fine("sorting file " + i + " with " + count/factor + " records");
+      LOG.debug("sorting file " + i + " with " + count/factor + " records");
       newSorter(fs, fast, megabytes, factor).sort(names[i], sortedNames[i]);
     }
 
-    LOG.fine("merging " + factor + " files with " + count/factor + " records");
+    LOG.info("merging " + factor + " files with " + count/factor + " debug");
     fs.delete(new Path(file+".sorted"));
     newSorter(fs, fast, megabytes, factor)
       .merge(sortedNames, file.suffix(".sorted"));
@@ -264,8 +265,6 @@ public class TestSequenceFile extends TestCase {
 
         int seed = 0;
  
-        LOG.setLevel(Level.FINE);
-
         if (create && !merge) {
             writeTest(fs, count, seed, file, compress);
             readTest(fs, count, seed, file);

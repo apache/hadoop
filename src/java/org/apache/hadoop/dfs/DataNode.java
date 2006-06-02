@@ -15,6 +15,8 @@
  */
 package org.apache.hadoop.dfs;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
@@ -24,7 +26,6 @@ import java.io.*;
 import java.net.*;
 import java.nio.channels.FileLock;
 import java.util.*;
-import java.util.logging.*;
 
 /**********************************************************
  * DataNode is a class (and program) that stores a set of
@@ -59,7 +60,7 @@ import java.util.logging.*;
  * @author Mike Cafarella
  **********************************************************/
 public class DataNode implements FSConstants, Runnable {
-    public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.dfs.DataNode");
+    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.DataNode");
     //
     // REMIND - mjc - I might bring "maxgigs" back so user can place 
     // artificial  limit on space
@@ -198,7 +199,7 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     void handleDiskError( String errMsgr ) {
-        LOG.warning( "Shuting down DataNode because "+errMsgr );
+        LOG.warn( "Shuting down DataNode because "+errMsgr );
         try {
             namenode.errorReport(
                     dnRegistration, DatanodeProtocol.DISK_ERROR, errMsgr);
@@ -356,7 +357,7 @@ public class DataNode implements FSConstants, Runnable {
                 ss.close();
             } catch (DiskErrorException de ) {
                 String errMsgr = de.getMessage();
-                LOG.warning("Exiting DataXceiveServer due to "+ errMsgr );
+                LOG.warn("Exiting DataXceiveServer due to "+ errMsgr );
                 handleDiskError(errMsgr);
             } catch (IOException ie) {
                 LOG.info("Exiting DataXceiveServer due to " + ie.toString());
@@ -403,7 +404,7 @@ public class DataNode implements FSConstants, Runnable {
                     in.close();
                 }
             } catch (IOException ie) {
-              LOG.log(Level.WARNING, "DataXCeiver", ie);
+              LOG.warn("DataXCeiver", ie);
             } finally {
                 try {
                     s.close();
@@ -797,7 +798,7 @@ public class DataNode implements FSConstants, Runnable {
                 }
                 LOG.info("Transmitted block " + b + " to " + curTarget);
             } catch (IOException ie) {
-              LOG.log(Level.WARNING, "Failed to transfer "+b+" to "+curTarget, ie);
+              LOG.warn("Failed to transfer "+b+" to "+curTarget, ie);
             } finally {
     xmitsInProgress--;
       }
@@ -887,7 +888,7 @@ public class DataNode implements FSConstants, Runnable {
         dn = new DataNode(conf, dataDir);
         return dn;
     } catch( DiskErrorException e ) {
-        LOG.warning("Can't start DataNode because " + e.getMessage() );
+        LOG.warn("Can't start DataNode because " + e.getMessage() );
         return null;
     }
   }
@@ -901,12 +902,10 @@ public class DataNode implements FSConstants, Runnable {
         "}";
   }
 
-  /**
-   */
-  public static void main(String args[]) throws IOException {
-    Configuration conf = new Configuration();
-    LogFormatter.setShowThreadIDs(true);
-    LogFormatter.initFileHandler(conf, "datanode");
-    runAndWait(conf);
-  }
+    /**
+     */
+    public static void main(String args[]) throws IOException {
+        Configuration conf = new Configuration();
+        runAndWait(conf);
+    }
 }

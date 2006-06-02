@@ -25,7 +25,8 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.TreeSet;
-import java.util.logging.Logger;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSOutputStream;
@@ -56,7 +57,7 @@ import org.apache.hadoop.io.UTF8;
  * @author Andrzej Bialecki
  */
 public class DFSck {
-  private static final Logger LOG = Logger.getLogger(DFSck.class.getName());
+  private static final Log LOG = LogFactory.getLog(DFSck.class.getName());
 
   /** Don't attempt any fixing . */
   public static final int FIXING_NONE = 0;

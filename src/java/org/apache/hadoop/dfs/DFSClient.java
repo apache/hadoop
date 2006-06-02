@@ -21,10 +21,11 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 
+import org.apache.commons.logging.*;
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.logging.*;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -39,7 +40,7 @@ import java.util.logging.*;
  * @author Mike Cafarella, Tessa MacDuff
  ********************************************************/
 class DFSClient implements FSConstants {
-    public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.fs.DFSClient");
+    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.DFSClient");
     static int MAX_BLOCK_ACQUIRE_FAILURES = 3;
     private static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
     ClientProtocol namenode;
@@ -405,7 +406,7 @@ class DFSClient implements FSConstants {
                         lastRenewed = System.currentTimeMillis();
                     } catch (IOException ie) {
                       String err = StringUtils.stringifyException(ie);
-                      LOG.warning("Problem renewing lease for " + clientName +
+                      LOG.warn("Problem renewing lease for " + clientName +
                                   ": " + err);
                     }
                 }
@@ -1024,14 +1025,14 @@ class DFSClient implements FSConstants {
         }
 
         private void handleSocketException(IOException ie) throws IOException {
-          LOG.log(Level.WARNING, "Error while writing.", ie);
+          LOG.warn("Error while writing.", ie);
           try {
             if (s != null) {
               s.close();
               s = null;
             }
           } catch (IOException ie2) {
-            LOG.log(Level.WARNING, "Error closing socket.", ie2);
+            LOG.warn("Error closing socket.", ie2);
           }
           namenode.abandonBlock(block, src.toString());
         }

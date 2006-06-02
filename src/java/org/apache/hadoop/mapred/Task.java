@@ -16,17 +16,18 @@
 
 package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
-import java.util.logging.Logger;
 
 /** Base class for tasks. */
 abstract class Task implements Writable, Configurable {
-  private static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.mapred.TaskRunner");
+  private static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.mapred.TaskRunner");
 
   ////////////////////////////////////////////
   // Fields
@@ -116,7 +117,7 @@ abstract class Task implements Writable, Configurable {
         try {
           umbilical.progress(getTaskId(), progress, status);
         } catch (IOException ie) {
-          LOG.warning(StringUtils.stringifyException(ie));
+          LOG.warn(StringUtils.stringifyException(ie));
         }
       }
     }

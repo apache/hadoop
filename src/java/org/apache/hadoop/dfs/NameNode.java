@@ -15,13 +15,14 @@
  */
 package org.apache.hadoop.dfs;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
-import java.util.logging.*;
 
 /**********************************************************
  * NameNode serves as both directory namespace manager and
@@ -56,8 +57,8 @@ import java.util.logging.*;
  * @author Mike Cafarella
  **********************************************************/
 public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
-    public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.dfs.NameNode");
-    public static final Logger stateChangeLog = LogFormatter.getLogger( "org.apache.hadoop.dfs.StateChange");
+    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.NameNode");
+    public static final Log stateChangeLog = LogFactory.getLog( "org.apache.hadoop.dfs.StateChange");
 
     private FSNamesystem namesystem;
     private Server server;
@@ -158,7 +159,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                short replication,
                                long blockSize
     ) throws IOException {
-       stateChangeLog.fine("*DIR* NameNode.create: file "
+       stateChangeLog.debug("*DIR* NameNode.create: file "
             +src+" for "+clientName+" at "+clientMachine);
        Object results[] = namesystem.startFile(new UTF8(src), 
                                                 new UTF8(clientName), 
@@ -181,7 +182,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     public LocatedBlock addBlock(String src, 
                                  String clientName) throws IOException {
-        stateChangeLog.fine("*BLOCK* NameNode.addBlock: file "
+        stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
             +src+" for "+clientName);
         UTF8 src8 = new UTF8(src);
         UTF8 client8 = new UTF8(clientName);
@@ -199,7 +200,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     public void reportWrittenBlock(LocatedBlock lb) throws IOException {
         Block b = lb.getBlock();        
         DatanodeInfo targets[] = lb.getLocations();
-        stateChangeLog.fine("*BLOCK* NameNode.reportWrittenBlock"
+        stateChangeLog.debug("*BLOCK* NameNode.reportWrittenBlock"
                 +": " + b.getBlockName() +" is written to "
                 +targets.length + " locations" );
 
@@ -212,7 +213,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * The client needs to give up on the block.
      */
     public void abandonBlock(Block b, String src) throws IOException {
-        stateChangeLog.fine("*BLOCK* NameNode.abandonBlock: "
+        stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
                 +b.getBlockName()+" of file "+src );
         if (! namesystem.abandonBlock(b, new UTF8(src))) {
             throw new IOException("Cannot abandon block during write to " + src);
@@ -222,13 +223,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     public void abandonFileInProgress(String src, 
                                       String holder) throws IOException {
-        stateChangeLog.fine("*DIR* NameNode.abandonFileInProgress:" + src );
+        stateChangeLog.debug("*DIR* NameNode.abandonFileInProgress:" + src );
         namesystem.abandonFileInProgress(new UTF8(src), new UTF8(holder));
     }
     /**
      */
     public boolean complete(String src, String clientName) throws IOException {
-        stateChangeLog.fine("*DIR* NameNode.complete: " + src + " for " + clientName );
+        stateChangeLog.debug("*DIR* NameNode.complete: " + src + " for " + clientName );
         int returnCode = namesystem.completeFile(new UTF8(src), new UTF8(clientName));
         if (returnCode == STILL_WAITING) {
             return false;
@@ -263,14 +264,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /**
      */
     public boolean rename(String src, String dst) throws IOException {
-        stateChangeLog.fine("*DIR* NameNode.rename: " + src + " to " + dst );
+        stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst );
         return namesystem.renameTo(new UTF8(src), new UTF8(dst));
     }
 
     /**
      */
     public boolean delete(String src) throws IOException {
-        stateChangeLog.fine("*DIR* NameNode.delete: " + src );
+        stateChangeLog.debug("*DIR* NameNode.delete: " + src );
         return namesystem.delete(new UTF8(src));
     }
 
@@ -289,7 +290,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /**
      */
     public boolean mkdirs(String src) throws IOException {
-        stateChangeLog.fine("*DIR* NameNode.mkdirs: " + src );
+        stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src );
         return namesystem.mkdirs(new UTF8(src));
     }
 
@@ -416,7 +417,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     public Block[] blockReport( DatanodeRegistration nodeReg,
                                 Block blocks[]) throws IOException {
         verifyRequest( nodeReg );
-        stateChangeLog.fine("*BLOCK* NameNode.blockReport: "
+        stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
                 +"from "+nodeReg.getName()+" "+blocks.length+" blocks" );
         if( firstBlockReportTime==0)
               firstBlockReportTime=System.currentTimeMillis();
@@ -427,7 +428,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     public void blockReceived(DatanodeRegistration nodeReg, 
                               Block blocks[]) throws IOException {
         verifyRequest( nodeReg );
-        stateChangeLog.fine("*BLOCK* NameNode.blockReceived: "
+        stateChangeLog.debug("*BLOCK* NameNode.blockReceived: "
                 +"from "+nodeReg.getName()+" "+blocks.length+" blocks." );
         for (int i = 0; i < blocks.length; i++) {
             namesystem.blockReceived( nodeReg, blocks[i] );
@@ -441,7 +442,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                             String msg) throws IOException {
       // Log error message from datanode
       verifyRequest( nodeReg );
-      LOG.warning("Report from " + nodeReg.getName() + ": " + msg);
+      LOG.warn("Report from " + nodeReg.getName() + ": " + msg);
       if( errorCode == DatanodeProtocol.DISK_ERROR ) {
           namesystem.removeDatanode( nodeReg );            
       }
@@ -490,20 +491,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
           System.err.println("Formatted "+dir);
           System.exit(0);
         }
-            
-        LogFormatter.initFileHandler( conf, "namenode" );
-        LogFormatter.setShowThreadIDs(true);
-        String confLevel = conf.get("dfs.namenode.logging.level", "info");
-        Level level;
-        if( confLevel.equals( "dir"))
-                level=Level.FINE;
-        else if( confLevel.equals( "block"))
-                level=Level.FINER;
-        else if( confLevel.equals( "all"))
-                level=Level.FINEST;
-        else level=Level.INFO;
-        stateChangeLog.setLevel( level);
-
+        
         NameNode namenode = new NameNode(conf);
         namenode.join();
     }

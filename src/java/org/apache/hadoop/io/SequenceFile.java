@@ -19,19 +19,18 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 import java.util.zip.*;
-import java.util.logging.*;
 import java.net.InetAddress;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
 import org.apache.lucene.util.PriorityQueue;
+import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
 
 /** Support for flat files of binary key/value pairs. */
 public class SequenceFile {
-  public static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.io.SequenceFile");
+  public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.io.SequenceFile");
 
   private SequenceFile() {}                         // no public ctor
 
@@ -401,7 +400,7 @@ public class SequenceFile {
     private void handleChecksumException(ChecksumException e)
       throws IOException {
       if (this.conf.getBoolean("io.skip.checksum.errors", false)) {
-        LOG.warning("Bad checksum at "+getPosition()+". Skipping entries.");
+        LOG.warn("Bad checksum at "+getPosition()+". Skipping entries.");
         sync(getPosition()+this.conf.getInt("io.bytes.per.checksum", 512));
       } else {
         throw e;
@@ -527,7 +526,7 @@ public class SequenceFile {
     }
 
     private int sortPass() throws IOException {
-      LOG.fine("running sort pass");
+      LOG.debug("running sort pass");
       SortPass sortPass = new SortPass(this.conf);         // make the SortPass
       try {
         return sortPass.run();                    // run it
@@ -584,7 +583,7 @@ public class SequenceFile {
           }
 
           // buffer is full -- sort & flush it
-          LOG.finer("flushing segment " + segments);
+          LOG.info("flushing segment " + segments);
           rawBuffer = buffer.getData();
           sort(count);
           flush(count, segments==0 && atEof);
@@ -692,7 +691,7 @@ public class SequenceFile {
     }
 
     private int mergePass(int pass, boolean last) throws IOException {
-      LOG.fine("running merge pass=" + pass);
+      LOG.debug("running merge pass=" + pass);
       MergePass mergePass = new MergePass(pass, last);
       try {                                       // make a merge pass
         return mergePass.run();                  // run it
@@ -732,7 +731,7 @@ public class SequenceFile {
         long end = fs.getLength(inName);
 
         while (in.getPos() < end) {
-          LOG.finer("merging segment " + segments);
+          LOG.debug("merging segment " + segments);
           long totalLength = 0;
           long totalCount = 0;
           while (in.getPos() < end && queue.size() < factor) {
@@ -799,7 +798,7 @@ public class SequenceFile {
       }
 
       public void run() throws IOException {
-        LOG.finer("merging files=" + inFiles.length);
+        LOG.debug("merging files=" + inFiles.length);
         for (int i = 0; i < inFiles.length; i++) {
           Path inFile = inFiles[i];
           MergeStream ms =

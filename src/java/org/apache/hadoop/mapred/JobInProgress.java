@@ -15,14 +15,14 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
 
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.logging.*;
 
 ///////////////////////////////////////////////////////
 // JobInProgress maintains all the info for keeping
@@ -31,7 +31,7 @@ import java.util.logging.*;
 // doing bookkeeping of its Tasks.
 ///////////////////////////////////////////////////////
 class JobInProgress {
-    public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.mapred.JobInProgress");
+    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobInProgress");
 
     JobProfile profile;
     JobStatus status;
@@ -261,7 +261,7 @@ class JobInProgress {
                                               TaskStatus status) {
         double oldProgress = tip.getProgress();   // save old progress
         tip.updateStatus(status);                 // update tip
-        LOG.fine("Taking progress for " + tip.getTIPId() + " from " + 
+        LOG.debug("Taking progress for " + tip.getTIPId() + " from " + 
                  oldProgress + " to " + tip.getProgress());
 
         //
@@ -632,7 +632,7 @@ class JobInProgress {
         fs.delete(new Path(profile.getJobFile()).getParent());
 
       } catch (IOException e) {
-        LOG.warning("Error cleaning up "+profile.getJobId()+": "+e);
+        LOG.warn("Error cleaning up "+profile.getJobId()+": "+e);
       }
     }
 

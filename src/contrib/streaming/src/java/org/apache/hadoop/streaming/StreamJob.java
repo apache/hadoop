@@ -19,7 +19,6 @@ package org.apache.hadoop.streaming;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.logging.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;

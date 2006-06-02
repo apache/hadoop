@@ -92,6 +92,9 @@ Trunk (unreleased)
 
 24. HADOOP-256.  Add a C API for DFS.  (Arun C Murthy via cutting)
 
+25. HADOOP-211.  Switch to use the Jakarta Commons logging internally,
+    configured to use log4j by default.  (Arun C Murthy and cutting)
+
 
 Release 0.2.1 - 2006-05-12
 

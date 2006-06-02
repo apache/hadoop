@@ -23,12 +23,12 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 
 import java.net.InetSocketAddress;
-import java.util.logging.*;
 import java.io.*;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
 
 /** A simple RPC mechanism.
  *
@@ -49,8 +49,8 @@ import org.apache.hadoop.util.LogFormatter;
  * the protocol instance is transmitted.
  */
 public class RPC {
-  private static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.ipc.RPC");
+  private static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.ipc.RPC");
 
   private RPC() {}                                  // no public ctor
 
@@ -150,7 +150,7 @@ public class RPC {
       ObjectWritable value = (ObjectWritable)
         client.call(new Invocation(method, args), address);
       long callTime = System.currentTimeMillis() - startTime;
-      LOG.fine("Call: " + method.getName() + " " + callTime);
+      LOG.debug("Call: " + method.getName() + " " + callTime);
       return value.get();
     }
   }
@@ -242,7 +242,7 @@ public class RPC {
         long startTime = System.currentTimeMillis();
         Object value = method.invoke(instance, call.getParameters());
         long callTime = System.currentTimeMillis() - startTime;
-        LOG.fine("Served: " + call.getMethodName() + " " + callTime);
+        LOG.debug("Served: " + call.getMethodName() + " " + callTime);
         if (verbose) log("Return: "+value);
 
         return new ObjectWritable(method.getReturnType(), value);

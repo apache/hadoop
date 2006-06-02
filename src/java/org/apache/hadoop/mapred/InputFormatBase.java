@@ -20,17 +20,17 @@ import java.io.IOException;
 import java.io.File;                              // deprecated
 
 import java.util.ArrayList;
-import java.util.logging.Logger;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.LogFormatter;
 
 /** A base class for {@link InputFormat}. */
 public abstract class InputFormatBase implements InputFormat {
 
-  public static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.mapred.InputFormatBase");
+  public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.mapred.InputFormatBase");
 
   private static final double SPLIT_SLOP = 1.1;   // 10% slop
 

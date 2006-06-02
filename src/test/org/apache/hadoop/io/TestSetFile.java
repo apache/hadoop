@@ -19,14 +19,15 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 import junit.framework.TestCase;
-import java.util.logging.*;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSetFile extends TestCase {
-  private static Logger LOG = SequenceFile.LOG;
+  private static Log LOG = SequenceFile.LOG;
   private static String FILE =
     System.getProperty("test.build.data",".") + "/test.set";
 
@@ -46,14 +47,14 @@ public class TestSetFile extends TestCase {
   }
 
   private static RandomDatum[] generate(int count) {
-    LOG.fine("generating " + count + " records in memory");
+    LOG.debug("generating " + count + " records in memory");
     RandomDatum[] data = new RandomDatum[count];
     RandomDatum.Generator generator = new RandomDatum.Generator();
     for (int i = 0; i < count; i++) {
       generator.next();
       data[i] = generator.getValue();
     }
-    LOG.fine("sorting " + count + " records in memory");
+    LOG.info("sorting " + count + " records in debug");
     Arrays.sort(data);
     return data;
   }
@@ -61,7 +62,7 @@ public class TestSetFile extends TestCase {
   private static void writeTest(FileSystem fs, RandomDatum[] data, String file)
     throws IOException {
     MapFile.delete(fs, file);
-    LOG.fine("creating with " + data.length + " records");
+    LOG.debug("creating with " + data.length + " records");
     SetFile.Writer writer = new SetFile.Writer(fs, file, RandomDatum.class);
     for (int i = 0; i < data.length; i++)
       writer.append(data[i]);
@@ -71,14 +72,14 @@ public class TestSetFile extends TestCase {
   private static void readTest(FileSystem fs, RandomDatum[] data, String file)
     throws IOException {
     RandomDatum v = new RandomDatum();
-    LOG.fine("reading " + data.length + " records");
+    LOG.debug("reading " + data.length + " records");
     SetFile.Reader reader = new SetFile.Reader(fs, file, conf);
     for (int i = 0; i < data.length; i++) {
       if (!reader.seek(data[i]))
         throw new RuntimeException("wrong value at " + i);
     }
     reader.close();
-    LOG.fine("done reading " + data.length + " records");
+    LOG.info("done reading " + data.length + " debug");
   }
 
 
@@ -116,8 +117,6 @@ public class TestSetFile extends TestCase {
         LOG.info("create = " + create);
         LOG.info("check = " + check);
         LOG.info("file = " + file);
-
-        LOG.setLevel(Level.FINE);
 
         RandomDatum[] data = generate(count);
 

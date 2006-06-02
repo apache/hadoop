@@ -15,6 +15,8 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
@@ -23,7 +25,6 @@ import org.apache.hadoop.util.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.logging.*;
 
 /*******************************************************
  * JobClient interacts with the JobTracker network interface.
@@ -34,7 +35,7 @@ import java.util.logging.*;
  * @author Mike Cafarella
  *******************************************************/
 public class JobClient implements MRConstants {
-    private static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.mapred.JobClient");
+    private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");
 
     static long MAX_JOBPROFILE_AGE = 1000 * 2;
 
@@ -330,7 +331,7 @@ public class JobClient implements MRConstants {
             retries = MAX_RETRIES;
           } catch (IOException ie) {
             if (--retries == 0) {
-              LOG.warning("Final attempt failed, killing job.");
+              LOG.warn("Final attempt failed, killing job.");
               throw ie;
             }
             LOG.info("Communication problem with server: " +

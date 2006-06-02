@@ -18,11 +18,11 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.logging.*;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -44,7 +44,7 @@ import org.apache.hadoop.util.LogFormatter;
  * @author Mike Cafarella
  *****************************************************************/
 public abstract class FileSystem extends Configured {
-    public static final Logger LOG = LogFormatter.getLogger("org.apache.hadoop.dfs.DistributedFileSystem");
+    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.DistributedFileSystem");
 
     private static final HashMap NAME_TO_FS = new HashMap();
     /**

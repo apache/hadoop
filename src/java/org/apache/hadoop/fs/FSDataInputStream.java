@@ -17,16 +17,17 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.Arrays;
-import java.util.logging.*;
 import java.util.zip.*;
+
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
 
 /** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
  * and buffers input through a {@link BufferedInputStream}. */
 public class FSDataInputStream extends DataInputStream {
-  private static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.fs.DataInputStream");
+  private static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.fs.DataInputStream");
 
   private static final byte[] VERSION = FSDataOutputStream.CHECKSUM_VERSION;
   private static final int HEADER_LENGTH = 8;
@@ -58,7 +59,7 @@ public class FSDataInputStream extends DataInputStream {
       } catch (FileNotFoundException e) {         // quietly ignore
         stopSumming();
       } catch (IOException e) {                   // loudly ignore
-        LOG.warning("Problem opening checksum file: "+ file + ".  Ignoring with exception " + e + ".");
+        LOG.warn("Problem opening checksum file: "+ file + ".  Ignoring with exception " + e + ".");
         stopSumming();
       }
     }
@@ -71,7 +72,7 @@ public class FSDataInputStream extends DataInputStream {
         try {
           sums.seek(HEADER_LENGTH + 4*(desired/bytesPerSum));
         } catch (IOException e) {
-          LOG.warning("Problem seeking checksum file: "+e+". Ignoring.");
+          LOG.warn("Problem seeking checksum file: "+e+". Ignoring.");
           stopSumming();
         }
         sum.reset();
@@ -108,7 +109,7 @@ public class FSDataInputStream extends DataInputStream {
       try {
         crc = sums.readInt();
       } catch (IOException e) {
-        LOG.warning("Problem reading checksum file: "+e+". Ignoring.");
+        LOG.warn("Problem reading checksum file: "+e+". Ignoring.");
         stopSumming();
         return;
       }

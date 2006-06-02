@@ -24,8 +24,7 @@ import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 
-/** Prints just the date and the log message. */
-
+/** @deprecated use {@link org.apache.commons.logging.LogFactory} instead. */
 public class LogFormatter extends Formatter {
   private static final String FORMAT = "yyMMdd HHmmss";
   private static final String NEWLINE = System.getProperty("line.separator");

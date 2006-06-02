@@ -19,9 +19,10 @@ package org.apache.hadoop.fs;
 import java.io.*;
 
 import junit.framework.TestCase;
-import java.util.logging.*;
 import java.util.Date;
 import java.util.StringTokenizer;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.io.*;
@@ -65,7 +66,7 @@ public class TestDFSIO extends TestCase {
   private static final String BASE_FILE_NAME = "test_io_";
   private static final String DEFAULT_RES_FILE_NAME = "TestDFSIO_results.log";
   
-  private static final Logger LOG = InputFormatBase.LOG;
+  private static final Log LOG = InputFormatBase.LOG;
   private static Configuration fsConfig = new Configuration();
   private static final long MEGA = 0x100000;
   private static String TEST_ROOT_DIR = System.getProperty("test.build.data","/benchmarks/TestDFSIO");

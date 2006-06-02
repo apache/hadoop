@@ -15,14 +15,14 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.util.jar.*;
-import java.util.logging.*;
 import java.util.Vector;
 import java.util.Enumeration;
 
@@ -31,8 +31,8 @@ import java.util.Enumeration;
  * user supplied map and reduce functions.
  */
 abstract class TaskRunner extends Thread {
-  public static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.mapred.TaskRunner");
+  public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.mapred.TaskRunner");
 
   boolean killed = false;
   private Process process;
@@ -144,20 +144,20 @@ abstract class TaskRunner extends Thread {
       // Run java
       runChild((String[])vargs.toArray(new String[0]), workDir);
     } catch (FSError e) {
-      LOG.log(Level.SEVERE, "FSError", e);
+      LOG.fatal("FSError", e);
       try {
         tracker.fsError(e.getMessage());
       } catch (IOException ie) {
-        LOG.log(Level.SEVERE, t.getTaskId()+" reporting FSError", ie);
+        LOG.fatal(t.getTaskId()+" reporting FSError", ie);
       }
     } catch (Throwable throwable) {
-      LOG.log(Level.WARNING, t.getTaskId()+" Child Error", throwable);
+      LOG.warn(t.getTaskId()+" Child Error", throwable);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       throwable.printStackTrace(new PrintStream(baos));
       try {
         tracker.reportDiagnosticInfo(t.getTaskId(), baos.toString());
       } catch (IOException e) {
-        LOG.log(Level.WARNING, t.getTaskId()+" Reporting Diagnostics", e);
+        LOG.warn(t.getTaskId()+" Reporting Diagnostics", e);
       }
     } finally {
       tracker.reportTaskFinished(t.getTaskId());
@@ -187,7 +187,7 @@ abstract class TaskRunner extends Thread {
         javaOpts = javaOpts.substring(0, index + MX.length()) +
             heapSize + ((end < 0)? "": javaOpts.substring(end));
     }
-    LOG.warning("mapred.child.heap.size is deprecated. Use " +
+    LOG.warn("mapred.child.heap.size is deprecated. Use " +
         "mapred.child.java.opt instead. Meantime, mapred.child.heap.size " +
         "is interpolated into mapred.child.java.opt: " + javaOpts);
     return javaOpts;
@@ -270,12 +270,12 @@ abstract class TaskRunner extends Thread {
         LOG.info(t.getTaskId()+" "+line);
       }
     } catch (IOException e) {
-      LOG.log(Level.WARNING, t.getTaskId()+" Error reading child output", e);
+      LOG.warn(t.getTaskId()+" Error reading child output", e);
     } finally {
       try {
         output.close();
       } catch (IOException e) {
-        LOG.log(Level.WARNING, t.getTaskId()+" Error closing child output", e);
+        LOG.warn(t.getTaskId()+" Error closing child output", e);
       }
     }
   }

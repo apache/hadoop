@@ -22,11 +22,10 @@ import java.lang.reflect.Method;
 
 import junit.framework.TestCase;
 
-import java.util.logging.Logger;
-import java.util.logging.Level;
 import java.util.Arrays;
 
-import org.apache.hadoop.util.LogFormatter;
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
@@ -35,17 +34,14 @@ import org.apache.hadoop.io.Writable;
 public class TestRPC extends TestCase {
   private static final int PORT = 1234;
 
-  public static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.ipc.TestRPC");
+  public static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.ipc.TestRPC");
   
   private static Configuration conf = new Configuration();
 
   // quiet during testing, since output ends up on console
   static {
     conf.setInt("ipc.client.timeout", 5000);
-    LOG.setLevel(Level.WARNING);
-    Client.LOG.setLevel(Level.WARNING);
-    Server.LOG.setLevel(Level.WARNING);
   }
 
   public TestRPC(String name) { super(name); }
@@ -134,7 +130,7 @@ public class TestRPC extends TestCase {
     try {
       proxy.error();
     } catch (IOException e) {
-      LOG.fine("Caught " + e);
+      LOG.debug("Caught " + e);
       caught = true;
     }
     assertTrue(caught);
@@ -156,11 +152,6 @@ public class TestRPC extends TestCase {
     server.stop();
   }
   public static void main(String[] args) throws Exception {
-    // crank up the volume!
-    LOG.setLevel(Level.FINE);
-    Client.LOG.setLevel(Level.FINE);
-    Server.LOG.setLevel(Level.FINE);
-    LogFormatter.setShowThreadIDs(true);
 
     new TestRPC("test").testCalls();
 

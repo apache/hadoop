@@ -18,11 +18,12 @@ package org.apache.hadoop.dfs;
 
 import junit.framework.TestCase;
 import junit.framework.AssertionFailedError;
+
+import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.util.LogFormatter;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
@@ -30,7 +31,6 @@ import java.io.FilenameFilter;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.ListIterator;
-import java.util.logging.Logger;
 import java.util.Random;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -69,8 +69,8 @@ import java.lang.reflect.InvocationTargetException;
  * @author Paul Baclace
  */
 public class ClusterTestDFS extends TestCase implements FSConstants {
-  private static final Logger LOG =
-      LogFormatter.getLogger("org.apache.hadoop.dfs.ClusterTestDFS");
+  private static final Log LOG =
+      LogFactory.getLog("org.apache.hadoop.dfs.ClusterTestDFS");
 
   private static Configuration conf = new Configuration();
   private static int BUFFER_SIZE =

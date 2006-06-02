@@ -18,14 +18,15 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 import junit.framework.TestCase;
-import java.util.logging.*;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestArrayFile extends TestCase {
-  private static Logger LOG = SequenceFile.LOG;
+  private static Log LOG = SequenceFile.LOG;
   private static String FILE =
     System.getProperty("test.build.data",".") + "/test.array";
 
@@ -51,7 +52,7 @@ public class TestArrayFile extends TestCase {
   }
 
   private static RandomDatum[] generate(int count) {
-    LOG.fine("generating " + count + " records in memory");
+    LOG.debug("generating " + count + " records in debug");
     RandomDatum[] data = new RandomDatum[count];
     RandomDatum.Generator generator = new RandomDatum.Generator();
     for (int i = 0; i < count; i++) {
@@ -64,7 +65,7 @@ public class TestArrayFile extends TestCase {
   private static void writeTest(FileSystem fs, RandomDatum[] data, String file)
     throws IOException {
     MapFile.delete(fs, file);
-    LOG.fine("creating with " + data.length + " records");
+    LOG.debug("creating with " + data.length + " debug");
     ArrayFile.Writer writer = new ArrayFile.Writer(fs, file, RandomDatum.class);
     writer.setIndexInterval(100);
     for (int i = 0; i < data.length; i++)
@@ -75,7 +76,7 @@ public class TestArrayFile extends TestCase {
   private static void readTest(FileSystem fs, RandomDatum[] data, String file, Configuration conf)
     throws IOException {
     RandomDatum v = new RandomDatum();
-    LOG.fine("reading " + data.length + " records");
+    LOG.debug("reading " + data.length + " debug");
     ArrayFile.Reader reader = new ArrayFile.Reader(fs, file, conf);
     for (int i = 0; i < data.length; i++) {       // try forwards
       reader.get(i, v);
@@ -90,7 +91,7 @@ public class TestArrayFile extends TestCase {
       }
     }
     reader.close();
-    LOG.fine("done reading " + data.length + " records");
+    LOG.debug("done reading " + data.length + " debug");
   }
 
 
@@ -130,8 +131,6 @@ public class TestArrayFile extends TestCase {
         LOG.info("create = " + create);
         LOG.info("check = " + check);
         LOG.info("file = " + file);
-
-        LOG.setLevel(Level.FINE);
 
         RandomDatum[] data = generate(count);
 

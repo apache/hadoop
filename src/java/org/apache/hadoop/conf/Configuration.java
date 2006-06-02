@@ -19,7 +19,6 @@ package org.apache.hadoop.conf;
 import java.util.*;
 import java.net.URL;
 import java.io.*;
-import java.util.logging.*;
 
 import javax.xml.parsers.*;
 
@@ -28,6 +27,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,8 +51,8 @@ import org.apache.hadoop.fs.Path;
  * may specify additional resources.
  */
 public class Configuration {
-  private static final Logger LOG =
-    LogFormatter.getLogger("org.apache.hadoop.conf.Configuration");
+  private static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.conf.Configuration");
 
   private ArrayList defaultResources = new ArrayList();
   private ArrayList finalResources = new ArrayList();
@@ -62,8 +63,8 @@ public class Configuration {
 
   /** A new configuration. */
   public Configuration() {
-    if (LOG.isLoggable(Level.FINE)) {
-      LOG.fine(StringUtils.stringifyException(new IOException("config()")));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(StringUtils.stringifyException(new IOException("config()")));
     }
     defaultResources.add("hadoop-default.xml");
     finalResources.add("hadoop-site.xml");
@@ -71,9 +72,9 @@ public class Configuration {
 
   /** A new configuration with the same settings cloned from another. */
   public Configuration(Configuration other) {
-    if (LOG.isLoggable(Level.FINE)) {
-      LOG.fine(StringUtils.stringifyException
-                 (new IOException("config(config)")));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(StringUtils.stringifyException
+                (new IOException("config(config)")));
     }
     this.defaultResources = (ArrayList)other.defaultResources.clone();
     this.finalResources = (ArrayList)other.finalResources.clone();
@@ -290,11 +291,11 @@ public class Configuration {
         return file;
       }
     }
-    LOG.warning("Could not make " + path + 
+    LOG.warn("Could not make " + path + 
                 " in local directories from " + dirsProp);
     for(int i=0; i < dirs.length; i++) {
       int index = (hashCode+i & Integer.MAX_VALUE) % dirs.length;
-      LOG.warning(dirsProp + "[" + index + "]=" + dirs[index]);
+      LOG.warn(dirsProp + "[" + index + "]=" + dirs[index]);
     }
     throw new IOException("No valid local directories in property: "+dirsProp);
   }
@@ -418,7 +419,7 @@ public class Configuration {
 
       Element root = doc.getDocumentElement();
       if (!"configuration".equals(root.getTagName()))
-        LOG.severe("bad conf file: top-level element not <configuration>");
+        LOG.fatal("bad conf file: top-level element not <configuration>");
       NodeList props = root.getChildNodes();
       for (int i = 0; i < props.getLength(); i++) {
         Node propNode = props.item(i);
@@ -426,7 +427,7 @@ public class Configuration {
           continue;
         Element prop = (Element)propNode;
         if (!"property".equals(prop.getTagName()))
-          LOG.warning("bad conf file: element not <property>");
+          LOG.warn("bad conf file: element not <property>");
         NodeList fields = prop.getChildNodes();
         String attr = null;
         String value = null;
@@ -445,7 +446,7 @@ public class Configuration {
       }
         
     } catch (Exception e) {
-      LOG.severe("error parsing conf file: " + e);
+      LOG.fatal("error parsing conf file: " + e);
       throw new RuntimeException(e);
     }
     

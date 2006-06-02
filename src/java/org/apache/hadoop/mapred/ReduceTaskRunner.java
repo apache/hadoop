@@ -206,9 +206,9 @@ class ReduceTaskRunner extends TaskRunner {
             size = copyOutput(loc, pingTimer);
             pingTimer.reset();
           } catch (IOException e) {
-            LOG.warning(reduceTask.getTaskId() + " copy failed: " +
+            LOG.warn(reduceTask.getTaskId() + " copy failed: " +
                         loc.getMapTaskId() + " from " + loc.getHost());
-            LOG.warning(StringUtils.stringifyException(e));
+            LOG.warn(StringUtils.stringifyException(e));
           }
           finish(size);
         }
@@ -242,7 +242,7 @@ class ReduceTaskRunner extends TaskRunner {
         return bytes;
       }
       catch (IOException e) {
-        LOG.warning(reduceTask.getTaskId() + " failed to copy " + loc.getMapTaskId() +
+        LOG.warn(reduceTask.getTaskId() + " failed to copy " + loc.getMapTaskId() +
                     " output from " + loc.getHost() + ".");
         throw e;
       }
@@ -269,8 +269,8 @@ class ReduceTaskRunner extends TaskRunner {
                 long lastProgress = copiers[i].getLastProgressTime();
                 if (lastProgress != 0 && 
                     currentTime - lastProgress > STALLED_COPY_TIMEOUT)  {
-                  LOG.warning("Map output copy stalled on " + 
-                              copiers[i].getLocation());
+                  LOG.warn("Map output copy stalled on " +
+                           copiers[i].getLocation());
                   // mark the current file as failed
                   copiers[i].fail();
                   // tell the thread to stop
@@ -372,7 +372,7 @@ class ReduceTaskRunner extends TaskRunner {
                    " map outputs from jobtracker");
         }
         catch (IOException ie) {
-          LOG.warning(reduceTask.getTaskId() +
+          LOG.warn(reduceTask.getTaskId() +
                       " Problem locating map outputs: " +
                       StringUtils.stringifyException(ie));
         }
@@ -449,9 +449,9 @@ class ReduceTaskRunner extends TaskRunner {
             long nextContact = currentTime + 60 * 1000 +
                                backoff.nextInt(maxBackoff*1000);
             penaltyBox.put(cr.getHost(), new Long(nextContact));          
-            LOG.warning(reduceTask.getTaskId() + " adding host " +
-                        cr.getHost() + " to penalty box, next contact in " +
-                        ((nextContact-currentTime)/1000) + " seconds");
+            LOG.warn(reduceTask.getTaskId() + " adding host " +
+                     cr.getHost() + " to penalty box, next contact in " +
+                     ((nextContact-currentTime)/1000) + " seconds");
           }
           uniqueHosts.remove(cr.getHost());
           numInFlight--;
