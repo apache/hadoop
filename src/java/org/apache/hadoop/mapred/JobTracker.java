@@ -835,6 +835,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         return fs.getName();
     }
 
+
+    public void reportTaskTrackerError(String taskTracker,
+            String errorClass,
+            String errorMessage) throws IOException {
+        LOG.warn("Report from " + taskTracker + ": " + errorMessage);        
+    }
+
     ////////////////////////////////////////////////////
     // JobSubmissionProtocol
     ////////////////////////////////////////////////////

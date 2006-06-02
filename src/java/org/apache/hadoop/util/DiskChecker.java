@@ -11,7 +11,7 @@ import java.io.IOException;
 public class DiskChecker {
 
     public static class DiskErrorException extends IOException {
-      DiskErrorException(String msg) {
+      public DiskErrorException(String msg) {
         super(msg);
       }
     }

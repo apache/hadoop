@@ -63,6 +63,18 @@ interface InterTrackerProtocol {
    * files referred to by the JobTracker
    */
   public String getFilesystemName() throws IOException;
+  
+  /**
+   * Report a problem to the job tracker.
+   * @param taskTracker the name of the task tracker
+   * @param errorClass the kind of error (eg. the class that was thrown)
+   * @param errorMessage the human readable error message
+   * @throws IOException if there was a problem in communication or on the
+   *                     remote side
+   */
+  public void reportTaskTrackerError(String taskTracker,
+                                     String errorClass,
+                                     String errorMessage) throws IOException;
 }
 
 

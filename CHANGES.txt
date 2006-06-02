@@ -95,6 +95,10 @@ Trunk (unreleased)
 25. HADOOP-211.  Switch to use the Jakarta Commons logging internally,
     configured to use log4j by default.  (Arun C Murthy and cutting)
 
+26. HADOOP-265.  Tasktracker now fails to start if it does not have a
+    writable local directory for temporary files.  In this case, it
+    logs a message to the JobTracker and exits. (Hairong Kuang via cutting)  
+
 
 Release 0.2.1 - 2006-05-12
 
