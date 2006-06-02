@@ -146,7 +146,6 @@ public class DataNode implements FSConstants, Runnable {
       // initialize data node internal structure
       this.data = new FSDataset(datadir, conf);
       this.dataXceiveServer = new Daemon(new DataXceiveServer(ss));
-      this.dataXceiveServer.start();
 
       long blockReportIntervalBasis =
         conf.getLong("dfs.blockreport.intervalMsec", BLOCKREPORT_INTERVAL);
@@ -189,10 +188,6 @@ public class DataNode implements FSConstants, Runnable {
         this.shouldRun = false;
         ((DataXceiveServer) this.dataXceiveServer.getRunnable()).kill();
         try {
-            this.dataXceiveServer.join();
-        } catch (InterruptedException ie) {
-        }
-        try {
           this.storage.close();
         } catch (IOException ie) {
         }
@@ -213,6 +208,9 @@ public class DataNode implements FSConstants, Runnable {
      * forever calling remote NameNode functions.
      */
     public void offerService() throws Exception {
+      // start dataXceiveServer  
+      dataXceiveServer.start();
+      
       long lastHeartbeat = 0, lastBlockReport = 0;
       LOG.info("using BLOCKREPORT_INTERVAL of " + blockReportInterval + "msec");
 
@@ -328,6 +326,12 @@ public class DataNode implements FSConstants, Runnable {
         } // while (shouldRun)
       } catch(DiskErrorException e) {
         handleDiskError(e.getMessage());
+      }
+      
+      // wait for dataXceiveServer to terminate
+      try {
+          this.dataXceiveServer.join();
+      } catch (InterruptedException ie) {
       }
     } // offerService
 

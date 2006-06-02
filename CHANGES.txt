@@ -97,8 +97,10 @@ Trunk (unreleased)
 
 26. HADOOP-265.  Tasktracker now fails to start if it does not have a
     writable local directory for temporary files.  In this case, it
-    logs a message to the JobTracker and exits. (Hairong Kuang via cutting)  
+    logs a message to the JobTracker and exits. (Hairong Kuang via cutting)
 
+27. HADOOP-270.  Fix potential deadlock in datanode shutdown.
+    (Hairong Kuang via cutting)
 
 Release 0.2.1 - 2006-05-12
 
