@@ -3,7 +3,8 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
- 1.
+ 1. HADOOP-272.  Fix a bug in bin/hadoop setting log
+    parameters. (omalley & cutting)
 
 
 Release 0.3.0 - 2006-06-02

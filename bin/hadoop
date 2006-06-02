@@ -121,10 +121,10 @@ done
 unset IFS
 
 # default log directory & file
-if [ "HADOOP_LOG_DIR" = "" ]; then
+if [ "$HADOOP_LOG_DIR" = "" ]; then
   HADOOP_LOG_DIR="$HADOOP_HOME/logs"
 fi
-if [ "HADOOP_LOGFILE" = "" ]; then
+if [ "$HADOOP_LOGFILE" = "" ]; then
   HADOOP_LOGFILE='hadoop.log'
 fi
 
