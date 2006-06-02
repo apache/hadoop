@@ -1,6 +1,11 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1.
+
+
 Release 0.3.0 - 2006-06-02
 
  1. HADOOP-208.  Enhance MapReduce web interface, adding new pages
