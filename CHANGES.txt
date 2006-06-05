@@ -9,6 +9,10 @@ Trunk (unreleased changes)
  2. HADOOP-274.  Change applications to log to standard output rather
     than to a rolling log file like daemons.  (omalley via cutting)
 
+ 3. HADOOP-262.  Fix reduce tasks to report progress while they're
+    waiting for map outputs, so that they do not time out.
+    (Mahadev Konar via cutting)
+
 
 Release 0.3.0 - 2006-06-02
 

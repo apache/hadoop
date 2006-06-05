@@ -419,6 +419,7 @@ class ReduceTaskRunner extends TaskRunner {
       // new, just wait for a bit
       try {
         if (numInFlight == 0 && numScheduled == 0) {
+          getTask().reportProgress(getTracker());
           Thread.sleep(5000);
         }
       } catch (InterruptedException e) { } // IGNORE
