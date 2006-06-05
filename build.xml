@@ -181,6 +181,8 @@
          basedir="${build.classes}">
       <fileset file="${conf.dir}/hadoop-default.xml"/>
       <fileset file="${conf.dir}/mapred-default.xml"/>
+      <fileset file="${conf.dir}/commons-logging.properties"/>
+      <fileset file="${conf.dir}/log4j.properties"/>
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
     </jar>
   </target>

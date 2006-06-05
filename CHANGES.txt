@@ -16,6 +16,9 @@ Trunk (unreleased changes)
  4. HADOOP-245 and HADOOP-246.  Improvements to record io package.  
     (Mahadev Konar via cutting)
 
+ 4. HADOOP-276.  Add logging config files to jar file so that they're
+    always found.  (omalley via cutting)
+
 
 Release 0.3.0 - 2006-06-02
 
