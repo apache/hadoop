@@ -29,7 +29,7 @@ import junit.framework.*;
 
 /**
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 public class FromCpp extends TestCase {
     

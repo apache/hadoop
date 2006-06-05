@@ -30,7 +30,7 @@ import org.xml.sax.SAXException;
  * Front-end interface to deserializers. Also acts as a factory
  * for deserializers.
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 public class RecordReader {
     

@@ -17,10 +17,11 @@
 package org.apache.hadoop.record.compiler;
 
 /**
- *
- * @author milindb
+ * Abstract Base class for all types supported by Hadoop Record I/O.
+ * 
+ * @author Milind Bhandarkar
  */
-public abstract class JType {
+abstract public class JType {
     
     private String mCppName;
     private String mJavaName;
@@ -31,7 +32,7 @@ public abstract class JType {
     /**
      * Creates a new instance of JType
      */
-    public JType(String cppname, String javaname, String suffix, String wrapper, String unwrap) {
+    JType(String cppname, String javaname, String suffix, String wrapper, String unwrap) {
         mCppName = cppname;
         mJavaName = javaname;
         mMethodSuffix = suffix;
@@ -39,21 +40,21 @@ public abstract class JType {
         mUnwrapMethod = unwrap;
     }
     
-    abstract public String getSignature();
+    abstract String getSignature();
     
-    public String genCppDecl(String fname) {
+    String genCppDecl(String fname) {
         return "  "+mCppName+" m"+fname+";\n"; 
     }
     
-    public String genJavaDecl (String fname) {
+    String genJavaDecl (String fname) {
         return "  private "+mJavaName+" m"+fname+";\n";
     }
     
-    public String genJavaConstructorParam (int fIdx) {
+    String genJavaConstructorParam (int fIdx) {
         return "        "+mJavaName+" m"+fIdx;
     }
     
-    public String genCppGetSet(String fname, int fIdx) {
+    String genCppGetSet(String fname, int fIdx) {
         String getFunc = "  virtual "+mCppName+" get"+fname+"() const {\n";
         getFunc += "    return m"+fname+";\n";
         getFunc += "  }\n";
@@ -63,7 +64,7 @@ public abstract class JType {
         return getFunc+setFunc;
     }
     
-    public String genJavaGetSet(String fname, int fIdx) {
+    String genJavaGetSet(String fname, int fIdx) {
         String getFunc = "  public "+mJavaName+" get"+fname+"() {\n";
         getFunc += "    return m"+fname+";\n";
         getFunc += "  }\n";
@@ -73,31 +74,31 @@ public abstract class JType {
         return getFunc+setFunc;
     }
     
-    public String getCppType() {
+    String getCppType() {
         return mCppName;
     }
     
-    public String getJavaType() {
+    String getJavaType() {
         return mJavaName;
     }
    
-    public String getJavaWrapperType() {
+    String getJavaWrapperType() {
         return mWrapper;
     }
     
-    public String getMethodSuffix() {
+    String getMethodSuffix() {
         return mMethodSuffix;
     }
     
-    public String genJavaWriteMethod(String fname, String tag) {
+    String genJavaWriteMethod(String fname, String tag) {
         return "    a_.write"+mMethodSuffix+"("+fname+",\""+tag+"\");\n";
     }
     
-    public String genJavaReadMethod(String fname, String tag) {
+    String genJavaReadMethod(String fname, String tag) {
         return "    "+fname+"=a_.read"+mMethodSuffix+"(\""+tag+"\");\n";
     }
     
-    public String genJavaReadWrapper(String fname, String tag, boolean decl) {
+    String genJavaReadWrapper(String fname, String tag, boolean decl) {
         String ret = "";
         if (decl) {
             ret = "    "+mWrapper+" "+fname+";\n";
@@ -105,19 +106,19 @@ public abstract class JType {
         return ret + "    "+fname+"=new "+mWrapper+"(a_.read"+mMethodSuffix+"(\""+tag+"\"));\n";
     }
     
-    public String genJavaWriteWrapper(String fname, String tag) {
+    String genJavaWriteWrapper(String fname, String tag) {
         return "        a_.write"+mMethodSuffix+"("+fname+"."+mUnwrapMethod+"(),\""+tag+"\");\n";
     }
     
-    public String genJavaCompareTo(String fname) {
+    String genJavaCompareTo(String fname) {
         return "    ret = ("+fname+" == peer."+fname+")? 0 :(("+fname+"<peer."+fname+")?-1:1);\n";
     }
     
-    public String genJavaEquals(String fname, String peer) {
+    String genJavaEquals(String fname, String peer) {
         return "    ret = ("+fname+"=="+peer+");\n";
     }
     
-    public String genJavaHashCode(String fname) {
+    String genJavaHashCode(String fname) {
         return "    ret = (int)"+fname+";\n";
     }
 

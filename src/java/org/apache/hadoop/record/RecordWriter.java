@@ -30,7 +30,7 @@ import org.xml.sax.SAXException;
 /**
  * Front-end for serializers. Also serves as a factory for serializers.
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 public class RecordWriter {
     

@@ -24,7 +24,7 @@ import java.io.UnsupportedEncodingException;
 
 /**
  * Various utility functions for Hadooop record I/O runtime.
- * @author milindb@yahoo-inc.com
+ * @author Milind Bhandarkar
  */
 public class Utils {
     

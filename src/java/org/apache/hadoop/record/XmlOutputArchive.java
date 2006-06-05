@@ -26,7 +26,7 @@ import java.util.Stack;
 
 /**
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 class XmlOutputArchive implements OutputArchive {
 

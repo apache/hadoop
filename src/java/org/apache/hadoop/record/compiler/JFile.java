@@ -20,8 +20,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
+ * Container for the Hadoop Record DDL.
+ * The main components of the file are filename, list of included files,
+ * and records defined in that file.
  *
- * @author milindb@yahoo-inc.com
+ * @author Milind Bhandarkar
  */
 public class JFile {
     
@@ -29,18 +32,27 @@ public class JFile {
     private ArrayList mInclFiles;
     private ArrayList mRecords;
     
-    /** Creates a new instance of JFile */
+    /** Creates a new instance of JFile
+     *
+     * @param name possibly full pathname to the file
+     * @param inclFiles included files (as JFile)
+     * @param recList List of records defined within this file
+     */
     public JFile(String name, ArrayList inclFiles, ArrayList recList) {
         mName = name;
         mInclFiles = inclFiles;
         mRecords = recList;
     }
-        
+    
+    /** Strip the other pathname components and return the basename */
     String getName() {
         int idx = mName.lastIndexOf('/');
         return (idx > 0) ? mName.substring(idx) : mName; 
     }
     
+    /** Generate record code in given language. Language should be all
+     *  lowercase.
+     */
     public void genCode(String language) throws IOException {
         if ("c++".equals(language)) {
             CppGenerator gen = new CppGenerator(mName, mInclFiles, mRecords);
