@@ -17,17 +17,19 @@
 package org.apache.hadoop.record.compiler;
 
 /**
+ * Abstract base class for all the "compound" types such as ustring,
+ * buffer, vector, map, and record.
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 abstract class JCompType extends JType {
     
     /** Creates a new instance of JCompType */
-    public JCompType(String cppType, String javaType, String suffix, String wrapper) {
+    JCompType(String cppType, String javaType, String suffix, String wrapper) {
         super(cppType, javaType, suffix, wrapper, null);
     }
     
-    public String genCppGetSet(String fname, int fIdx) {
+    String genCppGetSet(String fname, int fIdx) {
         String cgetFunc = "  virtual const "+getCppType()+"& get"+fname+"() const {\n";
         cgetFunc += "    return m"+fname+";\n";
         cgetFunc += "  }\n";
@@ -37,15 +39,15 @@ abstract class JCompType extends JType {
         return cgetFunc + getFunc;
     }
     
-    public String genJavaCompareTo(String fname) {
+    String genJavaCompareTo(String fname) {
         return "    ret = "+fname+".compareTo(peer."+fname+");\n";
     }
     
-    public String genJavaEquals(String fname, String peer) {
+    String genJavaEquals(String fname, String peer) {
         return "    ret = "+fname+".equals("+peer+");\n";
     }
     
-    public String genJavaHashCode(String fname) {
+    String genJavaHashCode(String fname) {
         return "    ret = "+fname+".hashCode();\n";
     }
 }

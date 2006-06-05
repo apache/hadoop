@@ -25,7 +25,7 @@ import java.io.InputStream;
 
 /**
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 public class BinaryInputArchive implements InputArchive {
     

@@ -29,7 +29,7 @@ import java.util.TreeMap;
 
 /**
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 public class TestRecordIO extends TestCase {
     

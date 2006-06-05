@@ -18,7 +18,7 @@ package org.apache.hadoop.record.compiler;
 
 /**
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 public class JBoolean extends JType {
     

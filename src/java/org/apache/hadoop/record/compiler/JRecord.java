@@ -24,7 +24,7 @@ import java.util.Iterator;
 
 /**
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 public class JRecord extends JCompType {
 
@@ -132,7 +132,7 @@ public class JRecord extends JCompType {
             hh.write(jf.genCppGetSet(fIdx));
         }
         hh.write("}; // end record "+getName()+"\n");
-        for (int i=0; i<ns.length; i++) {
+        for (int i=ns.length-1; i>=0; i--) {
             hh.write("} // end namespace "+ns[i]+"\n");
         }
         cc.write("void "+getCppFQName()+"::serialize(::hadoop::OArchive& a_, const char* tag) {\n");

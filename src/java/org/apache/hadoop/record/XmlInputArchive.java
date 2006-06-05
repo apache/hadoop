@@ -29,7 +29,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 /**
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 class XmlInputArchive implements InputArchive {
     

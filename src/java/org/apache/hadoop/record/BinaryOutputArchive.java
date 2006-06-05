@@ -26,7 +26,7 @@ import java.io.OutputStream;
 
 /**
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 public class BinaryOutputArchive implements OutputArchive {
     

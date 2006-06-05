@@ -24,7 +24,7 @@ import java.util.ArrayList;
 /**
  * Interface that all the Deserializers have to implement.
  *
- * @author milindb
+ * @author Milind Bhandarkar
  */
 public interface InputArchive {
     public byte readByte(String tag) throws IOException;
