@@ -23,6 +23,8 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathFilter;
@@ -30,11 +32,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.UTF8;
 
 import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.util.LogFormatter;
-
 
 /** An input format that performs globbing on DFS paths and 
  * selects a RecordReader based on a JobConf property.
@@ -46,7 +45,8 @@ public class StreamInputFormat extends InputFormatBase
   // an InputFormat should be public with the synthetic public default constructor
   // JobTracker's JobInProgress will instantiate with clazz.newInstance() (and a custom ClassLoader)
   
-  protected static final Logger LOG = LogFormatter.getLogger(StreamInputFormat.class.getName());
+  protected static final Log LOG = LogFactory.getLog(StreamInputFormat.class.getName());
+  
   static {
     //LOG.setLevel(Level.FINE);
   }
@@ -59,7 +59,7 @@ public class StreamInputFormat extends InputFormatBase
     int dsup = globs.length;
     for(int d=0; d<dsup; d++) {
       String leafName = globs[d].getName();
-      LOG.fine("StreamInputFormat: globs[" + d + "] leafName = " + leafName);
+      LOG.info("StreamInputFormat: globs[" + d + "] leafName = " + leafName);
       Path[] paths; Path dir;
 	  PathFilter filter = new GlobFilter(fs, leafName);
 	  dir = new Path(globs[d].getParent().toString());
@@ -79,7 +79,13 @@ public class StreamInputFormat extends InputFormatBase
     }
     String globToRegexp(String glob)
 	{
-	  return glob.replaceAll("\\*", ".*");
+      String re = glob;
+      re = re.replaceAll("\\.", "\\\\.");
+      re = re.replaceAll("\\+", "\\\\+");
+	  re = re.replaceAll("\\*", ".*");
+      re = re.replaceAll("\\?", ".");
+      LOG.info("globToRegexp: |" + glob + "|  ->  |" + re + "|");
+      return re;
 	}
 
     public boolean accept(Path pathname)
@@ -88,7 +94,7 @@ public class StreamInputFormat extends InputFormatBase
       if(acc) {
       	acc = pat_.matcher(pathname.getName()).matches();
       }
-      LOG.finer("matches " + pat_ + ", " + pathname + " = " + acc);
+      LOG.info("matches " + pat_ + ", " + pathname + " = " + acc);
       return acc;
     }
 	
@@ -99,7 +105,7 @@ public class StreamInputFormat extends InputFormatBase
   public RecordReader getRecordReader(FileSystem fs, final FileSplit split,
                                       JobConf job, Reporter reporter)
     throws IOException {
-    LOG.finer("getRecordReader start.....");
+    LOG.info("getRecordReader start.....");
     reporter.setStatus(split.toString());
 
     final long start = split.getStart();
@@ -143,5 +149,5 @@ public class StreamInputFormat extends InputFormatBase
     
     return reader;
   }
-  
+
 }
