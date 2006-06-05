@@ -15,6 +15,15 @@
       <title>News</title>
 
       <section>
+      <title>5 June, 2006: release 0.3.1 available</title>
+      <p>This is a bugfix release.  For details see the <a
+      href="http://tinyurl.com/l6on4">change log</a>. The release can
+      be obtained from <a
+      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
+      nearby mirror</a>.
+      </p> </section>
+
+      <section>
       <title>2 June, 2006: release 0.3.0 available</title>
       <p>This includes many fixes, improving performance, scalability
       and reliability and adding new features.  For details see the <a
