@@ -10,6 +10,10 @@ Trunk (unreleased changes)
     that things still work reasonably when Hadoop-specific system
     properties are not provided.  (omalley via cutting)
 
+ 3. HADOOP-280.  Fix a typo in AllTestDriver which caused the wrong
+    test to be run when "DistributedFSCheck" was specified.
+   (Konstantin Shvachko via cutting)
+
 
 Release 0.3.1 - 2006-06-05
 
