@@ -24,7 +24,6 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 import java.io.*;
 import java.net.*;
-import java.nio.channels.FileLock;
 import java.util.*;
 
 /**********************************************************
@@ -106,7 +105,17 @@ public class DataNode implements FSConstants, Runnable {
              new File(datadir),
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
         // register datanode
-        register();
+        while (shouldRun) {
+          try {
+            register();
+            break;
+          } catch (ConnectException ce) {
+            LOG.info("Namenode not available yet, Zzzzz...");
+            try {
+              Thread.sleep(10 * 1000);
+            } catch (InterruptedException ie) {}
+          }
+        }
     }
 
     /**
