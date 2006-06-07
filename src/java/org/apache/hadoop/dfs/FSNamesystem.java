@@ -1266,7 +1266,7 @@ class FSNamesystem implements FSConstants {
 
             if (! dir.isValidBlock(b) && ! pendingCreateBlocks.contains(b)) {
                 obsolete.add(b);
-                NameNode.stateChangeLog.info("BLOCK* NameSystem.processReport: "
+                NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
                         +"ask "+nodeID.getName()+" to delete "+b.getBlockName() );
             }
         }
@@ -1509,7 +1509,7 @@ class FSNamesystem implements FSConstants {
                 blockList.append(' ');
                 blockList.append(((Block)invalidateSet.elementAt(i)).getBlockName());
             }
-            NameNode.stateChangeLog.info("BLOCK* NameSystem.blockToInvalidate: "
+            NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockToInvalidate: "
                    +"ask "+nodeID.getName()+" to delete " + blockList );
         }
         return (Block[]) invalidateSet.toArray(new Block[invalidateSet.size()]);

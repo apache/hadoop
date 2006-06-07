@@ -73,7 +73,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
   private static final int BLOCK_LOG_HEADER_LEN = 32;
   /** DFS block size
    */
-  private static final int BLOCK_SIZE = 32*1000*1000;
+  private static final int BLOCK_SIZE = 32*1024*1024;
   
   /** Buffer size
    */
@@ -158,7 +158,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     
       // create a file with 2 data blocks
       try {
-        createFile("/data/yy",BLOCK_SIZE+1);
+        createFile("/data/yy", BLOCK_SIZE+1);
         assertCreate( "/data/yy", BLOCK_SIZE+1, false );
       } catch( IOException ioe ) {
     	assertCreate( "/data/yy", BLOCK_SIZE+1, true );
@@ -326,9 +326,9 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
   //
   private void configureDFS() throws IOException {
 	// set given config param to override other config settings
-	conf.setInt("test.dfs.block_size", BLOCK_SIZE);
+	conf.setInt("dfs.block.size", BLOCK_SIZE);
 	// verify that config changed
-	assertTrue(BLOCK_SIZE == conf.getInt("test.dfs.block_size", 2)); // 2 is an intentional obviously-wrong block size
+	assertTrue(BLOCK_SIZE == conf.getInt("dfs.block.size", 2)); // 2 is an intentional obviously-wrong block size
 	// downsize for testing (just to save resources)
 	conf.setInt("dfs.namenode.handler.count", 3);
 	conf.setLong("dfs.blockreport.intervalMsec", 50*1000L);
