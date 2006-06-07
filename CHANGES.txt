@@ -17,6 +17,9 @@ Trunk (unreleased changes)
  4. HADOOP-240.  DFS's mkdirs() implementation no longer logs a warning
     when the directory already exists. (Hairong Kuang via cutting)
 
+ 5. HADOOP-285.  Fix DFS datanodes to be able to re-join the cluster
+    after the connection to the namenode is lost.  (omalley via cutting)
+
 
 Release 0.3.1 - 2006-06-05
 

@@ -208,9 +208,7 @@ public class DataNode implements FSConstants, Runnable {
      * forever calling remote NameNode functions.
      */
     public void offerService() throws Exception {
-      // start dataXceiveServer  
-      dataXceiveServer.start();
-      
+     
       long lastHeartbeat = 0, lastBlockReport = 0;
       LOG.info("using BLOCKREPORT_INTERVAL of " + blockReportInterval + "msec");
 
@@ -328,11 +326,6 @@ public class DataNode implements FSConstants, Runnable {
         handleDiskError(e.getMessage());
       }
       
-      // wait for dataXceiveServer to terminate
-      try {
-          this.dataXceiveServer.join();
-      } catch (InterruptedException ie) {
-      }
     } // offerService
 
     /**
@@ -818,6 +811,10 @@ public class DataNode implements FSConstants, Runnable {
      */
     public void run() {
         LOG.info("Starting DataNode in: "+data.data);
+        
+        // start dataXceiveServer
+        dataXceiveServer.start();
+        
         while (shouldRun) {
             try {
                 offerService();
@@ -832,7 +829,14 @@ public class DataNode implements FSConstants, Runnable {
               }
             }
         }
-      LOG.info("Finishing DataNode in: "+data.data);
+        
+        // wait for dataXceiveServer to terminate
+        try {
+            this.dataXceiveServer.join();
+        } catch (InterruptedException ie) {
+        }
+        
+        LOG.info("Finishing DataNode in: "+data.data);
     }
 
     /** Start datanode daemons.
