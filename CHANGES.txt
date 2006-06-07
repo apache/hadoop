@@ -20,6 +20,9 @@ Trunk (unreleased changes)
  5. HADOOP-285.  Fix DFS datanodes to be able to re-join the cluster
     after the connection to the namenode is lost.  (omalley via cutting)
 
+ 6. HADOOP-277.  Fix a race condition when creating directories.
+   (Sameer Paranjpye via cutting)
+
 
 Release 0.3.1 - 2006-06-05
 

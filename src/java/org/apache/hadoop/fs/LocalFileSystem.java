@@ -223,11 +223,18 @@ public class LocalFileSystem extends FileSystem {
         }
         return results;
     }
-
+    
+    /**
+     * Creates the specified directory hierarchy. Does not
+     * treat existence as an error.
+     */
     public boolean mkdirs(Path f) throws IOException {
-      return pathToFile(f).mkdirs();
+      Path parent = f.getParent();
+      File p2f = pathToFile(f);
+      return (parent == null || mkdirs(parent)) &&
+             (p2f.mkdir() || p2f.isDirectory());
     }
-
+    
     /**
      * Set the working directory to the given directory.
      */
