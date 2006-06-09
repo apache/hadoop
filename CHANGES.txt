@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Release 0.3.2 - 2006-06-09
 
  1. HADOOP-275.  Update the streaming contrib module to use log4j for
     its logging.  (Michel Tourn via cutting)
