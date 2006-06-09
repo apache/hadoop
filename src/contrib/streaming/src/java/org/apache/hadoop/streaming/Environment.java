@@ -17,8 +17,12 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.util.*;
 
+/*
+ * If we move to Java 1.5, we can get rid of this class and just use System.getenv
+ */
 public class Environment extends Properties
 {
    public Environment()
@@ -26,12 +30,14 @@ public class Environment extends Properties
    {
       // Extend this code to fit all operating
       // environments that you expect to run in
-
       String command = null;
       String OS = System.getProperty("os.name");
+      String lowerOs = OS.toLowerCase();
       if (OS.equals("Windows NT")) {
          command = "cmd /C set";
       } else if (OS.indexOf("ix") > -1 || OS.indexOf("inux") > -1) {
+         command = "env";
+      } else if(lowerOs.startsWith("mac os x")) {
          command = "env";
       } else {
          // Add others here
@@ -83,4 +89,19 @@ public class Environment extends Properties
      }     
      return arr;
    }
+   
+   public String getHost()
+   {
+     String host = getProperty("HOST");
+     if(host == null) {
+       // HOST isn't always in the environment
+       try {
+         host = InetAddress.getLocalHost().getHostName();
+       } catch(IOException io) {
+         io.printStackTrace();
+       }
+     }
+     return host;
+   }
+   
 } 

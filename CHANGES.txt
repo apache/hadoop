@@ -1,6 +1,39 @@
 Hadoop Change Log
 
 
+Release 0.3.2 - 2006-06-09
+
+ 1. HADOOP-275.  Update the streaming contrib module to use log4j for
+    its logging.  (Michel Tourn via cutting)
+
+ 2. HADOOP-279.  Provide defaults for log4j logging parameters, so
+    that things still work reasonably when Hadoop-specific system
+    properties are not provided.  (omalley via cutting)
+
+ 3. HADOOP-280.  Fix a typo in AllTestDriver which caused the wrong
+    test to be run when "DistributedFSCheck" was specified.
+   (Konstantin Shvachko via cutting)
+
+ 4. HADOOP-240.  DFS's mkdirs() implementation no longer logs a warning
+    when the directory already exists. (Hairong Kuang via cutting)
+
+ 5. HADOOP-285.  Fix DFS datanodes to be able to re-join the cluster
+    after the connection to the namenode is lost.  (omalley via cutting)
+
+ 6. HADOOP-277.  Fix a race condition when creating directories.
+   (Sameer Paranjpye via cutting)
+
+ 7. HADOOP-289.  Improved exception handling in DFS datanode.
+    (Konstantin Shvachko via cutting)
+
+ 8. HADOOP-292.  Fix client-side logging to go to standard error
+    rather than standard output, so that it can be distinguished from
+    application output.  (omalley via cutting)
+
+ 9. HADOOP-294.  Fixed bug where conditions for retrying after errors
+    in the DFS client were reversed.  (omalley via cutting)
+
+
 Release 0.3.1 - 2006-06-05
 
  1. HADOOP-272.  Fix a bug in bin/hadoop setting log

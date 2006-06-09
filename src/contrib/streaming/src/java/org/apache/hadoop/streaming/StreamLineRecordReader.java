@@ -69,7 +69,7 @@ public class StreamLineRecordReader extends StreamBaseRecordReader
       return false;
 
     //((LongWritable)key).set(pos);           // key is position
-    //((UTF8)value).set(readLine(in));        // value is line
+    //((UTF8)value).set(readLine(in));   // value is line
     String line = readLine(in_);
 
     // key is line up to TAB, value is rest

@@ -20,14 +20,14 @@ import java.io.*;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.util.LogFormatter;
+import org.apache.commons.logging.*;
+
 
 /** 
  * Shared functionality for hadoopStreaming formats.
@@ -40,7 +40,10 @@ import org.apache.hadoop.util.LogFormatter;
 public abstract class StreamBaseRecordReader implements RecordReader
 {
     
-  protected static final Logger LOG = LogFormatter.getLogger(StreamBaseRecordReader.class.getName());
+  protected static final Log LOG = LogFactory.getLog(StreamBaseRecordReader.class.getName());
+  
+  // custom JobConf properties for this class are prefixed with this namespace
+  final String CONF_NS = "stream.recordreader.";
 
   public StreamBaseRecordReader(
     FSDataInputStream in, long start, long end, 
@@ -49,15 +52,45 @@ public abstract class StreamBaseRecordReader implements RecordReader
   {
     in_ = in;
     start_ = start;
-    splitName_ = splitName;
     end_ = end;
+    length_ = end_ - start_;
+    splitName_ = splitName;
     reporter_ = reporter;
     job_ = job;
+    
+    statusMaxRecordChars_ = job_.getInt(CONF_NS + "statuschars", 200);
   }
 
-  /** Called once before the first call to next */
+  /// RecordReader API
+  
+  /** Read a record. Implementation should call numRecStats at the end
+   */  
+  public abstract boolean next(Writable key, Writable value) throws IOException;
+
+  /** Returns the current position in the input. */
+  public synchronized long getPos() throws IOException 
+  { 
+    return in_.getPos(); 
+  }
+
+  /** Close this to future operations.*/
+  public synchronized void close() throws IOException 
+  { 
+    in_.close(); 
+  }
+  
+  /// StreamBaseRecordReader API
+
   public void init() throws IOException
   {
+    LOG.info("StreamBaseRecordReader.init: " +
+    " start_=" + start_ + " end_=" + end_ + " length_=" + length_ +
+    " start_ > in_.getPos() =" 
+        + (start_ > in_.getPos()) + " " + start_ 
+        + " > " + in_.getPos() );
+    if (start_ > in_.getPos()) {
+      in_.seek(start_);
+    }  
     seekNextRecordBoundary();
   }
   
@@ -66,17 +99,12 @@ public abstract class StreamBaseRecordReader implements RecordReader
    */
   public abstract void seekNextRecordBoundary() throws IOException;
   
-  
-  /** Read a record. Implementation should call numRecStats at the end
-   */  
-  public abstract boolean next(Writable key, Writable value) throws IOException;
-
-  
+    
   void numRecStats(CharSequence record) throws IOException
   {
     numRec_++;          
     if(numRec_ == nextStatusRec_) {
-      nextStatusRec_ +=100000;//*= 10;
+      nextStatusRec_ +=100;//*= 10;
       String status = getStatus(record);
       LOG.info(status);
       reporter_.setStatus(status);
@@ -91,10 +119,9 @@ public abstract class StreamBaseRecordReader implements RecordReader
       pos = getPos();
     } catch(IOException io) {
     }
-    final int M = 2000;
     String recStr;
-    if(record.length() > M) {
-    	recStr = record.subSequence(0, M) + "...";
+    if(record.length() > statusMaxRecordChars_) {
+        recStr = record.subSequence(0, statusMaxRecordChars_) + "...";
     } else {
     	recStr = record.toString();
     }
@@ -103,25 +130,15 @@ public abstract class StreamBaseRecordReader implements RecordReader
     return status;
   }
 
-  /** Returns the current position in the input. */
-  public synchronized long getPos() throws IOException 
-  { 
-    return in_.getPos(); 
-  }
-
-  /** Close this to future operations.*/
-  public synchronized void close() throws IOException 
-  { 
-    in_.close(); 
-  }
-
   FSDataInputStream in_;
   long start_;
   long end_;
+  long length_;
   String splitName_;
   Reporter reporter_;
   JobConf job_;
   int numRec_ = 0;
   int nextStatusRec_ = 1;
+  int statusMaxRecordChars_;
   
 }

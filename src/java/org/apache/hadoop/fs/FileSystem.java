@@ -459,7 +459,8 @@ public abstract class FileSystem extends Configured {
 
     /**
      * Make the given file and all non-existent parents into
-     * directories.
+     * directories. Has the semantics of Unix 'mkdir -p'.
+     * Existence of the directory hierarchy is not an error.
      */
     public abstract boolean mkdirs(Path f) throws IOException;
 

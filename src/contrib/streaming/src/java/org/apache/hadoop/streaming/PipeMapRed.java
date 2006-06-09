@@ -22,8 +22,11 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Properties;
 import java.util.regex.*;
+
+import org.apache.commons.logging.*;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
@@ -43,6 +46,8 @@ import org.apache.hadoop.io.LongWritable;
  */
 public abstract class PipeMapRed {
 
+  protected static final Log LOG = LogFactory.getLog(PipeMapRed.class.getName());  
+  
   /** The command to be spawned as a subprocess.
    * Mapper/Reducer operations will delegate to it
    */
@@ -53,9 +58,9 @@ public abstract class PipeMapRed {
   
 
   /**
-   * @returns ow many TABS before the end of the key part 
+   * @returns how many TABS before the end of the key part 
    * usually: 1 or "ALL"
-   * used both for tool output of both Map and Reduce
+   * used for tool output of both Map and Reduce
    * configured via tool's argv: splitKeyVal=ALL or 1..
    * although it is interpreted here, not by tool
    */
@@ -91,20 +96,57 @@ public abstract class PipeMapRed {
     return cols;
   }
   
-  String[] splitArgs(String args)
+  final static int OUTSIDE = 1;
+  final static int SINGLEQ = 2;
+  final static int DOUBLEQ = 3;
+  
+  static String[] splitArgs(String args)
   {
-    String regex = "\\s(?=(?:[^\"]*\"[^\"]*\")*[^\"]*\\z)";
-    String[] split = args.split(regex);
-    // remove outer quotes
-    for(int i=0; i<split.length; i++) {
-        String si = split[i].trim();
-        if(si.charAt(0)=='"' && si.charAt(si.length()-1)=='"') {
-            si = si.substring(1, si.length()-1);
-            split[i] = si;
+    ArrayList argList = new ArrayList();
+    char[] ch = args.toCharArray();
+    int clen = ch.length;
+    int state = OUTSIDE;
+    int argstart = 0;
+    for(int c=0; c<=clen; c++) {
+        boolean last = (c==clen);
+        int lastState = state;
+        boolean endToken = false;
+        if(!last) {
+          if(ch[c]=='\'') {
+            if(state == OUTSIDE) {
+              state = SINGLEQ;
+            } else if(state == SINGLEQ) {
+              state = OUTSIDE;  
+            }
+            endToken = (state != lastState);
+          } else if(ch[c]=='"') {
+            if(state == OUTSIDE) {
+              state = DOUBLEQ;
+            } else if(state == DOUBLEQ) {
+              state = OUTSIDE;  
+            }          
+            endToken = (state != lastState);
+          } else if(ch[c]==' ') {
+            if(state == OUTSIDE) {
+              endToken = true;
+            }            
+          }
+        }
+        if(last || endToken) {
+          if(c == argstart) {
+            // unquoted space
+          } else {
+            String a;
+            a = args.substring(argstart, c); 
+            argList.add(a);
+          }
+          argstart = c+1;
+          lastState = state;
         }
     }
-    return split;
+    return (String[])argList.toArray(new String[0]);
   }
+
   public void configure(JobConf job)
   {
 
@@ -132,7 +174,7 @@ public abstract class PipeMapRed {
 	  // A  relative path should match in the unjarred Job data
       // In this case, force an absolute path to make sure exec finds it.
       argvSplit[0] = new File(argvSplit[0]).getAbsolutePath();
-      log_.println("PipeMapRed exec " + Arrays.toString(argvSplit));
+      log_.println("PipeMapRed exec " + Arrays.asList(argvSplit));
             
       
       Environment childEnv = (Environment)StreamUtil.env().clone();
@@ -440,4 +482,5 @@ public abstract class PipeMapRed {
       }
     }    
   }
+  
 }

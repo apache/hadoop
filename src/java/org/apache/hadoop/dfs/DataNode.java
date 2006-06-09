@@ -24,7 +24,6 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 import java.io.*;
 import java.net.*;
-import java.nio.channels.FileLock;
 import java.util.*;
 
 /**********************************************************
@@ -173,7 +172,20 @@ public class DataNode implements FSConstants, Runnable {
      * @throws IOException
      */
     private void register() throws IOException {
-      dnRegistration = namenode.register( dnRegistration );
+      while (shouldRun) {
+        try {
+          dnRegistration = namenode.register( dnRegistration );
+          break;
+        } catch( ConnectException se ) {  // namenode has not been started
+          LOG.info("Namenode not available yet, Zzzzz...");
+        } catch( SocketTimeoutException te ) {  // namenode is busy
+          LOG.info("Problem connecting to Namenode: " + 
+                   StringUtils.stringifyException(te));
+        }
+        try {
+          Thread.sleep(10 * 1000);
+        } catch (InterruptedException ie) {}
+      }
       if( storage.getStorageID().equals("") ) {
         storage.setStorageID( dnRegistration.getStorageID());
         storage.write();
@@ -194,7 +206,7 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     void handleDiskError( String errMsgr ) {
-        LOG.warn( "Shuting down DataNode because "+errMsgr );
+        LOG.warn( "DataNode is shutting down.\n" + errMsgr );
         try {
             namenode.errorReport(
                     dnRegistration, DatanodeProtocol.DISK_ERROR, errMsgr);
@@ -208,9 +220,7 @@ public class DataNode implements FSConstants, Runnable {
      * forever calling remote NameNode functions.
      */
     public void offerService() throws Exception {
-      // start dataXceiveServer  
-      dataXceiveServer.start();
-      
+     
       long lastHeartbeat = 0, lastBlockReport = 0;
       LOG.info("using BLOCKREPORT_INTERVAL of " + blockReportInterval + "msec");
 
@@ -325,13 +335,16 @@ public class DataNode implements FSConstants, Runnable {
           } // synchronized
         } // while (shouldRun)
       } catch(DiskErrorException e) {
-        handleDiskError(e.getMessage());
-      }
-      
-      // wait for dataXceiveServer to terminate
-      try {
-          this.dataXceiveServer.join();
-      } catch (InterruptedException ie) {
+        handleDiskError(e.getLocalizedMessage());
+      } catch( RemoteException re ) {
+        String reClass = re.getClassName();
+        if( UnregisteredDatanodeException.class.getName().equals( reClass )) {
+          LOG.warn( "DataNode is shutting down: " + 
+                    StringUtils.stringifyException(re));
+          shutdown();
+          return;
+        }
+        throw re;
       }
     } // offerService
 
@@ -818,6 +831,10 @@ public class DataNode implements FSConstants, Runnable {
      */
     public void run() {
         LOG.info("Starting DataNode in: "+data.data);
+        
+        // start dataXceiveServer
+        dataXceiveServer.start();
+        
         while (shouldRun) {
             try {
                 offerService();
@@ -832,7 +849,14 @@ public class DataNode implements FSConstants, Runnable {
               }
             }
         }
-      LOG.info("Finishing DataNode in: "+data.data);
+        
+        // wait for dataXceiveServer to terminate
+        try {
+            this.dataXceiveServer.join();
+        } catch (InterruptedException ie) {
+        }
+        
+        LOG.info("Finishing DataNode in: "+data.data);
     }
 
     /** Start datanode daemons.

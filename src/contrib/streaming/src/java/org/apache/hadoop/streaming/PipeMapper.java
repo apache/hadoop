@@ -25,7 +25,6 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableComparable;

@@ -198,7 +198,7 @@ public class StreamUtil
   static {
     try {
       env = new Environment();
-      HOST = env.get("HOST").toString();
+      HOST = env.getHost();
     } catch(IOException io) {
       io.printStackTrace();
     }
@@ -275,6 +275,22 @@ public class StreamUtil
     }
   }
   
+  static final String regexpSpecials = "[]()?*+|.!^-\\~@";
+  
+  public static String regexpEscape(String plain)
+  {
+    StringBuffer buf = new StringBuffer();
+    char[] ch = plain.toCharArray();
+    int csup = ch.length;
+    for(int c=0; c<csup; c++) {
+      if(regexpSpecials.indexOf(ch[c]) != -1) {
+        buf.append("\\");    
+      }
+      buf.append(ch[c]);
+    }
+    return buf.toString();
+  }
+  
   static String slurp(File f) throws IOException
   {
     FileInputStream in = new FileInputStream(f);
@@ -298,5 +314,5 @@ public class StreamUtil
     }
     return env_;
   }
-
+  
 }
