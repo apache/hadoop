@@ -23,6 +23,9 @@ Trunk (unreleased changes)
  6. HADOOP-277.  Fix a race condition when creating directories.
    (Sameer Paranjpye via cutting)
 
+ 7. HADOOP-289.  Improved exception handling in DFS datanode.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.3.1 - 2006-06-05
 

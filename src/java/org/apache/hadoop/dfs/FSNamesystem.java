@@ -1329,6 +1329,8 @@ class FSNamesystem implements FSConstants {
      */
     private void proccessOverReplicatedBlock( Block block, short replication ) {
       TreeSet containingNodes = (TreeSet) blocksMap.get(block);
+      if( containingNodes == null )
+        return;
       Vector nonExcess = new Vector();
       for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
           DatanodeInfo cur = (DatanodeInfo) it.next();

@@ -105,17 +105,7 @@ public class DataNode implements FSConstants, Runnable {
              new File(datadir),
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
         // register datanode
-        while (shouldRun) {
-          try {
-            register();
-            break;
-          } catch (ConnectException ce) {
-            LOG.info("Namenode not available yet, Zzzzz...");
-            try {
-              Thread.sleep(10 * 1000);
-            } catch (InterruptedException ie) {}
-          }
-        }
+        register();
     }
 
     /**
@@ -182,7 +172,19 @@ public class DataNode implements FSConstants, Runnable {
      * @throws IOException
      */
     private void register() throws IOException {
-      dnRegistration = namenode.register( dnRegistration );
+      while (shouldRun) {
+        try {
+          dnRegistration = namenode.register( dnRegistration );
+          break;
+        } catch( ConnectException se ) {  // namenode has not been started
+          LOG.info("Namenode not available yet, Zzzzz...");
+        } catch( SocketTimeoutException te ) {  // namenode is busy
+          LOG.info("Namenode " + te.getLocalizedMessage() );
+        }
+        try {
+          Thread.sleep(10 * 1000);
+        } catch (InterruptedException ie) {}
+      }
       if( storage.getStorageID().equals("") ) {
         storage.setStorageID( dnRegistration.getStorageID());
         storage.write();
@@ -203,7 +205,7 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     void handleDiskError( String errMsgr ) {
-        LOG.warn( "Shuting down DataNode because "+errMsgr );
+        LOG.warn( "DataNode is shutting down.\n" + errMsgr );
         try {
             namenode.errorReport(
                     dnRegistration, DatanodeProtocol.DISK_ERROR, errMsgr);
@@ -332,9 +334,16 @@ public class DataNode implements FSConstants, Runnable {
           } // synchronized
         } // while (shouldRun)
       } catch(DiskErrorException e) {
-        handleDiskError(e.getMessage());
+        handleDiskError(e.getLocalizedMessage());
+      } catch( RemoteException re ) {
+        String reClass = re.getClassName();
+        if( UnregisteredDatanodeException.class.getName().equals( reClass )) {
+          LOG.warn( "DataNode is shutting down.\n" + re );
+          shutdown();
+          return;
+        }
+        throw re;
       }
-      
     } // offerService
 
     /**
