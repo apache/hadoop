@@ -26,6 +26,10 @@ Trunk (unreleased changes)
  7. HADOOP-289.  Improved exception handling in DFS datanode.
     (Konstantin Shvachko via cutting)
 
+ 8. HADOOP-292.  Fix client-side logging to go to standard error
+    rather than standard output, so that it can be distinguished from
+    application output.  (omalley via cutting)
+
 
 Release 0.3.1 - 2006-06-05
 
