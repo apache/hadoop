@@ -808,7 +808,7 @@ class DFSClient implements FSConstants {
                     localName, overwrite, replication, blockSize);
               } catch (RemoteException e) {
                 if (--retries == 0 || 
-                    AlreadyBeingCreatedException.class.getName().
+                    !AlreadyBeingCreatedException.class.getName().
                         equals(e.getClassName())) {
                   throw e;
                 } else {
@@ -838,7 +838,7 @@ class DFSClient implements FSConstants {
                                          clientName.toString());
               } catch (RemoteException e) {
                 if (--retries == 0 || 
-                    NotReplicatedYetException.class.getName().
+                    !NotReplicatedYetException.class.getName().
                         equals(e.getClassName())) {
                   throw e;
                 } else {

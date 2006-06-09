@@ -179,7 +179,8 @@ public class DataNode implements FSConstants, Runnable {
         } catch( ConnectException se ) {  // namenode has not been started
           LOG.info("Namenode not available yet, Zzzzz...");
         } catch( SocketTimeoutException te ) {  // namenode is busy
-          LOG.info("Namenode " + te.getLocalizedMessage() );
+          LOG.info("Problem connecting to Namenode: " + 
+                   StringUtils.stringifyException(te));
         }
         try {
           Thread.sleep(10 * 1000);
@@ -338,7 +339,8 @@ public class DataNode implements FSConstants, Runnable {
       } catch( RemoteException re ) {
         String reClass = re.getClassName();
         if( UnregisteredDatanodeException.class.getName().equals( reClass )) {
-          LOG.warn( "DataNode is shutting down.\n" + re );
+          LOG.warn( "DataNode is shutting down: " + 
+                    StringUtils.stringifyException(re));
           shutdown();
           return;
         }

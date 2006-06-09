@@ -30,6 +30,9 @@ Trunk (unreleased changes)
     rather than standard output, so that it can be distinguished from
     application output.  (omalley via cutting)
 
+ 9. HADOOP-294.  Fixed bug where conditions for retrying after errors
+    in the DFS client were reversed.  (omalley via cutting)
+
 
 Release 0.3.1 - 2006-06-05
 
