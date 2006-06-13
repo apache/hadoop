@@ -1,6 +1,13 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1. HADOOP-210.  Change RPC client and server so that server uses a
+    selector, and a thread per connection is no longer required.  This
+    should permit larger clusters.  (Devaraj Das via cutting)
+
+
 Release 0.3.2 - 2006-06-09
 
  1. HADOOP-275.  Update the streaming contrib module to use log4j for
