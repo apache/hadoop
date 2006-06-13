@@ -19,9 +19,9 @@ package org.apache.hadoop.util;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.StringTokenizer;
@@ -75,11 +75,13 @@ public class CopyFiles extends MapReduceBase implements Reducer {
     private static final long reportInterval = 1L << 25;
     private long bytesSinceLastReport = 0L;
     private long totalBytesCopied = 0L;
+    private static DecimalFormat percentFormat = new DecimalFormat("0.00");
     
     private void copy(String src, Reporter reporter) throws IOException {
       // open source file
       Path srcFile = new Path(srcPath, src);
       FSDataInputStream in = srcFileSys.open(srcFile);
+      long totalBytes = srcFileSys.getLength(srcFile);
       
       // create directories to hold destination file and create destFile
       Path destFile = new Path(destPath, src);
@@ -96,7 +98,12 @@ public class CopyFiles extends MapReduceBase implements Reducer {
         if (bytesSinceLastReport > reportInterval) {
             totalBytesCopied += bytesSinceLastReport;
             bytesSinceLastReport = 0L;
-            reporter.setStatus("Total bytes copied: "+totalBytesCopied);
+            reporter.setStatus("Copy "+ src + ": " + 
+                               percentFormat.format(100.0 * totalBytesCopied / 
+                                                    totalBytes) +
+                               "% and " +
+                               StringUtils.humanReadableInt(totalBytesCopied) +
+                               " bytes");
         }
       }
       
@@ -105,7 +112,8 @@ public class CopyFiles extends MapReduceBase implements Reducer {
       // report at least once for each file
       totalBytesCopied += bytesSinceLastReport;
       bytesSinceLastReport = 0L;
-      reporter.setStatus("Total bytes copied: "+totalBytesCopied);
+      reporter.setStatus("Finished. Bytes copied: " + 
+                         StringUtils.humanReadableInt(totalBytesCopied));
     }
     
     /** Mapper configuration.

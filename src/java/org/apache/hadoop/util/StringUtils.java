@@ -18,6 +18,7 @@ package org.apache.hadoop.util;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.text.DecimalFormat;
 
 /**
  * General string utils
@@ -51,4 +52,31 @@ public class StringUtils {
     return fullHostname;
   }
 
+  private static DecimalFormat numFormat = new DecimalFormat("0.0");
+  
+  /**
+   * Given an integer, return a string that is in an approximate, but human 
+   * readable format. 
+   * It uses the bases 'k', 'm', and 'g' for 1024, 1024**2, and 1024**3.
+   * @param number the number to format
+   * @return a human readable form of the integer
+   */
+  public static String humanReadableInt(long number) {
+    long absNumber = Math.abs(number);
+    double result = number;
+    String suffix = "";
+    if (absNumber < 1024) {
+      // nothing
+    } else if (absNumber < 1024 * 1024) {
+      result = number / 1024.0;
+      suffix = "k";
+    } else if (absNumber < 1024 * 1024 * 1024) {
+      result = number / (1024.0 * 1024);
+      suffix = "m";
+    } else {
+      result = number / (1024.0 * 1024 * 1024);
+      suffix = "g";
+    }
+    return numFormat.format(result) + suffix;
+  }
 }

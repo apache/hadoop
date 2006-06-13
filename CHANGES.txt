@@ -7,6 +7,9 @@ Trunk (unreleased changes)
     selector, and a thread per connection is no longer required.  This
     should permit larger clusters.  (Devaraj Das via cutting)
 
+ 2. HADOOP-298.  Improved progress reports for CopyFiles utility, the
+    distributed file copier.  (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
