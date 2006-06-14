@@ -38,7 +38,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.io.DataOutputBuffer;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -197,15 +196,8 @@ public class Client {
             LOG.debug(getName() + " sending #" + call.id);
           try {
             writingCall = call;
-            DataOutputBuffer d = new DataOutputBuffer(); //for serializing the
-                                                         //data to be written
-            d.writeInt(call.id);
-            call.param.write(d);
-            byte[] data = d.getData();
-            int dataLength = d.getLength();
-
-            out.writeInt(dataLength);      //first put the data length
-            out.write(data, 0, dataLength);//write the data
+            out.writeInt(call.id);
+            call.param.write(out);
             out.flush();
           } finally {
             writingCall = null;
@@ -216,7 +208,7 @@ public class Client {
         if (error)
           close();                                // close on error
       }
-    }  
+    }
 
     /** Close the connection and remove it from the pool. */
     public void close() {
