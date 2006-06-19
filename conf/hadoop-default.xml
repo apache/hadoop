@@ -96,6 +96,13 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.info.port</name>
+  <value>50070</value>
+  <description>The base port number for the dfs namenode web ui.
+  </description>
+</property>
+
+<property>
   <name>dfs.name.dir</name>
   <value>/tmp/hadoop/dfs/name</value>
   <description>Determines where on the local filesystem the DFS name node

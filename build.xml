@@ -66,6 +66,7 @@
   <path id="test.classpath">
     <pathelement location="${test.build.classes}" />
     <pathelement location="${test.src.dir}"/>
+    <pathelement location="${build.dir}"/>
     <path refid="classpath"/>
   </path>
 
@@ -74,6 +75,7 @@
     <path refid="classpath"/>
     <pathelement location="${test.build.classes}" />
     <pathelement location="${test.src.dir}"/>
+    <pathelement location="${build.dir}"/>
   </path>
 
   <!-- ====================================================== -->
@@ -85,6 +87,7 @@
     <mkdir dir="${build.src}"/>
     <mkdir dir="${build.webapps}/task/WEB-INF"/>
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
+    <mkdir dir="${build.webapps}/dfs/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
  
     <mkdir dir="${test.build.dir}"/>
@@ -136,6 +139,13 @@
      outputdir="${build.src}"
      package="org.apache.hadoop.mapred"
      webxml="${build.webapps}/job/WEB-INF/web.xml">
+    </jsp-compile>
+
+    <jsp-compile
+     uriroot="${src.webapps}/dfs"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.dfs"
+     webxml="${build.webapps}/dfs/WEB-INF/web.xml">
     </jsp-compile>
 
     <javac 
@@ -253,6 +263,7 @@
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
+      <sysproperty key="hadoop.log.dir" value="."/>
       <classpath refid="${test.classpath.id}"/>
       <formatter type="plain" />
       <batchtest todir="${test.build.dir}" unless="testcase">

@@ -94,20 +94,20 @@ public class MiniDFSCluster {
     conf.setInt("dfs.replication", 1);
     // this timeout seems to control the minimum time for the test, so
     // decrease it considerably.
-    conf.setInt("ipc.client.timeout", 1000);
+    conf.setInt("ipc.client.timeout", 2000);
     NameNode.format(conf);
     nameNode = new NameNodeRunner();
     nameNodeThread = new Thread(nameNode);
     nameNodeThread.start();
     try {                                     // let namenode get started
-      Thread.sleep(1000);
+      Thread.sleep(2000);
     } catch(InterruptedException e) {
     }
     dataNode = new DataNodeRunner();
     dataNodeThread = new Thread(dataNode);
     dataNodeThread.start();
     try {                                     // let daemons get started
-      Thread.sleep(1000);
+      Thread.sleep(2000);
     } catch(InterruptedException e) {
     }
   }
