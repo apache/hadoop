@@ -60,6 +60,10 @@ public class TaskTracker
     Server mapOutputServer = null;
     InterTrackerProtocol jobClient;
 
+    StatusHttpServer server = null;
+    
+    boolean shuttingDown = false;
+    
     TreeMap tasks = null;
     TreeMap runningTasks = null;
     int mapTotal = 0;
@@ -145,8 +149,22 @@ public class TaskTracker
         this.justStarted = true;
 
         this.jobClient = (InterTrackerProtocol) RPC.getProxy(InterTrackerProtocol.class, jobTrackAddr, this.fConf);
+        
+        this.running = true;
     }
 
+      public synchronized void shutdown() throws IOException {
+          shuttingDown = true;
+          close();
+          if (this.server != null) {
+            try {
+                LOG.info("Shttting down StatusHttpServer");
+                this.server.stop();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+          }
+      }
     /**
      * Close down the TaskTracker and all its components.  We must also shutdown
      * any running tasks or threads, and cleanup disk space.  A new TaskTracker
@@ -191,6 +209,8 @@ public class TaskTracker
             mapOutputServer = null;
         }
 
+        this.running = false;
+        
         // Clear local storage
         this.mapOutputFile.cleanupStorage();
     }
@@ -206,7 +226,7 @@ public class TaskTracker
       this.mapOutputFile = new MapOutputFile();
       this.mapOutputFile.setConf(conf);
       int httpPort = conf.getInt("tasktracker.http.port", 50060);
-      StatusHttpServer server = new StatusHttpServer("task", httpPort, true);
+      this.server = new StatusHttpServer("task", httpPort, true);
       int workerThreads = conf.getInt("tasktracker.http.threads", 40);
       server.setThreads(1, workerThreads);
       server.start();
@@ -236,7 +256,7 @@ public class TaskTracker
         long lastHeartbeat = 0;
         this.fs = FileSystem.getNamed(jobClient.getFilesystemName(), this.fConf);
 
-        while (running) {
+        while (running && !shuttingDown) {
             long now = System.currentTimeMillis();
 
             long waitTime = HEARTBEAT_INTERVAL - (now - lastHeartbeat);
@@ -407,26 +427,30 @@ public class TaskTracker
      */
     public void run() {
         try {
-            while (running) {
+            while (running && !shuttingDown) {
                 boolean staleState = false;
                 try {
                     // This while-loop attempts reconnects if we get network errors
-                    while (running && ! staleState) {
+                    while (running && ! staleState && !shuttingDown ) {
                         try {
                             if (offerService() == STALE_STATE) {
                                 staleState = true;
                             }
                         } catch (Exception ex) {
-                            LOG.info("Lost connection to JobTracker [" + jobTrackAddr + "].  Retrying...", ex);
-                            try {
-                                Thread.sleep(5000);
-                            } catch (InterruptedException ie) {
+                            if (!shuttingDown) {
+                                LOG.info("Lost connection to JobTracker [" +
+                                        jobTrackAddr + "].  Retrying...", ex);
+                                try {
+                                    Thread.sleep(5000);
+                                } catch (InterruptedException ie) {
+                                }
                             }
                         }
                     }
                 } finally {
                     close();
                 }
+                if (shuttingDown) { return; }
                 LOG.info("Reinitializing local state");
                 initialize();
             }
@@ -529,18 +553,20 @@ public class TaskTracker
 
             localJobConf = new JobConf(localJobFile);
             localJobConf.set("mapred.task.id", task.getTaskId());
+            localJobConf.set("mapred.local.dir",
+                    this.defaultJobConf.get("mapred.local.dir"));
             String jarFile = localJobConf.getJar();
             if (jarFile != null) {
               fs.copyToLocalFile(new Path(jarFile), localJarFile);
               localJobConf.setJar(localJarFile.toString());
+            }
 
-              FileSystem localFs = FileSystem.getNamed("local", fConf);
-              OutputStream out = localFs.create(localJobFile);
-              try {
-                localJobConf.write(out);
-              } finally {
-                out.close();
-              }
+            FileSystem localFs = FileSystem.getNamed("local", fConf);
+            OutputStream out = localFs.create(localJobFile);
+            try {
+              localJobConf.write(out);
+            } finally {
+              out.close();
             }
             // set the task's configuration to the local job conf
             // rather than the default.
@@ -836,7 +862,7 @@ public class TaskTracker
             
           Task task = umbilical.getTask(taskid);
           JobConf job = new JobConf(task.getJobFile());
-
+          
           defaultConf.addFinalResource(new Path(task.getJobFile()));
 
           startPinging(umbilical, taskid);        // start pinging parent

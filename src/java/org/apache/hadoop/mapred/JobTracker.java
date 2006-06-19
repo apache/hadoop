@@ -58,10 +58,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobTracker");
 
     private static JobTracker tracker = null;
+    private static boolean runTracker = true;
     public static void startTracker(Configuration conf) throws IOException {
       if (tracker != null)
         throw new IOException("JobTracker already running.");
-      while (true) {
+      runTracker = true;
+      while (runTracker) {
         try {
           tracker = new JobTracker(conf);
           break;
@@ -73,13 +75,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         } catch (InterruptedException e) {
         }
       }
-      tracker.offerService();
+      if (runTracker) { tracker.offerService(); }
     }
 
     public static JobTracker getTracker() {
         return tracker;
     }
 
+    public static void stopTracker() throws IOException {
+      if (tracker == null)
+        throw new IOException("Trying to stop JobTracker that is not running.");
+      runTracker = false;
+      tracker.close();
+      tracker = null;
+    }
+    
     /**
      * A thread to timeout tasks that have been assigned to task trackers,
      * but that haven't reported back yet.
@@ -353,8 +363,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     private TreeMap taskTrackers = new TreeMap();
     Vector jobInitQueue = new Vector();
     ExpireTrackers expireTrackers = new ExpireTrackers();
+    Thread expireTrackersThread = null;
     RetireJobs retireJobs = new RetireJobs();
+    Thread retireJobsThread = null;
     JobInitThread initJobs = new JobInitThread();
+    Thread initJobsThread = null;
     ExpireLaunchingTasks expireLaunchingTasks = new ExpireLaunchingTasks();
     Thread expireLaunchingTaskThread = new Thread(expireLaunchingTasks);
     
@@ -439,9 +452,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
         this.startTime = System.currentTimeMillis();
 
-        new Thread(this.expireTrackers).start();
-        new Thread(this.retireJobs).start();
-        new Thread(this.initJobs).start();
+        this.expireTrackersThread = new Thread(this.expireTrackers);
+        this.expireTrackersThread.start();
+        this.retireJobsThread = new Thread(this.retireJobs);
+        this.retireJobsThread.start();
+        this.initJobsThread = new Thread(this.initJobs);
+        this.initJobsThread.start();
         expireLaunchingTaskThread.start();
     }
 
@@ -466,8 +482,66 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             this.interTrackerServer.join();
         } catch (InterruptedException ie) {
         }
+        LOG.info("Stopped interTrackerServer");
     }
 
+    void close() throws IOException {
+        if (this.infoServer != null) {
+            LOG.info("Stopping infoServer");
+            try {
+                this.infoServer.stop();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+        if (this.interTrackerServer != null) {
+            LOG.info("Stopping interTrackerServer");
+            this.interTrackerServer.stop();
+        }
+        if (this.expireTrackers != null) {
+            LOG.info("Stopping expireTrackers");
+            this.expireTrackers.stopTracker();
+            try {
+                this.expireTrackersThread.interrupt();
+                this.expireTrackersThread.join();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+        if (this.retireJobs != null) {
+            LOG.info("Stopping retirer");
+            this.retireJobs.stopRetirer();
+            try {
+                this.retireJobsThread.interrupt();
+                this.retireJobsThread.join();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+        if (this.initJobs != null) {
+            LOG.info("Stopping initer");
+            this.initJobs.stopIniter();
+            try {
+                this.initJobsThread.interrupt();
+                this.initJobsThread.join();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+        if (this.expireLaunchingTaskThread != null) {
+            LOG.info("Stopping expireLaunchingTasks");
+            this.expireLaunchingTasks.stop();
+            try {
+                this.expireLaunchingTaskThread.interrupt();
+                this.expireLaunchingTaskThread.join();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+        LOG.info("stopped all jobtracker services");
+        return;
+    }
+    
     ///////////////////////////////////////////////////////
     // Maintain lookup tables; called by JobInProgress
     // and TaskInProgress

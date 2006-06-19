@@ -12,6 +12,10 @@ Trunk (unreleased changes)
  3. HADOOP-250.  Add an HTTP user interface to the namenode, running
     on port 50070. (Devaraj Das via cutting)
 
+ 4. HADOOP-123.  Add MapReduce unit tests that run a jobtracker and
+    tasktracker, greatly increasing code coverage.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 

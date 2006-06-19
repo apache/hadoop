@@ -28,12 +28,14 @@
   <property name="build.examples" value="${build.dir}/examples"/>
   <property name="build.libhdfs" value="${build.dir}/libhdfs"/>
   <property name="build.docs" value="${build.dir}/docs"/>
+  <property name="build.minimr" value="${build.dir}/minimr"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
 
   <property name="test.src.dir" value="${basedir}/src/test"/>
   <property name="test.build.dir" value="${build.dir}/test"/>
   <property name="test.build.data" value="${test.build.dir}/data"/>
+  <property name="hadoop.log.dir" value="${test.build.dir}/logs"/>
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.include" value="Test*"/>
@@ -65,6 +67,7 @@
   <!-- the unit test classpath: uses test.src.dir for configuration -->
   <path id="test.classpath">
     <pathelement location="${test.build.classes}" />
+    <pathelement location="${build.minimr}" />
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
     <path refid="classpath"/>
@@ -89,6 +92,7 @@
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
     <mkdir dir="${build.webapps}/dfs/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
+    <mkdir dir="${build.minimr}"/>
  
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
@@ -258,10 +262,13 @@
 
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
+    <delete dir="${hadoop.log.dir}"/>
+    <mkdir dir="${hadoop.log.dir}"/>
 
     <junit printsummary="yes" haltonfailure="no" fork="yes" dir="${basedir}"
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
+      <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
       <sysproperty key="hadoop.log.dir" value="."/>
       <classpath refid="${test.classpath.id}"/>

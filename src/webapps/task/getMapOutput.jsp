@@ -6,10 +6,10 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
-  import="java.util.logging.Logger"
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
+  import="org.apache.commons.logging.*"
 %><%
   String mapId = request.getParameter("map");
   String reduceId = request.getParameter("reduce");
@@ -35,8 +35,8 @@
   } catch (IOException ie) {
     TaskTracker tracker = 
        (TaskTracker) application.getAttribute("task.tracker");
-    Logger log = (Logger) application.getAttribute("log");
-    log.warning("Http server (getMapOutput.jsp): " +
+    Log log = (Log) application.getAttribute("log");
+    log.warn("Http server (getMapOutput.jsp): " +
                 StringUtils.stringifyException(ie));
     tracker.mapOutputLost(mapId);
     throw ie;
