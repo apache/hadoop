@@ -6,6 +6,10 @@ Trunk (unreleased changes)
  1. HADOOP-298.  Improved progress reports for CopyFiles utility, the
     distributed file copier.  (omalley via cutting)
 
+ 2. HADOOP-299.  Fix some problems in the TaskTracker, permitting
+    multiple jobs to more easily execute at the same time.
+    (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
