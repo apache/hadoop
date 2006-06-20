@@ -16,6 +16,10 @@ Trunk (unreleased changes)
     tasktracker, greatly increasing code coverage.
     (Milind Bhandarkar via cutting)
 
+ 5. HADOOP-271.  Add links from jobtracker's web ui to tasktracker's
+    web ui.  Also attempt to log a thread dump of child processes
+    before they're killed.  (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 

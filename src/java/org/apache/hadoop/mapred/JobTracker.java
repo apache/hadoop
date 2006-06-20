@@ -128,8 +128,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                   }
                   if (tip != null) {
                      JobInProgress job = tip.getJob();
+                     String trackerName = getAssignedTracker(taskId);
+                     TaskTrackerStatus trackerStatus = 
+                       getTaskTracker(trackerName);
                      job.failedTask(tip, taskId, "Error launching task", 
-                                    "n/a", "n/a");
+                                    trackerStatus.getHost(), trackerName);
                   }
                   itr.remove();
                 } else {
@@ -1029,6 +1032,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 	return tip.getTaskStatuses();
     }
 
+    /**
+     * Get tracker name for a given task id.
+     * @param taskId the name of the task
+     * @return The name of the task tracker
+     */
+    public synchronized String getAssignedTracker(String taskId) {
+      return (String) taskidToTrackerMap.get(taskId);
+    }
+    
     ///////////////////////////////////////////////////////////////
     // JobTracker methods
     ///////////////////////////////////////////////////////////////
@@ -1055,7 +1067,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     void updateTaskStatuses(TaskTrackerStatus status) {
         for (Iterator it = status.taskReports(); it.hasNext(); ) {
             TaskStatus report = (TaskStatus) it.next();
-            report.setHostname(status.getHost());
+            report.setTaskTracker(status.getTrackerName());
             String taskId = report.getTaskId();
             TaskInProgress tip = (TaskInProgress) taskidToTIPMap.get(taskId);
             if (tip == null) {

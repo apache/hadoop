@@ -52,8 +52,16 @@
   <%
     for (int i = 0; i < ts.length; i++) {
       TaskStatus status = ts[i];
+      String taskTrackerName = status.getTaskTracker();
+      TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
       out.print("<tr><td>" + status.getTaskId() + "</td>");
-      out.print("<td>" + status.getHostname() + "</td>");
+      if (taskTracker == null) {
+        out.print("<td>" + taskTrackerName + "</td>");
+      } else {
+        out.print("<td><a href=\"http://" + taskTracker.getHost() + ":" +
+                  taskTracker.getHttpPort() + "\">" +  taskTracker.getHost() + 
+                  "</a></td>");
+      }
       out.print("<td>");
       writeString(out, status.getRunState()); 
       out.print("</td>");

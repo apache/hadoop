@@ -20,12 +20,20 @@
     String tipId = tip.getTIPId();
     for(int i=0; i < statuses.length; ++i) {
       if (statuses[i].getRunState() == TaskStatus.FAILED) {
+        String taskTrackerName = statuses[i].getTaskTracker();
+        TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
         out.print("<tr><td>" + statuses[i].getTaskId() +
                   "</td><td><a href=\"/taskdetails.jsp?jobid="+ jobId + 
                   "&taskid=" + tipId + "\">" + tipId +
-                  "</a></td><td>" + statuses[i].getHostname() +
-                  "</td><td>" + statuses[i].getDiagnosticInfo() +
-                  "</td></tr>\n");
+                  "</a></td>");
+        if (taskTracker == null) {
+          out.print("<td>" + taskTrackerName + "</td>");
+        } else {
+          out.print("<td><a href=\"http://" + taskTracker.getHost() + ":" +
+                    taskTracker.getHttpPort() + "\">" +  taskTracker.getHost() + 
+                    "</a></td>");
+        }
+        out.print("<td>" + statuses[i].getDiagnosticInfo() + "</td></tr>\n");
       }
     }
   }

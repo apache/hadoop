@@ -236,6 +236,14 @@ class JobInProgress {
     }
     
     /**
+     * Get the job configuration
+     * @return the job's configuration
+     */
+    JobConf getJobConf() {
+      return conf;
+    }
+    
+    /**
      * Return a treeset of completed TaskInProgress objects
      */
     public Vector reportTasksInProgress(boolean shouldBeMap, boolean shouldBeComplete) {
@@ -604,7 +612,7 @@ class JobInProgress {
                                           TaskStatus.FAILED,
                                           reason,
                                           reason,
-                                          hostname);
+                                          trackerName);
        failedTask(tip, taskid, status, trackerName);
     }
        

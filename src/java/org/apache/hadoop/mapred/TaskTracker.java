@@ -250,6 +250,28 @@ public class TaskTracker
     }
 
     /**
+     * Are we running under killall-less operating system.
+     */
+    private static boolean isWindows = 
+      System.getProperty("os.name").startsWith("Windows");
+    
+    /**
+     * Get the call stacks for all java processes on this system.
+     * Obviously, this is only useful for debugging.
+     */
+    private static void getCallStacks() {
+      if (LOG.isDebugEnabled() && !isWindows) {
+         try {
+          Process proc = 
+            Runtime.getRuntime().exec("killall -QUIT java");
+          proc.waitFor();
+        } catch (IOException ie) {
+          LOG.warn(StringUtils.stringifyException(ie));
+        } catch (InterruptedException ie) {}
+      }
+    }
+    
+    /**
      * Main service loop.  Will stay in this loop forever.
      */
     int offerService() throws Exception {
@@ -341,6 +363,7 @@ public class TaskTracker
                                      (timeSinceLastReport / 1000) + 
                                      " seconds. Killing.";
                         LOG.info(tip.getTask().getTaskId() + ": " + msg);
+                        getCallStacks();
                         tip.reportDiagnosticInfo(msg);
                         try {
                           tip.killAndCleanup(true);
@@ -582,7 +605,13 @@ public class TaskTracker
         /**
          */
         public synchronized TaskStatus createStatus() {
-            TaskStatus status = new TaskStatus(task.getTaskId(), task.isMapTask(), progress, runstate, diagnosticInfo.toString(), (stateString == null) ? "" : stateString, "");
+            TaskStatus status = 
+              new TaskStatus(task.getTaskId(), 
+                             task.isMapTask(),
+                             progress, runstate, 
+                             diagnosticInfo.toString(), 
+                             (stateString == null) ? "" : stateString, 
+                              getName());
             if (diagnosticInfo.length() > 0) {
                 diagnosticInfo = new StringBuffer();
             }
@@ -902,6 +931,7 @@ public class TaskTracker
                     LOG.info("Ping exception: " + msg);
                     remainingRetries -=1;
                     if (remainingRetries == 0) {
+                      getCallStacks();
                       LOG.warn("Last retry, killing "+taskid);
                       System.exit(65);
                     }
