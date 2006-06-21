@@ -634,14 +634,26 @@ class DFSClient implements FSConstants {
                 throw new IOException("Stream closed");
             }
             if (pos < filelen) {
-                if (pos > blockEnd) {
-                    blockSeekTo(pos);
+              int retries = 2;
+              while (retries > 0) {
+                try {
+                  if (pos > blockEnd) {
+                      blockSeekTo(pos);
+                  }
+                  int realLen = Math.min(len, (int) (blockEnd - pos + 1));
+                  int result = blockStream.read(buf, off, realLen);
+                  if (result >= 0) {
+                      pos += result;
+                  }
+                  return result;
+                } catch (IOException e) {
+                  LOG.warn("DFS Read: " + StringUtils.stringifyException(e));
+                  blockEnd = -1;
+                  if (--retries == 0) {
+                    throw e;
+                  }
                 }
-                int result = blockStream.read(buf, off, Math.min(len, (int) (blockEnd - pos + 1)));
-                if (result >= 0) {
-                    pos += result;
-                }
-                return result;
+              }
             }
             return -1;
         }

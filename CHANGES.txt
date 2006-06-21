@@ -26,6 +26,10 @@ Trunk (unreleased changes)
     protocol: clients and servers must both be upgraded to the new
     version to ensure correct operation.  (Devaraj Das via cutting)
 
+ 7. HADOOP-311.  Change DFS client to retry failed reads, so that a
+    single read failure will not alone cause failure of a task.
+    (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
