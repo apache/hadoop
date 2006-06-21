@@ -332,4 +332,28 @@ creations/deletions), or "all".</description>
   <description>Defines the timeout for IPC calls in milliseconds.</description>
 </property>
 
+<property>
+  <name>ipc.client.idlethreshold</name>
+  <value>4000</value>
+  <description>Defines the threshold numner of connections after which
+               connections will be inspected for idleness.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.maxidletime</name>
+  <value>120000</value>
+  <description>Defines the maximum idle time for a connected client after 
+               which it may be disconnected.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.kill.max</name>
+  <value>10</value>
+  <description>Defines the maximum number of clients to disconnect in one go.
+  </description>
+</property>
+
+
 </configuration>

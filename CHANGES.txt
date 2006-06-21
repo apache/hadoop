@@ -20,6 +20,12 @@ Trunk (unreleased changes)
     web ui.  Also attempt to log a thread dump of child processes
     before they're killed.  (omalley via cutting)
 
+ 6. HADOOP-210.  Change RPC server to use a selector instead of a
+    thread per connection.  This should make it easier to scale to
+    larger clusters.  Note that this incompatibly changes the RPC
+    protocol: clients and servers must both be upgraded to the new
+    version to ensure correct operation.  (Devaraj Das via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
