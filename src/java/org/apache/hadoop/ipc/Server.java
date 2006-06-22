@@ -204,17 +204,24 @@ public abstract class Server {
           
           while (iter.hasNext()) {
             key = (SelectionKey)iter.next();
-            if (key.isAcceptable())
-              doAccept(key);
-            else if (key.isReadable())
-              doRead(key);
             iter.remove();
+            try {
+              if (key.isValid()) {
+                if (key.isAcceptable())
+                  doAccept(key);
+                else if (key.isReadable())
+                  doRead(key);
+              }
+            } catch (IOException e) {
+              key.cancel();
+            }
             key = null;
           }
         } catch (OutOfMemoryError e) {
           // we can run out of memory if we have too many threads
           // log the event and sleep for a minute and give 
           // some thread(s) a chance to finish
+          LOG.warn("Out of Memory in server select", e);
           closeCurrentConnection(key, e);
           cleanupConnections(true);
           try { Thread.sleep(60000); } catch (Exception ie) {}
@@ -238,10 +245,6 @@ public abstract class Server {
     }
 
     private void closeCurrentConnection(SelectionKey key, Throwable e) {
-      if (running) {
-        LOG.warn("selector: " + e);
-        e.printStackTrace();
-      }
       if (key != null) {
         Connection c = (Connection)key.attachment();
         if (c != null) {
@@ -277,8 +280,6 @@ public abstract class Server {
 
     void doRead(SelectionKey key) {
       int count = 0;
-      if (!key.isValid() || !key.isReadable())
-        return;
       Connection c = (Connection)key.attachment();
       if (c == null) {
         return;  
@@ -288,8 +289,8 @@ public abstract class Server {
       try {
         count = c.readAndProcess();
       } catch (Exception e) {
-        LOG.info(getName() + ": readAndProcess threw exception " + e + ". Count of bytes read: " + count);
-        e.printStackTrace();
+        key.cancel();
+        LOG.debug(getName() + ": readAndProcess threw exception " + e + ". Count of bytes read: " + count, e);
         count = -1; //so that the (count < 0) block is executed
       }
       if (count < 0) {
@@ -484,7 +485,7 @@ public abstract class Server {
               }
               out.flush();
             } catch (Exception e) {
-              e.printStackTrace();
+              LOG.warn("handler output error", e);
               synchronized (connectionList) {
                 if (connectionList.remove(call.connection))
                   numConnections--;
