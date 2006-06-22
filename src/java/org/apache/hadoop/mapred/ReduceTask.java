@@ -44,7 +44,6 @@ class ReduceTask extends Task {
   { getProgress().setStatus("reduce"); }
 
   private Progress copyPhase = getProgress().addPhase("copy");
-  private Progress appendPhase = getProgress().addPhase("append");
   private Progress sortPhase  = getProgress().addPhase("sort");
   private Progress reducePhase = getProgress().addPhase("reduce");
   private JobConf conf;
@@ -173,7 +172,6 @@ class ReduceTask extends Task {
 
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
-    Class keyClass = job.getMapOutputKeyClass();
     Class valueClass = job.getMapOutputValueClass();
     Reducer reducer = (Reducer)job.newInstance(job.getReducerClass());
     reducer.configure(job);
@@ -182,44 +180,10 @@ class ReduceTask extends Task {
     copyPhase.complete();                         // copy is already complete
 
     // open a file to collect map output
-    Path file = job.getLocalPath(getTaskId()+Path.SEPARATOR+"all.1");
-    SequenceFile.Writer writer =
-      new SequenceFile.Writer(lfs, file, keyClass, valueClass);
-    try {
-      // append all input files into a single input file
-      for (int i = 0; i < numMaps; i++) {
-        appendPhase.addPhase();                 // one per file
-      }
-      
-      DataOutputBuffer buffer = new DataOutputBuffer();
-
-      for (int i = 0; i < numMaps; i++) {
-        Path partFile =
-          this.mapOutputFile.getInputFile(i, getTaskId());
-        float progPerByte = 1.0f / lfs.getLength(partFile);
-        Progress phase = appendPhase.phase();
-        phase.setStatus(partFile.toString());
-
-        SequenceFile.Reader in = new SequenceFile.Reader(lfs, partFile, job);
-        try {
-          int keyLen;
-          while((keyLen = in.next(buffer)) > 0) {
-            writer.append(buffer.getData(), 0, buffer.getLength(), keyLen);
-            phase.set(in.getPosition()*progPerByte);
-            reportProgress(umbilical);
-            buffer.reset();
-          }
-        } finally {
-          in.close();
-        }
-        phase.complete();
-      }
-      
-    } finally {
-      writer.close();
+    Path[] mapFiles = new Path[numMaps];
+    for(int i=0; i < numMaps; i++) {
+      mapFiles[i] = mapOutputFile.getInputFile(i, getTaskId());
     }
-      
-    appendPhase.complete();                     // append is complete
 
     // spawn a thread to give sort progress heartbeats
     Thread sortProgress = new Thread() {
@@ -251,8 +215,7 @@ class ReduceTask extends Task {
       // sort the input file
       SequenceFile.Sorter sorter =
         new SequenceFile.Sorter(lfs, comparator, valueClass, job);
-      sorter.sort(file, sortedFile);              // sort
-      lfs.delete(file);                           // remove unsorted
+      sorter.sort(mapFiles, sortedFile, true);              // sort
 
     } finally {
       sortComplete = true;

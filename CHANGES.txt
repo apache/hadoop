@@ -30,6 +30,14 @@ Trunk (unreleased changes)
     single read failure will not alone cause failure of a task.
     (omalley via cutting)
 
+ 8. HADOOP-314.  Remove the "append" phase when reducing.  Map output
+    files are now directly passed to the sorter, without first
+    appending them into a single file.  Now, the first third of reduce
+    progress is "copy" (transferring map output to reduce nodes), the
+    middle third is "sort" (sorting map output) and the last third is
+    "reduce" (generating output).  Long-term, the "sort" phase will
+    also be removed.  (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
