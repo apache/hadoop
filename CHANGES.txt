@@ -38,6 +38,9 @@ Trunk (unreleased changes)
     "reduce" (generating output).  Long-term, the "sort" phase will
     also be removed.  (omalley via cutting)
 
+ 9. HADOOP-316.  Fix a potential deadlock in the jobtracker.
+    (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
