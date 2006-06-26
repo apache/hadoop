@@ -177,8 +177,12 @@ public class RandomWriter extends MapReduceBase implements Reducer {
     Path inDir = new Path(tmpDir, "in");
     Path fakeOutDir = new Path(tmpDir, "out");
     FileSystem fileSys = FileSystem.get(jobConf);
+    if (fileSys.exists(outDir)) {
+      System.out.println("Error: Output directory " + outDir + 
+                         " already exists.");
+      return;
+    }
     fileSys.delete(tmpDir);
-    fileSys.delete(outDir);
     fileSys.mkdirs(inDir);
     NumberFormat numberFormat = NumberFormat.getInstance();
     numberFormat.setMinimumIntegerDigits(6);
