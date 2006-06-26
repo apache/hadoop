@@ -47,6 +47,10 @@ Trunk (unreleased changes)
 11. HADOOP-135.  Fix potential deadlock in JobTracker by acquiring
     locks in a consistent order.  (omalley via cutting)
 
+12. HADOOP-278.  Check for existence of input directories before
+    starting MapReduce jobs, making it easier to debug this common
+    error.  (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 

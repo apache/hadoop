@@ -260,6 +260,17 @@ public class JobClient implements MRConstants {
           job.setWorkingDirectory(fs.getWorkingDirectory());          
         }
 
+        Path[] inputDirs = job.getInputPaths();
+        boolean[] validDirs = 
+          job.getInputFormat().areValidInputDirectories(fs, inputDirs);
+        for(int i=0; i < validDirs.length; ++i) {
+          if (!validDirs[i]) {
+            String msg = "Input directory " + inputDirs[i] + " is invalid.";
+            LOG.error(msg);
+            throw new IOException(msg);
+          }
+        }
+
         // Check the output specification
         job.getOutputFormat().checkOutputSpecs(fs, job);
 

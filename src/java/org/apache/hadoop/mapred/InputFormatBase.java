@@ -98,6 +98,16 @@ public abstract class InputFormatBase implements InputFormat {
     return (Path[])result.toArray(new Path[result.size()]);
   }
 
+  public boolean[] areValidInputDirectories(FileSystem fileSys,
+                                            Path[] inputDirs
+                                            ) throws IOException {
+    boolean[] result = new boolean[inputDirs.length];
+    for(int i=0; i < inputDirs.length; ++i) {
+      result[i] = fileSys.isDirectory(inputDirs[i]);
+    }
+    return result;
+  }
+
   /** Splits files returned by {#listPaths(FileSystem,JobConf) when
    * they're too big.*/ 
   public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits)

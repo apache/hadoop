@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 /** An input data format.  Input files are stored in a {@link FileSystem}.
  * The processing of an input file may be split across multiple machines.
@@ -26,6 +27,18 @@ import org.apache.hadoop.fs.FileSystem;
  * RecordReader}.  Files must thus be split on record boundaries. */
 public interface InputFormat {
 
+  /**
+   * Are the input directories valid? This method is used to test the input
+   * directories when a job is submitted so that the framework can fail early
+   * with a useful error message when the input directory does not exist.
+   * @param fileSys the file system to check for the directories
+   * @param inputDirs the list of input directories
+   * @return is each inputDir valid?
+   * @throws IOException
+   */
+  boolean[] areValidInputDirectories(FileSystem fileSys,
+                                     Path[] inputDirs) throws IOException;
+  
   /** Splits a set of input files.  One split is created per map task.
    *
    * @param fs the filesystem containing the files to be split
