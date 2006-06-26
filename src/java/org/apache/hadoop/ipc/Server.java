@@ -233,15 +233,15 @@ public abstract class Server {
       LOG.info("Stopping " + this.getName());
 
       try {
-        if (acceptChannel != null)
-          acceptChannel.close();
-        if (selector != null)
-          selector.close();
+        acceptChannel.close();
+        selector.close();
       } catch (IOException e) { }
 
-      selector= null;
-      acceptChannel= null;
-      connectionList = null;
+      synchronized (this) {
+        selector= null;
+        acceptChannel= null;
+        connectionList = null;
+      }
     }
 
     private void closeCurrentConnection(SelectionKey key, Throwable e) {
@@ -311,10 +311,11 @@ public abstract class Server {
       }
     }   
 
-    void doStop()
-    {
+    synchronized void doStop() {
+      if (selector != null) {
         selector.wakeup();
         Thread.yield();
+      }
     }
   }
 
