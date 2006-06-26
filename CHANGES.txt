@@ -66,6 +66,10 @@ Trunk (unreleased changes)
     "dfs", "fsck", "job", and "distcp" commands currently support
     this, with more to be added.  (Hairong Kuang via cutting)
 
+16. HADOOP-296.  Permit specification of the amount of reserved space
+    on a DFS datanode.  One may specify both the percentage free and
+    the number of bytes.  (Johan Oskarson via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 

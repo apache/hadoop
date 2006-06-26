@@ -30,8 +30,9 @@ import org.apache.hadoop.conf.*;
  * @author Mike Cafarella
  ***************************************************/
 class FSDataset implements FSConstants {
-    static final double USABLE_DISK_PCT = 0.98;
 
+		static final double USABLE_DISK_PCT_DEFAULT = 0.98f; 
+	
   /**
      * A node type that can be built into a tree reflecting the
      * hierarchy of blocks on the local disk.
@@ -202,6 +203,7 @@ class FSDataset implements FSConstants {
     DF diskUsage;
     File data = null, tmp = null;
     long reserved = 0;
+    double usableDiskPct = USABLE_DISK_PCT_DEFAULT;
     FSDir dirTree;
     TreeSet ongoingCreates = new TreeSet();
 
@@ -209,6 +211,8 @@ class FSDataset implements FSConstants {
      * An FSDataset has a directory where it loads its data files.
      */
     public FSDataset(File dir, Configuration conf) throws IOException {
+    		this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
+    		this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct", (float) USABLE_DISK_PCT_DEFAULT);
         diskUsage = new DF( dir.getCanonicalPath(), conf); 
         this.data = new File(dir, "data");
         if (! data.exists()) {
@@ -233,7 +237,7 @@ class FSDataset implements FSConstants {
      * Return how many bytes can still be stored in the FSDataset
      */
     public long getRemaining() throws IOException {
-        return ((long) Math.round(USABLE_DISK_PCT * diskUsage.getAvailable())) - reserved;
+        return ((long) Math.round(usableDiskPct * diskUsage.getAvailable())) - reserved;
     }
 
     /**

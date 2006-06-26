@@ -103,6 +103,20 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.datanode.du.reserved</name>
+  <value>0</value>
+  <description>Reserved space in bytes. Always leave this much space free for non dfs use
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.du.pct</name>
+  <value>0.98f</value>
+  <description>When calculating remaining space, only use this percentage of the real available space
+  </description>
+</property>
+
+<property>
   <name>dfs.name.dir</name>
   <value>/tmp/hadoop/dfs/name</value>
   <description>Determines where on the local filesystem the DFS name node
@@ -160,6 +174,7 @@ creations/deletions), or "all".</description>
   before we signal failure to the application.
   </description>
 </property>
+
 
 <!-- map/reduce properties -->
 
