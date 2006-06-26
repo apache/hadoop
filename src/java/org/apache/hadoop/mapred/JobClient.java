@@ -242,7 +242,6 @@ public class JobClient implements MRConstants {
 
         String originalJarPath = job.getJar();
 
-        FileSystem localFs = FileSystem.getNamed("local", job);
         FileSystem fs = getFs();
 
         short replication = (short)job.getInt("mapred.submit.replication", 10);
@@ -260,12 +259,14 @@ public class JobClient implements MRConstants {
           job.setWorkingDirectory(fs.getWorkingDirectory());          
         }
 
+        FileSystem userFileSys = FileSystem.get(job);
         Path[] inputDirs = job.getInputPaths();
         boolean[] validDirs = 
-          job.getInputFormat().areValidInputDirectories(fs, inputDirs);
+          job.getInputFormat().areValidInputDirectories(userFileSys, inputDirs);
         for(int i=0; i < validDirs.length; ++i) {
           if (!validDirs[i]) {
-            String msg = "Input directory " + inputDirs[i] + " is invalid.";
+            String msg = "Input directory " + inputDirs[i] + 
+                         " in " + userFileSys.getName() + " is invalid.";
             LOG.error(msg);
             throw new IOException(msg);
           }
