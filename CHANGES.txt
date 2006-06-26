@@ -51,6 +51,10 @@ Trunk (unreleased changes)
     starting MapReduce jobs, making it easier to debug this common
     error.  (omalley via cutting)
 
+13. HADOOP-304.  Improve error message for
+    UnregisterdDatanodeException, adding expected node name.
+   (Konstantin Shvachko via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
