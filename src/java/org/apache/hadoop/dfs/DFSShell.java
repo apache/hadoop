@@ -19,13 +19,14 @@ import java.io.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.ToolBase;
 
 /**************************************************
  * This class provides some DFS administrative access.
  *
  * @author Mike Cafarella
  **************************************************/
-public class DFSShell {
+public class DFSShell extends ToolBase {
 
     // required for unknown reason to make WritableFactories work distributed
     static { new DatanodeInfo(); }
@@ -34,10 +35,12 @@ public class DFSShell {
 
     /**
      */
-    public DFSShell(FileSystem fs) {
-        this.fs = fs;
+    public DFSShell() {
     }
 
+    public void init() throws IOException {
+        this.fs = FileSystem.get(conf);
+    }
     /**
      * Add a local file to the indicated name in DFS. src is kept.
      */
@@ -292,64 +295,71 @@ public class DFSShell {
     }
 
     /**
-     * main() has some simple utility methods
+     * run
      */
-    public static void main(String argv[]) throws IOException {
+    public int run( String argv[] ) throws Exception {
         if (argv.length < 1) {
-            System.out.println("Usage: java DFSShell [-local | -dfs <namenode:port>]" +
+            System.out.println("Usage: java DFSShell [-fs <local | namenode:port>]"+
+                    " [-conf <configuration file>] [-D <[property=value>]"+
                     " [-ls <path>] [-lsr <path>] [-du <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]" +
                     " [-put <localsrc> <dst>] [-copyFromLocal <localsrc> <dst>] [-moveFromLocal <localsrc> <dst>]" + 
                     " [-get <src> <localdst>] [-cat <src>] [-copyToLocal <src> <localdst>] [-moveToLocal <src> <localdst>]" +
                     " [-mkdir <path>] [-report] [-setrep [-R] <rep> <path/file>]");
-            return;
+            return -1;
         }
 
-        Configuration conf = new Configuration();
+        // initialize DFSShell
+        init();
+        
+        int exitCode = -1;
         int i = 0;
-        FileSystem fs = FileSystem.parseArgs(argv, i, conf);
         String cmd = argv[i++];
         try {
-            DFSShell tc = new DFSShell(fs);
-
             if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd)) {
-                tc.copyFromLocal(new Path(argv[i++]), argv[i++]);
+                copyFromLocal(new Path(argv[i++]), argv[i++]);
             } else if ("-moveFromLocal".equals(cmd)) {
-                tc.moveFromLocal(new Path(argv[i++]), argv[i++]);
+                moveFromLocal(new Path(argv[i++]), argv[i++]);
             } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd)) {
-                tc.copyToLocal(argv[i++], new Path(argv[i++]));
+                copyToLocal(argv[i++], new Path(argv[i++]));
             } else if ("-cat".equals(cmd)) {
-                tc.cat(argv[i++]);
+                cat(argv[i++]);
             } else if ("-moveToLocal".equals(cmd)) {
-                tc.moveToLocal(argv[i++], new Path(argv[i++]));
+                moveToLocal(argv[i++], new Path(argv[i++]));
             } else if ("-setrep".equals(cmd)) {
-            		tc.setReplication(argv, i);           
+            	setReplication(argv, i);           
             } else if ("-ls".equals(cmd)) {
                 String arg = i < argv.length ? argv[i++] : "";
-                tc.ls(arg, false);
+                ls(arg, false);
             } else if ("-lsr".equals(cmd)) {
                 String arg = i < argv.length ? argv[i++] : "";
-                tc.ls(arg, true);
+                ls(arg, true);
             } else if ("-mv".equals(cmd)) {
-                tc.rename(argv[i++], argv[i++]);
+                rename(argv[i++], argv[i++]);
             } else if ("-cp".equals(cmd)) {
-                tc.copy(argv[i++], argv[i++], conf);
+                copy(argv[i++], argv[i++], conf);
             } else if ("-rm".equals(cmd)) {
-                tc.delete(argv[i++]);
+                delete(argv[i++]);
             } else if ("-du".equals(cmd)) {
                 String arg = i < argv.length ? argv[i++] : "";
-                tc.du(arg);
+                du(arg);
             } else if ("-mkdir".equals(cmd)) {
-                tc.mkdir(argv[i++]);
+                mkdir(argv[i++]);
             } else if ("-report".equals(cmd)) {
-                tc.report();
+                report();
             }
-            System.exit(0);
+            exitCode = 0;;
         } catch (IOException e ) {
           System.err.println( cmd.substring(1) + ": " + e.getLocalizedMessage() );  
-          System.exit(-1);
         } finally {
             fs.close();
         }
+        return exitCode;
     }
 
+    /**
+     * main() has some simple utility methods
+     */
+    public static void main(String argv[]) throws IOException {
+        new DFSShell().doMain(new Configuration(), argv);
+    }
 }

@@ -51,15 +51,25 @@ import org.apache.hadoop.mapred.SequenceFileOutputFormat;
  *
  * @author Milind Bhandarkar
  */
-public class CopyFiles extends MapReduceBase implements Reducer {
+public class CopyFiles extends ToolBase {
   
-  private static final String usage = "distcp <srcurl> <desturl> "+
-          "[-dfs <namenode:port | local> ] [-jt <jobtracker:port | local>] " +
-          "[-config <config-file.xml>]";
+  private static final String usage = "distcp "+
+          "[-fs <namenode:port | local> ] [-jt <jobtracker:port | local>] " +
+          "[-conf <config-file.xml>] " + "[-D <property=value>] "+
+          "<srcurl> <desturl>";
   
   private static final long MIN_BYTES_PER_MAP = 1L << 28;
   private static final int MAX_NUM_MAPS = 10000;
   private static final int MAX_MAPS_PER_NODE = 10;
+  
+  public void setConf(Configuration conf) {
+      if (conf instanceof JobConf) {
+        this.conf = (JobConf) conf;
+      } else {
+        this.conf = new JobConf(conf);
+      }
+  }
+  
   /**
    * Mappper class for Copying files.
    */
@@ -154,11 +164,13 @@ public class CopyFiles extends MapReduceBase implements Reducer {
     }
   }
   
-  public void reduce(WritableComparable key,
-      Iterator values,
-      OutputCollector output,
-      Reporter reporter) throws IOException {
-    // nothing
+  public static class CopyFilesReducer extends MapReduceBase implements Reducer {
+      public void reduce(WritableComparable key,
+                         Iterator values,
+                         OutputCollector output,
+                         Reporter reporter) throws IOException {
+          // nothing
+      }
   }
   
   private static String getFileSysName(URI url) {
@@ -208,47 +220,25 @@ public class CopyFiles extends MapReduceBase implements Reducer {
    * input files. The mapper actually copies the files allotted to it. And
    * the reduce is empty.
    */
-  public static void main(String[] args) throws IOException {
-
-    Configuration conf = new Configuration();
+  public int run(String[] args) throws IOException {
     String srcPath = null;
     String destPath = null;
     
     for (int idx = 0; idx < args.length; idx++) {
-        if ("-dfs".equals(args[idx])) {
-            if (idx == (args.length-1)) {
-                System.out.println(usage);
-                return;
-            }
-            conf.set("fs.default.name", args[++idx]);
-        } else if ("-jt".equals(args[idx])) {
-            if (idx == (args.length-1)) {
-                System.out.println(usage);
-                return;
-            }
-            conf.set("mapred.job.tracker", args[++idx]);
-        } else if ("-config".equals(args[idx])) {
-            if (idx == (args.length-1)) {
-                System.out.println(usage);
-                return;
-            }
-            conf.addFinalResource(new Path(args[++idx]));
-        } else {
-            if (srcPath == null) {
+        if (srcPath == null) {
                 srcPath = args[idx];
-            } else if (destPath == null) {
+        } else if (destPath == null) {
                 destPath = args[idx];
-            } else {
+        } else {
                 System.out.println(usage);
-                return;
-            }
+                return -1;
         }
     }
     
     // mandatory command-line parameters
     if (srcPath == null || destPath == null) {
         System.out.println(usage);
-        return;
+        return -1;
     }
     
     URI srcurl = null;
@@ -260,7 +250,8 @@ public class CopyFiles extends MapReduceBase implements Reducer {
       throw new RuntimeException("URL syntax error.", ex);
     }
     
-    JobConf jobConf = new JobConf(conf, CopyFiles.class);
+    JobConf jobConf = (JobConf)conf;
+    
     jobConf.setJobName("copy-files");
     
     String srcFileSysName = getFileSysName(srcurl);
@@ -270,8 +261,8 @@ public class CopyFiles extends MapReduceBase implements Reducer {
     jobConf.set("copy.dest.fs", destFileSysName);
     FileSystem srcfs;
    
-    srcfs = FileSystem.getNamed(srcFileSysName, conf);
-    FileSystem destfs = FileSystem.getNamed(destFileSysName, conf);
+    srcfs = FileSystem.getNamed(srcFileSysName, jobConf);
+    FileSystem destfs = FileSystem.getNamed(destFileSysName, jobConf);
  
     srcPath = srcurl.getPath();
     if ("".equals(srcPath)) { srcPath = "/"; }
@@ -293,7 +284,7 @@ public class CopyFiles extends MapReduceBase implements Reducer {
     
     if (!srcfs.exists(tmpPath)) {
       System.out.println(srcPath+" does not exist.");
-      return;
+      return -1;
     }
     
     // turn off speculative execution, because DFS doesn't handle
@@ -308,7 +299,7 @@ public class CopyFiles extends MapReduceBase implements Reducer {
     jobConf.setOutputFormat(SequenceFileOutputFormat.class);
     
     jobConf.setMapperClass(CopyFilesMapper.class);
-    jobConf.setReducerClass(CopyFiles.class);
+    jobConf.setReducerClass(CopyFilesReducer.class);
     
     jobConf.setNumReduceTasks(1);
 
@@ -371,11 +362,20 @@ public class CopyFiles extends MapReduceBase implements Reducer {
     }
     finalPathList = null;
     
+    int exitCode = -1;
     try {
       JobClient.runJob(jobConf);
+      exitCode = 0;
     } finally {
       fileSys.delete(tmpDir);
     }
   
+    return exitCode;
+  }
+  
+  public static void main(String[] args) throws IOException {
+      new CopyFiles().doMain(
+              new JobConf(new Configuration(), CopyFiles.class), 
+              args);
   }
 }

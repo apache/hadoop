@@ -34,7 +34,7 @@ import java.util.*;
  *
  * @author Mike Cafarella
  *******************************************************/
-public class JobClient implements MRConstants {
+public class JobClient extends ToolBase implements MRConstants  {
     private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");
 
     static long MAX_JOBPROFILE_AGE = 1000 * 2;
@@ -170,22 +170,28 @@ public class JobClient implements MRConstants {
     JobSubmissionProtocol jobSubmitClient;
     FileSystem fs = null;
 
-    private Configuration conf;
     static Random r = new Random();
 
     /**
      * Build a job client, connect to the default job tracker
      */
+    public JobClient() {
+    }
+    
     public JobClient(Configuration conf) throws IOException {
-      this.conf = conf;
-      String tracker = conf.get("mapred.job.tracker", "local");
-      if ("local".equals(tracker)) {
-        this.jobSubmitClient = new LocalJobRunner(conf);
-      } else {
-        this.jobSubmitClient = (JobSubmissionProtocol) 
-          RPC.getProxy(JobSubmissionProtocol.class,
-                       JobTracker.getAddress(conf), conf);
-      }
+        setConf(conf);
+        init();
+    }
+    
+    public void init() throws IOException {
+        String tracker = conf.get("mapred.job.tracker", "local");
+        if ("local".equals(tracker)) {
+          this.jobSubmitClient = new LocalJobRunner(conf);
+        } else {
+          this.jobSubmitClient = (JobSubmissionProtocol) 
+            RPC.getProxy(JobSubmissionProtocol.class,
+                         JobTracker.getAddress(conf), conf);
+        }        
     }
   
     /**
@@ -382,14 +388,16 @@ public class JobClient implements MRConstants {
     }
         
 
-    /**
-     */
-    public static void main(String argv[]) throws IOException {
+    public int run(String[] argv) throws Exception {
+        // TODO Auto-generated method stub
         if (argv.length < 2) {
             System.out.println("JobClient -submit <job> | -status <id> | -kill <id> [-jt <jobtracker:port>|<config>]");
             System.exit(-1);
         }
 
+        // initialize JobClient
+        init();
+        
         // Process args
         String jobTrackerSpec = null;
         String submitJobFile = null;
@@ -398,10 +406,7 @@ public class JobClient implements MRConstants {
         boolean killJob = false;
 
         for (int i = 0; i < argv.length; i++) {
-            if ("-jt".equals(argv[i])) {
-                jobTrackerSpec = argv[i+1];
-                i++;
-            } else if ("-submit".equals(argv[i])) {
+            if ("-submit".equals(argv[i])) {
                 submitJobFile = argv[i+1];
                 i++;
             } else if ("-status".equals(argv[i])) {
@@ -416,31 +421,40 @@ public class JobClient implements MRConstants {
         }
 
         // Submit the request
-        JobClient jc = new JobClient(getConfiguration(jobTrackerSpec));
+        int exitCode = -1;
         try {
             if (submitJobFile != null) {
-                RunningJob job = jc.submitJob(submitJobFile);
+                RunningJob job = submitJob(submitJobFile);
                 System.out.println("Created job " + job.getJobID());
             } else if (getStatus) {
-                RunningJob job = jc.getJob(jobid);
+                RunningJob job = getJob(jobid);
                 if (job == null) {
                     System.out.println("Could not find job " + jobid);
                 } else {
                     System.out.println();
                     System.out.println(job);
+                    exitCode = 0;
                 }
             } else if (killJob) {
-                RunningJob job = jc.getJob(jobid);
+                RunningJob job = getJob(jobid);
                 if (job == null) {
                     System.out.println("Could not find job " + jobid);
                 } else {
                     job.killJob();
                     System.out.println("Killed job " + jobid);
+                    exitCode = 0;
                 }
             }
         } finally {
-            jc.close();
+            close();
         }
+        return exitCode;
+    }
+    
+    /**
+     */
+    public static void main(String argv[]) throws IOException {
+        new JobClient().doMain(new Configuration(), argv);
     }
 }
 

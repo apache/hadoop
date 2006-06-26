@@ -31,6 +31,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.util.ToolBase;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -56,7 +57,7 @@ import org.apache.hadoop.io.UTF8;
  *  
  * @author Andrzej Bialecki
  */
-public class DFSck {
+public class DFSck extends ToolBase {
   private static final Log LOG = LogFactory.getLog(DFSck.class.getName());
 
   /** Don't attempt any fixing . */
@@ -70,11 +71,13 @@ public class DFSck {
   private UTF8 lostFound = null;
   private boolean lfInited = false;
   private boolean lfInitedOk = false;
-  private Configuration conf;
   private boolean showFiles = false;
   private boolean showBlocks = false;
   private boolean showLocations = false;
   private int fixing;
+ 
+  DFSck() {
+  }
   
   /**
    * Filesystem checker.
@@ -86,16 +89,21 @@ public class DFSck {
    * @throws Exception
    */
   public DFSck(Configuration conf, int fixing, boolean showFiles, boolean showBlocks, boolean showLocations) throws Exception {
-    this.conf = conf;
-    this.fixing = fixing;
-    this.showFiles = showFiles;
-    this.showBlocks = showBlocks;
-    this.showLocations = showLocations;
-    String fsName = conf.get("fs.default.name", "local");
-    if (fsName.equals("local")) {
-      throw new Exception("This tool only checks DFS, but your config uses 'local' FS.");
-    }
-    this.dfs = new DFSClient(DataNode.createSocketAddr(fsName), conf);
+    setConf(conf);
+    init(fixing, showFiles, showBlocks, showLocations);
+  }
+  
+  public void init(int fixing, boolean showFiles, 
+          boolean showBlocks, boolean showLocations) throws IOException {
+      String fsName = conf.get("fs.default.name", "local");
+      if (fsName.equals("local")) {
+        throw new IOException("This tool only checks DFS, but your config uses 'local' FS.");
+      }
+      this.dfs = new DFSClient(DataNode.createSocketAddr(fsName), conf);
+      this.fixing = fixing;
+      this.showFiles = showFiles;
+      this.showBlocks = showBlocks;
+      this.showLocations = showLocations;
   }
   
   /**
@@ -405,7 +413,7 @@ public class DFSck {
   /**
    * @param args
    */
-  public static void main(String[] args) throws Exception {
+  public int run(String[] args) throws Exception {
     if (args.length == 0) {
       System.err.println("Usage: DFSck <path> [-move | -delete] [-files] [-blocks [-locations]]");
       System.err.println("\t<path>\tstart checking from this path");
@@ -414,9 +422,8 @@ public class DFSck {
       System.err.println("\t-files\tprint out files being checked");
       System.err.println("\t-blocks\tprint out block report");
       System.err.println("\t-locations\tprint out locations for every block");
-      return;
+      return -1;
     }
-    Configuration conf = new Configuration();
     String path = args[0];
     boolean showFiles = false;
     boolean showBlocks = false;
@@ -429,8 +436,8 @@ public class DFSck {
       if (args[i].equals("-move")) fixing = FIXING_MOVE;
       if (args[i].equals("-delete")) fixing = FIXING_DELETE;
     }
-    DFSck fsck = new DFSck(conf, fixing, showFiles, showBlocks, showLocations);
-    Result res = fsck.fsck(path);
+    init(fixing, showFiles, showBlocks, showLocations);
+    Result res = fsck(path);
     System.out.println();
     System.out.println(res);
     if (res.isHealthy()) {
@@ -438,6 +445,11 @@ public class DFSck {
     } else {
       System.out.println("\n\nThe filesystem under path '" + args[0] + "' is CORRUPT");
     }
+    return 0;
+  }
+
+  public static void main(String[] args) throws Exception {
+      new DFSck().doMain(new Configuration(), args);
   }
 
   /**
@@ -596,5 +608,6 @@ public class DFSck {
       this.corruptFiles = corruptFiles;
     }
   }
+
 
 }

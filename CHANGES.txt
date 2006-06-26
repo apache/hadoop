@@ -60,6 +60,12 @@ Trunk (unreleased changes)
     This improves performance when tasks are short.
     (Mahadev Konar via cutting)
 
+15. HADOOP-59.  Add support for generic command line options.  One may
+    now specify the filesystem (-fs), the MapReduce jobtracker (-jt),
+    a config file (-conf) or any configuration property (-D).  The
+    "dfs", "fsck", "job", and "distcp" commands currently support
+    this, with more to be added.  (Hairong Kuang via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
