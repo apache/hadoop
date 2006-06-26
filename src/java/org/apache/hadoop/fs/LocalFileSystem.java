@@ -322,7 +322,9 @@ public class LocalFileSystem extends FileSystem {
       throws IOException {
     }
 
-    public void close() throws IOException {}
+    public void close() throws IOException {
+        super.close();
+    }
 
     public String toString() {
         return "LocalFS";

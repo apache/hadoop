@@ -540,7 +540,9 @@ public abstract class FileSystem extends Configured {
      * No more filesystem operations are needed.  Will
      * release any held locks.
      */
-    public abstract void close() throws IOException;
+    public void close() throws IOException {
+        NAME_TO_FS.remove(getName());
+    }
 
     /**
      * Report a checksum error to the file system.

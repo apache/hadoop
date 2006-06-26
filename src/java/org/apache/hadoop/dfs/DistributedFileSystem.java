@@ -196,6 +196,7 @@ public class DistributedFileSystem extends FileSystem {
     }
 
     public void close() throws IOException {
+        super.close();
         dfs.close();
     }
 

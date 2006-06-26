@@ -171,12 +171,10 @@ public class TestCopyFiles extends TestCase {
   public void testCopyFromDfsToDfs() throws IOException {
     String namenode = null;
     MiniDFSCluster cluster = null;
-    FileSystem fileSys = null;
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(65314, conf);
-      fileSys = cluster.getFileSystem();
-      namenode = fileSys.getName();
+      namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
         CopyFiles.main(new String[] {"dfs://"+namenode+"/srcdat",
@@ -187,7 +185,6 @@ public class TestCopyFiles extends TestCase {
         deldir(namenode, "/srcdat");
       }
     } finally {
-      if (fileSys != null) { fileSys.close(); }
       if (cluster != null) { cluster.shutdown(); }
     }
   }
@@ -196,12 +193,10 @@ public class TestCopyFiles extends TestCase {
   public void testCopyFromLocalToDfs() throws IOException {
     String namenode = null;
     MiniDFSCluster cluster = null;
-    FileSystem fileSys = null;
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(65316, conf);
-      fileSys = cluster.getFileSystem();
-      namenode = fileSys.getName();
+      namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
         CopyFiles.main(new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
@@ -212,7 +207,6 @@ public class TestCopyFiles extends TestCase {
         deldir("local", TEST_ROOT_DIR+"/srcdat");
       }
     } finally {
-      if (fileSys != null) { fileSys.close(); }
       if (cluster != null) { cluster.shutdown(); }
     }
   }
@@ -221,12 +215,10 @@ public class TestCopyFiles extends TestCase {
   public void testCopyFromDfsToLocal() throws IOException {
     String namenode = null;
     MiniDFSCluster cluster = null;
-    FileSystem fileSys = null;
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(65318, conf);
-      fileSys = cluster.getFileSystem();
-      namenode = fileSys.getName();
+      namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
         CopyFiles.main(new String[] {"dfs://"+namenode+"/srcdat",
@@ -237,7 +229,6 @@ public class TestCopyFiles extends TestCase {
         deldir(namenode, "/srcdat");
       }
     } finally {
-      if (fileSys != null) { fileSys.close(); }
       if (cluster != null) { cluster.shutdown(); }
     }
  }
