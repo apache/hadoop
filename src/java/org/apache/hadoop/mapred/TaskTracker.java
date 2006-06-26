@@ -79,7 +79,7 @@ public class TaskTracker
 
     private int maxCurrentTasks;
     private int failures;
-    
+    private int finishedCount[] = new int[1];
     /**
      * A list of tips that should be cleaned up.
      */
@@ -284,11 +284,16 @@ public class TaskTracker
             long waitTime = HEARTBEAT_INTERVAL - (now - lastHeartbeat);
             if (waitTime > 0) {
                 try {
-                    Thread.sleep(waitTime);
+                    // sleeps for the wait time, wakes up if a task is finished.
+		    synchronized(finishedCount) {
+                        if (finishedCount[0] == 0) {
+			    finishedCount.wait(waitTime);
+                        }
+                        finishedCount[0] = 0;
+                    }
                 } catch (InterruptedException ie) {
-                }
-                continue;
-            }
+               }
+	    }
             lastHeartbeat = now;
 
             //
@@ -856,6 +861,10 @@ public class TaskTracker
         }
         if (tip != null) {
           tip.taskFinished();
+          synchronized(finishedCount) {
+              finishedCount[0]++;
+              finishedCount.notifyAll();
+          }
         } else {
           LOG.warn("Unknown child task finshed: "+taskid+". Ignored.");
         }

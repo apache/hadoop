@@ -52,8 +52,13 @@ Trunk (unreleased changes)
     error.  (omalley via cutting)
 
 13. HADOOP-304.  Improve error message for
-    UnregisterdDatanodeException, adding expected node name.
+    UnregisterdDatanodeException to include expected node name.
    (Konstantin Shvachko via cutting)
+
+14. HADOOP-305.  Fix TaskTracker to ask for new tasks as soon as a
+    task is finished, rather than waiting for the next heartbeat.
+    This improves performance when tasks are short.
+    (Mahadev Konar via cutting)
 
 
 Release 0.3.2 - 2006-06-09
