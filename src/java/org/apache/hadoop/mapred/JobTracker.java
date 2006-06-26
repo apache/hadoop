@@ -255,8 +255,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 }
                 
                 synchronized (jobs) {
-                    synchronized (jobInitQueue) {
-                        synchronized (jobsByArrival) {
+                    synchronized (jobsByArrival) {
+                        synchronized (jobInitQueue) {
                             for (Iterator it = jobs.keySet().iterator(); it.hasNext(); ) {
                                 String jobid = (String) it.next();
                                 JobInProgress job = (JobInProgress) jobs.get(jobid);

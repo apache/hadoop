@@ -44,6 +44,9 @@ Trunk (unreleased changes)
 10. HADOOP-319.  Fix FileSystem.close() to remove the FileSystem
     instance from the cache.  (Hairong Kuang via cutting)
 
+11. HADOOP-135.  Fix potential deadlock in JobTracker by acquiring
+    locks in a consistent order.  (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
