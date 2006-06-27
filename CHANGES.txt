@@ -74,6 +74,10 @@ Trunk (unreleased changes)
     duplicated DataNodeInfo.  The former is now deprecated, replaced
     by the latter.  (Konstantin Shvachko via cutting)
 
+18. HADOOP-325.  Fix a problem initializing RPC parameter classes, and
+    remove the workaround used to initialize classes.
+    (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 

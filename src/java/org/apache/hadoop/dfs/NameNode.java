@@ -68,12 +68,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     
     /** only used for testing purposes  */
     private boolean stopRequested = false;
-    // force loading of classes that will be received via RPC
-    // creating an instance will do the static initialization of the class
-    static {
-      new DatanodeRegistration();
-      new Block();
-    }
 
     /** Format a new filesystem.  Destroys any filesystem that may already
      * exist at this location.  **/

@@ -242,7 +242,7 @@ public class Configuration {
     if (valueString == null)
       return defaultValue;
     try {
-      return classLoader.loadClass(valueString);
+      return Class.forName(valueString, true, classLoader);
     } catch (ClassNotFoundException e) {
       throw new RuntimeException(e);
     }

@@ -50,9 +50,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       idFormat.setGroupingUsed(false);
     }
 
-    // required for unknown reason to make WritableFactories work distributed
-    static { new TaskTrackerStatus(); }
-
     private int nextJobId = 1;
 
     public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobTracker");

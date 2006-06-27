@@ -172,9 +172,10 @@ public class ObjectWritable implements Writable, Configurable {
     if (declaredClass == null) {
       try {
         declaredClass =
-          Thread.currentThread().getContextClassLoader().loadClass(className);
+          Class.forName(className, true, 
+                        Thread.currentThread().getContextClassLoader());
       } catch (ClassNotFoundException e) {
-        throw new RuntimeException(e.toString());
+        throw new RuntimeException("readObject can't find class", e);
       }
     }    
 
@@ -217,10 +218,11 @@ public class ObjectWritable implements Writable, Configurable {
     } else {                                      // Writable
       Class instanceClass = null;
       try {
-        instanceClass = Thread.currentThread().getContextClassLoader()
-          .loadClass(UTF8.readString(in));
+        instanceClass = 
+          Class.forName(UTF8.readString(in), true, 
+                        Thread.currentThread().getContextClassLoader());
       } catch (ClassNotFoundException e) {
-        throw new RuntimeException(e.toString());
+        throw new RuntimeException("readObject can't find class", e);
       }
       
       Writable writable = WritableFactories.newInstance(instanceClass);

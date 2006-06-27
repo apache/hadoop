@@ -28,9 +28,6 @@ import org.apache.hadoop.util.ToolBase;
  **************************************************/
 public class DFSShell extends ToolBase {
 
-    // required for unknown reason to make WritableFactories work distributed
-    static { new DatanodeInfo(); }
-
     FileSystem fs;
 
     /**

@@ -116,7 +116,7 @@ class JobInProgress {
           try {
             ClassLoader loader =
               new URLClassLoader(new URL[]{ localFs.pathToFile(localJarFile).toURL() });
-            Class inputFormatClass = loader.loadClass(ifClassName);
+            Class inputFormatClass = Class.forName(ifClassName, true, loader);
             inputFormat = (InputFormat)inputFormatClass.newInstance();
           } catch (Exception e) {
             throw new IOException(e.toString());

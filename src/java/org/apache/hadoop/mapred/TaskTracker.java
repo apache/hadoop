@@ -41,9 +41,6 @@ public class TaskTracker
 
     static final int STALE_STATE = 1;
 
-    // required for unknown reason to make WritableFactories work distributed
-    static { new MapTask(); new ReduceTask(); new MapOutputLocation(); }
-
     public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.mapred.TaskTracker");
 

@@ -120,7 +120,7 @@ public class RunJar {
       new URLClassLoader((URL[])classPath.toArray(new URL[0]));
 
     Thread.currentThread().setContextClassLoader(loader);
-    Class mainClass = loader.loadClass(mainClassName);
+    Class mainClass = Class.forName(mainClassName, true, loader);
     Method main = mainClass.getMethod("main", new Class[] {
       Array.newInstance(String.class, 0).getClass()
     });
