@@ -70,6 +70,10 @@ Trunk (unreleased changes)
     on a DFS datanode.  One may specify both the percentage free and
     the number of bytes.  (Johan Oskarson via cutting)
 
+17. HADOOP-321.  Refactor some DFS classes.  DataNodeReport nearly
+    duplicated DataNodeInfo.  The former is now deprecated, replaced
+    by the latter.  (Konstantin Shvachko via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
