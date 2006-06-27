@@ -51,7 +51,6 @@ public class TaskTracker
     InetSocketAddress jobTrackAddr;
 
     int taskReportPort;
-    int mapOutputPort;
 
     Server taskReportServer = null;
     Server mapOutputServer = null;
@@ -123,7 +122,6 @@ public class TaskTracker
 
         // port numbers
         this.taskReportPort = this.fConf.getInt("mapred.task.tracker.report.port", 50050);
-        this.mapOutputPort = this.fConf.getInt("mapred.task.tracker.output.port", 50040);
 
         // RPC initialization
         while (true) {
@@ -320,7 +318,7 @@ public class TaskTracker
             
             TaskTrackerStatus status = 
               new TaskTrackerStatus(taskTrackerName, localHostname, 
-                                    mapOutputPort, httpPort, taskReports, 
+                                    httpPort, taskReports, 
                                     failures); 
             int resultCode = jobClient.emitHeartbeat(status, justStarted);
             justStarted = false;

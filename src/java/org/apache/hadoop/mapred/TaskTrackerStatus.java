@@ -40,7 +40,6 @@ class TaskTrackerStatus implements Writable {
 
     String trackerName;
     String host;
-    int port;
     int httpPort;
     int failures;
     Vector taskReports;
@@ -54,11 +53,10 @@ class TaskTrackerStatus implements Writable {
 
     /**
      */
-    public TaskTrackerStatus(String trackerName, String host, int port, 
+    public TaskTrackerStatus(String trackerName, String host, 
                              int httpPort, Vector taskReports, int failures) {
         this.trackerName = trackerName;
         this.host = host;
-        this.port = port;
         this.httpPort = httpPort;
 
         this.taskReports = new Vector();
@@ -75,11 +73,6 @@ class TaskTrackerStatus implements Writable {
      */
     public String getHost() {
         return host;
-    }
-    /**
-     */
-    public int getPort() {
-        return port;
     }
 
     /**
@@ -156,7 +149,6 @@ class TaskTrackerStatus implements Writable {
     public void write(DataOutput out) throws IOException {
         UTF8.writeString(out, trackerName);
         UTF8.writeString(out, host);
-        out.writeInt(port);
         out.writeInt(httpPort);
 
         out.writeInt(taskReports.size());
@@ -171,7 +163,6 @@ class TaskTrackerStatus implements Writable {
     public void readFields(DataInput in) throws IOException {
         this.trackerName = UTF8.readString(in);
         this.host = UTF8.readString(in);
-        this.port = in.readInt();
         this.httpPort = in.readInt();
 
         taskReports = new Vector();
