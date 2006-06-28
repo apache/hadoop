@@ -281,11 +281,11 @@ public class DFSShell extends ToolBase {
         System.out.println("Effective replication multiplier: " + (1.0 * rawUsed / used));
 
         System.out.println("-------------------------------------------------");
-        DatanodeInfo info[] = dfs.getDataNodeStats();
+        DataNodeReport info[] = dfs.getDataNodeStats();
         System.out.println("Datanodes available: " + info.length);
         System.out.println();
         for (int i = 0; i < info.length; i++) {
-          System.out.println(info[i].getDatanodeReport());
+          System.out.println(info[i]);
           System.out.println();
         }
       }

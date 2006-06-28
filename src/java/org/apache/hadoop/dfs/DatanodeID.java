@@ -7,7 +7,7 @@ package org.apache.hadoop.dfs;
  * 
  * @author Konstantin Shvachko
  */
-public class DatanodeID {
+class DatanodeID {
 
   protected String name;      /// hostname:portNumber
   protected String storageID; /// unique per cluster storageID

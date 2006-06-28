@@ -20,9 +20,9 @@
     String uGb = DFSShell.limitDecimal((1.0 * u)/(1024*1024*1024), 2);
     String percentUsed = DFSShell.limitDecimal(((1.0 * u)/c)*100, 2);
     out.print("<td style=\"vertical-align: top;\"> <b>" + 
-              d.getName() +
+              d.getName().toString() +
               "</b>&nbsp;<br><i><b>LastContact:</b>" + 
-              new Date(d.getLastUpdate())+ ";&nbsp;");
+              new Date(d.lastUpdate())+ ";&nbsp;");
     out.print("<b>Total raw bytes:</b>&nbsp;" + c + "(" + cGb + 
               "&nbsp;GB);&nbsp;");
     out.print("<b>Percent used:</b>&nbsp;" + percentUsed);
@@ -53,7 +53,7 @@
         out.print("<tr>");
         generateLiveNodeData(out, l);
         out.print("<td style=\"vertical-align: top;\">" + 
-                  d.getName() +
+                  d.getName().toString() +
                   "<br></td>");
         out.print("</tr>");
       }
@@ -69,7 +69,7 @@
           DatanodeInfo d = (DatanodeInfo)dead.elementAt(i);
           out.print("<td style=\"vertical-align: top;\"><br></td>");
           out.print("<td style=\"vertical-align: top;\">" + 
-                    d.getName() +
+                    d.getName().toString() +
                     "<br></td>");
         }
         out.print("</tr>");

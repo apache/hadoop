@@ -242,7 +242,18 @@ public class DistributedFileSystem extends FileSystem {
     }
 
     /** Return statistics for each datanode.*/
-    public DatanodeInfo[] getDataNodeStats() throws IOException {
-      return dfs.datanodeReport();
+    public DataNodeReport[] getDataNodeStats() throws IOException {
+      DatanodeInfo[]  dnReport = dfs.datanodeReport();
+      DataNodeReport[] reports = new DataNodeReport[dnReport.length];
+
+      for (int i = 0; i < dnReport.length; i++) {
+        reports[i] = new DataNodeReport();
+        reports[i].name = dnReport[i].getName();
+        reports[i].host = dnReport[i].getHost();
+        reports[i].capacity = dnReport[i].getCapacity();
+        reports[i].remaining = dnReport[i].getRemaining();
+        reports[i].lastUpdate = dnReport[i].lastUpdate();
+      }
+      return reports;
     }
 }
