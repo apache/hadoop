@@ -234,6 +234,27 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.local.dir.minspacestart</name>
+  <value>0</value>
+  <description>If the space in mapred.local.dir drops under this, 
+  do not ask for more tasks.
+  Value in bytes.
+  </description>
+</property>
+
+<property>
+  <name>mapred.local.dir.minspacekill</name>
+  <value>0</value>
+  <description>If the space in mapred.local.dir drops under this, 
+  	do not ask more tasks until all the current ones have finished and 
+  	cleaned up. Also, to save the rest of the tasks we have running, 
+  	kill one of them, to clean up some space. Start with the reduce tasks,
+  	then go with the ones that have finished the least.
+  	Value in bytes.
+  </description>
+</property>
+
+<property>
   <name>mapred.map.tasks</name>
   <value>2</value>
   <description>The default number of map tasks per job.  Typically set

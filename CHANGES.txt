@@ -77,6 +77,9 @@ Trunk (unreleased changes)
 18. HADOOP-328.  Add an option to the "distcp" command to ignore read
     errors while copying.  (omalley via cutting)
 
+19. HADOOP-27.  Don't allocate tasks to trackers whose local free
+    space is too low.  (Johan Oskarson via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
