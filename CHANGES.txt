@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Release 0.4.0 - 2006-06-28
 
  1. HADOOP-298.  Improved progress reports for CopyFiles utility, the
     distributed file copier.  (omalley via cutting)
