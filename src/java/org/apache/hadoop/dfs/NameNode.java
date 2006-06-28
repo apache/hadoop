@@ -366,9 +366,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     public BlockCommand sendHeartbeat(DatanodeRegistration nodeReg,
                                       long capacity, 
                                       long remaining,
-                                      int xmitsInProgress) throws IOException {
+                                      int xmitsInProgress,
+                                      int xceiverCount) throws IOException {
         verifyRequest( nodeReg );
-        namesystem.gotHeartbeat( nodeReg, capacity, remaining );
+        namesystem.gotHeartbeat( nodeReg, capacity, remaining, xceiverCount );
         
         //
         // Only ask datanodes to perform block operations (transfer, delete) 

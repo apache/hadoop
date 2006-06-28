@@ -96,7 +96,10 @@ abstract class Task implements Writable, Configurable {
     return new Reporter() {
         public void setStatus(String status) throws IOException {
           progress.setStatus(status);
-          reportProgress(umbilical);
+          progress();
+        }
+        public void progress() throws IOException {
+            reportProgress(umbilical);
         }
       };
   }

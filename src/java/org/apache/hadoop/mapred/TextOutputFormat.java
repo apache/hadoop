@@ -24,16 +24,17 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.Progressable;
 
 /** An {@link OutputFormat} that writes plain text files. */
 public class TextOutputFormat extends OutputFormatBase {
 
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
-                                      String name) throws IOException {
+                                      String name, Progressable progress) throws IOException {
 
     Path file = new Path(job.getOutputPath(), name);
 
-    final FSDataOutputStream out = fs.create(file);
+    final FSDataOutputStream out = fs.create(file, progress);
 
     return new RecordWriter() {
         public synchronized void write(WritableComparable key, Writable value)

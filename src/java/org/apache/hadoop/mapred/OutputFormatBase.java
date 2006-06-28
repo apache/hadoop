@@ -20,11 +20,13 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Progressable;
 
 /** A base class for {@link OutputFormat}. */
 public abstract class OutputFormatBase implements OutputFormat {
   public abstract RecordWriter getRecordWriter(FileSystem fs,
-                                               JobConf job, String name)
+                                               JobConf job, String name,
+                                               Progressable progress)
     throws IOException;
 
   public void checkOutputSpecs(FileSystem fs, JobConf job) throws IOException {

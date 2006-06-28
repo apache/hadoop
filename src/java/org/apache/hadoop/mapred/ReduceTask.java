@@ -223,10 +223,12 @@ class ReduceTask extends Task {
 
     sortPhase.complete();                         // sort is complete
 
+    Reporter reporter = getReporter(umbilical, getProgress());
+    
     // make output collector
     String name = getOutputName(getPartition());
     final RecordWriter out =
-      job.getOutputFormat().getRecordWriter(FileSystem.get(job), job, name);
+      job.getOutputFormat().getRecordWriter(FileSystem.get(job), job, name, reporter);
     OutputCollector collector = new OutputCollector() {
         public void collect(WritableComparable key, Writable value)
           throws IOException {
@@ -237,7 +239,6 @@ class ReduceTask extends Task {
     
     // apply reduce function
     SequenceFile.Reader in = new SequenceFile.Reader(lfs, sortedFile, job);
-    Reporter reporter = getReporter(umbilical, getProgress());
     long length = lfs.getLength(sortedFile);
     try {
       ValuesIterator values = new ValuesIterator(in, length, comparator,

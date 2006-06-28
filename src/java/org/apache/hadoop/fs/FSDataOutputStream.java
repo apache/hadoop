@@ -19,6 +19,7 @@ import java.io.*;
 import java.util.zip.Checksum;
 import java.util.zip.CRC32;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Progressable;
 
 /** Utility that wraps a {@link FSOutputStream} in a {@link DataOutputStream},
  * buffers output through a {@link BufferedOutputStream} and creates a checksum
@@ -41,7 +42,18 @@ public class FSDataOutputStream extends DataOutputStream {
                   long blockSize,
                   Configuration conf)
       throws IOException {
-      super(fs.createRaw(file, overwrite, replication, blockSize));
+      this(fs, file, overwrite, replication, blockSize, conf, null);
+    }
+
+    public Summer(FileSystem fs, 
+                  Path file, 
+                  boolean overwrite, 
+                  short replication,
+                  long blockSize,
+                  Configuration conf,
+                  Progressable progress)
+      throws IOException {
+      super(fs.createRaw(file, overwrite, replication, blockSize, progress));
       this.bytesPerSum = conf.getInt("io.bytes.per.checksum", 512);
       this.sums = new FSDataOutputStream(
             fs.createRaw(FileSystem.getChecksumFile(file), true, 
@@ -50,7 +62,7 @@ public class FSDataOutputStream extends DataOutputStream {
       sums.write(CHECKSUM_VERSION, 0, CHECKSUM_VERSION.length);
       sums.writeInt(this.bytesPerSum);
     }
-
+    
     public void write(byte b[], int off, int len) throws IOException {
       int summed = 0;
       while (summed < len) {
@@ -137,6 +149,17 @@ public class FSDataOutputStream extends DataOutputStream {
             bufferSize));
   }
 
+  public FSDataOutputStream(FileSystem fs, Path file,
+                            boolean overwrite, Configuration conf,
+                            int bufferSize, short replication, long blockSize,
+                            Progressable progress)
+  throws IOException {
+    super(new Buffer(
+            new PositionCache(
+                new Summer(fs, file, overwrite, replication, blockSize, conf, progress)), 
+            bufferSize));
+  }
+  
   /** Construct without checksums. */
   private FSDataOutputStream(FSOutputStream out, Configuration conf) throws IOException {
     this(out, conf.getInt("io.file.buffer.size", 4096));

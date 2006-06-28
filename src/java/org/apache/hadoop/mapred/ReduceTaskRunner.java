@@ -22,6 +22,7 @@ import org.apache.hadoop.util.*;
 import java.io.*;
 import java.util.*;
 import java.text.DecimalFormat;
+import org.apache.hadoop.util.Progressable;
 
 /** Runs a reduce task. */
 class ReduceTaskRunner extends TaskRunner {
@@ -115,7 +116,7 @@ class ReduceTaskRunner extends TaskRunner {
     public MapOutputLocation getLocation() { return loc; }
   }
 
-  private static class PingTimer implements MapOutputLocation.Pingable {
+  private static class PingTimer implements Progressable {
     private long pingTime;
     
     public synchronized void reset() {
@@ -126,7 +127,7 @@ class ReduceTaskRunner extends TaskRunner {
       return pingTime;
     }
     
-    public void ping() {
+    public void progress() {
       synchronized (this) {
         pingTime = System.currentTimeMillis();
       }
@@ -202,7 +203,7 @@ class ReduceTaskRunner extends TaskRunner {
 
           try {
             start(loc);
-            pingTimer.ping();
+            pingTimer.progress();
             size = copyOutput(loc, pingTimer);
             pingTimer.reset();
           } catch (IOException e) {
@@ -222,7 +223,7 @@ class ReduceTaskRunner extends TaskRunner {
      * @throws IOException if there is an error copying the file
      */
     private long copyOutput(MapOutputLocation loc, 
-                            MapOutputLocation.Pingable pingee)
+                            Progressable pingee)
     throws IOException {
 
       String reduceId = reduceTask.getTaskId();

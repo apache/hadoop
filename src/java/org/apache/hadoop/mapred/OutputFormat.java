@@ -19,19 +19,22 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.util.Progressable;
 
 /** An output data format.  Output files are stored in a {@link
  * FileSystem}. */
 public interface OutputFormat {
 
-  /** Construct a {@link RecordWriter}.
+  /** Construct a {@link RecordWriter} with Progressable.
    *
    * @param fs the file system to write to
    * @param job the job whose output is being written
    * @param name the unique name for this part of the output
+   * @param progress mechanism for reporting progress while writing to file
    * @return a {@link RecordWriter}
    */
-  RecordWriter getRecordWriter(FileSystem fs, JobConf job, String name)
+  RecordWriter getRecordWriter(FileSystem fs, JobConf job, String name,
+          Progressable progress)
     throws IOException;
 
   /** Check whether the output specification for a job is appropriate.  Called

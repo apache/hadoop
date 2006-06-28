@@ -1132,7 +1132,8 @@ class FSNamesystem implements FSConstants {
      */
     public synchronized void gotHeartbeat(DatanodeID nodeID,
                                           long capacity, 
-                                          long remaining) throws IOException {
+                                          long remaining,
+                                          int xceiverCount) throws IOException {
       synchronized (heartbeats) {
         synchronized (datanodeMap) {
           long capacityDiff = 0;
@@ -1143,7 +1144,8 @@ class FSNamesystem implements FSConstants {
           if (nodeinfo == null) {
             NameNode.stateChangeLog.debug("BLOCK* NameSystem.gotHeartbeat: "
                     +"brand-new heartbeat from "+nodeID.getName() );
-            nodeinfo = new DatanodeInfo(nodeID, capacity, remaining);
+
+            nodeinfo = new DatanodeInfo(nodeID, capacity, remaining, xceiverCount);
             datanodeMap.put(nodeinfo.getStorageID(), nodeinfo);
             capacityDiff = capacity;
             remainingDiff = remaining;
@@ -1151,7 +1153,7 @@ class FSNamesystem implements FSConstants {
             capacityDiff = capacity - nodeinfo.getCapacity();
             remainingDiff = remaining - nodeinfo.getRemaining();
             heartbeats.remove(nodeinfo);
-            nodeinfo.updateHeartbeat(capacity, remaining);
+            nodeinfo.updateHeartbeat(capacity, remaining, xceiverCount);
           }
           heartbeats.add(nodeinfo);
           totalCapacity += capacityDiff;
@@ -1771,6 +1773,7 @@ class FSNamesystem implements FSConstants {
             }
         }
 
+        double avgLoad = 0.0;
         //
         // Build list of machines we can actually choose from
         //
@@ -1779,8 +1782,11 @@ class FSNamesystem implements FSConstants {
             DatanodeInfo node = (DatanodeInfo) it.next();
             if (! forbiddenMachines.contains(node.getHost())) {
                 targetList.add(node);
+                avgLoad += node.getXceiverCount();
             }
         }
+        if (targetList.size() > 0) { avgLoad = avgLoad/targetList.size(); }
+        
         Collections.shuffle(targetList);
         
         //
@@ -1795,7 +1801,8 @@ class FSNamesystem implements FSConstants {
                 for (Iterator it = targetList.iterator(); it.hasNext(); ) {
                     DatanodeInfo node = (DatanodeInfo) it.next();
                     if (clientMachine.equals(node.getHost())) {
-                        if (node.getRemaining() > blockSize * MIN_BLOCKS_FOR_WRITE) {
+                        if ((node.getRemaining() > blockSize * MIN_BLOCKS_FOR_WRITE) &&
+                            (node.getXceiverCount() < (2.0 * avgLoad))) {
                             return node;
                         }
                     }
@@ -1807,7 +1814,8 @@ class FSNamesystem implements FSConstants {
             //
             for (Iterator it = targetList.iterator(); it.hasNext(); ) {
                 DatanodeInfo node = (DatanodeInfo) it.next();
-                if (node.getRemaining() > blockSize * MIN_BLOCKS_FOR_WRITE) {
+                if ((node.getRemaining() > blockSize * MIN_BLOCKS_FOR_WRITE) &&
+                    (node.getXceiverCount() < (2.0 * avgLoad))) {
                     return node;
                 }
             }

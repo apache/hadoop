@@ -26,6 +26,7 @@ import org.apache.lucene.util.PriorityQueue;
 import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.Progressable;
 
 /** Support for flat files of binary key/value pairs. */
 public class SequenceFile {
@@ -88,6 +89,13 @@ public class SequenceFile {
       this(fs, name, keyClass, valClass, false);
     }
     
+    /** Create the named file with write-progress reporter. */
+    public Writer(FileSystem fs, Path name, Class keyClass, Class valClass,
+            Progressable progress)
+      throws IOException {
+      this(fs, name, keyClass, valClass, false, progress);
+    }
+    
     /** Create the named file.
      * @param compress if true, values are compressed.
      */
@@ -96,6 +104,17 @@ public class SequenceFile {
       throws IOException {
       this.target = name;
       init(fs.create(target), keyClass, valClass, compress);
+    }
+    
+    /** Create the named file with write-progress reporter.
+     * @param compress if true, values are compressed.
+     */
+    public Writer(FileSystem fs, Path name,
+                  Class keyClass, Class valClass, boolean compress,
+                  Progressable progress)
+      throws IOException {
+      this.target = name;
+      init(fs.create(target, progress), keyClass, valClass, compress);
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */

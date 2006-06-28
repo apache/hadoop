@@ -381,6 +381,7 @@ public class DFSCIOTest extends TestCase {
     for( int i=0; i < nrFiles; i++)
       ioer.doIO(new Reporter() {
           public void setStatus(String status) throws IOException {}
+          public void progress() throws IOException {}
         },
                 BASE_FILE_NAME+Integer.toString(i), 
                 MEGA*fileSize );

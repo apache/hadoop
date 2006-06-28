@@ -28,6 +28,7 @@ import java.util.*;
  * @author Mike Cafarella
  **************************************************/
 public class DatanodeInfo extends DatanodeID implements Writable, Comparable {
+  private int xceiverCount;
 
     static {                                      // register a ctor
       WritableFactories.setFactory
@@ -36,18 +37,18 @@ public class DatanodeInfo extends DatanodeID implements Writable, Comparable {
            public Writable newInstance() { return new DatanodeInfo(); }
          });
     }
-
+  /** number of active connections */
+  public int getXceiverCount() { return xceiverCount; }
+  
     private long capacityBytes, remainingBytes, lastUpdate;
     private volatile TreeSet blocks;
-
     /** Create an empty DatanodeInfo.
      */
     public DatanodeInfo() {
-        this(new String(), new String(), 0, 0);
+        this(new String(), new String(), 0, 0, 0);
     }
-
     public DatanodeInfo( DatanodeID nodeID ) {
-      this( nodeID.getName(), nodeID.getStorageID(), 0, 0);
+      this( nodeID.getName(), nodeID.getStorageID(), 0, 0, 0);
     }
     
    /**
@@ -55,22 +56,22 @@ public class DatanodeInfo extends DatanodeID implements Writable, Comparable {
     */
     public DatanodeInfo(DatanodeID nodeID, 
                         long capacity, 
-                        long remaining) {
-      this( nodeID.getName(), nodeID.getStorageID(), capacity, remaining );
+                        long remaining,
+                        int xceiverCount) {
+      this( nodeID.getName(), nodeID.getStorageID(), capacity, remaining, xceiverCount );
     }
-
    /**
     * @param name hostname:portNumber as String object.
     */
     public DatanodeInfo(String name, 
                         String storageID, 
                         long capacity, 
-                        long remaining) {
+                        long remaining,
+                        int xceiverCount) {
         super( name, storageID );
         this.blocks = new TreeSet();
-        updateHeartbeat(capacity, remaining);
+        updateHeartbeat(capacity, remaining, xceiverCount);
     }
-
    /**
     */
     public void updateBlocks(Block newBlocks[]) {
@@ -88,9 +89,10 @@ public class DatanodeInfo extends DatanodeID implements Writable, Comparable {
 
     /**
      */
-    public void updateHeartbeat(long capacity, long remaining) {
+    public void updateHeartbeat(long capacity, long remaining, int xceiverCount) {
         this.capacityBytes = capacity;
         this.remainingBytes = remaining;
+        this.xceiverCount = xceiverCount;
         this.lastUpdate = System.currentTimeMillis();
     }
 
@@ -119,7 +121,6 @@ public class DatanodeInfo extends DatanodeID implements Writable, Comparable {
         DatanodeInfo d = (DatanodeInfo) o;
         return name.compareTo(d.getName());
     }
-
     /////////////////////////////////////////////////
     // Writable
     /////////////////////////////////////////////////
@@ -131,6 +132,7 @@ public class DatanodeInfo extends DatanodeID implements Writable, Comparable {
         out.writeLong(capacityBytes);
         out.writeLong(remainingBytes);
         out.writeLong(lastUpdate);
+        out.writeInt(xceiverCount);
 
         /**
         out.writeInt(blocks.length);
@@ -151,7 +153,7 @@ public class DatanodeInfo extends DatanodeID implements Writable, Comparable {
         this.capacityBytes = in.readLong();
         this.remainingBytes = in.readLong();
         this.lastUpdate = in.readLong();
-
+        this.xceiverCount = in.readInt();
         /**
         int numBlocks = in.readInt();
         this.blocks = new Block[numBlocks];

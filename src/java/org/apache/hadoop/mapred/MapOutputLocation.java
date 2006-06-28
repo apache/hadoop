@@ -23,6 +23,7 @@ import java.net.URL;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.util.Progressable;
 
 /** The location of a map output file, as passed to a reduce task via the
  * {@link InterTrackerProtocol}. */ 
@@ -89,14 +90,6 @@ class MapOutputLocation implements Writable {
     return "http://" + host + ":" + port + "/getMapOutput.jsp?map=" + 
             mapTaskId;
   }
-
-  /**
-   * An interface for callbacks when an method makes some progress.
-   * @author Owen O'Malley
-   */
-  public static interface Pingable {
-    void ping();
-  }
   
   /**
    * Get the map output into a local file from the remote server.
@@ -110,7 +103,7 @@ class MapOutputLocation implements Writable {
   public long getFile(FileSystem fileSys, 
                       Path localFilename, 
                       int reduce,
-                      Pingable pingee) throws IOException {
+                      Progressable pingee) throws IOException {
     URL path = new URL(toString() + "&reduce=" + reduce);
     InputStream input = path.openConnection().getInputStream();
     OutputStream output = fileSys.create(localFilename);
@@ -122,7 +115,7 @@ class MapOutputLocation implements Writable {
         totalBytes += len;
         output.write(buffer, 0 ,len);
         if (pingee != null) {
-          pingee.ping();
+          pingee.progress();
         }
         len = input.read(buffer);
       }

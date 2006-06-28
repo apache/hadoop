@@ -212,6 +212,17 @@ public class DataNode implements FSConstants, Runnable {
         shutdown();
     }
     
+    private static class Count {
+        int value = 0;
+        Count(int init) { value = init; }
+        synchronized void incr() { value++; }
+        synchronized void decr() { value--; }
+        public String toString() { return Integer.toString(value); }
+        public int getValue() { return value; }
+    }
+    
+    Count xceiverCount = new Count(0);
+    
     /**
      * Main loop for the DataNode.  Runs until shutdown,
      * forever calling remote NameNode functions.
@@ -243,7 +254,8 @@ public class DataNode implements FSConstants, Runnable {
             BlockCommand cmd = namenode.sendHeartbeat(dnRegistration, 
                                                       data.getCapacity(), 
                                                       data.getRemaining(), 
-                                                      xmitsInProgress);
+                                                      xmitsInProgress,
+                                                      xceiverCount.getValue());
             //LOG.info("Just sent heartbeat, with name " + localName);
             lastHeartbeat = now;
 
@@ -345,6 +357,8 @@ public class DataNode implements FSConstants, Runnable {
       }
     } // offerService
 
+    
+    
     /**
      * Server used for receiving/sending a block of data.
      * This is created to listen for requests from clients or 
@@ -366,6 +380,7 @@ public class DataNode implements FSConstants, Runnable {
                     Socket s = ss.accept();
                     //s.setSoTimeout(READ_TIMEOUT);
                     data.checkDataDir();
+                    xceiverCount.incr();
                     new Daemon(new DataXceiver(s)).start();
                 }
                 ss.close();
@@ -393,6 +408,7 @@ public class DataNode implements FSConstants, Runnable {
         Socket s;
         public DataXceiver(Socket s) {
             this.s = s;
+            LOG.debug("Number of active connections is: "+xceiverCount);
         }
 
         /**
@@ -421,6 +437,8 @@ public class DataNode implements FSConstants, Runnable {
               LOG.warn("DataXCeiver", ie);
             } finally {
                 try {
+                    xceiverCount.decr();
+                    LOG.debug("Number of active connections is: "+xceiverCount);
                     s.close();
                 } catch (IOException ie2) {
                 }

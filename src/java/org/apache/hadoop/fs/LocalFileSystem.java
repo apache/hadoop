@@ -19,10 +19,8 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.util.*;
 import java.nio.channels.*;
-
-import org.apache.hadoop.fs.DF;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
  * Implement the FileSystem API for the native filesystem.
@@ -174,6 +172,13 @@ public class LocalFileSystem extends FileSystem {
         return new LocalFSFileOutputStream(f);
     }
 
+    public FSOutputStream createRaw(Path f, boolean overwrite, 
+                                    short replication, long blockSize,
+                                    Progressable progress)
+      throws IOException {
+        // ignore write-progress reporter for local files
+        return createRaw(f, overwrite, replication, blockSize);
+    }
     /**
      * Replication is not supported for the local file system.
      */

@@ -27,12 +27,14 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Progressable;
 
 /** An {@link OutputFormat} that writes {@link SequenceFile}s. */
 public class SequenceFileOutputFormat extends OutputFormatBase {
 
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
-                                      String name) throws IOException {
+                                      String name, Progressable progress)
+                                      throws IOException {
 
     Path file = new Path(job.getOutputPath(), name);
 
@@ -40,7 +42,8 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
       new SequenceFile.Writer(fs, file,
                               job.getOutputKeyClass(),
                               job.getOutputValueClass(),
-                              job.getBoolean("mapred.output.compress", false));
+                              job.getBoolean("mapred.output.compress", false),
+                              progress);
 
     return new RecordWriter() {
 

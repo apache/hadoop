@@ -22,6 +22,7 @@ import java.net.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -96,6 +97,13 @@ public class DistributedFileSystem extends FileSystem {
       return dfs.create(getPath(f), overwrite, replication, blockSize);
     }
 
+    public FSOutputStream createRaw(Path f, boolean overwrite, 
+                                    short replication, long blockSize,
+                                    Progressable progress)
+      throws IOException {
+      return dfs.create(getPath(f), overwrite, replication, blockSize, progress);
+    }
+    
     public boolean setReplicationRaw( Path src, 
                                       short replication
                                     ) throws IOException {

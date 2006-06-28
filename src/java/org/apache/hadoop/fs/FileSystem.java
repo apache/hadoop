@@ -23,6 +23,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -180,6 +181,18 @@ public abstract class FileSystem extends Configured {
     }
 
     /**
+     * Create an FSDataOutputStream at the indicated Path with write-progress
+     * reporting.
+     * Files are overwritten by default.
+     */
+    public FSDataOutputStream create(Path f, Progressable progress) throws IOException {
+      return create(f, true, 
+                    getConf().getInt("io.file.buffer.size", 4096),
+                    getDefaultReplication(),
+                    getDefaultBlockSize(), progress);
+    }
+
+    /**
      * Opens an FSDataOutputStream at the indicated Path.
      * Files are overwritten by default.
      */
@@ -191,6 +204,20 @@ public abstract class FileSystem extends Configured {
                     getDefaultBlockSize());
     }
 
+    /**
+     * Opens an FSDataOutputStream at the indicated Path with write-progress
+     * reporting.
+     * Files are overwritten by default.
+     */
+    public FSDataOutputStream create(Path f, short replication, Progressable progress)
+      throws IOException {
+      return create(f, true, 
+                    getConf().getInt("io.file.buffer.size", 4096),
+                    replication,
+                    getDefaultBlockSize(), progress);
+    }
+
+    
     /**
      * Opens an FSDataOutputStream at the indicated Path.
      * @param f the file name to open
@@ -206,6 +233,25 @@ public abstract class FileSystem extends Configured {
                      getDefaultReplication(),
                      getDefaultBlockSize());
     }
+    
+    /**
+     * Opens an FSDataOutputStream at the indicated Path with write-progress
+     * reporting.
+     * @param f the file name to open
+     * @param overwrite if a file with this name already exists, then if true,
+     *   the file will be overwritten, and if false an error will be thrown.
+     * @param bufferSize the size of the buffer to be used.
+     */
+    public FSDataOutputStream create( Path f, 
+                                      boolean overwrite,
+                                      int bufferSize,
+                                      Progressable progress
+                                    ) throws IOException {
+      return create( f, overwrite, bufferSize, 
+                     getDefaultReplication(),
+                     getDefaultBlockSize(), progress);
+    }
+    
     
     /**
      * Opens an FSDataOutputStream at the indicated Path.
@@ -225,6 +271,26 @@ public abstract class FileSystem extends Configured {
                                     bufferSize, replication, blockSize );
     }
 
+    /**
+     * Opens an FSDataOutputStream at the indicated Path with write-progress
+     * reporting.
+     * @param f the file name to open
+     * @param overwrite if a file with this name already exists, then if true,
+     *   the file will be overwritten, and if false an error will be thrown.
+     * @param bufferSize the size of the buffer to be used.
+     * @param replication required block replication for the file. 
+     */
+    public FSDataOutputStream create( Path f, 
+                                      boolean overwrite,
+                                      int bufferSize,
+                                      short replication,
+                                      long blockSize,
+                                      Progressable progress
+                                    ) throws IOException {
+      return new FSDataOutputStream(this, f, overwrite, getConf(), 
+                                    bufferSize, replication, blockSize, progress );
+    }
+
     /** Opens an OutputStream at the indicated Path.
      * @param f the file name to open
      * @param overwrite if a file with this name already exists, then if true,
@@ -236,6 +302,18 @@ public abstract class FileSystem extends Configured {
                                              long blockSize)
       throws IOException;
 
+    /** Opens an OutputStream at the indicated Path with write-progress
+     * reporting.
+     * @param f the file name to open
+     * @param overwrite if a file with this name already exists, then if true,
+     *   the file will be overwritten, and if false an error will be thrown.
+     * @param replication required block replication for the file. 
+     */
+    public abstract FSOutputStream createRaw(Path f, boolean overwrite, 
+                                             short replication,
+                                             long blockSize, Progressable progress)
+      throws IOException;
+    
     /** @deprecated Call {@link #createNewFile(Path)} instead. */
     public boolean createNewFile(File f) throws IOException {
       return createNewFile(new Path(f.toString()));

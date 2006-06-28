@@ -40,6 +40,7 @@ public class TestSequenceFileInputFormat extends TestCase {
     
     Reporter reporter = new Reporter() {
         public void setStatus(String status) throws IOException {}
+        public void progress() throws IOException {}
       };
     
     int seed = new Random().nextInt();

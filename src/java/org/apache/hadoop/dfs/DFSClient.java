@@ -216,7 +216,23 @@ class DFSClient implements FSConstants {
     public FSOutputStream create( UTF8 src, 
                                   boolean overwrite
                                 ) throws IOException {
-      return create( src, overwrite, defaultReplication, defaultBlockSize);
+      return create( src, overwrite, defaultReplication, defaultBlockSize, null);
+    }
+    
+    /**
+     * Create a new dfs file and return an output stream for writing into it
+     * with write-progress reporting. 
+     * 
+     * @param src stream name
+     * @param overwrite do not check for file existence if true
+     * @return output stream
+     * @throws IOException
+     */
+    public FSOutputStream create( UTF8 src, 
+                                  boolean overwrite,
+                                  Progressable progress
+                                ) throws IOException {
+      return create( src, overwrite, defaultReplication, defaultBlockSize, null);
     }
     
     /**
@@ -234,15 +250,34 @@ class DFSClient implements FSConstants {
                                   short replication,
                                   long blockSize
                                 ) throws IOException {
+      return create(src, overwrite, replication, blockSize, null);
+    }
+
+    /**
+     * Create a new dfs file with the specified block replication 
+     * with write-progress reporting and return an output stream for writing
+     * into the file.  
+     * 
+     * @param src stream name
+     * @param overwrite do not check for file existence if true
+     * @param replication block replication
+     * @return output stream
+     * @throws IOException
+     */
+    public FSOutputStream create( UTF8 src, 
+                                  boolean overwrite, 
+                                  short replication,
+                                  long blockSize,
+                                  Progressable progress
+                                ) throws IOException {
       checkOpen();
       FSOutputStream result = new DFSOutputStream(src, overwrite, 
-                                                  replication, blockSize);
+                                                  replication, blockSize, progress);
       synchronized (pendingCreates) {
         pendingCreates.put(src.toString(), result);
       }
       return result;
     }
-
     /**
      * Set replication for an existing file.
      * 
@@ -718,11 +753,13 @@ class DFSClient implements FSConstants {
         private String datanodeName;
         private long blockSize;
 
+        private Progressable progress;
         /**
          * Create a new output stream to the given DataNode.
          */
         public DFSOutputStream(UTF8 src, boolean overwrite, 
-                               short replication, long blockSize
+                               short replication, long blockSize,
+                               Progressable progress
                                ) throws IOException {
             this.src = src;
             this.overwrite = overwrite;
@@ -730,6 +767,10 @@ class DFSClient implements FSConstants {
             this.backupFile = newBackupFile();
             this.blockSize = blockSize;
             this.backupStream = new FileOutputStream(backupFile);
+            this.progress = progress;
+            if (progress != null) {
+                LOG.debug("Set non-null progress callback on DFSOutputStream "+src);
+            }
         }
 
         private File newBackupFile() throws IOException {
@@ -980,6 +1021,7 @@ class DFSClient implements FSConstants {
                     while (bytesRead > 0) {
                         blockStream.writeLong((long) bytesRead);
                         blockStream.write(buf, 0, bytesRead);
+                        if (progress != null) { progress.progress(); }
                         bytesRead = in.read(buf);
                     }
                     internalClose();

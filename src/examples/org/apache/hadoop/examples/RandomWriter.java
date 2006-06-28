@@ -76,7 +76,8 @@ public class RandomWriter extends MapReduceBase implements Reducer {
       String filename = ((UTF8) value).toString();
       SequenceFile.Writer writer = 
         new SequenceFile.Writer(fileSys, new Path(filename), 
-                                BytesWritable.class, BytesWritable.class);
+                                BytesWritable.class, BytesWritable.class,
+                                reporter);
       int itemCount = 0;
       while (numBytesToWrite > 0) {
         int keyLength = minKeySize + 

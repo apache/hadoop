@@ -27,15 +27,18 @@ import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Progressable;
 
 /** An {@link OutputFormat} that writes {@link MapFile}s. */
 public class MapFileOutputFormat extends OutputFormatBase {
 
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
-                                      String name) throws IOException {
+                                      String name, Progressable progress)
+                                      throws IOException {
 
     Path file = new Path(job.getOutputPath(), name);
 
+    // ignore the progress parameter, since MapFile is local
     final MapFile.Writer out =
       new MapFile.Writer(fs, file.toString(),
                          job.getMapOutputKeyClass(),

@@ -52,7 +52,8 @@ interface DatanodeProtocol {
      */
     public BlockCommand sendHeartbeat(DatanodeRegistration registration,
                                       long capacity, long remaining,
-                                      int xmitsInProgress) throws IOException;
+                                      int xmitsInProgress,
+                                      int xceiverCount) throws IOException;
 
     /**
      * blockReport() tells the NameNode about all the locally-stored blocks.

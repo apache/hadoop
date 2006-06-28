@@ -80,6 +80,12 @@ Trunk (unreleased changes)
 19. HADOOP-27.  Don't allocate tasks to trackers whose local free
     space is too low.  (Johan Oskarson via cutting)
 
+20. HADOOP-318.  Keep slow DFS output from causing task timeouts.
+    This incompatibly changes some public interfaces, adding a
+    parameter to OutputFormat.getRecordWriter() and the new method
+    Reporter.progress(), but it makes lots of tasks succeed that were
+    previously failing.  (Milind Bhandarkar via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
