@@ -74,6 +74,9 @@ Trunk (unreleased changes)
     remove the workaround used to initialize classes.
     (omalley via cutting)
 
+18. HADOOP-328.  Add an option to the "distcp" command to ignore read
+    errors while copying.  (omalley via cutting)
+
 
 Release 0.3.2 - 2006-06-09
 
