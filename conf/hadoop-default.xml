@@ -129,7 +129,9 @@ creations/deletions), or "all".</description>
   <description>Determines where on the local filesystem an DFS data node
   should store its blocks.  If this is a comma-delimited
   list of directories, then data will be stored in all named
-  directories, typically on different devices.</description>
+  directories, typically on different devices.
+  Directories that do not exist are ignored.
+  </description>
 </property>
 
 <property>
@@ -216,6 +218,7 @@ creations/deletions), or "all".</description>
   <description>The local directory where MapReduce stores intermediate
   data files.  May be a comma-separated list of
   directories on different devices in order to spread disk i/o.
+  Directories that do not exist are ignored.
   </description>
 </property>
 
