@@ -314,6 +314,10 @@ public class JobClient extends ToolBase implements MRConstants  {
       return jobSubmitClient.getClusterStatus();
     }
     
+    public JobStatus[] jobsToComplete() throws IOException {
+	return jobSubmitClient.jobsToComplete();
+    }
+    
     /** Utility that submits a job, then polls for progress until the job is
      * complete. */
     public static void runJob(JobConf job) throws IOException {

@@ -17,6 +17,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
+import java.util.*;
 
 /** 
  * Protocol that a JobClient and the central JobTracker use to communicate.  The
@@ -64,4 +65,11 @@ interface JobSubmissionProtocol {
      * prior to submitting the job.
      */
     public String getFilesystemName() throws IOException;
+
+    /** 
+     * Get the jobs that are not completed and not failed
+     * @return array of JobStatus for the running/to-be-run
+     * jobs.
+     */
+    public JobStatus[] jobsToComplete() throws IOException;
 }

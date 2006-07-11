@@ -26,7 +26,7 @@ import java.io.*;
  *
  * @author Mike Cafarella
  **************************************************/
-class JobStatus implements Writable {
+public class JobStatus implements Writable {
 
     static {                                      // register a ctor
       WritableFactories.setFactory
@@ -45,13 +45,18 @@ class JobStatus implements Writable {
     float mapProgress;
     float reduceProgress;
     int runState;
-
+    long startTime;
     /**
      */
     public JobStatus() {
     }
 
     /**
+     * Create a job status object for a given jobid.
+     * @param jobid The jobid of the job
+     * @param mapProgress The progress made on the maps
+     * @param reduceProgress The progress made on the reduces
+     * @param runState The current state of the job
      */
     public JobStatus(String jobid, float mapProgress, float reduceProgress, int runState) {
         this.jobid = jobid;
@@ -61,14 +66,47 @@ class JobStatus implements Writable {
     }
 
     /**
+     * @return The jobid of the Job
      */
     public String getJobId() { return jobid; }
+    
+    /**
+     * @return Percentage of progress in maps 
+     */
     public float mapProgress() { return mapProgress; }
-    public void setMapProgress(float p) { this.mapProgress = p; }
+    
+    /**
+     * Sets the map progress of this job
+     * @param p The value of map progress to set to
+     */
+    void setMapProgress(float p) { this.mapProgress = p; }
+    
+    /**
+     * @return Percentage of progress in reduce 
+     */
     public float reduceProgress() { return reduceProgress; }
-    public void setReduceProgress(float p) { this.reduceProgress = p; }
+    
+    /**
+     * Sets the reduce progress of this Job
+     * @param p The value of reduce progress to set to
+     */
+    void setReduceProgress(float p) { this.reduceProgress = p; }
+    
+    /**
+     * @return running state of the job
+     */
     public int getRunState() { return runState; }
-
+    
+    /** 
+     * Set the start time of the job
+     * @param startTime The startTime of the job
+     */
+    void setStartTime(long startTime) { this.startTime = startTime;};
+    
+    /**
+     * @return start time of the job
+     */
+    public long getStartTime() { return startTime;};
     ///////////////////////////////////////
     // Writable
     ///////////////////////////////////////
@@ -77,11 +115,13 @@ class JobStatus implements Writable {
         out.writeFloat(mapProgress);
         out.writeFloat(reduceProgress);
         out.writeInt(runState);
+        out.writeLong(startTime);
     }
     public void readFields(DataInput in) throws IOException {
         this.jobid = UTF8.readString(in);
         this.mapProgress = in.readFloat();
         this.reduceProgress = in.readFloat();
         this.runState = in.readInt();
+        this.startTime = in.readLong();
     }
 }

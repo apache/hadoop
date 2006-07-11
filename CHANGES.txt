@@ -10,6 +10,10 @@ Trunk (unreleased changes)
  2. HADOOP-313.  Permit task state to be saved so that single tasks
     may be manually re-executed when debugging.  (omalley via cutting)
 
+ 3. HADOOP-339.  Add method to JobClient API listing jobs that are
+    not yet complete, i.e., that are queued or running.
+    (Mahadev Konar via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
