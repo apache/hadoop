@@ -42,6 +42,8 @@ public class StreamJob
 {
   protected static final Log LOG = LogFactory.getLog(StreamJob.class.getName());    
   
+  final static String REDUCE_NONE = "NONE";
+  
   public StreamJob(String[] argv, boolean mayExit)
   {
     argv_ = argv;
@@ -248,7 +250,7 @@ public class StreamJob
     System.out.println("  -output   <path>     DFS output directory for the Reduce step");
     System.out.println("  -mapper   <cmd>      The streaming command to run");
     System.out.println("  -combiner <cmd>      Not implemented. But you can pipe the mapper output");
-    System.out.println("  -reducer  <cmd>      The streaming command to run");
+    System.out.println("  -reducer  <cmd>      The streaming command to run.");
     System.out.println("  -file     <file>     File/dir to be shipped in the Job jar file");
     System.out.println("  -cluster  <name>     Default uses hadoop-default.xml and hadoop-site.xml");
     System.out.println("  -config   <file>     Optional. One or more paths to xml config files");
@@ -277,6 +279,10 @@ public class StreamJob
     System.out.println("  Hadoop clusters. ");
     System.out.println("  The default is to use the normal hadoop-default.xml and hadoop-site.xml");
     System.out.println("  Else configuration will use $HADOOP_HOME/conf/hadoop-<name>.xml");
+    System.out.println();
+    System.out.println("To skip the shuffle/sort/reduce step:" );
+    System.out.println("  Use -reducer " + REDUCE_NONE);
+    System.out.println("  This preserves the map input order and speeds up processing");
     System.out.println();
     System.out.println("To set the number of reduce tasks (num. of output files):");
     System.out.println("  -jobconf mapred.reduce.tasks=10");
@@ -405,8 +411,10 @@ public class StreamJob
     }
     
     jobConf_.setInputFormat(StreamInputFormat.class);
+    // for SequenceFile, input classes may be overriden in getRecordReader 
     jobConf_.setInputKeyClass(UTF8.class);
     jobConf_.setInputValueClass(UTF8.class);
+    
     jobConf_.setOutputKeyClass(UTF8.class);
     jobConf_.setOutputValueClass(UTF8.class);
     //jobConf_.setCombinerClass();
@@ -465,10 +473,10 @@ public class StreamJob
     while(it.hasNext()) {
         String prop = (String)it.next();
         String[] nv = prop.split("=", 2);
-        msg("JobConf: set(" + nv[0] + ", " + nv[1]+")");
+        msg("xxxJobConf: set(" + nv[0] + ", " + nv[1]+")");
         jobConf_.set(nv[0], nv[1]);
     }   
-    
+    msg("submitting to jobconf: " + getJobTrackerHostPort());
   }
   
   protected String getJobTrackerHostPort()
@@ -532,7 +540,7 @@ public class StreamJob
       LOG.info("Job complete: " + jobId_);
       LOG.info("Output: " + output_);
       error = false;
-    } finally {    
+    } finally {
       if (error && (running_ != null)) {
         LOG.info("killJob...");
         running_.killJob();

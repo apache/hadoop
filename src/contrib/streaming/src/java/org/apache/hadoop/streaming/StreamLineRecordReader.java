@@ -37,11 +37,10 @@ public class StreamLineRecordReader extends StreamBaseRecordReader
 {
 
   public StreamLineRecordReader(
-    FSDataInputStream in, long start, long end, 
-    String splitName, Reporter reporter, JobConf job)
+    FSDataInputStream in, FileSplit split, Reporter reporter, JobConf job, FileSystem fs)
     throws IOException
   {
-    super(in, start, end, splitName, reporter, job);
+    super(in, split, reporter, job, fs);
   }
 
   public void seekNextRecordBoundary() throws IOException
@@ -59,7 +58,7 @@ public class StreamLineRecordReader extends StreamBaseRecordReader
       }
     }
 
-    System.out.println("getRecordReader start="+start_ + " end=" + end_ + " bytesSkipped"+bytesSkipped);
+    //System.out.println("getRecordReader start="+start_ + " end=" + end_ + " bytesSkipped"+bytesSkipped);
   }
 
   public synchronized boolean next(Writable key, Writable value)

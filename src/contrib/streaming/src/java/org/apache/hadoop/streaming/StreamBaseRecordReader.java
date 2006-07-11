@@ -20,6 +20,7 @@ import java.io.*;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.mapred.Reporter;
@@ -46,17 +47,18 @@ public abstract class StreamBaseRecordReader implements RecordReader
   final String CONF_NS = "stream.recordreader.";
 
   public StreamBaseRecordReader(
-    FSDataInputStream in, long start, long end, 
-    String splitName, Reporter reporter, JobConf job)
+    FSDataInputStream in, FileSplit split, Reporter reporter, JobConf job, FileSystem fs)
     throws IOException
   {
     in_ = in;
-    start_ = start;
-    end_ = end;
-    length_ = end_ - start_;
-    splitName_ = splitName;
+    split_ = split;
+    start_ = split_.getStart();
+    length_ = split_.getLength();
+    end_ = start_ + length_;
+    splitName_ = split_.getFile().getName();
     reporter_ = reporter;
     job_ = job;
+    fs_ = fs;
     
     statusMaxRecordChars_ = job_.getInt(CONF_NS + "statuschars", 200);
   }
@@ -66,6 +68,18 @@ public abstract class StreamBaseRecordReader implements RecordReader
   /** Read a record. Implementation should call numRecStats at the end
    */  
   public abstract boolean next(Writable key, Writable value) throws IOException;
+
+  /** This implementation always returns true. */
+  public boolean[] areValidInputDirectories(FileSystem fileSys,
+                                     Path[] inputDirs) throws IOException
+  {
+    int n = inputDirs.length;
+    boolean[] b = new boolean[n];
+    for(int i=0; i<n; i++) {
+      b[i] = true;
+    }
+    return b;
+  }
 
   /** Returns the current position in the input. */
   public synchronized long getPos() throws IOException 
@@ -125,18 +139,22 @@ public abstract class StreamBaseRecordReader implements RecordReader
     } else {
     	recStr = record.toString();
     }
-    String status = "HSTR " + StreamUtil.HOST + " " + numRec_ + ". pos=" + pos + " Processing record=" + recStr;
+    String unqualSplit = split_.getFile().getName() + ":" + split_.getStart() + "+" + split_.getLength();
+    String status = "HSTR " + StreamUtil.HOST + " " + numRec_ + ". pos=" + pos
+     + " " + unqualSplit + " Processing record=" + recStr;
     status += " " + splitName_;
     return status;
   }
 
   FSDataInputStream in_;
+  FileSplit split_;
   long start_;
   long end_;
   long length_;
   String splitName_;
   Reporter reporter_;
   JobConf job_;
+  FileSystem fs_;
   int numRec_ = 0;
   int nextStatusRec_ = 1;
   int statusMaxRecordChars_;

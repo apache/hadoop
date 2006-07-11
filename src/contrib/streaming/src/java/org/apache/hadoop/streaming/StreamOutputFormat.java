@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 
+import org.apache.hadoop.util.Progressable;
+
 /** Similar to org.apache.hadoop.mapred.TextOutputFormat, 
  * but delimits key and value with a TAB.
  * @author Michel Tourn
@@ -34,8 +36,8 @@ import org.apache.hadoop.io.Writable;
 public class StreamOutputFormat implements OutputFormat {
 
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
-                                      String name) throws IOException {
-
+                                      String name, Progressable progr) throws IOException {
+ 
     File file = new File(job.getOutputDir(), name);
 
     final FSDataOutputStream out = fs.create(file);

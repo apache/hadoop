@@ -47,11 +47,10 @@ import org.apache.hadoop.mapred.JobConf;
 public class StreamXmlRecordReader extends StreamBaseRecordReader 
 {
   public StreamXmlRecordReader(
-    FSDataInputStream in, long start, long end, 
-    String splitName, Reporter reporter, JobConf job)
+    FSDataInputStream in, FileSplit split, Reporter reporter, JobConf job, FileSystem fs)
     throws IOException
   {
-    super(in, start, end, splitName, reporter, job);
+    super(in, split, reporter, job, fs);
     
     beginMark_ = checkJobGet(CONF_NS + "begin");
     endMark_   = checkJobGet(CONF_NS + "end");

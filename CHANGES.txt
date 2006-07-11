@@ -14,6 +14,10 @@ Trunk (unreleased changes)
     not yet complete, i.e., that are queued or running.
     (Mahadev Konar via cutting)
 
+ 4. HADOOP-355.  Updates to the streaming contrib module, including
+    API fixes, making reduce optional, and adding an input type for
+    StreamSequenceRecordReader.  (Michel Tourn via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

@@ -51,6 +51,18 @@ public class StreamInputFormat extends InputFormatBase
     //LOG.setLevel(Level.FINE);
   }
   
+  /** This implementation always returns true. */
+  public boolean[] areValidInputDirectories(FileSystem fileSys,
+                                            Path[] inputDirs
+                                            ) throws IOException {
+    boolean[] b = new boolean[inputDirs.length];
+    for(int i=0; i < inputDirs.length; ++i) {
+      b[i] = true;
+    }
+    return b;
+  }
+
+  
   protected Path[] listPaths(FileSystem fs, JobConf job)
     throws IOException
   {
@@ -129,9 +141,8 @@ public class StreamInputFormat extends InputFormatBase
     
     Constructor ctor;
     try {
-      // reader = new StreamLineRecordReader(in, start, end, splitName, reporter, job);
       ctor = readerClass.getConstructor(new Class[]{
-        FSDataInputStream.class, long.class, long.class, String.class, Reporter.class, JobConf.class});
+        FSDataInputStream.class, FileSplit.class, Reporter.class, JobConf.class, FileSystem.class});
     } catch(NoSuchMethodException nsm) {
       throw new RuntimeException(nsm);
     }
@@ -140,12 +151,21 @@ public class StreamInputFormat extends InputFormatBase
     StreamBaseRecordReader reader;
     try {
         reader = (StreamBaseRecordReader) ctor.newInstance(new Object[]{
-            in, new Long(start), new Long(end), splitName, reporter, job});        
+            in, split, reporter, job, fs});        
     } catch(Exception nsm) {
       throw new RuntimeException(nsm);
     }
         
 	reader.init();
+
+
+    if(reader instanceof StreamSequenceRecordReader) {
+      // override k/v class types with types stored in SequenceFile
+      StreamSequenceRecordReader ss = (StreamSequenceRecordReader)reader;
+      job.setInputKeyClass(ss.rin_.getKeyClass());
+      job.setInputValueClass(ss.rin_.getValueClass());
+    }
+    
     
     return reader;
   }
