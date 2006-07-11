@@ -93,5 +93,9 @@ public class TestPath extends TestCase {
       assertEquals(new Path("c:/foo"), new Path("d:/bar", "c:/foo"));
     }
   }
+  
+  public void testEquals() {
+    assertFalse(new Path("/").equals(new Path("/foo")));
+  }
 
 }

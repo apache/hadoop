@@ -18,6 +18,9 @@ Trunk (unreleased changes)
     API fixes, making reduce optional, and adding an input type for
     StreamSequenceRecordReader.  (Michel Tourn via cutting)
 
+ 5. HADOOP-358.  Fix a NPE bug in Path.equals().
+    (Frédéric Bertin via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

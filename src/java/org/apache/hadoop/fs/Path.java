@@ -156,7 +156,7 @@ public class Path implements Comparable {
     return
       this.isAbsolute == that.isAbsolute &&
       Arrays.equals(this.elements, that.elements) &&
-      this.drive == null ? true : this.drive.equals(that.drive);
+      (this.drive == null ? true : this.drive.equals(that.drive));
   }
 
   public int hashCode() {
