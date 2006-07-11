@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Start all hadoop daemons.  Run this on master node.
 

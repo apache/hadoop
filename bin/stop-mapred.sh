@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Stop hadoop map reduce daemons.  Run this on master node.
 

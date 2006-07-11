@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # 
 # Runs a Hadoop command as a daemon.
 #
@@ -44,7 +44,7 @@ export HADOOP_HOME=`dirname "$this"`/..
 HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
 
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  source "${HADOOP_CONF_DIR}/hadoop-env.sh"
+  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
 # get log directory
@@ -72,7 +72,7 @@ case $startStop in
   (start)
 
     if [ -f $pid ]; then
-      if [ -a /proc/`cat $pid` ]; then
+      if ps -p `cat $pid` > /dev/null 2>&1; then
         echo $command running as process `cat $pid`.  Stop it first.
         exit 1
       fi
@@ -84,7 +84,7 @@ case $startStop in
     fi
 
     echo starting $command, logging to $log
-    nohup "$HADOOP_HOME"/bin/hadoop $command "$@" >& "$log" < /dev/null &
+    nohup "$HADOOP_HOME"/bin/hadoop $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;
@@ -92,7 +92,7 @@ case $startStop in
   (stop)
 
     if [ -f $pid ]; then
-      if [ -a /proc/`cat $pid` ]; then
+      if ps -p `cat $pid` > /dev/null 2>&1; then
         echo stopping $command
         kill `cat $pid`
       else

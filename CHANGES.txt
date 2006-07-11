@@ -1,6 +1,13 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1. HADOOP-352.  Fix shell scripts to use /bin/sh instead of
+    /bin/bash, for better portability.
+    (Jean-Baptiste Quenot via cutting)
+
+
 Release 0.4.0 - 2006-06-28
 
  1. HADOOP-298.  Improved progress reports for CopyFiles utility, the

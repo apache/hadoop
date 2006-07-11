@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # 
 # Run a shell command on all slave hosts.
 #
@@ -38,7 +38,7 @@ HADOOP_HOME=`dirname "$this"`/..
 HADOOP_CONF_DIR="${HADOOP_CONF_DIR:=$HADOOP_HOME/conf}"
 
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  source "${HADOOP_CONF_DIR}/hadoop-env.sh"
+  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
 if [ "$HADOOP_SLAVES" = "" ]; then

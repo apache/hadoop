@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Start hadoop dfs daemons.  Run this on master node.
 
