@@ -7,6 +7,9 @@ Trunk (unreleased changes)
     /bin/bash, for better portability.
     (Jean-Baptiste Quenot via cutting)
 
+ 2. HADOOP-313.  Permit task state to be saved so that single tasks
+    may be manually re-executed when debugging.  (omalley via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

@@ -39,8 +39,9 @@ class MapTask extends Task {
 
   public MapTask() {}
 
-  public MapTask(String jobFile, String taskId, FileSplit split) {
-    super(jobFile, taskId);
+  public MapTask(String jobId, String jobFile, String taskId, 
+                 int partition, FileSplit split) {
+    super(jobId, jobFile, taskId, partition);
     this.split = split;
   }
 
@@ -48,6 +49,13 @@ class MapTask extends Task {
       return true;
   }
 
+  public void localizeConfiguration(JobConf conf) {
+    super.localizeConfiguration(conf);
+    conf.set("map.input.file", split.getPath().toString());
+    conf.setLong("map.input.start", split.getStart());
+    conf.setLong("map.input.length", split.getLength());
+  }
+  
   public TaskRunner createRunner(TaskTracker tracker) {
     return new MapTaskRunner(this, tracker, this.conf);
   }

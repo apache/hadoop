@@ -652,6 +652,7 @@ public class TaskTracker
         boolean wasKilled = false;
         private JobConf defaultJobConf;
         private JobConf localJobConf;
+        private boolean keepFailedTaskFiles;
 
         /**
          */
@@ -682,7 +683,6 @@ public class TaskTracker
             t.setJobFile(localJobFile.toString());
 
             localJobConf = new JobConf(localJobFile);
-            localJobConf.set("mapred.task.id", task.getTaskId());
             localJobConf.set("mapred.local.dir",
                     this.defaultJobConf.get("mapred.local.dir"));
             String jarFile = localJobConf.getJar();
@@ -690,6 +690,7 @@ public class TaskTracker
               fs.copyToLocalFile(new Path(jarFile), localJarFile);
               localJobConf.setJar(localJarFile.toString());
             }
+            task.localizeConfiguration(localJobConf);
 
             FileSystem localFs = FileSystem.getNamed("local", fConf);
             OutputStream out = localFs.create(localJobFile);
@@ -701,6 +702,7 @@ public class TaskTracker
             // set the task's configuration to the local job conf
             // rather than the default.
             t.setConf(localJobConf);
+            keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
         }
 
         /**
@@ -875,6 +877,9 @@ public class TaskTracker
             LOG.debug("Cleaning up " + taskId);
             synchronized (TaskTracker.this) {
                tasks.remove(taskId);
+               if (runstate == TaskStatus.FAILED && keepFailedTaskFiles) {
+                 return;
+               }
                synchronized (this) {
                  try {
                     runner.close();

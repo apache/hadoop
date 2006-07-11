@@ -78,13 +78,14 @@ class LocalJobRunner implements JobSubmissionProtocol {
         // split input into minimum number of splits
         FileSplit[] splits;
         splits = job.getInputFormat().getSplits(fs, job, 1);
-
+        String jobId = profile.getJobId();
         
         // run a map task for each split
         job.setNumReduceTasks(1);                 // force a single reduce task
         for (int i = 0; i < splits.length; i++) {
           mapIds.add("map_" + newId());
-          MapTask map = new MapTask(file, (String)mapIds.get(i), splits[i]);
+          MapTask map = new MapTask(jobId, file, (String)mapIds.get(i), i,
+                                    splits[i]);
           map.setConf(job);
           map_tasks += 1;
           map.run(job, this);
@@ -104,8 +105,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
         }
 
         // run a single reduce task
-        ReduceTask reduce = new ReduceTask(profile.getJobId(), file, 
-                                           reduceId, mapIds.size(),0);
+        ReduceTask reduce = new ReduceTask(jobId, file, 
+                                           reduceId, 0, mapIds.size());
         reduce.setConf(job);
         reduce_tasks += 1;
         reduce.run(job, this);

@@ -194,6 +194,22 @@ public class JobConf extends Configuration {
   public void setUser(String user) {
     set("user.name", user);
   }
+
+  /**
+   * Set whether the framework shoul keep the intermediate files for 
+   * failed tasks.
+   */
+  public void setKeepFailedTaskFiles(boolean keep) {
+    setBoolean("keep.failed.task.files", keep);
+  }
+  
+  /**
+   * Should the temporary files for failed tasks be kept?
+   * @return should the files be kept?
+   */
+  public boolean getKeepFailedTaskFiles() {
+    return getBoolean("keep.failed.task.files", false);
+  }
   
   /**
    * Set the current working directory for the default file system

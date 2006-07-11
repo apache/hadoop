@@ -413,12 +413,12 @@ class TaskInProgress {
 
             String taskid = (String) usableTaskIds.first();
             usableTaskIds.remove(taskid);
+            String jobId = job.getProfile().getJobId();
 
             if (isMapTask()) {
-                t = new MapTask(jobFile, taskid, split);
+                t = new MapTask(jobId, jobFile, taskid, partition, split);
             } else {
-                t = new ReduceTask(job.getProfile().getJobId(), jobFile, taskid, 
-                                   numMaps, partition);
+                t = new ReduceTask(jobId, jobFile, taskid, partition, numMaps);
             }
             t.setConf(conf);
 

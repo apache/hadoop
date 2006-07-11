@@ -494,6 +494,14 @@ public class Configuration {
     }
   }
 
+  /**
+   * Set the class loader that will be used to load the various objects.
+   * @param classLoader the new class loader
+   */
+  public void setClassLoader(ClassLoader classLoader) {
+    this.classLoader = classLoader;
+  }
+  
   public String toString() {
     StringBuffer sb = new StringBuffer();
     sb.append("Configuration: ");

@@ -35,15 +35,20 @@ abstract class Task implements Writable, Configurable {
 
   private String jobFile;                         // job configuration file
   private String taskId;                          // unique, includes job id
+  private String jobId;                           // unique jobid
+  private int partition;                          // id within job
+  
   ////////////////////////////////////////////
   // Constructors
   ////////////////////////////////////////////
 
   public Task() {}
 
-  public Task(String jobFile, String taskId) {
+  public Task(String jobId, String jobFile, String taskId, int partition) {
     this.jobFile = jobFile;
     this.taskId = taskId;
+    this.jobId = jobId;
+    this.partition = partition;
   }
 
   ////////////////////////////////////////////
@@ -52,6 +57,22 @@ abstract class Task implements Writable, Configurable {
   public void setJobFile(String jobFile) { this.jobFile = jobFile; }
   public String getJobFile() { return jobFile; }
   public String getTaskId() { return taskId; }
+  
+  /**
+   * Get the job name for this task.
+   * @return the job name
+   */
+  public String getJobId() {
+    return jobId;
+  }
+  
+  /**
+   * Get the index of this task within the job.
+   * @return the integer part of the task id
+   */
+  public int getPartition() {
+    return partition;
+  }
 
   ////////////////////////////////////////////
   // Writable methods
@@ -60,14 +81,28 @@ abstract class Task implements Writable, Configurable {
   public void write(DataOutput out) throws IOException {
     UTF8.writeString(out, jobFile);
     UTF8.writeString(out, taskId);
+    UTF8.writeString(out, jobId);
+    out.writeInt(partition);
   }
   public void readFields(DataInput in) throws IOException {
     jobFile = UTF8.readString(in);
     taskId = UTF8.readString(in);
+    jobId = UTF8.readString(in);
+    partition = in.readInt();
   }
 
   public String toString() { return taskId; }
 
+  /**
+   * Localize the given JobConf to be specific for this task.
+   */
+  public void localizeConfiguration(JobConf conf) {
+    conf.set("mapred.task.id", taskId);
+    conf.setBoolean("mapred.task.is.map",isMapTask());
+    conf.setInt("mapred.task.partition", partition);
+    conf.set("mapred.job.id", jobId);
+  }
+  
   /** Run this task as a part of the named job.  This method is executed in the
    * child process and is what invokes user-supplied map, reduce, etc. methods.
    * @param umbilical for progress reports

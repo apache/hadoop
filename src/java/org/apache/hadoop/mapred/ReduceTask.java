@@ -36,9 +36,7 @@ class ReduceTask extends Task {
        });
   }
 
-  private UTF8 jobId = new UTF8();
   private int numMaps;
-  private int partition;
   private boolean sortComplete;
 
   { getProgress().setStatus("reduce"); }
@@ -52,11 +50,9 @@ class ReduceTask extends Task {
   public ReduceTask() {}
 
   public ReduceTask(String jobId, String jobFile, String taskId,
-                    int numMaps, int partition) {
-    super(jobFile, taskId);
-    this.jobId.set(jobId);
+                    int partition, int numMaps) {
+    super(jobId, jobFile, taskId, partition);
     this.numMaps = numMaps;
-    this.partition = partition;
   }
 
   public TaskRunner createRunner(TaskTracker tracker) throws IOException {
@@ -67,31 +63,26 @@ class ReduceTask extends Task {
       return false;
   }
 
-  /**
-   * Get the job name for this task.
-   * @return the job name
-   */
-  public UTF8 getJobId() {
-    return jobId;
-  }
-  
   public int getNumMaps() { return numMaps; }
-  public int getPartition() { return partition; }
+  
+  /**
+   * Localize the given JobConf to be specific for this task.
+   */
+  public void localizeConfiguration(JobConf conf) {
+    super.localizeConfiguration(conf);
+    conf.setNumMapTasks(numMaps);
+  }
 
   public void write(DataOutput out) throws IOException {
     super.write(out);
 
-    jobId.write(out);
     out.writeInt(numMaps);                        // write the number of maps
-    out.writeInt(partition);                      // write partition
   }
 
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
 
-    jobId.readFields(in);
     numMaps = in.readInt();
-    this.partition = in.readInt();                // read partition
   }
 
   /** Iterates values while keys match in sorted input. */
@@ -215,7 +206,7 @@ class ReduceTask extends Task {
       // sort the input file
       SequenceFile.Sorter sorter =
         new SequenceFile.Sorter(lfs, comparator, valueClass, job);
-      sorter.sort(mapFiles, sortedFile, true);              // sort
+      sorter.sort(mapFiles, sortedFile, !conf.getKeepFailedTaskFiles()); // sort
 
     } finally {
       sortComplete = true;
