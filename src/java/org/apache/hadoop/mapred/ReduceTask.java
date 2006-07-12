@@ -258,7 +258,7 @@ class ReduceTask extends Task {
     NUMBER_FORMAT.setGroupingUsed(false);
   }
 
-  private static synchronized String getOutputName(int partition) {
+  static synchronized String getOutputName(int partition) {
     return "part-" + NUMBER_FORMAT.format(partition);
   }
 

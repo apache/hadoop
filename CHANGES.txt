@@ -24,6 +24,9 @@ Trunk (unreleased changes)
  6. HADOOP-327.  Fix ToolBase to not call System.exit() when
     exceptions are thrown.  (Hairong Kuang via cutting)
 
+ 7. HADOOP-359.  Permit map output to be compressed.
+   (omalley via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

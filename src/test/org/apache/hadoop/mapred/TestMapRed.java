@@ -18,6 +18,7 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.mapred.lib.*;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
@@ -213,9 +214,139 @@ public class TestMapRed extends TestCase {
     **/
 
     public void testMapred() throws Exception {
-	launch();
+      launch();
     }
 
+    private static class MyMap implements Mapper {
+      private JobConf conf;
+      private boolean compress;
+      private String taskId;
+      
+      public void configure(JobConf conf) {
+        this.conf = conf;
+        compress = conf.getBoolean("mapred.compress.map.output", false);
+        taskId = conf.get("mapred.task.id");
+      }
+      
+      public void map(WritableComparable key, Writable value,
+                      OutputCollector output, Reporter reporter
+                      ) throws IOException {
+        String str = ((UTF8) value).toString().toLowerCase();
+        output.collect(new UTF8(str), value);
+      }
+
+      public void close() throws IOException {
+        MapOutputFile namer = new MapOutputFile();
+        namer.setConf(conf);
+        FileSystem fs = FileSystem.get(conf);
+        Path output = namer.getOutputFile(taskId, 0);
+        assertTrue("map output exists " + output, fs.exists(output));
+        SequenceFile.Reader rdr = 
+          new SequenceFile.Reader(fs, output, conf);
+        assertEquals("is map output compressed " + output, compress, 
+                     rdr.isCompressed());
+        rdr.close();
+      }
+    }
+    
+    private static class MyReduce extends IdentityReducer {
+      private JobConf conf;
+      private boolean compressInput;
+      private boolean compressOutput;
+      private String taskId;
+      private int partition;
+      private boolean first = true;
+      
+      public void configure(JobConf conf) {
+        this.conf = conf;
+        compressInput = conf.getBoolean("mapred.compress.map.output", 
+                                        false);
+        compressOutput = conf.getBoolean("mapred.compress.output",
+                                         false);
+        taskId = conf.get("mapred.task.id");
+        partition = conf.getInt("mapred.task.partition", -1);
+      }
+      
+      public void reduce(WritableComparable key, Iterator values,
+                         OutputCollector output, Reporter reporter
+                        ) throws IOException {
+        if (first) {
+          first = false;
+          Path input = conf.getLocalPath(taskId+"/all.2");
+          FileSystem fs = FileSystem.get(conf);
+          assertTrue("reduce input exists " + input, fs.exists(input));
+          SequenceFile.Reader rdr = 
+            new SequenceFile.Reader(fs, input, conf);
+          assertEquals("is reduce input compressed " + input, 
+                       compressInput, 
+                       rdr.isCompressed());
+          rdr.close();          
+        }
+      }
+      
+    }
+    
+    private void checkCompression(boolean compressMapOutput,
+                                  boolean compressReduceOutput,
+                                  boolean includeCombine
+                                  ) throws Exception {
+      JobConf conf = new JobConf();
+      Path testdir = new Path("build/test/test.mapred.compress");
+      Path inDir = new Path(testdir, "in");
+      Path outDir = new Path(testdir, "out");
+      FileSystem fs = FileSystem.get(conf);
+      conf.setInputPath(inDir);
+      conf.setOutputPath(outDir);
+      conf.setMapperClass(MyMap.class);
+      conf.setReducerClass(MyReduce.class);
+      conf.setOutputKeyClass(UTF8.class);
+      conf.setOutputValueClass(UTF8.class);
+      conf.setOutputFormat(SequenceFileOutputFormat.class);
+      if (includeCombine) {
+        conf.setCombinerClass(IdentityReducer.class);
+      }
+      if (compressMapOutput) {
+        conf.setBoolean("mapred.compress.map.output", true);
+      }
+      if (compressReduceOutput) {
+        conf.setBoolean("mapred.output.compress", true);
+      }
+      try {
+        fs.mkdirs(testdir);
+        fs.mkdirs(inDir);
+        Path inFile = new Path(inDir, "part0");
+        DataOutputStream f = fs.create(inFile);
+        f.writeBytes("Owen was here\n");
+        f.writeBytes("Hadoop is fun\n");
+        f.writeBytes("Is this done, yet?\n");
+        f.close();
+        JobClient.runJob(conf);
+        Path output = new Path(outDir,
+                               ReduceTask.getOutputName(0));
+        assertTrue("reduce output exists " + output, fs.exists(output));
+        SequenceFile.Reader rdr = 
+            new SequenceFile.Reader(fs, output, conf);
+        assertEquals("is reduce output compressed " + output, 
+                     compressReduceOutput, 
+                     rdr.isCompressed());
+        rdr.close();
+      } finally {
+        fs.delete(testdir);
+      }
+    }
+    
+    public void testCompression() throws Exception {
+      for(int compressMap=0; compressMap < 2; ++compressMap) {
+        for(int compressOut=0; compressOut < 2; ++compressOut) {
+          for(int combine=0; combine < 2; ++combine) {
+            checkCompression(compressMap == 1, compressOut == 1,
+                             combine == 1);
+          }
+        }
+      }
+    }
+    
+    
     /**
      * 
      */

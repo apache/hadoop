@@ -86,9 +86,11 @@ class LocalJobRunner implements JobSubmissionProtocol {
           mapIds.add("map_" + newId());
           MapTask map = new MapTask(jobId, file, (String)mapIds.get(i), i,
                                     splits[i]);
-          map.setConf(job);
+          JobConf localConf = new JobConf(job);
+          map.localizeConfiguration(localConf);
+          map.setConf(localConf);
           map_tasks += 1;
-          map.run(job, this);
+          map.run(localConf, this);
           map_tasks -= 1;
         }
 
@@ -105,12 +107,16 @@ class LocalJobRunner implements JobSubmissionProtocol {
         }
 
         // run a single reduce task
-        ReduceTask reduce = new ReduceTask(jobId, file, 
-                                           reduceId, 0, mapIds.size());
-        reduce.setConf(job);
-        reduce_tasks += 1;
-        reduce.run(job, this);
-        reduce_tasks -= 1;
+        {
+          ReduceTask reduce = new ReduceTask(jobId, file, 
+                                             reduceId, 0, mapIds.size());
+          JobConf localConf = new JobConf(job);
+          reduce.localizeConfiguration(localConf);
+          reduce.setConf(localConf);
+          reduce_tasks += 1;
+          reduce.run(localConf, this);
+          reduce_tasks -= 1;
+        }
         this.mapoutputFile.removeAll(reduceId);
         
         this.status.runState = JobStatus.SUCCEEDED;
@@ -211,5 +217,5 @@ class LocalJobRunner implements JobSubmissionProtocol {
     return new ClusterStatus(1, map_tasks, reduce_tasks, 1);
   }
 
-  public JobStatus[] jobsToComplete() {return null;};
+  public JobStatus[] jobsToComplete() {return null;}
 }

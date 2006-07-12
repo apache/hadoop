@@ -81,12 +81,16 @@ class MapTask extends Task {
     final int partitions = job.getNumReduceTasks();
     final SequenceFile.Writer[] outs = new SequenceFile.Writer[partitions];
     try {
+      FileSystem localFs = FileSystem.getNamed("local", job);
+      boolean compressTemps = job.getBoolean("mapred.compress.map.output", 
+                                             false);
       for (int i = 0; i < partitions; i++) {
         outs[i] =
-          new SequenceFile.Writer(FileSystem.getNamed("local", job),
+          new SequenceFile.Writer(localFs,
                                   this.mapOutputFile.getOutputFile(getTaskId(), i),
                                   job.getMapOutputKeyClass(),
-                                  job.getMapOutputValueClass());
+                                  job.getMapOutputValueClass(),
+                                  compressTemps);
       }
 
       final Partitioner partitioner =

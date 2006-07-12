@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.io.File;
 
+import java.lang.reflect.Constructor;
+
 import java.util.StringTokenizer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -291,6 +293,22 @@ public class JobConf extends Configuration {
   }
   
   /**
+   * Should the map outputs be compressed before transfer?
+   * Uses the SequenceFile compression.
+   */
+  public void setCompressMapOutput(boolean compress) {
+    setBoolean("mapred.compress.map.output", compress);
+  }
+  
+  /**
+   * Are the outputs of the maps be compressed?
+   * @return are they compressed?
+   */
+  public boolean getCompressMapOutput() {
+    return getBoolean("mapred.compress.map.output", false);
+  }
+  
+  /**
    * Get the key class for the map output data. If it is not set, use the
    * (final) output ket class This allows the map output key class to be
    * different than the final output key class
@@ -448,10 +466,14 @@ public class JobConf extends Configuration {
     set("mapred.job.name", name);
   }
   
+  private static final Class[] emptyArray = new Class[]{};
+  
   public Object newInstance(Class theClass) {
     Object result;
     try {
-      result = theClass.newInstance();
+      Constructor meth = theClass.getDeclaredConstructor(emptyArray);
+      meth.setAccessible(true);
+      result = meth.newInstance(emptyArray);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
