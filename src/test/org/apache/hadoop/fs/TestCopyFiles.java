@@ -157,7 +157,7 @@ public class TestCopyFiles extends TestCase {
   }
   
   /** copy files from local file system to local file system */
-  public void testCopyFromLocalToLocal() throws IOException {
+  public void testCopyFromLocalToLocal() throws Exception {
     MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
     CopyFiles.main(new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
       "file://"+TEST_ROOT_DIR+"/destdat"});
@@ -168,7 +168,7 @@ public class TestCopyFiles extends TestCase {
   }
   
   /** copy files from dfs file system to dfs file system */
-  public void testCopyFromDfsToDfs() throws IOException {
+  public void testCopyFromDfsToDfs() throws Exception {
     String namenode = null;
     MiniDFSCluster cluster = null;
     try {
@@ -190,7 +190,7 @@ public class TestCopyFiles extends TestCase {
   }
   
   /** copy files from local file system to dfs file system */
-  public void testCopyFromLocalToDfs() throws IOException {
+  public void testCopyFromLocalToDfs() throws Exception {
     String namenode = null;
     MiniDFSCluster cluster = null;
     try {
@@ -212,7 +212,7 @@ public class TestCopyFiles extends TestCase {
   }
 
   /** copy files from dfs file system to local file system */
-  public void testCopyFromDfsToLocal() throws IOException {
+  public void testCopyFromDfsToLocal() throws Exception {
     String namenode = null;
     MiniDFSCluster cluster = null;
     try {
