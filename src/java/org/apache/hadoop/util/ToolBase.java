@@ -34,35 +34,47 @@ import org.apache.hadoop.fs.Path;
 /*************************************************************
  * This is a base class to support generic commonad options.
  * Generic command options allow a user to specify a namenode,
- * a job tracker etc. Generic options supported are
- * -conf <configuration file>     specify an application configuration file
- * -D <property=value>            use value for given property
- * -fs <local|namenode:port>      specify a namenode
- * -jt <local|jobtracker:port>    specify a job tracker
+ * a job tracker etc. Generic options supported are 
+ * <p>-conf <configuration file>     specify an application configuration file
+ * <p>-D <property=value>            use value for given property
+ * <p>-fs <local|namenode:port>      specify a namenode
+ * <p>-jt <local|jobtracker:port>    specify a job tracker
+ * <br>
+ * <p>The general command line syntax is
+ * <p>bin/hadoop command [genericOptions] [commandOptions]
  * 
- * The general command line syntax is
- * bin/hadoop command [genericOptions] [commandOptions]
- * 
- * For every tool that inherits from ToolBase, generic options are 
+ * <p>For every tool that inherits from ToolBase, generic options are 
  * handled by ToolBase while command options are passed to the tool.
  * Generic options handling is implemented using Common CLI.
  * 
- * Tools that inherit from ToolBase in Hadoop are
+ * <p>Tools that inherit from ToolBase in Hadoop are
  * DFSShell, DFSck, JobClient, and CopyFiles.
- * 
- * Examples using generic options are
- * bin/hadoop dfs -fs darwin:8020 -ls /data
+ * <br>
+ * <p>Examples using generic options are
+ * <p>bin/hadoop dfs -fs darwin:8020 -ls /data
+ * <p><blockquote><pre>
  *     list /data directory in dfs with namenode darwin:8020
- * bin/hadoop dfs -D fs.default.name=darwin:8020 -ls /data
+ * </pre></blockquote>
+ * <p>bin/hadoop dfs -D fs.default.name=darwin:8020 -ls /data
+ * <p><blockquote><pre>
  *     list /data directory in dfs with namenode darwin:8020
- * bin/hadoop dfs -conf hadoop-site.xml -ls /data
+ * </pre></blockquote>
+ * <p>bin/hadoop dfs -conf hadoop-site.xml -ls /data
+ * <p><blockquote><pre>
  *     list /data directory in dfs with conf specified in hadoop-site.xml
- * bin/hadoop job -D mapred.job.tracker=darwin:50020 -submit job.xml
+ * </pre></blockquote>
+ * <p>bin/hadoop job -D mapred.job.tracker=darwin:50020 -submit job.xml
+ * <p><blockquote><pre>
  *     submit a job to job tracker darwin:50020
- * bin/hadoop job -jt darwin:50020 -submit job.xml
+ * </pre></blockquote>
+ * <p>bin/hadoop job -jt darwin:50020 -submit job.xml
+ * <p><blockquote><pre>
  *     submit a job to job tracker darwin:50020
- * bin/hadoop job -jt local -submit job.xml
+ * </pre></blockquote>
+ * <p>bin/hadoop job -jt local -submit job.xml
+ * <p><blockquote><pre>
  *     submit a job to local runner
+ * </pre></blockquote>
  *        
  * @author hairong
  *
@@ -161,31 +173,15 @@ public abstract class ToolBase implements Tool {
     }
 
     /**
-     * Execute a command
-     * @param conf Application default configuration
-     * @param args User-specified arguments
-     * @return Exit code
-     * @throws Exception
-     */
-    public int executeCommand(Configuration conf, String[] args) throws Exception {
-        String [] commandOptions = parseGeneralOptions(conf, args);
-        setConf(conf);
-        return this.run(commandOptions);
-    }
-    /**
      * Work as a main program: execute a command and handle exception if any
      * @param conf Application default configuration
      * @param args User-specified arguments
+     * @throws Exception
      */
-    public final void doMain(Configuration conf, String[] args) {
-        try {
-            System.exit(executeCommand(conf, args));
-        }
-        catch (Exception e) {
-            LOG.warn(e.getMessage());
-            e.printStackTrace();
-            System.exit(-1);
-        }
+    public final void doMain(Configuration conf, String[] args) throws Exception {
+        String [] commandOptions = parseGeneralOptions(conf, args);
+        setConf(conf);
+        this.run(commandOptions);
     }
 
 }

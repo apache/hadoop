@@ -238,7 +238,7 @@ public class CopyFiles extends ToolBase {
    * input files. The mapper actually copies the files allotted to it. And
    * the reduce is empty.
    */
-  public int run(String[] args) throws IOException {
+  public int run(String[] args) throws Exception {
     String srcPath = null;
     String destPath = null;
     boolean ignoreReadFailures = false;
@@ -392,7 +392,7 @@ public class CopyFiles extends ToolBase {
     return exitCode;
   }
   
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws Exception {
       new CopyFiles().doMain(
               new JobConf(new Configuration(), CopyFiles.class), 
               args);

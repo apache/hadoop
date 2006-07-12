@@ -356,7 +356,7 @@ public class DFSShell extends ToolBase {
     /**
      * main() has some simple utility methods
      */
-    public static void main(String argv[]) throws IOException {
+    public static void main(String argv[]) throws Exception {
         new DFSShell().doMain(new Configuration(), argv);
     }
 }
