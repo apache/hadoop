@@ -72,7 +72,7 @@ case $startStop in
   (start)
 
     if [ -f $pid ]; then
-      if ps -p `cat $pid` > /dev/null 2>&1; then
+      if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo $command running as process `cat $pid`.  Stop it first.
         exit 1
       fi
@@ -92,7 +92,7 @@ case $startStop in
   (stop)
 
     if [ -f $pid ]; then
-      if ps -p `cat $pid` > /dev/null 2>&1; then
+      if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo stopping $command
         kill `cat $pid`
       else
