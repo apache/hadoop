@@ -27,6 +27,10 @@ Trunk (unreleased changes)
  7. HADOOP-359.  Permit map output to be compressed.
    (omalley via cutting)
 
+ 8. HADOOP-341.  Permit input URI to CopyFiles to use the HTTP
+    protocol.  This lets one, e.g., more easily copy log files into
+    DFS.  (Arun C Murthy via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
