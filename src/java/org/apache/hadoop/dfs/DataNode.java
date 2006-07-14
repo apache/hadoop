@@ -82,7 +82,7 @@ public class DataNode implements FSConstants, Runnable {
         return new InetSocketAddress(host, port);
     }
 
-    private static Vector subThreadList = null;
+    private static Map subDataNodeList = null;
     DatanodeProtocol namenode;
     FSDataset data;
     DatanodeRegistration dnRegistration;
@@ -193,13 +193,26 @@ public class DataNode implements FSConstants, Runnable {
      * Shut down this instance of the datanode.
      * Returns only after shutdown is complete.
      */
-    void shutdown() {
+    public void shutdown() {
         this.shouldRun = false;
         ((DataXceiveServer) this.dataXceiveServer.getRunnable()).kill();
         try {
           this.storage.close();
         } catch (IOException ie) {
         }
+    }
+
+    /**
+     * Shut down all datanodes that where started via the run(conf) method.
+     * Returns only after shutdown is complete.
+     */
+    public static void shutdownAll(){
+      if(subDataNodeList != null && !subDataNodeList.isEmpty()){
+        for (Iterator iterator = subDataNodeList.keySet().iterator(); iterator.hasNext();) {
+          DataNode dataNode = (DataNode) iterator.next();
+          dataNode.shutdown();
+        }
+      }
     }
 
     void handleDiskError( String errMsgr ) {
@@ -880,14 +893,14 @@ public class DataNode implements FSConstants, Runnable {
      */
     public static void run(Configuration conf) throws IOException {
         String[] dataDirs = conf.getStrings("dfs.data.dir");
-        subThreadList = new Vector(dataDirs.length);
+        subDataNodeList = new HashMap(dataDirs.length);
         for (int i = 0; i < dataDirs.length; i++) {
           DataNode dn = makeInstanceForDir(dataDirs[i], conf);
           if (dn != null) {
             Thread t = new Thread(dn, "DataNode: "+dataDirs[i]);
             t.setDaemon(true); // needed for JUnit testing
             t.start();
-            subThreadList.add(t);
+            subDataNodeList.put(dn,t);
           }
         }
     }
@@ -901,7 +914,7 @@ public class DataNode implements FSConstants, Runnable {
     run(conf);
 
     //  Wait for sub threads to exit
-    for (Iterator iterator = subThreadList.iterator(); iterator.hasNext();) {
+    for (Iterator iterator = subDataNodeList.entrySet().iterator(); iterator.hasNext();) {
       Thread threadDataNode = (Thread) iterator.next();
       try {
         threadDataNode.join();

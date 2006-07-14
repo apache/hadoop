@@ -135,6 +135,14 @@ public class RPC {
     return CLIENT;
   }
 
+  /**
+   * Stop all RPC client connections
+   */
+  public static synchronized void stopClient(){
+    if(CLIENT != null)
+      CLIENT.stop();
+  }
+
   private static class Invoker implements InvocationHandler {
     private InetSocketAddress address;
     private Client client;

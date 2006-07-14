@@ -114,9 +114,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     /**
      * Stop all NameNode threads and wait for all to finish.
-     * Package-only access since this is intended for JUnit testing.
     */
-    void stop() {
+    public void stop() {
       if (! stopRequested) {
         stopRequested = true;
         namesystem.close();

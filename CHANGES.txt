@@ -34,6 +34,9 @@ Trunk (unreleased changes)
  9. HADOOP-361.  Remove unix dependencies from streaming contrib
     module tests, making them pure java. (Michel Tourn via cutting)
 
+10. HADOOP-354.  Make public methods to stop DFS daemons.
+   (Barry Kaplan via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
