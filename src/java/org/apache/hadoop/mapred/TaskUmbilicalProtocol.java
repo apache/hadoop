@@ -18,12 +18,16 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.ipc.VersionedProtocol;
+
 /** Protocol that task child process uses to contact its parent process.  The
  * parent is a daemon which which polls the central master for a new map or
  * reduce task and runs it as a child process.  All communication between child
  * and parent is via this protocol. */ 
-interface TaskUmbilicalProtocol {
+interface TaskUmbilicalProtocol extends VersionedProtocol {
 
+  public static final long versionID = 1L;
+  
   /** Called when a child task process starts, to get its task.*/
   Task getTask(String taskid) throws IOException;
 

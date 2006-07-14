@@ -37,6 +37,9 @@ Trunk (unreleased changes)
 10. HADOOP-354.  Make public methods to stop DFS daemons.
    (Barry Kaplan via cutting)
 
+11. HADOOP-252.  Add versioning to RPC protocols.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

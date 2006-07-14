@@ -20,7 +20,6 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.*;
 
 import java.io.*;
 
@@ -57,6 +56,13 @@ import java.io.*;
  * @author Mike Cafarella
  **********************************************************/
 public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
+    public long getProtocolVersion(String protocol, long clientVersion) { 
+      if (protocol.equals(ClientProtocol.class.getName())) {
+        return ClientProtocol.versionID; 
+      } else {
+        return DatanodeProtocol.versionID;
+      }
+    }
     public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.NameNode");
     public static final Log stateChangeLog = LogFactory.getLog( "org.apache.hadoop.dfs.StateChange");
 

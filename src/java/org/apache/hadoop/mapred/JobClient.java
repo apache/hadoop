@@ -187,6 +187,7 @@ public class JobClient extends ToolBase implements MRConstants  {
         } else {
           this.jobSubmitClient = (JobSubmissionProtocol) 
             RPC.getProxy(JobSubmissionProtocol.class,
+                         JobSubmissionProtocol.versionID,
                          JobTracker.getAddress(conf), conf);
         }        
     }
@@ -196,7 +197,8 @@ public class JobClient extends ToolBase implements MRConstants  {
      */
     public JobClient(InetSocketAddress jobTrackAddr, Configuration conf) throws IOException {
         this.jobSubmitClient = (JobSubmissionProtocol) 
-            RPC.getProxy(JobSubmissionProtocol.class, jobTrackAddr, conf);
+            RPC.getProxy(JobSubmissionProtocol.class,
+                         JobSubmissionProtocol.versionID, jobTrackAddr, conf);
     }
 
 

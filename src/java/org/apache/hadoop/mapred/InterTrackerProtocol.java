@@ -18,11 +18,15 @@ package org.apache.hadoop.mapred;
 
 import java.io.*;
 
+import org.apache.hadoop.ipc.VersionedProtocol;
+
 /** 
  * Protocol that a TaskTracker and the central JobTracker use to communicate.
  * The JobTracker is the Server, which implements this protocol.
  */ 
-interface InterTrackerProtocol {
+interface InterTrackerProtocol extends VersionedProtocol {
+  public static final long versionID = 1L;
+  
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
 

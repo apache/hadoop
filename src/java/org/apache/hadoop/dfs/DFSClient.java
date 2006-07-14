@@ -97,9 +97,11 @@ class DFSClient implements FSConstants {
     /** 
      * Create a new DFSClient connected to the given namenode server.
      */
-    public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf) {
+    public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf)
+    throws IOException {
         this.conf = conf;
-        this.namenode = (ClientProtocol) RPC.getProxy(ClientProtocol.class, nameNodeAddr, conf);
+        this.namenode = (ClientProtocol) RPC.getProxy(ClientProtocol.class,
+            ClientProtocol.versionID, nameNodeAddr, conf);
         try {
             this.localName = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException uhe) {

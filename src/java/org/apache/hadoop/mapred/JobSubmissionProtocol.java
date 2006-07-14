@@ -17,14 +17,16 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-import java.util.*;
+
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 /** 
  * Protocol that a JobClient and the central JobTracker use to communicate.  The
  * JobClient can use these methods to submit a Job for execution, and learn about
  * the current system status.
  */ 
-interface JobSubmissionProtocol {
+interface JobSubmissionProtocol extends VersionedProtocol {
+    public static final long versionID = 1L;
     /**
      * Submit a Job for execution.  Returns the latest profile for
      * that job.

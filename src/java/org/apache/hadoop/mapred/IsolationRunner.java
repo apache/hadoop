@@ -32,6 +32,10 @@ public class IsolationRunner {
 
   private static class FakeUmbilical implements TaskUmbilicalProtocol {
 
+    public long getProtocolVersion(String protocol, long clientVersion) {
+      return TaskUmbilicalProtocol.versionID;
+    }
+    
     public void done(String taskid) throws IOException {
       LOG.info("Task " + taskid + " reporting done.");
     }

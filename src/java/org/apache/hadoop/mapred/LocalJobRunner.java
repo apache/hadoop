@@ -35,6 +35,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
   private int map_tasks = 0;
   private int reduce_tasks = 0;
 
+  public long getProtocolVersion(String protocol, long clientVersion) {
+    return JobSubmissionProtocol.versionID;
+  }
+  
   private class Job extends Thread
     implements TaskUmbilicalProtocol {
     private String file;
@@ -48,6 +52,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private Path localFile;
     private FileSystem localFs;
 
+    public long getProtocolVersion(String protocol, long clientVersion) {
+      return TaskUmbilicalProtocol.versionID;
+    }
+    
     public Job(String file, Configuration conf) throws IOException {
       this.file = file;
       this.id = "job_" + newId();

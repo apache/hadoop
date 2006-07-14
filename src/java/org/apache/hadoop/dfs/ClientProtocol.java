@@ -16,6 +16,7 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**********************************************************************
  * ClientProtocol is used by a piece of DFS user code to communicate 
@@ -24,8 +25,10 @@ import java.io.*;
  *
  * @author Mike Cafarella
  **********************************************************************/
-interface ClientProtocol {
+interface ClientProtocol extends VersionedProtocol {
 
+  public static final long versionID = 1L;
+  
     ///////////////////////////////////////
     // File contents
     ///////////////////////////////////////

@@ -17,6 +17,7 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**********************************************************************
  * Protocol that a DFS datanode uses to communicate with the NameNode.
@@ -27,7 +28,8 @@ import java.io.*;
  *
  * @author Michael Cafarella
  **********************************************************************/
-interface DatanodeProtocol {
+interface DatanodeProtocol extends VersionedProtocol {
+  public static final long versionID = 1L;
   // error code
   final static int DISK_ERROR = 1;
   final static int INVALID_BLOCK = 2;

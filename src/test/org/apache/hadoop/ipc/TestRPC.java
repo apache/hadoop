@@ -30,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 
+import org.apache.hadoop.ipc.VersionedProtocol;
+
 /** Unit tests for RPC. */
 public class TestRPC extends TestCase {
   private static final int PORT = 1234;
@@ -46,7 +48,9 @@ public class TestRPC extends TestCase {
 
   public TestRPC(String name) { super(name); }
 	
-  public interface TestProtocol {
+  public interface TestProtocol extends VersionedProtocol {
+    public static final long versionID = 1L;
+    
     void ping() throws IOException;
     String echo(String value) throws IOException;
     String[] echo(String[] value) throws IOException;
@@ -59,6 +63,10 @@ public class TestRPC extends TestCase {
 
   public class TestImpl implements TestProtocol {
 
+    public long getProtocolVersion(String protocol, long clientVersion) {
+      return TestProtocol.versionID;
+    }
+    
     public void ping() {}
 
     public String echo(String value) throws IOException { return value; }
@@ -98,7 +106,7 @@ public class TestRPC extends TestCase {
 
     InetSocketAddress addr = new InetSocketAddress(PORT);
     TestProtocol proxy =
-      (TestProtocol)RPC.getProxy(TestProtocol.class, addr, conf);
+      (TestProtocol)RPC.getProxy(TestProtocol.class, TestProtocol.versionID, addr, conf);
     
     proxy.ping();
 

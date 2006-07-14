@@ -165,10 +165,21 @@ public class RPC {
 
   /** Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. */
-  public static Object getProxy(Class protocol, InetSocketAddress addr, Configuration conf) {
-    return Proxy.newProxyInstance(protocol.getClassLoader(),
+  public static VersionedProtocol getProxy(Class protocol, long clientVersion,
+      InetSocketAddress addr, Configuration conf)
+  throws RemoteException {
+    VersionedProtocol proxy = (VersionedProtocol) Proxy.newProxyInstance(
+                                  protocol.getClassLoader(),
                                   new Class[] { protocol },
                                   new Invoker(addr, conf));
+    long serverVersion = proxy.getProtocolVersion(protocol.getName(), clientVersion);
+    if (serverVersion == clientVersion) {
+      return proxy;
+    } else {
+      throw new RemoteException(protocol.getName(),
+          "RPC Server and Client Versions Mismatched. SID:"+serverVersion+
+          " CID:"+clientVersion);
+    }
   }
 
   /** Expert: Make multiple, parallel calls to a set of servers. */

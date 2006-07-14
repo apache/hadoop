@@ -118,7 +118,8 @@ public class DataNode implements FSConstants, Runnable {
       // get storage info and lock the data dir
       storage = new DataStorage( datadir );
       // connect to name node
-      this.namenode = (DatanodeProtocol) RPC.getProxy(DatanodeProtocol.class, 
+      this.namenode = (DatanodeProtocol) RPC.getProxy(DatanodeProtocol.class,
+                                                      DatanodeProtocol.versionID,
                                                       nameNodeAddr, 
                                                       conf);
       // find free port

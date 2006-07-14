@@ -87,6 +87,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       tracker = null;
     }
     
+    public long getProtocolVersion(String protocol, long clientVersion) {
+      if (protocol.equals(InterTrackerProtocol.class.getName())) {
+        return InterTrackerProtocol.versionID;
+      } else {
+        return JobSubmissionProtocol.versionID;
+      }
+    }
     /**
      * A thread to timeout tasks that have been assigned to task trackers,
      * but that haven't reported back yet.

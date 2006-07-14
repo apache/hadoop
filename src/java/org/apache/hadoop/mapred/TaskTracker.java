@@ -114,6 +114,9 @@ public class TaskTracker
       taskCleanupThread.start();
     }
     
+    public long getProtocolVersion(String protocol, long clientVersion) {
+      return TaskUmbilicalProtocol.versionID;
+    }
     /**
      * Do the real constructor work here.  It's in a separate method
      * so we can call it again and "recycle" the object after calling
@@ -160,7 +163,8 @@ public class TaskTracker
         this.mapOutputFile.cleanupStorage();
         this.justStarted = true;
 
-        this.jobClient = (InterTrackerProtocol) RPC.getProxy(InterTrackerProtocol.class, jobTrackAddr, this.fConf);
+        this.jobClient = (InterTrackerProtocol) RPC.getProxy(InterTrackerProtocol.class,
+            InterTrackerProtocol.versionID, jobTrackAddr, this.fConf);
         
         this.running = true;
     }
@@ -1002,6 +1006,7 @@ public class TaskTracker
           String taskid = args[1];
           TaskUmbilicalProtocol umbilical =
             (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
+                                                TaskUmbilicalProtocol.versionID,
                                                 new InetSocketAddress(port), 
                                                 defaultConf);
             
