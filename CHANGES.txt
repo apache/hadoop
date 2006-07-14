@@ -31,6 +31,9 @@ Trunk (unreleased changes)
     protocol.  This lets one, e.g., more easily copy log files into
     DFS.  (Arun C Murthy via cutting)
 
+ 9. HADOOP-361.  Remove unix dependencies from streaming contrib
+    module tests, making them pure java. (Michel Tourn via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

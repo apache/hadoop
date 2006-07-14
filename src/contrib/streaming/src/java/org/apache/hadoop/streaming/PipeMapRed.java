@@ -51,8 +51,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
  */
 public abstract class PipeMapRed {
 
-  protected static final Log LOG = LogFactory.getLog(PipeMapRed.class.getName());  
-  
+  protected static final Log LOG = LogFactory.getLog(PipeMapRed.class.getName());
+
   /** The command to be spawned as a subprocess.
    * Mapper/Reducer operations will delegate to it
    */
@@ -60,23 +60,23 @@ public abstract class PipeMapRed {
   /*
   */
   abstract String getKeyColPropName();
-  
-  /** Write output as side-effect files rather than as map outputs. 
+
+  /** Write output as side-effect files rather than as map outputs.
       This is useful to do "Map" tasks rather than "MapReduce" tasks. */
-  boolean getUseSideEffect() 
+  boolean getUseSideEffect()
   {
     return false;
   }
-  
+
   /**
-   * @returns how many TABS before the end of the key part 
+   * @returns how many TABS before the end of the key part
    * usually: 1 or "ALL"
    * used for tool output of both Map and Reduce
    * configured via tool's argv: splitKeyVal=ALL or 1..
    * although it is interpreted here, not by tool
    */
   int getKeyColsFromPipeCommand(String cmd)
-  {          
+  {
     String key = getKeyColPropName();
     Pattern kcPat = Pattern.compile(".*" + key + "=([^\\s]*).*");
     Matcher match = kcPat.matcher(cmd);
@@ -89,28 +89,28 @@ public abstract class PipeMapRed {
 
     int cols;
     if(kc== null) {
-      // default value is 1 and the Stream applications could instead 
+      // default value is 1 and the Stream applications could instead
       // add/remove the \t separator on lines to get the same effect as value 0, 1, ALL
       cols = 1;
     } else if(kc.equals("ALL")) {
       cols = ALL_COLS;
     } else {
       try {
-        cols = Integer.parseInt(kc);    
+        cols = Integer.parseInt(kc);
       } catch(NumberFormatException nf) {
         cols = Integer.MAX_VALUE;
       }
     }
 
     System.out.println("getKeyColsFromPipeCommand:" + key + " parse:" + cols + " from cmd=" + cmd);
-    
+
     return cols;
   }
-  
+
   final static int OUTSIDE = 1;
   final static int SINGLEQ = 2;
   final static int DOUBLEQ = 3;
-  
+
   static String[] splitArgs(String args)
   {
     ArrayList argList = new ArrayList();
@@ -127,20 +127,20 @@ public abstract class PipeMapRed {
             if(state == OUTSIDE) {
               state = SINGLEQ;
             } else if(state == SINGLEQ) {
-              state = OUTSIDE;  
+              state = OUTSIDE;
             }
             endToken = (state != lastState);
           } else if(ch[c]=='"') {
             if(state == OUTSIDE) {
               state = DOUBLEQ;
             } else if(state == DOUBLEQ) {
-              state = OUTSIDE;  
-            }          
+              state = OUTSIDE;
+            }
             endToken = (state != lastState);
           } else if(ch[c]==' ') {
             if(state == OUTSIDE) {
               endToken = true;
-            }            
+            }
           }
         }
         if(last || endToken) {
@@ -148,7 +148,7 @@ public abstract class PipeMapRed {
             // unquoted space
           } else {
             String a;
-            a = args.substring(argstart, c); 
+            a = args.substring(argstart, c);
             argList.add(a);
           }
           argstart = c+1;
@@ -164,16 +164,16 @@ public abstract class PipeMapRed {
     try {
       String argv = getPipeCommand(job);
       keyCols_ = getKeyColsFromPipeCommand(argv);
-      
-      job_ = job;      
-      
+
+      job_ = job;
+
       // Currently: null is identity reduce. REDUCE_NONE is no-map-outputs.
       doPipe_ = (argv != null) && !StreamJob.REDUCE_NONE.equals(argv);
       if(!doPipe_) return;
 
       setStreamJobDetails(job);
       setStreamProperties();
-            
+
       String[] argvSplit = splitArgs(argv);
       String prog = argvSplit[0];
       String userdir = System.getProperty("user.dir");
@@ -182,54 +182,54 @@ public abstract class PipeMapRed {
       } else {
         new MustangFile(prog).setExecutable(true, true);
       }
-      
-      
+
+
       if(job_.getInputValueClass().equals(BytesWritable.class)) {
-        // TODO expose as separate config: 
+        // TODO expose as separate config:
         // job or semistandard inputformat property
         optUseKey_ = false;
       }
-      
+
       optSideEffect_ = getUseSideEffect();
-      
+
       if(optSideEffect_) {
         String fileName = job_.get("mapred.task.id");
         sideEffectPath_ = new Path(job_.getOutputPath(), fileName);
         FileSystem fs = FileSystem.get(job_);
         sideEffectOut_ = fs.create(sideEffectPath_);
       }
-      
-      // argvSplit[0]: 
+
+      // argvSplit[0]:
       // An absolute path should be a preexisting valid path on all TaskTrackers
-	  // A  relative path should match in the unjarred Job data
+      // A  relative path should match in the unjarred Job data
       // In this case, force an absolute path to make sure exec finds it.
       argvSplit[0] = new File(argvSplit[0]).getAbsolutePath();
       logprintln("PipeMapRed exec " + Arrays.asList(argvSplit));
-      logprintln("sideEffectPath_=" + sideEffectPath_);      
-      
+      logprintln("sideEffectPath_=" + sideEffectPath_);
+
       Environment childEnv = (Environment)StreamUtil.env().clone();
       addEnvironment(childEnv, job_.get("stream.addenvironment"));
       sim = Runtime.getRuntime().exec(argvSplit, childEnv.toArray());
-      
+
       /* // This way required jdk1.5
       ProcessBuilder processBuilder = new ProcessBuilder(argvSplit);
       Map<String, String> env = processBuilder.environment();
       addEnvironment(env, job_.get("stream.addenvironment"));
       sim = processBuilder.start();
       */
-      
+
       clientOut_ = new DataOutputStream(new BufferedOutputStream(sim.getOutputStream()));
       clientIn_  = new DataInputStream(new BufferedInputStream(sim.getInputStream()));
       clientErr_ = new DataInputStream(new BufferedInputStream(sim.getErrorStream()));
       doneLock_  = new Object();
       startTime_ = System.currentTimeMillis();
-      
+
     } catch(Exception e) {
         e.printStackTrace();
         e.printStackTrace(log_);
-    } 
+    }
   }
-  
+
   void setStreamJobDetails(JobConf job)
   {
     jobLog_ = job.get("stream.jobLog_");
@@ -239,7 +239,7 @@ public abstract class PipeMapRed {
       logprintln("JobConf set minRecWrittenToEnableSkip_ =" + minRecWrittenToEnableSkip_);
     }
   }
-  
+
   void setStreamProperties()
   {
     taskid_ = System.getProperty("stream.taskid");
@@ -250,9 +250,9 @@ public abstract class PipeMapRed {
     if(s != null) {
       reportPortPlusOne_ = Integer.parseInt(s);
     }
-    
+
   }
-    
+
   void logprintln(String s)
   {
     if(log_ != null) {
@@ -261,14 +261,14 @@ public abstract class PipeMapRed {
       System.err.println(s); // or LOG.info()
     }
   }
-  
+
   void logflush()
   {
     if(log_ != null) {
       log_.flush();
     }
   }
-  
+
   void addEnvironment(Properties env, String nameVals)
   {
     // encoding "a=b c=d" from StreamJob
@@ -284,7 +284,7 @@ public abstract class PipeMapRed {
       }
     }
   }
-  
+
   /** .. and if successful: delete the task log */
   void appendLogToJobLog(String status)
   {
@@ -294,8 +294,8 @@ public abstract class PipeMapRed {
     StreamUtil.exec("/bin/rm " + LOGNAME, log_);
     // TODO socket-based aggregator (in JobTrackerInfoServer)
   }
-  
-  
+
+
   void startOutputThreads(OutputCollector output, Reporter reporter)
   {
       outputDone_ = false;
@@ -305,7 +305,7 @@ public abstract class PipeMapRed {
       errThread_ = new MRErrorThread(reporter);
       errThread_.start();
   }
-    
+
   void splitKeyVal(String line, UTF8 key, UTF8 val)
   {
     int pos;
@@ -313,10 +313,10 @@ public abstract class PipeMapRed {
       pos = -1;
     } else {
       pos = line.indexOf('\t');
-    }    
+    }
     if(pos == -1) {
       key.set(line);
-      val.set("");      
+      val.set("");
     } else {
       key.set(line.substring(0, pos));
       val.set(line.substring(pos+1));
@@ -339,7 +339,7 @@ public abstract class PipeMapRed {
               UTF8 val = new UTF8();
               // 3/4 Tool to Hadoop
               while((answer = clientIn_.readLine()) != null) {
-                // 4/4 Hadoop out 
+                // 4/4 Hadoop out
                 if(optSideEffect_) {
                   sideEffectOut_.write(answer.getBytes());
                   sideEffectOut_.write('\n');
@@ -419,7 +419,7 @@ public abstract class PipeMapRed {
     }
     try {
       if(clientOut_ != null) {
-      	clientOut_.close();
+        clientOut_.close();
       }
     } catch(IOException io) {
     }
@@ -442,29 +442,29 @@ public abstract class PipeMapRed {
       throw e;
     }
   }
-  
+
   void maybeLogRecord()
   {
     if(numRecRead_ >= nextRecReadLog_) {
       String info = numRecInfo();
       logprintln(info);
-      logflush();      
+      logflush();
       System.err.println(info);
       //nextRecReadLog_ *= 10;
       nextRecReadLog_ += 100;
-    }    
+    }
   }
-  
+
   public String getContext()
   {
-    
+
     String s = numRecInfo() + "\n";
     s += "minRecWrittenToEnableSkip_=" + minRecWrittenToEnableSkip_ + " ";
     s += "LOGNAME=" + LOGNAME + "\n";
     s += envline("HOST");
     s += envline("USER");
     s += envline("HADOOP_USER");
-    //s += envline("PWD"); // =/home/crawler/hadoop/trunk 
+    //s += envline("PWD"); // =/home/crawler/hadoop/trunk
     s += "last Hadoop input: |" + mapredKey_ + "|\n";
     s += "last tool output: |" + outThread_.answer + "|\n";
     s += "Date: " + new Date() + "\n";
@@ -472,12 +472,12 @@ public abstract class PipeMapRed {
     // s += envline("REMOTE_HOST");
     return s;
   }
-  
+
   String envline(String var)
   {
     return var + "=" + StreamUtil.env().get(var) + "\n";
   }
-  
+
   String numRecInfo()
   {
     long elapsed = (System.currentTimeMillis() - startTime_)/1000;
@@ -494,24 +494,24 @@ public abstract class PipeMapRed {
   {
       StringWriter sw = new StringWriter();
       PrintWriter pw = new PrintWriter(sw);
-      e.printStackTrace(pw);    
+      e.printStackTrace(pw);
       String msg = "log:" + jobLog_ + "\n" + getContext() + sw + "\n";
       logprintln(msg);
-      return msg;  
+      return msg;
   }
-    
+
 
   long startTime_;
   long numRecRead_ = 0;
   long numRecWritten_ = 0;
   long numRecSkipped_ = 0;
   long nextRecReadLog_ = 1;
-  
+
   long minRecWrittenToEnableSkip_ = Long.MAX_VALUE;
-  
+
   int keyCols_;
   final static int ALL_COLS = Integer.MAX_VALUE;
-  
+
   JobConf job_;
 
   // generic MapRed parameters passed on by hadoopStreaming
@@ -519,7 +519,7 @@ public abstract class PipeMapRed {
   int reportPortPlusOne_;
 
   boolean doPipe_;
-  
+
   Process sim;
   Object doneLock_;
   MROutputThread outThread_;
@@ -534,7 +534,7 @@ public abstract class PipeMapRed {
   // set in PipeMapper/PipeReducer subclasses
   String mapredKey_;
   int numExceptions_;
-  
+
   boolean optUseKey_ = true;
 
   boolean optSideEffect_;
@@ -543,7 +543,7 @@ public abstract class PipeMapRed {
 
   String LOGNAME;
   PrintStream log_;
-  
+
   /* curr. going to stderr so that it is preserved
   { // instance initializer
     try {
@@ -560,7 +560,7 @@ public abstract class PipeMapRed {
       if(log_ == null) {
         log_ = System.err;
       }
-    }    
+    }
   }
   */
 }

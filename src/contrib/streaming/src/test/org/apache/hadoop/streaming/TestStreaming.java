@@ -18,13 +18,13 @@ package org.apache.hadoop.streaming;
 
 import junit.framework.TestCase;
 import java.io.*;
+import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 /**
  * This class tests hadoopStreaming in MapReduce local mode.
- * It requires the Unix utilities tr and uniq.
  */
 public class TestStreaming extends TestCase
 {
@@ -34,9 +34,12 @@ public class TestStreaming extends TestCase
   String INPUT_FILE = "input.txt";
   String OUTPUT_DIR = "out";
   String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
-  String map = "/usr/bin/tr . \\n"; // split words into lines. Careful with spaces in args
-  String reduce = "/usr/bin/uniq";
-  String outputExpect = "are\t\nblue\t\nbunnies\t\npink\t\nred\t\nroses\t\nviolets\t\n";
+  // map behaves like "/usr/bin/tr . \\n"; (split words into lines)
+  String map = makeJavaCommand(TrApp.class, new String[]{".", "\\n"});
+  // combine, reduce behave like /usr/bin/uniq. But also prepend lines with C, R.
+  String combine  = makeJavaCommand(UniqApp.class, new String[]{"C"});
+  String reduce = makeJavaCommand(UniqApp.class, new String[]{"R"});
+  String outputExpect = "RCare\t\nRCblue\t\nRCbunnies\t\nRCpink\t\nRCred\t\nRCroses\t\nRCviolets\t\n";
 
   StreamJob job;
 
@@ -60,12 +63,44 @@ public class TestStreaming extends TestCase
     }
     System.out.println("test.build.data=" + antTestDir);
   }
+
   void createInput() throws IOException
   {
     String path = new File(".", INPUT_FILE).getAbsolutePath();// needed from junit forked vm
     DataOutputStream out = new DataOutputStream(new FileOutputStream(path));
     out.writeBytes(input);
     out.close();
+  }
+
+  public String makeJavaCommand(Class main, String[] argv)
+  {
+    ArrayList vargs = new ArrayList();
+    File javaHomeBin = new File(System.getProperty("java.home"), "bin");
+    File jvm = new File(javaHomeBin, "java");
+    vargs.add(jvm.toString());
+    // copy parent classpath
+    vargs.add("-classpath");
+    vargs.add(System.getProperty("java.class.path"));
+
+    // Add main class and its arguments
+    vargs.add(main.getName());
+    for(int i=0; i<argv.length; i++) {
+      vargs.add(argv[i]);
+    }
+    return collate(vargs, " ");
+  }
+
+  String collate(ArrayList args, String sep)
+  {
+    StringBuffer buf = new StringBuffer();
+    Iterator it = args.iterator();
+    while(it.hasNext()) {
+      if(buf.length() > 0) {
+        buf.append(" ");
+      }
+      buf.append(it.next());
+    }
+    return buf.toString();
   }
 
   public void testCommandLine()
@@ -80,11 +115,11 @@ public class TestStreaming extends TestCase
           "-input", INPUT_FILE,
           "-output", OUTPUT_DIR,
           "-mapper", map,
+          "-combiner", combine,
           "-reducer", reduce,
           /*"-debug",*/
           "-verbose"
       };
-
       job = new StreamJob(argv, mayExit);
       job.go();
       File outFile = new File(".", OUTPUT_DIR + "/part-00000").getAbsoluteFile();

@@ -34,30 +34,30 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.RunningJob;
 
-/** All the client-side work happens here. 
+/** All the client-side work happens here.
  * (Jar packaging, MapRed job submission and monitoring)
  * @author Michel Tourn
  */
 public class StreamJob
 {
-  protected static final Log LOG = LogFactory.getLog(StreamJob.class.getName());    
-  
+  protected static final Log LOG = LogFactory.getLog(StreamJob.class.getName());
+
   final static String REDUCE_NONE = "NONE";
-  
+
   public StreamJob(String[] argv, boolean mayExit)
   {
     argv_ = argv;
-    mayExit_ = mayExit;    
+    mayExit_ = mayExit;
   }
-  
+
   public void go() throws IOException
   {
     init();
-    
+
     preProcessArgs();
     parseArgv();
     postProcessArgs();
-    
+
     setJobConf();
     submitAndMonitorJob();
   }
@@ -70,13 +70,13 @@ public class StreamJob
         throw new RuntimeException(io);
      }
   }
-  
+
   void preProcessArgs()
   {
     verbose_ = false;
     addTaskEnvironment_ = "";
   }
-  
+
   void postProcessArgs() throws IOException
   {
     if(cluster_ == null) {
@@ -94,18 +94,19 @@ public class StreamJob
 
     Iterator it = packageFiles_.iterator();
     while(it.hasNext()) {
-      File f = new File((String)it.next());    
+      File f = new File((String)it.next());
       if(f.isFile()) {
         shippedCanonFiles_.add(f.getCanonicalPath());
       }
     }
     msg("shippedCanonFiles_=" + shippedCanonFiles_);
-    
+
     // careful with class names..
     mapCmd_ = unqualifyIfLocalPath(mapCmd_);
-    redCmd_ = unqualifyIfLocalPath(redCmd_);    
+    comCmd_ = unqualifyIfLocalPath(comCmd_);
+    redCmd_ = unqualifyIfLocalPath(redCmd_);
   }
-  
+
   void validateNameEqValue(String neqv)
   {
     String[] nv = neqv.split("=", 2);
@@ -114,11 +115,11 @@ public class StreamJob
     }
     msg("Recording name=value: name=" + nv[0] + " value=" + nv[1]);
   }
-  
+
   String unqualifyIfLocalPath(String cmd) throws IOException
   {
     if(cmd == null) {
-      //    
+      //
     } else {
       String prog = cmd;
       String args = "";
@@ -131,8 +132,8 @@ public class StreamJob
       boolean shipped = shippedCanonFiles_.contains(progCanon);
       msg("shipped: " + shipped + " " + progCanon);
       if(shipped) {
-        // Change path to simple filename. 
-        // That way when PipeMapRed calls Runtime.exec(), 
+        // Change path to simple filename.
+        // That way when PipeMapRed calls Runtime.exec(),
         // it will look for the excutable in Task's working dir.
         // And this is where TaskRunner unjars our job jar.
         prog = new File(prog).getName();
@@ -146,25 +147,25 @@ public class StreamJob
     msg("cmd=" + cmd);
     return cmd;
   }
-  
+
   String getHadoopAliasConfFile()
   {
     return new File(getHadoopClientHome() + "/conf", hadoopAliasConf_).getAbsolutePath();
   }
-   
-  
+
+
   void parseArgv()
   {
     if(argv_.length==0) {
       exitUsage(false);
     }
-    int i=0; 
+    int i=0;
     while(i < argv_.length) {
       String s;
       if(argv_[i].equals("-verbose")) {
-        verbose_ = true;      
+        verbose_ = true;
       } else if(argv_[i].equals("-info")) {
-        detailedUsage_ = true;      
+        detailedUsage_ = true;
       } else if(argv_[i].equals("-debug")) {
         debug_++;
       } else if((s = optionArg(argv_, i, "-input", false)) != null) {
@@ -176,6 +177,9 @@ public class StreamJob
       } else if((s = optionArg(argv_, i, "-mapper", mapCmd_ != null)) != null) {
         i++;
         mapCmd_ = s;
+      } else if((s = optionArg(argv_, i, "-combiner", comCmd_ != null)) != null) {
+        i++;
+        comCmd_ = s;
       } else if((s = optionArg(argv_, i, "-reducer", redCmd_ != null)) != null) {
         i++;
         redCmd_ = s;
@@ -218,7 +222,7 @@ public class StreamJob
         exitUsage(true);
     }
   }
-  
+
   String optionArg(String[] args, int index, String arg, boolean argSet)
   {
     if(index >= args.length || ! args[index].equals(arg)) {
@@ -229,10 +233,10 @@ public class StreamJob
     }
     if(index >= args.length-1) {
       throw new IllegalArgumentException("Expected argument after option " + args[index]);
-    }    
+    }
     return args[index+1];
   }
-  
+
   protected void msg(String msg)
   {
     if(verbose_) {
@@ -242,15 +246,15 @@ public class StreamJob
 
   public void exitUsage(boolean detailed)
   {
-                      //         1         2         3         4         5         6         7         
+                      //         1         2         3         4         5         6         7
                       //1234567890123456789012345678901234567890123456789012345678901234567890123456789
     System.out.println("Usage: $HADOOP_HOME/bin/hadoop jar build/hadoop-streaming.jar [options]");
     System.out.println("Options:");
     System.out.println("  -input    <path>     DFS input file(s) for the Map step");
     System.out.println("  -output   <path>     DFS output directory for the Reduce step");
     System.out.println("  -mapper   <cmd>      The streaming command to run");
-    System.out.println("  -combiner <cmd>      Not implemented. But you can pipe the mapper output");
-    System.out.println("  -reducer  <cmd>      The streaming command to run.");
+    System.out.println("  -combiner <cmd>      The streaming command to run");
+    System.out.println("  -reducer  <cmd>      The streaming command to run");
     System.out.println("  -file     <file>     File/dir to be shipped in the Job jar file");
     System.out.println("  -cluster  <name>     Default uses hadoop-default.xml and hadoop-site.xml");
     System.out.println("  -config   <file>     Optional. One or more paths to xml config files");
@@ -261,7 +265,7 @@ public class StreamJob
     System.out.println("  -cmdenv   <n>=<v>    Optional. Pass env.var to streaming commands");
     System.out.println("  -verbose");
     System.out.println();
-    if(!detailed) {    
+    if(!detailed) {
     System.out.println("For more details about these options:");
     System.out.println("Use $HADOOP_HOME/bin/hadoop jar build/hadoop-streaming.jar -info");
         fail("");
@@ -307,7 +311,7 @@ public class StreamJob
     System.out.println("  Input files are all the daily logs for days in month 2006-04");
     fail("");
   }
-  
+
   public void fail(String message)
   {
     if(mayExit_) {
@@ -319,8 +323,8 @@ public class StreamJob
   }
 
   // --------------------------------------------
-  
-  
+
+
   protected String getHadoopClientHome()
   {
     String h = env_.getProperty("HADOOP_HOME"); // standard Hadoop
@@ -342,11 +346,11 @@ public class StreamJob
     }
     return local;
   }
-  protected String getClusterNick() 
-  { 
+  protected String getClusterNick()
+  {
     return cluster_;
   }
-  
+
   /** @return path to the created Jar file or null if no files are necessary.
   */
   protected String packageJobJar() throws IOException
@@ -362,12 +366,12 @@ public class StreamJob
         msg("Found runtime classes in: " + runtimeClasses);
     }
     if(isLocalHadoop()) {
-      // don't package class files (they might get unpackaged in "." and then 
+      // don't package class files (they might get unpackaged in "." and then
       //  hide the intended CLASSPATH entry)
-      // we still package everything else (so that scripts and executable are found in 
+      // we still package everything else (so that scripts and executable are found in
       //  Task workdir like distributed Hadoop)
     } else {
-      if(new File(runtimeClasses).isDirectory()) {    
+      if(new File(runtimeClasses).isDirectory()) {
           packageFiles_.add(runtimeClasses);
       } else {
           unjarFiles.add(runtimeClasses);
@@ -377,7 +381,7 @@ public class StreamJob
       return null;
     }
     File jobJar = File.createTempFile("streamjob", ".jar");
-    System.out.println("packageJobJar: " + packageFiles_ + " " + unjarFiles + " " + jobJar);    
+    System.out.println("packageJobJar: " + packageFiles_ + " " + unjarFiles + " " + jobJar);
     if(debug_ == 0) {
       jobJar.deleteOnExit();
     }
@@ -389,7 +393,7 @@ public class StreamJob
     builder.merge(packageFiles_, unjarFiles, jobJarName);
     return jobJarName;
   }
-  
+
   protected void setJobConf() throws IOException
   {
     msg("hadoopAliasConf_ = " + hadoopAliasConf_);
@@ -403,35 +407,45 @@ public class StreamJob
     while(it.hasNext()) {
         String pathName = (String)it.next();
         config_.addFinalResource(new Path(pathName));
-    }   
+    }
     // general MapRed job properties
     jobConf_ = new JobConf(config_);
     for(int i=0; i<inputGlobs_.size(); i++) {
       jobConf_.addInputDir(new File((String)inputGlobs_.get(i)));
     }
-    
+
     jobConf_.setInputFormat(StreamInputFormat.class);
-    // for SequenceFile, input classes may be overriden in getRecordReader 
+    // for SequenceFile, input classes may be overriden in getRecordReader
     jobConf_.setInputKeyClass(UTF8.class);
     jobConf_.setInputValueClass(UTF8.class);
-    
+
     jobConf_.setOutputKeyClass(UTF8.class);
     jobConf_.setOutputValueClass(UTF8.class);
     //jobConf_.setCombinerClass();
 
     jobConf_.setOutputDir(new File(output_));
     jobConf_.setOutputFormat(StreamOutputFormat.class);
-    
+
     jobConf_.set("stream.addenvironment", addTaskEnvironment_);
-    
+
     String defaultPackage = this.getClass().getPackage().getName();
-    
+
     Class c = StreamUtil.goodClassOrNull(mapCmd_, defaultPackage);
     if(c != null) {
       jobConf_.setMapperClass(c);
     } else {
       jobConf_.setMapperClass(PipeMapper.class);
       jobConf_.set("stream.map.streamprocessor", mapCmd_);
+    }
+
+    if(comCmd_ != null) {
+      c = StreamUtil.goodClassOrNull(comCmd_, defaultPackage);
+      if(c != null) {
+        jobConf_.setCombinerClass(c);
+      } else {
+        jobConf_.setCombinerClass(PipeCombiner.class);
+        jobConf_.set("stream.combine.streamprocessor", comCmd_);
+      }
     }
 
     if(redCmd_ != null) {
@@ -443,13 +457,13 @@ public class StreamJob
         jobConf_.set("stream.reduce.streamprocessor", redCmd_);
       }
     }
-    
+
     if(inReaderSpec_ != null) {
         String[] args = inReaderSpec_.split(",");
         String readerClass = args[0];
         // this argument can only be a Java class
         c = StreamUtil.goodClassOrNull(readerClass, defaultPackage);
-        if(c != null) {            
+        if(c != null) {
             jobConf_.set("stream.recordreader.class", c.getName());
         } else {
             fail("-inputreader: class not found: " + readerClass);
@@ -461,13 +475,13 @@ public class StreamJob
             jobConf_.set(k, v);
         }
     }
-    
+
     jar_ = packageJobJar();
     if(jar_ != null) {
         jobConf_.setJar(jar_);
     }
 
-    // last, allow user to override anything 
+    // last, allow user to override anything
     // (although typically used with properties we didn't touch)
     it = userJobConfProps_.iterator();
     while(it.hasNext()) {
@@ -475,39 +489,39 @@ public class StreamJob
         String[] nv = prop.split("=", 2);
         msg("xxxJobConf: set(" + nv[0] + ", " + nv[1]+")");
         jobConf_.set(nv[0], nv[1]);
-    }   
+    }
     msg("submitting to jobconf: " + getJobTrackerHostPort());
   }
-  
+
   protected String getJobTrackerHostPort()
   {
     return jobConf_.get("mapred.job.tracker");
   }
-  
+
   protected void jobInfo()
-  {    
+  {
     if(isLocalHadoop()) {
-      LOG.info("Job running in-process (local Hadoop)"); 
+      LOG.info("Job running in-process (local Hadoop)");
     } else {
       String hp = getJobTrackerHostPort();
-      LOG.info("To kill this job, run:"); 
+      LOG.info("To kill this job, run:");
       LOG.info(getHadoopClientHome() + "/bin/hadoop job  -Dmapred.job.tracker=" + hp + " -kill " + jobId_);
       //LOG.info("Job file: " + running_.getJobFile() );
       LOG.info("Tracking URL: "  + StreamUtil.qualifyHost(running_.getTrackingURL()));
     }
   }
-  
+
   // Based on JobClient
   public void submitAndMonitorJob() throws IOException {
-    
+
     if(jar_ != null && isLocalHadoop()) {
         // getAbs became required when shell and subvm have different working dirs...
         File wd = new File(".").getAbsoluteFile();
         StreamUtil.unJar(new File(jar_), wd);
     }
-    
-    // if jobConf_ changes must recreate a JobClient 
-    jc_ = new JobClient(jobConf_); 
+
+    // if jobConf_ changes must recreate a JobClient
+    jc_ = new JobClient(jobConf_);
     boolean error = true;
     running_ = null;
     String lastReport = null;
@@ -515,8 +529,8 @@ public class StreamJob
       running_ = jc_.submitJob(jobConf_);
       jobId_ = running_.getJobID();
 
-      LOG.info("getLocalDirs(): " + Arrays.asList(jobConf_.getLocalDirs()));     
-      LOG.info("Running job: " + jobId_);      
+      LOG.info("getLocalDirs(): " + Arrays.asList(jobConf_.getLocalDirs()));
+      LOG.info("Running job: " + jobId_);
       jobInfo();
 
       while (!running_.isComplete()) {
@@ -548,7 +562,7 @@ public class StreamJob
       jc_.close();
     }
   }
-  
+
 
   protected boolean mayExit_;
   protected String[] argv_;
@@ -557,7 +571,7 @@ public class StreamJob
   protected int debug_;
 
   protected Environment env_;
-  
+
   protected String jar_;
   protected boolean localHadoop_;
   protected Configuration config_;
@@ -567,27 +581,28 @@ public class StreamJob
   // command-line arguments
   protected ArrayList inputGlobs_       = new ArrayList(); // <String>
   protected ArrayList packageFiles_     = new ArrayList(); // <String>
-  protected ArrayList shippedCanonFiles_= new ArrayList(); // <String>  
+  protected ArrayList shippedCanonFiles_= new ArrayList(); // <String>
   protected ArrayList userJobConfProps_ = new ArrayList(); // <String>
   protected String output_;
   protected String mapCmd_;
+  protected String comCmd_;
   protected String redCmd_;
   protected String cluster_;
   protected ArrayList configPath_ = new ArrayList(); // <String>
   protected String hadoopAliasConf_;
   protected String inReaderSpec_;
-  
+
 
   // Use to communicate config to the external processes (ex env.var.HADOOP_USER)
   // encoding "a=b c=d"
   protected String addTaskEnvironment_;
-  
+
   protected boolean outputSingleNode_;
   protected long minRecWrittenToEnableSkip_;
-  
+
   protected RunningJob running_;
   protected String jobId_;
-  
-  
+
+
 }
 

@@ -35,7 +35,7 @@ import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.hadoop.mapred.*;
 
-/** An input format that performs globbing on DFS paths and 
+/** An input format that performs globbing on DFS paths and
  * selects a RecordReader based on a JobConf property.
  * @author Michel Tourn
  */
@@ -44,13 +44,13 @@ public class StreamInputFormat extends InputFormatBase
 
   // an InputFormat should be public with the synthetic public default constructor
   // JobTracker's JobInProgress will instantiate with clazz.newInstance() (and a custom ClassLoader)
-  
+
   protected static final Log LOG = LogFactory.getLog(StreamInputFormat.class.getName());
-  
+
   static {
     //LOG.setLevel(Level.FINE);
   }
-  
+
   /** This implementation always returns true. */
   public boolean[] areValidInputDirectories(FileSystem fileSys,
                                             Path[] inputDirs
@@ -62,7 +62,7 @@ public class StreamInputFormat extends InputFormatBase
     return b;
   }
 
-  
+
   protected Path[] listPaths(FileSystem fs, JobConf job)
     throws IOException
   {
@@ -73,10 +73,10 @@ public class StreamInputFormat extends InputFormatBase
       String leafName = globs[d].getName();
       LOG.info("StreamInputFormat: globs[" + d + "] leafName = " + leafName);
       Path[] paths; Path dir;
-	  PathFilter filter = new GlobFilter(fs, leafName);
-	  dir = new Path(globs[d].getParent().toString());
+      PathFilter filter = new GlobFilter(fs, leafName);
+      dir = new Path(globs[d].getParent().toString());
       if(dir == null) dir = new Path(".");
-	  paths = fs.listPaths(dir, filter);
+      paths = fs.listPaths(dir, filter);
       list.addAll(Arrays.asList(paths));
     }
     return (Path[])list.toArray(new Path[]{});
@@ -90,27 +90,27 @@ public class StreamInputFormat extends InputFormatBase
       pat_ = Pattern.compile(globToRegexp(glob));
     }
     String globToRegexp(String glob)
-	{
+    {
       String re = glob;
       re = re.replaceAll("\\.", "\\\\.");
       re = re.replaceAll("\\+", "\\\\+");
-	  re = re.replaceAll("\\*", ".*");
+      re = re.replaceAll("\\*", ".*");
       re = re.replaceAll("\\?", ".");
       LOG.info("globToRegexp: |" + glob + "|  ->  |" + re + "|");
       return re;
-	}
+    }
 
     public boolean accept(Path pathname)
     {
       boolean acc = !fs_.isChecksumFile(pathname);
       if(acc) {
-      	acc = pat_.matcher(pathname.getName()).matches();
+          acc = pat_.matcher(pathname.getName()).matches();
       }
       LOG.info("matches " + pat_ + ", " + pathname + " = " + acc);
       return acc;
     }
-	
-	Pattern pat_;
+
+    Pattern pat_;
     FileSystem fs_;
   }
 
@@ -125,9 +125,9 @@ public class StreamInputFormat extends InputFormatBase
 
     String splitName = split.getFile() + ":" + start + "-" + end;
     final FSDataInputStream in = fs.open(split.getFile());
-    
+
     // will open the file and seek to the start of the split
-    // Factory dispatch based on available params..    
+    // Factory dispatch based on available params..
     Class readerClass;
     String c = job.get("stream.recordreader.class");
     if(c == null) {
@@ -136,9 +136,9 @@ public class StreamInputFormat extends InputFormatBase
       readerClass = StreamUtil.goodClassOrNull(c, null);
       if(readerClass == null) {
         throw new RuntimeException("Class not found: " + c);
-      }    
+      }
     }
-    
+
     Constructor ctor;
     try {
       ctor = readerClass.getConstructor(new Class[]{
@@ -147,16 +147,16 @@ public class StreamInputFormat extends InputFormatBase
       throw new RuntimeException(nsm);
     }
 
-    
+
     StreamBaseRecordReader reader;
     try {
         reader = (StreamBaseRecordReader) ctor.newInstance(new Object[]{
-            in, split, reporter, job, fs});        
+            in, split, reporter, job, fs});
     } catch(Exception nsm) {
       throw new RuntimeException(nsm);
     }
-        
-	reader.init();
+
+    reader.init();
 
 
     if(reader instanceof StreamSequenceRecordReader) {
@@ -165,8 +165,8 @@ public class StreamInputFormat extends InputFormatBase
       job.setInputKeyClass(ss.rin_.getKeyClass());
       job.setInputValueClass(ss.rin_.getValueClass());
     }
-    
-    
+
+
     return reader;
   }
 
