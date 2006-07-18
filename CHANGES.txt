@@ -47,6 +47,9 @@ Trunk (unreleased changes)
     lots of small jobs, in order to determine per-task overheads.
     (Sanjay Dahiya via cutting)
 
+14. HADOOP-342.  Add a tool for log analysis: Logalyzer.
+    (Arun C Murthy via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
