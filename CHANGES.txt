@@ -43,6 +43,10 @@ Trunk (unreleased changes)
 12. HADOOP-356.  Add contrib to "compile" and "test" build targets, so
     that this code is better maintained. (Michel Tourn via cutting)
 
+13. HADOOP-307.  Add smallJobsBenchmark contrib module.  This runs
+    lots of small jobs, in order to determine per-task overheads.
+    (Sanjay Dahiya via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
