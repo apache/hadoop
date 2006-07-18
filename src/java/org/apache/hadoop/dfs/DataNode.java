@@ -904,7 +904,7 @@ public class DataNode implements FSConstants, Runnable {
 
     //  Wait for sub threads to exit
     for (Iterator iterator = subDataNodeList.entrySet().iterator(); iterator.hasNext();) {
-      Thread threadDataNode = (Thread) iterator.next();
+      Thread threadDataNode = (Thread) ((Map.Entry) iterator.next()).getValue();
       try {
         threadDataNode.join();
       } catch (InterruptedException e) {
