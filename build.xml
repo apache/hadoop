@@ -128,8 +128,8 @@
           javacchome="${javacc.home}"
       />
   </target>
-
-  <target name="compile" depends="init, record-parser">
+  
+  <target name="compile-core" depends="init, record-parser">
 
     <jsp-compile
      uriroot="${src.webapps}/task"
@@ -167,7 +167,16 @@
 
   </target>
 
-  <target name="compile-examples" depends="compile">
+  <target name="compile-contrib" depends="compile-core">
+     <subant target="deploy">
+        <fileset file="${basedir}/src/contrib/build.xml"/>
+     </subant>  	
+  </target>
+  
+  <target name="compile" depends="compile-core, compile-contrib">
+  </target>
+
+  <target name="compile-examples" depends="compile-core">
     <javac 
      encoding="${build.encoding}" 
      srcdir="${examples.dir}"
@@ -187,7 +196,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="jar" depends="compile">
+  <target name="jar" depends="compile-core">
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
@@ -221,7 +230,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="metrics.jar" depends="compile">
+  <target name="metrics.jar" depends="compile-core">
     <jar jarfile="${build.dir}/hadoop-metrics-${version}.jar"
          basedir="${build.classes}">
       <include name="**/metrics/**" />
@@ -233,7 +242,7 @@
   <!-- ================================================================== -->
   <!-- Compile test code                                                  --> 
   <!-- ================================================================== -->
-  <target name="compile-test" depends="compile, jar">
+  <target name="compile-core-test" depends="compile-core, jar">
     <javac 
      encoding="${build.encoding}" 
      srcdir="${test.src.dir}"
@@ -258,7 +267,7 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="test" depends="compile, examples, compile-test">
+  <target name="test-core" depends="compile-core, examples, compile-core-test">
 
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
@@ -283,9 +292,19 @@
       </batchtest>
     </junit>
 
+
     <fail if="tests.failed">Tests failed!</fail>
 
   </target>   
+
+  <target name="test-contrib">
+    <subant target="test">
+        <fileset file="${basedir}/src/contrib/build.xml"/>
+    </subant>  	
+  </target>   
+  
+  <target name="test" depends="test-core, test-contrib">
+  </target>
 
   <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
   <target name="test-cluster">
@@ -301,7 +320,7 @@
   <!-- ================================================================== -->
   <!-- Documentation                                                      -->
   <!-- ================================================================== -->
-  <target name="javadoc" depends="compile, default-doc">
+  <target name="javadoc" depends="default-doc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
       overview="${src.dir}/overview.html"
@@ -334,7 +353,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc, examples, compile-test">
+  <target name="package" depends="jar, javadoc, examples, compile-core-test">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/bin"/>
@@ -404,7 +423,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean">
+  <target name="clean" depends="clean-contrib">
     <delete dir="${build.dir}"/>
   </target>
 
@@ -412,17 +431,12 @@
   <!-- Contrib targets. For now, they must be called explicitely          -->
   <!-- Using subant instead of ant as a workaround for 30569              -->
   <!-- ================================================================== -->
-  <target name="deploy-contrib" depends="compile">
+  <target name="deploy-contrib" depends="compile-core">
      <subant target="deploy">        
         <fileset file="src/contrib/build.xml"/>
      </subant>  	
   </target>
-  <target name="test-contrib" depends="compile">
-     <subant target="test">        
-        <fileset file="src/contrib/build.xml"/>
-     </subant>  	
-  </target>
-  <target name="clean-contrib" depends="compile">
+  <target name="clean-contrib">
      <subant target="clean">        
         <fileset file="src/contrib/build.xml"/>
      </subant>  	
