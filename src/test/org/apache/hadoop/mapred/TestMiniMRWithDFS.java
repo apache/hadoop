@@ -39,10 +39,10 @@ public class TestMiniMRWithDFS extends TestCase {
       FileSystem fileSys = null;
       try {
           Configuration conf = new Configuration();
-          dfs = new MiniDFSCluster(65314, conf);
+          dfs = new MiniDFSCluster(65314, conf, true);
           fileSys = dfs.getFileSystem();
           namenode = fileSys.getName();
-          mr = new MiniMRCluster(50050, 50060, 4, namenode);
+          mr = new MiniMRCluster(50050, 50060, 4, namenode, true);
           double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, "localhost:50050", namenode);
           double error = Math.abs(Math.PI - estimate);
           assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));

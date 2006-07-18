@@ -22,12 +22,15 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.io.*;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.*;
 
 /** A simple RPC mechanism.
@@ -163,22 +166,89 @@ public class RPC {
     }
   }
 
+  /**
+   * A version mismatch for the RPC protocol.
+   * @author Owen O'Malley
+   */
+  public static class VersionMismatch extends IOException {
+    private String interfaceName;
+    private long clientVersion;
+    private long serverVersion;
+    
+    /**
+     * Create a version mismatch exception
+     * @param interfaceName the name of the protocol mismatch
+     * @param clientVersion the client's version of the protocol
+     * @param serverVersion the server's version of the protocol
+     */
+    public VersionMismatch(String interfaceName, long clientVersion,
+                           long serverVersion) {
+      super("Protocol " + interfaceName + " version mismatch. (client = " +
+            clientVersion + ", server = " + serverVersion + ")");
+      this.interfaceName = interfaceName;
+      this.clientVersion = clientVersion;
+      this.serverVersion = serverVersion;
+    }
+    
+    /**
+     * Get the interface name
+     * @return the java class name 
+     *          (eg. org.apache.hadoop.mapred.InterTrackerProtocol)
+     */
+    public String getInterfaceName() {
+      return interfaceName;
+    }
+    
+    /**
+     * Get the client's prefered version
+     */
+    public long getClientVersion() {
+      return clientVersion;
+    }
+    
+    /**
+     * Get the server's agreed to version.
+     */
+    public long getServerVersion() {
+      return serverVersion;
+    }
+  }
+  
+  public static VersionedProtocol waitForProxy(Class protocol,
+                                               long clientVersion,
+                                               InetSocketAddress addr,
+                                               Configuration conf
+                                               ) throws IOException {
+    while (true) {
+      try {
+        return getProxy(protocol, clientVersion, addr, conf);
+      } catch( ConnectException se ) {  // namenode has not been started
+        LOG.info("Server at " + addr + " not available yet, Zzzzz...");
+      } catch( SocketTimeoutException te ) {  // namenode is busy
+        LOG.info("Problem connecting to server: " + addr);
+      }
+      try {
+        Thread.sleep(10*1000);
+      } catch (InterruptedException ie) {
+        // IGNORE
+      }
+    }
+  }
   /** Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. */
   public static VersionedProtocol getProxy(Class protocol, long clientVersion,
-      InetSocketAddress addr, Configuration conf)
-  throws RemoteException {
+                                           InetSocketAddress addr, Configuration conf) throws IOException {
     VersionedProtocol proxy = (VersionedProtocol) Proxy.newProxyInstance(
                                   protocol.getClassLoader(),
                                   new Class[] { protocol },
                                   new Invoker(addr, conf));
-    long serverVersion = proxy.getProtocolVersion(protocol.getName(), clientVersion);
+    long serverVersion = proxy.getProtocolVersion(protocol.getName(), 
+                                                  clientVersion);
     if (serverVersion == clientVersion) {
       return proxy;
     } else {
-      throw new RemoteException(protocol.getName(),
-          "RPC Server and Client Versions Mismatched. SID:"+serverVersion+
-          " CID:"+clientVersion);
+      throw new VersionMismatch(protocol.getName(), clientVersion, 
+                                serverVersion);
     }
   }
 

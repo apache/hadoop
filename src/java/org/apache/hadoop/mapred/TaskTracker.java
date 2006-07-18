@@ -61,6 +61,9 @@ public class TaskTracker
     boolean shuttingDown = false;
     
     TreeMap tasks = null;
+    /**
+     * Map from taskId -> TaskInProgress.
+     */
     TreeMap runningTasks = null;
     int mapTotal = 0;
     int reduceTotal = 0;
@@ -163,8 +166,10 @@ public class TaskTracker
         this.mapOutputFile.cleanupStorage();
         this.justStarted = true;
 
-        this.jobClient = (InterTrackerProtocol) RPC.getProxy(InterTrackerProtocol.class,
-            InterTrackerProtocol.versionID, jobTrackAddr, this.fConf);
+        this.jobClient = (InterTrackerProtocol) 
+                          RPC.waitForProxy(InterTrackerProtocol.class,
+                                           InterTrackerProtocol.versionID, 
+                                           jobTrackAddr, this.fConf);
         
         this.running = true;
     }
@@ -1139,7 +1144,8 @@ public class TaskTracker
           JobConf conf=new JobConf();
           new TaskTracker(conf).run();
         } catch (IOException e) {
-            LOG.warn( "Can not start task tracker because "+e.getMessage());
+            LOG.warn( "Can not start task tracker because "+
+                      StringUtils.stringifyException(e));
             System.exit(-1);
         }
     }

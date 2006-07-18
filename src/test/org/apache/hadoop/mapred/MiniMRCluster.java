@@ -130,7 +130,8 @@ public class MiniMRCluster {
     public MiniMRCluster(int jobTrackerPort,
             int taskTrackerPort,
             int numTaskTrackers,
-            String namenode) throws IOException {
+            String namenode,
+            boolean taskTrackerFirst) throws IOException {
         this.jobTrackerPort = jobTrackerPort;
         this.taskTrackerPort = taskTrackerPort;
         this.numTaskTrackers = numTaskTrackers;
@@ -151,10 +152,8 @@ public class MiniMRCluster {
         pw.close();
         jobTracker = new JobTrackerRunner();
         jobTrackerThread = new Thread(jobTracker);
-        jobTrackerThread.start();
-        try {                                     // let jobTracker get started
-            Thread.sleep(2000);
-        } catch(InterruptedException e) {
+        if (!taskTrackerFirst) {
+          jobTrackerThread.start();
         }
         for (int idx = 0; idx < numTaskTrackers; idx++) {
             TaskTrackerRunner taskTracker = new TaskTrackerRunner();
@@ -162,6 +161,9 @@ public class MiniMRCluster {
             taskTrackerThread.start();
             taskTrackerList.add(taskTracker);
             taskTrackerThreadList.add(taskTrackerThread);
+        }
+        if (taskTrackerFirst) {
+          jobTrackerThread.start();
         }
         try {                                     // let taskTrackers get started
             Thread.sleep(2000);
@@ -201,7 +203,7 @@ public class MiniMRCluster {
     
     public static void main(String[] args) throws IOException {
         System.out.println("Bringing up Jobtracker and tasktrackers.");
-        MiniMRCluster mr = new MiniMRCluster(50000, 50002, 4, "local");
+        MiniMRCluster mr = new MiniMRCluster(50000, 50002, 4, "local", false);
         System.out.println("JobTracker and TaskTrackers are up.");
         mr.shutdown();
         System.out.println("JobTracker and TaskTrackers brought down.");

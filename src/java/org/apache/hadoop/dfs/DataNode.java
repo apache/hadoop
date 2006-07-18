@@ -118,10 +118,11 @@ public class DataNode implements FSConstants, Runnable {
       // get storage info and lock the data dir
       storage = new DataStorage( datadir );
       // connect to name node
-      this.namenode = (DatanodeProtocol) RPC.getProxy(DatanodeProtocol.class,
-                                                      DatanodeProtocol.versionID,
-                                                      nameNodeAddr, 
-                                                      conf);
+      this.namenode = (DatanodeProtocol) 
+          RPC.waitForProxy(DatanodeProtocol.class,
+                           DatanodeProtocol.versionID,
+                           nameNodeAddr, 
+                           conf);
       // find free port
       ServerSocket ss = null;
       int tmpPort = conf.getInt("dfs.datanode.port", 50010);
@@ -170,20 +171,7 @@ public class DataNode implements FSConstants, Runnable {
      * @throws IOException
      */
     private void register() throws IOException {
-      while (shouldRun) {
-        try {
-          dnRegistration = namenode.register( dnRegistration );
-          break;
-        } catch( ConnectException se ) {  // namenode has not been started
-          LOG.info("Namenode not available yet, Zzzzz...");
-        } catch( SocketTimeoutException te ) {  // namenode is busy
-          LOG.info("Problem connecting to Namenode: " + 
-                   StringUtils.stringifyException(te));
-        }
-        try {
-          Thread.sleep(10 * 1000);
-        } catch (InterruptedException ie) {}
-      }
+      dnRegistration = namenode.register( dnRegistration );
       if( storage.getStorageID().equals("") ) {
         storage.setStorageID( dnRegistration.getStorageID());
         storage.write();

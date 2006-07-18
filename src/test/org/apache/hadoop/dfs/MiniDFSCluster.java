@@ -24,6 +24,18 @@ public class MiniDFSCluster {
   class NameNodeRunner implements Runnable {
     private NameNode node;
     
+    public boolean isUp() {
+      if (node == null) {
+        return false;
+      }
+      try {
+        long[] sizes = node.getStats();
+        return sizes[0] != 0;
+      } catch (IOException ie) {
+        return false;
+      }
+    }
+    
     /**
      * Create the name node and run it.
      */
@@ -82,8 +94,11 @@ public class MiniDFSCluster {
   
   /**
    * Create the config and start up the servers.
+   * @param dataNodeFirst should the datanode be brought up before the namenode?
    */
-  public MiniDFSCluster(int namenodePort, Configuration conf) throws IOException {
+  public MiniDFSCluster(int namenodePort, 
+                        Configuration conf,
+                        boolean dataNodeFirst) throws IOException {
     this.conf = conf;
     conf.set("fs.default.name", 
              "localhost:"+ Integer.toString(namenodePort));
@@ -98,17 +113,21 @@ public class MiniDFSCluster {
     NameNode.format(conf);
     nameNode = new NameNodeRunner();
     nameNodeThread = new Thread(nameNode);
-    nameNodeThread.start();
-    try {                                     // let namenode get started
-      Thread.sleep(2000);
-    } catch(InterruptedException e) {
-    }
     dataNode = new DataNodeRunner();
     dataNodeThread = new Thread(dataNode);
-    dataNodeThread.start();
-    try {                                     // let daemons get started
-      Thread.sleep(2000);
-    } catch(InterruptedException e) {
+    if (dataNodeFirst) {
+      dataNodeThread.start();      
+      nameNodeThread.start();      
+    } else {
+      nameNodeThread.start();
+      dataNodeThread.start();      
+    }
+    while (!nameNode.isUp()) {
+      try {                                     // let daemons get started
+        System.out.println("waiting for dfs minicluster to start");
+        Thread.sleep(2000);
+      } catch(InterruptedException e) {
+      }
     }
   }
   
