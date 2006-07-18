@@ -99,6 +99,7 @@ public class TestDFSIO extends TestCase {
     createControlFile(fs, fileSize, nrFiles);
     writeTest(fs);
     readTest(fs);
+    cleanup(fs);
   }
 
   private static void createControlFile(
@@ -249,8 +250,7 @@ public class TestDFSIO extends TestCase {
                         ) throws IOException {
       totalSize *= MEGA;
       // open file
-      DataInputStream in;
-      in = new DataInputStream(fs.open(new Path(DATA_DIR, name)));
+      DataInputStream in = fs.open(new Path(DATA_DIR, name));
       try {
         long actualSize = 0;
         for( int curSize = bufferSize; curSize == bufferSize; ) {
@@ -425,7 +425,7 @@ public class TestDFSIO extends TestCase {
     }
   }
 
-  private static void cleanup( FileSystem fs ) throws Exception {
+  private static void cleanup( FileSystem fs ) throws IOException {
     LOG.info( "Cleaning up test files" );
     fs.delete(new Path(TEST_ROOT_DIR));
   }
