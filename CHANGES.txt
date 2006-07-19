@@ -55,6 +55,8 @@ Trunk (unreleased changes)
     redirected to datanodes where the data is local when possible.
     (Devaraj Das via cutting)
 
+16. HADOOP-351.  Make Hadoop IPC kernel independent of Jetty.
+    (Devaraj Das via cutting)
 
 Release 0.4.0 - 2006-06-28
 
