@@ -21,6 +21,7 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.mapred.StatusHttpServer;
 
 import java.io.*;
 import java.net.*;
@@ -92,7 +93,13 @@ public class DataNode implements FSConstants, Runnable {
     Daemon dataXceiveServer = null;
     long blockReportInterval;
     private DataStorage storage = null;
-
+    private StatusHttpServer infoServer;
+    private static int infoPort;
+    private static int port;
+    private static String localMachine;
+    private static InetSocketAddress nameNodeAddr;
+    private static DataNode datanodeObject = null;
+    static Date startTime = new Date(System.currentTimeMillis());
     /**
      * Create the DataNode given a configuration and a dataDir.
      * 'dataDir' is where the blocks are stored.
@@ -103,8 +110,17 @@ public class DataNode implements FSConstants, Runnable {
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
         // register datanode
         register();
+        infoPort = conf.getInt("dfs.datanode.info.port", 50075);
+        this.infoServer = new StatusHttpServer("datanode", infoPort, false);
+        //create a servlet to serve full-file content
+        try {
+          this.infoServer.addServlet(null, "/streamFile/*",
+                "org.apache.hadoop.dfs.StreamFile", null);
+        } catch (Exception e) {LOG.warn("addServlet threw exception", e);}
+        this.infoServer.start();
+        datanodeObject = this;
     }
-
+    
     /**
      * A DataNode can also be created with configuration information
      * explicitly given.
@@ -149,8 +165,42 @@ public class DataNode implements FSConstants, Runnable {
         conf.getLong("dfs.blockreport.intervalMsec", BLOCKREPORT_INTERVAL);
       this.blockReportInterval =
         blockReportIntervalBasis - new Random().nextInt((int)(blockReportIntervalBasis/10));
+      localMachine = machineName;
+      this.nameNodeAddr = nameNodeAddr;
+      port = tmpPort;
     }
 
+    /** Return the DataNode object
+     * 
+     */
+    public static DataNode getDataNode() {
+        return datanodeObject;
+    } 
+
+    public String getDataNodeMachine() {
+      return localMachine;
+    }
+
+    public int getDataNodePort() {
+      return port;
+    }
+
+    public int getDataNodeInfoPort() {
+        return infoPort;
+    }
+
+    public InetSocketAddress getNameNodeAddr() {
+      return nameNodeAddr;
+    }
+    
+    public InetSocketAddress getDataNodeAddr() {
+        return new InetSocketAddress(localMachine, port);
+    }
+    
+    public Date getStartTime() {
+      return startTime;
+    }
+    
     /**
      * Return the namenode's identifier
      */
@@ -183,6 +233,10 @@ public class DataNode implements FSConstants, Runnable {
      * Returns only after shutdown is complete.
      */
     public void shutdown() {
+        try {
+          infoServer.stop();
+        } catch (Exception e) {
+        }
         this.shouldRun = false;
         ((DataXceiveServer) this.dataXceiveServer.getRunnable()).kill();
         try {
@@ -953,4 +1007,5 @@ public class DataNode implements FSConstants, Runnable {
         Configuration conf = new Configuration();
         runAndWait(conf);
     }
+
 }

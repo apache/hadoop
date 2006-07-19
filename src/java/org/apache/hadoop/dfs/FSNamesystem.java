@@ -103,7 +103,8 @@ class FSNamesystem implements FSConstants {
     StatusHttpServer infoServer;
     int infoPort;
     Date startTime;
-        
+    int dataNodeInfoPort;
+    
     //
     Random r = new Random();
 
@@ -169,6 +170,7 @@ class FSNamesystem implements FSConstants {
     public FSNamesystem(File dir, Configuration conf) throws IOException {
         fsNamesystemObject = this;
         this.infoPort = conf.getInt("dfs.info.port", 50070);
+        this.dataNodeInfoPort = conf.getInt("dfs.datanode.info.port", 50075);
         this.infoServer = new StatusHttpServer("dfs", infoPort, false);
         this.infoServer.start();
         InetSocketAddress addr = DataNode.createSocketAddr(conf.get("fs.default.name", "local"));
@@ -1929,5 +1931,36 @@ class FSNamesystem implements FSConstants {
            return node;
       }
       return null;
+    }
+    /** Stop at and return the detanode at index (used for content browsing)*/
+    private DatanodeInfo getDatanodeByIndex( int index ) {
+      int i = 0;
+      for (Iterator it = datanodeMap.values().iterator(); it.hasNext(); ) {
+        DatanodeInfo node = (DatanodeInfo) it.next();
+        if( i == index )
+           return node;
+        i++;
+      }
+      return null;
+    }
+    
+    public String randomDataNode() {
+      int size = datanodeMap.size();
+      int index = 0;
+      if (size != 0)
+        index = r.nextInt() % size;
+      DatanodeInfo d = getDatanodeByIndex(index);
+      if (d != null) {
+        return d.getHost();
+      }
+      return null;
+    }
+    
+    public int getNameNodeInfoPort() {
+      return infoPort;
+    }
+
+    public int getDataNodeInfoPort() {
+      return dataNodeInfoPort;
     }
 }

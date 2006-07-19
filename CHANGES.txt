@@ -50,6 +50,11 @@ Trunk (unreleased changes)
 14. HADOOP-342.  Add a tool for log analysis: Logalyzer.
     (Arun C Murthy via cutting)
 
+15. HADOOP-347.  Add web-based browsing of DFS content.  The namenode
+    redirects browsing requests to datanodes.  Content requests are
+    redirected to datanodes where the data is local when possible.
+    (Devaraj Das via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

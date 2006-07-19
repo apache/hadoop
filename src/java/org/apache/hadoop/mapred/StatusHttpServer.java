@@ -25,6 +25,7 @@ import org.mortbay.http.HttpContext;
 import org.mortbay.http.handler.ResourceHandler;
 import org.mortbay.http.SocketListener;
 import org.mortbay.jetty.servlet.WebApplicationContext;
+import org.mortbay.jetty.servlet.ServletHttpContext;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -88,6 +89,26 @@ public class StatusHttpServer {
    */
   public void setAttribute(String name, Object value) {
     webAppContext.setAttribute(name,value);
+  }
+
+  /**
+   * Add a servlet in the server
+   * @param name The name of the servlet (can be passed as null)
+   * @param pathSpec The path spec for the servlet
+   * @param classname The class name for the servlet
+   * @param contextPath The context path (can be null, defaults to "/")
+   */
+  public void addServlet(String name, String pathSpec, String classname,
+     String contextPath) 
+ throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String tmpContextPath = contextPath;
+    if (tmpContextPath == null) tmpContextPath = "/";
+    ServletHttpContext context = 
+                    (ServletHttpContext)webServer.getContext(tmpContextPath);
+    if (name == null)
+      context.addServlet(pathSpec, classname);
+    else
+      context.addServlet(name, pathSpec, classname);
   }
   
   /**

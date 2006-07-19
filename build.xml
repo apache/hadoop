@@ -91,6 +91,7 @@
     <mkdir dir="${build.webapps}/task/WEB-INF"/>
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
     <mkdir dir="${build.webapps}/dfs/WEB-INF"/>
+    <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
     <mkdir dir="${build.minimr}"/>
  
@@ -131,6 +132,7 @@
   
   <target name="compile-core" depends="init, record-parser">
 
+    <copy file="${src.webapps}/datanode/browseDirectory.jsp" todir="${src.webapps}/dfs/"/>
     <jsp-compile
      uriroot="${src.webapps}/task"
      outputdir="${build.src}"
@@ -150,6 +152,13 @@
      outputdir="${build.src}"
      package="org.apache.hadoop.dfs"
      webxml="${build.webapps}/dfs/WEB-INF/web.xml">
+    </jsp-compile>
+
+    <jsp-compile
+     uriroot="${src.webapps}/datanode"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.dfs"
+     webxml="${build.webapps}/datanode/WEB-INF/web.xml">
     </jsp-compile>
 
     <javac 
