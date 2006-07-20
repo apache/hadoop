@@ -1947,11 +1947,12 @@ class FSNamesystem implements FSConstants {
     public String randomDataNode() {
       int size = datanodeMap.size();
       int index = 0;
-      if (size != 0)
-        index = r.nextInt() % size;
-      DatanodeInfo d = getDatanodeByIndex(index);
-      if (d != null) {
-        return d.getHost();
+      if (size != 0) {
+        index = r.nextInt(size);
+        DatanodeInfo d = getDatanodeByIndex(index);
+        if (d != null) {
+          return d.getHost();
+        }
       }
       return null;
     }
