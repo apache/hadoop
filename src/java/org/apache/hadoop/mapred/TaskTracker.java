@@ -19,12 +19,17 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
+import org.apache.hadoop.metrics.Metrics;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 import java.io.*;
 import java.net.*;
 import java.util.*;
+
+import org.apache.hadoop.metrics.ContextFactory;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.MetricsRecord;
 
 /*******************************************************
  * TaskTracker is a process that starts and tracks MR Tasks
@@ -91,6 +96,28 @@ public class TaskTracker
     private int maxCurrentTasks;
     private int failures;
     private int finishedCount[] = new int[1];
+    
+    private class TaskTrackerMetrics {
+      private MetricsRecord metricsRecord = null;
+      
+      private long totalTasksCompleted = 0L;
+      
+      TaskTrackerMetrics() {
+        metricsRecord = Metrics.createRecord("mapred", "tasktracker");
+      }
+      
+      synchronized void completeTask() {
+        if (metricsRecord != null) {
+          metricsRecord.setMetric("tasks-completed", ++totalTasksCompleted);
+          metricsRecord.setMetric("maps-running", mapTotal);
+          metricsRecord.setMetric("reduce-running", reduceTotal);
+          metricsRecord.update();
+        }
+      }
+    }
+    
+    private TaskTrackerMetrics myMetrics = null;
+
     /**
      * A list of tips that should be cleaned up.
      */
@@ -142,6 +169,8 @@ public class TaskTracker
         this.minSpaceStart = this.fConf.getLong("mapred.local.dir.minspacestart", 0L);
         this.minSpaceKill = this.fConf.getLong("mapred.local.dir.minspacekill", 0L);
         
+        
+        this.myMetrics = new TaskTrackerMetrics();
         
         // port numbers
         this.taskReportPort = this.fConf.getInt("mapred.task.tracker.report.port", 50050);
@@ -333,6 +362,7 @@ public class TaskTracker
                         } else {
                             reduceTotal--;
                         }
+                        myMetrics.completeTask();
                         it.remove();
                     }
                 }
@@ -354,7 +384,7 @@ public class TaskTracker
             }
 
             //
-            // Check if we should create a new Task
+            // Check if we should createRecord a new Task
             //
             try {
               if ((mapTotal < maxCurrentTasks || reduceTotal < maxCurrentTasks) && acceptNewTasks) {

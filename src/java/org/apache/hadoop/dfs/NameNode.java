@@ -23,6 +23,9 @@ import org.apache.hadoop.conf.*;
 
 import java.io.*;
 
+import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.Metrics;
+
 /**********************************************************
  * NameNode serves as both directory namespace manager and
  * "inode table" for the Hadoop DFS.  There is a single NameNode
@@ -81,6 +84,38 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       FSDirectory.format(getDir(conf), conf);
     }
 
+    private class NameNodeMetrics {
+      private MetricsRecord metricsRecord = null;
+      
+      private long numFilesCreated = 0L;
+      private long numFilesOpened = 0L;
+      private long numFilesRenamed = 0L;
+      private long numFilesListed = 0L;
+      
+      NameNodeMetrics() {
+        metricsRecord = Metrics.createRecord("dfs", "namenode");
+      }
+      
+      synchronized void createFile() {
+        Metrics.report(metricsRecord, "files-created", ++numFilesCreated);
+      }
+      
+      synchronized void openFile() {
+        Metrics.report(metricsRecord, "files-opened", ++numFilesOpened);
+      }
+      
+      synchronized void renameFile() {
+        Metrics.report(metricsRecord, "files-renamed", ++numFilesRenamed);
+      }
+      
+      synchronized void listFile(int nfiles) {
+        numFilesListed += nfiles;
+        Metrics.report(metricsRecord, "files-listed", numFilesListed);
+      }
+    }
+    
+    private NameNodeMetrics myMetrics = null;
+    
     /**
      * Create a NameNode at the default location
      */
@@ -93,13 +128,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /**
      * Create a NameNode at the specified location and start it.
      */
-    public NameNode(File dir, int port, Configuration conf) throws IOException {     
+    public NameNode(File dir, int port, Configuration conf) throws IOException {
         this.namesystem = new FSNamesystem(dir, conf);
         this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
         this.server = RPC.getServer(this, port, handlerCount, false, conf);
         this.datanodeStartupPeriod =
             conf.getLong("dfs.datanode.startupMsec", DATANODE_STARTUP_PERIOD);
         this.server.start();
+        myMetrics = new NameNodeMetrics();
     }
 
     /** Return the configured directory where name data is stored. */
@@ -133,6 +169,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /////////////////////////////////////////////////////
     // ClientProtocol
     /////////////////////////////////////////////////////
+    
     /**
      */
     public LocatedBlock[] open(String src) throws IOException {
@@ -140,6 +177,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         if (openResults == null) {
             throw new IOException("Cannot open filename " + src);
         } else {
+            myMetrics.openFile();
             Block blocks[] = (Block[]) openResults[0];
             DatanodeInfo sets[][] = (DatanodeInfo[][]) openResults[1];
             LocatedBlock results[] = new LocatedBlock[blocks.length];
@@ -167,6 +205,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                                 overwrite,
                                                 replication,
                                                 blockSize);
+       myMetrics.createFile();
         Block b = (Block) results[0];
         DatanodeInfo targets[] = (DatanodeInfo[]) results[1];
         return new LocatedBlock(b, targets);
@@ -265,7 +304,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     public boolean rename(String src, String dst) throws IOException {
         stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst );
-        return namesystem.renameTo(new UTF8(src), new UTF8(dst));
+        boolean ret = namesystem.renameTo(new UTF8(src), new UTF8(dst));
+        if (ret) {
+            myMetrics.renameFile();
+        }
+        return ret;
     }
 
     /**
@@ -329,7 +372,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /**
      */
     public DFSFileInfo[] getListing(String src) throws IOException {
-        return namesystem.getListing(new UTF8(src));
+        DFSFileInfo[] files = namesystem.getListing(new UTF8(src));
+        if (files != null) {
+            myMetrics.listFile(files.length);
+        }
+        return files;
     }
 
     /**

@@ -23,6 +23,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
 class LocalJobRunner implements JobSubmissionProtocol {
@@ -34,6 +35,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
   private Configuration conf;
   private int map_tasks = 0;
   private int reduce_tasks = 0;
+
+  private JobTrackerMetrics myMetrics = null;
 
   public long getProtocolVersion(String protocol, long clientVersion) {
     return JobSubmissionProtocol.versionID;
@@ -98,7 +101,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
           map.localizeConfiguration(localConf);
           map.setConf(localConf);
           map_tasks += 1;
+          myMetrics.launchMap();
           map.run(localConf, this);
+          myMetrics.completeMap();
           map_tasks -= 1;
         }
 
@@ -114,7 +119,6 @@ class LocalJobRunner implements JobSubmissionProtocol {
           this.mapoutputFile.removeAll(mapId);
         }
 
-        // run a single reduce task
         {
           ReduceTask reduce = new ReduceTask(jobId, file, 
                                              reduceId, 0, mapIds.size());
@@ -122,7 +126,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
           reduce.localizeConfiguration(localConf);
           reduce.setConf(localConf);
           reduce_tasks += 1;
+          myMetrics.launchReduce();
           reduce.run(localConf, this);
+          myMetrics.completeReduce();
           reduce_tasks -= 1;
         }
         this.mapoutputFile.removeAll(reduceId);
@@ -188,6 +194,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   public LocalJobRunner(Configuration conf) throws IOException {
     this.fs = FileSystem.get(conf);
     this.conf = conf;
+    myMetrics = new JobTrackerMetrics();
   }
 
   // JobSubmissionProtocol methods

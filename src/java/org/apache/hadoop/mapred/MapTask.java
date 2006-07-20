@@ -21,9 +21,16 @@ import java.io.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.metrics.MetricsRecord;
+
+import org.apache.commons.logging.*;
+import org.apache.hadoop.metrics.Metrics;
 
 /** A Map task. */
 class MapTask extends Task {
+
+    public static final Log LOG =
+        LogFactory.getLog("org.apache.hadoop.mapred.MapTask");
 
   static {                                        // register a ctor
     WritableFactories.setFactory
@@ -32,6 +39,42 @@ class MapTask extends Task {
          public Writable newInstance() { return new MapTask(); }
        });
   }
+
+  
+  private class MapTaskMetrics {
+    private MetricsRecord metricsRecord = null;
+    
+    private long numInputRecords = 0L;
+    private long numInputBytes = 0L;
+    private long numOutputRecords = 0L;
+    private long numOutputBytes = 0L;
+    
+    MapTaskMetrics(String taskId) {
+      metricsRecord = Metrics.createRecord("mapred", "map", "taskid", taskId);
+    }
+    
+    private void reportMetric(String name, long value) {
+      if (metricsRecord != null) {
+        metricsRecord.setMetric(name, value);
+        metricsRecord.update();
+      }
+    }
+    
+    synchronized void mapInput(long numBytes) {
+      Metrics.report(metricsRecord, "input-records", ++numInputRecords);
+      numInputBytes += numBytes;
+      Metrics.report(metricsRecord, "input-bytes", numInputBytes);
+    }
+    
+    synchronized void mapOutput(long numBytes) {
+      Metrics.report(metricsRecord, "output-records", ++numOutputRecords);
+      numOutputBytes += numBytes;
+      Metrics.report(metricsRecord, "output-bytes", numOutputBytes);
+    }
+    
+  }
+  
+  private MapTaskMetrics myMetrics = null;
 
   private FileSplit split;
   private MapOutputFile mapOutputFile = new MapOutputFile();
@@ -43,6 +86,7 @@ class MapTask extends Task {
                  int partition, FileSplit split) {
     super(jobId, jobFile, taskId, partition);
     this.split = split;
+    myMetrics = new MapTaskMetrics(taskId);
   }
 
   public boolean isMapTask() {
@@ -72,6 +116,9 @@ class MapTask extends Task {
 
     split = new FileSplit();
     split.readFields(in);
+    if (myMetrics == null) {
+        myMetrics = new MapTaskMetrics(getTaskId());
+    }
   }
 
   public void run(final JobConf job, final TaskUmbilicalProtocol umbilical)
@@ -91,6 +138,7 @@ class MapTask extends Task {
                                   job.getMapOutputKeyClass(),
                                   job.getMapOutputValueClass(),
                                   compressTemps);
+        LOG.info("opened "+this.mapOutputFile.getOutputFile(getTaskId(), i).getName());
       }
 
       final Partitioner partitioner =
@@ -100,9 +148,11 @@ class MapTask extends Task {
           public synchronized void collect(WritableComparable key,
                                            Writable value)
             throws IOException {
-            outs[partitioner.getPartition(key, value, partitions)]
-              .append(key, value);
+            SequenceFile.Writer out = outs[partitioner.getPartition(key, value, partitions)];
+            long beforePos = out.getLength();
+            out.append(key, value);
             reportProgress(umbilical);
+            myMetrics.mapOutput(out.getLength() - beforePos);
           }
         };
 
@@ -128,7 +178,10 @@ class MapTask extends Task {
               (float)Math.min((rawIn.getPos()-split.getStart())*perByte, 1.0f);
             reportProgress(umbilical, progress);
 
-            return rawIn.next(key, value);
+            long beforePos = getPos();
+            boolean ret = rawIn.next(key, value);
+            myMetrics.mapInput(getPos() - beforePos);
+            return ret;
           }
           public long getPos() throws IOException { return rawIn.getPos(); }
           public void close() throws IOException { rawIn.close(); }

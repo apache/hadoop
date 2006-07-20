@@ -27,6 +27,9 @@ import java.net.*;
 import java.text.NumberFormat;
 import java.util.*;
 
+import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.Metrics;
+
 /*******************************************************
  * JobTracker is the central location for submitting and 
  * tracking MR jobs in a network environment.
@@ -320,7 +323,53 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         }
     }
 
+    static class JobTrackerMetrics {
+      private MetricsRecord metricsRecord = null;
+      
+      private long numMapTasksLaunched = 0L;
+      private long numMapTasksCompleted = 0L;
+      private long numReduceTasksLaunched = 0L;
+      private long numReduceTasksCompleted = 0L;
+      private long numJobsSubmitted = 0L;
+      private long numJobsCompleted = 0L;
+      
+      JobTrackerMetrics() {
+        metricsRecord = Metrics.createRecord("mapred", "jobtracker");
+      }
+      
+      synchronized void launchMap() {
+        Metrics.report(metricsRecord, "maps-launched",
+            ++numMapTasksLaunched);
+      }
+      
+      synchronized void completeMap() {
+        Metrics.report(metricsRecord, "maps-completed",
+            ++numMapTasksCompleted);
+      }
+      
+      synchronized void launchReduce() {
+        Metrics.report(metricsRecord, "reduces-launched",
+            ++numReduceTasksLaunched);
+      }
+      
+      synchronized void completeReduce() {
+        Metrics.report(metricsRecord, "reduces-completed",
+            ++numReduceTasksCompleted);
+      }
+      
+      synchronized void submitJob() {
+        Metrics.report(metricsRecord, "jobs-submitted",
+            ++numJobsSubmitted);
+      }
+      
+      synchronized void completeJob() {
+        Metrics.report(metricsRecord, "jobs-completed",
+            ++numJobsCompleted);
+      }
+    }
 
+    private JobTrackerMetrics myMetrics = null;
+    
     /////////////////////////////////////////////////////////////////
     // The real JobTracker
     ////////////////////////////////////////////////////////////////
@@ -459,6 +508,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
         this.startTime = System.currentTimeMillis();
 
+        myMetrics = new JobTrackerMetrics();
         this.expireTrackersThread = new Thread(this.expireTrackers);
         this.expireTrackersThread.start();
         this.retireJobsThread = new Thread(this.retireJobs);
@@ -795,6 +845,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                     Task t = job.obtainNewMapTask(taskTracker, tts);
                     if (t != null) {
                       expireLaunchingTasks.addNewTask(t.getTaskId());
+                      myMetrics.launchMap();
                       return t;
                     }
 
@@ -831,6 +882,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                     Task t = job.obtainNewReduceTask(taskTracker, tts);
                     if (t != null) {
                       expireLaunchingTasks.addNewTask(t.getTaskId());
+                      myMetrics.launchReduce();
                       return t;
                     }
 
@@ -950,6 +1002,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 }
             }
         }
+        myMetrics.submitJob();
         return job.getStatus();
     }
 
@@ -1096,6 +1149,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
                 if (report.getRunState() == TaskStatus.SUCCEEDED) {
                     job.completedTask(tip, report);
+                    if (tip.isMapTask()) {
+                        myMetrics.completeMap();
+                    } else {
+                        myMetrics.completeReduce();
+                    }
+                    if (job.getStatus().getRunState() == JobStatus.SUCCEEDED) {
+                        myMetrics.completeJob();
+                    }
                 } else if (report.getRunState() == TaskStatus.FAILED) {
                     // Tell the job to fail the relevant task
                     job.failedTask(tip, report.getTaskId(), report, 

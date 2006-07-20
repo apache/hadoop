@@ -23,6 +23,8 @@ import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.Metrics;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -45,6 +47,8 @@ class FSDirectory implements FSConstants {
     private static final byte OP_MKDIR = 3;
     private static final byte OP_SET_REPLICATION = 4;
 
+    private int numFilesDeleted = 0;
+    
     /******************************************************
      * We keep an in-memory representation of the file/block
      * hierarchy.
@@ -190,6 +194,7 @@ class FSDirectory implements FSConstants {
                     v.add(blocks[i]);
                 }
             }
+            Metrics.report(metricsRecord, "files-deleted", ++numFilesDeleted);
             for (Iterator it = children.values().iterator(); it.hasNext(); ) {
                 INode child = (INode) it.next();
                 child.collectSubtreeBlocks(v);
@@ -297,6 +302,8 @@ class FSDirectory implements FSConstants {
     boolean ready = false;
     int namespaceID = 0;  /// a persistent attribute of the namespace
 
+    private MetricsRecord metricsRecord = null;
+    
     /** Access an existing dfs name directory. */
     public FSDirectory(File dir, Configuration conf) throws IOException {
         File fullimage = new File(dir, "image");
@@ -314,6 +321,8 @@ class FSDirectory implements FSConstants {
             this.editlog = new DataOutputStream(new FileOutputStream(edits));
             editlog.writeInt( DFS_CURRENT_VERSION );
         }
+     
+        metricsRecord = Metrics.createRecord("dfs", "namenode");
     }
 
     /** Create a new dfs name directory.  Caution: this destroys all files
@@ -651,7 +660,7 @@ class FSDirectory implements FSConstants {
             }
         }
     }
-
+    
     /**
      * Add the given filename to the fs.
      */
@@ -668,7 +677,7 @@ class FSDirectory implements FSConstants {
                     +blocks.length+" blocks to the file system" );
            return false;
         }
-        // add create file record to log
+        // add createRecord file record to log
         UTF8 nameReplicationPair[] = new UTF8[] { 
                               path, 
                               toLogReplication( replication )};

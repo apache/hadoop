@@ -19,11 +19,16 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.metrics.Metrics;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.util.*;
 import java.text.*;
+
+import org.apache.hadoop.metrics.ContextFactory;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.MetricsRecord;
 
 /** A Reduce task. */
 class ReduceTask extends Task {
@@ -35,6 +40,29 @@ class ReduceTask extends Task {
          public Writable newInstance() { return new ReduceTask(); }
        });
   }
+
+  private class ReduceTaskMetrics {
+    private MetricsRecord metricsRecord = null;
+    
+    private long numInputRecords = 0L;
+    private long numOutputRecords = 0L;
+    
+    ReduceTaskMetrics(String taskId) {
+      metricsRecord = Metrics.createRecord("mapred", "reduce", "taskid", taskId);
+    }
+    
+    synchronized void reduceInput() {
+      Metrics.report(metricsRecord, "input-records", ++numInputRecords);
+    }
+    
+    synchronized void reduceOutput() {
+      Metrics.report(metricsRecord, "output-records", ++numOutputRecords);
+    }
+  }
+  
+  private ReduceTaskMetrics myMetrics = null;
+  
+  private UTF8 jobId = new UTF8();
 
   private int numMaps;
   private boolean sortComplete;
@@ -53,6 +81,7 @@ class ReduceTask extends Task {
                     int partition, int numMaps) {
     super(jobId, jobFile, taskId, partition);
     this.numMaps = numMaps;
+    myMetrics = new ReduceTaskMetrics(taskId);
   }
 
   public TaskRunner createRunner(TaskTracker tracker) throws IOException {
@@ -83,6 +112,9 @@ class ReduceTask extends Task {
     super.readFields(in);
 
     numMaps = in.readInt();
+    if (myMetrics == null) {
+        myMetrics = new ReduceTaskMetrics(getTaskId());
+    }
   }
 
   /** Iterates values while keys match in sorted input. */
@@ -224,6 +256,7 @@ class ReduceTask extends Task {
         public void collect(WritableComparable key, Writable value)
           throws IOException {
           out.write(key, value);
+          myMetrics.reduceOutput();
           reportProgress(umbilical);
         }
       };
@@ -235,6 +268,7 @@ class ReduceTask extends Task {
       ValuesIterator values = new ValuesIterator(in, length, comparator,
                                                  umbilical);
       while (values.more()) {
+        myMetrics.reduceInput();
         reducer.reduce(values.getKey(), values, collector, reporter);
         values.nextKey();
       }

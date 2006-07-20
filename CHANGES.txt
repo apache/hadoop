@@ -58,6 +58,12 @@ Trunk (unreleased changes)
 16. HADOOP-351.  Make Hadoop IPC kernel independent of Jetty.
     (Devaraj Das via cutting)
 
+17. HADOOP-237.  Add metric reporting to DFS and MapReduce.  With only
+    minor configuration changes, one can now monitor many Hadoop
+    system statistics using Ganglia or other monitoring systems.
+    (Milind Bhandarkar via cutting)
+
+
 Release 0.4.0 - 2006-06-28
 
  1. HADOOP-298.  Improved progress reports for CopyFiles utility, the
