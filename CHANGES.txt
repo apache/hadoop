@@ -63,6 +63,9 @@ Trunk (unreleased changes)
     system statistics using Ganglia or other monitoring systems.
     (Milind Bhandarkar via cutting)
 
+18. HADOOP-376.  Fix datanode's HTTP server to scan for a free port.
+    (omalley via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

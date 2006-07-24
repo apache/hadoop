@@ -161,7 +161,7 @@ public class DataNode implements FSConstants, Runnable {
         // register datanode
         register();
         infoPort = conf.getInt("dfs.datanode.info.port", 50075);
-        this.infoServer = new StatusHttpServer("datanode", infoPort, false);
+        this.infoServer = new StatusHttpServer("datanode", infoPort, true);
         //create a servlet to serve full-file content
         try {
           this.infoServer.addServlet(null, "/streamFile/*",
