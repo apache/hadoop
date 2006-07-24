@@ -5,8 +5,10 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
+source "$bin"/hadoop-config.sh
+
 # start dfs daemons
-"$bin"/start-dfs.sh
+"$bin"/start-dfs.sh --config $HADOOP_CONF_DIR
 
 # start mapred daemons
-"$bin"/start-mapred.sh
+"$bin"/start-mapred.sh --config $HADOOP_CONF_DIR

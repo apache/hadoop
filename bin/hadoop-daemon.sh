@@ -11,7 +11,7 @@
 #   HADOOP_IDENT_STRING   A string representing this instance of hadoop. $USER by default
 ##
 
-usage="Usage: hadoop-daemon [start|stop] [hadoop-command] [args...]"
+usage="Usage: hadoop-daemon.sh [--config <conf-dir>] (start|stop) <hadoop-command> <args...>"
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -19,29 +19,16 @@ if [ $# -le 1 ]; then
   exit 1
 fi
 
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+source "$bin"/hadoop-config.sh
+
 # get arguments
 startStop=$1
 shift
 command=$1
 shift
-
-# resolve links - $0 may be a softlink
-this="$0"
-while [ -h "$this" ]; do
-  ls=`ls -ld "$this"`
-  link=`expr "$ls" : '.*-> \(.*\)$'`
-  if expr "$link" : '.*/.*' > /dev/null; then
-    this="$link"
-  else
-    this=`dirname "$this"`/"$link"
-  fi
-done
-
-# the root of the Hadoop installation
-export HADOOP_HOME=`dirname "$this"`/..
-
-# Allow alternate conf dir location.
-HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
 
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"
@@ -84,7 +71,7 @@ case $startStop in
     fi
 
     echo starting $command, logging to $log
-    nohup "$HADOOP_HOME"/bin/hadoop $command "$@" > "$log" 2>&1 < /dev/null &
+    nohup "$HADOOP_HOME"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;

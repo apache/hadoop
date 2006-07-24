@@ -66,6 +66,9 @@ Trunk (unreleased changes)
 18. HADOOP-376.  Fix datanode's HTTP server to scan for a free port.
     (omalley via cutting)
 
+19. HADOOP-260.  Add --config option to shell scripts, specifying an
+    alternate configuration directory. (Milind Bhandarkar via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

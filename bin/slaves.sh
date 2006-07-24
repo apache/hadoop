@@ -11,7 +11,7 @@
 #   HADOOP_SSH_OPTS Options passed to ssh when running remote commands.
 ##
 
-usage="Usage: slaves.sh command..."
+usage="Usage: slaves.sh [--config confdir] command..."
 
 # if no args specified, show usage
 if [ $# -le 0 ]; then
@@ -19,23 +19,10 @@ if [ $# -le 0 ]; then
   exit 1
 fi
 
-# resolve links - $0 may be a softlink
-this="$0"
-while [ -h "$this" ]; do
-  ls=`ls -ld "$this"`
-  link=`expr "$ls" : '.*-> \(.*\)$'`
-  if expr "$link" : '.*/.*' > /dev/null; then
-    this="$link"
-  else
-    this=`dirname "$this"`/"$link"
-  fi
-done
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
 
-# the root of the Hadoop installation
-HADOOP_HOME=`dirname "$this"`/..
-
-# Allow alternate conf dir location.
-HADOOP_CONF_DIR="${HADOOP_CONF_DIR:=$HADOOP_HOME/conf}"
+source "$bin"/hadoop-config.sh
 
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"

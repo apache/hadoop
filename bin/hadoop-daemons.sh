@@ -2,7 +2,7 @@
 # 
 # Run a Hadoop command on all slave hosts.
 
-usage="Usage: hadoop-daemons.sh [start|stop] command args..."
+usage="Usage: hadoop-daemons.sh [--config confdir] [start|stop] command args..."
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -13,6 +13,6 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-HADOOP_HOME="$bin/.."
+source $bin/hadoop-config.sh
 
-exec "$bin/slaves.sh" cd "$HADOOP_HOME" \; "$bin/hadoop-daemon.sh" "$@"
+exec "$bin/slaves.sh" --config $HADOOP_CONF_DIR cd "$HADOOP_HOME" \; "$bin/hadoop-daemon.sh" --config $HADOOP_CONF_DIR "$@"
