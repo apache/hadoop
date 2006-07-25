@@ -528,7 +528,7 @@ class ReduceTaskRunner extends TaskRunner {
       } catch (InterruptedException ie) { } // IGNORE
       currentTime = System.currentTimeMillis();
     }
-    lastPollTime = pollTime;
+    lastPollTime = currentTime;
 
     return jobClient.locateMapOutputs(reduceTask.getJobId().toString(), 
                                       neededIds,

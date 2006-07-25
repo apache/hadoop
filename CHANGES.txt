@@ -76,6 +76,9 @@ Trunk (unreleased changes)
 21. HADOOP-344.  Fix some Windows-related problems with DF.
     (Konstantin Shvachko via cutting)
 
+22. HADOOP-380.  Fix reduce tasks to poll less frequently for map
+    outputs. (Mahadev Konar via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
