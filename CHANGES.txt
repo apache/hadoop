@@ -25,7 +25,7 @@ Trunk (unreleased changes)
     exceptions are thrown.  (Hairong Kuang via cutting)
 
  7. HADOOP-359.  Permit map output to be compressed.
-   (omalley via cutting)
+    (omalley via cutting)
 
  8. HADOOP-341.  Permit input URI to CopyFiles to use the HTTP
     protocol.  This lets one, e.g., more easily copy log files into
@@ -35,7 +35,7 @@ Trunk (unreleased changes)
     module tests, making them pure java. (Michel Tourn via cutting)
 
 10. HADOOP-354.  Make public methods to stop DFS daemons.
-   (Barry Kaplan via cutting)
+    (Barry Kaplan via cutting)
 
 11. HADOOP-252.  Add versioning to RPC protocols.
     (Milind Bhandarkar via cutting)
@@ -74,7 +74,7 @@ Trunk (unreleased changes)
     debugging.  (omalley via cutting)
 
 21. HADOOP-344.  Fix some Windows-related problems with DF.
-   (Konstantin Shvachko via cutting)
+    (Konstantin Shvachko via cutting)
 
 
 Release 0.4.0 - 2006-06-28
