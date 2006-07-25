@@ -33,7 +33,7 @@ public class Environment extends Properties
       String command = null;
       String OS = System.getProperty("os.name");
       String lowerOs = OS.toLowerCase();
-      if (OS.equals("Windows NT")) {
+      if (OS.indexOf("Windows") > -1) {
          command = "cmd /C set";
       } else if (OS.indexOf("ix") > -1 || OS.indexOf("inux") > -1) {
          command = "env";
