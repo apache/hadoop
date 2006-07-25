@@ -69,6 +69,10 @@ Trunk (unreleased changes)
 19. HADOOP-260.  Add --config option to shell scripts, specifying an
     alternate configuration directory. (Milind Bhandarkar via cutting)
 
+20. HADOOP-381.  Permit developers to save the temporary files for
+    tasks whose names match a regular expression, to facilliate
+    debugging.  (omalley via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

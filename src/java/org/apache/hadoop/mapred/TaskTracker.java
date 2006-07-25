@@ -26,6 +26,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -692,6 +693,7 @@ public class TaskTracker
         private JobConf defaultJobConf;
         private JobConf localJobConf;
         private boolean keepFailedTaskFiles;
+        private boolean alwaysKeepTaskFiles;
 
         /**
          */
@@ -742,6 +744,13 @@ public class TaskTracker
             // rather than the default.
             t.setConf(localJobConf);
             keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
+            String keepPattern = localJobConf.getKeepTaskFilesPattern();
+            if (keepPattern != null) {
+              alwaysKeepTaskFiles = 
+                Pattern.matches(keepPattern, task.getTaskId());
+            } else {
+              alwaysKeepTaskFiles = false;
+            }
         }
 
         /**
@@ -916,7 +925,9 @@ public class TaskTracker
             LOG.debug("Cleaning up " + taskId);
             synchronized (TaskTracker.this) {
                tasks.remove(taskId);
-               if (runstate == TaskStatus.FAILED && keepFailedTaskFiles) {
+               if (alwaysKeepTaskFiles ||
+                   (runstate == TaskStatus.FAILED && 
+                       keepFailedTaskFiles)) {
                  return;
                }
                synchronized (this) {
@@ -1159,6 +1170,14 @@ public class TaskTracker
         if( !writable )
             throw new DiskErrorException( 
                     "all local directories are not writable" );
+    }
+    
+    /**
+     * Is this task tracker idle?
+     * @return has this task tracker finished and cleaned up all of its tasks?
+     */
+    public synchronized boolean isIdle() {
+      return tasks.isEmpty();
     }
     
     /**

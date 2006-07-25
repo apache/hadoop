@@ -371,6 +371,24 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>keep.failed.task.files</name>
+  <value>false</value>
+  <description>Should the files for failed tasks be kept. This should only be 
+               used on jobs that are failing, because the storage is never
+               reclaimed. It also prevents the map outputs from being erased
+               from the reduce directory as they are consumed.</description>
+</property>
+
+<!-- 
+  <property>
+  <name>keep.task.files.pattern</name>
+  <value>.*_m_123456_0</value>
+  <description>Keep all files from tasks whose task names match the given
+               regular expression. Defaults to none.</description>
+  </property>
+-->
+
+<property>
   <name>mapred.compress.map.output</name>
   <value>false</value>
   <description>Should the outputs of the maps be compressed before being

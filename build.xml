@@ -70,6 +70,7 @@
     <pathelement location="${build.minimr}" />
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
+    <pathelement location="${build.examples}"/>
     <path refid="classpath"/>
   </path>
 

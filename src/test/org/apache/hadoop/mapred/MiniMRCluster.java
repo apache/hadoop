@@ -16,8 +16,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-import java.util.ArrayList;
-import org.apache.hadoop.conf.Configuration;
+import java.util.*;
 
 /**
  * This class creates a single-process Map-Reduce cluster for junit testing.
@@ -28,15 +27,14 @@ public class MiniMRCluster {
     
     private Thread jobTrackerThread;
     private JobTrackerRunner jobTracker;
-    private TaskTrackerRunner taskTracker;
     
     private int jobTrackerPort = 0;
     private int taskTrackerPort = 0;
     
     private int numTaskTrackers;
     
-    private ArrayList taskTrackerList = new ArrayList();
-    private ArrayList taskTrackerThreadList = new ArrayList();
+    private List taskTrackerList = new ArrayList();
+    private List taskTrackerThreadList = new ArrayList();
     
     private String namenode;
     
@@ -81,6 +79,7 @@ public class MiniMRCluster {
      */
     class TaskTrackerRunner implements Runnable {
         TaskTracker tt;
+        String localDir;
         
         /**
          * Create and run the task tracker.
@@ -99,6 +98,7 @@ public class MiniMRCluster {
                 File localDir = new File(jc.get("mapred.local.dir"));
                 File ttDir = new File(localDir, Integer.toString(taskTrackerPort));
                 ttDir.mkdirs();
+                this.localDir = ttDir.getAbsolutePath();
                 jc.set("mapred.local.dir", ttDir.getAbsolutePath());
                 tt = new TaskTracker(jc);
                 tt.run();
@@ -107,6 +107,14 @@ public class MiniMRCluster {
                 System.err.println("Task tracker crashed:");
                 e.printStackTrace();
             }
+        }
+        
+        /**
+         * Get the local dir for this TaskTracker.
+         * @return the absolute pathname
+         */
+        public String getLocalDir() {
+          return localDir;
         }
         
         /**
@@ -122,6 +130,39 @@ public class MiniMRCluster {
                 }
             }
         }
+    }
+    
+    /**
+     * Get the local directory for the Nth task tracker
+     * @param taskTracker the index of the task tracker to check
+     * @return the absolute pathname of the local dir
+     */
+    public String getTaskTrackerLocalDir(int taskTracker) {
+      return ((TaskTrackerRunner) 
+              taskTrackerList.get(taskTracker)).getLocalDir();
+    }
+
+    /**
+     * Get the number of task trackers in the cluster
+     */
+    public int getNumTaskTrackers() {
+      return taskTrackerList.size();
+    }
+    
+    /**
+     * Wait until the system is idle.
+     */
+    public void waitUntilIdle() {
+      for(Iterator itr= taskTrackerList.iterator(); itr.hasNext(); ) {
+        TaskTracker tracker = ((TaskTrackerRunner) itr.next()).tt;
+        while (!tracker.isIdle()) {
+          System.out.println("Waiting for task tracker " + tracker.getName() +
+                             " to finish.");
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ie) {}
+        }
+      }
     }
     
     /**

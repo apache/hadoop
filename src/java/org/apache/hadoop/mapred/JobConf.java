@@ -214,6 +214,26 @@ public class JobConf extends Configuration {
   }
   
   /**
+   * Set a regular expression for task names that should be kept. 
+   * The regular expression ".*_m_000123_0" would keep the files
+   * for the first instance of map 123 that ran.
+   * @param pattern the java.util.regex.Pattern to match against the 
+   *        task names.
+   */
+  public void setKeepTaskFilesPattern(String pattern) {
+    set("keep.task.files.pattern", pattern);
+  }
+  
+  /**
+   * Get the regular expression that is matched against the task names
+   * to see if we need to keep the files.
+   * @return the pattern as a string, if it was set, othewise null
+   */
+  public String getKeepTaskFilesPattern() {
+    return get("keep.task.files.pattern");
+  }
+  
+  /**
    * Set the current working directory for the default file system
    * @param dir the new current working directory
    */
