@@ -22,6 +22,7 @@ import java.util.zip.*;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.StringUtils;
 
 /** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
  * and buffers input through a {@link BufferedInputStream}. */
@@ -48,7 +49,7 @@ public class FSDataInputStream extends DataInputStream {
       
       this.fs = fs;
       this.file = file;
-      Path sumFile = fs.getChecksumFile(file);
+      Path sumFile = FileSystem.getChecksumFile(file);
       try {
         this.sums = new FSDataInputStream(fs.openRaw(sumFile), conf);
         byte[] version = new byte[VERSION.length];
@@ -59,7 +60,9 @@ public class FSDataInputStream extends DataInputStream {
       } catch (FileNotFoundException e) {         // quietly ignore
         stopSumming();
       } catch (IOException e) {                   // loudly ignore
-        LOG.warn("Problem opening checksum file: "+ file + ".  Ignoring with exception " + e + ".");
+        LOG.warn("Problem opening checksum file: "+ file + 
+                 ".  Ignoring exception: " + 
+                 StringUtils.stringifyException(e));
         stopSumming();
       }
     }
@@ -91,7 +94,15 @@ public class FSDataInputStream extends DataInputStream {
           int inBuf = read - summed;
           int toSum = inBuf <= goal ? inBuf : goal;
           
-          sum.update(b, off+summed, toSum);
+          try {
+            sum.update(b, off+summed, toSum);
+          } catch (ArrayIndexOutOfBoundsException e) {
+            throw new RuntimeException("Summer buffer overflow b.len=" + 
+                                       b.length + ", off=" + off + 
+                                       ", summed=" + summed + ", read=" + 
+                                       read + ", bytesPerSum=" + bytesPerSum +
+                                       ", inSum=" + inSum, e);
+          }
           summed += toSum;
           
           inSum += toSum;
