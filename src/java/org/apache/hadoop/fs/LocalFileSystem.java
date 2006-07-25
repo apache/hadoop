@@ -345,7 +345,7 @@ public class LocalFileSystem extends FileSystem {
         File f = pathToFile(p).getCanonicalFile();
       
         // find highest writable parent dir of f on the same device
-        String device = new DF(f.toString(), getConf()).getMount();
+        String device = new DF(f, getConf()).getMount();
         File parent = f.getParentFile();
         File dir;
         do {

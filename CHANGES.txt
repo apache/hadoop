@@ -73,6 +73,9 @@ Trunk (unreleased changes)
     tasks whose names match a regular expression, to facilliate
     debugging.  (omalley via cutting)
 
+21. HADOOP-344.  Fix some Windows-related problems with DF.
+   (Konstantin Shvachko via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

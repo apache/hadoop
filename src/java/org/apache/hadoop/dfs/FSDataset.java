@@ -213,7 +213,7 @@ class FSDataset implements FSConstants {
     public FSDataset(File dir, Configuration conf) throws IOException {
     		this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
     		this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct", (float) USABLE_DISK_PCT_DEFAULT);
-        diskUsage = new DF( dir.getCanonicalPath(), conf); 
+        diskUsage = new DF( dir, conf); 
         this.data = new File(dir, "data");
         if (! data.exists()) {
             data.mkdirs();

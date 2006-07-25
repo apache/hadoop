@@ -15,6 +15,7 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
@@ -39,12 +40,24 @@ public class DF {
   private int percentUsed;
   private String mount;
   
+  /** @deprecated
+   */
   public DF(String path, Configuration conf ) throws IOException {
+    this( new File(path), conf );
+  }
+
+  /** @deprecated
+   */
+  public DF(String path, long dfInterval) throws IOException {
+    this( new File(path), dfInterval );
+  }
+  
+  public DF(File path, Configuration conf ) throws IOException {
     this( path, conf.getLong( "dfs.df.interval", DF.DF_INTERVAL_DEFAULT ));
   }
 
-  public DF(String path, long dfInterval) throws IOException {
-    this.dirPath = path;
+  public DF(File path, long dfInterval) throws IOException {
+    this.dirPath = path.getCanonicalPath();
     this.dfInterval = dfInterval;
     lastDF = ( dfInterval < 0 ) ? 0 : -dfInterval;
     this.doDF();
@@ -145,6 +158,6 @@ public class DF {
     if( args.length > 0 )
       path = args[0];
 
-    System.out.println(new DF(path, DF_INTERVAL_DEFAULT).toString());
+    System.out.println(new DF(new File(path), DF_INTERVAL_DEFAULT).toString());
   }
 }

@@ -544,7 +544,7 @@ public class TaskTracker
         if (localDirsDf.containsKey(localDirs[i])) {
           df = (DF) localDirsDf.get(localDirs[i]);
         } else {
-          df = new DF(localDirs[i], fConf);
+          df = new DF(new File(localDirs[i]), fConf);
           localDirsDf.put(localDirs[i], df);
         }
 
