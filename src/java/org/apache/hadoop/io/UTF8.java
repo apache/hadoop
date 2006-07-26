@@ -28,6 +28,7 @@ import org.apache.commons.logging.*;
  * <p>Also includes utilities for efficiently reading and writing UTF-8.
  *
  * @author Doug Cutting
+ * @deprecated replaced by Text
  */
 public class UTF8 implements WritableComparable {
   private static final Log LOG= LogFactory.getLog("org.apache.hadoop.io.UTF8");

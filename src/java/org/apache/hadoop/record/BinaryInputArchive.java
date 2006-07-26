@@ -22,6 +22,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.InputStream;
 
+import org.apache.hadoop.io.WritableUtils;
+
 
 /**
  *
@@ -61,11 +63,11 @@ public class BinaryInputArchive implements InputArchive {
     }
     
     public int readInt(String tag) throws IOException {
-        return Utils.readInt(in);
+        return WritableUtils.readVInt(in);
     }
     
     public long readLong(String tag) throws IOException {
-        return Utils.readLong(in);
+        return WritableUtils.readVLong(in);
     }
     
     public float readFloat(String tag) throws IOException {
@@ -77,14 +79,14 @@ public class BinaryInputArchive implements InputArchive {
     }
     
     public String readString(String tag) throws IOException {
-        int len = Utils.readInt(in);
+        int len = readInt(tag);
         byte[] chars = new byte[len];
         in.readFully(chars);
         return new String(chars, "UTF-8");
     }
     
     public ByteArrayOutputStream readBuffer(String tag) throws IOException {
-        int len = Utils.readInt(in);
+        int len = readInt(tag);
         ByteArrayOutputStream buf = new ByteArrayOutputStream(len);
         byte[] arr = new byte[len];
         in.readFully(arr);
@@ -101,13 +103,13 @@ public class BinaryInputArchive implements InputArchive {
     public void endRecord(String tag) throws IOException {}
     
     public Index startVector(String tag) throws IOException {
-        return new BinaryIndex(Utils.readInt(in));
+        return new BinaryIndex(readInt(tag));
     }
     
     public void endVector(String tag) throws IOException {}
     
     public Index startMap(String tag) throws IOException {
-        return new BinaryIndex(Utils.readInt(in));
+        return new BinaryIndex(readInt(tag));
     }
     
     public void endMap(String tag) throws IOException {}

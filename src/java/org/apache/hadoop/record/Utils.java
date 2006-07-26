@@ -46,7 +46,8 @@ public class Utils {
      * @param stream Binary output stream
      * @param i Integer to be serialized
      * @throws java.io.IOException 
-     */
+     * @deprecated replaced by {@link #org.apache.hadoop.io.WritableUtils.writeVInt}
+      */
     static void writeInt(DataOutput stream, int i) throws IOException {
         if (i >= -120 && i <= 127) {
             stream.writeByte((byte)i);
@@ -89,7 +90,8 @@ public class Utils {
      * 
      * @param stream Binary output stream
      * @param i Long to be serialized
-     * @throws java.io.IOException 
+     * @throws java.io.IOException
+     * @deprecated replaced by {@link #org.apache.hadoop.io.WritableUtils.writeVLong}
      */
     static void writeLong(DataOutput stream, long i) throws IOException {
         if (i >= -112 && i <= 127) {
@@ -125,6 +127,7 @@ public class Utils {
      * @param stream Binary input stream
      * @throws java.io.IOException 
      * @return deserialized integer from stream.
+     * @deprecated replaced by {@link #org.apache.hadoop.io.WritableUtils.readVInt}
      */
     static int readInt(DataInput stream) throws IOException {
         int len = stream.readByte();
@@ -147,7 +150,8 @@ public class Utils {
      * @param stream Binary input stream
      * @throws java.io.IOException 
      * @return deserialized long from stream.
-     */
+     * @deprecated replaced by {@link #org.apache.hadoop.io.WritableUtils.readVLong}
+      */
     static long readLong(DataInput stream) throws IOException {
         int len = stream.readByte();
         if (len >= -112) {

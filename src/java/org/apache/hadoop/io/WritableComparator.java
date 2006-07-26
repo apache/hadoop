@@ -158,4 +158,38 @@ public class WritableComparator implements Comparator {
       (readInt(bytes, start+4) & 0xFFFFFFFFL);
   }
 
+  /**
+   * Reads a zero-compressed encoded long from a byte array and returns it.
+   * @param bytes: byte array with decode long
+   * @param start: starting index
+   * @throws java.io.IOException 
+   * @return deserialized long
+   */
+  static long readVLong(byte[] bytes, int start) throws IOException {
+      int len = bytes[start];
+      if (len >= -112) {
+          return len;
+      }
+      len = (len < -120) ? -(len + 120) : -(len + 112);
+      if (start+1+len>bytes.length)
+          throw new IOException(
+                  "Not enough number of bytes for a zero-compressed integer");
+      long i = 0;
+      for (int idx = 0; idx < len; idx++) {
+          i = i << 8;
+          i = i | (bytes[start+1+idx] & 0xFF);
+      }
+      return i;
+  }
+  
+  /**
+   * Reads a zero-compressed encoded integer from a byte array and returns it.
+   * @param bytes: byte array with the encoded integer
+   * @param start: start index
+   * @throws java.io.IOException 
+   * @return deserialized integer
+   */
+  static int readVInt(byte[] bytes, int start) throws IOException {
+      return (int) readVLong(bytes, start);
+  }
 }

@@ -1,0 +1,568 @@
+/**
+ * Copyright 2005 The Apache Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.io;
+
+import java.io.IOException;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.MalformedInputException;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+/** This class stores text using standard UTF8 encoding.  It provides methods
+ * to serialize, deserialize, and compare texts at byte level.  The type of
+ * length is integer and is serialized using zero-compressed format.  <p>In
+ * addition, it provides methods for string traversal without converting the
+ * byte array to a string.  <p>Also includes utilities for
+ * serializing/deserialing a string, coding/decoding a string, checking if a
+ * byte array contains valid UTF8 code, calculating the length of an encoded
+ * string.
+ */
+public class Text implements WritableComparable {
+  private static final Log LOG= LogFactory.getLog("org.apache.hadoop.io.Text");
+  
+  private static final CharsetDecoder DECODER = 
+    Charset.forName("UTF-8").newDecoder().
+    onMalformedInput(CodingErrorAction.REPORT).
+    onUnmappableCharacter(CodingErrorAction.REPORT);
+  private static final CharsetEncoder ENCODER = 
+    Charset.forName("UTF-8").newEncoder().
+    onMalformedInput(CodingErrorAction.REPORT).
+    onUnmappableCharacter(CodingErrorAction.REPORT);
+
+  private static final byte [] EMPTY_BYTES = new byte[0];
+  
+  private byte[] bytes;
+  private int length;
+
+  public Text() {
+    bytes = EMPTY_BYTES;
+  }
+
+  /** Construct from a string. 
+   * @exception CharacterCodingExcetpion if the string contains 
+   *            invalid codepoints or unpaired surrogates
+   */
+  public Text(String string) throws CharacterCodingException {
+    set(string);
+  }
+
+  /** Construct from another text. */
+  public Text(Text utf8) {
+    set(utf8);
+  }
+
+  /** Construct from a byte array.
+   * @exception CharacterCodingExcetpion if the array has invalid UTF8 bytes 
+   */
+  public Text(byte[] utf8) throws CharacterCodingException {
+    set(utf8);
+  }
+  
+  /** Retuns the raw bytes. */
+  public byte[] getBytes() {
+    return bytes;
+  }
+
+  /** Returns the number of bytes in the byte array */ 
+  public int getLength() {
+    return length;
+  }
+  
+  /**
+   * Returns the Unicode Scalar Value (32-bit integer value)
+   * for the character at <code>position</code>. Note that this
+   * method avoids using the converter or doing String instatiation
+   * @returns the Unicode scalar value at position or -1
+   *          if the position is invalid or points to a
+   *          trailing byte
+   */
+  public int charAt(int position) {
+    if (position > this.length) return -1; // too long
+    if (position < 0) return -1; // duh.
+      
+    ByteBuffer bb = (ByteBuffer)ByteBuffer.wrap(bytes).position(position);
+    return bytesToCodePoint(bb.slice());
+  }
+  
+  public int find(String what) {
+    return find(what, 0);
+  }
+  
+  /**
+   * Finds any occurence of <code>what</code> in the backing
+   * buffer, starting as position <code>start</code>. The starting
+   * position is measured in bytes and the return value is in
+   * terms of byte position in the buffer. The backing buffer is
+   * not converted to a string for this operation.
+   * @return byte position of the first occurence of the search
+   *         string in the UTF-8 buffer or -1 if not found
+   */
+  public int find(String what, int start) {
+    try {
+      ByteBuffer src = ByteBuffer.wrap(this.bytes);
+      ByteBuffer tgt = encode(what);
+      byte b = tgt.get();
+      src.position(start);
+          
+      while (src.hasRemaining()) {
+        if (b == src.get()) { // matching first byte
+          src.mark(); // save position in loop
+          tgt.mark(); // save position in target
+          boolean found = true;
+          int pos = src.position()-1;
+          while (tgt.hasRemaining()) {
+            if (!src.hasRemaining()) { // src expired first
+              tgt.reset();
+              src.reset();
+              found = false;
+              break;
+            }
+            if (!(tgt.get() == src.get())) {
+              tgt.reset();
+              src.reset();
+              found = false;
+              break; // no match
+            }
+          }
+          if (found) return pos;
+        }
+      }
+      return -1; // not found
+    } catch (CharacterCodingException e) {
+      // can't get here
+      e.printStackTrace();
+      return -1;
+    }
+  }  
+  /** Set to contain the contents of a string. 
+   * @exception CharacterCodingException if the string contains 
+   *       invalid codepoints or unpaired surrogate
+   */
+  public void set(String string) throws CharacterCodingException {
+    ByteBuffer bb = encode(string);
+    bytes = bb.array();
+    length = bb.limit();
+  }
+
+  /** Set to a utf8 byte array
+   * @exception CharacterCodingException if the array contains invalid UTF8 code  
+   */
+  public void set(byte[] utf8) throws CharacterCodingException {
+    validateUTF8(utf8);
+    set(utf8, utf8.length);
+  }
+  
+  /** copy a text. */
+  public void set(Text other) {
+    set(other.bytes, other.length);
+  }
+
+  private void set(byte[] utf8, int len ) {
+    setCapacity(len);
+    System.arraycopy(utf8, 0, bytes, 0, len);
+    this.length = len;
+  }
+
+  /*
+   * Sets the capacity of this Text object to <em>at least</em>
+   * <code>len</code> bytes. If the current buffer is longer,
+   * then the capacity and existing content of the buffer are
+   * unchanged. If <code>len</code> is larger
+   * than the current capacity, the Text object's capacity is
+   * increased to match. The existing contents of the buffer
+   * (if any) are deleted.
+   */
+  private void setCapacity( int len ) {
+    if (bytes == null || bytes.length < length)
+      bytes = new byte[length];      
+  }
+   
+  /** 
+   * Convert text back to string
+   * @see java.lang.Object#toString()
+   */
+  public String toString() {
+    try {
+      return decode(bytes);
+    } catch (CharacterCodingException e) { 
+      //bytes is supposed to contain valid utf8, therefore, 
+      // this should never happen
+      return null;
+    }
+  }
+  
+  /** deserialize 
+   * check if the received bytes are valid utf8 code. 
+   * if not throws MalformedInputException
+   * @see Writable#readFields(DataInput)
+   */
+  public void readFields(DataInput in) throws IOException {
+    length = WritableUtils.readVInt(in);
+    setCapacity(length);
+    in.readFully(bytes, 0, length);
+    validateUTF8(bytes);
+  }
+
+  /** Skips over one Text in the input. */
+  public static void skip(DataInput in) throws IOException {
+    int length = WritableUtils.readVInt(in);
+    in.skipBytes(length);
+  }
+
+  /** serialize
+   * write this object to out
+   * length uses zero-compressed encoding
+   * @see Writable#write(DataOutput)
+   */
+  public void write(DataOutput out) throws IOException {
+    WritableUtils.writeVInt(out, length); // out.writeInt(length);
+    out.write(bytes, 0, length);
+  }
+
+  /** Compare two Texts bytewise using standard UTF8 ordering. */
+  public int compareTo(Object o) {
+    Text that = (Text)o;
+    if(this == that)
+      return 0;
+    else
+      return WritableComparator.compareBytes(bytes, 0, length,
+                                             that.bytes, 0, that.length);
+  }
+
+  /** Returns true iff <code>o</code> is a Text with the same contents.  */
+  public boolean equals(Object o) {
+    if (!(o instanceof Text))
+      return false;
+    Text that = (Text)o;
+    if (this == that)
+      return true;
+    else if (this.length != that.length)
+      return false;
+    else
+      return WritableComparator.compareBytes(bytes, 0, length,
+                                             that.bytes, 0, that.length) == 0;
+  }
+
+  /** hash function */
+  public int hashCode() {
+    return WritableComparator.hashBytes(bytes, length);
+  }
+
+  /** A WritableComparator optimized for Text keys. */
+  public static class Comparator extends WritableComparator {
+    public Comparator() {
+      super(Text.class);
+    }
+
+    public int compare(byte[] b1, int s1, int l1,
+                       byte[] b2, int s2, int l2) {
+      try {
+        int n1 = readVInt(b1, s1);
+        int n2 = readVInt(b2, s2);
+        return compareBytes(b1, s1+WritableUtils.getVIntSize(n1), n1, 
+                            b2, s2+WritableUtils.getVIntSize(n2), n2);
+      }catch(IOException e) {
+        LOG.warn(e);
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  static {
+    // register this comparator
+    WritableComparator.define(Text.class, new Comparator());
+  }
+
+  /// STATIC UTILITIES FROM HERE DOWN
+  /**
+   * Converts the provided byte array to a String using the
+   * UTF-8 encoding. If the input is malformed,
+   * throws a MalformedInputException.
+   */
+  public static String decode(byte[] utf8) throws CharacterCodingException {
+    return decode(ByteBuffer.wrap(utf8), false);
+  }
+  
+  /**
+   * Converts the provided byte array to a String using the
+   * UTF-8 encoding. If <code>replace</code> is true, then
+   * malformed input is replaced with the
+   * substitution character, which is U+FFFD. Otherwise the
+   * method throws a MalformedInputException.
+   */
+  public static String decode(byte[] utf8, boolean replace) 
+    throws CharacterCodingException {
+    return decode(ByteBuffer.wrap(utf8), replace);
+  }
+  
+  private static String decode(ByteBuffer utf8, boolean replace) 
+    throws CharacterCodingException {
+    synchronized(DECODER) {
+      if (replace) {
+        DECODER.onMalformedInput(
+                                 java.nio.charset.CodingErrorAction.REPLACE);
+        DECODER.onUnmappableCharacter(CodingErrorAction.REPLACE);
+      }
+      String str = DECODER.decode(utf8).toString();
+      // set decoder back to its default value: REPORT
+      if (replace) {
+        DECODER.onMalformedInput(CodingErrorAction.REPORT);
+        DECODER.onUnmappableCharacter(CodingErrorAction.REPORT);
+      }
+      return str;
+    }
+
+  }
+
+  /**
+   * Converts the provided String to bytes using the
+   * UTF-8 encoding. If the input is malformed,
+   * throws a MalformedInputException.
+   * @return ByteBuffer: bytes stores at ByteBuffer.array() 
+   *                     and length is ByteBuffer.limit()
+   */
+
+  public static ByteBuffer encode(String string)
+    throws CharacterCodingException {
+    return encode(string, false);
+  }
+
+  /**
+   * Converts the provided String to bytes using the
+   * UTF-8 encoding. If <code>replace</code> is true, then
+   * malformed input is replaced with the
+   * substitution character, which is U+FFFD. Otherwise the
+   * method throws a MalformedInputException.
+   * @return ByteBuffer: bytes stores at ByteBuffer.array() 
+   *                     and length is ByteBuffer.limit()
+   */
+  public static ByteBuffer encode(String string, boolean replace)
+    throws CharacterCodingException {
+    synchronized(ENCODER) {
+      if (replace) {
+        ENCODER.onMalformedInput(CodingErrorAction.REPLACE);
+        ENCODER.onUnmappableCharacter(CodingErrorAction.REPLACE);
+      }
+      ByteBuffer bytes=ENCODER.encode(CharBuffer.wrap(string.toCharArray()));
+      if (replace) {
+        ENCODER.onMalformedInput(CodingErrorAction.REPORT);
+        ENCODER.onUnmappableCharacter(CodingErrorAction.REPORT);
+      }
+      return bytes;
+    }
+  }
+
+  /** Read a UTF8 encoded string from in
+   */
+  public static String readString(DataInput in) throws IOException {
+    int length = WritableUtils.readVInt(in);
+    byte [] bytes = new byte[length];
+    in.readFully(bytes, 0, length);
+    validateUTF8(bytes);
+    return decode(bytes);
+  }
+
+  /** Write a UTF8 encoded string to out
+   */
+  public static int writeString(DataOutput out, String s) throws IOException {
+    ByteBuffer bytes = encode(s);
+    int length = bytes.limit();
+    WritableUtils.writeVInt(out, length);
+    out.write(bytes.array(), 0, length);
+    return length;
+  }
+
+  ////// states for validateUTF8
+  
+  private static final int LEAD_BYTE = 0;
+
+  private static final int TRAIL_BYTE_1 = 1;
+
+  private static final int TRAIL_BYTE = 2;
+
+  /** 
+   * Check if a byte array contains valid utf-8
+   * @param utf8: byte array
+   * @exception MalformedInputException if the byte array contains invalid utf-8
+   */
+  public static void validateUTF8(byte[] utf8) 
+    throws MalformedInputException {
+    int count = 0;
+    int leadByte = 0;
+    int length = 0;
+    int state = LEAD_BYTE;
+    while (count < utf8.length) {
+      int aByte = ((int) utf8[count] & 0xFF);
+
+      switch (state) {
+      case LEAD_BYTE:
+        leadByte = aByte;
+        length = bytesFromUTF8[aByte];
+
+        switch (length) {
+        case 0: // check for ASCII
+          if (leadByte > 0x7E)
+            throw new MalformedInputException(count);
+          state = TRAIL_BYTE;
+          break;
+        case 1:
+          if (leadByte < 0xC2 || leadByte > 0xDF)
+            throw new MalformedInputException(count);
+          state = TRAIL_BYTE_1;
+          break;
+        case 2:
+          if (leadByte < 0xE0 || leadByte > 0xEF)
+            throw new MalformedInputException(count);
+          state = TRAIL_BYTE_1;
+          break;
+        case 3:
+          if (leadByte < 0xF0 || leadByte > 0xF4)
+            throw new MalformedInputException(count);
+          state = TRAIL_BYTE_1;
+          break;
+        default:
+          // too long! Longest valid UTF-8 is 4 bytes (lead + three)
+          // or if < 0 we got a trail byte in the lead byte position
+          throw new MalformedInputException(count);
+        } // switch (length)
+        break;
+
+      case TRAIL_BYTE_1:
+        if (leadByte == 0xF0 && aByte < 0x90)
+          throw new MalformedInputException(count);
+        if (leadByte == 0xF4 && aByte > 0x8F)
+          throw new MalformedInputException(count);
+        if (leadByte == 0xE0 && aByte < 0xA0)
+          throw new MalformedInputException(count);
+        if (leadByte == 0xED && aByte > 0x9F)
+          throw new MalformedInputException(count);
+        // falls through to regular trail-byte test!!
+      case TRAIL_BYTE:
+        if (aByte < 0x80 || aByte > 0xBF)
+          throw new MalformedInputException(count);
+        if (--length == 0) {
+          state = LEAD_BYTE;
+        } else {
+          state = TRAIL_BYTE;
+        }
+        break;
+      } // switch (state)
+      count++;
+    }
+  }
+
+  /**
+   * Magic numbers for UTF-8. These are the number of bytes
+   * that <em>follow</em> a given lead byte. Trailing bytes
+   * have the value -1. The values 4 and 5 are presented in
+   * this table, even though valid UTF-8 cannot include the
+   * five and six byte sequences.
+   */
+  static final int[] bytesFromUTF8 =
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+    // trail bytes
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3,
+    3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5 };
+
+  /**
+   * Returns the next code point at the current position in
+   * the buffer. The buffer's position will be incremented.
+   * Any mark set on this buffer will be changed by this method!
+   */
+  public static int bytesToCodePoint(ByteBuffer bytes) {
+    bytes.mark();
+    byte b = bytes.get();
+    bytes.reset();
+    int extraBytesToRead = bytesFromUTF8[(int)(b & 0xFF)];
+    if (extraBytesToRead < 0) return -1; // trailing byte!
+    int ch = 0;
+
+    switch (extraBytesToRead) {
+    case 5: ch += (int)(bytes.get() & 0xFF); ch <<= 6; /* remember, illegal UTF-8 */
+    case 4: ch += (int)(bytes.get() & 0xFF); ch <<= 6; /* remember, illegal UTF-8 */
+    case 3: ch += (int)(bytes.get() & 0xFF); ch <<= 6;
+    case 2: ch += (int)(bytes.get() & 0xFF); ch <<= 6;
+    case 1: ch += (int)(bytes.get() & 0xFF); ch <<= 6;
+    case 0: ch += (int)(bytes.get() & 0xFF);
+    }
+    ch -= offsetsFromUTF8[extraBytesToRead];
+
+    return ch;
+  }
+
+  
+  static final int offsetsFromUTF8[] =
+  { 0x00000000, 0x00003080,
+    0x000E2080, 0x03C82080, 0xFA082080, 0x82082080 };
+
+  /**
+   * For the given string, returns the number of UTF-8 bytes
+   * required to encode the string.
+   * @param string text to encode
+   * @return number of UTF-8 bytes required to encode
+   */
+  public static int utf8Length(String string) {
+    CharacterIterator iter = new StringCharacterIterator(string);
+    char ch = iter.first();
+    int size = 0;
+    while (ch != CharacterIterator.DONE) {
+      if ((ch >= 0xD800) && (ch < 0xDC00)) {
+        // surrogate pair?
+        char trail = iter.next();
+        if ((trail > 0xDBFF) && (trail < 0xE000)) {
+          // valid pair
+          size += 4;
+        } else {
+          // invalid pair
+          size += 3;
+          iter.previous(); // rewind one
+        }
+      } else if (ch < 0x80) {
+        size++;
+      } else if (ch < 0x800) {
+        size += 2;
+      } else {
+        // ch < 0x10000, that is, the largest char value
+        size += 3;
+      }
+      ch = iter.next();
+    }
+    return size;
+  }
+}

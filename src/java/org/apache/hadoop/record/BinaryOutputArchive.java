@@ -24,6 +24,8 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.io.WritableUtils;
+
 /**
  *
  * @author Milind Bhandarkar
@@ -50,11 +52,11 @@ public class BinaryOutputArchive implements OutputArchive {
     }
     
     public void writeInt(int i, String tag) throws IOException {
-        Utils.writeInt(out, i);
+        WritableUtils.writeVInt(out, i);
     }
     
     public void writeLong(long l, String tag) throws IOException {
-        Utils.writeLong(out, l);
+        WritableUtils.writeVLong(out, l);
     }
     
     public void writeFloat(float f, String tag) throws IOException {
@@ -67,14 +69,14 @@ public class BinaryOutputArchive implements OutputArchive {
     
     public void writeString(String s, String tag) throws IOException {
         byte[] chars = s.getBytes("UTF-8");
-        Utils.writeInt(out, chars.length);
+        writeInt(chars.length, tag);
         out.write(chars);
     }
     
     public void writeBuffer(ByteArrayOutputStream buf, String tag)
     throws IOException {
         byte[] barr = buf.toByteArray();
-        Utils.writeInt(out, barr.length);
+        writeInt(barr.length, tag);
         out.write(barr);
     }
     
@@ -87,13 +89,13 @@ public class BinaryOutputArchive implements OutputArchive {
     public void endRecord(Record r, String tag) throws IOException {}
     
     public void startVector(ArrayList v, String tag) throws IOException {
-        Utils.writeInt(out, v.size());
+        writeInt(v.size(), tag);
     }
     
     public void endVector(ArrayList v, String tag) throws IOException {}
     
     public void startMap(TreeMap v, String tag) throws IOException {
-        Utils.writeInt(out, v.size());
+        writeInt(v.size(), tag);
     }
     
     public void endMap(TreeMap v, String tag) throws IOException {}
