@@ -27,25 +27,19 @@
     String [] headings = new String[5];
     headings[0] = "Name"; headings[1] = "Type"; headings[2] = "Size";
     headings[3] = "Replication"; headings[4] = "BlockSize";
-    if (jspHelper.datanode != null) {
-      out.print("<h2>You are at DataNode " + jspHelper.dataNodeLabel + "</h2><hr>");
-      out.print("This DataNode has been up since "+jspHelper.datanode.getStartTime()+".<br>");
-    }
-    else {
-      out.print("<h2>There are no datanodes in the cluster</h2><hr>");
-    }
     out.print("<h3>Contents of directory " + dir + "</h3><hr>");
-    if (files == null || files.length == 0) {
-      out.print("Empty directory");
-      //dfs.close();
-      return;
-    }
 
     File f = new File(dir);
     String parent;
     if ((parent = f.getParent()) != null)
       out.print("<a href=\"" + req.getRequestURL() + "?dir=" + parent + 
                 "\">Go to parent directory</a><br>");
+
+    if (files == null || files.length == 0) {
+      out.print("Empty directory");
+      dfs.close();
+      return;
+    }
 
     jspHelper.addTableHeader(out);
     jspHelper.addTableRow(out, headings);
@@ -68,7 +62,7 @@
         DatanodeInfo chosenNode = jspHelper.bestNode(blocks[0]);
         String fqdn = InetAddress.getByName(chosenNode.getHost()).getCanonicalHostName();
         String datanodeUrl = "http://"+fqdn+":" +
-                             jspHelper.dataNodeInfoPort + 
+                             chosenNode.infoPort() + 
                              "/browseData.jsp?filename=" +
                              files[i].getPath() + "&blockSize=" + 
                              files[i].getBlockSize();
@@ -90,7 +84,7 @@
       }
     }
     jspHelper.addTableFooter(out);
-    //dfs.close();
+    dfs.close();
   }
 
 %>

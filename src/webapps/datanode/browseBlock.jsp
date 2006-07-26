@@ -17,7 +17,7 @@
   public void generateFileChunks(JspWriter out, HttpServletRequest req) 
     throws IOException {
     long startOffset = 0;
-    
+    int datanodePort = 0; 
     int chunkSizeToView = 0;
 
     String filename = req.getParameter("filename");
@@ -49,12 +49,18 @@
       chunkSizeToView = Integer.parseInt(chunkSizeToViewStr);
     else chunkSizeToView = jspHelper.defaultChunkSizeToView;
 
-    String startOffsetStr;
-    startOffsetStr = req.getParameter("startOffset");
+    String startOffsetStr = req.getParameter("startOffset");
     if (startOffsetStr == null || Long.parseLong(startOffsetStr) < 0)
       startOffset = 0;
     else startOffset = Long.parseLong(startOffsetStr);
-   
+
+    String datanodePortStr = req.getParameter("datanodePort");
+    if (datanodePortStr == null) {
+      out.print("Invalid input (datanodePort absent)");
+      return;
+    }
+    datanodePort = Integer.parseInt(datanodePortStr);
+
     out.print("<h2>File: " + filename + "</h2>");
     out.print("<a href=\"http://" + req.getServerName() + ":" + 
               req.getServerPort() + "/browseData.jsp?filename=" + filename + 
@@ -68,20 +74,24 @@
               startOffset + "\">");
     out.print("<input type=\"hidden\" name=\"filename\" value=\"" + filename +
               "\">");
+    out.print("<input type=\"hidden\" name=\"datanodePort\" value=\"" + 
+              datanodePort+ "\">");
     out.print("<input type=\"text\" name=\"chunkSizeToView\" value=" +
               chunkSizeToView + " size=10 maxlength=10>");
     out.print("&nbsp;&nbsp;<input type=\"submit\" name=\"submit\" value=\"Refresh\"><hr>");
+   out.print("</form>");
 
     //Determine the prev & next blocks
-    DFSClient dfs = null;
+    DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
     long nextStartOffset = 0;
     long nextBlockSize = 0;
     String nextBlockIdStr = null;
     String nextHost = req.getServerName();
+    int nextPort = req.getServerPort();
+    int nextDatanodePort = datanodePort;
     //determine data for the next link
     if (startOffset + chunkSizeToView >= blockSize) {
       //we have to go to the next block from this point onwards
-      dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
       LocatedBlock[] blocks = dfs.namenode.open(filename);
       for (int i = 0; i < blocks.length; i++) {
         if (blocks[i].getBlock().getBlockId() == blockId) {
@@ -90,8 +100,14 @@
             nextBlockIdStr = Long.toString(nextBlock.getBlock().getBlockId());
             nextStartOffset = 0;
             nextBlockSize = nextBlock.getBlock().getNumBytes();
-            String host = jspHelper.bestNode(nextBlock).getHost();
-            nextHost = InetAddress.getByName(host).getCanonicalHostName();
+            DatanodeInfo d = jspHelper.bestNode(nextBlock);
+            String datanodeAddr = d.getName();
+            nextDatanodePort = Integer.parseInt(
+                                      datanodeAddr.substring(
+                                           datanodeAddr.indexOf(':') + 1, 
+                                      datanodeAddr.length())); 
+            nextHost = InetAddress.getByName(d.getHost()).getCanonicalHostName();
+            nextPort = d.infoPort(); 
           }
         }
       }
@@ -105,11 +121,12 @@
     String nextUrl = null;
     if (nextBlockIdStr != null) {
       nextUrl = "http://" + nextHost + ":" + 
-                jspHelper.datanode.getDataNodeInfoPort() + 
+                nextPort + 
                 "/browseBlock.jsp?blockId=" + nextBlockIdStr +
                 "&blockSize=" + nextBlockSize + "&startOffset=" + 
                 nextStartOffset + "&filename=" + filename +
-                "&chunkSizeToView=" + chunkSizeToView;
+                "&chunkSizeToView=" + chunkSizeToView + 
+                "&datanodePort=" + nextDatanodePort;
       out.print("<a href=\"" + nextUrl + "\">Next</a>&nbsp;&nbsp;");        
     }
     //determine data for the prev link
@@ -117,9 +134,9 @@
     long prevStartOffset = 0;
     long prevBlockSize = 0;
     String prevHost = req.getServerName();
+    int prevPort = req.getServerPort();
+    int prevDatanodePort = datanodePort;
     if (startOffset == 0) {
-      if (dfs == null) 
-        dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
       LocatedBlock [] blocks = dfs.namenode.open(filename);
       for (int i = 0; i < blocks.length; i++) {
         if (blocks[i].getBlock().getBlockId() == blockId) {
@@ -130,8 +147,14 @@
             if (prevStartOffset < 0)
               prevStartOffset = 0;
             prevBlockSize = prevBlock.getBlock().getNumBytes();
-            String host = jspHelper.bestNode(prevBlock).getHost();
-            prevHost = InetAddress.getByName(host).getCanonicalHostName();
+            DatanodeInfo d = jspHelper.bestNode(prevBlock);
+            String datanodeAddr = d.getName();
+            prevDatanodePort = Integer.parseInt(
+                                      datanodeAddr.substring(
+                                          datanodeAddr.indexOf(':') + 1, 
+                                      datanodeAddr.length())); 
+            prevHost = InetAddress.getByName(d.getHost()).getCanonicalHostName();
+            prevPort = d.infoPort();
           }
         }
       }
@@ -147,24 +170,26 @@
     String prevUrl = null;
     if (prevBlockIdStr != null) {
       prevUrl = "http://" + prevHost + ":" + 
-                jspHelper.datanode.getDataNodeInfoPort() + 
+                prevPort + 
                 "/browseBlock.jsp?blockId=" + prevBlockIdStr + 
                 "&blockSize=" + prevBlockSize + "&startOffset=" + 
                 prevStartOffset + "&filename=" + filename + 
-                "&chunkSizeToView=" + chunkSizeToView;
+                "&chunkSizeToView=" + chunkSizeToView +
+                "&datanodePort=" + prevDatanodePort;
       out.print("<a href=\"" + prevUrl + "\">Prev</a>&nbsp;&nbsp;");
     }
     out.print("<hr>");
-
-    jspHelper.streamBlockInAscii(jspHelper.dataNodeAddr, blockId, 
-                                 blockSize, startOffset, chunkSizeToView, out);
-    //dfs.close();
+    try {
+    jspHelper.streamBlockInAscii(
+            new InetSocketAddress(req.getServerName(), datanodePort), blockId, 
+            blockSize, startOffset, chunkSizeToView, out);
+    } catch (Exception e){
+        out.print(e);
+    }
+    dfs.close();
   }
 
 %>
-
-
-
 <html>
 
 <title>Hadoop DFS File Viewer</title>
@@ -174,7 +199,6 @@
 <% 
    generateFileChunks(out,request);
 %>
-</form>
 <hr>
 
 <h2>Local logs</h2>

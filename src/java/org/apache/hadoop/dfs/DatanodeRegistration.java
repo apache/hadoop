@@ -28,6 +28,7 @@ class DatanodeRegistration extends DatanodeID implements Writable {
   int version;            /// current Datanode version
   String registrationID;  /// a unique per namenode id; indicates   
                           /// the namenode the datanode is registered with
+  int infoPort;
 
   /**
    * Default constructor.
@@ -70,6 +71,7 @@ class DatanodeRegistration extends DatanodeID implements Writable {
     new UTF8( this.name ).write(out);
     new UTF8( this.storageID ).write(out);
     new UTF8( this.registrationID ).write(out);   
+    out.writeInt(this.infoPort);
   }
 
   /**
@@ -83,5 +85,6 @@ class DatanodeRegistration extends DatanodeID implements Writable {
     this.storageID = uStr.toString();
     uStr.readFields(in);
     this.registrationID = uStr.toString();   
+    this.infoPort = in.readInt();
   }
 }

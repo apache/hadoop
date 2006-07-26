@@ -96,12 +96,9 @@ public class DataNode implements FSConstants, Runnable {
     long blockReportInterval;
     private DataStorage storage = null;
     private StatusHttpServer infoServer;
-    private static int infoPort;
-    private static int port;
-    private static String localMachine;
+    private int infoPort;
     private static InetSocketAddress nameNodeAddr;
     private static DataNode datanodeObject = null;
-    static Date startTime = new Date(System.currentTimeMillis());
     private class DataNodeMetrics {
       private MetricsRecord metricsRecord = null;
       
@@ -158,8 +155,6 @@ public class DataNode implements FSConstants, Runnable {
         this(InetAddress.getLocalHost().getHostName(), 
              new File(datadir),
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
-        // register datanode
-        register();
         infoPort = conf.getInt("dfs.datanode.info.port", 50075);
         this.infoServer = new StatusHttpServer("datanode", infoPort, true);
         //create a servlet to serve full-file content
@@ -168,6 +163,9 @@ public class DataNode implements FSConstants, Runnable {
                 "org.apache.hadoop.dfs.StreamFile", null);
         } catch (Exception e) {LOG.warn("addServlet threw exception", e);}
         this.infoServer.start();
+        infoPort = this.infoServer.getPort();
+        // register datanode
+        register();
         datanodeObject = this;
     }
     
@@ -215,9 +213,7 @@ public class DataNode implements FSConstants, Runnable {
         conf.getLong("dfs.blockreport.intervalMsec", BLOCKREPORT_INTERVAL);
       this.blockReportInterval =
         blockReportIntervalBasis - new Random().nextInt((int)(blockReportIntervalBasis/10));
-      localMachine = machineName;
       this.nameNodeAddr = nameNodeAddr;
-      port = tmpPort;
     }
 
     /** Return the DataNode object
@@ -227,28 +223,8 @@ public class DataNode implements FSConstants, Runnable {
         return datanodeObject;
     } 
 
-    public String getDataNodeMachine() {
-      return localMachine;
-    }
-
-    public int getDataNodePort() {
-      return port;
-    }
-
-    public int getDataNodeInfoPort() {
-        return infoPort;
-    }
-
     public InetSocketAddress getNameNodeAddr() {
       return nameNodeAddr;
-    }
-    
-    public InetSocketAddress getDataNodeAddr() {
-        return new InetSocketAddress(localMachine, port);
-    }
-    
-    public Date getStartTime() {
-      return startTime;
     }
     
     /**
@@ -271,6 +247,7 @@ public class DataNode implements FSConstants, Runnable {
      * @throws IOException
      */
     private void register() throws IOException {
+      dnRegistration.infoPort = infoPort;
       dnRegistration = namenode.register( dnRegistration );
       if( storage.getStorageID().equals("") ) {
         storage.setStorageID( dnRegistration.getStorageID());

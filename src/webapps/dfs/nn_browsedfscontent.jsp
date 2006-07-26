@@ -16,8 +16,8 @@
     String nodeToRedirect;
     int redirectPort;
     if (datanode != null) {
-      nodeToRedirect = datanode;
-      redirectPort = fsn.getDataNodeInfoPort();
+      redirectPort = Integer.parseInt(datanode.substring(datanode.indexOf(':') + 1));
+      nodeToRedirect = datanode.substring(0, datanode.indexOf(':'));
     }
     else {
       nodeToRedirect = fsn.getDFSNameNodeMachine();

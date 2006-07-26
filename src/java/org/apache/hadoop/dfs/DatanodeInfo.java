@@ -36,6 +36,7 @@ public class DatanodeInfo extends DatanodeID implements Writable {
   protected long remaining;
   protected long lastUpdate;
   protected int xceiverCount;
+  protected int infoPort; //the port where the infoserver is running
 
   DatanodeInfo() {
     this( new String(), new String() );
@@ -72,6 +73,9 @@ public class DatanodeInfo extends DatanodeID implements Writable {
   /** @deprecated Use {@link #getLastUpdate()} instead. */
   public long lastUpdate() { return getLastUpdate(); }
 
+  /** The port at which the http server is running*/
+  public int infoPort() { return infoPort; }
+
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {
     StringBuffer buffer = new StringBuffer();
@@ -106,6 +110,7 @@ public class DatanodeInfo extends DatanodeID implements Writable {
     out.writeLong(remaining);
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
+    out.writeInt(infoPort);
   }
 
   /**
@@ -120,5 +125,6 @@ public class DatanodeInfo extends DatanodeID implements Writable {
     this.remaining = in.readLong();
     this.lastUpdate = in.readLong();
     this.xceiverCount = in.readInt();
+    this.infoPort = in.readInt();
   }
 }

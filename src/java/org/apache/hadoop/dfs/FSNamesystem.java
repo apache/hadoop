@@ -106,7 +106,6 @@ class FSNamesystem implements FSConstants {
     StatusHttpServer infoServer;
     int infoPort;
     Date startTime;
-    int dataNodeInfoPort;
     
     //
     Random r = new Random();
@@ -176,7 +175,6 @@ class FSNamesystem implements FSConstants {
     public FSNamesystem(File dir, Configuration conf) throws IOException {
         fsNamesystemObject = this;
         this.infoPort = conf.getInt("dfs.info.port", 50070);
-        this.dataNodeInfoPort = conf.getInt("dfs.datanode.info.port", 50075);
         this.infoServer = new StatusHttpServer("dfs", infoPort, false);
         this.infoServer.start();
         InetSocketAddress addr = DataNode.createSocketAddr(conf.get("fs.default.name", "local"));
@@ -1085,8 +1083,10 @@ class FSNamesystem implements FSConstants {
               + "new storageID " + nodeReg.getStorageID() + " assigned." );
         }
         // register new datanode
+        DatanodeDescriptor dinfo;
         datanodeMap.put(nodeReg.getStorageID(), 
-                        new DatanodeDescriptor( nodeReg ) ) ;
+                        (dinfo = new DatanodeDescriptor( nodeReg ) ) ) ;
+        dinfo.infoPort = nodeReg.infoPort;
         NameNode.stateChangeLog.debug(
             "BLOCK* NameSystem.registerDatanode: "
             + "node registered." );
@@ -1153,6 +1153,7 @@ class FSNamesystem implements FSConstants {
             NameNode.stateChangeLog.debug("BLOCK* NameSystem.gotHeartbeat: "
                     +"brand-new heartbeat from "+nodeID.getName() );
             nodeinfo = new DatanodeDescriptor(nodeID, capacity, remaining, xceiverCount);
+            nodeinfo.infoPort = ((DatanodeRegistration)nodeID).infoPort;
             datanodeMap.put(nodeinfo.getStorageID(), nodeinfo);
             capacityDiff = capacity;
             remainingDiff = remaining;
@@ -1950,7 +1951,7 @@ class FSNamesystem implements FSConstants {
         index = r.nextInt(size);
         DatanodeInfo d = getDatanodeByIndex(index);
         if (d != null) {
-          return d.getHost();
+          return d.getHost() + ":" + d.infoPort();
         }
       }
       return null;
@@ -1960,7 +1961,4 @@ class FSNamesystem implements FSConstants {
       return infoPort;
     }
 
-    public int getDataNodeInfoPort() {
-      return dataNodeInfoPort;
-    }
 }

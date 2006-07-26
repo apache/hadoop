@@ -42,15 +42,13 @@
     out.print("<input type=\"hidden\" name=\"filename\" value=\"" + filename +
               "\">");
 
-    DFSClient dfs = null;
-    InetSocketAddress addr = jspHelper.dataNodeAddr;
     //fetch the block from the datanode that has the last block for this file
-    if (dfs == null) dfs = new DFSClient(jspHelper.nameNodeAddr, 
+    DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, 
                                          jspHelper.conf);
     LocatedBlock blocks[] = dfs.namenode.open(filename);
     if (blocks == null || blocks.length == 0) {
       out.print("No datanodes contain blocks of file "+filename);
-      //dfs.close();
+      dfs.close();
       return;
     }
     LocatedBlock lastBlk = blocks[blocks.length - 1];
@@ -61,17 +59,17 @@
       chosenNode = jspHelper.bestNode(lastBlk);
     } catch (IOException e) {
       out.print(e.toString());
-      //dfs.close();
+      dfs.close();
       return;
     }      
-    addr = DataNode.createSocketAddr(chosenNode.getName());
+    InetSocketAddress addr = DataNode.createSocketAddr(chosenNode.getName());
     //view the last chunkSizeToView bytes while Tailing
     if (blockSize >= chunkSizeToView)
       startOffset = blockSize - chunkSizeToView;
     else startOffset = 0;
 
     jspHelper.streamBlockInAscii(addr, blockId, blockSize, startOffset, chunkSizeToView, out);
-    //dfs.close();
+    dfs.close();
   }
 
 %>

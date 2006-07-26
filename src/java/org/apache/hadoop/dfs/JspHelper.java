@@ -28,10 +28,6 @@ import org.apache.hadoop.conf.*;
 
 public class JspHelper {
     static InetSocketAddress nameNodeAddr;
-    static InetSocketAddress dataNodeAddr;
-    static String dataNodeLabel;
-    static int dataNodeInfoPort;
-    static DataNode datanode = null;
     static Configuration conf = new Configuration();
 
     static int defaultChunkSizeToView = 
@@ -39,16 +35,11 @@ public class JspHelper {
     static Random rand = new Random();
 
     public JspHelper() {
-      if ((datanode = DataNode.getDataNode()) != null) {
-        dataNodeInfoPort = datanode.getDataNodeInfoPort();
-        nameNodeAddr = datanode.getNameNodeAddr();
-        dataNodeAddr = datanode.getDataNodeAddr();
-        dataNodeLabel = datanode.getDataNodeMachine() + ":" +
-                        datanode.getDataNodePort();
+      if (DataNode.getDataNode() != null) {
+        nameNodeAddr = DataNode.getDataNode().getNameNodeAddr();
       }
       else {
         FSNamesystem fsn = FSNamesystem.getFSNamesystem();
-        dataNodeInfoPort = fsn.getDataNodeInfoPort();
         nameNodeAddr = new InetSocketAddress(fsn.getDFSNameNodeMachine(),
                   fsn.getDFSNameNodePort()); 
       }      
@@ -72,7 +63,7 @@ public class JspHelper {
         chosenNode = nodes[index];
 
         //just ping to check whether the node is alive
-        InetSocketAddress targetAddr = DataNode.createSocketAddr(chosenNode.getHost() + ":" + dataNodeInfoPort);
+        InetSocketAddress targetAddr = DataNode.createSocketAddr(chosenNode.getHost() + ":" + chosenNode.infoPort());
         
         try {
           s = new Socket();
@@ -125,10 +116,18 @@ public class JspHelper {
         amtToRead = blockSize - offsetIntoBlock;
       byte[] buf = new byte[(int)amtToRead];
       int readOffset = 0;
+      int retries = 2;
       while (true) {
-        int numRead = in.read(buf, readOffset, (int)amtToRead);
-        if (numRead == -1)
-          throw new IOException("Could not read data from datanode");
+        int numRead;
+        try {
+          numRead = in.read(buf, readOffset, (int)amtToRead);
+        }
+        catch (IOException e) {
+          retries--;
+          if (retries == 0)
+            throw new IOException("Could not read data from datanode");
+          continue;
+        }
         amtToRead -= numRead;
         readOffset += numRead;
         if (amtToRead == 0)

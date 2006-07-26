@@ -36,10 +36,9 @@
               "\"><i>Go back to dir listing</i></a><br><hr>");
     //Add the various links for looking at the file contents
     //URL for downloading the full file
-    String fqdn = InetAddress.getByName(jspHelper.datanode.getDataNodeMachine()).getCanonicalHostName();
-    String downloadUrl = "http://" + fqdn + 
-                         ":" + jspHelper.datanode.getDataNodeInfoPort() + 
-                         "/streamFile?" + "filename=" + filename;
+    String downloadUrl = "http://" + req.getServerName() + ":" +
+                         + req.getServerPort() + "/streamFile?" + "filename=" +
+                         filename;
     out.print("<a href=\"" + downloadUrl + "\">Download this file</a><br>");
     
     DatanodeInfo chosenNode;
@@ -51,12 +50,13 @@
       chosenNode = jspHelper.bestNode(lastBlk);
     } catch (IOException e) {
       out.print(e.toString());
-      //dfs.close();
+      dfs.close();
       return;
     }
-    fqdn = InetAddress.getByName(chosenNode.getHost()).getCanonicalHostName();
+    String fqdn = 
+           InetAddress.getByName(chosenNode.getHost()).getCanonicalHostName();
     String tailUrl = "http://" + fqdn + ":" +
-                     jspHelper.datanode.getDataNodeInfoPort() + 
+                     chosenNode.infoPort() + 
                      "/tail.jsp?filename=" + filename;
     out.print("<a href=\"" + tailUrl + "\">TAIL this file</a><br>");
 
@@ -68,15 +68,20 @@
       chosenNode = jspHelper.bestNode(firstBlk);
     } catch (IOException e) {
       out.print(e.toString());
-      //dfs.close();
+      dfs.close();
       return;
     }
+    String datanodeAddr = chosenNode.getName();
+    int datanodePort = Integer.parseInt(datanodeAddr.substring(
+                                          datanodeAddr.indexOf(':') + 1, 
+                                      datanodeAddr.length())); 
     fqdn = InetAddress.getByName(chosenNode.getHost()).getCanonicalHostName();
     String chunkViewUrl = "http://" + fqdn + ":" +
-                     jspHelper.datanode.getDataNodeInfoPort() + 
+                     chosenNode.infoPort() + 
                      "/browseBlock.jsp?blockId=" + Long.toString(blockId) +
                      "&tail=false&blockSize=" + blockSize +
-                     "&filename=" + filename;
+                     "&filename=" + filename +
+                     "&datanodePort=" + datanodePort;
     out.print("<a href=\"" + chunkViewUrl + 
               "\">View this file (in a chunked fashion)</a><br>");
     out.print("<hr>"); 
@@ -94,12 +99,17 @@
       DatanodeInfo[] locs = blocks[i].getLocations();
       String locations = new String();
       for (int j = 0; j < locs.length; j++) {
+        datanodeAddr = locs[j].getName();
+        datanodePort = Integer.parseInt(datanodeAddr.substring(
+                                          datanodeAddr.indexOf(':') + 1, 
+                                      datanodeAddr.length())); 
         fqdn = InetAddress.getByName(locs[j].getHost()).getCanonicalHostName();
         String blockUrl = "http://"+ fqdn + ":" +
-                          jspHelper.dataNodeInfoPort +
+                          locs[j].infoPort() +
                           "/browseBlock.jsp?blockId=" + Long.toString(blockId) +
                           "&blockSize=" + blockSize +
-                          "&filename=" + filename;
+                          "&filename=" + filename + 
+                          "&datanodePort=" + datanodePort;
         locations += "<a href=\"" + blockUrl + "\">" + fqdn + "</a>";
         if (j < locs.length - 1)
           locations += ", ";
@@ -108,7 +118,7 @@
       jspHelper.addTableRow(out, cols);
     }
     jspHelper.addTableFooter(out);
-    //dfs.close();
+    dfs.close();
   }
 
 %>

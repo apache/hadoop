@@ -93,6 +93,10 @@ Trunk (unreleased changes)
 26. HADOOP-335.  Refactor DFS namespace/transaction logging in
     namenode.   (Konstantin Shvachko via cutting)
 
+27. HADOOP-375.  Fix handling of the datanode HTTP daemon's port so
+    that multiple datanode's can be run on a single host.
+    (Devaraj Das via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

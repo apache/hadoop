@@ -30,13 +30,11 @@ import java.text.DateFormat;
 public class StreamFile extends HttpServlet {
 
   static InetSocketAddress nameNodeAddr;
-  static int dataNodeInfoPort;
   static DataNode datanode = null;
   static Configuration conf = new Configuration();
   Random rand = new Random();
   static {
     if ((datanode = DataNode.getDataNode()) != null) {
-      dataNodeInfoPort = datanode.getDataNodeInfoPort();
       nameNodeAddr = datanode.getNameNodeAddr();
     }
   }
@@ -64,6 +62,7 @@ public class StreamFile extends HttpServlet {
     } finally {
       in.close();
       os.close();
+      dfs.close();
     }
   }
 }
