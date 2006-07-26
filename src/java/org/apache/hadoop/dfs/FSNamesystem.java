@@ -1391,14 +1391,26 @@ class FSNamesystem implements FSConstants {
      *
      * srcNodes.size() - dstNodes.size() == replication
      *
-     * For now, we choose nodes randomly.  In the future, we might enforce some
-     * kind of policy (like making sure replicates are spread across racks).
+     * We pick node with least free space
+     * In the future, we might enforce some kind of policy 
+     * (like making sure replicates are spread across racks).
      */
     void chooseExcessReplicates(Vector nonExcess, Block b, short replication) {
         while (nonExcess.size() - replication > 0) {
-            int chosenNode = r.nextInt(nonExcess.size());
-            DatanodeDescriptor cur = (DatanodeDescriptor) nonExcess.elementAt(chosenNode);
-            nonExcess.removeElementAt(chosenNode);
+            DatanodeInfo cur = null;
+            long minSpace = Long.MAX_VALUE;
+            
+            for (Iterator iter = nonExcess.iterator(); iter.hasNext();) {
+                DatanodeInfo node = (DatanodeInfo) iter.next();
+                long free = node.getRemaining();
+                
+                if(minSpace > free) {
+                    minSpace = free;
+                    cur = node;
+                }
+            }
+            
+            nonExcess.remove(cur);
 
             TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getStorageID());
             if (excessBlocks == null) {

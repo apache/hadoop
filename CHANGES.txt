@@ -97,6 +97,9 @@ Trunk (unreleased changes)
     that multiple datanode's can be run on a single host.
     (Devaraj Das via cutting)
 
+28. HADOOP-386.  When removing excess DFS block replicas, remove those
+    on nodes with the least space first.  (Johan Oskarson via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
