@@ -21,7 +21,6 @@ import java.io.*;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.Metrics;
@@ -34,21 +33,12 @@ import org.apache.hadoop.metrics.Metrics;
  * It keeps the filename->blockset mapping always-current
  * and logged to disk.
  * 
+ * TODO: Factor out to a standalone class.
+ * 
  * @author Mike Cafarella
  *************************************************/
 class FSDirectory implements FSConstants {
-    private static final String FS_IMAGE = "fsimage";
-    private static final String NEW_FS_IMAGE = "fsimage.new";
-    private static final String OLD_FS_IMAGE = "fsimage.old";
 
-    private static final byte OP_ADD = 0;
-    private static final byte OP_RENAME = 1;
-    private static final byte OP_DELETE = 2;
-    private static final byte OP_MKDIR = 3;
-    private static final byte OP_SET_REPLICATION = 4;
-
-    private int numFilesDeleted = 0;
-    
     /******************************************************
      * We keep an in-memory representation of the file/block
      * hierarchy.
@@ -91,6 +81,38 @@ class FSDirectory implements FSConstants {
          */
         public short getReplication() {
           return this.blockReplication;
+        }
+        
+        /**
+         * Get local file name
+         * @return local file name
+         */
+        String getLocalName() {
+          return name;
+        }
+
+        /**
+         * Get file blocks 
+         * @return file blocks
+         */
+        Block[] getBlocks() {
+          return this.blocks;
+        }
+        
+        /**
+         * Get parent directory 
+         * @return parent INode
+         */
+        INode getParent() {
+          return this.parent;
+        }
+
+        /**
+         * Get children 
+         * @return TreeMap of children
+         */
+        TreeMap getChildren() {
+          return this.children;
         }
 
         /**
@@ -182,7 +204,7 @@ class FSDirectory implements FSConstants {
                 return true;
             }
         }
-
+          
         /**
          * Collect all the blocks at this INode and all its children.
          * This operation is performed after a node is removed from the tree,
@@ -269,103 +291,43 @@ class FSDirectory implements FSConstants {
                 v.add(child);
             }
         }
-
-        /**
-         */
-        void saveImage(String parentPrefix, DataOutputStream out) throws IOException {
-            String fullName = "";
-            if (parent != null) {
-                fullName = parentPrefix + "/" + name;
-                new UTF8(fullName).write(out);
-                out.writeShort(blockReplication);
-                if (blocks == null) {
-                    out.writeInt(0);
-                } else {
-                    out.writeInt(blocks.length);
-                    for (int i = 0; i < blocks.length; i++) {
-                        blocks[i].write(out);
-                    }
-                }
-            }
-            for (Iterator it = children.values().iterator(); it.hasNext(); ) {
-                INode child = (INode) it.next();
-                child.saveImage(fullName, out);
-            }
-        }
     }
 
     
     INode rootDir = new INode("");
     TreeMap activeBlocks = new TreeMap();
     TreeMap activeLocks = new TreeMap();
-    DataOutputStream editlog = null;
+    FSImage fsImage;  
     boolean ready = false;
-    int namespaceID = 0;  /// a persistent attribute of the namespace
-
+    int namespaceID = 0;    // TODO: move to FSImage class, it belongs there
+    // Metrics members
     private MetricsRecord metricsRecord = null;
+    private int numFilesDeleted = 0;
     
     /** Access an existing dfs name directory. */
     public FSDirectory(File dir, Configuration conf) throws IOException {
-        File fullimage = new File(dir, "image");
-        if (! fullimage.exists()) {
-          throw new IOException("NameNode not formatted: " + dir);
-        }
-        File edits = new File(dir, "edits");
-        if (loadFSImage(fullimage, edits, conf)) {
-            saveFSImage(fullimage, edits);
-        }
-
-        synchronized (this) {
-            this.ready = true;
-            this.notifyAll();
-            this.editlog = new DataOutputStream(new FileOutputStream(edits));
-            editlog.writeInt( DFS_CURRENT_VERSION );
-        }
-     
-        metricsRecord = Metrics.createRecord("dfs", "namenode");
+      this.fsImage = new FSImage( dir, conf );
+      fsImage.loadFSImage( this, conf );
+      synchronized (this) {
+        this.ready = true;
+        this.notifyAll();
+        fsImage.getEditLog().create();
+      }
+      metricsRecord = Metrics.createRecord("dfs", "namenode");
     }
 
     /** Create a new dfs name directory.  Caution: this destroys all files
-     * in this filesystem. */
-    public static void format(File dir, Configuration conf)
-      throws IOException {
-        File image = new File(dir, "image");
-        File edits = new File(dir, "edits");
-
-        if (!((!image.exists() || FileUtil.fullyDelete(image)) &&
-              (!edits.exists() || edits.delete()) &&
-              image.mkdirs())) {
-          
-          throw new IOException("Unable to format: "+dir);
-        }
+     * in this filesystem.
+     * @deprecated use @link FSImage#format(File, Configuration) instead */
+    public static void format(File dir, Configuration conf) throws IOException {
+      FSImage.format( dir, conf );
     }
     
-    /**
-     * Generate new namespaceID.
-     * 
-     * namespaceID is a persistent attribute of the namespace.
-     * It is generated when the namenode is formatted and remains the same
-     * during the life cycle of the namenode.
-     * When a datanodes register they receive it as the registrationID,
-     * which is checked every time the datanode is communicating with the 
-     * namenode. Datanodes that do not 'know' the namespaceID are rejected.
-     * 
-     * @return new namespaceID
-     */
-    private int newNamespaceID() {
-      Random r = new Random();
-      r.setSeed( System.currentTimeMillis() );
-      int newID = 0;
-      while( newID == 0)
-        newID = r.nextInt();
-      return newID;
-    }
-
     /**
      * Shutdown the filestore
      */
     public void close() throws IOException {
-        editlog.close();
+        fsImage.getEditLog().close();
     }
 
     /**
@@ -385,283 +347,6 @@ class FSDirectory implements FSConstants {
     }
 
     /**
-     * Load in the filesystem image.  It's a big list of
-     * filenames and blocks.  Return whether we should
-     * "re-save" and consolidate the edit-logs
-     */
-    boolean loadFSImage( File fsdir, 
-                         File edits, 
-                         Configuration conf
-                       ) throws IOException {
-        //
-        // Atomic move sequence, to recover from interrupted save
-        //
-        File curFile = new File(fsdir, FS_IMAGE);
-        File newFile = new File(fsdir, NEW_FS_IMAGE);
-        File oldFile = new File(fsdir, OLD_FS_IMAGE);
-
-        // Maybe we were interrupted between 2 and 4
-        if (oldFile.exists() && curFile.exists()) {
-            oldFile.delete();
-            if (edits.exists()) {
-                edits.delete();
-            }
-        } else if (oldFile.exists() && newFile.exists()) {
-            // Or maybe between 1 and 2
-            newFile.renameTo(curFile);
-            oldFile.delete();
-        } else if (curFile.exists() && newFile.exists()) {
-            // Or else before stage 1, in which case we lose the edits
-            newFile.delete();
-        }
-
-        //
-        // Load in bits
-        //
-        boolean needToSave = true;
-        int imgVersion = DFS_CURRENT_VERSION;
-        if (curFile.exists()) {
-            DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(curFile)));
-            try {
-                // read image version: first appeared in version -1
-                imgVersion = in.readInt();
-                // read namespaceID: first appeared in version -2
-                if( imgVersion <= -2 )
-                  namespaceID = in.readInt();
-                // read number of files
-                int numFiles = 0;
-                // version 0 does not store version #
-                // starts directly with the number of files
-                if( imgVersion >= 0 ) {  
-                  numFiles = imgVersion;
-                  imgVersion = 0;
-                } else 
-                  numFiles = in.readInt();
-                  
-                needToSave = ( imgVersion != DFS_CURRENT_VERSION );
-                if( imgVersion < DFS_CURRENT_VERSION ) // future version
-                  throw new IOException(
-                              "Unsupported version of the file system image: "
-                              + imgVersion
-                              + ". Current version = " 
-                              + DFS_CURRENT_VERSION + "." );
-                
-                // read file info
-                short replication = (short)conf.getInt("dfs.replication", 3);
-                for (int i = 0; i < numFiles; i++) {
-                    UTF8 name = new UTF8();
-                    name.readFields(in);
-                    // version 0 does not support per file replication
-                    if( !(imgVersion >= 0) ) {
-                      replication = in.readShort(); // other versions do
-                      replication = adjustReplication( replication, conf );
-                    }
-                    int numBlocks = in.readInt();
-                    Block blocks[] = null;
-                    if (numBlocks > 0) {
-                        blocks = new Block[numBlocks];
-                        for (int j = 0; j < numBlocks; j++) {
-                            blocks[j] = new Block();
-                            blocks[j].readFields(in);
-                        }
-                    }
-                    unprotectedAddFile(name, 
-                            new INode( name.toString(), blocks, replication ));
-                }
-            } finally {
-                in.close();
-            }
-        }
-
-        if( namespaceID == 0 )
-          namespaceID = newNamespaceID();
-        
-        return needToSave || ( edits.exists() && loadFSEdits(edits, conf) > 0 );
-    }
-
-    /**
-     * Load an edit log, and apply the changes to the in-memory structure
-     *
-     * This is where we apply edits that we've been writing to disk all
-     * along.
-     */
-    int loadFSEdits(File edits, Configuration conf) throws IOException {
-        int numEdits = 0;
-        int logVersion = 0;
-
-        if (edits.exists()) {
-            DataInputStream in = new DataInputStream(
-                                    new BufferedInputStream(
-                                        new FileInputStream(edits)));
-            // Read log file version. Could be missing. 
-            in.mark( 4 );
-            if( in.available() > 0 ) {
-              logVersion = in.readByte();
-              in.reset();
-              if( logVersion >= 0 )
-                logVersion = 0;
-              else
-                logVersion = in.readInt();
-              if( logVersion < DFS_CURRENT_VERSION ) // future version
-                  throw new IOException(
-                            "Unexpected version of the file system log file: "
-                            + logVersion
-                            + ". Current version = " 
-                            + DFS_CURRENT_VERSION + "." );
-            }
-            
-            short replication = (short)conf.getInt("dfs.replication", 3);
-            try {
-                while (in.available() > 0) {
-                    byte opcode = in.readByte();
-                    numEdits++;
-                    switch (opcode) {
-                    case OP_ADD: {
-                        UTF8 name = new UTF8();
-                        ArrayWritable aw = null;
-                        Writable writables[];
-                        // version 0 does not support per file replication
-                        if( logVersion >= 0 )
-                          name.readFields(in);  // read name only
-                        else {  // other versions do
-                          // get name and replication
-                          aw = new ArrayWritable(UTF8.class);
-                          aw.readFields(in);
-                          writables = aw.get(); 
-                          if( writables.length != 2 )
-                            throw new IOException("Incorrect data fortmat. " 
-                                           + "Name & replication pair expected");
-                          name = (UTF8) writables[0];
-                          replication = Short.parseShort(
-                                              ((UTF8)writables[1]).toString());
-                          replication = adjustReplication( replication, conf );
-                        }
-                        // get blocks
-                        aw = new ArrayWritable(Block.class);
-                        aw.readFields(in);
-                        writables = aw.get();
-                        Block blocks[] = new Block[writables.length];
-                        System.arraycopy(writables, 0, blocks, 0, blocks.length);
-                        // add to the file tree
-                        unprotectedAddFile(name, 
-                            new INode( name.toString(), blocks, replication ));
-                        break;
-                    }
-                    case OP_SET_REPLICATION: {
-                        UTF8 src = new UTF8();
-                        UTF8 repl = new UTF8();
-                        src.readFields(in);
-                        repl.readFields(in);
-                        replication=adjustReplication(
-                                fromLogReplication(repl),
-                                conf);
-                        unprotectedSetReplication(src.toString(), 
-                                                  replication,
-                                                  null);
-                        break;
-                    } 
-                    case OP_RENAME: {
-                        UTF8 src = new UTF8();
-                        UTF8 dst = new UTF8();
-                        src.readFields(in);
-                        dst.readFields(in);
-                        unprotectedRenameTo(src, dst);
-                        break;
-                    }
-                    case OP_DELETE: {
-                        UTF8 src = new UTF8();
-                        src.readFields(in);
-                        unprotectedDelete(src);
-                        break;
-                    }
-                    case OP_MKDIR: {
-                        UTF8 src = new UTF8();
-                        src.readFields(in);
-                        unprotectedMkdir(src.toString());
-                        break;
-                    }
-                    default: {
-                        throw new IOException("Never seen opcode " + opcode);
-                    }
-                    }
-                }
-            } finally {
-                in.close();
-            }
-        }
-        
-        if( logVersion != DFS_CURRENT_VERSION ) // other version
-          numEdits++; // save this image asap
-        return numEdits;
-    }
-
-    private static short adjustReplication( short replication, Configuration conf) {
-        short minReplication = (short)conf.getInt("dfs.replication.min", 1);
-        if( replication<minReplication ) {
-            replication = minReplication;
-        }
-        short maxReplication = (short)conf.getInt("dfs.replication.max", 512);
-        if( replication>maxReplication ) {
-            replication = maxReplication;
-        }
-        return replication;
-    }
-    /**
-     * Save the contents of the FS image
-     */
-    void saveFSImage(File fullimage, File edits) throws IOException {
-        File curFile = new File(fullimage, FS_IMAGE);
-        File newFile = new File(fullimage, NEW_FS_IMAGE);
-        File oldFile = new File(fullimage, OLD_FS_IMAGE);
-
-        //
-        // Write out data
-        //
-        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(newFile)));
-        try {
-            out.writeInt(DFS_CURRENT_VERSION);
-            out.writeInt(this.namespaceID);
-            out.writeInt(rootDir.numItemsInTree() - 1);
-            rootDir.saveImage("", out);
-        } finally {
-            out.close();
-        }
-
-        //
-        // Atomic move sequence
-        //
-        // 1.  Move cur to old
-        curFile.renameTo(oldFile);
-        
-        // 2.  Move new to cur
-        newFile.renameTo(curFile);
-
-        // 3.  Remove pending-edits file (it's been integrated with newFile)
-        edits.delete();
-        
-        // 4.  Delete old
-        oldFile.delete();
-    }
-
-    /**
-     * Write an operation to the edit log
-     */
-    void logEdit(byte op, Writable w1, Writable w2) {
-        synchronized (editlog) {
-            try {
-                editlog.write(op);
-                if (w1 != null) {
-                    w1.write(editlog);
-                }
-                if (w2 != null) {
-                    w2.write(editlog);
-                }
-            } catch (IOException ie) {
-            }
-        }
-    }
-    
-    /**
      * Add the given filename to the fs.
      */
     public boolean addFile(UTF8 path, Block[] blocks, short replication) {
@@ -677,25 +362,12 @@ class FSDirectory implements FSConstants {
                     +blocks.length+" blocks to the file system" );
            return false;
         }
-        // add createRecord file record to log
-        UTF8 nameReplicationPair[] = new UTF8[] { 
-                              path, 
-                              toLogReplication( replication )};
-        logEdit(OP_ADD,
-                new ArrayWritable( UTF8.class, nameReplicationPair ), 
-                new ArrayWritable( Block.class, newNode.blocks ));
+        // add create file record to log
+        fsImage.getEditLog().logCreateFile( newNode );
         NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
                 +path+" with "+blocks.length+" blocks is added to the file system" );
         return true;
     }
-    
-    private static UTF8 toLogReplication( short replication ) {
-      return new UTF8( Short.toString(replication));
-    }
-    
-    private static short fromLogReplication( UTF8 replication ) {
-      return Short.parseShort(replication.toString());
-    }    
     
     /**
      */
@@ -716,20 +388,23 @@ class FSDirectory implements FSConstants {
         }
       }
     }
+    
+    boolean unprotectedAddFile(UTF8 path, Block[] blocks, short replication ) {
+      return unprotectedAddFile( path,  
+                    new INode( path.toString(), blocks, replication ));
+    }
 
     /**
      * Change the filename
      */
     public boolean renameTo(UTF8 src, UTF8 dst) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
-                +src+" to "+dst );
-        waitForReady();
-        if (unprotectedRenameTo(src, dst)) {
-            logEdit(OP_RENAME, src, dst);
-            return true;
-        } else {
-            return false;
-        }
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
+          +src+" to "+dst );
+      waitForReady();
+      if( ! unprotectedRenameTo(src, dst) )
+        return false;
+      fsImage.getEditLog().logRename(src, dst);
+      return true;
     }
 
     /**
@@ -783,23 +458,21 @@ class FSDirectory implements FSConstants {
      * @return array of file blocks
      * @throws IOException
      */
-    public Block[] setReplication(String src, 
-                              short replication,
-                              Vector oldReplication
-                             ) throws IOException {
+    Block[] setReplication( String src, 
+                            short replication,
+                            Vector oldReplication
+                           ) throws IOException {
       waitForReady();
       Block[] fileBlocks = unprotectedSetReplication(src, replication, oldReplication );
-      if( fileBlocks != null )  // 
-        logEdit(OP_SET_REPLICATION, 
-                new UTF8(src), 
-                toLogReplication( replication ));
+      if( fileBlocks != null )  // log replication change
+        fsImage.getEditLog().logSetReplication( src, replication );
       return fileBlocks;
     }
 
-    private Block[] unprotectedSetReplication( String src, 
-                                          short replication,
-                                          Vector oldReplication
-                                        ) throws IOException {
+    Block[] unprotectedSetReplication(  String src, 
+                                        short replication,
+                                        Vector oldReplication
+                                      ) throws IOException {
       if( oldReplication == null )
         oldReplication = new Vector();
       oldReplication.setSize(1);
@@ -847,7 +520,7 @@ class FSDirectory implements FSConstants {
         waitForReady();
         Block[] blocks = unprotectedDelete(src); 
         if( blocks != null )
-          logEdit(OP_DELETE, src, null);
+          fsImage.getEditLog().logDelete( src );
         return blocks;
     }
 
@@ -984,7 +657,7 @@ class FSDirectory implements FSConstants {
     }
 
     /**
-     * Create the given directory and all its parent dirs.
+     * @deprecated use @link #mkdirs(String) instead
      */
     public boolean mkdirs(UTF8 src) {
         return mkdirs(src.toString());
@@ -1019,7 +692,7 @@ class FSDirectory implements FSConstants {
                if (inserted != null) {
                    NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
                         +"created directory "+cur );
-                   logEdit(OP_MKDIR, new UTF8(inserted.computeName()), null);
+                   fsImage.getEditLog().logMkDir( inserted );
                } // otherwise cur exists, continue
             } catch (FileNotFoundException e ) {
                 NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "

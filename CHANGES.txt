@@ -90,6 +90,9 @@ Trunk (unreleased changes)
     writing zero-compressed integers (VInts and VLongs).
     (Hairong Kuang via cutting)
 
+26. HADOOP-335.  Refactor DFS namespace/transaction logging in
+    namenode.   (Konstantin Shvachko via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
