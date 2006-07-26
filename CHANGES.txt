@@ -79,6 +79,9 @@ Trunk (unreleased changes)
 22. HADOOP-380.  Fix reduce tasks to poll less frequently for map
     outputs. (Mahadev Konar via cutting)
 
+23. HADOOP-321.  Refactor DatanodeInfo, in preparation for
+    HADOOP-306.  (Konstantin Shvachko & omalley via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

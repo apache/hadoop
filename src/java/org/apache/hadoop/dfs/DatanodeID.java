@@ -7,7 +7,7 @@ package org.apache.hadoop.dfs;
  * 
  * @author Konstantin Shvachko
  */
-class DatanodeID {
+public class DatanodeID implements Comparable {
 
   protected String name;      /// hostname:portNumber
   protected String storageID; /// unique per cluster storageID
@@ -51,5 +51,14 @@ class DatanodeID {
   
   public String toString() {
     return name;
+  }
+  
+  /** Comparable.
+   * Basis of compare is the String name (host:portNumber) only.
+   * @param o
+   * @return as specified by Comparable.
+   */
+  public int compareTo(Object o) {
+    return name.compareTo(((DatanodeID)o).getName());
   }
 }

@@ -15,153 +15,110 @@
  */
 package org.apache.hadoop.dfs;
 
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Date;
 
-import java.io.*;
-import java.util.*;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 
-/**************************************************
- * DatanodeInfo tracks stats on a given DataNode,
- * such as available storage capacity, last update
- * time, etc.
+/** 
+ * DatanodeInfo represents the status of a DataNode.
  *
  * @author Mike Cafarella
- **************************************************/
-public class DatanodeInfo extends DatanodeID implements Writable, Comparable {
-  private int xceiverCount;
+ * @author Konstantin Shvachko
+ */
+public class DatanodeInfo extends DatanodeID implements Writable {
+  protected long capacity;
+  protected long remaining;
+  protected long lastUpdate;
+  protected int xceiverCount;
 
-    static {                                      // register a ctor
-      WritableFactories.setFactory
-        (DatanodeInfo.class,
-         new WritableFactory() {
-           public Writable newInstance() { return new DatanodeInfo(); }
-         });
-    }
+  DatanodeInfo() {
+    this( new String(), new String() );
+  }
+  
+  DatanodeInfo( String name, String storageID) {
+    super( name, storageID );
+    this.capacity = 0L;
+    this.remaining = 0L;
+    this.lastUpdate = 0L;
+    this.xceiverCount = 0;
+  }
+  
+  DatanodeInfo( DatanodeInfo from ) {
+    super( from.getName(), from.getStorageID() );
+    this.capacity = from.getCapacity();
+    this.remaining = from.getRemaining();
+    this.lastUpdate = from.getLastUpdate();
+    this.xceiverCount = from.getXceiverCount();
+  }
+
+  /** The raw capacity. */
+  public long getCapacity() { return capacity; }
+
+  /** The raw free space. */
+  public long getRemaining() { return remaining; }
+
+  /** The time when this information was accurate. */
+  public long getLastUpdate() { return lastUpdate; }
+
   /** number of active connections */
   public int getXceiverCount() { return xceiverCount; }
-  
-    private long capacityBytes, remainingBytes, lastUpdate;
-    private volatile TreeSet blocks;
-    /** Create an empty DatanodeInfo.
-     */
-    public DatanodeInfo() {
-        this(new String(), new String(), 0, 0, 0);
-    }
-    public DatanodeInfo( DatanodeID nodeID ) {
-      this( nodeID.getName(), nodeID.getStorageID(), 0, 0, 0);
-    }
-    
-   /**
-    * Create an empty DatanodeInfo.
-    */
-    public DatanodeInfo(DatanodeID nodeID, 
-                        long capacity, 
-                        long remaining,
-                        int xceiverCount) {
-      this( nodeID.getName(), nodeID.getStorageID(), capacity, remaining, xceiverCount );
-    }
-   /**
-    * @param name hostname:portNumber as String object.
-    */
-    public DatanodeInfo(String name, 
-                        String storageID, 
-                        long capacity, 
-                        long remaining,
-                        int xceiverCount) {
-        super( name, storageID );
-        this.blocks = new TreeSet();
-        updateHeartbeat(capacity, remaining, xceiverCount);
-    }
-   /**
-    */
-    public void updateBlocks(Block newBlocks[]) {
-        blocks.clear();
-        for (int i = 0; i < newBlocks.length; i++) {
-            blocks.add(newBlocks[i]);
-        }
-    }
 
-   /**
-    */
-    public void addBlock(Block b) {
-        blocks.add(b);
-    }
+  /** @deprecated Use {@link #getLastUpdate()} instead. */
+  public long lastUpdate() { return getLastUpdate(); }
 
-    /**
-     */
-    public void updateHeartbeat(long capacity, long remaining, int xceiverCount) {
-        this.capacityBytes = capacity;
-        this.remainingBytes = remaining;
-        this.xceiverCount = xceiverCount;
-        this.lastUpdate = System.currentTimeMillis();
-    }
+  /** A formatted string for reporting the status of the DataNode. */
+  public String getDatanodeReport() {
+    StringBuffer buffer = new StringBuffer();
+    long c = getCapacity();
+    long r = getRemaining();
+    long u = c - r;
+    buffer.append("Name: "+name+"\n");
+    buffer.append("Total raw bytes: "+c+" ("+DFSShell.byteDesc(c)+")"+"\n");
+    buffer.append("Used raw bytes: "+u+" ("+DFSShell.byteDesc(u)+")"+"\n");
+    buffer.append("% used: "+DFSShell.limitDecimal(((1.0*u)/c)*100,2)+"%"+"\n");
+    buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
+    return buffer.toString();
+  }
 
-    public Block[] getBlocks() {
-        return (Block[]) blocks.toArray(new Block[blocks.size()]);
-    }
-    public Iterator getBlockIterator() {
-        return blocks.iterator();
-    }
-    public long getCapacity() {
-        return capacityBytes;
-    }
-    public long getRemaining() {
-        return remainingBytes;
-    }
-    public long lastUpdate() {
-        return lastUpdate;
-    }
+  /////////////////////////////////////////////////
+  // Writable
+  /////////////////////////////////////////////////
+  static {                                      // register a ctor
+    WritableFactories.setFactory
+      (DatanodeInfo.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new DatanodeInfo(); }
+       });
+  }
 
-  /** Comparable.
-   * Basis of compare is the String name (host:portNumber) only.
-   * @param o
-   * @return as specified by Comparable.
+  /**
    */
-    public int compareTo(Object o) {
-        DatanodeInfo d = (DatanodeInfo) o;
-        return name.compareTo(d.getName());
-    }
-    /////////////////////////////////////////////////
-    // Writable
-    /////////////////////////////////////////////////
-    /**
-     */
-    public void write(DataOutput out) throws IOException {
-        new UTF8( this.name ).write(out);
-        new UTF8( this.storageID ).write(out);
-        out.writeLong(capacityBytes);
-        out.writeLong(remainingBytes);
-        out.writeLong(lastUpdate);
-        out.writeInt(xceiverCount);
+  public void write(DataOutput out) throws IOException {
+    new UTF8( this.name ).write(out);
+    new UTF8( this.storageID ).write(out);
+    out.writeLong(capacity);
+    out.writeLong(remaining);
+    out.writeLong(lastUpdate);
+    out.writeInt(xceiverCount);
+  }
 
-        /**
-        out.writeInt(blocks.length);
-        for (int i = 0; i < blocks.length; i++) {
-            blocks[i].write(out);
-        }
-        **/
-    }
-
-    /**
-     */
-    public void readFields(DataInput in) throws IOException {
-        UTF8 uStr = new UTF8();
-        uStr.readFields(in);
-        this.name = uStr.toString();
-        uStr.readFields(in);
-        this.storageID = uStr.toString();
-        this.capacityBytes = in.readLong();
-        this.remainingBytes = in.readLong();
-        this.lastUpdate = in.readLong();
-        this.xceiverCount = in.readInt();
-        /**
-        int numBlocks = in.readInt();
-        this.blocks = new Block[numBlocks];
-        for (int i = 0; i < blocks.length; i++) {
-            blocks[i] = new Block();
-            blocks[i].readFields(in);
-        }
-        **/
-    }
+  /**
+   */
+  public void readFields(DataInput in) throws IOException {
+    UTF8 uStr = new UTF8();
+    uStr.readFields(in);
+    this.name = uStr.toString();
+    uStr.readFields(in);
+    this.storageID = uStr.toString();
+    this.capacity = in.readLong();
+    this.remaining = in.readLong();
+    this.lastUpdate = in.readLong();
+    this.xceiverCount = in.readInt();
+  }
 }
-
