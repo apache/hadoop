@@ -47,6 +47,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private String file;
     private String id;
     private JobConf job;
+    private Random random = new Random();
 
     private JobStatus status = new JobStatus();
     private ArrayList mapIds = new ArrayList();
@@ -150,7 +151,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     }
 
     private String newId() {
-      return Integer.toString(Math.abs(new Random().nextInt()),36);
+      return Integer.toString(Math.abs(random.nextInt()),36);
     }
 
     // TaskUmbilicalProtocol methods
