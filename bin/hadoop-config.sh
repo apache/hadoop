@@ -3,7 +3,10 @@
 # also should not be passed any arguments, since we need original $*
 
 # resolve links - $0 may be a softlink
-this="$0"
+bin=`dirname "$0"`
+script=`basename "$0"`
+bin=`cd "$bin"; pwd`
+this="$bin/$script"
 while [ -h "$this" ]; do
   ls=`ls -ld "$this"`
   link=`expr "$ls" : '.*-> \(.*\)$'`
