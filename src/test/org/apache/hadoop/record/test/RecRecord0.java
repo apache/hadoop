@@ -56,7 +56,7 @@ public class RecRecord0 implements org.apache.hadoop.record.Record, org.apache.h
     org.apache.hadoop.record.BinaryInputArchive archive = new org.apache.hadoop.record.BinaryInputArchive(in);
     deserialize(archive, "");
   }
-  private boolean validate() {
+  public boolean validate() {
     if (bs_.cardinality() != bs_.length()) return false;
     return true;
 }

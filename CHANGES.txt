@@ -82,6 +82,9 @@ Trunk (unreleased changes)
 23. HADOOP-321.  Refactor DatanodeInfo, in preparation for
     HADOOP-306.  (Konstantin Shvachko & omalley via cutting)
 
+24. HADOOP-385.  Fix some bugs in record io code generation.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

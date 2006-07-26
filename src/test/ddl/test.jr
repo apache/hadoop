@@ -8,12 +8,14 @@ module org.apache.hadoop.record.test {
         byte            ByteVal;
         int             IntVal;
         long            LongVal;
-        float           FloatVal;
-        double          DoubleVal;
-        ustring         StringVal;
-        buffer          BufferVal;
+        float           FloatVal; // testing inline comment
+        double          DoubleVal; /* testing comment */
+        ustring         StringVal; /* testing multi-line
+                                    * comment */
+        buffer          BufferVal; // testing another // inline comment 
         vector<ustring> VectorVal;
         map<ustring,ustring>   MapVal;
+        RecRecord0      RecordVal;
     }
 }
 

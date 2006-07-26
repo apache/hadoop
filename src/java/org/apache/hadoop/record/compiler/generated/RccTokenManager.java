@@ -31,7 +31,7 @@ public class RccTokenManager implements RccConstants
   public  void setDebugStream(java.io.PrintStream ds) { debugStream = ds; }
 private final int jjMoveStringLiteralDfa0_1()
 {
-   return jjMoveNfa_1(1, 0);
+   return jjMoveNfa_1(0, 0);
 }
 private final void jjCheckNAdd(int state)
 {
@@ -67,7 +67,7 @@ private final int jjMoveNfa_1(int startState, int curPos)
 {
    int[] nextStates;
    int startsAt = 0;
-   jjnewStateCnt = 5;
+   jjnewStateCnt = 3;
    int i = 1;
    jjstateSet[0] = startState;
    int j, kind = 0x7fffffff;
@@ -82,32 +82,22 @@ private final int jjMoveNfa_1(int startState, int curPos)
          {
             switch(jjstateSet[--i])
             {
-               case 1:
+               case 0:
                   if ((0x2400L & l) != 0L)
                   {
                      if (kind > 6)
                         kind = 6;
                   }
-                  else if (curChar == 47)
-                     jjstateSet[jjnewStateCnt++] = 0;
                   if (curChar == 13)
-                     jjstateSet[jjnewStateCnt++] = 3;
+                     jjstateSet[jjnewStateCnt++] = 1;
                   break;
-               case 0:
-                  if (curChar == 47 && kind > 6)
-                     kind = 6;
-                  break;
-               case 2:
-                  if ((0x2400L & l) != 0L && kind > 6)
-                     kind = 6;
-                  break;
-               case 3:
+               case 1:
                   if (curChar == 10 && kind > 6)
                      kind = 6;
                   break;
-               case 4:
+               case 2:
                   if (curChar == 13)
-                     jjstateSet[jjnewStateCnt++] = 3;
+                     jjstateSet[jjnewStateCnt++] = 1;
                   break;
                default : break;
             }
@@ -143,7 +133,7 @@ private final int jjMoveNfa_1(int startState, int curPos)
          kind = 0x7fffffff;
       }
       ++curPos;
-      if ((i = jjnewStateCnt) == (startsAt = 5 - (jjnewStateCnt = startsAt)))
+      if ((i = jjnewStateCnt) == (startsAt = 3 - (jjnewStateCnt = startsAt)))
          return curPos;
       try { curChar = input_stream.readChar(); }
       catch(java.io.IOException e) { return curPos; }

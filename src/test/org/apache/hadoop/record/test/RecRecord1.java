@@ -12,10 +12,11 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
   private java.io.ByteArrayOutputStream mBufferVal;
   private java.util.ArrayList mVectorVal;
   private java.util.TreeMap mMapVal;
+  private org.apache.hadoop.record.test.RecRecord0 mRecordVal;
   private java.util.BitSet bs_;
   public RecRecord1() {
-    bs_ = new java.util.BitSet(11);
-    bs_.set(10);
+    bs_ = new java.util.BitSet(12);
+    bs_.set(11);
   }
   public RecRecord1(
         boolean m0,
@@ -27,9 +28,10 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
         String m6,
         java.io.ByteArrayOutputStream m7,
         java.util.ArrayList m8,
-        java.util.TreeMap m9) {
-    bs_ = new java.util.BitSet(11);
-    bs_.set(10);
+        java.util.TreeMap m9,
+        org.apache.hadoop.record.test.RecRecord0 m10) {
+    bs_ = new java.util.BitSet(12);
+    bs_.set(11);
     mBoolVal=m0; bs_.set(0);
     mByteVal=m1; bs_.set(1);
     mIntVal=m2; bs_.set(2);
@@ -40,6 +42,7 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
     mBufferVal=m7; bs_.set(7);
     mVectorVal=m8; bs_.set(8);
     mMapVal=m9; bs_.set(9);
+    mRecordVal=m10; bs_.set(10);
   }
   public boolean getBoolVal() {
     return mBoolVal;
@@ -101,6 +104,12 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
   public void setMapVal(java.util.TreeMap m_) {
     mMapVal=m_; bs_.set(9);
   }
+  public org.apache.hadoop.record.test.RecRecord0 getRecordVal() {
+    return mRecordVal;
+  }
+  public void setRecordVal(org.apache.hadoop.record.test.RecRecord0 m_) {
+    mRecordVal=m_; bs_.set(10);
+  }
   public void serialize(org.apache.hadoop.record.OutputArchive a_, String tag) throws java.io.IOException {
     if (!validate()) throw new java.io.IOException("All fields not set:");
     a_.startRecord(this,tag);
@@ -143,6 +152,8 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
       a_.endMap(mMapVal,"MapVal");
     }
     bs_.clear(9);
+    a_.writeRecord(mRecordVal,"RecordVal");
+    bs_.clear(10);
     a_.endRecord(this,tag);
   }
   public void deserialize(org.apache.hadoop.record.InputArchive a_, String tag) throws java.io.IOException {
@@ -187,6 +198,9 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
     a_.endMap("MapVal");
     }
     bs_.set(9);
+    mRecordVal= new org.apache.hadoop.record.test.RecRecord0();
+    a_.readRecord(mRecordVal,"RecordVal");
+    bs_.set(10);
     a_.endRecord(tag);
 }
   public String toString() {
@@ -225,6 +239,7 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
       }
       a_.endMap(mMapVal,"MapVal");
     }
+    a_.writeRecord(mRecordVal,"RecordVal");
       a_.endRecord(this,"");
       return new String(s.toByteArray(), "UTF-8");
     } catch (Throwable ex) {
@@ -240,8 +255,9 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
     org.apache.hadoop.record.BinaryInputArchive archive = new org.apache.hadoop.record.BinaryInputArchive(in);
     deserialize(archive, "");
   }
-  private boolean validate() {
+  public boolean validate() {
     if (bs_.cardinality() != bs_.length()) return false;
+    if (!mRecordVal.validate()) return false;
     return true;
 }
   public int compareTo (Object peer_) throws ClassCastException {
@@ -266,6 +282,8 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
     if (ret != 0) return ret;
     if (ret != 0) return ret;
     if (ret != 0) return ret;
+    if (ret != 0) return ret;
+    ret = mRecordVal.compareTo(peer.mRecordVal);
     if (ret != 0) return ret;
      return ret;
   }
@@ -298,6 +316,8 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
     if (!ret) return ret;
     ret = mMapVal.equals(peer.mMapVal);
     if (!ret) return ret;
+    ret = mRecordVal.equals(peer.mRecordVal);
+    if (!ret) return ret;
      return ret;
   }
   public int hashCode() {
@@ -323,9 +343,11 @@ public class RecRecord1 implements org.apache.hadoop.record.Record, org.apache.h
     result = 37*result + ret;
     ret = mMapVal.hashCode();
     result = 37*result + ret;
+    ret = mRecordVal.hashCode();
+    result = 37*result + ret;
     return result;
   }
   public static String signature() {
-    return "LRecRecord1(zbilfdsB[s]{ss})";
+    return "LRecRecord1(zbilfdsB[s]{ss}LRecRecord0(s))";
   }
 }

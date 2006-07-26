@@ -108,7 +108,7 @@ SPECIAL_TOKEN :
 
 <WithinOneLineComment> SPECIAL_TOKEN :
 {
-  <("//" | "\n" | "\r" | "\r\n" )> : DEFAULT
+  <("\n" | "\r" | "\r\n" )> : DEFAULT
 }
 
 <WithinOneLineComment> MORE :

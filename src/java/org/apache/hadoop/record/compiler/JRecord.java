@@ -84,8 +84,8 @@ public class JRecord extends JCompType {
         return "  "+mName+" "+fname+";\n";
     }
     
-    public String genJavaDecl (String fname) {
-        return "  private "+mName+" "+fname+";\n";
+    public String genJavaReadMethod(String fname, String tag) {
+        return genJavaReadWrapper(fname, tag, false);
     }
     
     public String genJavaReadWrapper(String fname, String tag, boolean decl) {
@@ -320,7 +320,7 @@ public class JRecord extends JCompType {
         jj.write("    deserialize(archive, \"\");\n");
         jj.write("  }\n");
         
-        jj.write("  private boolean validate() {\n");
+        jj.write("  public boolean validate() {\n");
         jj.write("    if (bs_.cardinality() != bs_.length()) return false;\n");
         for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
             JField jf = (JField) i.next();

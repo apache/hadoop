@@ -60,6 +60,9 @@ public class TestRecordIO extends TestCase {
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
+            RecRecord0 r0 = new RecRecord0();
+            r0.setStringVal("other random text");
+            r1.setRecordVal(r0);
             out.write(r1);
             ostream.close();
             FileInputStream istream = new FileInputStream(tmpfile);
@@ -91,6 +94,9 @@ public class TestRecordIO extends TestCase {
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
+            RecRecord0 r0 = new RecRecord0();
+            r0.setStringVal("other random text");
+            r1.setRecordVal(r0);
             out.write(r1);
             ostream.close();
             FileInputStream istream = new FileInputStream(tmpfile);
@@ -122,6 +128,9 @@ public class TestRecordIO extends TestCase {
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
+            RecRecord0 r0 = new RecRecord0();
+            r0.setStringVal("other random text");
+            r1.setRecordVal(r0);
             out.write(r1);
             ostream.close();
             FileInputStream istream = new FileInputStream(tmpfile);
