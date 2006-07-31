@@ -108,6 +108,9 @@ Trunk (unreleased changes)
 30. HADOOP-362.  Fix a problem where jobs hang when status messages
     are recieved out-of-order.  (omalley via cutting)
 
+31. HADOOP-287.  Use quicksort in instead of mergesort for in-memory
+    sorting algorithm in SequenceFile.  (Benjamin Reed via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

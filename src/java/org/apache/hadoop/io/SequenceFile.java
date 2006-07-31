@@ -570,7 +570,6 @@ public class SequenceFile {
 
       private int[] starts = new int[1024];
       private int[] pointers = new int[starts.length];
-      private int[] pointersCopy = new int[starts.length];
       private int[] keyLengths = new int[starts.length];
       private int[] lengths = new int[starts.length];
       
@@ -644,7 +643,6 @@ public class SequenceFile {
         int newLength = starts.length * 3 / 2;
         starts = grow(starts, newLength);
         pointers = grow(pointers, newLength);
-        pointersCopy = new int[newLength];
         keyLengths = grow(keyLengths, newLength);
         lengths = grow(lengths, newLength);
       }
@@ -682,48 +680,58 @@ public class SequenceFile {
         }
       }
 
+      /**
+       * Ensure that pointers[p] <= pointers[r]. This function
+       * is used to make the choice of pivot closer to optimal.
+       * See "Median-of-Three Partitioning" in Sedgewick book.
+     */
+      final private void fix(int p, int r) {
+        if (compare(pointers[p], pointers[r]) > 0) swap(pointers, p, r);
+      }
+      
+      private void quicksort(int p, int r) {
+        if (p-r < 13) {
+          for (int i=p; i<=r; i++)
+            for (int j=i; j>p && compare(pointers[j-1], pointers[j])>0; j--)
+              swap(pointers, j, j-1);
+          return;    	  			
+        }
+    	// sort the first middle and last elements
+    	fix(p, r);
+    	fix(p, (p+r)/2);
+    	fix((p+r)/2, r);
+      	// Divide
+    	int x = pointers[(p+r)/2];
+        int i = p-1;
+        int j = r+1;
+        while(true) {
+          j--;
+          i++;
+          while(compare(pointers[j], x) > 0) j--;
+          while(compare(pointers[i], x) < 0) i++;
+          if (i<j) swap(pointers, i, j);
+          else break;
+        }
+        // Conquer
+        // Recurse on smaller interval first to keep stack as shallow
+        // as possible. (See Sedgewick book.)
+        if (j-p < r-j-1) {
+          quicksort(p, j);
+          quicksort(j+1, r);
+        } else {
+          quicksort(j+1, r);
+          quicksort(p, j);
+        }
+      }
+      
       private void sort(int count) {
-        System.arraycopy(pointers, 0, pointersCopy, 0, count);
-        mergeSort(pointersCopy, pointers, 0, count);
+        quicksort(0, count-1);
       }
 
       private int compare(int i, int j) {
         return comparator.compare(rawBuffer, starts[i], keyLengths[i],
                                   rawBuffer, starts[j], keyLengths[j]);
       }
-
-      private void mergeSort(int src[], int dest[], int low, int high) {
-        int length = high - low;
-
-        // Insertion sort on smallest arrays
-        if (length < 7) {
-          for (int i=low; i<high; i++)
-            for (int j=i; j>low && compare(dest[j-1], dest[j])>0; j--)
-              swap(dest, j, j-1);
-          return;
-        }
-
-        // Recursively sort halves of dest into src
-        int mid = (low + high) >> 1;
-        mergeSort(dest, src, low, mid);
-        mergeSort(dest, src, mid, high);
-
-        // If list is already sorted, just copy from src to dest.  This is an
-        // optimization that results in faster sorts for nearly ordered lists.
-        if (compare(src[mid-1], src[mid]) <= 0) {
-          System.arraycopy(src, low, dest, low, length);
-          return;
-        }
-
-        // Merge sorted halves (now in src) into dest
-        for(int i = low, p = low, q = mid; i < high; i++) {
-          if (q>=high || p<mid && compare(src[p], src[q]) <= 0)
-            dest[i] = src[p++];
-          else
-            dest[i] = src[q++];
-        }
-      }
-
       private void swap(int x[], int a, int b) {
 	int t = x[a];
 	x[a] = x[b];
