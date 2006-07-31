@@ -138,7 +138,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                       TaskTrackerStatus trackerStatus = 
                         getTaskTracker(trackerName);
                       job.failedTask(tip, taskId, "Error launching task", 
-                                     trackerStatus.getHost(), trackerName);
+                                     trackerStatus.getHost(), trackerName,
+                                     myMetrics);
                     }
                     itr.remove();
                   } else {
@@ -1145,25 +1146,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 LOG.info("Serious problem.  While updating status, cannot find taskid " + report.getTaskId());
             } else {
                 expireLaunchingTasks.removeTask(taskId);
-                JobInProgress job = tip.getJob();
-
-                if (report.getRunState() == TaskStatus.SUCCEEDED) {
-                    job.completedTask(tip, report);
-                    if (tip.isMapTask()) {
-                        myMetrics.completeMap();
-                    } else {
-                        myMetrics.completeReduce();
-                    }
-                    if (job.getStatus().getRunState() == JobStatus.SUCCEEDED) {
-                        myMetrics.completeJob();
-                    }
-                } else if (report.getRunState() == TaskStatus.FAILED) {
-                    // Tell the job to fail the relevant task
-                    job.failedTask(tip, report.getTaskId(), report, 
-                                   status.getTrackerName());
-                } else {
-                    job.updateTaskStatus(tip, report);
-                }
+                tip.getJob().updateTaskStatus(tip, report, myMetrics);
             }
         }
     }
@@ -1190,7 +1173,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                   // if the job is done, we don't want to change anything
                   if (job.getStatus().getRunState() == JobStatus.RUNNING) {
                     job.failedTask(tip, taskId, "Lost task tracker", 
-                                   hostname, trackerName);
+                                   hostname, trackerName, myMetrics);
                   }
                 }
             }

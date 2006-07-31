@@ -70,6 +70,9 @@ class TaskInProgress {
     private JobConf conf;
     private boolean runSpeculative;
     private TreeMap taskDiagnosticData = new TreeMap();
+    /**
+     * Map from taskId -> TaskStatus
+     */
     private TreeMap taskStatuses = new TreeMap();
 
     private TreeSet machinesWhereFailed = new TreeSet();
@@ -227,10 +230,10 @@ class TaskInProgress {
      * task ID and overall status, plus reports for all the
      * component task-threads that have ever been started.
      */
-    TaskReport generateSingleReport() {
+    synchronized TaskReport generateSingleReport() {
       ArrayList diagnostics = new ArrayList();
       for (Iterator i = taskDiagnosticData.values().iterator(); i.hasNext();) {
-        diagnostics.addAll((Vector)i.next());
+        diagnostics.addAll((List)i.next());
       }
       return new TaskReport
         (getTIPId(), (float)progress, state,
@@ -245,23 +248,44 @@ class TaskInProgress {
      * A status message from a client has arrived.
      * It updates the status of a single component-thread-task,
      * which might result in an overall TaskInProgress status update.
+     * @return has the task changed its state noticably?
      */
-    public void updateStatus(TaskStatus status) {
+    synchronized boolean updateStatus(TaskStatus status) {
         String taskid = status.getTaskId();
         String diagInfo = status.getDiagnosticInfo();
+        TaskStatus oldStatus = (TaskStatus) taskStatuses.get(taskid);
+        boolean changed = true;
         if (diagInfo != null && diagInfo.length() > 0) {
-            LOG.info("Error from "+taskid+": "+diagInfo);
-            Vector diagHistory = (Vector) taskDiagnosticData.get(taskid);
-            if (diagHistory == null) {
-                diagHistory = new Vector();
-                taskDiagnosticData.put(taskid, diagHistory);
-            }
-            diagHistory.add(diagInfo);
+          LOG.info("Error from "+taskid+": "+diagInfo);
+          List diagHistory = (List) taskDiagnosticData.get(taskid);
+          if (diagHistory == null) {
+              diagHistory = new ArrayList();
+              taskDiagnosticData.put(taskid, diagHistory);
+          }
+          diagHistory.add(diagInfo);
         }
+        if (oldStatus != null) {
+          int oldState = oldStatus.getRunState();
+          int newState = status.getRunState();
+          
+          // The task is not allowed to move from completed back to running.
+          // We have seen out of order status messagesmoving tasks from complete
+          // to running. This is a spot fix, but it should be addressed more
+          // globally.
+          if (newState == TaskStatus.RUNNING &&
+              (oldState == TaskStatus.FAILED || 
+               oldState == TaskStatus.SUCCEEDED)) {
+            return false;
+          }
+          
+          changed = oldState != newState;
+        }
+        
         taskStatuses.put(taskid, status);
 
         // Recompute progress
         recomputeProgress();
+        return changed;
     }
 
     /**

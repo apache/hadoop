@@ -19,6 +19,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 
 import java.io.*;
 import java.net.*;
@@ -266,15 +267,28 @@ class JobInProgress {
     // Status update methods
     ////////////////////////////////////////////////////
     public synchronized void updateTaskStatus(TaskInProgress tip, 
-                                              TaskStatus status) {
+                                              TaskStatus status,
+                                              JobTrackerMetrics metrics) {
+
         double oldProgress = tip.getProgress();   // save old progress
-        tip.updateStatus(status);                 // update tip
-        LOG.debug("Taking progress for " + tip.getTIPId() + " from " + 
-                 oldProgress + " to " + tip.getProgress());
+        boolean wasRunning = tip.isRunning();
+        boolean wasComplete = tip.isComplete();
+        boolean change = tip.updateStatus(status);
+        if (change) {
+          if (status.getRunState() == TaskStatus.SUCCEEDED) {
+            completedTask(tip, status, metrics);
+          } else if (status.getRunState() == TaskStatus.FAILED) {
+            // Tell the job to fail the relevant task
+            failedTask(tip, status.getTaskId(), status, status.getTaskTracker(),
+                       wasRunning, wasComplete);
+          }          
+        }
 
         //
         // Update JobInProgress status
         //
+        LOG.debug("Taking progress for " + tip.getTIPId() + " from " + 
+                  oldProgress + " to " + tip.getProgress());
         double progressDelta = tip.getProgress() - oldProgress;
         if (tip.isMapTask()) {
           if (maps.length == 0) {
@@ -464,25 +478,28 @@ class JobInProgress {
      * A taskid assigned to this JobInProgress has reported in successfully.
      */
     public synchronized void completedTask(TaskInProgress tip, 
-                                           TaskStatus status) {
+                                           TaskStatus status,
+                                           JobTrackerMetrics metrics) {
         String taskid = status.getTaskId();
-        boolean oldDone = tip.isComplete();
-        updateTaskStatus(tip, status);
-        LOG.info("Taskid '" + taskid + "' has finished successfully.");
+        if (tip.isComplete()) {
+          LOG.info("Already complete TIP " + tip.getTIPId() + 
+                   " has completed task " + taskid);
+          return;
+        } else {
+          LOG.info("Task '" + taskid + "' has completed " + tip.getTIPId() + 
+                   " successfully.");          
+        }
+        
         tip.completed(taskid);
-        boolean newDone = tip.isComplete();
         // updating the running/finished map/reduce counts
-        if (oldDone != newDone) {
-            if (newDone) {  
-                if (tip.isMapTask()){
-                    runningMapTasks -= 1;
-                    finishedMapTasks += 1;
-                }
-                else{
-                    runningReduceTasks -= 1;
-                    finishedReduceTasks += 1;
-                }    
-            }
+        if (tip.isMapTask()){
+          runningMapTasks -= 1;
+          finishedMapTasks += 1;
+          metrics.completeMap();
+        } else{
+          runningReduceTasks -= 1;
+          finishedReduceTasks += 1;
+          metrics.completeReduce();
         }
         
         //
@@ -508,10 +525,12 @@ class JobInProgress {
         // If all tasks are complete, then the job is done!
         //
         if (status.getRunState() == JobStatus.RUNNING && allDone) {
-            this.status = new JobStatus(this.status.getJobId(), 1.0f, 1.0f, 
-                                        JobStatus.SUCCEEDED);
+            this.status.runState = JobStatus.SUCCEEDED;
             this.finishTime = System.currentTimeMillis();
             garbageCollect();
+            LOG.info("Job " + this.status.getJobId() + 
+                     " has completed successfully.");
+            metrics.completeJob();
         }
     }
 
@@ -550,33 +569,29 @@ class JobInProgress {
      * we need to schedule reexecution so that downstream reduce tasks can 
      * obtain the map task's output.
      */
-    public synchronized void failedTask(TaskInProgress tip, String taskid, 
-                                        TaskStatus status, String trackerName) {
-        boolean oldStatus = tip.isRunning();
-        boolean oldRun = tip.isComplete();
+    private void failedTask(TaskInProgress tip, String taskid, 
+                            TaskStatus status, String trackerName,
+                            boolean wasRunning, boolean wasComplete) {
         tip.failedSubTask(taskid, trackerName);
-        updateTaskStatus(tip, status);
-        boolean newStatus = tip.isRunning();
-        boolean newRun = tip.isComplete();
+        boolean isRunning = tip.isRunning();
+        boolean isComplete = tip.isComplete();
+        
         //update running  count on task failure.
-        if (oldStatus != newStatus) {
-           if (!newStatus) {
-              if (tip.isMapTask()){
-                  runningMapTasks -= 1;
-              }
-              else{
-                  runningReduceTasks -= 1;
-              }
-           }
+        if (wasRunning && !isRunning) {
+          if (tip.isMapTask()){
+            runningMapTasks -= 1;
+          } else {
+            runningReduceTasks -= 1;
+          }
         }
+        
         // the case when the map was complete but the task tracker went down.
-        if (oldRun != newRun) {
-            if (oldRun){
-                if (tip.isMapTask()){
-                    finishedMapTasks -= 1;
-                }
-            }
+        if (wasComplete && !isComplete) {
+          if (tip.isMapTask()){
+            finishedMapTasks -= 1;
+          }
         }
+        
         // After this, try to assign tasks with the one after this, so that
         // the failed task goes to the end of the list.
         if (tip.isMapTask()) {
@@ -605,7 +620,9 @@ class JobInProgress {
      * @param trackerName The task tracker the task failed on
      */
     public void failedTask(TaskInProgress tip, String taskid, 
-                           String reason, String hostname, String trackerName) {
+                           String reason, String hostname, 
+                           String trackerName,
+                           JobTrackerMetrics metrics) {
        TaskStatus status = new TaskStatus(taskid,
                                           tip.isMapTask(),
                                           0.0f,
@@ -613,7 +630,7 @@ class JobInProgress {
                                           reason,
                                           reason,
                                           trackerName);
-       failedTask(tip, taskid, status, trackerName);
+       updateTaskStatus(tip, status, metrics);
     }
        
                            

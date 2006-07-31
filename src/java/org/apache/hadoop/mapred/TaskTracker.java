@@ -357,15 +357,6 @@ public class TaskTracker
                     TaskInProgress tip = (TaskInProgress) it.next();
                     TaskStatus status = tip.createStatus();
                     taskReports.add(status);
-                    if (status.getRunState() != TaskStatus.RUNNING) {
-                        if (tip.getTask().isMapTask()) {
-                            mapTotal--;
-                        } else {
-                            reduceTotal--;
-                        }
-                        myMetrics.completeTask();
-                        it.remove();
-                    }
                 }
             }
 
@@ -378,6 +369,21 @@ public class TaskTracker
                                     httpPort, taskReports, 
                                     failures); 
             int resultCode = jobClient.emitHeartbeat(status, justStarted);
+            synchronized (this) {
+              for (Iterator it = taskReports.iterator();
+                   it.hasNext(); ) {
+                  TaskStatus taskStatus = (TaskStatus) it.next();
+                  if (taskStatus.getRunState() != TaskStatus.RUNNING) {
+                      if (taskStatus.getIsMap()) {
+                          mapTotal--;
+                      } else {
+                          reduceTotal--;
+                      }
+                      myMetrics.completeTask();
+                      runningTasks.remove(taskStatus.getTaskId());
+                  }
+              }
+            }
             justStarted = false;
               
             if (resultCode == InterTrackerProtocol.UNKNOWN_TASKTRACKER) {
