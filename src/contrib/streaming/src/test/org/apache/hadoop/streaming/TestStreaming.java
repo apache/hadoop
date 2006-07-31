@@ -80,7 +80,7 @@ public class TestStreaming extends TestCase
     vargs.add(jvm.toString());
     // copy parent classpath
     vargs.add("-classpath");
-    vargs.add(System.getProperty("java.class.path"));
+    vargs.add("\"" + System.getProperty("java.class.path") + "\"");
 
     // Add main class and its arguments
     vargs.add(main.getName());
