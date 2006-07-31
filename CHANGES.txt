@@ -101,6 +101,10 @@ Trunk (unreleased changes)
     on nodes with the least free space first.
     (Johan Oskarson via cutting)
 
+29. HADOOP-389.  Fix intermittent failures of mapreduce unit tests.
+    Also fix some build dependencies.
+    (Mahadev & Konstantin via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
