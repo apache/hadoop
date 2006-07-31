@@ -208,7 +208,7 @@ public class Text implements WritableComparable {
    */
   public String toString() {
     try {
-      return decode(bytes);
+      return decode(bytes, 0, length);
     } catch (CharacterCodingException e) { 
       //bytes is supposed to contain valid utf8, therefore, 
       // this should never happen
@@ -308,6 +308,11 @@ public class Text implements WritableComparable {
     return decode(ByteBuffer.wrap(utf8), false);
   }
   
+  public static String decode(byte[] utf8, int start, int length) 
+      throws CharacterCodingException {
+      return decode(ByteBuffer.wrap(utf8, start, length), false);
+  }
+  
   /**
    * Converts the provided byte array to a String using the
    * UTF-8 encoding. If <code>replace</code> is true, then
@@ -315,9 +320,9 @@ public class Text implements WritableComparable {
    * substitution character, which is U+FFFD. Otherwise the
    * method throws a MalformedInputException.
    */
-  public static String decode(byte[] utf8, boolean replace) 
+  public static String decode(byte[] utf8, int start, int length, boolean replace) 
     throws CharacterCodingException {
-    return decode(ByteBuffer.wrap(utf8), replace);
+    return decode(ByteBuffer.wrap(utf8, start, length), replace);
   }
   
   private static String decode(ByteBuffer utf8, boolean replace) 
