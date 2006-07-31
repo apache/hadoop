@@ -18,9 +18,7 @@ package org.apache.hadoop.io;
 
 import junit.framework.TestCase;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -72,25 +70,24 @@ public class TestText extends TestCase {
 
   public void testWritable() throws Exception {
     for (int i = 0; i < NUM_ITERATIONS; i++) {
-      try {
         String str;
         if(i == 0 )
             str = getLongString();
         else
             str = getTestString();
         TestWritable.testWritable(new Text(str));
-      } catch (IOException e) {
-          LOG.info(e);
-      }
     }
   }
 
 
   public void testCoding() throws Exception {
-    for (int i = 0; i < NUM_ITERATIONS; i++) {
-      try {
+      String before = "Bad \t encoding \t testcase";
+      Text text = new Text(before);
+      String after = text.toString();
+      assertTrue(before.equals(after));
+
+      for (int i = 0; i < NUM_ITERATIONS; i++) {
           // generate a random string
-          String before;
           if(i == 0 )
               before = getLongString();
           else
@@ -106,12 +103,9 @@ public class TestText extends TestCase {
                       utf8Java, 0, utf8Java.length));
               
           // test utf8 to string
-          String after = Text.decode(utf8Java);
+          after = Text.decode(utf8Java);
           assertTrue(before.equals(after));
-      }catch(CharacterCodingException e) {
-          LOG.info( e );
       }
-    }
   }
   
   
@@ -120,31 +114,27 @@ public class TestText extends TestCase {
     DataInputBuffer in = new DataInputBuffer();
 
     for (int i = 0; i < NUM_ITERATIONS; i++) {
-        try {
-          // generate a random string
-          String before;          
-          if(i == 0 )
-              before = getLongString();
-          else
-              before = getTestString();
-
-          // write it
-          out.reset();
-          Text.writeString(out, before);
-
-          // test that it reads correctly
-          in.reset(out.getData(), out.getLength());
-          String after = Text.readString(in);
-          assertTrue(before.equals(after));
-    
-          // Test compatibility with Java's other decoder 
-          int strLenSize = WritableUtils.getVIntSize(Text.utf8Length(before));
-          String after2 = new String(out.getData(), strLenSize, 
-          out.getLength()-strLenSize, "UTF-8");
-              assertTrue(before.equals(after2));
-        }catch(IOException e) {
-            LOG.info(e);
-        }
+        // generate a random string
+        String before;          
+        if(i == 0 )
+            before = getLongString();
+        else
+            before = getTestString();
+        
+        // write it
+        out.reset();
+        Text.writeString(out, before);
+        
+        // test that it reads correctly
+        in.reset(out.getData(), out.getLength());
+        String after = Text.readString(in);
+        assertTrue(before.equals(after));
+        
+        // Test compatibility with Java's other decoder 
+        int strLenSize = WritableUtils.getVIntSize(Text.utf8Length(before));
+        String after2 = new String(out.getData(), strLenSize, 
+                out.getLength()-strLenSize, "UTF-8");
+        assertTrue(before.equals(after2));
       }
   }
 
@@ -154,7 +144,6 @@ public class TestText extends TestCase {
       DataOutputBuffer out3 = new DataOutputBuffer();
       Text.Comparator comparator = new Text.Comparator();
       for (int i=0; i<NUM_ITERATIONS; i++ ) {
-        try {
           // reset output buffer
           out1.reset();
           out2.reset();
@@ -193,24 +182,23 @@ public class TestText extends TestCase {
           assertEquals(txt1.compareTo(txt3), 0);
           assertEquals(comparator.compare(out1.getData(), 0, out3.getLength(),
                   out3.getData(), 0, out3.getLength()), 0);
-        } catch (IOException e) {
-            LOG.info(e);
-        }
       }
   }
       
   public void testFind() throws Exception {
-      try {
-          Text text = new Text("abcd\u20acbdcd\u20ac");
-          assertTrue(text.find("abd")==-1);
-          assertTrue(text.find("ac")==-1);
-          assertTrue(text.find("\u20ac")==4);
-          assertTrue(text.find("\u20ac", 5)==11);
-      } catch( CharacterCodingException e) {
-          LOG.warn(e);
-      }
+      Text text = new Text("abcd\u20acbdcd\u20ac");
+      assertTrue(text.find("abd")==-1);
+      assertTrue(text.find("ac")==-1);
+      assertTrue(text.find("\u20ac")==4);
+      assertTrue(text.find("\u20ac", 5)==11);
   }
-  
+
+  public void testValidate() throws Exception {
+      Text text = new Text("abcd\u20acbdcd\u20ac");
+      byte [] utf8 = text.getBytes();
+      int length = text.getLength();
+      Text.validateUTF(utf8, 0, length);
+  }
   public static void main(String[] args)  throws Exception
   {
     TestText test = new TestText("main");
@@ -219,5 +207,6 @@ public class TestText extends TestCase {
     test.testCoding();
     test.testWritable();
     test.testFind();
+    test.testValidate();
   }
 }

@@ -415,13 +415,17 @@ public class Text implements WritableComparable {
    * @param utf8: byte array
    * @exception MalformedInputException if the byte array contains invalid utf-8
    */
-  public static void validateUTF8(byte[] utf8) 
+  public static void validateUTF8(byte[] utf8) throws MalformedInputException {
+     validateUTF(utf8, 0, utf8.length);     
+  }
+  
+  public static void validateUTF(byte[] utf8, int start, int len)
     throws MalformedInputException {
-    int count = 0;
+    int count = start;
     int leadByte = 0;
     int length = 0;
     int state = LEAD_BYTE;
-    while (count < utf8.length) {
+    while (count < start+len) {
       int aByte = ((int) utf8[count] & 0xFF);
 
       switch (state) {
@@ -433,7 +437,6 @@ public class Text implements WritableComparable {
         case 0: // check for ASCII
           if (leadByte > 0x7E)
             throw new MalformedInputException(count);
-          state = TRAIL_BYTE;
           break;
         case 1:
           if (leadByte < 0xC2 || leadByte > 0xDF)
