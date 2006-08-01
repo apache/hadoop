@@ -59,6 +59,34 @@ public class DFSShell extends ToolBase {
     void copyToLocal(String srcf, Path dst) throws IOException {
         fs.copyToLocalFile(new Path(srcf), dst);
     }
+    
+    /**
+     * Get all the files in the directory and output them to
+     * only one file on local fs 
+     * srcf is kept.
+     */
+    void copyMergeToLocal(String srcf, Path dst) throws IOException {
+        copyMergeToLocal(srcf, dst, false);
+    }    
+    
+
+    /**
+     * Get all the files in the directory and output them to
+     * only one file on local fs 
+     * srcf is kept.
+     * 
+     * Also adds a string between the files (useful for adding \n
+     * to a text file)
+     */
+    void copyMergeToLocal(String srcf, Path dst, boolean endline) throws IOException {
+        if(endline) {
+            FileUtil.copyMerge(fs, new Path(srcf), 
+                    FileSystem.getNamed("local", conf), dst, false, conf, "\n");
+        } else {
+            FileUtil.copyMerge(fs, new Path(srcf), 
+                    FileSystem.getNamed("local", conf), dst, false, conf, null);
+        }
+    }      
 
     /**
      * Obtain the indicated DFS file and copy to the local name.
@@ -300,8 +328,8 @@ public class DFSShell extends ToolBase {
                     " [-conf <configuration file>] [-D <[property=value>]"+
                     " [-ls <path>] [-lsr <path>] [-du <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]" +
                     " [-put <localsrc> <dst>] [-copyFromLocal <localsrc> <dst>] [-moveFromLocal <localsrc> <dst>]" + 
-                    " [-get <src> <localdst>] [-cat <src>] [-copyToLocal <src> <localdst>] [-moveToLocal <src> <localdst>]" +
-                    " [-mkdir <path>] [-report] [-setrep [-R] <rep> <path/file>]");
+                    " [-get <src> <localdst>] [-getmerge <src> <localdst> [addnl]] [-cat <src>] [-copyToLocal <src> <localdst>]" +
+                    " [-moveToLocal <src> <localdst>] [-mkdir <path>] [-report] [-setrep [-R] <rep> <path/file>]");
             return -1;
         }
 
@@ -318,6 +346,12 @@ public class DFSShell extends ToolBase {
                 moveFromLocal(new Path(argv[i++]), argv[i++]);
             } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd)) {
                 copyToLocal(argv[i++], new Path(argv[i++]));
+            } else if ("-getmerge".equals(cmd)) {
+                if(argv.length>i+2)
+                    copyMergeToLocal(argv[i++], new Path(argv[i++]), Boolean.parseBoolean(argv[i++]));
+                else
+                    copyMergeToLocal(argv[i++], new Path(argv[i++]));
+                
             } else if ("-cat".equals(cmd)) {
                 cat(argv[i++]);
             } else if ("-moveToLocal".equals(cmd)) {

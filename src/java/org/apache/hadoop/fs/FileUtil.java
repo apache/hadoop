@@ -82,6 +82,45 @@ public class FileUtil {
       return true;
     }
   }
+  
+  /** Copy all files in a directory to one output file (merge). */
+  public static boolean copyMerge(FileSystem srcFS, Path srcDir, 
+                             FileSystem dstFS, Path dstFile, 
+                             boolean deleteSource,
+                             Configuration conf, String addString) throws IOException {
+      dstFile = checkDest(srcDir.getName(), dstFS, dstFile);
+
+    if (!srcFS.isDirectory(srcDir))
+      return false;
+   
+    OutputStream out = dstFS.create(dstFile);
+    
+    try {
+      Path contents[] = srcFS.listPaths(srcDir);
+      for (int i = 0; i < contents.length; i++) {
+        if (srcFS.isFile(contents[i])) {
+          InputStream in = srcFS.open(contents[i]);
+          try {
+            copyContent(in, out, conf, false);
+            if(addString!=null)
+              out.write(addString.getBytes("UTF-8"));
+                
+          } finally {
+            in.close();
+          } 
+        }
+      }
+    } finally {
+      out.close();
+    }
+    
+
+    if (deleteSource) {
+      return srcFS.delete(srcDir);
+    } else {
+      return true;
+    }
+  }  
 
   /** Copy local files to a FileSystem. */
   public static boolean copy(File src,
@@ -142,7 +181,13 @@ public class FileUtil {
   }
 
   private static void copyContent(InputStream in, OutputStream out,
-                                  Configuration conf) throws IOException {
+          Configuration conf) throws IOException {
+    copyContent(in, out, conf, true);
+  }
+
+  
+  private static void copyContent(InputStream in, OutputStream out,
+                                  Configuration conf, boolean close) throws IOException {
     byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
     try {
       int bytesRead = in.read(buf);
@@ -151,7 +196,8 @@ public class FileUtil {
         bytesRead = in.read(buf);
       }
     } finally {
-      out.close();
+      if(close)
+        out.close();
     }
   }
 

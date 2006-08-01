@@ -120,9 +120,13 @@ Trunk (unreleased changes)
 34. HADOOP-345.  Permit iteration over Configuration key/value pairs.
     (Michel Tourn via cutting)
 
-35. HADOOP-409.  Streaming contrib module: make Hadoop configuration
+35. HADOOP-409.  Streaming contrib module: make configuration
     properties available to commands as environment variables.
     (Michel Tourn via cutting)
+
+36. HADOOP-369.  Add -getmerge option to dfs command that appends all
+    files in a directory into a single local file.
+    (Johan Oskarson via cutting)
 
 
 Release 0.4.0 - 2006-06-28
