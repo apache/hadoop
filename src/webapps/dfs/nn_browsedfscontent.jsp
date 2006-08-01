@@ -7,6 +7,7 @@
   import="org.apache.hadoop.dfs.*"
   import="java.text.DateFormat"
   import="java.net.InetAddress"
+  import="java.net.URLEncoder"
 %>
 <%!
   FSNamesystem fsn = FSNamesystem.getFSNamesystem();
@@ -25,7 +26,9 @@
     }
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
     redirectLocation = "http://" + fqdn + ":" + redirectPort + 
-                       "/browseDirectory.jsp?dir=/";
+                       "/browseDirectory.jsp?namenodeInfoPort=" + 
+                       fsn.getNameNodeInfoPort() +
+                       "&dir=" + URLEncoder.encode("/", "UTF-8");
     resp.sendRedirect(redirectLocation);
   }
 %>

@@ -10,6 +10,7 @@
 <%!
   FSNamesystem fsn = FSNamesystem.getFSNamesystem();
   String namenodeLabel = fsn.getDFSNameNodeMachine() + ":" + fsn.getDFSNameNodePort();
+  long currentTime;
 
   public void generateLiveNodeData(JspWriter out, DatanodeInfo d) 
     throws IOException {
@@ -21,8 +22,8 @@
     String percentUsed = DFSShell.limitDecimal(((1.0 * u)/c)*100, 2);
     out.print("<td style=\"vertical-align: top;\"> <b>" + 
               d.getName() +
-              "</b>&nbsp;<br><i><b>LastContact:</b>" + 
-              new Date(d.getLastUpdate())+ ";&nbsp;");
+              "</b>&nbsp;<br><i><b>LastContact:</b>&nbsp;" + 
+             (currentTime - d.getLastUpdate())/1000 + " second(s) back;&nbsp;");
     out.print("<b>Total raw bytes:</b>&nbsp;" + c + "(" + cGb + 
               "&nbsp;GB);&nbsp;");
     out.print("<b>Percent used:</b>&nbsp;" + percentUsed);
@@ -37,16 +38,19 @@
       out.print("There are no datanodes in the cluster");
     }
     else {
+      out.print("<br><b>Number of live data stores: " + live.size() + 
+                ", dead datanodes: " + dead.size() + "</b></br>");
       out.print("<table style=\"width: 100%; text-align: left;\" border=\"1\""+
                 " cellpadding=\"2\" cellspacing=\"2\">");
       out.print("<tbody>");
       out.print("<tr>");
-      out.print("<td style=\"vertical-align: top;\"><B>Live Nodes</B><br></td>");
-      out.print("<td style=\"vertical-align: top;\"><B>Dead Nodes</B><br></td>");
+      out.print("<td style=\"vertical-align: top;\"><B>Live Data Stores</B><br></td>");
+      out.print("<td style=\"vertical-align: top;\"><B>Dead Data Stores</B><br></td>");
       out.print("</tr>");
       int i = 0;
       int min = (live.size() > dead.size()) ? dead.size() : live.size();
       int max = (live.size() > dead.size()) ? live.size() : dead.size();
+      currentTime = System.currentTimeMillis();
       for (i = 0; i < min; i++) {
         DatanodeInfo l = (DatanodeInfo)live.elementAt(i);
         DatanodeInfo d = (DatanodeInfo)dead.elementAt(i);
@@ -87,15 +91,17 @@
 
 <html>
 
-<title>Hadoop DFS Health/Status</title>
+<title>Hadoop NameNode <%=namenodeLabel%></title>
 
 <body>
 <h1>NameNode '<%=namenodeLabel%>'</h1>
 
-This NameNode has been up since <%= fsn.getStartTime()%>.<br>
+This NameNode has been up since <%= fsn.getStartTime()%>.<br><br>
+<b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b>
 <hr>
 <h2>Cluster Summary</h2>
 The capacity of this cluster is <%= totalCapacity()%> and remaining is <%= totalRemaining()%>.
+<br>
 <% 
    generateDFSHealthReport(out); 
 %>

@@ -20,6 +20,11 @@
       out.print("Invalid input");
       return;
     }
+
+    String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
+    int namenodeInfoPort = -1;
+    if (namenodeInfoPortStr != null)
+      namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
     
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
     DFSFileInfo[] files = dfs.listPaths(new UTF8(dir));
@@ -32,7 +37,8 @@
     File f = new File(dir);
     String parent;
     if ((parent = f.getParent()) != null)
-      out.print("<a href=\"" + req.getRequestURL() + "?dir=" + parent + 
+      out.print("<a href=\"" + req.getRequestURL() + "?dir=" + parent +
+                "&namenodeInfoPort=" + namenodeInfoPort +
                 "\">Go to parent directory</a><br>");
 
     if (files == null || files.length == 0) {
@@ -61,11 +67,19 @@
         }
         DatanodeInfo chosenNode = jspHelper.bestNode(blocks[0]);
         String fqdn = InetAddress.getByName(chosenNode.getHost()).getCanonicalHostName();
+        String datanodeAddr = chosenNode.getName();
+        int datanodePort = Integer.parseInt(
+                                  datanodeAddr.substring(
+                                        datanodeAddr.indexOf(':') + 1, 
+                                  datanodeAddr.length())); 
         String datanodeUrl = "http://"+fqdn+":" +
                              chosenNode.getInfoPort() + 
-                             "/browseData.jsp?filename=" +
-                             files[i].getPath() + "&blockSize=" + 
-                             files[i].getBlockSize();
+                             "/browseBlock.jsp?blockId=" +
+                             blocks[0].getBlock().getBlockId() +
+                             "&blockSize=" + files[i].getBlockSize() +
+               "&filename=" + URLEncoder.encode(files[i].getPath(), "UTF-8") + 
+                             "&datanodePort=" + datanodePort + 
+                             "&namenodeInfoPort=" + namenodeInfoPort;
         cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getPath()+"</a>";
         cols[1] = "file";
         cols[2] = Long.toString(files[i].getLen());
@@ -74,7 +88,9 @@
         jspHelper.addTableRow(out, cols);
       }
       else {
-        String datanodeUrl = req.getRequestURL()+"?dir="+files[i].getPath();
+        String datanodeUrl = req.getRequestURL()+"?dir="+
+            URLEncoder.encode(files[i].getPath(), "UTF-8") + 
+            "&namenodeInfoPort=" + namenodeInfoPort;
         cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getPath()+"</a>";
         cols[1] = "dir";
         cols[2] = "0";
@@ -84,6 +100,10 @@
       }
     }
     jspHelper.addTableFooter(out);
+    String namenodeHost = jspHelper.nameNodeAddr.getHostName();
+    out.print("<br><a href=\"http://" + 
+              InetAddress.getByName(namenodeHost).getCanonicalHostName() + ":" +
+              namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
     dfs.close();
   }
 

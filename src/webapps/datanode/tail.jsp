@@ -20,6 +20,12 @@
     
     int chunkSizeToView = 0;
 
+    String referrer = req.getParameter("referrer");
+    boolean noLink = false;
+    if (referrer == null) {
+      noLink = true;
+    }
+
     String filename = req.getParameter("filename");
     if (filename == null) {
       out.print("Invalid input (filename absent)");
@@ -30,17 +36,20 @@
     if (chunkSizeToViewStr != null && Integer.parseInt(chunkSizeToViewStr) > 0)
       chunkSizeToView = Integer.parseInt(chunkSizeToViewStr);
     else chunkSizeToView = jspHelper.defaultChunkSizeToView;
-    
-    out.print("<h2>File: " + filename + "</h2>");
-    out.print("<a href=\"http://" + req.getServerName() + ":" + 
-              req.getServerPort() + "/browseData.jsp?filename=" + filename + 
-              "\">Go back to File details</a><br>");
+
+    if (!noLink)
+      out.print("<h2><a href=\"" + referrer + "\">" + filename + "</a></h2>");
+    else
+      out.print("<h2>" + filename + "</h2>");
     out.print("<b>Chunk Size to view (in bytes, upto file's DFS blocksize): </b>");
     out.print("<input type=\"text\" name=\"chunkSizeToView\" value=" +
               chunkSizeToView + " size=10 maxlength=10>");
     out.print("&nbsp;&nbsp;<input type=\"submit\" name=\"submit\" value=\"Refresh\"><hr>");
     out.print("<input type=\"hidden\" name=\"filename\" value=\"" + filename +
               "\">");
+    if (!noLink)
+      out.print("<input type=\"hidden\" name=\"referrer\" value=\"" + 
+                referrer+ "\">");
 
     //fetch the block from the datanode that has the last block for this file
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, 
@@ -68,7 +77,9 @@
       startOffset = blockSize - chunkSizeToView;
     else startOffset = 0;
 
+    out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" READONLY>");
     jspHelper.streamBlockInAscii(addr, blockId, blockSize, startOffset, chunkSizeToView, out);
+    out.print("</textarea>");
     dfs.close();
   }
 
