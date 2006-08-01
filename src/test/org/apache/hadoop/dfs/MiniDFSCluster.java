@@ -135,8 +135,8 @@ public class MiniDFSCluster {
    * Shut down the servers.
    */
   public void shutdown() {
-    nameNode.shutdown();
     dataNode.shutdown();
+    nameNode.shutdown();
   }
   
   /**
