@@ -27,7 +27,8 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
-  public static final long versionID = 1L;
+  public static final long versionID = 2L;  // infoPort added to DatanodeID
+                                            // affected: DatanodeInfo, LocatedBlock
   
     ///////////////////////////////////////
     // File contents

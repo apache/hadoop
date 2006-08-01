@@ -443,8 +443,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         //
         // Ask to perform pending transfers, if any
         //
-        Object xferResults[] = namesystem.pendingTransfers(
-                       new DatanodeDescriptor( nodeReg ), xmitsInProgress );
+        Object xferResults[] = namesystem.pendingTransfers( nodeReg,
+                                                            xmitsInProgress );
         if (xferResults != null) {
             return new BlockCommand((Block[]) xferResults[0], (DatanodeInfo[][]) xferResults[1]);
         }

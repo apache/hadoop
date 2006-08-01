@@ -56,7 +56,7 @@
     String fqdn = 
            InetAddress.getByName(chosenNode.getHost()).getCanonicalHostName();
     String tailUrl = "http://" + fqdn + ":" +
-                     chosenNode.infoPort() + 
+                     chosenNode.getInfoPort() + 
                      "/tail.jsp?filename=" + filename;
     out.print("<a href=\"" + tailUrl + "\">TAIL this file</a><br>");
 
@@ -77,7 +77,7 @@
                                       datanodeAddr.length())); 
     fqdn = InetAddress.getByName(chosenNode.getHost()).getCanonicalHostName();
     String chunkViewUrl = "http://" + fqdn + ":" +
-                     chosenNode.infoPort() + 
+                     chosenNode.getInfoPort() + 
                      "/browseBlock.jsp?blockId=" + Long.toString(blockId) +
                      "&tail=false&blockSize=" + blockSize +
                      "&filename=" + filename +
@@ -105,7 +105,7 @@
                                       datanodeAddr.length())); 
         fqdn = InetAddress.getByName(locs[j].getHost()).getCanonicalHostName();
         String blockUrl = "http://"+ fqdn + ":" +
-                          locs[j].infoPort() +
+                          locs[j].getInfoPort() +
                           "/browseBlock.jsp?blockId=" + Long.toString(blockId) +
                           "&blockSize=" + blockSize +
                           "&filename=" + filename + 

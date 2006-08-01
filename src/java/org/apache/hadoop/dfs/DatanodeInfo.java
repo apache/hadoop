@@ -31,33 +31,32 @@ import org.apache.hadoop.io.WritableFactory;
  * @author Mike Cafarella
  * @author Konstantin Shvachko
  */
-public class DatanodeInfo extends DatanodeID implements Writable {
+public class DatanodeInfo extends DatanodeID {
   protected long capacity;
   protected long remaining;
   protected long lastUpdate;
   protected int xceiverCount;
-  protected int infoPort; //the port where the infoserver is running
 
   DatanodeInfo() {
-    this( new String(), new String() );
-  }
-  
-  DatanodeInfo( String name, String storageID) {
-    super( name, storageID );
-    this.capacity = 0L;
-    this.remaining = 0L;
-    this.lastUpdate = 0L;
-    this.xceiverCount = 0;
+    super();
   }
   
   DatanodeInfo( DatanodeInfo from ) {
-    super( from.getName(), from.getStorageID() );
+    super( from );
     this.capacity = from.getCapacity();
     this.remaining = from.getRemaining();
     this.lastUpdate = from.getLastUpdate();
     this.xceiverCount = from.getXceiverCount();
   }
 
+  DatanodeInfo( DatanodeID nodeID ) {
+    super( nodeID );
+    this.capacity = 0L;
+    this.remaining = 0L;
+    this.lastUpdate = 0L;
+    this.xceiverCount = 0;
+  }
+  
   /** The raw capacity. */
   public long getCapacity() { return capacity; }
 
@@ -72,9 +71,6 @@ public class DatanodeInfo extends DatanodeID implements Writable {
 
   /** @deprecated Use {@link #getLastUpdate()} instead. */
   public long lastUpdate() { return getLastUpdate(); }
-
-  /** The port at which the http server is running*/
-  public int infoPort() { return infoPort; }
 
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {
@@ -104,27 +100,20 @@ public class DatanodeInfo extends DatanodeID implements Writable {
   /**
    */
   public void write(DataOutput out) throws IOException {
-    new UTF8( this.name ).write(out);
-    new UTF8( this.storageID ).write(out);
+    super.write( out );
     out.writeLong(capacity);
     out.writeLong(remaining);
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
-    out.writeInt(infoPort);
   }
 
   /**
    */
   public void readFields(DataInput in) throws IOException {
-    UTF8 uStr = new UTF8();
-    uStr.readFields(in);
-    this.name = uStr.toString();
-    uStr.readFields(in);
-    this.storageID = uStr.toString();
+    super.readFields(in);
     this.capacity = in.readLong();
     this.remaining = in.readLong();
     this.lastUpdate = in.readLong();
     this.xceiverCount = in.readInt();
-    this.infoPort = in.readInt();
   }
 }

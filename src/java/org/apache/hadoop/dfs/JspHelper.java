@@ -63,7 +63,7 @@ public class JspHelper {
         chosenNode = nodes[index];
 
         //just ping to check whether the node is alive
-        InetSocketAddress targetAddr = DataNode.createSocketAddr(chosenNode.getHost() + ":" + chosenNode.infoPort());
+        InetSocketAddress targetAddr = DataNode.createSocketAddr(chosenNode.getHost() + ":" + chosenNode.getInfoPort());
         
         try {
           s = new Socket();

@@ -29,7 +29,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * @author Michael Cafarella
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
-  public static final long versionID = 1L;
+  public static final long versionID = 2L;  // infoPort added to DatanodeID
+                                            // affected: DatanodeRegistration
+  
   // error code
   final static int DISK_ERROR = 1;
   final static int INVALID_BLOCK = 2;

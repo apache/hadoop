@@ -28,13 +28,12 @@ class DatanodeRegistration extends DatanodeID implements Writable {
   int version;            /// current Datanode version
   String registrationID;  /// a unique per namenode id; indicates   
                           /// the namenode the datanode is registered with
-  int infoPort;
 
   /**
    * Default constructor.
    */
   public DatanodeRegistration() {
-    this( 0, null, null, null );
+    this( 0, null, null, -1, null );
   }
   
   /**
@@ -43,8 +42,9 @@ class DatanodeRegistration extends DatanodeID implements Writable {
   public DatanodeRegistration(int version, 
                               String nodeName, 
                               String storageID,
+                              int infoPort,
                               String registrationID ) {
-    super(nodeName, storageID);
+    super( nodeName, storageID, infoPort );
     this.version = version;
     this.registrationID = registrationID;
   }
@@ -68,23 +68,15 @@ class DatanodeRegistration extends DatanodeID implements Writable {
    */
   public void write(DataOutput out) throws IOException {
     out.writeInt(this.version);
-    new UTF8( this.name ).write(out);
-    new UTF8( this.storageID ).write(out);
-    new UTF8( this.registrationID ).write(out);   
-    out.writeInt(this.infoPort);
+    super.write( out );
+    UTF8.writeString(out, registrationID);
   }
 
   /**
    */
   public void readFields(DataInput in) throws IOException {
     this.version = in.readInt();
-    UTF8 uStr = new UTF8();
-    uStr.readFields(in);
-    this.name = uStr.toString();
-    uStr.readFields(in);
-    this.storageID = uStr.toString();
-    uStr.readFields(in);
-    this.registrationID = uStr.toString();   
-    this.infoPort = in.readInt();
+    super.readFields(in);
+    this.registrationID = UTF8.readString(in);   
   }
 }

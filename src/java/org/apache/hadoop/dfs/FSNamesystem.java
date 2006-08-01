@@ -1076,17 +1076,15 @@ class FSNamesystem implements FSConstants {
         // this is a new datanode serving a new data storage
         if( nodeReg.getStorageID().equals("") ) {
           // this data storage has never registered
-          // it is either empty or was created by previous version of DFS
+          // it is either empty or was created by pre-storageID version of DFS
           nodeReg.storageID = newStorageID();
           NameNode.stateChangeLog.debug(
               "BLOCK* NameSystem.registerDatanode: "
               + "new storageID " + nodeReg.getStorageID() + " assigned." );
         }
         // register new datanode
-        DatanodeDescriptor dinfo;
         datanodeMap.put(nodeReg.getStorageID(), 
-                        (dinfo = new DatanodeDescriptor( nodeReg ) ) ) ;
-        dinfo.infoPort = nodeReg.infoPort;
+                        new DatanodeDescriptor( nodeReg ));
         NameNode.stateChangeLog.debug(
             "BLOCK* NameSystem.registerDatanode: "
             + "node registered." );
@@ -1153,7 +1151,6 @@ class FSNamesystem implements FSConstants {
             NameNode.stateChangeLog.debug("BLOCK* NameSystem.gotHeartbeat: "
                     +"brand-new heartbeat from "+nodeID.getName() );
             nodeinfo = new DatanodeDescriptor(nodeID, capacity, remaining, xceiverCount);
-            nodeinfo.infoPort = ((DatanodeRegistration)nodeID).infoPort;
             datanodeMap.put(nodeinfo.getStorageID(), nodeinfo);
             capacityDiff = capacity;
             remainingDiff = remaining;
@@ -1188,7 +1185,7 @@ class FSNamesystem implements FSConstants {
     }
 
     /**
-     * remove a datanode info
+     * remove a datanode descriptor
      * @param nodeID datanode ID
      * @author hairong
      */
@@ -1204,8 +1201,8 @@ class FSNamesystem implements FSConstants {
   }
   
   /**
-   * remove a datanode info
-   * @param nodeInfo datanode info
+   * remove a datanode descriptor
+   * @param nodeInfo datanode descriptor
    * @author hairong
    */
     private void removeDatanode( DatanodeDescriptor nodeInfo ) {
@@ -1611,7 +1608,7 @@ class FSNamesystem implements FSConstants {
      *     target sequence for the Block at the appropriate index.
      *
      */
-    public synchronized Object[] pendingTransfers(DatanodeDescriptor srcNode,
+    public synchronized Object[] pendingTransfers(DatanodeID srcNode,
                                                   int xmitsInProgress) {
     synchronized (neededReplications) {
       Object results[] = null;
@@ -1963,7 +1960,7 @@ class FSNamesystem implements FSConstants {
         index = r.nextInt(size);
         DatanodeInfo d = getDatanodeByIndex(index);
         if (d != null) {
-          return d.getHost() + ":" + d.infoPort();
+          return d.getHost() + ":" + d.getInfoPort();
         }
       }
       return null;

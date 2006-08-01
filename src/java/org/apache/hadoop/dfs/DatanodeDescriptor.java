@@ -30,7 +30,7 @@ class DatanodeDescriptor extends DatanodeInfo {
   private volatile TreeSet blocks = null;
 
   DatanodeDescriptor( DatanodeID nodeID ) {
-    this( nodeID.getName(), nodeID.getStorageID(), 0L, 0L, 0);
+    this( nodeID, 0L, 0L, 0 );
   }
   
   /**
@@ -40,18 +40,7 @@ class DatanodeDescriptor extends DatanodeInfo {
                       long capacity, 
                       long remaining,
                       int xceiverCount ) {
-    this( nodeID.getName(), nodeID.getStorageID(), capacity, remaining, xceiverCount );
-  }
-
-  /**
-   * @param name hostname:portNumber as String object.
-   */
-  DatanodeDescriptor( String name, 
-                      String storageID, 
-                      long capacity, 
-                      long remaining,
-                      int xceiverCount ) {
-    super( name, storageID );
+    super( nodeID );
     this.blocks = new TreeSet();
     updateHeartbeat(capacity, remaining, xceiverCount);
   }

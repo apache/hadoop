@@ -107,7 +107,7 @@
                                            datanodeAddr.indexOf(':') + 1, 
                                       datanodeAddr.length())); 
             nextHost = InetAddress.getByName(d.getHost()).getCanonicalHostName();
-            nextPort = d.infoPort(); 
+            nextPort = d.getInfoPort(); 
           }
         }
       }
@@ -154,7 +154,7 @@
                                           datanodeAddr.indexOf(':') + 1, 
                                       datanodeAddr.length())); 
             prevHost = InetAddress.getByName(d.getHost()).getCanonicalHostName();
-            prevPort = d.infoPort();
+            prevPort = d.getInfoPort();
           }
         }
       }

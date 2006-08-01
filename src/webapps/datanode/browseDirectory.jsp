@@ -62,7 +62,7 @@
         DatanodeInfo chosenNode = jspHelper.bestNode(blocks[0]);
         String fqdn = InetAddress.getByName(chosenNode.getHost()).getCanonicalHostName();
         String datanodeUrl = "http://"+fqdn+":" +
-                             chosenNode.infoPort() + 
+                             chosenNode.getInfoPort() + 
                              "/browseData.jsp?filename=" +
                              files[i].getPath() + "&blockSize=" + 
                              files[i].getBlockSize();

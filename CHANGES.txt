@@ -111,6 +111,9 @@ Trunk (unreleased changes)
 31. HADOOP-394.  Change order of DFS shutdown in unit tests to
     minimize errors logged.  (Konstantin Shvachko via cutting)
 
+32. HADOOP-396.  Make DatanodeID implement Writable.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

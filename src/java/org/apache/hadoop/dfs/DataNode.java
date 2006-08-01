@@ -96,7 +96,6 @@ public class DataNode implements FSConstants, Runnable {
     long blockReportInterval;
     private DataStorage storage = null;
     private StatusHttpServer infoServer;
-    private int infoPort;
     private static InetSocketAddress nameNodeAddr;
     private static DataNode datanodeObject = null;
     private class DataNodeMetrics {
@@ -155,15 +154,15 @@ public class DataNode implements FSConstants, Runnable {
         this(InetAddress.getLocalHost().getHostName(), 
              new File(datadir),
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
-        infoPort = conf.getInt("dfs.datanode.info.port", 50075);
-        this.infoServer = new StatusHttpServer("datanode", infoPort, true);
+        int infoServerPort = conf.getInt("dfs.datanode.info.port", 50075);
+        this.infoServer = new StatusHttpServer("datanode", infoServerPort, true);
         //create a servlet to serve full-file content
         try {
           this.infoServer.addServlet(null, "/streamFile/*",
                 "org.apache.hadoop.dfs.StreamFile", null);
         } catch (Exception e) {LOG.warn("addServlet threw exception", e);}
         this.infoServer.start();
-        infoPort = this.infoServer.getPort();
+        this.dnRegistration.infoPort = this.infoServer.getPort();
         // register datanode
         register();
         datanodeObject = this;
@@ -204,6 +203,7 @@ public class DataNode implements FSConstants, Runnable {
                                         DFS_CURRENT_VERSION, 
                                         machineName + ":" + tmpPort, 
                                         storage.getStorageID(),
+                                        -1,
                                         "" );
       // initialize data node internal structure
       this.data = new FSDataset(datadir, conf);
@@ -247,7 +247,6 @@ public class DataNode implements FSConstants, Runnable {
      * @throws IOException
      */
     private void register() throws IOException {
-      dnRegistration.infoPort = infoPort;
       dnRegistration = namenode.register( dnRegistration );
       if( storage.getStorageID().equals("") ) {
         storage.setStorageID( dnRegistration.getStorageID());
