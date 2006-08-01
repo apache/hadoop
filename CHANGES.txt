@@ -114,6 +114,9 @@ Trunk (unreleased changes)
 32. HADOOP-396.  Make DatanodeID implement Writable.
     (Konstantin Shvachko via cutting)
 
+33. HADOOP-377.  Permit one to add URL resources to a Configuration.
+    (Jean-Baptiste Quenot via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

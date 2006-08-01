@@ -88,6 +88,11 @@ public class Configuration {
   }
 
   /** Add a default resource. */
+  public void addDefaultResource(URL url) {
+    addResource(defaultResources, url);
+  }
+
+  /** Add a default resource. */
   public void addDefaultResource(Path file) {
     addResource(defaultResources, file);
   }
@@ -95,6 +100,11 @@ public class Configuration {
   /** Add a final resource. */
   public void addFinalResource(String name) {
     addResource(finalResources, name);
+  }
+
+  /** Add a final resource. */
+  public void addFinalResource(URL url) {
+    addResource(finalResources, url);
   }
 
   /** Add a final resource. */
@@ -391,7 +401,14 @@ public class Configuration {
         DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document doc = null;
 
-      if (name instanceof String) {               // a CLASSPATH resource
+
+      if (name instanceof URL) {                  // an URL resource
+        URL url = (URL)name;
+        if (url != null) {
+          LOG.info("parsing " + url);
+          doc = builder.parse(url.toString());
+        }
+      } else if (name instanceof String) {        // a CLASSPATH resource
         URL url = getResource((String)name);
         if (url != null) {
           LOG.info("parsing " + url);
