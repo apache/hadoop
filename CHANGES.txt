@@ -120,6 +120,10 @@ Trunk (unreleased changes)
 34. HADOOP-345.  Permit iteration over Configuration key/value pairs.
     (Michel Tourn via cutting)
 
+35. HADOOP-409.  Streaming contrib module: make Hadoop configuration
+    properties available to commands as environment variables.
+    (Michel Tourn via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
