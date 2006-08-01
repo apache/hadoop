@@ -117,6 +117,9 @@ Trunk (unreleased changes)
 33. HADOOP-377.  Permit one to add URL resources to a Configuration.
     (Jean-Baptiste Quenot via cutting)
 
+34. HADOOP-345.  Permit iteration over Configuration key/value pairs.
+    (Michel Tourn via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

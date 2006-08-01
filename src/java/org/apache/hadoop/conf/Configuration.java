@@ -386,6 +386,11 @@ public class Configuration {
     return properties;
   }
 
+  /** @return Iterator&lt; Map.Entry&lt;String,String> >  */
+  public Iterator entries() {
+    return getProps().entrySet().iterator();
+  }
+
   private void loadResources(Properties props,
                              ArrayList resources,
                              boolean reverse, boolean quiet) {
