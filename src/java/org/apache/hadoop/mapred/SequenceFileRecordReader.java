@@ -64,10 +64,31 @@ public class SequenceFileRecordReader implements RecordReader {
     return more;
   }
   
+  protected synchronized boolean next(Writable key)
+      throws IOException {
+      if (!more) return false;
+      long pos = in.getPosition();
+      boolean eof = in.next(key);
+      if (pos >= end && in.syncSeen()) {
+          more = false;
+      } else {
+          more = eof;
+      }
+      return more;
+  }
+  
+  protected synchronized void getCurrentValue(Writable value)
+      throws IOException {
+      in.getCurrentValue(value);
+  }
+  
   public synchronized long getPos() throws IOException {
     return in.getPosition();
   }
   
+  protected synchronized void seek(long pos) throws IOException {
+      in.seek(pos);
+  }
   public synchronized void close() throws IOException { in.close(); }
   
 }

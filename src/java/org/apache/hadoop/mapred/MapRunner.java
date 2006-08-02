@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** Default {@link MapRunnable} implementation.*/
 public class MapRunner implements MapRunnable {
@@ -30,7 +31,8 @@ public class MapRunner implements MapRunnable {
 
   public void configure(JobConf job) {
     this.job = job;
-    this.mapper = (Mapper)job.newInstance(job.getMapperClass());
+    this.mapper = (Mapper)ReflectionUtils.newInstance(job.getMapperClass(),
+                                                      job);
     this.inputKeyClass = job.getInputKeyClass();
     this.inputValueClass = job.getInputValueClass();
   }
@@ -41,8 +43,9 @@ public class MapRunner implements MapRunnable {
     try {
       // allocate key & value instances that are re-used for all entries
       WritableComparable key =
-        (WritableComparable)job.newInstance(inputKeyClass);
-      Writable value = (Writable)job.newInstance(inputValueClass);
+        (WritableComparable)ReflectionUtils.newInstance(inputKeyClass, job);
+      Writable value = (Writable)ReflectionUtils.newInstance(inputValueClass,
+                                                             job);
       while (input.next(key, value)) {
         // map pair to output
         mapper.map(key, value, output, reporter);

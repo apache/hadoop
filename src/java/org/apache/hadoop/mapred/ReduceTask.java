@@ -196,7 +196,8 @@ class ReduceTask extends Task {
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
     Class valueClass = job.getMapOutputValueClass();
-    Reducer reducer = (Reducer)job.newInstance(job.getReducerClass());
+    Reducer reducer = (Reducer)ReflectionUtils.newInstance(
+                                  job.getReducerClass(), job);
     reducer.configure(job);
     FileSystem lfs = FileSystem.getNamed("local", job);
 

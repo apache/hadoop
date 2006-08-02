@@ -19,6 +19,8 @@ package org.apache.hadoop.io;
 import java.io.*;
 
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.util.ReflectionUtils;
+
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -220,7 +222,8 @@ public final class WritableUtils  {
    */
   public static Writable clone(Writable orig, JobConf conf) {
     try {
-      Writable newInst = (Writable)conf.newInstance(orig.getClass());
+      Writable newInst = (Writable)ReflectionUtils.newInstance(orig.getClass(),
+                                                               conf);
       CopyInCopyOutBuffer buffer = (CopyInCopyOutBuffer)cloneBuffers.get();
       buffer.outBuffer.reset();
       orig.write(buffer.outBuffer);

@@ -134,6 +134,11 @@ Trunk (unreleased changes)
 38. HADOOP-411.  Add unit tests for command line parser.
     (Hairong Kuang via cutting)
 
+39. HADOOP-412.  Add MapReduce input formats that support filtering
+    of SequenceFile data, including sampling and regex matching.
+    Also, move JobConf.newInstance() to a new utility class.
+    (Hairong Kuang via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 

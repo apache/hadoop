@@ -25,6 +25,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
 
 import org.apache.commons.logging.*;
 import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** A Map task. */
 class MapTask extends Task {
@@ -142,7 +143,7 @@ class MapTask extends Task {
       }
 
       final Partitioner partitioner =
-        (Partitioner)job.newInstance(job.getPartitionerClass());
+        (Partitioner)ReflectionUtils.newInstance(job.getPartitionerClass(), job);
 
       OutputCollector partCollector = new OutputCollector() { // make collector
           public synchronized void collect(WritableComparable key,
@@ -188,7 +189,7 @@ class MapTask extends Task {
         };
 
       MapRunnable runner =
-        (MapRunnable)job.newInstance(job.getMapRunnerClass());
+        (MapRunnable)ReflectionUtils.newInstance(job.getMapRunnerClass(), job);
 
       try {
         runner.run(in, collector, reporter);      // run the map

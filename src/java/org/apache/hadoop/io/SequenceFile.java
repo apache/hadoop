@@ -236,9 +236,11 @@ public class SequenceFile {
     private int keyLength;
 
     private boolean inflateValues;
-    private byte[] inflateIn = new byte[8192];
-    private DataOutputBuffer inflateOut = new DataOutputBuffer();
     private Inflater inflater = new Inflater();
+    private InflaterInputStream inflateFilter =
+        new InflaterInputStream(inBuf, inflater);
+    private DataInputStream inflateIn =
+        new DataInputStream(new BufferedInputStream(inflateFilter));
     private Configuration conf;
 
     /** @deprecated Call {@link #Reader(FileSystem,Path,Configuration)}.*/
@@ -304,6 +306,8 @@ public class SequenceFile {
     /** Close the file. */
     public synchronized void close() throws IOException {
       in.close();
+      inflateIn.close();
+      inflater.end();
     }
 
     /** Returns the class of keys in this file. */
@@ -337,6 +341,25 @@ public class SequenceFile {
       return true;
     }
 
+    /** Read the current value in the buffer into <code>val</code>. */
+    public synchronized void getCurrentValue(Writable val)
+        throws IOException {
+        if(val instanceof Configurable) {
+            ((Configurable) val).setConf(this.conf);
+        }
+        if (inflateValues) {
+            inflater.reset();
+            val.readFields(inflateIn);
+        }  else {
+            val.readFields(inBuf);
+            if (inBuf.getPosition() != inBuf.getLength()) {
+                throw new IOException("value: read "+(inBuf.getPosition()-keyLength)
+                                      + " bytes, should read " +
+                                     (inBuf.getLength()-keyLength));
+            }
+        }        
+    }
+    
     /** Read the next key/value pair in the file into <code>key</code> and
      * <code>val</code>.  Returns true if such a pair exists and false when at
      * end of file */
@@ -348,36 +371,12 @@ public class SequenceFile {
       boolean more = next(key);
 
       if (more) {
-
-        if (inflateValues) {
-          inflater.reset();
-          inflater.setInput(outBuf.getData(), keyLength,
-                            outBuf.getLength()-keyLength);
-          inflateOut.reset();
-          while (!inflater.finished()) {
-            try {
-              int count = inflater.inflate(inflateIn);
-              inflateOut.write(inflateIn, 0, count);
-            } catch (DataFormatException e) {
-              throw new IOException (e.toString());
-            }
-          }
-          inBuf.reset(inflateOut.getData(), inflateOut.getLength());
-        }
-        if(val instanceof Configurable) {
-          ((Configurable) val).setConf(this.conf);
-        }
-        val.readFields(inBuf);
-
-        if (inBuf.getPosition() != inBuf.getLength())
-          throw new IOException(val+" read "+(inBuf.getPosition()-keyLength)
-                                + " bytes, should read " +
-                                (inBuf.getLength()-keyLength));
+          getCurrentValue(val);
       }
 
       return more;
     }
-
+    
     /** Read the next key/value pair in the file into <code>buffer</code>.
      * Returns the length of the key read, or -1 if at end of file.  The length
      * of the value may be computed by calling buffer.getLength() before and

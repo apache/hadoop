@@ -20,6 +20,7 @@ import java.io.*;
 import java.util.*;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** Implements partial value reduction during mapping.  This can minimize the
  * size of intermediate data.  Buffers a list of values for each unique key,
@@ -41,7 +42,8 @@ class CombiningCollector implements OutputCollector {
     this.job = job;
     this.out = out;
     this.reporter = reporter;
-    this.combiner = (Reducer)job.newInstance(job.getCombinerClass());
+    this.combiner = (Reducer)ReflectionUtils.newInstance(job.getCombinerClass(),
+                                                         job);
     this.keyToValues = new TreeMap(job.getOutputKeyComparator());
     this.limit = job.getInt("mapred.combine.buffer.size", 100000);
   }

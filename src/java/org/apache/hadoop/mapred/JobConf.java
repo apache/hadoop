@@ -20,8 +20,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.io.File;
 
-import java.lang.reflect.Constructor;
-
 import java.util.StringTokenizer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,6 +41,7 @@ import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** A map/reduce job configuration.  This names the {@link Mapper}, combiner
  * (if any), {@link Partitioner}, {@link Reducer}, {@link InputFormat}, and
@@ -280,17 +279,19 @@ public class JobConf extends Configuration {
   }
 
   public InputFormat getInputFormat() {
-    return (InputFormat)newInstance(getClass("mapred.input.format.class",
+    return (InputFormat)ReflectionUtils.newInstance(getClass("mapred.input.format.class",
                                              TextInputFormat.class,
-                                             InputFormat.class));
+                                             InputFormat.class),
+                                             this);
   }
   public void setInputFormat(Class theClass) {
     setClass("mapred.input.format.class", theClass, InputFormat.class);
   }
   public OutputFormat getOutputFormat() {
-    return (OutputFormat)newInstance(getClass("mapred.output.format.class",
+    return (OutputFormat)ReflectionUtils.newInstance(getClass("mapred.output.format.class",
                                               TextOutputFormat.class,
-                                              OutputFormat.class));
+                                              OutputFormat.class),
+                                              this);
   }
   public void setOutputFormat(Class theClass) {
     setClass("mapred.output.format.class", theClass, OutputFormat.class);
@@ -392,7 +393,7 @@ public class JobConf extends Configuration {
     Class theClass = getClass("mapred.output.key.comparator.class", null,
                               WritableComparator.class);
     if (theClass != null)
-      return (WritableComparator)newInstance(theClass);
+      return (WritableComparator)ReflectionUtils.newInstance(theClass, this);
     return WritableComparator.get(getMapOutputKeyClass());
   }
 
@@ -486,22 +487,6 @@ public class JobConf extends Configuration {
     set("mapred.job.name", name);
   }
   
-  private static final Class[] emptyArray = new Class[]{};
-  
-  public Object newInstance(Class theClass) {
-    Object result;
-    try {
-      Constructor meth = theClass.getDeclaredConstructor(emptyArray);
-      meth.setAccessible(true);
-      result = meth.newInstance(emptyArray);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-    if (result instanceof JobConfigurable)
-      ((JobConfigurable)result).configure(this);
-    return result;
-  }
-
   /** Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
    * on the class path that has a class with the same name.
