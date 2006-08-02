@@ -37,6 +37,7 @@ public class ExampleDriver {
                         "A random writer benchmark that writes 10GB per node.");
             pgd.addClass("sort", Sort.class, "A sort benchmark that sorts the data written by the random writer.");
             pgd.addClass("pi", PiBenchmark.class, "A benchmark that estimates Pi using monte-carlo method.");
+            pgd.addClass("nnbench", NNBench.class, "A benchmark that stresses the namenode");
             pgd.driver(argv);
 	}
 	catch(Throwable e){

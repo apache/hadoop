@@ -51,7 +51,7 @@ class FSNamesystem implements FSConstants {
     // to client-sent information.
     // Mapping: Block -> TreeSet<DatanodeDescriptor>
     //
-    TreeMap blocksMap = new TreeMap();
+    Map blocksMap = new HashMap();
 
     //
     // Stores the datanode-->block map.  Done by storing a 

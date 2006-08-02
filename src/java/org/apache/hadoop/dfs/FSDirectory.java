@@ -295,7 +295,7 @@ class FSDirectory implements FSConstants {
 
     
     INode rootDir = new INode("");
-    TreeMap activeBlocks = new TreeMap();
+    Map activeBlocks = new HashMap();
     TreeMap activeLocks = new TreeMap();
     FSImage fsImage;  
     boolean ready = false;

@@ -128,6 +128,9 @@ Trunk (unreleased changes)
     files in a directory into a single local file.
     (Johan Oskarson via cutting)
 
+37. HADOOP-410.  Replace some TreeMaps with HashMaps in DFS, for
+    a 17% performance improvement. (Milind Bhandarkar via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
