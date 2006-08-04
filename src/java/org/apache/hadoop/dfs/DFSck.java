@@ -151,8 +151,9 @@ public class DFSck extends ToolBase {
       Block block = blocks[i].getBlock();
       long id = block.getBlockId();
       DatanodeInfo[] locs = blocks[i].getLocations();
-      if (locs.length > res.replication) res.overReplicatedBlocks += (locs.length - res.replication);
-      if (locs.length < res.replication && locs.length > 0) res.underReplicatedBlocks += (res.replication - locs.length);
+      short targetFileReplication = file.getReplication();
+      if (locs.length > targetFileReplication) res.overReplicatedBlocks += (locs.length - targetFileReplication);
+      if (locs.length < targetFileReplication && locs.length > 0) res.underReplicatedBlocks += (targetFileReplication - locs.length);
       report.append(i + ". " + id + " len=" + block.getNumBytes());
       if (locs == null || locs.length == 0) {
         report.append(" MISSING!");

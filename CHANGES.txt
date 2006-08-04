@@ -139,6 +139,9 @@ Trunk (unreleased changes)
     Also, move JobConf.newInstance() to a new utility class.
     (Hairong Kuang via cutting)
 
+40. HADOOP-226.  Fix fsck command to properly consider replication
+    counts, now that these can vary per file.  (Bryan Pendleton via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
