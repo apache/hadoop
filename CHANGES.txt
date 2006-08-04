@@ -142,6 +142,9 @@ Trunk (unreleased changes)
 40. HADOOP-226.  Fix fsck command to properly consider replication
     counts, now that these can vary per file.  (Bryan Pendleton via cutting)
 
+41. HADOOP-425.  Add a Python MapReduce example, using Jython.
+    (omalley via cutting)
+
 
 Release 0.4.0 - 2006-06-28
 
