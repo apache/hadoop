@@ -61,11 +61,6 @@ class FSNamesystem implements FSConstants {
     //
     TreeMap datanodeMap = new TreeMap();
 
-    // 
-    // Stores the datanode.name-->datanodeInfo map. Used for getting a sorted
-    // list of datanodes sorted by their names
-    TreeMap datanodeMapByName = new TreeMap();
-
     //
     // Stores the set of dead datanodes
     TreeMap deaddatanodeMap = new TreeMap();
@@ -1088,10 +1083,8 @@ class FSNamesystem implements FSConstants {
               + "new storageID " + nodeReg.getStorageID() + " assigned." );
         }
         // register new datanode
-        DatanodeDescriptor dinfo;
         datanodeMap.put(nodeReg.getStorageID(), 
-                        (dinfo = new DatanodeDescriptor( nodeReg )));
-        datanodeMapByName.put(nodeReg.getName(), dinfo);
+                        new DatanodeDescriptor( nodeReg ));
         NameNode.stateChangeLog.debug(
             "BLOCK* NameSystem.registerDatanode: "
             + "node registered." );
@@ -1159,7 +1152,6 @@ class FSNamesystem implements FSConstants {
                     +"brand-new heartbeat from "+nodeID.getName() );
             nodeinfo = new DatanodeDescriptor(nodeID, capacity, remaining, xceiverCount);
             datanodeMap.put(nodeinfo.getStorageID(), nodeinfo);
-            datanodeMapByName.put(nodeinfo.getName(), nodeinfo);
             capacityDiff = capacity;
             remainingDiff = remaining;
           } else {
@@ -1216,7 +1208,6 @@ class FSNamesystem implements FSConstants {
     private void removeDatanode( DatanodeDescriptor nodeInfo ) {
       heartbeats.remove(nodeInfo);
       datanodeMap.remove(nodeInfo.getStorageID());
-      datanodeMapByName.remove(nodeInfo.getName());
       deaddatanodeMap.put(nodeInfo.getName(), nodeInfo);
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeDatanode: "
               + nodeInfo.getName() + " is removed from datanodeMap");
@@ -1552,7 +1543,7 @@ class FSNamesystem implements FSConstants {
     public void DFSNodesStatus(Vector live, Vector dead) {
         synchronized (heartbeats) {
             synchronized (datanodeMap) {
-                live.addAll(datanodeMapByName.values());
+                live.addAll(datanodeMap.values());
                 dead.addAll(deaddatanodeMap.values());
             }
         }

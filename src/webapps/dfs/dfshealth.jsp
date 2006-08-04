@@ -11,15 +11,20 @@
   FSNamesystem fsn = FSNamesystem.getFSNamesystem();
   String namenodeLabel = fsn.getDFSNameNodeMachine() + ":" + fsn.getDFSNameNodePort();
   long currentTime;
+  JspHelper jspHelper = new JspHelper();
 
-  public void generateLiveNodeData(JspWriter out, DatanodeInfo d) 
+  public void generateLiveNodeData(JspWriter out, DatanodeDescriptor d) 
     throws IOException {
     long c = d.getCapacity();
     long r = d.getRemaining();
     long u = c - r;
     String cGb = DFSShell.limitDecimal((1.0 * c)/(1024*1024*1024), 2);
     String uGb = DFSShell.limitDecimal((1.0 * u)/(1024*1024*1024), 2);
-    String percentUsed = DFSShell.limitDecimal(((1.0 * u)/c)*100, 2);
+    String percentUsed;
+    if (c > 0) 
+      percentUsed = DFSShell.limitDecimal(((1.0 * u)/c)*100, 2);
+    else
+      percentUsed = "100"; 
     out.print("<td style=\"vertical-align: top;\"> <b>" + 
               d.getName() +
               "</b>&nbsp;<br><i><b>LastContact:</b>&nbsp;" + 
@@ -33,7 +38,7 @@
   public void generateDFSHealthReport(JspWriter out) throws IOException {
     Vector live = new Vector();
     Vector dead = new Vector();
-    fsn.DFSNodesStatus(live, dead);
+    jspHelper.DFSNodesStatus(live, dead);
     if (live.isEmpty() && dead.isEmpty()) {
       out.print("There are no datanodes in the cluster");
     }
@@ -52,8 +57,8 @@
       int max = (live.size() > dead.size()) ? live.size() : dead.size();
       currentTime = System.currentTimeMillis();
       for (i = 0; i < min; i++) {
-        DatanodeInfo l = (DatanodeInfo)live.elementAt(i);
-        DatanodeInfo d = (DatanodeInfo)dead.elementAt(i);
+        DatanodeDescriptor l = (DatanodeDescriptor)live.elementAt(i);
+        DatanodeDescriptor d = (DatanodeDescriptor)dead.elementAt(i);
         out.print("<tr>");
         generateLiveNodeData(out, l);
         out.print("<td style=\"vertical-align: top;\">" + 
@@ -65,12 +70,12 @@
       for (i = min; i < max; i++) {
         out.print("<tr>");
         if (type == 1) {
-          DatanodeInfo l = (DatanodeInfo)live.elementAt(i);
+          DatanodeDescriptor l = (DatanodeDescriptor)live.elementAt(i);
           generateLiveNodeData(out, l);
           out.print("<td style=\"vertical-align: top;\"><br></td>");
         }
         else if (type == 0) {
-          DatanodeInfo d = (DatanodeInfo)dead.elementAt(i);
+          DatanodeDescriptor d = (DatanodeDescriptor)dead.elementAt(i);
           out.print("<td style=\"vertical-align: top;\"><br></td>");
           out.print("<td style=\"vertical-align: top;\">" + 
                     d.getName() +

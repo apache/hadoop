@@ -27,6 +27,7 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 
 public class JspHelper {
+    static FSNamesystem fsn = null;
     static InetSocketAddress nameNodeAddr;
     static Configuration conf = new Configuration();
 
@@ -39,7 +40,7 @@ public class JspHelper {
         nameNodeAddr = DataNode.getDataNode().getNameNodeAddr();
       }
       else {
-        FSNamesystem fsn = FSNamesystem.getFSNamesystem();
+        fsn = FSNamesystem.getFSNamesystem();
         nameNodeAddr = new InetSocketAddress(fsn.getDFSNameNodeMachine(),
                   fsn.getDFSNameNodePort()); 
       }      
@@ -136,6 +137,17 @@ public class JspHelper {
       s.close();
       in.close();
       out.print(new String(buf));
+    }
+    public void DFSNodesStatus(Vector live, Vector dead) {
+      if (fsn == null) return;
+      TreeMap nodesSortedByName = new TreeMap();
+      fsn.DFSNodesStatus(live, dead);
+      for (int num = 0; num < live.size(); num++) {
+        DatanodeDescriptor d = (DatanodeDescriptor)live.elementAt(num);
+        nodesSortedByName.put(d.getName(), d);
+      }
+      live.clear();
+      live.addAll(nodesSortedByName.values());
     }
     public void addTableHeader(JspWriter out) throws IOException {
       out.print("<table border=\"1\""+
