@@ -143,7 +143,7 @@ public class JspHelper {
       TreeMap nodesSortedByName = new TreeMap();
       fsn.DFSNodesStatus(live, dead);
       for (int num = 0; num < live.size(); num++) {
-        DatanodeDescriptor d = (DatanodeDescriptor)live.elementAt(num);
+        DatanodeInfo d = (DatanodeInfo)live.elementAt(num);
         nodesSortedByName.put(d.getName(), d);
       }
       live.clear();

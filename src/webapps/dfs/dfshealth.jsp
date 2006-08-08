@@ -13,7 +13,7 @@
   long currentTime;
   JspHelper jspHelper = new JspHelper();
 
-  public void generateLiveNodeData(JspWriter out, DatanodeDescriptor d) 
+  public void generateLiveNodeData(JspWriter out, DatanodeInfo d) 
     throws IOException {
     long c = d.getCapacity();
     long r = d.getRemaining();
@@ -57,8 +57,8 @@
       int max = (live.size() > dead.size()) ? live.size() : dead.size();
       currentTime = System.currentTimeMillis();
       for (i = 0; i < min; i++) {
-        DatanodeDescriptor l = (DatanodeDescriptor)live.elementAt(i);
-        DatanodeDescriptor d = (DatanodeDescriptor)dead.elementAt(i);
+        DatanodeInfo l = (DatanodeInfo)live.elementAt(i);
+        DatanodeInfo d = (DatanodeInfo)dead.elementAt(i);
         out.print("<tr>");
         generateLiveNodeData(out, l);
         out.print("<td style=\"vertical-align: top;\">" + 
@@ -70,12 +70,12 @@
       for (i = min; i < max; i++) {
         out.print("<tr>");
         if (type == 1) {
-          DatanodeDescriptor l = (DatanodeDescriptor)live.elementAt(i);
+          DatanodeInfo l = (DatanodeInfo)live.elementAt(i);
           generateLiveNodeData(out, l);
           out.print("<td style=\"vertical-align: top;\"><br></td>");
         }
         else if (type == 0) {
-          DatanodeDescriptor d = (DatanodeDescriptor)dead.elementAt(i);
+          DatanodeInfo d = (DatanodeInfo)dead.elementAt(i);
           out.print("<td style=\"vertical-align: top;\"><br></td>");
           out.print("<td style=\"vertical-align: top;\">" + 
                     d.getName() +

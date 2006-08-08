@@ -1,6 +1,13 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1. HADOOP-415.  Replace some uses of DatanodeDescriptor in the DFS
+    web UI code with DatanodeInfo, the preferred public class.
+    (Devaraj Das via cutting)
+
+
 Release 0.5.0 - 2006-08-04
 
  1. HADOOP-352.  Fix shell scripts to use /bin/sh instead of
