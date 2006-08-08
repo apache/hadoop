@@ -280,7 +280,7 @@ class JobInProgress {
           } else if (status.getRunState() == TaskStatus.FAILED) {
             // Tell the job to fail the relevant task
             failedTask(tip, status.getTaskId(), status, status.getTaskTracker(),
-                       wasRunning, wasComplete, metrics);
+                       wasRunning, wasComplete);
           }          
         }
 
@@ -520,7 +520,7 @@ class JobInProgress {
                 }
             }
         }
-        
+
         //
         // If all tasks are complete, then the job is done!
         //
@@ -571,8 +571,7 @@ class JobInProgress {
      */
     private void failedTask(TaskInProgress tip, String taskid, 
                             TaskStatus status, String trackerName,
-                            boolean wasRunning, boolean wasComplete,
-                            JobTrackerMetrics metrics) {
+                            boolean wasRunning, boolean wasComplete) {
         tip.failedSubTask(taskid, trackerName);
         boolean isRunning = tip.isRunning();
         boolean isComplete = tip.isComplete();
@@ -597,10 +596,8 @@ class JobInProgress {
         // the failed task goes to the end of the list.
         if (tip.isMapTask()) {
           firstMapToTry = (tip.getIdWithinJob() + 1) % maps.length;
-          metrics.failedMap();
         } else {
           firstReduceToTry = (tip.getIdWithinJob() + 1) % reduces.length;
-          metrics.failedReduce();
         }
             
         //
@@ -698,5 +695,4 @@ class JobInProgress {
        }
        return null;
     }
-    
 }
