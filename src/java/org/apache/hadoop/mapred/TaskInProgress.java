@@ -283,6 +283,12 @@ class TaskInProgress {
         
         taskStatuses.put(taskid, status);
 
+        //since if this task was declared failed due to tasktracker getting 
+        //lost, but now that same tasktracker reports in with this taskId as 
+        //running, we update recentTasks
+        if (status.getRunState() == TaskStatus.RUNNING)
+          recentTasks.add(taskid);
+
         // Recompute progress
         recomputeProgress();
         return changed;
@@ -469,5 +475,12 @@ class TaskInProgress {
      */
     public int getIdWithinJob() {
       return partition;
+    }
+
+    /**
+     * Get the TaskStatus associated with a given taskId
+     */
+    public TaskStatus getTaskStatus(String taskId) {
+      return (TaskStatus)taskStatuses.get(taskId);
     }
 }

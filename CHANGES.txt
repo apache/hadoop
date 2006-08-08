@@ -3,7 +3,7 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
- 1. HADOOP-415.  Replace some uses of DatanodeDescriptor in the DFS
+ 1. HADOOP-427.  Replace some uses of DatanodeDescriptor in the DFS
     web UI code with DatanodeInfo, the preferred public class.
     (Devaraj Das via cutting)
 

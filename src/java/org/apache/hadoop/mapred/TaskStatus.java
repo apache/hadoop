@@ -25,7 +25,7 @@ import java.io.*;
  *
  * @author Mike Cafarella
  **************************************************/
-class TaskStatus implements Writable {
+class TaskStatus implements Writable, Cloneable {
     public static final int RUNNING = 0;
     public static final int SUCCEEDED = 1;
     public static final int FAILED = 2;
@@ -51,6 +51,16 @@ class TaskStatus implements Writable {
         this.diagnosticInfo = diagnosticInfo;
         this.stateString = stateString;
         this.taskTracker = taskTracker;
+    }
+    
+    //Implementing the clone method so that we can save the status of tasks
+    public Object clone() throws CloneNotSupportedException {
+        TaskStatus ts = (TaskStatus)super.clone();
+        if (this.diagnosticInfo != null)
+          ts.diagnosticInfo = new String(this.diagnosticInfo);
+        if (this.stateString != null)
+          ts.stateString = new String(this.stateString);
+        return ts;
     }
     
     public String getTaskId() { return taskid; }
