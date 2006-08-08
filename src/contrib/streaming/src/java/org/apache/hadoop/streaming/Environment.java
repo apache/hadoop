@@ -30,12 +30,16 @@ public class Environment extends Properties
    {
       // Extend this code to fit all operating
       // environments that you expect to run in
+      // http://lopica.sourceforge.net/os.html
       String command = null;
       String OS = System.getProperty("os.name");
       String lowerOs = OS.toLowerCase();
       if (OS.indexOf("Windows") > -1) {
          command = "cmd /C set";
-      } else if (OS.indexOf("ix") > -1 || OS.indexOf("inux") > -1) {
+      } else if (lowerOs.indexOf("ix") > -1 || lowerOs.indexOf("linux") > -1 
+        || lowerOs.indexOf("freebsd") > -1
+        || lowerOs.indexOf("sunos") > -1 || lowerOs.indexOf("solaris") > -1
+        || lowerOs.indexOf("hp-ux") > -1) {
          command = "env";
       } else if(lowerOs.startsWith("mac os x")) {
          command = "env";

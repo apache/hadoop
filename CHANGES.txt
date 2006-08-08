@@ -7,6 +7,10 @@ Trunk (unreleased changes)
     web UI code with DatanodeInfo, the preferred public class.
     (Devaraj Das via cutting)
 
+ 2. HADOOP-426.  Fix streaming contrib module to work correctly on
+    Solaris.  This was causing nightly builds to fail.
+    (Michel Tourn via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
