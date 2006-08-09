@@ -125,11 +125,25 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 <a name="N1000C"></a><a name="Overview"></a>
 <h2 class="h3">Overview</h2>
 <div class="section">
-<p>Hadoop is a new <a href="http://lucene.apache.org/java/">Lucene</a> sub-project
+<p>Hadoop is a framework for running applications on large
+      clusters of commodity hardware. The Hadoop framework
+      transparently provides applications both reliability and data
+      motion. Hadoop implements a computational paradigm named
+      map/reduce, where the application is divided into many small
+      fragments of work, each of which may be executed or reexecuted
+      on any node in the cluster. In addition, it provides a
+      distributed file system that stores data on the compute nodes,
+      providing very high aggregate bandwidth across the cluster. Both
+      map/reduce and the distributed file system are designed so that
+      node failures are automatically handled by the framework.</p>
+<p>The intent is to scale Hadoop up to handling thousand of
+      computers. Hadoop has been tested on clusters of 600
+      nodes.</p>
+<p>Hadoop is a <a href="http://lucene.apache.org/java/">Lucene</a> sub-project
       that contains the distributed computing platform that was
       formerly a part of <a href="http://lucene.apache.org/nutch/">Nutch</a>.  This
       includes the Hadoop Distributed Filesystem (HDFS) and an
-      implementation of MapReduce.</p>
+      implementation of map/reduce.</p>
 <p>For more information about Hadoop, please see the <a href="http://wiki.apache.org/lucene-hadoop/">Hadoop wiki.</a>
 </p>
 </div>
