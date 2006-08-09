@@ -16,6 +16,9 @@ Trunk (unreleased changes)
     available).  Also, tasks are better load-balanced among nodes.
     (omalley via cutting)
 
+ 4. HADOOP-324.  Fix datanode to not exit when a disk is full, but
+    rather simply to fail writes.  (Wendy Chien via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

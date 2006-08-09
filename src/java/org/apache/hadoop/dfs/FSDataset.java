@@ -21,6 +21,7 @@ import java.util.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.conf.*;
 
 /**************************************************
@@ -302,7 +303,7 @@ class FSDataset implements FSConstants {
             // Check if we have too little space
             //
             if (getRemaining() < blockSize) {
-                throw new IOException("Insufficient space for an additional block");
+                throw new DiskOutOfSpaceException("Insufficient space for an additional block");
             }
 
             //

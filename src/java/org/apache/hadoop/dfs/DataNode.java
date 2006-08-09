@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.Metrics;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.mapred.StatusHttpServer;
 
 import java.io.*;
@@ -726,8 +727,12 @@ public class DataNode implements FSConstants, Runnable {
                       out.write(buf, 0, bytesRead);
                       myMetrics.wroteBytes(bytesRead);
                     } catch (IOException iex) {
-                      shutdown();
-                      throw iex;
+                      if (iex.getMessage().startsWith("No space left on device")) {
+                    	  throw new DiskOutOfSpaceException("No space left on device");
+                      } else {
+                        shutdown();
+                        throw iex;
+                      }
                     }
                     if (out2 != null) {
                       try {

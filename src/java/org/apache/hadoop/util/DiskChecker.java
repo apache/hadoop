@@ -16,6 +16,12 @@ public class DiskChecker {
       }
     }
     
+    public static class DiskOutOfSpaceException extends IOException {
+        public DiskOutOfSpaceException(String msg) {
+          super(msg);
+        }
+      }
+      
     public static void checkDir( File dir ) throws DiskErrorException {
         if( !dir.exists() && !dir.mkdirs() )
             throw new DiskErrorException( "can not create directory: " 
