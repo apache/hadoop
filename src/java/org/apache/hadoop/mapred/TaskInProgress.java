@@ -16,8 +16,10 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.commons.logging.*;
+import org.apache.hadoop.util.*;
 
 import java.text.NumberFormat;
+import java.io.*;
 import java.util.*;
 
 
@@ -391,21 +393,12 @@ class TaskInProgress {
     /////////////////////////////////////////////////
 
     /**
-     * Return whether this TIP has a non-speculative task to run
+     * Return whether this TIP still needs to run
      */
-    boolean hasTask() {
-        if (failed || isComplete() || recentTasks.size() > 0) {
-            return false;
-        } else {
-            for (Iterator it = taskStatuses.values().iterator(); it.hasNext(); ) {
-                TaskStatus ts = (TaskStatus) it.next();
-                if (ts.getRunState() == TaskStatus.RUNNING) {
-                    return false;
-                }
-            }
-            return true;
-        }
+    boolean isRunnable() {
+      return !failed && (completes == 0);
     }
+    
     /**
      * Return whether the TIP has a speculative task to run.  We
      * only launch a speculative task if the current TIP is really
@@ -430,27 +423,24 @@ class TaskInProgress {
     /**
      * Return a Task that can be sent to a TaskTracker for execution.
      */
-    public Task getTaskToRun(String taskTracker, TaskTrackerStatus tts, double avgProgress) {
+    public Task getTaskToRun(String taskTracker) {
         Task t = null;
-        if (hasTask() || 
-            hasSpeculativeTask(avgProgress)) {
 
-            String taskid = (String) usableTaskIds.first();
-            usableTaskIds.remove(taskid);
-            String jobId = job.getProfile().getJobId();
+        String taskid = (String) usableTaskIds.first();
+        usableTaskIds.remove(taskid);
+        String jobId = job.getProfile().getJobId();
 
-            if (isMapTask()) {
-                t = new MapTask(jobId, jobFile, taskid, partition, split);
-            } else {
-                t = new ReduceTask(jobId, jobFile, taskid, partition, numMaps);
-            }
-            t.setConf(conf);
-
-            recentTasks.add(taskid);
-
-            // Ask JobTracker to note that the task exists
-            jobtracker.createTaskEntry(taskid, taskTracker, this);
+        if (isMapTask()) {
+          t = new MapTask(jobId, jobFile, taskid, partition, split);
+        } else {
+          t = new ReduceTask(jobId, jobFile, taskid, partition, numMaps);
         }
+        t.setConf(conf);
+
+        recentTasks.add(taskid);
+
+        // Ask JobTracker to note that the task exists
+        jobtracker.createTaskEntry(taskid, taskTracker, this);
         return t;
     }
     
@@ -461,6 +451,14 @@ class TaskInProgress {
      */
     public boolean hasFailedOnMachine(String tracker) {
       return machinesWhereFailed.contains(tracker);
+    }
+    
+    /**
+     * Get the number of machines where this task has failed.
+     * @return the size of the failed machine set
+     */
+    public int getNumberOfFailedMachines() {
+      return machinesWhereFailed.size();
     }
     
     /**

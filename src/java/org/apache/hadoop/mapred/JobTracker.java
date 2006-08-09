@@ -779,13 +779,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         int remainingMapLoad = 0;
         int numTaskTrackers;
         TaskTrackerStatus tts;
-        int avgMapLoad = 0;
-        int avgReduceLoad = 0;
 	
         synchronized (taskTrackers) {
           numTaskTrackers = taskTrackers.size();
           tts = (TaskTrackerStatus) taskTrackers.get(taskTracker);
         }
+        if (tts == null) {
+          LOG.warn("Unknown task tracker polling; ignoring: " + taskTracker);
+          return null;
+        }
+        int totalCapacity = numTaskTrackers * maxCurrentTasks;
+
         synchronized(jobsByArrival){
             for (Iterator it = jobsByArrival.iterator(); it.hasNext(); ) {
                     JobInProgress job = (JobInProgress) it.next();
@@ -797,19 +801,23 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                     }
             }   
         }
-        
+
+        // find out the maximum number of maps or reduces that we are willing
+        // to run on any node.
+        int maxMapLoad = 0;
+        int maxReduceLoad = 0;
         if (numTaskTrackers > 0) {
-          avgMapLoad = remainingMapLoad / numTaskTrackers;
-          avgReduceLoad = remainingReduceLoad / numTaskTrackers;
+          maxMapLoad = Math.min(maxCurrentTasks,
+                                (int) Math.ceil((double) remainingMapLoad / 
+                                                numTaskTrackers));
+          maxReduceLoad = Math.min(maxCurrentTasks,
+                                   (int) Math.ceil((double) remainingReduceLoad
+                                                   / numTaskTrackers));
         }
-        int totalCapacity = numTaskTrackers * maxCurrentTasks;
+        
         //
         // Get map + reduce counts for the current tracker.
         //
-        if (tts == null) {
-          LOG.warn("Unknown task tracker polling; ignoring: " + taskTracker);
-          return null;
-        }
 
         int numMaps = tts.countMapTasks();
         int numReduces = tts.countReduceTasks();
@@ -823,18 +831,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
         //
         // We hand a task to the current taskTracker if the given machine 
-        // has a workload that's equal to or less than the pendingMaps average.
-        // This way the maps are launched if the TaskTracker has running tasks 
-        // less than the pending average 
-        // +/- TASK_ALLOC_EPSILON.  (That epsilon is in place in case
-        // there is an odd machine that is failing for some reason but 
-        // has not yet been removed from the pool, making capacity seem
-        // larger than it really is.)
+        // has a workload that's less than the maximum load of that kind of
+        // task.
         //
        
         synchronized (jobsByArrival) {
-            if ((numMaps < maxCurrentTasks) &&
-                (numMaps <= avgMapLoad + 1 + TASK_ALLOC_EPSILON)) {
+            if (numMaps < maxMapLoad) {
 
                 int totalNeededMaps = 0;
                 for (Iterator it = jobsByArrival.iterator(); it.hasNext(); ) {
@@ -843,7 +845,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                         continue;
                     }
 
-                    Task t = job.obtainNewMapTask(taskTracker, tts);
+                    Task t = job.obtainNewMapTask(tts, numTaskTrackers);
                     if (t != null) {
                       expireLaunchingTasks.addNewTask(t.getTaskId());
                       myMetrics.launchMap();
@@ -870,17 +872,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             //
             // Same thing, but for reduce tasks
             //
-            if ((numReduces < maxCurrentTasks) &&
-                (numReduces <= avgReduceLoad + 1 + TASK_ALLOC_EPSILON)) {
+            if (numReduces < maxReduceLoad) {
 
                 int totalNeededReduces = 0;
                 for (Iterator it = jobsByArrival.iterator(); it.hasNext(); ) {
                     JobInProgress job = (JobInProgress) it.next();
-                    if (job.getStatus().getRunState() != JobStatus.RUNNING) {
+                    if (job.getStatus().getRunState() != JobStatus.RUNNING ||
+                        job.numReduceTasks == 0) {
                         continue;
                     }
 
-                    Task t = job.obtainNewReduceTask(taskTracker, tts);
+                    Task t = job.obtainNewReduceTask(tts, numTaskTrackers);
                     if (t != null) {
                       expireLaunchingTasks.addNewTask(t.getTaskId());
                       myMetrics.launchReduce();

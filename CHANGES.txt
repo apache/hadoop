@@ -11,6 +11,11 @@ Trunk (unreleased changes)
     Solaris.  This was causing nightly builds to fail.
     (Michel Tourn via cutting)
 
+ 3. HADOOP-400.  Improvements to task assignment.  Tasks are no longer
+    re-run on nodes where they have failed (unless no other node is
+    available).  Also, tasks are better load-balanced among nodes.
+    (omalley via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
