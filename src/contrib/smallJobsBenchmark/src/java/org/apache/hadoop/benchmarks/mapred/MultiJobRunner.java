@@ -26,10 +26,10 @@ import org.apache.hadoop.mapred.TextOutputFormat;
  */
 public class MultiJobRunner {
   
-  private String jarFile = "MRBenchmark.jar" ;
+  private String jarFile = null ; // "MRBenchmark.jar" ;
   private String input ; 
   private String output ; 
-  private int numJobs = 2000 ; // default value
+  private int numJobs = 1 ; // default value
   private static final Log LOG = LogFactory.getLog(MultiJobRunner.class);
   private int numMaps = 2; 
   private int numReduces = 1;
@@ -130,7 +130,9 @@ public class MultiJobRunner {
     
     job.setOutputPath(new Path(output));
     
-    job.setJar(jarFile);
+    if( null != jarFile ){
+      job.setJar(jarFile);
+    }
     job.setMapperClass(BenchmarkMapper.class);
     job.setReducerClass(BenchmarkReducer.class);
     
@@ -338,8 +340,8 @@ public class MultiJobRunner {
     }
     
     String output = "";
-    String jarFile = "MRBenchmark.jar" ; 
-    int numJobs = 0 ; 
+    String jarFile = null; //"MRBenchmark.jar" ; 
+    int numJobs = 1 ; 
     int numMaps = 2; 
     int numReduces = 1 ; 
     int dataLines = 1 ; 

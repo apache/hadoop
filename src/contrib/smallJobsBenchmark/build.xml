@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<project name="smallJobsBenchmark" default="jar">
+<project name="smallJobsBenchmark" default="deploy">
 
   <import file="../build-contrib.xml"/>
   
@@ -12,6 +12,10 @@
     <jar
       jarfile="${build.dir}/${benchmarkJarName}"
       basedir="${build.classes}">
+    <manifest>
+       <attribute name="Main-Class" 
+                  value="org/apache/hadoop/benchmarks/mapred/BenchmarkRunner"/>
+     </manifest>
     </jar>
   </target>
   

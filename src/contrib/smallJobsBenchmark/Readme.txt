@@ -6,6 +6,9 @@ $ cd smallJobsBenchmark
 $ ant deploy
 
 Running the benchmark
+$ $HADOOP_HOME/bin/hadoop jar <path to MRBenchmark.jar> smallJobsBenchmark -inputLines <numLines> -maps <numMaps> -reduces <numReduces> -jar <path to MRBenchmark.jar>
+
+For running the benchmark multiple times with different input sizes, maps, reduces following helper scripts can be used. 
 $ cd build/contrib/smallJobsBenchmark
 $ bin/run.sh
 
