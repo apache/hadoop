@@ -19,6 +19,7 @@ package org.apache.hadoop.io;
 import junit.framework.TestCase;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -199,6 +200,14 @@ public class TestText extends TestCase {
       int length = text.getLength();
       Text.validateUTF(utf8, 0, length);
   }
+
+  public void testTextText() throws CharacterCodingException {
+    Text a=new Text("abc");
+    Text b=new Text("a");
+    b.set(a);
+    assertEquals("abc",b.toString());
+  }
+
   public static void main(String[] args)  throws Exception
   {
     TestText test = new TestText("main");

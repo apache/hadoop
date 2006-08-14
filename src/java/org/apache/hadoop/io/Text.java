@@ -198,8 +198,8 @@ public class Text implements WritableComparable {
    * (if any) are deleted.
    */
   private void setCapacity( int len ) {
-    if (bytes == null || bytes.length < length)
-      bytes = new byte[length];      
+    if (bytes == null || bytes.length < len)
+      bytes = new byte[len];      
   }
    
   /** 
