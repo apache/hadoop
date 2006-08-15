@@ -37,6 +37,9 @@ Trunk (unreleased changes)
  8. HADOOP-436.  Fix an error-handling bug in the web ui.
     (Devaraj Das via cutting)
 
+ 9. HADOOP-455.  Fix a bug in Text, where DEL was not permitted.
+    (Hairong Kuang via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

@@ -435,7 +435,7 @@ public class Text implements WritableComparable {
 
         switch (length) {
         case 0: // check for ASCII
-          if (leadByte > 0x7E)
+          if (leadByte > 0x7F)
             throw new MalformedInputException(count);
           break;
         case 1:
