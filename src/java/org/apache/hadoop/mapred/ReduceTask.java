@@ -62,8 +62,6 @@ class ReduceTask extends Task {
   
   private ReduceTaskMetrics myMetrics = null;
   
-  private UTF8 jobId = new UTF8();
-
   private int numMaps;
   private boolean sortComplete;
 

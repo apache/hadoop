@@ -24,7 +24,7 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.examples.WordCount;
 
 /**
@@ -58,7 +58,7 @@ public class TestMiniMRWithDFS extends TestCase {
     conf.setJobName("wordcount");
     
     // the keys are words (strings)
-    conf.setOutputKeyClass(UTF8.class);
+    conf.setOutputKeyClass(Text.class);
     // the values are counts (ints)
     conf.setOutputValueClass(IntWritable.class);
     

@@ -27,7 +27,7 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 
 
 import java.util.regex.Pattern;
@@ -48,10 +48,10 @@ public class RegexMapper extends MapReduceBase implements Mapper {
   public void map(WritableComparable key, Writable value,
                   OutputCollector output, Reporter reporter)
     throws IOException {
-    String text = ((UTF8)value).toString();
+    String text = ((Text)value).toString();
     Matcher matcher = pattern.matcher(text);
     while (matcher.find()) {
-      output.collect(new UTF8(matcher.group(group)), new LongWritable(1));
+      output.collect(new Text(matcher.group(group)), new LongWritable(1));
     }
   }
 

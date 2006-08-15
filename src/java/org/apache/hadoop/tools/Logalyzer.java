@@ -25,7 +25,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.CopyFiles;
@@ -73,17 +73,17 @@ public class Logalyzer {
     public void map(WritableComparable key, Writable value,
         OutputCollector output, Reporter reporter)
     throws IOException {
-      String text = ((UTF8)value).toString();
+      String text = ((Text)value).toString();
       Matcher matcher = pattern.matcher(text);
       while (matcher.find()) {
-        output.collect((UTF8)value, new LongWritable(1));
+        output.collect((Text)value, new LongWritable(1));
       }
     }
     
   }
   
   /** A WritableComparator optimized for UTF8 keys of the logs. */
-  public static class LogComparator extends UTF8.Comparator implements Configurable {
+  public static class LogComparator extends Text.Comparator implements Configurable {
     
     private static Log LOG = LogFactory.getLog("org.apache.hadoop.tools.Logalyzer");
     private JobConf conf = null;
@@ -119,12 +119,12 @@ public class Logalyzer {
       }
       
       try {
-        UTF8 logline1 = new UTF8(); 
+        Text logline1 = new Text(); 
         logline1.readFields(new DataInputStream(new ByteArrayInputStream(b1, s1, l1)));
         String line1 = logline1.toString();
         String[] logColumns1 = line1.split(columnSeparator);
         
-        UTF8 logline2 = new UTF8(); 
+        Text logline2 = new Text(); 
         logline2.readFields(new DataInputStream(new ByteArrayInputStream(b2, s2, l2)));
         String line2 = logline2.toString();
         String[] logColumns2 = line2.split(columnSeparator);
@@ -161,7 +161,7 @@ public class Logalyzer {
     
     static {                                        
       // register this comparator
-      WritableComparator.define(UTF8.class, new LogComparator());
+      WritableComparator.define(Text.class, new LogComparator());
     }
   }
   
@@ -209,8 +209,6 @@ public class Logalyzer {
     
     grepJob.setInputPath(grepInput);
     grepJob.setInputFormat(TextInputFormat.class);
-    grepJob.setInputKeyClass(LongWritable.class);
-    grepJob.setInputValueClass(UTF8.class);
     
     grepJob.setMapperClass(LogRegexMapper.class);
     grepJob.set("mapred.mapper.regex", grepPattern);
@@ -222,7 +220,7 @@ public class Logalyzer {
     
     grepJob.setOutputPath(analysisOutput);
     grepJob.setOutputFormat(TextOutputFormat.class);
-    grepJob.setOutputKeyClass(UTF8.class);
+    grepJob.setOutputKeyClass(Text.class);
     grepJob.setOutputValueClass(LongWritable.class);
     grepJob.setOutputKeyComparatorClass(LogComparator.class);
     

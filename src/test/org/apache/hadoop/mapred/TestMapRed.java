@@ -108,7 +108,7 @@ public class TestMapRed extends TestCase {
             int keyint = ((IntWritable) key).get();
             while (it.hasNext()) {
                 int val = ((IntWritable) it.next()).get();
-                out.collect(new UTF8("" + val), new UTF8(""));
+                out.collect(new Text("" + val), new Text(""));
             }
         }
         public void close() {
@@ -137,7 +137,7 @@ public class TestMapRed extends TestCase {
 
         public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
             long pos = ((LongWritable) key).get();
-            UTF8 str = (UTF8) val;
+            Text str = (Text) val;
 
             out.collect(new IntWritable(Integer.parseInt(str.toString().trim())), new IntWritable(1));
         }
@@ -231,8 +231,8 @@ public class TestMapRed extends TestCase {
       public void map(WritableComparable key, Writable value,
                       OutputCollector output, Reporter reporter
                       ) throws IOException {
-        String str = ((UTF8) value).toString().toLowerCase();
-        output.collect(new UTF8(str), value);
+        String str = ((Text) value).toString().toLowerCase();
+        output.collect(new Text(str), value);
       }
 
       public void close() throws IOException {
@@ -299,8 +299,8 @@ public class TestMapRed extends TestCase {
       conf.setOutputPath(outDir);
       conf.setMapperClass(MyMap.class);
       conf.setReducerClass(MyReduce.class);
-      conf.setOutputKeyClass(UTF8.class);
-      conf.setOutputValueClass(UTF8.class);
+      conf.setOutputKeyClass(Text.class);
+      conf.setOutputValueClass(Text.class);
       conf.setOutputFormat(SequenceFileOutputFormat.class);
       if (includeCombine) {
         conf.setCombinerClass(IdentityReducer.class);
@@ -456,8 +456,6 @@ public class TestMapRed extends TestCase {
         fs.delete(intermediateOuts);
         JobConf checkJob = new JobConf(conf);
         checkJob.setInputPath(randomOuts);
-        checkJob.setInputKeyClass(LongWritable.class);
-        checkJob.setInputValueClass(UTF8.class);
         checkJob.setInputFormat(TextInputFormat.class);
         checkJob.setMapperClass(RandomCheckMapper.class);
 

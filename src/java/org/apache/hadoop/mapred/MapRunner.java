@@ -26,15 +26,11 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class MapRunner implements MapRunnable {
   private JobConf job;
   private Mapper mapper;
-  private Class inputKeyClass;
-  private Class inputValueClass;
 
   public void configure(JobConf job) {
     this.job = job;
     this.mapper = (Mapper)ReflectionUtils.newInstance(job.getMapperClass(),
                                                       job);
-    this.inputKeyClass = job.getInputKeyClass();
-    this.inputValueClass = job.getInputValueClass();
   }
 
   public void run(RecordReader input, OutputCollector output,
@@ -42,10 +38,9 @@ public class MapRunner implements MapRunnable {
     throws IOException {
     try {
       // allocate key & value instances that are re-used for all entries
-      WritableComparable key =
-        (WritableComparable)ReflectionUtils.newInstance(inputKeyClass, job);
-      Writable value = (Writable)ReflectionUtils.newInstance(inputValueClass,
-                                                             job);
+      WritableComparable key = input.createKey();
+      Writable value = input.createValue();
+      
       while (input.next(key, value)) {
         // map pair to output
         mapper.map(key, value, output, reporter);

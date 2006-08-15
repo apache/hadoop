@@ -56,8 +56,6 @@ public class Sort {
     jobConf.setInputFormat(SequenceFileInputFormat.class);
     jobConf.setOutputFormat(SequenceFileOutputFormat.class);
    
-    jobConf.setInputKeyClass(BytesWritable.class);
-    jobConf.setInputValueClass(BytesWritable.class);
     jobConf.setOutputKeyClass(BytesWritable.class);
     jobConf.setOutputValueClass(BytesWritable.class);
     

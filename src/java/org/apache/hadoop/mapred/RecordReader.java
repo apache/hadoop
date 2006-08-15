@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.DataInput;
 
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /** Reads key/value pairs from an input file {@link FileSplit}.
  * Implemented by {@link InputFormat} implementations. */
@@ -33,6 +34,18 @@ public interface RecordReader {
    * @see Writable#readFields(DataInput)
    */      
   boolean next(Writable key, Writable value) throws IOException;
+  
+  /**
+   * Create an object of the appropriate type to be used as a key.
+   * @return a new key object
+   */
+  WritableComparable createKey();
+  
+  /**
+   * Create an object of the appropriate type to be used as the value.
+   * @return a new value object
+   */
+  Writable createValue();
 
   /** Returns the current position in the input. */
   long getPos() throws IOException;

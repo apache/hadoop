@@ -19,6 +19,7 @@ package org.apache.hadoop.streaming;
 import java.io.*;
 
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -26,6 +27,7 @@ import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.JobConf;
 
+import org.apache.hadoop.util.ReflectionUtils;
 
 public class StreamSequenceRecordReader extends StreamBaseRecordReader
 {
@@ -86,6 +88,15 @@ public class StreamSequenceRecordReader extends StreamBaseRecordReader
     //return new SequenceFileRecordReader(job_, split_);
   }
 
+  public WritableComparable createKey() {
+    return (WritableComparable) 
+           ReflectionUtils.newInstance(rin_.getKeyClass(), null);
+  }
+  
+  public Writable createValue() {
+    return (Writable) ReflectionUtils.newInstance(rin_.getValueClass(), null);
+  }
+  
   boolean more_;
   SequenceFile.Reader rin_;
   int numFailed_;

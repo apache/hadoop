@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.ClusterStatus;
@@ -73,7 +73,7 @@ public class RandomWriter extends MapReduceBase implements Reducer {
                     Writable value,
                     OutputCollector output, 
                     Reporter reporter) throws IOException {
-      String filename = ((UTF8) value).toString();
+      String filename = ((Text) value).toString();
       SequenceFile.Writer writer = 
         new SequenceFile.Writer(fileSys, new Path(filename), 
                                 BytesWritable.class, BytesWritable.class,

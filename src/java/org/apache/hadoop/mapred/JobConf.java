@@ -296,19 +296,24 @@ public class JobConf extends Configuration {
   public void setOutputFormat(Class theClass) {
     setClass("mapred.output.format.class", theClass, OutputFormat.class);
   }
-  
+
+  /** @deprecated Call {@link RecordReader#createKey()}. */
   public Class getInputKeyClass() {
     return getClass("mapred.input.key.class",
                     LongWritable.class, WritableComparable.class);
   }
+
+  /** @deprecated Not used */
   public void setInputKeyClass(Class theClass) {
     setClass("mapred.input.key.class", theClass, WritableComparable.class);
   }
 
+  /** @deprecated Call {@link RecordReader#createValue()}. */
   public Class getInputValueClass() {
     return getClass("mapred.input.value.class", UTF8.class, Writable.class);
   }
 
+  /** @deprecated Not used */
   public void setInputValueClass(Class theClass) {
     setClass("mapred.input.value.class", theClass, Writable.class);
   }

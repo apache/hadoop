@@ -27,7 +27,7 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 
 
 /** A {@link Mapper} that maps text values into <token,freq> pairs.  Uses
@@ -38,13 +38,13 @@ public class TokenCountMapper extends MapReduceBase implements Mapper {
                   OutputCollector output, Reporter reporter)
     throws IOException {
     // get input text
-    String text = ((UTF8)value).toString();       // value is line of text
+    String text = ((Text)value).toString();       // value is line of text
 
     // tokenize the value
     StringTokenizer st = new StringTokenizer(text);
     while (st.hasMoreTokens()) {
       // output <token,1> pairs
-      output.collect(new UTF8(st.nextToken()), new LongWritable(1));
+      output.collect(new Text(st.nextToken()), new LongWritable(1));
     }  
   }
   

@@ -21,7 +21,7 @@ import java.util.*;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobClient;
@@ -53,12 +53,12 @@ public class WordCount {
   public static class MapClass extends MapReduceBase implements Mapper {
     
     private final static IntWritable one = new IntWritable(1);
-    private UTF8 word = new UTF8();
+    private Text word = new Text();
     
     public void map(WritableComparable key, Writable value, 
         OutputCollector output, 
         Reporter reporter) throws IOException {
-      String line = ((UTF8)value).toString();
+      String line = ((Text)value).toString();
       StringTokenizer itr = new StringTokenizer(line);
       while (itr.hasMoreTokens()) {
         word.set(itr.nextToken());
@@ -99,7 +99,7 @@ public class WordCount {
     conf.setJobName("wordcount");
  
     // the keys are words (strings)
-    conf.setOutputKeyClass(UTF8.class);
+    conf.setOutputKeyClass(Text.class);
     // the values are counts (ints)
     conf.setOutputValueClass(IntWritable.class);
     

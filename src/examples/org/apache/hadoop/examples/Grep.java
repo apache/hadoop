@@ -24,8 +24,8 @@ import org.apache.hadoop.mapred.lib.RegexMapper;
 import org.apache.hadoop.mapred.lib.InverseMapper;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,7 +61,7 @@ public class Grep {
 
     grepJob.setOutputPath(tempDir);
     grepJob.setOutputFormat(SequenceFileOutputFormat.class);
-    grepJob.setOutputKeyClass(UTF8.class);
+    grepJob.setOutputKeyClass(Text.class);
     grepJob.setOutputValueClass(LongWritable.class);
 
     JobClient.runJob(grepJob);
@@ -71,8 +71,6 @@ public class Grep {
 
     sortJob.setInputPath(tempDir);
     sortJob.setInputFormat(SequenceFileInputFormat.class);
-    sortJob.setInputKeyClass(UTF8.class);
-    sortJob.setInputValueClass(LongWritable.class);
 
     sortJob.setMapperClass(InverseMapper.class);
 

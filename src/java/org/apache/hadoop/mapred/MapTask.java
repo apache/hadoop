@@ -54,13 +54,6 @@ class MapTask extends Task {
       metricsRecord = Metrics.createRecord("mapred", "map", "taskid", taskId);
     }
     
-    private void reportMetric(String name, long value) {
-      if (metricsRecord != null) {
-        metricsRecord.setMetric(name, value);
-        metricsRecord.update();
-      }
-    }
-    
     synchronized void mapInput(long numBytes) {
       Metrics.report(metricsRecord, "input-records", ++numInputRecords);
       numInputBytes += numBytes;
@@ -172,6 +165,14 @@ class MapTask extends Task {
       RecordReader in = new RecordReader() {      // wrap in progress reporter
           private float perByte = 1.0f /(float)split.getLength();
 
+          public WritableComparable createKey() {
+            return rawIn.createKey();
+          }
+          
+          public Writable createValue() {
+            return rawIn.createValue();
+          }
+          
           public synchronized boolean next(Writable key, Writable value)
             throws IOException {
 

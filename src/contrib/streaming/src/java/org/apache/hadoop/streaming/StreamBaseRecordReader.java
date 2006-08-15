@@ -18,6 +18,7 @@ package org.apache.hadoop.streaming;
 
 import java.io.*;
 
+import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.fs.Path;
@@ -91,6 +92,14 @@ public abstract class StreamBaseRecordReader implements RecordReader
   public synchronized void close() throws IOException 
   { 
     in_.close(); 
+  }
+
+  public WritableComparable createKey() {
+    return new UTF8();
+  }
+  
+  public Writable createValue() {
+    return new UTF8();
   }
   
   /// StreamBaseRecordReader API

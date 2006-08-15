@@ -148,8 +148,6 @@ public class PiBenchmark {
     // turn off speculative execution, because DFS doesn't handle
     // multiple writers to the same file.
     jobConf.setSpeculativeExecution(false);
-    jobConf.setInputKeyClass(LongWritable.class);
-    jobConf.setInputValueClass(LongWritable.class);
     jobConf.setInputFormat(SequenceFileInputFormat.class);
         
     jobConf.setOutputKeyClass(LongWritable.class);

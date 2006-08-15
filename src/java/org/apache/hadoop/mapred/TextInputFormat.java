@@ -21,9 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.*;
 
 /** An {@link InputFormat} for plain text files.  Files are broken into lines.
  * Either linefeed or carriage-return are used to signal end of line.  Keys are
@@ -53,6 +51,15 @@ public class TextInputFormat extends InputFormatBase {
     }
 
     return new RecordReader() {
+      
+        public WritableComparable createKey() {
+          return new LongWritable();
+        }
+        
+        public Writable createValue() {
+          return new Text();
+        }
+        
         /** Read a line. */
         public synchronized boolean next(Writable key, Writable value)
           throws IOException {
@@ -61,7 +68,7 @@ public class TextInputFormat extends InputFormatBase {
             return false;
 
           ((LongWritable)key).set(pos);           // key is position
-          ((UTF8)value).set(readLine(in));        // value is line
+          ((Text)value).set(readLine(in));        // value is line
           return true;
         }
         

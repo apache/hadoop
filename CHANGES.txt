@@ -25,6 +25,16 @@ Trunk (unreleased changes)
  6. HADOOP-453.  Fix a bug in Text.setCapacity().  (siren via cutting)
 
 
+ 7. HADOOP-450.  Change so that input types are determined by the
+    RecordReader rather than specified directly in the JobConf.  This
+    facilitates jobs with a variety of input types.
+
+    WARNING: This contains incompatible API changes!  The RecordReader
+    interface has two new methods that all user-defined InputFormats
+    must now define.  Also, the values returned by TextInputFormat are
+    no longer of class UTF8, but now of class Text.
+
+
 Release 0.5.0 - 2006-08-04
 
  1. HADOOP-352.  Fix shell scripts to use /bin/sh instead of

@@ -155,8 +155,6 @@ public class NNBench extends MapReduceBase implements Reducer {
     // turn off speculative execution, because DFS doesn't handle
     // multiple writers to the same file.
     jobConf.setSpeculativeExecution(false);
-    jobConf.setInputKeyClass(IntWritable.class);
-    jobConf.setInputValueClass(IntWritable.class);
     jobConf.setInputFormat(SequenceFileInputFormat.class);
     jobConf.setOutputKeyClass(BytesWritable.class);
     jobConf.setOutputValueClass(BytesWritable.class);

@@ -20,14 +20,11 @@ import java.io.*;
 import java.util.*;
 import junit.framework.TestCase;
 
-import org.apache.commons.logging.*;
-
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 
 public class TestTextInputFormat extends TestCase {
-  private static final Log LOG = InputFormatBase.LOG;
 
   private static int MAX_LENGTH = 10000;
   private static Configuration conf = new Configuration();
@@ -70,7 +67,7 @@ public class TestTextInputFormat extends TestCase {
       // try splitting the file in a variety of sizes
       InputFormat format = new TextInputFormat();
       LongWritable key = new LongWritable();
-      UTF8 value = new UTF8();
+      Text value = new Text();
       for (int i = 0; i < 3; i++) {
         int numSplits = random.nextInt(MAX_LENGTH/20)+1;
         //LOG.info("splitting: requesting = " + numSplits);
