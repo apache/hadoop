@@ -34,6 +34,9 @@ Trunk (unreleased changes)
     must now define.  Also, the values returned by TextInputFormat are
     no longer of class UTF8, but now of class Text.
 
+ 8. HADOOP-436.  Fix an error-handling bug in the web ui.
+    (Devaraj Das via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

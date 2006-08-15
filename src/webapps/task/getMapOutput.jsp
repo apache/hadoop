@@ -29,7 +29,11 @@
     inStream = fileSys.open(filename);
     int len = inStream.read(buffer);
     while (len > 0) {
-      outStream.write(buffer, 0, len);
+      try {
+        outStream.write(buffer, 0, len);
+      } catch (Exception e) {
+        break;
+      }
       len = inStream.read(buffer);
     }
   } catch (IOException ie) {
