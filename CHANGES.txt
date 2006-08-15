@@ -40,6 +40,12 @@ Trunk (unreleased changes)
  9. HADOOP-455.  Fix a bug in Text, where DEL was not permitted.
     (Hairong Kuang via cutting)
 
+10. HADOOP-456.  Change the DFS namenode to keep a persistent record
+    of the set of known datanodes.  This will be used to implement a
+    "safe mode" where filesystem changes are prohibited when a
+    critical percentage of the datanodes are unavailable.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

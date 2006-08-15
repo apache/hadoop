@@ -113,5 +113,7 @@ public interface FSConstants {
     // Version is reflected in the data storage file.
     // Versions are negative.
     // Decrement DFS_CURRENT_VERSION to define a new version.
-    public static final int DFS_CURRENT_VERSION = -2;
+    public static final int DFS_CURRENT_VERSION = -3;
+    // Current version: New operations OP_DATANODE_REMOVE and OP_DATANODE_ADD
+    // are introduced
 }

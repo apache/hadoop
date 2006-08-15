@@ -25,12 +25,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSDirectory.INode;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.io.Writable;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -49,7 +49,7 @@ class FSImage {
   /**
    * 
    */
-  FSImage( File fsDir, Configuration conf ) throws IOException {
+  FSImage( File fsDir ) throws IOException {
     this.imageDir = new File(fsDir, "image");
     if (! imageDir.exists()) {
       throw new IOException("NameNode not formatted: " + fsDir);
@@ -67,9 +67,9 @@ class FSImage {
    * filenames and blocks.  Return whether we should
    * "re-save" and consolidate the edit-logs
    */
-  void loadFSImage( FSDirectory fsDir, 
-                    Configuration conf
-                  ) throws IOException {
+  void loadFSImage( Configuration conf ) throws IOException {
+    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSDirectory fsDir = fsNamesys.dir;
     File edits = editLog.getEditsFile();
     //
     // Atomic move sequence, to recover from interrupted save
@@ -120,11 +120,7 @@ class FSImage {
         
         needToSave = ( imgVersion != FSConstants.DFS_CURRENT_VERSION );
         if( imgVersion < FSConstants.DFS_CURRENT_VERSION ) // future version
-          throw new IOException(
-              "Unsupported version of the file system image: "
-              + imgVersion
-              + ". Current version = " 
-              + FSConstants.DFS_CURRENT_VERSION + "." );
+          throw new IncorrectVersionException(imgVersion, "file system image");
         
         // read file info
         short replication = (short)conf.getInt("dfs.replication", 3);
@@ -147,6 +143,9 @@ class FSImage {
           }
           fsDir.unprotectedAddFile(name, blocks, replication );
         }
+        
+        // load datanode info
+        this.loadDatanodes( imgVersion, in );
       } finally {
         in.close();
       }
@@ -155,15 +154,17 @@ class FSImage {
     if( fsDir.namespaceID == 0 )
       fsDir.namespaceID = newNamespaceID();
     
-    needToSave |= ( edits.exists() && editLog.loadFSEdits(fsDir, conf) > 0 );
+    needToSave |= ( edits.exists() && editLog.loadFSEdits(conf) > 0 );
     if( needToSave )
-      saveFSImage( fsDir );
+      saveFSImage();
   }
 
   /**
    * Save the contents of the FS image
    */
-  void saveFSImage( FSDirectory fsDir ) throws IOException {
+  void saveFSImage() throws IOException {
+    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSDirectory fsDir = fsNamesys.dir;
     File curFile = new File(imageDir, FS_IMAGE);
     File newFile = new File(imageDir, NEW_FS_IMAGE);
     File oldFile = new File(imageDir, OLD_FS_IMAGE);
@@ -177,6 +178,7 @@ class FSImage {
       out.writeInt(fsDir.namespaceID);
       out.writeInt(fsDir.rootDir.numItemsInTree() - 1);
       saveImage( "", fsDir.rootDir, out );
+      saveDatanodes( out );
     } finally {
       out.close();
     }
@@ -251,6 +253,34 @@ class FSImage {
     for(Iterator it = root.getChildren().values().iterator(); it.hasNext(); ) {
       INode child = (INode) it.next();
       saveImage( fullName, child, out );
+    }
+  }
+
+  /**
+   * Save list of datanodes contained in {@link FSNamesystem#datanodeMap}.
+   * Only the {@link DatanodeInfo} part is stored.
+   * The {@link DatanodeDescriptor#blocks} is transient.
+   * 
+   * @param out output stream
+   * @throws IOException
+   */
+  void saveDatanodes( DataOutputStream out ) throws IOException {
+    TreeMap datanodeMap = FSNamesystem.getFSNamesystem().datanodeMap;
+    int size = datanodeMap.size();
+    out.writeInt( size );
+    for( Iterator it = datanodeMap.values().iterator(); it.hasNext(); )
+      ((DatanodeDescriptor)it.next()).write( out );
+  }
+
+  void loadDatanodes( int version, DataInputStream in ) throws IOException {
+    if( version > -3 ) // pre datanode image version
+      return;
+    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    int size = in.readInt();
+    for( int i = 0; i < size; i++ ) {
+      DatanodeDescriptor node = new DatanodeDescriptor();
+      node.readFields(in);
+      fsNamesys.unprotectedAddDatanode( node );
     }
   }
 }

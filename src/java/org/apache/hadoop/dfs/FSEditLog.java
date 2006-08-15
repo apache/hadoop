@@ -39,6 +39,8 @@ class FSEditLog {
   private static final byte OP_DELETE = 2;
   private static final byte OP_MKDIR = 3;
   private static final byte OP_SET_REPLICATION = 4;
+  private static final byte OP_DATANODE_ADD = 5;
+  private static final byte OP_DATANODE_REMOVE = 6;
   
   private File editsFile;
   DataOutputStream editsStream = null;
@@ -74,9 +76,9 @@ class FSEditLog {
    * This is where we apply edits that we've been writing to disk all
    * along.
    */
-  int loadFSEdits( FSDirectory fsDir, 
-                   Configuration conf
-                 ) throws IOException {
+  int loadFSEdits( Configuration conf ) throws IOException {
+    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
     int logVersion = 0;
     
@@ -170,6 +172,29 @@ class FSEditLog {
             fsDir.unprotectedMkdir(src.toString());
             break;
           }
+          case OP_DATANODE_ADD: {
+            if( logVersion > -3 )
+              throw new IOException("Unexpected opcode " + opcode 
+                  + " for version " + logVersion );
+            DatanodeDescriptor node = new DatanodeDescriptor();
+            node.readFields(in);
+            fsNamesys.unprotectedAddDatanode( node );
+            break;
+          }
+          case OP_DATANODE_REMOVE: {
+            if( logVersion > -3 )
+              throw new IOException("Unexpected opcode " + opcode 
+                  + " for version " + logVersion );
+            DatanodeID nodeID = new DatanodeID();
+            nodeID.readFields(in);
+            DatanodeDescriptor node = fsNamesys.getDatanode( nodeID );
+            if( node != null ) {
+              fsNamesys.unprotectedRemoveDatanode( node );
+              // physically remove node from datanodeMap
+              fsNamesys.wipeDatanode( nodeID );
+            }
+            break;
+          }
           default: {
             throw new IOException("Never seen opcode " + opcode);
           }
@@ -260,11 +285,27 @@ class FSEditLog {
     logEdit(OP_DELETE, src, null);
   }
   
+  /** 
+   * Creates a record in edit log corresponding to a new data node
+   * registration event.
+   */
+  void logAddDatanode( DatanodeDescriptor node ) {
+    logEdit( OP_DATANODE_ADD, node, null );
+  }
+  
+  /** 
+   * Creates a record in edit log corresponding to a data node
+   * removal event.
+   */
+  void logRemoveDatanode( DatanodeID nodeID ) {
+    logEdit( OP_DATANODE_REMOVE, new DatanodeID( nodeID ), null );
+  }
+  
   static UTF8 toLogReplication( short replication ) {
     return new UTF8( Short.toString(replication));
   }
   
   static short fromLogReplication( UTF8 replication ) {
     return Short.parseShort(replication.toString());
-  }    
+  }
 }

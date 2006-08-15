@@ -27,8 +27,12 @@ import java.util.*;
  **************************************************/
 class DatanodeDescriptor extends DatanodeInfo {
 
-  private volatile TreeSet blocks = null;
+  private volatile TreeSet blocks = new TreeSet();
 
+  DatanodeDescriptor() {
+    super();
+  }
+  
   DatanodeDescriptor( DatanodeID nodeID ) {
     this( nodeID, 0L, 0L, 0 );
   }
@@ -41,7 +45,6 @@ class DatanodeDescriptor extends DatanodeInfo {
                       long remaining,
                       int xceiverCount ) {
     super( nodeID );
-    this.blocks = new TreeSet();
     updateHeartbeat(capacity, remaining, xceiverCount);
   }
 
@@ -60,6 +63,13 @@ class DatanodeDescriptor extends DatanodeInfo {
     blocks.add(b);
   }
 
+  void resetBlocks() {
+    this.capacity = 0;
+    this.remaining = 0;
+    this.xceiverCount = 0;
+    this.blocks.clear();
+  }
+  
   /**
    */
   void updateHeartbeat(long capacity, long remaining, int xceiverCount) {

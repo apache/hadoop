@@ -33,8 +33,6 @@ import org.apache.hadoop.metrics.Metrics;
  * It keeps the filename->blockset mapping always-current
  * and logged to disk.
  * 
- * TODO: Factor out to a standalone class.
- * 
  * @author Mike Cafarella
  *************************************************/
 class FSDirectory implements FSConstants {
@@ -42,6 +40,8 @@ class FSDirectory implements FSConstants {
     /******************************************************
      * We keep an in-memory representation of the file/block
      * hierarchy.
+     * 
+     * TODO: Factor out INode to a standalone class.
      ******************************************************/
     class INode {
         private String name;
@@ -305,9 +305,12 @@ class FSDirectory implements FSConstants {
     private int numFilesDeleted = 0;
     
     /** Access an existing dfs name directory. */
-    public FSDirectory(File dir, Configuration conf) throws IOException {
-      this.fsImage = new FSImage( dir, conf );
-      fsImage.loadFSImage( this, conf );
+    public FSDirectory(File dir) throws IOException {
+      this.fsImage = new FSImage( dir );
+    }
+    
+    void loadFSImage( Configuration conf ) throws IOException {
+      fsImage.loadFSImage( conf );
       synchronized (this) {
         this.ready = true;
         this.notifyAll();

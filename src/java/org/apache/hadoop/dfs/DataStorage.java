@@ -39,7 +39,7 @@ class DataStorage {
   public DataStorage( File datadir ) throws IOException {
     this( DataNode.DFS_CURRENT_VERSION, datadir );
     
-    if( version != DataNode.DFS_CURRENT_VERSION )
+    if( version < FSConstants.DFS_CURRENT_VERSION ) // future version
       throw new IncorrectVersionException( version, "data storage" );
   }
   
@@ -128,9 +128,7 @@ class DataStorage {
   public boolean read() throws IOException {
     storageFile.seek(0);
     this.version = storageFile.readInt();
-    UTF8 uID = new UTF8();
-    uID.readFields( storageFile );
-    this.storageID = uID.toString();
+    this.storageID = UTF8.readString( storageFile );
     return false;
   }
 
@@ -142,7 +140,6 @@ class DataStorage {
   public void write() throws IOException {
     storageFile.seek(0);
     storageFile.writeInt( this.version );
-    UTF8 uID = new UTF8( this.storageID );
-    uID.write( storageFile );
+    UTF8.writeString( storageFile, this.storageID );
   }
 }
