@@ -51,6 +51,9 @@ Trunk (unreleased changes)
     the jobs it depends on have successfully completed.
     (Runping Qi via cutting)
 
+12. HADOOP-176.  Fix a bug in IntWritable.Comparator.
+    (Dick King via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

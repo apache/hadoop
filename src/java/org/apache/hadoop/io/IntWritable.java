@@ -56,7 +56,7 @@ public class IntWritable implements WritableComparable {
   public int compareTo(Object o) {
     int thisValue = this.value;
     int thatValue = ((IntWritable)o).value;
-    return thisValue - thatValue;
+    return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
   }
 
   public String toString() {
@@ -73,7 +73,7 @@ public class IntWritable implements WritableComparable {
                        byte[] b2, int s2, int l2) {
       int thisValue = readInt(b1, s1);
       int thatValue = readInt(b2, s2);
-      return thisValue - thatValue;
+      return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
     }
   }
 
