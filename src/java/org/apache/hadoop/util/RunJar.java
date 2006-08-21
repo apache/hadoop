@@ -75,7 +75,14 @@ public class RunJar {
     File file = new File(fileName);
     String mainClassName = null;
 
-    JarFile jarFile = new JarFile(fileName);
+    JarFile jarFile;
+    try {
+      jarFile = new JarFile(fileName);
+    } catch(IOException io) {
+      throw new IOException("Error opening job jar: " + fileName)
+        .initCause(io);
+    }
+
     Manifest manifest = jarFile.getManifest();
     if (manifest != null) {
       mainClassName = manifest.getMainAttributes().getValue("Main-Class");

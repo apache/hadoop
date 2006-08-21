@@ -58,6 +58,9 @@ Trunk (unreleased changes)
     class, for improved handling of UTF-8 data.
     (Milind Bhandarkar via cutting)
 
+14. HADOOP-464.  Improved error message when job jar not found.
+    (Michel Tourn via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
