@@ -5,7 +5,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-source "$bin"/hadoop-config.sh
+. "$bin"/hadoop-config.sh
 
 # start dfs daemons
 # start namenode after datanodes, to minimize time namenode is up w/o data

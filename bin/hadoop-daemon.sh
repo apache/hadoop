@@ -22,7 +22,7 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-source "$bin"/hadoop-config.sh
+. "$bin"/hadoop-config.sh
 
 # get arguments
 startStop=$1

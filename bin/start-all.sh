@@ -5,7 +5,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-source "$bin"/hadoop-config.sh
+. "$bin"/hadoop-config.sh
 
 # start dfs daemons
 "$bin"/start-dfs.sh --config $HADOOP_CONF_DIR

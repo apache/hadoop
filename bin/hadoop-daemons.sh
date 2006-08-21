@@ -13,6 +13,6 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-source $bin/hadoop-config.sh
+. $bin/hadoop-config.sh
 
 exec "$bin/slaves.sh" --config $HADOOP_CONF_DIR cd "$HADOOP_HOME" \; "$bin/hadoop-daemon.sh" --config $HADOOP_CONF_DIR "$@"

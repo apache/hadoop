@@ -19,7 +19,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-source "$bin"/hadoop-config.sh
+. "$bin"/hadoop-config.sh
 
 # if no args specified, show usage
 if [ $# = 0 ]; then

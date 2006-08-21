@@ -22,7 +22,7 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-source "$bin"/hadoop-config.sh
+. "$bin"/hadoop-config.sh
 
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"
