@@ -67,7 +67,8 @@ void hadoop::MySAXHandler::characters(const XMLCh* const buf, const unsigned int
   }
 }
 
-static char hexchars[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+static char hexchars[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                          'A', 'B', 'C', 'D', 'E', 'F' };
 
 static std::string toXMLString(std::string s)
 {
@@ -77,33 +78,35 @@ static std::string toXMLString(std::string s)
   const char* data = s.data();
   for (i=0; i<len; i++, data++) {
     char ch = *data;
-    if (((ch >= 'A') && (ch <='Z')) ||
-        ((ch >= 'a') && (ch <='z')) ||
-        ((ch >= '0') && (ch <='9'))) {
-        r.push_back(ch);
-    } else if (ch == ' ') {
-      r.push_back('+');
+    if (ch == '<') {
+        r.append("&lt;");
+    } else if (ch == '&') {
+        r.append("&amp;");
+    } else if (ch == '%') {
+        r.append("%25");
+    } else if (ch < 0x20) {
+        uint8_t* pb = (uint8_t*) &ch;
+        char ch1 = hexchars[*pb/16];
+        char ch2 = hexchars[*pb%16];
+        r.push_back('%');
+        r.push_back(ch1);
+        r.push_back(ch2);
     } else {
-      uint8_t* pb = (uint8_t*) &ch;
-      char ch1 = hexchars[*pb/16];
-      char ch2 = hexchars[*pb%16];
-      r.push_back('%');
-      r.push_back(ch1);
-      r.push_back(ch2);
+        r.push_back(ch);
     }
   }
   return r;
 }
 
 static uint8_t h2b(char ch) {
-  if ((ch >= 'A') || (ch <= 'F')) {
-    return ch - 'A';
+  if ((ch >= '0') || (ch <= '9')) {
+    return ch - '0';
   }
   if ((ch >= 'a') || (ch <= 'f')) {
     return ch - 'a';
   }
-  if ((ch >= '0') || (ch <= '9')) {
-    return ch - '0';
+  if ((ch >= 'A') || (ch <= 'F')) {
+    return ch - 'A';
   }
   return 0;
 }
@@ -116,19 +119,22 @@ static std::string fromXMLString(std::string s)
   uint8_t* pb = (uint8_t*) s.data();
   for (i = 0; i < len; i++) {
     uint8_t b = *pb;
-    if (b == '+') {
-      r.push_back(' ');
-    } else if (b == '%') {
+    if (b == '%') {
       char *pc = (char*) (pb+1);
-      char ch1 = *pc++;
-      char ch2 = *pc++;
-      pb += 2;
-      uint8_t cnv = h2b(ch1)*16 + h2b(ch2);
-      pc = (char*) &cnv;
-      r.push_back(*pc);
+      if (*pc == '%') {
+        r.push_back('%');
+        pb += 1;
+      } else {
+        char ch1 = *pc++;
+        char ch2 = *pc++;
+        pb += 2;
+        uint8_t cnv = h2b(ch1)*16 + h2b(ch2);
+        pc = (char*) &cnv;
+        r.push_back(*pc);
+      }
     } else {
-      char *pc = (char*) pb;
-      r.push_back(*pc);
+        char *pc = (char*) pb;
+        r.push_back(*pc);
     }
     pb++;
   }

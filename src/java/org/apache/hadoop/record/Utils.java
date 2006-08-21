@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.CharacterCodingException;
+import org.apache.hadoop.io.Text;
 
 /**
  * Various utility functions for Hadooop record I/O runtime.
@@ -194,19 +196,45 @@ public class Utils {
         return true;
     }
     
+    public static final byte[] hexchars = { '0', '1', '2', '3', '4', '5',
+                                            '6', '7', '8', '9', 'A', 'B',
+                                            'C', 'D', 'E', 'F' };
     /**
      * 
      * @param s 
      * @return 
      */
-    static String toXMLString(String s) {
-        String rets = "";
-        try {
-            rets = java.net.URLEncoder.encode(s, "UTF-8");
-        } catch (UnsupportedEncodingException ex) {
-            ex.printStackTrace();
+    static String toXMLString(Text t) {
+        String s = t.toString();
+        StringBuffer sb = new StringBuffer();
+        for (int idx = 0; idx < s.length(); idx++) {
+          char ch = s.charAt(idx);
+          if (ch == '<') {
+            sb.append("&lt;");
+          } else if (ch == '&') {
+            sb.append("&amp;");
+          } else if (ch == '%') {
+            sb.append("%25");
+          } else if (ch < 0x20) {
+            sb.append("%");
+            sb.append(hexchars[ch/16]);
+            sb.append(hexchars[ch%16]);
+          } else {
+            sb.append(ch);
+          }
         }
-        return rets;
+        return sb.toString();
+    }
+    
+    static private int h2c(char ch) {
+      if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+      } else if (ch >= 'A' && ch <= 'F') {
+        return ch - 'A';
+      } else if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a';
+      }
+      return 0;
     }
     
     /**
@@ -214,14 +242,25 @@ public class Utils {
      * @param s 
      * @return 
      */
-    static String fromXMLString(String s) {
-        String rets = "";
-        try {
-            rets = java.net.URLDecoder.decode(s, "UTF-8");
-        } catch (UnsupportedEncodingException ex) {
-            ex.printStackTrace();
+    static Text fromXMLString(String s) {
+        StringBuffer sb = new StringBuffer();
+        for (int idx = 0; idx < s.length();) {
+          char ch = s.charAt(idx++);
+          if (ch == '%') {
+            char ch1 = s.charAt(idx++);
+            char ch2 = s.charAt(idx++);
+            char res = (char)(h2c(ch1)*16 + h2c(ch2));
+            sb.append(res);
+          } else {
+            sb.append(ch);
+          }
         }
-        return rets;
+        try {
+          return new Text(sb.toString());
+        } catch (CharacterCodingException ex) {
+          ex.printStackTrace();
+          return new Text();
+        }
     }
     
     /**
@@ -229,7 +268,8 @@ public class Utils {
      * @param s 
      * @return 
      */
-    static String toCSVString(String s) {
+    static String toCSVString(Text t) {
+        String s = t.toString();
         StringBuffer sb = new StringBuffer(s.length()+1);
         sb.append('\'');
         int len = s.length();
@@ -267,7 +307,7 @@ public class Utils {
      * @throws java.io.IOException 
      * @return 
      */
-    static String fromCSVString(String s) throws IOException {
+    static Text fromCSVString(String s) throws IOException {
         if (s.charAt(0) != '\'') {
             throw new IOException("Error deserializing string.");
         }
@@ -290,7 +330,7 @@ public class Utils {
                 sb.append(c);
             }
         }
-        return sb.toString();
+        return new Text(sb.toString());
     }
     
     /**

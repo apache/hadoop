@@ -17,15 +17,14 @@
 package org.apache.hadoop.record.test;
 
 import org.apache.hadoop.record.RecordReader;
-import org.apache.hadoop.record.RecordWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.TreeMap;
 import junit.framework.*;
+import org.apache.hadoop.io.Text;
 
 /**
  *
@@ -54,7 +53,7 @@ public class FromCpp extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("random text");
+            r1.setStringVal(new Text("random text"));
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
@@ -80,7 +79,7 @@ public class FromCpp extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("random text");
+            r1.setStringVal(new Text("random text"));
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
@@ -106,7 +105,7 @@ public class FromCpp extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("random text");
+            r1.setStringVal(new Text("random text"));
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());

@@ -94,7 +94,7 @@ public class TestMapRed extends TestCase {
 
             for (int i = 0; i < randomCount; i++) {
                 out.collect(new RecInt(Math.abs(r.nextInt())),
-                        new RecString(Integer.toString(randomVal)));
+                        new RecString(new Text(Integer.toString(randomVal))));
             }
         }
         public void close() {
@@ -113,9 +113,9 @@ public class TestMapRed extends TestCase {
                 throws IOException {
             int keyint = ((RecInt) key).getData();
             while (it.hasNext()) {
-                String val = ((RecString) it.next()).getData();
-                out.collect(new RecInt(Integer.parseInt(val)),
-                        new RecString(""));
+                Text val = ((RecString) it.next()).getData();
+                out.collect(new RecInt(Integer.parseInt(val.toString())),
+                        new RecString(new Text("")));
             }
         }
         public void close() {
@@ -144,8 +144,8 @@ public class TestMapRed extends TestCase {
 
         public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
             int pos = ((RecInt) key).getData();
-            String str = ((RecString) val).getData();
-            out.collect(new RecInt(pos), new RecString("1"));
+            Text str = ((RecString) val).getData();
+            out.collect(new RecInt(pos), new RecString(new Text("1")));
         }
         public void close() {
         }
@@ -163,7 +163,7 @@ public class TestMapRed extends TestCase {
                 it.next();
                 count++;
             }
-            out.collect(new RecInt(keyint), new RecString(Integer.toString(count)));
+            out.collect(new RecInt(keyint), new RecString(new Text(Integer.toString(count))));
         }
         public void close() {
         }
@@ -183,8 +183,8 @@ public class TestMapRed extends TestCase {
 
         public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
             int keyint = ((RecInt) key).getData();
-            String valstr = ((RecString) val).getData();
-            out.collect(new RecInt(keyint), new RecInt(Integer.parseInt(valstr)));
+            Text valstr = ((RecString) val).getData();
+            out.collect(new RecInt(keyint), new RecInt(Integer.parseInt(valstr.toString())));
         }
         public void close() {
         }

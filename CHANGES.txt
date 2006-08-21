@@ -54,6 +54,10 @@ Trunk (unreleased changes)
 12. HADOOP-176.  Fix a bug in IntWritable.Comparator.
     (Dick King via cutting)
 
+13. HADOOP-421.  Replace uses of String in recordio package with Text
+    class, for improved handling of UTF-8 data.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

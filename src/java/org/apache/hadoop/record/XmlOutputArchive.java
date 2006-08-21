@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.io.PrintStream;
 import java.io.OutputStream;
 import java.util.Stack;
+import org.apache.hadoop.io.Text;
 
 /**
  *
@@ -188,7 +189,7 @@ class XmlOutputArchive implements OutputArchive {
         printEndEnvelope(tag);
     }
     
-    public void writeString(String s, String tag) throws IOException {
+    public void writeString(Text s, String tag) throws IOException {
         printBeginEnvelope(tag);
         stream.print("<string>");
         stream.print(Utils.toXMLString(s));

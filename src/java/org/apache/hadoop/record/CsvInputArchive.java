@@ -20,9 +20,9 @@ import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
-import java.io.PushbackInputStream;
 import java.io.PushbackReader;
 import java.io.UnsupportedEncodingException;
+import org.apache.hadoop.io.Text;
 
 /**
  *
@@ -119,7 +119,7 @@ class CsvInputArchive implements InputArchive {
         }
     }
     
-    public String readString(String tag) throws IOException {
+    public Text readString(String tag) throws IOException {
         String sval = readField(tag);
         return Utils.fromCSVString(sval);
         

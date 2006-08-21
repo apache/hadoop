@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.OutputStream;
+import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.io.WritableUtils;
 
@@ -67,10 +68,8 @@ public class BinaryOutputArchive implements OutputArchive {
         out.writeDouble(d);
     }
     
-    public void writeString(String s, String tag) throws IOException {
-        byte[] chars = s.getBytes("UTF-8");
-        writeInt(chars.length, tag);
-        out.write(chars);
+    public void writeString(Text s, String tag) throws IOException {
+        s.write(out);
     }
     
     public void writeBuffer(ByteArrayOutputStream buf, String tag)

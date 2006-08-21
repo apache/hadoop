@@ -20,13 +20,13 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
+import org.apache.hadoop.io.Text;
 /**
  *
  * @author Milind Bhandarkar
@@ -197,7 +197,7 @@ class XmlInputArchive implements InputArchive {
         return Double.parseDouble(v.getValue());
     }
     
-    public String readString(String tag) throws IOException {
+    public Text readString(String tag) throws IOException {
         Value v = next();
         if (!"string".equals(v.getType())) {
             throw new IOException("Error deserializing "+tag+".");

@@ -24,7 +24,7 @@ public class JString extends JCompType {
     
     /** Creates a new instance of JString */
     public JString() {
-        super(" ::std::string", "String", "String", "String");
+        super(" ::std::string", "Text", "String", "Text");
     }
     
     public String getSignature() {
@@ -34,7 +34,7 @@ public class JString extends JCompType {
     public String genJavaReadWrapper(String fname, String tag, boolean decl) {
         String ret = "";
         if (decl) {
-            ret = "    String "+fname+";\n";
+            ret = "    Text "+fname+";\n";
         }
         return ret + "        "+fname+"=a_.readString(\""+tag+"\");\n";
     }

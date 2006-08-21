@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.InputStream;
+import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.io.WritableUtils;
 
@@ -78,11 +79,10 @@ public class BinaryInputArchive implements InputArchive {
         return in.readDouble();
     }
     
-    public String readString(String tag) throws IOException {
-        int len = readInt(tag);
-        byte[] chars = new byte[len];
-        in.readFully(chars);
-        return new String(chars, "UTF-8");
+    public Text readString(String tag) throws IOException {
+        Text text = new Text();
+        text.readFields(in);
+        return text;
     }
     
     public ByteArrayOutputStream readBuffer(String tag) throws IOException {

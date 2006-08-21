@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.io.PrintStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import org.apache.hadoop.io.Text;
 
 /**
  *
@@ -88,7 +89,7 @@ public class CsvOutputArchive implements OutputArchive {
         throwExceptionOnError(tag);
     }
     
-    public void writeString(String s, String tag) throws IOException {
+    public void writeString(Text s, String tag) throws IOException {
         printCommaUnlessFirst();
         stream.print(Utils.toCSVString(s));
         throwExceptionOnError(tag);

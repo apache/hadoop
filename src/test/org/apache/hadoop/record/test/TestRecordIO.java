@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.TreeMap;
+import org.apache.hadoop.io.Text;
 
 /**
  *
@@ -56,12 +57,12 @@ public class TestRecordIO extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("random text");
+            r1.setStringVal(new Text("random text"));
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             RecRecord0 r0 = new RecRecord0();
-            r0.setStringVal("other random text");
+            r0.setStringVal(new Text("other random text"));
             r1.setRecordVal(r0);
             out.write(r1);
             ostream.close();
@@ -90,12 +91,12 @@ public class TestRecordIO extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("random text");
+            r1.setStringVal(new Text("random text"));
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             RecRecord0 r0 = new RecRecord0();
-            r0.setStringVal("other random text");
+            r0.setStringVal(new Text("other random text"));
             r1.setRecordVal(r0);
             out.write(r1);
             ostream.close();
@@ -124,12 +125,12 @@ public class TestRecordIO extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("random text");
+            r1.setStringVal(new Text("random &lt; %text<&more"));
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             RecRecord0 r0 = new RecRecord0();
-            r0.setStringVal("other random text");
+            r0.setStringVal(new Text("other %random &amp; >&more text"));
             r1.setRecordVal(r0);
             out.write(r1);
             ostream.close();

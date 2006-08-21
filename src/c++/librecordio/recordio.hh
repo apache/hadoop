@@ -44,7 +44,7 @@ class OArchive;
 class Record {
 public:
   virtual bool validate() const = 0;
-  virtual void serialize(OArchive& archive, const char* tag) = 0;
+  virtual void serialize(OArchive& archive, const char* tag) const = 0;
   virtual void deserialize(IArchive& archive, const char* tag) = 0;
   virtual const std::string& type() const = 0;
   virtual const std::string& signature() const = 0;

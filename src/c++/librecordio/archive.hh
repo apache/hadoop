@@ -88,7 +88,7 @@ public:
   virtual void endVector(size_t len, const char* tag) = 0;
   virtual void startMap(size_t len, const char* tag) = 0;
   virtual void endMap(size_t len, const char* tag) = 0;
-  virtual void serialize(hadoop::Record& s, const char* tag) {
+  virtual void serialize(const hadoop::Record& s, const char* tag) {
     s.serialize(*this, tag);
   }
   template <typename T>
