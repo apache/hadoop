@@ -59,10 +59,12 @@ public abstract class InputFormatBase implements InputFormat {
 
   /** List input directories.
    * Subclasses may override to, e.g., select only files matching a regular
-   * expression.
-   * Property mapred.input.subdir, if set, names a subdirectory that
-   * is appended to all input dirs specified by job, and if the given fs
+   * expression. 
+   * 
+   * <p>Property <code>mapred.input.subdir</code>, if set, names a subdirectory
+   * that is appended to all input dirs specified by job, and if the given fs
    * lists those too, each is added to the returned array of Path.
+   *
    * @param fs
    * @param job
    * @return array of Path objects, never zero length.
@@ -108,7 +110,7 @@ public abstract class InputFormatBase implements InputFormat {
     return result;
   }
 
-  /** Splits files returned by {#listPaths(FileSystem,JobConf) when
+  /** Splits files returned by {@link #listPaths(FileSystem,JobConf)} when
    * they're too big.*/ 
   public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits)
     throws IOException {
