@@ -36,3 +36,6 @@
 
 # A string representing this instance of hadoop. $USER by default.
 # export HADOOP_IDENT_STRING=$USER
+
+# The scheduling priority for daemon processes.  See 'man nice'.
+# export HADOOP_NICENESS=10

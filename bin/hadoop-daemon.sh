@@ -9,6 +9,7 @@
 #   HADOOP_MASTER    host:path where hadoop code should be rsync'd from
 #   HADOOP_PID_DIR   The pid files are stored. /tmp by default.
 #   HADOOP_IDENT_STRING   A string representing this instance of hadoop. $USER by default
+#   HADOOP_NICENESS The scheduling priority for daemons. Defaults to 0.
 ##
 
 usage="Usage: hadoop-daemon.sh [--config <conf-dir>] (start|stop) <hadoop-command> <args...>"
@@ -54,6 +55,11 @@ export HADOOP_ROOT_LOGGER="INFO,DRFA"
 log=$HADOOP_LOG_DIR/hadoop-$HADOOP_IDENT_STRING-$command-`hostname`.out
 pid=$HADOOP_PID_DIR/hadoop-$HADOOP_IDENT_STRING-$command.pid
 
+# Set default scheduling priority
+if [ "$HADOOP_NICENESS" == "" ]; then
+    export HADOOP_NICENESS=0
+fi
+
 case $startStop in
 
   (start)
@@ -71,7 +77,7 @@ case $startStop in
     fi
 
     echo starting $command, logging to $log
-    nohup "$HADOOP_HOME"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+    nohup nice -n $HADOOP_NICENESS "$HADOOP_HOME"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;

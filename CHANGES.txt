@@ -65,6 +65,9 @@ Trunk (unreleased changes)
     /bin/sh scripts since HADOOP-352.
     (Jean-Baptiste Quenot via cutting)
 
+16. HADOOP-468.  Add HADOOP_NICENESS environment variable to set
+    scheduling priority for daemons.  (Vetle Roeim via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
