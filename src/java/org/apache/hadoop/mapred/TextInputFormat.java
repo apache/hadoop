@@ -44,7 +44,16 @@ public class TextInputFormat extends InputFormatBase {
       in.seek(start-1);
       while (in.getPos() < end) {    // scan to the next newline in the file
         char c = (char)in.read();
-        if (c == '\r' || c == '\n') {
+        if (c == '\n')
+          break;
+          
+        if (c == '\r') {       
+          long curPos = in.getPos();
+          char nextC = (char)in.read();
+          if (nextC != '\n') {
+            in.seek(curPos);
+          }
+
           break;
         }
       }
@@ -90,8 +99,18 @@ public class TextInputFormat extends InputFormatBase {
         break;
 
       char c = (char)b;              // bug: this assumes eight-bit characters.
-      if (c == '\r' || c == '\n')
+      if (c == '\n')
         break;
+        
+      if (c == '\r') {       
+        long curPos = in.getPos();
+        char nextC = (char)in.read();
+        if (nextC != '\n') {
+          in.seek(curPos);
+        }
+
+        break;
+      }
 
       buffer.append(c);
     }
