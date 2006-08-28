@@ -83,6 +83,9 @@ Trunk (unreleased changes)
 20. HADOOP-281.  Prohibit DFS files that are also directories.
     (Wendy Chien via cutting)
 
+21. HADOOP-486.  Add the job username to JobStatus instances returned
+    by JobClient.  (Mahadev Konar via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

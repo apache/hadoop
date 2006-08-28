@@ -1109,6 +1109,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             if (status.getRunState() == JobStatus.RUNNING 
 		|| status.getRunState() == JobStatus.PREP) {
 		status.setStartTime(jip.getStartTime());
+                status.setUsername(jip.getProfile().getUser());
                 v.add(status);
             }
         }

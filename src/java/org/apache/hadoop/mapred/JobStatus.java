@@ -46,6 +46,7 @@ public class JobStatus implements Writable {
     float reduceProgress;
     int runState;
     long startTime;
+    String user;
     /**
      */
     public JobStatus() {
@@ -63,6 +64,7 @@ public class JobStatus implements Writable {
         this.mapProgress = mapProgress;
         this.reduceProgress = reduceProgress;
         this.runState = runState;
+        this.user = "nobody";
     }
 
     /**
@@ -107,6 +109,16 @@ public class JobStatus implements Writable {
      * @return start time of the job
      */
     public long getStartTime() { return startTime;};
+
+    /**
+      * @param user The username of the job
+      */
+    void setUsername(String userName) { this.user = userName;};
+
+    /**
+      * @return the username of the job
+      */
+    public String getUsername() { return this.user;};
     ///////////////////////////////////////
     // Writable
     ///////////////////////////////////////
@@ -116,6 +128,7 @@ public class JobStatus implements Writable {
         out.writeFloat(reduceProgress);
         out.writeInt(runState);
         out.writeLong(startTime);
+        UTF8.writeString(out, user);
     }
     public void readFields(DataInput in) throws IOException {
         this.jobid = UTF8.readString(in);
@@ -123,5 +136,6 @@ public class JobStatus implements Writable {
         this.reduceProgress = in.readFloat();
         this.runState = in.readInt();
         this.startTime = in.readLong();
+        this.user = UTF8.readString(in);
     }
 }
