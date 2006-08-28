@@ -45,7 +45,7 @@ public abstract class StreamBaseRecordReader implements RecordReader
   protected static final Log LOG = LogFactory.getLog(StreamBaseRecordReader.class.getName());
   
   // custom JobConf properties for this class are prefixed with this namespace
-  final String CONF_NS = "stream.recordreader.";
+  final static String CONF_NS = "stream.recordreader.";
 
   public StreamBaseRecordReader(
     FSDataInputStream in, FileSplit split, Reporter reporter, JobConf job, FileSystem fs)

@@ -62,6 +62,36 @@ public class StreamInputFormat extends InputFormatBase
     return b;
   }
 
+  static boolean isGzippedInput(JobConf job)
+  {
+    String val = job.get(StreamBaseRecordReader.CONF_NS + "compression");
+    return "gzip".equals(val);
+  }
+
+  public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits)
+    throws IOException {
+      
+    if(isGzippedInput(job)) {
+      return getFullFileSplits(fs, job);
+    } else {
+      return super.getSplits(fs, job, numSplits);
+    }   
+  }
+  
+  /** For the compressed-files case: override InputFormatBase to produce one split. */
+  FileSplit[] getFullFileSplits(FileSystem fs, JobConf job)
+    throws IOException
+  {
+    Path[] files = listPaths(fs, job);
+    int numSplits = files.length;
+    ArrayList splits = new ArrayList(numSplits);
+    for (int i = 0; i < files.length; i++) {
+      Path file = files[i];
+      long splitSize = fs.getLength(file);
+      splits.add(new FileSplit(file, 0, splitSize));
+    }
+    return (FileSplit[])splits.toArray(new FileSplit[splits.size()]);
+  }
 
   protected Path[] listPaths(FileSystem fs, JobConf job)
     throws IOException
@@ -170,4 +200,5 @@ public class StreamInputFormat extends InputFormatBase
     return reader;
   }
 
+  
 }

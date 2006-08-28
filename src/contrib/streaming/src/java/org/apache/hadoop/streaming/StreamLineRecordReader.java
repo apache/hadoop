@@ -17,6 +17,7 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+import java.util.zip.GZIPInputStream; 
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -41,35 +42,54 @@ public class StreamLineRecordReader extends StreamBaseRecordReader
     throws IOException
   {
     super(in, split, reporter, job, fs);
+    gzipped_ = StreamInputFormat.isGzippedInput(job);
+    if(gzipped_) {
+      din_ = new DataInputStream(new GZIPInputStream(in_));
+    } else {
+      din_ = in_;
+    }
   }
 
   public void seekNextRecordBoundary() throws IOException
   {
-    int bytesSkipped = 0;
-    if (start_ != 0) {
-      in_.seek(start_ - 1);
-      // scan to the next newline in the file
-      while (in_.getPos() < end_) {
-        char c = (char)in_.read();
-        bytesSkipped++;
-        if (c == '\r' || c == '\n') {
-          break;
+    if(gzipped_) {
+      // no skipping: use din_ as-is 
+      // assumes splitter created only one split per file
+      return;
+    } else {
+      int bytesSkipped = 0;
+      if (start_ != 0) {
+        in_.seek(start_ - 1);
+        // scan to the next newline in the file
+        while (in_.getPos() < end_) {
+          char c = (char)in_.read();
+          bytesSkipped++;
+          if (c == '\r' || c == '\n') {
+            break;
+          }
         }
       }
-    }
 
-    //System.out.println("getRecordReader start="+start_ + " end=" + end_ + " bytesSkipped"+bytesSkipped);
+      //System.out.println("getRecordReader start="+start_ + " end=" + end_ + " bytesSkipped"+bytesSkipped);
+    }
   }
 
   public synchronized boolean next(Writable key, Writable value)
     throws IOException {
-    long pos = in_.getPos();
-    if (pos >= end_)
-      return false;
+    if(gzipped_) {
+      // figure EOS from readLine
+    } else {
+      long pos = in_.getPos();
+      if (pos >= end_)
+        return false;
+    }
 
-    //((LongWritable)key).set(pos);           // key is position
+    //((LongWritable)key).set(pos);      // key is position
     //((UTF8)value).set(readLine(in));   // value is line
-    String line = readLine(in_);
+    String line = readLine(din_);
+    if(line == null) {
+        return false; // for gzipped_
+    }
 
     // key is line up to TAB, value is rest
     final boolean NOVAL = false;
@@ -92,22 +112,32 @@ public class StreamLineRecordReader extends StreamBaseRecordReader
 
 
   // from TextInputFormat
-  private static String readLine(FSDataInputStream in) throws IOException {
+  private static String readLine(InputStream in) throws IOException {
     StringBuffer buffer = new StringBuffer();
+    boolean over = true;
     while (true) {
 
       int b = in.read();
       if (b == -1)
         break;
-
+      
+      over = false;
       char c = (char)b;              // bug: this assumes eight-bit characters.
       if (c == '\r' || c == '\n')    // TODO || c == '\t' here
         break;
 
       buffer.append(c);
     }
-
-    return buffer.toString();
+    
+    if(over) {
+      return null;
+    } else {
+      return buffer.toString();
+    }
+    
   }
 
+  boolean gzipped_;
+  GZIPInputStream zin_;
+  DataInputStream din_; // GZIP or plain
 }

@@ -86,6 +86,9 @@ Trunk (unreleased changes)
 21. HADOOP-486.  Add the job username to JobStatus instances returned
     by JobClient.  (Mahadev Konar via cutting)
 
+22. HADOOP-437.  contrib/streaming: Add support for gzipped inputs.
+    (Michel Tourn via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

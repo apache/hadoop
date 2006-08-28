@@ -40,13 +40,13 @@ public class StreamSequenceRecordReader extends StreamBaseRecordReader
     numFailed_ = 0;
     // super.in_ ignored, using rin_ instead
   }
-  
-    
+
+
   public synchronized boolean next(Writable key, Writable value)
    throws IOException
-  {         
+  {
     boolean success;
-    do {    
+    do {
       if (!more_) return false;
       success = false;
       try {
@@ -61,7 +61,7 @@ public class StreamSequenceRecordReader extends StreamBaseRecordReader
       } catch(IOException io) {
         numFailed_++;
         if(numFailed_ < 100 || numFailed_ % 100 == 0) {
-          err_.println("StreamSequenceRecordReader: numFailed_/numRec_=" 
+          err_.println("StreamSequenceRecordReader: numFailed_/numRec_="
             + numFailed_+ "/" + numRec_);
         }
         io.printStackTrace(err_);
@@ -69,9 +69,9 @@ public class StreamSequenceRecordReader extends StreamBaseRecordReader
       }
     } while(!success);
     numRecStats("");
-    return more_;    
+    return more_;
   }
-  
+
 
   public void seekNextRecordBoundary() throws IOException
   {

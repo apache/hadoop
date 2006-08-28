@@ -72,7 +72,8 @@ public class PipeMapper extends PipeMapRed implements Mapper
     try {
       // 1/4 Hadoop in
       if(key instanceof BytesWritable) {
-        mapredKey_ = new String(((BytesWritable)key).get(), "UTF-8");
+        BytesWritable bKey = (BytesWritable)key;
+        mapredKey_ = new String(bKey.get(), 0, bKey.getSize(), "UTF-8");
       } else {
         mapredKey_ = key.toString();        
       }
@@ -84,7 +85,8 @@ public class PipeMapper extends PipeMapRed implements Mapper
       if(numExceptions_==0) {
         String sval;
         if(value instanceof BytesWritable) {
-          sval = new String(((BytesWritable)value).get(), "UTF-8");
+          BytesWritable bVal = (BytesWritable)value;
+          sval = new String(bVal.get(), 0, bVal.getSize(), "UTF-8");
         } else {
           sval = value.toString();
         }

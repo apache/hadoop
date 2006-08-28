@@ -22,6 +22,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.commons.logging.*;
 
@@ -290,6 +291,11 @@ public class StreamJob
     System.out.println();
     System.out.println("To set the number of reduce tasks (num. of output files):");
     System.out.println("  -jobconf mapred.reduce.tasks=10");
+    System.out.println("To name the job (appears in the JobTrack Web UI):");
+    System.out.println("  -jobconf mapred.job.name='My Job' ");
+    System.out.println("To specify that line-oriented input is in gzip format:");
+    System.out.println("(at this time ALL input files must be gzipped and this is not recognized based on file extension)");
+    System.out.println("   -jobconf stream.recordreader.compression=gzip ");
     System.out.println("To change the local temp directory:");
     System.out.println("  -jobconf dfs.data.dir=/tmp");
     System.out.println("Additional local temp directories with -cluster local:");

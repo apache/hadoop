@@ -166,6 +166,10 @@ public abstract class PipeMapRed {
       String argv = getPipeCommand(job);
       keyCols_ = getKeyColsFromPipeCommand(argv);
 
+      debug_ = (job.get("stream.debug") != null);
+      if(debug_) {
+        System.out.println("PipeMapRed: stream.debug=true");
+      }
       job_ = job;
 
       // Currently: null is identity reduce. REDUCE_NONE is no-map-outputs.
@@ -194,6 +198,7 @@ public abstract class PipeMapRed {
       optSideEffect_ = getUseSideEffect();
 
       if(optSideEffect_) {
+        // in cluster local named: outnone/map_bw5nzv
         String fileName = job_.get("mapred.task.id");
         sideEffectPath_ = new Path(job_.getOutputPath(), fileName);
         FileSystem fs = FileSystem.get(job_);
@@ -360,7 +365,7 @@ public abstract class PipeMapRed {
       val.set(line.substring(pos+1));
     }
   }
-
+  
   class MROutputThread extends Thread
   {
     MROutputThread(OutputCollector output, Reporter reporter)
@@ -557,6 +562,7 @@ public abstract class PipeMapRed {
   int reportPortPlusOne_;
 
   boolean doPipe_;
+  boolean debug_;
 
   Process sim;
   Object doneLock_;
