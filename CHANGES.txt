@@ -68,10 +68,11 @@ Trunk (unreleased changes)
 16. HADOOP-468.  Add HADOOP_NICENESS environment variable to set
     scheduling priority for daemons.  (Vetle Roeim via cutting)
 
-
 17. HADOOP-473.  Fix TextInputFormat to correctly handle more EOL
     formats.  Things now work correctly with CR, LF or CRLF.
     (Dennis Kubes & James White via cutting)
+
+18. HADOOP-461.  Make Java 1.5 an explicit requirement.  (cutting)
 
 
 Release 0.5.0 - 2006-08-04

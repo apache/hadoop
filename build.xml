@@ -45,7 +45,7 @@
   <property name="src.webapps" value="${basedir}/src/webapps"/>
 
   <property name="javadoc.link.java"
-	    value="http://java.sun.com/j2se/1.4.2/docs/api/"/>
+	    value="http://java.sun.com/j2se/1.5/docs/api/"/>
   <property name="javadoc.packages" value="org.apache.hadoop.*"/>
 
   <property name="dist.dir" value="${build.dir}/${final.name}"/>
@@ -53,7 +53,7 @@
   <property name="javac.debug" value="on"/>
   <property name="javac.optimize" value="on"/>
   <property name="javac.deprecation" value="off"/>
-  <property name="javac.version" value="1.4"/>
+  <property name="javac.version" value="1.5"/>
 
   <!-- the normal classpath -->
   <path id="classpath">
