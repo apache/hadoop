@@ -26,6 +26,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.conf.*;
 
 /**
@@ -122,8 +123,9 @@ public class DFSCIOTest extends TestCase {
       Path controlFile = new Path(CONTROL_DIR, "in_file_" + name);
       SequenceFile.Writer writer = null;
       try {
-        writer = new SequenceFile.Writer(fs, controlFile,
-                                         UTF8.class, LongWritable.class);
+        writer = SequenceFile.createWriter(fs, fsConfig, controlFile,
+                                         UTF8.class, LongWritable.class,
+                                         CompressionType.NONE);
         writer.append(new UTF8(name), new LongWritable(fileSize));
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());

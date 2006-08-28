@@ -25,6 +25,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.conf.*;
 
 public class TestFileSystem extends TestCase {
@@ -77,7 +78,8 @@ public class TestFileSystem extends TestCase {
     Random random = new Random(seed);
 
     SequenceFile.Writer writer =
-      new SequenceFile.Writer(fs, controlFile, UTF8.class, LongWritable.class);
+      SequenceFile.createWriter(fs, conf, controlFile, 
+          UTF8.class, LongWritable.class, CompressionType.NONE);
 
     long totalSize = 0;
     long maxSize = ((megaBytes / numFiles) * 2) + 1;

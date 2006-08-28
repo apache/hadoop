@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Progressable;
 
@@ -38,11 +39,17 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
 
     Path file = new Path(job.getOutputPath(), name);
 
-    final SequenceFile.Writer out =
-      new SequenceFile.Writer(fs, file,
+    /** TODO: Figure out a way to deprecate 'mapred.output.compress' */
+    final SequenceFile.Writer out = 
+      SequenceFile.createWriter(fs, job, file,
                               job.getOutputKeyClass(),
                               job.getOutputValueClass(),
-                              job.getBoolean("mapred.output.compress", false),
+                              job.getBoolean("mapred.output.compress", false) ? 
+                                  CompressionType.RECORD : 
+                                  CompressionType.valueOf(
+                                    job.get("mapred.seqfile.compression.type", 
+                                        "NONE")
+                                  ),
                               progress);
 
     return new RecordWriter() {

@@ -31,6 +31,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.ClusterStatus;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -184,9 +185,10 @@ public class NNBench extends MapReduceBase implements Reducer {
 
     for(int i=0; i < numMaps; ++i) {
       Path file = new Path(inDir, "part"+i);
-      SequenceFile.Writer writer = new SequenceFile.Writer(fileSys,
-                                file,
+      SequenceFile.Writer writer = SequenceFile.createWriter(fileSys,
+                                jobConf, file,
                                 IntWritable.class, IntWritable.class,
+                                CompressionType.NONE,
                                 null);
       writer.append(new IntWritable(0), new IntWritable(filesPerMap));
       writer.close();

@@ -26,6 +26,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
 
 /**
@@ -125,8 +126,9 @@ public class PiBenchmark {
         Path outDir = new Path(tmpDir, "out");
         Path outFile = new Path(outDir, "reduce-out");
         FileSystem fileSys = FileSystem.get(conf);
-        SequenceFile.Writer writer = new SequenceFile.Writer(fileSys, outFile,
-              LongWritable.class, LongWritable.class);
+        SequenceFile.Writer writer = SequenceFile.createWriter(fileSys, conf, 
+            outFile, LongWritable.class, LongWritable.class, 
+            CompressionType.NONE);
         writer.append(new LongWritable(numInside), new LongWritable(numOutside));
         writer.close();
       }
@@ -173,8 +175,8 @@ public class PiBenchmark {
     
     for(int idx=0; idx < numMaps; ++idx) {
       Path file = new Path(inDir, "part"+idx);
-      SequenceFile.Writer writer = new SequenceFile.Writer(fileSys, file,
-              LongWritable.class, LongWritable.class);
+      SequenceFile.Writer writer = SequenceFile.createWriter(fileSys, jobConf, 
+          file, LongWritable.class, LongWritable.class, CompressionType.NONE);
       writer.append(new LongWritable(numPoints), new LongWritable(0));
       writer.close();
       System.out.println("Wrote input for Map #"+idx);

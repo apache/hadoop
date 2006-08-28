@@ -19,6 +19,7 @@ package org.apache.hadoop.record.test;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.conf.*;
 import junit.framework.TestCase;
 import java.io.*;
@@ -251,7 +252,9 @@ public class TestMapRed extends TestCase {
         fs.mkdirs(randomIns);
 
         File answerkey = new File(randomIns, "answer.key");
-        SequenceFile.Writer out = new SequenceFile.Writer(fs, answerkey.getPath(), RecInt.class, RecInt.class);
+        SequenceFile.Writer out = SequenceFile.createWriter(fs, conf, 
+            new Path(answerkey.getPath()), RecInt.class, RecInt.class, 
+            CompressionType.NONE);
         try {
             for (int i = 0; i < range; i++) {
                 RecInt k = new RecInt();

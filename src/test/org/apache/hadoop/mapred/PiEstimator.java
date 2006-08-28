@@ -26,6 +26,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /**
  * A Map-reduce program to estimaate the valu eof Pi using monte-carlo
@@ -119,8 +120,9 @@ public class PiEstimator {
         Path outDir = new Path(tmpDir, "out");
         Path outFile = new Path(outDir, "reduce-out");
         FileSystem fileSys = FileSystem.get(conf);
-        SequenceFile.Writer writer = new SequenceFile.Writer(fileSys, outFile,
-              IntWritable.class, IntWritable.class);
+        SequenceFile.Writer writer = SequenceFile.createWriter(fileSys, conf,
+            outFile, IntWritable.class, IntWritable.class, 
+            CompressionType.NONE);
         writer.append(new IntWritable(numInside), new IntWritable(numOutside));
         writer.close();
       }
@@ -169,8 +171,8 @@ public class PiEstimator {
     
     for(int idx=0; idx < numMaps; ++idx) {
       Path file = new Path(inDir, "part"+idx);
-      SequenceFile.Writer writer = new SequenceFile.Writer(fileSys, file,
-              IntWritable.class, IntWritable.class);
+      SequenceFile.Writer writer = SequenceFile.createWriter(fileSys, jobConf, 
+          file, IntWritable.class, IntWritable.class, CompressionType.NONE);
       writer.append(new IntWritable(numPoints), new IntWritable(0));
       writer.close();
     }

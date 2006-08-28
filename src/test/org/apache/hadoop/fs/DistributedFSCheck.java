@@ -28,6 +28,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.conf.*;
 
 /**
@@ -89,7 +90,8 @@ public class DistributedFSCheck extends TestCase {
 
     Path inputFile = new Path(MAP_INPUT_DIR, "in_file");
     SequenceFile.Writer writer =
-      new SequenceFile.Writer(fs, inputFile, UTF8.class, LongWritable.class);
+      SequenceFile.createWriter(fs, fsConfig, inputFile, 
+          UTF8.class, LongWritable.class, CompressionType.NONE);
     
     try {
       nrFiles = 0;

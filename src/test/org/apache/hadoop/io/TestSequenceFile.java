@@ -23,6 +23,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.conf.*;
 
 
@@ -40,13 +41,19 @@ public class TestSequenceFile extends TestCase {
     int megabytes = 1;
     int factor = 5;
     Path file = new Path(System.getProperty("test.build.data",".")+"/test.seq");
+    Path recordCompressedFile = 
+      new Path(System.getProperty("test.build.data",".")+"/test.rc.seq");
+    Path blockCompressedFile = 
+      new Path(System.getProperty("test.build.data",".")+"/test.bc.seq");
  
     int seed = new Random().nextInt();
 
-    FileSystem fs = new LocalFileSystem(new Configuration());
+    FileSystem fs = new LocalFileSystem(conf);
     try {
         //LOG.setLevel(Level.FINE);
-        writeTest(fs, count, seed, file, false);
+
+        // SequenceFile.Writer
+        writeTest(fs, count, seed, file, CompressionType.NONE);
         readTest(fs, count, seed, file);
 
         sortTest(fs, count, megabytes, factor, false, file);
@@ -55,24 +62,63 @@ public class TestSequenceFile extends TestCase {
         sortTest(fs, count, megabytes, factor, true, file);
         checkSort(fs, count, seed, file);
 
-        mergeTest(fs, count, seed, file, false, factor, megabytes);
+        mergeTest(fs, count, seed, file, CompressionType.NONE, false, 
+            factor, megabytes);
         checkSort(fs, count, seed, file);
 
-        mergeTest(fs, count, seed, file, true, factor, megabytes);
+        mergeTest(fs, count, seed, file, CompressionType.NONE, true, 
+            factor, megabytes);
         checkSort(fs, count, seed, file);
-    } finally {
+        
+        // SequenceFile.RecordCompressWriter
+        writeTest(fs, count, seed, recordCompressedFile, CompressionType.RECORD);
+        readTest(fs, count, seed, recordCompressedFile);
+
+        sortTest(fs, count, megabytes, factor, false, recordCompressedFile);
+        checkSort(fs, count, seed, recordCompressedFile);
+
+        sortTest(fs, count, megabytes, factor, true, recordCompressedFile);
+        checkSort(fs, count, seed, recordCompressedFile);
+
+        mergeTest(fs, count, seed, recordCompressedFile, 
+            CompressionType.RECORD, false, factor, megabytes);
+        checkSort(fs, count, seed, recordCompressedFile);
+
+        mergeTest(fs, count, seed, recordCompressedFile, 
+            CompressionType.RECORD, true, factor, megabytes);
+        checkSort(fs, count, seed, recordCompressedFile);
+        
+        // SequenceFile.BlockCompressWriter
+        writeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK);
+        readTest(fs, count, seed, blockCompressedFile);
+
+        sortTest(fs, count, megabytes, factor, false, blockCompressedFile);
+        checkSort(fs, count, seed, blockCompressedFile);
+
+        sortTest(fs, count, megabytes, factor, true, blockCompressedFile);
+        checkSort(fs, count, seed, blockCompressedFile);
+
+        mergeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK, 
+            false, factor, megabytes);
+        checkSort(fs, count, seed, blockCompressedFile);
+
+        mergeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK, 
+            true, factor, megabytes);
+        checkSort(fs, count, seed, blockCompressedFile);
+
+        } finally {
         fs.close();
     }
   }
 
-  private static void writeTest(FileSystem fs, int count, int seed,
-                                Path file, boolean compress)
+  private static void writeTest(FileSystem fs, int count, int seed, Path file, 
+      CompressionType compressionType)
     throws IOException {
     fs.delete(file);
     LOG.debug("creating with " + count + " records");
-    SequenceFile.Writer writer =
-      new SequenceFile.Writer(fs, file, RandomDatum.class, RandomDatum.class,
-                              compress);
+    SequenceFile.Writer writer = 
+      SequenceFile.createWriter(fs, conf, file, 
+          RandomDatum.class, RandomDatum.class, compressionType);
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
     for (int i = 0; i < count; i++) {
       generator.next();
@@ -86,22 +132,39 @@ public class TestSequenceFile extends TestCase {
 
   private static void readTest(FileSystem fs, int count, int seed, Path file)
     throws IOException {
-    RandomDatum k = new RandomDatum();
-    RandomDatum v = new RandomDatum();
     LOG.debug("reading " + count + " records");
     SequenceFile.Reader reader = new SequenceFile.Reader(fs, file, conf);
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
+
+    RandomDatum k = new RandomDatum();
+    RandomDatum v = new RandomDatum();
+    DataOutputBuffer rawKey = new DataOutputBuffer();
+    SequenceFile.ValueBytes rawValue = reader.createValueBytes();
+    
     for (int i = 0; i < count; i++) {
       generator.next();
       RandomDatum key = generator.getKey();
       RandomDatum value = generator.getValue();
-      
-      reader.next(k, v);
-      
-      if (!k.equals(key))
-        throw new RuntimeException("wrong key at " + i);
-      if (!v.equals(value))
-        throw new RuntimeException("wrong value at " + i);
+
+      if ((i%5) == 10) {
+        // Testing 'raw' apis
+        rawKey.reset();
+        reader.nextRaw(rawKey, rawValue);
+      } else {
+        // Testing 'non-raw' apis 
+        if ((i%2) == 0) {
+          reader.next(k);
+          reader.getCurrentValue(v);
+        } else {
+          reader.next(k, v);
+        }
+
+        // Sanity check
+        if (!k.equals(key))
+          throw new RuntimeException("wrong key at " + i);
+        if (!v.equals(value))
+          throw new RuntimeException("wrong value at " + i);
+      }
     }
     reader.close();
   }
@@ -152,9 +215,9 @@ public class TestSequenceFile extends TestCase {
     LOG.debug("sucessfully checked " + count + " records");
   }
 
-  private static void mergeTest(FileSystem fs, int count, int seed, 
-                                Path file, boolean fast, int factor, 
-                                int megabytes)
+  private static void mergeTest(FileSystem fs, int count, int seed, Path file, 
+                                CompressionType compressionType,
+                                boolean fast, int factor, int megabytes)
     throws IOException {
 
     LOG.debug("creating "+factor+" files with "+count/factor+" records");
@@ -168,8 +231,8 @@ public class TestSequenceFile extends TestCase {
       sortedNames[i] = names[i].suffix(".sorted");
       fs.delete(names[i]);
       fs.delete(sortedNames[i]);
-      writers[i] =
-        new SequenceFile.Writer(fs, names[i], RandomDatum.class,RandomDatum.class);
+      writers[i] = SequenceFile.createWriter(fs, conf, names[i], 
+          RandomDatum.class, RandomDatum.class, compressionType);
     }
 
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
@@ -215,21 +278,25 @@ public class TestSequenceFile extends TestCase {
     int megabytes = 1;
     int factor = 10;
     boolean create = true;
+    boolean rwonly = false;
     boolean check = false;
     boolean fast = false;
     boolean merge = false;
-    boolean compress = false;
+    String compressType = "NONE";
     Path file = null;
-    String usage = "Usage: SequenceFile (-local | -dfs <namenode:port>) [-count N] [-megabytes M] [-factor F] [-nocreate] [-check] [-fast] [-merge] [-compress] file";
-    
+
+    String usage = "Usage: SequenceFile (-local | -dfs <namenode:port>) " +
+        "[-count N] " + "[-check] [-compressType <NONE|RECORD|BLOCK>] " +
+        "[[-rwonly] | {[-megabytes M] [-factor F] [-nocreate] [-fast] [-merge]}] " +
+        " file";
     if (args.length == 0) {
         System.err.println(usage);
         System.exit(-1);
     }
-    int i = 0;
-    FileSystem fs = FileSystem.parseArgs(args, i, conf);      
+    
+    FileSystem fs = FileSystem.parseArgs(args, 0, conf);      
     try {
-      for (; i < args.length; i++) {       // parse command line
+      for (int i=0; i < args.length; ++i) {       // parse command line
           if (args[i] == null) {
               continue;
           } else if (args[i].equals("-count")) {
@@ -238,6 +305,8 @@ public class TestSequenceFile extends TestCase {
               megabytes = Integer.parseInt(args[++i]);
           } else if (args[i].equals("-factor")) {
               factor = Integer.parseInt(args[++i]);
+          } else if (args[i].equals("-rwonly")) {
+              rwonly = true;
           } else if (args[i].equals("-nocreate")) {
               create = false;
           } else if (args[i].equals("-check")) {
@@ -246,8 +315,8 @@ public class TestSequenceFile extends TestCase {
               fast = true;
           } else if (args[i].equals("-merge")) {
               merge = true;
-          } else if (args[i].equals("-compress")) {
-              compress = true;
+          } else if (args[i].equals("-compressType")) {
+              compressType = args[++i];
           } else {
               // file is required parameter
               file = new Path(args[i]);
@@ -257,23 +326,34 @@ public class TestSequenceFile extends TestCase {
         LOG.info("megabytes = " + megabytes);
         LOG.info("factor = " + factor);
         LOG.info("create = " + create);
+        LOG.info("rwonly = " + rwonly);
         LOG.info("check = " + check);
         LOG.info("fast = " + fast);
         LOG.info("merge = " + merge);
-        LOG.info("compress = " + compress);
+        LOG.info("compressType = " + compressType);
         LOG.info("file = " + file);
 
+        if (rwonly && (!create || merge || fast)) {
+          System.err.println(usage);
+          System.exit(-1);
+        }
+
         int seed = 0;
- 
-        if (create && !merge) {
-            writeTest(fs, count, seed, file, compress);
+        CompressionType compressionType = 
+          CompressionType.valueOf(compressType);
+
+        if (rwonly || (create && !merge)) {
+            writeTest(fs, count, seed, file, compressionType);
             readTest(fs, count, seed, file);
         }
 
-        if (merge) {
-            mergeTest(fs, count, seed, file, fast, factor, megabytes);
-        } else {
+        if (!rwonly) {
+          if (merge) {
+            mergeTest(fs, count, seed, file, compressionType, 
+                fast, factor, megabytes);
+          } else {
             sortTest(fs, count, megabytes, factor, fast, file);
+          }
         }
     
         if (check) {

@@ -31,6 +31,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.ClusterStatus;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -51,6 +52,7 @@ public class RandomWriter extends MapReduceBase implements Reducer {
   
   public static class Map extends MapReduceBase implements Mapper {
     private FileSystem fileSys = null;
+    private JobConf jobConf = null;
     private long numBytesToWrite;
     private int minKeySize;
     private int keySizeRange;
@@ -75,9 +77,9 @@ public class RandomWriter extends MapReduceBase implements Reducer {
                     Reporter reporter) throws IOException {
       String filename = ((Text) value).toString();
       SequenceFile.Writer writer = 
-        new SequenceFile.Writer(fileSys, new Path(filename), 
+        SequenceFile.createWriter(fileSys, jobConf, new Path(filename), 
                                 BytesWritable.class, BytesWritable.class,
-                                reporter);
+                                CompressionType.NONE, reporter);
       int itemCount = 0;
       while (numBytesToWrite > 0) {
         int keyLength = minKeySize + 
@@ -104,6 +106,7 @@ public class RandomWriter extends MapReduceBase implements Reducer {
      * the data.
      */
     public void configure(JobConf job) {
+      jobConf = job;
       try {
         fileSys = FileSystem.get(job);
       } catch (IOException e) {

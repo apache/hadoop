@@ -74,6 +74,12 @@ Trunk (unreleased changes)
 
 18. HADOOP-461.  Make Java 1.5 an explicit requirement.  (cutting)
 
+19. HADOOP-54.  Add block compression to SequenceFile.  One may now
+    specify that blocks of keys and values are compressed together,
+    improving compression for small keys and values.
+    SequenceFile.Writer's constructor is now deprecated and replaced
+    with a factory method.  (Arun C Murthy via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
