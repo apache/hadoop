@@ -184,6 +184,10 @@ class FSDirectory implements FSConstants {
               throw new FileNotFoundException(
                       "Parent path does not exist: "+path);
           }
+          if (!parentNode.isDir()) {
+        	  throw new FileNotFoundException(
+        			  "Parent path is not a directory: "+path);
+          }
            // check whether the parent already has a node with that name
           String name = newNode.name = target.getName();
           if( parentNode.getChild( name ) != null )

@@ -80,6 +80,9 @@ Trunk (unreleased changes)
     SequenceFile.Writer's constructor is now deprecated and replaced
     with a factory method.  (Arun C Murthy via cutting)
 
+20. HADOOP-281.  Prohibit DFS files that are also directories.
+    (Wendy Chien via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
