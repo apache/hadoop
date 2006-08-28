@@ -17,6 +17,8 @@
 package org.apache.hadoop.conf;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.net.URL;
 import java.io.*;
 
@@ -37,7 +39,7 @@ import org.apache.hadoop.fs.Path;
 /** Provides access to configuration parameters.  Configurations are specified
  * by resources.  A resource contains a set of name/value pairs.
  *
- * <p>Each resources is named by either a String or by a Path.  If named by a
+ * <p>Each resource is named by either a String or by a Path.  If named by a
  * String, then the classpath is examined for a file with that name.  If a
  * File, then the local filesystem is examined directly, without referring to
  * the CLASSPATH.
@@ -49,6 +51,21 @@ import org.apache.hadoop.fs.Path;
  * <p>Hadoop's default resource is the String "hadoop-default.xml" and its
  * final resource is the String "hadoop-site.xml".  Other tools built on Hadoop
  * may specify additional resources.
+ * 
+ * <p>The values returned by most <tt>get*</tt> methods are based on String representations. 
+ * This String is processed for <b>variable expansion</b>. The available variables are the 
+ * <em>System properties</em> and the <em>other properties</em> defined in this Configuration.
+ * <p>The only <tt>get*</tt> method that is not processed for variable expansion is
+ * {@link getObject} (as it cannot assume that the returned values are String). 
+ * You can use <tt>getObject</tt> to obtain the raw value of a String property without 
+ * variable expansion: if <tt>(String)conf.getObject("my.jdk")</tt> is <tt>"JDK ${java.version}"</tt>
+ * then conf.get("my.jdk")</tt> is <tt>"JDK 1.5.0"</tt> 
+ * <p> Example XML config using variables:<br><tt>
+ * &lt;name>basedir&lt;/name>&lt;value>/user/${user.name}&lt;/value><br> 
+ * &lt;name>tempdir&lt;/name>&lt;value>${basedir}/tmp&lt;/value><br>
+ * </tt>When conf.get("tempdir") is called:<br>
+ * <tt>${basedir}</tt> is resolved to another property in this Configuration.
+ * Then <tt>${user.name}</tt> is resolved to a System property.
  */
 public class Configuration {
   private static final Log LOG =
@@ -137,9 +154,41 @@ public class Configuration {
     else return defaultValue;
   }
   
+  private static Pattern varPat = Pattern.compile("\\$\\{[^\\}\\$\u0020]+\\}");
+  private static int MAX_SUBST = 20;
+
+  private String substituteVars(String expr) {
+    if(expr == null) {
+      return null;
+    }
+    Matcher match = varPat.matcher("");
+    String eval = expr;
+    for(int s=0; s<MAX_SUBST; s++) {
+      match.reset(eval);
+      if(! match.find()) {
+        return eval;
+      }
+      String var = match.group();
+      var = var.substring(2, var.length()-1); // remove ${ .. }
+      String val = System.getProperty(var);
+      if(val == null) {
+        val = (String)this.getObject(var);
+      }
+      if(val == null) {
+        return eval; // return literal ${var}: var is unbound
+      }
+      // substitute
+      eval = eval.substring(0, match.start())+val+eval.substring(match.end());
+    }
+    throw new IllegalStateException("Variable substitution depth too large: " 
+                                    + MAX_SUBST + " " + expr);
+  }
+  
   /** Returns the value of the <code>name</code> property, or null if no
    * such property exists. */
-  public String get(String name) { return getProps().getProperty(name);}
+  public String get(String name) {
+    return substituteVars(getProps().getProperty(name));
+  }
 
   /** Sets the value of the <code>name</code> property. */
   public void set(String name, Object value) {
@@ -150,9 +199,9 @@ public class Configuration {
    * exists, then <code>defaultValue</code> is returned.
    */
   public String get(String name, String defaultValue) {
-     return getProps().getProperty(name, defaultValue);
+     return substituteVars(getProps().getProperty(name, defaultValue));
   }
-  
+    
   /** Returns the value of the <code>name</code> property as an integer.  If no
    * such property is specified, or if the specified value is not a valid
    * integer, then <code>defaultValue</code> is returned.

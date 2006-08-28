@@ -89,6 +89,15 @@ Trunk (unreleased changes)
 22. HADOOP-437.  contrib/streaming: Add support for gzipped inputs.
     (Michel Tourn via cutting)
 
+32. HADOOP-463.  Add variable expansion to config files.
+    Configuration property values may now contain variable
+    expressions.  A variable is referenced with the syntax
+    '${variable}'.  Variables values are found first in the
+    configuration, and then in Java system properties.  The default
+    configuration is modified so that temporary directories are now
+    under ${hadoop.tmp.dir}, which is, by default,
+    /tmp/hadoop-${user.name}.  (Michel Tourn via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
