@@ -97,7 +97,8 @@ public class RPC {
       UTF8.writeString(out, methodName);
       out.writeInt(parameterClasses.length);
       for (int i = 0; i < parameterClasses.length; i++) {
-        ObjectWritable.writeObject(out, parameters[i], parameterClasses[i]);
+        ObjectWritable.writeObject(out, parameters[i], parameterClasses[i],
+                                   conf);
       }
     }
 

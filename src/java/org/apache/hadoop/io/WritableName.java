@@ -19,6 +19,8 @@ package org.apache.hadoop.io;
 import java.util.HashMap;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+
 /** Utility to permit renaming of Writable implementation classes without
  * invalidiating files that contain their class name.
  * @author Doug Cutting
@@ -57,13 +59,14 @@ public class WritableName {
   }
 
   /** Return the class for a name.  Default is {@link Class#forName(String)}.*/
-  public static synchronized Class getClass(String name) throws IOException {
+  public static synchronized Class getClass(String name,
+                                            Configuration conf
+                                            ) throws IOException {
     Class writableClass = (Class)NAME_TO_CLASS.get(name);
     if (writableClass != null)
       return writableClass;
     try {
-      return Class.forName(name, true, 
-                           Thread.currentThread().getContextClassLoader());
+      return conf.getClassByName(name);
     } catch (ClassNotFoundException e) {
       IOException newE = new IOException("WritableName can't load class");
       newE.initCause(e);

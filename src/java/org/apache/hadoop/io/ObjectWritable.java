@@ -21,8 +21,7 @@ import java.lang.reflect.Array;
 import java.io.*;
 import java.util.*;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.*;
 
 /** A polymorphic Writable that writes an instance with it's class name.
  * Handles arrays, strings and primitive types without a Writable wrapper.
@@ -61,7 +60,7 @@ public class ObjectWritable implements Writable, Configurable {
   }
   
   public void write(DataOutput out) throws IOException {
-    writeObject(out, instance, declaredClass);
+    writeObject(out, instance, declaredClass, conf);
   }
 
   private static final Map PRIMITIVE_NAMES = new HashMap();
@@ -77,10 +76,11 @@ public class ObjectWritable implements Writable, Configurable {
     PRIMITIVE_NAMES.put("void", Void.TYPE);
   }
 
-  private static class NullInstance implements Writable {
+  private static class NullInstance extends Configured implements Writable {
     private Class declaredClass;
-    public NullInstance() {}
-    public NullInstance(Class declaredClass) {
+    public NullInstance() { super(null); }
+    public NullInstance(Class declaredClass, Configuration conf) {
+      super(conf);
       this.declaredClass = declaredClass;
     }
     public void readFields(DataInput in) throws IOException {
@@ -88,8 +88,7 @@ public class ObjectWritable implements Writable, Configurable {
       declaredClass = (Class)PRIMITIVE_NAMES.get(className);
       if (declaredClass == null) {
         try {
-          declaredClass =
-            Thread.currentThread().getContextClassLoader().loadClass(className);
+          declaredClass = getConf().getClassByName(className);
         } catch (ClassNotFoundException e) {
           throw new RuntimeException(e.toString());
         }
@@ -103,10 +102,11 @@ public class ObjectWritable implements Writable, Configurable {
   /** Write a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding. */
   public static void writeObject(DataOutput out, Object instance,
-                                 Class declaredClass) throws IOException {
+                                 Class declaredClass, 
+                                 Configuration conf) throws IOException {
 
     if (instance == null) {                       // null
-      instance = new NullInstance(declaredClass);
+      instance = new NullInstance(declaredClass, conf);
       declaredClass = Writable.class;
     }
 
@@ -117,7 +117,7 @@ public class ObjectWritable implements Writable, Configurable {
       out.writeInt(length);
       for (int i = 0; i < length; i++) {
         writeObject(out, Array.get(instance, i),
-                    declaredClass.getComponentType());
+                    declaredClass.getComponentType(), conf);
       }
       
     } else if (declaredClass == String.class) {   // String
@@ -171,9 +171,7 @@ public class ObjectWritable implements Writable, Configurable {
     Class declaredClass = (Class)PRIMITIVE_NAMES.get(className);
     if (declaredClass == null) {
       try {
-        declaredClass =
-          Class.forName(className, true, 
-                        Thread.currentThread().getContextClassLoader());
+        declaredClass = conf.getClassByName(className);
       } catch (ClassNotFoundException e) {
         throw new RuntimeException("readObject can't find class", e);
       }

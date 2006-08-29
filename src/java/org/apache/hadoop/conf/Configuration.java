@@ -75,9 +75,14 @@ public class Configuration {
   private ArrayList finalResources = new ArrayList();
 
   private Properties properties;
-  private ClassLoader classLoader = 
-    Thread.currentThread().getContextClassLoader();
-
+  private ClassLoader classLoader;
+  {
+    classLoader = Thread.currentThread().getContextClassLoader();
+    if (classLoader == null) {
+      classLoader = Configuration.class.getClassLoader();
+    }
+  }
+  
   /** A new configuration. */
   public Configuration() {
     if (LOG.isDebugEnabled()) {
@@ -293,6 +298,16 @@ public class Configuration {
     return (String[])values.toArray(new String[values.size()]);
   }
 
+  /**
+   * Load a class by name.
+   * @param name the class name
+   * @return the class object
+   * @throws ClassNotFoundException if the class is not found
+   */
+  public Class getClassByName(String name) throws ClassNotFoundException {
+    return Class.forName(name, true, classLoader);
+  }
+  
   /** Returns the value of the <code>name</code> property as a Class.  If no
    * such property is specified, then <code>defaultValue</code> is returned.
    */
@@ -301,7 +316,7 @@ public class Configuration {
     if (valueString == null)
       return defaultValue;
     try {
-      return Class.forName(valueString, true, classLoader);
+      return getClassByName(valueString);
     } catch (ClassNotFoundException e) {
       throw new RuntimeException(e);
     }
@@ -565,6 +580,14 @@ public class Configuration {
     }
   }
 
+  /**
+   * Get the class loader for this job.
+   * @return the correct class loader
+   */
+  public ClassLoader getClassLoader() {
+    return classLoader;
+  }
+  
   /**
    * Set the class loader that will be used to load the various objects.
    * @param classLoader the new class loader

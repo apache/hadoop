@@ -40,7 +40,7 @@ public class ReflectionUtils {
         try {
             Constructor meth = theClass.getDeclaredConstructor(emptyArray);
             meth.setAccessible(true);
-            result = meth.newInstance(emptyArray);
+            result = meth.newInstance();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

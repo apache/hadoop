@@ -853,13 +853,13 @@ public class SequenceFile {
         UTF8 className = new UTF8();
         
         className.readFields(in);                   // read key class name
-        this.keyClass = WritableName.getClass(className.toString());
+        this.keyClass = WritableName.getClass(className.toString(), conf);
         
         className.readFields(in);                   // read val class name
-        this.valClass = WritableName.getClass(className.toString());
+        this.valClass = WritableName.getClass(className.toString(), conf);
       } else {
-        this.keyClass = WritableName.getClass(Text.readString(in));
-        this.valClass = WritableName.getClass(Text.readString(in));
+        this.keyClass = WritableName.getClass(Text.readString(in), conf);
+        this.valClass = WritableName.getClass(Text.readString(in), conf);
       }
 
       if (version > 2) {                          // if version > 2
