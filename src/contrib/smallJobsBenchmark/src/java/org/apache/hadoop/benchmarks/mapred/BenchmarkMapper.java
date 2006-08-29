@@ -23,7 +23,7 @@ public class BenchmarkMapper extends MapReduceBase implements Mapper {
   public void map(WritableComparable key, Writable value,
       OutputCollector output, Reporter reporter) throws IOException {
     
-    String line = ((UTF8)value).toString();
+    String line = value.toString();
     output.collect(new UTF8(process(line)), new UTF8(""));		
   }
   

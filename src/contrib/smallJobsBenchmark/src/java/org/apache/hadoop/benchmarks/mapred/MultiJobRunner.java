@@ -345,7 +345,7 @@ public class MultiJobRunner {
     int numMaps = 2; 
     int numReduces = 1 ; 
     int dataLines = 1 ; 
-    int inputType = GenData.RANDOM ; 
+    int inputType = GenData.ASCENDING ; 
     boolean ignoreOutput = false ; 
     boolean verbose = false ; 
     

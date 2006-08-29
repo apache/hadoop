@@ -6,12 +6,6 @@ then
   exit 1;
 fi
 
-if [ -z $JAVA_HOME ] 
-then
-  echo "Error JAVA_HOME not defined"  ;
-  exit 1;
-fi
-
 mkdir -p logs;
 
 export TIMES=2
