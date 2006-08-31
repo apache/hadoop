@@ -15,28 +15,49 @@
  */
 package org.apache.hadoop.conf;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 
 import junit.framework.TestCase;
 
 
 public class TestConfiguration extends TestCase {
-    
-  public void testVariableSubstitution() throws IOException {
-    Configuration conf = new Configuration();
-    final String CONFIG = new File("./test-config.xml").getAbsolutePath();
-    this.out = new BufferedWriter(new FileWriter(CONFIG));
+
+  private Configuration conf;
+  final static String CONFIG = new File("./test-config.xml").getAbsolutePath();
+  final static String CONFIG2 = new File("./test-config2.xml").getAbsolutePath();
+
+  protected void setUp() throws Exception {
+    super.setUp();
+    conf = new Configuration();
+  }
+  
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    new File(CONFIG).delete();
+    new File(CONFIG2).delete();
+  }
+  
+  private void startConfig() throws IOException{
     out.write("<?xml version=\"1.0\"?>\n");
     out.write("<configuration>\n");
+  }
+
+  private void endConfig() throws IOException{
+    out.write("</configuration>\n");
+    out.close();
+  }
+  
+  public void testVariableSubstitution() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
     declareProperty("my.int", "${intvar}", "42");
     declareProperty("intvar", "42", "42");
     declareProperty("my.base", "/tmp/${user.name}", UNSPEC);
@@ -46,8 +67,7 @@ public class TestConfiguration extends TestCase {
     declareProperty("my.fullfile", "${my.base}/${my.file}${my.suffix}", UNSPEC);
     // check that undefined variables are returned as-is
     declareProperty("my.failsexpand", "a${my.undefvar}b", "a${my.undefvar}b");
-    out.write("</configuration>\n");
-    out.close();
+    endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addDefaultResource(fileResource);
 
@@ -70,8 +90,6 @@ public class TestConfiguration extends TestCase {
     // check that expansion also occurs for getInt()
     assertTrue(conf.getInt("intvar", -1) == 42);
     assertTrue(conf.getInt("my.int", -1) == 42);
-      
-    new File(CONFIG).delete();
   }
     
   public static void assertEq(Object a, Object b) {
@@ -107,6 +125,39 @@ public class TestConfiguration extends TestCase {
     out.write(val);
     out.write("</value>");
     out.write("</property>\n");
+  }
+  
+  public void testOverlay() throws IOException{
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("a","b");
+    appendProperty("b","c");
+    appendProperty("d","e");
+    endConfig();
+
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    appendProperty("a","b");
+    appendProperty("b","d");
+    endConfig();
+
+    
+    
+    Path fileResource = new Path(CONFIG);
+    conf.addDefaultResource(fileResource);
+    
+    //set dynamically something
+    conf.set("c","d");
+    conf.set("a","d");
+    
+    Configuration clone=new Configuration(conf);
+    clone.addFinalResource(new Path(CONFIG2));
+    
+    assertEquals(clone.get("a"), "d"); 
+    assertEquals(clone.get("b"), "d"); 
+    assertEquals(clone.get("c"), "d"); 
+    assertEquals(clone.get("d"), "e"); 
+    
   }
 
   BufferedWriter out;

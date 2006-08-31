@@ -75,6 +75,7 @@ public class Configuration {
   private ArrayList finalResources = new ArrayList();
 
   private Properties properties;
+  private Properties overlay;
   private ClassLoader classLoader;
   {
     classLoader = Thread.currentThread().getContextClassLoader();
@@ -102,6 +103,8 @@ public class Configuration {
     this.finalResources = (ArrayList)other.finalResources.clone();
     if (other.properties != null)
       this.properties = (Properties)other.properties.clone();
+    if(other.overlay!=null)
+      this.overlay = (Properties)other.overlay.clone();
   }
 
   /** Add a default resource. */
@@ -197,9 +200,17 @@ public class Configuration {
 
   /** Sets the value of the <code>name</code> property. */
   public void set(String name, Object value) {
+    getOverlay().setProperty(name, value.toString());
     getProps().setProperty(name, value.toString());
   }
   
+  private synchronized Properties getOverlay() {
+    if(overlay==null){
+      overlay=new Properties();
+    }
+    return overlay;
+  }
+
   /** Returns the value of the <code>name</code> property.  If no such property
    * exists, then <code>defaultValue</code> is returned.
    */
@@ -446,6 +457,8 @@ public class Configuration {
       loadResources(newProps, defaultResources, false, false);
       loadResources(newProps, finalResources, true, true);
       properties = newProps;
+      if(overlay!=null)
+        properties.putAll(overlay);
     }
     return properties;
   }

@@ -104,6 +104,9 @@ Trunk (unreleased changes)
 25. HADOOP-460. Fix contrib/smallJobsBenchmark to use Text instead of
     UTF8.  (Sanjay Dahiya via cutting)
 
+26. HADOOP-196.  Fix Configuration(Configuration) constructor to work
+    correctly.  (Sami Siren via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
