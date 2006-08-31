@@ -457,7 +457,8 @@ public class JobClient extends ToolBase implements MRConstants  {
     /**
      */
     public static void main(String argv[]) throws Exception {
-        new JobClient().doMain(new Configuration(), argv);
+        int res = new JobClient().doMain(new Configuration(), argv);
+        System.exit(res);
     }
 }
 

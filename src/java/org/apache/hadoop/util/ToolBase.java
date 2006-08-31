@@ -177,11 +177,14 @@ public abstract class ToolBase implements Tool {
      * @param conf Application default configuration
      * @param args User-specified arguments
      * @throws Exception
+     * @return exit code to be passed to a caller. General contract is that code
+     * equal zero signifies a normal return, negative values signify errors, and
+     * positive non-zero values can be used to return application-specific codes.
      */
-    public final void doMain(Configuration conf, String[] args) throws Exception {
+    public final int doMain(Configuration conf, String[] args) throws Exception {
         String [] commandOptions = parseGeneralOptions(conf, args);
         setConf(conf);
-        this.run(commandOptions);
+        return this.run(commandOptions);
     }
 
 }

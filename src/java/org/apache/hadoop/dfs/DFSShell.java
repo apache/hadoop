@@ -391,6 +391,7 @@ public class DFSShell extends ToolBase {
      * main() has some simple utility methods
      */
     public static void main(String argv[]) throws Exception {
-        new DFSShell().doMain(new Configuration(), argv);
+        int res = new DFSShell().doMain(new Configuration(), argv);
+        System.exit(res);
     }
 }

@@ -810,9 +810,10 @@ public class CopyFiles extends ToolBase {
   }
   
   public static void main(String[] args) throws Exception {
-    new CopyFiles().doMain(
+    int res = new CopyFiles().doMain(
         new JobConf(new Configuration(), CopyFiles.class), 
         args);
+    System.exit(res);
   }
   
 }

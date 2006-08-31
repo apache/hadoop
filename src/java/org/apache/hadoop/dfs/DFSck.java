@@ -450,7 +450,8 @@ public class DFSck extends ToolBase {
   }
 
   public static void main(String[] args) throws Exception {
-      new DFSck().doMain(new Configuration(), args);
+      int res = new DFSck().doMain(new Configuration(), args);
+      System.exit(res);
   }
 
   /**
