@@ -625,12 +625,7 @@ public class Configuration {
       if (i.nextIndex() != 0) {
         sb.append(" , ");
       }
-      Object obj = i.next();
-      if (obj instanceof Path) {
-        sb.append((Path)obj);
-      } else {
-        sb.append((String)obj);
-      }
+      sb.append(i.next());
     }
   }
 
