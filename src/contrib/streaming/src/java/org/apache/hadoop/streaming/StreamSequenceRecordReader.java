@@ -68,7 +68,8 @@ public class StreamSequenceRecordReader extends StreamBaseRecordReader
         success = false;
       }
     } while(!success);
-    numRecStats("");
+    
+    numRecStats(new byte[0], 0, 0);
     return more_;
   }
 

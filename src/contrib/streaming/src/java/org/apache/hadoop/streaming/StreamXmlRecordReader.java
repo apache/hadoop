@@ -19,14 +19,12 @@ package org.apache.hadoop.streaming;
 import java.io.*;
 import java.util.regex.*;
 
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
 
@@ -76,18 +74,22 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader
       return false;
     }
     
-    StringBuffer buf = new StringBuffer();
+    DataOutputBuffer buf = new DataOutputBuffer();
     if(!readUntilMatchBegin()) {
         return false;
     }
     if(!readUntilMatchEnd(buf)) {
         return false;
     }
-    numRecStats(buf);
     
     // There is only one elem..key/value splitting is not done here.
-    ((UTF8)key).set(buf.toString());
-    ((UTF8)value).set("");
+    byte [] record = new byte[buf.getLength()];
+    System.arraycopy(buf.getData(), 0, record, 0, record.length);
+    
+    numRecStats(record, 0, record.length); 
+
+    ((Text)key).set(record);
+    ((Text)value).set("");
     
     /*if(numNext < 5) {
         System.out.println("@@@ " + numNext + ". true next k=|" + key.toString().replaceAll("[\\r\\n]", " ")
@@ -111,7 +113,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader
     }
   }
   
-  boolean readUntilMatchEnd(StringBuffer buf) throws IOException
+  private boolean readUntilMatchEnd(DataOutputBuffer buf) throws IOException
   {
     if(slowMatch_) {
       return slowReadUntilMatch(endPat_, true, buf);
@@ -121,7 +123,8 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader
   }
   
   
-  boolean slowReadUntilMatch(Pattern markPattern, boolean includePat, StringBuffer outBufOrNull) 
+  private boolean slowReadUntilMatch(Pattern markPattern, boolean includePat, 
+          DataOutputBuffer outBufOrNull) 
     throws IOException   
   {
     try {
@@ -131,7 +134,10 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader
       boolean success = true;
       in_.mark(lookAhead_ + 2);
       read = in_.read(buf);
-      String sbuf = new String(buf);        
+      if( read == -1 )
+          return false;
+      
+      String sbuf = new String(buf, 0, read, "UTF-8");        
       Matcher match = markPattern.matcher(sbuf);
 
       firstMatchStart_ = NA;
@@ -176,16 +182,11 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader
       if(matched) {
         int endPos = includePat ? firstMatchEnd_ : firstMatchStart_;
         //System.out.println("firstMatchStart_=" + firstMatchStart_ + " firstMatchEnd_=" + firstMatchEnd_);
-        String snip = sbuf.substring(firstMatchStart_, firstMatchEnd_);
+        //String snip = sbuf.substring(firstMatchStart_, firstMatchEnd_);
         //System.out.println(" match snip=|" + snip + "| markPattern=" + markPattern);
         if(outBufOrNull != null) {
-          buf = new byte[endPos];
           in_.reset();      
-          read = in_.read(buf);
-          if(read != endPos) {
-              //System.out.println("@@@ BAD re-read less: " + read + " < " + endPos);
-          }          
-          outBufOrNull.append(new String(buf));
+          outBufOrNull.write(in_,endPos);  
         } else {
           //System.out.println("Skip to " + (inStart + endPos));
           in_.seek(inStart + endPos);
@@ -255,10 +256,12 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader
   
   
   
-  boolean fastReadUntilMatch(String textPat, boolean includePat, StringBuffer outBufOrNull) throws IOException 
+  boolean fastReadUntilMatch(String textPat, 
+          boolean includePat, 
+          DataOutputBuffer outBufOrNull) throws IOException 
   {
     //System.out.println("@@@BEGIN readUntilMatch inPos=" + in_.getPos());  
-    char[] cpat = textPat.toCharArray();
+    byte[] cpat = textPat.getBytes("UTF-8");
     int m = 0;
     boolean match = false;
     long markPos = -1;
@@ -273,10 +276,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader
       if (b == -1)
         break;
 
-      char c = (char)b; // this assumes eight-bit matching. OK with UTF-8
-      if(outBufOrNull != null) {
-        outBufOrNull.append(c);
-      }
+      byte c = (byte)b; // this assumes eight-bit matching. OK with UTF-8
       if (c == cpat[m]) {
         m++;
         if(m==msup) {
@@ -284,16 +284,20 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader
           break;
         }
       } else {
+        if(outBufOrNull != null) {
+          outBufOrNull.write(cpat, 0, m);
+          outBufOrNull.write(c);
+        }
+        
         m = 0;
       }
     }
     if(!includePat && match) {
-      if(outBufOrNull != null) {
-        outBufOrNull.setLength(outBufOrNull.length() - textPat.length());
-      }
       long pos = in_.getPos() - textPat.length();
       in_.reset();
       in_.seek(pos);
+    } else if(outBufOrNull != null){
+      outBufOrNull.write(cpat);
     }
     //System.out.println("@@@DONE  readUntilMatch inPos=" + in_.getPos() + " includePat=" + includePat + " pat=" + textPat + ", buf=|" + outBufOrNull + "|");
     return match;

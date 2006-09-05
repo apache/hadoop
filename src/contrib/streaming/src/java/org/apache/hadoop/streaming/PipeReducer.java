@@ -20,13 +20,10 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 
@@ -61,10 +58,10 @@ public class PipeReducer extends PipeMapRed implements Reducer
         numRecRead_++;
         maybeLogRecord();
         if(doPipe_) {
-          clientOut_.writeBytes(key.toString());
-          clientOut_.writeBytes("\t");
-          clientOut_.writeBytes(val.toString());
-          clientOut_.writeBytes("\n");
+          write(key);
+          clientOut_.write('\t');
+          write(val);
+          clientOut_.write('\n');
           clientOut_.flush();
         } else {
           // "identity reduce"
@@ -73,6 +70,7 @@ public class PipeReducer extends PipeMapRed implements Reducer
       }
     } catch(IOException io) {
       appendLogToJobLog("failure");
+      mapRedFinished();
       throw new IOException(getContext() + io.getMessage());    
     }
   }

@@ -18,7 +18,7 @@ package org.apache.hadoop.streaming;
 
 import java.io.*;
 
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.fs.Path;
@@ -95,11 +95,11 @@ public abstract class StreamBaseRecordReader implements RecordReader
   }
 
   public WritableComparable createKey() {
-    return new UTF8();
+    return new Text();
   }
   
   public Writable createValue() {
-    return new UTF8();
+    return new Text();
   }
   
   /// StreamBaseRecordReader API
@@ -123,12 +123,14 @@ public abstract class StreamBaseRecordReader implements RecordReader
   public abstract void seekNextRecordBoundary() throws IOException;
   
     
-  void numRecStats(CharSequence record) throws IOException
+  void numRecStats(byte[] record, int start, int len) throws IOException
   {
     numRec_++;          
     if(numRec_ == nextStatusRec_) {
+      String recordStr = new String(record, start, 
+                Math.min(len, statusMaxRecordChars_), "UTF-8");    
       nextStatusRec_ +=100;//*= 10;
-      String status = getStatus(record);
+      String status = getStatus(recordStr);
       LOG.info(status);
       reporter_.setStatus(status);
     }

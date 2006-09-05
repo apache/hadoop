@@ -28,7 +28,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.mapred.JobConf;
@@ -417,19 +417,19 @@ public class StreamJob
     // general MapRed job properties
     jobConf_ = new JobConf(config_);
     for(int i=0; i<inputGlobs_.size(); i++) {
-      jobConf_.addInputDir(new File((String)inputGlobs_.get(i)));
+      jobConf_.addInputPath(new Path((String)inputGlobs_.get(i)));
     }
 
     jobConf_.setInputFormat(StreamInputFormat.class);
     // for SequenceFile, input classes may be overriden in getRecordReader
-    jobConf_.setInputKeyClass(UTF8.class);
-    jobConf_.setInputValueClass(UTF8.class);
+    jobConf_.setInputKeyClass(Text.class);
+    jobConf_.setInputValueClass(Text.class);
 
-    jobConf_.setOutputKeyClass(UTF8.class);
-    jobConf_.setOutputValueClass(UTF8.class);
+    jobConf_.setOutputKeyClass(Text.class);
+    jobConf_.setOutputValueClass(Text.class);
     //jobConf_.setCombinerClass();
 
-    jobConf_.setOutputDir(new File(output_));
+    jobConf_.setOutputPath(new Path(output_));
     jobConf_.setOutputFormat(StreamOutputFormat.class);
 
     jobConf_.set("stream.addenvironment", addTaskEnvironment_);

@@ -17,17 +17,12 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
-import java.util.Iterator;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 
@@ -71,34 +66,20 @@ public class PipeMapper extends PipeMapRed implements Mapper
     }
     try {
       // 1/4 Hadoop in
-      if(key instanceof BytesWritable) {
-        BytesWritable bKey = (BytesWritable)key;
-        mapredKey_ = new String(bKey.get(), 0, bKey.getSize(), "UTF-8");
-      } else {
-        mapredKey_ = key.toString();        
-      }
       numRecRead_++;
-
       maybeLogRecord();
 
       // 2/4 Hadoop to Tool
       if(numExceptions_==0) {
-        String sval;
-        if(value instanceof BytesWritable) {
-          BytesWritable bVal = (BytesWritable)value;
-          sval = new String(bVal.get(), 0, bVal.getSize(), "UTF-8");
-        } else {
-          sval = value.toString();
-        }
-        if(optUseKey_) {
-          clientOut_.writeBytes(mapredKey_);
-          clientOut_.writeBytes("\t");
-        }
-        clientOut_.writeBytes(sval);
-        clientOut_.writeBytes("\n");
-        clientOut_.flush();
+          if(optUseKey_) {
+              write(key);
+              clientOut_.write('\t');
+          }
+          write(value);
+          clientOut_.write('\n');
+          clientOut_.flush();
       } else {
-        numRecSkipped_++;
+          numRecSkipped_++;
       }
     } catch(IOException io) {
       numExceptions_++;
@@ -106,6 +87,7 @@ public class PipeMapper extends PipeMapRed implements Mapper
         // terminate with failure
         String msg = logFailure(io);
         appendLogToJobLog("failure");
+        mapRedFinished();
         throw new IOException(msg);
       } else {
         // terminate with success:

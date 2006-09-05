@@ -17,17 +17,18 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+import java.nio.charset.MalformedInputException;
 import java.util.zip.GZIPInputStream; 
 
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Similar to org.apache.hadoop.mapred.TextRecordReader, 
@@ -75,68 +76,49 @@ public class StreamLineRecordReader extends StreamBaseRecordReader
   }
 
   public synchronized boolean next(Writable key, Writable value)
-    throws IOException {
-    if(gzipped_) {
-      // figure EOS from readLine
-    } else {
-      long pos = in_.getPos();
-      if (pos >= end_)
-        return false;
+    throws IOException {  
+    if(!(key instanceof Text)) {
+        throw new IllegalArgumentException(
+                "Key should be of type Text but: "+key.getClass().getName());
+    }
+    if(!(value instanceof Text)) {
+        throw new IllegalArgumentException(
+                "Value should be of type Text but: "+value.getClass().getName());
     }
 
-    //((LongWritable)key).set(pos);      // key is position
-    //((UTF8)value).set(readLine(in));   // value is line
-    String line = readLine(din_);
-    if(line == null) {
-        return false; // for gzipped_
+    Text tKey = (Text)key;
+    Text tValue = (Text)value;
+    byte [] line;
+    
+    while (true) {
+        if(gzipped_) {
+            // figure EOS from readLine
+        } else {
+            long pos = in_.getPos();
+            if (pos >= end_)
+                return false;
+        }
+        
+        line = UTF8ByteArrayUtils.readLine(in_);
+        if(line==null)
+            return false;
+        try {
+            int tab=UTF8ByteArrayUtils.findTab(line);
+            if(tab == -1) {
+                tKey.set(line);
+                tValue.set("");
+            } else {
+                UTF8ByteArrayUtils.splitKeyVal(line, tKey, tValue, tab);
+            }
+            break;
+        } catch (MalformedInputException e) {
+            LOG.warn(e);
+            StringUtils.stringifyException(e);
+        }
     }
-
-    // key is line up to TAB, value is rest
-    final boolean NOVAL = false;
-    if(NOVAL) {
-        ((UTF8)key).set(line);
-        ((UTF8)value).set("");
-    } else {
-      int tab = line.indexOf('\t');
-      if(tab == -1) {
-        ((UTF8)key).set(line);
-        ((UTF8)value).set("");
-      } else {
-        ((UTF8)key).set(line.substring(0, tab));
-        ((UTF8)value).set(line.substring(tab+1));
-      }
-    }
-    numRecStats(line);
+    numRecStats( line, 0, line.length );
     return true;
   }
-
-
-  // from TextInputFormat
-  private static String readLine(InputStream in) throws IOException {
-    StringBuffer buffer = new StringBuffer();
-    boolean over = true;
-    while (true) {
-
-      int b = in.read();
-      if (b == -1)
-        break;
-      
-      over = false;
-      char c = (char)b;              // bug: this assumes eight-bit characters.
-      if (c == '\r' || c == '\n')    // TODO || c == '\t' here
-        break;
-
-      buffer.append(c);
-    }
-    
-    if(over) {
-      return null;
-    } else {
-      return buffer.toString();
-    }
-    
-  }
-
   boolean gzipped_;
   GZIPInputStream zin_;
   DataInputStream din_; // GZIP or plain

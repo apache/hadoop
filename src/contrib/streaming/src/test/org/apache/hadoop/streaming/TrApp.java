@@ -17,7 +17,6 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
-import java.util.*;
 import org.apache.hadoop.streaming.Environment;
 
 /** A minimal Java implementation of /usr/bin/tr.
@@ -51,12 +50,12 @@ public class TrApp
     // property names have been escaped in PipeMapRed.safeEnvVarName()
     expect("mapred_input_format_class", "org.apache.hadoop.streaming.StreamInputFormat");
     expect("mapred_job_tracker", "local");
-    expect("mapred_input_key_class", "org.apache.hadoop.io.UTF8");
-    expect("mapred_input_value_class", "org.apache.hadoop.io.UTF8");
+    expect("mapred_input_key_class", "org.apache.hadoop.io.Text");
+    expect("mapred_input_value_class", "org.apache.hadoop.io.Text");
     expect("mapred_local_dir", "build/test/mapred/local");
     expect("mapred_output_format_class", "org.apache.hadoop.streaming.StreamOutputFormat");
-    expect("mapred_output_key_class", "org.apache.hadoop.io.UTF8");
-    expect("mapred_output_value_class", "org.apache.hadoop.io.UTF8");
+    expect("mapred_output_key_class", "org.apache.hadoop.io.Text");
+    expect("mapred_output_value_class", "org.apache.hadoop.io.Text");
 
     expect("mapred_task_is_map", "true");
     expect("mapred_reduce_tasks", "1");

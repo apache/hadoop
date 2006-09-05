@@ -110,6 +110,10 @@ Trunk (unreleased changes)
 27. HADOOP-501.  Fix Configuration.toString() to handle URL resources.
     (Thomas Friol via cutting)
 
+28. HADOOP-499.  Reduce the use of Strings in contrib/streaming,
+    replacing them with Text for better performance.
+    (Hairong Kuang via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
