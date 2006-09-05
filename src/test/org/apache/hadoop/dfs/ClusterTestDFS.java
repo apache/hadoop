@@ -227,12 +227,13 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
       conf.set("fs.default.name", nameNodeSocketAddr);
       for (int i = 0; i < initialDNcount; i++) {
         // uniquely config real fs path for data storage for this datanode
-        String dataDir = baseDirSpecified + "/datanode" + i;
-        conf.set("dfs.data.dir", dataDir);
-        DataNode dn = DataNode.makeInstanceForDir(dataDir, conf);
+        String dataDirs[] = new String[1];
+        dataDirs[0] = baseDirSpecified + "/datanode" + i;
+        conf.set("dfs.data.dir", dataDirs[0]);
+        DataNode dn = DataNode.makeInstance(dataDirs, conf);
         if (dn != null) {
           listOfDataNodeDaemons.add(dn);
-          (new Thread(dn, "DataNode" + i + ": " + dataDir)).start();
+          (new Thread(dn, "DataNode" + i + ": " + dataDirs[0])).start();
         }
       }
       try {
@@ -365,8 +366,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
           if (i != iDatanodeClosed) {
             try {
               if (checkDataDirsEmpty) {
-                File dataDir = new File(dataNode.data.diskUsage.getDirPath());
-                assertNoBlocks(dataDir);
+                assertNoBlocks(dataNode);
 
               }
               dataNode.shutdown();
@@ -408,18 +408,13 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
     msg(summarizeThreadGroup());
   }
 
-  private void assertNoBlocks(File datanodeDir) {
-    File datanodeDataDir = new File(datanodeDir, "data");
-    String[] blockFilenames =
-        datanodeDataDir.list(
-            new FilenameFilter() {
-              public boolean accept(File dir, String name){
-                return Block.isBlockFilename(new File(dir, name));}});
+  private void assertNoBlocks(DataNode dn) {
+    Block[] blocks = dn.data.getBlockReport();
     // if this fails, the delete did not propagate because either
     //   awaitQuiescence() returned before the disk images were removed
     //   or a real failure was detected.
-    assertTrue(" data dir not empty: " + datanodeDataDir,
-               blockFilenames.length==0);
+    assertTrue(" data dir not empty: " + dn.data.volumes,
+               blocks.length==0);
   }
 
   /**

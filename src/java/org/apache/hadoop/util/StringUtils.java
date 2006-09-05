@@ -79,4 +79,22 @@ public class StringUtils {
     }
     return numFormat.format(result) + suffix;
   }
+  
+  /**
+   * Given an array of strings, return a comma-separated list of its elements.
+   * @param strs Array of strings
+   * @return Empty string if strs.length is 0, comma separated list of strings
+   * otherwise
+   */
+  
+  public static String arrayToString(String[] strs) {
+    if (strs.length == 0) { return ""; }
+    StringBuffer sbuf = new StringBuffer();
+    sbuf.append(strs[0]);
+    for (int idx = 1; idx < strs.length; idx++) {
+      sbuf.append(",");
+      sbuf.append(strs[idx]);
+    }
+    return sbuf.toString();
+  }
 }

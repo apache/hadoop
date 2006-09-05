@@ -114,6 +114,12 @@ Trunk (unreleased changes)
     replacing them with Text for better performance.
     (Hairong Kuang via cutting)
 
+29. HADOOP-64.  Manage multiple volumes with a single DataNode.
+    Previously DataNode would create a separate daemon per configured
+    volume, each with its own connection to the NameNode.  Now all
+    volumes are handled by a single DataNode daemon, reducing the load
+    on the NameNode.  (Milind Bhandarkar via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

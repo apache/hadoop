@@ -71,9 +71,12 @@ public class MiniDFSCluster {
      */
     public void run() {
       try {
-        File dataDir = new File(conf.get("dfs.data.dir"));
-        dataDir.mkdirs();
-        node = new DataNode(conf, dataDir.getPath());
+        String[] dirs = conf.getStrings("dfs.data.dir");
+        for (int idx = 0; idx < dirs.length; idx++) {
+          File dataDir = new File(dirs[idx]);
+          dataDir.mkdirs();
+        }
+        node = new DataNode(conf, dirs);
         node.run();
       } catch (Throwable e) {
         node = null;
@@ -105,7 +108,8 @@ public class MiniDFSCluster {
     File base_dir = new File(System.getProperty("test.build.data"),
                              "dfs/");
     conf.set("dfs.name.dir", new File(base_dir, "name").getPath());
-    conf.set("dfs.data.dir", new File(base_dir, "data").getPath());
+    conf.set("dfs.data.dir", new File(base_dir, "data1").getPath()+","+
+        new File(base_dir, "data2").getPath());
     conf.setInt("dfs.replication", 1);
     // this timeout seems to control the minimum time for the test, so
     // decrease it considerably.

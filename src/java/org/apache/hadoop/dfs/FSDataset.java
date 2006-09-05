@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.*;
  ***************************************************/
 class FSDataset implements FSConstants {
 
-		static final double USABLE_DISK_PCT_DEFAULT = 0.98f; 
 	
   /**
      * A node type that can be built into a tree reflecting the
@@ -40,92 +39,72 @@ class FSDataset implements FSConstants {
      */
     class FSDir {
         File dir;
+        int numBlocks = 0;
+        int myIdx = 0;
         FSDir children[];
+        FSDir siblings[];
 
         /**
          */
-        public FSDir(File dir) {
+        public FSDir(File dir, int myIdx, FSDir[] siblings) {
             this.dir = dir;
+            this.myIdx = myIdx;
+            this.siblings = siblings;
             this.children = null;
-        }
-
-        /**
-         */
-        public File getDirName() {
-            return dir;
-        }
-
-        /**
-         */
-        public FSDir[] getChildren() {
-            return children;
-        }
-
-        /**
-         */
-        public void addBlock(Block b, File src) {
-            addBlock(b, src, b.getBlockId(), 0);
-        }
-
-        /**
-         */
-        void addBlock(Block b, File src, long blkid, int depth) {
-            //
-            // Add to the local dir, if no child dirs
-            //
-            if (children == null) {
-                src.renameTo(new File(dir, b.getBlockName()));
-
-                //
-                // Test whether this dir's contents should be busted 
-                // up into subdirs.
-                //
-
-                // REMIND - mjc - sometime soon, we'll want this code
-                // working.  It prevents the datablocks from all going
-                // into a single huge directory.
-                /**
-                File localFiles[] = dir.listFiles();
-                if (localFiles.length == 16) {
-                    //
-                    // Create all the necessary subdirs
-                    //
-                    this.children = new FSDir[16];
-                    for (int i = 0; i < children.length; i++) {
-                        String str = Integer.toBinaryString(i);
-                        try {
-                            File subdir = new File(dir, "dir_" + str);
-                            subdir.mkdir();
-                            children[i] = new FSDir(subdir);
-                        } catch (StringIndexOutOfBoundsException excep) {
-                            excep.printStackTrace();
-                            System.out.println("Ran into problem when i == " + i + " an str = " + str);
-                        }
-                    }
-
-                    //
-                    // Move existing files into new dirs
-                    //
-                    for (int i = 0; i < localFiles.length; i++) {
-                        Block srcB = new Block(localFiles[i]);
-                        File dst = getBlockFilename(srcB, blkid, depth);
-                        if (!src.renameTo(dst)) {
-                            System.out.println("Unexpected problem in renaming " + src);
-                        }
-                    }
-                }
-                **/
+            if (! dir.exists()) {
+              dir.mkdirs();
             } else {
-                // Find subdir
-                children[getHalfByte(blkid, depth)].addBlock(b, src, blkid, depth+1);
+              File[] files = dir.listFiles();
+              int numChildren = 0;
+              for (int idx = 0; idx < files.length; idx++) {
+                if (files[idx].isDirectory()) {
+                  numChildren++;
+                } else if (Block.isBlockFilename(files[idx])) {
+                  numBlocks++;
+                }
+              }
+              if (numChildren > 0) {
+                children = new FSDir[numChildren];
+                int curdir = 0;
+                for (int idx = 0; idx < files.length; idx++) {
+                  if (files[idx].isDirectory()) {
+                    children[curdir] = new FSDir(files[idx], curdir, children);
+                    curdir++;
+                  }
+                }
+              }
             }
         }
 
         /**
-         * Fill in the given blockSet with any child blocks
+         */
+        public File addBlock(Block b, File src) {
+            if (numBlocks < maxBlocksPerDir) {
+              File dest = new File(dir, b.getBlockName());
+              src.renameTo(dest);
+              numBlocks += 1;
+              return dest;
+            } else {
+              if (siblings != null && myIdx != (siblings.length-1)) {
+                File dest = siblings[myIdx+1].addBlock(b, src);
+                if (dest != null) { return dest; }
+              }
+              if (children == null) {
+                children = new FSDir[maxBlocksPerDir];
+                for (int idx = 0; idx < maxBlocksPerDir; idx++) {
+                  children[idx] = new FSDir(
+                      new File(dir, "subdir"+idx), idx, children);
+                }
+              }
+              return children[0].addBlock(b, src);
+            }
+        }
+
+        /**
+         * Populate the given blockSet with any child blocks
          * found at this node.
          */
-        public void getBlockInfo(TreeSet blockSet) {
+        public void getBlockInfo(TreeSet<Block> blockSet) {
             if (children != null) {
                 for (int i = 0; i < children.length; i++) {
                     children[i].getBlockInfo(blockSet);
@@ -140,38 +119,36 @@ class FSDataset implements FSConstants {
             }
         }
 
-        /**
-         * Find the file that corresponds to the given Block
-         */
-        public File getBlockFilename(Block b) {
-            return getBlockFilename(b, b.getBlockId(), 0);
-        }
 
-        /**
-         * Helper method to find file for a Block
-         */         
-        private File getBlockFilename(Block b, long blkid, int depth) {
-            if (children == null) {
-                return new File(dir, b.getBlockName());
-            } else {
-                // 
-                // Lift the 4 bits starting at depth, going left->right.
-                // That means there are 2^4 possible children, or 16.
-                // The max depth is thus ((len(long) / 4) == 16).
-                //
-                return children[getHalfByte(blkid, depth)].getBlockFilename(b, blkid, depth+1);
+        void getVolumeMap(HashMap<Block, FSVolume> volumeMap, FSVolume volume) {
+          if (children != null) {
+                for (int i = 0; i < children.length; i++) {
+                    children[i].getVolumeMap(volumeMap, volume);
+                }
+            }
+
+            File blockFiles[] = dir.listFiles();
+            for (int i = 0; i < blockFiles.length; i++) {
+                if (Block.isBlockFilename(blockFiles[i])) {
+                    volumeMap.put(new Block(blockFiles[i], blockFiles[i].length()), volume);
+                }
             }
         }
-
-        /**
-         * Returns a number 0-15, inclusive.  Pulls out the right
-         * half-byte from the indicated long.
-         */
-        private int getHalfByte(long blkid, int halfByteIndex) {
-            blkid = blkid >> ((15 - halfByteIndex) * 4);
-            return (int) ((0x000000000000000F) & blkid);
-        }
         
+        void getBlockMap(HashMap<Block, File> blockMap) {
+          if (children != null) {
+                for (int i = 0; i < children.length; i++) {
+                    children[i].getBlockMap(blockMap);
+                }
+            }
+
+            File blockFiles[] = dir.listFiles();
+            for (int i = 0; i < blockFiles.length; i++) {
+                if (Block.isBlockFilename(blockFiles[i])) {
+                    blockMap.put(new Block(blockFiles[i], blockFiles[i].length()), blockFiles[i]);
+                }
+            }
+        }
         /**
          * check if a data diretory is healthy
          * @throws DiskErrorException
@@ -195,50 +172,210 @@ class FSDataset implements FSConstants {
         }
     }
 
+    class FSVolume {
+      static final double USABLE_DISK_PCT_DEFAULT = 0.98f; 
+
+      private File dir;
+      private FSDir dataDir;
+      private File tmpDir;
+      private DF usage;
+      private long reserved;
+      private double usableDiskPct = USABLE_DISK_PCT_DEFAULT;
+    
+      FSVolume(File dir, Configuration conf) throws IOException {
+        this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
+        this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct",
+            (float) USABLE_DISK_PCT_DEFAULT);
+        this.dir = dir;
+        this.dataDir = new FSDir(new File(dir, "data"), 0, null);
+        this.tmpDir = new File(dir, "tmp");
+        if (tmpDir.exists()) {
+          FileUtil.fullyDelete(tmpDir);
+        }
+        tmpDir.mkdirs();
+        this.usage = new DF(dir, conf);
+      }
+      
+      long getCapacity() throws IOException {
+        return usage.getCapacity();
+      }
+      
+      long getAvailable() throws IOException {
+        return ((long) Math.round(usableDiskPct *
+                usage.getAvailable()) - reserved);
+      }
+      
+      String getMount() throws IOException {
+        return usage.getMount();
+      }
+      
+      File createTmpFile(Block b) throws IOException {
+        File f = new File(tmpDir, b.getBlockName());
+        try {
+          if (f.exists()) {
+            throw new IOException("Unexpected problem in creating temporary file for "+
+                b + ".  File " + f + " should not be present, but is.");
+          }
+          // Create the zero-length temp file
+          //
+          if (!f.createNewFile()) {
+            throw new IOException("Unexpected problem in creating temporary file for "+
+                b + ".  File " + f + " should be creatable, but is already present.");
+          }
+        } catch (IOException ie) {
+          System.out.println("Exception!  " + ie);
+          throw ie;
+        }
+        reserved -= b.getNumBytes();
+        return f;
+      }
+      
+      File addBlock(Block b, File f) {
+        return dataDir.addBlock(b, f);
+      }
+      
+      void checkDirs() throws DiskErrorException {
+        dataDir.checkDirTree();
+        DiskChecker.checkDir(tmpDir);
+      }
+      
+      void getBlockInfo(TreeSet<Block> blockSet) {
+        dataDir.getBlockInfo(blockSet);
+      }
+      
+      void getVolumeMap(HashMap<Block, FSVolume> volumeMap) {
+        dataDir.getVolumeMap(volumeMap, this);
+      }
+      
+      void getBlockMap(HashMap<Block, File> blockMap) {
+        dataDir.getBlockMap(blockMap);
+      }
+      
+      public String toString() {
+        return dir.getAbsolutePath();
+      }
+    }
+    
+    class FSVolumeSet {
+      FSVolume[] volumes = null;
+      int curVolume = 0;
+      HashMap<String,Long> mountMap = new HashMap<String,Long>();
+      
+      FSVolumeSet(FSVolume[] volumes) {
+        this.volumes = volumes;
+      }
+      
+      FSVolume getNextVolume(long blockSize) throws IOException {
+        int startVolume = curVolume;
+        while (true) {
+          FSVolume volume = volumes[curVolume];
+          curVolume = (curVolume + 1) % volumes.length;
+          if (volume.getAvailable() >= blockSize) { return volume; }
+          if (curVolume == startVolume) {
+            throw new DiskOutOfSpaceException("Insufficient space for an additional block");
+          }
+        }
+      }
+      
+      synchronized long getCapacity() throws IOException {
+        for (int idx = 0; idx < volumes.length; idx++) {
+          String mount = volumes[idx].getMount();
+          Long capacity = new Long(volumes[idx].getCapacity());
+          mountMap.put(mount, capacity);
+        }
+        long capacity = 0L;
+        for (Iterator<Long> iter = mountMap.values().iterator(); iter.hasNext();) {
+          capacity += iter.next().longValue();
+        }
+        return capacity;
+      }
+      
+      synchronized long getRemaining() throws IOException {
+        for (int idx = 0; idx < volumes.length; idx++) {
+          String mount = volumes[idx].getMount();
+          Long remaining = new Long(volumes[idx].getCapacity());
+          mountMap.put(mount, remaining);
+        }
+        long remaining = 0L;
+        for (Iterator<Long> iter = mountMap.values().iterator(); iter.hasNext();) {
+          remaining += iter.next().longValue();
+        }
+        return remaining;
+      }
+      
+      void getBlockInfo(TreeSet<Block> blockSet) {
+        for (int idx = 0; idx < volumes.length; idx++) {
+          volumes[idx].getBlockInfo(blockSet);
+        }
+      }
+      
+      void getVolumeMap(HashMap<Block, FSVolume> volumeMap) {
+        for (int idx = 0; idx < volumes.length; idx++) {
+          volumes[idx].getVolumeMap(volumeMap);
+        }
+      }
+      
+      void getBlockMap(HashMap<Block, File> blockMap) {
+        for (int idx = 0; idx < volumes.length; idx++) {
+          volumes[idx].getBlockMap(blockMap);
+        }
+      }
+      
+      void checkDirs() throws DiskErrorException {
+        for (int idx = 0; idx < volumes.length; idx++) {
+          volumes[idx].checkDirs();
+        }
+      }
+      
+      public String toString() {
+        StringBuffer sb = new StringBuffer();
+        for (int idx = 0; idx < volumes.length; idx++) {
+          sb.append(volumes[idx].toString());
+          if (idx != volumes.length - 1) { sb.append(","); }
+        }
+        return sb.toString();
+      }
+    }
     //////////////////////////////////////////////////////
     //
     // FSDataSet
     //
     //////////////////////////////////////////////////////
 
-    DF diskUsage;
-    File data = null, tmp = null;
-    long reserved = 0;
-    double usableDiskPct = USABLE_DISK_PCT_DEFAULT;
-    FSDir dirTree;
-    TreeSet ongoingCreates = new TreeSet();
+    FSVolumeSet volumes;
+    private HashMap<Block,File> ongoingCreates = new HashMap<Block,File>();
+    private int maxBlocksPerDir = 0;
+    private HashMap<Block,FSVolume> volumeMap = null;
+    private HashMap<Block,File> blockMap = null;
 
     /**
      * An FSDataset has a directory where it loads its data files.
      */
-    public FSDataset(File dir, Configuration conf) throws IOException {
-    		this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
-    		this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct", (float) USABLE_DISK_PCT_DEFAULT);
-        diskUsage = new DF( dir, conf); 
-        this.data = new File(dir, "data");
-        if (! data.exists()) {
-            data.mkdirs();
+    public FSDataset(File[] dirs, Configuration conf) throws IOException {
+    	this.maxBlocksPerDir = conf.getInt("dfs.datanode.numblocks", 64);
+        FSVolume[] volArray = new FSVolume[dirs.length];
+        for (int idx = 0; idx < dirs.length; idx++) {
+          volArray[idx] = new FSVolume(dirs[idx], conf);
         }
-        this.tmp = new File(dir, "tmp");
-        if (tmp.exists()) {
-            FileUtil.fullyDelete(tmp);
-        }
-        this.tmp.mkdirs();
-        this.dirTree = new FSDir(data);
+        volumes = new FSVolumeSet(volArray);
+        volumeMap = new HashMap<Block,FSVolume>();
+        volumes.getVolumeMap(volumeMap);
+        blockMap = new HashMap<Block,File>();
+        volumes.getBlockMap(blockMap);
     }
 
     /**
      * Return total capacity, used and unused
      */
     public long getCapacity() throws IOException {
-        return diskUsage.getCapacity();
+        return volumes.getCapacity();
     }
 
     /**
      * Return how many bytes can still be stored in the FSDataset
      */
     public long getRemaining() throws IOException {
-        return ((long) Math.round(usableDiskPct * diskUsage.getAvailable())) - reserved;
+        return volumes.getRemaining();
     }
 
     /**
@@ -263,19 +400,6 @@ class FSDataset implements FSConstants {
     }
 
     /**
-     * A Block b will be coming soon!
-     */
-    public boolean startBlock(Block b) throws IOException {
-        //
-        // Make sure the block isn't 'valid'
-        //
-        if (isValidBlock(b)) {
-            throw new IOException("Block " + b + " is valid, and cannot be created.");
-        }
-        return true;
-    }
-
-    /**
      * Start writing to a block file
      */
     public OutputStream writeToBlock(Block b) throws IOException {
@@ -295,41 +419,17 @@ class FSDataset implements FSConstants {
             //
             // Is it already in the create process?
             //
-            if (ongoingCreates.contains(b)) {
-                throw new IOException("Block " + b + " has already been started (though not completed), and thus cannot be created.");
+            if (ongoingCreates.containsKey(b)) {
+                throw new IOException("Block " + b +
+                    " has already been started (though not completed), and thus cannot be created.");
             }
 
-            //
-            // Check if we have too little space
-            //
-            if (getRemaining() < blockSize) {
-                throw new DiskOutOfSpaceException("Insufficient space for an additional block");
-            }
-
-            //
-            // OK, all's well.  Register the create, adjust 
-            // 'reserved' size, & create file
-            //
-            ongoingCreates.add(b);
-            reserved += blockSize;
-            f = getTmpFile(b);
-	    try {
-		if (f.exists()) {
-		    throw new IOException("Unexpected problem in startBlock() for " + b + ".  File " + f + " should not be present, but is.");
-		}
-
-		//
-		// Create the zero-length temp file
-		//
-		if (!f.createNewFile()) {
-		    throw new IOException("Unexpected problem in startBlock() for " + b + ".  File " + f + " should be creatable, but is already present.");
-		}
-	    } catch (IOException ie) {
-                System.out.println("Exception!  " + ie);
-		ongoingCreates.remove(b);		
-		reserved -= blockSize;
-                throw ie;
-	    }
+            FSVolume v = volumes.getNextVolume(blockSize);
+            
+            // create temporary file to hold block in the designated volume
+            f = v.createTmpFile(b);
+            ongoingCreates.put(b, f);
+            volumeMap.put(b, v);
         }
 
         //
@@ -352,49 +452,31 @@ class FSDataset implements FSConstants {
      * Complete the block write!
      */
     public void finalizeBlock(Block b) throws IOException {
-        File f = getTmpFile(b);
-        if (! f.exists()) {
-            throw new IOException("No temporary file " + f + " for block " + b);
+      synchronized (ongoingCreates) {
+        File f = ongoingCreates.get(b);
+        if (f == null || ! f.exists()) {
+          throw new IOException("No temporary file " + f + " for block " + b);
         }
+        long finalLen = f.length();
+        b.setNumBytes(finalLen);
+        FSVolume v = volumeMap.get(b);
         
-        synchronized (ongoingCreates) {
-            //
-            // Make sure still registered as ongoing
-            //
-            if (! ongoingCreates.contains(b)) {
-                throw new IOException("Tried to finalize block " + b + ", but not in ongoingCreates table");
-            }
-
-            long finalLen = f.length();
-            b.setNumBytes(finalLen);
-
-            //
-            // Move the file
-            // (REMIND - mjc - shame to move the file within a synch
-            // section!  Maybe remove this?)
-            //
-            dirTree.addBlock(b, f);
-
-            //
-            // Done, so deregister from ongoingCreates
-            //
-            if (! ongoingCreates.remove(b)) {
-                throw new IOException("Tried to finalize block " + b + ", but could not find it in ongoingCreates after file-move!");
-            } 
-            reserved -= b.getNumBytes();
-        }
+        File dest = v.addBlock(b, f);
+        blockMap.put(b, dest);
+        ongoingCreates.remove(b);
+      }
     }
 
     /**
      * Return a table of block data
      */
     public Block[] getBlockReport() {
-        TreeSet blockSet = new TreeSet();
-        dirTree.getBlockInfo(blockSet);
+        TreeSet<Block> blockSet = new TreeSet<Block>();
+        volumes.getBlockInfo(blockSet);
         Block blockTable[] = new Block[blockSet.size()];
         int i = 0;
-        for (Iterator it = blockSet.iterator(); it.hasNext(); i++) {
-            blockTable[i] = (Block) it.next();
+        for (Iterator<Block> it = blockSet.iterator(); it.hasNext(); i++) {
+            blockTable[i] = it.next();
         }
         return blockTable;
     }
@@ -404,11 +486,7 @@ class FSDataset implements FSConstants {
      */
     public boolean isValidBlock(Block b) {
         File f = getFile(b);
-        if (f.exists()) {
-            return true;
-        } else {
-            return false;
-        }
+        return (f!= null && f.exists());
     }
 
     /**
@@ -417,31 +495,22 @@ class FSDataset implements FSConstants {
      * just get rid of it.
      */
     public void invalidate(Block invalidBlks[]) throws IOException {
-        for (int i = 0; i < invalidBlks.length; i++) {
-            File f = getFile(invalidBlks[i]);
-
-            // long len = f.length();
-            if (!f.delete()) {
-                throw new IOException("Unexpected error trying to delete block " + invalidBlks[i] + " at file " + f);
-            }
-            DataNode.LOG.info("Deleting block " + invalidBlks[i]);
+      for (int i = 0; i < invalidBlks.length; i++) {
+        File f = getFile(invalidBlks[i]);
+        if (!f.delete()) {
+          throw new IOException("Unexpected error trying to delete block "
+              + invalidBlks[i] + " at file " + f);
         }
+        blockMap.remove(invalidBlks[i]);
+        DataNode.LOG.info("Deleting block " + invalidBlks[i]);
+      }
     }
 
     /**
      * Turn the block identifier into a filename.
      */
     File getFile(Block b) {
-        // REMIND - mjc - should cache this result for performance
-        return dirTree.getBlockFilename(b);
-    }
-
-    /**
-     * Get the temp file, if this block is still being created.
-     */
-    File getTmpFile(Block b) {
-        // REMIND - mjc - should cache this result for performance
-        return new File(tmp, b.getBlockName());
+      return blockMap.get(b);
     }
 
     /**
@@ -450,15 +519,12 @@ class FSDataset implements FSConstants {
      * @author hairong
      */
     void checkDataDir() throws DiskErrorException {
-        dirTree.checkDirTree();
-        DiskChecker.checkDir( tmp );
+        volumes.checkDirs();
     }
     
 
     public String toString() {
-      return "FSDataset{" +
-        "dirpath='" + diskUsage.getDirPath() + "'" +
-        "}";
+      return "FSDataset{dirpath='"+volumes+"'}";
     }
 
 }

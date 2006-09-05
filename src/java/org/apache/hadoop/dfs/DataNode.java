@@ -86,7 +86,6 @@ public class DataNode implements FSConstants, Runnable {
         return new InetSocketAddress(host, port);
     }
 
-    private static Map subDataNodeList = null;
     DatanodeProtocol namenode;
     FSDataset data;
     DatanodeRegistration dnRegistration;
@@ -148,12 +147,12 @@ public class DataNode implements FSConstants, Runnable {
     DataNodeMetrics myMetrics = new DataNodeMetrics();
 
     /**
-     * Create the DataNode given a configuration and a dataDir.
-     * 'dataDir' is where the blocks are stored.
+     * Create the DataNode given a configuration and an array of dataDirs.
+     * 'dataDirs' is where the blocks are stored.
      */
-    public DataNode(Configuration conf, String datadir) throws IOException {
+    DataNode(Configuration conf, String[] dataDirs) throws IOException {
         this(InetAddress.getLocalHost().getHostName(), 
-             new File(datadir),
+             dataDirs,
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
         int infoServerPort = conf.getInt("dfs.datanode.info.port", 50075);
         this.infoServer = new StatusHttpServer("datanode", infoServerPort, true);
@@ -176,11 +175,22 @@ public class DataNode implements FSConstants, Runnable {
      * @see DataStorage
      */
     private DataNode(String machineName, 
-                    File datadir, 
+                    String[] dataDirs, 
                     InetSocketAddress nameNodeAddr, 
                     Configuration conf ) throws IOException {
-      // get storage info and lock the data dir
-      storage = new DataStorage( datadir );
+      File[] volumes = new File[dataDirs.length];
+      for (int idx = 0; idx < dataDirs.length; idx++) {
+        volumes[idx] = new File(dataDirs[idx]);
+      }
+      // get storage info and lock the data dirs
+      storage = new DataStorage( volumes );
+      int numDirs = storage.getNumLocked();
+      if (numDirs == 0) { // all data dirs are in use
+        throw new IOException("Cannot start multiple Datanode instances "
+                              + "sharing the same data directories.\n"
+                              + StringUtils.arrayToString(dataDirs) + " are locked. ");
+      }
+      volumes = storage.getLockedDirs();
       // connect to name node
       this.namenode = (DatanodeProtocol) 
           RPC.waitForProxy(DatanodeProtocol.class,
@@ -207,7 +217,7 @@ public class DataNode implements FSConstants, Runnable {
                                         -1,
                                         "" );
       // initialize data node internal structure
-      this.data = new FSDataset(datadir, conf);
+      this.data = new FSDataset(volumes, conf);
       this.dataXceiveServer = new Daemon(new DataXceiveServer(ss));
 
       long blockReportIntervalBasis =
@@ -251,7 +261,7 @@ public class DataNode implements FSConstants, Runnable {
       dnRegistration = namenode.register( dnRegistration );
       if( storage.getStorageID().equals("") ) {
         storage.setStorageID( dnRegistration.getStorageID());
-        storage.write();
+        storage.writeAll();
       }
     }
 
@@ -267,22 +277,9 @@ public class DataNode implements FSConstants, Runnable {
         this.shouldRun = false;
         ((DataXceiveServer) this.dataXceiveServer.getRunnable()).kill();
         try {
-          this.storage.close();
+          this.storage.closeAll();
         } catch (IOException ie) {
         }
-    }
-
-    /**
-     * Shut down all datanodes that where started via the run(conf) method.
-     * Returns only after shutdown is complete.
-     */
-    public static void shutdownAll(){
-      if(subDataNodeList != null && !subDataNodeList.isEmpty()){
-        for (Iterator iterator = subDataNodeList.keySet().iterator(); iterator.hasNext();) {
-          DataNode dataNode = (DataNode) iterator.next();
-          dataNode.shutdown();
-        }
-      }
     }
 
     void handleDiskError( String errMsgr ) {
@@ -940,7 +937,7 @@ public class DataNode implements FSConstants, Runnable {
      * Only stop when "shouldRun" is turned off (which can only happen at shutdown).
      */
     public void run() {
-        LOG.info("Starting DataNode in: "+data.data);
+        LOG.info("Starting DataNode in: "+data);
         
         // start dataXceiveServer
         dataXceiveServer.start();
@@ -966,40 +963,50 @@ public class DataNode implements FSConstants, Runnable {
         } catch (InterruptedException ie) {
         }
         
-        LOG.info("Finishing DataNode in: "+data.data);
+        LOG.info("Finishing DataNode in: "+data);
     }
 
-    /** Start datanode daemons.
-     * Start a datanode daemon for each comma separated data directory
-     * specified in property dfs.data.dir
+    private static ArrayList dataNodeList = new ArrayList();
+    private static ArrayList dataNodeThreadList = new ArrayList();
+    
+    /** Start datanode daemon.
      */
     public static void run(Configuration conf) throws IOException {
         String[] dataDirs = conf.getStrings("dfs.data.dir");
-        subDataNodeList = new HashMap(dataDirs.length);
-        for (int i = 0; i < dataDirs.length; i++) {
-          DataNode dn = makeInstanceForDir(dataDirs[i], conf);
-          if (dn != null) {
-            Thread t = new Thread(dn, "DataNode: "+dataDirs[i]);
-            t.setDaemon(true); // needed for JUnit testing
-            t.start();
-            subDataNodeList.put(dn,t);
-          }
+        DataNode dn = makeInstance(dataDirs, conf);
+        dataNodeList.add(dn);
+        if (dn != null) {
+          Thread t = new Thread(dn, "DataNode: [" +
+              StringUtils.arrayToString(dataDirs) + "]");
+          t.setDaemon(true); // needed for JUnit testing
+          t.start();
+          dataNodeThreadList.add(t);
         }
     }
+    
+    /**
+     * Shut down all datanodes that where started via the run(conf) method.
+     * Returns only after shutdown is complete.
+     */
+    public static void shutdownAll(){
+      if(!dataNodeList.isEmpty()){
+        for (Iterator iterator = dataNodeList.iterator(); iterator.hasNext();) {
+          DataNode dataNode = (DataNode) iterator.next();
+          dataNode.shutdown();
+        }
+      }
+    }
 
-  /** Start datanode daemons.
-   * Start a datanode daemon for each comma separated data directory
-   * specified in property dfs.data.dir and wait for them to finish.
-   * If this thread is specifically interrupted, it will stop waiting.
+
+  /** Start a single datanode daemon and wait for it to finish.
+   *  If this thread is specifically interrupted, it will stop waiting.
    */
   private static void runAndWait(Configuration conf) throws IOException {
     run(conf);
-
-    //  Wait for sub threads to exit
-    for (Iterator iterator = subDataNodeList.entrySet().iterator(); iterator.hasNext();) {
-      Thread threadDataNode = (Thread) ((Map.Entry) iterator.next()).getValue();
+    if (dataNodeThreadList.size() > 0) {
+      Thread t = (Thread) dataNodeThreadList.remove(dataNodeThreadList.size()-1);
       try {
-        threadDataNode.join();
+        t.join();
       } catch (InterruptedException e) {
         if (Thread.currentThread().isInterrupted()) {
           // did someone knock?
@@ -1010,25 +1017,29 @@ public class DataNode implements FSConstants, Runnable {
   }
 
   /**
-   * Make an instance of DataNode after ensuring that given data directory
-   * (and parent directories, if necessary) can be created.
-   * @param dataDir where the new DataNode instance should keep its files.
+   * Make an instance of DataNode after ensuring that at least one of the
+   * given data directories (and their parent directories, if necessary)
+   * can be created.
+   * @param dataDirs List of directories, where the new DataNode instance should
+   * keep its files.
    * @param conf Configuration instance to use.
-   * @return DataNode instance for given data dir and conf, or null if directory
-   * cannot be created.
+   * @return DataNode instance for given list of data dirs and conf, or null if
+   * no directory from this directory list can be created.
    * @throws IOException
    */
-  static DataNode makeInstanceForDir(String dataDir, Configuration conf) throws IOException {
-    DataNode dn = null;
-    File data = new File(dataDir);
-    try {
+  static DataNode makeInstance(String[] dataDirs, Configuration conf)
+  throws IOException {
+    ArrayList dirs = new ArrayList();
+    for (int i = 0; i < dataDirs.length; i++) {
+      File data = new File(dataDirs[i]);
+      try {
         DiskChecker.checkDir( data );
-        dn = new DataNode(conf, dataDir);
-        return dn;
-    } catch( DiskErrorException e ) {
-        LOG.warn("Can't start DataNode because " + e.getMessage() );
-        return null;
+        dirs.add(dataDirs[i]);
+      } catch( DiskErrorException e ) {
+        LOG.warn("Invalid directory in dfs.data.dir: " + e.getMessage() );
+      }
     }
+    return ((dirs.size() > 0) ? new DataNode(conf, dataDirs) : null);
   }
 
   public String toString() {

@@ -357,12 +357,13 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
       //
       for (int i = 0; i < dataNodeNum; i++) {
         // uniquely config real fs path for data storage for this datanode
-        String dataDir = baseDirSpecified + "/datanode" + i;
-        conf.set("dfs.data.dir", dataDir);
-        DataNode dn = DataNode.makeInstanceForDir(dataDir, conf);
+        String dataDir[] = new String[1];
+        dataDir[0] = baseDirSpecified + "/datanode" + i;
+        conf.set("dfs.data.dir", dataDir[0]);
+        DataNode dn = DataNode.makeInstance(dataDir, conf);
         if (dn != null) {
           dataNodeDaemons.add(dn);
-          (new Thread(dn, "DataNode" + i + ": " + dataDir)).start();
+          (new Thread(dn, "DataNode" + i + ": " + dataDir[0])).start();
         }
       }
 	         
