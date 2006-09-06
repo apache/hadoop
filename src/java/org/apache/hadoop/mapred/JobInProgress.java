@@ -143,6 +143,14 @@ class JobInProgress {
         // adjust number of map tasks to actual number of splits
         //
         this.numMapTasks = splits.length;
+        
+        // if no split is returned, job is considered completed and successful
+        if (numMapTasks == 0) {
+            this.status = new JobStatus(status.getJobId(), 1.0f, 1.0f, JobStatus.SUCCEEDED);
+            tasksInited = true;
+            return;
+        }
+        
         // create a map task for each split
         this.maps = new TaskInProgress[numMapTasks];
         for (int i = 0; i < numMapTasks; i++) {
