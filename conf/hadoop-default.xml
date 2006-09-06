@@ -475,5 +475,28 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>ipc.client.connection.maxidletime</name>
+  <value>1000</value>
+  <description>The maximum time after which a client will bring down the
+               connection to the server.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connect.max.retries</name>
+  <value>10</value>
+  <description>Indicates the number of retries a client will make to establish
+               a server connection.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.listen.queue.size</name>
+  <value>128</value>
+  <description>Indicates the length of the listen queue for servers accepting
+               client connections.
+  </description>
+</property>
 
 </configuration>

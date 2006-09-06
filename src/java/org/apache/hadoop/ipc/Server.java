@@ -122,6 +122,7 @@ public abstract class Server {
                                          //-tion (for idle connections) ran
     private long cleanupInterval = 10000; //the minimum interval between 
                                           //two cleanup runs
+    private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
     
     public Listener() throws IOException {
       address = new InetSocketAddress(port);
@@ -130,7 +131,7 @@ public abstract class Server {
       acceptChannel.configureBlocking(false);
 
       // Bind the server socket to the local host and port
-      acceptChannel.socket().bind(address);
+      acceptChannel.socket().bind(address, backlogLength);
       // create a selector;
       selector= Selector.open();
 
@@ -178,7 +179,8 @@ public abstract class Server {
                 numConnections--;
             }
             try {
-              LOG.info(getName() + ": disconnecting client " + c.getHostAddress());
+              if (LOG.isDebugEnabled())
+                LOG.debug(getName() + ": disconnecting client " + c.getHostAddress());
               c.close();
             } catch (Exception e) {}
             numNuked++;
@@ -252,7 +254,8 @@ public abstract class Server {
               numConnections--;
           }
           try {
-            LOG.info(getName() + ": disconnecting client " + c.getHostAddress());
+            if (LOG.isDebugEnabled())
+              LOG.debug(getName() + ": disconnecting client " + c.getHostAddress());
             c.close();
           } catch (Exception ex) {}
           c = null;
@@ -272,7 +275,8 @@ public abstract class Server {
         connectionList.add(numConnections, c);
         numConnections++;
       }
-      LOG.info("Server connection on port " + port + " from " + 
+      if (LOG.isDebugEnabled())
+        LOG.debug("Server connection on port " + port + " from " + 
                 c.getHostAddress() +
                 ": starting. Number of active connections: " + numConnections);
     }
@@ -298,7 +302,8 @@ public abstract class Server {
             numConnections--;
         }
         try {
-          LOG.info(getName() + ": disconnecting client " + 
+          if (LOG.isDebugEnabled())
+            LOG.debug(getName() + ": disconnecting client " + 
                   c.getHostAddress() + ". Number of active connections: "+
                   numConnections);
           c.close();

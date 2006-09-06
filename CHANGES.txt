@@ -137,6 +137,12 @@ Trunk (unreleased changes)
     renewLease() calls when no files are being written.
     (Konstantin Shvachko via cutting)
 
+35. HADOOP-312.  Close idle IPC connections.  All IPC connections were
+    cached forever.  Now, after a connection has been idle for more
+    than a configurable amount of time (one second by default), the
+    connection is closed, conserving resources on both client and
+    server. (Devaraj Das via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
