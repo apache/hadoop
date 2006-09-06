@@ -388,10 +388,17 @@ public abstract class FileSystem extends Configured {
       } else {
 
         boolean value = renameRaw(src, dst);
+        if (!value)
+          return false;
 
         Path checkFile = getChecksumFile(src);
-        if (exists(checkFile))
-          renameRaw(checkFile, getChecksumFile(dst)); // try to rename checksum
+        if (exists(checkFile)) { //try to rename checksum
+          if(isDirectory(dst)) {
+            renameRaw(checkFile, dst);
+          } else {
+            renameRaw(checkFile, getChecksumFile(dst)); 
+          }
+        }
 
         return value;
       }

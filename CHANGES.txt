@@ -129,6 +129,10 @@ Trunk (unreleased changes)
 32. HADOOP-507.  Fix an IllegalAccessException in DFS.
     (omalley via cutting)
 
+33. HADOOP-320.  Fix so that checksum files are correctly copied when
+    the destination of a file copy is a directory.
+    (Hairong Kuang via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
