@@ -223,10 +223,7 @@ public class ObjectWritable implements Writable, Configurable {
         throw new RuntimeException("readObject can't find class", e);
       }
       
-      Writable writable = WritableFactories.newInstance(instanceClass);
-      if(writable instanceof Configurable) {
-        ((Configurable) writable).setConf(conf);
-      }
+      Writable writable = WritableFactories.newInstance(instanceClass, conf);
       writable.readFields(in);
       instance = writable;
 

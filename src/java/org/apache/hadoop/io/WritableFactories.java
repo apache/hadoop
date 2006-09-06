@@ -16,6 +16,8 @@
 
 package org.apache.hadoop.io;
 
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.ReflectionUtils;
 import java.util.HashMap;
 
 /** Factories for non-public writables.  Defining a factory permits {@link
@@ -36,19 +38,22 @@ public class WritableFactories {
   }
 
   /** Create a new instance of a class with a defined factory. */
-  public static Writable newInstance(Class c) {
+  public static Writable newInstance(Class c, Configuration conf) {
     WritableFactory factory = WritableFactories.getFactory(c);
     if (factory != null) {
-      return factory.newInstance();
-    } else {
-      try {
-        return (Writable)c.newInstance();
-      } catch (InstantiationException e) {
-        throw new RuntimeException(e);
-      } catch (IllegalAccessException e) {
-        throw new RuntimeException(e);
+      Writable result = factory.newInstance();
+      if (result instanceof Configurable) {
+        ((Configurable) result).setConf(conf);
       }
+      return result;
+    } else {
+      return (Writable)ReflectionUtils.newInstance(c, conf);
     }
+  }
+  
+  /** Create a new instance of a class with a defined factory. */
+  public static Writable newInstance(Class c) {
+    return newInstance(c, null);
   }
 
 }

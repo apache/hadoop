@@ -126,6 +126,9 @@ Trunk (unreleased changes)
 31. HADOOP-408.  Adjust some timeouts and remove some others so that
     unit tests run faster.  (cutting)
 
+32. HADOOP-507.  Fix an IllegalAccessException in DFS.
+    (omalley via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
