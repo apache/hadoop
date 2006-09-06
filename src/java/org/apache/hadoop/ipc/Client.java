@@ -280,9 +280,6 @@ public class Client {
    * using this client. */
   public void stop() {
     LOG.info("Stopping client");
-    try {
-      Thread.sleep(timeout);                        // let all calls complete
-    } catch (InterruptedException e) {}
     running = false;
   }
 

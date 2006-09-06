@@ -541,16 +541,11 @@ public abstract class Server {
     }
   }
 
-  /** Stops the service.  No new calls will be handled after this is called.  All
-   * subthreads will likely be finished after this returns.
-   */
+  /** Stops the service.  No new calls will be handled after this is called. */
   public synchronized void stop() {
     LOG.info("Stopping server on " + port);
     running = false;
     listener.doStop();
-    try {
-      Thread.sleep(timeout);     //  inexactly wait for pending requests to finish
-    } catch (InterruptedException e) {}
     notifyAll();
   }
 

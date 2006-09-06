@@ -229,7 +229,7 @@ public class RPC {
         LOG.info("Problem connecting to server: " + addr);
       }
       try {
-        Thread.sleep(10*1000);
+        Thread.sleep(1000);
       } catch (InterruptedException ie) {
         // IGNORE
       }

@@ -59,7 +59,6 @@ public class TaskTracker
     int taskReportPort;
 
     Server taskReportServer = null;
-    Server mapOutputServer = null;
     InterTrackerProtocol jobClient;
 
     StatusHttpServer server = null;
@@ -209,7 +208,7 @@ public class TaskTracker
           close();
           if (this.server != null) {
             try {
-                LOG.info("Shttting down StatusHttpServer");
+                LOG.info("Shutting down StatusHttpServer");
                 this.server.stop();
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
@@ -234,18 +233,10 @@ public class TaskTracker
             tip.jobHasFinished();
         }
 
-        // Wait for them to die and report in
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException ie) {
-        }
-
-        //
         // Shutdown local RPC servers.  Do them
         // in parallel, as RPC servers can take a long
         // time to shutdown.  (They need to wait a full
         // RPC timeout, which might be 10-30 seconds.)
-        //
         new Thread() {
             public void run() {
                 if (taskReportServer != null) {
@@ -254,11 +245,6 @@ public class TaskTracker
                 }
             }
         }.start();
-
-        if (mapOutputServer != null) {
-            mapOutputServer.stop();
-            mapOutputServer = null;
-        }
 
         this.running = false;
         

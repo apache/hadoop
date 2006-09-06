@@ -123,6 +123,9 @@ Trunk (unreleased changes)
 30. HADOOP-424.  Fix MapReduce so that jobs which generate zero splits
     do not fail.  (Frédéric Bertin via cutting)
 
+31. HADOOP-408.  Adjust some timeouts and remove some others so that
+    unit tests run faster.  (cutting)
+
 
 Release 0.5.0 - 2006-08-04
 
