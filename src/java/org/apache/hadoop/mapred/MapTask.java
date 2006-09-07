@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 import java.io.*;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -123,15 +124,20 @@ class MapTask extends Task {
     final SequenceFile.Writer[] outs = new SequenceFile.Writer[partitions];
     try {
       FileSystem localFs = FileSystem.getNamed("local", job);
+      /** TODO: Figure out a way to deprecate 'mapred.compress.map.output' */
       boolean compressTemps = job.getBoolean("mapred.compress.map.output", 
                                              false);
       for (int i = 0; i < partitions; i++) {
         outs[i] =
-          new SequenceFile.Writer(localFs,
+          SequenceFile.createWriter(localFs, job,
                                   this.mapOutputFile.getOutputFile(getTaskId(), i),
                                   job.getMapOutputKeyClass(),
                                   job.getMapOutputValueClass(),
-                                  compressTemps);
+                                  compressTemps ? CompressionType.RECORD : 
+                                    CompressionType.valueOf(
+                                        job.get("mapred.seqfile.compression.type", 
+                                            "NONE"))
+                                  );
         LOG.info("opened "+this.mapOutputFile.getOutputFile(getTaskId(), i).getName());
       }
 

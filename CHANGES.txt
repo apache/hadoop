@@ -148,6 +148,10 @@ Trunk (unreleased changes)
     advertised by datanodes and tasktrackers.
     (Lorenzo Thione via cutting)
 
+37. HADOOP-441.  Add a compression codec API and extend SequenceFile
+    to use it.  This will permit the use of alternate compression
+    codecs in SequenceFile.  (Arun C Murthy via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

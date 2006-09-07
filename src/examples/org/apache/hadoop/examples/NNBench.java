@@ -41,6 +41,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.util.Progressable;
 
 /**
  * This program uses map/reduce to just run a distributed job where there is
@@ -189,7 +190,7 @@ public class NNBench extends MapReduceBase implements Reducer {
                                 jobConf, file,
                                 IntWritable.class, IntWritable.class,
                                 CompressionType.NONE,
-                                null);
+                                (Progressable)null);
       writer.append(new IntWritable(0), new IntWritable(filesPerMap));
       writer.close();
     }
