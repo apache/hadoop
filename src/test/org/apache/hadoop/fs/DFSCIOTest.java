@@ -78,7 +78,7 @@ public class DFSCIOTest extends TestCase {
 
   private static Path HDFS_TEST_DIR = new Path("/tmp/DFSCIOTest");
   private static String HDFS_LIB_VERSION = System.getProperty("libhdfs.version", "1");
-  private static String CHMOD = new String("/usr/bin/chmod");
+  private static String CHMOD = new String("chmod");
   private static Path HDFS_SHLIB = new Path(HDFS_TEST_DIR + "/libhdfs.so." + HDFS_LIB_VERSION );
   private static Path HDFS_READ = new Path(HDFS_TEST_DIR + "/hdfs_read");
   private static Path HDFS_WRITE = new Path(HDFS_TEST_DIR + "/hdfs_write");
@@ -239,7 +239,7 @@ public class DFSCIOTest extends TestCase {
         // exec the C program
         Path outFile = new Path(DATA_DIR, name);
         String writeCmd = new String(HDFS_WRITE + " " + outFile + " " + totalSize + " " + bufferSize); 
-        Process process = runTime.exec(writeCmd, null, new File("/tmp/"));
+        Process process = runTime.exec(writeCmd, null, new File(HDFS_TEST_DIR.toString()));
         int exitStatus = process.waitFor();
         if (exitStatus != 0) {
           throw new IOException(writeCmd + ": Failed with exitStatus: " + exitStatus);
@@ -347,7 +347,7 @@ public class DFSCIOTest extends TestCase {
     	  	 Path inFile = new Path(DATA_DIR, name);
     	  	 String readCmd = new String(HDFS_READ + " " + inFile + " " + totalSize + " " + 
     	  			 bufferSize); 
-    	  	 Process process = runTime.exec(readCmd, null, new File("/tmp/"));
+    	  	 Process process = runTime.exec(readCmd, null, new File(HDFS_TEST_DIR.toString()));
     	  	 int exitStatus = process.waitFor();
         
     	  	 if (exitStatus != 0) {
@@ -398,7 +398,7 @@ public class DFSCIOTest extends TestCase {
     boolean isSequential = false;
 
     String version="DFSCIOTest.0.0.1";
-    String usage = "Usage: TestFDSIO -read | -write | -clean [-nrFiles N] [-fileSize MB] [-resFile resultFileName] [-bufferSize Bytes] ";
+    String usage = "Usage: DFSCIOTest -read | -write | -clean [-nrFiles N] [-fileSize MB] [-resFile resultFileName] [-bufferSize Bytes] ";
     
     System.out.println(version);
     if (args.length == 0) {

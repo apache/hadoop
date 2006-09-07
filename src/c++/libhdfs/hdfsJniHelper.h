@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#ifndef LIBHDFS_JNI_HELPER_H
+#define LIBHDFS_JNI_HELPER_H
+
 #include <jni.h>
 #include <stdio.h>
 
@@ -323,6 +326,8 @@ void hashTableInit()
     }  
     UNLOCK_HASH_TABLE();
 }
+
+#endif /*LIBHDFS_JNI_HELPER_H*/
 
 /**
  * vim: ts=4: sw=4: et:

@@ -152,6 +152,9 @@ Trunk (unreleased changes)
     to use it.  This will permit the use of alternate compression
     codecs in SequenceFile.  (Arun C Murthy via cutting)
 
+38. HADOOP-483. Improvements to libhdfs build and documentation.
+    (Arun C Murthy via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

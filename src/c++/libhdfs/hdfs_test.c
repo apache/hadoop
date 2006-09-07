@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
 
         hdfsFileInfo *fileInfo = NULL;
         if(fileInfo = hdfsGetPathInfo(fs, slashTmp)) {
-            fprintf(stderr, "Yaay! hdfsGetPathInfo - SUCCESS!\n");
+            fprintf(stderr, "hdfsGetPathInfo - SUCCESS!\n");
             fprintf(stderr, "Name: %s,", fileInfo->mName);
             fprintf(stderr, "Type: %c,", (char)fileInfo->mKind);
             fprintf(stderr, "Size: %ld\n", fileInfo->mSize);

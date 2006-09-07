@@ -1,0 +1,49 @@
+#
+# Copyright 2005 The Apache Software Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+#
+# Note: This script depends on 5 environment variables to function correctly:
+# a) CLASSPATH
+# b) HADOOP_HOME
+# c) HADOOP_CONF_DIR 
+# d) HADOOP_LOG_DIR 
+# e) LIBHDFS_BUILD_DIR
+# All these are passed by build.xml.
+#
+
+HDFS_TEST=hdfs_test
+HADOOP_LIB_DIR=$HADOOP_HOME/lib
+HADOOP_BIN_DIR=$HADOOP_HOME/bin
+
+# Add libs to CLASSPATH for libhdfs (jni)
+CLASSPATH=`for f in $HADOOP_LIB_DIR/*.jar; do CLASSPATH=$CLASSPATH:$f; done; echo $CLASSPATH;`
+
+# Manipulate HADOOP_CONF_DIR so as to include 
+# HADOOP_HOME/conf/hadoop-default.xml too
+# which is necessary to circumvent bin/hadoop
+HADOOP_CONF_DIR=$HADOOP_CONF_DIR:$HADOOP_HOME/conf
+
+# Put delays to ensure hdfs is up and running and also shuts down 
+# after the tests are complete
+echo Y | $HADOOP_BIN_DIR/hadoop namenode -format &&
+$HADOOP_BIN_DIR/hadoop-daemon.sh start namenode && sleep 2 && 
+$HADOOP_BIN_DIR/hadoop-daemon.sh start datanode && sleep 2 && 
+echo CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_BUILD_DIR/libhdfs.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST && 
+CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_BUILD_DIR/libhdfs.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST && BUILD_STATUS=$? && sleep 3
+$HADOOP_BIN_DIR/hadoop-daemon.sh stop datanode && sleep 2 && 
+$HADOOP_BIN_DIR/hadoop-daemon.sh stop namenode && sleep 2 
+
+exit $BUILD_STATUS
