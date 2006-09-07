@@ -143,6 +143,11 @@ Trunk (unreleased changes)
     connection is closed, conserving resources on both client and
     server. (Devaraj Das via cutting)
 
+36. HADOOP-497.  Permit the specification of the network interface and
+    nameserver to be used when determining the local hostname
+    advertised by datanodes and tasktrackers.
+    (Lorenzo Thione via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

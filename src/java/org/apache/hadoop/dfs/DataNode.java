@@ -20,6 +20,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
@@ -182,6 +183,13 @@ public class DataNode implements FSConstants, Runnable {
       for (int idx = 0; idx < dataDirs.length; idx++) {
         volumes[idx] = new File(dataDirs[idx]);
       }
+
+      // use configured nameserver & interface to get local hostname
+      machineName =
+        DNS.getDefaultHost
+        (conf.get("dfs.datanode.dns.interface","default"),
+         conf.get("dfs.datanode.dns.nameserver","default"));
+ 
       // get storage info and lock the data dirs
       storage = new DataStorage( volumes );
       int numDirs = storage.getNumLocked();

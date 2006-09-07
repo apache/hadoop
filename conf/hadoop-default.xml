@@ -111,6 +111,23 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+ <property>
+  <name>dfs.datanode.dns.interface</name>
+  <value>default</value>
+  <description>The name of the Network Interface from which a data node should 
+  report its IP address.
+  </description>
+ </property>
+ 
+<property>
+  <name>dfs.datanode.dns.nameserver</name>
+  <value>default</value>
+  <description>The host name or IP address of the name server (DNS)
+  which a DataNode should use to determine the host name used by the
+  NameNode for communication and display purposes.
+  </description>
+ </property>
+ 
 <property>
   <name>dfs.default.chunk.view.size</name>
   <value>2048</value>
@@ -372,6 +389,24 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+
+<property>
+  <name>mapred.tasktracker.dns.interface</name>
+  <value>default</value>
+  <description>The name of the Network Interface from which a task
+  tracker should report its IP address.
+  </description>
+ </property>
+ 
+<property>
+  <name>mapred.tasktracker.dns.nameserver</name>
+  <value>default</value>
+  <description>The host name or IP address of the name server (DNS)
+  which a TaskTracker should use to determine the host name used by
+  the JobTracker for communication and display purposes.
+  </description>
+ </property>
+ 
 <property>
   <name>tasktracker.http.threads</name>
   <value>40</value>

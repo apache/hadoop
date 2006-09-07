@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.net.DNS;
 
 /*******************************************************
  * TaskTracker is a process that starts and tracks MR Tasks
@@ -153,8 +154,12 @@ public class TaskTracker
      * close().
      */
     synchronized void initialize() throws IOException {
-        this.localHostname = InetAddress.getLocalHost().getHostName();
-
+        // use configured nameserver & interface to get local hostname
+        this.localHostname =
+          DNS.getDefaultHost
+          (fConf.get("mapred.tasktracker.dns.interface","default"),
+           fConf.get("mapred.tasktracker.dns.nameserver","default"));
+ 
         //check local disk
         checkLocalDirs(this.fConf.getLocalDirs());
         fConf.deleteLocalFiles(SUBDIR);
