@@ -397,7 +397,7 @@ public abstract class PipeMapRed {
             Text key = new Text();
             Text val = new Text();
             // 3/4 Tool to Hadoop
-            while((answer=UTF8ByteArrayUtils.readLine(clientIn_))!= null) {
+            while((answer=UTF8ByteArrayUtils.readLine((InputStream)clientIn_))!= null) {
                 // 4/4 Hadoop out
                 if(optSideEffect_) {
                     sideEffectOut_.write(answer);
@@ -434,7 +434,7 @@ public abstract class PipeMapRed {
       byte [] line;
       try {
         long num = 0;
-        while((line=UTF8ByteArrayUtils.readLine(clientErr_)) != null) {
+        while((line=UTF8ByteArrayUtils.readLine((InputStream)clientErr_)) != null) {
           num++;
           String lineStr = new String(line, "UTF-8"); 
           logprintln(lineStr);

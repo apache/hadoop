@@ -158,6 +158,9 @@ Trunk (unreleased changes)
 39. HADOOP-458.  Fix a memory corruption bug in libhdfs.
     (Arun C Murthy via cutting)
 
+40. HADOOP-517.  Fix a contrib/streaming bug in end-of-line detection.
+    (Hairong Kuang via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

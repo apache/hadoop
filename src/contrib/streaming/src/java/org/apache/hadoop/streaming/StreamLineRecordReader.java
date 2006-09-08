@@ -99,7 +99,7 @@ public class StreamLineRecordReader extends StreamBaseRecordReader
                 return false;
         }
         
-        line = UTF8ByteArrayUtils.readLine(in_);
+        line = UTF8ByteArrayUtils.readLine((InputStream)in_);
         if(line==null)
             return false;
         try {
