@@ -156,7 +156,7 @@ Trunk (unreleased changes)
     (Arun C Murthy via cutting)
 
 39. HADOOP-458.  Fix a memory corruption bug in libhdfs.
-    (omalley via cutting)
+    (Arun C Murthy via cutting)
 
 
 Release 0.5.0 - 2006-08-04
