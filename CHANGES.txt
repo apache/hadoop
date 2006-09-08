@@ -155,6 +155,9 @@ Trunk (unreleased changes)
 38. HADOOP-483. Improvements to libhdfs build and documentation.
     (Arun C Murthy via cutting)
 
+39. HADOOP-458.  Fix a memory corruption bug in libhdfs.
+    (omalley via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

@@ -94,8 +94,12 @@ static inline JNIEnv* getJNIEnv()
         		fprintf(stderr, "Please set the environment variable $CLASSPATH!\n");
         		exit(-1);
         } 
-        char *optHadoopClassPath = malloc(sizeof(char) * strlen(hadoopClassPath) + 16);
-        sprintf(optHadoopClassPath, "-Djava.class.path=%s", hadoopClassPath);
+        char *hadoopClassPathVMArg = "-Djava.class.path=";
+        size_t optHadoopClassPathLen = strlen(hadoopClassPath) + 
+        								strlen(hadoopClassPathVMArg) + 1;
+        char *optHadoopClassPath = malloc(sizeof(char) * optHadoopClassPathLen);
+        snprintf(optHadoopClassPath, optHadoopClassPathLen,
+        	"%s%s", hadoopClassPathVMArg, hadoopClassPath);
 
         //Create the VM
         JavaVMInitArgs vm_args;
