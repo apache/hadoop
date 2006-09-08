@@ -198,7 +198,7 @@ public class TestText extends TestCase {
       Text text = new Text("abcd\u20acbdcd\u20ac");
       byte [] utf8 = text.getBytes();
       int length = text.getLength();
-      Text.validateUTF(utf8, 0, length);
+      Text.validateUTF8(utf8, 0, length);
   }
 
   public void testTextText() throws CharacterCodingException {

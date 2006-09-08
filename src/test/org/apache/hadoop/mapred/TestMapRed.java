@@ -17,7 +17,6 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.conf.*;
 import org.apache.hadoop.mapred.lib.*;
 import junit.framework.TestCase;
 import java.io.*;
@@ -83,7 +82,6 @@ public class TestMapRed extends TestCase {
      * as many times as we were instructed.
      */
     static class RandomGenMapper implements Mapper {
-        Random r = new Random();
         public void configure(JobConf job) {
         }
 
@@ -105,7 +103,6 @@ public class TestMapRed extends TestCase {
         }
 
         public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
-            int keyint = ((IntWritable) key).get();
             while (it.hasNext()) {
                 int val = ((IntWritable) it.next()).get();
                 out.collect(new Text("" + val), new Text(""));
@@ -136,7 +133,6 @@ public class TestMapRed extends TestCase {
         }
 
         public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-            long pos = ((LongWritable) key).get();
             Text str = (Text) val;
 
             out.collect(new IntWritable(Integer.parseInt(str.toString().trim())), new IntWritable(1));
@@ -203,7 +199,6 @@ public class TestMapRed extends TestCase {
     private static int range = 10;
     private static int counts = 100;
     private static Random r = new Random();
-    private static Configuration conf = new Configuration();
 
     /**
        public TestMapRed(int range, int counts, Configuration conf) throws IOException {
@@ -252,19 +247,14 @@ public class TestMapRed extends TestCase {
     private static class MyReduce extends IdentityReducer {
       private JobConf conf;
       private boolean compressInput;
-      private boolean compressOutput;
       private String taskId;
-      private int partition;
       private boolean first = true;
       
       public void configure(JobConf conf) {
         this.conf = conf;
         compressInput = conf.getBoolean("mapred.compress.map.output", 
                                         false);
-        compressOutput = conf.getBoolean("mapred.compress.output",
-                                         false);
         taskId = conf.get("mapred.task.id");
-        partition = conf.getInt("mapred.task.partition", -1);
       }
       
       public void reduce(WritableComparable key, Iterator values,
@@ -295,6 +285,7 @@ public class TestMapRed extends TestCase {
       Path inDir = new Path(testdir, "in");
       Path outDir = new Path(testdir, "out");
       FileSystem fs = FileSystem.get(conf);
+      fs.delete(testdir);
       conf.setInputPath(inDir);
       conf.setOutputPath(outDir);
       conf.setMapperClass(MyMap.class);
@@ -306,10 +297,10 @@ public class TestMapRed extends TestCase {
         conf.setCombinerClass(IdentityReducer.class);
       }
       if (compressMapOutput) {
-        conf.setBoolean("mapred.compress.map.output", true);
+        conf.setCompressMapOutput(true);
       }
       if (compressReduceOutput) {
-        conf.setBoolean("mapred.output.compress", true);
+        SequenceFileOutputFormat.setCompressOutput(conf, true);
       }
       try {
         fs.mkdirs(testdir);
@@ -354,6 +345,7 @@ public class TestMapRed extends TestCase {
         //
         // Generate distribution of ints.  This is the answer key.
         //
+        JobConf conf = new JobConf();
         int countsToGo = counts;
         int dist[] = new int[range];
         for (int i = 0; i < range; i++) {
@@ -376,7 +368,10 @@ public class TestMapRed extends TestCase {
         fs.mkdirs(randomIns);
 
         Path answerkey = new Path(randomIns, "answer.key");
-        SequenceFile.Writer out = new SequenceFile.Writer(fs, answerkey, IntWritable.class, IntWritable.class);
+        SequenceFile.Writer out = 
+          SequenceFile.createWriter(fs, conf, answerkey, IntWritable.class,
+                                    IntWritable.class, 
+                                    SequenceFile.CompressionType.NONE);
         try {
             for (int i = 0; i < range; i++) {
                 out.append(new IntWritable(i), new IntWritable(dist[i]));
@@ -409,8 +404,6 @@ public class TestMapRed extends TestCase {
 
         JobConf genJob = new JobConf(conf);
         genJob.setInputPath(randomIns);
-        genJob.setInputKeyClass(IntWritable.class);
-        genJob.setInputValueClass(IntWritable.class);
         genJob.setInputFormat(SequenceFileInputFormat.class);
         genJob.setMapperClass(RandomGenMapper.class);
 
@@ -479,8 +472,6 @@ public class TestMapRed extends TestCase {
         fs.delete(finalOuts);
         JobConf mergeJob = new JobConf(conf);
         mergeJob.setInputPath(intermediateOuts);
-        mergeJob.setInputKeyClass(IntWritable.class);
-        mergeJob.setInputValueClass(IntWritable.class);
         mergeJob.setInputFormat(SequenceFileInputFormat.class);
         mergeJob.setMapperClass(MergeMapper.class);
         
@@ -564,8 +555,8 @@ public class TestMapRed extends TestCase {
         }
 
         int i = 0;
-        int range = Integer.parseInt(argv[i++]);
-        int counts = Integer.parseInt(argv[i++]);
-	launch();
+        range = Integer.parseInt(argv[i++]);
+        counts = Integer.parseInt(argv[i++]);
+	      launch();
     }
 }

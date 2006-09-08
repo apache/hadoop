@@ -28,6 +28,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -62,6 +63,27 @@ public class SequenceFile {
     RECORD,
     /** Compress sequences of records together in blocks. */
     BLOCK
+  }
+
+  /**
+   * Get the compression type for the reduce outputs
+   * @param job the job config to look in
+   * @return the kind of compression to use
+   */
+  static public CompressionType getCompressionType(Configuration job) {
+    String name = job.get("io.seqfile.compression.type");
+    return name == null ? CompressionType.RECORD : 
+                          CompressionType.valueOf(name);
+  }
+  
+  /**
+   * Set the compression type for sequence files.
+   * @param job the configuration to modify
+   * @param val the new compression type (none, block, record)
+   */
+  static public void setCompressionType(Configuration job, 
+                                        CompressionType val) {
+    job.set("io.seqfile.compression.type", val.toString());
   }
   
   /**
@@ -685,7 +707,7 @@ public class SequenceFile {
         Class keyClass, Class valClass, CompressionCodec codec) 
     throws IOException {
       super.init(name, fs.create(name), keyClass, valClass, true, codec);
-      init(conf.getInt("mapred.seqfile.compress.blocksize", 1000000));
+      init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
       
       initializeFileHeader();
       writeFileHeader();
@@ -699,7 +721,7 @@ public class SequenceFile {
     throws IOException {
       super.init(name, fs.create(name, progress), keyClass, valClass, 
           true, codec);
-      init(conf.getInt("mapred.seqfile.compress.blocksize", 1000000));
+      init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
       
       initializeFileHeader();
       writeFileHeader();
@@ -998,7 +1020,7 @@ public class SequenceFile {
       }
       
 
-      lazyDecompress = conf.getBoolean("mapred.seqfile.lazydecompress", true);
+      lazyDecompress = conf.getBoolean("io.seqfile.lazydecompress", true);
     }
     
     /** Close the file. */

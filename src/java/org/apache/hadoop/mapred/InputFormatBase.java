@@ -40,6 +40,17 @@ public abstract class InputFormatBase implements InputFormat {
     this.minSplitSize = minSplitSize;
   }
 
+  /**
+   * Is the given filename splitable? Usually, true, but if the file is
+   * stream compressed, it will not be.
+   * @param fs the file system that the file is on
+   * @param filename the file name to check
+   * @return is this file splitable?
+   */
+  protected boolean isSplitable(FileSystem fs, Path filename) {
+    return true;
+  }
+  
   public abstract RecordReader getRecordReader(FileSystem fs,
                                                FileSplit split,
                                                JobConf job,
@@ -117,15 +128,12 @@ public abstract class InputFormatBase implements InputFormat {
 
     Path[] files = listPaths(fs, job);
 
+    long totalSize = 0;                           // compute total size
     for (int i = 0; i < files.length; i++) {      // check we have valid files
       Path file = files[i];
       if (fs.isDirectory(file) || !fs.exists(file)) {
         throw new IOException("Not a file: "+files[i]);
       }
-    }
-
-    long totalSize = 0;                           // compute total size
-    for (int i = 0; i < files.length; i++) {
       totalSize += fs.getLength(files[i]);
     }
 
@@ -138,19 +146,24 @@ public abstract class InputFormatBase implements InputFormat {
     for (int i = 0; i < files.length; i++) {
       Path file = files[i];
       long length = fs.getLength(file);
-      long blockSize = fs.getBlockSize(file);
-      long splitSize = computeSplitSize(goalSize, minSize, blockSize);
+      if (isSplitable(fs, file)) {
+        long blockSize = fs.getBlockSize(file);
+        long splitSize = computeSplitSize(goalSize, minSize, blockSize);
 
-      long bytesRemaining = length;
-      while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
-        splits.add(new FileSplit(file, length-bytesRemaining, splitSize));
-        bytesRemaining -= splitSize;
+        long bytesRemaining = length;
+        while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
+          splits.add(new FileSplit(file, length-bytesRemaining, splitSize));
+          bytesRemaining -= splitSize;
+        }
+        
+        if (bytesRemaining != 0) {
+          splits.add(new FileSplit(file, length-bytesRemaining, bytesRemaining));
+        }
+      } else {
+        if (length != 0) {
+          splits.add(new FileSplit(file, 0, length));
+        }
       }
-      
-      if (bytesRemaining != 0) {
-        splits.add(new FileSplit(file, length-bytesRemaining, bytesRemaining));
-      }
-      //LOG.info( "Generating splits for " + i + "th file: " + file.getName() );
     }
     //LOG.info( "Total # of splits: " + splits.size() );
     return (FileSplit[])splits.toArray(new FileSplit[splits.size()]);

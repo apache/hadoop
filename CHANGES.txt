@@ -161,6 +161,13 @@ Trunk (unreleased changes)
 40. HADOOP-517.  Fix a contrib/streaming bug in end-of-line detection.
     (Hairong Kuang via cutting)
 
+41. HADOOP-474.  Add CompressionCodecFactory, and use it in
+    TextInputFormat and TextOutputFormat.  Compressed input files are
+    automatically decompressed when they have the correct extension.
+    Output files will, when output compression is specified, be
+    generated with an approprate extension.  Also add a gzip codec and
+    fix problems with UTF8 text inputs.  (omalley via cutting)
+
 
 Release 0.5.0 - 2006-08-04
 

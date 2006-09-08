@@ -27,8 +27,10 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes {@link SequenceFile}s. */
 public class SequenceFileOutputFormat extends OutputFormatBase {
@@ -38,18 +40,23 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
                                       throws IOException {
 
     Path file = new Path(job.getOutputPath(), name);
+    CompressionCodec codec = null;
+    CompressionType compressionType = CompressionType.NONE;
+    if (getCompressOutput(job)) {
+      // find the kind of compression to do
+      compressionType = SequenceFile.getCompressionType(job);
 
-    /** TODO: Figure out a way to deprecate 'mapred.output.compress' */
+      // find the right codec
+      Class codecClass = getOutputCompressorClass(job, DefaultCodec.class);
+      codec = (CompressionCodec) 
+                 ReflectionUtils.newInstance(codecClass, job);
+    }
     final SequenceFile.Writer out = 
       SequenceFile.createWriter(fs, job, file,
                               job.getOutputKeyClass(),
                               job.getOutputValueClass(),
-                              job.getBoolean("mapred.output.compress", false) ? 
-                                  CompressionType.RECORD : 
-                                  CompressionType.valueOf(
-                                    job.get("mapred.seqfile.compression.type", 
-                                        "NONE")
-                                  ),
+                              compressionType,
+                              codec,
                               progress);
 
     return new RecordWriter() {

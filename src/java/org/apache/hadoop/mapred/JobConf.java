@@ -37,6 +37,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.compress.CompressionCodec;
 
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
@@ -332,6 +333,38 @@ public class JobConf extends Configuration {
    */
   public boolean getCompressMapOutput() {
     return getBoolean("mapred.compress.map.output", false);
+  }
+
+  /**
+   * Set the given class as the  compression codec for the map outputs.
+   * @param codecClass the CompressionCodec class that will compress the 
+   *                   map outputs
+   */
+  public void setMapOutputCompressorClass(Class codecClass) {
+    setCompressMapOutput(true);
+    setClass("mapred.output.compression.codec", codecClass, 
+             CompressionCodec.class);
+  }
+  
+  /**
+   * Get the codec for compressing the map outputs
+   * @param defaultValue the value to return if it is not set
+   * @return the CompressionCodec class that should be used to compress the 
+   *   map outputs
+   * @throws IllegalArgumentException if the class was specified, but not found
+   */
+  public Class getMapOutputCompressorClass(Class defaultValue) {
+    String name = get("mapred.output.compression.codec");
+    if (name == null) {
+      return defaultValue;
+    } else {
+      try {
+        return getClassByName(name);
+      } catch (ClassNotFoundException e) {
+        throw new IllegalArgumentException("Compression codec " + name + 
+                                           " was not found.", e);
+      }
+    }
   }
   
   /**

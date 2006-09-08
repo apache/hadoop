@@ -16,6 +16,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -24,30 +25,51 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes plain text files. */
 public class TextOutputFormat extends OutputFormatBase {
 
+  protected static class LineRecordWriter implements RecordWriter {
+    private DataOutputStream out;
+    
+    public LineRecordWriter(DataOutputStream out) {
+      this.out = out;
+    }
+    
+    public synchronized void write(WritableComparable key, Writable value)
+    throws IOException {
+      out.write(key.toString().getBytes("UTF-8"));
+      out.writeByte('\t');
+      out.write(value.toString().getBytes("UTF-8"));
+      out.writeByte('\n');
+    }
+    public synchronized void close(Reporter reporter) throws IOException {
+      out.close();
+    }   
+  }
+  
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
                                       String name, Progressable progress) throws IOException {
 
-    Path file = new Path(job.getOutputPath(), name);
-
-    final FSDataOutputStream out = fs.create(file, progress);
-
-    return new RecordWriter() {
-        public synchronized void write(WritableComparable key, Writable value)
-          throws IOException {
-          out.write(key.toString().getBytes("UTF-8"));
-          out.writeByte('\t');
-          out.write(value.toString().getBytes("UTF-8"));
-          out.writeByte('\n');
-        }
-        public synchronized void close(Reporter reporter) throws IOException {
-          out.close();
-        }
-      };
+    Path dir = job.getOutputPath();
+    boolean isCompressed = getCompressOutput(job);
+    if (!isCompressed) {
+      FSDataOutputStream fileOut = fs.create(new Path(dir, name), progress);
+      return new LineRecordWriter(fileOut);
+    } else {
+      Class codecClass = getOutputCompressorClass(job, GzipCodec.class);
+      // create the named codec
+      CompressionCodec codec = (CompressionCodec)
+                               ReflectionUtils.newInstance(codecClass, job);
+      // build the filename including the extension
+      Path filename = new Path(dir, name + codec.getDefaultExtension());
+      FSDataOutputStream fileOut = fs.create(filename, progress);
+      return new LineRecordWriter(new DataOutputStream
+                                  (codec.createOutputStream(fileOut)));
+    }
   }      
 }
 

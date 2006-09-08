@@ -87,6 +87,13 @@ creations/deletions), or "all".</description>
   facilitate opening large map files using less memory.</description>
 </property>
 
+<property>
+  <name>io.compression.codecs</name>
+  <value>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec</value>
+  <description>A list of the compression codec classes that can be used 
+               for compression/decompression.</description>
+</property>
+
 <!-- file system properties -->
 
 <property>
@@ -441,6 +448,21 @@ creations/deletions), or "all".</description>
 -->
 
 <property>
+  <name>mapred.output.compress</name>
+  <value>false</value>
+  <description>Should the outputs of the reduces be compressed?
+  </description>
+</property>
+
+<property>
+  <name>mapred.output.compression.codec</name>
+  <value>org.apache.hadoop.io.compress.DefaultCodec</value>
+  <description>If the reduce outputs are compressed, how should they be 
+               compressed?
+  </description>
+</property>
+
+<property>
   <name>mapred.compress.map.output</name>
   <value>false</value>
   <description>Should the outputs of the maps be compressed before being
@@ -449,7 +471,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.seqfile.compress.blocksize</name>
+  <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
   <description>The minimum block size for compression in block compressed 
   				SequenceFiles.
@@ -457,7 +479,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.seqfile.lazydecompress</name>
+  <name>io.seqfile.lazydecompress</name>
   <value>true</value>
   <description>Should values of block-compressed SequenceFiles be decompressed
   				only when necessary.
@@ -465,7 +487,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.seqfile.sorter.recordlimit</name>
+  <name>io.seqfile.sorter.recordlimit</name>
   <value>1000000</value>
   <description>The limit on number of records to be kept in memory in a spill 
   				in SequenceFiles.Sorter
@@ -473,8 +495,8 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.seqfile.compression.type</name>
-  <value>NONE</value>
+  <name>io.seqfile.compression.type</name>
+  <value>RECORD</value>
   <description>The default compression type for SequenceFile.Writer.
   </description>
 </property>

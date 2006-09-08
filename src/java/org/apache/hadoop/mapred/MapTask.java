@@ -20,8 +20,11 @@ import java.io.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics.MetricsRecord;
 
 import org.apache.commons.logging.*;
@@ -123,21 +126,27 @@ class MapTask extends Task {
     final int partitions = job.getNumReduceTasks();
     final SequenceFile.Writer[] outs = new SequenceFile.Writer[partitions];
     try {
+      Reporter reporter = getReporter(umbilical, getProgress());
       FileSystem localFs = FileSystem.getNamed("local", job);
-      /** TODO: Figure out a way to deprecate 'mapred.compress.map.output' */
-      boolean compressTemps = job.getBoolean("mapred.compress.map.output", 
-                                             false);
+      CompressionCodec codec = null;
+      CompressionType compressionType = CompressionType.NONE;
+      if (job.getCompressMapOutput()) {
+        // find the kind of compression to do, defaulting to record
+        compressionType = SequenceFile.getCompressionType(job);
+
+        // find the right codec
+        Class codecClass = 
+          job.getMapOutputCompressorClass(DefaultCodec.class);
+        codec = (CompressionCodec) 
+                   ReflectionUtils.newInstance(codecClass, job);
+      }
       for (int i = 0; i < partitions; i++) {
+        Path filename = mapOutputFile.getOutputFile(getTaskId(), i);
         outs[i] =
-          SequenceFile.createWriter(localFs, job,
-                                  this.mapOutputFile.getOutputFile(getTaskId(), i),
-                                  job.getMapOutputKeyClass(),
-                                  job.getMapOutputValueClass(),
-                                  compressTemps ? CompressionType.RECORD : 
-                                    CompressionType.valueOf(
-                                        job.get("mapred.seqfile.compression.type", 
-                                            "NONE"))
-                                  );
+          SequenceFile.createWriter(localFs, job, filename,
+                                    job.getMapOutputKeyClass(),
+                                    job.getMapOutputValueClass(),
+                                    compressionType, codec, reporter);
         LOG.info("opened "+this.mapOutputFile.getOutputFile(getTaskId(), i).getName());
       }
 
@@ -157,7 +166,6 @@ class MapTask extends Task {
         };
 
       OutputCollector collector = partCollector;
-      Reporter reporter = getReporter(umbilical, getProgress());
 
       boolean combining = job.getCombinerClass() != null;
       if (combining) {                            // add combining collector

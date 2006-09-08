@@ -173,18 +173,29 @@ public class Text implements WritableComparable {
    * @exception CharacterCodingException if the array contains invalid UTF8 code  
    */
   public void set(byte[] utf8) throws CharacterCodingException {
-    validateUTF8(utf8);
-    set(utf8, utf8.length);
+    set(utf8, 0, utf8.length);
   }
   
   /** copy a text. */
   public void set(Text other) {
-    set(other.bytes, other.length);
+    try {
+      set(other.bytes, 0, other.length);
+    } catch (CharacterCodingException e) {
+      throw new RuntimeException("bad Text UTF8 encoding", e);
+    }
   }
 
-  private void set(byte[] utf8, int len ) {
+  /**
+   * Set the Text to range of bytes
+   * @param utf8 the data to copy from
+   * @param start the first position of the new string
+   * @param len the number of bytes of the new string
+   */
+  public void set(byte[] utf8, int start, int len 
+                  ) throws CharacterCodingException{
+    validateUTF8(utf8, start, len);
     setCapacity(len);
-    System.arraycopy(utf8, 0, bytes, 0, len);
+    System.arraycopy(utf8, start, bytes, 0, len);
     this.length = len;
   }
 
@@ -416,10 +427,17 @@ public class Text implements WritableComparable {
    * @exception MalformedInputException if the byte array contains invalid utf-8
    */
   public static void validateUTF8(byte[] utf8) throws MalformedInputException {
-     validateUTF(utf8, 0, utf8.length);     
+     validateUTF8(utf8, 0, utf8.length);     
   }
   
-  public static void validateUTF(byte[] utf8, int start, int len)
+  /**
+   * Check to see if a byte array is valid utf-8
+   * @param utf8 the array of bytes
+   * @param start the offset of the first byte in the array
+   * @param len the length of the byte sequence
+   * @throws MalformedInputException if the byte array contains invalid bytes
+   */
+  public static void validateUTF8(byte[] utf8, int start, int len)
     throws MalformedInputException {
     int count = start;
     int leadByte = 0;

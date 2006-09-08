@@ -16,106 +16,148 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.IOException;
+import java.io.*;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FSDataInputStream;
-
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.compress.*;
 
 /** An {@link InputFormat} for plain text files.  Files are broken into lines.
  * Either linefeed or carriage-return are used to signal end of line.  Keys are
  * the position in the file, and values are the line of text.. */
-public class TextInputFormat extends InputFormatBase {
+public class TextInputFormat extends InputFormatBase implements JobConfigurable {
 
+  private CompressionCodecFactory compressionCodecs = null;
+  
+  public void configure(JobConf conf) {
+    compressionCodecs = new CompressionCodecFactory(conf);
+  }
+  
+  protected boolean isSplitable(FileSystem fs, Path file) {
+    return compressionCodecs.getCodec(file) == null;
+  }
+  
+  protected static class LineRecordReader implements RecordReader {
+    private long pos;
+    private long end;
+    private BufferedInputStream in;
+    private ByteArrayOutputStream buffer = new ByteArrayOutputStream(256);
+    /**
+     * Provide a bridge to get the bytes from the ByteArrayOutputStream
+     * without creating a new byte array.
+     */
+    private static class TextStuffer extends OutputStream {
+      public Text target;
+      public void write(int b) {
+        throw new UnsupportedOperationException("write(byte) not supported");
+      }
+      public void write(byte[] data, int offset, int len) throws IOException {
+        target.set(data, offset, len);
+      }      
+    }
+    private TextStuffer bridge = new TextStuffer();
+
+    public LineRecordReader(InputStream in, long offset, long endOffset) {
+      this.in = new BufferedInputStream(in);
+      this.pos = offset;
+      this.end = endOffset;
+    }
+    
+    public WritableComparable createKey() {
+      return new LongWritable();
+    }
+    
+    public Writable createValue() {
+      return new Text();
+    }
+    
+    /** Read a line. */
+    public synchronized boolean next(Writable key, Writable value)
+      throws IOException {
+      if (pos >= end)
+        return false;
+
+      ((LongWritable)key).set(pos);           // key is position
+      buffer.reset();
+      long bytesRead = readLine(in, buffer);
+      if (bytesRead == 0) {
+        return false;
+      }
+      pos += bytesRead;
+      bridge.target = (Text) value;
+      buffer.writeTo(bridge);
+      return true;
+    }
+    
+    public  synchronized long getPos() throws IOException {
+      return pos;
+    }
+
+    public synchronized void close() throws IOException { 
+      in.close(); 
+    }  
+
+  }
+  
   public RecordReader getRecordReader(FileSystem fs, FileSplit split,
                                       JobConf job, Reporter reporter)
     throws IOException {
 
     reporter.setStatus(split.toString());
 
-    final long start = split.getStart();
-    final long end = start + split.getLength();
+    long start = split.getStart();
+    long end = start + split.getLength();
+    final Path file = split.getPath();
+    final CompressionCodec codec = compressionCodecs.getCodec(file);
 
     // open the file and seek to the start of the split
-    final FSDataInputStream in = fs.open(split.getPath());
+    FSDataInputStream fileIn = fs.open(split.getPath());
+    InputStream in = fileIn;
     
-    if (start != 0) {
-      in.seek(start-1);
-      while (in.getPos() < end) {    // scan to the next newline in the file
-        char c = (char)in.read();
-        if (c == '\n')
-          break;
-          
-        if (c == '\r') {       
-          long curPos = in.getPos();
-          char nextC = (char)in.read();
-          if (nextC != '\n') {
-            in.seek(curPos);
-          }
-
-          break;
-        }
-      }
+    if (codec != null) {
+      in = codec.createInputStream(fileIn);
+      end = Long.MAX_VALUE;
+    } else if (start != 0) {
+      fileIn.seek(start-1);
+      readLine(fileIn, null);
+      start = fileIn.getPos();
     }
-
-    return new RecordReader() {
-      
-        public WritableComparable createKey() {
-          return new LongWritable();
-        }
-        
-        public Writable createValue() {
-          return new Text();
-        }
-        
-        /** Read a line. */
-        public synchronized boolean next(Writable key, Writable value)
-          throws IOException {
-          long pos = in.getPos();
-          if (pos >= end)
-            return false;
-
-          ((LongWritable)key).set(pos);           // key is position
-          ((Text)value).set(readLine(in));        // value is line
-          return true;
-        }
-        
-        public  synchronized long getPos() throws IOException {
-          return in.getPos();
-        }
-
-        public synchronized void close() throws IOException { in.close(); }
-
-      };
+    
+    return new LineRecordReader(in, start, end);
   }
 
-  private static String readLine(FSDataInputStream in) throws IOException {
-    StringBuffer buffer = new StringBuffer();
+  public static long readLine(InputStream in, 
+                              OutputStream out) throws IOException {
+    long bytes = 0;
     while (true) {
 
       int b = in.read();
-      if (b == -1)
+      if (b == -1) {
         break;
-
-      char c = (char)b;              // bug: this assumes eight-bit characters.
-      if (c == '\n')
+      }
+      bytes += 1;
+      
+      byte c = (byte)b;
+      if (c == '\n') {
         break;
-        
-      if (c == '\r') {       
-        long curPos = in.getPos();
-        char nextC = (char)in.read();
+      }
+      
+      if (c == '\r') {
+        in.mark(1);
+        byte nextC = (byte)in.read();
         if (nextC != '\n') {
-          in.seek(curPos);
+          in.reset();
+        } else {
+          bytes += 1;
         }
-
         break;
       }
 
-      buffer.append(c);
+      if (out != null) {
+        out.write(c);
+      }
     }
-    
-    return buffer.toString();
+    return bytes;
   }
 
 }
