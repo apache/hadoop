@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Release 0.6.0 - 2006-08-08
 
  1. HADOOP-427.  Replace some uses of DatanodeDescriptor in the DFS
     web UI code with DatanodeInfo, the preferred public class.
