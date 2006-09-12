@@ -13,6 +13,9 @@ Trunk (unreleased changes)
  3. HADOOP-521.  Fix another NullPointerException finding the
     ClassLoader when using libhdfs.  (omalley via cutting)
 
+ 4. HADOOP-526.  Fix a NullPointerException when attempting to start
+    two datanodes in the same directory.  (Milind Bhandarkar via cutting)
+
 
 Release 0.6.0 - 2006-08-08
 

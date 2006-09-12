@@ -35,6 +35,9 @@ class DataStorage {
   private ArrayList storageFiles = new ArrayList();
   private ArrayList storageLocks = new ArrayList();
   
+  // cache away the names of all passed in dirs
+  private File[] origDirs = null;
+  
   // cache away the names of locked dirs
   private File[] dirs = null;
   
@@ -65,6 +68,7 @@ class DataStorage {
    */
   public DataStorage( int curVersion, File[] dataDirs ) throws IOException {
     this.version = curVersion;
+    this.origDirs = dataDirs;
     for (int idx = 0; idx < dataDirs.length; idx++) {
       storageFiles.add(idx, new RandomAccessFile( 
                           new File(dataDirs[idx], STORAGE_INFO_FILE_NAME ), 
@@ -129,7 +133,7 @@ class DataStorage {
     FileLock lock = file.getChannel().tryLock();
     if (lock == null) {
       // log a warning
-      LOG.warn("Cannot lock storage file in directory "+dirs[idx].getName());
+      LOG.warn("Cannot lock storage file in directory "+origDirs[idx].getName());
       // remove the file from fileList, and close it
       storageFiles.add(idx, null);
       file.close();
