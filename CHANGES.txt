@@ -10,6 +10,9 @@ Trunk (unreleased changes)
     explicitly specified.  Also add a test case for this.
     (omalley via cutting)
 
+ 3. HADOOP-521.  Fix another NullPointerException finding the
+    ClassLoader when using libhdfs.  (omalley via cutting)
+
 
 Release 0.6.0 - 2006-08-08
 

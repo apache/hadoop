@@ -216,9 +216,7 @@ public class ObjectWritable implements Writable, Configurable {
     } else {                                      // Writable
       Class instanceClass = null;
       try {
-        instanceClass = 
-          Class.forName(UTF8.readString(in), true, 
-                        Thread.currentThread().getContextClassLoader());
+        instanceClass = conf.getClassByName(UTF8.readString(in));
       } catch (ClassNotFoundException e) {
         throw new RuntimeException("readObject can't find class", e);
       }
