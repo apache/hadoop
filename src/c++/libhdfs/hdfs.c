@@ -574,12 +574,16 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
 
     jthrowable jException;
     jbyteArray jbWarray;
-    jint noWrittenBytes = 0;
 
     //Sanity check
     if (!f || f->type == UNINITIALIZED) {
         errno = EBADF;
         return -1;
+    }
+    
+    if (length < 0) {
+    	errno = EINVAL;
+    	return -1;
     }
 
     //Error checking... make sure that this file is 'writable'
@@ -589,20 +593,23 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
         return -1;
     }
 
-    //Write the requisite bytes into the file
-    jbWarray = (*env)->NewByteArray(env, length);
-    (*env)->SetByteArrayRegion(env, jbWarray, 0, length, buffer);
-    if (invokeMethod(env, NULL, &jException, INSTANCE, jOutputStream,
-                "org/apache/hadoop/fs/FSDataOutputStream", "write", 
-                "([B)V", jbWarray)) {
-        fprintf(stderr, 
-            "Call to org.apache.hadoop.fs.FSDataOutputStream::write failed!\n"
-            );
-        errno = EINTERNAL;
-        noWrittenBytes = -1;
-    } 
-    (*env)->ReleaseByteArrayElements(env, jbWarray, 
-                (*env)->GetByteArrayElements(env, jbWarray, 0), JNI_ABORT);
+	// 'length' equals 'zero' is a valid use-case according to Posix!
+	if (length != 0) {
+	    //Write the requisite bytes into the file
+	    jbWarray = (*env)->NewByteArray(env, length);
+	    (*env)->SetByteArrayRegion(env, jbWarray, 0, length, buffer);
+	    if (invokeMethod(env, NULL, &jException, INSTANCE, jOutputStream,
+	                "org/apache/hadoop/fs/FSDataOutputStream", "write", 
+	                "([B)V", jbWarray)) {
+	        fprintf(stderr, 
+	            "Call to org.apache.hadoop.fs.FSDataOutputStream::write failed!\n"
+	            );
+	        errno = EINTERNAL;
+	        length = -1;
+	    } 
+	    (*env)->ReleaseByteArrayElements(env, jbWarray, 
+	                (*env)->GetByteArrayElements(env, jbWarray, 0), JNI_ABORT);
+	}
 
     //Return no. of bytes succesfully written (libc way)
     //i.e. 'length' itself! ;-)

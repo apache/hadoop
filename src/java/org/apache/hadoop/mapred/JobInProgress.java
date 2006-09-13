@@ -109,24 +109,15 @@ class JobInProgress {
         //
         String jobFile = profile.getJobFile();
 
-        JobConf jd = new JobConf(localJobFile);
         FileSystem fs = FileSystem.get(conf);
-        String ifClassName = jd.get("mapred.input.format.class");
-        InputFormat inputFormat;
-        if (ifClassName != null && localJarFile != null) {
-          try {
+        if (localJarFile != null) {
             ClassLoader loader =
               new URLClassLoader(new URL[]{ localFs.pathToFile(localJarFile).toURL() });
-            Class inputFormatClass = Class.forName(ifClassName, true, loader);
-            inputFormat = (InputFormat)inputFormatClass.newInstance();
-          } catch (Exception e) {
-            throw new IOException(e.toString());
-          }
-        } else {
-          inputFormat = jd.getInputFormat();
+            conf.setClassLoader(loader);
         }
+        InputFormat inputFormat = conf.getInputFormat();
 
-        FileSplit[] splits = inputFormat.getSplits(fs, jd, numMapTasks);
+        FileSplit[] splits = inputFormat.getSplits(fs, conf, numMapTasks);
 
         //
         // sort splits by decreasing length, to reduce job's tail

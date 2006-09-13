@@ -56,6 +56,7 @@ public class TestMiniMRWithDFS extends TestCase {
     conf.set("fs.default.name", fileSys);
     conf.set("mapred.job.tracker", jobTracker);
     conf.setJobName("wordcount");
+    conf.setInputFormat(TextInputFormat.class);
     
     // the keys are words (strings)
     conf.setOutputKeyClass(Text.class);

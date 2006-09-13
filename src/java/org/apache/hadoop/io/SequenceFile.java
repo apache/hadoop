@@ -980,14 +980,19 @@ public class SequenceFile {
       
       // if version >= 5
       // setup the compression codec
-      if (version >= CUSTOM_COMPRESS_VERSION && this.decompress) {    
-        try {
-          this.codec = (CompressionCodec)
-          ReflectionUtils.newInstance(conf.getClassByName(Text.readString(in)),
-              conf);
-        } catch (ClassNotFoundException cnfe) {
-          cnfe.printStackTrace();
-          throw new IllegalArgumentException("Unknown codec: " + cnfe);
+      if (decompress) {
+        if (version >= CUSTOM_COMPRESS_VERSION) {
+          String codecClassname = Text.readString(in);
+          try {
+            Class codecClass = conf.getClassByName(codecClassname);
+            this.codec = (CompressionCodec)
+                 ReflectionUtils.newInstance(codecClass, conf);
+          } catch (ClassNotFoundException cnfe) {
+            throw new IllegalArgumentException("Unknown codec: " + 
+                                               codecClassname, cnfe);
+          }
+        } else {
+          codec = new DefaultCodec();
         }
       }
       
