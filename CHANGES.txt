@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Release 0.6.1 - 2006-08-13
 
  1. HADOOP-520.  Fix a bug in libhdfs, where write failures were not
     correctly returning error codes.  (Arun C Murthy via cutting)
