@@ -528,9 +528,11 @@ public class SequenceFile {
     public synchronized void append(Writable key, Writable val)
       throws IOException {
       if (key.getClass() != keyClass)
-        throw new IOException("wrong key class: "+key+" is not "+keyClass);
+        throw new IOException("wrong key class: "+key.getClass().getName()
+            +" is not "+keyClass);
       if (val.getClass() != valClass)
-        throw new IOException("wrong value class: "+val+" is not "+valClass);
+        throw new IOException("wrong value class: "+val.getClass().getName()
+            +" is not "+valClass);
 
       buffer.reset();
 
@@ -643,9 +645,11 @@ public class SequenceFile {
     public synchronized void append(Writable key, Writable val)
       throws IOException {
       if (key.getClass() != keyClass)
-        throw new IOException("wrong key class: "+key+" is not "+keyClass);
+        throw new IOException("wrong key class: "+key.getClass().getName()
+            +" is not "+keyClass);
       if (val.getClass() != valClass)
-        throw new IOException("wrong value class: "+val+" is not "+valClass);
+        throw new IOException("wrong value class: "+val.getClass().getName()
+            +" is not "+valClass);
 
       buffer.reset();
 
@@ -1183,7 +1187,8 @@ public class SequenceFile {
      * value.  True if another entry exists, and false at end of file. */
     public synchronized boolean next(Writable key) throws IOException {
       if (key.getClass() != keyClass)
-        throw new IOException("wrong key class: "+key+" is not "+keyClass);
+        throw new IOException("wrong key class: "+key.getClass().getName()
+            +" is not "+keyClass);
 
       if (version < BLOCK_COMPRESS_VERSION || blockCompressed == false) {
         outBuf.reset();

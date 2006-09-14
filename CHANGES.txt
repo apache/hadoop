@@ -11,6 +11,9 @@ Trunk (unreleased changes)
    file format used to store pathnames has some limitations.
    (Wendy Chien via cutting)
 
+3. HADOOP-530.  Improve error messages in SequenceFile when keys or
+   values are of the wrong type.  (Hairong Kuang via cutting)
+
 
 Release 0.6.1 - 2006-08-13
 
