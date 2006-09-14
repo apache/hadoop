@@ -7,6 +7,10 @@ Trunk (unreleased changes)
    so that things are not shown to be 100% complete until they are in
    fact finished.  (omalley via cutting) 
 
+2. HADOOP-438.  Limit the length of absolute paths in DFS, since the
+   file format used to store pathnames has some limitations.
+   (Wendy Chien via cutting)
+
 
 Release 0.6.1 - 2006-08-13
 

@@ -106,6 +106,11 @@ public interface FSConstants {
     public static long LEASE_PERIOD = 60 * 1000;
     public static int READ_TIMEOUT = 60 * 1000;
 
+    // We need to limit the length and depth of a path in the filesystem.  HADOOP-438
+    // Currently we set the maximum length to 8k characters and the maximum depth to 1k.  
+    public static int MAX_PATH_LENGTH = 8000;
+    public static int MAX_PATH_DEPTH = 1000;
+    
     //TODO mb@media-style.com: should be conf injected?
     public static final int BUFFER_SIZE = new Configuration().getInt("io.file.buffer.size", 4096);
 

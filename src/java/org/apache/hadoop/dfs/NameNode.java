@@ -17,6 +17,7 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
@@ -199,6 +200,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     ) throws IOException {
        stateChangeLog.debug("*DIR* NameNode.create: file "
             +src+" for "+clientName+" at "+clientMachine);
+       if (!checkPathLength(src)) {
+           throw new IOException("create: Pathname too long.  Limit " 
+               + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
+       }
        Object results[] = namesystem.startFile(new UTF8(src), 
                                                 new UTF8(clientName), 
                                                 new UTF8(clientMachine), 
@@ -304,6 +309,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     public boolean rename(String src, String dst) throws IOException {
         stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst );
+        if (!checkPathLength(dst)) {
+            throw new IOException("rename: Pathname too long.  Limit " 
+                + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
+        }
         boolean ret = namesystem.renameTo(new UTF8(src), new UTF8(dst));
         if (ret) {
             myMetrics.renameFile();
@@ -331,9 +340,25 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
 
     /**
+     * Check path length does not exceed maximum.  Returns true if
+     * length and depth are okay.  Returns false if length is too long 
+     * or depth is too great.
+     * 
+     */
+    private boolean checkPathLength(String src) {
+        Path srcPath = new Path(src);
+        return (src.length() <= MAX_PATH_LENGTH &&
+                srcPath.depth() <= MAX_PATH_DEPTH);
+    }
+    
+    /**
      */
     public boolean mkdirs(String src) throws IOException {
         stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src );
+        if (!checkPathLength(src)) {
+            throw new IOException("mkdirs: Pathname too long.  Limit " 
+                + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
+        }
         return namesystem.mkdirs(new UTF8(src));
     }
 

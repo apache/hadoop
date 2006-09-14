@@ -174,5 +174,11 @@ public class Path implements Comparable {
     Path that = (Path)o;
     return this.toString().compareTo(that.toString());
   }
+  
+  /** Return the number of elements in this path. */
+  public int depth() {
+    return elements.length;
+  }
 
 }
+
