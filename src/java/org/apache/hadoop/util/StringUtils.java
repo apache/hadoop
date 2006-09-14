@@ -18,7 +18,10 @@ package org.apache.hadoop.util;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.text.DecimalFormat;
+import org.apache.hadoop.fs.*;
 
 /**
  * General string utils
@@ -104,5 +107,82 @@ public class StringUtils {
       sbuf.append(strs[idx]);
     }
     return sbuf.toString();
+  }
+
+  /**
+   * Given an array of bytes it will convert the bytes to a hex string
+   * representation of the bytes
+   * @param bytes
+   * @return hex string representation of the byte array
+   */
+  public static String byteToHexString(byte bytes[]) {
+    StringBuffer retString = new StringBuffer();
+    for (int i = 0; i < bytes.length; ++i) {
+      retString.append(Integer.toHexString(0x0100 + (bytes[i] & 0x00FF))
+          .substring(1));
+    }
+    return retString.toString();
+  }
+
+  /**
+   * Given a hexstring this will return the byte array corresponding to the
+   * string
+   * @param hex the hex String array
+   * @return a byte array that is a hex string representation of the given
+   *         string. The size of the byte array is therefore hex.length/2
+   */
+  public static byte[] hexStringToByte(String hex) {
+    byte[] bts = new byte[hex.length() / 2];
+    for (int i = 0; i < bts.length; i++) {
+      bts[i] = (byte) Integer.parseInt(hex.substring(2 * i, 2 * i + 2), 16);
+    }
+    return bts;
+  }
+  /**
+   * 
+   * @param uris
+   * @return
+   */
+  public static String uriToString(URI[] uris){
+    String ret = null;
+    ret = uris[0].toString();
+    for(int i = 1; i < uris.length;i++){
+      ret = ret + "," + uris[i].toString();
+    }
+    return ret;
+  }
+  
+  /**
+   * 
+   * @param str
+   * @return
+   */
+  public static URI[] stringToURI(String[] str){
+    if (str == null) 
+      return null;
+    URI[] uris = new URI[str.length];
+    for (int i = 0; i < str.length;i++){
+      try{
+        uris[i] = new URI(str[i]);
+      }catch(URISyntaxException ur){
+        System.out.println("Exception in specified URI's " + StringUtils.stringifyException(ur));
+        //making sure its asssigned to null in case of an error
+        uris[i] = null;
+      }
+    }
+    return uris;
+  }
+  
+  /**
+   * 
+   * @param str
+   * @return
+   */
+  public static Path[] stringToPath(String[] str){
+    Path[] p = new Path[str.length];
+    for (int i = 0; i < str.length;i++){
+      p[i] = new Path(str[i]);
+    }
+    return p;
   }
 }

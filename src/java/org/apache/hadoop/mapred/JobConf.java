@@ -171,6 +171,7 @@ public class JobConf extends Configuration {
     String dirs = get("mapred.input.dir");
     set("mapred.input.dir", dirs == null ? dir.toString() : dirs + "," + dir);
   }
+
   public Path[] getInputPaths() {
     String dirs = get("mapred.input.dir", "");
     ArrayList list = Collections.list(new StringTokenizer(dirs, ","));
@@ -197,8 +198,10 @@ public class JobConf extends Configuration {
     set("user.name", user);
   }
 
+
+  
   /**
-   * Set whether the framework shoul keep the intermediate files for 
+   * Set whether the framework should keep the intermediate files for 
    * failed tasks.
    */
   public void setKeepFailedTaskFiles(boolean keep) {

@@ -20,11 +20,12 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.*;
-
+import org.apache.hadoop.filecache.*;
 import java.io.*;
 import java.util.jar.*;
 import java.util.Vector;
 import java.util.Enumeration;
+import java.net.URI;
 
 /** Base class that runs a task in a separate process.  Tasks are run in a
  * separate process in order to isolate the map/reduce system code from bugs in
@@ -61,25 +62,71 @@ abstract class TaskRunner extends Thread {
   */
   public void close() throws IOException {}
 
+  private String stringifyPathArray(Path[] p){
+	  if (p == null){
+      return null;
+    }
+    String str = p[0].toString();
+    for (int i = 1; i < p.length; i++){
+      str = str + "," + p[i].toString();
+    }
+    return str;
+  }
+  
   public final void run() {
     try {
-
+      
+      //before preparing the job localize 
+      //all the archives
+      
+      URI[] archives = DistributedCache.getCacheArchives(conf);
+      URI[] files = DistributedCache.getCacheFiles(conf);
+      if ((archives != null) || (files != null)) {
+        if (archives != null) {
+          String[] md5 = DistributedCache.getArchiveMd5(conf);
+          Path[] p = new Path[archives.length];
+          for (int i = 0; i < archives.length;i++){
+            p[i] = DistributedCache.getLocalCache(archives[i], conf, conf.getLocalPath(TaskTracker.getCacheSubdir()), true, md5[i]);
+          }
+          DistributedCache.setLocalArchives(conf, stringifyPathArray(p));
+        }
+        if ((files != null)) {
+          String[] md5 = DistributedCache.getFileMd5(conf);
+          Path[] p = new Path[files.length];
+          for (int i = 0; i < files.length;i++){
+           p[i] = DistributedCache.getLocalCache(files[i], conf, conf.getLocalPath(TaskTracker
+              .getCacheSubdir()), false, md5[i]);
+          }
+          DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
+        }
+        
+        // sets the paths to local archives and paths
+        Path localTaskFile = new Path(t.getJobFile());
+        FileSystem localFs = FileSystem.getNamed("local", conf);
+        localFs.delete(localTaskFile);
+        OutputStream out = localFs.create(localTaskFile);
+        try {
+          conf.write(out);
+        } finally {
+          out.close();
+        }
+      }
+      
       if (! prepare()) {
         return;
       }
 
       String sep = System.getProperty("path.separator");
-      File workDir = new File(new File(t.getJobFile()).getParent(), "work");
-      workDir.mkdirs();
-               
       StringBuffer classPath = new StringBuffer();
       // start with same classpath as parent process
       classPath.append(System.getProperty("java.class.path"));
       classPath.append(sep);
-
+      File workDir = new File(new File(t.getJobFile()).getParentFile().getParent(), "work");
+      workDir.mkdirs();
+	  
       String jar = conf.getJar();
-      if (jar != null) {                      // if jar exists, it into workDir
-        RunJar.unJar(new File(jar), workDir);
+      if (jar != null) {       
+    	  // if jar exists, it into workDir
         File[] libs = new File(workDir, "lib").listFiles();
         if (libs != null) {
           for (int i = 0; i < libs.length; i++) {
@@ -160,10 +207,27 @@ abstract class TaskRunner extends Thread {
         LOG.warn(t.getTaskId()+" Reporting Diagnostics", e);
       }
     } finally {
+      try{
+        URI[] archives = DistributedCache.getCacheArchives(conf);
+        URI[] files = DistributedCache.getCacheFiles(conf);
+        if (archives != null){
+          for (int i = 0; i < archives.length; i++){
+            DistributedCache.releaseCache(archives[i], conf);
+          }
+        }
+        if (files != null){
+          for(int i = 0; i < files.length; i++){
+            DistributedCache.releaseCache(files[i], conf);
+          }
+        }
+      }catch(IOException ie){
+        LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
+      }
       tracker.reportTaskFinished(t.getTaskId());
     }
   }
 
+  
   /**
    * Handle deprecated mapred.child.heap.size.
    * If present, interpolate into mapred.child.java.opts value with
@@ -238,6 +302,7 @@ abstract class TaskRunner extends Thread {
       logStream(process.getInputStream());        // normally empty
       
       int exit_code = process.waitFor();
+     
       if (!killed && exit_code != 0) {
         throw new IOException("Task process exit with nonzero status of " +
                               exit_code + ".");

@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
-
+import org.apache.hadoop.filecache.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -227,7 +227,8 @@ public class JobClient extends ToolBase implements MRConstants  {
         JobConf job = new JobConf(jobFile);
         return submitJob(job);
     }
-
+    
+   
     /**
      * Submit a job to the MR system
      */
@@ -244,11 +245,39 @@ public class JobClient extends ToolBase implements MRConstants  {
         Path submitJobDir = new Path(job.getSystemDir(), "submit_" + Integer.toString(Math.abs(r.nextInt()), 36));
         Path submitJobFile = new Path(submitJobDir, "job.xml");
         Path submitJarFile = new Path(submitJobDir, "job.jar");
-
-        String originalJarPath = job.getJar();
-
         FileSystem fs = getFs();
-
+        // try getting the md5 of the archives
+        URI[] tarchives = DistributedCache.getCacheArchives(job);
+        URI[] tfiles = DistributedCache.getCacheFiles(job);
+        if ((tarchives != null) || (tfiles != null)) {
+          // prepare these archives for md5 checksums
+          if (tarchives != null) {
+            String md5Archives = StringUtils.byteToHexString(DistributedCache
+                .createMD5(tarchives[0], job));
+            for (int i = 1; i < tarchives.length; i++) {
+              md5Archives = md5Archives
+                  + ","
+                  + StringUtils.byteToHexString(DistributedCache
+                      .createMD5(tarchives[i], job));
+            }
+            DistributedCache.setArchiveMd5(job, md5Archives);
+            //job.set("mapred.cache.archivemd5", md5Archives);
+          }
+          if (tfiles != null) {
+            String md5Files = StringUtils.byteToHexString(DistributedCache
+                .createMD5(tfiles[0], job));
+            for (int i = 1; i < tfiles.length; i++) {
+              md5Files = md5Files
+                  + ","
+                  + StringUtils.byteToHexString(DistributedCache
+                      .createMD5(tfiles[i], job));
+            }
+            DistributedCache.setFileMd5(job, md5Files);
+            //"mapred.cache.filemd5", md5Files);
+          }
+        }
+       
+        String originalJarPath = job.getJar();
         short replication = (short)job.getInt("mapred.submit.replication", 10);
 
         if (originalJarPath != null) {           // copy jar to JobTracker's fs

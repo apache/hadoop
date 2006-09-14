@@ -17,6 +17,9 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.util.Enumeration;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -230,5 +233,68 @@ public class FileUtil {
     }
     return dst;
   }
-
+  
+  /**
+   * Takes an input dir and returns the du on that local directory. Very basic
+   * implementation.
+   * 
+   * @param dir
+   *          The input dir to get the disk space of this local dir
+   * @return The total disk space of the input local directory
+   */
+  public static long getDU(File dir) {
+    long size = 0;
+    if (!dir.exists())
+      return 0;
+    if (!dir.isDirectory()) {
+      return dir.length();
+    } else {
+      size = dir.length();
+      File[] allFiles = dir.listFiles();
+      for (int i = 0; i < allFiles.length; i++) {
+        size = size + getDU(allFiles[i]);
+      }
+      return size;
+    }
+  }
+    
+	/**
+   * Given a File input it will unzip the file in a the unzip directory
+   * passed as the second parameter
+   * @param inFile The zip file as input
+   * @param unzipDir The unzip directory where to unzip the zip file.
+   * @throws IOException
+   */
+  public static void unZip(File inFile, File unzipDir) throws IOException {
+    Enumeration entries;
+    ZipFile zipFile = new ZipFile(inFile);
+    ;
+    try {
+      entries = zipFile.entries();
+      while (entries.hasMoreElements()) {
+        ZipEntry entry = (ZipEntry) entries.nextElement();
+        if (!entry.isDirectory()) {
+          InputStream in = zipFile.getInputStream(entry);
+          try {
+            File file = new File(unzipDir, entry.getName());
+            file.getParentFile().mkdirs();
+            OutputStream out = new FileOutputStream(file);
+            try {
+              byte[] buffer = new byte[8192];
+              int i;
+              while ((i = in.read(buffer)) != -1) {
+                out.write(buffer, 0, i);
+              }
+            } finally {
+              out.close();
+            }
+          } finally {
+            in.close();
+          }
+        }
+      }
+    } finally {
+      zipFile.close();
+    }
+  }
 }

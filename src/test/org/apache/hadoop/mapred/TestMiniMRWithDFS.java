@@ -95,12 +95,14 @@ public class TestMiniMRWithDFS extends TestCase {
    * @param taskDirs the task ids that should be present
    */
   private static void checkTaskDirectories(MiniMRCluster mr,
+                                           String[] jobIds,
                                            String[] taskDirs) {
     mr.waitUntilIdle();
     int trackers = mr.getNumTaskTrackers();
     List neededDirs = new ArrayList(Arrays.asList(taskDirs));
     boolean[] found = new boolean[taskDirs.length];
     for(int i=0; i < trackers; ++i) {
+      int numNotDel = 0;
       File localDir = new File(mr.getTaskTrackerLocalDir(i));
       File trackerDir = new File(localDir, "taskTracker");
       assertTrue("local dir " + localDir + " does not exist.", 
@@ -113,7 +115,7 @@ public class TestMiniMRWithDFS extends TestCase {
         System.out.println("Local " + localDir + ": " + contents[j]);
       }
       for(int j=0; j < trackerContents.length; ++j) {
-        System.out.println("Local " + trackerDir + ": " + trackerContents[j]);
+        System.out.println("Local jobcache " + trackerDir + ": " + trackerContents[j]);
       }
       for(int fileIdx = 0; fileIdx < contents.length; ++fileIdx) {
         String name = contents[fileIdx];
@@ -123,13 +125,11 @@ public class TestMiniMRWithDFS extends TestCase {
                      localDir, idx != -1);
           assertTrue("Matching output directory not found " + name +
                      " in " + trackerDir, 
-                     new File(trackerDir, name).isDirectory());
+                     new File(new File(new File(trackerDir, "jobcache"), jobIds[idx]), name).isDirectory());
           found[idx] = true;
+          numNotDel++;
         }  
       }
-      assertTrue("The local directory had " + contents.length + 
-                 " and task tracker directory had " + trackerContents.length +
-                 " items.", contents.length == trackerContents.length + 1);
     }
     for(int i=0; i< found.length; i++) {
       assertTrue("Directory " + taskDirs[i] + " not found", found[i]);
@@ -155,7 +155,7 @@ public class TestMiniMRWithDFS extends TestCase {
                                                jobTrackerName, namenode);
           double error = Math.abs(Math.PI - estimate);
           assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
-          checkTaskDirectories(mr, new String[]{});
+          checkTaskDirectories(mr, new String[]{}, new String[]{});
           
           // Run a word count example
           JobConf jobConf = new JobConf();
@@ -168,7 +168,7 @@ public class TestMiniMRWithDFS extends TestCase {
                                    3, 1);
           assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
                        "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
-          checkTaskDirectories(mr, new String[]{"task_0002_m_000001_0"});
+          checkTaskDirectories(mr, new String[]{"job_0002"}, new String[]{"task_0002_m_000001_0"});
           
       } finally {
           if (fileSys != null) { fileSys.close(); }

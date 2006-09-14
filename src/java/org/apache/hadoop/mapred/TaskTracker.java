@@ -71,6 +71,7 @@ public class TaskTracker
      * Map from taskId -> TaskInProgress.
      */
     TreeMap runningTasks = null;
+    Map runningJobs = null;
     int mapTotal = 0;
     int reduceTotal = 0;
     boolean justStarted = true;
@@ -89,11 +90,11 @@ public class TaskTracker
 
     static Random r = new Random();
     FileSystem fs = null;
-    static final String SUBDIR = "taskTracker";
-
+    private static final String SUBDIR = "taskTracker";
+    private static final String CACHEDIR = "archive";
+    private static final String JOBCACHE = "jobcache";
     private JobConf fConf;
     private MapOutputFile mapOutputFile;
-
     private int maxCurrentTasks;
     private int failures;
     private int finishedCount[] = new int[1];
@@ -145,6 +146,14 @@ public class TaskTracker
       taskCleanupThread.start();
     }
     
+    static String getCacheSubdir() {
+      return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.CACHEDIR;
+    }
+
+    static String getJobCacheSubdir() {
+      return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.JOBCACHE;
+    }
+    
     public long getProtocolVersion(String protocol, long clientVersion) {
       return TaskUmbilicalProtocol.versionID;
     }
@@ -167,6 +176,7 @@ public class TaskTracker
         // Clear out state tables
         this.tasks = new TreeMap();
         this.runningTasks = new TreeMap();
+        this.runningJobs = new TreeMap();
         this.mapTotal = 0;
         this.reduceTotal = 0;
         this.acceptNewTasks = true;
@@ -207,8 +217,84 @@ public class TaskTracker
         
         this.running = true;
     }
+        
+    // intialize the job directory
+    private void localizeJob(TaskInProgress tip) throws IOException {
+      Path localJarFile = null;
+      Task t = tip.getTask();
+      Path localJobFile = new Path(fConf.getLocalPath(getJobCacheSubdir()), (t
+          .getJobId()
+          + Path.SEPARATOR + "job.xml"));
+      RunningJob rjob = null;
+      synchronized (runningJobs) {
+        if (!runningJobs.containsKey(t.getJobId())) {
+          rjob = new RunningJob();
+          rjob.localized = false;
+          rjob.tasks = new ArrayList();
+          rjob.jobFile = localJobFile;
+          rjob.tasks.add(tip);
+          runningJobs.put(t.getJobId(), rjob);
+        } else {
+          rjob = (RunningJob) runningJobs.get(t.getJobId());
+          // keep this for later use when we just get a jobid to delete
+          // the data for
+          rjob.tasks.add(tip);
+        }
+      }
+      synchronized (rjob) {
+        if (!rjob.localized) {
+          localJarFile = new Path(fConf.getLocalPath(getJobCacheSubdir()), (t
+              .getJobId())
+              + Path.SEPARATOR + "job.jar");
+  
+          String jobFile = t.getJobFile();
+          fs.copyToLocalFile(new Path(jobFile), localJobFile);
+          JobConf localJobConf = new JobConf(localJobFile);
+          String jarFile = localJobConf.getJar();
+          if (jarFile != null) {
+            fs.copyToLocalFile(new Path(jarFile), localJarFile);
+            localJobConf.setJar(localJarFile.toString());
+            FileSystem localFs = FileSystem.getNamed("local", fConf);
+            OutputStream out = localFs.create(localJobFile);
+            try {
+              localJobConf.write(out);
+            } finally {
+              out.close();
+            }
 
-      public synchronized void shutdown() throws IOException {
+            // also unjar the job.jar files in workdir
+            File workDir = new File(
+                                    new File(localJobFile.toString()).getParent(),
+                                    "work");
+            workDir.mkdirs();
+            RunJar.unJar(new File(localJarFile.toString()), workDir);
+          }
+          rjob.localized = true;
+        }
+      }
+      launchTaskForJob(tip, new JobConf(rjob.jobFile)); 
+    }
+    
+    private void launchTaskForJob(TaskInProgress tip, JobConf jobConf) throws IOException{
+      synchronized (tip) {
+      try {
+        tip.setJobConf(jobConf);
+        tip.launchTask();
+      } catch (Throwable ie) {
+        tip.runstate = TaskStatus.FAILED;
+        try {
+          tip.cleanup();
+        } catch (Throwable ie2) {
+          // Ignore it, we are just trying to cleanup.
+        }
+        String error = StringUtils.stringifyException(ie);
+        tip.reportDiagnosticInfo(error);
+        LOG.info(error);
+      }
+      }
+     }
+    
+    public synchronized void shutdown() throws IOException {
           shuttingDown = true;
           close();
           if (this.server != null) {
@@ -311,6 +397,12 @@ public class TaskTracker
           LOG.warn(StringUtils.stringifyException(ie));
         } catch (InterruptedException ie) {}
       }
+    }
+    /**Return the DFS filesystem
+     * @return
+     */
+    public FileSystem getFileSystem(){
+      return fs;
     }
     
     /**
@@ -448,6 +540,10 @@ public class TaskTracker
               synchronized (this) {
                 for (int i = 0; i < toCloseIds.length; i++) {
                   Object tip = tasks.get(toCloseIds[i]);
+                  synchronized(runningJobs){
+                    runningJobs.remove(((TaskInProgress)
+                	 	  tasks.get(toCloseIds[i])).getTask().getJobId());
+                  }
                   if (tip != null) {
                     tasksToCleanup.put(tip);
                   } else {
@@ -551,8 +647,8 @@ public class TaskTracker
 
       return true;
     }
-
-	/**
+    
+    /**
      * Start a new task.
      * All exceptions are handled locally, so that we don't mess up the
      * task tracker.
@@ -569,20 +665,10 @@ public class TaskTracker
           reduceTotal++;
         }
       }
-      synchronized (tip) {
-        try {
-          tip.launchTask();
-        } catch (Throwable ie) {
-          tip.runstate = TaskStatus.FAILED;
-          try {
-            tip.cleanup();
-          } catch (Throwable ie2) {
-            // Ignore it, we are just trying to cleanup.
-          }
-          String error = StringUtils.stringifyException(ie);
-          tip.reportDiagnosticInfo(error);
-          LOG.info(error);
-        }
+      try{
+    	  localizeJob(tip);
+      }catch(IOException ie){
+    	  LOG.warn("Error initializing Job " + tip.getTask().getJobId());
       }
     }
     
@@ -691,6 +777,7 @@ public class TaskTracker
         private JobConf localJobConf;
         private boolean keepFailedTaskFiles;
         private boolean alwaysKeepTaskFiles;
+        private boolean keepJobFiles;
 
         /**
          */
@@ -702,60 +789,52 @@ public class TaskTracker
             this.lastProgressReport = System.currentTimeMillis();
             this.defaultJobConf = conf;
             localJobConf = null;
+            keepJobFiles = false;
         }
-
-        /**
-         * Some fields in the Task object need to be made machine-specific.
-         * So here, edit the Task's fields appropriately.
-         */
-        private void localizeTask(Task t) throws IOException {
-            this.defaultJobConf.deleteLocalFiles(SUBDIR + "/" + 
-                                                 task.getTaskId());
-            Path localJobFile =
-              this.defaultJobConf.getLocalPath(SUBDIR+"/"+t.getTaskId()+"/"+"job.xml");
-            Path localJarFile =
-              this.defaultJobConf.getLocalPath(SUBDIR+"/"+t.getTaskId()+"/"+"job.jar");
-
-            String jobFile = t.getJobFile();
-            fs.copyToLocalFile(new Path(jobFile), localJobFile);
-            t.setJobFile(localJobFile.toString());
-
-            localJobConf = new JobConf(localJobFile);
-            localJobConf.set("mapred.local.dir",
-                    this.defaultJobConf.get("mapred.local.dir"));
-            String jarFile = localJobConf.getJar();
-            if (jarFile != null) {
-              fs.copyToLocalFile(new Path(jarFile), localJarFile);
-              localJobConf.setJar(localJarFile.toString());
-            }
-            task.localizeConfiguration(localJobConf);
-
-            FileSystem localFs = FileSystem.getNamed("local", fConf);
-            OutputStream out = localFs.create(localJobFile);
-            try {
-              localJobConf.write(out);
-            } finally {
-              out.close();
-            }
-            // set the task's configuration to the local job conf
-            // rather than the default.
-            t.setConf(localJobConf);
-            keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
+        
+        private void localizeTask(Task task) throws IOException{
+            Path localTaskDir =
+              new Path(this.defaultJobConf.getLocalPath(SUBDIR+ Path.SEPARATOR
+                    + JOBCACHE + Path.SEPARATOR
+                    + task.getJobId()), task.getTaskId());
+           FileSystem localFs = FileSystem.getNamed("local", fConf);
+           localFs.mkdirs(localTaskDir);
+           Path localTaskFile = new Path(localTaskDir, "job.xml");
+           task.setJobFile(localTaskFile.toString());
+           localJobConf.set("mapred.local.dir",
+                    fConf.get("mapred.local.dir"));
+            
+           localJobConf.set("mapred.task.id", task.getTaskId());
+           keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
+           task.localizeConfiguration(localJobConf);
+           OutputStream out = localFs.create(localTaskFile);
+           try {
+             localJobConf.write(out);
+           } finally {
+             out.close();
+           }
+            task.setConf(localJobConf);
             String keepPattern = localJobConf.getKeepTaskFilesPattern();
             if (keepPattern != null) {
-              alwaysKeepTaskFiles = 
+                keepJobFiles = true;
+                alwaysKeepTaskFiles = 
                 Pattern.matches(keepPattern, task.getTaskId());
             } else {
               alwaysKeepTaskFiles = false;
             }
         }
-
+        
         /**
          */
         public Task getTask() {
             return task;
         }
 
+        public void setJobConf(JobConf lconf){
+            this.localJobConf = lconf;
+            keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
+        }
+        
         /**
          */
         public synchronized TaskStatus createStatus() {
@@ -876,11 +955,18 @@ public class TaskTracker
          * finished.  If the task is still running, kill it (and clean up
          */
         public synchronized void jobHasFinished() throws IOException {
+        	 
             if (getRunState() == TaskStatus.RUNNING) {
                 killAndCleanup(false);
             } else {
                 cleanup();
             }
+            if (keepJobFiles)
+              return;
+            // delete the job diretory for this task 
+            // since the job is done/failed
+            this.defaultJobConf.deleteLocalFiles(SUBDIR + Path.SEPARATOR + 
+                    JOBCACHE + Path.SEPARATOR +  task.getJobId());
         }
 
         /**
@@ -934,10 +1020,13 @@ public class TaskTracker
                  }
                }
             }
-            this.defaultJobConf.deleteLocalFiles(SUBDIR + "/" + taskId);
-        }
+            this.defaultJobConf.deleteLocalFiles(SUBDIR + Path.SEPARATOR + 
+                    JOBCACHE + Path.SEPARATOR + task.getJobId() + Path.SEPARATOR +
+                    taskId);
+            }
     }
 
+    
     // ///////////////////////////////////////////////////////////////
     // TaskUmbilicalProtocol
     /////////////////////////////////////////////////////////////////
@@ -1034,6 +1123,16 @@ public class TaskTracker
         } else {
           LOG.warn("Unknown child with bad map output: "+taskid+". Ignored.");
         }
+    }
+    
+    /**
+     *  The datastructure for initializing a job
+     */
+    static class RunningJob{
+      Path jobFile;
+      // keep this for later use
+      ArrayList tasks;
+      boolean localized;
     }
 
     /** 
