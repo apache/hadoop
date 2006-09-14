@@ -52,7 +52,7 @@ public class StringUtils {
     return fullHostname;
   }
 
-  private static DecimalFormat numFormat = new DecimalFormat("0.0");
+  private static DecimalFormat oneDecimal = new DecimalFormat("0.0");
   
   /**
    * Given an integer, return a string that is in an approximate, but human 
@@ -77,7 +77,15 @@ public class StringUtils {
       result = number / (1024.0 * 1024 * 1024);
       suffix = "g";
     }
-    return numFormat.format(result) + suffix;
+    return oneDecimal.format(result) + suffix;
+  }
+  
+  private static DecimalFormat percentFormat = new DecimalFormat("0.00%");
+  
+  public static String formatPercent(double done) {
+    final int scale = 10000;
+    double rounded = Math.floor(done * scale);
+    return percentFormat.format(rounded / scale);
   }
   
   /**

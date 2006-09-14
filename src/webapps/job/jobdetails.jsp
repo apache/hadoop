@@ -36,7 +36,7 @@
     }
     out.print("<tr><th><a href=\"/jobtasks.jsp?jobid=" + jobId + 
               "&type="+ kind + "&pagenum=1\">" + kind + "</a></th><td>" + 
-              percentFormat.format(100.0 * completePercent) +
+              StringUtils.formatPercent(completePercent) +
               "</td><td>" + totalTasks + "</td><td>" + 
               (totalTasks - runningTasks - finishedTasks) + "</td><td>" +
               runningTasks + "</td><td>" +

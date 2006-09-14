@@ -41,12 +41,12 @@ public class JobStatus implements Writable {
     public static final int FAILED = 3;
     public static final int PREP = 4;
 
-    String jobid;
-    float mapProgress;
-    float reduceProgress;
-    int runState;
-    long startTime;
-    String user;
+    private String jobid;
+    private float mapProgress;
+    private float reduceProgress;
+    private int runState;
+    private long startTime;
+    private String user;
     /**
      */
     public JobStatus() {
@@ -81,7 +81,10 @@ public class JobStatus implements Writable {
      * Sets the map progress of this job
      * @param p The value of map progress to set to
      */
-    void setMapProgress(float p) { this.mapProgress = p; }
+    void setMapProgress(float p) { 
+      this.mapProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
+    
+    }
     
     /**
      * @return Percentage of progress in reduce 
@@ -92,12 +95,21 @@ public class JobStatus implements Writable {
      * Sets the reduce progress of this Job
      * @param p The value of reduce progress to set to
      */
-    void setReduceProgress(float p) { this.reduceProgress = p; }
+    void setReduceProgress(float p) { 
+      this.reduceProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
+    }
     
     /**
      * @return running state of the job
      */
     public int getRunState() { return runState; }
+    
+    /**
+     * Change the current run state of the job.
+     */
+    public void setRunState(int state) {
+      this.runState = state;
+    }
     
     /** 
      * Set the start time of the job

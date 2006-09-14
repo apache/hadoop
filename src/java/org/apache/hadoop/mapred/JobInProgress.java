@@ -293,13 +293,16 @@ class JobInProgress {
           if (maps.length == 0) {
             this.status.setMapProgress(1.0f);
           } else {
-            this.status.mapProgress += (progressDelta / maps.length);
+            this.status.setMapProgress((float) (this.status.mapProgress() +
+                                                progressDelta / maps.length));
           }
         } else {
           if (reduces.length == 0) {
             this.status.setReduceProgress(1.0f);
           } else {
-            this.status.reduceProgress += (progressDelta / reduces.length);
+            this.status.setReduceProgress
+                 ((float) (this.status.reduceProgress() +
+                           (progressDelta / reduces.length)));
           }
         }
     }   
@@ -477,6 +480,9 @@ class JobInProgress {
             }
         }
         if (allDone) {
+            if (tip.isMapTask()) {
+              this.status.setMapProgress(1.0f);              
+            }
             for (int i = 0; i < reduces.length; i++) {
                 if (! reduces[i].isComplete()) {
                     allDone = false;
@@ -489,7 +495,8 @@ class JobInProgress {
         // If all tasks are complete, then the job is done!
         //
         if (status.getRunState() == JobStatus.RUNNING && allDone) {
-            this.status.runState = JobStatus.SUCCEEDED;
+            this.status.setRunState(JobStatus.SUCCEEDED);
+            this.status.setReduceProgress(1.0f);
             this.finishTime = System.currentTimeMillis();
             garbageCollect();
             LOG.info("Job " + this.status.getJobId() + 

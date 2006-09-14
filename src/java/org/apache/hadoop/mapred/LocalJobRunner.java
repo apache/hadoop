@@ -49,7 +49,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private JobConf job;
     private Random random = new Random();
 
-    private JobStatus status = new JobStatus();
+    private JobStatus status;
     private ArrayList mapIds = new ArrayList();
     private MapOutputFile mapoutputFile;
     private JobProfile profile;
@@ -73,8 +73,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
       this.job = new JobConf(localFile);
       profile = new JobProfile(job.getUser(), id, file, 
                                "http://localhost:8080/", job.getJobName());
-      this.status.jobid = id;
-      this.status.runState = JobStatus.RUNNING;
+      status = new JobStatus(id, 0.0f, 0.0f, JobStatus.RUNNING);
 
       jobs.put(id, this);
 
@@ -134,10 +133,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
         }
         this.mapoutputFile.removeAll(reduceId);
         
-        this.status.runState = JobStatus.SUCCEEDED;
+        this.status.setRunState(JobStatus.SUCCEEDED);
 
       } catch (Throwable t) {
-        this.status.runState = JobStatus.FAILED;
+        this.status.setRunState(JobStatus.FAILED);
         LOG.warn(id, t);
 
       } finally {
@@ -163,9 +162,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
       float taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
         float numTasks = mapIds.size();
-        status.mapProgress = (taskIndex/numTasks)+(progress/numTasks);
+        status.setMapProgress(taskIndex/numTasks + progress/numTasks);
       } else {
-        status.reduceProgress = progress;
+        status.setReduceProgress(progress);
       }
     }
 
@@ -180,9 +179,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
     public void done(String taskId) throws IOException {
       int taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
-        status.mapProgress = 1.0f;
+        status.setMapProgress(1.0f);
       } else {
-        status.reduceProgress = 1.0f;
+        status.setReduceProgress(1.0f);
       }
     }
 

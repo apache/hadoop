@@ -44,11 +44,11 @@
                   "<td>" + profile.getUser() + "</td>" 
                     + "<td>" + ("".equals(name) ? "&nbsp;" : name) + "</td>" + 
                     "<td>" + 
-                    percentFormat.format(100.0 * status.mapProgress()) + 
-                    "%</td><td>" + 
+                    StringUtils.formatPercent(status.mapProgress()) + 
+                    "</td><td>" + 
                     desiredMaps + "</td><td>" + completedMaps + "</td><td>" + 
-                    percentFormat.format(100.0 * status.reduceProgress()) + 
-                    "%</td><td>" + 
+                    StringUtils.formatPercent(status.reduceProgress()) + 
+                    "</td><td>" + 
                     desiredReduces + "</td><td> " + completedReduces + 
                     "</td></tr>\n");
         }

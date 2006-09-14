@@ -1,6 +1,13 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+1. HADOOP-243.  Fix rounding in the display of task and job progress
+   so that things are not shown to be 100% complete until they are in
+   fact finished.  (omalley via cutting) 
+
+
 Release 0.6.1 - 2006-08-13
 
  1. HADOOP-520.  Fix a bug in libhdfs, where write failures were not

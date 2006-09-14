@@ -12,7 +12,6 @@
   JobTracker tracker = JobTracker.getTracker();
   String trackerLabel = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
-  private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
 
   public void generateTaskTrackerTable(JspWriter out) throws IOException {
     Collection c = tracker.taskTrackers();

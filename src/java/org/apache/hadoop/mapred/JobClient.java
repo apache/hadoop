@@ -342,9 +342,10 @@ public class JobClient extends ToolBase implements MRConstants  {
               break;
             }
             running = jc.getJob(jobId);
-            String report = (" map " + Math.round(running.mapProgress()*100)+
-                             "%  reduce " + 
-                             Math.round(running.reduceProgress()*100) + "%");
+            String report = 
+              (" map " + StringUtils.formatPercent(running.mapProgress())+
+               " reduce " + 
+               StringUtils.formatPercent(running.reduceProgress()));
             if (!report.equals(lastReport)) {
               LOG.info(report);
               lastReport = report;
@@ -402,7 +403,6 @@ public class JobClient extends ToolBase implements MRConstants  {
         init();
         
         // Process args
-        String jobTrackerSpec = null;
         String submitJobFile = null;
         String jobid = null;
         boolean getStatus = false;

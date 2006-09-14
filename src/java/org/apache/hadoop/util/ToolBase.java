@@ -80,7 +80,7 @@ import org.apache.hadoop.fs.Path;
  *
  */
 public abstract class ToolBase implements Tool {
-    public static final Log LOG = LogFactory.getLog(
+    private static final Log LOG = LogFactory.getLog(
             "org.apache.hadoop.util.ToolBase");
     public Configuration conf;
 

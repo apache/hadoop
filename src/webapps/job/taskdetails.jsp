@@ -6,6 +6,7 @@
   import="java.lang.String"
   import="java.util.*"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.util.*"
 %>
 <%
   String jobid = request.getParameter("jobid");
@@ -65,7 +66,8 @@
       out.print("<td>");
       writeString(out, status.getRunState()); 
       out.print("</td>");
-      out.print("<td>"+status.getProgress()+"</td>");
+      out.print("<td>"+ StringUtils.formatPercent(status.getProgress()) + 
+                "</td>");
       out.print("<td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
       out.print("</tr>\n");
     }
