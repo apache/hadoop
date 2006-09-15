@@ -47,6 +47,7 @@ public class TestSequenceFile extends TestCase {
       new Path(System.getProperty("test.build.data",".")+"/test.bc.seq");
  
     int seed = new Random().nextInt();
+    LOG.info("Seed = " + seed);
 
     FileSystem fs = new LocalFileSystem(conf);
     try {
@@ -115,7 +116,8 @@ public class TestSequenceFile extends TestCase {
       CompressionType compressionType)
     throws IOException {
     fs.delete(file);
-    LOG.debug("creating with " + count + " records");
+    LOG.info("creating " + count + " records with " + compressionType +
+              " compression");
     SequenceFile.Writer writer = 
       SequenceFile.createWriter(fs, conf, file, 
           RandomDatum.class, RandomDatum.class, compressionType);
@@ -146,25 +148,36 @@ public class TestSequenceFile extends TestCase {
       RandomDatum key = generator.getKey();
       RandomDatum value = generator.getValue();
 
-      if ((i%5) == 10) {
-        // Testing 'raw' apis
-        rawKey.reset();
-        reader.nextRaw(rawKey, rawValue);
-      } else {
-        // Testing 'non-raw' apis 
-        if ((i%2) == 0) {
-          reader.next(k);
-          reader.getCurrentValue(v);
+      try {
+        if ((i%5) == 10) {
+          // Testing 'raw' apis
+          rawKey.reset();
+          reader.nextRaw(rawKey, rawValue);
         } else {
-          reader.next(k, v);
+          // Testing 'non-raw' apis 
+          if ((i%2) == 0) {
+            reader.next(k);
+            reader.getCurrentValue(v);
+          } else {
+            reader.next(k, v);
+          }
+          // Sanity check
+          if (!k.equals(key))
+            throw new RuntimeException("wrong key at " + i);
+          if (!v.equals(value))
+            throw new RuntimeException("wrong value at " + i);
         }
-
-        // Sanity check
-        if (!k.equals(key))
-          throw new RuntimeException("wrong key at " + i);
-        if (!v.equals(value))
-          throw new RuntimeException("wrong value at " + i);
+      } catch (IOException ioe) {
+        LOG.info("Problem on row " + i);
+        LOG.info("Expected value = " + value);
+        LOG.info("Expected len = " + value.getLength());
+        LOG.info("Actual value = " + v);
+        LOG.info("Actual len = " + v.getLength());
+        LOG.info("Key equals: " + k.equals(key));
+        LOG.info("value equals: " + v.equals(value));
+        throw ioe;
       }
+
     }
     reader.close();
   }
@@ -284,9 +297,11 @@ public class TestSequenceFile extends TestCase {
     boolean merge = false;
     String compressType = "NONE";
     Path file = null;
+    int seed = new Random().nextInt();
 
     String usage = "Usage: SequenceFile (-local | -dfs <namenode:port>) " +
-        "[-count N] " + "[-check] [-compressType <NONE|RECORD|BLOCK>] " +
+        "[-count N] " + 
+        "[-seed #] [-check] [-compressType <NONE|RECORD|BLOCK>] " +
         "[[-rwonly] | {[-megabytes M] [-factor F] [-nocreate] [-fast] [-merge]}] " +
         " file";
     if (args.length == 0) {
@@ -304,7 +319,9 @@ public class TestSequenceFile extends TestCase {
           } else if (args[i].equals("-megabytes")) {
               megabytes = Integer.parseInt(args[++i]);
           } else if (args[i].equals("-factor")) {
-              factor = Integer.parseInt(args[++i]);
+            factor = Integer.parseInt(args[++i]);
+          } else if (args[i].equals("-seed")) {
+            seed = Integer.parseInt(args[++i]);
           } else if (args[i].equals("-rwonly")) {
               rwonly = true;
           } else if (args[i].equals("-nocreate")) {
@@ -326,6 +343,7 @@ public class TestSequenceFile extends TestCase {
         LOG.info("megabytes = " + megabytes);
         LOG.info("factor = " + factor);
         LOG.info("create = " + create);
+        LOG.info("seed = " + seed);
         LOG.info("rwonly = " + rwonly);
         LOG.info("check = " + check);
         LOG.info("fast = " + fast);
@@ -338,7 +356,6 @@ public class TestSequenceFile extends TestCase {
           System.exit(-1);
         }
 
-        int seed = 0;
         CompressionType compressionType = 
           CompressionType.valueOf(compressType);
 

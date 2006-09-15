@@ -26,11 +26,15 @@ public class RandomDatum implements WritableComparable {
   public RandomDatum() {}
 
   public RandomDatum(Random random) {
-    length = 10 + random.nextInt(100);
+    length = 10 + (int) Math.pow(10.0, random.nextFloat() * 3.0);
     data = new byte[length];
     random.nextBytes(data);
   }
 
+  public int getLength() {
+    return length;
+  }
+  
   public void write(DataOutput out) throws IOException {
     out.writeInt(length);
     out.write(data);
