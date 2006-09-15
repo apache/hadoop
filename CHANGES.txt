@@ -17,9 +17,17 @@ Trunk (unreleased changes)
 4. HADOOP-288.  Add a file caching system and use it in MapReduce to
    cache job jar files on slave nodes.  (Mahadev Konar via cutting)
 
-5. HADOOP-532.  Fix a bug reading value-compressed sequence files,
+
+Release 0.6.2 (unreleased)
+
+1. HADOOP-532.  Fix a bug reading value-compressed sequence files,
    where an exception was thrown reporting that the full value had not
    been read.  (omalley via cutting)
+
+2. HADOOP-534.  Change the default value class in JobConf to be Text
+   instead of the now-deprecated UTF8.  This fixes the Grep example
+   program, which was updated to use Text, but relies on this
+   default.  (Hairong Kuang via cutting)
 
 
 Release 0.6.1 - 2006-08-13

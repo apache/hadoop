@@ -36,7 +36,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
 import org.apache.hadoop.mapred.lib.IdentityMapper;
@@ -314,7 +314,7 @@ public class JobConf extends Configuration {
 
   /** @deprecated Call {@link RecordReader#createValue()}. */
   public Class getInputValueClass() {
-    return getClass("mapred.input.value.class", UTF8.class, Writable.class);
+    return getClass("mapred.input.value.class", Text.class, Writable.class);
   }
 
   /** @deprecated Not used */
@@ -444,7 +444,7 @@ public class JobConf extends Configuration {
   }
 
   public Class getOutputValueClass() {
-    return getClass("mapred.output.value.class", UTF8.class, Writable.class);
+    return getClass("mapred.output.value.class", Text.class, Writable.class);
   }
   public void setOutputValueClass(Class theClass) {
     setClass("mapred.output.value.class", theClass, Writable.class);
