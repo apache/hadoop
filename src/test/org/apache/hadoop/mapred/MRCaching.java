@@ -65,7 +65,7 @@ public class MRCaching {
         Path file = new Path("/tmp");
         fs.mkdirs(file);
         Path fileOut = new Path(file, "test.txt");
-        fs.delete(file);
+        fs.delete(fileOut);
         DataOutputStream out = fs.create(fileOut);
 
         for (int i = 0; i < localArchives.length; i++) {
