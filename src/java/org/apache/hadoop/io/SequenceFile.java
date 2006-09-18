@@ -972,10 +972,14 @@ public class SequenceFile {
 
       if (version > 2) {                          // if version > 2
         this.decompress = in.readBoolean();       // is compressed?
+      } else {
+        decompress = false;
       }
 
       if (version >= BLOCK_COMPRESS_VERSION) {    // if version >= 4
         this.blockCompressed = in.readBoolean();  // is block-compressed?
+      } else {
+        blockCompressed = false;
       }
       
       // if version >= 5
@@ -1004,9 +1008,9 @@ public class SequenceFile {
       valBuffer = new DataInputBuffer();
       if (decompress) {
         valInFilter = this.codec.createInputStream(valBuffer);
-        valIn = new DataInputStream(new BufferedInputStream(valInFilter));
+        valIn = new DataInputStream(valInFilter);
       } else {
-        valIn = new DataInputStream(new BufferedInputStream(valBuffer));
+        valIn = valBuffer;
       }
       
       if (blockCompressed) {
@@ -1109,10 +1113,11 @@ public class SequenceFile {
      * corresponding to the 'current' key 
      */
     private synchronized void seekToCurrentValue() throws IOException {
-      if (version < BLOCK_COMPRESS_VERSION || blockCompressed == false) {
+      if (!blockCompressed) {
         if (decompress) {
           valInFilter.resetState();
         }
+        valBuffer.reset();
       } else {
         // Check if this is the first value in the 'block' to be read
         if (lazyDecompress && !valuesDecompressed) {
@@ -1156,13 +1161,15 @@ public class SequenceFile {
       // Position stream to 'current' value
       seekToCurrentValue();
 
-      if (version < BLOCK_COMPRESS_VERSION || blockCompressed == false) {
+      if (!blockCompressed) {
         val.readFields(valIn);
         
-        if (valBuffer.getPosition() != valBuffer.getLength())
+        if (valIn.read() > 0) {
+          LOG.info("available bytes: " + valIn.available());
           throw new IOException(val+" read "+(valBuffer.getPosition()-keyLength)
               + " bytes, should read " +
               (valBuffer.getLength()-keyLength));
+        }
       } else {
         // Get the value
         int valLength = WritableUtils.readVInt(valLenIn);
@@ -1185,7 +1192,7 @@ public class SequenceFile {
       if (key.getClass() != keyClass)
         throw new IOException("wrong key class: "+key+" is not "+keyClass);
 
-      if (version < BLOCK_COMPRESS_VERSION || blockCompressed == false) {
+      if (!blockCompressed) {
         outBuf.reset();
         
         keyLength = next(outBuf);
@@ -1195,6 +1202,7 @@ public class SequenceFile {
         valBuffer.reset(outBuf.getData(), outBuf.getLength());
         
         key.readFields(valBuffer);
+        valBuffer.mark(0);
         if (valBuffer.getPosition() != keyLength)
           throw new IOException(key + " read " + valBuffer.getPosition()
               + " bytes, should read " + keyLength);
@@ -1266,7 +1274,7 @@ public class SequenceFile {
     /** @deprecated Call {@link #nextRaw(DataOutputBuffer,SequenceFile.ValueBytes)}. */
     public synchronized int next(DataOutputBuffer buffer) throws IOException {
       // Unsupported for block-compressed sequence files
-      if (version >= BLOCK_COMPRESS_VERSION && blockCompressed) {
+      if (blockCompressed) {
         throw new IOException("Unsupported call for block-compressed" +
             " SequenceFiles - use SequenceFile.Reader.next(DataOutputStream, ValueBytes)");
       }
@@ -1303,7 +1311,7 @@ public class SequenceFile {
      */
     public int nextRaw(DataOutputBuffer key, ValueBytes val) 
     throws IOException {
-      if (version < BLOCK_COMPRESS_VERSION || blockCompressed == false) {
+      if (!blockCompressed) {
         if (in.getPos() >= end) 
           return -1;
 
