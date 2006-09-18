@@ -17,12 +17,13 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+
 import org.apache.hadoop.streaming.Environment;
 
 /** A minimal Java implementation of /usr/bin/tr.
     Used to test the usage of external applications without adding
     platform-specific dependencies.
-*/
+ */
 public class TrApp
 {
 
@@ -35,16 +36,6 @@ public class TrApp
   void testParentJobConfToEnvVars() throws IOException
   {
     env = new Environment();
-
-    /* To get some ideas of stable env.vars:
-    Enumeration it = env.keys();
-     while(it.hasMoreElements()) {
-        String key = (String)it.nextElement();
-        String val = (String)env.get(key);
-        System.out.println("@@@" + key + "=" + val);
-     }
-     */
-
     // test that some JobConf properties are exposed as expected     
     // Note the dots translated to underscore: 
     // property names have been escaped in PipeMapRed.safeEnvVarName()
@@ -52,7 +43,8 @@ public class TrApp
     expect("mapred_job_tracker", "local");
     expect("mapred_input_key_class", "org.apache.hadoop.io.Text");
     expect("mapred_input_value_class", "org.apache.hadoop.io.Text");
-    expect("mapred_local_dir", "build/test/mapred/local");
+    //expect("mapred_local_dir", "build/test/mapred/local");
+    expectDefined("mapred_local_dir");
     expect("mapred_output_format_class", "org.apache.hadoop.streaming.StreamOutputFormat");
     expect("mapred_output_key_class", "org.apache.hadoop.io.Text");
     expect("mapred_output_value_class", "org.apache.hadoop.io.Text");
@@ -64,12 +56,12 @@ public class TrApp
     expectDefined("map_input_file");
     expect("map_input_start", "0");
     expectDefined("map_input_length");
-    
+
     expectDefined("io_sort_factor");
 
     // the FileSplit context properties are not available in local hadoop..
     // so can't check them in this test.
-    
+
   }
 
   // this runs in a subprocess; won't use JUnit's assertTrue()    
@@ -81,7 +73,7 @@ public class TrApp
       throw new IOException(msg);
     }
   }
-  
+
   void expectDefined(String evName) throws IOException
   {
     String got = env.getProperty(evName);
@@ -90,7 +82,7 @@ public class TrApp
       throw new IOException(msg);
     }
   }
-  
+
   public void go() throws IOException
   {
     testParentJobConfToEnvVars();
@@ -98,8 +90,8 @@ public class TrApp
     String line;
 
     while ((line = in.readLine()) != null) {
-        String out = line.replace(find, replace);
-        System.out.println(out);
+      String out = line.replace(find, replace);
+      System.out.println(out);
     }
   }
 

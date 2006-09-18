@@ -18,7 +18,8 @@ package org.apache.hadoop.streaming;
 
 import java.io.*;
 import java.nio.charset.MalformedInputException;
-import java.util.zip.GZIPInputStream; 
+import java.util.Arrays;
+import java.util.zip.GZIPInputStream;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.Text;
@@ -35,25 +36,21 @@ import org.apache.hadoop.util.StringUtils;
  * but delimits key and value with a TAB.
  * @author Michel Tourn
  */
-public class StreamLineRecordReader extends StreamBaseRecordReader 
-{
+public class StreamLineRecordReader extends StreamBaseRecordReader {
 
-  public StreamLineRecordReader(
-    FSDataInputStream in, FileSplit split, Reporter reporter, JobConf job, FileSystem fs)
-    throws IOException
-  {
+  public StreamLineRecordReader(FSDataInputStream in, FileSplit split, Reporter reporter,
+      JobConf job, FileSystem fs) throws IOException {
     super(in, split, reporter, job, fs);
     gzipped_ = StreamInputFormat.isGzippedInput(job);
-    if(gzipped_) {
+    if (gzipped_) {
       din_ = new DataInputStream(new GZIPInputStream(in_));
     } else {
       din_ = in_;
     }
   }
 
-  public void seekNextRecordBoundary() throws IOException
-  {
-    if(gzipped_) {
+  public void seekNextRecordBoundary() throws IOException {
+    if (gzipped_) {
       // no skipping: use din_ as-is 
       // assumes splitter created only one split per file
       return;
@@ -63,7 +60,7 @@ public class StreamLineRecordReader extends StreamBaseRecordReader
         in_.seek(start_ - 1);
         // scan to the next newline in the file
         while (in_.getPos() < end_) {
-          char c = (char)in_.read();
+          char c = (char) in_.read();
           bytesSkipped++;
           if (c == '\r' || c == '\n') {
             break;
@@ -75,51 +72,54 @@ public class StreamLineRecordReader extends StreamBaseRecordReader
     }
   }
 
-  public synchronized boolean next(Writable key, Writable value)
-    throws IOException {  
-    if(!(key instanceof Text)) {
-        throw new IllegalArgumentException(
-                "Key should be of type Text but: "+key.getClass().getName());
+  public synchronized boolean next(Writable key, Writable value) throws IOException {
+    if (!(key instanceof Text)) {
+      throw new IllegalArgumentException("Key should be of type Text but: "
+          + key.getClass().getName());
     }
-    if(!(value instanceof Text)) {
-        throw new IllegalArgumentException(
-                "Value should be of type Text but: "+value.getClass().getName());
+    if (!(value instanceof Text)) {
+      throw new IllegalArgumentException("Value should be of type Text but: "
+          + value.getClass().getName());
     }
 
-    Text tKey = (Text)key;
-    Text tValue = (Text)value;
-    byte [] line;
-    
+    Text tKey = (Text) key;
+    Text tValue = (Text) value;
+    byte[] line;
+
     while (true) {
-        if(gzipped_) {
-            // figure EOS from readLine
+      if (gzipped_) {
+        // figure EOS from readLine
+      } else {
+        long pos = in_.getPos();
+        if (pos >= end_) return false;
+      }
+
+      line = UTF8ByteArrayUtils.readLine((InputStream) in_);
+      try {
+        Text.validateUTF8(line);
+      } catch (MalformedInputException m) {
+        System.err.println("line=" + line + "|" + new Text(line));
+        System.out.flush();
+      }
+      if (line == null) return false;
+      try {
+        int tab = UTF8ByteArrayUtils.findTab(line);
+        if (tab == -1) {
+          tKey.set(line);
+          tValue.set("");
         } else {
-            long pos = in_.getPos();
-            if (pos >= end_)
-                return false;
+          UTF8ByteArrayUtils.splitKeyVal(line, tKey, tValue, tab);
         }
-        
-        line = UTF8ByteArrayUtils.readLine((InputStream)in_);
-        if(line==null)
-            return false;
-        try {
-            int tab=UTF8ByteArrayUtils.findTab(line);
-            if(tab == -1) {
-                tKey.set(line);
-                tValue.set("");
-            } else {
-                UTF8ByteArrayUtils.splitKeyVal(line, tKey, tValue, tab);
-            }
-            break;
-        } catch (MalformedInputException e) {
-            LOG.warn(e);
-            StringUtils.stringifyException(e);
-        }
+        break;
+      } catch (MalformedInputException e) {
+        LOG.warn(StringUtils.stringifyException(e));
+      }
     }
-    numRecStats( line, 0, line.length );
+    numRecStats(line, 0, line.length);
     return true;
   }
+
   boolean gzipped_;
   GZIPInputStream zin_;
-  DataInputStream din_; // GZIP or plain
+  DataInputStream din_; // GZIP or plain  
 }

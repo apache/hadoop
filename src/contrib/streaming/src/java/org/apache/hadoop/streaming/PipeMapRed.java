@@ -17,6 +17,9 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+import java.net.Socket;
+import java.net.URI;
+import java.nio.channels.*;
 import java.nio.charset.CharacterCodingException;
 import java.io.IOException;
 import java.util.Date;
@@ -29,6 +32,7 @@ import java.util.regex.*;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -38,6 +42,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -53,16 +58,18 @@ public abstract class PipeMapRed {
    * Mapper/Reducer operations will delegate to it
    */
   abstract String getPipeCommand(JobConf job);
+
   /*
-  */
+   */
   abstract String getKeyColPropName();
 
   /** Write output as side-effect files rather than as map outputs.
-      This is useful to do "Map" tasks rather than "MapReduce" tasks. */
-  boolean getUseSideEffect()
-  {
+   This is useful to do "Map" tasks rather than "MapReduce" tasks. */
+  boolean getUseSideEffect() {
     return false;
   }
+
+  abstract boolean getDoPipe();
 
   /**
    * @returns how many TABS before the end of the key part
@@ -71,29 +78,28 @@ public abstract class PipeMapRed {
    * configured via tool's argv: splitKeyVal=ALL or 1..
    * although it is interpreted here, not by tool
    */
-  int getKeyColsFromPipeCommand(String cmd)
-  {
+  int getKeyColsFromPipeCommand(String cmd) {
     String key = getKeyColPropName();
     Pattern kcPat = Pattern.compile(".*" + key + "=([^\\s]*).*");
     Matcher match = kcPat.matcher(cmd);
     String kc;
-    if(!match.matches()) {
+    if (!match.matches()) {
       kc = null;
     } else {
       kc = match.group(1);
     }
 
     int cols;
-    if(kc== null) {
+    if (kc == null) {
       // default value is 1 and the Stream applications could instead
       // add/remove the \t separator on lines to get the same effect as value 0, 1, ALL
       cols = 1;
-    } else if(kc.equals("ALL")) {
+    } else if (kc.equals("ALL")) {
       cols = ALL_COLS;
     } else {
       try {
         cols = Integer.parseInt(kc);
-      } catch(NumberFormatException nf) {
+      } catch (NumberFormatException nf) {
         cols = Integer.MAX_VALUE;
       }
     }
@@ -107,87 +113,135 @@ public abstract class PipeMapRed {
   final static int SINGLEQ = 2;
   final static int DOUBLEQ = 3;
 
-  static String[] splitArgs(String args)
-  {
+  static String[] splitArgs(String args) {
     ArrayList argList = new ArrayList();
     char[] ch = args.toCharArray();
     int clen = ch.length;
     int state = OUTSIDE;
     int argstart = 0;
-    for(int c=0; c<=clen; c++) {
-        boolean last = (c==clen);
-        int lastState = state;
-        boolean endToken = false;
-        if(!last) {
-          if(ch[c]=='\'') {
-            if(state == OUTSIDE) {
-              state = SINGLEQ;
-            } else if(state == SINGLEQ) {
-              state = OUTSIDE;
-            }
-            endToken = (state != lastState);
-          } else if(ch[c]=='"') {
-            if(state == OUTSIDE) {
-              state = DOUBLEQ;
-            } else if(state == DOUBLEQ) {
-              state = OUTSIDE;
-            }
-            endToken = (state != lastState);
-          } else if(ch[c]==' ') {
-            if(state == OUTSIDE) {
-              endToken = true;
-            }
+    for (int c = 0; c <= clen; c++) {
+      boolean last = (c == clen);
+      int lastState = state;
+      boolean endToken = false;
+      if (!last) {
+        if (ch[c] == '\'') {
+          if (state == OUTSIDE) {
+            state = SINGLEQ;
+          } else if (state == SINGLEQ) {
+            state = OUTSIDE;
+          }
+          endToken = (state != lastState);
+        } else if (ch[c] == '"') {
+          if (state == OUTSIDE) {
+            state = DOUBLEQ;
+          } else if (state == DOUBLEQ) {
+            state = OUTSIDE;
+          }
+          endToken = (state != lastState);
+        } else if (ch[c] == ' ') {
+          if (state == OUTSIDE) {
+            endToken = true;
           }
         }
-        if(last || endToken) {
-          if(c == argstart) {
-            // unquoted space
-          } else {
-            String a;
-            a = args.substring(argstart, c);
-            argList.add(a);
-          }
-          argstart = c+1;
-          lastState = state;
+      }
+      if (last || endToken) {
+        if (c == argstart) {
+          // unquoted space
+        } else {
+          String a;
+          a = args.substring(argstart, c);
+          argList.add(a);
         }
+        argstart = c + 1;
+        lastState = state;
+      }
     }
-    return (String[])argList.toArray(new String[0]);
+    return (String[]) argList.toArray(new String[0]);
   }
 
-  public void configure(JobConf job)
-  {
+  OutputStream getURIOutputStream(URI uri, boolean allowSocket) throws IOException {
+    final String SOCKET = "socket";
+    if (uri.getScheme().equals(SOCKET)) {
+      if (!allowSocket) {
+        throw new IOException(SOCKET + " not allowed on outputstream " + uri);
+      }
+      final Socket sock = new Socket(uri.getHost(), uri.getPort());
+      OutputStream out = new FilterOutputStream(sock.getOutputStream()) {
+        public void close() throws IOException {
+          sock.close();
+          super.close();
+        }
+      };
+      return out;
+    } else {
+      // a FSDataOutputStreamm, localFS or HDFS.
+      // localFS file may be set up as a FIFO.
+      return sideFs_.create(new Path(uri.getSchemeSpecificPart()));
+    }
+  }
 
+  String getSideEffectFileName() {
+    FileSplit split = StreamUtil.getCurrentSplit(job_);
+    String leaf = split.getPath().getName();
+    if (split.getStart() == 0) {
+      return leaf;
+    } else {
+      return new FileSplit(new Path(leaf), split.getStart(), split.getLength()).toString();
+    }
+  }
+
+  String makeUniqueFileSuffix() {
+    return "." + System.currentTimeMillis() + "." + job_.get("mapred.task.id");
+  }
+
+  public void configure(JobConf job) {
     try {
       String argv = getPipeCommand(job);
+
       keyCols_ = getKeyColsFromPipeCommand(argv);
 
       debug_ = (job.get("stream.debug") != null);
-      if(debug_) {
+      if (debug_) {
         System.out.println("PipeMapRed: stream.debug=true");
       }
-      
-      joinDelay_ = job.getLong("stream.joindelay.milli", 0);
-      
-      job_ = job;
 
-      // Currently: null is identity reduce. REDUCE_NONE is no-map-outputs.
-      doPipe_ = (argv != null) && !StreamJob.REDUCE_NONE.equals(argv);
-      if(!doPipe_) return;
+      joinDelay_ = job.getLong("stream.joindelay.milli", 0);
+
+      job_ = job;
+      fs_ = FileSystem.get(job_);
+      if (job_.getBoolean("stream.sideoutput.localfs", false)) {
+        //sideFs_ = new LocalFileSystem(job_);
+        sideFs_ = FileSystem.getNamed("local", job_);
+      } else {
+        sideFs_ = fs_;
+      }
+
+      if (debug_) {
+        System.out.println("kind   :" + this.getClass());
+        System.out.println("split  :" + StreamUtil.getCurrentSplit(job_));
+        System.out.println("fs     :" + fs_.toString());
+        System.out.println("sideFs :" + sideFs_.toString());
+      }
+
+      doPipe_ = getDoPipe();
+      if (!doPipe_) return;
 
       setStreamJobDetails(job);
       setStreamProperties();
 
+      if (debugFailEarly_) {
+        throw new RuntimeException("debugFailEarly_");
+      }
       String[] argvSplit = splitArgs(argv);
       String prog = argvSplit[0];
       String userdir = System.getProperty("user.dir");
-      if(new File(prog).isAbsolute()) {
+      if (new File(prog).isAbsolute()) {
         // we don't own it. Hope it is executable
       } else {
         new MustangFile(prog).setExecutable(true, true);
       }
 
-
-      if(job_.getInputValueClass().equals(BytesWritable.class)) {
+      if (job_.getInputValueClass().equals(BytesWritable.class)) {
         // TODO expose as separate config:
         // job or semistandard inputformat property
         optUseKey_ = false;
@@ -195,12 +249,28 @@ public abstract class PipeMapRed {
 
       optSideEffect_ = getUseSideEffect();
 
-      if(optSideEffect_) {
-        // in cluster local named: outnone/map_bw5nzv
-        String fileName = job_.get("mapred.task.id");
-        sideEffectPath_ = new Path(job_.getOutputPath(), fileName);
-        FileSystem fs = FileSystem.get(job_);
-        sideEffectOut_ = fs.create(sideEffectPath_);
+      if (optSideEffect_) {
+        // during work: use a completely unique filename to avoid HDFS namespace conflicts
+        // after work: rename to a filename that depends only on the workload (the FileSplit)
+        //   it's a friendly name and in case of reexecution it will clobber. 
+        // reexecution can be due to: other job, failed task and speculative task
+        // See StreamJob.setOutputSpec(): if reducerNone_ aka optSideEffect then: 
+        // client has renamed outputPath and saved the argv's original output path as:
+        if (useSingleSideOutputURI_) {
+          sideEffectURI_ = new URI(sideOutputURI_);
+          sideEffectPathFinal_ = null; // in-place, no renaming to final
+        } else {
+          String sideOutputPath = job_.get("stream.sideoutput.dir"); // was: job_.getOutputPath() 
+          String fileName = getSideEffectFileName(); // see HADOOP-444 for rationale
+          sideEffectPathFinal_ = new Path(sideOutputPath, fileName);
+          sideEffectURI_ = new URI(sideEffectPathFinal_ + makeUniqueFileSuffix()); // implicit dfs: 
+        }
+        // apply default scheme
+        if(sideEffectURI_.getScheme() == null) {
+          sideEffectURI_ = new URI("file", sideEffectURI_.getSchemeSpecificPart(), null);
+        }
+        boolean allowSocket = useSingleSideOutputURI_;
+        sideEffectOut_ = getURIOutputStream(sideEffectURI_, allowSocket);
       }
 
       // argvSplit[0]:
@@ -209,109 +279,131 @@ public abstract class PipeMapRed {
       // In this case, force an absolute path to make sure exec finds it.
       argvSplit[0] = new File(argvSplit[0]).getAbsolutePath();
       logprintln("PipeMapRed exec " + Arrays.asList(argvSplit));
-      logprintln("sideEffectPath_=" + sideEffectPath_);
+      logprintln("sideEffectURI_=" + sideEffectURI_);
 
-      Environment childEnv = (Environment)StreamUtil.env().clone();
+      Environment childEnv = (Environment) StreamUtil.env().clone();
       addJobConfToEnvironment(job_, childEnv);
       addEnvironment(childEnv, job_.get("stream.addenvironment"));
       sim = Runtime.getRuntime().exec(argvSplit, childEnv.toArray());
 
       /* // This way required jdk1.5
-      ProcessBuilder processBuilder = new ProcessBuilder(argvSplit);
-      Map<String, String> env = processBuilder.environment();
-      addEnvironment(env, job_.get("stream.addenvironment"));
-      sim = processBuilder.start();
-      */
+       Builder processBuilder = new ProcessBuilder(argvSplit);
+       Map<String, String> env = processBuilder.environment();
+       addEnvironment(env, job_.get("stream.addenvironment"));
+       sim = processBuilder.start();
+       */
 
       clientOut_ = new DataOutputStream(new BufferedOutputStream(sim.getOutputStream()));
-      clientIn_  = new DataInputStream(new BufferedInputStream(sim.getInputStream()));
+      clientIn_ = new DataInputStream(new BufferedInputStream(sim.getInputStream()));
       clientErr_ = new DataInputStream(new BufferedInputStream(sim.getErrorStream()));
       startTime_ = System.currentTimeMillis();
 
-    } catch(Exception e) {
-        e.printStackTrace();
-        e.printStackTrace(log_);
+    } catch (Exception e) {
+      logStackTrace(e);
     }
   }
 
-  void setStreamJobDetails(JobConf job)
-  {
+  void setStreamJobDetails(JobConf job) {
     jobLog_ = job.get("stream.jobLog_");
     String s = job.get("stream.minRecWrittenToEnableSkip_");
-    if(s != null) {
+    if (s != null) {
       minRecWrittenToEnableSkip_ = Long.parseLong(s);
       logprintln("JobConf set minRecWrittenToEnableSkip_ =" + minRecWrittenToEnableSkip_);
     }
+    taskId_ = StreamUtil.getTaskInfo(job_);
+    debugFailEarly_ = isDebugFail("early");
+    debugFailDuring_ = isDebugFail("during");
+    debugFailLate_ = isDebugFail("late");
+
+    sideOutputURI_ = job_.get("stream.sideoutput.uri");
+    useSingleSideOutputURI_ = (sideOutputURI_ != null);
   }
 
-  void setStreamProperties()
-  {
-    taskid_ = System.getProperty("stream.taskid");
-    if(taskid_ == null) {
-      taskid_ = "noid" + System.currentTimeMillis();
+  boolean isDebugFail(String kind) {
+    String execidlist = job_.get("stream.debugfail.reexec." + kind);
+    if (execidlist == null) {
+      return false;
     }
+    String[] e = execidlist.split(",");
+    for (int i = 0; i < e.length; i++) {
+      int ei = Integer.parseInt(e[i]);
+      if (taskId_.execid == ei) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void setStreamProperties() {
     String s = System.getProperty("stream.port");
-    if(s != null) {
+    if (s != null) {
       reportPortPlusOne_ = Integer.parseInt(s);
     }
-
   }
 
-  void logprintln(String s)
-  {
-    if(log_ != null) {
+  void logStackTrace(Exception e) {
+    if (e == null) return;
+    e.printStackTrace();
+    if (log_ != null) {
+      e.printStackTrace(log_);
+    }
+  }
+
+  void logprintln(String s) {
+    if (log_ != null) {
       log_.println(s);
     } else {
       LOG.info(s); // or LOG.info()
     }
   }
 
-  void logflush()
-  {
-    if(log_ != null) {
+  void logflush() {
+    if (log_ != null) {
       log_.flush();
     }
   }
 
-  void addJobConfToEnvironment(JobConf conf, Properties env)
-  {
-    logprintln("addJobConfToEnvironment: begin");
-    Iterator it = conf.entries();
-    while(it.hasNext()) {
-        Map.Entry en = (Map.Entry)it.next();
-        String name = (String)en.getKey();
-        String value = (String)en.getValue();
-        name = safeEnvVarName(name);
-        envPut(env, name, value);
+  void addJobConfToEnvironment(JobConf conf, Properties env) {
+    if (debug_) {
+      logprintln("addJobConfToEnvironment: begin");
     }
-    logprintln("addJobConfToEnvironment: end");
+    Iterator it = conf.entries();
+    while (it.hasNext()) {
+      Map.Entry en = (Map.Entry) it.next();
+      String name = (String) en.getKey();
+      //String value = (String)en.getValue(); // does not apply variable expansion
+      String value = conf.get(name); // does variable expansion 
+      name = safeEnvVarName(name);
+      envPut(env, name, value);
+    }
+    if (debug_) {
+      logprintln("addJobConfToEnvironment: end");
+    }
   }
-  
-  String safeEnvVarName(String var)
-  {
+
+  String safeEnvVarName(String var) {
     StringBuffer safe = new StringBuffer();
     int len = var.length();
-    for(int i=0; i<len; i++) {
-        char c = var.charAt(i);
-        char s;
-        if((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
-          s = c;
-        } else {
-          s = '_';
-        }
-        safe.append(s);
+    for (int i = 0; i < len; i++) {
+      char c = var.charAt(i);
+      char s;
+      if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+        s = c;
+      } else {
+        s = '_';
+      }
+      safe.append(s);
     }
     return safe.toString();
   }
 
-  void addEnvironment(Properties env, String nameVals)
-  {
+  void addEnvironment(Properties env, String nameVals) {
     // encoding "a=b c=d" from StreamJob
-    if(nameVals == null) return;
+    if (nameVals == null) return;
     String[] nv = nameVals.split(" ");
-    for(int i=0; i<nv.length; i++) {
+    for (int i = 0; i < nv.length; i++) {
       String[] pair = nv[i].split("=", 2);
-      if(pair.length != 2) {
+      if (pair.length != 2) {
         logprintln("Skip ev entry:" + nv[i]);
       } else {
         envPut(env, pair[0], pair[1]);
@@ -319,43 +411,43 @@ public abstract class PipeMapRed {
     }
   }
 
-  void envPut(Properties env, String name, String value)
-  {
-    logprintln("Add  ev entry:" + name + "=" + value);
+  void envPut(Properties env, String name, String value) {
+    if (debug_) {
+      logprintln("Add  ev entry:" + name + "=" + value);
+    }
     env.put(name, value);
   }
-  
+
   /** .. and if successful: delete the task log */
-  void appendLogToJobLog(String status)
-  {
-    if(jobLog_ == null) {
+  void appendLogToJobLog(String status) {
+    if (jobLog_ == null) {
       return; // not using a common joblog
     }
-    StreamUtil.exec("/bin/rm " + LOGNAME, log_);
+    if (log_ != null) {
+      StreamUtil.exec("/bin/rm " + LOGNAME, log_);
+    }
     // TODO socket-based aggregator (in JobTrackerInfoServer)
   }
 
-
-  void startOutputThreads(OutputCollector output, Reporter reporter)
-  {
-      outThread_ = new MROutputThread(output, reporter);
-      outThread_.start();
-      errThread_ = new MRErrorThread(reporter);
-      errThread_.start();
+  void startOutputThreads(OutputCollector output, Reporter reporter) {
+    outThread_ = new MROutputThread(output, reporter);
+    outThread_.start();
+    errThread_ = new MRErrorThread(reporter);
+    errThread_.start();
   }
-  
+
   void waitOutputThreads() {
-      try {
-          sim.waitFor();
-          if(outThread_ != null) {
-              outThread_.join(joinDelay_);
-          }
-          if(errThread_ != null) {
-              errThread_.join(joinDelay_);
-          }
-      } catch(InterruptedException e) {
-          //ignore
+    try {
+      sim.waitFor();
+      if (outThread_ != null) {
+        outThread_.join(joinDelay_);
       }
+      if (errThread_ != null) {
+        errThread_.join(joinDelay_);
+      }
+    } catch (InterruptedException e) {
+      //ignore
+    }
   }
 
   /**
@@ -365,124 +457,137 @@ public abstract class PipeMapRed {
    * @param val: value of a record
    * @throws IOException
    */
-  void splitKeyVal(byte [] line, Text key, Text val) throws IOException
-  {
-    int pos=-1;
-    if(keyCols_ != ALL_COLS) {
-        pos = UTF8ByteArrayUtils.findTab(line);
+  void splitKeyVal(byte[] line, Text key, Text val) throws IOException {
+    int pos = -1;
+    if (keyCols_ != ALL_COLS) {
+      pos = UTF8ByteArrayUtils.findTab(line);
     }
     try {
-        if(pos == -1) {
-            key.set(line);
-            val.set("");
-        } else {
-            UTF8ByteArrayUtils.splitKeyVal(line, key, val, pos);
-        }
+      if (pos == -1) {
+        key.set(line);
+        val.set("");
+      } else {
+        UTF8ByteArrayUtils.splitKeyVal(line, key, val, pos);
+      }
     } catch (CharacterCodingException e) {
-        LOG.warn(e);
-        StringUtils.stringifyException(e);
+      LOG.warn(StringUtils.stringifyException(e));
     }
   }
-  
-  class MROutputThread extends Thread
-  {
-    MROutputThread(OutputCollector output, Reporter reporter)
-    {
+
+  class MROutputThread extends Thread {
+
+    MROutputThread(OutputCollector output, Reporter reporter) {
       setDaemon(true);
       this.output = output;
       this.reporter = reporter;
     }
+
     public void run() {
-        try {
-            Text key = new Text();
-            Text val = new Text();
-            // 3/4 Tool to Hadoop
-            while((answer=UTF8ByteArrayUtils.readLine((InputStream)clientIn_))!= null) {
-                // 4/4 Hadoop out
-                if(optSideEffect_) {
-                    sideEffectOut_.write(answer);
-                    sideEffectOut_.write('\n');
-                } else {
-                    splitKeyVal(answer, key, val);
-                    output.collect(key, val);
-                }
-                numRecWritten_++;
-                if(numRecWritten_ % 100 == 0) {
-                    logprintln(numRecRead_+"/"+numRecWritten_);
-                    logflush();
-                }
-            }
-        } catch(IOException io) {
-            io.printStackTrace(log_);
+      try {
+        Text key = new Text();
+        Text val = new Text();
+        // 3/4 Tool to Hadoop
+        while ((answer = UTF8ByteArrayUtils.readLine((InputStream) clientIn_)) != null) {
+          // 4/4 Hadoop out
+          if (optSideEffect_) {
+            sideEffectOut_.write(answer);
+            sideEffectOut_.write('\n');
+          } else {
+            splitKeyVal(answer, key, val);
+            output.collect(key, val);
+          }
+          numRecWritten_++;
+          if (numRecWritten_ % 100 == 0) {
+            logprintln(numRecRead_ + "/" + numRecWritten_);
+            logflush();
+          }
         }
-        logprintln("MROutputThread done");
+      } catch (IOException io) {
+        io.printStackTrace(log_);
+      }
+      logprintln("MROutputThread done");
     }
+
     OutputCollector output;
     Reporter reporter;
-    byte [] answer;
+    byte[] answer;
   }
 
-  class MRErrorThread extends Thread
-  {
-    public MRErrorThread(Reporter reporter)
-    {
+  class MRErrorThread extends Thread {
+
+    public MRErrorThread(Reporter reporter) {
       this.reporter = reporter;
       setDaemon(true);
     }
-    public void run()
-    {
-      byte [] line;
+
+    public void run() {
+      byte[] line;
       try {
         long num = 0;
-        while((line=UTF8ByteArrayUtils.readLine((InputStream)clientErr_)) != null) {
+        while ((line = UTF8ByteArrayUtils.readLine((InputStream) clientErr_)) != null) {
           num++;
-          String lineStr = new String(line, "UTF-8"); 
+          String lineStr = new String(line, "UTF-8");
           logprintln(lineStr);
-          if(num < 10) {
+          long now = System.currentTimeMillis(); 
+          if (num < 10 || (now-lastStderrReport > 10*1000)) {
             String hline = "MRErr: " + lineStr;
             System.err.println(hline);
             reporter.setStatus(hline);
+            lastStderrReport = now;
           }
         }
-      } catch(IOException io) {
-        io.printStackTrace(log_);
+      } catch (IOException io) {
+        logStackTrace(io);
       }
     }
+    long lastStderrReport = 0;
     Reporter reporter;
   }
 
-  public void mapRedFinished()
-  {
-      logprintln("mapRedFinished");
-      if(!doPipe_) return;
-
+  public void mapRedFinished() {
+    logprintln("mapRedFinished");
+    try {
+      if (!doPipe_) return;
       try {
-          try {
-              if(clientOut_ != null) {
-                  clientOut_.close();
-              }
-          } catch(IOException io) {
-          }
-          waitOutputThreads();
-          try {
-              if(optSideEffect_) {
-                  logprintln("closing " + sideEffectPath_);
-                  sideEffectOut_.close();
-                  logprintln("closed  " + sideEffectPath_);
-              }
-          } catch(IOException io) {
-              io.printStackTrace();
-          }
-          sim.destroy();
-      } catch(RuntimeException e) {
-          e.printStackTrace(log_);
-          throw e;
+        if (clientOut_ != null) {
+          clientOut_.close();
+        }
+      } catch (IOException io) {
       }
+      waitOutputThreads();
+      try {
+        if (optSideEffect_) {
+          logprintln("closing " + sideEffectURI_);
+          if (sideEffectOut_ != null) sideEffectOut_.close();
+          logprintln("closed  " + sideEffectURI_);
+          if (sideEffectURI_.getScheme().equals("file")) {
+            logprintln("size  " + new File(sideEffectURI_).length());
+          }
+          if (useSingleSideOutputURI_) {
+            // With sideEffectPath_ we wrote in-place. 
+            // Possibly a named pipe set up by user or a socket.
+          } else {
+            boolean del = sideFs_.delete(sideEffectPathFinal_);
+            logprintln("deleted  (" + del + ") " + sideEffectPathFinal_);
+            sideFs_.rename(new Path(sideEffectURI_.getSchemeSpecificPart()), sideEffectPathFinal_);
+            logprintln("renamed  " + sideEffectPathFinal_);
+          }
+        }
+      } catch (IOException io) {
+        io.printStackTrace();
+      }
+      if (sim != null) sim.destroy();
+    } catch (RuntimeException e) {
+      logStackTrace(e);
+      throw e;
+    }
+    if (debugFailLate_) {
+      throw new RuntimeException("debugFailLate_");
+    }
   }
 
-  void maybeLogRecord()
-  {
-    if(numRecRead_ >= nextRecReadLog_) {
+  void maybeLogRecord() {
+    if (numRecRead_ >= nextRecReadLog_) {
       String info = numRecInfo();
       logprintln(info);
       logflush();
@@ -492,8 +597,7 @@ public abstract class PipeMapRed {
     }
   }
 
-  public String getContext()
-  {
+  public String getContext() {
 
     String s = numRecInfo() + "\n";
     s += "minRecWrittenToEnableSkip_=" + minRecWrittenToEnableSkip_ + " ";
@@ -503,38 +607,38 @@ public abstract class PipeMapRed {
     s += envline("HADOOP_USER");
     //s += envline("PWD"); // =/home/crawler/hadoop/trunk
     s += "last Hadoop input: |" + mapredKey_ + "|\n";
-    s += "last tool output: |" + outThread_.answer + "|\n";
+    if (outThread_ != null) {
+      s += "last tool output: |" + outThread_.answer + "|\n";
+    }
     s += "Date: " + new Date() + "\n";
     // s += envline("HADOOP_HOME");
     // s += envline("REMOTE_HOST");
     return s;
   }
 
-  String envline(String var)
-  {
+  String envline(String var) {
     return var + "=" + StreamUtil.env().get(var) + "\n";
   }
 
-  String numRecInfo()
-  {
-    long elapsed = (System.currentTimeMillis() - startTime_)/1000;
-    long total = numRecRead_+numRecWritten_+numRecSkipped_;
-    return "R/W/S=" + numRecRead_+"/"+numRecWritten_+"/"+numRecSkipped_
-     + " in:"  + safeDiv(numRecRead_, elapsed) + " [rec/s]"
-     + " out:" + safeDiv(numRecWritten_, elapsed) + " [rec/s]";
+  String numRecInfo() {
+    long elapsed = (System.currentTimeMillis() - startTime_) / 1000;
+    long total = numRecRead_ + numRecWritten_ + numRecSkipped_;
+    return "R/W/S=" + numRecRead_ + "/" + numRecWritten_ + "/" + numRecSkipped_ + " in:"
+        + safeDiv(numRecRead_, elapsed) + " [rec/s]" + " out:" + safeDiv(numRecWritten_, elapsed)
+        + " [rec/s]";
   }
-  String safeDiv(long n, long d)
-  {
-    return (d==0) ? "NA" : ""+n/d + "=" + n + "/" + d;
+
+  String safeDiv(long n, long d) {
+    return (d == 0) ? "NA" : "" + n / d + "=" + n + "/" + d;
   }
-  String logFailure(Exception e)
-  {
-      StringWriter sw = new StringWriter();
-      PrintWriter pw = new PrintWriter(sw);
-      e.printStackTrace(pw);
-      String msg = "log:" + jobLog_ + "\n" + getContext() + sw + "\n";
-      logprintln(msg);
-      return msg;
+
+  String logFailure(Exception e) {
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    e.printStackTrace(pw);
+    String msg = "log:" + jobLog_ + "\n" + getContext() + sw + "\n";
+    logprintln(msg);
+    return msg;
   }
 
   /**
@@ -543,24 +647,24 @@ public abstract class PipeMapRed {
    * @throws IOException
    */
   void write(Writable value) throws IOException {
-      byte[] bval;
-      int valSize;
-      if(value instanceof BytesWritable) {
-          BytesWritable val = (BytesWritable)value;
-          bval = val.get();
-          valSize = val.getSize();
-      } else if(value instanceof Text){
-          Text val = (Text)value;
-          bval = val.getBytes();
-          valSize = val.getLength();
-      } else  {
-          String sval = value.toString();
-          bval = sval.getBytes("UTF-8");
-          valSize = bval.length;
-      }
-      clientOut_.write(bval, 0, valSize);
+    byte[] bval;
+    int valSize;
+    if (value instanceof BytesWritable) {
+      BytesWritable val = (BytesWritable) value;
+      bval = val.get();
+      valSize = val.getSize();
+    } else if (value instanceof Text) {
+      Text val = (Text) value;
+      bval = val.getBytes();
+      valSize = val.getLength();
+    } else {
+      String sval = value.toString();
+      bval = sval.getBytes("UTF-8");
+      valSize = bval.length;
+    }
+    clientOut_.write(bval, 0, valSize);
   }
-  
+
   long startTime_;
   long numRecRead_ = 0;
   long numRecWritten_ = 0;
@@ -574,52 +678,43 @@ public abstract class PipeMapRed {
 
   long joinDelay_;
   JobConf job_;
+  FileSystem fs_;
+  FileSystem sideFs_;
 
   // generic MapRed parameters passed on by hadoopStreaming
-  String taskid_;
   int reportPortPlusOne_;
 
   boolean doPipe_;
   boolean debug_;
+  boolean debugFailEarly_;
+  boolean debugFailDuring_;
+  boolean debugFailLate_;
 
   Process sim;
   MROutputThread outThread_;
   String jobLog_;
   MRErrorThread errThread_;
   DataOutputStream clientOut_;
-  DataInputStream  clientErr_;
-  DataInputStream   clientIn_;
+  DataInputStream clientErr_;
+  DataInputStream clientIn_;
 
   // set in PipeMapper/PipeReducer subclasses
   String mapredKey_;
   int numExceptions_;
+  StreamUtil.TaskId taskId_;
 
   boolean optUseKey_ = true;
 
-  boolean optSideEffect_;
-  Path sideEffectPath_;
-  FSDataOutputStream sideEffectOut_;
+  private boolean optSideEffect_;
+  private URI sideEffectURI_;
+  private Path sideEffectPathFinal_;
+
+  private boolean useSingleSideOutputURI_;
+  private String sideOutputURI_;
+
+  private OutputStream sideEffectOut_;
 
   String LOGNAME;
   PrintStream log_;
 
-  /* curr. going to stderr so that it is preserved
-  { // instance initializer
-    try {
-      int id = (int)((System.currentTimeMillis()/2000) % 10);
-      String sid = id+ "." + StreamUtil.env().get("USER");
-      LOGNAME = "/tmp/PipeMapRed." + sid + ".log";
-      log_ = new PrintStream(new FileOutputStream(LOGNAME));
-      logprintln(new java.util.Date());
-      logflush();
-    } catch(IOException io) {
-      System.err.println("LOGNAME=" + LOGNAME);
-      io.printStackTrace();
-    } finally {
-      if(log_ == null) {
-        log_ = System.err;
-      }
-    }
-  }
-  */
 }

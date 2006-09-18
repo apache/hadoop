@@ -43,7 +43,7 @@
     <fileset refid="lib.jars"/>
     <pathelement location="${hadoop.root}/build/classes"/>
     <fileset dir="${hadoop.root}/lib">
-      <include name="*.jar" />
+      <include name="**/*.jar" />
     </fileset>
   </path>
 
@@ -131,7 +131,7 @@
   <!-- ================================================================== -->
   <target name="test" depends="compile-test, deploy" if="test.available">
     <echo message="contrib: ${name}"/>
-    <junit 
+    <junit
       printsummary="withOutAndErr" haltonfailure="no" fork="yes"
       errorProperty="tests.failed" failureProperty="tests.failed">
       
@@ -143,6 +143,9 @@
       -->
       <sysproperty key="user.dir" value="${build.test}/data"/>
       
+      <sysproperty key="fs.default.name" value="${fs.default.name}"/>
+      <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
+   
       <classpath refid="test.classpath"/>
       <formatter type="plain" />
       <batchtest todir="${build.test}" unless="testcase">

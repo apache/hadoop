@@ -29,22 +29,16 @@ import org.apache.hadoop.mapred.JobConf;
 
 import org.apache.hadoop.util.ReflectionUtils;
 
-public class StreamSequenceRecordReader extends StreamBaseRecordReader
-{
+public class StreamSequenceRecordReader extends StreamBaseRecordReader {
 
-  public StreamSequenceRecordReader (
-    FSDataInputStream in, FileSplit split, Reporter reporter, JobConf job, FileSystem fs)
-    throws IOException
-  {
+  public StreamSequenceRecordReader(FSDataInputStream in, FileSplit split, Reporter reporter,
+      JobConf job, FileSystem fs) throws IOException {
     super(in, split, reporter, job, fs);
     numFailed_ = 0;
     // super.in_ ignored, using rin_ instead
   }
 
-
-  public synchronized boolean next(Writable key, Writable value)
-   throws IOException
-  {
+  public synchronized boolean next(Writable key, Writable value) throws IOException {
     boolean success;
     do {
       if (!more_) return false;
@@ -58,29 +52,26 @@ public class StreamSequenceRecordReader extends StreamBaseRecordReader
           more_ = eof;
         }
         success = true;
-      } catch(IOException io) {
+      } catch (IOException io) {
         numFailed_++;
-        if(numFailed_ < 100 || numFailed_ % 100 == 0) {
-          err_.println("StreamSequenceRecordReader: numFailed_/numRec_="
-            + numFailed_+ "/" + numRec_);
+        if (numFailed_ < 100 || numFailed_ % 100 == 0) {
+          err_.println("StreamSequenceRecordReader: numFailed_/numRec_=" + numFailed_ + "/"
+              + numRec_);
         }
         io.printStackTrace(err_);
         success = false;
       }
-    } while(!success);
-    
+    } while (!success);
+
     numRecStats(new byte[0], 0, 0);
     return more_;
   }
 
-
-  public void seekNextRecordBoundary() throws IOException
-  {
+  public void seekNextRecordBoundary() throws IOException {
     rin_ = new SequenceFile.Reader(fs_, split_.getPath(), job_);
     end_ = split_.getStart() + split_.getLength();
 
-    if (split_.getStart() > rin_.getPosition())
-      rin_.sync(split_.getStart());                  // sync to start
+    if (split_.getStart() > rin_.getPosition()) rin_.sync(split_.getStart()); // sync to start
 
     more_ = rin_.getPosition() < end_;
 
@@ -90,14 +81,13 @@ public class StreamSequenceRecordReader extends StreamBaseRecordReader
   }
 
   public WritableComparable createKey() {
-    return (WritableComparable) 
-           ReflectionUtils.newInstance(rin_.getKeyClass(), null);
+    return (WritableComparable) ReflectionUtils.newInstance(rin_.getKeyClass(), null);
   }
-  
+
   public Writable createValue() {
     return (Writable) ReflectionUtils.newInstance(rin_.getValueClass(), null);
   }
-  
+
   boolean more_;
   SequenceFile.Reader rin_;
   int numFailed_;

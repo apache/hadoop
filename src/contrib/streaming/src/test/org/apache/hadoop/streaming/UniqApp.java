@@ -17,12 +17,13 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+import java.util.Date;
 
 /** A minimal Java implementation of /usr/bin/uniq
     Used to test the usage of external applications without adding
     platform-specific dependencies.
     Uniques lines and prepends a header on the line.
-*/
+ */
 public class UniqApp
 {
 
@@ -36,10 +37,10 @@ public class UniqApp
     String line;
     String prevLine = null;
     while ((line = in.readLine()) != null) {
-        if(! line.equals(prevLine)) {
-          System.out.println(header + line);
-        }
-        prevLine = line;
+      if(! line.equals(prevLine)) {
+        System.out.println(header + line);
+      }
+      prevLine = line;
     }
   }
 

@@ -30,60 +30,55 @@ import org.apache.hadoop.io.Writable;
  *  It delegates operations to an external program via stdin and stdout.
  *  @author Michel Tourn
  */
-public class PipeMapper extends PipeMapRed implements Mapper
-{
+public class PipeMapper extends PipeMapRed implements Mapper {
 
-  String getPipeCommand(JobConf job)
-  {
+  String getPipeCommand(JobConf job) {
     return job.get("stream.map.streamprocessor");
   }
 
-  String getKeyColPropName()
-  {
+  String getKeyColPropName() {
     return "mapKeyCols";
-  }  
-
-  boolean getUseSideEffect()
-  {
-    String reduce = job_.get("stream.reduce.streamprocessor");
-    if(StreamJob.REDUCE_NONE.equals(reduce)) {
-      return true;  
-    }
-    return false;
   }
-  
+
+  boolean getUseSideEffect() {
+    return StreamUtil.getUseMapSideEffect(job_);
+  }
+
+  boolean getDoPipe() {
+    return true;
+  }
 
   // Do NOT declare default constructor
   // (MapRed creates it reflectively)
 
-  public void map(WritableComparable key, Writable value,
-                  OutputCollector output, Reporter reporter)
-    throws IOException
-  {
+  public void map(WritableComparable key, Writable value, OutputCollector output, Reporter reporter) throws IOException {
     // init
-    if(outThread_ == null) {
+    if (outThread_ == null) {
       startOutputThreads(output, reporter);
     }
     try {
       // 1/4 Hadoop in
       numRecRead_++;
       maybeLogRecord();
+      if (debugFailDuring_ && numRecRead_ == 3) {
+        throw new IOException("debugFailDuring_");
+      }
 
       // 2/4 Hadoop to Tool
-      if(numExceptions_==0) {
-          if(optUseKey_) {
-              write(key);
-              clientOut_.write('\t');
-          }
-          write(value);
-          clientOut_.write('\n');
-          clientOut_.flush();
+      if (numExceptions_ == 0) {
+        if (optUseKey_) {
+          write(key);
+          clientOut_.write('\t');
+        }
+        write(value);
+        clientOut_.write('\n');
+        clientOut_.flush();
       } else {
-          numRecSkipped_++;
+        numRecSkipped_++;
       }
-    } catch(IOException io) {
+    } catch (IOException io) {
       numExceptions_++;
-      if(numExceptions_ > 1 || numRecWritten_ < minRecWrittenToEnableSkip_) {
+      if (numExceptions_ > 1 || numRecWritten_ < minRecWrittenToEnableSkip_) {
         // terminate with failure
         String msg = logFailure(io);
         appendLogToJobLog("failure");
@@ -95,11 +90,10 @@ public class PipeMapper extends PipeMapRed implements Mapper
       }
     }
   }
-  
-  public void close()
-  {
+
+  public void close() {
     appendLogToJobLog("success");
     mapRedFinished();
   }
-  
+
 }

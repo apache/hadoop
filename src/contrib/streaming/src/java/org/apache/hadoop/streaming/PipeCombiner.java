@@ -40,11 +40,9 @@ import org.apache.hadoop.io.WritableComparable;
  *  such a multipass aggregation.
  *  @author Michel Tourn
  */
-public class PipeCombiner extends PipeReducer
-{
+public class PipeCombiner extends PipeReducer {
 
-  String getPipeCommand(JobConf job)
-  {
+  String getPipeCommand(JobConf job) {
     return job.get("stream.combine.streamprocessor");
   }
 

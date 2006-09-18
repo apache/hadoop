@@ -35,72 +35,27 @@ public class TestStreaming extends TestCase
   String OUTPUT_DIR = "out";
   String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
   // map behaves like "/usr/bin/tr . \\n"; (split words into lines)
-  String map = makeJavaCommand(TrApp.class, new String[]{".", "\\n"});
+  String map = StreamUtil.makeJavaCommand(TrApp.class, new String[]{".", "\\n"});
   // combine, reduce behave like /usr/bin/uniq. But also prepend lines with C, R.
-  String combine  = makeJavaCommand(UniqApp.class, new String[]{"C"});
-  String reduce = makeJavaCommand(UniqApp.class, new String[]{"R"});
+  String combine  = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"C"});
+  String reduce = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"R"});
   String outputExpect = "RCare\t\nRCblue\t\nRCbunnies\t\nRCpink\t\nRCred\t\nRCroses\t\nRCviolets\t\n";
 
   StreamJob job;
 
   public TestStreaming() throws IOException
   {
-    // trunk/src/contrib/streaming --> trunk/build/contrib/streaming/test/data
-    String userDir = System.getProperty("user.dir");
-    String antTestDir = System.getProperty("test.build.data", userDir);
-    if(! userDir.equals(antTestDir)) {
-        // because changes to user.dir are ignored by File
-        throw new IllegalStateException("user.dir != test.build.data. The junit Ant task must be forked.");
-    }
-
-    boolean fromAntJunit = System.getProperty("test.build.data") != null;
-    if(fromAntJunit) {
-      new File(antTestDir).mkdirs();
-      File outFile = new File(antTestDir, getClass().getName()+".log");
-      PrintStream out = new PrintStream(new FileOutputStream(outFile));
-      System.setOut(out);
-      System.setErr(out);
-    }
-    System.out.println("test.build.data=" + antTestDir);
+    UtilTest utilTest = new UtilTest(getClass().getName());
+    utilTest.checkUserDir();
+    utilTest.redirectIfAntJunit();
   }
 
   void createInput() throws IOException
   {
     String path = new File(".", INPUT_FILE).getAbsolutePath();// needed from junit forked vm
     DataOutputStream out = new DataOutputStream(new FileOutputStream(path));
-    out.writeBytes(input);
+    out.write(input.getBytes("UTF-8"));
     out.close();
-  }
-
-  public String makeJavaCommand(Class main, String[] argv)
-  {
-    ArrayList vargs = new ArrayList();
-    File javaHomeBin = new File(System.getProperty("java.home"), "bin");
-    File jvm = new File(javaHomeBin, "java");
-    vargs.add(jvm.toString());
-    // copy parent classpath
-    vargs.add("-classpath");
-    vargs.add("\"" + System.getProperty("java.class.path") + "\"");
-
-    // Add main class and its arguments
-    vargs.add(main.getName());
-    for(int i=0; i<argv.length; i++) {
-      vargs.add(argv[i]);
-    }
-    return collate(vargs, " ");
-  }
-
-  String collate(ArrayList args, String sep)
-  {
-    StringBuffer buf = new StringBuffer();
-    Iterator it = args.iterator();
-    while(it.hasNext()) {
-      if(buf.length() > 0) {
-        buf.append(" ");
-      }
-      buf.append(it.next());
-    }
-    return buf.toString();
   }
 
   public void testCommandLine()
@@ -117,22 +72,21 @@ public class TestStreaming extends TestCase
           "-mapper", map,
           "-combiner", combine,
           "-reducer", reduce,
-          /*"-debug",*/
-          "-verbose"
+          //"-verbose",
+          //"-jobconf", "stream.debug=set"
+          "-jobconf", "keep.failed.task.files=true",
       };
-      job = new StreamJob(argv, mayExit);
+      job = new StreamJob(argv, mayExit);      
       job.go();
       File outFile = new File(".", OUTPUT_DIR + "/part-00000").getAbsoluteFile();
       String output = StreamUtil.slurp(outFile);
-      System.out.println("outEx=" + outputExpect);
-      System.out.println("  out=" + output);
+      System.err.println("outEx1=" + outputExpect);
+      System.err.println("  out1=" + output);
       assertEquals(outputExpect, output);
 
     } catch(Exception e) {
-        failTrace(e);
+      failTrace(e);
     }
-
-
   }
 
   void failTrace(Exception e)
@@ -141,8 +95,6 @@ public class TestStreaming extends TestCase
     e.printStackTrace(new PrintWriter(sw));
     fail(sw.toString());
   }
-
-
 
   public static void main(String[]args) throws Exception
   {

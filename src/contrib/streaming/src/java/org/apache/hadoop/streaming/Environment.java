@@ -23,89 +23,78 @@ import java.util.*;
 /*
  * If we move to Java 1.5, we can get rid of this class and just use System.getenv
  */
-public class Environment extends Properties
-{
-   public Environment()
-      throws IOException
-   {
-      // Extend this code to fit all operating
-      // environments that you expect to run in
-      // http://lopica.sourceforge.net/os.html
-      String command = null;
-      String OS = System.getProperty("os.name");
-      String lowerOs = OS.toLowerCase();
-      if (OS.indexOf("Windows") > -1) {
-         command = "cmd /C set";
-      } else if (lowerOs.indexOf("ix") > -1 || lowerOs.indexOf("linux") > -1 
-        || lowerOs.indexOf("freebsd") > -1
-        || lowerOs.indexOf("sunos") > -1 || lowerOs.indexOf("solaris") > -1
-        || lowerOs.indexOf("hp-ux") > -1) {
-         command = "env";
-      } else if(lowerOs.startsWith("mac os x")) {
-         command = "env";
-      } else {
-         // Add others here
-      }
+public class Environment extends Properties {
 
-      if (command == null) {
-         throw new RuntimeException("Operating system " + OS
-            + " not supported by this class");
-      }
+  public Environment() throws IOException {
+    // Extend this code to fit all operating
+    // environments that you expect to run in
+    // http://lopica.sourceforge.net/os.html
+    String command = null;
+    String OS = System.getProperty("os.name");
+    String lowerOs = OS.toLowerCase();
+    if (OS.indexOf("Windows") > -1) {
+      command = "cmd /C set";
+    } else if (lowerOs.indexOf("ix") > -1 || lowerOs.indexOf("linux") > -1
+        || lowerOs.indexOf("freebsd") > -1 || lowerOs.indexOf("sunos") > -1
+        || lowerOs.indexOf("solaris") > -1 || lowerOs.indexOf("hp-ux") > -1) {
+      command = "env";
+    } else if (lowerOs.startsWith("mac os x")) {
+      command = "env";
+    } else {
+      // Add others here
+    }
 
-      // Read the environment variables
+    if (command == null) {
+      throw new RuntimeException("Operating system " + OS + " not supported by this class");
+    }
 
-      Process pid = Runtime.getRuntime().exec(command);
-      BufferedReader in =
-         new BufferedReader(
-         new InputStreamReader(
-         pid.getInputStream()));
-      while(true) {
-         String line = in.readLine();
-         if (line == null)
-            break;
-         int p = line.indexOf("=");
-         if (p != -1) {
-            String name = line.substring(0, p);
-            String value = line.substring(p+1);
-            setProperty(name, value);
-         }
+    // Read the environment variables
+
+    Process pid = Runtime.getRuntime().exec(command);
+    BufferedReader in = new BufferedReader(new InputStreamReader(pid.getInputStream()));
+    while (true) {
+      String line = in.readLine();
+      if (line == null) break;
+      int p = line.indexOf("=");
+      if (p != -1) {
+        String name = line.substring(0, p);
+        String value = line.substring(p + 1);
+        setProperty(name, value);
       }
-      in.close();
+    }
+    in.close();
+    try {
+      pid.waitFor();
+    } catch (InterruptedException e) {
+      throw new IOException(e.getMessage());
+    }
+  }
+
+  // to be used with Runtime.exec(String[] cmdarray, String[] envp) 
+  String[] toArray() {
+    String[] arr = new String[super.size()];
+    Enumeration it = super.keys();
+    int i = -1;
+    while (it.hasMoreElements()) {
+      String key = (String) it.nextElement();
+      String val = (String) get(key);
+      i++;
+      arr[i] = key + "=" + val;
+    }
+    return arr;
+  }
+
+  public String getHost() {
+    String host = getProperty("HOST");
+    if (host == null) {
+      // HOST isn't always in the environment
       try {
-         pid.waitFor();
+        host = InetAddress.getLocalHost().getHostName();
+      } catch (IOException io) {
+        io.printStackTrace();
       }
-      catch (InterruptedException e) {
-         throw new IOException(e.getMessage());
-      }
-   }
-   
-   // to be used with Runtime.exec(String[] cmdarray, String[] envp) 
-   String[] toArray()
-   {
-     String[] arr = new String[super.size()];
-     Enumeration it = super.keys();
-     int i = -1;
-     while(it.hasMoreElements()) {
-        String key = (String)it.nextElement();
-        String val = (String)get(key);
-        i++;   
-        arr[i] = key + "=" + val;
-     }     
-     return arr;
-   }
-   
-   public String getHost()
-   {
-     String host = getProperty("HOST");
-     if(host == null) {
-       // HOST isn't always in the environment
-       try {
-         host = InetAddress.getLocalHost().getHostName();
-       } catch(IOException io) {
-         io.printStackTrace();
-       }
-     }
-     return host;
-   }
-   
-} 
+    }
+    return host;
+  }
+
+}

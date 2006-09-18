@@ -30,71 +30,60 @@ import java.util.*;
  * From man chmod: If no user specs are given, the effect is as if `a' were given. 
  * 
  */
-public class MustangFile extends File
-{
+public class MustangFile extends File {
 
-    public MustangFile(File parent, String child)
-    {
-      super(parent, child);
-    }
+  public MustangFile(File parent, String child) {
+    super(parent, child);
+  }
 
-    public MustangFile(String pathname)
-    {
-      super(pathname);
-    }
+  public MustangFile(String pathname) {
+    super(pathname);
+  }
 
-    public MustangFile(String parent, String child) 
-    {
-      super(parent, child);
-    }
+  public MustangFile(String parent, String child) {
+    super(parent, child);
+  }
 
-    public boolean setReadable(boolean readable, boolean ownerOnly) 
-    {
-      chmod("r", readable, ownerOnly);
-      return SUCCESS;
-    }
+  public boolean setReadable(boolean readable, boolean ownerOnly) {
+    chmod("r", readable, ownerOnly);
+    return SUCCESS;
+  }
 
-    public boolean setReadable(boolean readable)
-    {
-      chmod("r", readable, false);
-      return SUCCESS;
-    }
+  public boolean setReadable(boolean readable) {
+    chmod("r", readable, false);
+    return SUCCESS;
+  }
 
-    public boolean setWritable(boolean writable, boolean ownerOnly) 
-    {
-      chmod("w", writable, ownerOnly);
-      return SUCCESS;
-    }
-    
-    public boolean setWritable(boolean writable) 
-    {
-      chmod("w", writable, false);
-      return SUCCESS;
-    }
+  public boolean setWritable(boolean writable, boolean ownerOnly) {
+    chmod("w", writable, ownerOnly);
+    return SUCCESS;
+  }
 
-    public boolean setExecutable(boolean executable, boolean ownerOnly) 
-    {
-      chmod("x", executable, ownerOnly);
-      return SUCCESS;
-    }
-    
-    public boolean setExecutable(boolean executable)
-    {
-      chmod("x", executable, false);
-      return SUCCESS;
-    }
-    
-    void chmod(String perms, boolean plus, boolean ownerOnly)
-    {
-       String[] argv = new String[3];
-       argv[0] = "/bin/chmod";
-       String spec = ownerOnly ? "u" : "ugoa";
-       spec += (plus ? "+" : "-");
-       spec += perms;
-       argv[1] = spec;
-       argv[2] = getAbsolutePath();
-       StreamUtil.exec(argv, System.err);
-    }
-    
-    final static boolean SUCCESS = true;
-}    
+  public boolean setWritable(boolean writable) {
+    chmod("w", writable, false);
+    return SUCCESS;
+  }
+
+  public boolean setExecutable(boolean executable, boolean ownerOnly) {
+    chmod("x", executable, ownerOnly);
+    return SUCCESS;
+  }
+
+  public boolean setExecutable(boolean executable) {
+    chmod("x", executable, false);
+    return SUCCESS;
+  }
+
+  void chmod(String perms, boolean plus, boolean ownerOnly) {
+    String[] argv = new String[3];
+    argv[0] = "/bin/chmod";
+    String spec = ownerOnly ? "u" : "ugoa";
+    spec += (plus ? "+" : "-");
+    spec += perms;
+    argv[1] = spec;
+    argv[2] = getAbsolutePath();
+    StreamUtil.exec(argv, System.err);
+  }
+
+  final static boolean SUCCESS = true;
+}

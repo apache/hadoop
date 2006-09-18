@@ -19,13 +19,12 @@ package org.apache.hadoop.streaming;
 import java.io.IOException;
 
 /** The main entrypoint. Usually invoked with the script bin/hadoopStreaming
-*/
-public class HadoopStreaming 
-{
-  public static void main(String[] args) throws IOException
-  {
+ */
+public class HadoopStreaming {
+
+  public static void main(String[] args) throws IOException {
     boolean mayExit = true;
     StreamJob job = new StreamJob(args, mayExit);
     job.go();
-  }  
+  }
 }

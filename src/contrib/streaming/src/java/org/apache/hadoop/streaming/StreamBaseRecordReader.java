@@ -30,7 +30,6 @@ import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.commons.logging.*;
 
-
 /** 
  * Shared functionality for hadoopStreaming formats.
  * A custom reader can be defined to be a RecordReader with the constructor below
@@ -39,18 +38,15 @@ import org.apache.commons.logging.*;
  * @see StreamXmlRecordReader 
  * @author Michel Tourn
  */
-public abstract class StreamBaseRecordReader implements RecordReader
-{
-    
+public abstract class StreamBaseRecordReader implements RecordReader {
+
   protected static final Log LOG = LogFactory.getLog(StreamBaseRecordReader.class.getName());
-  
+
   // custom JobConf properties for this class are prefixed with this namespace
   final static String CONF_NS = "stream.recordreader.";
 
-  public StreamBaseRecordReader(
-    FSDataInputStream in, FileSplit split, Reporter reporter, JobConf job, FileSystem fs)
-    throws IOException
-  {
+  public StreamBaseRecordReader(FSDataInputStream in, FileSplit split, Reporter reporter,
+      JobConf job, FileSystem fs) throws IOException {
     in_ = in;
     split_ = split;
     start_ = split_.getStart();
@@ -60,99 +56,90 @@ public abstract class StreamBaseRecordReader implements RecordReader
     reporter_ = reporter;
     job_ = job;
     fs_ = fs;
-    
+
     statusMaxRecordChars_ = job_.getInt(CONF_NS + "statuschars", 200);
   }
 
   /// RecordReader API
-  
+
   /** Read a record. Implementation should call numRecStats at the end
-   */  
+   */
   public abstract boolean next(Writable key, Writable value) throws IOException;
 
   /** This implementation always returns true. */
-  public boolean[] areValidInputDirectories(FileSystem fileSys,
-                                     Path[] inputDirs) throws IOException
-  {
+  public boolean[] areValidInputDirectories(FileSystem fileSys, Path[] inputDirs) throws IOException {
     int n = inputDirs.length;
     boolean[] b = new boolean[n];
-    for(int i=0; i<n; i++) {
+    for (int i = 0; i < n; i++) {
       b[i] = true;
     }
     return b;
   }
 
   /** Returns the current position in the input. */
-  public synchronized long getPos() throws IOException 
-  { 
-    return in_.getPos(); 
+  public synchronized long getPos() throws IOException {
+    return in_.getPos();
   }
 
   /** Close this to future operations.*/
-  public synchronized void close() throws IOException 
-  { 
-    in_.close(); 
+  public synchronized void close() throws IOException {
+    in_.close();
   }
 
   public WritableComparable createKey() {
     return new Text();
   }
-  
+
   public Writable createValue() {
     return new Text();
   }
-  
+
   /// StreamBaseRecordReader API
 
-  public void init() throws IOException
-  {
-    LOG.info("StreamBaseRecordReader.init: " +
-    " start_=" + start_ + " end_=" + end_ + " length_=" + length_ +
-    " start_ > in_.getPos() =" 
-        + (start_ > in_.getPos()) + " " + start_ 
-        + " > " + in_.getPos() );
+  public void init() throws IOException {
+    LOG.info("StreamBaseRecordReader.init: " + " start_=" + start_ + " end_=" + end_ + " length_="
+        + length_ + " start_ > in_.getPos() =" + (start_ > in_.getPos()) + " " + start_ + " > "
+        + in_.getPos());
     if (start_ > in_.getPos()) {
       in_.seek(start_);
-    }  
+    }
     seekNextRecordBoundary();
   }
-  
+
   /** Implementation should seek forward in_ to the first byte of the next record.
    *  The initial byte offset in the stream is arbitrary.
    */
   public abstract void seekNextRecordBoundary() throws IOException;
-  
-    
-  void numRecStats(byte[] record, int start, int len) throws IOException
-  {
-    numRec_++;          
-    if(numRec_ == nextStatusRec_) {
-      String recordStr = new String(record, start, 
-                Math.min(len, statusMaxRecordChars_), "UTF-8");    
-      nextStatusRec_ +=100;//*= 10;
+
+  void numRecStats(byte[] record, int start, int len) throws IOException {
+    numRec_++;
+    if (numRec_ == nextStatusRec_) {
+      String recordStr = new String(record, start, Math.min(len, statusMaxRecordChars_), "UTF-8");
+      nextStatusRec_ += 100;//*= 10;
       String status = getStatus(recordStr);
       LOG.info(status);
       reporter_.setStatus(status);
     }
   }
 
- long lastMem =0;
- String getStatus(CharSequence record)
- {
+  long lastMem = 0;
+
+  String getStatus(CharSequence record) {
     long pos = -1;
-    try { 
+    try {
       pos = getPos();
-    } catch(IOException io) {
+    } catch (IOException io) {
     }
     String recStr;
-    if(record.length() > statusMaxRecordChars_) {
-        recStr = record.subSequence(0, statusMaxRecordChars_) + "...";
+    if (record.length() > statusMaxRecordChars_) {
+      recStr = record.subSequence(0, statusMaxRecordChars_) + "...";
     } else {
-    	recStr = record.toString();
+      recStr = record.toString();
     }
-    String unqualSplit = split_.getFile().getName() + ":" + split_.getStart() + "+" + split_.getLength();
-    String status = "HSTR " + StreamUtil.HOST + " " + numRec_ + ". pos=" + pos
-     + " " + unqualSplit + " Processing record=" + recStr;
+    String unqualSplit = split_.getFile().getName() + ":" + split_.getStart() + "+"
+        + split_.getLength();
+    String status = "HSTR " + StreamUtil.HOST + " " + numRec_ + ". pos=" + pos + " " + unqualSplit
+        + " Processing record=" + recStr;
     status += " " + splitName_;
     return status;
   }
@@ -169,5 +156,5 @@ public abstract class StreamBaseRecordReader implements RecordReader
   int numRec_ = 0;
   int nextStatusRec_ = 1;
   int statusMaxRecordChars_;
-  
+
 }

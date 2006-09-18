@@ -317,7 +317,7 @@
 
   </target>   
 
-  <target name="test-contrib" depends="compile-core">
+  <target name="test-contrib" depends="compile-core, compile-core-test">
     <subant target="test">
         <fileset file="${basedir}/src/contrib/build.xml"/>
     </subant>  	
