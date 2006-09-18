@@ -156,7 +156,8 @@ public class DataNode implements FSConstants, Runnable {
              dataDirs,
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
         int infoServerPort = conf.getInt("dfs.datanode.info.port", 50075);
-        this.infoServer = new StatusHttpServer("datanode", infoServerPort, true);
+        String infoServerBindAddress = conf.get("dfs.datanode.info.bindAddress", "0.0.0.0");
+        this.infoServer = new StatusHttpServer("datanode", infoServerBindAddress, infoServerPort, true);
         //create a servlet to serve full-file content
         try {
           this.infoServer.addServlet(null, "/streamFile/*",
@@ -208,9 +209,10 @@ public class DataNode implements FSConstants, Runnable {
       // find free port
       ServerSocket ss = null;
       int tmpPort = conf.getInt("dfs.datanode.port", 50010);
+      String bindAddress = conf.get("dfs.datanode.bindAddress", "0.0.0.0");
       while (ss == null) {
         try {
-          ss = new ServerSocket(tmpPort);
+          ss = new ServerSocket(tmpPort,0,InetAddress.getByName(bindAddress));
           LOG.info("Opened server at " + tmpPort);
         } catch (IOException ie) {
           LOG.info("Could not open server at " + tmpPort + ", trying new port");

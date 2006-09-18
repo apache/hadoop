@@ -52,12 +52,13 @@ public class StatusHttpServer {
    * @param findPort whether the server should start at the given port and 
    *        increment by 1 until it finds a free port.
    */
-  public StatusHttpServer(String name, int port, 
+  public StatusHttpServer(String name, String bindAddress, int port, 
                           boolean findPort) throws IOException {
     webServer = new org.mortbay.jetty.Server();
     this.findPort = findPort;
     listener = new SocketListener();
     listener.setPort(port);
+    listener.setHost(bindAddress);
     webServer.addListener(listener);
 
     // set up the context for "/logs/"

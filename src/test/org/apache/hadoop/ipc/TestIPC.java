@@ -41,12 +41,13 @@ public class TestIPC extends TestCase {
   private static final Random RANDOM = new Random();
 
   private static final int PORT = 1234;
+  private static final String ADDRESS = "0.0.0.0";
 
   private static class TestServer extends Server {
     private boolean sleep;
 
-    public TestServer(int port, int handlerCount, boolean sleep) {
-      super(port, LongWritable.class, handlerCount, conf);
+    public TestServer(String bindAddress, int port, int handlerCount, boolean sleep) {
+      super(bindAddress, port, LongWritable.class, handlerCount, conf);
       this.setTimeout(1000);
       this.sleep = sleep;
     }
@@ -134,7 +135,7 @@ public class TestIPC extends TestCase {
   public void testSerial(int handlerCount, boolean handlerSleep, 
                           int clientCount, int callerCount, int callCount)
     throws Exception {
-    Server server = new TestServer(PORT, handlerCount, handlerSleep);
+    Server server = new TestServer(ADDRESS, PORT, handlerCount, handlerSleep);
     server.start();
 
     Client[] clients = new Client[clientCount];
@@ -167,7 +168,7 @@ public class TestIPC extends TestCase {
     throws Exception {
     Server[] servers = new Server[serverCount];
     for (int i = 0; i < serverCount; i++) {
-      servers[i] = new TestServer(PORT+i, handlerCount, handlerSleep);
+      servers[i] = new TestServer(ADDRESS, PORT+i, handlerCount, handlerSleep);
       servers[i].start();
     }
 

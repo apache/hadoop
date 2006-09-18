@@ -350,7 +350,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
 	
     NameNode.format(conf);
     
-    nameNodeDaemon = new NameNode(new File(nameFSDir), nameNodePort, conf);
+    nameNodeDaemon = new NameNode(new File(nameFSDir), "localhost", nameNodePort, conf);
 
      //
       //        start DataNodes

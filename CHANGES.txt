@@ -20,6 +20,9 @@ Trunk (unreleased changes)
 5. HADOOP-533.  Fix unit test to not modify conf directory.
   (Hairong Kuang via cutting)
 
+6. HADOOP-527.  Permit specification of the local address that various
+   Hadoop daemons should bind to.  (Philippe Gassmann via cutting)
+
 
 Release 0.6.2 (unreleased)
 

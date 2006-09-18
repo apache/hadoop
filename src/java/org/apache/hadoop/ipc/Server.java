@@ -69,7 +69,7 @@ public abstract class Server {
   public static Server get() {
     return (Server)SERVER.get();
   }
-
+  private String bindAddress; 
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads
   private int maxQueuedCalls;                     // max number of queued calls
@@ -125,7 +125,7 @@ public abstract class Server {
     private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
     
     public Listener() throws IOException {
-      address = new InetSocketAddress(port);
+      address = new InetSocketAddress(bindAddress,port);
       // Create a new server socket and set to non blocking mode
       acceptChannel = ServerSocketChannel.open();
       acceptChannel.configureBlocking(false);
@@ -515,12 +515,13 @@ public abstract class Server {
     }
 
   }
-  
-  /** Constructs a server listening on the named port.  Parameters passed must
+  /** Constructs a server listening on the named port and address.  Parameters passed must
    * be of the named class.  The <code>handlerCount</handlerCount> determines
    * the number of handler threads that will be used to process calls.
+   * 
    */
-  protected Server(int port, Class paramClass, int handlerCount, Configuration conf) {
+  protected Server(String bindAddress, int port, Class paramClass, int handlerCount, Configuration conf) {
+    this.bindAddress = bindAddress;
     this.conf = conf;
     this.port = port;
     this.paramClass = paramClass;
@@ -530,6 +531,17 @@ public abstract class Server {
     this.maxIdleTime = conf.getInt("ipc.client.maxidletime", 120000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
+  }
+  
+  
+  /** Constructs a server listening on the named port.  Parameters passed must
+   * be of the named class.  The <code>handlerCount</handlerCount> determines
+   * the number of handler threads that will be used to process calls.
+   * 
+   * @deprecated the bind address should always be specified
+   */
+  protected Server(int port, Class paramClass, int handlerCount, Configuration conf) {
+    this("0.0.0.0",port,paramClass,handlerCount,conf);
   }
 
   /** Sets the timeout used for network i/o. */

@@ -35,6 +35,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 /** Unit tests for RPC. */
 public class TestRPC extends TestCase {
   private static final int PORT = 1234;
+  private static final String ADDRESS = "0.0.0.0";
 
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.TestRPC");
@@ -101,7 +102,7 @@ public class TestRPC extends TestCase {
   }
 
   public void testCalls() throws Exception {
-    Server server = RPC.getServer(new TestImpl(), PORT, conf);
+    Server server = RPC.getServer(new TestImpl(), ADDRESS, PORT, conf);
     server.start();
 
     InetSocketAddress addr = new InetSocketAddress(PORT);

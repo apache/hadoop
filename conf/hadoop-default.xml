@@ -104,11 +104,27 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.datanode.bindAddress</name>
+  <value>0.0.0.0</value>
+  <description>
+    the address where the datanode will listen to.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.port</name>
   <value>50010</value>
   <description>The port number that the dfs datanode server uses as a starting 
 	       point to look for a free port to listen on.
 </description>
+</property>
+
+<property>
+  <name>dfs.info.bindAddress</name>
+  <value>0.0.0.0</value>
+  <description>
+    the address where the dfs namenode web ui will listen on.
+  </description>
 </property>
 
 <property>
@@ -238,6 +254,14 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.job.tracker.info.bindAddress</name>
+  <value>0.0.0.0</value>
+  <description>
+    the address where the job tracker info webserver will be binded on.
+  </description>
+</property>
+
+<property>
   <name>mapred.job.tracker.info.port</name>
   <value>50030</value>
   <description>The port that the MapReduce job tracker info webserver runs at.
@@ -249,6 +273,14 @@ creations/deletions), or "all".</description>
   <value>50040</value>
   <description>The port number that the MapReduce task tracker output server uses as a starting
                point to look for a free port to listen on.
+  </description>
+</property>
+
+<property>
+  <name>mapred.task.tracker.report.bindAddress</name>
+  <value>0.0.0.0</value>
+  <description>
+    the address where the maperd tracker report server will be binded on.
   </description>
 </property>
 
@@ -427,6 +459,14 @@ creations/deletions), or "all".</description>
   <value>40</value>
   <description>The number of worker threads that for the http server. This is
                used for map output fetching
+  </description>
+</property>
+
+<property>
+  <name>tasktracker.http.bindAddress</name>
+  <value>0.0.0.0</value>
+  <description>
+    the address where the task tracker http server will be binded on.
   </description>
 </property>
 

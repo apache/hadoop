@@ -116,6 +116,7 @@ class FSNamesystem implements FSConstants {
     //
     StatusHttpServer infoServer;
     int infoPort;
+    String infoBindAddress;
     Date startTime;
     
     //
@@ -190,7 +191,8 @@ class FSNamesystem implements FSConstants {
     public FSNamesystem(File dir, Configuration conf) throws IOException {
         fsNamesystemObject = this;
         this.infoPort = conf.getInt("dfs.info.port", 50070);
-        this.infoServer = new StatusHttpServer("dfs", infoPort, false);
+        this.infoBindAddress = conf.get("dfs.info.bindAddress", "0.0.0.0");
+        this.infoServer = new StatusHttpServer("dfs",infoBindAddress, infoPort, false);
         this.infoServer.start();
         InetSocketAddress addr = DataNode.createSocketAddr(conf.get("fs.default.name", "local"));
         this.localMachine = addr.getHostName();

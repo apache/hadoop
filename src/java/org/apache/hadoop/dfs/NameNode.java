@@ -23,6 +23,8 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 
 import java.io.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.Metrics;
@@ -121,18 +123,17 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * Create a NameNode at the default location
      */
     public NameNode(Configuration conf) throws IOException {
-        this(getDir(conf),
-             DataNode.createSocketAddr
-             (conf.get("fs.default.name", "local")).getPort(), conf);
+       this(getDir(conf),DataNode.createSocketAddr(conf.get("fs.default.name", "local")).getHostName(),
+                       DataNode.createSocketAddr(conf.get("fs.default.name", "local")).getPort(), conf);
     }
 
     /**
      * Create a NameNode at the specified location and start it.
      */
-    public NameNode(File dir, int port, Configuration conf) throws IOException {
+    public NameNode(File dir, String bindAddress, int port, Configuration conf) throws IOException {
         this.namesystem = new FSNamesystem(dir, conf);
         this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
-        this.server = RPC.getServer(this, port, handlerCount, false, conf);
+        this.server = RPC.getServer(this, bindAddress, port, handlerCount, false, conf);
         this.datanodeStartupPeriod =
             conf.getLong("dfs.datanode.startupMsec", DATANODE_STARTUP_PERIOD);
         this.server.start();

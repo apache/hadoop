@@ -56,7 +56,8 @@ public class TaskTracker
     String taskTrackerName;
     String localHostname;
     InetSocketAddress jobTrackAddr;
-
+    
+    String taskReportBindAddress;
     int taskReportPort;
 
     Server taskReportServer = null;
@@ -189,11 +190,13 @@ public class TaskTracker
         
         // port numbers
         this.taskReportPort = this.fConf.getInt("mapred.task.tracker.report.port", 50050);
+        // bind address
+        this.taskReportBindAddress = this.fConf.get("mapred.task.tracker.report.bindAddress", "0.0.0.0");
 
         // RPC initialization
         while (true) {
             try {
-                this.taskReportServer = RPC.getServer(this, this.taskReportPort, maxCurrentTasks, false, this.fConf);
+                this.taskReportServer = RPC.getServer(this, this.taskReportBindAddress, this.taskReportPort, maxCurrentTasks, false, this.fConf);
                 this.taskReportServer.start();
                 break;
             } catch (BindException e) {
@@ -354,7 +357,8 @@ public class TaskTracker
       this.mapOutputFile = new MapOutputFile();
       this.mapOutputFile.setConf(conf);
       int httpPort = conf.getInt("tasktracker.http.port", 50060);
-      this.server = new StatusHttpServer("task", httpPort, true);
+      String httpBindAddress = conf.get("tasktracker.http.bindAddress", "0.0.0.0");;
+      this.server = new StatusHttpServer("task", httpBindAddress, httpPort, true);
       int workerThreads = conf.getInt("tasktracker.http.threads", 40);
       server.setThreads(1, workerThreads);
       server.start();
