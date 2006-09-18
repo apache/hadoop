@@ -43,7 +43,7 @@ public class TestDFSShellGenericOptions extends TestCase {
     
     private void testConfOption(String[] args, String namenode) {
         // prepare configuration hadoop-site.xml
-        File configDir = new File("conf", "minidfs");
+        File configDir = new File(new File("build", "test"), "minidfs");
         configDir.mkdirs();
         File siteFile = new File(configDir, "hadoop-site.xml");
         PrintWriter pw;
@@ -61,14 +61,14 @@ public class TestDFSShellGenericOptions extends TestCase {
     
             // prepare arguments to create a directory /data
             args[0] = "-conf";
-            args[1] = "conf/minidfs/hadoop-site.xml";
+            args[1] = siteFile.getPath();
             execute(args, namenode); 
         } catch (FileNotFoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
+        } finally {
+          siteFile.delete();
+          configDir.delete();
         }
-        
-        configDir.delete();
     }
     
     private void testPropertyOption(String[] args, String namenode) {

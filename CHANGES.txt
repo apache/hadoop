@@ -17,6 +17,9 @@ Trunk (unreleased changes)
 4. HADOOP-288.  Add a file caching system and use it in MapReduce to
    cache job jar files on slave nodes.  (Mahadev Konar via cutting)
 
+5. HADOOP-533.  Fix unit test to not modify conf directory.
+  (Hairong Kuang via cutting)
+
 
 Release 0.6.2 (unreleased)
 
