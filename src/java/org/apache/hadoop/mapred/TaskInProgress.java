@@ -71,7 +71,7 @@ class TaskInProgress {
     private TreeSet recentTasks = new TreeSet();
     private JobConf conf;
     private boolean runSpeculative;
-    private TreeMap taskDiagnosticData = new TreeMap();
+    private Map<String,List<String>> taskDiagnosticData = new TreeMap();
     /**
      * Map from taskId -> TaskStatus
      */
@@ -242,6 +242,15 @@ class TaskInProgress {
          (String[])diagnostics.toArray(new String[diagnostics.size()]));
     }
 
+    /**
+     * Get the diagnostic messages for a given task within this tip.
+     * @param taskId the id of the required task
+     * @return the list of diagnostics for that task
+     */
+    synchronized List<String> getDiagnosticInfo(String taskId) {
+      return taskDiagnosticData.get(taskId);
+    }
+    
     ////////////////////////////////////////////////
     // Update methods, usually invoked by the owning
     // job.

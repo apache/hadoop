@@ -12,8 +12,8 @@
   String jobid = request.getParameter("jobid");
   JobTracker tracker = JobTracker.getTracker();
   JobInProgress job = (JobInProgress) tracker.getJob(jobid);
-  String taskid = request.getParameter("taskid");
-  TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(jobid, taskid): null;
+  String tipid = request.getParameter("taskid");
+  TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(jobid, tipid): null;
 %>
 
 <%! 
@@ -68,7 +68,20 @@
       out.print("</td>");
       out.print("<td>"+ StringUtils.formatPercent(status.getProgress()) + 
                 "</td>");
-      out.print("<td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
+      out.print("<td><pre>");
+      List<String> failures = tracker.getTaskDiagnostics(jobid, tipid,
+                                                         status.getTaskId());
+      if (failures == null) {
+        out.print("&nbsp;");
+      } else {
+        for(Iterator<String> itr = failures.iterator(); itr.hasNext(); ) {
+          out.print(itr.next());
+          if (itr.hasNext()) {
+            out.print("\n-------\n");
+          }
+        }
+      }
+      out.print("</pre></td>");
       out.print("</tr>\n");
     }
   %>

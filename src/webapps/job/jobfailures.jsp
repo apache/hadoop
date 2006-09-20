@@ -33,8 +33,22 @@
                     taskTracker.getHttpPort() + "\">" +  taskTracker.getHost() + 
                     "</a></td>");
         }
-        out.print("<td>" + statuses[i].getDiagnosticInfo() + "</td></tr>\n");
-      }
+        out.print("<td><pre>");
+        List<String> failures = 
+                     tracker.getTaskDiagnostics(jobId, tipId, 
+                                                statuses[i].getTaskId());
+        if (failures == null) {
+          out.print("&nbsp;");
+        } else {
+          for(Iterator<String> itr = failures.iterator(); itr.hasNext(); ) {
+            out.print(itr.next());
+            if (itr.hasNext()) {
+              out.print("\n-------\n");
+            }
+           }
+         }
+         out.print("</pre></td></tr>\n");
+       }
     }
   }
              

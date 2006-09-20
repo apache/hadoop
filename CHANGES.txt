@@ -36,6 +36,9 @@ Trunk (unreleased changes)
 10. HADOOP-261.  Record an error message when map output is lost.
     (omalley via cutting)
 
+11. HADOOP-293.  Report the full list of task error messages in the
+    web ui, not just the most recent.  (omalley via cutting)
+
 
 Release 0.6.2 (unreleased)
 

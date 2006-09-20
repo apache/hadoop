@@ -403,7 +403,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     Vector jobsByArrival = new Vector();
 
     // All the known TaskInProgress items, mapped to by taskids (taskid->TIP)
-    TreeMap taskidToTIPMap = new TreeMap();
+    Map<String, TaskInProgress> taskidToTIPMap = new TreeMap();
 
     // (taskid --> trackerID) 
     TreeMap taskidToTrackerMap = new TreeMap();
@@ -1081,6 +1081,27 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         }
     }
 
+    /**
+     * Get the diagnostics for a given task
+     * @param jobId the id of the job
+     * @param tipId the id of the tip 
+     * @param taskId the id of the task
+     * @return a list of the diagnostic messages
+     */
+    public synchronized List<String> getTaskDiagnostics(String jobId,
+                                                        String tipId,
+                                                        String taskId) {
+      JobInProgress job = (JobInProgress) jobs.get(jobId);
+      if (job == null) {
+        throw new IllegalArgumentException("Job " + jobId + " not found.");
+      }
+      TaskInProgress tip = job.getTaskInProgress(tipId);
+      if (tip == null) {
+        throw new IllegalArgumentException("TIP " + tipId + " not found.");
+      }
+      return tip.getDiagnosticInfo(taskId);
+    }
+    
     /** Get all the TaskStatuses from the tipid. */
     TaskStatus[] getTaskStatuses(String jobid, String tipid){
 	JobInProgress job = (JobInProgress) jobs.get(jobid);
