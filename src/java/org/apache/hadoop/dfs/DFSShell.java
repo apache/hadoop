@@ -255,12 +255,19 @@ public class DFSShell extends ToolBase {
     /**
      * Delete an DFS file
      */
-    public void delete(String srcf) throws IOException {
-        if (fs.delete(new Path(srcf))) {
-            System.out.println("Deleted " + srcf);
-        } else {
-            System.out.println("Delete failed");
-        }
+    public void delete(String srcf, boolean recursive) throws IOException {
+      Path srcp = new Path(srcf);
+      if (fs.isDirectory(srcp) && !recursive) {
+        System.out.println("Cannot remove directory \"" + srcf +
+                           "\", use -rmr instead");
+        return;
+      }
+
+      if (fs.delete(srcp)) {
+        System.out.println("Deleted " + srcf);
+      } else {
+        System.out.println("Delete failed");
+      }
     }
 
     /**
@@ -367,7 +374,8 @@ public class DFSShell extends ToolBase {
                 " [-du <path>]"+
                 " [-mv <src> <dst>]"+
                 " [-cp <src> <dst>]"+
-                " [-rm <src>]" +
+                " [-rm <path>]" +
+                " [-rmr <path>]" +
                 " [-put <localsrc> <dst>]"+
                 " [-copyFromLocal <localsrc> <dst>]"+
                 " [-moveFromLocal <localsrc> <dst>]" + 
@@ -419,7 +427,9 @@ public class DFSShell extends ToolBase {
             } else if ("-cp".equals(cmd)) {
                 copy(argv[i++], argv[i++], conf);
             } else if ("-rm".equals(cmd)) {
-                delete(argv[i++]);
+                delete(argv[i++], false);
+            } else if ("-rmr".equals(cmd)) {
+                delete(argv[i++], true);
             } else if ("-du".equals(cmd)) {
                 String arg = i < argv.length ? argv[i++] : "";
                 du(arg);

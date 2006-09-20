@@ -51,6 +51,10 @@ Trunk (unreleased changes)
     modifications are permitted and block replication is inhibited.
     (Konstantin Shvachko via cutting)
 
+14. HADOOP-431.  Change 'dfs -rm' to not operate recursively and add a
+    new command, 'dfs -rmr' which operates recursively.
+    (Sameer Paranjpye via cutting)
+
 
 Release 0.6.2 (unreleased)
 
