@@ -39,6 +39,10 @@ Trunk (unreleased changes)
 11. HADOOP-293.  Report the full list of task error messages in the
     web ui, not just the most recent.  (omalley via cutting)
 
+12. HADOOP-551.  Restore JobClient's console printouts to only include
+    a maximum of one update per one percent of progress.
+    (omalley via cutting)
+
 
 Release 0.6.2 (unreleased)
 

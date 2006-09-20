@@ -83,11 +83,19 @@ public class StringUtils {
     return oneDecimal.format(result) + suffix;
   }
   
-  private static DecimalFormat percentFormat = new DecimalFormat("0.00%");
-  
-  public static String formatPercent(double done) {
-    final int scale = 10000;
+  /**
+   * Format a percentage for presentation to the user.
+   * @param done the percentage to format (0.0 to 1.0)
+   * @param digits the number of digits past the decimal point
+   * @return a string representation of the percentage
+   */
+  public static String formatPercent(double done, int digits) {
+    DecimalFormat percentFormat = new DecimalFormat("0.00%");
+    double scale = Math.pow(10.0, digits+2);
     double rounded = Math.floor(done * scale);
+    percentFormat.setDecimalSeparatorAlwaysShown(false);
+    percentFormat.setMinimumFractionDigits(digits);
+    percentFormat.setMaximumFractionDigits(digits);
     return percentFormat.format(rounded / scale);
   }
   

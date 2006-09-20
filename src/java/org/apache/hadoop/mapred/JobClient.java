@@ -372,9 +372,9 @@ public class JobClient extends ToolBase implements MRConstants  {
             }
             running = jc.getJob(jobId);
             String report = 
-              (" map " + StringUtils.formatPercent(running.mapProgress())+
+              (" map " + StringUtils.formatPercent(running.mapProgress(), 0)+
                " reduce " + 
-               StringUtils.formatPercent(running.reduceProgress()));
+               StringUtils.formatPercent(running.reduceProgress(), 0));
             if (!report.equals(lastReport)) {
               LOG.info(report);
               lastReport = report;

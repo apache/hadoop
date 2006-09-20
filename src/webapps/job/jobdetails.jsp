@@ -10,7 +10,6 @@
 %>
 
 <%!
-  private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
   JobTracker tracker = JobTracker.getTracker();
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
@@ -36,7 +35,7 @@
     }
     out.print("<tr><th><a href=\"/jobtasks.jsp?jobid=" + jobId + 
               "&type="+ kind + "&pagenum=1\">" + kind + "</a></th><td>" + 
-              StringUtils.formatPercent(completePercent) +
+              StringUtils.formatPercent(completePercent, 2) +
               "</td><td>" + totalTasks + "</td><td>" + 
               (totalTasks - runningTasks - finishedTasks) + "</td><td>" +
               runningTasks + "</td><td>" +

@@ -66,7 +66,7 @@
       out.print("<td>");
       writeString(out, status.getRunState()); 
       out.print("</td>");
-      out.print("<td>"+ StringUtils.formatPercent(status.getProgress()) + 
+      out.print("<td>"+ StringUtils.formatPercent(status.getProgress(),2) + 
                 "</td>");
       out.print("<td><pre>");
       List<String> failures = tracker.getTaskDiagnostics(jobid, tipid,

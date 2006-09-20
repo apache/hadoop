@@ -44,10 +44,10 @@
                   "<td>" + profile.getUser() + "</td>" 
                     + "<td>" + ("".equals(name) ? "&nbsp;" : name) + "</td>" + 
                     "<td>" + 
-                    StringUtils.formatPercent(status.mapProgress()) + 
+                    StringUtils.formatPercent(status.mapProgress(),2) + 
                     "</td><td>" + 
                     desiredMaps + "</td><td>" + completedMaps + "</td><td>" + 
-                    StringUtils.formatPercent(status.reduceProgress()) + 
+                    StringUtils.formatPercent(status.reduceProgress(),2) + 
                     "</td><td>" + 
                     desiredReduces + "</td><td> " + completedReduces + 
                     "</td></tr>\n");

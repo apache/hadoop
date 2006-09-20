@@ -63,7 +63,7 @@
           out.print("<tr><td><a href=\"taskdetails.jsp?jobid=" + jobid + 
                     "&taskid=" + report.getTaskId() + "\">"  + 
                     report.getTaskId() + "</a></td>");
-         out.print("<td>" + StringUtils.formatPercent(report.getProgress()) + 
+         out.print("<td>" + StringUtils.formatPercent(report.getProgress(),2) + 
                    "</td>");
          out.print("<td>"  + report.getState() + "</td>");
          String[] diagnostics = report.getDiagnostics();
