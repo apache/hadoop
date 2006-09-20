@@ -42,6 +42,7 @@
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
+  <property name="test.output" value="no"/>
 
   <property name="libhdfs.test.conf.dir" value="${libhdfs.src}/tests/conf"/>
   <property name="libhdfs.test.log.dir" value="${build.libhdfs}/tests/logs"/>
@@ -294,7 +295,8 @@
     <mkdir dir="${test.build.data}"/>
     <delete dir="${hadoop.log.dir}"/>
     <mkdir dir="${hadoop.log.dir}"/>
-    <junit printsummary="yes" haltonfailure="no" fork="yes" dir="${basedir}"
+    <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no" 
+           fork="yes" dir="${basedir}"
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
       <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/>

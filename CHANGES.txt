@@ -30,6 +30,9 @@ Trunk (unreleased changes)
 8. HADOOP-545.  Remove an unused config file parameter.
    (Philippe Gassmann via cutting)
 
+9. HADOOP-548.  Add an Ant property "test.output" to build.xml that
+   causes test output to be logged to the console.  (omalley via cutting)
+
 
 Release 0.6.2 (unreleased)
 
