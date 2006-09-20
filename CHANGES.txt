@@ -3,35 +3,38 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
-1. HADOOP-243.  Fix rounding in the display of task and job progress
-   so that things are not shown to be 100% complete until they are in
-   fact finished.  (omalley via cutting) 
+ 1. HADOOP-243.  Fix rounding in the display of task and job progress
+    so that things are not shown to be 100% complete until they are in
+    fact finished.  (omalley via cutting) 
 
-2. HADOOP-438.  Limit the length of absolute paths in DFS, since the
-   file format used to store pathnames has some limitations.
-   (Wendy Chien via cutting)
+ 2. HADOOP-438.  Limit the length of absolute paths in DFS, since the
+    file format used to store pathnames has some limitations.
+    (Wendy Chien via cutting)
 
-3. HADOOP-530.  Improve error messages in SequenceFile when keys or
-   values are of the wrong type.  (Hairong Kuang via cutting)
+ 3. HADOOP-530.  Improve error messages in SequenceFile when keys or
+    values are of the wrong type.  (Hairong Kuang via cutting)
 
-4. HADOOP-288.  Add a file caching system and use it in MapReduce to
-   cache job jar files on slave nodes.  (Mahadev Konar via cutting)
+ 4. HADOOP-288.  Add a file caching system and use it in MapReduce to
+    cache job jar files on slave nodes.  (Mahadev Konar via cutting)
 
-5. HADOOP-533.  Fix unit test to not modify conf directory.
-  (Hairong Kuang via cutting)
+ 5. HADOOP-533.  Fix unit test to not modify conf directory.
+   (Hairong Kuang via cutting)
 
-6. HADOOP-527.  Permit specification of the local address that various
-   Hadoop daemons should bind to.  (Philippe Gassmann via cutting)
+ 6. HADOOP-527.  Permit specification of the local address that various
+    Hadoop daemons should bind to.  (Philippe Gassmann via cutting)
 
-7. HADOOP-542.  Updates to contrib/streaming: reformatted source code,
-   on-the-fly merge sort, a fix for HADOOP-540, etc.
-   (Michel Tourn via cutting)
+ 7. HADOOP-542.  Updates to contrib/streaming: reformatted source code,
+    on-the-fly merge sort, a fix for HADOOP-540, etc.
+    (Michel Tourn via cutting)
 
-8. HADOOP-545.  Remove an unused config file parameter.
-   (Philippe Gassmann via cutting)
+ 8. HADOOP-545.  Remove an unused config file parameter.
+    (Philippe Gassmann via cutting)
 
-9. HADOOP-548.  Add an Ant property "test.output" to build.xml that
-   causes test output to be logged to the console.  (omalley via cutting)
+ 9. HADOOP-548.  Add an Ant property "test.output" to build.xml that
+    causes test output to be logged to the console.  (omalley via cutting)
+
+10. HADOOP-261.  Record an error message when map output is lost.
+    (omalley via cutting)
 
 
 Release 0.6.2 (unreleased)

@@ -40,9 +40,10 @@
     TaskTracker tracker = 
        (TaskTracker) application.getAttribute("task.tracker");
     Log log = (Log) application.getAttribute("log");
-    log.warn("Http server (getMapOutput.jsp): " +
-                StringUtils.stringifyException(ie));
-    tracker.mapOutputLost(mapId);
+    String errorMsg = "getMapOutput(" + mapId + "," + reduceId + ") failed : "+
+                       StringUtils.stringifyException(ie);
+    log.warn(errorMsg);
+    tracker.mapOutputLost(mapId, errorMsg);
     throw ie;
   } finally {
     if (inStream != null) {

@@ -357,7 +357,7 @@ public class TaskTracker
       this.mapOutputFile = new MapOutputFile();
       this.mapOutputFile.setConf(conf);
       int httpPort = conf.getInt("tasktracker.http.port", 50060);
-      String httpBindAddress = conf.get("tasktracker.http.bindAddress", "0.0.0.0");;
+      String httpBindAddress = conf.get("tasktracker.http.bindAddress", "0.0.0.0");
       this.server = new StatusHttpServer("task", httpBindAddress, httpPort, true);
       int workerThreads = conf.getInt("tasktracker.http.threads", 40);
       server.setThreads(1, workerThreads);
@@ -990,11 +990,14 @@ public class TaskTracker
         /**
          * The map output has been lost.
          */
-        public synchronized void mapOutputLost() throws IOException {
+        public synchronized void mapOutputLost(String failure
+                                               ) throws IOException {
             if (runstate == TaskStatus.SUCCEEDED) {
               LOG.info("Reporting output lost:"+task.getTaskId());
               runstate = TaskStatus.FAILED;       // change status to failure
               progress = 0.0f;
+              reportDiagnosticInfo("Map output lost, rescheduling: " + 
+                                   failure);
               runningTasks.put(task.getTaskId(), this);
               mapTotal++;
             } else {
@@ -1120,10 +1123,11 @@ public class TaskTracker
     /**
      * A completed map task's output has been lost.
      */
-    public synchronized void mapOutputLost(String taskid) throws IOException {
+    public synchronized void mapOutputLost(String taskid,
+                                           String errorMsg) throws IOException {
         TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
         if (tip != null) {
-          tip.mapOutputLost();
+          tip.mapOutputLost(errorMsg);
         } else {
           LOG.warn("Unknown child with bad map output: "+taskid+". Ignored.");
         }
