@@ -27,6 +27,9 @@ Trunk (unreleased changes)
    on-the-fly merge sort, a fix for HADOOP-540, etc.
    (Michel Tourn via cutting)
 
+8. HADOOP-545.  Remove an unused config file parameter.
+   (Philippe Gassmann via cutting)
+
 
 Release 0.6.2 (unreleased)
 

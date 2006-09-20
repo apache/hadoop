@@ -95,7 +95,6 @@ public class MiniMRCluster {
                 // set it down at 2 seconds.
                 jc.setInt("ipc.client.timeout", 1000);
                 jc.setInt("mapred.task.tracker.info.port", taskTrackerPort++);
-                jc.setInt("mapred.task.tracker.output.port", taskTrackerPort++);
                 jc.setInt("mapred.task.tracker.report.port", taskTrackerPort++);
                 File localDir = new File(jc.get("mapred.local.dir"));
                 File ttDir = new File(localDir, Integer.toString(taskTrackerPort));

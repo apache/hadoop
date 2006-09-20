@@ -269,14 +269,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.task.tracker.output.port</name>
-  <value>50040</value>
-  <description>The port number that the MapReduce task tracker output server uses as a starting
-               point to look for a free port to listen on.
-  </description>
-</property>
-
-<property>
   <name>mapred.task.tracker.report.bindAddress</name>
   <value>0.0.0.0</value>
   <description>
