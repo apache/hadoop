@@ -43,6 +43,14 @@ Trunk (unreleased changes)
     a maximum of one update per one percent of progress.
     (omalley via cutting)
 
+13. HADOOP-306.  Add a "safe" mode to DFS.  The name node enters this
+    when less than a specified percentage of file data is complete.
+    Currently safe mode is only used on startup, but eventually it
+    will also be entered when datanodes disconnect and file data
+    becomes incomplete.  While in safe mode no filesystem
+    modifications are permitted and block replication is inhibited.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.6.2 (unreleased)
 

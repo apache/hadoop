@@ -27,8 +27,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
-  public static final long versionID = 2L;  // infoPort added to DatanodeID
-                                            // affected: DatanodeInfo, LocatedBlock
+  public static final long versionID = 3L;  // setSafeMode() added
   
     ///////////////////////////////////////
     // File contents
@@ -244,4 +243,59 @@ interface ClientProtocol extends VersionedProtocol {
      * @throws IOException
      */
     public long getBlockSize(String filename) throws IOException;
+
+    /**
+     * Enter, leave or get safe mode.
+     * <p>
+     * Safe mode is a name node state when it
+     * <ol><li>does not accept changes to name space (read-only), and</li>
+     * <li>does not replicate or delete blocks.</li></ol>
+     * 
+     * <p>
+     * Safe mode is entered automatically at name node startup.
+     * Safe mode can also be entered manually using
+     * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode( SafeModeAction.SAFEMODE_GET )}.
+     * <p>
+     * At startup the name node accepts data node reports collecting
+     * information about block locations.
+     * In order to leave safe mode it needs to collect a configurable
+     * percentage called threshold of blocks, which satisfy the minimal 
+     * replication condition.
+     * The minimal replication condition is that each block must have at least
+     * <tt>dfs.replication.min</tt> replicas.
+     * When the threshold is reached the name node extends safe mode
+     * for a configurable amount of time
+     * to let the remaining data nodes to check in before it
+     * will start replicating missing blocks.
+     * Then the name node leaves safe mode.
+     * <p>
+     * If safe mode is turned on manually using
+     * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode( SafeModeAction.SAFEMODE_ENTER )}
+     * then the name node stays in safe mode until it is manually turned off
+     * using {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode( SafeModeAction.SAFEMODE_LEAVE )}.
+     * Current state of the name node can be verified using
+     * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode( SafeModeAction.SAFEMODE_GET )}
+     * <h4>Configuration parameters:</h4>
+     * <tt>dfs.safemode.threshold.pct</tt> is the threshold parameter.<br>
+     * <tt>dfs.safemode.extension</tt> is the safe mode extension parameter.<br>
+     * <tt>dfs.replication.min</tt> is the minimal replication parameter.
+     * 
+     * <h4>Special cases:</h4>
+     * The name node does not enter safe mode at startup if the threshold is 
+     * set to 0 or if the name space is empty.<br>
+     * If the threshold is set to 1 then all blocks need to have at least 
+     * minimal replication.<br>
+     * If the threshold value is greater than 1 then the name node will not be 
+     * able to turn off safe mode automatically.<br>
+     * Safe mode can always be turned off manually.
+     * 
+     * @param action  <ul> <li>0 leave safe mode;</li>
+     *                <li>1 enter safe mode;</li>
+     *                <li>2 get safe mode state.</li></ul>
+     * @return <ul><li>0 if the safe mode is OFF or</li> 
+     *         <li>1 if the safe mode is ON.</li></ul>
+     * @throws IOException
+     * @author Konstantin Shvachko
+     */
+    public boolean setSafeMode( FSConstants.SafeModeAction action ) throws IOException;
 }

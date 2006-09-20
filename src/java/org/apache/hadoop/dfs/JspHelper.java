@@ -165,4 +165,9 @@ public class JspHelper {
       out.print("</tbody></table>");
     }
 
+    public String getSafeModeText() {
+      if( ! fsn.isInSafeMode() )
+        return "";
+      return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "<em>";
+    }
 }

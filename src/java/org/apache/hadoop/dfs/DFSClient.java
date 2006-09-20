@@ -351,6 +351,17 @@ class DFSClient implements FSConstants {
     public DatanodeInfo[] datanodeReport() throws IOException {
         return namenode.getDatanodeReport();
     }
+    
+    /**
+     * Enter, leave or get safe mode.
+     * See {@link ClientProtocol#setSafeMode(FSConstants.SafeModeAction)} 
+     * for more details.
+     * 
+     * @see ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
+     */
+    public boolean setSafeMode( SafeModeAction action ) throws IOException {
+      return namenode.setSafeMode( action );
+    }
 
     /**
      */

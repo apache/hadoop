@@ -75,8 +75,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     private FSNamesystem namesystem;
     private Server server;
     private int handlerCount = 2;
-    private long datanodeStartupPeriod;
-    private volatile long firstBlockReportTime;
     
     /** only used for testing purposes  */
     private boolean stopRequested = false;
@@ -134,8 +132,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         this.namesystem = new FSNamesystem(dir, conf);
         this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
         this.server = RPC.getServer(this, bindAddress, port, handlerCount, false, conf);
-        this.datanodeStartupPeriod =
-            conf.getLong("dfs.datanode.startupMsec", DATANODE_STARTUP_PERIOD);
         this.server.start();
         myMetrics = new NameNodeMetrics();
     }
@@ -360,7 +356,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
             throw new IOException("mkdirs: Pathname too long.  Limit " 
                 + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
         }
-        return namesystem.mkdirs(new UTF8(src));
+        return namesystem.mkdirs( src );
     }
 
     /**
@@ -423,6 +419,22 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         }
         return results;
     }
+    
+    /**
+     * @inheritDoc
+     */
+    public boolean setSafeMode( SafeModeAction action ) throws IOException {
+      switch( action ) {
+      case SAFEMODE_LEAVE: // leave safe mode
+        namesystem.leaveSafeMode();
+        break;
+      case SAFEMODE_ENTER: // enter safe mode
+        namesystem.enterSafeMode();
+        break;
+      case SAFEMODE_GET: // get safe mode
+      }
+      return namesystem.isInSafeMode();
+    }
 
     ////////////////////////////////////////////////////////////////
     // DatanodeProtocol
@@ -448,23 +460,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                       int xceiverCount) throws IOException {
         verifyRequest( nodeReg );
         namesystem.gotHeartbeat( nodeReg, capacity, remaining, xceiverCount );
-        
-        //
-        // Only ask datanodes to perform block operations (transfer, delete) 
-        // after a startup quiet period.  The assumption is that all the
-        // datanodes will be started together, but the namenode may
-        // have been started some time before.  (This is esp. true in
-        // the case of network interruptions.)  So, wait for some time
-        // to pass from the time of connection to the first block-transfer.
-        // Otherwise we transfer a lot of blocks unnecessarily.
-        //
-        // Hairong: Ideally in addition we also look at the history. For example,
-        // we should wait until at least 98% of datanodes are connected to the server
-        //
-        if( firstBlockReportTime==0 ||
-            System.currentTimeMillis()-firstBlockReportTime < datanodeStartupPeriod) {
-            return null;
-        }
         
         //
         // Ask to perform pending transfers, if any
@@ -493,8 +488,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         verifyRequest( nodeReg );
         stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
                 +"from "+nodeReg.getName()+" "+blocks.length+" blocks" );
-        if( firstBlockReportTime==0)
-              firstBlockReportTime=System.currentTimeMillis();
 
         return namesystem.processReport( nodeReg, blocks );
      }

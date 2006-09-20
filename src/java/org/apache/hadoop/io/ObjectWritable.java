@@ -145,7 +145,8 @@ public class ObjectWritable implements Writable, Configurable {
       } else {
         throw new IllegalArgumentException("Not a primitive: "+declaredClass);
       }
-      
+    } else if (declaredClass.isEnum() ) {         // enum
+      UTF8.writeString( out, ((Enum)instance).name() );
     } else if (Writable.class.isAssignableFrom(declaredClass)) { // Writable
       UTF8.writeString(out, instance.getClass().getName());
       ((Writable)instance).write(out);
@@ -212,7 +213,8 @@ public class ObjectWritable implements Writable, Configurable {
       
     } else if (declaredClass == String.class) {        // String
       instance = UTF8.readString(in);
-      
+    } else if( declaredClass.isEnum() ) {         // enum
+      instance = Enum.valueOf( declaredClass, UTF8.readString(in) );
     } else {                                      // Writable
       Class instanceClass = null;
       try {

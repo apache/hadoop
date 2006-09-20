@@ -253,4 +253,16 @@ public class DistributedFileSystem extends FileSystem {
     public DatanodeInfo[] getDataNodeStats() throws IOException {
       return dfs.datanodeReport();
     }
+    
+    /**
+     * Enter, leave or get safe mode.
+     * See {@link ClientProtocol#setSafeMode(FSConstants.SafeModeAction)} 
+     * for more details.
+     *  
+     * @see ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
+     */
+    public boolean setSafeMode( FSConstants.SafeModeAction action ) 
+    throws IOException {
+      return dfs.setSafeMode( action );
+    }
 }

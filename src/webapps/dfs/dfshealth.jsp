@@ -105,6 +105,8 @@ This NameNode has been up since <%= fsn.getStartTime()%>.<br><br>
 <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b>
 <hr>
 <h2>Cluster Summary</h2>
+<b> <%= jspHelper.getSafeModeText()%> </b>
+<p>
 The capacity of this cluster is <%= totalCapacity()%> and remaining is <%= totalRemaining()%>.
 <br>
 <% 

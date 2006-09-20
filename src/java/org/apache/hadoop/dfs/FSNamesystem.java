@@ -165,9 +165,9 @@ class FSNamesystem implements FSConstants {
     // Threaded object that checks to see if we have been
     // getting heartbeats from all clients. 
     //
-    HeartbeatMonitor hbmon = null;
-    LeaseMonitor lmon = null;
-    Daemon hbthread = null, lmthread = null;
+    Daemon hbthread = null;   // HeartbeatMonitor thread
+    Daemon lmthread = null;   // LeaseMonitor thread
+    Daemon smmthread = null;  // SafeModeMonitor thread
     boolean fsRunning = true;
     long systemStart = 0;
 
@@ -183,6 +183,7 @@ class FSNamesystem implements FSConstants {
     public static FSNamesystem fsNamesystemObject;
     private String localMachine;
     private int port;
+    private SafeModeInfo safeMode;  // safe mode information
 
     /**
      * dir is where the filesystem directory state 
@@ -190,33 +191,44 @@ class FSNamesystem implements FSConstants {
      */
     public FSNamesystem(File dir, Configuration conf) throws IOException {
         fsNamesystemObject = this;
-        this.infoPort = conf.getInt("dfs.info.port", 50070);
-        this.infoBindAddress = conf.get("dfs.info.bindAddress", "0.0.0.0");
-        this.infoServer = new StatusHttpServer("dfs",infoBindAddress, infoPort, false);
-        this.infoServer.start();
         InetSocketAddress addr = DataNode.createSocketAddr(conf.get("fs.default.name", "local"));
-        this.localMachine = addr.getHostName();
-        this.port = addr.getPort();
-        this.dir = new FSDirectory(dir);
-        this.dir.loadFSImage( conf );
-        this.hbthread = new Daemon(new HeartbeatMonitor());
-        this.lmthread = new Daemon(new LeaseMonitor());
-        hbthread.start();
-        lmthread.start();
-        this.systemStart = System.currentTimeMillis();
-        this.startTime = new Date(systemStart); 
-
         this.maxReplication = conf.getInt("dfs.replication.max", 512);
         this.minReplication = conf.getInt("dfs.replication.min", 1);
+        if( minReplication <= 0 )
+          throw new IOException(
+              "Unexpected configuration parameters: dfs.replication.min = " 
+              + minReplication
+              + " must be greater than 0" );
+        if( maxReplication >= (int)Short.MAX_VALUE )
+          throw new IOException(
+              "Unexpected configuration parameters: dfs.replication.max = " 
+              + maxReplication + " must be less than " + (Short.MAX_VALUE) );
         if( maxReplication < minReplication )
           throw new IOException(
               "Unexpected configuration parameters: dfs.replication.min = " 
               + minReplication
               + " must be less than dfs.replication.max = " 
               + maxReplication );
-
         this.maxReplicationStreams = conf.getInt("dfs.max-repl-streams", 2);
         this.heartBeatRecheck= 1000;
+
+        this.localMachine = addr.getHostName();
+        this.port = addr.getPort();
+        this.dir = new FSDirectory(dir);
+        this.dir.loadFSImage( conf );
+        this.safeMode = new SafeModeInfo( conf );
+        setBlockTotal();
+        this.hbthread = new Daemon(new HeartbeatMonitor());
+        this.lmthread = new Daemon(new LeaseMonitor());
+        hbthread.start();
+        lmthread.start();
+        this.systemStart = now();
+        this.startTime = new Date(systemStart); 
+
+        this.infoPort = conf.getInt("dfs.info.port", 50070);
+        this.infoBindAddress = conf.get("dfs.info.bindAddress", "0.0.0.0");
+        this.infoServer = new StatusHttpServer("dfs",infoBindAddress, infoPort, false);
+        this.infoServer.start();
     }
     /** Return the FSNamesystem object
      * 
@@ -308,6 +320,8 @@ class FSNamesystem implements FSConstants {
     public boolean setReplication(String src, 
                                   short replication
                                 ) throws IOException {
+      if( isInSafeMode() )
+        throw new SafeModeException( "Cannot set replication for " + src, safeMode );
       verifyReplication(src, replication, null );
 
       Vector oldReplication = new Vector();
@@ -382,6 +396,8 @@ class FSNamesystem implements FSConstants {
                                           ) throws IOException {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: file "
             +src+" for "+holder+" at "+clientMachine);
+      if( isInSafeMode() )
+        throw new SafeModeException( "Cannot create file" + src, safeMode );
       try {
         if (pendingCreates.get(src) != null) {
            throw new AlreadyBeingCreatedException(
@@ -465,6 +481,8 @@ class FSNamesystem implements FSConstants {
                                                     ) throws IOException {
         NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: file "
             +src+" for "+clientName);
+        if( isInSafeMode() )
+          throw new SafeModeException( "Cannot add block to " + src, safeMode );
         FileUnderConstruction pendingFile = 
           (FileUnderConstruction) pendingCreates.get(src);
         // make sure that we still have the lease on this file
@@ -562,8 +580,11 @@ class FSNamesystem implements FSConstants {
      * Before we return, we make sure that all the file's blocks have 
      * been reported by datanodes and are replicated correctly.
      */
-    public synchronized int completeFile(UTF8 src, UTF8 holder) {
+    public synchronized int completeFile( UTF8 src, 
+                                          UTF8 holder) throws IOException {
         NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder );
+        if( isInSafeMode() )
+          throw new SafeModeException( "Cannot complete file " + src, safeMode );
         if (dir.getFile(src) != null || pendingCreates.get(src) == null) {
             NameNode.stateChangeLog.warn( "DIR* NameSystem.completeFile: "
                     + "failed to complete " + src
@@ -705,8 +726,10 @@ class FSNamesystem implements FSConstants {
     /**
      * Change the indicated filename.
      */
-    public boolean renameTo(UTF8 src, UTF8 dst) {
+    public boolean renameTo(UTF8 src, UTF8 dst) throws IOException {
         NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src + " to " + dst );
+        if( isInSafeMode() )
+          throw new SafeModeException( "Cannot rename " + src, safeMode );
         return dir.renameTo(src, dst);
     }
 
@@ -714,8 +737,10 @@ class FSNamesystem implements FSConstants {
      * Remove the indicated filename from the namespace.  This may
      * invalidate some blocks that make up the file.
      */
-    public synchronized boolean delete(UTF8 src) {
+    public synchronized boolean delete(UTF8 src) throws IOException {
         NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src );
+        if( isInSafeMode() )
+          throw new SafeModeException( "Cannot delete " + src, safeMode );
         Block deletedBlocks[] = (Block[]) dir.delete(src);
         if (deletedBlocks != null) {
             for (int i = 0; i < deletedBlocks.length; i++) {
@@ -762,8 +787,10 @@ class FSNamesystem implements FSConstants {
     /**
      * Create all the necessary directories
      */
-    public boolean mkdirs(UTF8 src) {
+    public boolean mkdirs( String src ) throws IOException {
         NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src );
+        if( isInSafeMode() )
+          throw new SafeModeException( "Cannot create directory " + src, safeMode );
         return dir.mkdirs(src);
     }
 
@@ -847,10 +874,10 @@ class FSNamesystem implements FSConstants {
             renew();
         }
         public void renew() {
-            this.lastUpdate = System.currentTimeMillis();
+            this.lastUpdate = now();
         }
         public boolean expired() {
-            if (System.currentTimeMillis() - lastUpdate > LEASE_PERIOD) {
+            if (now() - lastUpdate > LEASE_PERIOD) {
                 return true;
             } else {
                 return false;
@@ -943,7 +970,11 @@ class FSNamesystem implements FSConstants {
     /**
      * Get a lock (perhaps exclusive) on the given file
      */
-    public synchronized int obtainLock(UTF8 src, UTF8 holder, boolean exclusive) {
+    public synchronized int obtainLock( UTF8 src, 
+                                        UTF8 holder, 
+                                        boolean exclusive) throws IOException {
+        if( isInSafeMode() )
+          throw new SafeModeException( "Cannot lock file " + src, safeMode );
         int result = dir.obtainLock(src, holder, exclusive);
         if (result == COMPLETE_SUCCESS) {
             synchronized (leases) {
@@ -1013,8 +1044,10 @@ class FSNamesystem implements FSConstants {
     /**
      * Renew the lease(s) held by the given client
      */
-    public void renewLease(UTF8 holder) {
+    public void renewLease(UTF8 holder) throws IOException {
         synchronized (leases) {
+            if( isInSafeMode() )
+              throw new SafeModeException( "Cannot renew lease for " + holder, safeMode );
             Lease lease = (Lease) leases.get(holder);
             if (lease != null) {
                 sortedLeases.remove(lease);
@@ -1102,7 +1135,9 @@ class FSNamesystem implements FSConstants {
             "BLOCK* NameSystem.registerDatanode: "
             + "node " + nodeS.name
             + " is replaced by " + nodeReg.getName() + "." );
+        getEditLog().logRemoveDatanode( nodeS );
         nodeS.name = nodeReg.getName();
+        getEditLog().logAddDatanode( nodeS );
         return;
       }
 
@@ -1391,6 +1426,9 @@ class FSNamesystem implements FSConstants {
             FSDirectory.INode fileINode = dir.getFileByBlock(block);
             if( fileINode == null )  // block does not belong to any file
                 return;
+            // check whether safe replication is reached for the block
+            // only if it is a part of a files
+            incrementSafeBlockCount( containingNodes.size() );
             short fileReplication = fileINode.getReplication();
             if (containingNodes.size() >= fileReplication ) {
                 neededReplications.remove(block);
@@ -1494,9 +1532,14 @@ class FSNamesystem implements FSConstants {
                 +block.getBlockName() + " from "+node.getName() );
         TreeSet containingNodes = (TreeSet) blocksMap.get(block);
         if (containingNodes == null || ! containingNodes.contains(node)) {
-            throw new IllegalArgumentException("No machine mapping found for block " + block + ", which should be at node " + node);
+          NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
+            +block.getBlockName()+" has already been removed from node "+node );
+          return;
         }
         containingNodes.remove(node);
+        decrementSafeBlockCount( containingNodes.size() );
+        if( containingNodes.size() == 0 )
+          blocksMap.remove(block);
         //
         // It's possible that the block was removed because of a datanode
         // failure.  If the block is still valid, check if replication is
@@ -1631,6 +1674,11 @@ class FSNamesystem implements FSConstants {
      * Check if there are any recently-deleted blocks a datanode should remove.
      */
     public synchronized Block[] blocksToInvalidate( DatanodeID nodeID ) {
+        // Ask datanodes to perform block delete  
+        // only if safe mode is off.
+        if( isInSafeMode() )
+          return null;
+        
         Vector invalidateSet = (Vector) recentInvalidateSets.remove( 
                                                       nodeID.getStorageID() );
  
@@ -1661,6 +1709,11 @@ class FSNamesystem implements FSConstants {
      */
     public synchronized Object[] pendingTransfers(DatanodeID srcNode,
                                                   int xmitsInProgress) {
+    // Ask datanodes to perform block replication  
+    // only if safe mode is off.
+    if( isInSafeMode() )
+      return null;
+    
     synchronized (neededReplications) {
       Object results[] = null;
       int scheduledXfers = 0;
@@ -1692,7 +1745,7 @@ class FSNamesystem implements FSConstants {
                                                       srcNode.getStorageID() );
             // srcNode must contain the block, and the block must
             // not be scheduled for removal on that node
-            if (containingNodes.contains(srcNode)
+            if (containingNodes != null && containingNodes.contains(srcNode)
                 && (excessBlocks == null || ! excessBlocks.contains(block))) {
               DatanodeDescriptor targets[] = chooseTargets(
                   Math.min( fileINode.getReplication() - containingNodes.size(),
@@ -2024,4 +2077,354 @@ class FSNamesystem implements FSConstants {
       return infoPort;
     }
 
+    /**
+     * SafeModeInfo contains information related to the safe mode.
+     * <p>
+     * An instance of {@link SafeModeInfo} is created when the name node
+     * enters safe mode.
+     * <p>
+     * During name node startup {@link SafeModeInfo} counts the number of
+     * <em>safe blocks</em>, those that have at least the minimal number of
+     * replicas, and calculates the ratio of safe blocks to the total number
+     * of blocks in the system, which is the size of
+     * {@link FSDirectory#activeBlocks}. When the ratio reaches the
+     * {@link #threshold} it starts the {@link SafeModeMonitor} daemon in order
+     * to monitor whether the safe mode extension is passed. Then it leaves safe
+     * mode and destroys itself.
+     * <p>
+     * If safe mode is turned on manually then the number of safe blocks is
+     * not tracked because the name node is not intended to leave safe mode
+     * automatically in the case.
+     *
+     * @see ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
+     * @see SafeModeMonitor
+     * @author Konstantin Shvachko
+     */
+    class SafeModeInfo {
+      // configuration fields
+      /** Safe mode threshold condition %.*/
+      private double threshold;
+      /** Safe mode extension after the threshold. */
+      private int extension;
+      /** Min replication required by safe mode. */
+      private int safeReplication;
+      
+      // internal fields
+      /** Time when threshold was reached.
+       * 
+       * <br>-1 safe mode is off
+       * <br> 0 safe mode is on, but threshold is not reached yet 
+       */
+      private long reached = -1;  
+      /** Total number of blocks. */
+      int blockTotal; 
+      /** Number of safe blocks. */
+      private int blockSafe;
+      
+      /**
+       * Creates SafeModeInfo when the name node enters
+       * automatic safe mode at startup.
+       *  
+       * @param conf configuration
+       */
+      SafeModeInfo( Configuration conf ) {
+        this.threshold = conf.getFloat( "dfs.safemode.threshold.pct", 0.95f );
+        this.extension = conf.getInt( "dfs.safemode.extension", 0 );
+        this.safeReplication = conf.getInt( "dfs.replication.min", 1 );
+        this.blockTotal = 0; 
+        this.blockSafe = 0;
+      }
+
+      /**
+       * Creates SafeModeInfo when safe mode is entered manually.
+       *
+       * The {@link #threshold} is set to 1.5 so that it could never be reached.
+       * {@link #blockTotal} is set to -1 to indicate that safe mode is manual.
+       * 
+       * @see SafeModeInfo
+       */
+      private SafeModeInfo() {
+        this.threshold = 1.5f;  // this threshold can never be riched
+        this.extension = 0;
+        this.safeReplication = Short.MAX_VALUE + 1; // more than maxReplication
+        this.blockTotal = -1;
+        this.blockSafe = -1;
+        this.reached = -1;
+        enter();
+      }
+      
+      /**
+       * Check if safe mode is on.
+       * @return true if in safe mode
+       */
+      synchronized boolean isOn() {
+        try {
+          isConsistent();   // SHV this an assert
+        } catch( IOException e ) {
+          System.err.print( StringUtils.stringifyException( e ));
+        }
+        return this.reached >= 0;
+      }
+      
+      /**
+       * Enter safe mode.
+       */
+      void enter() {
+        if( reached != 0 )
+          NameNode.stateChangeLog.info(
+            "STATE* SafeModeInfo.enter: " + "Safe mode is ON.\n" 
+            + getTurnOffTip() );
+        this.reached = 0;
+      }
+      
+      /**
+       * Leave safe mode.
+       */
+      synchronized void leave() {
+        if( reached >= 0 )
+          NameNode.stateChangeLog.info(
+            "STATE* SafeModeInfo.leave: " + "Safe mode is OFF." ); 
+        reached = -1;
+        safeMode = null;
+      }
+      
+      /** 
+       * Safe mode can be turned off iff 
+       * the threshold is reached and 
+       * the extension time have passed.
+       * @return true if can leave or false otherwise.
+       */
+      synchronized boolean canLeave() {
+        if( reached == 0 )
+          return false;
+        if( now() - reached < extension )
+          return false;
+        return ! needEnter();
+      }
+      
+      /** 
+       * There is no need to enter safe mode 
+       * if DFS is empty or {@link #threshold} == 0
+       */
+      boolean needEnter() {
+        return getSafeBlockRatio() < threshold;
+      }
+      
+      /**
+       * Ratio of the number of safe blocks to the total number of blocks 
+       * to be compared with the threshold.
+       */
+      private float getSafeBlockRatio() {
+        return ( blockTotal == 0 ? 1 : (float)blockSafe/blockTotal );
+      }
+      
+      /**
+       * Check and trigger safe mode if needed. 
+       */
+      private void checkMode() {
+        if( needEnter() ) {
+          enter();
+          return;
+        }
+        // the threshold is reached
+        if( ! isOn() ||                           // safe mode is off
+            extension <= 0 || threshold <= 0 ) {  // don't need to wait
+          this.leave();                           // just leave safe mode
+          return;
+        }
+        if( reached > 0 )  // threshold has already been reached before
+          return;
+        // start monitor
+        reached = now();
+        smmthread = new Daemon(new SafeModeMonitor());
+        smmthread.start();
+      }
+      
+      /**
+       * Set total number of blocks.
+       */
+      synchronized void setBlockTotal( int total) {
+        this.blockTotal = total; 
+        checkMode();
+      }
+      
+      /**
+       * Increment number of safe blocks if current block has 
+       * reached minimal replication.
+       * @param replication current replication 
+       */
+      synchronized void incrementSafeBlockCount( short replication ) {
+        if( (int)replication == safeReplication )
+          this.blockSafe++;
+        checkMode();
+      }
+      
+      /**
+       * Decrement number of safe blocks if current block has 
+       * fallen below minimal replication.
+       * @param replication current replication 
+       */
+      synchronized void decrementSafeBlockCount( short replication ) {
+        if( replication == safeReplication-1 )
+          this.blockSafe--;
+        checkMode();
+      }
+      
+      /**
+       * Check if safe mode was entered manually or at startup.
+       */
+      boolean isManual() {
+        return blockTotal == -1;
+      }
+      
+      /**
+       * A tip on how safe mode is to be turned off: manually or automatically.
+       */
+      String getTurnOffTip() {
+        return ( isManual() ? 
+            "Use \"hadoop dfs -safemode leave\" to turn safe mode off." :
+            "Safe mode will be turned off automatically." );
+      }
+      
+      /**
+       * Returns printable state of the class.
+       */
+      public String toString() {
+        String resText = "Current safe block ratio = " 
+          + getSafeBlockRatio() 
+          + ". Target threshold = " + threshold
+          + ". Minimal replication = " + safeReplication + ".";
+        if( reached > 0 ) 
+          resText += " Threshold was reached " + new Date(reached) + ".";
+        return resText;
+      }
+      
+      /**
+       * Checks consistency of the class state.
+       * @deprecated This is for debugging purposes.
+       */
+      void isConsistent() throws IOException {
+        if( blockTotal == -1 && blockSafe == -1 ) {
+          return; // manual safe mode
+        }
+        int activeBlocks = dir.activeBlocks.size();
+        if( blockTotal != activeBlocks )
+          throw new IOException( "blockTotal " + blockTotal 
+              + " does not match all blocks count. " 
+              + "activeBlocks = " + activeBlocks 
+              + ". safeBlocks = " + blockSafe 
+              + " safeMode is: " 
+              + ((safeMode == null) ? "null" : safeMode.toString()) ); 
+        if( blockSafe < 0 || blockSafe > blockTotal )
+          throw new IOException( "blockSafe " + blockSafe 
+              + " is out of range [0," + blockTotal + "]. " 
+              + "activeBlocks = " + activeBlocks 
+              + " safeMode is: " 
+              + ((safeMode == null) ? "null" : safeMode.toString()) ); 
+      } 
+    }
+    
+    /**
+     * Periodically check whether it is time to leave safe mode.
+     * This thread starts when the threshold level is reached.
+     *
+     * @author Konstantin Shvachko
+     */
+    class SafeModeMonitor implements Runnable {
+      /** interval in msec for checking safe mode: {@value} */
+      private static final long recheckInterval = 1000;
+      
+      /**
+       */
+      public void run() {
+        while( ! safeMode.canLeave() ) {
+          try {
+            Thread.sleep(recheckInterval);
+          } catch (InterruptedException ie) {
+          }
+        }
+        // leave safe mode an stop the monitor
+        safeMode.leave();
+        smmthread = null;
+      }
+    }
+    
+    /**
+     * Current system time.
+     * @return current time in msec.
+     */
+    static long now() {
+      return System.currentTimeMillis();
+    }
+    
+    /**
+     * Check whether the name node is in safe mode.
+     * @return true if safe mode is ON, false otherwise
+     */
+    boolean isInSafeMode() {
+      if( safeMode == null )
+        return false;
+      return safeMode.isOn();
+    }
+    
+    /**
+     * Increment number of blocks that reached minimal replication.
+     * @param replication current replication 
+     */
+    void incrementSafeBlockCount( int replication ) {
+      if( safeMode == null )
+        return;
+      safeMode.incrementSafeBlockCount( (short)replication );
+    }
+
+    /**
+     * Decrement number of blocks that reached minimal replication.
+     * @param replication current replication
+     */
+    void decrementSafeBlockCount( int replication ) {
+      if( safeMode == null )
+        return;
+      safeMode.decrementSafeBlockCount( (short)replication );
+    }
+
+    /**
+     * Set the total number of blocks in the system. 
+     */
+    void setBlockTotal() {
+      if( safeMode == null )
+        return;
+      safeMode.setBlockTotal( dir.activeBlocks.size() );
+    }
+
+    /**
+     * Enter safe mode manually.
+     * @throws IOException
+     */
+    synchronized void enterSafeMode() throws IOException {
+      if( isInSafeMode() ) {
+        NameNode.stateChangeLog.info(
+            "STATE* FSNamesystem.enterSafeMode: " + "Safe mode is already ON."); 
+        return;
+      }
+      safeMode = new SafeModeInfo();
+    }
+    
+    /**
+     * Leave safe mode.
+     * @throws IOException
+     */
+    synchronized void leaveSafeMode() throws IOException {
+      if( ! isInSafeMode() ) {
+        NameNode.stateChangeLog.info(
+            "STATE* FSNamesystem.leaveSafeMode: " + "Safe mode is already OFF."); 
+        return;
+      }
+      safeMode.leave();
+    }
+    
+    String getSafeModeTip() {
+      if( ! isInSafeMode() )
+        return "";
+      return safeMode.getTurnOffTip();
+    }
 }

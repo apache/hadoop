@@ -241,6 +241,32 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>dfs.blockreport.intervalMsec</name>
+  <value>3600000</value>
+  <description>Determines block reporting interval.</description>
+</property>
+
+<property>
+  <name>dfs.safemode.threshold.pct</name>
+  <value>0.95f</value>
+  <description>
+  	Specifies the percentage of blocks that should satisfy 
+  	the minimal replication requirement defined by dfs.replication.min.
+  	Values less than or equal to 0 mean not to start in safe mode.
+  	Values greater than 1 will make safe mode permanent.
+ 	</description>
+</property>
+
+<property>
+  <name>dfs.safemode.extension</name>
+  <value>30000</value>
+  <description>
+  	Determines extension of safe mode in milliseconds 
+  	after the threshold level is reached.
+ 	</description>
+</property>
+
 
 <!-- map/reduce properties -->
 
@@ -552,7 +578,7 @@ creations/deletions), or "all".</description>
 <property>
   <name>ipc.client.idlethreshold</name>
   <value>4000</value>
-  <description>Defines the threshold numner of connections after which
+  <description>Defines the threshold number of connections after which
                connections will be inspected for idleness.
   </description>
 </property>

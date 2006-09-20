@@ -102,7 +102,6 @@ public interface FSConstants {
     public static long HEARTBEAT_INTERVAL = 3 * 1000;
     public static long EXPIRE_INTERVAL = 10 * 60 * 1000;
     public static long BLOCKREPORT_INTERVAL = 60 * 60 * 1000;
-    public static long DATANODE_STARTUP_PERIOD = 2 * 60 * 1000;
     public static long LEASE_PERIOD = 60 * 1000;
     public static int READ_TIMEOUT = 60 * 1000;
 
@@ -113,6 +112,9 @@ public interface FSConstants {
     
     //TODO mb@media-style.com: should be conf injected?
     public static final int BUFFER_SIZE = new Configuration().getInt("io.file.buffer.size", 4096);
+
+    // SafeMode actions
+    public enum SafeModeAction{ SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET; }
 
     // Version is reflected in the dfs image and edit log files.
     // Version is reflected in the data storage file.

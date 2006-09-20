@@ -300,7 +300,10 @@ public class DFSShell extends ToolBase {
         long raw = dfs.getRawCapacity();
         long rawUsed = dfs.getRawUsed();
         long used = dfs.getUsed();
+        boolean mode = dfs.setSafeMode( FSConstants.SafeModeAction.SAFEMODE_GET );
 
+        if( mode )
+          System.out.println("Safe mode is ON" );
         System.out.println("Total raw bytes: " + raw + " (" + byteDesc(raw) + ")");
         System.out.println("Used raw bytes: " + rawUsed + " (" + byteDesc(rawUsed) + ")");
         System.out.println("% used: " + limitDecimal(((1.0 * rawUsed) / raw) * 100, 2) + "%");
@@ -318,18 +321,65 @@ public class DFSShell extends ToolBase {
         }
       }
     }
+    
+    /**
+     * Safe mode maintenance command.
+     * 
+     * Usage: java DFSShell -safemode [enter | leave | get]
+     */
+    public void setSafeMode( String argv[], int idx ) throws IOException {
+      final String safeModeUsage = "Usage: java DFSShell -safemode [enter | leave | get]";
+      if( ! (fs instanceof DistributedFileSystem) ) {
+        System.out.println( "FileSystem is " + fs.getName() );
+        return;
+      }
+      if( idx != argv.length-1 ) {
+        System.out.println( safeModeUsage );
+        return;
+      }
+      FSConstants.SafeModeAction action;
+      if( "leave".equalsIgnoreCase(argv[idx]) )
+        action = FSConstants.SafeModeAction.SAFEMODE_LEAVE;
+      else if( "enter".equalsIgnoreCase(argv[idx]) )
+        action = FSConstants.SafeModeAction.SAFEMODE_ENTER;
+      else if( "get".equalsIgnoreCase(argv[idx]) )
+        action = FSConstants.SafeModeAction.SAFEMODE_GET;
+      else {
+        System.out.println( safeModeUsage );
+        return;
+      }
+      DistributedFileSystem dfs = (DistributedFileSystem)fs;
+      boolean mode = dfs.setSafeMode( action );
+      System.out.println( "Safe mode is " + ( mode ? "ON" : "OFF" ));
+    }
 
     /**
      * run
      */
     public int run( String argv[] ) throws Exception {
         if (argv.length < 1) {
-            System.out.println("Usage: java DFSShell [-fs <local | namenode:port>]"+
-                    " [-conf <configuration file>] [-D <[property=value>]"+
-                    " [-ls <path>] [-lsr <path>] [-du <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]" +
-                    " [-put <localsrc> <dst>] [-copyFromLocal <localsrc> <dst>] [-moveFromLocal <localsrc> <dst>]" + 
-                    " [-get <src> <localdst>] [-getmerge <src> <localdst> [addnl]] [-cat <src>] [-copyToLocal <src> <localdst>]" +
-                    " [-moveToLocal <src> <localdst>] [-mkdir <path>] [-report] [-setrep [-R] <rep> <path/file>]");
+            System.out.println("Usage: java DFSShell" + 
+                " [-fs <local | namenode:port>]" +
+                " [-conf <configuration file>]" +
+                " [-D <[property=value>]"+
+                " [-ls <path>]"+
+                " [-lsr <path>]"+
+                " [-du <path>]"+
+                " [-mv <src> <dst>]"+
+                " [-cp <src> <dst>]"+
+                " [-rm <src>]" +
+                " [-put <localsrc> <dst>]"+
+                " [-copyFromLocal <localsrc> <dst>]"+
+                " [-moveFromLocal <localsrc> <dst>]" + 
+                " [-get <src> <localdst>]"+
+                " [-getmerge <src> <localdst> [addnl]]"+
+                " [-cat <src>]"+
+                " [-copyToLocal <src> <localdst>]" +
+                " [-moveToLocal <src> <localdst>]"+
+                " [-mkdir <path>]"+
+                " [-report]"+
+                " [-setrep [-R] <rep> <path/file>]" +
+                " [-safemode enter | leave | get]");
             return -1;
         }
 
@@ -377,6 +427,8 @@ public class DFSShell extends ToolBase {
                 mkdir(argv[i++]);
             } else if ("-report".equals(cmd)) {
                 report();
+            } else if ("-safemode".equals(cmd)) {
+                setSafeMode(argv,i);
             }
             exitCode = 0;;
         } catch (IOException e ) {
