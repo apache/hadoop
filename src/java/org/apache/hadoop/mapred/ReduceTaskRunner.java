@@ -116,7 +116,7 @@ class ReduceTaskRunner extends TaskRunner {
     public MapOutputLocation getLocation() { return loc; }
   }
 
-  private static class PingTimer implements Progressable {
+  private class PingTimer implements Progressable {
     private long pingTime;
     
     public synchronized void reset() {
@@ -130,6 +130,7 @@ class ReduceTaskRunner extends TaskRunner {
     public void progress() {
       synchronized (this) {
         pingTime = System.currentTimeMillis();
+        getTask().reportProgress(getTracker());
       }
     }
   }

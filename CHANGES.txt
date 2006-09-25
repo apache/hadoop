@@ -65,6 +65,10 @@ Trunk (unreleased changes)
     tracker every 10 seconds rather than every 100 records, to avoid
     task timeouts.  (Michel Tourn via cutting)
 
+17. HADOOP-547.  Fix reduce tasks to ping tasktracker while copying
+    data, rather than only between copies, avoiding task timeouts.
+    (Sanjay Dahiya via cutting)
+
 
 Release 0.6.2 (unreleased)
 
