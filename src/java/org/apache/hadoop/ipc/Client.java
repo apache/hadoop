@@ -19,6 +19,7 @@ package org.apache.hadoop.ipc;
 import java.net.Socket;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 
 import java.io.IOException;
 import java.io.EOFException;
@@ -117,10 +118,11 @@ public class Client {
     private boolean shouldCloseConnection = false;
 
     public Connection(InetSocketAddress address) throws IOException {
+      if (address.isUnresolved()) {
+         throw new UnknownHostException("unknown host: " + address.getHostName());
+      }
       this.address = address;
-      this.setName("Client connection to "
-                   + address.getAddress().getHostAddress()
-                   + ":" + address.getPort());
+      this.setName("Client connection to " + address.toString());
       this.setDaemon(true);
     }
 

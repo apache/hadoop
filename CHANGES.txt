@@ -73,6 +73,9 @@ Trunk (unreleased changes)
     build/, no longer modifying the source tree.
     (Arun C Murthy via cutting)
 
+19. HADOOP-487.  Throw a more informative exception for unknown RPC
+    hosts.  (Sameer Paranjpye via cutting)
+
 
 Release 0.6.2 (unreleased)
 
