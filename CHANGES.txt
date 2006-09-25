@@ -61,6 +61,11 @@ Trunk (unreleased changes)
     extend ObjectWritable to handle enums, so that they can be passed
     as RPC parameters.  (Sanjay Dahiya via cutting)
 
+16. HADOOP-556.  Contrib/streaming: send keep-alive reports to task
+    tracker every 10 seconds rather than every 100 records, to avoid
+    task timeouts.  (Michel Tourn via cutting)
+
+
 Release 0.6.2 (unreleased)
 
 1. HADOOP-532.  Fix a bug reading value-compressed sequence files,

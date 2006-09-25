@@ -497,8 +497,12 @@ public abstract class PipeMapRed {
             output.collect(key, val);
           }
           numRecWritten_++;
-          if (numRecWritten_ % 100 == 0) {
-            logprintln(numRecRead_ + "/" + numRecWritten_);
+          long now = System.currentTimeMillis();
+          if (now-lastStdoutReport > reporterOutDelay_) {
+            lastStdoutReport = now;
+            String hline = "Records R/W=" + numRecRead_ + "/" + numRecWritten_;
+            reporter.setStatus(hline);
+            logprintln(hline);
             logflush();
           }
         }
@@ -511,6 +515,8 @@ public abstract class PipeMapRed {
     OutputCollector output;
     Reporter reporter;
     byte[] answer;
+    long lastStdoutReport = 0;
+    
   }
 
   class MRErrorThread extends Thread {
@@ -529,11 +535,11 @@ public abstract class PipeMapRed {
           String lineStr = new String(line, "UTF-8");
           logprintln(lineStr);
           long now = System.currentTimeMillis(); 
-          if (num < 10 || (now-lastStderrReport > 10*1000)) {
+          if (num < 20 || (now-lastStderrReport > reporterErrDelay_)) {
+            lastStderrReport = now;
             String hline = "MRErr: " + lineStr;
             System.err.println(hline);
             reporter.setStatus(hline);
-            lastStderrReport = now;
           }
         }
       } catch (IOException io) {
@@ -671,11 +677,14 @@ public abstract class PipeMapRed {
   long numRecSkipped_ = 0;
   long nextRecReadLog_ = 1;
 
+  
   long minRecWrittenToEnableSkip_ = Long.MAX_VALUE;
 
   int keyCols_;
   final static int ALL_COLS = Integer.MAX_VALUE;
 
+  long reporterOutDelay_ = 10*1000L; 
+  long reporterErrDelay_ = 10*1000L; 
   long joinDelay_;
   JobConf job_;
   FileSystem fs_;

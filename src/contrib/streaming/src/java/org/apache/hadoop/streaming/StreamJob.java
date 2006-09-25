@@ -46,7 +46,6 @@ public class StreamJob {
 
   protected static final Log LOG = LogFactory.getLog(StreamJob.class.getName());
   final static String REDUCE_NONE = "NONE";
-
   private boolean reducerNone_;
 
   public StreamJob(String[] argv, boolean mayExit) {
@@ -107,12 +106,13 @@ public class StreamJob {
     redCmd_ = unqualifyIfLocalPath(redCmd_);
   }
 
-  void validateNameEqValue(String neqv) {
+  String[] parseNameEqValue(String neqv) {
     String[] nv = neqv.split("=", 2);
     if (nv.length < 2) {
       fail("Invalid name=value spec: " + neqv);
     }
     msg("Recording name=value: name=" + nv[0] + " value=" + nv[1]);
+    return nv;
   }
 
   String unqualifyIfLocalPath(String cmd) throws IOException {
@@ -199,17 +199,17 @@ public class StreamJob {
         configPath_.add(s);
       } else if ((s = optionArg(argv_, i, "-dfs", false)) != null) {
         i++;
-        userJobConfProps_.add("fs.default.name=" + s);
+        userJobConfProps_.put("fs.default.name", s);
       } else if ((s = optionArg(argv_, i, "-jt", false)) != null) {
         i++;
-        userJobConfProps_.add("mapred.job.tracker=" + s);
+        userJobConfProps_.put("mapred.job.tracker", s);
       } else if ((s = optionArg(argv_, i, "-jobconf", false)) != null) {
         i++;
-        validateNameEqValue(s);
-        userJobConfProps_.add(s);
+        String[] nv = parseNameEqValue(s);
+        userJobConfProps_.put(nv[0], nv[1]);
       } else if ((s = optionArg(argv_, i, "-cmdenv", false)) != null) {
         i++;
-        validateNameEqValue(s);
+        parseNameEqValue(s);
         if (addTaskEnvironment_.length() > 0) {
           addTaskEnvironment_ += " ";
         }
@@ -389,8 +389,9 @@ public class StreamJob {
     // First try an explicit spec: it's too hard to find our own location in this case:
     // $HADOOP_HOME/bin/hadoop jar /not/first/on/classpath/custom-hadoop-streaming.jar
     // where findInClasspath() would find the version of hadoop-streaming.jar in $HADOOP_HOME
-    String runtimeClasses = jobConf_.get("stream.shipped.hadoopstreaming"); // jar or class dir
-
+    String runtimeClasses = userJobConfProps_.get("stream.shipped.hadoopstreaming"); // jar or class dir
+System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.hadoopstreaming");
+    
     if (runtimeClasses == null) {
       runtimeClasses = StreamUtil.findInClasspath(StreamJob.class.getName());
     }
@@ -433,13 +434,15 @@ public class StreamJob {
   }
 
   protected void setUserJobConfProps(boolean doEarlyProps) {
-    Iterator it = userJobConfProps_.iterator();
+    Iterator it = userJobConfProps_.keySet().iterator();
     while (it.hasNext()) {
-      String prop = (String) it.next();
-      String[] nv = prop.split("=", 2);
-      if (doEarlyProps == nv[0].equals("fs.default.name")) {
-        msg("xxxJobConf: set(" + nv[0] + ", " + nv[1] + ") early=" + doEarlyProps);
-        jobConf_.set(nv[0], nv[1]);
+      String key = (String) it.next();
+      String val = (String)userJobConfProps_.get(key);
+      boolean earlyName = key.equals("fs.default.name");
+      earlyName |= key.equals("stream.shipped.hadoopstreaming");
+      if (doEarlyProps == earlyName) {
+        msg("xxxJobConf: set(" + key + ", " + val + ") early=" + doEarlyProps);
+        jobConf_.set(key, val);
       }
     }
   }
@@ -752,7 +755,8 @@ public class StreamJob {
   protected boolean hasSimpleInputSpecs_;
   protected ArrayList packageFiles_ = new ArrayList(); // <String>
   protected ArrayList shippedCanonFiles_ = new ArrayList(); // <String>
-  protected ArrayList userJobConfProps_ = new ArrayList(); // <String> name=value
+  //protected ArrayList userJobConfProps_ = new ArrayList(); // <String> name=value
+  protected TreeMap<String, String> userJobConfProps_ = new TreeMap<String, String>(); 
   protected String output_;
   protected String mapsideoutURI_;
   protected String mapCmd_;
