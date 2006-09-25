@@ -69,6 +69,10 @@ Trunk (unreleased changes)
     data, rather than only between copies, avoiding task timeouts.
     (Sanjay Dahiya via cutting)
 
+18. HADOOP-537.  Fix src/c++/libhdfs build process to create files in
+    build/, no longer modifying the source tree.
+    (Arun C Murthy via cutting)
+
 
 Release 0.6.2 (unreleased)
 

@@ -25,47 +25,49 @@
 
 CC = gcc
 LD = gcc
-CFLAGS =  -m32 -g -W -fPIC
+CFLAGS =  -g -W -fPIC
 LDFLAGS = -L$(JAVA_HOME)/jre/lib/$(OS_ARCH)/server -ljvm -m32 -shared -Wl,-x 
-PLATFORM = `echo $$OS_NAME | tr [A-Z] [a-z]`
-LINC = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(PLATFORM)
-HDFS_TEST = hdfs_test
-HDFS_READ_TEST = hdfs_read
-HDFS_WRITE_TEST = hdfs_write
+PLATFORM = $(shell echo $$OS_NAME | tr [A-Z] [a-z])
+CPPFLAGS = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(PLATFORM)
+
 LIB_NAME = hdfs
-SO_TARGET = lib$(LIB_NAME).so.$(SHLIB_VERSION)
-SO = lib$(LIB_NAME).so
-OBJS = hdfs.o
+SO_TARGET = $(LIBHDFS_BUILD_DIR)/lib$(LIB_NAME).so.$(SHLIB_VERSION)
+SO = $(LIBHDFS_BUILD_DIR)/lib$(LIB_NAME).so
+
 RM = rm -rf
 LINK = ln -sf
 DOXYGEN = doxygen
 
+CSRC = \
+	hdfs.c \
+	$(NONE)
+
+COBJS = $(addprefix $(LIBHDFS_BUILD_DIR)/,$(patsubst %,%.o,$(basename $(CSRC))))
+
+HDFS_TEST = $(LIBHDFS_BUILD_DIR)/hdfs_test
+HDFS_READ_TEST = $(LIBHDFS_BUILD_DIR)/hdfs_read
+HDFS_WRITE_TEST = $(LIBHDFS_BUILD_DIR)/hdfs_write
+
 all: $(SO_TARGET) $(HDFS_TEST) $(HDFS_READ_TEST) $(HDFS_WRITE_TEST)
 
-$(SO_TARGET): $(OBJS)
-	$(LD) $(LDFLAGS) -o $(SO_TARGET) -Wl,-soname,$(SO_TARGET) $(OBJS) \
-	&& $(LINK) $(SO_TARGET) $(SO) \
-	&& cp ./$(SO_TARGET) $(LIBHDFS_BUILD_DIR)/ \
-	&& $(LINK) $(LIBHDFS_BUILD_DIR)/$(SO_TARGET) $(LIBHDFS_BUILD_DIR)/$(SO)
-
-$(OBJS): hdfs.c
-	$(CC) $(CFLAGS) $(LINC) -c hdfs.c
+$(SO_TARGET): $(COBJS)
+	$(LD) $(LDFLAGS) -o $(SO_TARGET) -Wl,-soname,$(SO_TARGET) $(COBJS) \
+	&& $(LINK) $(SO_TARGET) $(SO)
+	
+$(LIBHDFS_BUILD_DIR)/%.o: %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(HDFS_TEST): hdfs_test.c
-	$(CC) $(HDFS_TEST).c $(LINC) -L. -l$(LIB_NAME) -m32 -o $(HDFS_TEST) \
-	&& cp $(HDFS_TEST) $(LIBHDFS_BUILD_DIR)/
+	$(CC) $(CPPFLAGS) $< -L$(LIBHDFS_BUILD_DIR) -l$(LIB_NAME) -o $@
 
 $(HDFS_READ_TEST): hdfs_read.c
-	$(CC) $(HDFS_READ_TEST).c $(LINC) -m32 -Wl,-rpath,. -L. -l$(LIB_NAME) -o $(HDFS_READ_TEST) \
-	&& cp $(HDFS_READ_TEST) $(LIBHDFS_BUILD_DIR)/ 
+	$(CC) $(CPPFLAGS) $< -Wl,-rpath,. -L$(LIBHDFS_BUILD_DIR) -l$(LIB_NAME) -o $@ 
 
 $(HDFS_WRITE_TEST): hdfs_write.c
-	$(CC) $(HDFS_WRITE_TEST).c $(LINC) -m32 -Wl,-rpath,. -L. -l$(LIB_NAME) -o $(HDFS_WRITE_TEST) \
-	&& cp $(HDFS_WRITE_TEST) $(LIBHDFS_BUILD_DIR)/ 
+	$(CC) $(CPPFLAGS) $< -Wl,-rpath,. -L$(LIBHDFS_BUILD_DIR) -l$(LIB_NAME) -o $@
 
 clean:
-	$(RM) *.o *.so* $(HDFS_TEST) $(HDFS_READ_TEST) $(HDFS_WRITE_TEST) \
-	$(LIBHDFS_BUILD_DIR)/* ./docs/api 
+	$(RM) $(LIBHDFS_BUILD_DIR)/* 
 
 doc:
 	$(DOXYGEN) docs/Doxyfile
@@ -74,3 +76,4 @@ test: $(HDFS_TEST)
 	./tests/test-libhdfs.sh	
 
 # vim: sw=4: ts=4: noet
+
