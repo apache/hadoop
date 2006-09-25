@@ -591,8 +591,8 @@ class JobInProgress {
      * @param trackerName The task tracker the task failed on
      */
     public void failedTask(TaskInProgress tip, String taskid, 
-                           String reason, String hostname, 
-                           String trackerName,
+                           String reason, Phase phase, 
+                           String hostname, String trackerName,
                            JobTrackerMetrics metrics) {
        TaskStatus status = new TaskStatus(taskid,
                                           tip.isMapTask(),
@@ -600,7 +600,7 @@ class JobInProgress {
                                           TaskStatus.FAILED,
                                           reason,
                                           reason,
-                                          trackerName);
+                                          trackerName, phase);
        updateTaskStatus(tip, status, metrics);
     }
        

@@ -65,6 +65,8 @@ class TaskInProgress {
     private double progress = 0;
     private String state = "";
     private long startTime = 0;
+    private long execStartTime = 0 ;
+    private long execFinishTime = 0 ;
     private int completes = 0;
     private boolean failed = false;
     private TreeSet usableTaskIds = new TreeSet();
@@ -237,9 +239,12 @@ class TaskInProgress {
       for (Iterator i = taskDiagnosticData.values().iterator(); i.hasNext();) {
         diagnostics.addAll((List)i.next());
       }
-      return new TaskReport
-        (getTIPId(), (float)progress, state,
-         (String[])diagnostics.toArray(new String[diagnostics.size()]));
+      TaskReport report = new TaskReport
+      (getTIPId(), (float)progress, state,
+          (String[])diagnostics.toArray(new String[diagnostics.size()]),
+          execStartTime, execFinishTime);
+      
+      return report ;
     }
 
     /**
@@ -311,6 +316,10 @@ class TaskInProgress {
         TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
         if (status != null) {
             status.setRunState(TaskStatus.FAILED);
+            // tasktracker went down and failed time was not reported. 
+            if( 0 == status.getFinishTime() ){
+              status.setFinishTime(System.currentTimeMillis());
+            }
         }
         this.recentTasks.remove(taskid);
         if (this.completes > 0) {
@@ -372,8 +381,10 @@ class TaskInProgress {
     void recomputeProgress() {
         if (isComplete()) {
             this.progress = 1;
+            this.execFinishTime = System.currentTimeMillis();
         } else if (failed) {
             this.progress = 0;
+            this.execFinishTime = System.currentTimeMillis();
         } else {
             double bestProgress = 0;
             String bestState = "";
@@ -434,6 +445,10 @@ class TaskInProgress {
      */
     public Task getTaskToRun(String taskTracker) {
         Task t = null;
+        if( 0 == execStartTime ){
+          // assume task starts running now
+          execStartTime = System.currentTimeMillis();
+        }
 
         String taskid = (String) usableTaskIds.first();
         usableTaskIds.remove(taskid);

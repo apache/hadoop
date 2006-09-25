@@ -37,7 +37,8 @@ abstract class Task implements Writable, Configurable {
   private String taskId;                          // unique, includes job id
   private String jobId;                           // unique jobid
   private int partition;                          // id within job
-  
+  private Phase phase ;                         // current phase of the task 
+
   ////////////////////////////////////////////
   // Constructors
   ////////////////////////////////////////////
@@ -72,6 +73,20 @@ abstract class Task implements Writable, Configurable {
    */
   public int getPartition() {
     return partition;
+  }
+  /**
+   * Return current phase of the task. 
+   * @return
+   */
+  public Phase getPhase(){
+    return this.phase ; 
+  }
+  /**
+   * Set current phase of the task. 
+   * @param p
+   */
+  protected void setPhase(Phase p){
+    this.phase = p ; 
   }
 
   ////////////////////////////////////////////
@@ -153,7 +168,7 @@ abstract class Task implements Writable, Configurable {
         float progress = taskProgress.get();
         String status = taskProgress.toString();
         try {
-          umbilical.progress(getTaskId(), progress, status);
+          umbilical.progress(getTaskId(), progress, status, phase);
         } catch (IOException ie) {
           LOG.warn(StringUtils.stringifyException(ie));
         }
@@ -164,7 +179,7 @@ abstract class Task implements Writable, Configurable {
   public void done(TaskUmbilicalProtocol umbilical)
     throws IOException {
     umbilical.progress(getTaskId(),               // send a final status report
-                       taskProgress.get(), taskProgress.toString());
+                       taskProgress.get(), taskProgress.toString(), phase);
     umbilical.done(getTaskId());
   }
 }

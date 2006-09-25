@@ -7,8 +7,9 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
   import="java.lang.Integer"
+  import="java.text.SimpleDateFormat"
 %>
-
+<%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%
   String jobid = request.getParameter("jobid");
   String type = request.getParameter("type");
@@ -54,7 +55,7 @@
     out.print("<h2>Tasks</h2>");
     out.print("<center>");
     out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
-    out.print("<tr><td align=\"center\">Task</td><td>Complete</td><td>Status</td><td>Errors</td></tr>");
+    out.print("<tr><td align=\"center\">Task</td><td>Complete</td><td>Status</td><td>Start Time</td><td>Finish Time</td><td>Errors</td></tr>");
     if (end_index > report_len){
         end_index = report_len;
     }
@@ -66,6 +67,9 @@
          out.print("<td>" + StringUtils.formatPercent(report.getProgress(),2) + 
                    "</td>");
          out.print("<td>"  + report.getState() + "</td>");
+         out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, report.getStartTime(),0) + "</td>");
+         out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
+             report.getFinishTime(), report.getStartTime()) + "</td>");
          String[] diagnostics = report.getDiagnostics();
          for (int j = 0; j < diagnostics.length ; j++) {
                 out.print("<td><pre>" + diagnostics[j] + "</pre></td>");

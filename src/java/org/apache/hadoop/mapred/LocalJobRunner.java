@@ -157,7 +157,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
     public Task getTask(String taskid) { return null; }
 
-    public void progress(String taskId, float progress, String state) {
+    public void progress(String taskId, float progress, String state, Phase phase) {
       LOG.info(state);
       float taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
@@ -166,6 +166,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
       } else {
         status.setReduceProgress(progress);
       }
+      
+      // ignore phase
     }
 
     public void reportDiagnosticInfo(String taskid, String trace) {

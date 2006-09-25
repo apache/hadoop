@@ -359,5 +359,27 @@ public final class WritableUtils  {
       
       return len+1;
   }
-  
+  /**
+   * Read an Enum value from DataInput, Enums are read and written 
+   * using String values. 
+   * @param <T> Enum type
+   * @param in DataInput to read from 
+   * @param enumType Class type of Enum
+   * @return Enum represented by String read from DataInput
+   * @throws IOException
+   */
+  public static <T extends Enum<T>> T readEnum(DataInput in, Class<T> enumType)
+    throws IOException{
+    return T.valueOf(enumType, Text.readString(in));
+  }
+  /**
+   * writes String value of enum to DataOutput. 
+   * @param out Dataoutput stream
+   * @param enumVal enum value
+   * @throws IOException
+   */
+  public static void writeEnum(DataOutput out,  Enum enumVal) 
+  throws IOException{
+    Text.writeString(out, enumVal.name()); 
+  }
 }

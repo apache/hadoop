@@ -45,6 +45,9 @@ class MapTask extends Task {
        });
   }
 
+  {   // set phase for this task
+    setPhase(Phase.MAP); 
+  }
   
   private class MapTaskMetrics {
     private MetricsRecord metricsRecord = null;

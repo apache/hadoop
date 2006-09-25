@@ -55,6 +55,11 @@ Trunk (unreleased changes)
     new command, 'dfs -rmr' which operates recursively.
     (Sameer Paranjpye via cutting)
 
+15. HADOOP-263.  Include timestamps for job transitions.  The web
+    interface now displays the start and end times of tasks and the
+    start times of sorting and reducing for reduce tasks.  Also,
+    extend ObjectWritable to handle enums, so that they can be passed
+    as RPC parameters.  (Sanjay Dahiya via cutting)
 
 Release 0.6.2 (unreleased)
 

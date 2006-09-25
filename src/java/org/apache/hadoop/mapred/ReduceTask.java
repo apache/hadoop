@@ -65,7 +65,10 @@ class ReduceTask extends Task {
   private int numMaps;
   private boolean sortComplete;
 
-  { getProgress().setStatus("reduce"); }
+  { 
+    getProgress().setStatus("reduce"); 
+    setPhase(Phase.SHUFFLE);        // phase to start with 
+ }
 
   private Progress copyPhase = getProgress().addPhase("copy");
   private Progress sortPhase  = getProgress().addPhase("sort");
@@ -200,6 +203,7 @@ class ReduceTask extends Task {
     FileSystem lfs = FileSystem.getNamed("local", job);
 
     copyPhase.complete();                         // copy is already complete
+    
 
     // open a file to collect map output
     Path[] mapFiles = new Path[numMaps];
@@ -232,6 +236,7 @@ class ReduceTask extends Task {
     WritableComparator comparator = job.getOutputKeyComparator();
     
     try {
+      setPhase(Phase.SORT) ; 
       sortProgress.start();
 
       // sort the input file
@@ -244,6 +249,7 @@ class ReduceTask extends Task {
     }
 
     sortPhase.complete();                         // sort is complete
+    setPhase(Phase.REDUCE); 
 
     Reporter reporter = getReporter(umbilical, getProgress());
     

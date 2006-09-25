@@ -52,8 +52,8 @@ public class IsolationRunner {
       return true;
     }
 
-    public void progress(String taskid, float progress, String state
-                         ) throws IOException {
+    public void progress(String taskid, float progress, String state,
+                         Phase phase) throws IOException {
       StringBuffer buf = new StringBuffer("Task ");
       buf.append(taskid);
       buf.append(" making progress to ");
@@ -63,6 +63,7 @@ public class IsolationRunner {
         buf.append(state);
       }
       LOG.info(buf.toString());
+      // ignore phase
     }
 
     public void reportDiagnosticInfo(String taskid, String trace) throws IOException {

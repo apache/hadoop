@@ -25,15 +25,19 @@ public class TaskReport implements Writable {
   private float progress;
   private String state;
   private String[] diagnostics;
+  private long startTime ; 
+  private long finishTime; 
 
   public TaskReport() {}
 
   TaskReport(String taskid, float progress, String state,
-             String[] diagnostics) {
+             String[] diagnostics, long startTime, long finishTime) {
     this.taskid = taskid;
     this.progress = progress;
     this.state = state;
     this.diagnostics = diagnostics;
+    this.startTime = startTime ; 
+    this.finishTime = finishTime ;
   }
     
   /** The id of the task. */
@@ -44,7 +48,36 @@ public class TaskReport implements Writable {
   public String getState() { return state; }
   /** A list of error messages. */
   public String[] getDiagnostics() { return diagnostics; }
+  /**
+   * Get finish time of task. 
+   * @return 0, if finish time was not set else returns finish time.
+   */
+  public long getFinishTime() {
+    return finishTime;
+  }
 
+  /** 
+   * set finish time of task. 
+   * @param finishTime finish time of task. 
+   */
+  void setFinishTime(long finishTime) {
+    this.finishTime = finishTime;
+  }
+
+  /**
+   * Get start time of task. 
+   * @return 0 if start time was not set, else start time. 
+   */
+  public long getStartTime() {
+    return startTime;
+  }
+
+  /** 
+   * set start time of the task. 
+   */ 
+  void setStartTime(long startTime) {
+    this.startTime = startTime;
+  }
   //////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////
@@ -52,6 +85,8 @@ public class TaskReport implements Writable {
     UTF8.writeString(out, taskid);
     out.writeFloat(progress);
     UTF8.writeString(out, state);
+    out.writeLong(startTime);
+    out.writeLong(finishTime);
     new ObjectWritable(diagnostics).write(out);
   }
 
@@ -59,7 +94,9 @@ public class TaskReport implements Writable {
     this.taskid = UTF8.readString(in);
     this.progress = in.readFloat();
     this.state = UTF8.readString(in);
-
+    this.startTime = in.readLong(); 
+    this.finishTime = in.readLong() ;
+    
     ObjectWritable wrapper = new ObjectWritable();
     wrapper.readFields(in);
     diagnostics = (String[])wrapper.get();

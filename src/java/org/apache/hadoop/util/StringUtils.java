@@ -20,7 +20,10 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.util.Date;
+
 import org.apache.hadoop.fs.*;
 
 /**
@@ -193,4 +196,59 @@ public class StringUtils {
     }
     return p;
   }
+  /**
+   * 
+   * Given a finish and start time in long milliseconds, returns a 
+   * String in the format Xhrs, Ymins, Z sec, for the time difference between two times. 
+   * If finish time comes before start time then negative valeus of X, Y and Z wil return. 
+   * 
+   * @param finishTime finish time
+   * @param statTime start time
+   * @return
+   */
+  public static String formatTimeDiff(long finishTime, long startTime){
+    StringBuffer buf = new StringBuffer() ;
+    
+    long timeDiff = finishTime - startTime ; 
+    long hours = timeDiff / (60*60*1000) ;
+    long rem = (timeDiff % (60*60*1000)) ;
+    long minutes =  rem / (60*1000);
+    rem = rem % (60*1000) ;
+    long seconds = rem / 1000 ;
+    
+    if( hours != 0 ){
+      buf.append(hours);
+      buf.append("hrs, ");
+    }
+    if( minutes != 0 ){
+      buf.append(minutes);
+      buf.append("mins, ");
+    }
+    // return "0sec if no difference
+    buf.append(seconds);
+    buf.append("sec");
+    return buf.toString(); 
+  }
+  /**
+   * Formats time in ms and appends difference (finishTime - startTime) 
+   * as returned by formatTimeDiff().
+   * If finish time is 0, empty string is returned, if start time is 0 
+   * then difference is not appended to return value. 
+   * @param dateFormat date format to use
+   * @param finishTime fnish time
+   * @param startTime start time
+   * @return formatted value. 
+   */
+  public static String getFormattedTimeWithDiff(DateFormat dateFormat, 
+      long finishTime, long startTime){
+    StringBuffer buf = new StringBuffer();
+    if( 0 != finishTime ) {
+      buf.append(dateFormat.format(new Date(finishTime)));
+      if( 0 != startTime ){
+        buf.append(" (" + formatTimeDiff(finishTime , startTime) + ")");
+      }
+    }
+    return buf.toString();
+  }
+  
 }

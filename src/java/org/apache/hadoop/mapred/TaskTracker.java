@@ -771,7 +771,6 @@ public class TaskTracker
         Task task;
         float progress;
         int runstate;
-        String stateString = "";
         long lastProgressReport;
         StringBuffer diagnosticInfo = new StringBuffer();
         TaskRunner runner;
@@ -781,6 +780,7 @@ public class TaskTracker
         private JobConf localJobConf;
         private boolean keepFailedTaskFiles;
         private boolean alwaysKeepTaskFiles;
+        private TaskStatus taskStatus ; 
         private boolean keepJobFiles;
 
         /**
@@ -789,10 +789,15 @@ public class TaskTracker
             this.task = task;
             this.progress = 0.0f;
             this.runstate = TaskStatus.UNASSIGNED;
-            stateString = "initializing";
             this.lastProgressReport = System.currentTimeMillis();
             this.defaultJobConf = conf;
             localJobConf = null;
+            taskStatus = new TaskStatus(task.getTaskId(), 
+                task.isMapTask(),
+                progress, runstate, 
+                diagnosticInfo.toString(), 
+                "initializing",  
+                 getName(), task.isMapTask()?Phase.MAP:Phase.SHUFFLE); 
             keepJobFiles = false;
         }
         
@@ -842,17 +847,14 @@ public class TaskTracker
         /**
          */
         public synchronized TaskStatus createStatus() {
-            TaskStatus status = 
-              new TaskStatus(task.getTaskId(), 
-                             task.isMapTask(),
-                             progress, runstate, 
-                             diagnosticInfo.toString(), 
-                             (stateString == null) ? "" : stateString, 
-                              getName());
-            if (diagnosticInfo.length() > 0) {
-                diagnosticInfo = new StringBuffer();
-            }
-            return status;
+          taskStatus.setProgress(progress);
+          taskStatus.setRunState(runstate);
+          taskStatus.setDiagnosticInfo(diagnosticInfo.toString());
+          
+          if (diagnosticInfo.length() > 0) {
+              diagnosticInfo = new StringBuffer();
+          }
+          return taskStatus;
         }
 
         /**
@@ -863,17 +865,27 @@ public class TaskTracker
             this.runstate = TaskStatus.RUNNING;
             this.runner = task.createRunner(TaskTracker.this);
             this.runner.start();
+            this.taskStatus.setStartTime(System.currentTimeMillis());
         }
 
         /**
          * The task is reporting its progress
          */
-        public synchronized void reportProgress(float p, String state) {
+        public synchronized void reportProgress(float p, String state, Phase newPhase) {
             LOG.info(task.getTaskId()+" "+p+"% "+state);
             this.progress = p;
             this.runstate = TaskStatus.RUNNING;
             this.lastProgressReport = System.currentTimeMillis();
-            this.stateString = state;
+            Phase oldPhase = taskStatus.getPhase() ;
+            if( oldPhase != newPhase ){
+              // sort phase started
+              if( newPhase == Phase.SORT ){
+                this.taskStatus.setShuffleFinishTime(System.currentTimeMillis());
+              }else if( newPhase == Phase.REDUCE){
+                this.taskStatus.setSortFinishTime(System.currentTimeMillis());
+              }
+            }
+            this.taskStatus.setStateString(state);
         }
 
         /**
@@ -901,6 +913,7 @@ public class TaskTracker
         public synchronized void reportDone() {
             LOG.info("Task " + task.getTaskId() + " is done.");
             this.progress = 1.0f;
+            this.taskStatus.setFinishTime(System.currentTimeMillis());
             this.done = true;
         }
 
@@ -936,7 +949,7 @@ public class TaskTracker
                   runstate = TaskStatus.FAILED;
                   progress = 0.0f;
               }
-              
+              this.taskStatus.setFinishTime(System.currentTimeMillis());
               needCleanup = runstate == TaskStatus.FAILED;
             }
 
@@ -1052,10 +1065,10 @@ public class TaskTracker
     /**
      * Called periodically to report Task progress, from 0.0 to 1.0.
      */
-    public synchronized void progress(String taskid, float progress, String state) throws IOException {
+    public synchronized void progress(String taskid, float progress, String state, Phase phase) throws IOException {
         TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
         if (tip != null) {
-          tip.reportProgress(progress, state);
+          tip.reportProgress(progress, state, phase);
         } else {
           LOG.warn("Progress from unknown child task: "+taskid+". Ignored.");
         }

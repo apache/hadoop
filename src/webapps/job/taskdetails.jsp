@@ -7,7 +7,10 @@
   import="java.util.*"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
+  import="java.text.SimpleDateFormat"  
+  import="org.apache.hadoop.util.*"
 %>
+<%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%
   String jobid = request.getParameter("jobid");
   JobTracker tracker = JobTracker.getTracker();
@@ -47,9 +50,23 @@
 
 <h2>All Task Attempts</h2>
 <center>
+<%
+	if( ts.length == 0 ) {
+%>
+		<h3>No Task Attempts found</h3>
+<%
+	}else{
+%>
 <table border=2 cellpadding="5" cellspacing="2">
-<tr><td align="center">Task Attempts</td><td>Machine</td><td>Status</td><td>Progress</td><td>Errors</td></tr>
-
+<tr><td align="center">Task Attempts</td><td>Machine</td><td>Status</td><td>Progress</td><td>Start Time</td> 
+  <%
+	if( ! ts[0].getIsMap() ) { 
+  %>
+<td>Shuffle Finished</td><td>Sort Finished</td>
+  <%
+	}
+  %>
+<td>Finish Time</td><td>Errors</td></tr>
   <%
     for (int i = 0; i < ts.length; i++) {
       TaskStatus status = ts[i];
@@ -68,6 +85,17 @@
       out.print("</td>");
       out.print("<td>"+ StringUtils.formatPercent(status.getProgress(),2) + 
                 "</td>");
+      out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat,  
+          status.getStartTime(), 0) + "</td>");
+      if( ! ts[i].getIsMap() ) {
+	      out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
+	          status.getShuffleFinishTime(), status.getStartTime()) + "</td>");
+	      out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
+	          status.getSortFinishTime(), status.getShuffleFinishTime()) + "</td>");
+      }
+      out.println("<td>"+ StringUtils.getFormattedTimeWithDiff(dateFormat, 
+          status.getFinishTime(), status.getStartTime()) + "</td>");
+      
       out.print("<td><pre>");
       List<String> failures = tracker.getTaskDiagnostics(jobid, tipid,
                                                          status.getTaskId());
@@ -84,6 +112,7 @@
       out.print("</pre></td>");
       out.print("</tr>\n");
     }
+  }
   %>
 </table>
 </center>
