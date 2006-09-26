@@ -218,15 +218,26 @@ public class LocalFileSystem extends FileSystem {
     }
 
     public Path[] listPathsRaw(Path f) throws IOException {
-        String[] names = pathToFile(f).list();
-        if (names == null) {
+        File localf = pathToFile(f);
+        Path[] results;
+
+        if(!localf.exists())
           return null;
+        else if(localf.isFile()) {
+          results = new Path[1];
+          results[0] = f;
+          return results;
+        } else { //directory
+          String[] names = localf.list();
+          if (names == null) {
+            return null;
+          }
+          results = new Path[names.length];
+          for (int i = 0; i < names.length; i++) {
+            results[i] = new Path(f, names[i]);
+          }
+          return results;
         }
-        Path[] results = new Path[names.length];
-        for (int i = 0; i < names.length; i++) {
-          results[i] = new Path(f, names[i]);
-        }
-        return results;
     }
     
     /**

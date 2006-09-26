@@ -18,6 +18,7 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.*;
 
@@ -481,15 +482,17 @@ public abstract class FileSystem extends Configured {
       return result;
     }
 
+    final private static PathFilter DEFAULT_FILTER = new PathFilter() {
+      public boolean accept(Path file) {
+        return !isChecksumFile(file);
+      }     
+    };
+  
     /** List files in a directory. */
     public Path[] listPaths(Path f) throws IOException {
-      return listPaths(f, new PathFilter() {
-          public boolean accept(Path file) {
-            return !isChecksumFile(file);
-          }
-        });
+      return listPaths(f, DEFAULT_FILTER);
     }
-
+    
     /** List files in a directory. */
     public abstract Path[] listPathsRaw(Path f) throws IOException;
 
@@ -509,21 +512,253 @@ public abstract class FileSystem extends Configured {
       }
       return result;
     }
-
-    /** Filter files in a directory. */
-    public Path[] listPaths(Path f, PathFilter filter) throws IOException {
-        Vector results = new Vector();
-        Path listing[] = listPathsRaw(f);
-        if (listing != null) {
-          for (int i = 0; i < listing.length; i++) {
-            if (filter.accept(listing[i])) {
-              results.add(listing[i]);
-            }
+    
+    /** Filter raw files in a directory. */
+    private void listPaths(ArrayList<Path> results, Path f, PathFilter filter)
+      throws IOException {
+      Path listing[] = listPathsRaw(f);
+      if (listing != null) {
+        for (int i = 0; i < listing.length; i++) {
+          if (filter.accept(listing[i])) {
+            results.add(listing[i]);
           }
         }
+      }      
+    }
+    
+    /** Filter raw files in a directory. */
+    public Path[] listPaths(Path f, PathFilter filter) throws IOException {
+        ArrayList<Path> results = new ArrayList<Path>();
+        listPaths(results, f, filter);
         return (Path[]) results.toArray(new Path[results.size()]);
     }
 
+    /** 
+     * Filter raw files in a list directories using the default checksum filter. 
+     * @param files: a list of paths
+     * @return a list of files under the source paths
+     * @exception IOException
+     */
+    public Path[] listPaths(Path[] files ) throws IOException {
+      return listPaths( files, DEFAULT_FILTER );
+    }
+    
+    /** 
+     * Filter raw files in a list directories using user-supplied path filter. 
+     * @param files: a list of paths
+     * @return a list of files under the source paths
+     * @exception IOException
+     */
+    public Path[] listPaths(Path[] files, PathFilter filter)
+    throws IOException {
+      ArrayList<Path> results = new ArrayList<Path>();
+      for(int i=0; i<files.length; i++) {
+        listPaths(results, files[i], filter);
+      }
+      return (Path[]) results.toArray(new Path[results.size()]);
+    }
+    
+    /**
+     * <p>Return all the files that match filePattern and are not checksum
+     * files. Results are sorted by their names.
+     * 
+     * <p>
+     * A filename pattern is composed of <i>regular</i> characters and
+     * <i>special pattern matching</i> characters, which are:
+     *
+     * <dl>
+     *  <dd>
+     *   <dl>
+     *    <p>
+     *    <dt> <tt> ? </tt>
+     *    <dd> Matches any single character.
+     *
+     *    <p>
+     *    <dt> <tt> * </tt>
+     *    <dd> Matches zero or more characters.
+     *
+     *    <p>
+     *    <dt> <tt> [<i>abc</i>] </tt>
+     *    <dd> Matches a single character from character set
+     *     <tt>{<i>a,b,c</i>}</tt>.
+     *
+     *    <p>
+     *    <dt> <tt> [<i>a</i>-<i>b</i>] </tt>
+     *    <dd> Matches a single character from the character range
+     *     <tt>{<i>a...b</i>}</tt>.  Note that character <tt><i>a</i></tt> must be
+     *     lexicographically less than or equal to character <tt><i>b</i></tt>.
+     *
+     *    <p>
+     *    <dt> <tt> [^<i>a</i>] </tt>
+     *    <dd> Matches a single character that is not from character set or range
+     *     <tt>{<i>a</i>}</tt>.  Note that the <tt>^</tt> character must occur
+     *     immediately to the right of the opening bracket.
+     *
+     *    <p>
+     *    <dt> <tt> \<i>c</i> </tt>
+     *    <dd> Removes (escapes) any special meaning of character <i>c</i>.
+     *
+     *   </dl>
+     *  </dd>
+     * </dl>
+     *
+     * @param filePattern: a regular expression specifying file pattern
+
+     * @return an array of paths that match the file pattern
+     * @throws IOException
+     */
+    public Path[] globPaths(Path filePattern) throws IOException {
+      return globPaths(filePattern, DEFAULT_FILTER);
+    }
+    
+    /** glob all the file names that matches filePattern
+     * and is accepted by filter
+     * @param 
+     */
+    public Path[] globPaths(Path filePattern, PathFilter filter) 
+        throws IOException {
+      Path [] parents = new Path[1];
+      int level = 0;
+      
+      String filename = filePattern.toString();
+      if("".equals(filename) || Path.SEPARATOR.equals(filename)) {
+        parents[0] = filePattern;
+        return parents;
+      }
+      
+      String [] components = filename.split(Path.SEPARATOR);
+      if(filePattern.isAbsolute()) {
+        parents[0] = new Path(Path.SEPARATOR);
+        level = 1;
+      } else {
+        parents[0] = new Path( "" );
+      }
+      
+      Path[] results = globPathsLevel(parents, components, level, filter);
+      Arrays.sort(results);
+      return results;
+    }
+    
+    private Path[] globPathsLevel(Path[] parents,
+        String [] filePattern, int level, PathFilter filter) throws IOException {
+      if (level == filePattern.length)
+        return parents;
+      GlobFilter fp = new GlobFilter(filePattern[level], filter);
+      if( fp.hasPattern()) {
+        parents = listPaths(parents, fp);
+      } else {
+        for(int i=0; i<parents.length; i++) {
+          parents[i] = new Path(parents[i], filePattern[level]);
+        }
+      }
+      return globPathsLevel(parents, filePattern, level+1, filter);      
+    }
+ 
+    private static class GlobFilter implements PathFilter {
+      private PathFilter userFilter = DEFAULT_FILTER;
+      private Pattern regex;
+      private boolean hasPattern = false;
+      
+      /** Default pattern character: Escape any special meaning. */
+      private static final char  PAT_ESCAPE =  '\\';
+      /** Default pattern character: Any single character. */
+      private static final char  PAT_ANY = '.';
+      /** Default pattern character: Character set close. */
+      private static final char  PAT_SET_CLOSE = ']';
+      
+      GlobFilter() {
+      }
+      
+      GlobFilter(String filePattern) throws IOException {
+        setRegex(filePattern);
+      }
+      
+      GlobFilter(String filePattern, PathFilter filter) throws IOException {
+        userFilter = filter;
+        setRegex(filePattern);
+      }
+      
+      void setRegex(String filePattern) throws IOException {
+        int len;
+        int setOpen;
+        boolean setRange;
+        StringBuffer fileRegex = new StringBuffer();
+
+        // Validate the pattern
+        len = filePattern.length();
+        if (len == 0)
+            return;
+
+        setOpen =  0;
+        setRange = false;
+
+        for (int i = 0;  i < len;  i++)
+        {
+            char  pCh;
+
+            // Examine a single pattern character
+            pCh = filePattern.charAt(i);            
+            if( pCh == PAT_ESCAPE ) {
+              fileRegex.append( pCh );
+              i++;
+              if (i >= len)
+                  error( "An escaped character does not present",
+                      filePattern, i);
+              pCh = filePattern.charAt(i);
+            } else if( pCh == '.' ) {
+              fileRegex.append( PAT_ESCAPE );
+            } else if( pCh == '*' ) {
+                fileRegex.append( PAT_ANY );
+                hasPattern = true;
+            } else if( pCh == '?' ) {
+                pCh = PAT_ANY ;
+                hasPattern = true;
+            } else if( pCh == '[' && setOpen == 0 ) {
+                setOpen++;
+                hasPattern = true;
+            } else if( pCh == '^' && setOpen > 0) {
+            } else if (pCh == '-'  &&  setOpen > 0) {
+                // Character set range
+                setRange = true;
+            } else if (pCh == PAT_SET_CLOSE  &&  setRange) {
+                // Incomplete character set range
+                error("Incomplete character set range", filePattern, i);
+            } else if (pCh == PAT_SET_CLOSE  &&  setOpen > 0) {
+                // End of a character set
+                if (setOpen < 2)
+                    error("Unexpected end of set", filePattern, i);
+                setOpen = 0;
+            } else if (setOpen > 0) {
+                // Normal character, or the end of a character set range
+                setOpen++;
+                setRange = false;
+            }
+            fileRegex.append( pCh );
+        }
+
+        // Check for a well-formed pattern
+        if (setOpen > 0  ||  setRange)
+        {
+            // Incomplete character set or character range
+            error("Expecting set closure character or end of range", filePattern, len);
+        }
+        regex = Pattern.compile(fileRegex.toString());
+      }
+      
+      boolean hasPattern() {
+        return hasPattern;
+      }
+      
+      public boolean accept(Path path) {
+        return regex.matcher(path.getName()).matches() && userFilter.accept(path);
+      }
+      
+      private void error(String s, String pattern, int pos) throws IOException {
+        throw new IOException("Illegal file pattern: "
+                                 +s+" for glob "+pattern + " at " + pos);
+      }
+    }
+    
     /**
      * Set the current working directory for the given file system.
      * All relative paths will be resolved relative to it.

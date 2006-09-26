@@ -53,17 +53,35 @@ public class DFSShell extends ToolBase {
     }
 
     /**
-     * Obtain the indicated DFS file and copy to the local name.
-     * srcf is kept.
+     * Obtain the indicated DFS files that match the file pattern <i>srcf</i>
+     * and copy them to the local name. srcf is kept.
+     * When copying mutiple files, the destination must be a directory. 
+     * Otherwise, IOException is thrown.
+     * @param srcf: a file pattern specifying source files
+     * @param dstf: a destination local file/directory 
+     * @exception: IOException  
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
-    void copyToLocal(String srcf, Path dst) throws IOException {
-        fs.copyToLocalFile(new Path(srcf), dst);
+    void copyToLocal(String srcf, String dstf) throws IOException {
+      Path [] srcs = fs.globPaths( new Path(srcf) );
+      if( srcs.length > 1 && !new File( dstf ).isDirectory()) {
+        throw new IOException( "When copy multiple files, " 
+            + "destination should be a directory." );
+      }
+      Path dst = new Path( dstf );
+      for( int i=0; i<srcs.length; i++ ) {
+        fs.copyToLocalFile( srcs[i], dst );
+      }
     }
     
     /**
-     * Get all the files in the directory and output them to
-     * only one file on local fs 
+     * Get all the files in the directories that match the source file 
+     * pattern and merge and sort them to only one file on local fs 
      * srcf is kept.
+     * @param srcf: a file pattern specifying source files
+     * @param dstf: a destination local file/directory 
+     * @exception: IOException  
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
     void copyMergeToLocal(String srcf, Path dst) throws IOException {
         copyMergeToLocal(srcf, dst, false);
@@ -71,21 +89,29 @@ public class DFSShell extends ToolBase {
     
 
     /**
-     * Get all the files in the directory and output them to
-     * only one file on local fs 
+     * Get all the files in the directories that match the source file pattern
+     * and merge and sort them to only one file on local fs 
      * srcf is kept.
      * 
      * Also adds a string between the files (useful for adding \n
      * to a text file)
+     * @param srcf: a file pattern specifying source files
+     * @param dstf: a destination local file/directory
+     * @param endline: if an end of line character is added to a text file 
+     * @exception: IOException  
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
     void copyMergeToLocal(String srcf, Path dst, boolean endline) throws IOException {
+      Path [] srcs = fs.globPaths( new Path( srcf ) );
+      for( int i=0; i<srcs.length; i++ ) {
         if(endline) {
-            FileUtil.copyMerge(fs, new Path(srcf), 
+            FileUtil.copyMerge(fs, srcs[i], 
                     FileSystem.getNamed("local", conf), dst, false, conf, "\n");
         } else {
-            FileUtil.copyMerge(fs, new Path(srcf), 
+            FileUtil.copyMerge(fs, srcs[i], 
                     FileSystem.getNamed("local", conf), dst, false, conf, null);
         }
+      }
     }      
 
     /**
@@ -96,8 +122,24 @@ public class DFSShell extends ToolBase {
         System.err.println("Option '-moveToLocal' is not implemented yet.");
     }
 
+    /**
+     * Fetch all DFS files that match the file pattern <i>srcf</i> and display
+     * their content on stdout. 
+     * @param srcf: a file pattern specifying source files
+     * @exception: IOException
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
+     */
     void cat(String srcf) throws IOException {
-      FSDataInputStream in = fs.open(new Path(srcf));
+      Path [] srcs = fs.globPaths( new Path( srcf ) );
+      for( int i=0; i<srcs.length; i++ ) {
+        cat(srcs[i]);
+      }
+    }
+    
+
+    /* print the content of src to screen */
+    private void cat(Path src) throws IOException {
+      FSDataInputStream in = fs.open(src);
       try {
         BufferedReader din = new BufferedReader(new InputStreamReader(in));
         String line;
@@ -138,15 +180,29 @@ public class DFSShell extends ToolBase {
         System.exit(-1);
       }
       
-      setReplication(rep, new Path(cmd[pos]), recursive);
+      setReplication(rep, cmd[pos], recursive);
     }
     
     /**
-     * Set the replication for the path argument
+     * Set the replication for files that match file pattern <i>srcf</i>
      * if it's a directory and recursive is true,
      * set replication for all the subdirs and those files too
+     * @param newRep: new replication factor
+     * @param srcf: a file pattern specifying source files
+     * @param recursive: if need to set replication factor for files in subdirs
+     * @exception: IOException  
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
-    public void setReplication(short newRep, Path src, boolean recursive) throws IOException {
+    public void setReplication(short newRep, String srcf, boolean recursive)
+        throws IOException {
+      Path[] srcs = fs.globPaths( new Path(srcf) );
+      for( int i=0; i<srcs.length; i++ ) {
+        setReplication( newRep, srcs[i], recursive );
+      }
+    }
+    
+    private void setReplication(short newRep, Path src, boolean recursive)
+      throws IOException {
   	
     	if(!fs.isDirectory(src)) {
     		setFileReplication(src, newRep);
@@ -172,8 +228,8 @@ public class DFSShell extends ToolBase {
     /**
      * Actually set the replication for this file
      * If it fails either throw IOException or print an error msg
-     * @param file
-     * @param newRep
+     * @param file: a dfs file/directory
+     * @param newRep: new replication factor
      * @throws IOException
      */
     private void setFileReplication(Path file, short newRep) throws IOException {
@@ -187,14 +243,27 @@ public class DFSShell extends ToolBase {
     
     
     /**
-     * Get a listing of all files in DFS at the indicated name
+     * Get a listing of all files in DFS that match the file pattern <i>srcf</i>
+     * @param srcf: a file pattern specifying source files
+     * @param recursive: if need to list files in subdirs
+     * @exception: IOException  
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
-    public void ls(String src, boolean recursive) throws IOException {
-        Path items[] = fs.listPaths(new Path(src));
+    public void ls(String srcf, boolean recursive) throws IOException {
+      Path[] srcs = fs.globPaths( new Path(srcf) );
+      boolean printHeader = (srcs.length == 1) ? true: false;
+      for(int i=0; i<srcs.length; i++) {
+        ls(srcs[i], recursive, printHeader);
+      }
+    }
+
+    /* list all files in dfs under the directory <i>src</i>*/
+    private void ls(Path src, boolean recursive, boolean printHeader ) throws IOException {
+        Path items[] = fs.listPaths(src);
         if (items == null) {
             System.out.println("Could not get listing for " + src);
         } else {
-            if(!recursive) {
+            if(!recursive && printHeader ) {
             	System.out.println("Found " + items.length + " items");
             }
             for (int i = 0; i < items.length; i++) {
@@ -205,16 +274,20 @@ public class DFSShell extends ToolBase {
                                         ("<r " + fs.getReplication(cur) 
                                             + ">\t" + fs.getLength(cur))));
                 if(recursive && fs.isDirectory(cur)) {
-                  ls(cur.toString(), recursive);
+                  ls(cur, recursive, printHeader);
                 }
             }
         }
     }
 
     /**
+     * Show the size of all files in DFS that match the file pattern <i>srcf</i>
+     * @param srcf: a file pattern specifying source files
+     * @exception: IOException  
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
     public void du(String src) throws IOException {
-        Path items[] = fs.listPaths(new Path(src));
+        Path items[] = fs.listPaths( fs.globPaths( new Path(src) ) );
         if (items == null) {
             System.out.println("Could not get listing for " + src);
         } else {
@@ -235,38 +308,79 @@ public class DFSShell extends ToolBase {
     }
     
     /**
-     * Rename an DFS file
+     * Move DFS files that match the file pattern <i>srcf</i>
+     * to a destination dfs file.
+     * When moving mutiple files, the destination must be a directory. 
+     * Otherwise, IOException is thrown.
+     * @param srcf: a file pattern specifying source files
+     * @param dstf: a destination local file/directory 
+     * @exception: IOException  
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
     public void rename(String srcf, String dstf) throws IOException {
-        if (fs.rename(new Path(srcf), new Path(dstf))) {
-            System.out.println("Renamed " + srcf + " to " + dstf);
+      Path [] srcs = fs.globPaths( new Path(srcf) );
+      Path dst = new Path(dstf);
+      if( srcs.length > 1 && !fs.isDirectory(dst)) {
+        throw new IOException( "When moving multiple files, " 
+            + "destination should be a directory." );
+      }
+      for( int i=0; i<srcs.length; i++ ) {
+        if (fs.rename(srcs[i], dst)) {
+            System.out.println("Renamed " + srcs[i] + " to " + dstf);
         } else {
-            System.out.println("Rename failed");
+            System.out.println("Rename failed " + srcs[i]);
         }
+      }
     }
 
     /**
-     * Copy an DFS file
+     * Copy DFS files that match the file pattern <i>srcf</i>
+     * to a destination dfs file.
+     * When copying mutiple files, the destination must be a directory. 
+     * Otherwise, IOException is thrown.
+     * @param srcf: a file pattern specifying source files
+     * @param dstf: a destination local file/directory 
+     * @exception: IOException  
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
     public void copy(String srcf, String dstf, Configuration conf) throws IOException {
-      FileUtil.copy(fs, new Path(srcf), fs, new Path(dstf), false, conf);
+      Path [] srcs = fs.globPaths( new Path(srcf) );
+      Path dst = new Path(dstf);
+      if( srcs.length > 1 && !fs.isDirectory(dst)) {
+        throw new IOException( "When copying multiple files, " 
+            + "destination should be a directory." );
+      }
+      for( int i=0; i<srcs.length; i++ ) {
+        FileUtil.copy(fs, srcs[i], fs, dst, false, conf);
+      }
     }
 
     /**
-     * Delete an DFS file
+     * Delete all files in DFS that match the file pattern <i>srcf</i>
+     * @param srcf: a file pattern specifying source files
+     * @param recursive: if need to delete subdirs
+     * @exception: IOException  
+     * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
     public void delete(String srcf, boolean recursive) throws IOException {
-      Path srcp = new Path(srcf);
-      if (fs.isDirectory(srcp) && !recursive) {
-        System.out.println("Cannot remove directory \"" + srcf +
+      Path [] srcs = fs.globPaths( new Path(srcf) );
+      for( int i=0; i<srcs.length; i++ ) {
+        delete(srcs[i], recursive);
+      }
+    }
+    
+    /* delete an DFS file */
+    private void delete(Path src, boolean recursive ) throws IOException {
+      if (fs.isDirectory(src) && !recursive) {
+        System.out.println("Cannot remove directory \"" + src +
                            "\", use -rmr instead");
         return;
       }
 
-      if (fs.delete(srcp)) {
-        System.out.println("Deleted " + srcf);
+      if (fs.delete(src)) {
+        System.out.println("Deleted " + src);
       } else {
-        System.out.println("Delete failed");
+        System.out.println("Delete failed " + src);
       }
     }
 
@@ -403,7 +517,7 @@ public class DFSShell extends ToolBase {
             } else if ("-moveFromLocal".equals(cmd)) {
                 moveFromLocal(new Path(argv[i++]), argv[i++]);
             } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd)) {
-                copyToLocal(argv[i++], new Path(argv[i++]));
+                copyToLocal(argv[i++], argv[i++]);
             } else if ("-getmerge".equals(cmd)) {
                 if(argv.length>i+2)
                     copyMergeToLocal(argv[i++], new Path(argv[i++]), Boolean.parseBoolean(argv[i++]));

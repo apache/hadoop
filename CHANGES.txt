@@ -76,6 +76,10 @@ Trunk (unreleased changes)
 19. HADOOP-487.  Throw a more informative exception for unknown RPC
     hosts.  (Sameer Paranjpye via cutting)
 
+20. HADOOP-559.  Add file name globbing (pattern matching) support to
+    the FileSystem API, and use it in DFSShell ('bin/hadoop dfs')
+    commands.  (Hairong Kuang via cutting)
+
 
 Release 0.6.2 (unreleased)
 
