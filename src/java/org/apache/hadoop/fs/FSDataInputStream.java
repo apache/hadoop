@@ -193,7 +193,8 @@ public class FSDataInputStream extends DataInputStream {
     public void seek(long desired) throws IOException {
       long end = ((PositionCache)in).getPos();
       long start = end - this.count;
-      if (desired >= start && desired < end) {
+      int avail = this.count - this.pos;
+      if (desired >= start && desired < end && avail > 0) {
         this.pos = (int)(desired - start);        // can position within buffer
       } else {
         this.count = 0;                           // invalidate buffer
