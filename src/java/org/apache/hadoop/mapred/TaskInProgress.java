@@ -69,6 +69,7 @@ class TaskInProgress {
     private long execFinishTime = 0 ;
     private int completes = 0;
     private boolean failed = false;
+    private boolean killed = false;
     private TreeSet usableTaskIds = new TreeSet();
     private TreeSet recentTasks = new TreeSet();
     private JobConf conf;
@@ -188,7 +189,8 @@ class TaskInProgress {
         if (status == null) {
             return false;
         }
-        return ((completes > 0) && (status.getRunState() == TaskStatus.SUCCEEDED));
+        return ((completes > 0) && 
+                (status.getRunState() == TaskStatus.State.SUCCEEDED));
     }
     /**
      */
@@ -281,16 +283,17 @@ class TaskInProgress {
           diagHistory.add(diagInfo);
         }
         if (oldStatus != null) {
-          int oldState = oldStatus.getRunState();
-          int newState = status.getRunState();
+          TaskStatus.State oldState = oldStatus.getRunState();
+          TaskStatus.State newState = status.getRunState();
           
           // The task is not allowed to move from completed back to running.
           // We have seen out of order status messagesmoving tasks from complete
           // to running. This is a spot fix, but it should be addressed more
           // globally.
-          if (newState == TaskStatus.RUNNING &&
-              (oldState == TaskStatus.FAILED || 
-               oldState == TaskStatus.SUCCEEDED)) {
+          if (newState == TaskStatus.State.RUNNING &&
+              (oldState == TaskStatus.State.FAILED || 
+               oldState == TaskStatus.State.KILLED || 
+               oldState == TaskStatus.State.SUCCEEDED)) {
             return false;
           }
           
@@ -315,7 +318,7 @@ class TaskInProgress {
         LOG.info("Task '" + taskid + "' has been lost.");
         TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
         if (status != null) {
-            status.setRunState(TaskStatus.FAILED);
+            status.setRunState(TaskStatus.State.FAILED);
             // tasktracker went down and failed time was not reported. 
             if( 0 == status.getFinishTime() ){
               status.setFinishTime(System.currentTimeMillis());
@@ -341,7 +344,7 @@ class TaskInProgress {
     public void completed(String taskid) {
         LOG.info("Task '" + taskid + "' has completed.");
         TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
-        status.setRunState(TaskStatus.SUCCEEDED);
+        status.setRunState(TaskStatus.State.SUCCEEDED);
         recentTasks.remove(taskid);
 
         //
@@ -369,9 +372,18 @@ class TaskInProgress {
             return;
         }
         this.failed = true;
+        killed = true;
         recomputeProgress();
     }
 
+    /**
+     * Was the task killed?
+     * @return true if the task killed
+     */
+    public boolean wasKilled() {
+      return killed;
+    }
+    
     /**
      * This method is called whenever there's a status change
      * for one of the TIP's sub-tasks.  It recomputes the overall 
@@ -391,11 +403,11 @@ class TaskInProgress {
             for (Iterator it = taskStatuses.keySet().iterator(); it.hasNext(); ) {
                 String taskid = (String) it.next();
                 TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
-                if (status.getRunState() == TaskStatus.SUCCEEDED) {
+                if (status.getRunState() == TaskStatus.State.SUCCEEDED) {
                     bestProgress = 1;
                     bestState = status.getStateString();
                     break;
-                } else if (status.getRunState() == TaskStatus.RUNNING) {
+                } else if (status.getRunState() == TaskStatus.State.RUNNING) {
                   if (status.getProgress() >= bestProgress) {
                     bestProgress = status.getProgress();
                     bestState = status.getStateString();

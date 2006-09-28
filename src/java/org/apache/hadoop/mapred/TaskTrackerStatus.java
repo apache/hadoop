@@ -104,32 +104,34 @@ class TaskTrackerStatus implements Writable {
      * Return the current MapTask count
      */
     public int countMapTasks() {
-        int mapCount = 0;
-        for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
-            TaskStatus ts = (TaskStatus) it.next();
-	    if (ts.getIsMap() &&
-		((ts.getRunState() == TaskStatus.RUNNING)
-                 || (ts.getRunState() == TaskStatus.UNASSIGNED))) {
-		mapCount++;
-	    }
-	}
-        return mapCount;
+      int mapCount = 0;
+      for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
+        TaskStatus ts = (TaskStatus) it.next();
+        TaskStatus.State state = ts.getRunState();
+        if (ts.getIsMap() &&
+            ((state == TaskStatus.State.RUNNING) ||
+                (state == TaskStatus.State.UNASSIGNED))) {
+          mapCount++;
+        }
+      }
+      return mapCount;
     }
 
     /**
      * Return the current ReduceTask count
      */
     public int countReduceTasks() {
-	int reduceCount = 0;
-        for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
-            TaskStatus ts = (TaskStatus) it.next();
-            if ((!ts.getIsMap()) &&
-		((ts.getRunState() == TaskStatus.RUNNING)
-		 || (ts.getRunState() == TaskStatus.UNASSIGNED))) {
-                reduceCount++;
-            }
+      int reduceCount = 0;
+      for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
+        TaskStatus ts = (TaskStatus) it.next();
+        TaskStatus.State state = ts.getRunState();
+        if ((!ts.getIsMap()) &&
+            ((state == TaskStatus.State.RUNNING) ||  
+                (state == TaskStatus.State.UNASSIGNED))) {
+          reduceCount++;
         }
-        return reduceCount;
+      }
+      return reduceCount;
     }
 
     /**

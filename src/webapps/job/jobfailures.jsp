@@ -19,7 +19,7 @@
     TaskStatus[] statuses = tip.getTaskStatuses();
     String tipId = tip.getTIPId();
     for(int i=0; i < statuses.length; ++i) {
-      if (statuses[i].getRunState() == TaskStatus.FAILED) {
+      if (statuses[i].getRunState() == TaskStatus.State.FAILED) {
         String taskTrackerName = statuses[i].getTaskTracker();
         TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
         out.print("<tr><td>" + statuses[i].getTaskId() +

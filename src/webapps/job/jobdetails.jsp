@@ -23,6 +23,7 @@
     int totalTasks = tasks.length;
     int runningTasks = 0;
     int finishedTasks = 0;
+    int killedTasks = 0;
     int failures = 0;
     for(int i=0; i < totalTasks; ++i) {
       TaskInProgress task = tasks[i];
@@ -30,6 +31,8 @@
         finishedTasks += 1;
       } else if (task.isRunning()) {
         runningTasks += 1;
+      } else if (task.wasKilled()) {
+        killedTasks += 1;
       }
       failures += task.numTaskFailures();
     }
@@ -37,9 +40,11 @@
               "&type="+ kind + "&pagenum=1\">" + kind + "</a></th><td>" + 
               StringUtils.formatPercent(completePercent, 2) +
               "</td><td>" + totalTasks + "</td><td>" + 
-              (totalTasks - runningTasks - finishedTasks) + "</td><td>" +
+              (totalTasks - runningTasks - finishedTasks - killedTasks) + 
+              "</td><td>" +
               runningTasks + "</td><td>" +
-              finishedTasks + 
+              finishedTasks + "</td><td>" +
+              killedTasks +
               "</td><td><a href=\"/jobfailures.jsp?jobid=" + jobId +
               "&kind=" + kind + "\">" +
               failures + "</a></td></tr>\n");
@@ -74,6 +79,7 @@
     out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
     out.print("<tr><th>Kind</th><th>% Complete</th><th>Num Tasks</th>" +
               "<th>Pending</th><th>Running</th><th>Complete</th>" +
+              "<th>Killed</th>" +
               "<th><a href=\"/jobfailures.jsp?jobid=" + jobId + 
               "\">Failures</a></th></tr>\n");
     printTaskSummary(out, jobId, "map", status.mapProgress(), 

@@ -84,6 +84,12 @@ Trunk (unreleased changes)
     returned after seeking to a random location.
     (Milind Bhandarkar via cutting)
 
+22. HADOOP-560.  Add a "killed" task state.  This can be used to
+    distinguish kills from other failures.  Task state has also been
+    converted to use an enum type instead of an int, uncovering a bug
+    elsewhere.  The web interface is also updated to display killed
+    tasks.  (omalley via cutting)
+
 
 Release 0.6.2 (unreleased)
 

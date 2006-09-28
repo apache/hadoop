@@ -436,6 +436,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       return namesystem.isInSafeMode();
     }
 
+    /**
+     * Is the cluster currently in safe mode?
+     */
+    boolean isInSafeMode() {
+      return namesystem.isInSafeMode();
+    }
+    
     ////////////////////////////////////////////////////////////////
     // DatanodeProtocol
     ////////////////////////////////////////////////////////////////

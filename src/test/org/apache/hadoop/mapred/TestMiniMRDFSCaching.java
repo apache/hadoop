@@ -38,17 +38,16 @@ public class TestMiniMRDFSCaching extends TestCase {
     String namenode = null;
     FileSystem fileSys = null;
     try {
-      Configuration conf = new Configuration();
+      JobConf conf = new JobConf();
       dfs = new MiniDFSCluster(65314, conf, true);
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getName();
       mr = new MiniMRCluster(50050, 50060, 2, namenode, true);
-      JobConf jconf = new JobConf();
       // run the wordcount example with caching
       boolean ret = MRCaching.launchMRCache("localhost:50050",
                                             "/testing/wc/input",
                                             "/testing/wc/output", namenode,
-                                            jconf,
+                                            conf,
                                             "The quick brown fox\nhas many silly\n"
                                                 + "red fox sox\n");
       assertTrue("Archives not matching", ret);

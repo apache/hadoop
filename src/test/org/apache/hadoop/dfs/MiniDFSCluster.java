@@ -30,7 +30,7 @@ public class MiniDFSCluster {
       }
       try {
         long[] sizes = node.getStats();
-        return sizes[0] != 0;
+        return !node.isInSafeMode() && sizes[0] != 0;
       } catch (IOException ie) {
         return false;
       }

@@ -25,7 +25,8 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * The JobTracker is the Server, which implements this protocol.
  */ 
 interface InterTrackerProtocol extends VersionedProtocol {
-  public static final long versionID = 1L;
+  // version 2 introduced to replace TaskStatus.State with an enum
+  public static final long versionID = 2L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

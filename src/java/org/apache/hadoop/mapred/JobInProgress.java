@@ -274,9 +274,11 @@ class JobInProgress {
         boolean wasComplete = tip.isComplete();
         boolean change = tip.updateStatus(status);
         if (change) {
-          if (status.getRunState() == TaskStatus.SUCCEEDED) {
+          TaskStatus.State state = status.getRunState();
+          if (state == TaskStatus.State.SUCCEEDED) {
             completedTask(tip, status, metrics);
-          } else if (status.getRunState() == TaskStatus.FAILED) {
+          } else if (state == TaskStatus.State.FAILED ||
+                     state == TaskStatus.State.KILLED) {
             // Tell the job to fail the relevant task
             failedTask(tip, status.getTaskId(), status, status.getTaskTracker(),
                        wasRunning, wasComplete);
@@ -494,7 +496,7 @@ class JobInProgress {
         //
         // If all tasks are complete, then the job is done!
         //
-        if (status.getRunState() == JobStatus.RUNNING && allDone) {
+        if (this.status.getRunState() == JobStatus.RUNNING && allDone) {
             this.status.setRunState(JobStatus.SUCCEEDED);
             this.status.setReduceProgress(1.0f);
             this.finishTime = System.currentTimeMillis();
@@ -597,7 +599,7 @@ class JobInProgress {
        TaskStatus status = new TaskStatus(taskid,
                                           tip.isMapTask(),
                                           0.0f,
-                                          TaskStatus.FAILED,
+                                          TaskStatus.State.FAILED,
                                           reason,
                                           reason,
                                           trackerName, phase);
@@ -659,7 +661,7 @@ class JobInProgress {
        if (tip.isComplete()) {
          TaskStatus[] statuses = tip.getTaskStatuses();
          for(int i=0; i < statuses.length; i++) {
-           if (statuses[i].getRunState() == TaskStatus.SUCCEEDED) {
+           if (statuses[i].getRunState() == TaskStatus.State.SUCCEEDED) {
              return statuses[i];
            }
          }

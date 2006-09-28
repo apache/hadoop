@@ -19,28 +19,6 @@
   TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(jobid, tipid): null;
 %>
 
-<%! 
-  public void writeString(JspWriter out, int state) throws IOException{
-    String sstate;
-    if (state == TaskStatus.RUNNING){
-      sstate = "RUNNING";
-    }
-    else if (state == TaskStatus.SUCCEEDED){
-      sstate = "SUCCEDED";
-    }
-    else if (state == TaskStatus.FAILED){
-      sstate = "FAILED";
-    }
-    else if (state == TaskStatus.UNASSIGNED){
-      sstate = "UNASSIGNED";
-    }
-    else{
-      sstate = "ERROR IN STATUS";
-   }
-    out.print(sstate);
-  }
-%>
-
 <html>
 <title>Hadoop Task Details</title>
 <body>
@@ -80,9 +58,7 @@
                   taskTracker.getHttpPort() + "\">" +  taskTracker.getHost() + 
                   "</a></td>");
       }
-      out.print("<td>");
-      writeString(out, status.getRunState()); 
-      out.print("</td>");
+      out.print("<td>" + status.getRunState() + "</td>");
       out.print("<td>"+ StringUtils.formatPercent(status.getProgress(),2) + 
                 "</td>");
       out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat,  

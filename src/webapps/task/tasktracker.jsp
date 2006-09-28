@@ -8,24 +8,6 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
 %>
-<%!
-  private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
-  
-  private String stringifyState(int state) {
-    if (state == TaskStatus.RUNNING){
-      return "RUNNING";
-    } else if (state == TaskStatus.SUCCEEDED){
-      return "SUCCEDED";
-    } else if (state == TaskStatus.FAILED){
-      return "FAILED";
-    } else if (state == TaskStatus.UNASSIGNED){
-      return "UNASSIGNED";
-    }
-    return "unknown status";
-  }
-  
- %>
-
 <%
   TaskTracker tracker = (TaskTracker) application.getAttribute("task.tracker");
   String trackerName = tracker.getName();
@@ -50,9 +32,9 @@
      while (itr.hasNext()) {
        TaskStatus status = (TaskStatus) itr.next();
        out.print("<tr><td>" + status.getTaskId());
-       out.print("</td><td>" + stringifyState(status.getRunState())); 
+       out.print("</td><td>" + status.getRunState()); 
        out.print("</td><td>" + 
-                 percentFormat.format(100.0 * status.getProgress()));
+                 StringUtils.formatPercent(status.getProgress(), 2));
        out.print("</td><td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
        out.print("</tr>\n");
      }

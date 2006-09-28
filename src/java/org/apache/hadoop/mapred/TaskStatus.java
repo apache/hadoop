@@ -19,7 +19,7 @@ import org.apache.hadoop.io.*;
 
 import java.io.*;
 // enumeration for reporting current phase of a task. 
-enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE};
+enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE}
 
 /**************************************************
  * Describes the current status of a task.  This is
@@ -28,15 +28,12 @@ enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE};
  * @author Mike Cafarella
  **************************************************/
 class TaskStatus implements Writable {
-    public static final int RUNNING = 0;
-    public static final int SUCCEEDED = 1;
-    public static final int FAILED = 2;
-    public static final int UNASSIGNED = 3;
+    public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED};
     
     private String taskid;
     private boolean isMap;
     private float progress;
-    private int runState;
+    private State runState;
     private String diagnosticInfo;
     private String stateString;
     private String taskTracker;
@@ -53,7 +50,7 @@ class TaskStatus implements Writable {
     public TaskStatus() {}
 
     public TaskStatus(String taskid, boolean isMap, float progress,
-                      int runState, String diagnosticInfo,
+                      State runState, String diagnosticInfo,
                       String stateString, String taskTracker,
                       Phase phase) {
         this.taskid = taskid;
@@ -70,10 +67,10 @@ class TaskStatus implements Writable {
     public boolean getIsMap() { return isMap; }
     public float getProgress() { return progress; }
     public void setProgress(float progress) { this.progress = progress; } 
-    public int getRunState() { return runState; }
+    public State getRunState() { return runState; }
     public String getTaskTracker() {return taskTracker;}
     public void setTaskTracker(String tracker) { this.taskTracker = tracker;}
-    public void setRunState(int runState) { this.runState = runState; }
+    public void setRunState(State runState) { this.runState = runState; }
     public String getDiagnosticInfo() { return diagnosticInfo; }
     public void setDiagnosticInfo(String info) { this.diagnosticInfo = info; }
     public String getStateString() { return stateString; }
@@ -183,7 +180,7 @@ class TaskStatus implements Writable {
         UTF8.writeString(out, taskid);
         out.writeBoolean(isMap);
         out.writeFloat(progress);
-        out.writeInt(runState);
+        WritableUtils.writeEnum(out, runState);
         UTF8.writeString(out, diagnosticInfo);
         UTF8.writeString(out, stateString);
         WritableUtils.writeEnum(out, phase);
@@ -199,7 +196,7 @@ class TaskStatus implements Writable {
         this.taskid = UTF8.readString(in);
         this.isMap = in.readBoolean();
         this.progress = in.readFloat();
-        this.runState = in.readInt();
+        this.runState = WritableUtils.readEnum(in, State.class);
         this.diagnosticInfo = UTF8.readString(in);
         this.stateString = UTF8.readString(in);
         this.phase = WritableUtils.readEnum(in, Phase.class); 
