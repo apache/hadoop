@@ -28,8 +28,12 @@ import java.net.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.metrics.ContextFactory;
-import org.apache.hadoop.metrics.MetricsContext;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.net.DNS;
 
@@ -361,8 +365,6 @@ public class TaskTracker
       this.server = new StatusHttpServer("task", httpBindAddress, httpPort, true);
       int workerThreads = conf.getInt("tasktracker.http.threads", 40);
       server.setThreads(1, workerThreads);
-      server.start();
-      this.httpPort = server.getPort();
       // let the jsp pages get to the task tracker, config, and other relevant
       // objects
       FileSystem local = FileSystem.getNamed("local", conf);
@@ -370,6 +372,9 @@ public class TaskTracker
       server.setAttribute("local.file.system", local);
       server.setAttribute("conf", conf);
       server.setAttribute("log", LOG);
+      server.addServlet("mapOutput", "mapOutput", MapOutputServlet.class);
+      server.start();
+      this.httpPort = server.getPort();
       initialize();
     }
 
@@ -1317,5 +1322,56 @@ public class TaskTracker
                       StringUtils.stringifyException(e));
             System.exit(-1);
         }
+    }
+    
+    /**
+     * This class is used in TaskTracker's Jetty to serve the map outputs
+     * to other nodes.
+     * @author Owen O'Malley
+     */
+    public static class MapOutputServlet extends HttpServlet {
+      public void doGet(HttpServletRequest request, 
+                        HttpServletResponse response
+                       ) throws ServletException, IOException {
+        String mapId = request.getParameter("map");
+        String reduceId = request.getParameter("reduce");
+        if (mapId == null || reduceId == null) {
+          throw new IOException("map and reduce parameters are required");
+        }
+        ServletContext context = getServletContext();
+        int reduce = Integer.parseInt(reduceId);
+        byte[] buffer = new byte[64*1024];
+        OutputStream outStream = response.getOutputStream();
+        JobConf conf = (JobConf) context.getAttribute("conf");
+        FileSystem fileSys = 
+          (FileSystem) context.getAttribute("local.file.system");
+        Path filename = conf.getLocalPath(mapId+"/part-"+reduce+".out");
+        response.setContentLength((int) fileSys.getLength(filename));
+        InputStream inStream = null;
+        try {
+          inStream = fileSys.open(filename);
+          try {
+            int len = inStream.read(buffer);
+            while (len > 0) {
+              outStream.write(buffer, 0, len);
+              len = inStream.read(buffer);
+            }
+          } finally {
+            inStream.close();
+            outStream.close();
+          }
+        } catch (IOException ie) {
+          TaskTracker tracker = 
+            (TaskTracker) context.getAttribute("task.tracker");
+          Log log = (Log) context.getAttribute("log");
+          String errorMsg = "getMapOutput(" + mapId + "," + reduceId + 
+          ") failed :\n"+
+          StringUtils.stringifyException(ie);
+          log.warn(errorMsg);
+          tracker.mapOutputLost(mapId, errorMsg);
+          response.sendError(HttpServletResponse.SC_GONE, errorMsg);
+          throw ie;
+        } 
+      }
     }
 }

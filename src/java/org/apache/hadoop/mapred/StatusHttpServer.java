@@ -21,11 +21,12 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
 
+import javax.servlet.http.HttpServlet;
+
 import org.mortbay.http.HttpContext;
 import org.mortbay.http.handler.ResourceHandler;
 import org.mortbay.http.SocketListener;
 import org.mortbay.jetty.servlet.WebApplicationContext;
-import org.mortbay.jetty.servlet.ServletHttpContext;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -97,19 +98,33 @@ public class StatusHttpServer {
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
    * @param classname The class name for the servlet
-   * @param contextPath The context path (can be null, defaults to "/")
    */
-  public void addServlet(String name, String pathSpec, String classname,
-     String contextPath) 
- throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-    String tmpContextPath = contextPath;
-    if (tmpContextPath == null) tmpContextPath = "/";
-    ServletHttpContext context = 
-                    (ServletHttpContext)webServer.getContext(tmpContextPath);
-    if (name == null)
-      context.addServlet(pathSpec, classname);
-    else
-      context.addServlet(name, pathSpec, classname);
+  public <T extends HttpServlet> 
+  void addServlet(String name, String pathSpec, 
+                  Class<T> servletClass) {
+    WebApplicationContext context = webAppContext;
+    try {
+      if (name == null) {
+        context.addServlet(pathSpec, servletClass.getName());
+      } else {
+        context.addServlet(name, pathSpec, servletClass.getName());
+      } 
+    } catch (ClassNotFoundException ex) {
+      throw makeRuntimeException("Problem instantiating class", ex);
+    } catch (InstantiationException ex) {
+      throw makeRuntimeException("Problem instantiating class", ex);
+    } catch (IllegalAccessException ex) {
+      throw makeRuntimeException("Problem instantiating class", ex);
+    }
+  }
+  
+  private static RuntimeException makeRuntimeException(String msg, 
+                                                       Throwable cause) {
+    RuntimeException result = new RuntimeException(msg);
+    if (cause != null) {
+      result.initCause(cause);
+    }
+    return result;
   }
   
   /**

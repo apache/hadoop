@@ -95,6 +95,11 @@ Trunk (unreleased changes)
     DFS, prohibiting the use of "." or ".." as directory or file
     names.  (Wendy Chien via cutting)
 
+24. HADOOP-513.  Replace map output handling with a servlet, rather
+    than a JSP page.  This fixes an issue where
+    IllegalStateException's were logged, sets content-length
+    correctly, and better handles some errors.  (omalley via cutting)
+
 
 Release 0.6.2 (unreleased)
 

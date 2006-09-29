@@ -87,7 +87,7 @@ class MapOutputLocation implements Writable {
   }
 
   public String toString() {
-    return "http://" + host + ":" + port + "/getMapOutput.jsp?map=" + 
+    return "http://" + host + ":" + port + "/mapOutput?map=" + 
             mapTaskId;
   }
   

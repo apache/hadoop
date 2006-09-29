@@ -161,10 +161,7 @@ public class DataNode implements FSConstants, Runnable {
         String infoServerBindAddress = conf.get("dfs.datanode.info.bindAddress", "0.0.0.0");
         this.infoServer = new StatusHttpServer("datanode", infoServerBindAddress, infoServerPort, true);
         //create a servlet to serve full-file content
-        try {
-          this.infoServer.addServlet(null, "/streamFile/*",
-                "org.apache.hadoop.dfs.StreamFile", null);
-        } catch (Exception e) {LOG.warn("addServlet threw exception", e);}
+        this.infoServer.addServlet(null, "/streamFile/*", StreamFile.class);
         this.infoServer.start();
         this.dnRegistration.infoPort = this.infoServer.getPort();
         datanodeObject = this;
