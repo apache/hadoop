@@ -57,13 +57,15 @@ public class Path implements Comparable {
       this.elements = child.elements;
     } else {
       this.isAbsolute = parent.isAbsolute;
-      this.elements = new String[parent.elements.length+child.elements.length];
+      ArrayList list = new ArrayList(parent.elements.length+child.elements.length);
       for (int i = 0; i < parent.elements.length; i++) {
-        elements[i] = parent.elements[i];
+        list.add(parent.elements[i]);
       }
       for (int i = 0; i < child.elements.length; i++) {
-        elements[i+parent.elements.length] = child.elements[i];
+        list.add(child.elements[i]);
       }
+      normalize(list);
+      this.elements = (String[])list.toArray(new String[list.size()]);
     }
     this.drive = child.drive == null ? parent.drive : child.drive;
   }
@@ -82,10 +84,10 @@ public class Path implements Comparable {
     // determine whether the path is absolute
     this.isAbsolute = pathString.startsWith(SEPARATOR);
 
-
     // tokenize the path into elements
-    Enumeration tokens = new StringTokenizer(pathString, SEPARATOR);
+    Enumeration tokens = new StringTokenizer(pathString, SEPARATOR);    
     ArrayList list = Collections.list(tokens);
+    normalize(list);
     this.elements = (String[])list.toArray(new String[list.size()]);
   }
 
@@ -180,5 +182,56 @@ public class Path implements Comparable {
     return elements.length;
   }
 
+  /* 
+   * Removes '.' and '..' 
+   */
+  private void normalize(ArrayList list) {
+    boolean canNormalize = this.isAbsolute;
+    boolean changed = false;    // true if we have detected any . or ..
+    int index = 0;
+    int listSize = list.size();
+    for (int i = 0; i < listSize; i++) {
+      // Invariant: (index >= 0) && (index <= i)
+      if (list.get(i).equals(".")) {
+        changed = true;
+      } else {
+        if (canNormalize) {
+          if (list.get(i).equals("..")) {
+            if ((index > 0) && !list.get(index-1).equals("..")) {
+              index--;    // effectively deletes the last element currently in list.
+              changed = true;
+            } else { // index == 0
+              // the first element is now going to be '..'
+              canNormalize = false;
+              list.set(index, "..");
+              isAbsolute = false;
+              index++; 
+            }
+          } else { // list.get(i) != ".." or "."
+            if (changed) {
+              list.set(index, list.get(i));
+            }
+            index++;
+          }
+        } else { // !canNormalize
+          if (changed) {
+            list.set(index, list.get(i));
+          }
+          index++;
+          if (!list.get(i).equals("..")) {
+           canNormalize = true;
+          }
+        }  // else !canNormalize
+      } 
+    }  // for
+    
+    // Remove the junk at the end of the list.
+    for (int j = listSize-1; j >= index; j--) {
+      list.remove(j);
+    }
+
+  }
+  
+  
 }
 

@@ -90,6 +90,11 @@ Trunk (unreleased changes)
     elsewhere.  The web interface is also updated to display killed
     tasks.  (omalley via cutting)
 
+23. HADOOP-423.  Normalize Paths containing directories named "." and
+    "..", using the standard, unix interpretation.  Also add checks in
+    DFS, prohibiting the use of "." or ".." as directory or file
+    names.  (Wendy Chien via cutting)
+
 
 Release 0.6.2 (unreleased)
 

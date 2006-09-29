@@ -98,4 +98,42 @@ public class TestPath extends TestCase {
     assertFalse(new Path("/").equals(new Path("/foo")));
   }
 
+  public void testDots() {
+    // Test Path(String) 
+    assertEquals(new Path("/foo/bar/baz").toString(), "/foo/bar/baz");
+    assertEquals(new Path("/foo/bar/../baz").toString(), "/foo/baz");
+    assertEquals(new Path("/foo/bar/./baz").toString(), "/foo/bar/baz");
+    assertEquals(new Path("/foo/bar/baz/../../fud").toString(), "/foo/fud");
+    assertEquals(new Path("/foo/bar/baz/.././../fud").toString(), "/foo/fud");
+    assertEquals(new Path("../../foo/bar").toString(), "../../foo/bar");
+    assertEquals(new Path(".././../foo/bar").toString(), "../../foo/bar");
+    assertEquals(new Path("./foo/bar/baz").toString(), "foo/bar/baz");
+    assertEquals(new Path("/foo/bar/../../baz/boo").toString(), "/baz/boo");
+    assertEquals(new Path("/foo/bar/../../../baz").toString(), "../baz");
+    assertEquals(new Path("foo/bar/").toString(), "foo/bar");
+    assertEquals(new Path("foo/bar/../baz").toString(), "foo/baz");
+    assertEquals(new Path("foo/bar/../../baz/boo").toString(), "baz/boo");
+    
+    
+    // Test Path(Path,Path)
+    assertEquals(new Path("/foo/bar", "baz/boo").toString(), "/foo/bar/baz/boo");
+    assertEquals(new Path("foo/bar/","baz/bud").toString(), "foo/bar/baz/bud");
+    
+    assertEquals(new Path("/foo/bar","../../boo/bud").toString(), "/boo/bud");
+    assertEquals(new Path("foo/bar","../../boo/bud").toString(), "boo/bud");
+    assertEquals(new Path("","boo/bud").toString(), "boo/bud");
+
+    assertEquals(new Path("/foo/bar/baz","../../boo/bud").toString(), "/foo/boo/bud");
+    assertEquals(new Path("foo/bar/baz","../../boo/bud").toString(), "foo/boo/bud");
+
+    assertEquals(new Path("/foo/bar/","../../../baz/boo").toString(), "../baz/boo");
+    
+    assertEquals(new Path("../../","../../boo/bud").toString(), "../../../../boo/bud");
+    assertEquals(new Path("../../foo","../../../boo/bud").toString(), "../../../../boo/bud");
+    assertEquals(new Path("../../foo/bar","../boo/bud").toString(), "../../foo/boo/bud");
+
+    assertEquals(new Path("foo/bar/baz","../../..").toString(), "");
+    assertEquals(new Path("foo/bar/baz","../../../../..").toString(), "../..");
+  }
+  
 }

@@ -21,6 +21,7 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.StatusHttpServer;
+import org.apache.hadoop.fs.Path;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -398,6 +399,9 @@ class FSNamesystem implements FSConstants {
             +src+" for "+holder+" at "+clientMachine);
       if( isInSafeMode() )
         throw new SafeModeException( "Cannot create file" + src, safeMode );
+      if (!isValidName(src.toString())) {
+        throw new IOException("Invalid file name: " + src);      	  
+      }
       try {
         if (pendingCreates.get(src) != null) {
            throw new AlreadyBeingCreatedException(
@@ -730,6 +734,9 @@ class FSNamesystem implements FSConstants {
         NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src + " to " + dst );
         if( isInSafeMode() )
           throw new SafeModeException( "Cannot rename " + src, safeMode );
+        if (!isValidName(dst.toString())) {
+          throw new IOException("Invalid name: " + dst);
+        }
         return dir.renameTo(src, dst);
     }
 
@@ -785,12 +792,42 @@ class FSNamesystem implements FSConstants {
     }
 
     /**
+     * Whether the pathname is valid.  Currently prohibits relative paths, 
+     * and names which contain a ":" or "/" 
+     */
+    private boolean isValidName(String src) {
+      
+      // Path must be absolute.
+      if (!src.startsWith(Path.SEPARATOR)) {
+        return false;
+      }
+      
+      // Check for ".." "." ":" "/"
+      Enumeration tokens = new StringTokenizer(src, Path.SEPARATOR);    
+      ArrayList list = Collections.list(tokens);      
+      for (int i = 0; i < list.size(); i++) {
+        String element = (String)list.get(i);
+        if (element.equals("..") || 
+            element.equals(".")  ||
+            (element.indexOf(":") >= 0)  ||
+            (element.indexOf("/") >= 0)) {
+          return false;
+        }
+      }
+      
+      return true;
+    }
+    
+    /**
      * Create all the necessary directories
      */
     public boolean mkdirs( String src ) throws IOException {
         NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src );
         if( isInSafeMode() )
           throw new SafeModeException( "Cannot create directory " + src, safeMode );
+        if (!isValidName(src)) {
+          throw new IOException("Invalid directory name: " + src);
+        }
         return dir.mkdirs(src);
     }
 
