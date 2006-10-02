@@ -103,6 +103,9 @@ Trunk (unreleased changes)
 25. HADOOP-552.  Improved error checking when copying map output files
     to reduce nodes.  (omalley via cutting)
 
+26. HADOOP-566.  Fix scripts to work correctly when accessed through
+    relative symbolic links.  (Lee Faris via cutting)
+
 
 Release 0.6.2 - 2006-09-18
 
