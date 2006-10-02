@@ -19,7 +19,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import java.io.*;
-import java.net.URL;
+import java.net.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.*;
@@ -104,24 +104,46 @@ class MapOutputLocation implements Writable {
                       Path localFilename, 
                       int reduce,
                       Progressable pingee) throws IOException {
-    URL path = new URL(toString() + "&reduce=" + reduce);
-    InputStream input = path.openConnection().getInputStream();
-    OutputStream output = fileSys.create(localFilename);
+    boolean good = false;
     long totalBytes = 0;
+    URL path = new URL(toString() + "&reduce=" + reduce);
     try {
-      byte[] buffer = new byte[64 * 1024];
-      int len = input.read(buffer);
-      while (len > 0) {
-        totalBytes += len;
-        output.write(buffer, 0 ,len);
-        if (pingee != null) {
-          pingee.progress();
+      URLConnection connection = path.openConnection();
+      InputStream input = connection.getInputStream();
+      try {
+        OutputStream output = fileSys.create(localFilename);
+        try {
+          byte[] buffer = new byte[64 * 1024];
+          int len = input.read(buffer);
+          while (len > 0) {
+            totalBytes += len;
+            output.write(buffer, 0 ,len);
+            if (pingee != null) {
+              pingee.progress();
+            }
+            len = input.read(buffer);
+          }
+        } finally {
+          output.close();
         }
-        len = input.read(buffer);
+      } finally {
+        input.close();
+      }
+      good = ((int) totalBytes) == connection.getContentLength();
+      if (!good) {
+        throw new IOException("Incomplete map output received for " + path +
+                              " (" + totalBytes + " instead of " + 
+                              connection.getContentLength() + ")");
       }
     } finally {
-      input.close();
-      output.close();
+      if (!good) {
+        try {
+          fileSys.delete(localFilename);
+          totalBytes = 0;
+        } catch (Throwable th) {
+          // IGNORED because we are cleaning up
+        }
+      }
     }
     return totalBytes;
   }
