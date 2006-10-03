@@ -20,8 +20,13 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
-* A compression input stream.
-  * @author Arun C Murthy
+ * A compression input stream.
+ *
+ * <p>Implementations are assumed to be buffered.  This permits clients to
+ * reposition the underlying input stream then call {@link #resetState()},
+ * without having to also synchronize client buffers.
+ *
+ * @author Arun C Murthy
  */
 public abstract class CompressionInputStream extends InputStream {
   /**
@@ -49,8 +54,8 @@ public abstract class CompressionInputStream extends InputStream {
   public abstract int read(byte[] b, int off, int len) throws IOException;
 
   /**
-   * Reset the compression to the initial state. Does not reset the underlying
-   * stream.
+   * Reset the decompressor to its initial state and discard any buffered data,
+   * as the underlying stream may have been repositioned.
    */
   public abstract void resetState() throws IOException;
   

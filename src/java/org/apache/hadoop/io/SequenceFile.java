@@ -592,7 +592,15 @@ public class SequenceFile {
       val.writeUncompressedBytes(out);            // value
     }
 
-    /** Returns the current length of the output file. */
+    /** Returns the current length of the output file.
+     *
+     * <p>This always returns a synchronized position.  In other words, {@link
+     * immediately after calling {@link Reader#seek(long)} with a position
+     * returned by this method, Reader#next(Writable) may be called.  However
+     * the key may be earlier in the file than key last written when this
+     * method was called (e.g., with block-compression, it may be the first key
+     * in the block that was being written when this method was called).
+     */
     public synchronized long getLength() throws IOException {
       return out.getPos();
     }
@@ -1023,13 +1031,13 @@ public class SequenceFile {
         valLenBuffer = new DataInputBuffer();
         
         keyLenInFilter = this.codec.createInputStream(keyLenBuffer);
-        keyLenIn = new DataInputStream(new BufferedInputStream(keyLenInFilter));
+        keyLenIn = new DataInputStream(keyLenInFilter);
 
         keyInFilter = this.codec.createInputStream(keyBuffer);
-        keyIn = new DataInputStream(new BufferedInputStream(keyInFilter));
+        keyIn = new DataInputStream(keyInFilter);
 
         valLenInFilter = this.codec.createInputStream(valLenBuffer);
-        valLenIn = new DataInputStream(new BufferedInputStream(valLenInFilter));
+        valLenIn = new DataInputStream(valLenInFilter);
       }
       
 
@@ -1058,19 +1066,17 @@ public class SequenceFile {
 
     /** Read a compressed buffer */
     private synchronized void readBuffer(DataInputBuffer buffer, 
-        CompressionInputStream filter, boolean castAway) throws IOException {
+        CompressionInputStream filter) throws IOException {
       // Read data into a temporary buffer
       DataOutputBuffer dataBuffer = new DataOutputBuffer();
       int dataBufferLength = WritableUtils.readVInt(in);
       dataBuffer.write(in, dataBufferLength);
       
-      if (false == castAway) {
-        // Reset the codec
-        filter.resetState();
-        
-        // Set up 'buffer' connected to the input-stream
-        buffer.reset(dataBuffer.getData(), 0, dataBuffer.getLength());
-      }
+      // Set up 'buffer' connected to the input-stream
+      buffer.reset(dataBuffer.getData(), 0, dataBuffer.getLength());
+
+      // Reset the codec
+      filter.resetState();
     }
     
     /** Read the next 'compressed' block */
@@ -1078,8 +1084,8 @@ public class SequenceFile {
       // Check if we need to throw away a whole block of 
       // 'values' due to 'lazy decompression' 
       if (lazyDecompress && !valuesDecompressed) {
-        readBuffer(null, null, true);
-        readBuffer(null, null, true);
+        in.seek(WritableUtils.readVInt(in)+in.getPos());
+        in.seek(WritableUtils.readVInt(in)+in.getPos());
       }
       
       // Reset internal states
@@ -1099,14 +1105,14 @@ public class SequenceFile {
       noBufferedRecords = WritableUtils.readVInt(in);
       
       // Read key lengths and keys
-      readBuffer(keyLenBuffer, keyLenInFilter, false);
-      readBuffer(keyBuffer, keyInFilter, false);
+      readBuffer(keyLenBuffer, keyLenInFilter);
+      readBuffer(keyBuffer, keyInFilter);
       noBufferedKeys = noBufferedRecords;
       
       // Read value lengths and values
       if (!lazyDecompress) {
-        readBuffer(valLenBuffer, valLenInFilter, false);
-        readBuffer(valBuffer, valInFilter, false);
+        readBuffer(valLenBuffer, valLenInFilter);
+        readBuffer(valBuffer, valInFilter);
         noBufferedValues = noBufferedRecords;
         valuesDecompressed = true;
       }
@@ -1126,8 +1132,8 @@ public class SequenceFile {
         // Check if this is the first value in the 'block' to be read
         if (lazyDecompress && !valuesDecompressed) {
           // Read the value lengths and values
-          readBuffer(valLenBuffer, valLenInFilter, false);
-          readBuffer(valBuffer, valInFilter, false);
+          readBuffer(valLenBuffer, valLenInFilter);
+          readBuffer(valBuffer, valInFilter);
           noBufferedValues = noBufferedRecords;
           valuesDecompressed = true;
         }
@@ -1377,9 +1383,18 @@ public class SequenceFile {
       }
     }
 
-    /** Set the current byte position in the input file. */
+    /** Set the current byte position in the input file.
+     *
+     * <p>The position passed must be a position returned by {@link
+     * Writer#getLength()} when writing this file.  To seek to an arbitrary
+     * position, use {@link Reader#sync(long)}.
+     */
     public synchronized void seek(long position) throws IOException {
       in.seek(position);
+      if (blockCompressed) {                      // trigger block read
+        noBufferedKeys = 0;
+        valuesDecompressed = true;
+      }
     }
 
     /** Seek to the next sync mark past a given position.*/

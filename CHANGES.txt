@@ -112,6 +112,10 @@ Trunk (unreleased changes)
     stream. Implement an optimized version for DFS and local FS.
     (Milind Bhandarkar via cutting)
 
+28. HADOOP-522. Permit block compression with MapFile and SetFile.
+    Since these formats are always sorted, block compression can
+    provide a big advantage.  (cutting)
+
 
 Release 0.6.2 - 2006-09-18
 

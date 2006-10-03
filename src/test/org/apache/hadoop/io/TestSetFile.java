@@ -24,6 +24,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSetFile extends TestCase {
@@ -39,7 +40,10 @@ public class TestSetFile extends TestCase {
     FileSystem fs = new LocalFileSystem(conf);
     try {
         RandomDatum[] data = generate(10000);
-        writeTest(fs, data, FILE);
+        writeTest(fs, data, FILE, CompressionType.NONE);
+        readTest(fs, data, FILE);
+
+        writeTest(fs, data, FILE, CompressionType.BLOCK);
         readTest(fs, data, FILE);
     } finally {
         fs.close();
@@ -47,23 +51,27 @@ public class TestSetFile extends TestCase {
   }
 
   private static RandomDatum[] generate(int count) {
-    LOG.debug("generating " + count + " records in memory");
+    LOG.info("generating " + count + " records in memory");
     RandomDatum[] data = new RandomDatum[count];
     RandomDatum.Generator generator = new RandomDatum.Generator();
     for (int i = 0; i < count; i++) {
       generator.next();
       data[i] = generator.getValue();
     }
-    LOG.info("sorting " + count + " records in debug");
+    LOG.info("sorting " + count + " records");
     Arrays.sort(data);
     return data;
   }
 
-  private static void writeTest(FileSystem fs, RandomDatum[] data, String file)
+  private static void writeTest(FileSystem fs, RandomDatum[] data,
+                                String file, CompressionType compress)
     throws IOException {
     MapFile.delete(fs, file);
-    LOG.debug("creating with " + data.length + " records");
-    SetFile.Writer writer = new SetFile.Writer(fs, file, RandomDatum.class);
+    LOG.info("creating with " + data.length + " records");
+    SetFile.Writer writer =
+      new SetFile.Writer(conf, fs, file,
+                         WritableComparator.get(RandomDatum.class),
+                         compress);
     for (int i = 0; i < data.length; i++)
       writer.append(data[i]);
     writer.close();
@@ -72,14 +80,16 @@ public class TestSetFile extends TestCase {
   private static void readTest(FileSystem fs, RandomDatum[] data, String file)
     throws IOException {
     RandomDatum v = new RandomDatum();
-    LOG.debug("reading " + data.length + " records");
+    int sample = (int)Math.sqrt(data.length);
+    Random random = new Random();
+    LOG.info("reading " + sample + " records");
     SetFile.Reader reader = new SetFile.Reader(fs, file, conf);
-    for (int i = 0; i < data.length; i++) {
-      if (!reader.seek(data[i]))
+    for (int i = 0; i < sample; i++) {
+      if (!reader.seek(data[random.nextInt(data.length)]))
         throw new RuntimeException("wrong value at " + i);
     }
     reader.close();
-    LOG.info("done reading " + data.length + " debug");
+    LOG.info("done reading " + data.length);
   }
 
 
@@ -89,7 +99,9 @@ public class TestSetFile extends TestCase {
     boolean create = true;
     boolean check = true;
     String file = FILE;
-    String usage = "Usage: TestSetFile (-local | -dfs <namenode:port>) [-count N] [-nocreate] [-nocheck] file";
+    String compress = "NONE";
+
+    String usage = "Usage: TestSetFile (-local | -dfs <namenode:port>) [-count N] [-nocreate] [-nocheck] [-compress type] file";
       
     if (args.length == 0) {
       System.err.println(usage);
@@ -108,26 +120,30 @@ public class TestSetFile extends TestCase {
           create = false;
         } else if (args[i].equals("-nocheck")) {
           check = false;
+        } else if (args[i].equals("-compress")) {
+          compress = args[++i];
         } else {
           // file is required parameter
           file = args[i];
         }
-
-        LOG.info("count = " + count);
-        LOG.info("create = " + create);
-        LOG.info("check = " + check);
-        LOG.info("file = " + file);
-
-        RandomDatum[] data = generate(count);
-
-        if (create) {
-          writeTest(fs, data, file);
-        }
-
-        if (check) {
-          readTest(fs, data, file);
-        }
       }
+
+      LOG.info("count = " + count);
+      LOG.info("create = " + create);
+      LOG.info("check = " + check);
+      LOG.info("compress = " + compress);
+      LOG.info("file = " + file);
+      
+      RandomDatum[] data = generate(count);
+      
+      if (create) {
+        writeTest(fs, data, file, CompressionType.valueOf(compress));
+      }
+      
+      if (check) {
+        readTest(fs, data, file);
+      }
+  
     } finally {
       fs.close();
     }

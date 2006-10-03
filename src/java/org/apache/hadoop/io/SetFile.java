@@ -20,6 +20,7 @@ import java.io.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /** A file-based set of keys. */
 public class SetFile extends MapFile {
@@ -38,6 +39,20 @@ public class SetFile extends MapFile {
     public Writer(FileSystem fs, String dirName, WritableComparator comparator)
       throws IOException {
       super(fs, dirName, comparator, NullWritable.class);
+    }
+
+    /** Create a set naming the element class and compression type. */
+    public Writer(Configuration conf, FileSystem fs, String dirName,
+                  Class keyClass, SequenceFile.CompressionType compress)
+      throws IOException {
+      this(conf, fs, dirName, WritableComparator.get(keyClass), compress);
+    }
+
+    /** Create a set naming the element comparator and compression type. */
+    public Writer(Configuration conf, FileSystem fs, String dirName,
+                  WritableComparator comparator,
+                  SequenceFile.CompressionType compress) throws IOException {
+      super(conf, fs, dirName, comparator, NullWritable.class, compress);
     }
 
     /** Append a key to a set.  The key must be strictly greater than the

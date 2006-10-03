@@ -19,6 +19,7 @@ package org.apache.hadoop.io;
 import java.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /** A file-based map from keys to values.
  * 
@@ -69,11 +70,19 @@ public class MapFile {
       this(fs, dirName, WritableComparator.get(keyClass), valClass, false);
     }
 
-    /** Create the named map for keys of the named class. */
+    /** Create the named map for keys of the named class.
+     * @deprecated specify a {@link CompressionType} instead
+     */
     public Writer(FileSystem fs, String dirName,
                   Class keyClass, Class valClass, boolean compress)
       throws IOException {
       this(fs, dirName, WritableComparator.get(keyClass), valClass, compress);
+    }
+    /** Create the named map for keys of the named class. */
+    public Writer(Configuration conf, FileSystem fs, String dirName,
+                  Class keyClass, Class valClass, CompressionType compress)
+      throws IOException {
+      this(conf,fs,dirName,WritableComparator.get(keyClass),valClass,compress);
     }
 
     /** Create the named map using the named key comparator. */
@@ -82,10 +91,22 @@ public class MapFile {
       throws IOException {
       this(fs, dirName, comparator, valClass, false);
     }
-    /** Create the named map using the named key comparator. */
+    /** Create the named map using the named key comparator.
+     * @deprecated specify a {@link CompressionType} instead
+     */
     public Writer(FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass,
                   boolean compress)
+      throws IOException {
+
+      this(new Configuration(), fs, dirName, comparator, valClass,
+           compress ? CompressionType.RECORD : CompressionType.NONE);
+    }
+
+    /** Create the named map using the named key comparator. */
+    public Writer(Configuration conf, FileSystem fs, String dirName,
+                  WritableComparator comparator, Class valClass,
+                  SequenceFile.CompressionType compress)
       throws IOException {
 
       this.comparator = comparator;
@@ -99,9 +120,11 @@ public class MapFile {
 
       Class keyClass = comparator.getKeyClass();
       this.data =
-        new SequenceFile.Writer(fs, dataFile, keyClass, valClass, compress);
+        SequenceFile.createWriter
+        (fs,conf,dataFile,keyClass,valClass,compress);
       this.index =
-        new SequenceFile.Writer(fs, indexFile, keyClass, LongWritable.class);
+        SequenceFile.createWriter
+        (fs,conf,indexFile,keyClass,LongWritable.class,CompressionType.BLOCK);
     }
     
     /** The number of entries that are added before an index entry is added.*/
@@ -159,9 +182,7 @@ public class MapFile {
       
     private WritableComparator comparator;
 
-    private DataOutputBuffer keyBuf = new DataOutputBuffer();
-    private DataOutputBuffer nextBuf = new DataOutputBuffer();
-    private int nextKeyLen = -1;
+    private WritableComparable nextKey;
     private long seekPosition = -1;
     private int seekIndex = -1;
     private long firstPosition;
@@ -300,14 +321,11 @@ public class MapFile {
     public synchronized boolean seek(WritableComparable key)
       throws IOException {
       readIndex();                                // make sure index is read
-      keyBuf.reset();                             // write key to keyBuf
-      key.write(keyBuf);
 
       if (seekIndex != -1                         // seeked before
           && seekIndex+1 < count           
           && comparator.compare(key,keys[seekIndex+1])<0 // before next indexed
-          && comparator.compare(keyBuf.getData(), 0, keyBuf.getLength(),
-                                nextBuf.getData(), 0, nextKeyLen)
+          && comparator.compare(key, nextKey)
           >= 0) {                                 // but after last seeked
         // do nothing
       } else {
@@ -322,14 +340,14 @@ public class MapFile {
       }
       data.seek(seekPosition);
       
-      while ((nextKeyLen = data.next(nextBuf.reset())) != -1) {
-        int c = comparator.compare(keyBuf.getData(), 0, keyBuf.getLength(),
-                                   nextBuf.getData(), 0, nextKeyLen);
+      if (nextKey == null)
+        nextKey = comparator.newKey();
+
+      while (data.next(nextKey)) {
+        int c = comparator.compare(key, nextKey);
         if (c <= 0) {                             // at or beyond desired
-          data.seek(seekPosition);                // back off to previous
           return c == 0;
         }
-        seekPosition = data.getPosition();
       }
 
       return false;
@@ -366,7 +384,7 @@ public class MapFile {
     public synchronized Writable get(WritableComparable key, Writable val)
       throws IOException {
       if (seek(key)) {
-        next(getKey, val);                        // don't smash key
+        data.getCurrentValue(val);
         return val;
       } else
         return null;

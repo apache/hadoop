@@ -23,6 +23,7 @@ import java.util.Arrays;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
@@ -40,10 +41,10 @@ public class MapFileOutputFormat extends OutputFormatBase {
 
     // ignore the progress parameter, since MapFile is local
     final MapFile.Writer out =
-      new MapFile.Writer(fs, file.toString(),
+      new MapFile.Writer(job, fs, file.toString(),
                          job.getMapOutputKeyClass(),
                          job.getMapOutputValueClass(),
-                         job.getBoolean("mapred.output.compress", false));
+                         SequenceFile.getCompressionType(job));
 
     return new RecordWriter() {
 
