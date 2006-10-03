@@ -124,6 +124,10 @@ Trunk (unreleased changes)
     version' comand is added to show this information, and it is also
     added to various web interfaces.  (omalley via cutting)
 
+30. HADOOP-568.  Fix so that errors while initializing tasks on a
+    tasktracker correctly report the task as failed to the jobtracker,
+    so that it will be rescheduled.  (omalley via cutting)
+
 
 Release 0.6.2 - 2006-09-18
 

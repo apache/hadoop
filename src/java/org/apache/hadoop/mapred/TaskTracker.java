@@ -674,10 +674,19 @@ public class TaskTracker
           reduceTotal++;
         }
       }
-      try{
+      try {
     	  localizeJob(tip);
-      }catch(IOException ie){
-    	  LOG.warn("Error initializing Job " + tip.getTask().getJobId());
+      } catch (IOException ie) {
+        String msg = ("Error initializing " + tip.getTask().getTaskId() + 
+                      ":\n" + StringUtils.stringifyException(ie));
+        LOG.warn(msg);
+        tip.reportDiagnosticInfo(msg);
+        try {
+          tip.killAndCleanup(true);
+        } catch (IOException ie2) {
+          LOG.info("Error cleaning up " + tip.getTask().getTaskId() + ":\n" +
+                   StringUtils.stringifyException(ie2));          
+        }
       }
     }
     
@@ -995,7 +1004,8 @@ public class TaskTracker
         }
 
         /**
-         * This task has run on too long, and should be killed.
+         * Something went wrong and the task must be killed.
+         * @param wasFailure was it a failure (versus a kill request)?
          */
         public synchronized void killAndCleanup(boolean wasFailure
                                                 ) throws IOException {
@@ -1005,6 +1015,13 @@ public class TaskTracker
                   failures += 1;
                 }
                 runner.kill();
+            } else if (runstate == TaskStatus.State.UNASSIGNED) {
+              if (wasFailure) {
+                failures += 1;
+                runstate = TaskStatus.State.FAILED;
+              } else {
+                runstate = TaskStatus.State.KILLED;
+              }
             }
         }
 
