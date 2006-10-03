@@ -5,6 +5,7 @@
   import="java.io.*"
   import="java.util.*"
   import="org.apache.hadoop.dfs.*"
+  import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
 %>
 <%!
@@ -101,7 +102,12 @@
 <body>
 <h1>NameNode '<%=namenodeLabel%>'</h1>
 
-This NameNode has been up since <%= fsn.getStartTime()%>.<br><br>
+<b>Started:</b> <%= fsn.getStartTime()%><br>
+<b>Version:</b> <%= VersionInfo.getVersion()%>,
+                r<%= VersionInfo.getRevision()%><br>
+<b>Compiled:</b> <%= VersionInfo.getDate()%> by 
+                 <%= VersionInfo.getUser()%><br>
+
 <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b>
 <hr>
 <h2>Cluster Summary</h2>

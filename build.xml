@@ -120,6 +120,10 @@
       <fileset dir="${conf.dir}" includes="**/*.template"/>
       <mapper type="glob" from="*.template" to="*"/>
     </copy>
+
+    <exec executable="sh">
+       <arg line="src/saveVersion.sh ${version}"/>
+    </exec>
   </target>
 
   <!-- ====================================================== -->
@@ -218,6 +222,13 @@
     </tar>
     <jar jarfile="${build.dir}/${final.name}.jar"
          basedir="${build.classes}">
+      <manifest>
+        <section name="org/apache/hadoop">
+          <attribute name="Implementation-Title" value="Hadoop"/>
+          <attribute name="Implementation-Version" value="${version}"/>
+          <attribute name="Implementation-Vendor" value="Apache"/>
+        </section>
+      </manifest>
       <fileset file="${conf.dir}/hadoop-default.xml"/>
       <fileset file="${conf.dir}/mapred-default.xml"/>
       <fileset file="${conf.dir}/commons-logging.properties"/>

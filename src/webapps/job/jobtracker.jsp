@@ -78,8 +78,12 @@
 <body>
 <h1><%= trackerLabel %> Hadoop Map/Reduce Administration</h1>
 
-This JobTracker has been up since <%= new Date(tracker.getStartTime())%>.<br>
-
+<b>Started:</b> <%= new Date(tracker.getStartTime())%><br>
+<b>Version:</b> <%= VersionInfo.getVersion()%>,
+                r<%= VersionInfo.getRevision()%><br>
+<b>Compiled:</b> <%= VersionInfo.getDate()%> by 
+                 <%= VersionInfo.getUser()%><br>
+                   
 <hr>
 <h2>Cluster Summary</h2>
 <center>

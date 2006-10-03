@@ -33,6 +33,7 @@ if [ $# = 0 ]; then
   echo "  jobtracker        run the MapReduce job Tracker node" 
   echo "  tasktracker       run a MapReduce task Tracker node" 
   echo "  job               manipulate MapReduce jobs" 
+  echo "  version           print the version"
   echo "  jar <jar>         run a jar file"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
   echo " or"
@@ -131,6 +132,8 @@ elif [ "$COMMAND" = "tasktracker" ] ; then
   CLASS=org.apache.hadoop.mapred.TaskTracker
 elif [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
+elif [ "$COMMAND" = "version" ] ; then
+  CLASS=org.apache.hadoop.util.VersionInfo
 elif [ "$COMMAND" = "jar" ] ; then
   CLASS=org.apache.hadoop.util.RunJar
 elif [ "$COMMAND" = "distcp" ] ; then

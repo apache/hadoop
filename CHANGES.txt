@@ -116,6 +116,14 @@ Trunk (unreleased changes)
     Since these formats are always sorted, block compression can
     provide a big advantage.  (cutting)
 
+29. HADOOP-567. Record version and revision information in builds.  A
+    package manifest is added to the generated jar file containing
+    version information, and a VersionInfo utility is added that
+    includes further information, including the build date and user,
+    and the subversion revision and repository.  A 'bin/hadoop
+    version' comand is added to show this information, and it is also
+    added to various web interfaces.  (omalley via cutting)
+
 
 Release 0.6.2 - 2006-09-18
 
