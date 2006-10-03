@@ -97,6 +97,11 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Read following %d bytes:\n%s\n", 
                 num_read_bytes, buffer);
 
+        num_read_bytes = hdfsPread(fs, readFile, 0, (void*)buffer, 
+                sizeof(buffer));
+        fprintf(stderr, "Read following %d bytes:\n%s\n", 
+                num_read_bytes, buffer);
+
         hdfsCloseFile(fs, readFile);
     }
 

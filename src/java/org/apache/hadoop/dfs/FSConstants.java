@@ -86,6 +86,7 @@ public interface FSConstants {
     public static final byte OP_WRITE_BLOCK = (byte) 80;
     public static final byte OP_READ_BLOCK = (byte) 81;
     public static final byte OP_READSKIP_BLOCK = (byte) 82;
+    public static final byte OP_READ_RANGE_BLOCK = (byte) 83;
 
     // Encoding types
     public static final byte RUNLENGTH_ENCODING = 0;

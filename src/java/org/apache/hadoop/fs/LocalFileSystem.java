@@ -17,6 +17,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.nio.channels.*;
 import org.apache.hadoop.conf.Configuration;
@@ -113,6 +114,16 @@ public class LocalFileSystem extends FileSystem {
           }
         }
 
+        public int read(long position, byte[] b, int off, int len)
+        throws IOException {
+          ByteBuffer bb = ByteBuffer.wrap(b, off, len);
+          try {
+            return fis.getChannel().read(bb, position);
+          } catch (IOException e) {
+            throw new FSError(e);
+          }
+        }
+        
         public long skip(long n) throws IOException { return fis.skip(n); }
     }
     

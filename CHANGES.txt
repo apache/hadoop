@@ -106,6 +106,12 @@ Trunk (unreleased changes)
 26. HADOOP-566.  Fix scripts to work correctly when accessed through
     relative symbolic links.  (Lee Faris via cutting)
 
+27. HADOOP-519.  Add positioned read methods to FSInputStream.  These
+    permit one to read from a stream without moving its position, and
+    can hence be performed by multiple threads at once on a single
+    stream. Implement an optimized version for DFS and local FS.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.6.2 - 2006-09-18
 

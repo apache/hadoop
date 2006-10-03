@@ -510,7 +510,8 @@ public class DataNode implements FSConstants, Runnable {
                     byte op = (byte) in.read();
                     if (op == OP_WRITE_BLOCK) {
                         writeBlock(in);
-                    } else if (op == OP_READ_BLOCK || op == OP_READSKIP_BLOCK) {
+                    } else if (op == OP_READ_BLOCK || op == OP_READSKIP_BLOCK ||
+                        op == OP_READ_RANGE_BLOCK) {
                         readBlock(in, op);
                     } else {
                         while (op >= 0) {
@@ -548,8 +549,12 @@ public class DataNode implements FSConstants, Runnable {
           b.readFields(in);
 
           long toSkip = 0;
+          long endOffset = -1;
           if (op == OP_READSKIP_BLOCK) {
               toSkip = in.readLong();
+          } else if (op == OP_READ_RANGE_BLOCK) {
+            toSkip = in.readLong();
+            endOffset = in.readLong();
           }
 
           //
@@ -567,14 +572,15 @@ public class DataNode implements FSConstants, Runnable {
                   // Get blockdata from disk
                   //
                   long len = data.getLength(b);
+                  if (endOffset < 0) { endOffset = len; }
                   DataInputStream in2 = new DataInputStream(data.getBlockData(b));
                   out.writeLong(len);
 
-                  if (op == OP_READSKIP_BLOCK) {
+                  long amtSkipped = 0;
+                  if ((op == OP_READSKIP_BLOCK) || (op == OP_READ_RANGE_BLOCK)) {
                       if (toSkip > len) {
                           toSkip = len;
                       }
-                      long amtSkipped = 0;
                       try {
                           amtSkipped = in2.skip(toSkip);
                       } catch (IOException iex) {
@@ -583,26 +589,35 @@ public class DataNode implements FSConstants, Runnable {
                       }
                       out.writeLong(amtSkipped);
                   }
+                  if (op == OP_READ_RANGE_BLOCK) {
+                      if (endOffset > len) {
+                        endOffset = len;
+                      }
+                      out.writeLong(endOffset);
+                  }
 
                   byte buf[] = new byte[BUFFER_SIZE];
                   try {
+                    int toRead = (int) (endOffset - amtSkipped + 1);
                       int bytesRead = 0;
                       try {
-                          bytesRead = in2.read(buf);
+                          bytesRead = in2.read(buf, 0, Math.min(BUFFER_SIZE, toRead));
                           myMetrics.readBytes(bytesRead);
                       } catch (IOException iex) {
                           shutdown();
                           throw iex;
                       }
-                      while (bytesRead >= 0) {
+                      while (toRead > 0 && bytesRead >= 0) {
                           out.write(buf, 0, bytesRead);
-                          len -= bytesRead;
+                          toRead -= bytesRead;
+                          if (toRead > 0) {
                           try {
-                              bytesRead = in2.read(buf);
+                              bytesRead = in2.read(buf, 0, Math.min(BUFFER_SIZE, toRead));
                               myMetrics.readBytes(bytesRead);
                           } catch (IOException iex) {
                               shutdown();
                               throw iex;
+                          }
                           }
                       }
                   } catch (SocketException se) {

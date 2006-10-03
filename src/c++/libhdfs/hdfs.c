@@ -559,6 +559,58 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
     return noReadBytes;
 }
   
+tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position, void* buffer, tSize length)
+{
+    // JAVA EQUIVALENT:
+    //  byte [] bR = new byte[length];
+    //  fis.read(pos, bR, 0, length);
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+
+    //Parameters
+    jobject jFS = (jobject)fs;
+    jobject jInputStream = (jobject)(f ? f->file : NULL);
+
+    jthrowable jException;
+    jbyteArray jbRarray;
+    jint noReadBytes = 0;
+
+    //Sanity check
+    if (!f || f->type == UNINITIALIZED) {
+        errno = EBADF;
+        return -1;
+    }
+
+    //Error checking... make sure that this file is 'readable'
+    if (f->type != INPUT) {
+        fprintf(stderr, "Cannot read from a non-InputStream object!\n");
+        errno = EINVAL;
+        return -1;
+    }
+
+    //Read the requisite bytes
+    jbRarray = (*env)->NewByteArray(env, length);
+    if (invokeMethod(env, (RetVal*)&noReadBytes, &jException, INSTANCE, 
+                jInputStream, "org/apache/hadoop/fs/FSDataInputStream", 
+                "read", "(J[BII)I", position, jbRarray, 0, length) != 0) {
+        fprintf(stderr, 
+            "Call to org.apache.hadoop.fs.FSDataInputStream::read failed!\n");
+        errno = EINTERNAL;
+        noReadBytes = -1;
+    } else {
+        if(noReadBytes > 0) {
+            (*env)->GetByteArrayRegion(env, jbRarray, 0, noReadBytes, buffer);
+        }
+        //This is a valid case: there aren't any bytes left to read!
+        errno = 0;
+    }
+    (*env)->ReleaseByteArrayElements(env, jbRarray, 
+                (*env)->GetByteArrayElements(env, jbRarray, 0), JNI_ABORT);
+
+    return noReadBytes;
+}
+
 tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
 {
     // JAVA EQUIVALENT

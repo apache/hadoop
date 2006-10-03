@@ -26,7 +26,8 @@ import org.apache.hadoop.util.StringUtils;
 
 /** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
  * and buffers input through a {@link BufferedInputStream}. */
-public class FSDataInputStream extends DataInputStream {
+public class FSDataInputStream extends DataInputStream
+    implements Seekable, PositionedReadable {
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.fs.DataInputStream");
 
@@ -36,7 +37,8 @@ public class FSDataInputStream extends DataInputStream {
   private int bytesPerSum = 1;
   
   /** Verify that data matches checksums. */
-  private class Checker extends FilterInputStream implements Seekable {
+  private class Checker extends FilterInputStream
+      implements Seekable, PositionedReadable {
     private FileSystem fs;
     private Path file;
     private FSDataInputStream sums;
@@ -139,6 +141,21 @@ public class FSDataInputStream extends DataInputStream {
       return ((FSInputStream)in).getPos();
     }
 
+    public int read(long position, byte[] buffer, int offset, int length)
+    throws IOException {
+      return ((FSInputStream)in).read(position, buffer, offset, length);
+    }
+    
+    public void readFully(long position, byte[] buffer, int offset, int length)
+    throws IOException {
+      ((FSInputStream)in).readFully(position, buffer, offset, length);
+    }
+    
+    public void readFully(long position, byte[] buffer)
+    throws IOException {
+      ((FSInputStream)in).readFully(position, buffer);
+    }
+
     public void close() throws IOException {
       super.close();
       stopSumming();
@@ -179,6 +196,16 @@ public class FSDataInputStream extends DataInputStream {
       
     public long getPos() throws IOException {
       return position;                            // return cached position
+    }
+    
+    public int read(long position, byte[] buffer, int offset, int length)
+    throws IOException {
+      return ((PositionedReadable)in).read(position, buffer, offset, length);
+    }
+    
+    public void readFully(long position, byte[] buffer, int offset, int length)
+    throws IOException {
+      ((PositionedReadable)in).readFully(position, buffer, offset, length);
     }
     
   }
@@ -224,6 +251,15 @@ public class FSDataInputStream extends DataInputStream {
       return buf[pos++] & 0xff;
     }
 
+    public int read(long position, byte[] buffer, int offset, int length)
+    throws IOException {
+      return ((PositionCache)in).read(position, buffer, offset, length);
+    }
+    
+    public void readFully(long position, byte[] buffer, int offset, int length)
+    throws IOException {
+      ((PositionCache)in).readFully(position, buffer, offset, length);
+    }
 }
   
   
@@ -252,7 +288,7 @@ public class FSDataInputStream extends DataInputStream {
     this.in = new Buffer(new PositionCache(in), bufferSize);
   }
   
-  public void seek(long desired) throws IOException {
+  public synchronized void seek(long desired) throws IOException {
     ((Buffer)in).seek(desired);
   }
 
@@ -260,4 +296,18 @@ public class FSDataInputStream extends DataInputStream {
     return ((Buffer)in).getPos();
   }
 
+  public int read(long position, byte[] buffer, int offset, int length)
+  throws IOException {
+    return ((Buffer)in).read(position, buffer, offset, length);
+  }
+  
+  public void readFully(long position, byte[] buffer, int offset, int length)
+  throws IOException {
+    ((Buffer)in).readFully(position, buffer, offset, length);
+  }
+  
+  public void readFully(long position, byte[] buffer)
+  throws IOException {
+    ((Buffer)in).readFully(position, buffer, 0, buffer.length);
+  }
 }
