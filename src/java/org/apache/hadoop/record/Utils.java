@@ -255,12 +255,8 @@ public class Utils {
             sb.append(ch);
           }
         }
-        try {
-          return new Text(sb.toString());
-        } catch (CharacterCodingException ex) {
-          ex.printStackTrace();
-          return new Text();
-        }
+        
+        return new Text(sb.toString());
     }
     
     /**

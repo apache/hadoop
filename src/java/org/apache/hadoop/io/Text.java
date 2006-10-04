@@ -64,10 +64,8 @@ public class Text implements WritableComparable {
   }
 
   /** Construct from a string. 
-   * @exception CharacterCodingExcetpion if the string contains 
-   *            invalid codepoints or unpaired surrogates
    */
-  public Text(String string) throws CharacterCodingException {
+  public Text(String string) {
     set(string);
   }
 
@@ -77,9 +75,8 @@ public class Text implements WritableComparable {
   }
 
   /** Construct from a byte array.
-   * @exception CharacterCodingExcetpion if the array has invalid UTF8 bytes 
    */
-  public Text(byte[] utf8) throws CharacterCodingException {
+  public Text(byte[] utf8)  {
     set(utf8);
   }
   
@@ -160,29 +157,26 @@ public class Text implements WritableComparable {
     }
   }  
   /** Set to contain the contents of a string. 
-   * @exception CharacterCodingException if the string contains 
-   *       invalid codepoints or unpaired surrogate
    */
-  public void set(String string) throws CharacterCodingException {
-    ByteBuffer bb = encode(string);
-    bytes = bb.array();
-    length = bb.limit();
+  public void set(String string) {
+    try {
+      ByteBuffer bb = encode(string, true);
+      bytes = bb.array();
+      length = bb.limit();
+    }catch(CharacterCodingException e) {
+      throw new RuntimeException("Should not have happened " + e.toString()); 
+    }
   }
 
   /** Set to a utf8 byte array
-   * @exception CharacterCodingException if the array contains invalid UTF8 code  
    */
-  public void set(byte[] utf8) throws CharacterCodingException {
+  public void set(byte[] utf8) {
     set(utf8, 0, utf8.length);
   }
   
   /** copy a text. */
   public void set(Text other) {
-    try {
-      set(other.bytes, 0, other.length);
-    } catch (CharacterCodingException e) {
-      throw new RuntimeException("bad Text UTF8 encoding", e);
-    }
+    set(other.bytes, 0, other.length);
   }
 
   /**
@@ -191,9 +185,7 @@ public class Text implements WritableComparable {
    * @param start the first position of the new string
    * @param len the number of bytes of the new string
    */
-  public void set(byte[] utf8, int start, int len 
-                  ) throws CharacterCodingException{
-    validateUTF8(utf8, start, len);
+  public void set(byte[] utf8, int start, int len) {
     setCapacity(len);
     System.arraycopy(utf8, start, bytes, 0, len);
     this.length = len;
@@ -221,22 +213,16 @@ public class Text implements WritableComparable {
     try {
       return decode(bytes, 0, length);
     } catch (CharacterCodingException e) { 
-      //bytes is supposed to contain valid utf8, therefore, 
-      // this should never happen
       return null;
     }
   }
   
   /** deserialize 
-   * check if the received bytes are valid utf8 code. 
-   * if not throws MalformedInputException
-   * @see Writable#readFields(DataInput)
    */
   public void readFields(DataInput in) throws IOException {
     length = WritableUtils.readVInt(in);
     setCapacity(length);
     in.readFully(bytes, 0, length);
-    validateUTF8(bytes);
   }
 
   /** Skips over one Text in the input. */
@@ -251,7 +237,7 @@ public class Text implements WritableComparable {
    * @see Writable#write(DataOutput)
    */
   public void write(DataOutput out) throws IOException {
-    WritableUtils.writeVInt(out, length); // out.writeInt(length);
+    WritableUtils.writeVInt(out, length);
     out.write(bytes, 0, length);
   }
 
@@ -313,15 +299,15 @@ public class Text implements WritableComparable {
   /**
    * Converts the provided byte array to a String using the
    * UTF-8 encoding. If the input is malformed,
-   * throws a MalformedInputException.
+   * replace by a default value.
    */
   public static String decode(byte[] utf8) throws CharacterCodingException {
-    return decode(ByteBuffer.wrap(utf8), false);
+    return decode(ByteBuffer.wrap(utf8), true);
   }
   
   public static String decode(byte[] utf8, int start, int length) 
       throws CharacterCodingException {
-      return decode(ByteBuffer.wrap(utf8, start, length), false);
+      return decode(ByteBuffer.wrap(utf8, start, length), true);
   }
   
   /**
@@ -358,14 +344,14 @@ public class Text implements WritableComparable {
   /**
    * Converts the provided String to bytes using the
    * UTF-8 encoding. If the input is malformed,
-   * throws a MalformedInputException.
+   * invalid chars are replaced by a default value.
    * @return ByteBuffer: bytes stores at ByteBuffer.array() 
    *                     and length is ByteBuffer.limit()
    */
 
   public static ByteBuffer encode(String string)
     throws CharacterCodingException {
-    return encode(string, false);
+    return encode(string, true);
   }
 
   /**
@@ -399,7 +385,6 @@ public class Text implements WritableComparable {
     int length = WritableUtils.readVInt(in);
     byte [] bytes = new byte[length];
     in.readFully(bytes, 0, length);
-    validateUTF8(bytes);
     return decode(bytes);
   }
 
