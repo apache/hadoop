@@ -114,7 +114,8 @@
 <hr>
 
 <h2>Local logs</h2>
-<a href="/logs/">Log</a> directory
+<a href="/logs/">Log</a> directory, <a href="jobhistory.jsp?historyFile=JobHistory.log&reload=true">
+Job Tracker History</a>
 
 <hr>
 <a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>

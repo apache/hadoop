@@ -135,6 +135,10 @@ Trunk (unreleased changes)
 32. HADOOP-343.  Fix mapred copying so that a failed tasktracker
     doesn't cause other copies to slow.  (Sameer Paranjpye via cutting)
 
+33. HADOOP-239.  Add a persistent job history mechanism, so that basic
+    job statistics are not lost after 24 hours and/or when the
+    jobtracker is restarted.  (Sanjay Dahiya via cutting)
+
 
 Release 0.6.2 - 2006-09-18
 

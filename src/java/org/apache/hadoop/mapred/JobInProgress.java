@@ -20,7 +20,8 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
-
+import org.apache.hadoop.mapred.JobHistory.Keys ; 
+import org.apache.hadoop.mapred.JobHistory.Values ; 
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -47,6 +48,8 @@ class JobInProgress {
     int runningReduceTasks = 0;
     int finishedMapTasks = 0;
     int finishedReduceTasks = 0;
+    int failedMapTasks = 0 ; 
+    int failedReduceTasks = 0 ; 
     JobTracker jobtracker = null;
     HashMap hostToMaps = new HashMap();
 
@@ -93,6 +96,9 @@ class JobInProgress {
 
         this.numMapTasks = conf.getNumMapTasks();
         this.numReduceTasks = conf.getNumReduceTasks();
+        JobHistory.JobInfo.logSubmitted(jobid, conf.getJobName(), conf.getUser(), 
+            System.currentTimeMillis(), jobFile); 
+        
     }
 
     /**
@@ -183,6 +189,8 @@ class JobInProgress {
 
         this.status = new JobStatus(status.getJobId(), 0.0f, 0.0f, JobStatus.RUNNING);
         tasksInited = true;
+        
+        JobHistory.JobInfo.logStarted(profile.getJobId(), System.currentTimeMillis(), numMapTasks, numReduceTasks);
     }
 
     /////////////////////////////////////////////////////
@@ -331,6 +339,9 @@ class JobInProgress {
       Task result = maps[target].getTaskToRun(tts.getTrackerName());
       if (!wasRunning) {
         runningMapTasks += 1;
+        JobHistory.Task.logStarted(profile.getJobId(), 
+            maps[target].getTIPId(), Values.MAP.name(),
+            System.currentTimeMillis());
       }
       return result;
     }    
@@ -357,6 +368,9 @@ class JobInProgress {
         Task result = reduces[target].getTaskToRun(tts.getTrackerName());
         if (!wasRunning) {
           runningReduceTasks += 1;
+          JobHistory.Task.logStarted(profile.getJobId(), 
+              reduces[target].getTIPId(), Values.REDUCE.name(),
+              System.currentTimeMillis());
         }
         return result;
     }
@@ -457,6 +471,30 @@ class JobInProgress {
         } else {
           LOG.info("Task '" + taskid + "' has completed " + tip.getTIPId() + 
                    " successfully.");          
+
+          String taskTrackerName = status.getTaskTracker();
+          TaskTrackerStatus taskTracker = this.jobtracker.getTaskTracker(taskTrackerName);
+          
+          if(status.getIsMap()){
+            JobHistory.MapAttempt.logStarted(profile.getJobId(), 
+                tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+                taskTracker.getHost()); 
+            JobHistory.MapAttempt.logFinished(profile.getJobId(), 
+                tip.getTIPId(), status.getTaskId(), status.getFinishTime(), 
+                taskTracker.getHost()); 
+            JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
+                Values.MAP.name(), status.getFinishTime()); 
+          }else{
+              JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
+                  tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+                  taskTracker.getHost()); 
+              JobHistory.ReduceAttempt.logFinished(profile.getJobId(), 
+                  tip.getTIPId(), status.getTaskId(), status.getShuffleFinishTime(),
+                  status.getSortFinishTime(), status.getFinishTime(), 
+                  taskTracker.getHost()); 
+              JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
+                  Values.REDUCE.name(), status.getFinishTime()); 
+          }
         }
         
         tip.completed(taskid);
@@ -503,6 +541,8 @@ class JobInProgress {
             garbageCollect();
             LOG.info("Job " + this.status.getJobId() + 
                      " has completed successfully.");
+            JobHistory.JobInfo.logFinished(this.status.getJobId(), finishTime, 
+                this.finishedMapTasks, this.finishedReduceTasks, failedMapTasks, failedReduceTasks);
             metrics.completeJob();
         }
     }
@@ -525,7 +565,9 @@ class JobInProgress {
             for (int i = 0; i < reduces.length; i++) {
                 reduces[i].kill();
             }
-
+            JobHistory.JobInfo.logFinished(this.status.getJobId(), finishTime, 
+                this.finishedMapTasks, this.finishedReduceTasks, failedMapTasks, 
+                failedReduceTasks);
             garbageCollect();
         }
     }
@@ -565,12 +607,33 @@ class JobInProgress {
           }
         }
         
+        // update job history
+        String taskTrackerName = status.getTaskTracker();
+        TaskTrackerStatus taskTracker = this.jobtracker.getTaskTracker(taskTrackerName);
+        if(status.getIsMap()){
+          JobHistory.MapAttempt.logStarted(profile.getJobId(), 
+              tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+              taskTracker.getHost()); 
+          JobHistory.MapAttempt.logFailed(profile.getJobId(), 
+              tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+              taskTracker.getHost(), status.getDiagnosticInfo()); 
+        }else{
+          JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
+              tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+              taskTracker.getHost()); 
+          JobHistory.ReduceAttempt.logFailed(profile.getJobId(), 
+              tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+              taskTracker.getHost(), status.getDiagnosticInfo()); 
+        }
+        
         // After this, try to assign tasks with the one after this, so that
         // the failed task goes to the end of the list.
         if (tip.isMapTask()) {
           firstMapToTry = (tip.getIdWithinJob() + 1) % maps.length;
+          failedMapTasks++; 
         } else {
           firstReduceToTry = (tip.getIdWithinJob() + 1) % reduces.length;
+          failedReduceTasks++; 
         }
             
         //
@@ -578,10 +641,15 @@ class JobInProgress {
         //
         if (tip.isFailed()) {
             LOG.info("Aborting job " + profile.getJobId());
+            JobHistory.JobInfo.logFailed(profile.getJobId(), 
+                System.currentTimeMillis(), this.finishedMapTasks, this.finishedReduceTasks);
             kill();
         }
 
         jobtracker.removeTaskEntry(taskid);
+        JobHistory.Task.logFailed(profile.getJobId(), tip.getTIPId(), 
+            tip.isMapTask() ? Values.MAP.name():Values.REDUCE.name(),  
+            System.currentTimeMillis(), status.getDiagnosticInfo());
  }
 
     /**
@@ -604,6 +672,9 @@ class JobInProgress {
                                           reason,
                                           trackerName, phase);
        updateTaskStatus(tip, status, metrics);
+       JobHistory.Task.logFailed(profile.getJobId(), tip.getTIPId(), 
+           tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(), 
+           System.currentTimeMillis(), reason); 
     }
        
                            
