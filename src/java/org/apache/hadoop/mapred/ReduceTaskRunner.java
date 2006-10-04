@@ -455,6 +455,20 @@ class ReduceTaskRunner extends TaskRunner {
             LOG.warn(reduceTask.getTaskId() + " adding host " +
                      cr.getHost() + " to penalty box, next contact in " +
                      ((nextContact-currentTime)/1000) + " seconds");
+
+            // other outputs from the failed host may be present in the
+            // knownOutputs cache, purge them. This is important in case
+            // the failure is due to a lost tasktracker (causes many
+            // unnecessary backoffs). If not, we only take a small hit
+            // polling the jobtracker a few more times
+            ListIterator locIt = knownOutputs.listIterator();
+            while (locIt.hasNext()) {
+              MapOutputLocation loc = (MapOutputLocation)locIt.next();
+              if (cr.getHost().equals(loc.getHost())) {
+                locIt.remove();
+                neededOutputs.add(new Integer(loc.getMapId()));
+              }
+            }
           }
           uniqueHosts.remove(cr.getHost());
           numInFlight--;
