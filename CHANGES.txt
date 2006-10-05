@@ -139,6 +139,9 @@ Trunk (unreleased changes)
     job statistics are not lost after 24 hours and/or when the
     jobtracker is restarted.  (Sanjay Dahiya via cutting)
 
+34. HADOOP-506.  Ignore heartbeats from stale task trackers.
+   (Sanjay Dahiya via cutting)
+
 
 Release 0.6.2 - 2006-09-18
 
