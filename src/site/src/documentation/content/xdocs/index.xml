@@ -15,6 +15,15 @@
       <title>News</title>
 
       <section>
+      <title>6 October, 2006: release 0.7.0 available</title>
+      <p>For details see the <a
+      href="http://tinyurl.com/kvd9m">release notes</a>. The release can
+      be obtained from <a
+      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
+      nearby mirror</a>.
+      </p> </section>
+
+      <section>
       <title>18 September, 2006: release 0.6.2 available</title>
       <p>This fixes critical bugs in 0.6.1.  For details see the <a
       href="http://tinyurl.com/gyb56">release notes</a>. The release can

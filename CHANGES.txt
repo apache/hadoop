@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Release 0.7.0 - 2006-10-06
 
  1. HADOOP-243.  Fix rounding in the display of task and job progress
     so that things are not shown to be 100% complete until they are in
