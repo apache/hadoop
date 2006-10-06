@@ -323,8 +323,8 @@ public class DataNode implements FSConstants, Runnable {
       // Now loop for a long time....
       //
 
-      try {
-        while (shouldRun) {
+      while (shouldRun) {
+        try {
           long now = System.currentTimeMillis();
 
           //
@@ -411,11 +411,15 @@ public class DataNode implements FSConstants, Runnable {
               // Send newly-received blockids to namenode
               //
               blockArray = (Block[]) receivedBlockList.toArray(new Block[receivedBlockList.size()]);
-              receivedBlockList.removeAllElements();
             }
           }
           if( blockArray != null ) {
             namenode.blockReceived( dnRegistration, blockArray );
+            synchronized (receivedBlockList) {
+              for(Block b: blockArray) {
+                receivedBlockList.remove(b);
+              }
+            }
           }
             
           //
@@ -431,19 +435,22 @@ public class DataNode implements FSConstants, Runnable {
               }
             }
           } // synchronized
-        } // while (shouldRun)
-      } catch(DiskErrorException e) {
-        handleDiskError(e.getLocalizedMessage());
-      } catch( RemoteException re ) {
-        String reClass = re.getClassName();
-        if( UnregisteredDatanodeException.class.getName().equals( reClass )) {
-          LOG.warn( "DataNode is shutting down: " + 
-                    StringUtils.stringifyException(re));
-          shutdown();
+        } catch(DiskErrorException e) {
+          handleDiskError(e.getLocalizedMessage());
           return;
+        } catch( RemoteException re ) {
+          String reClass = re.getClassName();
+          if( UnregisteredDatanodeException.class.getName().equals( reClass )) {
+            LOG.warn( "DataNode is shutting down: " + 
+                      StringUtils.stringifyException(re));
+            shutdown();
+            return;
+          }
+          LOG.warn(StringUtils.stringifyException(re));
+        } catch (IOException e) {
+          LOG.warn(StringUtils.stringifyException(e));
         }
-        throw re;
-      }
+      } // while (shouldRun)
     } // offerService
 
     
@@ -968,9 +975,8 @@ public class DataNode implements FSConstants, Runnable {
             try {
                 offerService();
             } catch (Exception ex) {
-                LOG.info("Exception: " + ex);
+              LOG.error("Exception: " + StringUtils.stringifyException(ex));
               if (shouldRun) {
-                LOG.info("Lost connection to namenode.  Retrying...");
                 try {
                   Thread.sleep(5000);
                 } catch (InterruptedException ie) {

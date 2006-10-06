@@ -150,6 +150,12 @@ Trunk (unreleased changes)
     This should improve some DFS namenode failure modes.
     (omalley via cutting)
 
+36. HADOOP-581.  Fix datanode to not reset itself on communications
+    errors with the namenode.  If a request to the namenode fails, the
+    datanode should retry, not restart.  This reduces the load on the
+    namenode, since restarts cause a resend of the block report.
+    (omalley via cutting)
+
 
 Release 0.6.2 - 2006-09-18
 
