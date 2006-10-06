@@ -142,6 +142,14 @@ Trunk (unreleased changes)
 34. HADOOP-506.  Ignore heartbeats from stale task trackers.
    (Sanjay Dahiya via cutting)
 
+35. HADOOP-255.  Discard stale, queued IPC calls.  Do not process
+    calls whose clients will likely time out before they receive a
+    response.  When the queue is full, new calls are now received and
+    queued, and the oldest calls are discarded, so that, when servers
+    get bogged down, they no longer develop a backlog on the socket.
+    This should improve some DFS namenode failure modes.
+    (omalley via cutting)
+
 
 Release 0.6.2 - 2006-09-18
 
