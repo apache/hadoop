@@ -30,6 +30,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
@@ -351,6 +352,10 @@ public abstract class Server {
     private long lastContact;
     private int dataLength;
     private Socket socket;
+    // Cache the remote host & port info so that even if the socket is 
+    // disconnected, we can say where it used to connect to.
+    private String hostAddress;
+    private int remotePort;
 
     public Connection(SelectionKey key, SocketChannel channel, 
     long lastContact) {
@@ -363,14 +368,21 @@ public abstract class Server {
       this.out = new DataOutputStream
         (new BufferedOutputStream(
          this.channelOut = new SocketChannelOutputStream(channel, 4096)));
+      InetAddress addr = socket.getInetAddress();
+      if (addr == null) {
+        this.hostAddress = "*Unknown*";
+      } else {
+        this.hostAddress = addr.getHostAddress();
+      }
+      this.remotePort = socket.getPort();
     }   
 
     public String toString() {
-      return getHostAddress() + ":" + socket.getPort(); 
+      return getHostAddress() + ":" + remotePort; 
     }
     
     public String getHostAddress() {
-      return socket.getInetAddress().getHostAddress();
+      return hostAddress;
     }
 
     public void setLastContact(long lastContact) {
@@ -431,7 +443,8 @@ public abstract class Server {
       Call call = new Call(id, param, this);
       synchronized (callQueue) {
         if (callQueue.size() >= maxQueueSize) {
-          callQueue.removeFirst();
+          Call oldCall = (Call) callQueue.removeFirst();
+          LOG.warn("Call queue overflow discarding oldest call " + oldCall);
         }
         callQueue.addLast(call);              // queue the call
         callQueue.notify();                   // wake up a waiting handler
@@ -484,7 +497,7 @@ public abstract class Server {
           // throw the message away if it is too old
           if (System.currentTimeMillis() - call.receivedTime > 
               maxCallStartAge) {
-            LOG.info("Call " + call.toString() + 
+            LOG.warn("Call " + call.toString() + 
                      " discarded for being too old (" +
                      (System.currentTimeMillis() - call.receivedTime) + ")");
             continue;
@@ -492,7 +505,7 @@ public abstract class Server {
           
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": has #" + call.id + " from " +
-                     call.connection.socket.getInetAddress().getHostAddress());
+                     call.connection);
           
           String errorClass = null;
           String error = null;

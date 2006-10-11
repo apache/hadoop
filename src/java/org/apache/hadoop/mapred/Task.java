@@ -176,10 +176,26 @@ abstract class Task implements Writable, Configurable {
     }
   }
 
-  public void done(TaskUmbilicalProtocol umbilical)
-    throws IOException {
-    umbilical.progress(getTaskId(),               // send a final status report
-                       taskProgress.get(), taskProgress.toString(), phase);
-    umbilical.done(getTaskId());
+  public void done(TaskUmbilicalProtocol umbilical) throws IOException {
+    int retries = 10;
+    boolean needProgress = true;
+    while (true) {
+      try {
+        if (needProgress) {
+          // send a final status report
+          umbilical.progress(getTaskId(), taskProgress.get(), 
+                             taskProgress.toString(), phase);
+          needProgress = false;
+        }
+        umbilical.done(getTaskId());
+        return;
+      } catch (IOException ie) {
+        LOG.warn("Failure signalling completion: " + 
+                 StringUtils.stringifyException(ie));
+        if (--retries == 0) {
+          throw ie;
+        }
+      }
+    }
   }
 }

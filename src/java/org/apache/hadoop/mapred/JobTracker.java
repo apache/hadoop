@@ -21,6 +21,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.*;
 import java.net.*;
@@ -114,8 +115,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       private Map launchingTasks = new LinkedHashMap();
       
       public void run() {
-        try {
-          while (shouldRun) {
+        while (shouldRun) {
+          try {
             // Every 3 minutes check for any tasks that are overdue
             Thread.sleep(TASKTRACKER_EXPIRY_INTERVAL/3);
             long now = System.currentTimeMillis();
@@ -151,9 +152,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 }
               }
             }
+          } catch (InterruptedException ie) {
+            // all done
+            return;
+          } catch (Exception e) {
+            LOG.error("Expire Launching Task Thread got exception: " +
+                      StringUtils.stringifyException(e));
           }
-        } catch (InterruptedException ie) {
-          // all done
         }
       }
       
@@ -188,15 +193,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
          */
         public void run() {
             while (shouldRun) {
+              try {
                 //
                 // Thread runs periodically to check whether trackers should be expired.
                 // The sleep interval must be no more than half the maximum expiry time
                 // for a task tracker.
                 //
-                try {
-                    Thread.sleep(TASKTRACKER_EXPIRY_INTERVAL / 3);
-                } catch (InterruptedException ie) {
-                }
+                Thread.sleep(TASKTRACKER_EXPIRY_INTERVAL / 3);
 
                 //
                 // Loop through all expired items in the queue
@@ -232,6 +235,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                         }
                     }
                 }
+              } catch (Exception t) {
+                LOG.error("Tracker Expiry Thread got exception: " +
+                          StringUtils.stringifyException(t));
+              }
             }
         }
         

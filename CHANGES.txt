@@ -1,6 +1,25 @@
 Hadoop Change Log
 
 
+Release 0.7.1 - 2006-10-11
+
+ 1. HADOOP-593.  Fix a NullPointerException in the JobTracker.
+    (omalley via cutting)
+
+ 2. HADOOP-592.  Fix a NullPointerException in the IPC Server.  Also
+    consistently log when stale calls are discarded.  (omalley via cutting)
+
+ 3. HADOOP-594.  Increase the DFS safe-mode threshold from .95 to
+    .999, so that nearly all blocks must be reported before filesystem
+    modifications are permitted.  (Konstantin Shvachko via cutting)
+
+ 4. HADOOP-598.  Fix tasks to retry when reporting completion, so that
+    a single RPC timeout won't fail a task.  (omalley via cutting)
+
+ 5. HADOOP-597.  Fix TaskTracker to not discard map outputs for errors
+    in transmitting them to reduce nodes.  (omalley via cutting)
+
+
 Release 0.7.0 - 2006-10-06
 
  1. HADOOP-243.  Fix rounding in the display of task and job progress
