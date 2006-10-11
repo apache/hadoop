@@ -1365,30 +1365,39 @@ public class TaskTracker
         Path filename = conf.getLocalPath(mapId+"/part-"+reduce+".out");
         response.setContentLength((int) fileSys.getLength(filename));
         InputStream inStream = null;
+        // true iff IOException was caused by attempt to access input
+        boolean isInputException = true;
         try {
           inStream = fileSys.open(filename);
           try {
             int len = inStream.read(buffer);
             while (len > 0) {
-              outStream.write(buffer, 0, len);
+              try {
+                outStream.write(buffer, 0, len);
+              } catch (IOException ie) {
+                isInputException = false;
+                throw ie;
+              }
               len = inStream.read(buffer);
             }
           } finally {
             inStream.close();
-            outStream.close();
           }
         } catch (IOException ie) {
           TaskTracker tracker = 
             (TaskTracker) context.getAttribute("task.tracker");
           Log log = (Log) context.getAttribute("log");
-          String errorMsg = "getMapOutput(" + mapId + "," + reduceId + 
-          ") failed :\n"+
-          StringUtils.stringifyException(ie);
+          String errorMsg = ("getMapOutput(" + mapId + "," + reduceId + 
+                             ") failed :\n"+
+                             StringUtils.stringifyException(ie));
           log.warn(errorMsg);
-          tracker.mapOutputLost(mapId, errorMsg);
+          if (isInputException) {
+            tracker.mapOutputLost(mapId, errorMsg);
+          }
           response.sendError(HttpServletResponse.SC_GONE, errorMsg);
           throw ie;
         } 
+        outStream.close();
       }
     }
 }

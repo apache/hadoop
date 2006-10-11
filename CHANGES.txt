@@ -16,6 +16,9 @@ Release 0.7.1 - unreleased
  4. HADOOP-598.  Fix tasks to retry when reporting completion, so that
     a single RPC timeout won't fail a task.  (omalley via cutting)
 
+ 5. HADOOP-597.  Fix TaskTracker to not discard map outputs for errors
+    in transmitting them to reduce nodes.  (omalley via cutting)
+
 
 Release 0.7.0 - 2006-10-06
 
