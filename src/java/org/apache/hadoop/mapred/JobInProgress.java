@@ -20,7 +20,6 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
-import org.apache.hadoop.mapred.JobHistory.Keys ; 
 import org.apache.hadoop.mapred.JobHistory.Values ; 
 import java.io.*;
 import java.net.*;
@@ -33,7 +32,7 @@ import java.util.*;
 // doing bookkeeping of its Tasks.
 ///////////////////////////////////////////////////////
 class JobInProgress {
-    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobInProgress");
+    private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobInProgress");
 
     JobProfile profile;
     JobStatus status;
@@ -473,25 +472,24 @@ class JobInProgress {
                    " successfully.");          
 
           String taskTrackerName = status.getTaskTracker();
-          TaskTrackerStatus taskTracker = this.jobtracker.getTaskTracker(taskTrackerName);
           
           if(status.getIsMap()){
             JobHistory.MapAttempt.logStarted(profile.getJobId(), 
                 tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
-                taskTracker.getHost()); 
+                taskTrackerName); 
             JobHistory.MapAttempt.logFinished(profile.getJobId(), 
                 tip.getTIPId(), status.getTaskId(), status.getFinishTime(), 
-                taskTracker.getHost()); 
+                taskTrackerName); 
             JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
                 Values.MAP.name(), status.getFinishTime()); 
           }else{
               JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
                   tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
-                  taskTracker.getHost()); 
+                  taskTrackerName); 
               JobHistory.ReduceAttempt.logFinished(profile.getJobId(), 
                   tip.getTIPId(), status.getTaskId(), status.getShuffleFinishTime(),
                   status.getSortFinishTime(), status.getFinishTime(), 
-                  taskTracker.getHost()); 
+                  taskTrackerName); 
               JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
                   Values.REDUCE.name(), status.getFinishTime()); 
           }
@@ -609,21 +607,20 @@ class JobInProgress {
         
         // update job history
         String taskTrackerName = status.getTaskTracker();
-        TaskTrackerStatus taskTracker = this.jobtracker.getTaskTracker(taskTrackerName);
-        if(status.getIsMap()){
+        if (status.getIsMap()) {
           JobHistory.MapAttempt.logStarted(profile.getJobId(), 
               tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
-              taskTracker.getHost()); 
+              taskTrackerName); 
           JobHistory.MapAttempt.logFailed(profile.getJobId(), 
               tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
-              taskTracker.getHost(), status.getDiagnosticInfo()); 
-        }else{
+              taskTrackerName, status.getDiagnosticInfo()); 
+        } else {
           JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
               tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
-              taskTracker.getHost()); 
+              taskTrackerName); 
           JobHistory.ReduceAttempt.logFailed(profile.getJobId(), 
               tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
-              taskTracker.getHost(), status.getDiagnosticInfo()); 
+              taskTrackerName, status.getDiagnosticInfo()); 
         }
         
         // After this, try to assign tasks with the one after this, so that

@@ -1,6 +1,12 @@
 Hadoop Change Log
 
 
+Release 0.7.1 - unreleased
+
+ 1. HADOOP-593.  Fix a NullPointerException in the JobTracker.
+    (omalley via cutting)
+
+
 Release 0.7.0 - 2006-10-06
 
  1. HADOOP-243.  Fix rounding in the display of task and job progress
