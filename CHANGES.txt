@@ -13,6 +13,9 @@ Release 0.7.1 - unreleased
     .999, so that nearly all blocks must be reported before filesystem
     modifications are permitted.  (Konstantin Shvachko via cutting)
 
+ 4. HADOOP-598.  Fix tasks to retry when reporting completion, so that
+    a single RPC timeout won't fail a task.  (omalley via cutting)
+
 
 Release 0.7.0 - 2006-10-06
 
