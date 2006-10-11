@@ -249,7 +249,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.safemode.threshold.pct</name>
-  <value>0.95f</value>
+  <value>0.999f</value>
   <description>
   	Specifies the percentage of blocks that should satisfy 
   	the minimal replication requirement defined by dfs.replication.min.

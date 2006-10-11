@@ -9,6 +9,10 @@ Release 0.7.1 - unreleased
  2. HADOOP-592.  Fix a NullPointerException in the IPC Server.  Also
     consistently log when stale calls are discarded.  (omalley via cutting)
 
+ 3. HADOOP-594.  Increase the DFS safe-mode threshold from .95 to
+    .999, so that nearly all blocks must be reported before filesystem
+    modifications are permitted.  (Konstantin Shvachko via cutting)
+
 
 Release 0.7.0 - 2006-10-06
 
