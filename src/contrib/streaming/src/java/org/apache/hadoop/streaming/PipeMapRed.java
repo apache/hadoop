@@ -273,11 +273,23 @@ public abstract class PipeMapRed {
         sideEffectOut_ = getURIOutputStream(sideEffectURI_, allowSocket);
       }
 
+      // 
       // argvSplit[0]:
       // An absolute path should be a preexisting valid path on all TaskTrackers
-      // A  relative path should match in the unjarred Job data
-      // In this case, force an absolute path to make sure exec finds it.
-      argvSplit[0] = new File(argvSplit[0]).getAbsolutePath();
+      // A relative path is converted into an absolute pathname by looking
+      // up the PATH env variable. If it still fails, look it up in the
+      // tasktracker's local working directory
+      //
+      if (!new File(argvSplit[0]).isAbsolute()) {
+          PathFinder finder = new PathFinder("PATH");
+          finder.prependPathComponent(".");
+          File f = finder.getAbsolutePath(argvSplit[0]);
+          if (f != null) {
+              argvSplit[0] = f.getAbsolutePath();
+          }
+          f = null;
+      }
+      System.out.println("XXX2 argvSplit[0] = " + argvSplit[0]);
       logprintln("PipeMapRed exec " + Arrays.asList(argvSplit));
       logprintln("sideEffectURI_=" + sideEffectURI_);
 

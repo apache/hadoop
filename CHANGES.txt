@@ -1,6 +1,13 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1. HADOOP-477.  Extend contrib/streaming to scan the PATH environment
+    variables when resolving executable program names.
+    (Dhruba Borthakur via cutting) 
+
+
 Release 0.7.1 - 2006-10-11
 
  1. HADOOP-593.  Fix a NullPointerException in the JobTracker.
