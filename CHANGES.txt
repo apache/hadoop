@@ -20,6 +20,9 @@ Trunk (unreleased changes)
  5. HADOOP-514.  Make DFS heartbeat interval configurable.
     (Milind Bhandarkar via cutting)
 
+ 6. HADOOP-588.  Fix logging and accounting of failed tasks.
+    (Sanjay Dahiya via cutting)
+
 
 Release 0.7.1 - 2006-10-11
 

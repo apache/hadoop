@@ -563,9 +563,8 @@ class JobInProgress {
             for (int i = 0; i < reduces.length; i++) {
                 reduces[i].kill();
             }
-            JobHistory.JobInfo.logFinished(this.status.getJobId(), finishTime, 
-                this.finishedMapTasks, this.finishedReduceTasks, failedMapTasks, 
-                failedReduceTasks);
+            JobHistory.JobInfo.logFailed(this.status.getJobId(), finishTime, 
+                this.finishedMapTasks, this.finishedReduceTasks);
             garbageCollect();
         }
     }
@@ -638,15 +637,15 @@ class JobInProgress {
         //
         if (tip.isFailed()) {
             LOG.info("Aborting job " + profile.getJobId());
+            JobHistory.Task.logFailed(profile.getJobId(), tip.getTIPId(), 
+                tip.isMapTask() ? Values.MAP.name():Values.REDUCE.name(),  
+                System.currentTimeMillis(), status.getDiagnosticInfo());
             JobHistory.JobInfo.logFailed(profile.getJobId(), 
                 System.currentTimeMillis(), this.finishedMapTasks, this.finishedReduceTasks);
             kill();
         }
 
         jobtracker.removeTaskEntry(taskid);
-        JobHistory.Task.logFailed(profile.getJobId(), tip.getTIPId(), 
-            tip.isMapTask() ? Values.MAP.name():Values.REDUCE.name(),  
-            System.currentTimeMillis(), status.getDiagnosticInfo());
  }
 
     /**

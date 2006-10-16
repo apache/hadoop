@@ -38,14 +38,13 @@
 <hr/>
 <center>
 <%
-	Map<String, JobHistory.Task> tasks = job.getAllTasks();
-	int finishedMaps = job.getInt(Keys.FINISHED_MAPS)  ;
-	int finishedReduces = job.getInt(Keys.FINISHED_REDUCES) ;
-	if( finishedMaps == 0 || finishedReduces == 0 ){
+	if( ! Values.SUCCESS.name().equals(job.get(Keys.JOB_STATUS)) ){
 	  out.print("<h3>No Analysis available as job did not finish</h3>");
 	  return ;
 	}
-	
+	Map<String, JobHistory.Task> tasks = job.getAllTasks();
+	int finishedMaps = job.getInt(Keys.FINISHED_MAPS)  ;
+	int finishedReduces = job.getInt(Keys.FINISHED_REDUCES) ;
 	JobHistory.Task [] mapTasks = new JobHistory.Task[finishedMaps]; 
 	JobHistory.Task [] reduceTasks = new JobHistory.Task[finishedReduces]; 
 	int mapIndex = 0 , reduceIndex=0; 
