@@ -281,6 +281,10 @@ public class JobClient extends ToolBase implements MRConstants  {
         short replication = (short)job.getInt("mapred.submit.replication", 10);
 
         if (originalJarPath != null) {           // copy jar to JobTracker's fs
+          // use jar name if job is not named. 
+          if( "".equals(job.getJobName() )){
+            job.setJobName(new Path(originalJarPath).getName());
+          }
           job.setJar(submitJarFile.toString());
           fs.copyFromLocalFile(new Path(originalJarPath), submitJarFile);
           fs.setReplication(submitJarFile, replication);
