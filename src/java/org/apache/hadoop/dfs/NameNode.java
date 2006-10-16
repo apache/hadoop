@@ -23,8 +23,6 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.Metrics;
@@ -129,7 +127,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * Create a NameNode at the specified location and start it.
      */
     public NameNode(File dir, String bindAddress, int port, Configuration conf) throws IOException {
-        this.namesystem = new FSNamesystem(dir, conf);
+        this.namesystem = new FSNamesystem(dir, this, conf);
         this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
         this.server = RPC.getServer(this, bindAddress, port, handlerCount, false, conf);
         this.server.start();
@@ -546,7 +544,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       if( version != DFS_CURRENT_VERSION )
         throw new IncorrectVersionException( version, "data node" );
     }
-
+    
     /**
      */
     public static void main(String argv[]) throws Exception {

@@ -26,6 +26,13 @@ import org.apache.hadoop.fs.Path;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.util.*;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskTracker;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -190,7 +197,7 @@ class FSNamesystem implements FSConstants {
      * dir is where the filesystem directory state 
      * is stored
      */
-    public FSNamesystem(File dir, Configuration conf) throws IOException {
+    public FSNamesystem(File dir, NameNode nn, Configuration conf) throws IOException {
         fsNamesystemObject = this;
         InetSocketAddress addr = DataNode.createSocketAddr(conf.get("fs.default.name", "local"));
         this.maxReplication = conf.getInt("dfs.replication.max", 512);
@@ -229,6 +236,10 @@ class FSNamesystem implements FSConstants {
         this.infoPort = conf.getInt("dfs.info.port", 50070);
         this.infoBindAddress = conf.get("dfs.info.bindAddress", "0.0.0.0");
         this.infoServer = new StatusHttpServer("dfs",infoBindAddress, infoPort, false);
+        this.infoServer.setAttribute("name.system", this);
+        this.infoServer.setAttribute("name.node", nn);
+        this.infoServer.setAttribute("name.conf", conf);
+        this.infoServer.addServlet("fsck", "/fsck", FsckServlet.class);
         this.infoServer.start();
     }
     /** Return the FSNamesystem object
@@ -2463,5 +2474,30 @@ class FSNamesystem implements FSConstants {
       if( ! isInSafeMode() )
         return "";
       return safeMode.getTurnOffTip();
+    }
+    
+    /**
+     * This class is used in Namesystem's jetty to do fsck on namenode
+     * @author Milind Bhandarkar
+     */
+    public static class FsckServlet extends HttpServlet {
+      public void doGet(HttpServletRequest request,
+          HttpServletResponse response
+          ) throws ServletException, IOException {
+        Map<String,String[]> pmap = request.getParameterMap();
+        try {
+          ServletContext context = getServletContext();
+          NameNode nn = (NameNode) context.getAttribute("name.node");
+          Configuration conf = (Configuration) context.getAttribute("name.conf");
+          NamenodeFsck fscker = new NamenodeFsck(conf, nn, pmap, response);
+          fscker.fsck();
+        } catch (IOException ie) {
+          StringUtils.stringifyException(ie);
+          LOG.warn(ie);
+          String errMsg = "Fsck on path " + pmap.get("path") + " failed.";
+          response.sendError(HttpServletResponse.SC_GONE, errMsg);
+          throw ie;
+        }
+      }
     }
 }

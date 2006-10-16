@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs;
+package org.apache.hadoop.dfs;
 
 import java.io.IOException;
 import java.util.Random;
 import junit.framework.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.CopyFiles;
 
 
 /**
- * A JUnit test for copying files recursively.
+ * A JUnit test for doing fsck
  *
  * @author Milind Bhandarkar
  */
-public class TestCopyFiles extends TestCase {
+public class TestFsck extends TestCase {
   
   private static final int NFILES = 20;
   private static String TEST_ROOT_DIR =
@@ -76,7 +77,7 @@ public class TestCopyFiles extends TestCase {
     long getSeed() { return seed; }
   }
   
-  public TestCopyFiles(String testName) {
+  public TestFsck(String testName) {
     super(testName);
   }
 
@@ -118,35 +119,6 @@ public class TestCopyFiles extends TestCase {
     return files;
   }
   
-  /** check if the files have been copied correctly. */
-  private static boolean checkFiles(String fsname, String topdir, MyFile[] files) 
-  throws IOException {
-    
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getNamed(fsname, conf);
-    Path root = new Path(topdir);
-    
-    for (int idx = 0; idx < NFILES; idx++) {
-      Path fPath = new Path(root, files[idx].getName());
-      FSDataInputStream in = fs.open(fPath);
-      byte[] toRead = new byte[files[idx].getSize()];
-      byte[] toCompare = new byte[files[idx].getSize()];
-      Random rb = new Random(files[idx].getSeed());
-      rb.nextBytes(toCompare);
-      assertEquals("Cannnot read file.", toRead.length, in.read(toRead));
-      in.close();
-      for (int i = 0; i < toRead.length; i++) {
-        if (toRead[i] != toCompare[i]) {
-          return false;
-        }
-      }
-      toRead = null;
-      toCompare = null;
-    }
-    
-    return true;
-  }
-  
   /** delete directory and everything underneath it.*/
   private static void deldir(String fsname, String topdir)
   throws IOException {
@@ -156,20 +128,8 @@ public class TestCopyFiles extends TestCase {
     fs.delete(root);
   }
   
-  /** copy files from local file system to local file system */
-  public void testCopyFromLocalToLocal() throws Exception {
-    MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
-    new CopyFiles().doMain(new Configuration(),
-        new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
-          "file://"+TEST_ROOT_DIR+"/destdat"});
-    assertTrue("Source and destination directories do not match.",
-        checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
-    deldir("local", TEST_ROOT_DIR+"/destdat");
-    deldir("local", TEST_ROOT_DIR+"/srcdat");
-  }
-  
-  /** copy files from dfs file system to dfs file system */
-  public void testCopyFromDfsToDfs() throws Exception {
+  /** do fsck */
+  public void testFsck() throws Exception {
     String namenode = null;
     MiniDFSCluster cluster = null;
     try {
@@ -178,60 +138,11 @@ public class TestCopyFiles extends TestCase {
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
-        new CopyFiles().doMain(conf, new String[] {"dfs://"+namenode+"/srcdat",
-        "dfs://"+namenode+"/destdat"});
-        assertTrue("Source and destination directories do not match.",
-            checkFiles(namenode, "/destdat", files));
-        deldir(namenode, "/destdat");
+        assertEquals(0, new DFSck().doMain(conf, new String[] {"/"}));
         deldir(namenode, "/srcdat");
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }
   }
-  
-  /** copy files from local file system to dfs file system */
-  public void testCopyFromLocalToDfs() throws Exception {
-    String namenode = null;
-    MiniDFSCluster cluster = null;
-    try {
-      Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(65316, conf, false);
-      namenode = conf.get("fs.default.name", "local");
-      if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
-        new CopyFiles().doMain(conf, new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
-        "dfs://"+namenode+"/destdat"});
-        assertTrue("Source and destination directories do not match.",
-            checkFiles(namenode, "/destdat", files));
-        deldir(namenode, "/destdat");
-        deldir("local", TEST_ROOT_DIR+"/srcdat");
-      }
-    } finally {
-      if (cluster != null) { cluster.shutdown(); }
-    }
-  }
-
-  /** copy files from dfs file system to local file system */
-  public void testCopyFromDfsToLocal() throws Exception {
-    String namenode = null;
-    MiniDFSCluster cluster = null;
-    try {
-      Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(65318, conf, false);
-      namenode = conf.get("fs.default.name", "local");
-      if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles(namenode, "/srcdat");
-        new CopyFiles().doMain(conf, new String[] {"dfs://"+namenode+"/srcdat",
-        "file://"+TEST_ROOT_DIR+"/destdat"});
-        assertTrue("Source and destination directories do not match.",
-            checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
-        deldir("local", TEST_ROOT_DIR+"/destdat");
-        deldir(namenode, "/srcdat");
-      }
-    } finally {
-      if (cluster != null) { cluster.shutdown(); }
-    }
- }
-  
 }

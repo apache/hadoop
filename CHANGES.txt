@@ -11,6 +11,9 @@ Trunk (unreleased changes)
     attempts from 'info' to 'debug', so they are not normally shown.
     (Konstantin Shvachko via cutting)
 
+ 3. HADOOP-498.  Re-implement DFS integrity checker to run server-side,
+    for much improved performance.  (Milind Bhandarkar via cutting)
+
 
 Release 0.7.1 - 2006-10-11
 
