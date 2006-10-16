@@ -608,7 +608,8 @@ class DFSClient implements FSConstants {
                     this.blockStream = in;
                 } catch (IOException ex) {
                     // Put chosen node into dead list, continue
-                    LOG.info("Failed to connect to " + targetAddr + ":" + ex);
+                    LOG.debug("Failed to connect to " + targetAddr + ":" 
+                              + StringUtils.stringifyException(ex));
                     deadNodes.add(chosenNode);
                     if (s != null) {
                         try {
@@ -771,7 +772,8 @@ class DFSClient implements FSConstants {
               int nread = in.read(buf, offset, (int)(end - start + 1));
             } catch (IOException ex) {
               // Put chosen node into dead list, continue
-              LOG.info("Failed to connect to " + targetAddr + ":" + ex);
+              LOG.debug("Failed to connect to " + targetAddr + ":" 
+                        + StringUtils.stringifyException(ex));
               deadNodes.add(chosenNode);
               if (dn != null) {
                 try {

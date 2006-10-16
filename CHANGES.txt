@@ -7,6 +7,10 @@ Trunk (unreleased changes)
     variables when resolving executable program names.
     (Dhruba Borthakur via cutting) 
 
+ 2. HADOOP-583.  In DFSClient, reduce the log level of re-connect
+    attempts from 'info' to 'debug', so they are not normally shown.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.7.1 - 2006-10-11
 
