@@ -244,7 +244,13 @@ creations/deletions), or "all".</description>
 <property>
   <name>dfs.blockreport.intervalMsec</name>
   <value>3600000</value>
-  <description>Determines block reporting interval.</description>
+  <description>Determines block reporting interval in milliseconds.</description>
+</property>
+
+<property>
+  <name>dfs.heartbeat.interval</name>
+  <value>3</value>
+  <description>Determines datanode heartbeat interval in seconds.</description>
 </property>
 
 <property>

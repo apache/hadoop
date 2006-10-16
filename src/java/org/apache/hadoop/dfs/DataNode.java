@@ -95,6 +95,7 @@ public class DataNode implements FSConstants, Runnable {
     int xmitsInProgress = 0;
     Daemon dataXceiveServer = null;
     long blockReportInterval;
+    long heartBeatInterval;
     private DataStorage storage = null;
     private StatusHttpServer infoServer;
     private static InetSocketAddress nameNodeAddr;
@@ -231,6 +232,7 @@ public class DataNode implements FSConstants, Runnable {
         conf.getLong("dfs.blockreport.intervalMsec", BLOCKREPORT_INTERVAL);
       this.blockReportInterval =
         blockReportIntervalBasis - new Random().nextInt((int)(blockReportIntervalBasis/10));
+      this.heartBeatInterval = conf.getLong("dfs.heartbeat.interval", HEARTBEAT_INTERVAL) * 1000L;
       this.nameNodeAddr = nameNodeAddr;
     }
 
@@ -330,7 +332,7 @@ public class DataNode implements FSConstants, Runnable {
           //
           // Every so often, send heartbeat or block-report
           //
-          if (now - lastHeartbeat > HEARTBEAT_INTERVAL) {
+          if (now - lastHeartbeat > heartBeatInterval) {
             //
             // All heartbeat messages include following info:
             // -- Datanode name
@@ -426,7 +428,7 @@ public class DataNode implements FSConstants, Runnable {
           // There is no work to do;  sleep until hearbeat timer elapses, 
           // or work arrives, and then iterate again.
           //
-          long waitTime = HEARTBEAT_INTERVAL - (System.currentTimeMillis() - lastHeartbeat);
+          long waitTime = heartBeatInterval - (System.currentTimeMillis() - lastHeartbeat);
           synchronized( receivedBlockList ) {
             if (waitTime > 0 && receivedBlockList.size() == 0) {
               try {
