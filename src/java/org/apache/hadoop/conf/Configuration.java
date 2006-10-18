@@ -71,6 +71,7 @@ public class Configuration {
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.conf.Configuration");
 
+  private boolean   quietmode = false;
   private ArrayList defaultResources = new ArrayList();
   private ArrayList finalResources = new ArrayList();
 
@@ -454,7 +455,7 @@ public class Configuration {
   private synchronized Properties getProps() {
     if (properties == null) {
       Properties newProps = new Properties();
-      loadResources(newProps, defaultResources, false, false);
+      loadResources(newProps, defaultResources, false, quietmode);
       loadResources(newProps, finalResources, true, true);
       properties = newProps;
       if(overlay!=null)
@@ -487,20 +488,26 @@ public class Configuration {
       if (name instanceof URL) {                  // an URL resource
         URL url = (URL)name;
         if (url != null) {
-          LOG.info("parsing " + url);
+          if (!quiet) {
+            LOG.info("parsing " + url);
+          }
           doc = builder.parse(url.toString());
         }
       } else if (name instanceof String) {        // a CLASSPATH resource
         URL url = getResource((String)name);
         if (url != null) {
-          LOG.info("parsing " + url);
+          if (!quiet) {
+            LOG.info("parsing " + url);
+          }
           doc = builder.parse(url.toString());
         }
       } else if (name instanceof Path) {          // a file resource
         Path file = (Path)name;
         FileSystem fs = FileSystem.getNamed("local", this);
         if (fs.exists(file)) {
-          LOG.info("parsing " + file);
+          if (!quiet) {
+            LOG.info("parsing " + file);
+          }
           InputStream in = new BufferedInputStream(fs.openRaw(file));
           try {
             doc = builder.parse(in);
@@ -627,6 +634,13 @@ public class Configuration {
       }
       sb.append(i.next());
     }
+  }
+
+  /** Make this class quiet. Error and informational
+   *  messages might not be logged.
+   */
+  public void setQuietMode(boolean value) {
+    quietmode = value;
   }
 
   /** For debugging.  List non-default properties to the terminal and exit. */

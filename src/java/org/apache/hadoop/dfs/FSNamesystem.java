@@ -833,13 +833,18 @@ class FSNamesystem implements FSConstants {
      * Create all the necessary directories
      */
     public boolean mkdirs( String src ) throws IOException {
+        boolean    success;
         NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src );
         if( isInSafeMode() )
           throw new SafeModeException( "Cannot create directory " + src, safeMode );
         if (!isValidName(src)) {
           throw new IOException("Invalid directory name: " + src);
         }
-        return dir.mkdirs(src);
+        success = dir.mkdirs(src);
+        if (!success) {
+          throw new IOException("Invalid directory name: " + src);
+        }
+        return success;
     }
 
     /**

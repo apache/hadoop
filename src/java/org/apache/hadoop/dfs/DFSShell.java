@@ -16,9 +16,11 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
+import java.text.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.util.ToolBase;
 
 /**************************************************
@@ -36,6 +38,7 @@ public class DFSShell extends ToolBase {
     }
 
     public void init() throws IOException {
+        conf.setQuietMode(true);
         this.fs = FileSystem.get(conf);
     }
     /**
@@ -455,7 +458,7 @@ public class DFSShell extends ToolBase {
         return;
       }
       if( idx != argv.length-1 ) {
-        System.out.println( safeModeUsage );
+        printUsage("-safemode");
         return;
       }
       FSConstants.SafeModeAction action;
@@ -466,7 +469,7 @@ public class DFSShell extends ToolBase {
       else if( "get".equalsIgnoreCase(argv[idx]) )
         action = FSConstants.SafeModeAction.SAFEMODE_GET;
       else {
-        System.out.println( safeModeUsage );
+        printUsage("-safemode");
         return;
       }
       DistributedFileSystem dfs = (DistributedFileSystem)fs;
@@ -475,42 +478,125 @@ public class DFSShell extends ToolBase {
     }
 
     /**
+     * Displays format of commands.
+     * 
+     */
+    public void printUsage(String cmd) {
+          if ("-fs".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [-fs <local | namenode:port>]");
+          } else if ("-conf".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [-conf <configuration file>]");
+          } else if ("-D".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [-D <[property=value>]");
+          } else if ("-ls".equals(cmd) || "-lsr".equals(cmd) ||
+                   "-du".equals(cmd) || "-rm".equals(cmd) ||
+                   "-rmr".equals(cmd) || "-mkdir".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [" + cmd + " <path>]");
+          } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [" + cmd + " <src> <dst>]");
+          } else if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd) ||
+                   "-moveFromLocal".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [" + cmd + " <localsrc> <dst>]");
+          } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd) ||
+                   "-moveToLocal".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [" + cmd + " <src> <localdst>]");
+          } else if ("-cat".equals(cmd)) {
+            System.out.println("Usage: java DFSShell" + 
+                " [" + cmd + " <src>]");
+          } else if ("-get".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [" + cmd + " <src> <localdst> [addnl]]");
+          } else if ("-report".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [report]");
+          } else if ("-setrep".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [-setrep [-R] <rep> <path/file>]");
+          } else if ("-safemode".equals(cmd)) {
+            System.err.println("Usage: java DFSShell" + 
+                " [-safemode enter | leave | get]");
+          } else {
+            System.err.println("Usage: java DFSShell");
+            System.err.println("           [-fs <local | namenode:port>]");
+            System.err.println("           [-conf <configuration file>]");
+            System.err.println("           [-D <[property=value>]");
+            System.err.println("           [-ls <path>]" );
+            System.err.println("           [-lsr <path>]");
+            System.err.println("           [-du <path>]");
+            System.err.println("           [-mv <src> <dst>]");
+            System.err.println("           [-cp <src> <dst>]");
+            System.err.println("           [-rm <path>]");
+            System.err.println("           [-rmr <path>]");
+            System.err.println("           [-put <localsrc> <dst>]");
+            System.err.println("           [-copyFromLocal <localsrc> <dst>]");
+            System.err.println("           [-moveFromLocal <localsrc> <dst>]");
+            System.err.println("           [-get <src> <localdst>]");
+            System.err.println("           [-getmerge <src> <localdst> [addnl]]");
+            System.err.println("           [-cat <src>]");
+            System.err.println("           [-copyToLocal <src> <localdst>]");
+            System.err.println("           [-moveToLocal <src> <localdst>]");
+            System.err.println("           [-mkdir <path>]");
+            System.err.println("           [-report]");
+            System.err.println("           [-setrep [-R] <rep> <path/file>]");
+            System.err.println("           [-safemode enter | leave | get]");
+          }
+    }
+
+    /**
      * run
      */
     public int run( String argv[] ) throws Exception {
+
         if (argv.length < 1) {
-            System.out.println("Usage: java DFSShell" + 
-                " [-fs <local | namenode:port>]" +
-                " [-conf <configuration file>]" +
-                " [-D <[property=value>]"+
-                " [-ls <path>]"+
-                " [-lsr <path>]"+
-                " [-du <path>]"+
-                " [-mv <src> <dst>]"+
-                " [-cp <src> <dst>]"+
-                " [-rm <path>]" +
-                " [-rmr <path>]" +
-                " [-put <localsrc> <dst>]"+
-                " [-copyFromLocal <localsrc> <dst>]"+
-                " [-moveFromLocal <localsrc> <dst>]" + 
-                " [-get <src> <localdst>]"+
-                " [-getmerge <src> <localdst> [addnl]]"+
-                " [-cat <src>]"+
-                " [-copyToLocal <src> <localdst>]" +
-                " [-moveToLocal <src> <localdst>]"+
-                " [-mkdir <path>]"+
-                " [-report]"+
-                " [-setrep [-R] <rep> <path/file>]" +
-                " [-safemode enter | leave | get]");
+            printUsage(""); 
             return -1;
         }
 
-        // initialize DFSShell
-        init();
-        
         int exitCode = -1;
         int i = 0;
         String cmd = argv[i++];
+
+        //
+        // verify that we have enough command line parameters
+        //
+        if ("-put".equals(cmd) || "-get".equals(cmd) || 
+            "-copyFromLocal".equals(cmd) || "-moveFromLocal".equals(cmd) || 
+            "-copyToLocal".equals(cmd) || "-moveToLocal".equals(cmd) || 
+            "-mv".equals(cmd) || "-cp".equals(cmd)) {
+                if (argv.length != 3) {
+                  printUsage(cmd);
+                  return exitCode;
+                }
+        } else if ("-rm".equals(cmd) || "-rmr".equals(cmd) ||
+                 "-cat".equals(cmd) || "-mkdir".equals(cmd) ||
+                 "-safemode".equals(cmd)) {
+                if (argv.length != 2) {
+                  printUsage(cmd);
+                  return exitCode;
+                }
+        } else if ( "-report".equals(cmd)) {
+                if (argv.length != 1) {
+                  printUsage(cmd);
+                  return exitCode;
+                }
+        }
+
+        // initialize DFSShell
+        try {
+            init();
+        } catch (IOException e) {
+            System.err.println("Bad connection to DFS... command aborted.");
+            return exitCode;
+        }
+
+        exitCode = 0;
         try {
             if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd)) {
                 copyFromLocal(new Path(argv[i++]), argv[i++]);
@@ -523,7 +609,6 @@ public class DFSShell extends ToolBase {
                     copyMergeToLocal(argv[i++], new Path(argv[i++]), Boolean.parseBoolean(argv[i++]));
                 else
                     copyMergeToLocal(argv[i++], new Path(argv[i++]));
-                
             } else if ("-cat".equals(cmd)) {
                 cat(argv[i++]);
             } else if ("-moveToLocal".equals(cmd)) {
@@ -553,10 +638,32 @@ public class DFSShell extends ToolBase {
                 report();
             } else if ("-safemode".equals(cmd)) {
                 setSafeMode(argv,i);
+            } else {
+                exitCode = -1;
+                System.err.println(cmd.substring(1) + ": Unknown command");
+                printUsage("");
             }
-            exitCode = 0;;
+        } catch (RemoteException e) {
+          //
+          // This is a error returned by hadoop server. Print
+          // out the first line of the error mesage, ignore the stack trace.
+          exitCode = -1;
+          try {
+            String[] content;
+            content = e.getLocalizedMessage().split("\n");
+            System.err.println(cmd.substring(1) + ": " + 
+                               content[0]);
+          } catch (Exception ex) {
+            System.err.println(cmd.substring(1) + ": " + 
+                               ex.getLocalizedMessage());  
+          }
         } catch (IOException e ) {
-          System.err.println( cmd.substring(1) + ": " + e.getLocalizedMessage() );  
+          //
+          // IO exception encountered locally.
+          // 
+          exitCode = -1;
+          System.err.println(cmd.substring(1) + ": " + 
+                             e.getLocalizedMessage());  
         } finally {
             fs.close();
         }

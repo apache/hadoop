@@ -190,8 +190,9 @@ class FSDirectory implements FSConstants {
           }
            // check whether the parent already has a node with that name
           String name = newNode.name = target.getName();
-          if( parentNode.getChild( name ) != null )
+          if( parentNode.getChild( name ) != null ) {
             return null;
+          }
           // insert into the parent children list
           parentNode.children.put(name, newNode);
           newNode.parent = parentNode;
@@ -700,7 +701,13 @@ class FSDirectory implements FSConstants {
                    NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
                         +"created directory "+cur );
                    fsImage.getEditLog().logMkDir( inserted );
-               } // otherwise cur exists, continue
+               } else { // otherwise cur exists, verify that it is a directory
+                 if (!isDir(new UTF8(cur))) {
+                   NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
+                        +"path " + cur + " is not a directory ");
+                   return false;
+                 } 
+               }
             } catch (FileNotFoundException e ) {
                 NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
                         +"failed to create directory "+src);

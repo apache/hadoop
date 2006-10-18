@@ -23,6 +23,10 @@ Trunk (unreleased changes)
  6. HADOOP-588.  Fix logging and accounting of failed tasks.
     (Sanjay Dahiya via cutting)
 
+ 7. HADOOP-462.  Improve command line parsing in DFSShell, so that
+    incorrect numbers of arguments result in informative errors rather
+    than ArrayOutOfBoundsException.  (Dhruba Borthakur via cutting) 
+
 
 Release 0.7.1 - 2006-10-11
 

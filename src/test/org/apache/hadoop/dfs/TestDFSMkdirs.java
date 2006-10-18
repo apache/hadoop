@@ -41,7 +41,13 @@ public class TestDFSMkdirs extends TestCase {
     	// Third, use mkdir to create a subdirectory off of that file,
     	// and check that it fails.
     	Path myIllegalPath = new Path("/test/mkdirs/myFile/subdir");
-    	assertFalse(fileSys.mkdirs(myIllegalPath));
+        Boolean exist = true;
+        try {
+    	    fileSys.mkdirs(myIllegalPath);
+        } catch (IOException e) {
+            exist = false;
+        }
+    	assertFalse(exist);
     	assertFalse(fileSys.exists(myIllegalPath));
     	fileSys.delete(myFile);
     	

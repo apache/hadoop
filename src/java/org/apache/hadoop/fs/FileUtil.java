@@ -78,6 +78,8 @@ public class FileUtil {
       } finally {
         in.close();
       } 
+    } else {
+      throw new IOException(src.toString() + ": No such file or directory");
     }
     if (deleteSource) {
       return srcFS.delete(src);
