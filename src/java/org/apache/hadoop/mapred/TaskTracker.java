@@ -817,9 +817,8 @@ public class TaskTracker
         
         private void localizeTask(Task task) throws IOException{
             Path localTaskDir =
-              new Path(this.defaultJobConf.getLocalPath(SUBDIR+ Path.SEPARATOR
-                    + JOBCACHE + Path.SEPARATOR
-                    + task.getJobId()), task.getTaskId());
+              new Path(this.defaultJobConf.getLocalPath(TaskTracker.getJobCacheSubdir()), 
+                (task.getJobId() + Path.SEPARATOR + task.getTaskId()));
            FileSystem localFs = FileSystem.getNamed("local", fConf);
            localFs.mkdirs(localTaskDir);
            Path localTaskFile = new Path(localTaskDir, "job.xml");

@@ -32,7 +32,7 @@ public class TestMiniMRLocalFS extends TestCase {
   public void testWithLocal() throws IOException {
       MiniMRCluster mr = null;
       try {
-          mr = new MiniMRCluster(60030, 60040, 2, "local", false);
+          mr = new MiniMRCluster(60030, 60040, 2, "local", false, 3);
           double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, "localhost:60030", "local");
           double error = Math.abs(Math.PI - estimate);
           assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
