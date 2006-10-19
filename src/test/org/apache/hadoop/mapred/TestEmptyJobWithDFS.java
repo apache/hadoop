@@ -106,7 +106,7 @@ public class TestEmptyJobWithDFS extends TestCase {
           fileSys = dfs.getFileSystem();
           namenode = fileSys.getName();
           mr = new MiniMRCluster(jobTrackerPort, 50060, taskTrackers, 
-                                 namenode, true);
+                                 namenode, true, 2);
 
           JobConf jobConf = new JobConf();
           boolean result;

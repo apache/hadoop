@@ -79,9 +79,16 @@ public class MiniMRCluster {
      */
     class TaskTrackerRunner implements Runnable {
         TaskTracker tt;
-        String localDir;
+        // the localDirs for this taskTracker
+        String[] localDir;
         boolean isInitialized = false;
         boolean isDead = false;
+        int numDir;       
+        TaskTrackerRunner(int numDir) {
+          this.numDir = numDir;
+          // a maximum of 10 local dirs can be specified in MinMRCluster
+          localDir = new String[10];
+        }
         
         /**
          * Create and run the task tracker.
@@ -97,10 +104,19 @@ public class MiniMRCluster {
                 jc.setInt("mapred.task.tracker.info.port", taskTrackerPort++);
                 jc.setInt("mapred.task.tracker.report.port", taskTrackerPort++);
                 File localDir = new File(jc.get("mapred.local.dir"));
-                File ttDir = new File(localDir, Integer.toString(taskTrackerPort));
+                String mapredDir = "";
+                File ttDir = new File(localDir, Integer.toString(taskTrackerPort) + "_" + 0);
                 ttDir.mkdirs();
-                this.localDir = ttDir.getAbsolutePath();
-                jc.set("mapred.local.dir", ttDir.getAbsolutePath());
+                this.localDir[0] = ttDir.getAbsolutePath();
+                mapredDir = ttDir.getAbsolutePath();
+                for (int i = 1; i < numDir; i++){
+                  ttDir = new File(localDir, Integer.toString(taskTrackerPort) + "_" + i);
+                  ttDir.mkdirs();
+                  this.localDir[i] = ttDir.getAbsolutePath();
+                  mapredDir = mapredDir + "," + ttDir.getAbsolutePath();
+                }
+                jc.set("mapred.local.dir", mapredDir);
+                System.out.println("mapred.local.dir is " +  mapredDir);
                 tt = new TaskTracker(jc);
                 isInitialized = true;
                 tt.run();
@@ -114,12 +130,17 @@ public class MiniMRCluster {
         
         /**
          * Get the local dir for this TaskTracker.
+         * This is there so that we do not break
+         * previous tests. 
          * @return the absolute pathname
          */
         public String getLocalDir() {
-          return localDir;
+          return localDir[0];
         }
-        
+       
+        public String[] getLocalDirs(){
+         return localDir;
+        } 
         /**
          * Shut down the server and wait for it to finish.
          */
@@ -176,10 +197,18 @@ public class MiniMRCluster {
      * Create the config and start up the servers.
      */
     public MiniMRCluster(int jobTrackerPort,
+                         int taskTrackerPort,
+                         int numTaskTrackers,
+                         String namenode,
+                         boolean taskTrackerFirst) throws IOException {
+        this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, taskTrackerFirst, 1);
+    } 
+  
+    public MiniMRCluster(int jobTrackerPort,
             int taskTrackerPort,
             int numTaskTrackers,
             String namenode,
-            boolean taskTrackerFirst) throws IOException {
+            boolean taskTrackerFirst, int numDir) throws IOException {
         this.jobTrackerPort = jobTrackerPort;
         this.taskTrackerPort = taskTrackerPort;
         this.numTaskTrackers = numTaskTrackers;
@@ -204,7 +233,7 @@ public class MiniMRCluster {
           jobTrackerThread.start();
         }
         for (int idx = 0; idx < numTaskTrackers; idx++) {
-            TaskTrackerRunner taskTracker = new TaskTrackerRunner();
+            TaskTrackerRunner taskTracker = new TaskTrackerRunner(numDir);
             Thread taskTrackerThread = new Thread(taskTracker);
             taskTrackerThread.start();
             taskTrackerList.add(taskTracker);

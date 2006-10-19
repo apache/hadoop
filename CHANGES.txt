@@ -28,6 +28,16 @@ Trunk (unreleased changes)
     than ArrayOutOfBoundsException.  (Dhruba Borthakur via cutting) 
 
 
+Release 0.7.2 - 2006-10-18
+
+ 1. HADOOP-607.  Fix a bug where classes included in job jars were not
+    found by tasks.  (Mahadev Konar via cutting)
+
+ 2. HADOOP-609.  Add a unit test that checks that classes in job jars
+    can be found by tasks.  Also modify unit tests to specify multiple
+    local directories.  (Mahadev Konar via cutting)
+
+
 Release 0.7.1 - 2006-10-11
 
  1. HADOOP-593.  Fix a NullPointerException in the JobTracker.

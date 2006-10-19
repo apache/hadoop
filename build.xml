@@ -39,6 +39,7 @@
   <property name="test.cache.data" value="${test.build.dir}/cache"/>
   <property name="hadoop.log.dir" value="${test.build.dir}/logs"/>
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
+  <property name="test.build.testjar" value="${test.build.dir}/testjar"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
@@ -104,7 +105,7 @@
  
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
-
+    <mkdir dir="${test.build.testjar}"/>
     <touch datetime="01/25/1971 2:00 pm">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
     </touch>
@@ -282,7 +283,24 @@
      source="${javac.version}"
      deprecation="${javac.deprecation}">
       <classpath refid="test.classpath"/>
-    </javac>    
+    </javac> 
+    <javac
+     encoding="${build.encoding}"
+     srcdir="${test.src.dir}/testjar"
+     includes="*.java"
+     destdir="${test.build.testjar}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <classpath refid="test.classpath"/>
+    </javac>                                 
+    <delete file="${test.build.testjar}/testjob.jar"/> 
+    <jar jarfile="${test.build.testjar}/testjob.jar"
+     basedir="${test.build.testjar}">
+    </jar>
+                                                              
     <jar jarfile="${build.dir}/${final.name}-test.jar"
          basedir="${test.build.classes}">
          <manifest>
@@ -294,7 +312,7 @@
     <mkdir dir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.txt" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.jar" todir="${test.cache.data}"/>
-    <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>    
+    <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>
   </target>
 
   <!-- ================================================================== -->
