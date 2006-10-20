@@ -1971,9 +1971,9 @@ class FSNamesystem implements FSConstants {
             if (clientMachine != null && clientMachine.getLength() > 0) {
                 for (Iterator it = targetList.iterator(); it.hasNext(); ) {
                     DatanodeDescriptor node = (DatanodeDescriptor) it.next();
-                    if (clientMachine.equals(node.getHost())) {
-                        if ((node.getRemaining() > blockSize * MIN_BLOCKS_FOR_WRITE) &&
-                            (node.getXceiverCount() < (2.0 * avgLoad))) {
+                    if (clientMachine.toString().equals(node.getHost())) {
+                        if ((node.getRemaining() >= blockSize * MIN_BLOCKS_FOR_WRITE) &&
+                            (node.getXceiverCount() <= (2.0 * avgLoad))) {
                             return node;
                         }
                     }
@@ -1985,9 +1985,23 @@ class FSNamesystem implements FSConstants {
             //
             for (Iterator it = targetList.iterator(); it.hasNext(); ) {
                 DatanodeDescriptor node = (DatanodeDescriptor) it.next();
-                if ((node.getRemaining() > blockSize * MIN_BLOCKS_FOR_WRITE) &&
-                    (node.getXceiverCount() < (2.0 * avgLoad))) {
+                if ((node.getRemaining() >= blockSize * MIN_BLOCKS_FOR_WRITE) &&
+                    (node.getXceiverCount() <= (2.0 * avgLoad))) {
                     return node;
+                }
+            }
+
+            //
+            // If we are still not able to find a good node, then see if
+            // we can pick the clientmachine itself.
+            //
+            if (clientMachine != null && clientMachine.getLength() > 0) {
+                for (Iterator it = targetList.iterator(); it.hasNext(); ) {
+                    DatanodeDescriptor node = (DatanodeDescriptor) it.next();
+                    if (clientMachine.toString().equals(node.getHost()) &&
+                        node.getRemaining() >= blockSize) {
+                        return node;
+                    }
                 }
             }
 
@@ -1998,7 +2012,7 @@ class FSNamesystem implements FSConstants {
             //
             for (Iterator it = targetList.iterator(); it.hasNext(); ) {
                 DatanodeDescriptor node = (DatanodeDescriptor) it.next();
-                if (node.getRemaining() > blockSize) {
+                if (node.getRemaining() >= blockSize) {
                     return node;
                 }
             }

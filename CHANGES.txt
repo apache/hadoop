@@ -27,6 +27,10 @@ Trunk (unreleased changes)
     incorrect numbers of arguments result in informative errors rather
     than ArrayOutOfBoundsException.  (Dhruba Borthakur via cutting) 
 
+ 8. HADOOP-561.  Fix DFS so that one replica of each block is written
+    locally, if possible.  This was the intent, but there as a bug.
+    (Dhruba Borthakur via cutting) 
+
 
 Release 0.7.2 - 2006-10-18
 
