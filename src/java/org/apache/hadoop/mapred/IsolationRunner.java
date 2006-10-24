@@ -53,7 +53,7 @@ public class IsolationRunner {
     }
 
     public void progress(String taskid, float progress, String state,
-                         Phase phase) throws IOException {
+                         TaskStatus.Phase phase) throws IOException {
       StringBuffer buf = new StringBuffer("Task ");
       buf.append(taskid);
       buf.append(" making progress to ");

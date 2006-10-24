@@ -657,7 +657,7 @@ class JobInProgress {
      * @param trackerName The task tracker the task failed on
      */
     public void failedTask(TaskInProgress tip, String taskid, 
-                           String reason, Phase phase, 
+                           String reason, TaskStatus.Phase phase, 
                            String hostname, String trackerName,
                            JobTrackerMetrics metrics) {
        TaskStatus status = new TaskStatus(taskid,

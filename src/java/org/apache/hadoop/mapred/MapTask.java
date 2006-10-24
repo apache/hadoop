@@ -46,7 +46,7 @@ class MapTask extends Task {
   }
 
   {   // set phase for this task
-    setPhase(Phase.MAP); 
+    setPhase(TaskStatus.Phase.MAP); 
   }
   
   private class MapTaskMetrics {

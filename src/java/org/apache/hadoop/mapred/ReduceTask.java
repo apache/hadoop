@@ -67,7 +67,7 @@ class ReduceTask extends Task {
 
   { 
     getProgress().setStatus("reduce"); 
-    setPhase(Phase.SHUFFLE);        // phase to start with 
+    setPhase(TaskStatus.Phase.SHUFFLE);        // phase to start with 
  }
 
   private Progress copyPhase = getProgress().addPhase("copy");
@@ -236,7 +236,7 @@ class ReduceTask extends Task {
     WritableComparator comparator = job.getOutputKeyComparator();
     
     try {
-      setPhase(Phase.SORT) ; 
+      setPhase(TaskStatus.Phase.SORT) ; 
       sortProgress.start();
 
       // sort the input file
@@ -249,7 +249,7 @@ class ReduceTask extends Task {
     }
 
     sortPhase.complete();                         // sort is complete
-    setPhase(Phase.REDUCE); 
+    setPhase(TaskStatus.Phase.REDUCE); 
 
     Reporter reporter = getReporter(umbilical, getProgress());
     

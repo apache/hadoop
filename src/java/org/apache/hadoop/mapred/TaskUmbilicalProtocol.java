@@ -37,7 +37,8 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * @param state description of task's current state
    * @param phase current phase of the task.
    */
-  void progress(String taskid, float progress, String state, Phase phase)
+  void progress(String taskid, float progress, String state, 
+                TaskStatus.Phase phase)
     throws IOException;
 
   /** Report error messages back to parent.  Calls should be sparing, since all

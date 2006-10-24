@@ -18,9 +18,6 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
-// enumeration for reporting current phase of a task. 
-enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE}
-
 /**************************************************
  * Describes the current status of a task.  This is
  * not intended to be a comprehensive piece of data.
@@ -28,7 +25,11 @@ enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE}
  * @author Mike Cafarella
  **************************************************/
 class TaskStatus implements Writable {
-    public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED};
+    //enumeration for reporting current phase of a task. 
+    public static enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE}
+
+    // what state is the task in?
+    public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED}
     
     private String taskid;
     private boolean isMap;

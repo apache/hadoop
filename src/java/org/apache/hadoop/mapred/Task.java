@@ -37,7 +37,7 @@ abstract class Task implements Writable, Configurable {
   private String taskId;                          // unique, includes job id
   private String jobId;                           // unique jobid
   private int partition;                          // id within job
-  private Phase phase ;                         // current phase of the task 
+  private TaskStatus.Phase phase ;                         // current phase of the task 
 
   ////////////////////////////////////////////
   // Constructors
@@ -78,14 +78,14 @@ abstract class Task implements Writable, Configurable {
    * Return current phase of the task. 
    * @return
    */
-  public Phase getPhase(){
+  public TaskStatus.Phase getPhase(){
     return this.phase ; 
   }
   /**
    * Set current phase of the task. 
    * @param p
    */
-  protected void setPhase(Phase p){
+  protected void setPhase(TaskStatus.Phase p){
     this.phase = p ; 
   }
 

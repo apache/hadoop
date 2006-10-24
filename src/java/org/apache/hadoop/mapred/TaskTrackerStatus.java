@@ -42,25 +42,26 @@ class TaskTrackerStatus implements Writable {
     String host;
     int httpPort;
     int failures;
-    Vector taskReports;
+    List<TaskStatus> taskReports;
     
     volatile long lastSeen;
     
     /**
      */
     public TaskTrackerStatus() {
+      taskReports = new ArrayList();
     }
 
     /**
      */
     public TaskTrackerStatus(String trackerName, String host, 
-                             int httpPort, Vector taskReports, int failures) {
+                             int httpPort, List<TaskStatus> taskReports, 
+                             int failures) {
         this.trackerName = trackerName;
         this.host = host;
         this.httpPort = httpPort;
 
-        this.taskReports = new Vector();
-        this.taskReports.addAll(taskReports);
+        this.taskReports = new ArrayList(taskReports);
         this.failures = failures;
     }
 
@@ -167,7 +168,6 @@ class TaskTrackerStatus implements Writable {
         this.host = UTF8.readString(in);
         this.httpPort = in.readInt();
 
-        taskReports = new Vector();
         taskReports.clear();
 
         int numTasks = in.readInt();

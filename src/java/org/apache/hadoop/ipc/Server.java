@@ -47,6 +47,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.SocketChannelOutputStream;
+import org.apache.hadoop.util.*;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -497,6 +498,7 @@ public abstract class Server {
           // throw the message away if it is too old
           if (System.currentTimeMillis() - call.receivedTime > 
               maxCallStartAge) {
+            ReflectionUtils.logThreadInfo(LOG, "Discarding call " + call, 30);
             LOG.warn("Call " + call.toString() + 
                      " discarded for being too old (" +
                      (System.currentTimeMillis() - call.receivedTime) + ")");

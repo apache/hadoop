@@ -69,7 +69,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           tracker = new JobTracker(conf);
           break;
         } catch (IOException e) {
-          LOG.warn("Starting tracker", e);
+          LOG.warn("Error starting tracker: " + 
+                   StringUtils.stringifyException(e));
         }
         try {
           Thread.sleep(1000);
@@ -139,7 +140,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                       TaskTrackerStatus trackerStatus = 
                         getTaskTracker(trackerName);
                       job.failedTask(tip, taskId, "Error launching task", 
-                                     tip.isMapTask()?Phase.MAP:Phase.STARTING,
+                                     tip.isMapTask()? TaskStatus.Phase.MAP:
+                                       TaskStatus.Phase.STARTING,
                                      trackerStatus.getHost(), trackerName,
                                      myMetrics);
                     }
@@ -1209,7 +1211,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                   // if the job is done, we don't want to change anything
                   if (job.getStatus().getRunState() == JobStatus.RUNNING) {
                     job.failedTask(tip, taskId, "Lost task tracker", 
-                                   Phase.MAP, hostname, trackerName, myMetrics);
+                                   TaskStatus.Phase.MAP, hostname, trackerName, 
+                                   myMetrics);
                   }
                 }
             }

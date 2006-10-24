@@ -157,7 +157,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
     public Task getTask(String taskid) { return null; }
 
-    public void progress(String taskId, float progress, String state, Phase phase) {
+    public void progress(String taskId, float progress, String state, 
+                         TaskStatus.Phase phase) {
       LOG.info(state);
       float taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
