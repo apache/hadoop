@@ -44,6 +44,9 @@ Trunk (unreleased changes)
     code, and also remove a mistaken call there.
     (Nigel Daley via cutting)
 
+13. HADOOP-634.  Add missing license to many files.
+    (Nigel Daley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 
