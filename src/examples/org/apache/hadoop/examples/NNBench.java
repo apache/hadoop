@@ -44,12 +44,15 @@ import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.util.Progressable;
 
 /**
- * This program uses map/reduce to just run a distributed job where there is
- * no interaction between the tasks and each task creates 1M/NTasks files
- * of 8 bytes each, closes them. Opens those files again, and reads them,
- * and closes them. It is meant as a stress-test and benchmark for namenode.
+ * This program uses map/reduce to run a distributed job where there is
+ * no interaction between the tasks.  Each task creates a configurable 
+ * number of files.  Each file has a configurable number of bytes 
+ * written to it, then it is closed, re-opened, and read from, and
+ * re-closed.  This program functions as a stress-test and benchmark
+ * for namenode, especially when the number of bytes written to
+ * each file is small.
  * 
- * @author Owen O'Malley
+ * @author Milind Bhandarkar
  */
 public class NNBench extends MapReduceBase implements Reducer {
   
@@ -67,7 +70,8 @@ public class NNBench extends MapReduceBase implements Reducer {
     }
     
     /**
-     * Given a number of files to create, create and open those files.
+     * Given a number of files to create, create and open those files
+     * for both writing and reading a given number of bytes.
      */
     public void map(WritableComparable key, 
                     Writable value,
@@ -97,7 +101,6 @@ public class NNBench extends MapReduceBase implements Reducer {
         int toBeRead = numBytesToWrite;
         while (toBeRead > 0) {
           int nbytes = Math.min(buffer.length, toBeRead);
-          randomizeBytes(buffer, 0, nbytes);
           toBeRead -= nbytes;
           in.read(buffer, 0, nbytes);
           reporter.setStatus("read " + (numBytesToWrite-toBeRead) +
@@ -134,8 +137,7 @@ public class NNBench extends MapReduceBase implements Reducer {
   
   /**
    * This is the main routine for launching a distributed namenode stress test.
-   * It runs 10 maps/node and each node creates 1M/nMaps DFS files.
-   * The reduce doesn't do anything.
+   * It runs 10 maps/node.  The reduce doesn't do anything.
    * 
    * @throws IOException 
    */

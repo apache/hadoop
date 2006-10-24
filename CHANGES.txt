@@ -40,6 +40,10 @@ Trunk (unreleased changes)
 11. HADOOP-554.  Fix DFSShell to return -1 for errors.
     (Dhruba Borthakur via cutting) 
 
+12. HADOOP-626.  Correct the documentation in the NNBench example
+    code, and also remove a mistaken call there.
+    (Nigel Daley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 
