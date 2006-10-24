@@ -37,6 +37,9 @@ Trunk (unreleased changes)
 10. HADOOP-625.  Add a servlet to all http daemons that displays a
     stack dump, useful for debugging.  (omalley via cutting)
 
+11. HADOOP-554.  Fix DFSShell to return -1 for errors.
+    (Dhruba Borthakur via cutting) 
+
 
 Release 0.7.2 - 2006-10-18
 

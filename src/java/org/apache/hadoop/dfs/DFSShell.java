@@ -264,7 +264,7 @@ public class DFSShell extends ToolBase {
     private void ls(Path src, boolean recursive, boolean printHeader ) throws IOException {
         Path items[] = fs.listPaths(src);
         if (items == null) {
-            System.out.println("Could not get listing for " + src);
+            throw new IOException("Could not get listing for " + src);
         } else {
             if(!recursive && printHeader ) {
             	System.out.println("Found " + items.length + " items");
@@ -292,7 +292,7 @@ public class DFSShell extends ToolBase {
     public void du(String src) throws IOException {
         Path items[] = fs.listPaths( fs.globPaths( new Path(src) ) );
         if (items == null) {
-            System.out.println("Could not get listing for " + src);
+            throw new IOException("Could not get listing for " + src);
         } else {
             System.out.println("Found " + items.length + " items");
             for (int i = 0; i < items.length; i++) {
@@ -591,6 +591,10 @@ public class DFSShell extends ToolBase {
         // initialize DFSShell
         try {
             init();
+        } catch (RPC.VersionMismatch v) { 
+            System.err.println("Version Mismatch between client and server" +
+                               "... command aborted.");
+            return exitCode;
         } catch (IOException e) {
             System.err.println("Bad connection to DFS... command aborted.");
             return exitCode;
