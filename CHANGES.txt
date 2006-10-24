@@ -47,6 +47,9 @@ Trunk (unreleased changes)
 13. HADOOP-634.  Add missing license to many files.
     (Nigel Daley via cutting)
 
+14. HADOOP-627.  Fix some synchronization problems in MiniMRCluster
+    that sometimes caused unit tests to fail.  (Nigel Daley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

@@ -78,11 +78,11 @@ public class MiniMRCluster {
      * An inner class to run the task tracker.
      */
     class TaskTrackerRunner implements Runnable {
-        TaskTracker tt;
+        volatile TaskTracker tt;
         // the localDirs for this taskTracker
         String[] localDir;
-        boolean isInitialized = false;
-        boolean isDead = false;
+        volatile boolean isInitialized = false;
+        volatile boolean isDead = false;
         int numDir;       
         TaskTrackerRunner(int numDir) {
           this.numDir = numDir;
