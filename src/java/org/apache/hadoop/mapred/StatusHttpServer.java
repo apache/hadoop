@@ -15,14 +15,18 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.URL;
 import java.net.URLDecoder;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.*;
 import org.mortbay.http.HttpContext;
 import org.mortbay.http.handler.ResourceHandler;
 import org.mortbay.http.SocketListener;
@@ -44,6 +48,8 @@ public class StatusHttpServer {
   private SocketListener listener;
   private boolean findPort;
   private WebApplicationContext webAppContext;
+  private static final Log LOG =
+    LogFactory.getLog(StatusHttpServer.class.getName());
   
   /**
    * Create a status server on the given port.
@@ -80,7 +86,8 @@ public class StatusHttpServer {
 
     // set up the context for "/" jsp files
     webAppContext = 
-      webServer.addWebApplication("/", appDir + File.separator + name);      
+      webServer.addWebApplication("/", appDir + File.separator + name);
+    addServlet("stacks", "/stacks", StackServlet.class);
   }
 
   /**
@@ -207,4 +214,23 @@ public class StatusHttpServer {
   public void stop() throws InterruptedException {
     webServer.stop();
   }
+  
+  /**
+   * A very simple servlet to serve up a text representation of the current
+   * stack traces. It both returns the stacks to the caller and logs them.
+   * Currently the stack traces are done sequentially rather than exactly the
+   * same data.
+   * @author Owen O'Malley
+   */
+  public static class StackServlet extends HttpServlet {
+    public void doGet(HttpServletRequest request, 
+                      HttpServletResponse response
+                     ) throws ServletException, IOException {
+      OutputStream outStream = response.getOutputStream();
+      ReflectionUtils.printThreadInfo(new PrintWriter(outStream), "");
+      outStream.close();
+      ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);      
+    }
+  }
+
 }

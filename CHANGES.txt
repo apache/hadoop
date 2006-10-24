@@ -34,6 +34,9 @@ Trunk (unreleased changes)
  9. HADOOP-610.  Fix TaskTracker to survive more exceptions, keeping
     tasks from becoming lost.  (omalley via cutting)
 
+10. HADOOP-625.  Add a servlet to all http daemons that displays a
+    stack dump, useful for debugging.  (omalley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 
