@@ -56,8 +56,6 @@ class JobInProgress {
     long finishTime;
 
     private JobConf conf;
-    private int firstMapToTry = 0;
-    private int firstReduceToTry = 0;
     boolean tasksInited = false;
 
     private LocalFileSystem localFs;
@@ -330,7 +328,7 @@ class JobInProgress {
       ArrayList mapCache = (ArrayList)hostToMaps.get(tts.getHost());
       double avgProgress = status.mapProgress() / maps.length;
       int target = findNewTask(tts, clusterSize, avgProgress, 
-                                  maps, firstMapToTry, mapCache);
+                                  maps, mapCache);
       if (target == -1) {
         return null;
       }
@@ -359,7 +357,7 @@ class JobInProgress {
 
         double avgProgress = status.reduceProgress() / reduces.length;
         int target = findNewTask(tts, clusterSize, avgProgress, 
-                                    reduces, firstReduceToTry, null);
+                                    reduces, null);
         if (target == -1) {
           return null;
         }
@@ -388,7 +386,6 @@ class JobInProgress {
                             int clusterSize,
                             double avgProgress,
                             TaskInProgress[] tasks,
-                            int firstTaskToTry,
                             List cachedTasks) {
         String taskTracker = tts.getTrackerName();
         //
@@ -419,8 +416,7 @@ class JobInProgress {
         int failedTarget = -1;
         int specTarget = -1;
         for (int i = 0; i < tasks.length; i++) {
-          int realIdx = (i + firstTaskToTry) % tasks.length; 
-          TaskInProgress task = tasks[realIdx];
+          TaskInProgress task = tasks[i];
           if (task.isRunnable()) {
             // if it failed here and we haven't tried every machine, we
             // don't schedule it here.
@@ -433,15 +429,15 @@ class JobInProgress {
               // failed tasks that aren't running can be scheduled as a last
               // resort
               if (!isRunning && failedTarget == -1) {
-                failedTarget = realIdx;
+                failedTarget = i;
               }
             } else {
               if (!isRunning) {
-                LOG.info("Choosing normal task " + tasks[realIdx].getTIPId());
-                return realIdx;
+                LOG.info("Choosing normal task " + tasks[i].getTIPId());
+                return i;
               } else if (specTarget == -1 &&
                          task.hasSpeculativeTask(avgProgress)) {
-                specTarget = realIdx;
+                specTarget = i;
               }
             }
           }
@@ -625,10 +621,8 @@ class JobInProgress {
         // After this, try to assign tasks with the one after this, so that
         // the failed task goes to the end of the list.
         if (tip.isMapTask()) {
-          firstMapToTry = (tip.getIdWithinJob() + 1) % maps.length;
           failedMapTasks++; 
         } else {
-          firstReduceToTry = (tip.getIdWithinJob() + 1) % reduces.length;
           failedReduceTasks++; 
         }
             

@@ -75,6 +75,11 @@ Trunk (unreleased changes)
 20. HADOOP-624.  Fix servlet path to stop a Jetty warning on startup.
     (omalley via cutting)
 
+21. HADOOP-578.  Failed tasks are no longer placed at the end of the
+    task queue.  This was originally done to work around other
+    problems that have now been fixed.  Re-executing failed tasks
+    sooner causes buggy jobs to fail faster.  (Sanjay Dahiya via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 
