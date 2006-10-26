@@ -72,6 +72,9 @@ Trunk (unreleased changes)
 19. HADOOP-638.  Fix an unsynchronized access to TaskTracker's
     internal state.  (Nigel Daley via cutting)
 
+20. HADOOP-624.  Fix servlet path to stop a Jetty warning on startup.
+    (omalley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

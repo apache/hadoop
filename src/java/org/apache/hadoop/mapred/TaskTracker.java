@@ -391,7 +391,7 @@ public class TaskTracker
       server.setAttribute("local.file.system", local);
       server.setAttribute("conf", conf);
       server.setAttribute("log", LOG);
-      server.addServlet("mapOutput", "mapOutput", MapOutputServlet.class);
+      server.addServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
       server.start();
       this.httpPort = server.getPort();
       initialize();
