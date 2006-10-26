@@ -103,7 +103,8 @@ public interface FSConstants {
     public static long HEARTBEAT_INTERVAL = 3;
     public static long EXPIRE_INTERVAL = 10 * 60 * 1000;
     public static long BLOCKREPORT_INTERVAL = 60 * 60 * 1000;
-    public static long LEASE_PERIOD = 60 * 1000;
+    public static final long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
+    public static final long LEASE_HARDLIMIT_PERIOD = 60 * LEASE_SOFTLIMIT_PERIOD;
     public static int READ_TIMEOUT = 60 * 1000;
 
     // We need to limit the length and depth of a path in the filesystem.  HADOOP-438

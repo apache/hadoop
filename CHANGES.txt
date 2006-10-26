@@ -50,6 +50,14 @@ Trunk (unreleased changes)
 14. HADOOP-627.  Fix some synchronization problems in MiniMRCluster
     that sometimes caused unit tests to fail.  (Nigel Daley via cutting)
 
+15. HADOOP-563.  Improve the NameNode's lease policy so that leases
+    are held for one hour without renewal (instead of one minute).
+    However another attempt to create the same file will still succeed
+    if the lease has not been renewed within a minute.  This prevents
+    communication or scheduling problems from causing a write to fail
+    for up to an hour, barring some other process trying to create the
+    same file.  (Dhruba Borthakur via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

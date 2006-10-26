@@ -414,11 +414,54 @@ class FSNamesystem implements FSConstants {
         throw new IOException("Invalid file name: " + src);      	  
       }
       try {
-        if (pendingCreates.get(src) != null) {
-           throw new AlreadyBeingCreatedException(
-                   "failed to create file " + src + " for " + holder +
-                   " on client " + clientMachine + 
-                   " because pendingCreates is non-null.");
+        FileUnderConstruction pendingFile = (FileUnderConstruction ) 
+                                              pendingCreates.get(src);
+        if (pendingFile != null) {
+          //
+          // If the file exists in pendingCreate, then it must be in our
+          // leases. Find the appropriate lease record.
+          //
+          Lease lease = (Lease) leases.get(holder);
+          //
+          // We found the lease for this file. And surprisingly the original
+          // holder is trying to recreate this file. This should never occur.
+          //
+          if (lease != null) {
+            throw new AlreadyBeingCreatedException(
+                  "failed to create file " + src + " for " + holder +
+                  " on client " + clientMachine + 
+                  " because current leaseholder is trying to recreate file.");
+          }
+          //
+          // Find the original holder.
+          //
+          UTF8 oldholder = pendingFile.getClientName();
+          lease = (Lease) leases.get(oldholder);
+          if (lease == null) {
+            throw new AlreadyBeingCreatedException(
+                  "failed to create file " + src + " for " + holder +
+                  " on client " + clientMachine + 
+                  " because pendingCreates is non-null but no leases found.");
+          }
+          //
+          // If the original holder has not renewed in the last SOFTLIMIT 
+          // period, then reclaim all resources and allow this request 
+          // to proceed. Otherwise, prevent this request from creating file.
+          //
+          if (lease.expiredSoftLimit()) {
+            lease.releaseLocks();
+            leases.remove(lease.holder);
+            LOG.info("Removing lease " + lease + " ");
+            if (!sortedLeases.remove(lease)) {
+              LOG.error("Unknown failure trying to remove " + lease + 
+                       " from lease set.");
+            }
+          } else  {
+            throw new AlreadyBeingCreatedException(
+                  "failed to create file " + src + " for " + holder +
+                  " on client " + clientMachine + 
+                  " because pendingCreates is non-null.");
+          }
         }
 
         try {
@@ -929,12 +972,23 @@ class FSNamesystem implements FSConstants {
         public void renew() {
             this.lastUpdate = now();
         }
-        public boolean expired() {
-            if (now() - lastUpdate > LEASE_PERIOD) {
+        /**
+         * Returns true if the Hard Limit Timer has expired
+         */
+        public boolean expiredHardLimit() {
+            if (now() - lastUpdate > LEASE_HARDLIMIT_PERIOD) {
                 return true;
-            } else {
-                return false;
             }
+            return false;
+        }
+        /**
+         * Returns true if the Soft Limit Timer has expired
+         */
+        public boolean expiredSoftLimit() {
+            if (now() - lastUpdate > LEASE_SOFTLIMIT_PERIOD) {
+                return true;
+            }
+            return false;
         }
         public void obtained(UTF8 src) {
             locks.add(src);
@@ -999,7 +1053,7 @@ class FSNamesystem implements FSConstants {
                         Lease top;
                         while ((sortedLeases.size() > 0) &&
                                ((top = (Lease) sortedLeases.first()) != null)) {
-                            if (top.expired()) {
+                            if (top.expiredHardLimit()) {
                                 top.releaseLocks();
                                 leases.remove(top.holder);
                                 LOG.info("Removing lease " + top + ", leases remaining: " + sortedLeases.size());
