@@ -58,6 +58,10 @@ Trunk (unreleased changes)
     for up to an hour, barring some other process trying to create the
     same file.  (Dhruba Borthakur via cutting)
 
+16. HADOOP-635.  In DFSShell, permit specification of multiple files
+    as the source for file copy and move commands.
+    (Dhruba Borthakur via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 
