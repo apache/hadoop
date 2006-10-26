@@ -464,7 +464,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                       int xmitsInProgress,
                                       int xceiverCount) throws IOException {
         verifyRequest( nodeReg );
-        namesystem.gotHeartbeat( nodeReg, capacity, remaining, xceiverCount );
+        if( namesystem.gotHeartbeat( nodeReg, capacity, remaining, xceiverCount )) {
+          // request block report from the datanode
+          return new BlockCommand( DataNodeAction.DNA_REPORT );
+        }
         
         //
         // Ask to perform pending transfers, if any

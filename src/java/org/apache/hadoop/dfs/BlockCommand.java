@@ -37,54 +37,43 @@ class BlockCommand implements Writable {
            public Writable newInstance() { return new BlockCommand(); }
          });
     }
-  
-    boolean transferBlocks = false;
-    boolean invalidateBlocks = false;
-    boolean shutdown = false;
+
+    DatanodeProtocol.DataNodeAction action;
     Block blocks[];
     DatanodeInfo targets[][];
 
     public BlockCommand() {
-        this.transferBlocks = false;
-        this.invalidateBlocks = false;
-        this.shutdown = false;
-        this.blocks = new Block[0];
-        this.targets = new DatanodeInfo[0][];
+      this.action = DatanodeProtocol.DataNodeAction.DNA_UNKNOWN;
+      this.blocks = new Block[0];
+      this.targets = new DatanodeInfo[0][];
     }
 
+    /**
+     * Create BlockCommand for transferring blocks to another datanode
+     * @param blocks    blocks to be transferred 
+     * @param targets   nodes to transfer
+     */
     public BlockCommand(Block blocks[], DatanodeInfo targets[][]) {
-        this.transferBlocks = true;
-        this.invalidateBlocks = false;
-        this.shutdown = false;
-        this.blocks = blocks;
-        this.targets = targets;
+      this.action = DatanodeProtocol.DataNodeAction.DNA_TRANSFER;
+      this.blocks = blocks;
+      this.targets = targets;
     }
 
+    /**
+     * Create BlockCommand for block invalidation
+     * @param blocks  blocks to invalidate
+     */
     public BlockCommand(Block blocks[]) {
-        this.transferBlocks = false;
-        this.invalidateBlocks = true;
-        this.shutdown = false;
-        this.blocks = blocks;
-        this.targets = new DatanodeInfo[0][];
+      this.action = DatanodeProtocol.DataNodeAction.DNA_INVALIDATE;
+      this.blocks = blocks;
+      this.targets = new DatanodeInfo[0][];
     }
 
-    public BlockCommand( boolean doShutdown ) {
+    public BlockCommand( DatanodeProtocol.DataNodeAction action ) {
       this();
-      this.shutdown = doShutdown;
+      this.action = action;
     }
 
-    public boolean transferBlocks() {
-        return transferBlocks;
-    }
-
-    public boolean invalidateBlocks() {
-        return invalidateBlocks;
-    }
-    
-    public boolean shutdownNode() {
-      return shutdown;
-  }
-  
     public Block[] getBlocks() {
         return blocks;
     }
@@ -97,8 +86,7 @@ class BlockCommand implements Writable {
     // Writable
     ///////////////////////////////////////////
     public void write(DataOutput out) throws IOException {
-        out.writeBoolean(transferBlocks);
-        out.writeBoolean(invalidateBlocks);        
+        WritableUtils.writeEnum( out, action );
         out.writeInt(blocks.length);
         for (int i = 0; i < blocks.length; i++) {
             blocks[i].write(out);
@@ -113,8 +101,8 @@ class BlockCommand implements Writable {
     }
 
     public void readFields(DataInput in) throws IOException {
-        this.transferBlocks = in.readBoolean();
-        this.invalidateBlocks = in.readBoolean();
+        this.action = (DatanodeProtocol.DataNodeAction)
+            WritableUtils.readEnum( in, DatanodeProtocol.DataNodeAction.class );
         this.blocks = new Block[in.readInt()];
         for (int i = 0; i < blocks.length; i++) {
             blocks[i] = new Block();

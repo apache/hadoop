@@ -267,7 +267,17 @@ public class DataNode implements FSConstants, Runnable {
      * @throws IOException
      */
     private void register() throws IOException {
-      dnRegistration = namenode.register( dnRegistration );
+      while( true ) {
+        try {
+          dnRegistration = namenode.register( dnRegistration );
+          break;
+        } catch( SocketTimeoutException e ) {  // namenode is busy
+          LOG.info("Problem connecting to server: " + getNameNodeAddr());
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ie) {}
+        }
+      }
       if( storage.getStorageID().equals("") ) {
         storage.setStorageID( dnRegistration.getStorageID());
         storage.writeAll();
@@ -350,29 +360,14 @@ public class DataNode implements FSConstants, Runnable {
 
             if( cmd != null ) {
               data.checkDataDir();
-              if (cmd.transferBlocks()) {
+              switch( cmd.action ) {
+              case DNA_TRANSFER:
                 //
                 // Send a copy of a block to another datanode
                 //
-                Block blocks[] = cmd.getBlocks();
-                DatanodeInfo xferTargets[][] = cmd.getTargets();
-                    
-                for (int i = 0; i < blocks.length; i++) {
-                  if (!data.isValidBlock(blocks[i])) {
-                    String errStr = "Can't send invalid block " + blocks[i];
-                    LOG.info(errStr);
-                    namenode.errorReport( dnRegistration, 
-                                DatanodeProtocol.INVALID_BLOCK, 
-                                errStr);
-                    break;
-                  } else {
-                    if (xferTargets[i].length > 0) {
-                        LOG.info("Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
-                        new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
-                    }
-                  }
-                }
-              } else if (cmd.invalidateBlocks()) {
+                transferBlocks( cmd.getBlocks(), cmd.getTargets() );
+                break;
+              case DNA_INVALIDATE:
                 //
                 // Some local block(s) are obsolete and can be 
                 // safely garbage-collected.
@@ -380,10 +375,17 @@ public class DataNode implements FSConstants, Runnable {
                 Block toDelete[] = cmd.getBlocks();
                 data.invalidate(toDelete);
                 myMetrics.removedBlocks(toDelete.length);
-              } else if( cmd.shutdownNode()) {
+                break;
+              case DNA_SHUTDOWN:
                 // shut down the data node
                 this.shutdown();
                 continue;
+              case DNA_REPORT:
+                // namenode requested a block report; sending
+                lastBlockReport = 0;
+                break;
+              default:
+                LOG.warn( "Unknown BlockCommand action: " + cmd.action);
               }
             }
           }
@@ -455,7 +457,24 @@ public class DataNode implements FSConstants, Runnable {
       } // while (shouldRun)
     } // offerService
 
-    
+    private void transferBlocks(  Block blocks[], 
+                                  DatanodeInfo xferTargets[][] 
+                                ) throws IOException {
+      for (int i = 0; i < blocks.length; i++) {
+        if (!data.isValidBlock(blocks[i])) {
+          String errStr = "Can't send invalid block " + blocks[i];
+          LOG.info(errStr);
+          namenode.errorReport( dnRegistration, 
+                                DatanodeProtocol.INVALID_BLOCK, 
+                                errStr );
+          break;
+        }
+        if (xferTargets[i].length > 0) {
+          LOG.info("Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
+          new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
+        }
+      }
+    }
     
     /**
      * Server used for receiving/sending a block of data.

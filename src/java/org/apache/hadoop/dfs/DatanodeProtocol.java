@@ -29,12 +29,23 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * @author Michael Cafarella
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
-  public static final long versionID = 2L;  // infoPort added to DatanodeID
-                                            // affected: DatanodeRegistration
+  public static final long versionID = 3L;  // BlockCommand.action replaced boolean members
+                                            // affected: BlockCommand
   
   // error code
   final static int DISK_ERROR = 1;
   final static int INVALID_BLOCK = 2;
+
+  /**
+   * Determines actions that data node should perform 
+   * when receiving a block command. 
+   */
+  public enum DataNodeAction{ DNA_UNKNOWN,    // unknown action   
+                              DNA_TRANSFER,   // transfer blocks to another datanode
+                              DNA_INVALIDATE, // invalidate blocks
+                              DNA_SHUTDOWN,   // shutdown node
+                              DNA_REPORT; }   // send block report to the namenode
+
   /** 
    * Register Datanode.
    *

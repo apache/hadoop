@@ -1297,14 +1297,23 @@ class FSNamesystem implements FSConstants {
      * The given node has reported in.  This method should:
      * 1) Record the heartbeat, so the datanode isn't timed out
      * 2) Adjust usage stats for future block allocation
+     * 
+     * If a substantial amount of time passed since the last datanode 
+     * heartbeat then request an immediate block report.  
+     * 
+     * @return true if block report is required or false otherwise.
+     * @throws IOException
      */
-    public synchronized void gotHeartbeat(DatanodeID nodeID,
-                                          long capacity, 
-                                          long remaining,
-                                          int xceiverCount) throws IOException {
+    public synchronized boolean gotHeartbeat( DatanodeID nodeID,
+                                              long capacity, 
+                                              long remaining,
+                                              int xceiverCount
+                                            ) throws IOException {
+      boolean needBlockReport;
       synchronized (heartbeats) {
         synchronized (datanodeMap) {
           DatanodeDescriptor nodeinfo = getDatanode( nodeID );
+          needBlockReport = nodeinfo.isDead(); 
           
           if (nodeinfo == null) 
             // We do not accept unregistered guests
@@ -1314,6 +1323,7 @@ class FSNamesystem implements FSConstants {
           addHeartbeat(nodeinfo);
         }
       }
+      return needBlockReport;
     }
 
     /**
@@ -1902,6 +1912,9 @@ class FSNamesystem implements FSConstants {
                       "BLOCK* NameSystem.pendingTransfer: " + "ask "
                       + srcNode.getName() + " to replicate "
                       + block.getBlockName() + " to " + targetList);
+              NameNode.stateChangeLog.debug(
+                  "BLOCK* neededReplications = " + neededReplications.size()
+                  + " pendingReplications = " + pendingReplications.size() );
             }
           }
 
@@ -2280,7 +2293,7 @@ class FSNamesystem implements FSConstants {
        */
       synchronized boolean isOn() {
         try {
-          isConsistent();   // SHV this an assert
+          isConsistent();   // SHV this is an assert
         } catch( IOException e ) {
           System.err.print( StringUtils.stringifyException( e ));
         }
