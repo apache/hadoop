@@ -69,6 +69,9 @@ Trunk (unreleased changes)
 18. HADOOP-642.  Change IPC client to specify an explicit connect
     timeout.  (Konstantin Shvachko via cutting)
 
+19. HADOOP-638.  Fix an unsynchronized access to TaskTracker's
+    internal state.  (Nigel Daley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

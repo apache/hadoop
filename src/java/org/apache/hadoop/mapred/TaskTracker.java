@@ -446,7 +446,7 @@ public class TaskTracker
             killOverflowingTasks();
             
             //we've cleaned up, resume normal operation
-            if (!acceptNewTasks && tasks.isEmpty()) {
+            if (!acceptNewTasks && isIdle()) {
                 acceptNewTasks=true;
             }
           } catch (InterruptedException ie) {
