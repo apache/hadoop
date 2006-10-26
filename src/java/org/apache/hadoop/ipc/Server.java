@@ -295,9 +295,9 @@ public abstract class Server {
         numConnections++;
       }
       if (LOG.isDebugEnabled())
-        LOG.debug("Server connection on port " + port + " from " + 
-                c.getHostAddress() +
-                ": starting. Number of active connections: " + numConnections);
+        LOG.debug("Server connection from " + c.toString() +
+                "; # active connections: " + numConnections +
+                "; # queued calls: " + callQueue.size() );
     }
 
     void doRead(SelectionKey key) {

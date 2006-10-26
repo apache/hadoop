@@ -66,6 +66,9 @@ Trunk (unreleased changes)
     a re-discovered DataNode, so that no-longer-needed replications
     are stopped promptly.  (Konstantin Shvachko via cutting)
 
+18. HADOOP-642.  Change IPC client to specify an explicit connect
+    timeout.  (Konstantin Shvachko via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

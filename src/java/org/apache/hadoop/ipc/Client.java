@@ -32,16 +32,14 @@ import java.io.FilterOutputStream;
 
 import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.Collection;
-import java.util.Random;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.dfs.FSConstants;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
@@ -134,7 +132,8 @@ public class Client {
       short failures = 0;
       while (true) {
         try {
-          this.socket = new Socket(address.getAddress(), address.getPort());
+          this.socket = new Socket();
+          this.socket.connect(address, FSConstants.READ_TIMEOUT);
           break;
         } catch (IOException ie) { //SocketTimeoutException is also caught 
           if (failures == maxRetries) {
