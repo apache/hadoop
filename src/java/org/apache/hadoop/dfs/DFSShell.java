@@ -520,10 +520,16 @@ public class DFSShell extends ToolBase {
             ending = " k";
         } else if (len < 1024 * 1024 * 1024) {
             val = (1.0 * len) / (1024 * 1024);
-            ending = " Mb";
-        } else {
+            ending = " MB";
+        } else if (len < 128L * 1024 * 1024 * 1024 ) {
             val = (1.0 * len) / (1024 * 1024 * 1024);
-            ending = " Gb";
+            ending = " GB";
+        } else if (len < 1024L * 1024 * 1024 * 1024 * 1024) {
+            val = (1.0 * len) / (1024L * 1024 * 1024 * 1024);
+            ending = " TB";
+        } else {
+            val = (1.0 * len) / (1024L * 1024 * 1024 * 1024 * 1024);
+            ending = " PB";
         }
         return limitDecimal(val, 2) + ending;
     }

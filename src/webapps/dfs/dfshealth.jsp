@@ -7,6 +7,7 @@
   import="org.apache.hadoop.dfs.*"
   import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
+  import="java.lang.Math"    
 %>
 <%!
   FSNamesystem fsn = FSNamesystem.getFSNamesystem();
@@ -19,108 +20,110 @@
     long c = d.getCapacity();
     long r = d.getRemaining();
     long u = c - r;
-    String cGb = DFSShell.limitDecimal((1.0 * c)/(1024*1024*1024), 2);
-    String uGb = DFSShell.limitDecimal((1.0 * u)/(1024*1024*1024), 2);
+    
     String percentUsed;
     if (c > 0) 
       percentUsed = DFSShell.limitDecimal(((1.0 * u)/c)*100, 2);
     else
-      percentUsed = "100"; 
-    out.print("<td style=\"vertical-align: top;\"> <b>" + 
-              d.getName() +
-              "</b>&nbsp;<br><i><b>LastContact:</b>&nbsp;" + 
-             (currentTime - d.getLastUpdate())/1000 + " second(s) back;&nbsp;");
-    out.print("<b>Total raw bytes:</b>&nbsp;" + c + "(" + cGb + 
-              "&nbsp;GB);&nbsp;");
-    out.print("<b>Percent used:</b>&nbsp;" + percentUsed);
-    out.print("</i></td>");
+      percentUsed = "100";
+    
+    out.print("<tr> <td id=\"col1\">" + d.getName() +
+              "<td>" + ((currentTime - d.getLastUpdate())/1000) +
+	      "<td>" + DFSShell.byteDesc(c) +
+	      "<td>" + percentUsed + "\n");
   }
 
-  public void generateDFSHealthReport(JspWriter out) throws IOException {
+  public void generateDFSHealthReport(JspWriter out,
+                                      HttpServletRequest request)
+                                      throws IOException {
     Vector live = new Vector();
     Vector dead = new Vector();
     jspHelper.DFSNodesStatus(live, dead);
+    
+    out.print( "<div id=\"dfstable\"> <table>\n" +
+	       "<tr> <td id=\"col1\"> Capacity <td> : <td>" +
+	       DFSShell.byteDesc( fsn.totalCapacity() ) +
+	       "<tr> <td id=\"col1\"> Remaining <td> : <td>" +
+	       DFSShell.byteDesc( fsn.totalRemaining() ) +
+	       "<tr> <td id=\"col1\"> Used <td> : <td>" +
+	       DFSShell.limitDecimal((fsn.totalCapacity() -
+				      fsn.totalRemaining())*100.0/
+				     (fsn.totalCapacity() + 1e-10), 2) +
+	       "%<tr> <td id=\"col1\"> Live Nodes <td> : <td>" + live.size() +
+	       "<tr> <td id=\"col1\"> Dead Nodes <td> : <td>" + dead.size() +
+               "</table></div><br><hr>\n" );
+    
     if (live.isEmpty() && dead.isEmpty()) {
-      out.print("There are no datanodes in the cluster");
+	out.print("There are no datanodes in the cluster");
     }
     else {
-      out.print("<br><b>Number of live data stores: " + live.size() + 
-                ", dead datanodes: " + dead.size() + "</b></br>");
-      out.print("<table style=\"width: 100%; text-align: left;\" border=\"1\""+
-                " cellpadding=\"2\" cellspacing=\"2\">");
-      out.print("<tbody>");
-      out.print("<tr>");
-      out.print("<td style=\"vertical-align: top;\"><B>Live Data Stores</B><br></td>");
-      out.print("<td style=\"vertical-align: top;\"><B>Dead Data Stores</B><br></td>");
-      out.print("</tr>");
-      int i = 0;
-      int min = (live.size() > dead.size()) ? dead.size() : live.size();
-      int max = (live.size() > dead.size()) ? live.size() : dead.size();
-      currentTime = System.currentTimeMillis();
-      for (i = 0; i < min; i++) {
-        DatanodeInfo l = (DatanodeInfo)live.elementAt(i);
-        DatanodeInfo d = (DatanodeInfo)dead.elementAt(i);
-        out.print("<tr>");
-        generateLiveNodeData(out, l);
-        out.print("<td style=\"vertical-align: top;\">" + 
-                  d.getName() +
-                  "<br></td>");
-        out.print("</tr>");
-      }
-      int type = (live.size() > dead.size()) ? 1 : 0;
-      for (i = min; i < max; i++) {
-        out.print("<tr>");
-        if (type == 1) {
-          DatanodeInfo l = (DatanodeInfo)live.elementAt(i);
-          generateLiveNodeData(out, l);
-          out.print("<td style=\"vertical-align: top;\"><br></td>");
-        }
-        else if (type == 0) {
-          DatanodeInfo d = (DatanodeInfo)dead.elementAt(i);
-          out.print("<td style=\"vertical-align: top;\"><br></td>");
-          out.print("<td style=\"vertical-align: top;\">" + 
-                    d.getName() +
-                    "<br></td>");
-        }
-        out.print("</tr>");
-      }
-      out.print("</tbody></table>");
+	
+        currentTime = System.currentTimeMillis();
+	out.print( "<div id=\"dfsnodetable\"> "+
+                   "<a id=\"title\">" +
+                   "Live Datanodes: " + live.size() + "</a>" +
+                   "<br><br>\n<table border=\"1\">\n" );
+
+	if ( live.size() > 0 ) {
+
+	    out.print( "<tr id=\"row1\">" +
+		       "<td> Node <td> Last Contact <td> Size " +
+		       "<td> Used (%)\n" );
+            
+	    for ( int i=0; i < live.size(); i++ ) {
+		DatanodeInfo d = ( DatanodeInfo ) live.elementAt(i);
+		generateLiveNodeData( out, d );
+	    }
+	}
+        out.print("</table>\n");
+	
+	out.print("<br> <a id=\"title\"> " +
+                  " Dead Datanodes : " +dead.size() + "</a><br><br>\n");
+
+	if ( dead.size() > 0 ) {
+	    out.print( "<table border=\"1\"> <tr id=\"row1\"> " +
+		       "<td> Node \n" );
+	    
+	    for ( int i=0; i < dead.size() ; i++ ) {
+		DatanodeInfo d = ( DatanodeInfo ) dead.elementAt(i);
+		out.print( "<tr> <td> " + d.getName() + "\n" );
+	    }
+	    
+	    out.print("</table>\n");
+	}
+	out.print("</div>");
     }
-  }
-  public String totalCapacity() {
-    return fsn.totalCapacity() + "(" + DFSShell.limitDecimal((1.0 * fsn.totalCapacity())/(1024*1024*1024), 2) + " GB)";
-  }
-  public String totalRemaining() {
-    return fsn.totalRemaining() + "(" +  DFSShell.limitDecimal(fsn.totalRemaining()/(1024*1024*1024), 2) + " GB)";
   }
 %>
 
 <html>
 
+<link rel="stylesheet" type="text/css" href="/static/hadoop.css">
 <title>Hadoop NameNode <%=namenodeLabel%></title>
-
+    
 <body>
 <h1>NameNode '<%=namenodeLabel%>'</h1>
 
-<b>Started:</b> <%= fsn.getStartTime()%><br>
-<b>Version:</b> <%= VersionInfo.getVersion()%>,
-                r<%= VersionInfo.getRevision()%><br>
-<b>Compiled:</b> <%= VersionInfo.getDate()%> by 
-                 <%= VersionInfo.getUser()%><br>
+
+<div id="dfstable"> <table>	  
+<tr> <td id="col1"> Started: <td> <%= fsn.getStartTime()%>
+<tr> <td id="col1"> Version: <td> <%= VersionInfo.getVersion()%>,
+                r<%= VersionInfo.getRevision()%>
+<tr> <td id="col1"> Compiled: <td> <%= VersionInfo.getDate()%> by
+                 <%= VersionInfo.getUser()%>
+</table></div><br>				      
 
 <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b>
 <hr>
-<h2>Cluster Summary</h2>
+<h3>Cluster Summary</h3>
 <b> <%= jspHelper.getSafeModeText()%> </b>
-<p>
-The capacity of this cluster is <%= totalCapacity()%> and remaining is <%= totalRemaining()%>.
-<br>
+
 <% 
-   generateDFSHealthReport(out); 
+    generateDFSHealthReport(out, request); 
 %>
 <hr>
 
-<h2>Local logs</h2>
+<h3>Local logs</h3>
 <a href="/logs/">Log</a> directory
 
 <hr>

@@ -1,0 +1,22 @@
+
+div#dfsnodetable tr#row1, div#dfstable td#col1 {
+	font-weight : bolder;
+}
+
+div#dfsnodetable caption {
+	text-align : left;
+}
+
+div#dfsnodetable a#title {
+	font-size : larger;
+	font-weight : bolder;
+}
+
+div#dfstable table {
+	width : 40%;
+}
+
+div#dfsnodetable td, div#dfstable td {
+	padding-left : 10px;
+	padding-right : 10px;
+}

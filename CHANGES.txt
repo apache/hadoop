@@ -107,6 +107,10 @@ Trunk (unreleased changes)
 
 29. HADOOP-399.  Fix javadoc warnings.  (Nigel Daley via cutting)
 
+30. HADOOP-599.  Fix web ui and command line to correctly report DFS
+    filesystem size statistics.  Also improve web layout.
+    (Raghu Angadi via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

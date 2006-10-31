@@ -170,6 +170,6 @@ public class JspHelper {
     public String getSafeModeText() {
       if( ! fsn.isInSafeMode() )
         return "";
-      return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "<em>";
+      return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em>";
     }
 }

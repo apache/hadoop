@@ -261,7 +261,6 @@ class FSDataset implements FSConstants {
     class FSVolumeSet {
       FSVolume[] volumes = null;
       int curVolume = 0;
-      HashMap<String,Long> mountMap = new HashMap<String,Long>();
       
       FSVolumeSet(FSVolume[] volumes) {
         this.volumes = volumes;
@@ -280,27 +279,17 @@ class FSDataset implements FSConstants {
       }
       
       synchronized long getCapacity() throws IOException {
-        for (int idx = 0; idx < volumes.length; idx++) {
-          String mount = volumes[idx].getMount();
-          Long capacity = new Long(volumes[idx].getCapacity());
-          mountMap.put(mount, capacity);
-        }
         long capacity = 0L;
-        for (Iterator<Long> iter = mountMap.values().iterator(); iter.hasNext();) {
-          capacity += iter.next().longValue();
+        for (int idx = 0; idx < volumes.length; idx++) {
+            capacity += volumes[idx].getCapacity();
         }
         return capacity;
       }
       
       synchronized long getRemaining() throws IOException {
-        for (int idx = 0; idx < volumes.length; idx++) {
-          String mount = volumes[idx].getMount();
-          Long remaining = new Long(volumes[idx].getCapacity());
-          mountMap.put(mount, remaining);
-        }
         long remaining = 0L;
-        for (Iterator<Long> iter = mountMap.values().iterator(); iter.hasNext();) {
-          remaining += iter.next().longValue();
+        for (int idx = 0; idx < volumes.length; idx++) {
+          remaining += volumes[idx].getAvailable();
         }
         return remaining;
       }
