@@ -111,6 +111,9 @@ Trunk (unreleased changes)
     filesystem size statistics.  Also improve web layout.
     (Raghu Angadi via cutting)
 
+31. HADOOP-660.  Permit specification of junit test output format.
+    (Nigel Daley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

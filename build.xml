@@ -43,6 +43,7 @@
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
   <property name="test.output" value="no"/>
+  <property name="test.junit.output.format" value="plain"/>
 
   <property name="libhdfs.test.conf.dir" value="${libhdfs.src}/tests/conf"/>
   <property name="libhdfs.test.log.dir" value="${build.libhdfs}/tests/logs"/>
@@ -329,7 +330,7 @@
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
       <sysproperty key="hadoop.log.dir" value="."/>
       <classpath refid="${test.classpath.id}"/>
-      <formatter type="plain" />
+      <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${test.src.dir}"
 	         includes="**/${test.include}.java"
