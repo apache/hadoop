@@ -43,20 +43,27 @@ class FSImage {
   private static final String FS_IMAGE = "fsimage";
   private static final String NEW_FS_IMAGE = "fsimage.new";
   private static final String OLD_FS_IMAGE = "fsimage.old";
+  private static final String FS_TIME = "fstime";
 
-  private File imageDir;  /// directory that contains the image file 
+  private File[] imageDirs;  /// directories that contains the image file 
   private FSEditLog editLog;
   // private int namespaceID = 0;    /// a persistent attribute of the namespace
 
   /**
    * 
    */
-  FSImage( File fsDir ) throws IOException {
-    this.imageDir = new File(fsDir, "image");
-    if (! imageDir.exists()) {
-      throw new IOException("NameNode not formatted: " + fsDir);
+  FSImage( File[] fsDirs ) throws IOException {
+    this.imageDirs = new File[fsDirs.length];
+    for (int idx = 0; idx < imageDirs.length; idx++) {
+      imageDirs[idx] = new File(fsDirs[idx], "image");
+      if (! imageDirs[idx].exists()) {
+        throw new IOException("NameNode not formatted: " + imageDirs[idx]);
+      }
     }
-    File edits = new File(fsDir, "edits");
+    File[] edits = new File[fsDirs.length];
+    for (int idx = 0; idx < edits.length; idx++) {
+      edits[idx] = new File(fsDirs[idx], "edits");
+    }
     this.editLog = new FSEditLog( edits );
   }
   
@@ -72,27 +79,52 @@ class FSImage {
   void loadFSImage( Configuration conf ) throws IOException {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
-    File edits = editLog.getEditsFile();
-    //
-    // Atomic move sequence, to recover from interrupted save
-    //
-    File curFile = new File(imageDir, FS_IMAGE);
-    File newFile = new File(imageDir, NEW_FS_IMAGE);
-    File oldFile = new File(imageDir, OLD_FS_IMAGE);
+    for (int idx = 0; idx < imageDirs.length; idx++) {
+      //
+      // Atomic move sequence, to recover from interrupted save
+      //
+      File curFile = new File(imageDirs[idx], FS_IMAGE);
+      File newFile = new File(imageDirs[idx], NEW_FS_IMAGE);
+      File oldFile = new File(imageDirs[idx], OLD_FS_IMAGE);
 
-    // Maybe we were interrupted between 2 and 4
-    if (oldFile.exists() && curFile.exists()) {
-      oldFile.delete();
-      if (edits.exists()) {
-        edits.delete();
+      // Maybe we were interrupted between 2 and 4
+      if (oldFile.exists() && curFile.exists()) {
+        oldFile.delete();
+        if (editLog.exists()) {
+          editLog.deleteAll();
+        }
+      } else if (oldFile.exists() && newFile.exists()) {
+        // Or maybe between 1 and 2
+        newFile.renameTo(curFile);
+        oldFile.delete();
+      } else if (curFile.exists() && newFile.exists()) {
+        // Or else before stage 1, in which case we lose the edits
+        newFile.delete();
       }
-    } else if (oldFile.exists() && newFile.exists()) {
-      // Or maybe between 1 and 2
-      newFile.renameTo(curFile);
-      oldFile.delete();
-    } else if (curFile.exists() && newFile.exists()) {
-      // Or else before stage 1, in which case we lose the edits
-      newFile.delete();
+    }
+    
+    // Now check all curFiles and see which is the newest
+    File curFile = null;
+    long maxTimeStamp = 0;
+    for (int idx = 0; idx < imageDirs.length; idx++) {
+      File file = new File(imageDirs[idx], FS_IMAGE);
+      if (file.exists()) {
+        long timeStamp = 0;
+        File timeFile = new File(imageDirs[idx], FS_TIME);
+        if (timeFile.exists() && timeFile.canRead()) {
+          DataInputStream in = new DataInputStream(
+              new FileInputStream(timeFile));
+          try {
+            timeStamp = in.readLong();
+          } finally {
+            in.close();
+          }
+        }
+        if (maxTimeStamp < timeStamp) {
+          maxTimeStamp = timeStamp;
+          curFile = file;
+        }
+      }
     }
 
     //
@@ -100,7 +132,7 @@ class FSImage {
     //
     boolean needToSave = true;
     int imgVersion = FSConstants.DFS_CURRENT_VERSION;
-    if (curFile.exists()) {
+    if (curFile != null) {
       DataInputStream in = new DataInputStream(
                               new BufferedInputStream(
                                   new FileInputStream(curFile)));
@@ -156,7 +188,7 @@ class FSImage {
     if( fsDir.namespaceID == 0 )
       fsDir.namespaceID = newNamespaceID();
     
-    needToSave |= ( edits.exists() && editLog.loadFSEdits(conf) > 0 );
+    needToSave |= ( editLog.exists() && editLog.loadFSEdits(conf) > 0 );
     if( needToSave )
       saveFSImage();
   }
@@ -167,35 +199,51 @@ class FSImage {
   void saveFSImage() throws IOException {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
-    File curFile = new File(imageDir, FS_IMAGE);
-    File newFile = new File(imageDir, NEW_FS_IMAGE);
-    File oldFile = new File(imageDir, OLD_FS_IMAGE);
-    
-    //
-    // Write out data
-    //
-    DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(newFile)));
-    try {
-      out.writeInt(FSConstants.DFS_CURRENT_VERSION);
-      out.writeInt(fsDir.namespaceID);
-      out.writeInt(fsDir.rootDir.numItemsInTree() - 1);
-      saveImage( "", fsDir.rootDir, out );
-      saveDatanodes( out );
-    } finally {
-      out.close();
+    for (int idx = 0; idx < imageDirs.length; idx++) {
+      File newFile = new File(imageDirs[idx], NEW_FS_IMAGE);
+      
+      //
+      // Write out data
+      //
+      DataOutputStream out = new DataOutputStream(
+            new BufferedOutputStream(
+            new FileOutputStream(newFile)));
+      try {
+        out.writeInt(FSConstants.DFS_CURRENT_VERSION);
+        out.writeInt(fsDir.namespaceID);
+        out.writeInt(fsDir.rootDir.numItemsInTree() - 1);
+        saveImage( "", fsDir.rootDir, out );
+        saveDatanodes( out );
+      } finally {
+        out.close();
+      }
     }
     
     //
     // Atomic move sequence
     //
-    // 1.  Move cur to old
-    curFile.renameTo(oldFile);
-    // 2.  Move new to cur
-    newFile.renameTo(curFile);
-    // 3.  Remove pending-edits file (it's been integrated with newFile)
-    editLog.getEditsFile().delete();
-    // 4.  Delete old
-    oldFile.delete();
+    for (int idx = 0; idx < imageDirs.length; idx++) {
+      File curFile = new File(imageDirs[idx], FS_IMAGE);
+      File newFile = new File(imageDirs[idx], NEW_FS_IMAGE);
+      File oldFile = new File(imageDirs[idx], OLD_FS_IMAGE);
+      File timeFile = new File(imageDirs[idx], FS_TIME);
+      // 1.  Move cur to old and delete timeStamp
+      curFile.renameTo(oldFile);
+      if (timeFile.exists()) { timeFile.delete(); }
+      // 2.  Move new to cur and write timestamp
+      newFile.renameTo(curFile);
+      DataOutputStream out = new DataOutputStream(
+            new FileOutputStream(timeFile));
+      try {
+        out.writeLong(System.currentTimeMillis());
+      } finally {
+        out.close();
+      }
+      // 3.  Remove pending-edits file (it's been integrated with newFile)
+      editLog.delete(idx);
+      // 4.  Delete old
+      oldFile.delete();
+    }
   }
 
   /**
@@ -219,9 +267,9 @@ class FSImage {
     return newID;
   }
   
-  /** Create a new dfs name directory.  Caution: this destroys all files
+  /** Create new dfs name directory.  Caution: this destroys all files
    * in this filesystem. */
-  static void format(File dir, Configuration conf) throws IOException {
+  static void format(File dir) throws IOException {
     File image = new File(dir, "image");
     File edits = new File(dir, "edits");
     

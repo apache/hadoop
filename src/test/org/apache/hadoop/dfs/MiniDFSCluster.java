@@ -135,7 +135,8 @@ public class MiniDFSCluster {
     this.nameNodeInfoPort = 50080;   // We just want this port to be different from the default. 
     File base_dir = new File(System.getProperty("test.build.data"),
                              "dfs/");
-    conf.set("dfs.name.dir", new File(base_dir, "name").getPath());
+    conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
+        new File(base_dir, "name2").getPath());
     conf.set("dfs.data.dir", new File(base_dir, "data1").getPath()+","+
         new File(base_dir, "data2").getPath());
     conf.setInt("dfs.replication", 1);

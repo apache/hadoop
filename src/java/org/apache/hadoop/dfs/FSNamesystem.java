@@ -196,10 +196,10 @@ class FSNamesystem implements FSConstants {
     private SafeModeInfo safeMode;  // safe mode information
 
     /**
-     * dir is where the filesystem directory state 
+     * dirs is a list oif directories where the filesystem directory state 
      * is stored
      */
-    public FSNamesystem(File dir, NameNode nn, Configuration conf) throws IOException {
+    public FSNamesystem(File[] dirs, NameNode nn, Configuration conf) throws IOException {
         fsNamesystemObject = this;
         InetSocketAddress addr = DataNode.createSocketAddr(conf.get("fs.default.name", "local"));
         this.maxReplication = conf.getInt("dfs.replication.max", 512);
@@ -224,7 +224,7 @@ class FSNamesystem implements FSConstants {
 
         this.localMachine = addr.getHostName();
         this.port = addr.getPort();
-        this.dir = new FSDirectory(dir);
+        this.dir = new FSDirectory(dirs);
         this.dir.loadFSImage( conf );
         this.safeMode = new SafeModeInfo( conf );
         setBlockTotal();

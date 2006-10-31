@@ -21,9 +21,12 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Vector;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.ArrayWritable;
@@ -44,15 +47,16 @@ class FSEditLog {
   private static final byte OP_DATANODE_ADD = 5;
   private static final byte OP_DATANODE_REMOVE = 6;
   
-  private File editsFile;
-  DataOutputStream editsStream = null;
+  private File[] editFiles;
+  DataOutputStream[] editStreams = null;
+  FileDescriptor[] editDescriptors = null;
   
-  FSEditLog( File edits ) {
-    this.editsFile = edits;
+  FSEditLog( File[] edits ) {
+    this.editFiles = edits;
   }
   
-  File getEditsFile() {
-    return this.editsFile;
+  File[] getEditFiles() {
+    return this.editFiles;
   }
 
   /**
@@ -61,17 +65,61 @@ class FSEditLog {
    * @throws IOException
    */
   void create() throws IOException {
-    editsStream = new DataOutputStream(new FileOutputStream(editsFile));
-    editsStream.writeInt( FSConstants.DFS_CURRENT_VERSION );
+    editStreams = new DataOutputStream[editFiles.length];
+    editDescriptors = new FileDescriptor[editFiles.length];
+    for (int idx = 0; idx < editStreams.length; idx++) {
+      FileOutputStream stream = new FileOutputStream(editFiles[idx]);
+      editStreams[idx] = new DataOutputStream(stream);
+      editDescriptors[idx] = stream.getFD();
+      editStreams[idx].writeInt( FSConstants.DFS_CURRENT_VERSION );
+    }
   }
   
   /**
    * Shutdown the filestore
    */
   void close() throws IOException {
-    editsStream.close();
+    for (int idx = 0; idx < editStreams.length; idx++) {
+      editStreams[idx].flush();
+      editDescriptors[idx].sync();
+      editStreams[idx].close();
+    }
   }
 
+  /**
+   * Delete specified editLog
+   */
+  void delete(int idx) throws IOException {
+    if (editStreams != null) {
+      editStreams[idx].close();
+    }
+    editFiles[idx].delete();
+  }
+  
+  /**
+   * Delete all editLogs
+   */
+  void deleteAll() throws IOException {
+    for (int idx = 0; idx < editFiles.length; idx++ ) {
+      if (editStreams != null) {
+        editStreams[idx].close();
+      }
+      editFiles[idx].delete();
+    }
+  }
+  
+  /**
+   * check if ANY edits log exists
+   */
+  boolean exists() throws IOException {
+    for (int idx = 0; idx < editFiles.length; idx++) {
+      if (editFiles[idx].exists()) { 
+        return true;
+      }
+    }
+    return false;
+  }
+  
   /**
    * Load an edit log, and apply the changes to the in-memory structure
    *
@@ -84,10 +132,29 @@ class FSEditLog {
     int numEdits = 0;
     int logVersion = 0;
     
-    if (editsFile.exists()) {
+    // first check how many editFiles exist
+    // and choose the largest editFile, because it is the most recent
+    Vector<File> files = new Vector<File>();
+    for (int idx = 0; idx < editFiles.length; idx++) {
+      if (editFiles[idx].exists()) {
+        files.add(editFiles[idx]);
+      }
+    }
+    long maxLength = Long.MIN_VALUE;
+    File edits = null;
+    for (Iterator<File> it = files.iterator(); it.hasNext();) {
+      File f = it.next();
+      long length = f.length();
+      if (length > maxLength) {
+        maxLength = length;
+        edits = f;
+      }
+    }
+    
+    if (edits != null) {
       DataInputStream in = new DataInputStream(
           new BufferedInputStream(
-              new FileInputStream(editsFile)));
+              new FileInputStream(edits)));
       // Read log file version. Could be missing. 
       in.mark( 4 );
       if( in.available() > 0 ) {
@@ -228,17 +295,21 @@ class FSEditLog {
    * Write an operation to the edit log
    */
   void logEdit(byte op, Writable w1, Writable w2) {
-    synchronized (editsStream) {
-      try {
-        editsStream.write(op);
-        if (w1 != null) {
-          w1.write(editsStream);
+    for (int idx = 0; idx < editStreams.length; idx++) {
+      synchronized (editStreams[idx]) {
+        try {
+          editStreams[idx].write(op);
+          if (w1 != null) {
+            w1.write(editStreams[idx]);
+          }
+          if (w2 != null) {
+            w2.write(editStreams[idx]);
+          }
+          editStreams[idx].flush();
+          editDescriptors[idx].sync();
+        } catch (IOException ie) {
+          // TODO: Must report an error here
         }
-        if (w2 != null) {
-          w2.write(editsStream);
-        }
-      } catch (IOException ie) {
-        // TODO: Must report an error here
       }
     }
     // TODO: initialize checkpointing if the log is large enough

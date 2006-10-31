@@ -82,7 +82,16 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /** Format a new filesystem.  Destroys any filesystem that may already
      * exist at this location.  **/
     public static void format(Configuration conf) throws IOException {
-      FSDirectory.format(getDir(conf), conf);
+      File[] dirs = getDirs(conf);
+      for (int idx = 0; idx < dirs.length; idx++) {
+        FSImage.format(dirs[idx]);
+      }
+    }
+
+    /** Format a new filesystem.  Destroys any filesystem that may already
+     * exist at this location.  **/
+    public static void format(File dir) throws IOException {
+      FSImage.format(dir);
     }
 
     private class NameNodeMetrics {
@@ -121,24 +130,30 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * Create a NameNode at the default location
      */
     public NameNode(Configuration conf) throws IOException {
-       this(getDir(conf),DataNode.createSocketAddr(conf.get("fs.default.name", "local")).getHostName(),
+       this(getDirs(conf),DataNode.createSocketAddr(conf.get("fs.default.name", "local")).getHostName(),
                        DataNode.createSocketAddr(conf.get("fs.default.name", "local")).getPort(), conf);
     }
 
     /**
      * Create a NameNode at the specified location and start it.
      */
-    public NameNode(File dir, String bindAddress, int port, Configuration conf) throws IOException {
-        this.namesystem = new FSNamesystem(dir, this, conf);
+    public NameNode(File[] dirs, String bindAddress, int port, Configuration conf) throws IOException {
+        this.namesystem = new FSNamesystem(dirs, this, conf);
         this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
         this.server = RPC.getServer(this, bindAddress, port, handlerCount, false, conf);
         this.server.start();
         myMetrics = new NameNodeMetrics();
     }
 
-    /** Return the configured directory where name data is stored. */
-    private static File getDir(Configuration conf) {
-      return new File(conf.get("dfs.name.dir", "/tmp/hadoop/dfs/name"));
+    /** Return the configured directories where name data is stored. */
+    private static File[] getDirs(Configuration conf) {
+      String[] dirNames = conf.getStrings("dfs.name.dir");
+      if (dirNames == null) { dirNames = new String[] {"/tmp/hadoop/dfs/name"}; }
+      File[] dirs = new File[dirNames.length];
+      for (int idx = 0; idx < dirs.length; idx++) {
+        dirs[idx] = new File(dirNames[idx]);
+      }
+      return dirs;
     }
 
     /**
@@ -556,17 +571,22 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         Configuration conf = new Configuration();
 
         if (argv.length == 1 && argv[0].equals("-format")) {
-          File dir = getDir(conf);
-          if (dir.exists()) {
-            System.err.print("Re-format filesystem in " + dir +" ? (Y or N) ");
-            if (!(System.in.read() == 'Y')) {
-              System.err.println("Format aborted.");
-              System.exit(1);
+          boolean aborted = false;
+          File[] dirs = getDirs(conf);
+          for (int idx = 0; idx < dirs.length; idx++) {
+            if (dirs[idx].exists()) {
+              System.err.print("Re-format filesystem in " + dirs[idx] +" ? (Y or N) ");
+              if (!(System.in.read() == 'Y')) {
+                System.err.println("Format aborted in "+ dirs[idx]);
+                aborted = true;
+              } else {
+                format(dirs[idx]);
+                System.err.println("Formatted "+dirs[idx]);
+              }
+              System.in.read(); // discard the enter-key
             }
           }
-          format(conf);
-          System.err.println("Formatted "+dir);
-          System.exit(0);
+          System.exit(aborted ? 1 : 0);
         }
         
         NameNode namenode = new NameNode(conf);

@@ -312,8 +312,8 @@ class FSDirectory implements FSConstants {
     private int numFilesDeleted = 0;
     
     /** Access an existing dfs name directory. */
-    public FSDirectory(File dir) throws IOException {
-      this.fsImage = new FSImage( dir );
+    public FSDirectory(File[] dirs) throws IOException {
+      this.fsImage = new FSImage( dirs );
     }
     
     void loadFSImage( Configuration conf ) throws IOException {
@@ -326,11 +326,13 @@ class FSDirectory implements FSConstants {
       metricsRecord = Metrics.createRecord("dfs", "namenode");
     }
 
-    /** Create a new dfs name directory.  Caution: this destroys all files
+    /** Create new dfs name directories.  Caution: this destroys all files
      * in this filesystem.
-     * @deprecated use @link FSImage#format(File, Configuration) instead */
-    public static void format(File dir, Configuration conf) throws IOException {
-      FSImage.format( dir, conf );
+     * @deprecated use @link FSImage#format(File[], Configuration) instead */
+    public static void format(File[] dirs, Configuration conf) throws IOException {
+      for (int idx = 0; idx < dirs.length; idx++) {
+        FSImage.format( dirs[idx] );
+      }
     }
     
     /**

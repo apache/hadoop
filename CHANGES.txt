@@ -94,6 +94,9 @@ Trunk (unreleased changes)
 25. HADOOP-482.  Fix unit tests to work when a cluster is running on
     the same machine, removing port conflicts.  (Wendy Chien via cutting)
 
+26. HADOOP-90.  Permit dfs.name.dir to list multiple directories,
+    where namenode data is to be replicated. (Milind Bhandarkar via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

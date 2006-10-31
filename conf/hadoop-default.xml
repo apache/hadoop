@@ -176,7 +176,9 @@ creations/deletions), or "all".</description>
   <name>dfs.name.dir</name>
   <value>${hadoop.tmp.dir}/dfs/name</value>
   <description>Determines where on the local filesystem the DFS name node
-      should store the name table.</description>
+      should store the name table.  If this is a comma-delimited list
+      of directories then the name table is replicated in all of the
+      directories, for redundancy. </description>
 </property>
 
 <property>
