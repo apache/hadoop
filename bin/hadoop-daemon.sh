@@ -31,6 +31,23 @@ shift
 command=$1
 shift
 
+hadoop_rotate_log ()
+{
+    log=$1;
+    num=5;
+    if [ -n "$2" ]; then
+	num=$2
+    fi
+    if [ -f "$log" ]; then # rotate logs
+	while [ $num -gt 1 ]; do
+	    prev=`expr $num - 1`
+	    [ -f "$log.$prev" ] && mv "$log.$prev" "$log.$num"
+	    num=$prev
+	done
+	mv "$log" "$log.$num";
+    fi
+}
+
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
@@ -76,6 +93,7 @@ case $startStop in
       rsync -a -e ssh --delete --exclude=.svn $HADOOP_MASTER/ "$HADOOP_HOME"
     fi
 
+    hadoop_rotate_log $log
     echo starting $command, logging to $log
     nohup nice -n $HADOOP_NICENESS "$HADOOP_HOME"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid

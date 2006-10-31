@@ -1105,8 +1105,13 @@ public class DataNode implements FSConstants, Runnable {
     /**
      */
     public static void main(String args[]) throws IOException {
+      try {
         Configuration conf = new Configuration();
         runAndWait(conf);
+      } catch ( Throwable e ) {
+        LOG.error( StringUtils.stringifyException( e ) );
+        System.exit(-1);
+      }
     }
 
 }

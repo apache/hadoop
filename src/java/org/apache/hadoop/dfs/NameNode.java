@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.*;
 
@@ -568,6 +569,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /**
      */
     public static void main(String argv[]) throws Exception {
+      try {
         Configuration conf = new Configuration();
 
         if (argv.length == 1 && argv[0].equals("-format")) {
@@ -591,5 +593,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         
         NameNode namenode = new NameNode(conf);
         namenode.join();
+        
+      } catch ( Throwable e ) {
+        LOG.error( StringUtils.stringifyException( e ) );
+        System.exit(-1);
+      }
     }
 }

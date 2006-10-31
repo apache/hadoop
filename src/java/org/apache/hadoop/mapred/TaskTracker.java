@@ -1367,10 +1367,10 @@ public class TaskTracker
           ReflectionUtils.setContentionTracing
               (conf.getBoolean("tasktracker.contention.tracking", false));
           new TaskTracker(conf).run();
-        } catch (IOException e) {
-            LOG.warn( "Can not start task tracker because "+
-                      StringUtils.stringifyException(e));
-            System.exit(-1);
+        } catch ( Throwable e ) {
+          LOG.error( "Can not start task tracker because "+
+                     StringUtils.stringifyException(e) );
+          System.exit(-1);
         }
     }
     
