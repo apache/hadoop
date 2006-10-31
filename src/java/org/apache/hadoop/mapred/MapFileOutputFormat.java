@@ -46,7 +46,8 @@ public class MapFileOutputFormat extends OutputFormatBase {
       new MapFile.Writer(job, fs, file.toString(),
                          job.getMapOutputKeyClass(),
                          job.getMapOutputValueClass(),
-                         SequenceFile.getCompressionType(job));
+                         SequenceFile.getCompressionType(job),
+                         progress);
 
     return new RecordWriter() {
 

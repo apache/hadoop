@@ -82,6 +82,11 @@ Trunk (unreleased changes)
 
 22. HADOOP-658.  Update source file headers per Apache policy.  (cutting)
 
+23. HADOOP-636.  Add MapFile & ArrayFile constructors which accept a
+    Progressable, and pass it down to SequenceFile.  This permits
+    reduce tasks which use MapFile to still report progress while
+    writing blocks to the filesystem.  (cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

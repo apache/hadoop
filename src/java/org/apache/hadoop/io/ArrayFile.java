@@ -21,6 +21,9 @@ package org.apache.hadoop.io;
 import java.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
+
 
 /** A dense file-based mapping from integers to values. */
 public class ArrayFile extends MapFile {
@@ -31,9 +34,20 @@ public class ArrayFile extends MapFile {
   public static class Writer extends MapFile.Writer {
     private LongWritable count = new LongWritable(0);
 
-    /** Create the named file for values of the named class. */
-    public Writer(FileSystem fs, String file, Class valClass) throws IOException {
+    /** Create the named file for values of the named class.
+     * @deprecated specify {@link CompressionType} and {@link Progressable}
+     */
+    public Writer(FileSystem fs, String file, Class valClass)
+      throws IOException {
       super(fs, file, LongWritable.class, valClass);
+    }
+
+    /** Create the named file for values of the named class. */
+    public Writer(Configuration conf, FileSystem fs,
+                  String file, Class valClass,
+                  CompressionType compress, Progressable progress)
+      throws IOException {
+      super(conf, fs, file, LongWritable.class, valClass, compress, progress);
     }
 
     /** Append a value to the file. */

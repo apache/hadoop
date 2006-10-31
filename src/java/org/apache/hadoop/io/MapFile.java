@@ -21,6 +21,7 @@ package org.apache.hadoop.io;
 import java.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /** A file-based map from keys to values.
@@ -73,7 +74,7 @@ public class MapFile {
     }
 
     /** Create the named map for keys of the named class.
-     * @deprecated specify a {@link CompressionType} instead
+     * @deprecated specify {@link CompressionType} and {@link Progressable}
      */
     public Writer(FileSystem fs, String dirName,
                   Class keyClass, Class valClass, boolean compress)
@@ -82,19 +83,30 @@ public class MapFile {
     }
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
+                  Class keyClass, Class valClass,
+                  CompressionType compress, Progressable progress)
+      throws IOException {
+      this(conf,fs,dirName,WritableComparator.get(keyClass),valClass,
+           compress, progress);
+    }
+
+    /** Create the named map for keys of the named class. */
+    public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class keyClass, Class valClass, CompressionType compress)
       throws IOException {
       this(conf,fs,dirName,WritableComparator.get(keyClass),valClass,compress);
     }
 
-    /** Create the named map using the named key comparator. */
+    /** Create the named map using the named key comparator.
+     * @deprecated specify {@link CompressionType} and {@link Progressable}
+     */
     public Writer(FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass)
       throws IOException {
       this(fs, dirName, comparator, valClass, false);
     }
     /** Create the named map using the named key comparator.
-     * @deprecated specify a {@link CompressionType} instead
+     * @deprecated specify {@link CompressionType} and {@link Progressable}
      */
     public Writer(FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass,
@@ -105,10 +117,20 @@ public class MapFile {
            compress ? CompressionType.RECORD : CompressionType.NONE);
     }
 
-    /** Create the named map using the named key comparator. */
+    /** Create the named map using the named key comparator.
+     * @deprecated specify a {@link Progressable}
+     */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   WritableComparator comparator, Class valClass,
                   SequenceFile.CompressionType compress)
+      throws IOException {
+      this(conf, fs, dirName, comparator, valClass, compress, null);
+    }
+    /** Create the named map using the named key comparator. */
+    public Writer(Configuration conf, FileSystem fs, String dirName,
+                  WritableComparator comparator, Class valClass,
+                  SequenceFile.CompressionType compress,
+                  Progressable progress)
       throws IOException {
 
       this.comparator = comparator;
@@ -123,10 +145,11 @@ public class MapFile {
       Class keyClass = comparator.getKeyClass();
       this.data =
         SequenceFile.createWriter
-        (fs,conf,dataFile,keyClass,valClass,compress);
+        (fs,conf,dataFile,keyClass,valClass,compress,progress);
       this.index =
         SequenceFile.createWriter
-        (fs,conf,indexFile,keyClass,LongWritable.class,CompressionType.BLOCK);
+        (fs, conf, indexFile, keyClass, LongWritable.class,
+         CompressionType.BLOCK, progress);
     }
     
     /** The number of entries that are added before an index entry is added.*/
