@@ -99,12 +99,12 @@ public class DFSck extends ToolBase {
       if (!args[idx].startsWith("-")) { dir = args[idx]; break; }
     }
     url.append(URLEncoder.encode(dir, "UTF-8"));
-    for (int idx = 1; idx < args.length; idx++) {
-      if (args[idx].equals("-move")) { url.append("&move"); }
-      if (args[idx].equals("-delete")) { url.append("&delete"); }
-      if (args[idx].equals("-files")) { url.append("&files"); }
-      if (args[idx].equals("-blocks")) { url.append("&blocks"); }
-      if (args[idx].equals("-locations")) { url.append("&locations"); }
+    for (int idx = 0; idx < args.length; idx++) {
+      if (args[idx].equals("-move")) { url.append("&move=1"); }
+      else if (args[idx].equals("-delete")) { url.append("&delete=1"); }
+      else if (args[idx].equals("-files")) { url.append("&files=1"); }
+      else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
+      else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
     }
     URL path = new URL(url.toString());
     URLConnection connection = path.openConnection();
