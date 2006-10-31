@@ -80,6 +80,8 @@ Trunk (unreleased changes)
     problems that have now been fixed.  Re-executing failed tasks
     sooner causes buggy jobs to fail faster.  (Sanjay Dahiya via cutting)
 
+22. HADOOP-658.  Update source file headers per Apache policy.  (cutting)
+
 
 Release 0.7.2 - 2006-10-18
 
