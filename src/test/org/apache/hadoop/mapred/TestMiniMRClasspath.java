@@ -96,8 +96,8 @@ public class TestMiniMRClasspath extends TestCase {
       FileSystem fileSys = null;
       try {
           final int taskTrackers = 4;
-          final int jobTrackerPort = 50050;
-          final String jobTrackerName = "localhost:" + jobTrackerPort;
+          final int jobTrackerPort = 60050;
+
           Configuration conf = new Configuration();
           dfs = new MiniDFSCluster(65314, conf, true);
           fileSys = dfs.getFileSystem();
@@ -106,6 +106,7 @@ public class TestMiniMRClasspath extends TestCase {
                                  namenode, true, 3);
           JobConf jobConf = new JobConf();
           String result;
+          final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
           result = launchWordCount(namenode, jobTrackerName, jobConf, 
                                    "The quick brown fox\nhas many silly\n" + 
                                    "red fox sox\n",

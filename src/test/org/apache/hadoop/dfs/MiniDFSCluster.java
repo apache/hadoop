@@ -34,6 +34,12 @@ public class MiniDFSCluster {
   private Thread dataNodeThread;
   private NameNodeRunner nameNode;
   private DataNodeRunner dataNode;
+  private int maxRetries = 10;
+  private int MAX_RETRIES  = 10;
+  private int MAX_RETRIES_PER_PORT = 10;
+
+  private int nameNodePort = 0;
+  private int nameNodeInfoPort = 0;
 
   /**
    * An inner class that runs a name node.
@@ -111,17 +117,22 @@ public class MiniDFSCluster {
       }
     }
   }
-  
+
   /**
-   * Create the config and start up the servers.
+   * Create the config and start up the servers.  If either the rpc or info port is already 
+   * in use, we will try new ports.
+   * @param namenodePort suggestion for which rpc port to use.  caller should use 
+   *                     getNameNodePort() to get the actual port used.   
    * @param dataNodeFirst should the datanode be brought up before the namenode?
    */
   public MiniDFSCluster(int namenodePort, 
                         Configuration conf,
                         boolean dataNodeFirst) throws IOException {
+
     this.conf = conf;
-    conf.set("fs.default.name", 
-             "localhost:"+ Integer.toString(namenodePort));
+
+    this.nameNodePort = namenodePort;
+    this.nameNodeInfoPort = 50080;   // We just want this port to be different from the default. 
     File base_dir = new File(System.getProperty("test.build.data"),
                              "dfs/");
     conf.set("dfs.name.dir", new File(base_dir, "name").getPath());
@@ -131,27 +142,66 @@ public class MiniDFSCluster {
     // this timeout seems to control the minimum time for the test, so
     // decrease it considerably.
     conf.setInt("ipc.client.timeout", 1000);
-    NameNode.format(conf);
-    nameNode = new NameNodeRunner();
-    nameNodeThread = new Thread(nameNode);
-    dataNode = new DataNodeRunner();
-    dataNodeThread = new Thread(dataNode);
-    if (dataNodeFirst) {
-      dataNodeThread.start();      
-      nameNodeThread.start();      
-    } else {
-      nameNodeThread.start();
-      dataNodeThread.start();      
-    }
-    while (!nameNode.isUp()) {
-      try {                                     // let daemons get started
-        System.out.println("waiting for dfs minicluster to start");
-        Thread.sleep(1000);
-      } catch(InterruptedException e) {
+
+    // Loops until we find ports that work or we give up because 
+    // too many tries have failed.
+    boolean foundPorts = false;
+    int portsTried = 0;
+    while ((!foundPorts) && (portsTried < MAX_RETRIES)) {
+      conf.set("fs.default.name", 
+               "localhost:"+ Integer.toString(nameNodePort));
+      conf.set("dfs.info.port", nameNodeInfoPort);
+      
+      NameNode.format(conf);
+      nameNode = new NameNodeRunner();
+      nameNodeThread = new Thread(nameNode);
+      dataNode = new DataNodeRunner();
+      dataNodeThread = new Thread(dataNode);
+      if (dataNodeFirst) {
+        dataNodeThread.start();      
+        nameNodeThread.start();      
+      } else {
+        nameNodeThread.start();
+        dataNodeThread.start();      
       }
+
+      int retry = 0;
+      while (!nameNode.isUp() && (retry < MAX_RETRIES_PER_PORT)) {
+        try {                                     // let daemons get started
+          System.out.println("waiting for dfs minicluster to start");
+          Thread.sleep(1000);
+        } catch(InterruptedException e) {
+        }
+        retry++;
+      }
+      if (retry >= MAX_RETRIES_PER_PORT) {
+        this.nameNodePort += 3;
+        this.nameNodeInfoPort += 7;
+        System.out.println("Failed to start DFS minicluster in " + retry + " attempts.  Trying new ports:");
+        System.out.println("\tNameNode RPC port: " + nameNodePort);
+        System.out.println("\tNameNode info port: " + nameNodeInfoPort);
+
+        nameNode.shutdown();
+        dataNode.shutdown();
+        
+      } else {
+        foundPorts = true;
+      }
+      portsTried++;
+    } 
+    if (portsTried >= MAX_RETRIES) {
+        throw new IOException("Failed to start a DFS minicluster after trying " + portsTried + " ports.");
     }
   }
-  
+
+  /**
+   * Returns the rpc port used by the mini cluster, because the caller supplied port is 
+   * not necessarily the actual port used.
+   */     
+  public int getNameNodePort() {
+    return nameNodePort;
+  }
+    
   /**
    * Shut down the servers.
    */

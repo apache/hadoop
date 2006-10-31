@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     extend the cache to permit symbolic links to cached items, rather
     than local file copies.  (Mahadev Konar via cutting)
 
+25. HADOOP-482.  Fix unit tests to work when a cluster is running on
+    the same machine, removing port conflicts.  (Wendy Chien via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

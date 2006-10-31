@@ -87,11 +87,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
 
     public static void stopTracker() throws IOException {
-      if (tracker == null)
-        throw new IOException("Trying to stop JobTracker that is not running.");
       runTracker = false;
-      tracker.close();
-      tracker = null;
+      if (tracker != null) {
+        tracker.close();
+        tracker = null;
+      }
     }
     
     public long getProtocolVersion(String protocol, long clientVersion) {

@@ -7,14 +7,12 @@
 
 <configuration>
 
-<property>
-  <name>mapred.local.dir</name>
-  <value>build/test/mapred/local</value>
-</property>
 
 <property>
-  <name>mapred.system.dir</name>
-  <value>build/test/mapred/system</value>
+  <name>hadoop.tmp.dir</name>
+  <value>build/test</value>
+  <description>A base for other temporary directories.</description>
 </property>
+
 
 </configuration>

@@ -101,15 +101,14 @@ public class TestEmptyJobWithDFS extends TestCase {
       FileSystem fileSys = null;
       try {
           final int taskTrackers = 4;
-          final int jobTrackerPort = 50050;
-          final String jobTrackerName = "localhost:" + jobTrackerPort;
+          final int jobTrackerPort = 60050;
           Configuration conf = new Configuration();
           dfs = new MiniDFSCluster(65315, conf, true);
           fileSys = dfs.getFileSystem();
           namenode = fileSys.getName();
           mr = new MiniMRCluster(jobTrackerPort, 50060, taskTrackers, 
                                  namenode, true, 2);
-
+          final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
           JobConf jobConf = new JobConf();
           boolean result;
           result = launchEmptyJob(namenode, jobTrackerName, jobConf, 

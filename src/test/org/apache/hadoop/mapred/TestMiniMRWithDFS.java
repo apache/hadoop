@@ -145,14 +145,15 @@ public class TestMiniMRWithDFS extends TestCase {
       FileSystem fileSys = null;
       try {
           final int taskTrackers = 4;
-          final int jobTrackerPort = 50050;
-          final String jobTrackerName = "localhost:" + jobTrackerPort;
+          final int jobTrackerPort = 60050;
+
           Configuration conf = new Configuration();
           dfs = new MiniDFSCluster(65314, conf, true);
           fileSys = dfs.getFileSystem();
           namenode = fileSys.getName();
           mr = new MiniMRCluster(jobTrackerPort, 50060, taskTrackers, 
                                  namenode, true);
+          final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
           double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
                                                jobTrackerName, namenode);
           double error = Math.abs(Math.PI - estimate);

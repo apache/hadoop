@@ -35,12 +35,13 @@ public class TestMiniMRLocalFS extends TestCase {
       MiniMRCluster mr = null;
       try {
           mr = new MiniMRCluster(60030, 60040, 2, "local", false, 3);
-          double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, "localhost:60030", "local");
+          String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
+          double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, jobTrackerName, "local");
           double error = Math.abs(Math.PI - estimate);
           assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
           JobConf jconf = new JobConf();
           // run the wordcount example with caching
-          boolean ret = MRCaching.launchMRCache("localhost:60030", "/tmp/wc/input",
+          boolean ret = MRCaching.launchMRCache(jobTrackerName, "/tmp/wc/input",
                                                 "/tmp/wc/output", "local", jconf,
                                                 "The quick brown fox\nhas many silly\n"
                                                     + "red fox sox\n");
