@@ -157,7 +157,6 @@ public class StringUtils {
   /**
    * 
    * @param uris
-   * @return
    */
   public static String uriToString(URI[] uris){
     String ret = null;
@@ -171,7 +170,6 @@ public class StringUtils {
   /**
    * 
    * @param str
-   * @return
    */
   public static URI[] stringToURI(String[] str){
     if (str == null) 
@@ -192,7 +190,6 @@ public class StringUtils {
   /**
    * 
    * @param str
-   * @return
    */
   public static Path[] stringToPath(String[] str){
     Path[] p = new Path[str.length];
@@ -208,8 +205,7 @@ public class StringUtils {
    * If finish time comes before start time then negative valeus of X, Y and Z wil return. 
    * 
    * @param finishTime finish time
-   * @param statTime start time
-   * @return
+   * @param startTime start time
    */
   public static String formatTimeDiff(long finishTime, long startTime){
     StringBuffer buf = new StringBuffer() ;

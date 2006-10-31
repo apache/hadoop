@@ -105,6 +105,8 @@ Trunk (unreleased changes)
     error.  Also, change the hadoop-daemon.sh script to rotate
     standard i/o log files.  (Raghu Angadi via cutting)
 
+29. HADOOP-399.  Fix javadoc warnings.  (Nigel Daley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

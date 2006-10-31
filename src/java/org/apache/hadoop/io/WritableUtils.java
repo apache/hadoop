@@ -336,10 +336,8 @@ public final class WritableUtils  {
 
   /**
    * Get the encoded length if an integer is stored in a variable-length format
-   * @param i: a long
    * @return the encoded length 
    */
-  
   public static int getVIntSize(long i) {
       if (i >= -112 && i <= 127) {
           return 1;

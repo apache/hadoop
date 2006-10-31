@@ -306,7 +306,7 @@ public class FileUtil {
    * Create a soft link between a src and destination
    * only on a local disk. HDFS does not support this
    * @param target the target for symlink 
-   * @param destination the symlink
+   * @param linkname the symlink
    * @return value returned by the command
    */
   public static int symLink(String target, String linkname) throws IOException{

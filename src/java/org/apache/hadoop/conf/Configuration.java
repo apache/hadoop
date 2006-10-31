@@ -58,7 +58,7 @@ import org.apache.hadoop.fs.Path;
  * This String is processed for <b>variable expansion</b>. The available variables are the 
  * <em>System properties</em> and the <em>other properties</em> defined in this Configuration.
  * <p>The only <tt>get*</tt> method that is not processed for variable expansion is
- * {@link getObject} (as it cannot assume that the returned values are String). 
+ * {@link #getObject(String)} (as it cannot assume that the returned values are String). 
  * You can use <tt>getObject</tt> to obtain the raw value of a String property without 
  * variable expansion: if <tt>(String)conf.getObject("my.jdk")</tt> is <tt>"JDK ${java.version}"</tt>
  * then conf.get("my.jdk")</tt> is <tt>"JDK 1.5.0"</tt> 

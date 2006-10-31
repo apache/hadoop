@@ -537,7 +537,7 @@ public abstract class FileSystem extends Configured {
 
     /** 
      * Filter raw files in a list directories using the default checksum filter. 
-     * @param files: a list of paths
+     * @param files a list of paths
      * @return a list of files under the source paths
      * @exception IOException
      */
@@ -547,7 +547,7 @@ public abstract class FileSystem extends Configured {
     
     /** 
      * Filter raw files in a list directories using user-supplied path filter. 
-     * @param files: a list of paths
+     * @param files a list of paths
      * @return a list of files under the source paths
      * @exception IOException
      */
@@ -604,7 +604,7 @@ public abstract class FileSystem extends Configured {
      *  </dd>
      * </dl>
      *
-     * @param filePattern: a regular expression specifying file pattern
+     * @param filePattern a regular expression specifying file pattern
 
      * @return an array of paths that match the file pattern
      * @throws IOException
@@ -614,8 +614,7 @@ public abstract class FileSystem extends Configured {
     }
     
     /** glob all the file names that matches filePattern
-     * and is accepted by filter
-     * @param 
+     * and is accepted by filter.
      */
     public Path[] globPaths(Path filePattern, PathFilter filter) 
         throws IOException {

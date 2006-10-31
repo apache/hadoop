@@ -96,7 +96,7 @@ public class Text implements WritableComparable {
    * Returns the Unicode Scalar Value (32-bit integer value)
    * for the character at <code>position</code>. Note that this
    * method avoids using the converter or doing String instatiation
-   * @returns the Unicode scalar value at position or -1
+   * @return the Unicode scalar value at position or -1
    *          if the position is invalid or points to a
    *          trailing byte
    */
@@ -410,8 +410,8 @@ public class Text implements WritableComparable {
 
   /** 
    * Check if a byte array contains valid utf-8
-   * @param utf8: byte array
-   * @exception MalformedInputException if the byte array contains invalid utf-8
+   * @param utf8 byte array
+   * @throws MalformedInputException if the byte array contains invalid utf-8
    */
   public static void validateUTF8(byte[] utf8) throws MalformedInputException {
      validateUTF8(utf8, 0, utf8.length);     

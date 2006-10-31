@@ -58,7 +58,7 @@ public class PiBenchmark {
     
     /** Map method.
      * @param key
-     * @param value not-used.
+     * @param val not-used
      * @param out
      * @param reporter
      */
@@ -101,7 +101,7 @@ public class PiBenchmark {
           conf = job;
       }
       /** Reduce method.
-       * @ param key
+       * @param key
        * @param values
        * @param output
        * @param reporter

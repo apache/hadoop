@@ -123,7 +123,7 @@ public class Path implements Comparable {
     return new Path(isAbsolute, newElements, drive);
   }
 
-  /** Adds a suffix to a the final name in the path.*/
+  /** Adds a suffix to the final name in the path.*/
   public Path suffix(String suffix) {
     return new Path(getParent(), getName()+suffix);
   }

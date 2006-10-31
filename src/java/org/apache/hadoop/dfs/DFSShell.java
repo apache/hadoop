@@ -191,12 +191,12 @@ public class DFSShell extends ToolBase {
     /**
      * Set the replication for files that match file pattern <i>srcf</i>
      * if it's a directory and recursive is true,
-     * set replication for all the subdirs and those files too
-     * @param newRep: new replication factor
-     * @param srcf: a file pattern specifying source files
-     * @param recursive: if need to set replication factor for files in subdirs
-     * @exception: IOException  
-     * @see org.apache.hadoop.fs.FileSystem.globPaths 
+     * set replication for all the subdirs and those files too.
+     * @param newRep new replication factor
+     * @param srcf a file pattern specifying source files
+     * @param recursive if need to set replication factor for files in subdirs
+     * @throws IOException  
+     * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
      */
     public void setReplication(short newRep, String srcf, boolean recursive)
         throws IOException {
@@ -248,11 +248,11 @@ public class DFSShell extends ToolBase {
     
     
     /**
-     * Get a listing of all files in DFS that match the file pattern <i>srcf</i>
-     * @param srcf: a file pattern specifying source files
-     * @param recursive: if need to list files in subdirs
-     * @exception: IOException  
-     * @see org.apache.hadoop.fs.FileSystem.globPaths 
+     * Get a listing of all files in DFS that match the file pattern <i>srcf</i>.
+     * @param srcf a file pattern specifying source files
+     * @param recursive if need to list files in subdirs
+     * @throws IOException  
+     * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
      */
     public void ls(String srcf, boolean recursive) throws IOException {
       Path[] srcs = fs.globPaths( new Path(srcf) );
@@ -286,10 +286,10 @@ public class DFSShell extends ToolBase {
     }
 
     /**
-     * Show the size of all files in DFS that match the file pattern <i>srcf</i>
-     * @param srcf: a file pattern specifying source files
-     * @exception: IOException  
-     * @see org.apache.hadoop.fs.FileSystem.globPaths 
+     * Show the size of all files in DFS that match the file pattern <i>src</i>
+     * @param src a file pattern specifying source files
+     * @throws IOException  
+     * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
      */
     public void du(String src) throws IOException {
         Path items[] = fs.listPaths( fs.globPaths( new Path(src) ) );
@@ -317,10 +317,10 @@ public class DFSShell extends ToolBase {
      * to a destination dfs file.
      * When moving mutiple files, the destination must be a directory. 
      * Otherwise, IOException is thrown.
-     * @param srcf: a file pattern specifying source files
-     * @param dstf: a destination local file/directory 
-     * @exception: IOException  
-     * @see org.apache.hadoop.fs.FileSystem.globPaths 
+     * @param srcf a file pattern specifying source files
+     * @param dstf a destination local file/directory 
+     * @throws IOException  
+     * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
      */
     public void rename(String srcf, String dstf) throws IOException {
       Path [] srcs = fs.globPaths( new Path(srcf) );
@@ -403,10 +403,10 @@ public class DFSShell extends ToolBase {
      * to a destination dfs file.
      * When copying mutiple files, the destination must be a directory. 
      * Otherwise, IOException is thrown.
-     * @param srcf: a file pattern specifying source files
-     * @param dstf: a destination local file/directory 
-     * @exception: IOException  
-     * @see org.apache.hadoop.fs.FileSystem.globPaths 
+     * @param srcf a file pattern specifying source files
+     * @param dstf a destination local file/directory 
+     * @throws IOException  
+     * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
      */
     public void copy(String srcf, String dstf, Configuration conf) throws IOException {
       Path [] srcs = fs.globPaths( new Path(srcf) );
@@ -481,11 +481,11 @@ public class DFSShell extends ToolBase {
     }
 
     /**
-     * Delete all files in DFS that match the file pattern <i>srcf</i>
-     * @param srcf: a file pattern specifying source files
-     * @param recursive: if need to delete subdirs
-     * @exception: IOException  
-     * @see org.apache.hadoop.fs.FileSystem.globPaths 
+     * Delete all files in DFS that match the file pattern <i>srcf</i>.
+     * @param srcf a file pattern specifying source files
+     * @param recursive if need to delete subdirs
+     * @throws IOException  
+     * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
      */
     public void delete(String srcf, boolean recursive) throws IOException {
       Path [] srcs = fs.globPaths( new Path(srcf) );

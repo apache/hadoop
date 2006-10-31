@@ -56,7 +56,7 @@ public class SequenceFile {
   public static final int SYNC_INTERVAL = 100*SYNC_SIZE; 
 
   /** The type of compression.
-   * @see SequenceFile#Writer
+   * @see SequenceFile.Writer
    */
   public static enum CompressionType {
     /** Do not compress records. */
@@ -596,9 +596,9 @@ public class SequenceFile {
 
     /** Returns the current length of the output file.
      *
-     * <p>This always returns a synchronized position.  In other words, {@link
-     * immediately after calling {@link Reader#seek(long)} with a position
-     * returned by this method, Reader#next(Writable) may be called.  However
+     * <p>This always returns a synchronized position.  In other words,
+     * immediately after calling {@link SequenceFile.Reader#seek(long)} with a position
+     * returned by this method, {@link SequenceFile.Reader#next(Writable)} may be called.  However
      * the key may be earlier in the file than key last written when this
      * method was called (e.g., with block-compression, it may be the first key
      * in the block that was being written when this method was called).
@@ -1388,8 +1388,8 @@ public class SequenceFile {
     /** Set the current byte position in the input file.
      *
      * <p>The position passed must be a position returned by {@link
-     * Writer#getLength()} when writing this file.  To seek to an arbitrary
-     * position, use {@link Reader#sync(long)}.
+     * SequenceFile.Writer#getLength()} when writing this file.  To seek to an arbitrary
+     * position, use {@link SequenceFile.Reader#sync(long)}.
      */
     public synchronized void seek(long position) throws IOException {
       in.seek(position);

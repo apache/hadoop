@@ -107,8 +107,8 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
     public static class RegexFilter extends FilterBase {
         private Pattern p;
         /** Define the filtering regex and stores it in conf
-         * @argument conf where the regex is set
-         * @argument regex regex used as a filter
+         * @param conf where the regex is set
+         * @param regex regex used as a filter
          */
         public static void setPattern(Configuration conf, String regex )
             throws PatternSyntaxException {

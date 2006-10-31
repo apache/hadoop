@@ -88,12 +88,11 @@ public class NamenodeFsck {
   
   /**
    * Filesystem checker.
-   * @param conf current Configuration
-   * @param fixing one of pre-defined values
-   * @param showFiles show each file being checked
-   * @param showBlocks for each file checked show its block information
-   * @param showLocations for each block in each file show block locations
-   * @throws Exception
+   * @param conf configuration (namenode config)
+   * @param nn namenode that this fsck is going to use
+   * @param pmap key=value[] map that is passed to the http servlet as url parameters
+   * @param response the object into which  this servelet writes the url contents
+   * @throws IOException
    */
   public NamenodeFsck(Configuration conf,
       NameNode nn,
@@ -457,7 +456,6 @@ public class NamenodeFsck {
     
     /**
      * DFS is considered healthy if there are no missing blocks.
-     * @return
      */
     public boolean isHealthy() {
       return missingIds.size() == 0;

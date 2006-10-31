@@ -73,7 +73,6 @@ public class JobConf extends Configuration {
 
   /** 
    * Construct a map/reduce job configuration.
-   * @param conf a Configuration whose settings will be inherited.
    * @param exampleClass a class whose containing jar is used as the job's jar.
    */
   public JobConf(Class exampleClass) {
@@ -83,8 +82,7 @@ public class JobConf extends Configuration {
   /**
    * Construct a map/reduce job configuration.
    * 
-   * @param conf
-   *          a Configuration whose settings will be inherited.
+   * @param conf a Configuration whose settings will be inherited.
    */
   public JobConf(Configuration conf) {
     super(conf);

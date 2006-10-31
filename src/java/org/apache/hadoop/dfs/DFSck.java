@@ -38,11 +38,11 @@ import org.apache.hadoop.util.ToolBase;
  * <li>files with blocks that are completely missing from all datanodes.<br/>
  * In this case the tool can perform one of the following actions:
  *  <ul>
- *      <li>none ({@link #FIXING_NONE})</li>
+ *      <li>none ({@link NamenodeFsck#FIXING_NONE})</li>
  *      <li>move corrupted files to /lost+found directory on DFS
- *      ({@link #FIXING_MOVE}). Remaining data blocks are saved as a
+ *      ({@link NamenodeFsck#FIXING_MOVE}). Remaining data blocks are saved as a
  *      block chains, representing longest consecutive series of valid blocks.</li>
- *      <li>delete corrupted files ({@link #FIXING_DELETE})</li>
+ *      <li>delete corrupted files ({@link NamenodeFsck#FIXING_DELETE})</li>
  *  </ul>
  *  </li>
  *  <li>detect files with under-replicated or over-replicated blocks</li>

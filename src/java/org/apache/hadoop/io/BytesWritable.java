@@ -60,7 +60,6 @@ public class BytesWritable implements WritableComparable {
   
   /**
    * Get the current size of the buffer.
-   * @return
    */
   public int getSize() {
     return size;

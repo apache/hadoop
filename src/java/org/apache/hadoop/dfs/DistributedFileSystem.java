@@ -258,10 +258,8 @@ public class DistributedFileSystem extends FileSystem {
     
     /**
      * Enter, leave or get safe mode.
-     * See {@link ClientProtocol#setSafeMode(FSConstants.SafeModeAction)} 
-     * for more details.
      *  
-     * @see ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
+     * @see org.apache.hadoop.dfs.ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
      */
     public boolean setSafeMode( FSConstants.SafeModeAction action ) 
     throws IOException {

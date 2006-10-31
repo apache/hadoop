@@ -51,10 +51,10 @@ interface DatanodeProtocol extends VersionedProtocol {
   /** 
    * Register Datanode.
    *
-   * @see DataNode#register()
-   * @see FSNamesystem#registerDatanode(DatanodeRegistration)
+   * @see org.apache.hadoop.dfs.DataNode#register()
+   * @see org.apache.hadoop.dfs.FSNamesystem#registerDatanode(DatanodeRegistration)
    * 
-   * @return updated {@link DatanodeRegistration}, which contains 
+   * @return updated {@link org.apache.hadoop.dfs.DatanodeRegistration}, which contains 
    * new storageID if the datanode did not have one and
    * registration ID for further communication.
    */

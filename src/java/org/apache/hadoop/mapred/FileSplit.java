@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.Path;
 
 /** A section of an input file.  Returned by {@link
  * InputFormat#getSplits(FileSystem, JobConf, int)} and passed to
- * InputFormat#getRecordReader(FileSystem,FileSplit,JobConf,Reporter). */
+ * {@link InputFormat#getRecordReader(FileSystem,FileSplit,JobConf,Reporter)}. */
 public class FileSplit implements Writable {
   private Path file;
   private long start;

@@ -77,8 +77,8 @@ public class ReflectionUtils {
     }
     
     /**
-     * Print all of the thread's information and stack traces
-     * @author Owen O'Malley
+     * Print all of the thread's information and stack traces.
+     * 
      * @param stream the stream to
      * @param title a string title for the stack trace
      */

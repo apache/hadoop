@@ -19,15 +19,13 @@
 package org.apache.hadoop.examples;
 import org.apache.hadoop.util.ProgramDriver;
 
+/**
+ * A description of an example program based on its class and a 
+ * human-readable description.
+ * @author Owen O'Malley
+ */
 public class ExampleDriver {
   
-  /**
-   * A description of an example program based on its class and a 
-   * human-readable description.
-   * @author Owen O'Malley
-   * @date april 2006
-   */
-    
     public static void main(String argv[]){
         ProgramDriver pgd = new ProgramDriver();
         try {

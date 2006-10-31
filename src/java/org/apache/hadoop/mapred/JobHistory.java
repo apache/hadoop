@@ -225,7 +225,6 @@ public class JobHistory {
      * Convert value from history to int and return. 
      * if no value is found it returns 0.
      * @param k key 
-     * @return
      */
     public int getInt(Keys k){
       String s = values.get(k); 
@@ -238,7 +237,6 @@ public class JobHistory {
      * Convert value from history to int and return. 
      * if no value is found it returns 0.
      * @param k
-     * @return
      */
     public long getLong(Keys k){
       String s = values.get(k); 
@@ -271,7 +269,6 @@ public class JobHistory {
     }
     /**
      * Returns Map containing all key-values. 
-     * @return
      */
     public Map<Keys, String> getValues(){
       return values; 
@@ -292,7 +289,6 @@ public class JobHistory {
 
     /**
      * Returns all map and reduce tasks <taskid-Task>. 
-     * @return
      */
     public Map<String, Task> getAllTasks() { return allTasks; }
     
@@ -486,12 +482,12 @@ public class JobHistory {
     }
     /**
      * Returns all task attempts for this task. <task attempt id - TaskAttempt>
-     * @return
      */
     public Map<String, TaskAttempt> getTaskAttempts(){
       return this.taskAttempts;
     }
   }
+
   /**
    * Base class for Map and Reduce TaskAttempts. 
    */

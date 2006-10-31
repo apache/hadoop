@@ -103,10 +103,10 @@ public class StatusHttpServer {
   }
 
   /**
-   * Add a servlet in the server
+   * Add a servlet in the server.
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
-   * @param classname The class name for the servlet
+   * @param servletClass The servlet class
    */
   public <T extends HttpServlet> 
   void addServlet(String name, String pathSpec, 
