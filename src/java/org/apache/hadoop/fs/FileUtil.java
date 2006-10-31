@@ -301,4 +301,23 @@ public class FileUtil {
       zipFile.close();
     }
   }
+  
+  /**
+   * Create a soft link between a src and destination
+   * only on a local disk. HDFS does not support this
+   * @param target the target for symlink 
+   * @param destination the symlink
+   * @return value returned by the command
+   */
+  public static int symLink(String target, String linkname) throws IOException{
+   String cmd = "ln -s " + target + " " + linkname;
+   Process p = Runtime.getRuntime().exec( cmd, null );
+   int returnVal = -1;
+   try{
+     returnVal = p.waitFor();
+   } catch(InterruptedException e){
+     //do nothing as of yet
+   }
+   return returnVal;
+ }
 }

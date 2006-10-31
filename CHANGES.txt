@@ -87,6 +87,10 @@ Trunk (unreleased changes)
     reduce tasks which use MapFile to still report progress while
     writing blocks to the filesystem.  (cutting)
 
+24. HADOOP-576.  Enable contrib/streaming to use the file cache.  Also
+    extend the cache to permit symbolic links to cached items, rather
+    than local file copies.  (Mahadev Konar via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

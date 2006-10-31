@@ -22,8 +22,12 @@ import java.io.*;
 import java.net.InetAddress;
 import java.util.*;
 
-/*
- * If we move to Java 1.5, we can get rid of this class and just use System.getenv
+/**
+ * This is a class used to get the current environment
+ * on the host machines running the map/reduce. This class
+ * assumes that setting the environment in streaming is 
+ * allowed on windows/ix/linuz/freebsd/sunos/solaris/hp-ux
+ * @author michel
  */
 public class Environment extends Properties {
 

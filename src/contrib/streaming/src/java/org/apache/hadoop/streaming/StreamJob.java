@@ -39,7 +39,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.RunningJob;
-
+import org.apache.hadoop.filecache.*;
+import org.apache.hadoop.util.*;
 /** All the client-side work happens here.
  * (Jar packaging, MapRed job submission and monitoring)
  * @author Michel Tourn
@@ -54,7 +55,13 @@ public class StreamJob {
     argv_ = argv;
     mayExit_ = mayExit;
   }
-
+  
+  /**
+   * This is the method that actually 
+   * intializes the job conf and submits the job
+   * to the jobtracker
+   * @throws IOException
+   */
   public void go() throws IOException {
     init();
 
@@ -65,7 +72,7 @@ public class StreamJob {
     setJobConf();
     submitAndMonitorJob();
   }
-
+  
   protected void init() {
     try {
       env_ = new Environment();
@@ -157,6 +164,10 @@ public class StreamJob {
     return new File(getHadoopClientHome() + "/conf", hadoopAliasConf_).getAbsolutePath();
   }
 
+  /**
+   * This method parses the command line args
+   * to a hadoop streaming job
+   */
   void parseArgv() {
     if (argv_.length == 0) {
       exitUsage(false);
@@ -219,7 +230,22 @@ public class StreamJob {
       } else if ((s = optionArg(argv_, i, "-inputreader", inReaderSpec_ != null)) != null) {
         i++;
         inReaderSpec_ = s;
-      } else {
+      } else if((s = optionArg(argv_, i, "-cacheArchive", false)) != null) {
+    	  i++;
+    	  if (cacheArchives == null)
+    		  cacheArchives = s;
+    	  else
+    		  cacheArchives = cacheArchives + "," + s;    	  
+      } else if((s = optionArg(argv_, i, "-cacheFile", false)) != null) {
+        i++;
+        System.out.println(" the val of s is " + s);
+        if (cacheFiles == null)
+          cacheFiles = s;
+        else
+          cacheFiles = cacheFiles + "," + s;
+        System.out.println(" the val of cachefiles is " + cacheFiles);
+      }
+      else {
         System.err.println("Unexpected argument: " + argv_[i]);
         exitUsage(false);
       }
@@ -269,6 +295,8 @@ public class StreamJob {
     System.out.println("  -inputreader <spec>  Optional.");
     System.out.println("  -jobconf  <n>=<v>    Optional. Add or override a JobConf property");
     System.out.println("  -cmdenv   <n>=<v>    Optional. Pass env.var to streaming commands");
+    System.out.println("  -cacheFile fileNameURI");
+    System.out.println("  -cacheArchive fileNameURI");
     System.out.println("  -verbose");
     System.out.println();
     if (!detailed) {
@@ -392,7 +420,7 @@ public class StreamJob {
     // $HADOOP_HOME/bin/hadoop jar /not/first/on/classpath/custom-hadoop-streaming.jar
     // where findInClasspath() would find the version of hadoop-streaming.jar in $HADOOP_HOME
     String runtimeClasses = userJobConfProps_.get("stream.shipped.hadoopstreaming"); // jar or class dir
-System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.hadoopstreaming");
+    System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.hadoopstreaming");
     
     if (runtimeClasses == null) {
       runtimeClasses = StreamUtil.findInClasspath(StreamJob.class.getName());
@@ -435,6 +463,11 @@ System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.ha
     return jobJarName;
   }
 
+  /**
+   * This method sets the user jobconf variable specified
+   * by user using -jobconf key=value
+   * @param doEarlyProps
+   */
   protected void setUserJobConfProps(boolean doEarlyProps) {
     Iterator it = userJobConfProps_.keySet().iterator();
     while (it.hasNext()) {
@@ -448,7 +481,17 @@ System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.ha
       }
     }
   }
-
+  
+  /**
+   * get the uris of all the files/caches
+   */
+  protected void getURIs(String lcacheArchives, String lcacheFiles) {
+    String archives[] = StringUtils.getStrings(lcacheArchives);
+    String files[] = StringUtils.getStrings(lcacheFiles);
+    fileURIs = StringUtils.stringToURI(files);
+    archiveURIs = StringUtils.stringToURI(archives);
+  }
+  
   protected void setJobConf() throws IOException {
     msg("hadoopAliasConf_ = " + hadoopAliasConf_);
     config_ = new Configuration();
@@ -548,7 +591,8 @@ System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.ha
         jobConf_.set(k, v);
       }
     }
-
+    
+    setUserJobConfProps(false);
     // output setup is done late so we can customize for reducerNone_
     //jobConf_.setOutputDir(new File(output_));
     setOutputSpec();
@@ -561,20 +605,36 @@ System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.ha
 
     // last, allow user to override anything
     // (although typically used with properties we didn't touch)
-    setUserJobConfProps(false);
 
     jar_ = packageJobJar();
     if (jar_ != null) {
       jobConf_.setJar(jar_);
     }
-
+    
+    if ((cacheArchives != null) || (cacheFiles != null)){
+      getURIs(cacheArchives, cacheFiles);
+      boolean b = DistributedCache.checkURIs(fileURIs, archiveURIs);
+      if (!b)
+        fail(LINK_URI);
+      DistributedCache.createSymlink(jobConf_);
+    }
+    // set the jobconf for the caching parameters
+    if (cacheArchives != null)
+      DistributedCache.setCacheArchives(archiveURIs, jobConf_);
+    if (cacheFiles != null)
+      DistributedCache.setCacheFiles(fileURIs, jobConf_);
+    
     if(verbose_) {
       listJobConfProperties();
     }
-    
+   
     msg("submitting to jobconf: " + getJobTrackerHostPort());
   }
 
+  /**
+   * Prints out the jobconf properties on stdout
+   * when verbose is specified.
+   */
   protected void listJobConfProperties()
   {
     msg("==== JobConf properties:");
@@ -765,6 +825,10 @@ System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.ha
   protected String comCmd_;
   protected String redCmd_;
   protected String cluster_;
+  protected String cacheFiles;
+  protected String cacheArchives;
+  protected URI[] fileURIs;
+  protected URI[] archiveURIs;
   protected ArrayList configPath_ = new ArrayList(); // <String>
   protected String hadoopAliasConf_;
   protected String inReaderSpec_;
@@ -780,5 +844,6 @@ System.out.println(runtimeClasses + "=@@@userJobConfProps_.get(stream.shipped.ha
 
   protected RunningJob running_;
   protected String jobId_;
-
+  protected static String LINK_URI = "You need to specify the uris as hdfs://host:port/#linkname," +
+      "Please specify a different link name for all of your caching URIs";
 }

@@ -23,6 +23,16 @@ import java.util.*;
 import java.util.jar.*;
 import java.util.zip.ZipException;
 
+/**
+ * This class is the main class for generating job.jar
+ * for Hadoop Streaming jobs. It includes the files specified 
+ * with the -file option and includes them in the jar. Also,
+ * hadoop-streaming is a user level appplication, so all the classes
+ * with hadoop-streaming that are needed in the job are also included
+ * in the job.jar.
+ * @author michel
+ *
+ */
 public class JarBuilder {
 
   public JarBuilder() {

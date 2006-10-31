@@ -302,14 +302,7 @@ public class Configuration {
    */
   public String[] getStrings(String name) {
     String valueString = get(name);
-    if (valueString == null)
-      return null;
-    StringTokenizer tokenizer = new StringTokenizer (valueString,",");
-    List values = new ArrayList();
-    while (tokenizer.hasMoreTokens()) {
-      values.add(tokenizer.nextToken());
-    }
-    return (String[])values.toArray(new String[values.size()]);
+    return StringUtils.getStrings(valueString);
   }
 
   /**

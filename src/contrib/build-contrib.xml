@@ -24,9 +24,10 @@
   <property name="build.dir" location="${hadoop.root}/build/contrib/${name}"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
+  <property name="hadoop.log.dir" location="${build.dir}/test/logs"/>
   <!-- all jars together -->
   <property name="deploy.dir" location="${hadoop.root}/build/"/>
-
+  <property name="minimr.dir" value="${hadoop.root}/build/minimr"/>
   <property name="javac.deprecation" value="off"/>
   <property name="javac.debug" value="on"/>
 
@@ -51,6 +52,7 @@
   <path id="test.classpath">
     <pathelement location="${build.test}" />
     <pathelement location="${hadoop.root}/build/test/classes"/>
+    <pathelement location="${minimr.dir}" />
     <pathelement location="${hadoop.root}/src/test"/>
     <pathelement location="${conf.dir}"/>
     <pathelement location="${hadoop.root}/build"/>
@@ -69,7 +71,8 @@
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.test}"/>
-
+    <mkdir dir="${hadoop.log.dir}"/>
+    <mkdir dir="${minimr.dir}"/>
     <antcall target="init-contrib"/>
   </target>
 
@@ -131,8 +134,10 @@
   <!-- ================================================================== -->
   <target name="test" depends="compile-test, deploy" if="test.available">
     <echo message="contrib: ${name}"/>
+    <delete dir="${hadoop.log.dir}"/>
+    <mkdir dir="${hadoop.log.dir}"/>
     <junit
-      printsummary="withOutAndErr" haltonfailure="no" fork="yes"
+      printsummary="withOutAndErr" showoutput="no" haltonfailure="no" fork="yes"
       errorProperty="tests.failed" failureProperty="tests.failed">
       
       <sysproperty key="test.build.data" value="${build.test}/data"/>
@@ -145,7 +150,7 @@
       
       <sysproperty key="fs.default.name" value="${fs.default.name}"/>
       <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
-   
+      <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/> 
       <classpath refid="test.classpath"/>
       <formatter type="plain" />
       <batchtest todir="${build.test}" unless="testcase">

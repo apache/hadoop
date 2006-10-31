@@ -43,7 +43,7 @@ public class DistributedCache {
   /**
    * 
    * @param cache the cache to be localized, this should be specified as 
-   * new URI(dfs://hostname:port/absoulte_path_to_file). If no schema 
+   * new URI(dfs://hostname:port/absoulte_path_to_file#LINKNAME). If no schema 
    * or hostname:port is provided the file is assumed to be in the filesystem
    * being used in the Configuration
    * @param conf The Confguration file which contains the filesystem
@@ -55,12 +55,14 @@ public class DistributedCache {
    * @param md5 this is a mere checksum to verufy if you are using the right cache. 
    * You need to pass the md5 of the crc file in DFS. This is matched against the one
    * calculated in this api and if it does not match, the cache is not localized.
+   * @param currentWorkDir this is the directory where you would want to create symlinks 
+   * for the locally cached files/archives
    * @return the path to directory where the archives are unjarred in case of archives,
    * the path to the file where the file is copied locally 
    * @throws IOException
    */
   public static Path getLocalCache(URI cache, Configuration conf, Path baseDir,
-      boolean isArchive, String md5) throws IOException {
+      boolean isArchive, String md5, Path currentWorkDir) throws IOException {
     String cacheId = makeRelative(cache, conf);
     CacheStatus lcacheStatus;
     Path localizedPath;
@@ -80,7 +82,7 @@ public class DistributedCache {
       }
     }
     synchronized (lcacheStatus) {
-      localizedPath = localizeCache(cache, lcacheStatus, conf, isArchive, md5);
+      localizedPath = localizeCache(cache, lcacheStatus, conf, isArchive, md5, currentWorkDir);
     }
     // try deleting stuff if you can
     long size = FileUtil.getDU(new File(baseDir.toString()));
@@ -157,15 +159,26 @@ public class DistributedCache {
 
   // the methoed which actually copies the caches locally and unjars/unzips them
   private static Path localizeCache(URI cache, CacheStatus cacheStatus,
-      Configuration conf, boolean isArchive, String md5) throws IOException {
+      Configuration conf, boolean isArchive, String md5, Path currentWorkDir) throws IOException {
     boolean b = true;
+    boolean doSymlink = getSymlink(conf);
     FileSystem dfs = getFileSystem(cache, conf);
     b = ifExistsAndFresh(cacheStatus, cache, dfs, md5, conf);
     if (b) {
-      if (isArchive)
+      if (isArchive) {
+        if (doSymlink)
+        FileUtil.symLink(cacheStatus.localLoadPath.toString(), 
+            currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment());
+        
         return cacheStatus.localLoadPath;
-      else
+      }
+      else {
+        if (doSymlink)
+          FileUtil.symLink(cacheFilePath(cacheStatus.localLoadPath).toString(), 
+              currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment());
+       
         return cacheFilePath(cacheStatus.localLoadPath);
+      }
     } else {
       // remove the old archive
       // if the old archive cannot be removed since it is being used by another
@@ -179,7 +192,6 @@ public class DistributedCache {
       localFs.delete(cacheStatus.localLoadPath);
       Path parchive = new Path(cacheStatus.localLoadPath,
                                new Path(cacheStatus.localLoadPath.getName()));
-
       localFs.mkdirs(cacheStatus.localLoadPath);
       String cacheId = cache.getPath();
       dfs.copyToLocalFile(new Path(cacheId), parchive);
@@ -199,14 +211,23 @@ public class DistributedCache {
         // else will not do anyhting
         // and copy the file into the dir as it is
       }
+      // create a symlink if #NAME is specified as fragment in the
+      // symlink
       cacheStatus.currentStatus = true;
       cacheStatus.md5 = checkSum;
     }
-    if (isArchive)
+    if (isArchive){
+      if (doSymlink)
+        FileUtil.symLink(cacheStatus.localLoadPath.toString(), 
+            currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment());
       return cacheStatus.localLoadPath;
-    else
+    }
+    else {
+      if (doSymlink)
+        FileUtil.symLink(cacheFilePath(cacheStatus.localLoadPath).toString(), 
+            currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment());
       return cacheFilePath(cacheStatus.localLoadPath);
-
+    }
   }
 
   // Checks if the cache has already been localized and is fresh
@@ -451,6 +472,75 @@ public class DistributedCache {
     String files = conf.get("mapred.cache.files");
     conf.set("mapred.cache.files", files == null ? uri.toString() : files + ","
         + uri.toString());
+  }
+  
+  /**
+   * This method allows you to create symlinks in the current working directory
+   * of the task to all the cache files/archives
+   * @param conf the jobconf 
+   */
+  public static void createSymlink(Configuration conf){
+    conf.set("mapred.create.symlink", "yes");
+  }
+  
+  /**
+   * This method checks to see if symlinks are to be create for the 
+   * localized cache files in the current working directory 
+   * @param conf the jobconf
+   * @return true if symlinks are to be created- else return false
+   */
+  public static boolean getSymlink(Configuration conf){
+    String result = conf.get("mapred.create.symlink");
+    if ("yes".equals(result)){
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * This method checks if there is a conflict in the fragment names 
+   * of the uris. Also makes sure that each uri has a fragment. It 
+   * is only to be called if you want to create symlinks for 
+   * the various archives and files.
+   * @param uriFiles The uri array of urifiles
+   * @param uriArchives the uri array of uri archives
+   */
+  public static boolean checkURIs(URI[]  uriFiles, URI[] uriArchives){
+    if ((uriFiles == null) && (uriArchives == null)){
+      return true;
+    }
+    if (uriFiles != null){
+      for (int i = 0; i < uriFiles.length; i++){
+        String frag1 = uriFiles[i].getFragment();
+        if (frag1 == null)
+          return false;
+        for (int j=i+1; j < uriFiles.length; i++){
+          String frag2 = uriFiles[j].getFragment();
+          if (frag2 == null)
+            return false;
+          if (frag1.equalsIgnoreCase(frag2))
+            return false;
+        }
+        if (uriArchives != null){
+          for (int j = 0; j < uriArchives.length; j++){
+            String frag2 = uriArchives[j].getFragment();
+            if (frag2 == null){
+              return false;
+            }
+            if (frag1.equalsIgnoreCase(frag2))
+              return false;
+            for (int k=j+1; k < uriArchives.length; k++){
+              String frag3 = uriArchives[k].getFragment();
+              if (frag3 == null)
+                return false;
+              if (frag2.equalsIgnoreCase(frag3))
+                  return false;
+            }
+          }
+        }
+      }
+    }
+    return true;
   }
 
   private static class CacheStatus {

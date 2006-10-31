@@ -21,6 +21,8 @@ package org.apache.hadoop.streaming;
 import java.io.IOException;
 
 /** The main entrypoint. Usually invoked with the script bin/hadoopStreaming
+ * or bin/hadoop har hadoop-streaming.jar args.
+ * It passes all the args to StreamJob which handles all the arguments.
  */
 public class HadoopStreaming {
 

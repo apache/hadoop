@@ -30,7 +30,9 @@ import java.util.*;
  *
  * Note: not specifying ownerOnly maps to ownerOnly = false
  * From man chmod: If no user specs are given, the effect is as if `a' were given. 
- * 
+ * This class is mainly used to change permissions when files are unjarred from the 
+ * job.jar. The executable specified in the mappper/reducer is set to be executable 
+ * using this class.
  */
 public class MustangFile extends File {
 

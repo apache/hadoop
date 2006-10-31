@@ -24,7 +24,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.*;
 
@@ -253,4 +256,19 @@ public class StringUtils {
     return buf.toString();
   }
   
+  /**
+   * returns an arraylist of strings  
+   * @param str the comma seperated string values
+   * @return the arraylist of the comma seperated string values
+   */
+  public static String[] getStrings(String str){
+    if (str == null)
+      return null;
+    StringTokenizer tokenizer = new StringTokenizer (str,",");
+    List values = new ArrayList();
+    while (tokenizer.hasMoreTokens()) {
+      values.add(tokenizer.nextToken());
+    }
+    return (String[])values.toArray(new String[values.size()]);
+  }
 }

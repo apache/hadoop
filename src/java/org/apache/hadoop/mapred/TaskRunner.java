@@ -80,7 +80,7 @@ abstract class TaskRunner extends Thread {
       
       //before preparing the job localize 
       //all the archives
-      
+      File workDir = new File(new File(t.getJobFile()).getParentFile().getParent(), "work");
       URI[] archives = DistributedCache.getCacheArchives(conf);
       URI[] files = DistributedCache.getCacheFiles(conf);
       if ((archives != null) || (files != null)) {
@@ -88,7 +88,8 @@ abstract class TaskRunner extends Thread {
           String[] md5 = DistributedCache.getArchiveMd5(conf);
           Path[] p = new Path[archives.length];
           for (int i = 0; i < archives.length;i++){
-            p[i] = DistributedCache.getLocalCache(archives[i], conf, conf.getLocalPath(TaskTracker.getCacheSubdir()), true, md5[i]);
+            p[i] = DistributedCache.getLocalCache(archives[i], conf, 
+                conf.getLocalPath(TaskTracker.getCacheSubdir()), true, md5[i], new Path(workDir.getAbsolutePath()));
           }
           DistributedCache.setLocalArchives(conf, stringifyPathArray(p));
         }
@@ -97,7 +98,7 @@ abstract class TaskRunner extends Thread {
           Path[] p = new Path[files.length];
           for (int i = 0; i < files.length;i++){
            p[i] = DistributedCache.getLocalCache(files[i], conf, conf.getLocalPath(TaskTracker
-              .getCacheSubdir()), false, md5[i]);
+              .getCacheSubdir()), false, md5[i], new Path(workDir.getAbsolutePath()));
           }
           DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
         }
@@ -123,7 +124,6 @@ abstract class TaskRunner extends Thread {
       // start with same classpath as parent process
       classPath.append(System.getProperty("java.class.path"));
       classPath.append(sep);
-      File workDir = new File(new File(t.getJobFile()).getParentFile().getParent(), "work");
       workDir.mkdirs();
 	  
       String jar = conf.getJar();
