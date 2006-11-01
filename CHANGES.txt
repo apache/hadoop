@@ -116,6 +116,9 @@ Trunk (unreleased changes)
 
 32. HADOOP-663.  Fix a few unit test issues.  (Mahadev Konar via cutting)
 
+33. HADOOP-664.  Cause entire build to fail if libhdfs tests fail.
+    (Nigel Daley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

@@ -508,7 +508,7 @@
     <delete dir="${libhdfs.test.log.dir}"/>
     <mkdir dir="${libhdfs.test.log.dir}"/>
 
-    <exec dir="${libhdfs.src}" executable="make">
+    <exec dir="${libhdfs.src}" executable="make" failonerror="true">
         <env key="OS_NAME" value="${os.name}"/>
         <env key="OS_ARCH" value="${os.arch}"/>
         <env key="SHLIB_VERSION" value="${libhdfs.version}"/>
