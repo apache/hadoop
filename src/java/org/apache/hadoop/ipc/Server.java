@@ -158,7 +158,7 @@ public abstract class Server {
 
       // Register accepts on the server socket with the selector.
       acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
-      this.setName("Server listener on port " + port);
+      this.setName("IPC Server listener on " + port);
       this.setDaemon(true);
     }
     /** cleanup connections from connectionList. Choose a random range
@@ -476,7 +476,7 @@ public abstract class Server {
   private class Handler extends Thread {
     public Handler(int instanceNumber) {
       this.setDaemon(true);
-      this.setName("Server handler "+ instanceNumber + " on " + port);
+      this.setName("IPC Server handler "+ instanceNumber + " on " + port);
     }
 
     public void run() {

@@ -122,7 +122,7 @@ public class Client {
          throw new UnknownHostException("unknown host: " + address.getHostName());
       }
       this.address = address;
-      this.setName("Client connection to " + address.toString());
+      this.setName("IPC Client connection to " + address.toString());
       this.setDaemon(true);
     }
 
@@ -421,8 +421,9 @@ public class Client {
 
     Thread t = new ConnectionCuller();
     t.setDaemon(true);
-    t.setName(valueClass.getName()
-              +" ConnectionCuller maxidletime="+maxIdleTime+"ms");
+    t.setName(valueClass.getName() + " Connection Culler");
+    LOG.info(valueClass.getName() + 
+             "Connection culler maxidletime= " + maxIdleTime + "ms");
     t.start();
   }
  

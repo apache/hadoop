@@ -119,6 +119,11 @@ Trunk (unreleased changes)
 33. HADOOP-664.  Cause entire build to fail if libhdfs tests fail.
     (Nigel Daley via cutting)
 
+34. HADOOP-633.  Keep jobtracker from dying when job initialization
+    throws exceptions.  Also improve exception handling in a few other
+    places and add more informative thread names.
+    (omalley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

@@ -147,7 +147,7 @@ public class TaskTracker
             }
           }
         }
-      });
+      }, "taskCleanup");
     {
       taskCleanupThread.setDaemon(true);
       taskCleanupThread.start();
@@ -356,7 +356,7 @@ public class TaskTracker
         // in parallel, as RPC servers can take a long
         // time to shutdown.  (They need to wait a full
         // RPC timeout, which might be 10-30 seconds.)
-        new Thread() {
+        new Thread("RPC shutdown") {
             public void run() {
                 if (taskReportServer != null) {
                     taskReportServer.stop();
