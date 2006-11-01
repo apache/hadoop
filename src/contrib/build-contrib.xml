@@ -20,7 +20,7 @@
   <available file="${src.test}" type="dir" property="test.available"/>
 
   <property name="conf.dir" location="${hadoop.root}/conf"/>
-
+  <property name="test.junit.output.format" value="plain"/>
   <property name="build.dir" location="${hadoop.root}/build/contrib/${name}"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>

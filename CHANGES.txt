@@ -114,6 +114,8 @@ Trunk (unreleased changes)
 31. HADOOP-660.  Permit specification of junit test output format.
     (Nigel Daley via cutting)
 
+32. HADOOP-663.  Fix a few unit test issues.  (Mahadev Konar via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

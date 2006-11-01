@@ -125,7 +125,7 @@ public class DistributedCache {
         if (lcacheStatus.refcount == 0) {
           // delete this cache entry
           FileSystem.getNamed("local", conf).delete(lcacheStatus.localLoadPath);
-          cachedArchives.remove(cacheId);
+          it.remove();
         }
       }
     }

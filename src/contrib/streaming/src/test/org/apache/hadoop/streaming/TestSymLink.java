@@ -64,7 +64,7 @@ public class TestSymLink extends TestCase
         mr  = new MiniMRCluster(jobTrackerPort, 60060, 1, namenode, true, 3);
         // During tests, the default Configuration will use a local mapred
         // So don't specify -config or -cluster
-        String strJobtracker = "mapred.job.tracker=" + "localhost:" + jobTrackerPort;
+        String strJobtracker = "mapred.job.tracker=" + "localhost:" + mr.getJobTrackerPort();
         String strNamenode = "fs.default.name=" + namenode;
         String argv[] = new String[] {
             "-input", INPUT_FILE,
