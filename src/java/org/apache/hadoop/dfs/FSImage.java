@@ -105,7 +105,7 @@ class FSImage {
     
     // Now check all curFiles and see which is the newest
     File curFile = null;
-    long maxTimeStamp = 0;
+    long maxTimeStamp = Long.MIN_VALUE;
     for (int idx = 0; idx < imageDirs.length; idx++) {
       File file = new File(imageDirs[idx], FS_IMAGE);
       if (file.exists()) {
