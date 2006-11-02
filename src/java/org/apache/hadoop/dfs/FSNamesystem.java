@@ -33,8 +33,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.TaskTracker;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -61,7 +59,8 @@ class FSNamesystem implements FSConstants {
     // to client-sent information.
     // Mapping: Block -> TreeSet<DatanodeDescriptor>
     //
-    Map blocksMap = new HashMap();
+    Map<Block, SortedSet<DatanodeDescriptor>> blocksMap = 
+                              new HashMap<Block, SortedSet<DatanodeDescriptor>>();
 
     /**
      * Stores the datanode -> block map.  
@@ -84,36 +83,40 @@ class FSNamesystem implements FSConstants {
      * <p>
      * Mapping: StorageID -> DatanodeDescriptor
      */
-    TreeMap datanodeMap = new TreeMap();
+    Map<String, DatanodeDescriptor> datanodeMap = 
+                                      new TreeMap<String, DatanodeDescriptor>();
 
     //
-    // Keeps a Vector for every named machine.  The Vector contains
+    // Keeps a Collection for every named machine containing
     // blocks that have recently been invalidated and are thought to live
     // on the machine in question.
-    // Mapping: StorageID -> Vector<Block>
+    // Mapping: StorageID -> ArrayList<Block>
     //
-    TreeMap recentInvalidateSets = new TreeMap();
+    private Map<String, Collection<Block>> recentInvalidateSets = 
+                                      new TreeMap<String, Collection<Block>>();
 
     //
     // Keeps a TreeSet for every named node.  Each treeset contains
     // a list of the blocks that are "extra" at that location.  We'll
     // eventually remove these extras.
-    // Mapping: Block -> TreeSet<DatanodeDescriptor>
+    // Mapping: StorageID -> TreeSet<Block>
     //
-    TreeMap excessReplicateMap = new TreeMap();
+    private Map<String, Collection<Block>> excessReplicateMap = 
+                                      new TreeMap<String, Collection<Block>>();
 
     //
     // Keeps track of files that are being created, plus the
     // blocks that make them up.
     // Mapping: fileName -> FileUnderConstruction
     //
-    TreeMap pendingCreates = new TreeMap();
+    Map<UTF8, FileUnderConstruction> pendingCreates = 
+                                  new TreeMap<UTF8, FileUnderConstruction>();
 
     //
     // Keeps track of the blocks that are part of those pending creates
     // Set of: Block
     //
-    TreeSet pendingCreateBlocks = new TreeSet();
+    Collection<Block> pendingCreateBlocks = new TreeSet<Block>();
 
     //
     // Stats on overall usage
@@ -139,37 +142,36 @@ class FSNamesystem implements FSConstants {
      * The {@link HeartbeatMonitor} periodically checks for outdated entries,
      * and removes them from the set.
      */
-    TreeSet heartbeats = new TreeSet(new Comparator() {
-        public int compare(Object o1, Object o2) {
-            DatanodeDescriptor d1 = (DatanodeDescriptor) o1;
-            DatanodeDescriptor d2 = (DatanodeDescriptor) o2;            
+    TreeSet<DatanodeDescriptor> heartbeats = 
+      new TreeSet<DatanodeDescriptor>(
+        new Comparator<DatanodeDescriptor>() {
+          public int compare(DatanodeDescriptor d1, DatanodeDescriptor d2) {
             long lu1 = d1.getLastUpdate();
             long lu2 = d2.getLastUpdate();
-            if (lu1 < lu2) {
-                return -1;
-            } else if (lu1 > lu2) {
-                return 1;
-            } else {
-                return d1.getStorageID().compareTo(d2.getStorageID());
-            }
+            if (lu1 < lu2)
+              return -1;
+            if (lu1 > lu2)
+              return 1;
+            return d1.getStorageID().compareTo(d2.getStorageID());
+          }
         }
-    });
+      );
 
     //
     // Store set of Blocks that need to be replicated 1 or more times.
     // We also store pending replication-orders.
     // Set of: Block
     //
-    private TreeSet neededReplications = new TreeSet();
-    private TreeSet pendingReplications = new TreeSet();
+    private Collection<Block> neededReplications = new TreeSet<Block>();
+    private Collection<Block> pendingReplications = new TreeSet<Block>();
 
     //
     // Used for handling lock-leases
     // Mapping: leaseHolder -> Lease
     //
-    private TreeMap leases = new TreeMap();
+    private Map<UTF8, Lease> leases = new TreeMap<UTF8, Lease>();
     // Set of: Lease
-    private TreeSet sortedLeases = new TreeSet();
+    private SortedSet<Lease> sortedLeases = new TreeSet<Lease>();
 
     //
     // Threaded object that checks to see if we have been
@@ -299,14 +301,14 @@ class FSNamesystem implements FSConstants {
             DatanodeDescriptor machineSets[][] = new DatanodeDescriptor[blocks.length][];
 
             for (int i = 0; i < blocks.length; i++) {
-                TreeSet containingNodes = (TreeSet) blocksMap.get(blocks[i]);
+              SortedSet<DatanodeDescriptor> containingNodes = blocksMap.get(blocks[i]);
                 if (containingNodes == null) {
                     machineSets[i] = new DatanodeDescriptor[0];
                 } else {
                     machineSets[i] = new DatanodeDescriptor[containingNodes.size()];
                     int j = 0;
-                    for (Iterator it = containingNodes.iterator(); it.hasNext(); j++) {
-                        machineSets[i][j] = (DatanodeDescriptor) it.next();
+                    for (Iterator<DatanodeDescriptor> it = containingNodes.iterator(); it.hasNext(); j++) {
+                        machineSets[i][j] = it.next();
                     }
                 }
             }
@@ -338,12 +340,12 @@ class FSNamesystem implements FSConstants {
         throw new SafeModeException( "Cannot set replication for " + src, safeMode );
       verifyReplication(src, replication, null );
 
-      Vector oldReplication = new Vector();
+      Vector<Integer> oldReplication = new Vector<Integer>();
       Block[] fileBlocks;
       fileBlocks = dir.setReplication( src, replication, oldReplication );
       if( fileBlocks == null )  // file not found or is a directory
         return false;
-      int oldRepl = ((Integer)oldReplication.elementAt(0)).intValue();
+      int oldRepl = oldReplication.elementAt(0).intValue();
       if( oldRepl == replication ) // the same replication
         return true;
 
@@ -416,14 +418,13 @@ class FSNamesystem implements FSConstants {
         throw new IOException("Invalid file name: " + src);      	  
       }
       try {
-        FileUnderConstruction pendingFile = (FileUnderConstruction ) 
-                                              pendingCreates.get(src);
+        FileUnderConstruction pendingFile = pendingCreates.get(src);
         if (pendingFile != null) {
           //
           // If the file exists in pendingCreate, then it must be in our
           // leases. Find the appropriate lease record.
           //
-          Lease lease = (Lease) leases.get(holder);
+          Lease lease = leases.get(holder);
           //
           // We found the lease for this file. And surprisingly the original
           // holder is trying to recreate this file. This should never occur.
@@ -438,7 +439,7 @@ class FSNamesystem implements FSConstants {
           // Find the original holder.
           //
           UTF8 oldholder = pendingFile.getClientName();
-          lease = (Lease) leases.get(oldholder);
+          lease = leases.get(oldholder);
           if (lease == null) {
             throw new AlreadyBeingCreatedException(
                   "failed to create file " + src + " for " + holder +
@@ -500,7 +501,7 @@ class FSNamesystem implements FSConstants {
         NameNode.stateChangeLog.debug( "DIR* NameSystem.startFile: "
                    +"add "+src+" to pendingCreates for "+holder );
         synchronized (leases) {
-            Lease lease = (Lease) leases.get(holder);
+            Lease lease = leases.get(holder);
             if (lease == null) {
                 lease = new Lease(holder);
                 leases.put(holder, lease);
@@ -543,8 +544,7 @@ class FSNamesystem implements FSConstants {
             +src+" for "+clientName);
         if( isInSafeMode() )
           throw new SafeModeException( "Cannot add block to " + src, safeMode );
-        FileUnderConstruction pendingFile = 
-          (FileUnderConstruction) pendingCreates.get(src);
+        FileUnderConstruction pendingFile = pendingCreates.get(src);
         // make sure that we still have the lease on this file
         if (pendingFile == null) {
           throw new LeaseExpiredException("No lease on " + src);
@@ -587,12 +587,11 @@ class FSNamesystem implements FSConstants {
         //
         NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
                 +b.getBlockName()+"of file "+src );
-        FileUnderConstruction pendingFile = 
-          (FileUnderConstruction) pendingCreates.get(src);
+        FileUnderConstruction pendingFile = pendingCreates.get(src);
         if (pendingFile != null) {
-            Vector pendingVector = pendingFile.getBlocks();
-            for (Iterator it = pendingVector.iterator(); it.hasNext(); ) {
-                Block cur = (Block) it.next();
+            Collection<Block> pendingVector = pendingFile.getBlocks();
+            for (Iterator<Block> it = pendingVector.iterator(); it.hasNext(); ) {
+                Block cur = it.next();
                 if (cur.compareTo(b) == 0) {
                     pendingCreateBlocks.remove(cur);
                     it.remove();
@@ -616,7 +615,7 @@ class FSNamesystem implements FSConstants {
       NameNode.stateChangeLog.debug("DIR* NameSystem.abandonFileInProgress:" + src );
       synchronized (leases) {
         // find the lease
-        Lease lease = (Lease) leases.get(holder);
+        Lease lease = leases.get(holder);
         if (lease != null) {
           // remove the file from the lease
           if (lease.completedCreate(src)) {
@@ -655,11 +654,10 @@ class FSNamesystem implements FSConstants {
             return STILL_WAITING;
         }
         
-        FileUnderConstruction pendingFile = 
-            (FileUnderConstruction) pendingCreates.get(src);
-        Vector blocks = pendingFile.getBlocks();
+        FileUnderConstruction pendingFile = pendingCreates.get(src);
+        Collection<Block> blocks = pendingFile.getBlocks();
         int nrBlocks = blocks.size();
-        Block pendingBlocks[] = (Block[]) blocks.toArray(new Block[nrBlocks]);
+        Block pendingBlocks[] = blocks.toArray(new Block[nrBlocks]);
 
         //
         // We have the pending blocks, but they won't have
@@ -671,11 +669,11 @@ class FSNamesystem implements FSConstants {
         // improve this!
         //
         for (int i = 0; i < nrBlocks; i++) {
-            Block b = (Block)pendingBlocks[i];
-            TreeSet containingNodes = (TreeSet) blocksMap.get(b);
-            DatanodeDescriptor node = (DatanodeDescriptor) containingNodes.first();
-            for (Iterator it = node.getBlockIterator(); it.hasNext(); ) {
-                Block cur = (Block) it.next();
+            Block b = pendingBlocks[i];
+            SortedSet<DatanodeDescriptor> containingNodes = blocksMap.get(b);
+            DatanodeDescriptor node = containingNodes.first();
+            for (Iterator<Block> it = node.getBlockIterator(); it.hasNext(); ) {
+                Block cur = it.next();
                 if (b.getBlockId() == cur.getBlockId()) {
                     b.setNumBytes(cur.getNumBytes());
                     break;
@@ -700,7 +698,7 @@ class FSNamesystem implements FSConstants {
         }
 
         synchronized (leases) {
-            Lease lease = (Lease) leases.get(holder);
+            Lease lease = leases.get(holder);
             if (lease != null) {
                 lease.completedCreate(src);
                 if (! lease.hasLocks()) {
@@ -720,7 +718,7 @@ class FSNamesystem implements FSConstants {
         // Now that the file is real, we need to be sure to replicate
         // the blocks.
         for (int i = 0; i < nrBlocks; i++) {
-            TreeSet containingNodes = (TreeSet) blocksMap.get(pendingBlocks[i]);
+          SortedSet<DatanodeDescriptor> containingNodes = blocksMap.get(pendingBlocks[i]);
             if (containingNodes.size() < pendingFile.getReplication()) {
                    NameNode.stateChangeLog.debug(
                           "DIR* NameSystem.completeFile:"
@@ -744,8 +742,7 @@ class FSNamesystem implements FSConstants {
         do {
             b = new Block(FSNamesystem.randBlockId.nextLong(), 0);
         } while (dir.isValidBlock(b));
-        FileUnderConstruction v = 
-          (FileUnderConstruction) pendingCreates.get(src);
+        FileUnderConstruction v = pendingCreates.get(src);
         v.getBlocks().add(b);
         pendingCreateBlocks.add(b);
         NameNode.stateChangeLog.debug("BLOCK* NameSystem.allocateBlock: "
@@ -759,12 +756,11 @@ class FSNamesystem implements FSConstants {
      * replicated.  If not, return false.
      */
     synchronized boolean checkFileProgress(UTF8 src) {
-        FileUnderConstruction v = 
-          (FileUnderConstruction) pendingCreates.get(src);
+        FileUnderConstruction v = pendingCreates.get(src);
 
-        for (Iterator it = v.getBlocks().iterator(); it.hasNext(); ) {
-            Block b = (Block) it.next();
-            TreeSet containingNodes = (TreeSet) blocksMap.get(b);
+        for (Iterator<Block> it = v.getBlocks().iterator(); it.hasNext(); ) {
+            Block b = it.next();
+            SortedSet<DatanodeDescriptor> containingNodes = blocksMap.get(b);
             if (containingNodes == null || containingNodes.size() < this.minReplication) {
                 return false;
             }
@@ -804,18 +800,18 @@ class FSNamesystem implements FSConstants {
         NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src );
         if( isInSafeMode() )
           throw new SafeModeException( "Cannot delete " + src, safeMode );
-        Block deletedBlocks[] = (Block[]) dir.delete(src);
+        Block deletedBlocks[] = dir.delete(src);
         if (deletedBlocks != null) {
             for (int i = 0; i < deletedBlocks.length; i++) {
                 Block b = deletedBlocks[i];
 
-                TreeSet containingNodes = (TreeSet) blocksMap.get(b);
+                SortedSet<DatanodeDescriptor> containingNodes = blocksMap.get(b);
                 if (containingNodes != null) {
-                    for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
-                        DatanodeDescriptor node = (DatanodeDescriptor) it.next();
-                        Vector invalidateSet = (Vector) recentInvalidateSets.get(node.getStorageID());
+                    for (Iterator<DatanodeDescriptor> it = containingNodes.iterator(); it.hasNext(); ) {
+                        DatanodeDescriptor node = it.next();
+                        Collection<Block> invalidateSet = recentInvalidateSets.get(node.getStorageID());
                         if (invalidateSet == null) {
-                            invalidateSet = new Vector();
+                            invalidateSet = new ArrayList<Block>();
                             recentInvalidateSets.put(node.getStorageID(), invalidateSet);
                         }
                         invalidateSet.add(b);
@@ -859,10 +855,9 @@ class FSNamesystem implements FSConstants {
       }
       
       // Check for ".." "." ":" "/"
-      Enumeration tokens = new StringTokenizer(src, Path.SEPARATOR);    
-      ArrayList list = Collections.list(tokens);      
-      for (int i = 0; i < list.size(); i++) {
-        String element = (String)list.get(i);
+      StringTokenizer tokens = new StringTokenizer(src, Path.SEPARATOR);
+      while( tokens.hasMoreTokens()) {
+        String element = tokens.nextToken();
         if (element.equals("..") || 
             element.equals(".")  ||
             (element.indexOf(":") >= 0)  ||
@@ -870,7 +865,6 @@ class FSNamesystem implements FSConstants {
           return false;
         }
       }
-      
       return true;
     }
     
@@ -896,17 +890,17 @@ class FSNamesystem implements FSConstants {
      * Figure out a few hosts that are likely to contain the
      * block(s) referred to by the given (filename, start, len) tuple.
      */
-    public UTF8[][] getDatanodeHints(UTF8 src, long start, long len) {
+    public String[][] getDatanodeHints(String src, long start, long len) {
         if (start < 0 || len < 0) {
-            return new UTF8[0][];
+            return new String[0][];
         }
 
         int startBlock = -1;
         int endBlock = -1;
-        Block blocks[] = dir.getFile(src);
+        Block blocks[] = dir.getFile( new UTF8( src ));
 
         if (blocks == null) {                     // no blocks
-            return new UTF8[0][];
+            return new String[0][];
         }
 
         //
@@ -936,19 +930,18 @@ class FSNamesystem implements FSConstants {
         // be found
         //
         if (startBlock < 0 || endBlock < 0) {
-            return new UTF8[0][];
+            return new String[0][];
         } else {
-            UTF8 hosts[][] = new UTF8[(endBlock - startBlock) + 1][];
+          String hosts[][] = new String[(endBlock - startBlock) + 1][];
             for (int i = startBlock; i <= endBlock; i++) {
-                TreeSet containingNodes = (TreeSet) blocksMap.get(blocks[i]);
-                Vector v = new Vector();
+              SortedSet<DatanodeDescriptor> containingNodes = blocksMap.get(blocks[i]);
+                Collection<String> v = new ArrayList<String>();
                 if (containingNodes != null) {
-                  for (Iterator it =containingNodes.iterator(); it.hasNext();) {
-                    DatanodeDescriptor cur = (DatanodeDescriptor) it.next();
-                    v.add(new UTF8( cur.getHost() ));
+                  for (Iterator<DatanodeDescriptor> it =containingNodes.iterator(); it.hasNext();) {
+                    v.add( it.next().getHost() );
                   }
                 }
-                hosts[i-startBlock] = (UTF8[]) v.toArray(new UTF8[v.size()]);
+                hosts[i-startBlock] = v.toArray(new String[v.size()]);
             }
             return hosts;
         }
@@ -961,11 +954,11 @@ class FSNamesystem implements FSConstants {
      * checks in.  If the client dies and allows its lease to
      * expire, all the corresponding locks can be released.
      *************************************************************/
-    class Lease implements Comparable {
+    class Lease implements Comparable<Lease> {
         public UTF8 holder;
         public long lastUpdate;
-        private TreeSet locks = new TreeSet();
-        private TreeSet creates = new TreeSet();
+        private Collection<UTF8> locks = new TreeSet<UTF8>();
+        private Collection<UTF8> creates = new TreeSet<UTF8>();
 
         public Lease(UTF8 holder) {
             this.holder = holder;
@@ -1008,15 +1001,11 @@ class FSNamesystem implements FSConstants {
             return (locks.size() + creates.size()) > 0;
         }
         public void releaseLocks() {
-            for (Iterator it = locks.iterator(); it.hasNext(); ) {
-                UTF8 src = (UTF8) it.next();
-                internalReleaseLock(src, holder);
-            }
+            for (Iterator<UTF8> it = locks.iterator(); it.hasNext(); )
+                internalReleaseLock(it.next(), holder);
             locks.clear();
-            for (Iterator it = creates.iterator(); it.hasNext(); ) {
-                UTF8 src = (UTF8) it.next();
-                internalReleaseCreate(src, holder);
-            }
+            for (Iterator<UTF8> it = creates.iterator(); it.hasNext(); )
+                internalReleaseCreate(it.next(), holder);
             creates.clear();
         }
 
@@ -1029,9 +1018,9 @@ class FSNamesystem implements FSConstants {
 
         /**
          */
-        public int compareTo(Object o) {
-            Lease l1 = (Lease) this;
-            Lease l2 = (Lease) o;
+        public int compareTo(Lease o) {
+            Lease l1 = this;
+            Lease l2 = o;
             long lu1 = l1.lastUpdate;
             long lu2 = l2.lastUpdate;
             if (lu1 < lu2) {
@@ -1054,7 +1043,7 @@ class FSNamesystem implements FSConstants {
                     synchronized (leases) {
                         Lease top;
                         while ((sortedLeases.size() > 0) &&
-                               ((top = (Lease) sortedLeases.first()) != null)) {
+                               ((top = sortedLeases.first()) != null)) {
                             if (top.expiredHardLimit()) {
                                 top.releaseLocks();
                                 leases.remove(top.holder);
@@ -1087,7 +1076,7 @@ class FSNamesystem implements FSConstants {
         int result = dir.obtainLock(src, holder, exclusive);
         if (result == COMPLETE_SUCCESS) {
             synchronized (leases) {
-                Lease lease = (Lease) leases.get(holder);
+                Lease lease = leases.get(holder);
                 if (lease == null) {
                     lease = new Lease(holder);
                     leases.put(holder, lease);
@@ -1110,7 +1099,7 @@ class FSNamesystem implements FSConstants {
         int result = internalReleaseLock(src, holder);
         if (result == COMPLETE_SUCCESS) {
             synchronized (leases) {
-                Lease lease = (Lease) leases.get(holder);
+                Lease lease = leases.get(holder);
                 if (lease != null) {
                     lease.released(src);
                     if (! lease.hasLocks()) {
@@ -1132,15 +1121,14 @@ class FSNamesystem implements FSConstants {
      * @param holder The datanode that was creating the file
      */
     private void internalReleaseCreate(UTF8 src, UTF8 holder) {
-      FileUnderConstruction v = 
-        (FileUnderConstruction) pendingCreates.remove(src);
+      FileUnderConstruction v = pendingCreates.remove(src);
       if (v != null) {
          NameNode.stateChangeLog.debug(
                       "DIR* NameSystem.internalReleaseCreate: " + src
                     + " is removed from pendingCreates for "
                     + holder + " (failure)");
-        for (Iterator it2 = v.getBlocks().iterator(); it2.hasNext(); ) {
-          Block b = (Block) it2.next();
+        for (Iterator<Block> it2 = v.getBlocks().iterator(); it2.hasNext(); ) {
+          Block b = it2.next();
           pendingCreateBlocks.remove(b);
         }
       } else {
@@ -1157,7 +1145,7 @@ class FSNamesystem implements FSConstants {
         synchronized (leases) {
             if( isInSafeMode() )
               throw new SafeModeException( "Cannot renew lease for " + holder, safeMode );
-            Lease lease = (Lease) leases.get(holder);
+            Lease lease = leases.get(holder);
             if (lease != null) {
                 sortedLeases.remove(lease);
                 lease.renew();
@@ -1211,7 +1199,7 @@ class FSNamesystem implements FSConstants {
           + " storage " + nodeReg.getStorageID() );
 
       nodeReg.registrationID = getRegistrationID();
-      DatanodeDescriptor nodeS = (DatanodeDescriptor)datanodeMap.get(nodeReg.getStorageID());
+      DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
       DatanodeDescriptor nodeN = getDatanodeByName( nodeReg.getName() );
       
       if( nodeN != null && nodeS != null && nodeN == nodeS ) {
@@ -1430,7 +1418,7 @@ class FSNamesystem implements FSConstants {
         DatanodeDescriptor nodeInfo = null;
 
         while ((heartbeats.size() > 0) &&
-               ((nodeInfo = (DatanodeDescriptor) heartbeats.first()) != null) &&
+               ((nodeInfo = heartbeats.first()) != null) &&
                (nodeInfo.isDead())) {
           NameNode.stateChangeLog.info("BLOCK* NameSystem.heartbeatCheck: "
               + "lost heartbeat from " + nodeInfo.getName());
@@ -1501,9 +1489,9 @@ class FSNamesystem implements FSConstants {
         // This function considers every block on a datanode, and thus
         // should only be invoked infrequently.
         //
-        Vector obsolete = new Vector();
-        for (Iterator it = node.getBlockIterator(); it.hasNext(); ) {
-            Block b = (Block) it.next();
+        Collection<Block> obsolete = new ArrayList<Block>();
+        for (Iterator<Block> it = node.getBlockIterator(); it.hasNext(); ) {
+            Block b = it.next();
 
             if (! dir.isValidBlock(b) && ! pendingCreateBlocks.contains(b)) {
                 obsolete.add(b);
@@ -1519,9 +1507,9 @@ class FSNamesystem implements FSConstants {
      * needed replications if this takes care of the problem.
      */
     synchronized void addStoredBlock(Block block, DatanodeDescriptor node) {
-        TreeSet containingNodes = (TreeSet) blocksMap.get(block);
+      SortedSet<DatanodeDescriptor> containingNodes = blocksMap.get(block);
         if (containingNodes == null) {
-            containingNodes = new TreeSet();
+            containingNodes = new TreeSet<DatanodeDescriptor>();
             blocksMap.put(block, containingNodes);
         }
         if (! containingNodes.contains(node)) {
@@ -1572,13 +1560,13 @@ class FSNamesystem implements FSConstants {
      * mark them in the excessReplicateMap.
      */
     private void proccessOverReplicatedBlock( Block block, short replication ) {
-      TreeSet containingNodes = (TreeSet) blocksMap.get(block);
+      SortedSet<DatanodeDescriptor> containingNodes = blocksMap.get(block);
       if( containingNodes == null )
         return;
-      Vector nonExcess = new Vector();
-      for (Iterator it = containingNodes.iterator(); it.hasNext(); ) {
-          DatanodeDescriptor cur = (DatanodeDescriptor) it.next();
-          TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getStorageID());
+      Collection<DatanodeDescriptor> nonExcess = new ArrayList<DatanodeDescriptor>();
+      for (Iterator<DatanodeDescriptor> it = containingNodes.iterator(); it.hasNext(); ) {
+          DatanodeDescriptor cur = it.next();
+          Collection<Block> excessBlocks = excessReplicateMap.get(cur.getStorageID());
           if (excessBlocks == null || ! excessBlocks.contains(block)) {
               nonExcess.add(cur);
           }
@@ -1596,13 +1584,14 @@ class FSNamesystem implements FSConstants {
      * In the future, we might enforce some kind of policy 
      * (like making sure replicates are spread across racks).
      */
-    void chooseExcessReplicates(Vector nonExcess, Block b, short replication) {
+    void chooseExcessReplicates(Collection<DatanodeDescriptor> nonExcess, 
+                                Block b, short replication) {
         while (nonExcess.size() - replication > 0) {
             DatanodeInfo cur = null;
             long minSpace = Long.MAX_VALUE;
             
-            for (Iterator iter = nonExcess.iterator(); iter.hasNext();) {
-                DatanodeInfo node = (DatanodeInfo) iter.next();
+            for (Iterator<DatanodeDescriptor> iter = nonExcess.iterator(); iter.hasNext();) {
+                DatanodeInfo node = iter.next();
                 long free = node.getRemaining();
                 
                 if(minSpace > free) {
@@ -1613,9 +1602,9 @@ class FSNamesystem implements FSConstants {
             
             nonExcess.remove(cur);
 
-            TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(cur.getStorageID());
+            Collection<Block> excessBlocks = excessReplicateMap.get(cur.getStorageID());
             if (excessBlocks == null) {
-                excessBlocks = new TreeSet();
+                excessBlocks = new TreeSet<Block>();
                 excessReplicateMap.put(cur.getStorageID(), excessBlocks);
             }
             excessBlocks.add(b);
@@ -1631,9 +1620,9 @@ class FSNamesystem implements FSConstants {
             // should be deleted.  Items are removed from the invalidate list
             // upon giving instructions to the namenode.
             //
-            Vector invalidateSet = (Vector) recentInvalidateSets.get(cur.getStorageID());
+            Collection<Block> invalidateSet = recentInvalidateSets.get(cur.getStorageID());
             if (invalidateSet == null) {
-                invalidateSet = new Vector();
+                invalidateSet = new ArrayList<Block>();
                 recentInvalidateSets.put(cur.getStorageID(), invalidateSet);
             }
             invalidateSet.add(b);
@@ -1649,7 +1638,7 @@ class FSNamesystem implements FSConstants {
     synchronized void removeStoredBlock(Block block, DatanodeDescriptor node) {
         NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
                 +block.getBlockName() + " from "+node.getName() );
-        TreeSet containingNodes = (TreeSet) blocksMap.get(block);
+        SortedSet<DatanodeDescriptor> containingNodes = blocksMap.get(block);
         if (containingNodes == null || ! containingNodes.contains(node)) {
           NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
             +block.getBlockName()+" has already been removed from node "+node );
@@ -1679,7 +1668,7 @@ class FSNamesystem implements FSConstants {
         // We've removed a block from a node, so it's definitely no longer
         // in "excess" there.
         //
-        TreeSet excessBlocks = (TreeSet) excessReplicateMap.get(node.getStorageID());
+        Collection<Block> excessBlocks = excessReplicateMap.get(node.getStorageID());
         if (excessBlocks != null) {
             excessBlocks.remove(block);
             NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
@@ -1740,8 +1729,8 @@ class FSNamesystem implements FSConstants {
           synchronized (datanodeMap) {
             results = new DatanodeInfo[datanodeMap.size()];
             int i = 0;
-            for(Iterator it = datanodeMap.values().iterator(); it.hasNext(); )
-              results[i++] = new DatanodeInfo( (DatanodeDescriptor)it.next() );
+            for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext(); )
+              results[i++] = new DatanodeInfo( it.next() );
           }
         }
         return results;
@@ -1749,11 +1738,12 @@ class FSNamesystem implements FSConstants {
     
     /**
      */
-    public void DFSNodesStatus(Vector live, Vector dead) {
+    public void DFSNodesStatus( Vector<DatanodeDescriptor> live, 
+                                Vector<DatanodeDescriptor> dead) {
       synchronized (heartbeats) {
         synchronized (datanodeMap) {
-          for(Iterator it = datanodeMap.values().iterator(); it.hasNext(); ) {
-            DatanodeDescriptor node = (DatanodeDescriptor)it.next();
+          for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext(); ) {
+            DatanodeDescriptor node = it.next();
             if( node.isDead() )
               dead.add( node );
             else
@@ -1765,7 +1755,7 @@ class FSNamesystem implements FSConstants {
     /** 
      */
     public DatanodeInfo getDataNodeInfo(String name) {
-        return (DatanodeDescriptor)datanodeMap.get(name);
+        return datanodeMap.get(name);
     }
     /** 
      */
@@ -1798,7 +1788,7 @@ class FSNamesystem implements FSConstants {
         if( isInSafeMode() )
           return null;
         
-        Vector invalidateSet = (Vector) recentInvalidateSets.remove( 
+        Collection<Block> invalidateSet = recentInvalidateSets.remove( 
                                                       nodeID.getStorageID() );
  
         if (invalidateSet == null ) 
@@ -1806,9 +1796,9 @@ class FSNamesystem implements FSConstants {
         
         if(NameNode.stateChangeLog.isInfoEnabled()) {
             StringBuffer blockList = new StringBuffer();
-            for( int i=0; i<invalidateSet.size(); i++ ) {
+            for( Iterator<Block> it = invalidateSet.iterator(); it.hasNext(); ) {
                 blockList.append(' ');
-                blockList.append(((Block)invalidateSet.elementAt(i)).getBlockName());
+                blockList.append(it.next().getBlockName());
             }
             NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockToInvalidate: "
                    +"ask "+nodeID.getName()+" to delete " + blockList );
@@ -1843,9 +1833,10 @@ class FSNamesystem implements FSConstants {
         // are present at the current node. If so, ask the node to
         // replicate them.
         //
-        Vector replicateBlocks = new Vector();
-        Vector replicateTargetSets = new Vector();
-        for (Iterator it = neededReplications.iterator(); it.hasNext();) {
+        List<Block> replicateBlocks = new ArrayList<Block>();
+        List<DatanodeDescriptor[]> replicateTargetSets;
+        replicateTargetSets = new ArrayList<DatanodeDescriptor[]>();
+        for (Iterator<Block> it = neededReplications.iterator(); it.hasNext();) {
           //
           // We can only reply with 'maxXfers' or fewer blocks
           //
@@ -1853,14 +1844,14 @@ class FSNamesystem implements FSConstants {
             break;
           }
 
-          Block block = (Block) it.next();
+          Block block = it.next();
           long blockSize = block.getNumBytes();
           FSDirectory.INode fileINode = dir.getFileByBlock(block);
           if (fileINode == null) { // block does not belong to any file
             it.remove();
           } else {
-            TreeSet containingNodes = (TreeSet) blocksMap.get(block);
-            TreeSet excessBlocks = (TreeSet) excessReplicateMap.get( 
+            Collection<DatanodeDescriptor> containingNodes = blocksMap.get(block);
+            Collection<Block> excessBlocks = excessReplicateMap.get( 
                                                       srcNode.getStorageID() );
             // srcNode must contain the block, and the block must
             // not be scheduled for removal on that node
@@ -1888,11 +1879,11 @@ class FSNamesystem implements FSConstants {
         //
         if (replicateBlocks.size() > 0) {
           int i = 0;
-          for (Iterator it = replicateBlocks.iterator(); it.hasNext(); i++) {
-            Block block = (Block) it.next();
+          for (Iterator<Block> it = replicateBlocks.iterator(); it.hasNext(); i++) {
+            Block block = it.next();
             DatanodeDescriptor targets[] = 
-                      (DatanodeDescriptor[]) replicateTargetSets.elementAt(i);
-            TreeSet containingNodes = (TreeSet) blocksMap.get(block);
+                      (DatanodeDescriptor[]) replicateTargetSets.get(i);
+            Collection<DatanodeDescriptor> containingNodes = blocksMap.get(block);
 
             if (containingNodes.size() + targets.length >= 
                     dir.getFileByBlock( block).getReplication() ) {
@@ -1926,7 +1917,7 @@ class FSNamesystem implements FSConstants {
           DatanodeDescriptor targetMatrix[][] = 
                         new DatanodeDescriptor[replicateTargetSets.size()][];
           for (i = 0; i < targetMatrix.length; i++) {
-            targetMatrix[i] = (DatanodeDescriptor[]) replicateTargetSets.elementAt(i);
+            targetMatrix[i] = replicateTargetSets.get(i);
           }
 
           results = new Object[2];
@@ -1950,8 +1941,11 @@ class FSNamesystem implements FSConstants {
      *          of DatanodeDescriptor instances that should not be considered targets.
      * @return array of DatanodeDescriptor instances uses as targets.
      */
-    DatanodeDescriptor[] chooseTargets(int desiredReplicates, TreeSet forbiddenNodes,
-                                 UTF8 clientMachine, long blockSize) {
+    DatanodeDescriptor[] chooseTargets(
+                            int desiredReplicates, 
+                            Collection<DatanodeDescriptor> forbiddenNodes,
+                            UTF8 clientMachine, 
+                            long blockSize) {
         if (desiredReplicates > heartbeats.size()) {
           LOG.warn("Replication requested of "+desiredReplicates
                       +" is larger than cluster size ("+heartbeats.size()
@@ -1959,8 +1953,9 @@ class FSNamesystem implements FSConstants {
           desiredReplicates  = heartbeats.size();
         }
 
-        TreeSet alreadyChosen = new TreeSet();
-        Vector targets = new Vector();
+        Collection<DatanodeDescriptor> alreadyChosen;
+        alreadyChosen = new TreeSet<DatanodeDescriptor>();
+        Collection<DatanodeDescriptor> targets = new ArrayList<DatanodeDescriptor>();
 
         for (int i = 0; i < desiredReplicates; i++) {
             DatanodeDescriptor target = chooseTarget(forbiddenNodes, alreadyChosen, 
@@ -1985,8 +1980,10 @@ class FSNamesystem implements FSConstants {
      * @return DatanodeDescriptor instance to use or null if something went wrong
      * (a log message is emitted if null is returned).
      */
-    DatanodeDescriptor chooseTarget(TreeSet forbidden1, TreeSet forbidden2, 
-                              UTF8 clientMachine, long blockSize) {
+    DatanodeDescriptor chooseTarget(Collection<DatanodeDescriptor> forbidden1, 
+                                    Collection<DatanodeDescriptor> forbidden2, 
+                                    UTF8 clientMachine, 
+                                    long blockSize) {
         //
         // Check if there are any available targets at all
         //
@@ -1999,16 +1996,16 @@ class FSNamesystem implements FSConstants {
         //
         // Build a map of forbidden hostnames from the two forbidden sets.
         //
-        TreeSet forbiddenMachines = new TreeSet();
+        Collection<String> forbiddenMachines = new TreeSet<String>();
         if (forbidden1 != null) {
-            for (Iterator it = forbidden1.iterator(); it.hasNext(); ) {
-                DatanodeDescriptor cur = (DatanodeDescriptor) it.next();
+            for (Iterator<DatanodeDescriptor> it = forbidden1.iterator(); it.hasNext(); ) {
+                DatanodeDescriptor cur = it.next();
                 forbiddenMachines.add(cur.getHost());
             }
         }
         if (forbidden2 != null) {
-            for (Iterator it = forbidden2.iterator(); it.hasNext(); ) {
-                DatanodeDescriptor cur = (DatanodeDescriptor) it.next();
+            for (Iterator<DatanodeDescriptor> it = forbidden2.iterator(); it.hasNext(); ) {
+                DatanodeDescriptor cur = it.next();
                 forbiddenMachines.add(cur.getHost());
             }
         }
@@ -2017,9 +2014,9 @@ class FSNamesystem implements FSConstants {
         //
         // Build list of machines we can actually choose from
         //
-        Vector targetList = new Vector();
-        for (Iterator it = heartbeats.iterator(); it.hasNext(); ) {
-            DatanodeDescriptor node = (DatanodeDescriptor) it.next();
+        List<DatanodeDescriptor> targetList = new ArrayList<DatanodeDescriptor>();
+        for (Iterator<DatanodeDescriptor> it = heartbeats.iterator(); it.hasNext(); ) {
+            DatanodeDescriptor node = it.next();
             if (! forbiddenMachines.contains(node.getHost())) {
                 targetList.add(node);
                 avgLoad += node.getXceiverCount();
@@ -2038,8 +2035,8 @@ class FSNamesystem implements FSConstants {
             // and it's got the capacity, pick it.
             //
             if (clientMachine != null && clientMachine.getLength() > 0) {
-                for (Iterator it = targetList.iterator(); it.hasNext(); ) {
-                    DatanodeDescriptor node = (DatanodeDescriptor) it.next();
+                for (Iterator<DatanodeDescriptor> it = targetList.iterator(); it.hasNext(); ) {
+                    DatanodeDescriptor node = it.next();
                     if (clientMachine.toString().equals(node.getHost())) {
                         if ((node.getRemaining() >= blockSize * MIN_BLOCKS_FOR_WRITE) &&
                             (node.getXceiverCount() <= (2.0 * avgLoad))) {
@@ -2052,8 +2049,8 @@ class FSNamesystem implements FSConstants {
             //
             // Otherwise, choose node according to target capacity
             //
-            for (Iterator it = targetList.iterator(); it.hasNext(); ) {
-                DatanodeDescriptor node = (DatanodeDescriptor) it.next();
+            for (Iterator<DatanodeDescriptor> it = targetList.iterator(); it.hasNext(); ) {
+                DatanodeDescriptor node = it.next();
                 if ((node.getRemaining() >= blockSize * MIN_BLOCKS_FOR_WRITE) &&
                     (node.getXceiverCount() <= (2.0 * avgLoad))) {
                     return node;
@@ -2065,8 +2062,8 @@ class FSNamesystem implements FSConstants {
             // we can pick the clientmachine itself.
             //
             if (clientMachine != null && clientMachine.getLength() > 0) {
-                for (Iterator it = targetList.iterator(); it.hasNext(); ) {
-                    DatanodeDescriptor node = (DatanodeDescriptor) it.next();
+                for (Iterator<DatanodeDescriptor> it = targetList.iterator(); it.hasNext(); ) {
+                    DatanodeDescriptor node = it.next();
                     if (clientMachine.toString().equals(node.getHost()) &&
                         node.getRemaining() >= blockSize) {
                         return node;
@@ -2079,8 +2076,8 @@ class FSNamesystem implements FSConstants {
             // to pick any node if the target was out of bytes.  As
             // a last resort, pick the first valid one we can find.
             //
-            for (Iterator it = targetList.iterator(); it.hasNext(); ) {
-                DatanodeDescriptor node = (DatanodeDescriptor) it.next();
+            for (Iterator<DatanodeDescriptor> it = targetList.iterator(); it.hasNext(); ) {
+                DatanodeDescriptor node = it.next();
                 if (node.getRemaining() >= blockSize) {
                     return node;
                 }
@@ -2100,7 +2097,7 @@ class FSNamesystem implements FSConstants {
      * Information about the file while it is being written to.
      * Note that at that time the file is not visible to the outside.
      * 
-     * This class contains a <code>Vector</code> of {@link Block}s that has
+     * This class contains a <code>Collection</code> of {@link Block}s that has
      * been written into the file so far, and file replication. 
      * 
      * @author shv
@@ -2108,7 +2105,7 @@ class FSNamesystem implements FSConstants {
     private class FileUnderConstruction {
       private short blockReplication; // file replication
       private long blockSize;
-      private Vector blocks;
+      private Collection<Block> blocks;
       private UTF8 clientName;         // lease holder
       private UTF8 clientMachine;
       
@@ -2118,7 +2115,7 @@ class FSNamesystem implements FSConstants {
                             UTF8 clientMachine) throws IOException {
         this.blockReplication = replication;
         this.blockSize = blockSize;
-        this.blocks = new Vector();
+        this.blocks = new ArrayList<Block>();
         this.clientName = clientName;
         this.clientMachine = clientMachine;
       }
@@ -2131,7 +2128,7 @@ class FSNamesystem implements FSConstants {
         return blockSize;
       }
       
-      public Vector getBlocks() {
+      public Collection<Block> getBlocks() {
         return blocks;
       }
       
@@ -2153,7 +2150,7 @@ class FSNamesystem implements FSConstants {
      */
     public DatanodeDescriptor getDatanode( DatanodeID nodeID ) throws IOException {
       UnregisteredDatanodeException e = null;
-      DatanodeDescriptor node = (DatanodeDescriptor) datanodeMap.get(nodeID.getStorageID());
+      DatanodeDescriptor node = datanodeMap.get(nodeID.getStorageID());
       if (node == null) 
         return null;
       if (!node.getName().equals(nodeID.getName())) {
@@ -2177,8 +2174,8 @@ class FSNamesystem implements FSConstants {
      * @throws IOException
      */
     public DatanodeDescriptor getDatanodeByName( String name ) throws IOException {
-      for (Iterator it = datanodeMap.values().iterator(); it.hasNext(); ) {
-        DatanodeDescriptor node = (DatanodeDescriptor) it.next();
+      for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext(); ) {
+        DatanodeDescriptor node = it.next();
         if( node.getName().equals(name) )
            return node;
       }
@@ -2187,8 +2184,8 @@ class FSNamesystem implements FSConstants {
     /** Stop at and return the datanode at index (used for content browsing)*/
     private DatanodeInfo getDatanodeByIndex( int index ) {
       int i = 0;
-      for (Iterator it = datanodeMap.values().iterator(); it.hasNext(); ) {
-        DatanodeInfo node = (DatanodeInfo) it.next();
+      for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext(); ) {
+        DatanodeInfo node = it.next();
         if( i == index )
            return node;
         i++;

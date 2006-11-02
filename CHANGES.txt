@@ -130,6 +130,10 @@ Trunk (unreleased changes)
 36. HADOOP-373.  Consistently check the value returned by
     FileSystem.mkdirs().  (Wendy Chien via cutting)
 
+37. HADOOP-670.  Code cleanups in some DFS internals: use generic
+    types, replace Vector with ArrayList, etc.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

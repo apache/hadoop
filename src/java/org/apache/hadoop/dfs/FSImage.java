@@ -26,8 +26,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Random;
-import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSDirectory.INode;
@@ -315,7 +315,7 @@ class FSImage {
    * @throws IOException
    */
   void saveDatanodes( DataOutputStream out ) throws IOException {
-    TreeMap datanodeMap = FSNamesystem.getFSNamesystem().datanodeMap;
+    Map datanodeMap = FSNamesystem.getFSNamesystem().datanodeMap;
     int size = datanodeMap.size();
     out.writeInt( size );
     for( Iterator it = datanodeMap.values().iterator(); it.hasNext(); )

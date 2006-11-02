@@ -29,7 +29,7 @@ import java.util.*;
  **************************************************/
 class DatanodeDescriptor extends DatanodeInfo {
 
-  private volatile TreeSet blocks = new TreeSet();
+  private volatile Collection<Block> blocks = new TreeSet<Block>();
 
   DatanodeDescriptor() {
     super();
@@ -96,7 +96,7 @@ class DatanodeDescriptor extends DatanodeInfo {
     return (Block[]) blocks.toArray(new Block[blocks.size()]);
   }
 
-  Iterator getBlockIterator() {
+  Iterator<Block> getBlockIterator() {
     return blocks.iterator();
   }
 }
