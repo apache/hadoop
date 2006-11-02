@@ -164,19 +164,23 @@ public class DistributedCache {
     boolean doSymlink = getSymlink(conf);
     FileSystem dfs = getFileSystem(cache, conf);
     b = ifExistsAndFresh(cacheStatus, cache, dfs, md5, conf);
+    String link = currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment();
+    File flink = new File(link);
     if (b) {
       if (isArchive) {
-        if (doSymlink)
-        FileUtil.symLink(cacheStatus.localLoadPath.toString(), 
-            currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment());
-        
+        if (doSymlink){
+          if (!flink.exists())
+            FileUtil.symLink(cacheStatus.localLoadPath.toString(), 
+                link);
+        }
         return cacheStatus.localLoadPath;
       }
       else {
-        if (doSymlink)
-          FileUtil.symLink(cacheFilePath(cacheStatus.localLoadPath).toString(), 
-              currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment());
-       
+        if (doSymlink){
+          if (!flink.exists())
+            FileUtil.symLink(cacheFilePath(cacheStatus.localLoadPath).toString(), 
+              link);
+        }
         return cacheFilePath(cacheStatus.localLoadPath);
       }
     } else {
@@ -219,16 +223,21 @@ public class DistributedCache {
       cacheStatus.currentStatus = true;
       cacheStatus.md5 = checkSum;
     }
+    
     if (isArchive){
-      if (doSymlink)
-        FileUtil.symLink(cacheStatus.localLoadPath.toString(), 
-            currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment());
+      if (doSymlink){
+        if (!flink.exists())
+          FileUtil.symLink(cacheStatus.localLoadPath.toString(), 
+            link);
+      }
       return cacheStatus.localLoadPath;
     }
     else {
-      if (doSymlink)
-        FileUtil.symLink(cacheFilePath(cacheStatus.localLoadPath).toString(), 
-            currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment());
+      if (doSymlink){
+        if (!flink.exists())
+          FileUtil.symLink(cacheFilePath(cacheStatus.localLoadPath).toString(), 
+            link);
+      }
       return cacheFilePath(cacheStatus.localLoadPath);
     }
   }

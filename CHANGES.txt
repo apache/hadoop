@@ -137,6 +137,9 @@ Trunk (unreleased changes)
 38. HADOOP-647.  Permit map outputs to use a different compression
     type than the job output.  (omalley via cutting)
 
+39. HADOOP-671.  File cache should not create symlinks when they
+    already exist.  (Mahadev Konar via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 
