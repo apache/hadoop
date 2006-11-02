@@ -115,7 +115,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
           String mapId = (String)mapIds.get(i);
           Path mapOut = this.mapoutputFile.getOutputFile(mapId, 0);
           Path reduceIn = this.mapoutputFile.getInputFile(i, reduceId);
-          localFs.mkdirs(reduceIn.getParent());
+          if (!localFs.mkdirs(reduceIn.getParent())) {
+            throw new IOException("Mkdirs failed to create " + 
+                                  reduceIn.getParent().toString());
+          }
           if (!localFs.rename(mapOut, reduceIn))
             throw new IOException("Couldn't rename " + mapOut);
           this.mapoutputFile.removeAll(mapId);

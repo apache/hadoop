@@ -136,14 +136,14 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     
       // create a directory
       try {
-        dfsClient.mkdirs( new UTF8( "/data") );
+        assertTrue(dfsClient.mkdirs( new UTF8( "/data") ));
         assertMkdirs( "/data", false );
       } catch ( IOException ioe ) {
       	ioe.printStackTrace();
       }
        
       try {
-        dfsClient.mkdirs( new UTF8( "data") );
+        assertTrue(dfsClient.mkdirs( new UTF8( "data") ));
         assertMkdirs( "data", true );
       } catch ( IOException ioe ) {
        	ioe.printStackTrace();

@@ -67,7 +67,9 @@ public class FileUtil {
     dst = checkDest(src.getName(), dstFS, dst);
 
     if (srcFS.isDirectory(src)) {
-      dstFS.mkdirs(dst);
+      if (!dstFS.mkdirs(dst)) {
+        return false;
+      }
       Path contents[] = srcFS.listPaths(src);
       for (int i = 0; i < contents.length; i++) {
         copy(srcFS, contents[i], dstFS, new Path(dst, contents[i].getName()),
@@ -137,7 +139,9 @@ public class FileUtil {
     dst = checkDest(src.getName(), dstFS, dst);
 
     if (src.isDirectory()) {
-      dstFS.mkdirs(dst);
+      if (!dstFS.mkdirs(dst)) {
+        return false;
+      }
       File contents[] = src.listFiles();
       for (int i = 0; i < contents.length; i++) {
         copy(contents[i], dstFS, new Path(dst, contents[i].getName()),
@@ -166,7 +170,9 @@ public class FileUtil {
     dst = checkDest(src.getName(), dst);
 
     if (srcFS.isDirectory(src)) {
-      dst.mkdirs();
+      if (!dst.mkdirs()) {
+        return false;
+      }
       Path contents[] = srcFS.listPaths(src);
       for (int i = 0; i < contents.length; i++) {
         copy(srcFS, contents[i], new File(dst, contents[i].getName()),
@@ -281,7 +287,12 @@ public class FileUtil {
           InputStream in = zipFile.getInputStream(entry);
           try {
             File file = new File(unzipDir, entry.getName());
-            file.getParentFile().mkdirs();
+            if (!file.getParentFile().mkdirs()) {           
+              if (!file.getParentFile().isDirectory()) {
+                throw new IOException("Mkdirs failed to create " + 
+                                      file.getParentFile().toString());
+              }
+            }
             OutputStream out = new FileOutputStream(file);
             try {
               byte[] buffer = new byte[8192];

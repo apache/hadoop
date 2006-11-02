@@ -61,7 +61,7 @@ public class TestDFSShellGenericOptions extends TestCase {
     private void testConfOption(String[] args, String namenode) {
         // prepare configuration hadoop-site.xml
         File configDir = new File(new File("build", "test"), "minidfs");
-        configDir.mkdirs();
+        assertTrue(configDir.mkdirs());
         File siteFile = new File(configDir, "hadoop-site.xml");
         PrintWriter pw;
         try {

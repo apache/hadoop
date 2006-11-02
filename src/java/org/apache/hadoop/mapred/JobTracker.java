@@ -495,7 +495,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         this.systemDir = jobConf.getSystemDir();
         this.fs = FileSystem.get(conf);
         fs.delete(systemDir);
-        fs.mkdirs(systemDir);
+        if (!fs.mkdirs(systemDir)) {
+          throw new IOException("Mkdirs failed to create " + systemDir.toString());
+        }
 
         // Same with 'localDir' except it's always on the local disk.
         jobConf.deleteLocalFiles(SUBDIR);

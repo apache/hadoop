@@ -48,13 +48,17 @@ class FSDataset implements FSConstants {
 
         /**
          */
-        public FSDir(File dir, int myIdx, FSDir[] siblings) {
+        public FSDir(File dir, int myIdx, FSDir[] siblings) 
+            throws IOException {
             this.dir = dir;
             this.myIdx = myIdx;
             this.siblings = siblings;
             this.children = null;
             if (! dir.exists()) {
-              dir.mkdirs();
+              if (! dir.mkdirs()) {
+                throw new IOException("Mkdirs failed to create " + 
+                                      dir.toString());
+              }
             } else {
               File[] files = dir.listFiles();
               int numChildren = 0;
@@ -80,7 +84,7 @@ class FSDataset implements FSConstants {
 
         /**
          */
-        public File addBlock(Block b, File src) {
+        public File addBlock(Block b, File src) throws IOException {
             if (numBlocks < maxBlocksPerDir) {
               File dest = new File(dir, b.getBlockName());
               src.renameTo(dest);
@@ -194,7 +198,11 @@ class FSDataset implements FSConstants {
         if (tmpDir.exists()) {
           FileUtil.fullyDelete(tmpDir);
         }
-        tmpDir.mkdirs();
+        if (!tmpDir.mkdirs()) {
+          if (!tmpDir.isDirectory()) {
+            throw new IOException("Mkdirs failed to create " + tmpDir.toString());
+          }
+        }
         this.usage = new DF(dir, conf);
       }
       
@@ -232,7 +240,7 @@ class FSDataset implements FSConstants {
         return f;
       }
       
-      File addBlock(Block b, File f) {
+      File addBlock(Block b, File f) throws IOException {
         return dataDir.addBlock(b, f);
       }
       

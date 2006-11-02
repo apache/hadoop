@@ -189,7 +189,11 @@ public class RandomWriter extends MapReduceBase implements Reducer {
       return;
     }
     fileSys.delete(tmpDir);
-    fileSys.mkdirs(inDir);
+    if (!fileSys.mkdirs(inDir)) {
+      System.out.println("Error: Mkdirs failed to create " + 
+                         inDir.toString());
+      return;
+    }
     NumberFormat numberFormat = NumberFormat.getInstance();
     numberFormat.setMinimumIntegerDigits(6);
     numberFormat.setGroupingUsed(false);

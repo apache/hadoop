@@ -50,7 +50,8 @@ public class TestDFSMkdirs extends TestCase {
     	Path myPath = new Path("/test/mkdirs");
     	assertTrue(fileSys.mkdirs(myPath));
     	assertTrue(fileSys.exists(myPath));
-    	
+    	assertTrue(fileSys.mkdirs(myPath));
+
     	// Second, create a file in that directory.
     	Path myFile = new Path("/test/mkdirs/myFile");
     	writeFile(fileSys, myFile);

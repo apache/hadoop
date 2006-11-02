@@ -309,7 +309,9 @@ public class DFSShell extends ToolBase {
      */
     public void mkdir(String src) throws IOException {
         Path f = new Path(src);
-        fs.mkdirs(f);
+        if (!fs.mkdirs(f)) {
+          System.out.println("Mkdirs failed to create " + src);
+        }
     }
     
     /**

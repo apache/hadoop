@@ -108,7 +108,10 @@ public class TestFsck extends TestCase {
     
     for (int idx = 0; idx < NFILES; idx++) {
       Path fPath = new Path(root, files[idx].getName());
-      fs.mkdirs(fPath.getParent());
+      if (!fs.mkdirs(fPath.getParent())) {
+        throw new IOException("Mkdirs failed to create directory " +
+                              fPath.getParent().toString());
+      }
       FSDataOutputStream out = fs.create(fPath);
       byte[] toWrite = new byte[files[idx].getSize()];
       Random rb = new Random(files[idx].getSeed());

@@ -164,8 +164,9 @@ public class PiEstimator {
     Path outDir = new Path(tmpDir, "out");
     FileSystem fileSys = FileSystem.get(jobConf);
     fileSys.delete(tmpDir);
-    fileSys.mkdirs(inDir);
-    
+    if (!fileSys.mkdirs(inDir)) {
+      throw new IOException("Mkdirs failed to create " + inDir.toString());
+    }
     jobConf.setInputPath(inDir);
     jobConf.setOutputPath(outDir);
     

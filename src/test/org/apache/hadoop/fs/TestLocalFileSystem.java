@@ -51,14 +51,14 @@ public class TestLocalFileSystem extends TestCase {
       // make sure it doesn't already exist
       assertTrue(!fileSys.exists(subdir));
       // make it and check for it
-      fileSys.mkdirs(subdir);
+      assertTrue(fileSys.mkdirs(subdir));
       assertTrue(fileSys.isDirectory(subdir));
       
       fileSys.setWorkingDirectory(subdir);
       
       // create a directory and check for it
       Path dir1 = new Path("dir1");
-      fileSys.mkdirs(dir1);
+      assertTrue(fileSys.mkdirs(dir1));
       assertTrue(fileSys.isDirectory(dir1));
       
       // delete the directory and make sure it went away

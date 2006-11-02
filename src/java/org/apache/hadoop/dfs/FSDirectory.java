@@ -366,7 +366,9 @@ class FSDirectory implements FSConstants {
 
         // Always do an implicit mkdirs for parent directory tree
         String pathString = path.toString();
-        mkdirs(new Path(pathString).getParent().toString());
+        if( ! mkdirs(new Path(pathString).getParent().toString()) ) {
+           return false;
+        }
         INode newNode = new INode( new File(pathString).getName(), blocks, replication);
         if( ! unprotectedAddFile(path, newNode) ) {
            NameNode.stateChangeLog.info("DIR* FSDirectory.addFile: "

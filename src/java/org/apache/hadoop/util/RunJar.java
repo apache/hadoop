@@ -41,7 +41,12 @@ public class RunJar {
           InputStream in = jar.getInputStream(entry);
           try {
             File file = new File(toDir, entry.getName());
-            file.getParentFile().mkdirs();
+            if (!file.getParentFile().mkdirs()) {
+              if (!file.getParentFile().isDirectory()) {
+                throw new IOException("Mkdirs failed to create " + 
+                                      file.getParentFile().toString());
+              }
+            }
             OutputStream out = new FileOutputStream(file);
             try {
               byte[] buffer = new byte[8192];
@@ -102,7 +107,12 @@ public class RunJar {
 
     final File workDir = File.createTempFile("hadoop-unjar","");
     workDir.delete();
-    workDir.mkdirs();
+    if (!workDir.mkdirs()) {
+      if (!workDir.isDirectory()) {
+        System.err.println("Mkdirs failed to create " + workDir.toString());
+        System.exit(-1);
+      }
+    }
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
         public void run() {

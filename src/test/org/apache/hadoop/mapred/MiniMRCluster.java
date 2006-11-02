@@ -116,12 +116,21 @@ public class MiniMRCluster {
                 File localDir = new File(jc.get("mapred.local.dir"));
                 String mapredDir = "";
                 File ttDir = new File(localDir, Integer.toString(taskTrackerPort) + "_" + 0);
-                ttDir.mkdirs();
+                if (!ttDir.mkdirs()) {
+                  if (!ttDir.isDirectory()) {
+                    throw new IOException("Mkdirs failed to create " + ttDir.toString());
+                  }
+                }
                 this.localDir[0] = ttDir.getAbsolutePath();
                 mapredDir = ttDir.getAbsolutePath();
                 for (int i = 1; i < numDir; i++){
                   ttDir = new File(localDir, Integer.toString(taskTrackerPort) + "_" + i);
                   ttDir.mkdirs();
+                  if (!ttDir.mkdirs()) {
+                    if (!ttDir.isDirectory()) {
+                      throw new IOException("Mkdirs failed to create " + ttDir.toString());
+                    }
+                  }
                   this.localDir[i] = ttDir.getAbsolutePath();
                   mapredDir = mapredDir + "," + ttDir.getAbsolutePath();
                 }

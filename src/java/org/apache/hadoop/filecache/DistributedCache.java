@@ -192,7 +192,10 @@ public class DistributedCache {
       localFs.delete(cacheStatus.localLoadPath);
       Path parchive = new Path(cacheStatus.localLoadPath,
                                new Path(cacheStatus.localLoadPath.getName()));
-      localFs.mkdirs(cacheStatus.localLoadPath);
+      if (!localFs.mkdirs(cacheStatus.localLoadPath)) {
+          throw new IOException("Mkdirs failed to create directory " + 
+                                cacheStatus.localLoadPath.toString());
+      }
       String cacheId = cache.getPath();
       dfs.copyToLocalFile(new Path(cacheId), parchive);
       dfs.copyToLocalFile(new Path(cacheId + "_md5"), new Path(parchive

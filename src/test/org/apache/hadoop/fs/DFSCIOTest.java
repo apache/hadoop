@@ -437,7 +437,10 @@ public class DFSCIOTest extends TestCase {
       
       if (testType != TEST_TYPE_CLEANUP) {
     	  	fs.delete(HDFS_TEST_DIR);
-    	  	fs.mkdirs(HDFS_TEST_DIR);
+    	  	if (!fs.mkdirs(HDFS_TEST_DIR)) {
+                    throw new IOException("Mkdirs failed to create " + 
+                                          HDFS_TEST_DIR.toString());
+                }
 
     	  	//Copy the executables over to the remote filesystem
     	  	String hadoopHome = System.getenv("HADOOP_HOME");

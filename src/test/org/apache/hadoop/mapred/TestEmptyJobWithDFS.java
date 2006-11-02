@@ -57,7 +57,9 @@ public class TestEmptyJobWithDFS extends TestCase {
       final Path outDir = new Path("/testing/empty/output");
       FileSystem fs = FileSystem.getNamed(fileSys, conf);
       fs.delete(outDir);
-      fs.mkdirs(inDir);
+      if (!fs.mkdirs(inDir)) {
+          return false;
+      }
 
       // use WordCount example
       conf.set("fs.default.name", fileSys);

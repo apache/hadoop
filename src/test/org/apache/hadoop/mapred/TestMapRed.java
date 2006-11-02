@@ -305,8 +305,12 @@ public class TestMapRed extends TestCase {
         SequenceFileOutputFormat.setCompressOutput(conf, true);
       }
       try {
-        fs.mkdirs(testdir);
-        fs.mkdirs(inDir);
+        if (!fs.mkdirs(testdir)) {
+          throw new IOException("Mkdirs failed to create " + testdir.toString());
+        }
+        if (!fs.mkdirs(inDir)) {
+          throw new IOException("Mkdirs failed to create " + inDir.toString());
+        }
         Path inFile = new Path(inDir, "part0");
         DataOutputStream f = fs.create(inFile);
         f.writeBytes("Owen was here\n");
@@ -364,10 +368,14 @@ public class TestMapRed extends TestCase {
         //
         FileSystem fs = FileSystem.get(conf);
         Path testdir = new Path("mapred.loadtest");
-        fs.mkdirs(testdir);
+        if (!fs.mkdirs(testdir)) {
+            throw new IOException("Mkdirs failed to create " + testdir.toString());
+        }
 
         Path randomIns = new Path(testdir, "genins");
-        fs.mkdirs(randomIns);
+        if (!fs.mkdirs(randomIns)) {
+            throw new IOException("Mkdirs failed to create " + randomIns.toString());
+        }
 
         Path answerkey = new Path(randomIns, "answer.key");
         SequenceFile.Writer out = 

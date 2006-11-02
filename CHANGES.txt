@@ -127,6 +127,9 @@ Trunk (unreleased changes)
 35. HADOOP-669.  Fix a problem introduced by HADOOP-90 that can cause
     DFS to lose files.  (Milind Bhandarkar via cutting)
 
+36. HADOOP-373.  Consistently check the value returned by
+    FileSystem.mkdirs().  (Wendy Chien via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

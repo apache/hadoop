@@ -65,7 +65,9 @@ public class MRCaching {
         // read the cached files (unzipped, unjarred and text)
         // and put it into a single file /tmp/test.txt
         Path file = new Path("/tmp");
-        fs.mkdirs(file);
+        if (!fs.mkdirs(file)) {
+          throw new IOException("Mkdirs failed to create " + file.toString());
+        }
         Path fileOut = new Path(file, "test.txt");
         fs.delete(fileOut);
         DataOutputStream out = fs.create(fileOut);
@@ -130,8 +132,9 @@ public class MRCaching {
     final Path outDir = new Path(outdir);
     FileSystem fs = FileSystem.getNamed(fileSys, conf);
     fs.delete(outDir);
-    fs.mkdirs(inDir);
-
+    if (!fs.mkdirs(inDir)) {
+      throw new IOException("Mkdirs failed to create " + inDir.toString());
+    }
     {
       DataOutputStream file = fs.create(new Path(inDir, "part-0"));
       file.writeBytes(input);
@@ -160,7 +163,9 @@ public class MRCaching {
     Path zipPath = new Path(localPath, new Path("test.zip"));
     Path cacheTest = new Path("/tmp/cachedir");
     fs.delete(cacheTest);
-    fs.mkdirs(cacheTest);
+    if (!fs.mkdirs(cacheTest)) {
+      throw new IOException("Mkdirs failed to create " + cacheTest.toString());
+    }
     fs.copyFromLocalFile(txtPath, cacheTest);
     fs.copyFromLocalFile(jarPath, cacheTest);
     fs.copyFromLocalFile(zipPath, cacheTest);

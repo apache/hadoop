@@ -97,7 +97,12 @@ public class MiniDFSCluster {
         String[] dirs = conf.getStrings("dfs.data.dir");
         for (int idx = 0; idx < dirs.length; idx++) {
           File dataDir = new File(dirs[idx]);
-          dataDir.mkdirs();
+          if (!dataDir.mkdirs()) {      
+            if (!dataDir.isDirectory()) {
+              throw new RuntimeException("Mkdirs failed to create directory " +
+                                         dataDir.toString());
+            }
+          }
         }
         node = new DataNode(conf, dirs);
         node.run();

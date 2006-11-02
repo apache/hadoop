@@ -248,10 +248,14 @@ public class TestMapRed extends TestCase {
         //
         FileSystem fs = FileSystem.get(conf);
         File testdir = new File("mapred.loadtest");
-        fs.mkdirs(testdir);
+        if (!fs.mkdirs(testdir)) {
+          throw new IOException("Mkdirs failed to create directory " + testdir.toString());
+        }
 
         File randomIns = new File(testdir, "genins");
-        fs.mkdirs(randomIns);
+        if (!fs.mkdirs(randomIns)) {
+          throw new IOException("Mkdirs failed to create directory " + randomIns.toString());
+        }
 
         File answerkey = new File(randomIns, "answer.key");
         SequenceFile.Writer out = SequenceFile.createWriter(fs, conf, 

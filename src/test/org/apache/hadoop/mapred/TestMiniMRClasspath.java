@@ -45,7 +45,9 @@ public class TestMiniMRClasspath extends TestCase {
     final Path outDir = new Path("/testing/wc/output");
     FileSystem fs = FileSystem.getNamed(fileSys, conf);
     fs.delete(outDir);
-    fs.mkdirs(inDir);
+    if (!fs.mkdirs(inDir)) {
+      throw new IOException("Mkdirs failed to create " + inDir.toString());
+    }
     {
       DataOutputStream file = fs.create(new Path(inDir, "part-0"));
       file.writeBytes(input);

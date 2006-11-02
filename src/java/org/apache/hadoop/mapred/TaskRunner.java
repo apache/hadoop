@@ -124,7 +124,11 @@ abstract class TaskRunner extends Thread {
       // start with same classpath as parent process
       classPath.append(System.getProperty("java.class.path"));
       classPath.append(sep);
-      workDir.mkdirs();
+      if (!workDir.mkdirs()) {
+        if (!workDir.isDirectory()) {
+          LOG.fatal("Mkdirs failed to create " + workDir.toString());
+        }
+      }
 	  
       String jar = conf.getJar();
       if (jar != null) {       

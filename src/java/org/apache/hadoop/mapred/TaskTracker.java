@@ -294,7 +294,11 @@ public class TaskTracker
             File workDir = new File(
                                     new File(localJobFile.toString()).getParent(),
                                     "work");
-            workDir.mkdirs();
+            if (!workDir.mkdirs()) {
+              if (!workDir.isDirectory()) {
+                throw new IOException("Mkdirs failed to create " + workDir.toString());
+              }
+            }
             RunJar.unJar(new File(localJarFile.toString()), workDir);
           }
           rjob.localized = true;
@@ -831,7 +835,9 @@ public class TaskTracker
               new Path(this.defaultJobConf.getLocalPath(TaskTracker.getJobCacheSubdir()), 
                 (task.getJobId() + Path.SEPARATOR + task.getTaskId()));
            FileSystem localFs = FileSystem.getNamed("local", fConf);
-           localFs.mkdirs(localTaskDir);
+           if (!localFs.mkdirs(localTaskDir)) {
+             throw new IOException("Mkdirs failed to create " + localTaskDir.toString());
+           }
            Path localTaskFile = new Path(localTaskDir, "job.xml");
            task.setJobFile(localTaskFile.toString());
            localJobConf.set("mapred.local.dir",

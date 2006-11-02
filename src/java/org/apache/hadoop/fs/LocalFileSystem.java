@@ -179,9 +179,11 @@ public class LocalFileSystem extends FileSystem {
             throw new IOException("File already exists:"+f);
         }
         Path parent = f.getParent();
-        if (parent != null)
-          mkdirs(parent);
-
+        if (parent != null) {
+          if (!mkdirs(parent)) {
+            throw new IOException("Mkdirs failed to create " + parent.toString());
+          }
+        }
         return new LocalFSFileOutputStream(f);
     }
 
@@ -379,7 +381,11 @@ public class LocalFileSystem extends FileSystem {
 
         // move the file there
         File badDir = new File(dir, "bad_files");
-        badDir.mkdirs();
+        if (!badDir.mkdirs()) {
+          if (!badDir.isDirectory()) {
+            throw new IOException("Mkdirs failed to create " + badDir.toString());
+          }
+        }
         String suffix = "." + new Random().nextInt();
         File badFile = new File(badDir,f.getName()+suffix);
         LOG.warn("Moving bad file " + f + " to " + badFile);

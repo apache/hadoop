@@ -235,7 +235,9 @@ public class TestGlobPaths extends TestCase {
   throws IOException {
     for(int i=0; i<Math.min(NUM_OF_PATHS, files.length); i++) {
       path[i] = new Path( files[i] );
-      fs.mkdirs( path[i] );
+      if (!fs.mkdirs( path[i] )) {
+        throw new IOException("Mkdirs failed to create " + path[i].toString());
+      }
     }
     return fs.globPaths( new Path(pattern) );
   }

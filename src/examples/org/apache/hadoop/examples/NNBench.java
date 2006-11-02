@@ -81,7 +81,9 @@ public class NNBench extends MapReduceBase implements Reducer {
                     Reporter reporter) throws IOException {
       int nFiles = ((IntWritable) value).get();
       Path taskDir = new Path(topDir, taskId);
-      fileSys.mkdirs(taskDir);
+      if (!fileSys.mkdirs(taskDir)) {
+        throw new IOException("Mkdirs failed to create " + taskDir.toString());
+      }
       byte[] buffer = new byte[32768];
       for (int index = 0; index < nFiles; index++) {
         FSDataOutputStream out = fileSys.create(
@@ -186,7 +188,11 @@ public class NNBench extends MapReduceBase implements Reducer {
       return;
     }
     fileSys.delete(tmpDir);
-    fileSys.mkdirs(inDir);
+    if (!fileSys.mkdirs(inDir)) {
+      System.out.println("Error: Mkdirs failed to create " + 
+                         inDir.toString());
+      return;
+    }
 
     for(int i=0; i < numMaps; ++i) {
       Path file = new Path(inDir, "part"+i);

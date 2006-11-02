@@ -137,8 +137,9 @@ public class MapFile {
       this.lastKey = comparator.newKey();
 
       Path dir = new Path(dirName);
-      fs.mkdirs(dir);
-
+      if (!fs.mkdirs(dir)) {
+          throw new IOException("Mkdirs failed to create directory " + dir.toString());
+      }
       Path dataFile = new Path(dir, DATA_FILE_NAME);
       Path indexFile = new Path(dir, INDEX_FILE_NAME);
 

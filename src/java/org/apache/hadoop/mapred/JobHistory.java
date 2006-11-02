@@ -88,7 +88,9 @@ public class JobHistory {
       try{
         File logDir = new File(LOG_DIR); 
         if( ! logDir.exists() ){
-          logDir.mkdirs(); 
+          if( ! logDir.mkdirs() ){
+            throw new IOException("Mkdirs failed to create " + logDir.toString());
+          }
         }
         masterIndex = 
           new PrintWriter(

@@ -184,7 +184,12 @@ public class CopyFiles extends ToolBase {
       // create directories to hold destination file and create destFile
       Path destFile = new Path(destPath, src);
       Path destParent = destFile.getParent();
-      if (destParent != null) { destFileSys.mkdirs(destParent); }
+      if (destParent != null) { 
+        if (!destFileSys.mkdirs(destParent)) {
+          throw new IOException("Mkdirs failed to create " + 
+                                destParent.toString()); 
+        }
+      }
       FSDataOutputStream out = destFileSys.create(destFile);
       
       // copy file
@@ -285,7 +290,10 @@ public class CopyFiles extends ToolBase {
       Path inDir = new Path(jobDirectory, "in");
       Path fakeOutDir = new Path(jobDirectory, "out");
       FileSystem fileSys = FileSystem.get(jobConf);
-      fileSys.mkdirs(inDir);
+      if (!fileSys.mkdirs(inDir)) {
+        throw new IOException("Mkdirs failed to create " +
+                              inDir.toString());
+      }
       jobConf.set("distcp.job.dir", jobDirectory.toString());
       
       jobConf.setInputPath(inDir);
@@ -480,7 +488,9 @@ public class CopyFiles extends ToolBase {
       Path jobDirectory = new Path(jobConf.getSystemDir(), "distcp_" + 
           Integer.toString(Math.abs(r.nextInt()), 36));
       Path jobInputDir = new Path(jobDirectory, "in");
-      fileSystem.mkdirs(jobInputDir);
+      if (!fileSystem.mkdirs(jobInputDir)) {
+        throw new IOException("Mkdirs failed to create " + jobInputDir.toString());
+      }
       jobConf.setInputPath(jobInputDir);
       
       jobConf.set("distcp.job.dir", jobDirectory.toString());
