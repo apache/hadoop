@@ -137,7 +137,7 @@ class MapTask extends Task {
       CompressionType compressionType = CompressionType.NONE;
       if (job.getCompressMapOutput()) {
         // find the kind of compression to do, defaulting to record
-        compressionType = SequenceFile.getCompressionType(job);
+        compressionType = job.getMapOutputCompressionType();
 
         // find the right codec
         Class codecClass = 

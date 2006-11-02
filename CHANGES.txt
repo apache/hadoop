@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     types, replace Vector with ArrayList, etc.
     (Konstantin Shvachko via cutting)
 
+38. HADOOP-647.  Permit map outputs to use a different compression
+    type than the job output.  (omalley via cutting)
+
 
 Release 0.7.2 - 2006-10-18
 

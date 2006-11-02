@@ -34,11 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
 import org.apache.hadoop.mapred.lib.IdentityMapper;
@@ -338,6 +334,28 @@ public class JobConf extends Configuration {
     return getBoolean("mapred.compress.map.output", false);
   }
 
+  /**
+   * Set the compression type for the map outputs.
+   * @param style NONE, RECORD, or BLOCK to control how the map outputs are 
+   *        compressed
+   */
+  public void setMapOutputCompressionType(SequenceFile.CompressionType style) {
+    set("map.output.compression.type", style.toString());
+  }
+  
+  /**
+   * Get the compression type for the map outputs.
+   * @return the compression type, defaulting to job output compression type
+   */
+  public SequenceFile.CompressionType getMapOutputCompressionType() {
+    String val = get("map.output.compression.type");
+    if (val == null) {
+      return SequenceFile.getCompressionType(this);
+    } else {
+      return SequenceFile.CompressionType.valueOf(val);
+    }
+  }
+  
   /**
    * Set the given class as the  compression codec for the map outputs.
    * @param codecClass the CompressionCodec class that will compress the 
