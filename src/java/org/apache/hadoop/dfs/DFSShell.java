@@ -608,6 +608,64 @@ public class DFSShell extends ToolBase {
     }
 
     /**
+     * Apply operation specified by 'cmd' on all parameters
+     * starting from argv[startindex].
+     */
+    private int doall(String cmd, String argv[], Configuration conf, 
+                      int startindex) {
+      int exitCode = 0;
+      int i = startindex;
+      //
+      // for each source file, issue the command
+      //
+      for (; i < argv.length; i++) {
+        try {
+          //
+          // issue the command to the remote dfs server
+          //
+          if ("-cat".equals(cmd)) {
+              cat(argv[i]);
+          } else if ("-mkdir".equals(cmd)) {
+              mkdir(argv[i]);
+          } else if ("-rm".equals(cmd)) {
+              delete(argv[i], false);
+          } else if ("-rmr".equals(cmd)) {
+              delete(argv[i], true);
+          } else if ("-du".equals(cmd)) {
+              du(argv[i]);
+          } else if ("-ls".equals(cmd)) {
+              ls(argv[i], false);
+          } else if ("-lsr".equals(cmd)) {
+              ls(argv[i], true);
+          }
+        } catch (RemoteException e) {
+          //
+          // This is a error returned by hadoop server. Print
+          // out the first line of the error mesage.
+          //
+          exitCode = -1;
+          try {
+            String[] content;
+            content = e.getLocalizedMessage().split("\n");
+            System.err.println(cmd.substring(1) + ": " +
+                               content[0]);
+          } catch (Exception ex) {
+            System.err.println(cmd.substring(1) + ": " +
+                               ex.getLocalizedMessage());
+          }
+        } catch (IOException e) {
+          //
+          // IO exception encountered locally.
+          //
+          exitCode = -1;
+          System.err.println(cmd.substring(1) + ": " +
+                             e.getLocalizedMessage());
+        }
+      }
+      return exitCode;
+    }
+
+    /**
      * Displays format of commands.
      * 
      */
@@ -703,9 +761,7 @@ public class DFSShell extends ToolBase {
                   printUsage(cmd);
                   return exitCode;
                 }
-        } else if ("-rm".equals(cmd) || "-rmr".equals(cmd) ||
-                 "-cat".equals(cmd) || "-mkdir".equals(cmd) ||
-                 "-safemode".equals(cmd)) {
+        } else if ("-safemode".equals(cmd)) {
                 if (argv.length != 2) {
                   printUsage(cmd);
                   return exitCode;
@@ -717,6 +773,12 @@ public class DFSShell extends ToolBase {
                 }
         } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
                 if (argv.length < 3) {
+                  printUsage(cmd);
+                  return exitCode;
+                }
+        } else if ("-rm".equals(cmd) || "-rmr".equals(cmd) ||
+                   "-cat".equals(cmd) || "-mkdir".equals(cmd)) {
+                if (argv.length < 2) {
                   printUsage(cmd);
                   return exitCode;
                 }
@@ -748,30 +810,39 @@ public class DFSShell extends ToolBase {
                 else
                     copyMergeToLocal(argv[i++], new Path(argv[i++]));
             } else if ("-cat".equals(cmd)) {
-                cat(argv[i++]);
+                doall(cmd, argv, conf, i);
             } else if ("-moveToLocal".equals(cmd)) {
                 moveToLocal(argv[i++], new Path(argv[i++]));
             } else if ("-setrep".equals(cmd)) {
             	setReplication(argv, i);           
             } else if ("-ls".equals(cmd)) {
-                String arg = i < argv.length ? argv[i++] : "";
-                ls(arg, false);
+                if (i < argv.length) {
+                    doall(cmd, argv, conf, i);
+                } else {
+                    ls("", false);
+                } 
             } else if ("-lsr".equals(cmd)) {
-                String arg = i < argv.length ? argv[i++] : "";
-                ls(arg, true);
+                if (i < argv.length) {
+                    doall(cmd, argv, conf, i);
+                } else {
+                    ls("", true);
+                } 
             } else if ("-mv".equals(cmd)) {
                 exitCode = rename(argv, conf);
             } else if ("-cp".equals(cmd)) {
                 exitCode = copy(argv, conf);
             } else if ("-rm".equals(cmd)) {
-                delete(argv[i++], false);
+                doall(cmd, argv, conf, i);
             } else if ("-rmr".equals(cmd)) {
-                delete(argv[i++], true);
+                doall(cmd, argv, conf, i);
             } else if ("-du".equals(cmd)) {
-                String arg = i < argv.length ? argv[i++] : "";
-                du(arg);
+                if (i < argv.length) {
+                    doall(cmd, argv, conf, i);
+                } else {
+                    du("");
+                }
             } else if ("-mkdir".equals(cmd)) {
-                mkdir(argv[i++]);
+                doall(cmd, argv, conf, i);
             } else if ("-report".equals(cmd)) {
                 report();
             } else if ("-safemode".equals(cmd)) {

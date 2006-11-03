@@ -137,8 +137,12 @@ Trunk (unreleased changes)
 38. HADOOP-647.  Permit map outputs to use a different compression
     type than the job output.  (omalley via cutting)
 
-39. HADOOP-671.  File cache should not create symlinks when they
-    already exist.  (Mahadev Konar via cutting)
+39. HADOOP-671.  Fix file cache to check for pre-existence before
+    creating .  (Mahadev Konar via cutting)
+
+40. HADOOP-665.  Extend many DFSShell commands to accept multiple
+    arguments.  Now commands like "ls", "rm", etc. will operate on
+    multiple files.  (Dhruba Borthakur via cutting)
 
 
 Release 0.7.2 - 2006-10-18
