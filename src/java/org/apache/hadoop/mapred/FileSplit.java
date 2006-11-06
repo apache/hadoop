@@ -38,11 +38,6 @@ public class FileSplit implements Writable {
   
   FileSplit() {}
 
-  /** @deprecated Call {@link #FileSplit(Path,long,long)} instead. */
-  public FileSplit(File file, long start, long length) {
-    this(new Path(file.toString()), start, length);
-  }
-
   /** Constructs a split.
    *
    * @param file the file name

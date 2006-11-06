@@ -326,15 +326,6 @@ class FSDirectory implements FSConstants {
       metricsRecord = Metrics.createRecord("dfs", "namenode");
     }
 
-    /** Create new dfs name directories.  Caution: this destroys all files
-     * in this filesystem.
-     * @deprecated use @link FSImage#format(File[], Configuration) instead */
-    public static void format(File[] dirs, Configuration conf) throws IOException {
-      for (int idx = 0; idx < dirs.length; idx++) {
-        FSImage.format( dirs[idx] );
-      }
-    }
-    
     /**
      * Shutdown the filestore
      */
@@ -668,13 +659,6 @@ class FSDirectory implements FSConstants {
             INode node = rootDir.getNode(normalizePath(src));
             return node != null && node.isDir();
         }
-    }
-
-    /**
-     * @deprecated use @link #mkdirs(String) instead
-     */
-    public boolean mkdirs(UTF8 src) {
-        return mkdirs(src.toString());
     }
 
     /**

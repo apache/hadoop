@@ -340,7 +340,7 @@ public class CopyFiles extends ToolBase {
       for(int idx=0; idx < numMaps; ++idx) {
         Path file = new Path(inDir, "part"+idx);
         SequenceFile.Writer writer = 
-          new SequenceFile.Writer(fileSys, file, Text.class, Text.class);
+          SequenceFile.createWriter(fileSys,conf,file,Text.class,Text.class);
         for (int ipath = idx; ipath < nFiles; ipath += numMaps) {
           String path = (String) finalPathList.get(ipath);
           writer.append(new Text(path), new Text(""));
@@ -500,7 +500,8 @@ public class CopyFiles extends ToolBase {
       for(int i=0; i < srcPaths.length; ++i) {
         Path ipFile = new Path(jobInputDir, "part" + i);
         SequenceFile.Writer writer = 
-          new SequenceFile.Writer(fileSystem, ipFile, Text.class, Text.class);
+          SequenceFile.createWriter(fileSystem, conf, ipFile,
+                                    Text.class, Text.class);
         writer.append(new Text(srcPaths[i]), new Text(""));
         writer.close();
       }

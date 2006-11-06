@@ -292,45 +292,11 @@ public class RPC {
     return new Server(instance, conf, bindAddress,port, numHandlers, verbose);
   }
 
-  
-  /** Construct a server for a protocol implementation instance listening on a
-   * port.
-   * 
-   * @deprecated the bind address should always be specified
-   */
-  public static Server getServer(final Object instance, final int port, Configuration conf) {
-    return getServer(instance, port, 1, false, conf);
-  }
-
-  /** Construct a server for a protocol implementation instance listening on a
-   * port. 
-   *
-   * @deprecated the bind address should always be specified
-   */
-  public static Server getServer(final Object instance,final int port,
-                                 final int numHandlers,
-                                 final boolean verbose, Configuration conf) {
-    return new Server(instance, conf, port, numHandlers, verbose);
-  }
-  
-  
-  
   /** An RPC Server. */
   public static class Server extends org.apache.hadoop.ipc.Server {
     private Object instance;
     private Class implementation;
     private boolean verbose;
-
-    /** Construct an RPC server.
-     * @param instance the instance whose methods will be called
-     * @param conf the configuration to use
-     * @param port the port to listen for connections on
-     * 
-     * @deprecated the bind address should always be specified
-     */
-    public Server(Object instance, Configuration conf, int port) {
-      this(instance, conf,  "0.0.0.0", port, 1, false);
-    }
 
     /** Construct an RPC server.
      * @param instance the instance whose methods will be called
@@ -358,22 +324,6 @@ public class RPC {
       this.verbose = verbose;
     }
 
-    /** Construct an RPC server.
-     * @param instance the instance whose methods will be called
-     * @param conf the configuration to use
-     * @param port the port to listen for connections on
-     * @param numHandlers the number of method handler threads to run
-     * @param verbose whether each call should be logged
-     * 
-     * @deprecated the bind address should always be specified
-     */
-    public Server(Object instance, Configuration conf,  int port,
-                  int numHandlers, boolean verbose) {
-      super("0.0.0.0", port, Invocation.class, numHandlers, conf);
-      this.instance = instance;
-      this.implementation = instance.getClass();
-      this.verbose = verbose;
-    }
     public Writable call(Writable param) throws IOException {
       try {
         Invocation call = (Invocation)param;

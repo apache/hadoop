@@ -139,11 +139,6 @@ public abstract class FileSystem extends Configured {
      */
     public abstract String[][] getFileCacheHints(Path f, long start, long len) throws IOException;
 
-    /** @deprecated Call {@link #open(Path)} instead. */
-    public FSDataInputStream open(File f) throws IOException {
-      return open(new Path(f.toString()));
-    }
-
     /**
      * Opens an FSDataInputStream at the indicated Path.
      * @param f the file name to open
@@ -166,11 +161,6 @@ public abstract class FileSystem extends Configured {
      * or via DFS.
      */
     public abstract FSInputStream openRaw(Path f) throws IOException;
-
-    /** @deprecated Call {@link #create(Path)} instead. */
-    public FSDataOutputStream create(File f) throws IOException {
-      return create(new Path(f.toString()));
-    }
 
     /**
      * Opens an FSDataOutputStream at the indicated Path.
@@ -317,11 +307,6 @@ public abstract class FileSystem extends Configured {
                                              long blockSize, Progressable progress)
       throws IOException;
     
-    /** @deprecated Call {@link #createNewFile(Path)} instead. */
-    public boolean createNewFile(File f) throws IOException {
-      return createNewFile(new Path(f.toString()));
-    }
-
     /**
      * Creates the given Path as a brand-new zero-length file.  If
      * create fails, or if it already existed, return false.
@@ -376,11 +361,6 @@ public abstract class FileSystem extends Configured {
      */
     public abstract boolean setReplicationRaw(Path src, short replication) throws IOException;
 
-    /** @deprecated Call {@link #rename(Path, Path)} instead. */
-    public boolean rename(File src, File dst) throws IOException {
-      return rename(new Path(src.toString()), new Path(dst.toString()));
-    }
-
     /**
      * Renames Path src to Path dst.  Can take place on local fs
      * or remote DFS.
@@ -414,11 +394,6 @@ public abstract class FileSystem extends Configured {
      */
     public abstract boolean renameRaw(Path src, Path dst) throws IOException;
 
-    /** @deprecated Call {@link #delete(Path)} instead. */
-    public boolean delete(File f) throws IOException {
-      return delete(new Path(f.toString()));
-    }
-
     /** Delete a file. */
     public boolean delete(Path f) throws IOException {
       if (isDirectory(f)) {
@@ -434,26 +409,11 @@ public abstract class FileSystem extends Configured {
      */
     public abstract boolean deleteRaw(Path f) throws IOException;
 
-    /** @deprecated call {@link #exists(Path)} instead */
-    public boolean exists(File f) throws IOException {
-      return exists(new Path(f.toString()));
-    }
-
     /** Check if exists. */
     public abstract boolean exists(Path f) throws IOException;
 
-    /** @deprecated Call {@link #isDirectory(Path)} instead. */
-    public boolean isDirectory(File f) throws IOException {
-      return isDirectory(new Path(f.toString()));
-    }
-
     /** True iff the named path is a directory. */
     public abstract boolean isDirectory(Path f) throws IOException;
-
-    /** @deprecated Call {@link #isFile(Path)} instead. */
-    public boolean isFile(File f) throws IOException {
-      return isFile(new Path(f.toString()));
-    }
 
     /** True iff the named path is a regular file. */
     public boolean isFile(Path f) throws IOException {
@@ -464,25 +424,8 @@ public abstract class FileSystem extends Configured {
         }
     }
     
-    /** @deprecated Call {@link #getLength(Path)} instead. */
-    public long getLength(File f) throws IOException {
-      return getLength(new Path(f.toString()));
-    }
-
     /** The number of bytes in a file. */
     public abstract long getLength(Path f) throws IOException;
-
-    /** @deprecated Call {@link #listPaths(Path)} instead. */
-    public File[] listFiles(File f) throws IOException {
-      Path[] paths = listPaths(new Path(f.toString()));
-      if (paths == null)
-        return null;
-      File[] result = new File[paths.length];
-      for (int i = 0 ; i < paths.length; i++) {
-        result[i] = new File(paths[i].toString());
-      }
-      return result;
-    }
 
     final private static PathFilter DEFAULT_FILTER = new PathFilter() {
       public boolean accept(Path file) {
@@ -498,23 +441,6 @@ public abstract class FileSystem extends Configured {
     /** List files in a directory. */
     public abstract Path[] listPathsRaw(Path f) throws IOException;
 
-    /** @deprecated Call {@link #listPaths(Path)} instead. */
-    public File[] listFiles(File f, final FileFilter filt) throws IOException {
-      Path[] paths = listPaths(new Path(f.toString()),
-                               new PathFilter() {
-                                 public boolean accept(Path p) {
-                                   return filt.accept(new File(p.toString()));
-                                 }
-                               });
-      if (paths == null)
-        return null;
-      File[] result = new File[paths.length];
-      for (int i = 0 ; i < paths.length; i++) {
-        result[i] = new File(paths[i].toString());
-      }
-      return result;
-    }
-    
     /** Filter raw files in a directory. */
     private void listPaths(ArrayList<Path> results, Path f, PathFilter filter)
       throws IOException {
@@ -773,11 +699,6 @@ public abstract class FileSystem extends Configured {
      */
     public abstract Path getWorkingDirectory();
     
-    /** @deprecated Call {@link #mkdirs(Path)} instead. */
-    public boolean mkdirs(File f) throws IOException {
-      return mkdirs(new Path(f.toString()));
-    }
-
     /**
      * Make the given file and all non-existent parents into
      * directories. Has the semantics of Unix 'mkdir -p'.
@@ -785,20 +706,10 @@ public abstract class FileSystem extends Configured {
      */
     public abstract boolean mkdirs(Path f) throws IOException;
 
-    /** @deprecated Call {@link #lock(Path,boolean)} instead. */
-    public void lock(File f, boolean shared) throws IOException {
-      lock(new Path(f.toString()), shared);
-    }
-
     /**
      * Obtain a lock on the given Path
      */
     public abstract void lock(Path f, boolean shared) throws IOException;
-
-    /** @deprecated Call {@link #release(Path)} instead. */
-    public void release(File f) throws IOException {
-      release(new Path(f.toString()));
-    }
 
     /**
      * Release the lock
@@ -824,30 +735,12 @@ public abstract class FileSystem extends Configured {
     public abstract void copyToLocalFile(Path src, Path dst) throws IOException;
 
     /**
-     * the same as copyToLocalFile(Path src, File dst), except that
-     * the source is removed afterward.
-     */
-    // not implemented yet
-    //public abstract void moveToLocalFile(Path src, File dst) throws IOException;
-
-    /** @deprecated Call {@link #startLocalOutput(Path, Path)} instead. */
-    public File startLocalOutput(File src, File dst) throws IOException {
-      return new File(startLocalOutput(new Path(src.toString()),
-                                       new Path(dst.toString())).toString());
-    }
-
-    /**
      * Returns a local File that the user can write output to.  The caller
      * provides both the eventual FS target name and the local working
      * file.  If the FS is local, we write directly into the target.  If
      * the FS is remote, we write into the tmp local area.
      */
     public abstract Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile) throws IOException;
-
-    /** @deprecated Call {@link #completeLocalOutput(Path, Path)} instead. */
-    public void completeLocalOutput(File src, File dst) throws IOException {
-      completeLocalOutput(new Path(src.toString()), new Path(dst.toString()));
-    }
 
     /**
      * Called when we're all done writing to the target.  A local FS will

@@ -34,12 +34,11 @@ public class ArrayFile extends MapFile {
   public static class Writer extends MapFile.Writer {
     private LongWritable count = new LongWritable(0);
 
-    /** Create the named file for values of the named class.
-     * @deprecated specify {@link CompressionType} and {@link Progressable}
-     */
-    public Writer(FileSystem fs, String file, Class valClass)
+    /** Create the named file for values of the named class. */
+    public Writer(Configuration conf, FileSystem fs,
+                  String file, Class valClass)
       throws IOException {
-      super(fs, file, LongWritable.class, valClass);
+      super(conf, fs, file, LongWritable.class, valClass);
     }
 
     /** Create the named file for values of the named class. */

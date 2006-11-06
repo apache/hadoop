@@ -140,8 +140,8 @@ public class StreamInputFormat extends InputFormatBase {
     final long start = split.getStart();
     final long end = start + split.getLength();
 
-    String splitName = split.getFile() + ":" + start + "-" + end;
-    final FSDataInputStream in = fs.open(split.getFile());
+    String splitName = split.getPath() + ":" + start + "-" + end;
+    final FSDataInputStream in = fs.open(split.getPath());
 
     // will open the file and seek to the start of the split
     // Factory dispatch based on available params..

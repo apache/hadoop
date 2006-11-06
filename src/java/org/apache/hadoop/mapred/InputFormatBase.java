@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.File;                              // deprecated
 
 import java.util.ArrayList;
 
@@ -58,17 +57,6 @@ public abstract class InputFormatBase implements InputFormat {
                                                JobConf job,
                                                Reporter reporter)
     throws IOException;
-
-  /** @deprecated Call {@link #listFiles(FileSystem,JobConf)} instead. */
-  protected File[] listFiles(FileSystem fs, JobConf job)
-    throws IOException {
-    Path[] paths = listPaths(fs, job);
-    File[] result = new File[paths.length];
-    for (int i = 0 ; i < paths.length; i++) {
-      result[i] = new File(paths[i].toString());
-    }
-    return result;
-  }
 
   /** List input directories.
    * Subclasses may override to, e.g., select only files matching a regular

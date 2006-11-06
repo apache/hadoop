@@ -56,8 +56,8 @@ public class TestSequenceFileInputFilter extends TestCase {
   private static void createSequenceFile(int numRecords) throws Exception {
       // create a file with length entries
       SequenceFile.Writer writer =
-          new SequenceFile.Writer(fs, inFile,
-                  Text.class, BytesWritable.class);
+          SequenceFile.createWriter(fs, conf, inFile,
+                                    Text.class, BytesWritable.class);
       try {
           for (int i = 1; i <= numRecords; i++) {
               Text key = new Text(Integer.toString(i));

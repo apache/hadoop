@@ -95,6 +95,24 @@ public class SequenceFile {
    * @param name The name of the file. 
    * @param keyClass The 'key' type.
    * @param valClass The 'value' type.
+   * @return Returns the handle to the constructed SequenceFile Writer.
+   * @throws IOException
+   */
+  public static Writer 
+  createWriter(FileSystem fs, Configuration conf, Path name, 
+      Class keyClass, Class valClass) 
+  throws IOException {
+    return createWriter(fs,conf,name,keyClass,valClass,
+                        getCompressionType(conf));
+  }
+  
+  /**
+   * Construct the preferred type of SequenceFile Writer.
+   * @param fs The configured filesystem. 
+   * @param conf The configuration.
+   * @param name The name of the file. 
+   * @param keyClass The 'key' type.
+   * @param valClass The 'value' type.
    * @param compressionType The compression type.
    * @return Returns the handle to the constructed SequenceFile Writer.
    * @throws IOException
@@ -372,73 +390,25 @@ public class SequenceFile {
       }
     }
 
-    /** @deprecated Call {@link #SequenceFile.Writer(FileSystem,Path,Class,Class)}. */
-    public Writer(FileSystem fs, String name, Class keyClass, Class valClass)
-      throws IOException {
-      this(fs, new Path(name), keyClass, valClass, false);
-    }
-
     /** Implicit constructor: needed for the period of transition!*/
     Writer()
     {}
     
     /** Create the named file. */
-    /** @deprecated Call {@link #SequenceFile.Writer(FileSystem,Configuration,Path,Class,Class)}. */
-    public Writer(FileSystem fs, Path name, Class keyClass, Class valClass)
-      throws IOException {
-      this(fs, name, keyClass, valClass, false);
-    }
-    
-    /** Create the named file with write-progress reporter. */
-    /** @deprecated Call {@link #SequenceFile.Writer(FileSystem,Configuration,Path,Class,Class,Progressable)}. */
-    public Writer(FileSystem fs, Path name, Class keyClass, Class valClass,
-            Progressable progress)
-      throws IOException {
-      this(fs, name, keyClass, valClass, false, progress);
-    }
-    
-    /** Create the named file.
-     * @param compress if true, values are compressed.
-     */
-    /** @deprecated Call {@link #SequenceFile.Writer(FileSystem,Configuration,Path,Class,Class)}. */
-    public Writer(FileSystem fs, Path name,
-                  Class keyClass, Class valClass, boolean compress)
-      throws IOException {
-      init(name, fs.create(name), keyClass, valClass, compress, null); 
-
-      initializeFileHeader();
-      writeFileHeader();
-      finalizeFileHeader();
-    }
-    
-    /** Create the named file with write-progress reporter.
-     * @param compress if true, values are compressed.
-     */
-    /** @deprecated Call {@link #SequenceFile.Writer(FileSystem,Configuration,Path,Class,Class,Progressable)}. */
-    public Writer(FileSystem fs, Path name,
-                  Class keyClass, Class valClass, boolean compress,
-                  Progressable progress)
-      throws IOException {
-      init(name, fs.create(name, progress), keyClass, valClass, 
-          compress, null);
-      
-      initializeFileHeader();
-      writeFileHeader();
-      finalizeFileHeader();
-    }
-    
-    /** Create the named file. */
     public Writer(FileSystem fs, Configuration conf, Path name, 
         Class keyClass, Class valClass)
       throws IOException {
-      this(fs, name, keyClass, valClass, false);
+      this(fs, conf, name, keyClass, valClass, null);
     }
     
     /** Create the named file with write-progress reporter. */
     public Writer(FileSystem fs, Configuration conf, Path name, 
         Class keyClass, Class valClass, Progressable progress)
       throws IOException {
-      this(fs, name, keyClass, valClass, false, progress);
+      init(name, fs.create(name, progress), keyClass, valClass, false, null);
+      initializeFileHeader();
+      writeFileHeader();
+      finalizeFileHeader();
     }
 
     /** Write to an arbitrary stream using a specified buffer size. */
@@ -561,22 +531,6 @@ public class SequenceFile {
       out.write(buffer.getData(), 0, buffer.getLength()); // data
     }
 
-    /** 
-     * Append a key/value pair. 
-     * @deprecated Call {@link #appendRaw(byte[], int, int, SequenceFile.ValueBytes)}. 
-     */
-    public synchronized void append(byte[] data, int start, int length,
-                                    int keyLength) throws IOException {
-      if (keyLength == 0)
-        throw new IOException("zero length keys not allowed");
-
-      checkAndWriteSync();                        // sync
-      out.writeInt(length);                       // total record length
-      out.writeInt(keyLength);                    // key portion length
-      out.write(data, start, length);             // data
-
-    }
-    
     public synchronized void appendRaw(
         byte[] keyData, int keyOffset, int keyLength, ValueBytes val) 
     throws IOException {
@@ -925,12 +879,6 @@ public class SequenceFile {
     private DataInputBuffer valBuffer = null;
     private CompressionInputStream valInFilter = null;
     private DataInputStream valIn = null;
-
-    /** @deprecated Call {@link #SequenceFile.Reader(FileSystem,Path,Configuration)}.*/
-    public Reader(FileSystem fs, String file, Configuration conf)
-      throws IOException {
-      this(fs, new Path(file), conf);
-    }
 
     /** Open the named file. */
     public Reader(FileSystem fs, Path file, Configuration conf)
@@ -1304,7 +1252,7 @@ public class SequenceFile {
         return next(buffer);
       }
     }
-    
+
     public ValueBytes createValueBytes() {
       ValueBytes val = null;
       if (!decompress || blockCompressed) {

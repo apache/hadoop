@@ -140,27 +140,16 @@ public class JobConf extends Configuration {
     }
   }
 
-  /** @deprecated Call {@link #getLocalPath(String)} instead. */
-  public File getLocalFile(String subdir, String name) throws IOException {
-    return new File(getLocalPath(subdir+Path.SEPARATOR+name).toString());
-  }
-
   /** Constructs a local file name.  Files are distributed among configured
    * local directories.*/
   public Path getLocalPath(String pathString) throws IOException {
     return getLocalPath("mapred.local.dir", pathString);
   }
 
-  /** @deprecated Call {@link #setInputPath(Path)} instead.*/
-  public void setInputDir(File dir) { setInputPath(new Path(dir.toString())); }
-
   public void setInputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
     set("mapred.input.dir", dir);
   }
-
-  /** @deprecated Call {@link #addInputPath(Path)} instead.*/
-  public void addInputDir(File dir) { addInputPath(new Path(dir.toString())); }
 
   public void addInputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
@@ -260,17 +249,9 @@ public class JobConf extends Configuration {
     }
   }
   
-  /** @deprecated Call {@link #getOutputPath()} instead.*/
-  public File getOutputDir() { return new File(getOutputPath().toString()); }
-
   public Path getOutputPath() { 
     String name = get("mapred.output.dir");
     return name == null ? null: new Path(name);
-  }
-
-  /** @deprecated Call {@link #setOutputPath(Path)} instead.*/
-  public void setOutputDir(File dir) {
-    setOutputPath(new Path(dir.toString()));
   }
 
   public void setOutputPath(Path dir) {

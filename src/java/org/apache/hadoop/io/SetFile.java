@@ -37,10 +37,12 @@ public class SetFile extends MapFile {
       super(fs, dirName, keyClass, NullWritable.class);
     }
 
-    /** Create the named set using the named key comparator. */
+    /** Create the named set using the named key comparator.
+     * @deprecated
+     */
     public Writer(FileSystem fs, String dirName, WritableComparator comparator)
       throws IOException {
-      super(fs, dirName, comparator, NullWritable.class);
+      super(new Configuration(), fs, dirName, comparator, NullWritable.class);
     }
 
     /** Create a set naming the element class and compression type. */

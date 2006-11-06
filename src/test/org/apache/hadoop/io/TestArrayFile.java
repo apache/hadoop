@@ -66,9 +66,10 @@ public class TestArrayFile extends TestCase {
 
   private static void writeTest(FileSystem fs, RandomDatum[] data, String file)
     throws IOException {
+    Configuration conf = new Configuration();
     MapFile.delete(fs, file);
     LOG.debug("creating with " + data.length + " debug");
-    ArrayFile.Writer writer = new ArrayFile.Writer(fs, file, RandomDatum.class);
+    ArrayFile.Writer writer = new ArrayFile.Writer(conf, fs, file, RandomDatum.class);
     writer.setIndexInterval(100);
     for (int i = 0; i < data.length; i++)
       writer.append(data[i]);

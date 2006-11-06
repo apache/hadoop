@@ -71,9 +71,6 @@ public class DatanodeInfo extends DatanodeID {
   /** number of active connections */
   public int getXceiverCount() { return xceiverCount; }
 
-  /** @deprecated Use {@link #getLastUpdate()} instead. */
-  public long lastUpdate() { return getLastUpdate(); }
-
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {
     StringBuffer buffer = new StringBuffer();

@@ -3,6 +3,15 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
+ 1. HADOOP-655.  Remove most deprecated code.  A few deprecated things
+    remain, notably UTF8 and some methods that are still required.
+    Also cleaned up constructors for SequenceFile, MapFile, SetFile,
+    and ArrayFile a bit.  (cutting)
+
+
+Release 0.8.0 - 2006-11-03
+
+
  1. HADOOP-477.  Extend contrib/streaming to scan the PATH environment
     variables when resolving executable program names.
     (Dhruba Borthakur via cutting) 

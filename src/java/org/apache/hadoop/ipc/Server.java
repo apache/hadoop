@@ -578,17 +578,6 @@ public abstract class Server {
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
   }
-  
-  
-  /** Constructs a server listening on the named port.  Parameters passed must
-   * be of the named class.  The <code>handlerCount</handlerCount> determines
-   * the number of handler threads that will be used to process calls.
-   * 
-   * @deprecated the bind address should always be specified
-   */
-  protected Server(int port, Class paramClass, int handlerCount, Configuration conf) {
-    this("0.0.0.0",port,paramClass,handlerCount,conf);
-  }
 
   /** Sets the timeout used for network i/o. */
   public void setTimeout(int timeout) { this.timeout = timeout; }

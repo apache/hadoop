@@ -2434,7 +2434,6 @@ class FSNamesystem implements FSConstants {
       
       /**
        * Checks consistency of the class state.
-       * @deprecated This is for debugging purposes.
        */
       void isConsistent() throws IOException {
         if( blockTotal == -1 && blockSafe == -1 ) {

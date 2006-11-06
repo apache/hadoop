@@ -30,12 +30,6 @@ import org.apache.hadoop.conf.Configuration;
  */
 public class FileUtil {
   
-  /** @deprecated Call {@link #fullyDelete(File)}. */
-  public static boolean fullyDelete(File dir, Configuration conf)
-    throws IOException {
-    return fullyDelete(dir);
-  }
-
   /**
    * Delete a directory and all its contents.  If
    * we return false, the directory may be partially-deleted.

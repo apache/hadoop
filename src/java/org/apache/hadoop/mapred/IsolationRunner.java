@@ -111,8 +111,8 @@ public class IsolationRunner {
       Path f = namer.getInputFile(i, taskId);
       if(! fs.exists(f)) {
         LOG.info("Create missing input: " + f);
-        SequenceFile.Writer out = new SequenceFile.Writer(fs, f, keyClass,
-                                                          valueClass);
+        SequenceFile.Writer out =
+          SequenceFile.createWriter(fs, conf, f, keyClass, valueClass);
         out.close();
       }
     }    

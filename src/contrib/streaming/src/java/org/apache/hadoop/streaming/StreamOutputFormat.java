@@ -19,12 +19,12 @@
 package org.apache.hadoop.streaming;
 
 import java.io.IOException;
-import java.io.File;
 
 import org.apache.hadoop.mapred.*;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
@@ -39,7 +39,7 @@ public class StreamOutputFormat implements OutputFormat {
 
   public RecordWriter getRecordWriter(FileSystem fs, JobConf job, String name, Progressable progr) throws IOException {
 
-    File file = new File(job.getOutputDir(), name);
+    Path file = new Path(job.getOutputPath(), name);
 
     final FSDataOutputStream out = fs.create(file);
 

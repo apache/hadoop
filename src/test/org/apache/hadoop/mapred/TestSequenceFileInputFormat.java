@@ -61,8 +61,8 @@ public class TestSequenceFileInputFormat extends TestCase {
 
       // create a file with length entries
       SequenceFile.Writer writer =
-        new SequenceFile.Writer(fs, file,
-                                IntWritable.class, BytesWritable.class);
+        SequenceFile.createWriter(fs, conf, file,
+                                  IntWritable.class, BytesWritable.class);
       try {
         for (int i = 0; i < length; i++) {
           IntWritable key = new IntWritable(i);

@@ -67,7 +67,7 @@ public class TestWritable extends TestCase {
 
       // create a file with length entries
       SequenceFile.Writer writer =
-        new SequenceFile.Writer(fs, file,
+        new SequenceFile.Writer(fs, conf, file,
                                 RecInt.class, RecBuffer.class);
       try {
         for (int i = 0; i < length; i++) {
