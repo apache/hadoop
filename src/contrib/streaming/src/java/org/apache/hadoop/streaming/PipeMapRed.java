@@ -291,7 +291,6 @@ public abstract class PipeMapRed {
           }
           f = null;
       }
-      System.out.println("XXX2 argvSplit[0] = " + argvSplit[0]);
       logprintln("PipeMapRed exec " + Arrays.asList(argvSplit));
       logprintln("sideEffectURI_=" + sideEffectURI_);
 
@@ -580,9 +579,6 @@ public abstract class PipeMapRed {
           logprintln("closing " + sideEffectURI_);
           if (sideEffectOut_ != null) sideEffectOut_.close();
           logprintln("closed  " + sideEffectURI_);
-          if (sideEffectURI_.getScheme().equals("file")) {
-            logprintln("size  " + new File(sideEffectURI_).length());
-          }
           if (useSingleSideOutputURI_) {
             // With sideEffectPath_ we wrote in-place. 
             // Possibly a named pipe set up by user or a socket.

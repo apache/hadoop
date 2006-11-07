@@ -13,6 +13,9 @@ Trunk (unreleased changes)
  3. HADOOP-682.  Fix DFS format command to work correctly when
     configured with a non-existent directory. (Sanjay Dahiya via cutting)
 
+ 4. HADOOP-645.  Fix a bug in contrib/streaming when -reducer is NONE.
+    (Dhruba Borthakur via cutting) 
+
 
 Release 0.8.0 - 2006-11-03
 
