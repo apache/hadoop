@@ -8,6 +8,8 @@ Trunk (unreleased changes)
     Also cleaned up constructors for SequenceFile, MapFile, SetFile,
     and ArrayFile a bit.  (cutting)
 
+ 2. HADOOP-565.  Upgrade to Jetty version 6. (Sanjay Dahiya via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
