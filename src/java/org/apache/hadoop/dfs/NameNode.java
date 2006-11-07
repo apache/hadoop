@@ -574,6 +574,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                 System.err.println("Formatted "+dirs[idx]);
               }
               System.in.read(); // discard the enter-key
+            }else{
+              format(dirs[idx]);
+              System.err.println("Formatted "+dirs[idx]);
             }
           }
           System.exit(aborted ? 1 : 0);

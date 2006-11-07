@@ -10,9 +10,11 @@ Trunk (unreleased changes)
 
  2. HADOOP-565.  Upgrade to Jetty version 6. (Sanjay Dahiya via cutting)
 
+ 3. HADOOP-682.  Fix DFS format command to work correctly when
+    configured with a non-existent directory. (Sanjay Dahiya via cutting)
+
 
 Release 0.8.0 - 2006-11-03
-
 
  1. HADOOP-477.  Extend contrib/streaming to scan the PATH environment
     variables when resolving executable program names.
