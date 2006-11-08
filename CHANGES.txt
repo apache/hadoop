@@ -22,6 +22,9 @@ Trunk (unreleased changes)
  6. HADOOP-683.  Remove a script dependency on bash, so it works with
     dash, the new default for /bin/sh on Ubuntu.  (James Todd via cutting)
 
+ 7. HADOOP-382.  Extend unit tests to run multiple datanodes.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

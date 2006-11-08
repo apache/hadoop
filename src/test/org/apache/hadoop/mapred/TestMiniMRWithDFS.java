@@ -150,7 +150,7 @@ public class TestMiniMRWithDFS extends TestCase {
           final int jobTrackerPort = 60050;
 
           Configuration conf = new Configuration();
-          dfs = new MiniDFSCluster(65314, conf, true);
+          dfs = new MiniDFSCluster(65314, conf, 4, true);
           fileSys = dfs.getFileSystem();
           namenode = fileSys.getName();
           mr = new MiniMRCluster(jobTrackerPort, 50060, taskTrackers, 

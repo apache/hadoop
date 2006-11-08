@@ -1996,17 +1996,17 @@ class FSNamesystem implements FSConstants {
         //
         // Build a map of forbidden hostnames from the two forbidden sets.
         //
-        Collection<String> forbiddenMachines = new TreeSet<String>();
+        Collection<DatanodeDescriptor> forbiddenMachines = new TreeSet();
         if (forbidden1 != null) {
             for (Iterator<DatanodeDescriptor> it = forbidden1.iterator(); it.hasNext(); ) {
                 DatanodeDescriptor cur = it.next();
-                forbiddenMachines.add(cur.getHost());
+                forbiddenMachines.add(cur);
             }
         }
         if (forbidden2 != null) {
             for (Iterator<DatanodeDescriptor> it = forbidden2.iterator(); it.hasNext(); ) {
                 DatanodeDescriptor cur = it.next();
-                forbiddenMachines.add(cur.getHost());
+                forbiddenMachines.add(cur);
             }
         }
 
@@ -2017,7 +2017,7 @@ class FSNamesystem implements FSConstants {
         List<DatanodeDescriptor> targetList = new ArrayList<DatanodeDescriptor>();
         for (Iterator<DatanodeDescriptor> it = heartbeats.iterator(); it.hasNext(); ) {
             DatanodeDescriptor node = it.next();
-            if (! forbiddenMachines.contains(node.getHost())) {
+            if (! forbiddenMachines.contains(node)) {
                 targetList.add(node);
                 avgLoad += node.getXceiverCount();
             }

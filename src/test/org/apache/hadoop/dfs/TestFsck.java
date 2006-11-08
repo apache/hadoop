@@ -139,7 +139,7 @@ public class TestFsck extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(65314, conf, false);
+      cluster = new MiniDFSCluster(65314, conf, 4, false);
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");

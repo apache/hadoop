@@ -111,7 +111,7 @@ public class TestPread extends TestCase {
    */
   public void testPreadDFS() throws IOException {
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, false);
+    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, 3, false);
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("preadtest.dat");

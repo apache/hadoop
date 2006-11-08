@@ -30,10 +30,11 @@ import org.apache.hadoop.fs.*;
 public class MiniDFSCluster {
 
   private Configuration conf;
+  int nDatanodes;
   private Thread nameNodeThread;
-  private Thread dataNodeThread;
+  private Thread dataNodeThreads[];
   private NameNodeRunner nameNode;
-  private DataNodeRunner dataNode;
+  private DataNodeRunner dataNodes[];
   private int maxRetries = 10;
   private int MAX_RETRIES  = 10;
   private int MAX_RETRIES_PER_PORT = 10;
@@ -88,6 +89,15 @@ public class MiniDFSCluster {
    */
   class DataNodeRunner implements Runnable {
     private DataNode node;
+    Configuration conf = null;
+    
+    public DataNodeRunner(Configuration conf, File dataDir, int index) {
+      this.conf = new Configuration(conf);
+      this.conf.set("dfs.data.dir",
+          new File(dataDir, "data"+(2*index+1)).getPath()+","+
+          new File(dataDir, "data"+(2*index+2)).getPath());
+    
+    }
     
     /**
      * Create and run the data node.
@@ -127,24 +137,39 @@ public class MiniDFSCluster {
    * Create the config and start up the servers.  If either the rpc or info port is already 
    * in use, we will try new ports.
    * @param namenodePort suggestion for which rpc port to use.  caller should use 
-   *                     getNameNodePort() to get the actual port used.   
+   *                     getNameNodePort() to get the actual port used.
    * @param dataNodeFirst should the datanode be brought up before the namenode?
    */
   public MiniDFSCluster(int namenodePort, 
                         Configuration conf,
                         boolean dataNodeFirst) throws IOException {
+    this(namenodePort, conf, 1, dataNodeFirst);
+  }
+  
+  /**
+   * Create the config and start up the servers.  If either the rpc or info port is already 
+   * in use, we will try new ports.
+   * @param namenodePort suggestion for which rpc port to use.  caller should use 
+   *                     getNameNodePort() to get the actual port used.
+   * @param nDatanodes Number of datanodes   
+   * @param dataNodeFirst should the datanode be brought up before the namenode?
+   */
+  public MiniDFSCluster(int namenodePort, 
+                        Configuration conf,
+                        int nDatanodes,
+                        boolean dataNodeFirst) throws IOException {
 
     this.conf = conf;
 
+    this.nDatanodes = nDatanodes;
     this.nameNodePort = namenodePort;
     this.nameNodeInfoPort = 50080;   // We just want this port to be different from the default. 
     File base_dir = new File(System.getProperty("test.build.data"),
                              "dfs/");
+    File data_dir = new File(base_dir, "data");
     conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
         new File(base_dir, "name2").getPath());
-    conf.set("dfs.data.dir", new File(base_dir, "data1").getPath()+","+
-        new File(base_dir, "data2").getPath());
-    conf.setInt("dfs.replication", 1);
+    conf.setInt("dfs.replication", Math.min(3, nDatanodes));
     // this timeout seems to control the minimum time for the test, so
     // decrease it considerably.
     conf.setInt("ipc.client.timeout", 1000);
@@ -161,14 +186,22 @@ public class MiniDFSCluster {
       NameNode.format(conf);
       nameNode = new NameNodeRunner();
       nameNodeThread = new Thread(nameNode);
-      dataNode = new DataNodeRunner();
-      dataNodeThread = new Thread(dataNode);
+      dataNodes = new DataNodeRunner[nDatanodes];
+      dataNodeThreads = new Thread[nDatanodes];
+      for (int idx = 0; idx < nDatanodes; idx++) {
+        dataNodes[idx] = new DataNodeRunner(conf, data_dir, idx);
+        dataNodeThreads[idx] = new Thread(dataNodes[idx]);
+      }
       if (dataNodeFirst) {
-        dataNodeThread.start();      
+        for (int idx = 0; idx < nDatanodes; idx++) {
+          dataNodeThreads[idx].start();
+        }
         nameNodeThread.start();      
       } else {
         nameNodeThread.start();
-        dataNodeThread.start();      
+        for (int idx = 0; idx < nDatanodes; idx++) {
+          dataNodeThreads[idx].start();
+        }
       }
 
       int retry = 0;
@@ -188,7 +221,9 @@ public class MiniDFSCluster {
         System.out.println("\tNameNode info port: " + nameNodeInfoPort);
 
         nameNode.shutdown();
-        dataNode.shutdown();
+        for (int idx = 0; idx < nDatanodes; idx++) {
+          dataNodes[idx].shutdown();
+        }
         
       } else {
         foundPorts = true;
@@ -212,7 +247,9 @@ public class MiniDFSCluster {
    * Shut down the servers.
    */
   public void shutdown() {
-    dataNode.shutdown();
+    for (int idx = 0; idx < nDatanodes; idx++) {
+      dataNodes[idx].shutdown();
+    }
     nameNode.shutdown();
   }
   
