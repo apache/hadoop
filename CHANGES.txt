@@ -25,6 +25,9 @@ Trunk (unreleased changes)
  7. HADOOP-382.  Extend unit tests to run multiple datanodes.
     (Milind Bhandarkar via cutting)
 
+ 8. HADOOP-604.  Fix some synchronization issues and a
+    NullPointerException in DFS datanode.  (Raghu Angadi via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
