@@ -16,6 +16,8 @@ Trunk (unreleased changes)
  4. HADOOP-645.  Fix a bug in contrib/streaming when -reducer is NONE.
     (Dhruba Borthakur via cutting) 
 
+ 5. HADOOP-687. Fix a classpath bug in bin/hadoop that blocked the
+    servers from starting. (Sameer Paranjpye via omalley)
 
 Release 0.8.0 - 2006-11-03
 
