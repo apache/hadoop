@@ -73,7 +73,7 @@ log=$HADOOP_LOG_DIR/hadoop-$HADOOP_IDENT_STRING-$command-`hostname`.out
 pid=$HADOOP_PID_DIR/hadoop-$HADOOP_IDENT_STRING-$command.pid
 
 # Set default scheduling priority
-if [ "$HADOOP_NICENESS" == "" ]; then
+if [ "$HADOOP_NICENESS" = "" ]; then
     export HADOOP_NICENESS=0
 fi
 
