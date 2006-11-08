@@ -28,6 +28,9 @@ Trunk (unreleased changes)
  8. HADOOP-604.  Fix some synchronization issues and a
     NullPointerException in DFS datanode.  (Raghu Angadi via cutting)
 
+ 9. HADOOP-459.  Fix memory leaks and a host of other issues with
+    libhdfs.  (Sameer Paranjpye via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

@@ -46,7 +46,7 @@
   <property name="test.junit.output.format" value="plain"/>
 
   <property name="libhdfs.test.conf.dir" value="${libhdfs.src}/tests/conf"/>
-  <property name="libhdfs.test.log.dir" value="${build.libhdfs}/tests/logs"/>
+  <property name="libhdfs.test.dir" value="${test.build.dir}/libhdfs"/>
 
   <property name="web.src.dir" value="${basedir}/src/web"/>
   <property name="src.webapps" value="${basedir}/src/webapps"/>
@@ -504,19 +504,20 @@
     </exec>
   </target>
 	
-  <target name="test-libhdfs" depends="compile-libhdfs, jar">
-    <delete dir="${libhdfs.test.log.dir}"/>
-    <mkdir dir="${libhdfs.test.log.dir}"/>
+  <target name="test-libhdfs" depends="compile-libhdfs, compile-core">
+    <delete dir="${libhdfs.test.dir}"/>
+    <mkdir dir="${libhdfs.test.dir}"/>
+    <mkdir dir="${libhdfs.test.dir}/logs"/>
+    <mkdir dir="${libhdfs.test.dir}/dfs/name"/>
 
     <exec dir="${libhdfs.src}" executable="make" failonerror="true">
         <env key="OS_NAME" value="${os.name}"/>
         <env key="OS_ARCH" value="${os.arch}"/>
         <env key="SHLIB_VERSION" value="${libhdfs.version}"/>
         <env key="LIBHDFS_BUILD_DIR" value="${build.libhdfs}"/>
-        <env key="CLASSPATH" value="${build.dir}/${final.name}.jar"/>
         <env key="HADOOP_HOME" value="${basedir}"/>
         <env key="HADOOP_CONF_DIR" value="${libhdfs.test.conf.dir}"/>
-        <env key="HADOOP_LOG_DIR" value="${libhdfs.test.log.dir}"/>
+        <env key="HADOOP_LOG_DIR" value="${libhdfs.test.dir}/logs"/>
 		<arg value="test"/>
     </exec>
   </target>

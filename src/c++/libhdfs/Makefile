@@ -25,10 +25,10 @@
 
 CC = gcc
 LD = gcc
-CFLAGS =  -g -W -fPIC
-LDFLAGS = -L$(JAVA_HOME)/jre/lib/$(OS_ARCH)/server -ljvm -m32 -shared -Wl,-x 
+CFLAGS =  -g -Wall -O2 -fPIC
+LDFLAGS = -L$(JAVA_HOME)/jre/lib/$(OS_ARCH)/server -ljvm -shared -m32 -Wl,-x 
 PLATFORM = $(shell echo $$OS_NAME | tr [A-Z] [a-z])
-CPPFLAGS = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(PLATFORM)
+CPPFLAGS = -m32 -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(PLATFORM)
 
 LIB_NAME = hdfs
 SO_TARGET = $(LIBHDFS_BUILD_DIR)/lib$(LIB_NAME).so.$(SHLIB_VERSION)
@@ -40,6 +40,7 @@ DOXYGEN = doxygen
 
 CSRC = \
 	hdfs.c \
+	hdfsJniHelper.c \
 	$(NONE)
 
 COBJS = $(addprefix $(LIBHDFS_BUILD_DIR)/,$(patsubst %,%.o,$(basename $(CSRC))))

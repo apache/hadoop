@@ -70,6 +70,13 @@ int main(int argc, char **argv) {
         //Read tests
         
         const char* readPath = "/tmp/testfile.txt";
+        int exists = hdfsExists(fs, readPath);
+
+        if (exists) {
+          fprintf(stderr, "Failed to validate existence of %s\n", readPath);
+          exit(-1);
+        }
+
         hdfsFile readFile = hdfsOpenFile(fs, readPath, O_RDONLY, 0, 0, 0);
         if (!readFile) {
             fprintf(stderr, "Failed to open %s for reading!\n", readPath);
@@ -188,6 +195,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "hdfsDelete: %s\n", (hdfsDelete(fs, srcPath) ? "Failed!" : "Success!"));
         fprintf(stderr, "hdfsDelete: %s\n", (hdfsDelete(lfs, srcPath) ? "Failed!" : "Success!"));
         fprintf(stderr, "hdfsDelete: %s\n", (hdfsDelete(lfs, dstPath) ? "Failed!" : "Success!"));
+        fprintf(stderr, "hdfsExists: %s\n", (hdfsExists(fs, newDirectory) ? "Success!" : "Failed!"));
     }
 
     return 0;

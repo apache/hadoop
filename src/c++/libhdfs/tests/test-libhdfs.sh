@@ -28,13 +28,40 @@ HDFS_TEST=hdfs_test
 HADOOP_LIB_DIR=$HADOOP_HOME/lib
 HADOOP_BIN_DIR=$HADOOP_HOME/bin
 
-# Add libs to CLASSPATH for libhdfs (jni)
-CLASSPATH=`for f in $HADOOP_LIB_DIR/*.jar; do CLASSPATH=$CLASSPATH:$f; done; echo $CLASSPATH;`
-
-# Manipulate HADOOP_CONF_DIR so as to include 
-# HADOOP_HOME/conf/hadoop-default.xml too
+## Manipulate HADOOP_CONF_DIR so as to include 
+## HADOOP_HOME/conf/hadoop-default.xml too
 # which is necessary to circumvent bin/hadoop
 HADOOP_CONF_DIR=$HADOOP_CONF_DIR:$HADOOP_HOME/conf
+
+# CLASSPATH initially contains $HADOOP_CONF_DIR
+CLASSPATH="${HADOOP_CONF_DIR}"
+CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
+
+# for developers, add Hadoop classes to CLASSPATH
+if [ -d "$HADOOP_HOME/build/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/classes
+fi
+if [ -d "$HADOOP_HOME/build/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build
+fi
+if [ -d "$HADOOP_HOME/build/test/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/test/classes
+fi
+
+# so that filenames w/ spaces are handled correctly in loops below
+IFS=
+
+# add libs to CLASSPATH
+for f in $HADOOP_HOME/lib/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+for f in $HADOOP_HOME/lib/jsp-2.0/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# restore ordinary behaviour
+unset IFS
 
 # Put delays to ensure hdfs is up and running and also shuts down 
 # after the tests are complete

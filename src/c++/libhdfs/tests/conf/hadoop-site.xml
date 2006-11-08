@@ -8,28 +8,17 @@
 <configuration>
 
 <property>
+  <name>hadoop.tmp.dir</name>
+  <value>../../../build/test/libhdfs</value>
+  <description>A base for other temporary directories.</description>
+</property>
+
+
+<property>
   <name>fs.default.name</name>
   <value>localhost:23000</value>
   <description>The name of the default file system.  Either the
   literal string "local" or a host:port for DFS.</description>
-</property>
-
-<property>
-  <name>dfs.name.dir</name>
-  <value>/tmp/test-libhdfs/dfs/name</value>
-  <description>Determines where on the local filesystem the DFS name node
-      should store the name table.</description>
-</property>
-
-<property>
-  <name>dfs.data.dir</name>
-  <value>/tmp/test-libhdfs/dfs/data</value>
-  <description>Determines where on the local filesystem an DFS data node
-  should store its blocks.  If this is a comma-delimited
-  list of directories, then data will be stored in all named
-  directories, typically on different devices.
-  Directories that do not exist are ignored.
-  </description>
 </property>
 
 <property>
