@@ -140,11 +140,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                       String trackerName = getAssignedTracker(taskId);
                       TaskTrackerStatus trackerStatus = 
                         getTaskTracker(trackerName);
-                      job.failedTask(tip, taskId, "Error launching task", 
-                                     tip.isMapTask()? TaskStatus.Phase.MAP:
-                                       TaskStatus.Phase.STARTING,
-                                     trackerStatus.getHost(), trackerName,
-                                     myMetrics);
+                      // This might happen when the tasktracker has already
+                      // expired and this thread tries to call failedtask
+                      // again. expire tasktracker should have called failed
+                      // task!
+                      if (trackerStatus != null)
+                        job.failedTask(tip, taskId, "Error launching task", 
+                                       tip.isMapTask()? TaskStatus.Phase.MAP:
+                                         TaskStatus.Phase.STARTING,
+                                       trackerStatus.getHost(), trackerName,
+                                       myMetrics);
                     }
                     itr.remove();
                   } else {

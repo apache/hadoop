@@ -31,6 +31,9 @@ Trunk (unreleased changes)
  9. HADOOP-459.  Fix memory leaks and a host of other issues with
     libhdfs.  (Sameer Paranjpye via cutting)
 
+10. HADOOP-694.  Fix a NullPointerException in jobtracker.
+    (Mahadev Konar via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
