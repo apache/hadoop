@@ -366,11 +366,11 @@ public abstract class Server {
       this.channel = channel;
       this.lastContact = lastContact;
       this.data = null;
-      this.dataLengthBuffer = null;
+      this.dataLengthBuffer = ByteBuffer.allocate(4);
       this.socket = channel.socket();
       this.out = new DataOutputStream
         (new BufferedOutputStream(
-         this.channelOut = new SocketChannelOutputStream(channel, 4096)));
+         this.channelOut = new SocketChannelOutputStream( channel )));
       InetAddress addr = socket.getInetAddress();
       if (addr == null) {
         this.hostAddress = "*Unknown*";
@@ -410,31 +410,27 @@ public abstract class Server {
 
     public int readAndProcess() throws IOException, InterruptedException {
       int count = -1;
-      if (dataLengthBuffer == null)
-        dataLengthBuffer = ByteBuffer.allocateDirect(4);
       if (dataLengthBuffer.remaining() > 0) {
-        count = channel.read(dataLengthBuffer);
-        if (count < 0) return count;
-        if (dataLengthBuffer.remaining() == 0) {
-          dataLengthBuffer.flip(); 
-          dataLength = dataLengthBuffer.getInt();
-          data = ByteBuffer.allocateDirect(dataLength);
-        }
-        //return count;
+        count = channel.read(dataLengthBuffer);       
+        if ( count < 0 || dataLengthBuffer.remaining() > 0 ) 
+          return count;        
+        dataLengthBuffer.flip(); 
+        dataLength = dataLengthBuffer.getInt();
+        data = ByteBuffer.allocate(dataLength);
       }
       count = channel.read(data);
       if (data.remaining() == 0) {
         data.flip();
         processData();
-        data = dataLengthBuffer = null; 
+        dataLengthBuffer.flip();
+        data = null; 
       }
       return count;
     }
 
     private void processData() throws  IOException, InterruptedException {
-      byte[] bytes = new byte[dataLength];
-      data.get(bytes);
-      DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+      DataInputStream dis =
+          new DataInputStream(new ByteArrayInputStream( data.array() ));
       int id = dis.readInt();                    // try to read an id
         
       if (LOG.isDebugEnabled())

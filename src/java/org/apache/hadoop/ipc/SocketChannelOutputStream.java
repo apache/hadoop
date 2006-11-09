@@ -42,10 +42,10 @@ class SocketChannelOutputStream extends OutputStream {
     /** Constructor.
      * 
      */
-    public SocketChannelOutputStream(SocketChannel channel, int bufferSize)
+    public SocketChannelOutputStream(SocketChannel channel)
     {
         this.channel = channel;
-        buffer = ByteBuffer.allocateDirect(bufferSize);
+        buffer = ByteBuffer.allocate(8); // only for small writes
     }
 
     /* ------------------------------------------------------------------------------- */
@@ -85,16 +85,8 @@ class SocketChannelOutputStream extends OutputStream {
      */
     public void write(byte[] buf, int offset, int length) throws IOException
     {
-        if (length > buffer.capacity())
-            flush = ByteBuffer.wrap(buf,offset,length);
-        else
-         {
-             buffer.clear();
-             buffer.put(buf,offset,length);
-             buffer.flip();
-             flush = buffer;
-         }
-         flushBuffer();
+        flush = ByteBuffer.wrap(buf,offset,length);
+        flushBuffer();
     }
 
     /* ------------------------------------------------------------------------------- */
@@ -103,16 +95,8 @@ class SocketChannelOutputStream extends OutputStream {
      */
     public void write(byte[] buf) throws IOException
     {
-        if (buf.length > buffer.capacity())
-            flush = ByteBuffer.wrap(buf);
-        else
-         {
-             buffer.clear();
-             buffer.put(buf);
-             buffer.flip();
-             flush = buffer;
-         }
-         flushBuffer();
+        flush = ByteBuffer.wrap(buf);
+        flushBuffer();
     }
 
 
@@ -144,6 +128,7 @@ class SocketChannelOutputStream extends OutputStream {
                 }
             }
         }
+        flush = null;
     }
 
     /* ------------------------------------------------------------------------------- */

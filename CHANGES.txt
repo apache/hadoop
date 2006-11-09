@@ -34,6 +34,10 @@ Trunk (unreleased changes)
 10. HADOOP-694.  Fix a NullPointerException in jobtracker.
     (Mahadev Konar via cutting)
 
+11. HADOOP-637.  Fix a memory leak in the IPC server.  Direct buffers
+    are not collected like normal buffers, and provided little
+    advantage.  (Raghu Angadi via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
