@@ -69,8 +69,11 @@ echo Y | $HADOOP_BIN_DIR/hadoop namenode -format &&
 $HADOOP_BIN_DIR/hadoop-daemon.sh start namenode && sleep 2 && 
 $HADOOP_BIN_DIR/hadoop-daemon.sh start datanode && sleep 2 && 
 echo CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_BUILD_DIR/libhdfs.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST && 
-CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_BUILD_DIR/libhdfs.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST && BUILD_STATUS=$? && sleep 3
+CLASSPATH=$HADOOP_CONF_DIR:$CLASSPATH LD_PRELOAD="$LIBHDFS_BUILD_DIR/libhdfs.so" $LIBHDFS_BUILD_DIR/$HDFS_TEST
+BUILD_STATUS=$?
+sleep 3
 $HADOOP_BIN_DIR/hadoop-daemon.sh stop datanode && sleep 2 && 
 $HADOOP_BIN_DIR/hadoop-daemon.sh stop namenode && sleep 2 
 
+echo exiting with $BUILD_STATUS
 exit $BUILD_STATUS
