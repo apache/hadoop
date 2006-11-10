@@ -44,6 +44,9 @@ Trunk (unreleased changes)
 13. HADOOP-611.  Add support for iterator-based merging to
     SequenceFile.  (Devaraj Das via cutting)
 
+14. HADOOP-688.  Move DFS administrative commands to a separate
+    command named 'dfsadmin'.  (Dhruba Borthakur via cutting) 
+
 
 Release 0.8.0 - 2006-11-03
 
