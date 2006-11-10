@@ -215,6 +215,11 @@ public class TestTextInputFormat extends TestCase {
     format.configure(job);
     FileSplit[] splits = format.getSplits(localFs, job, 100);
     assertEquals("compressed splits == 2", 2, splits.length);
+    if (splits[0].getPath().getName().equals("part2.txt.gz")) {
+      FileSplit tmp = splits[0];
+      splits[0] = splits[1];
+      splits[1] = tmp;
+    }
     List<Text> results = readSplit(format, splits[0], job);
     assertEquals("splits[0] length", 6, results.size());
     assertEquals("splits[0][5]", " dog", results.get(5).toString());

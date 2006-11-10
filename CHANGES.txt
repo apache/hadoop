@@ -38,6 +38,9 @@ Trunk (unreleased changes)
     are not collected like normal buffers, and provided little
     advantage.  (Raghu Angadi via cutting)
 
+12. HADOOP-696.  Fix TestTextInputFormat unit test to not rely on the
+    order of directory listings.  (Sameer Paranjpye via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
