@@ -50,6 +50,9 @@ Trunk (unreleased changes)
 15. HADOOP-708.  Fix test-libhdfs to return the correct status, so
     that failures will break the build.  (Nigel Daley via cutting)
 
+16. HADOOP-646.  Fix namenode to handle edits files larger than 2GB.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

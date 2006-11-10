@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -157,8 +158,15 @@ class FSEditLog {
               new FileInputStream(edits)));
       // Read log file version. Could be missing. 
       in.mark( 4 );
-      if( in.available() > 0 ) {
+      // If edits log is greater than 2G, available method will return negative
+      // numbers, so we avoid having to call available
+      boolean available = true;
+      try {
         logVersion = in.readByte();
+      } catch (EOFException e) {
+        available = false;
+      }
+      if (available) {
         in.reset();
         if( logVersion >= 0 )
           logVersion = 0;
@@ -174,8 +182,13 @@ class FSEditLog {
       
       short replication = (short)conf.getInt("dfs.replication", 3);
       try {
-        while (in.available() > 0) {
-          byte opcode = in.readByte();
+        while (true) {
+          byte opcode = -1;
+          try {
+            opcode = in.readByte();
+          } catch (EOFException e) {
+            break; // no more transactions
+          }
           numEdits++;
           switch (opcode) {
           case OP_ADD: {
