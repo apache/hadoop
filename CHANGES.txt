@@ -60,6 +60,9 @@ Trunk (unreleased changes)
     sort pass over the data and should consequently significantly
     decrease overall processing time.  (Devaraj Das via cutting)
 
+19. HADOOP-661.  Make each job's configuration visible through the web
+    ui.  (Arun C Murthy via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

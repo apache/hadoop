@@ -59,11 +59,16 @@
     }
     JobProfile profile = job.getProfile();
     JobStatus status = job.getStatus();
+    int runState = status.getRunState();
     out.print("<b>User:</b> " + profile.getUser() + "<br>\n");
     out.print("<b>Job Name:</b> " + profile.getJobName() + "<br>\n");
-    out.print("<b>Job File:</b> " + profile.getJobFile() + "<br>\n");
+    if (runState == JobStatus.RUNNING) {
+      out.print("<b>Job File:</b> <a href=\"/jobconf.jsp?jobid=" + jobId + "\">" + 
+          profile.getJobFile() + "</a><br>\n");
+    } else {
+      out.print("<b>Job File:</b> " + profile.getJobFile() + "<br>\n");
+    }
     out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
-    int runState = status.getRunState();
     if (runState == JobStatus.RUNNING) {
       out.print("<b>Status:</b> Running<br>\n");
     } else {
