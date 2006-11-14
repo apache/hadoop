@@ -127,12 +127,12 @@ public class TestRecordIO extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal(new Text("random &lt; %text<&more"));
+            r1.setStringVal(new Text("ran\002dom &lt; %text<&more"));
             r1.setBufferVal(new ByteArrayOutputStream(20));
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             RecRecord0 r0 = new RecRecord0();
-            r0.setStringVal(new Text("other %random &amp; >&more text"));
+            r0.setStringVal(new Text("other %rando\007m &amp; >&more text"));
             r1.setRecordVal(r0);
             out.write(r1);
             ostream.close();

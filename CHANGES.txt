@@ -67,6 +67,9 @@ Trunk (unreleased changes)
     Each task's log output is now available through the web ui.  (Arun
     C Murthy via cutting)
 
+21. HADOOP-712.  Fix record io's xml serialization to correctly handle
+    control-characters.  (Milind Bhandarkar via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
