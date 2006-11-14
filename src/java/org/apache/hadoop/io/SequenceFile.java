@@ -33,6 +33,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** Support for flat files of binary key/value pairs. */
@@ -1538,6 +1539,34 @@ public class SequenceFile {
       }
     }
 
+    /** 
+     * Perform a file sort from a set of input files and return an iterator.
+     * @param inFiles the files to be sorted
+     * @param tempDir the directory where temp files are created during sort
+     * @param deleteInput should the input files be deleted as they are read?
+     * @return iterator the RawKeyValueIterator
+     */
+    public RawKeyValueIterator sortAndIterate(Path[] inFiles, Path tempDir, 
+                                    boolean deleteInput) throws IOException {
+      Path outFile = new Path(tempDir + Path.SEPARATOR + "all.2");
+      if (fs.exists(outFile)) {
+        throw new IOException("already exists: " + outFile);
+      }
+      this.inFiles = inFiles;
+      //outFile will basically be used as prefix for temp files in the cases
+      //where sort outputs multiple sorted segments. For the single segment
+      //case, the outputFile itself will contain the sorted data for that
+      //segment
+      this.outFile = outFile;
+
+      int segments = sortPass(deleteInput);
+      if (segments > 1)
+        return merge(outFile.suffix(".0"), outFile.suffix(".0.index"));
+      else if (segments == 1)
+        return merge(new Path[]{outFile}, true);
+      else return null;
+    }
+
     /**
      * The backwards compatible interface to sort.
      * @param inFile the input file to sort
@@ -1799,6 +1828,10 @@ public class SequenceFile {
        * @throws IOException
        */
       void close() throws IOException;
+      /** Gets the Progress object; this has a float (0.0 - 1.0) 
+       * indicating the bytes processed by the iterator so far
+       */
+      Progress getProgress();
     }    
     
   /**
@@ -1941,6 +1974,9 @@ public class SequenceFile {
       private boolean blockCompress;
       private DataOutputBuffer rawKey = new DataOutputBuffer();
       private ValueBytes rawValue;
+      private long totalBytesProcessed;
+      private float progPerByte;
+      private Progress mergeProgress = new Progress();
       
       //a TreeMap used to store the segments sorted by size (segment offset and
       //segment path name is used to break ties between segments of same sizes)
@@ -1992,7 +2028,7 @@ public class SequenceFile {
         //load the raw value. Re-use the existing rawValue buffer
         if(rawValue == null)
           rawValue = ms.in.createValueBytes();
-        ms.nextRawValue(rawValue);
+        int valLength = ms.nextRawValue(rawValue);
 
         if (ms.nextRawKey()) {
           adjustTop();
@@ -2000,9 +2036,17 @@ public class SequenceFile {
           pop();
           ms.cleanup();
         }
+        if (progPerByte > 0) {
+          totalBytesProcessed += rawKey.getLength() + valLength;
+          mergeProgress.set(totalBytesProcessed * progPerByte);
+        }
         return true;
       }
       
+      public Progress getProgress() {
+        return mergeProgress; 
+      }
+
       /** This is the single level merge that is called multiple times 
        * depending on the factor size and the number of segments
        * @return RawKeyValueIterator
@@ -2029,6 +2073,13 @@ public class SequenceFile {
           //if we have lesser number of segments remaining, then just return the
           //iterator, else do another single level merge
           if (numSegments <= factor) {
+            //calculate the length of the remaining segments. Required for 
+            //calculating the merge progress
+            long totalBytes = 0;
+            for (int i = 0; i < numSegments; i++)
+              totalBytes += mStream[i].segmentLength;
+            if (totalBytes != 0) //being paranoid
+              progPerByte = 1.0f / (float)totalBytes;
             return this;
           } else {
             //we want to spread the creation of temp files on multiple disks if 

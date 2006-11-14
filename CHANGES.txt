@@ -56,6 +56,10 @@ Trunk (unreleased changes)
 17. HADOOP-705.  Fix a bug in the JobTracker when failed jobs were
     not completely cleaned up.  (Mahadev Konar via cutting)
 
+18. HADOOP-613.  Perform final merge while reducing.  This removes one
+    sort pass over the data and should consequently significantly
+    decrease overall processing time.  (Devaraj Das via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

@@ -122,23 +122,28 @@ class ReduceTask extends Task {
 
   /** Iterates values while keys match in sorted input. */
   private class ValuesIterator implements Iterator {
-    private SequenceFile.Reader in;               // input file
+    private SequenceFile.Sorter.RawKeyValueIterator in; //input iterator
     private WritableComparable key;               // current key
     private Writable value;                       // current value
     private boolean hasNext;                      // more w/ this key
     private boolean more;                         // more in file
-    private float progPerByte;
     private TaskUmbilicalProtocol umbilical;
     private WritableComparator comparator;
+    private Class keyClass;
+    private Class valClass;
+    private DataOutputBuffer valOut = new DataOutputBuffer();
+    private DataInputBuffer valIn = new DataInputBuffer();
+    private DataInputBuffer keyIn = new DataInputBuffer();
 
-    public ValuesIterator (SequenceFile.Reader in, long length,
-                           WritableComparator comparator,
-                           TaskUmbilicalProtocol umbilical)
+    public ValuesIterator (SequenceFile.Sorter.RawKeyValueIterator in, 
+                           WritableComparator comparator, Class keyClass,
+                           Class valClass, TaskUmbilicalProtocol umbilical)
       throws IOException {
       this.in = in;
-      this.progPerByte = 1.0f / (float)length;
       this.umbilical = umbilical;
       this.comparator = comparator;
+      this.keyClass = keyClass;
+      this.valClass = valClass;
       getNext();
     }
 
@@ -173,18 +178,26 @@ class ReduceTask extends Task {
     public WritableComparable getKey() { return key; }
 
     private void getNext() throws IOException {
-      reducePhase.set(in.getPosition()*progPerByte); // update progress
+      reducePhase.set(in.getProgress().get()); // update progress
       reportProgress(umbilical);
 
       Writable lastKey = key;                     // save previous key
       try {
-        key = (WritableComparable)in.getKeyClass().newInstance();
-        value = (Writable)in.getValueClass().newInstance();
+        key = (WritableComparable)keyClass.newInstance();
+        value = (Writable)valClass.newInstance();
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
-      more = in.next(key, value);
+      more = in.next();
       if (more) {
+        //de-serialize the raw key/value
+        keyIn.reset(in.getKey().getData(), in.getKey().getLength());
+        key.readFields(keyIn);
+        valOut.reset();
+        (in.getValue()).writeUncompressedBytes(valOut);
+        valIn.reset(valOut.getData(), valOut.getLength());
+        value.readFields(valIn);
+
         if (lastKey == null) {
           hasNext = true;
         } else {
@@ -233,10 +246,12 @@ class ReduceTask extends Task {
       };
     sortProgress.setName("Sort progress reporter for task "+getTaskId());
 
-    Path sortedFile = job.getLocalPath(getTaskId()+Path.SEPARATOR+"all.2");
+    Path tempDir = job.getLocalPath(getTaskId()); 
 
     WritableComparator comparator = job.getOutputKeyComparator();
-    
+   
+    SequenceFile.Sorter.RawKeyValueIterator rIter;
+ 
     try {
       setPhase(TaskStatus.Phase.SORT) ; 
       sortProgress.start();
@@ -244,7 +259,8 @@ class ReduceTask extends Task {
       // sort the input file
       SequenceFile.Sorter sorter =
         new SequenceFile.Sorter(lfs, comparator, valueClass, job);
-      sorter.sort(mapFiles, sortedFile, !conf.getKeepFailedTaskFiles()); // sort
+      rIter = sorter.sortAndIterate(mapFiles, tempDir, 
+                                    !conf.getKeepFailedTaskFiles()); // sort
 
     } finally {
       sortComplete = true;
@@ -269,11 +285,11 @@ class ReduceTask extends Task {
       };
     
     // apply reduce function
-    SequenceFile.Reader in = new SequenceFile.Reader(lfs, sortedFile, job);
-    long length = lfs.getLength(sortedFile);
     try {
-      ValuesIterator values = new ValuesIterator(in, length, comparator,
-                                                 umbilical);
+      Class keyClass = job.getMapOutputKeyClass();
+      Class valClass = job.getMapOutputValueClass();
+      ValuesIterator values = new ValuesIterator(rIter, comparator, keyClass, 
+                                                 valClass, umbilical);
       while (values.more()) {
         myMetrics.reduceInput();
         reducer.reduce(values.getKey(), values, collector, reporter);
@@ -282,8 +298,6 @@ class ReduceTask extends Task {
 
     } finally {
       reducer.close();
-      in.close();
-      lfs.delete(sortedFile);                     // remove sorted
       out.close(reporter);
     }
     done(umbilical);
