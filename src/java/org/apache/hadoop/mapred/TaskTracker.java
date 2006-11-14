@@ -276,13 +276,25 @@ public class TaskTracker
                                   jobId + Path.SEPARATOR + "job.jar");
   
           String jobFile = t.getJobFile();
+          FileSystem localFs = FileSystem.getNamed("local", fConf);
+          // this will happen on a partial execution of localizeJob.
+          // Sometimes the job.xml gets copied but copying job.jar
+          // might throw out an exception
+          // we should clean up and then try again
+          Path jobDir = localJobFile.getParent();
+          if (localFs.exists(jobDir)){
+            localFs.delete(jobDir);
+            boolean b = localFs.mkdirs(jobDir);
+            if (!b)
+              throw new IOException("Not able to create job directory "
+                  + jobDir.toString());
+          }
           fs.copyToLocalFile(new Path(jobFile), localJobFile);
           JobConf localJobConf = new JobConf(localJobFile);
           String jarFile = localJobConf.getJar();
           if (jarFile != null) {
             fs.copyToLocalFile(new Path(jarFile), localJarFile);
             localJobConf.setJar(localJarFile.toString());
-            FileSystem localFs = FileSystem.getNamed("local", fConf);
             OutputStream out = localFs.create(localJobFile);
             try {
               localJobConf.write(out);

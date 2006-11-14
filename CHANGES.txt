@@ -53,6 +53,9 @@ Trunk (unreleased changes)
 16. HADOOP-646.  Fix namenode to handle edits files larger than 2GB.
     (Milind Bhandarkar via cutting)
 
+17. HADOOP-705.  Fix a bug in the JobTracker when failed jobs were
+    not completely cleaned up.  (Mahadev Konar via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
