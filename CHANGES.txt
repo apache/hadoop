@@ -70,6 +70,9 @@ Trunk (unreleased changes)
 21. HADOOP-712.  Fix record io's xml serialization to correctly handle
     control-characters.  (Milind Bhandarkar via cutting)
 
+22. HADOOP-668.  Improvements to the web-based DFS browser.
+    (Hairong Kuang via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

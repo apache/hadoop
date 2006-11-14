@@ -34,7 +34,7 @@ public class JspHelper {
     static Configuration conf = new Configuration();
 
     static int defaultChunkSizeToView = 
-                        conf.getInt("dfs.default.chunk.view.size",2 * 1024);
+                        conf.getInt("dfs.default.chunk.view.size",32 * 1024);
     static Random rand = new Random();
 
     public JspHelper() {
@@ -160,6 +160,19 @@ public class JspHelper {
       out.print("<tr>");
       for (int i = 0; i < columns.length; i++) {
         out.print("<td style=\"vertical-align: top;\"><B>"+columns[i]+"</B><br></td>");
+      }
+      out.print("</tr>");
+    }
+    public void addTableRow(JspWriter out, String[] columns, int row) throws IOException {
+      out.print("<tr>");
+      
+      for (int i = 0; i < columns.length; i++) {
+        if( row/2*2 == row ) {//even
+          out.print("<td style=\"vertical-align: top;background-color:LightGrey;\"><B>"+columns[i]+"</B><br></td>");
+        } else {
+          out.print("<td style=\"vertical-align: top;background-color:LightBlue;\"><B>"+columns[i]+"</B><br></td>");
+          
+        }
       }
       out.print("</tr>");
     }

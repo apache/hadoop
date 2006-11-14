@@ -153,7 +153,7 @@ creations/deletions), or "all".</description>
  
 <property>
   <name>dfs.default.chunk.view.size</name>
-  <value>2048</value>
+  <value>32768</value>
   <description>The number of bytes to view for a file on the browser.
   </description>
 </property>
