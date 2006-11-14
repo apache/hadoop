@@ -44,19 +44,21 @@
   <%
 	}
   %>
-<td>Finish Time</td><td>Errors</td></tr>
+<td>Finish Time</td><td>Errors</td><td>Task Logs</td></tr>
   <%
     for (int i = 0; i < ts.length; i++) {
       TaskStatus status = ts[i];
       String taskTrackerName = status.getTaskTracker();
       TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
       out.print("<tr><td>" + status.getTaskId() + "</td>");
+      String taskAttemptTracker = null;
       if (taskTracker == null) {
         out.print("<td>" + taskTrackerName + "</td>");
       } else {
-        out.print("<td><a href=\"http://" + taskTracker.getHost() + ":" +
-                  taskTracker.getHttpPort() + "\">" +  taskTracker.getHost() + 
-                  "</a></td>");
+        taskAttemptTracker = "http://" + taskTracker.getHost() + ":" +
+        	taskTracker.getHttpPort();
+        out.print("<td><a href=\"" + taskAttemptTracker + "\">" +  
+        	taskTracker.getHost() + "</a></td>");
       }
       out.print("<td>" + status.getRunState() + "</td>");
       out.print("<td>"+ StringUtils.formatPercent(status.getProgress(),2) + 
@@ -86,7 +88,21 @@
         }
       }
       out.print("</pre></td>");
-      out.print("</tr>\n");
+      if (taskAttemptTracker == null) {
+        out.print("&nbsp;");
+      } else {
+        String taskLogUrl = taskAttemptTracker + "/tasklog.jsp?taskid=" + 
+                              status.getTaskId();
+        String tailFourKBUrl = taskLogUrl + "&tail=true&tailsize=4096";
+        String tailEightKBUrl = taskLogUrl + "&tail=true&tailsize=8192";
+        String entireLogUrl = taskLogUrl + "&all=true";
+        out.print("<td>");
+        out.print("<a href=\"" + tailFourKBUrl + "\">Last 4KB</a><br/>");
+        out.print("<a href=\"" + tailEightKBUrl + "\">Last 8KB</a><br/>");
+        out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");
+        out.print("</td>");
+      }
+      out.println("</tr>\n");
     }
   }
   %>

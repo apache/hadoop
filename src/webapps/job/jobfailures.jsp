@@ -45,9 +45,22 @@
             if (itr.hasNext()) {
               out.print("\n-------\n");
             }
-           }
-         }
-         out.print("</pre></td></tr>\n");
+          }
+        }
+        out.print("</pre></td>");
+        
+        String taskLogUrl = "http://" + taskTracker.getHost() + ":" +
+        	taskTracker.getHttpPort() + "/tasklog.jsp?taskid=" + statuses[i].getTaskId();
+        String tailFourKBUrl = taskLogUrl + "&tail=true&tailsize=4096";
+        String tailEightKBUrl = taskLogUrl + "&tail=true&tailsize=8192";
+        String entireLogUrl = taskLogUrl + "&all=true";
+        out.print("<td>");
+        out.print("<a href=\"" + tailFourKBUrl + "\">Last 4KB</a><br/>");
+        out.print("<a href=\"" + tailEightKBUrl + "\">Last 8KB</a><br/>");
+        out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");
+        out.print("</td>");
+        
+        out.print("</tr>\n");
        }
     }
   }
@@ -78,7 +91,7 @@
     }
     out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
     out.print("<tr><th>Attempt</th><th>Task</th><th>Machine</th>" +
-              "<th>Error</th></tr>\n");
+              "<th>Error</th><th>Logs</th></tr>\n");
     if (includeMap) {
       TaskInProgress[] tips = job.getMapTasks();
       for(int i=0; i < tips.length; ++i) {

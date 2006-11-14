@@ -318,6 +318,9 @@ class ReduceTaskRunner extends TaskRunner {
 
   /** Assemble all of the map output files */
   public boolean prepare() throws IOException {
+    if (!super.prepare()) {
+      return false;
+    }
     
     // cleanup from failures
     this.mapOutputFile.removeAll(reduceTask.getTaskId());

@@ -19,14 +19,10 @@ package org.apache.hadoop.mapred;
 
 import org.apache.commons.logging.*;
 
-import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.util.*;
 import org.apache.hadoop.filecache.*;
 import java.io.*;
-import java.util.jar.*;
 import java.util.Vector;
-import java.util.Enumeration;
 import java.net.URI;
 
 /** Base class that runs a task in a separate process.  Tasks are run in a
@@ -44,10 +40,13 @@ abstract class TaskRunner extends Thread {
 
   protected JobConf conf;
 
+  private TaskLog.Writer taskLogWriter;
+  
   public TaskRunner(Task t, TaskTracker tracker, JobConf conf) {
     this.t = t;
     this.tracker = tracker;
     this.conf = conf;
+    this.taskLogWriter = new TaskLog.Writer(conf, t.getTaskId());
   }
 
   public Task getTask() { return t; }
@@ -56,7 +55,10 @@ abstract class TaskRunner extends Thread {
   /** Called to assemble this task's input.  This method is run in the parent
    * process before the child is spawned.  It should not execute user code,
    * only system code. */
-  public boolean prepare() throws IOException {return true;}
+  public boolean prepare() throws IOException {
+    taskLogWriter.init();                   // initialize the child task's log
+    return true;
+  }
 
   /** Called when this task's output is no longer needed.
   * This method is run in the parent process after the child exits.  It should
@@ -305,7 +307,7 @@ abstract class TaskRunner extends Thread {
         }
       }.start();
         
-      logStream(process.getInputStream());        // normally empty
+      logStream(process.getInputStream());		  // normally empty
       
       int exit_code = process.waitFor();
      
@@ -318,6 +320,7 @@ abstract class TaskRunner extends Thread {
       throw new IOException(e.toString());
     } finally {
       kill();
+      taskLogWriter.close();
     }
   }
 
@@ -335,10 +338,11 @@ abstract class TaskRunner extends Thread {
    */
   private void logStream(InputStream output) {
     try {
-      BufferedReader in = new BufferedReader(new InputStreamReader(output));
-      String line;
-      while ((line = in.readLine()) != null) {
-        LOG.info(t.getTaskId()+" "+line);
+      byte[] buf = new byte[512];
+      int n = 0;
+      while ((n = output.read(buf, 0, buf.length)) != -1) {
+        // Write out to the task's log
+        taskLogWriter.write(buf, 0, n);
       }
     } catch (IOException e) {
       LOG.warn(t.getTaskId()+" Error reading child output", e);
@@ -350,4 +354,5 @@ abstract class TaskRunner extends Thread {
       }
     }
   }
+  
 }

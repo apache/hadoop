@@ -63,6 +63,10 @@ Trunk (unreleased changes)
 19. HADOOP-661.  Make each job's configuration visible through the web
     ui.  (Arun C Murthy via cutting)
 
+20. HADOOP-489.  In MapReduce, separate user logs from system logs.
+    Each task's log output is now available through the web ui.  (Arun
+    C Murthy via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
