@@ -1873,7 +1873,7 @@ public class SequenceFile {
     /**
      * Clones the attributes (like compression of the input file and creates a 
      * corresponding Writer
-     * @param FileSystem
+     * @param fileSys the FileSystem object
      * @param inputFile the path of the input file whose attributes should be 
      * cloned 
      * @param outputFile the path of the output file 
