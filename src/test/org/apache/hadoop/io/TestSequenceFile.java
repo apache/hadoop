@@ -26,6 +26,9 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
 
 
@@ -39,6 +42,10 @@ public class TestSequenceFile extends TestCase {
 
   /** Unit tests for SequenceFile. */
   public void testSequenceFile() throws Exception {
+    compressedSeqFileTest(new DefaultCodec());
+  }
+  
+  public void compressedSeqFileTest(CompressionCodec codec) throws Exception {
     int count = 1024 * 10;
     int megabytes = 1;
     int factor = 5;
@@ -56,7 +63,7 @@ public class TestSequenceFile extends TestCase {
         //LOG.setLevel(Level.FINE);
 
         // SequenceFile.Writer
-        writeTest(fs, count, seed, file, CompressionType.NONE);
+        writeTest(fs, count, seed, file, CompressionType.NONE, null);
         readTest(fs, count, seed, file);
 
         sortTest(fs, count, megabytes, factor, false, file);
@@ -74,7 +81,8 @@ public class TestSequenceFile extends TestCase {
         checkSort(fs, count, seed, file);
         
         // SequenceFile.RecordCompressWriter
-        writeTest(fs, count, seed, recordCompressedFile, CompressionType.RECORD);
+        writeTest(fs, count, seed, recordCompressedFile, CompressionType.RECORD, 
+            codec);
         readTest(fs, count, seed, recordCompressedFile);
 
         sortTest(fs, count, megabytes, factor, false, recordCompressedFile);
@@ -92,7 +100,8 @@ public class TestSequenceFile extends TestCase {
         checkSort(fs, count, seed, recordCompressedFile);
         
         // SequenceFile.BlockCompressWriter
-        writeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK);
+        writeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK,
+            codec);
         readTest(fs, count, seed, blockCompressedFile);
 
         sortTest(fs, count, megabytes, factor, false, blockCompressedFile);
@@ -115,14 +124,14 @@ public class TestSequenceFile extends TestCase {
   }
 
   private static void writeTest(FileSystem fs, int count, int seed, Path file, 
-      CompressionType compressionType)
+      CompressionType compressionType, CompressionCodec codec)
     throws IOException {
     fs.delete(file);
     LOG.info("creating " + count + " records with " + compressionType +
               " compression");
     SequenceFile.Writer writer = 
       SequenceFile.createWriter(fs, conf, file, 
-          RandomDatum.class, RandomDatum.class, compressionType);
+          RandomDatum.class, RandomDatum.class, compressionType, codec);
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
     for (int i = 0; i < count; i++) {
       generator.next();
@@ -151,7 +160,7 @@ public class TestSequenceFile extends TestCase {
       RandomDatum value = generator.getValue();
 
       try {
-        if ((i%5) == 10) {
+        if ((i%5) == 0) {
           // Testing 'raw' apis
           rawKey.reset();
           reader.nextRaw(rawKey, rawValue);
@@ -163,7 +172,8 @@ public class TestSequenceFile extends TestCase {
           } else {
             reader.next(k, v);
           }
-          // Sanity check
+          
+          // Check
           if (!k.equals(key))
             throw new RuntimeException("wrong key at " + i);
           if (!v.equals(value))
@@ -171,6 +181,10 @@ public class TestSequenceFile extends TestCase {
         }
       } catch (IOException ioe) {
         LOG.info("Problem on row " + i);
+        LOG.info("Expected key = " + key);
+        LOG.info("Expected len = " + key.getLength());
+        LOG.info("Actual key = " + k);
+        LOG.info("Actual len = " + k.getLength());
         LOG.info("Expected value = " + value);
         LOG.info("Expected len = " + value.getLength());
         LOG.info("Actual value = " + v);
@@ -298,12 +312,14 @@ public class TestSequenceFile extends TestCase {
     boolean fast = false;
     boolean merge = false;
     String compressType = "NONE";
+    String compressionCodec = "org.apache.hadoop.io.compress.DefaultCodec";
     Path file = null;
     int seed = new Random().nextInt();
 
     String usage = "Usage: SequenceFile (-local | -dfs <namenode:port>) " +
         "[-count N] " + 
-        "[-seed #] [-check] [-compressType <NONE|RECORD|BLOCK>] " +
+        "[-seed #] [-check] [-compressType <NONE|RECORD|BLOCK>] " + 
+        "-codec <compressionCodec> " + 
         "[[-rwonly] | {[-megabytes M] [-factor F] [-nocreate] [-fast] [-merge]}] " +
         " file";
     if (args.length == 0) {
@@ -336,6 +352,8 @@ public class TestSequenceFile extends TestCase {
               merge = true;
           } else if (args[i].equals("-compressType")) {
               compressType = args[++i];
+          } else if (args[i].equals("-codec")) {
+              compressionCodec = args[++i];
           } else {
               // file is required parameter
               file = new Path(args[i]);
@@ -351,6 +369,7 @@ public class TestSequenceFile extends TestCase {
         LOG.info("fast = " + fast);
         LOG.info("merge = " + merge);
         LOG.info("compressType = " + compressType);
+        LOG.info("compressionCodec = " + compressionCodec);
         LOG.info("file = " + file);
 
         if (rwonly && (!create || merge || fast)) {
@@ -360,9 +379,12 @@ public class TestSequenceFile extends TestCase {
 
         CompressionType compressionType = 
           CompressionType.valueOf(compressType);
+        CompressionCodec codec = (CompressionCodec)ReflectionUtils.newInstance(
+                                    conf.getClassByName(compressionCodec), 
+                                    conf);
 
         if (rwonly || (create && !merge)) {
-            writeTest(fs, count, seed, file, compressionType);
+            writeTest(fs, count, seed, file, compressionType, codec);
             readTest(fs, count, seed, file);
         }
 

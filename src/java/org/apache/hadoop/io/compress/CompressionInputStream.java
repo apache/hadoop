@@ -39,7 +39,8 @@ public abstract class CompressionInputStream extends InputStream {
   /**
    * Create a compression input stream that reads
    * the decompressed bytes from the given stream.
-   * @param in
+   * 
+   * @param in The input stream to be compressed.
    */
   protected CompressionInputStream(InputStream in) {
     this.in = in;

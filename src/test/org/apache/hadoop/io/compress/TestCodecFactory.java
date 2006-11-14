@@ -29,6 +29,16 @@ import org.apache.hadoop.conf.Configuration;
 public class TestCodecFactory extends TestCase {
 
   private static class BaseCodec implements CompressionCodec {
+    private Configuration conf;
+    
+    public void setConf(Configuration conf) {
+      this.conf = conf;
+    }
+    
+    public Configuration getConf() {
+      return conf;
+    }
+    
     public CompressionOutputStream createOutputStream(OutputStream out) {
       return null;
     }

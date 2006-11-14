@@ -76,6 +76,11 @@ Trunk (unreleased changes)
 23. HADOOP-715.  Fix build.xml so that test logs are written in build
     directory, rather than in CWD.  (Arun C Murthy via cutting)
 
+24. HADOOP-538.  Add support for building an optional native library,
+    libhadoop.so, that improves the performance of zlib-based
+    compression.  To build this, specify -Dcompile.native to Ant.
+    (Arun C Murthy via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

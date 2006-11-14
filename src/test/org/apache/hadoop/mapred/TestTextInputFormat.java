@@ -26,6 +26,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.*;
+import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestTextInputFormat extends TestCase {
   private static final Log LOG =
@@ -203,13 +204,14 @@ public class TestTextInputFormat extends TestCase {
    * Test using the gzip codec for reading
    */
   public static void testGzip() throws IOException {
+    JobConf job = new JobConf();
     CompressionCodec gzip = new GzipCodec();
+    ReflectionUtils.setConf(gzip, job);
     localFs.delete(workDir);
     writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip, 
               "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
               "this is a test\nof gzip\n");
-    JobConf job = new JobConf();
     job.setInputPath(workDir);
     TextInputFormat format = new TextInputFormat();
     format.configure(job);

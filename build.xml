@@ -15,6 +15,7 @@
   <property name="libhdfs.version" value="1"/>
 
   <property name="src.dir" value="${basedir}/src/java"/>
+  <property name="native.src.dir" value="${basedir}/src/native"/>
   <property name="examples.dir" value="${basedir}/src/examples"/>
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
@@ -28,6 +29,8 @@
   <property name="build.webapps" value="${build.dir}/webapps"/>
   <property name="build.examples" value="${build.dir}/examples"/>
   <property name="build.libhdfs" value="${build.dir}/libhdfs"/>
+  <property name="build.platform" value="${os.name}-${os.arch}-${sun.arch.data.model}"/>
+  <property name="build.native" value="${build.dir}/native/${build.platform}"/>
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
@@ -140,7 +143,7 @@
       />
   </target>
   
-  <target name="compile-core" depends="init, record-parser">
+  <target name="compile-core-classes" depends="init, record-parser">
 
     <copy file="${src.webapps}/datanode/browseDirectory.jsp" todir="${src.webapps}/dfs/"/>
     <jsp-compile
@@ -184,6 +187,46 @@
       <classpath refid="classpath"/>
     </javac>    
 
+    </target>
+
+  <target name="compile-core-native" depends="compile-core-classes"
+          if="compile.native">
+  	
+    <mkdir dir="${build.native}/lib"/>
+    <mkdir dir="${build.native}/src/org/apache/hadoop/io/compress/zlib"/>
+
+  	<javah
+  	  classpath="${build.classes}"
+  	  destdir="${build.native}/src/org/apache/hadoop/io/compress/zlib"
+      force="yes"
+  	  verbose="yes"
+  	  >
+  	  <class name="org.apache.hadoop.io.compress.zlib.ZlibCompressor" />
+      <class name="org.apache.hadoop.io.compress.zlib.ZlibDecompressor" />
+  	</javah>
+
+	<exec dir="${build.native}" executable="sh" failonerror="true">
+	  <env key="OS_NAME" value="${os.name}"/>
+	  <env key="OS_ARCH" value="${os.arch}"/>
+	  <env key="JVM_DATA_MODEL" value="${sun.arch.data.model}"/>
+	  <env key="HADOOP_NATIVE_SRCDIR" value="${native.src.dir}"/>
+	  <arg line="${native.src.dir}/configure"/>
+    </exec>
+
+    <exec dir="${build.native}" executable="make" failonerror="true">
+      <env key="OS_NAME" value="${os.name}"/>
+      <env key="OS_ARCH" value="${os.arch}"/>
+  	  <env key="JVM_DATA_MODEL" value="${sun.arch.data.model}"/>
+  	  <env key="HADOOP_NATIVE_SRCDIR" value="${native.src.dir}"/>
+    </exec>
+
+	<exec dir="${build.native}" executable="sh" failonerror="true">
+	  <arg line="${build.native}/libtool --mode=install cp ${build.native}/lib/libhadoop.la ${build.native}/lib"/>
+    </exec>
+
+  </target>
+
+  <target name="compile-core" depends="compile-core-classes,compile-core-native">
   </target>
 
   <target name="compile-contrib" depends="compile-core">
@@ -328,6 +371,8 @@
       <sysproperty key="test.build.data" value="${test.build.data}"/>
       <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
+      <sysproperty key="java.library.path"
+       value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
       <classpath refid="${test.classpath.id}"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
@@ -409,8 +454,18 @@
     <mkdir dir="${dist.dir}/docs/api"/>
 
     <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
-      <fileset dir="lib"/>
+      <fileset dir="lib">
+        <exclude name="**/native/**"/>
+      </fileset>
     </copy>
+
+    <mkdir dir="${dist.dir}/lib/native"/>
+  	<exec dir="${dist.dir}" executable="sh" failonerror="true">
+	  <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
+	  <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
+	  <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
+	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
+    </exec>
 
     <copy todir="${dist.dir}/webapps">
       <fileset dir="${build.webapps}"/>

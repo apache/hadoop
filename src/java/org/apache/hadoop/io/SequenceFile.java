@@ -30,11 +30,13 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.DefaultCodec;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.NativeCodeLoader;
 
 /** Support for flat files of binary key/value pairs. */
 public class SequenceFile {
@@ -185,6 +187,13 @@ public class SequenceFile {
       Class keyClass, Class valClass, 
       CompressionType compressionType, CompressionCodec codec) 
   throws IOException {
+    if ((codec instanceof GzipCodec) && 
+        !NativeCodeLoader.isNativeCodeLoaded() && 
+        !ZlibFactory.isNativeZlibLoaded()) {
+      throw new IllegalArgumentException("SequenceFile doesn't work with " +
+          "GzipCodec without native-hadoop code!");
+    }
+    
     Writer writer = null;
     
     if (compressionType == CompressionType.NONE) {
@@ -218,6 +227,13 @@ public class SequenceFile {
       Class keyClass, Class valClass, 
       CompressionType compressionType, CompressionCodec codec,
       Progressable progress) throws IOException {
+    if ((codec instanceof GzipCodec) && 
+        !NativeCodeLoader.isNativeCodeLoaded() && 
+        !ZlibFactory.isNativeZlibLoaded()) {
+      throw new IllegalArgumentException("SequenceFile doesn't work with " +
+          "GzipCodec without native-hadoop code!");
+    }
+    
     Writer writer = null;
     
     if (compressionType == CompressionType.NONE) {
@@ -244,18 +260,25 @@ public class SequenceFile {
    * @throws IOException
    */
   private static Writer
-  createWriter(FSDataOutputStream out, 
+  createWriter(Configuration conf, FSDataOutputStream out, 
       Class keyClass, Class valClass, boolean compress, boolean blockCompress,
       CompressionCodec codec)
   throws IOException {
+    if ((codec instanceof GzipCodec) && 
+        !NativeCodeLoader.isNativeCodeLoaded() && 
+        !ZlibFactory.isNativeZlibLoaded()) {
+      throw new IllegalArgumentException("SequenceFile doesn't work with " +
+          "GzipCodec without native-hadoop code!");
+    }
+
     Writer writer = null;
 
     if (!compress) {
-      writer = new Writer(out, keyClass, valClass);
+      writer = new Writer(conf, out, keyClass, valClass);
     } else if (compress && !blockCompress) {
-      writer = new RecordCompressWriter(out, keyClass, valClass, codec);
+      writer = new RecordCompressWriter(conf, out, keyClass, valClass, codec);
     } else {
-      writer = new BlockCompressWriter(out, keyClass, valClass, codec);
+      writer = new BlockCompressWriter(conf, out, keyClass, valClass, codec);
     }
     
     return writer;
@@ -364,6 +387,7 @@ public class SequenceFile {
   
   /** Write key/value pairs to a sequence-format file. */
   public static class Writer {
+    Configuration conf;
     FSDataOutputStream out;
     DataOutputBuffer buffer = new DataOutputBuffer();
     Path target = null;
@@ -406,16 +430,17 @@ public class SequenceFile {
     public Writer(FileSystem fs, Configuration conf, Path name, 
         Class keyClass, Class valClass, Progressable progress)
       throws IOException {
-      init(name, fs.create(name, progress), keyClass, valClass, false, null);
+      init(name, conf, fs.create(name, progress), keyClass, valClass, false, null);
       initializeFileHeader();
       writeFileHeader();
       finalizeFileHeader();
     }
 
     /** Write to an arbitrary stream using a specified buffer size. */
-    private Writer(FSDataOutputStream out, Class keyClass, Class valClass)
+    private Writer(Configuration conf, FSDataOutputStream out, 
+        Class keyClass, Class valClass)
     throws IOException {
-      init(null, out, keyClass, valClass, false, null);
+      init(null, conf, out, keyClass, valClass, false, null);
       
       initializeFileHeader();
       writeFileHeader();
@@ -453,17 +478,19 @@ public class SequenceFile {
     }
 
     /** Initialize. */
-    void init(Path name, FSDataOutputStream out,
+    void init(Path name, Configuration conf, FSDataOutputStream out,
                       Class keyClass, Class valClass,
                       boolean compress, CompressionCodec codec) 
     throws IOException {
       this.target = name;
+      this.conf = conf;
       this.out = out;
       this.keyClass = keyClass;
       this.valClass = valClass;
       this.compress = compress;
       this.codec = codec;
       if(this.codec != null) {
+        ReflectionUtils.setConf(this.codec, this.conf);
         this.deflateFilter = this.codec.createOutputStream(buffer);
         this.deflateOut = 
           new DataOutputStream(new BufferedOutputStream(deflateFilter));
@@ -479,6 +506,9 @@ public class SequenceFile {
     /** Returns the compression codec of data in this file. */
     public CompressionCodec getCompressionCodec() { return codec; }
 
+    /** Returns the configuration of this file. */
+    Configuration getConf() { return conf; }
+    
     /** Close the file. */
     public synchronized void close() throws IOException {
       if (out != null) {
@@ -571,7 +601,7 @@ public class SequenceFile {
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
         Class keyClass, Class valClass, CompressionCodec codec) 
     throws IOException {
-      super.init(name, fs.create(name), keyClass, valClass, true, codec);
+      super.init(name, conf, fs.create(name), keyClass, valClass, true, codec);
       
       initializeFileHeader();
       writeFileHeader();
@@ -583,7 +613,7 @@ public class SequenceFile {
         Class keyClass, Class valClass, CompressionCodec codec,
         Progressable progress)
     throws IOException {
-      super.init(name, fs.create(name, progress), 
+      super.init(name, conf, fs.create(name, progress), 
           keyClass, valClass, true, codec);
       
       initializeFileHeader();
@@ -592,10 +622,10 @@ public class SequenceFile {
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */
-    private RecordCompressWriter(FSDataOutputStream out,
+    private RecordCompressWriter(Configuration conf, FSDataOutputStream out,
                    Class keyClass, Class valClass, CompressionCodec codec)
       throws IOException {
-      super.init(null, out, keyClass, valClass, true, codec);
+      super.init(null, conf, out, keyClass, valClass, true, codec);
       
       initializeFileHeader();
       writeFileHeader();
@@ -675,7 +705,7 @@ public class SequenceFile {
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
         Class keyClass, Class valClass, CompressionCodec codec) 
     throws IOException {
-      super.init(name, fs.create(name), keyClass, valClass, true, codec);
+      super.init(name, conf, fs.create(name), keyClass, valClass, true, codec);
       init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
       
       initializeFileHeader();
@@ -688,7 +718,7 @@ public class SequenceFile {
         Class keyClass, Class valClass, CompressionCodec codec,
         Progressable progress)
     throws IOException {
-      super.init(name, fs.create(name, progress), keyClass, valClass, 
+      super.init(name, conf, fs.create(name, progress), keyClass, valClass, 
           true, codec);
       init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
       
@@ -698,10 +728,10 @@ public class SequenceFile {
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */
-    private BlockCompressWriter(FSDataOutputStream out,
+    private BlockCompressWriter(Configuration conf, FSDataOutputStream out,
                    Class keyClass, Class valClass, CompressionCodec codec)
       throws IOException {
-      super.init(null, out, keyClass, valClass, true, codec);
+      super.init(null, conf, out, keyClass, valClass, true, codec);
       init(1000000);
       
       initializeFileHeader();
@@ -1013,6 +1043,9 @@ public class SequenceFile {
     /** Returns the compression codec of data in this file. */
     public CompressionCodec getCompressionCodec() { return codec; }
 
+    /** Returns the configuration used for this file. */
+    Configuration getConf() { return conf; }
+    
     /** Read a compressed buffer */
     private synchronized void readBuffer(DataInputBuffer buffer, 
         CompressionInputStream filter) throws IOException {
@@ -1731,7 +1764,7 @@ public class SequenceFile {
         }
 
         long segmentStart = out.getPos();
-        Writer writer = createWriter(out, keyClass, valClass, 
+        Writer writer = createWriter(conf, out, keyClass, valClass, 
             isCompressed, isBlockCompressed, codec);
         
         if (!done) {
@@ -1851,7 +1884,7 @@ public class SequenceFile {
      * @param inNames the array of path names
      * @param deleteInputs true if the input files should be deleted when 
      * unnecessary
-     * @return RawKeyValueIterator
+     * @return RawKeyValueIteratorMergeQueue
      * @throws IOException
      */
     public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs) 
@@ -1893,7 +1926,7 @@ public class SequenceFile {
         out = fs.create(outputFile, true, memory/(factor+1), prog);
       else
         out = fs.create(outputFile, true, memory/(factor+1));
-      Writer writer = createWriter(out, keyClass, valClass, compress, 
+      Writer writer = createWriter(conf, out, keyClass, valClass, compress, 
                           blockCompress, codec);
       return writer;
     }

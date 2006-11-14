@@ -39,12 +39,16 @@ public class TestCodec extends TestCase {
 
   private static final Log LOG= 
     LogFactory.getLog("org.apache.hadoop.io.compress.TestCodec");
+
+  private int count = 10000;
+  private int seed = new Random().nextInt();
   
-  public void testCodec() throws IOException {
-    int count = 10000;
-    int seed = new Random().nextInt();
-    
+  public void testDefaultCodec() throws IOException {
     codecTest(seed, count, "org.apache.hadoop.io.compress.DefaultCodec");
+  }
+  
+  public void testGzipCodec() throws IOException {
+    codecTest(seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
   
   private static void codecTest(int seed, int count, String codecClass) 
@@ -59,7 +63,7 @@ public class TestCodec extends TestCase {
     } catch (ClassNotFoundException cnfe) {
       throw new IOException("Illegal codec!");
     }
-    LOG.debug("Created a Codec object of type: " + codecClass);
+    LOG.info("Created a Codec object of type: " + codecClass);
 
     // Generate data
     DataOutputBuffer data = new DataOutputBuffer();
@@ -76,7 +80,7 @@ public class TestCodec extends TestCase {
     DataInputStream originalIn = new DataInputStream(new BufferedInputStream(originalData));
     originalData.reset(data.getData(), 0, data.getLength());
     
-    LOG.debug("Generated " + count + " records");
+    LOG.info("Generated " + count + " records");
     
     // Compress data
     DataOutputBuffer compressedDataBuffer = new DataOutputBuffer();
@@ -84,24 +88,19 @@ public class TestCodec extends TestCase {
       codec.createOutputStream(compressedDataBuffer);
     DataOutputStream deflateOut = 
       new DataOutputStream(new BufferedOutputStream(deflateFilter));
-    
-    deflateFilter.resetState();
-    compressedDataBuffer.reset();
     deflateOut.write(data.getData(), 0, data.getLength());
     deflateOut.flush();
     deflateFilter.finish();
-    LOG.debug("Finished compressing data");
+    LOG.info("Finished compressing data");
     
     // De-compress data
     DataInputBuffer deCompressedDataBuffer = new DataInputBuffer();
+    deCompressedDataBuffer.reset(compressedDataBuffer.getData(), 0, 
+        compressedDataBuffer.getLength());
     CompressionInputStream inflateFilter = 
       codec.createInputStream(deCompressedDataBuffer);
     DataInputStream inflateIn = 
       new DataInputStream(new BufferedInputStream(inflateFilter));
-    
-    inflateFilter.resetState();
-    deCompressedDataBuffer.reset(compressedDataBuffer.getData(), 0, 
-        compressedDataBuffer.getLength());
 
     // Check
     for(int i=0; i < count; ++i) {
@@ -115,7 +114,7 @@ public class TestCodec extends TestCase {
       k2.readFields(inflateIn);
       v2.readFields(inflateIn);
     }
-    LOG.debug("SUCCESS! Completed checking " + count + " records");
+    LOG.info("SUCCESS! Completed checking " + count + " records");
   }
   
   public static void main(String[] args) {

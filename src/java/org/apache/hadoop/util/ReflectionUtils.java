@@ -23,7 +23,6 @@ import java.io.*;
 import java.lang.management.*;
 
 import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.mapred.*;
 
@@ -34,6 +33,24 @@ import org.apache.hadoop.mapred.*;
 public class ReflectionUtils {
     
     private static final Class[] emptyArray = new Class[]{};
+
+    /**
+     * Check and set 'configuration' if necessary.
+     * 
+     * @param theObject object for which to set configuration
+     * @param conf Configuration
+     */
+    public static void setConf(Object theObject, Configuration conf) {
+      if (conf != null) {
+        if (theObject instanceof Configurable) {
+            ((Configurable) theObject).setConf(conf);
+        }
+        if (conf instanceof JobConf && 
+                theObject instanceof JobConfigurable) {
+            ((JobConfigurable)theObject).configure((JobConf) conf);
+        }
+      }
+    }
 
     /** Create an object for the given class and initialize it from conf
      * 
@@ -50,18 +67,10 @@ public class ReflectionUtils {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        if (conf != null) {
-            if (result instanceof Configurable) {
-                ((Configurable) result).setConf(conf);
-            }
-            if (conf instanceof JobConf && 
-                    result instanceof JobConfigurable) {
-                ((JobConfigurable)result).configure((JobConf) conf);
-            }
-        }
+        setConf(result, conf);
         return result;
     }
-    
+
     static private ThreadMXBean threadBean = 
       ManagementFactory.getThreadMXBean();
     

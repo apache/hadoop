@@ -1,0 +1,10 @@
+Package: libhadoop 
+Authors: Arun C Murthy <arunc@yahoo-inc.com> 
+
+MOTIVATION
+
+The libhadoop package contains the native code for any of hadoop (http://lucene.apache.org/hadoop). 
+
+IMPROVEMENTS
+
+Any suggestions for improvements or patched should be sent to hadoop-dev@lucene.apache.org. Please go through http://wiki.apache.org/lucene-hadoop/HowToContribute for more information on how to contribute.
