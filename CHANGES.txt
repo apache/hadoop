@@ -73,6 +73,9 @@ Trunk (unreleased changes)
 22. HADOOP-668.  Improvements to the web-based DFS browser.
     (Hairong Kuang via cutting)
 
+23. HADOOP-715.  Fix build.xml so that test logs are written in build
+    directory, rather than in CWD.  (Arun C Murthy via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

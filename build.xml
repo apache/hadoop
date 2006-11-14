@@ -36,7 +36,7 @@
   <property name="test.build.dir" value="${build.dir}/test"/>
   <property name="test.build.data" value="${test.build.dir}/data"/>
   <property name="test.cache.data" value="${test.build.dir}/cache"/>
-  <property name="hadoop.log.dir" value="${test.build.dir}/logs"/>
+  <property name="test.log.dir" value="${test.build.dir}/logs"/>
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.testjar" value="${test.build.dir}/testjar"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
@@ -320,15 +320,14 @@
 
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
-    <delete dir="${hadoop.log.dir}"/>
-    <mkdir dir="${hadoop.log.dir}"/>
+    <delete dir="${test.log.dir}"/>
+    <mkdir dir="${test.log.dir}"/>
     <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no" 
            fork="yes" dir="${basedir}"
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
-      <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/>
+      <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
-      <sysproperty key="hadoop.log.dir" value="."/>
       <classpath refid="${test.classpath.id}"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
