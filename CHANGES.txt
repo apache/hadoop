@@ -85,6 +85,9 @@ Trunk (unreleased changes)
     to be smaller than the buffer size, typically only when debugging.
     (Milind Bhandarkar via cutting)
 
+26. HADOOP-695.  Fix a NullPointerException in contrib/streaming.
+    (Hairong Kuang via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

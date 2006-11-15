@@ -97,13 +97,13 @@ public class StreamLineRecordReader extends StreamBaseRecordReader {
       }
 
       line = UTF8ByteArrayUtils.readLine((InputStream) in_);
+      if (line == null) return false;
       try {
         Text.validateUTF8(line);
       } catch (MalformedInputException m) {
         System.err.println("line=" + line + "|" + new Text(line));
         System.out.flush();
       }
-      if (line == null) return false;
       try {
         int tab = UTF8ByteArrayUtils.findTab(line);
         if (tab == -1) {
