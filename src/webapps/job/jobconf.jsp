@@ -44,10 +44,8 @@
     JobConf jobConf = job.getJobConf();
     ByteArrayOutputStream jobConfXML = new ByteArrayOutputStream();
     jobConf.write(jobConfXML);
-    String baseUrl = request.getScheme() + "://" + request.getServerName() + ":"
-                     + request.getServerPort();
-    URL jobConfXSL = new URL(baseUrl + "/static/jobconf.xsl");
-    XMLUtils.transform(jobConfXSL.openStream(),
+    XMLUtils.transform(
+        jobConf.getConfResourceAsInputStream("webapps/static/jobconf.xsl"),
 	    new ByteArrayInputStream(jobConfXML.toByteArray()), 
 	    out
 	  );
