@@ -1080,7 +1080,8 @@ class DFSClient implements FSConstants {
                 throw new IOException("Stream closed");
             }
             while (len > 0) {
-              int remaining = BUFFER_SIZE - pos;
+              int remaining = Math.min(BUFFER_SIZE - pos,
+                  (int)((blockSize - bytesWrittenToBlock) - pos));
               int toWrite = Math.min(remaining, len);
               System.arraycopy(b, off, outBuf, pos, toWrite);
               pos += toWrite;

@@ -81,6 +81,10 @@ Trunk (unreleased changes)
     compression.  To build this, specify -Dcompile.native to Ant.
     (Arun C Murthy via cutting)
 
+25. HADOOP-610.  Fix an problem when the DFS block size is configured
+    to be smaller than the buffer size, typically only when debugging.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
