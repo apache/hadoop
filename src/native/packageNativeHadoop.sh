@@ -17,11 +17,11 @@ TAR='tar -c'
 UNTAR='tar -x'
 
 # Copy the pre-built libraries in $BASE_NATIVE_LIB_DIR
-if test -e $BASE_NATIVE_LIB_DIR
+if [ -d $BASE_NATIVE_LIB_DIR ]
 then
   for platform in `ls $BASE_NATIVE_LIB_DIR`
   do
-    if test ! -e $DIST_LIB_DIR/$platform
+    if [ ! -d $DIST_LIB_DIR/$platform ]
     then
       mkdir -p $DIST_LIB_DIR/$platform
       echo "Created $DIST_LIB_DIR/$platform"
@@ -33,11 +33,11 @@ then
 fi
 
 # Copy the custom-built libraries in $BUILD_DIR
-if test -e $BUILD_NATIVE_DIR
+if [ -d $BUILD_NATIVE_DIR ]
 then 
   for platform in `ls $BUILD_NATIVE_DIR`
   do
-    if test ! -e $DIST_LIB_DIR/$platform
+    if [ ! -d $DIST_LIB_DIR/$platform ]
     then
       mkdir -p $DIST_LIB_DIR/$platform
       echo "Created $DIST_LIB_DIR/$platform"
