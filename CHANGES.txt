@@ -88,6 +88,9 @@ Trunk (unreleased changes)
 26. HADOOP-695.  Fix a NullPointerException in contrib/streaming.
     (Hairong Kuang via cutting)
 
+27. HADOOP-652.  In DFS, when a file is deleted, the block count is
+    now decremented.  (Vladimir Krokhmalyov via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

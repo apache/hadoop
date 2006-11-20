@@ -170,6 +170,16 @@ class FSDataset implements FSConstants {
             }
         }
         
+        void clearPath(File f) {
+          if (dir.compareTo(f) == 0) numBlocks--;
+          else {
+            if ((siblings != null) && (myIdx != (siblings.length - 1)))
+              siblings[myIdx + 1].clearPath(f);
+            else if (children != null)
+              children[0].clearPath(f);
+          }
+        }
+        
         public String toString() {
           return "FSDir{" +
               "dir=" + dir +
@@ -259,6 +269,10 @@ class FSDataset implements FSConstants {
       
       void getBlockMap(HashMap<Block, File> blockMap) {
         dataDir.getBlockMap(blockMap);
+      }
+      
+      void clearPath(File f) {
+        dataDir.clearPath(f);
       }
       
       public String toString() {
@@ -498,15 +512,18 @@ class FSDataset implements FSConstants {
      */
     public void invalidate(Block invalidBlks[]) throws IOException {
       for (int i = 0; i < invalidBlks.length; i++) {
-        synchronized ( this ) {
-          File f = getFile(invalidBlks[i]);
-          if (!f.delete()) {
-            throw new IOException("Unexpected error trying to delete block "
-                                  + invalidBlks[i] + " at file " + f);
-          }
+        File f;
+        synchronized (this) {
+          f = getFile(invalidBlks[i]);
+          FSVolume v = volumeMap.get(invalidBlks[i]);
+          v.clearPath(f.getParentFile());
           blockMap.remove(invalidBlks[i]);
           volumeMap.remove(invalidBlks[i]);
-        } 
+        }
+        if (!f.delete()) {
+            throw new IOException("Unexpected error trying to delete block "
+                                  + invalidBlks[i] + " at file " + f);
+        }
         DataNode.LOG.info("Deleting block " + invalidBlks[i]);
       }
     }
