@@ -100,7 +100,6 @@ Trunk (unreleased changes)
 30. HADOOP-447.  In DFS, fix getBlockSize(Path) to work with relative
     paths.  (Raghu Angadi via cutting)
 
-
 Release 0.8.0 - 2006-11-03
 
  1. HADOOP-477.  Extend contrib/streaming to scan the PATH environment

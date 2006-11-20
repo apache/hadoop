@@ -107,14 +107,20 @@ for f in $HADOOP_HOME/lib/jsp-2.0/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-# setup 'java.library.path' for native-hadoop code
-JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} java org.apache.hadoop.util.PlatformName`
+# setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
-if [ -d "$HADOOP_HOME/build/classes" ]; then
-  JAVA_LIBRARY_PATH=${HADOOP_HOME}/build/native/${JAVA_PLATFORM}/lib
-fi
-JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
+if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
+  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} org.apache.hadoop.util.PlatformName`
   
+  if [ -d "$HADOOP_HOME/build/native" ]; then
+    JAVA_LIBRARY_PATH=${HADOOP_HOME}/build/native/${JAVA_PLATFORM}/lib
+  fi
+  
+  if [ -d "${HADOOP_HOME}/lib/native" ]; then
+    JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
+  fi
+fi
+ 
 # restore ordinary behaviour
 unset IFS
 
@@ -165,7 +171,9 @@ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.root.logger=${HADOOP_ROOT_LOGGER:-INFO,console}"
-HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
+if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
+  HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
+fi  
 
 # run it
 exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"

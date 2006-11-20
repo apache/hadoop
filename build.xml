@@ -459,7 +459,6 @@
       </fileset>
     </copy>
 
-    <mkdir dir="${dist.dir}/lib/native"/>
   	<exec dir="${dist.dir}" executable="sh" failonerror="true">
 	  <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
 	  <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
