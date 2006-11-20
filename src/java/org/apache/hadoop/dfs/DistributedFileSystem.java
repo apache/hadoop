@@ -62,7 +62,7 @@ public class DistributedFileSystem extends FileSystem {
     }
     
     public long getBlockSize(Path f) throws IOException {
-      return dfs.getBlockSize(f);
+      return dfs.getBlockSize(makeAbsolute(f));
     }
     
     public short getDefaultReplication() {

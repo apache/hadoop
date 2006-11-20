@@ -97,6 +97,9 @@ Trunk (unreleased changes)
 29. HADOOP-723.  In MapReduce, fix a race condition during the
     shuffle, which resulted in FileNotFoundExceptions.  (omalley via cutting)
 
+30. HADOOP-447.  In DFS, fix getBlockSize(Path) to work with relative
+    paths.  (Raghu Angadi via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
