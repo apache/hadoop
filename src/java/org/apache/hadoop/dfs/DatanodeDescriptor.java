@@ -30,6 +30,9 @@ import java.util.*;
 class DatanodeDescriptor extends DatanodeInfo {
 
   private volatile Collection<Block> blocks = new TreeSet<Block>();
+  // isAlive == heartbeats.contains(this)
+  // This is an optimization, because contains takes O(n) time on Arraylist
+  protected boolean isAlive = false;
 
   DatanodeDescriptor() {
     super();
@@ -81,17 +84,6 @@ class DatanodeDescriptor extends DatanodeInfo {
     this.xceiverCount = xceiverCount;
   }
   
-  /**
-   * Verify whether the node is dead.
-   * 
-   * A data node is considered dead if its last heartbeat was received
-   * EXPIRE_INTERVAL msecs ago.
-   */
-  boolean isDead() {
-    return getLastUpdate() < 
-              System.currentTimeMillis() - FSConstants.EXPIRE_INTERVAL;
-  }
-
   Block[] getBlocks() {
     return (Block[]) blocks.toArray(new Block[blocks.size()]);
   }

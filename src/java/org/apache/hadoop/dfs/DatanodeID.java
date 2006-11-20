@@ -82,7 +82,8 @@ public class DatanodeID implements WritableComparable {
   }
   
   public boolean equals( Object to ) {
-    return (this.compareTo( to ) != 0);
+    return (name.equals(((DatanodeID)to).getName()) &&
+        storageID.equals(((DatanodeID)to).getStorageID()));
   }
   
   public int hashCode() {

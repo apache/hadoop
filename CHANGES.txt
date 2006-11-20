@@ -91,6 +91,9 @@ Trunk (unreleased changes)
 27. HADOOP-652.  In DFS, when a file is deleted, the block count is
     now decremented.  (Vladimir Krokhmalyov via cutting)
 
+28. HADOOP-725.  In DFS, optimize block placement algorithm,
+    previously a performance bottleneck.  (Milind Bhandarkar via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
