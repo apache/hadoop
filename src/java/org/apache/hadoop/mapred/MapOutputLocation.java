@@ -100,28 +100,41 @@ class MapOutputLocation implements Writable {
    * @param localFilename the filename to write the data into
    * @param reduce the reduce id to get for
    * @param pingee a status object that wants to know when we make progress
+   * @param timeout number of ms for connection and read timeout
    * @throws IOException when something goes wrong
    */
   public long getFile(FileSystem fileSys, 
                       Path localFilename, 
                       int reduce,
-                      Progressable pingee) throws IOException {
+                      Progressable pingee,
+                      int timeout) throws IOException, InterruptedException {
     boolean good = false;
     long totalBytes = 0;
+    Thread currentThread = Thread.currentThread();
     URL path = new URL(toString() + "&reduce=" + reduce);
     try {
       URLConnection connection = path.openConnection();
+      if (timeout > 0) {
+        connection.setConnectTimeout(timeout);
+        connection.setReadTimeout(timeout);
+      }
       InputStream input = connection.getInputStream();
       try {
         OutputStream output = fileSys.create(localFilename);
         try {
           byte[] buffer = new byte[64 * 1024];
+          if (currentThread.isInterrupted()) {
+            throw new InterruptedException();
+          }
           int len = input.read(buffer);
           while (len > 0) {
             totalBytes += len;
             output.write(buffer, 0 ,len);
             if (pingee != null) {
               pingee.progress();
+            }
+            if (currentThread.isInterrupted()) {
+              throw new InterruptedException();
             }
             len = input.read(buffer);
           }

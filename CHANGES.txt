@@ -94,6 +94,9 @@ Trunk (unreleased changes)
 28. HADOOP-725.  In DFS, optimize block placement algorithm,
     previously a performance bottleneck.  (Milind Bhandarkar via cutting)
 
+29. HADOOP-723.  In MapReduce, fix a race condition during the
+    shuffle, which resulted in FileNotFoundExceptions.  (omalley via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

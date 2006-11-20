@@ -28,6 +28,8 @@ import org.apache.hadoop.util.Progressable;
 
 /** Runs a reduce task. */
 class ReduceTaskRunner extends TaskRunner {
+  /** Number of ms before timing out a copy */
+  private static final int STALLED_COPY_TIMEOUT = 3 * 60 * 1000;
   
   /** 
    * for cleaning up old map outputs
@@ -137,11 +139,14 @@ class ReduceTaskRunner extends TaskRunner {
     }
   }
   
+  private static int nextMapOutputCopierId = 0;
+
   /** Copies map outputs as they become available */
   private class MapOutputCopier extends Thread {
 
     private PingTimer pingTimer = new PingTimer();
     private MapOutputLocation currentLocation = null;
+    private int id = nextMapOutputCopierId++;
     
     public MapOutputCopier() {
     }
@@ -192,8 +197,8 @@ class ReduceTaskRunner extends TaskRunner {
      * The thread exits when it is interrupted by the {@link ReduceTaskRunner}
      */
     public void run() {
-      try {
-        while (true) {        
+      while (true) {        
+        try {
           MapOutputLocation loc = null;
           long size = -1;
           
@@ -215,8 +220,13 @@ class ReduceTaskRunner extends TaskRunner {
             LOG.warn(StringUtils.stringifyException(e));
           }
           finish(size);
+        } catch (InterruptedException e) { 
+          return; // ALL DONE
+        } catch (Throwable th) {
+          LOG.error("Map output copy failure: " + 
+                    StringUtils.stringifyException(th));
         }
-      } catch (InterruptedException e) { }  // ALL DONE!
+      }
     }
 
     /** Copies a a map output from a remote host, using raw RPC. 
@@ -224,44 +234,48 @@ class ReduceTaskRunner extends TaskRunner {
      * @param pingee a status object to ping as we make progress
      * @return the size of the copied file
      * @throws IOException if there is an error copying the file
+     * @throws InterruptedException if the copier should give up
      */
     private long copyOutput(MapOutputLocation loc, 
-                            Progressable pingee)
-    throws IOException {
+                            Progressable pingee
+                            ) throws IOException, InterruptedException {
 
       String reduceId = reduceTask.getTaskId();
       LOG.info(reduceId + " Copying " + loc.getMapTaskId() +
                " output from " + loc.getHost() + ".");
-
-      try {
-        // this copies the map output file
-        Path filename = conf.getLocalPath(reduceId + "/map_" +
-                                          loc.getMapId() + ".out");
-        long bytes = loc.getFile(localFileSys, filename,
-                                 reduceTask.getPartition(), pingee);
-
-        LOG.info(reduceTask.getTaskId() + " done copying " + loc.getMapTaskId() +
-                 " output from " + loc.getHost() + ".");
-
-        return bytes;
+      // the place where the file should end up
+      Path finalFilename = conf.getLocalPath(reduceId + "/map_" +
+                                             loc.getMapId() + ".out");
+      // a working filename that will be unique to this attempt
+      Path tmpFilename = new Path(finalFilename + "-" + id);
+      // this copies the map output file
+      long bytes = loc.getFile(localFileSys, tmpFilename,
+                               reduceTask.getPartition(), pingee,
+                               STALLED_COPY_TIMEOUT);
+      // lock the ReduceTaskRunner while we do the rename
+      synchronized (ReduceTaskRunner.this) {
+        // if we can't rename the file, something is broken
+        if (!(new File(tmpFilename.toString()).
+                 renameTo(new File(finalFilename.toString())))) {
+          localFileSys.delete(tmpFilename);
+          throw new IOException("failure to rename map output " + tmpFilename);
+        }
       }
-      catch (IOException e) {
-        LOG.warn(reduceTask.getTaskId() + " failed to copy " + loc.getMapTaskId() +
-                    " output from " + loc.getHost() + ".");
-        throw e;
-      }
+      LOG.info(reduceTask.getTaskId() + " done copying " + loc.getMapTaskId() +
+               " output from " + loc.getHost() + ".");
+      
+      return bytes;
     }
 
   }
   
   private class MapCopyLeaseChecker extends Thread {
-    private static final long STALLED_COPY_TIMEOUT = 3 * 60 * 1000;
     private static final long STALLED_COPY_CHECK = 60 * 1000;
     private long lastStalledCheck = 0;
     
     public void run() {
-      try {
-        while (true) {
+      while (true) {
+        try {
           long currentTime = System.currentTimeMillis();
           if (currentTime - lastStalledCheck > STALLED_COPY_CHECK) {
             lastStalledCheck = currentTime;
@@ -288,9 +302,13 @@ class ReduceTaskRunner extends TaskRunner {
           } else {
             Thread.sleep(lastStalledCheck + STALLED_COPY_CHECK - currentTime);
           }
+        } catch (InterruptedException ie) {
+          return;
+        } catch (Throwable th) {
+          LOG.error("MapCopyLeaseChecker error: " + 
+                    StringUtils.stringifyException(th));
         }
-      } catch (InterruptedException ie) {}
-      
+      }      
     }
   }
 
