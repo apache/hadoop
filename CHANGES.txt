@@ -116,6 +116,12 @@ Trunk (unreleased changes)
     for sorting datanode list by various columns.
     (Raghu Angadi via cutting)
 
+35. HADOOP-76.  Implement speculative reduce.  Now when a job is
+    configured for speculative execution, both maps and reduces will
+    execute speculatively.  Reduce outputs are written to temporary
+    location and moved to the final location when reduce is complete.
+    (Sanjay Dahiya via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

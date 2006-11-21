@@ -357,7 +357,7 @@ class JobInProgress {
             return null;
         }
 
-        double avgProgress = status.reduceProgress() / reduces.length;
+        double avgProgress = status.reduceProgress() ;
         int target = findNewTask(tts, clusterSize, avgProgress, 
                                     reduces, null);
         if (target == -1) {
@@ -438,8 +438,10 @@ class JobInProgress {
                 LOG.info("Choosing normal task " + tasks[i].getTIPId());
                 return i;
               } else if (specTarget == -1 &&
-                         task.hasSpeculativeTask(avgProgress)) {
+                         task.hasSpeculativeTask(avgProgress) && 
+                         ! task.hasRunOnMachine(taskTracker)) {
                 specTarget = i;
+                break ;
               }
             }
           }
@@ -691,6 +693,11 @@ class JobInProgress {
         // so we remove that directory to cleanup
         FileSystem fs = FileSystem.get(conf);
         fs.delete(new Path(profile.getJobFile()).getParent());
+        
+        // Delete temp dfs dirs created if any, like in case of 
+        // speculative exn of reduces.  
+     //   String tempDir = conf.get("mapred.system.dir") + "/job_" + uniqueString; 
+     //   fs.delete(new Path(tempDir)); 
 
       } catch (IOException e) {
         LOG.warn("Error cleaning up "+profile.getJobId()+": "+e);

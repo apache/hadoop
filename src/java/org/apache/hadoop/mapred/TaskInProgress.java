@@ -18,10 +18,8 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.commons.logging.*;
-import org.apache.hadoop.util.*;
 
 import java.text.NumberFormat;
-import java.io.*;
 import java.util.*;
 
 
@@ -44,6 +42,7 @@ class TaskInProgress {
     static final int MAX_TASK_FAILURES = 4;    
     static final double SPECULATIVE_GAP = 0.2;
     static final long SPECULATIVE_LAG = 60 * 1000;
+    static final int MAX_CONCURRENT_TASKS = 2; 
     private static NumberFormat idFormat = NumberFormat.getInstance();
     static {
       idFormat.setMinimumIntegerDigits(6);
@@ -73,7 +72,9 @@ class TaskInProgress {
     private boolean failed = false;
     private boolean killed = false;
     private TreeSet usableTaskIds = new TreeSet();
-    private TreeSet recentTasks = new TreeSet();
+    // Map from task Id -> TaskTracker Id, contains tasks that are
+    // currently runnings
+    private TreeMap<String, String> activeTasks = new TreeMap();
     private JobConf conf;
     private boolean runSpeculative;
     private Map<String,List<String>> taskDiagnosticData = new TreeMap();
@@ -176,7 +177,7 @@ class TaskInProgress {
      * @return true if any tasks are running
      */
     public boolean isRunning() {
-      return !recentTasks.isEmpty();
+      return !activeTasks.isEmpty();
     }
     
     /**
@@ -326,8 +327,8 @@ class TaskInProgress {
               status.setFinishTime(System.currentTimeMillis());
             }
         }
-        this.recentTasks.remove(taskid);
-        if (this.completes > 0) {
+        this.activeTasks.remove(taskid);
+        if (this.completes > 0 && this.isMapTask()) {
             this.completes--;
         }
 
@@ -347,7 +348,7 @@ class TaskInProgress {
         LOG.info("Task '" + taskid + "' has completed.");
         TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
         status.setRunState(TaskStatus.State.SUCCEEDED);
-        recentTasks.remove(taskid);
+        activeTasks.remove(taskid);
 
         //
         // Now that the TIP is complete, the other speculative 
@@ -445,11 +446,19 @@ class TaskInProgress {
         // in more depth eventually...
         //
         if (isMapTask() &&
-            recentTasks.size() <= MAX_TASK_EXECS &&
+            activeTasks.size() <= MAX_TASK_EXECS &&
             runSpeculative &&
             (averageProgress - progress >= SPECULATIVE_GAP) &&
             (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG)) {
             return true;
+        }else{
+          //Note: validate criteria for speculative reduce execution
+          if( runSpeculative && (activeTasks.size() < MAX_CONCURRENT_TASKS ) && 
+              (averageProgress - progress >= SPECULATIVE_GAP) &&
+              completes <= 0 &&
+              (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG)) {
+            return true ; 
+          }
         }
         return false;
     }
@@ -469,13 +478,13 @@ class TaskInProgress {
         String jobId = job.getProfile().getJobId();
 
         if (isMapTask()) {
-          t = new MapTask(jobId, jobFile, taskid, partition, split);
+          t = new MapTask(jobId, jobFile, this.id, taskid, partition, split);
         } else {
-          t = new ReduceTask(jobId, jobFile, taskid, partition, numMaps);
+          t = new ReduceTask(jobId, jobFile, this.id, taskid, partition, numMaps);
         }
         t.setConf(conf);
 
-        recentTasks.add(taskid);
+        activeTasks.put(taskid, taskTracker);
 
         // Ask JobTracker to note that the task exists
         jobtracker.createTaskEntry(taskid, taskTracker, this);
@@ -491,6 +500,15 @@ class TaskInProgress {
       return machinesWhereFailed.contains(tracker);
     }
     
+    /**
+     * Was this task ever scheduled to run on this machine?
+     * @param tracker The task tracker name
+     * @return Was task scheduled on the tracker?
+     */
+    public boolean hasRunOnMachine(String tracker){
+      return this.activeTasks.values().contains(tracker) || 
+               hasFailedOnMachine(tracker) ;
+    }
     /**
      * Get the number of machines where this task has failed.
      * @return the size of the failed machine set

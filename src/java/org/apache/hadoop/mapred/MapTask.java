@@ -85,9 +85,9 @@ class MapTask extends Task {
 
   public MapTask() {}
 
-  public MapTask(String jobId, String jobFile, String taskId, 
+  public MapTask(String jobId, String jobFile, String tipId, String taskId, 
                  int partition, FileSplit split) {
-    super(jobId, jobFile, taskId, partition);
+    super(jobId, jobFile, tipId, taskId, partition);
     this.split = split;
     myMetrics = new MapTaskMetrics(taskId);
   }

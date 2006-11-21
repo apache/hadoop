@@ -154,12 +154,12 @@ public class IsolationRunner {
       FileSplit split = new FileSplit(new Path(conf.get("map.input.file")),
                                       conf.getLong("map.input.start", 0),
                                       conf.getLong("map.input.length", 0));
-      task = new MapTask(jobId, jobFilename.toString(), taskId, partition, 
-                         split);
+      task = new MapTask(jobId, jobFilename.toString(), conf.get("mapred.tip.id"), 
+          taskId, partition, split);
     } else {
       int numMaps = conf.getNumMapTasks();
       fillInMissingMapOutputs(local, taskId, numMaps, conf);
-      task = new ReduceTask(jobId, jobFilename.toString(), taskId,
+      task = new ReduceTask(jobId, jobFilename.toString(), conf.get("mapred.tip.id"), taskId, 
                             partition, numMaps);
     }
     task.setConf(conf);

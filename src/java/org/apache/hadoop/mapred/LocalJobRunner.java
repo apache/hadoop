@@ -96,8 +96,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
         // run a map task for each split
         job.setNumReduceTasks(1);                 // force a single reduce task
         for (int i = 0; i < splits.length; i++) {
-          mapIds.add("map_" + newId());
-          MapTask map = new MapTask(jobId, file, (String)mapIds.get(i), i,
+          String mapId = "map_" + newId() ; 
+          mapIds.add(mapId);
+          MapTask map = new MapTask(jobId, file, "tip_m_" + mapId, 
+                                    mapId, i,
                                     splits[i]);
           JobConf localConf = new JobConf(job);
           map.localizeConfiguration(localConf);
@@ -126,7 +128,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
         {
           ReduceTask reduce = new ReduceTask(jobId, file, 
-                                             reduceId, 0, mapIds.size());
+                                             "tip_r_0001", reduceId, 0, mapIds.size());
           JobConf localConf = new JobConf(job);
           reduce.localizeConfiguration(localConf);
           reduce.setConf(localConf);

@@ -80,9 +80,9 @@ class ReduceTask extends Task {
 
   public ReduceTask() {}
 
-  public ReduceTask(String jobId, String jobFile, String taskId,
+  public ReduceTask(String jobId, String jobFile, String tipId, String taskId,
                     int partition, int numMaps) {
-    super(jobId, jobFile, taskId, partition);
+    super(jobId, jobFile, tipId, taskId, partition);
     this.numMaps = numMaps;
     myMetrics = new ReduceTaskMetrics(taskId);
   }
@@ -272,9 +272,18 @@ class ReduceTask extends Task {
     Reporter reporter = getReporter(umbilical, getProgress());
     
     // make output collector
-    String name = getOutputName(getPartition());
-    final RecordWriter out =
-      job.getOutputFormat().getRecordWriter(FileSystem.get(job), job, name, reporter);
+    String finalName = getOutputName(getPartition());
+    boolean runSpeculative = job.getSpeculativeExecution();
+    FileSystem fs = FileSystem.get(job) ;
+
+    if( runSpeculative ){
+        fs = new PhasedFileSystem (fs , 
+                      getJobId(), getTipId(), getTaskId());
+    }
+    
+    final RecordWriter out = 
+      job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter) ;  
+    
     OutputCollector collector = new OutputCollector() {
         public void collect(WritableComparable key, Writable value)
           throws IOException {
@@ -299,6 +308,9 @@ class ReduceTask extends Task {
     } finally {
       reducer.close();
       out.close(reporter);
+      if( runSpeculative ){
+        ((PhasedFileSystem)fs).commit(); 
+       }
     }
     done(umbilical);
   }

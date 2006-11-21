@@ -38,6 +38,7 @@ abstract class Task implements Writable, Configurable {
   private String jobFile;                         // job configuration file
   private String taskId;                          // unique, includes job id
   private String jobId;                           // unique jobid
+  private String tipId ;
   private int partition;                          // id within job
   private TaskStatus.Phase phase ;                         // current phase of the task 
 
@@ -47,10 +48,12 @@ abstract class Task implements Writable, Configurable {
 
   public Task() {}
 
-  public Task(String jobId, String jobFile, String taskId, int partition) {
+  public Task(String jobId, String jobFile, String tipId, 
+      String taskId, int partition) {
     this.jobFile = jobFile;
     this.taskId = taskId;
     this.jobId = jobId;
+    this.tipId = tipId; 
     this.partition = partition;
   }
 
@@ -60,6 +63,7 @@ abstract class Task implements Writable, Configurable {
   public void setJobFile(String jobFile) { this.jobFile = jobFile; }
   public String getJobFile() { return jobFile; }
   public String getTaskId() { return taskId; }
+  public String getTipId(){ return tipId ; }
   
   /**
    * Get the job name for this task.
@@ -97,12 +101,14 @@ abstract class Task implements Writable, Configurable {
 
   public void write(DataOutput out) throws IOException {
     UTF8.writeString(out, jobFile);
+    UTF8.writeString(out, tipId); 
     UTF8.writeString(out, taskId);
     UTF8.writeString(out, jobId);
     out.writeInt(partition);
   }
   public void readFields(DataInput in) throws IOException {
     jobFile = UTF8.readString(in);
+    tipId = UTF8.readString(in);
     taskId = UTF8.readString(in);
     jobId = UTF8.readString(in);
     partition = in.readInt();
@@ -114,6 +120,7 @@ abstract class Task implements Writable, Configurable {
    * Localize the given JobConf to be specific for this task.
    */
   public void localizeConfiguration(JobConf conf) {
+    conf.set("mapred.tip.id", tipId); 
     conf.set("mapred.task.id", taskId);
     conf.setBoolean("mapred.task.is.map",isMapTask());
     conf.setInt("mapred.task.partition", partition);

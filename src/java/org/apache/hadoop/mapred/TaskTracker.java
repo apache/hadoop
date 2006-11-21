@@ -1044,12 +1044,33 @@ public class TaskTracker
                   failures += 1;
                 }
                 runner.kill();
+                runstate = TaskStatus.State.KILLED;
             } else if (runstate == TaskStatus.State.UNASSIGNED) {
               if (wasFailure) {
                 failures += 1;
                 runstate = TaskStatus.State.FAILED;
               } else {
                 runstate = TaskStatus.State.KILLED;
+              }
+            }
+            
+            // the temporary file names in speculative exn are generated in 
+            // the launched JVM, and we dont talk to it when killing so cleanup
+            // should happen here. find the task id and delete the temp directory 
+            // for the task. only for killed speculative reduce instances
+            
+            // Note: it would be better to couple this with delete localfiles
+            // which is in conf currently, it doenst belong there. 
+
+            if( !task.isMapTask() && 
+                this.defaultJobConf.getSpeculativeExecution() ){
+              try{
+                String systemDir = task.getConf().get("mapred.system.dir");
+                String taskTempDir = systemDir + "/" + 
+                    task.getJobId() + "/" + task.getTipId();
+                fs.delete(new Path(taskTempDir)) ;
+              }catch(IOException e){
+                LOG.warn("Error in deleting reduce temporary output",e); 
               }
             }
         }
