@@ -140,16 +140,10 @@ public class JspHelper {
       in.close();
       out.print(new String(buf));
     }
-    public void DFSNodesStatus(Vector live, Vector dead) {
-      if (fsn == null) return;
-      TreeMap nodesSortedByName = new TreeMap();
-      fsn.DFSNodesStatus(live, dead);
-      for (int num = 0; num < live.size(); num++) {
-        DatanodeInfo d = (DatanodeInfo)live.elementAt(num);
-        nodesSortedByName.put(d.getName(), d);
-      }
-      live.clear();
-      live.addAll(nodesSortedByName.values());
+    public void DFSNodesStatus( ArrayList<DatanodeDescriptor> live,
+                                ArrayList<DatanodeDescriptor> dead ) {
+        if ( fsn != null )
+            fsn.DFSNodesStatus(live, dead);
     }
     public void addTableHeader(JspWriter out) throws IOException {
       out.print("<table border=\"1\""+
@@ -183,6 +177,72 @@ public class JspHelper {
     public String getSafeModeText() {
       if( ! fsn.isInSafeMode() )
         return "";
-      return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em>";
+      return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
+    }
+    
+    public void sortNodeList(ArrayList<DatanodeDescriptor> nodes,
+                             String field, String order) {
+        
+        class NodeComapare implements Comparator<DatanodeDescriptor> {
+            static final int 
+                FIELD_NAME              = 1,
+                FIELD_LAST_CONTACT      = 2,
+                FIELD_BLOCKS            = 3,
+                FIELD_SIZE              = 4,
+                FIELD_DISK_USED         = 5,
+                SORT_ORDER_ASC          = 1,
+                SORT_ORDER_DSC          = 2;
+
+            int sortField = FIELD_NAME;
+            int sortOrder = SORT_ORDER_ASC;
+            
+            public NodeComapare(String field, String order) {
+                if ( field.equals( "lastcontact" ) ) {
+                    sortField = FIELD_LAST_CONTACT;
+                } else if ( field.equals( "size" ) ) {
+                    sortField = FIELD_SIZE;
+                } else if ( field.equals( "blocks" ) ) {
+                    sortField = FIELD_BLOCKS;
+                } else if ( field.equals( "pcused" ) ) {
+                    sortField = FIELD_DISK_USED;
+                } else {
+                    sortField = FIELD_NAME;
+                }
+                
+                if ( order.equals("DSC") ) {
+                    sortOrder = SORT_ORDER_DSC;
+                } else {
+                    sortOrder = SORT_ORDER_ASC;
+                }
+            }
+
+            public int compare( DatanodeDescriptor d1,
+                                DatanodeDescriptor d2 ) {
+                int ret = 0;
+                switch ( sortField ) {
+                case FIELD_LAST_CONTACT:
+                    ret = (int) (d2.getLastUpdate() - d1.getLastUpdate());
+                    break;
+                case FIELD_BLOCKS:
+                    ret = d1.numBlocks() - d2.numBlocks();
+                    break;
+                case FIELD_SIZE:
+                    long  dlong = d1.getCapacity() - d2.getCapacity();
+                    ret = (dlong < 0) ? -1 : ( (dlong > 0) ? 1 : 0 );
+                    break;
+                case FIELD_DISK_USED:
+                    double ddbl =((d2.getRemaining()*1.0/d2.getCapacity())-
+                                  (d1.getRemaining()*1.0/d1.getCapacity()));
+                    ret = (ddbl < 0) ? -1 : ( (ddbl > 0) ? 1 : 0 );
+                    break;
+                case FIELD_NAME: 
+                    ret = d1.getName().compareTo(d2.getName());
+                    break;
+                }
+                return ( sortOrder == SORT_ORDER_DSC ) ? -ret : ret;
+            }
+        }
+        
+        Collections.sort( nodes, new NodeComapare( field, order ) );
     }
 }

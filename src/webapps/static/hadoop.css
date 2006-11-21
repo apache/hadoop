@@ -1,6 +1,14 @@
+body {
+  background-color : #ffffff;
+  font-family : sans-serif;
+}
 
 div#dfsnodetable tr#row1, div#dfstable td#col1 {
 	font-weight : bolder;
+}
+
+div#dfstable td#col3 {
+	text-align : right;
 }
 
 div#dfsnodetable caption {
@@ -12,11 +20,35 @@ div#dfsnodetable a#title {
 	font-weight : bolder;
 }
 
+div#dfsnodetable td, th {
+	border-bottom-style : none;
+}
+
+div#dfsnodetable th.header, th.headerASC, th.headerDSC {
+        padding-bottom : 4px;
+        padding-top : 4px;       
+}
+div#dfsnodetable th.header:hover, th.headerASC:hover, th.headerDSC:hover {
+        text-decoration : underline;
+	cursor : pointer;
+}
+
+div#dfsnodetable td.blocks, td.size, td.pcused, td.lastcontact {
+	text-align : right;
+}
+
+div#dfsnodetable .rowNormal .header {
+	background-color : #ffffff;
+}
+div#dfsnodetable .rowAlt, .headerASC, .headerDSC {
+	background-color : lightyellow;
+}
+
 div#dfstable table {
 	width : 40%;
 }
 
-div#dfsnodetable td, div#dfstable td {
+div#dfsnodetable td, div#dfsnodetable th, div#dfstable td {
 	padding-left : 10px;
 	padding-right : 10px;
 }

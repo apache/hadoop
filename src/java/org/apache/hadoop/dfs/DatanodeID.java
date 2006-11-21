@@ -94,6 +94,16 @@ public class DatanodeID implements WritableComparable {
     return name;
   }
   
+  /**
+   * Update fields when a new registration request comes in.
+   * Note that this does not update storageID.
+   */
+  void updateRegInfo( DatanodeID nodeReg ) {
+      name = nodeReg.getName();
+      infoPort = nodeReg.getInfoPort();
+      // update any more fields added in future.
+  }
+    
   /** Comparable.
    * Basis of compare is the String name (host:portNumber) only.
    * @param o

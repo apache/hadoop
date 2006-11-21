@@ -111,6 +111,11 @@ Trunk (unreleased changes)
     the format of IPC requests back-compatibly in subsequent releases.
     (omalley via cutting)
 
+34. HADOOP-699.  Fix DFS web interface so that filesystem browsing
+    works correctly, using the right port number.  Also add support
+    for sorting datanode list by various columns.
+    (Raghu Angadi via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

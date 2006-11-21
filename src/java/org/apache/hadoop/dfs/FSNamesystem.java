@@ -1198,17 +1198,7 @@ class FSNamesystem implements FSConstants {
       DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
       DatanodeDescriptor nodeN = getDatanodeByName( nodeReg.getName() );
       
-      if( nodeN != null && nodeS != null && nodeN == nodeS ) {
-        // The same datanode has been just restarted to serve the same data 
-        // storage. We do not need to remove old data blocks, the delta will  
-        // be calculated on the next block report from the datanode
-        NameNode.stateChangeLog.info(
-            "BLOCK* NameSystem.registerDatanode: "
-            + "node restarted." );
-        return;
-      }
-      
-      if( nodeN != null ) {
+      if( nodeN != null && nodeN != nodeS ) {
         // nodeN previously served a different data storage, 
         // which is not served by anybody anymore.
         removeDatanode( nodeN );
@@ -1218,18 +1208,25 @@ class FSNamesystem implements FSConstants {
         getEditLog().logRemoveDatanode( nodeN );
         nodeN = null;
       }
-      
-      // nodeN is not found
-      if( nodeS != null ) {
-        // nodeS is found
-        // The registering datanode is a replacement node for the existing 
-        // data storage, which from now on will be served by a new node.
-        NameNode.stateChangeLog.debug(
+
+      if ( nodeS != null ) {
+        if( nodeN == nodeS ) {
+          // The same datanode has been just restarted to serve the same data 
+          // storage. We do not need to remove old data blocks, the delta will
+          // be calculated on the next block report from the datanode
+          NameNode.stateChangeLog.debug("BLOCK* NameSystem.registerDatanode: "
+                                        + "node restarted." );
+        } else {
+          // nodeS is found
+          // The registering datanode is a replacement node for the existing 
+          // data storage, which from now on will be served by a new node.
+          NameNode.stateChangeLog.debug(
             "BLOCK* NameSystem.registerDatanode: "
             + "node " + nodeS.name
             + " is replaced by " + nodeReg.getName() + "." );
+        }
         getEditLog().logRemoveDatanode( nodeS );
-        nodeS.name = nodeReg.getName();
+        nodeS.updateRegInfo( nodeReg );
         getEditLog().logAddDatanode( nodeS );
         return;
       }
@@ -1763,8 +1760,8 @@ class FSNamesystem implements FSConstants {
     
     /**
      */
-    public void DFSNodesStatus( Vector<DatanodeDescriptor> live, 
-                                Vector<DatanodeDescriptor> dead) {
+    public void DFSNodesStatus( ArrayList<DatanodeDescriptor> live, 
+                                ArrayList<DatanodeDescriptor> dead ) {
       synchronized (heartbeats) {
         synchronized (datanodeMap) {
           for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext(); ) {

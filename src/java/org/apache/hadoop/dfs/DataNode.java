@@ -158,8 +158,6 @@ public class DataNode implements FSConstants, Runnable {
         this(InetAddress.getLocalHost().getHostName(), 
              dataDirs,
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
-        // register datanode
-        register();
         int infoServerPort = conf.getInt("dfs.datanode.info.port", 50075);
         String infoServerBindAddress = conf.get("dfs.datanode.info.bindAddress", "0.0.0.0");
         this.infoServer = new StatusHttpServer("datanode", infoServerBindAddress, infoServerPort, true);
@@ -167,6 +165,8 @@ public class DataNode implements FSConstants, Runnable {
         this.infoServer.addServlet(null, "/streamFile/*", StreamFile.class);
         this.infoServer.start();
         this.dnRegistration.infoPort = this.infoServer.getPort();
+        // register datanode
+        register();
         datanodeObject = this;
     }
     

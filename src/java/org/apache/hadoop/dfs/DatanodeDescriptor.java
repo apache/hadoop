@@ -74,6 +74,10 @@ class DatanodeDescriptor extends DatanodeInfo {
     this.xceiverCount = 0;
     this.blocks.clear();
   }
+
+  int numBlocks() {
+    return blocks.size();
+  }
   
   /**
    */
