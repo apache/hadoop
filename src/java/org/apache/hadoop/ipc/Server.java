@@ -59,6 +59,12 @@ import org.apache.hadoop.util.*;
  * @see Client
  */
 public abstract class Server {
+  
+  /**
+   * The first four bytes of Hadoop RPC connections
+   */
+  public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
+  
   /**
    * How much time should be allocated for actually running the handler?
    * Calls that are older than ipc.timeout * MAX_CALL_QUEUE_TIME
@@ -346,6 +352,7 @@ public abstract class Server {
 
   /** Reads calls from a connection and queues them for handling. */
   private class Connection {
+    private boolean firstData = true;
     private SocketChannel channel;
     private SelectionKey key;
     private ByteBuffer data;
@@ -415,6 +422,23 @@ public abstract class Server {
         if ( count < 0 || dataLengthBuffer.remaining() > 0 ) 
           return count;        
         dataLengthBuffer.flip(); 
+        // Is this a new style header?
+        if (firstData && HEADER.equals(dataLengthBuffer)) {
+          // If so, read the version
+          ByteBuffer versionBuffer = ByteBuffer.allocate(1);
+          count = channel.read(versionBuffer);
+          if (count < 0) {
+            return count;
+          }
+          // read the first length
+          dataLengthBuffer.clear();
+          count = channel.read(dataLengthBuffer);
+          if (count < 0 || dataLengthBuffer.remaining() > 0) {
+            return count;
+          }
+          dataLengthBuffer.flip();
+          firstData = false;
+        }
         dataLength = dataLengthBuffer.getInt();
         data = ByteBuffer.allocate(dataLength);
       }

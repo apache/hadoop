@@ -31,6 +31,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
+import java.io.OutputStream;
 
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -43,6 +44,7 @@ import org.apache.hadoop.dfs.FSConstants;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.util.StringUtils;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -52,6 +54,10 @@ import org.apache.hadoop.io.DataOutputBuffer;
  * @see Server
  */
 public class Client {
+  /** Should the client send the header on the connection? */
+  private static final boolean SEND_HEADER = false;
+  private static final byte CURRENT_VERSION = 0;
+  
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.Client");
   private Hashtable connections = new Hashtable();
@@ -155,7 +161,6 @@ public class Client {
           }
         }
       }
-
       socket.setSoTimeout(timeout);
       this.in = new DataInputStream
         (new BufferedInputStream
@@ -178,6 +183,10 @@ public class Client {
                }
              }
            }));
+      if (SEND_HEADER) {
+        out.write(Server.HEADER.array());
+        out.write(CURRENT_VERSION);
+      }
       notify();
     }
 
@@ -269,7 +278,7 @@ public class Client {
       } catch (EOFException eof) {
           // This is what happens when the remote side goes down
       } catch (Exception e) {
-        LOG.info(getName() + " caught: " + e, e);
+        LOG.info(StringUtils.stringifyException(e));
       } finally {
         //If there was no exception thrown in this method, then the only
         //way we reached here is by breaking out of the while loop (after
@@ -480,7 +489,8 @@ public class Client {
           Connection connection = getConnection(addresses[i]);
           connection.sendParam(call);             // send each parameter
         } catch (IOException e) {
-          LOG.info("Calling "+addresses[i]+" caught: " + e); // log errors
+          LOG.info("Calling "+addresses[i]+" caught: " + 
+                   StringUtils.stringifyException(e)); // log errors
           results.size--;                         //  wait for one fewer result
         }
       }
