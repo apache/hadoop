@@ -19,7 +19,9 @@
 package org.apache.hadoop.streaming;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
+import java.net.URLDecoder;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
@@ -45,7 +47,17 @@ import org.apache.hadoop.io.WritableComparable;
 public class PipeCombiner extends PipeReducer {
 
   String getPipeCommand(JobConf job) {
-    return job.get("stream.combine.streamprocessor");
+    String str = job.get("stream.combine.streamprocessor");
+    if (str == null) {
+      System.err.println("X1003");
+      return str;
+    }
+    try {
+      return URLDecoder.decode(str, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+        System.err.println("stream.combine.streamprocessor in jobconf not found");
+        return null;
+    }
   }
 
 }

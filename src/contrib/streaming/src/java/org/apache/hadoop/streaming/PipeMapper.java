@@ -19,6 +19,7 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+import java.net.URLDecoder;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
@@ -35,7 +36,17 @@ import org.apache.hadoop.io.Writable;
 public class PipeMapper extends PipeMapRed implements Mapper {
 
   String getPipeCommand(JobConf job) {
-    return job.get("stream.map.streamprocessor");
+    String str = job.get("stream.map.streamprocessor");
+    if (str == null) {
+      return str;
+    }
+    try {
+      return URLDecoder.decode(str, "UTF-8");
+    }
+    catch (UnsupportedEncodingException e) {
+      System.err.println("stream.map.streamprocessor in jobconf not found");
+      return null;
+    }
   }
 
   String getKeyColPropName() {

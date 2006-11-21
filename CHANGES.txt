@@ -103,6 +103,9 @@ Trunk (unreleased changes)
 31. HADOOP-733.  Make exit codes in DFShell consistent and add a unit
     test.  (Dhruba Borthakur via cutting)
 
+32. HADOOP-709.  Fix contrib/streaming to work with commands that
+    contain control characters.  (Dhruba Borthakur via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

@@ -455,6 +455,15 @@ public class StreamUtil {
 
   static boolean getUseMapSideEffect(JobConf job) {
     String reduce = job.get("stream.reduce.streamprocessor");
+    if (reduce == null) {
+      return false;
+    }
+    try {
+      reduce = URLDecoder.decode(reduce, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      System.err.println("stream.reduce.streamprocessor in jobconf not found");
+      return false;
+    }
     return StreamJob.REDUCE_NONE.equals(reduce);
   }
 

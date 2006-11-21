@@ -19,7 +19,9 @@
 package org.apache.hadoop.streaming;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
+import java.net.URLDecoder;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reducer;
@@ -36,7 +38,16 @@ import org.apache.hadoop.io.Writable;
 public class PipeReducer extends PipeMapRed implements Reducer {
 
   String getPipeCommand(JobConf job) {
-    return job.get("stream.reduce.streamprocessor");
+    String str = job.get("stream.reduce.streamprocessor");
+    if (str == null) {
+      return str;
+    }
+    try {
+      return URLDecoder.decode(str, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+        System.err.println("stream.reduce.streamprocessor in jobconf not found");
+        return null;
+    }
   }
 
   boolean getDoPipe() {
