@@ -24,6 +24,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
   </project>
 
   <docs label="Documentation">    
+    <faq         label="FAQ"              href="ext:faq" />    
     <wiki        label="Wiki"             href="ext:wiki" />    
     <apidocs     label="API Docs"         href="docs/api/" />
   </docs>
@@ -44,6 +45,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <lucene    href="http://lucene.apache.org/java/" />
     <nutch     href="http://lucene.apache.org/nutch/" />
     <wiki      href="http://wiki.apache.org/lucene-hadoop/" />
+    <faq       href="http://wiki.apache.org/lucene-hadoop/FAQ" />
     <nightly   href="http://cvs.apache.org/dist/lucene/hadoop/nightly/" />
     <releases  href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/" />
     <store     href="http://www.cafepress.com/hadoop/" />
