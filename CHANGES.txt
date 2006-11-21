@@ -100,6 +100,10 @@ Trunk (unreleased changes)
 30. HADOOP-447.  In DFS, fix getBlockSize(Path) to work with relative
     paths.  (Raghu Angadi via cutting)
 
+31. HADOOP-733.  Make exit codes in DFShell consistent and add a unit
+    test.  (Dhruba Borthakur via cutting)
+
+
 Release 0.8.0 - 2006-11-03
 
  1. HADOOP-477.  Extend contrib/streaming to scan the PATH environment

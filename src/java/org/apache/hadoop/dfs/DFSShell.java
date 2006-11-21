@@ -216,7 +216,7 @@ public class DFSShell extends ToolBase {
     	
       Path items[] = fs.listPaths(src);
       if (items == null) {
-      	System.out.println("Could not get listing for " + src);
+      	throw new IOException("Could not get listing for " + src);
       } else {
 
       	for (int i = 0; i < items.length; i++) {
@@ -310,7 +310,7 @@ public class DFSShell extends ToolBase {
     public void mkdir(String src) throws IOException {
         Path f = new Path(src);
         if (!fs.mkdirs(f)) {
-          System.out.println("Mkdirs failed to create " + src);
+          throw new IOException("Mkdirs failed to create " + src);
         }
     }
     
@@ -499,15 +499,14 @@ public class DFSShell extends ToolBase {
     /* delete an DFS file */
     private void delete(Path src, boolean recursive ) throws IOException {
       if (fs.isDirectory(src) && !recursive) {
-        System.out.println("Cannot remove directory \"" + src +
+        throw new IOException("Cannot remove directory \"" + src +
                            "\", use -rmr instead");
-        return;
       }
 
       if (fs.delete(src)) {
         System.out.println("Deleted " + src);
       } else {
-        System.out.println("Delete failed " + src);
+        throw new IOException("Delete failed " + src);
       }
     }
 
@@ -730,20 +729,20 @@ public class DFSShell extends ToolBase {
                 else
                     copyMergeToLocal(argv[i++], new Path(argv[i++]));
             } else if ("-cat".equals(cmd)) {
-                doall(cmd, argv, conf, i);
+                exitCode = doall(cmd, argv, conf, i);
             } else if ("-moveToLocal".equals(cmd)) {
                 moveToLocal(argv[i++], new Path(argv[i++]));
             } else if ("-setrep".equals(cmd)) {
             	setReplication(argv, i);           
             } else if ("-ls".equals(cmd)) {
                 if (i < argv.length) {
-                    doall(cmd, argv, conf, i);
+                    exitCode = doall(cmd, argv, conf, i);
                 } else {
                     ls("", false);
                 } 
             } else if ("-lsr".equals(cmd)) {
                 if (i < argv.length) {
-                    doall(cmd, argv, conf, i);
+                    exitCode = doall(cmd, argv, conf, i);
                 } else {
                     ls("", true);
                 } 
@@ -752,17 +751,17 @@ public class DFSShell extends ToolBase {
             } else if ("-cp".equals(cmd)) {
                 exitCode = copy(argv, conf);
             } else if ("-rm".equals(cmd)) {
-                doall(cmd, argv, conf, i);
+                exitCode = doall(cmd, argv, conf, i);
             } else if ("-rmr".equals(cmd)) {
-                doall(cmd, argv, conf, i);
+                exitCode = doall(cmd, argv, conf, i);
             } else if ("-du".equals(cmd)) {
                 if (i < argv.length) {
-                    doall(cmd, argv, conf, i);
+                    exitCode = doall(cmd, argv, conf, i);
                 } else {
                     du("");
                 }
             } else if ("-mkdir".equals(cmd)) {
-                doall(cmd, argv, conf, i);
+                exitCode = doall(cmd, argv, conf, i);
             } else {
                 exitCode = -1;
                 System.err.println(cmd.substring(1) + ": Unknown command");
