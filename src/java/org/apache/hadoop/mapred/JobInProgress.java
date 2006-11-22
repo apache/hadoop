@@ -328,8 +328,7 @@ class JobInProgress {
         return null;
       }
       ArrayList mapCache = (ArrayList)hostToMaps.get(tts.getHost());
-      double avgProgress = status.mapProgress() / maps.length;
-      int target = findNewTask(tts, clusterSize, avgProgress, 
+      int target = findNewTask(tts, clusterSize, status.mapProgress(), 
                                   maps, mapCache);
       if (target == -1) {
         return null;
@@ -357,8 +356,7 @@ class JobInProgress {
             return null;
         }
 
-        double avgProgress = status.reduceProgress() ;
-        int target = findNewTask(tts, clusterSize, avgProgress, 
+        int target = findNewTask(tts, clusterSize, status.reduceProgress() , 
                                     reduces, null);
         if (target == -1) {
           return null;
@@ -441,7 +439,6 @@ class JobInProgress {
                          task.hasSpeculativeTask(avgProgress) && 
                          ! task.hasRunOnMachine(taskTracker)) {
                 specTarget = i;
-                break ;
               }
             }
           }
@@ -696,8 +693,8 @@ class JobInProgress {
         
         // Delete temp dfs dirs created if any, like in case of 
         // speculative exn of reduces.  
-     //   String tempDir = conf.get("mapred.system.dir") + "/job_" + uniqueString; 
-     //   fs.delete(new Path(tempDir)); 
+        String tempDir = conf.get("mapred.system.dir") + "/job_" + uniqueString; 
+        fs.delete(new Path(tempDir)); 
 
       } catch (IOException e) {
         LOG.warn("Error cleaning up "+profile.getJobId()+": "+e);

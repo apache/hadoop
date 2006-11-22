@@ -1026,6 +1026,17 @@ public class TaskTracker
             }
             if (keepJobFiles)
               return;
+            
+            // Delete temp directory in case any task used PhasedFileSystem.
+            try{
+              String systemDir = task.getConf().get("mapred.system.dir");
+              String taskTempDir = systemDir + "/" + 
+                  task.getJobId() + "/" + task.getTipId();
+              fs.delete(new Path(taskTempDir)) ;
+            }catch(IOException e){
+              LOG.warn("Error in deleting reduce temporary output",e); 
+            }
+            
             // delete the job diretory for this task 
             // since the job is done/failed
             this.defaultJobConf.deleteLocalFiles(SUBDIR + Path.SEPARATOR + 
@@ -1051,26 +1062,6 @@ public class TaskTracker
                 runstate = TaskStatus.State.FAILED;
               } else {
                 runstate = TaskStatus.State.KILLED;
-              }
-            }
-            
-            // the temporary file names in speculative exn are generated in 
-            // the launched JVM, and we dont talk to it when killing so cleanup
-            // should happen here. find the task id and delete the temp directory 
-            // for the task. only for killed speculative reduce instances
-            
-            // Note: it would be better to couple this with delete localfiles
-            // which is in conf currently, it doenst belong there. 
-
-            if( !task.isMapTask() && 
-                this.defaultJobConf.getSpeculativeExecution() ){
-              try{
-                String systemDir = task.getConf().get("mapred.system.dir");
-                String taskTempDir = systemDir + "/" + 
-                    task.getJobId() + "/" + task.getTipId();
-                fs.delete(new Path(taskTempDir)) ;
-              }catch(IOException e){
-                LOG.warn("Error in deleting reduce temporary output",e); 
               }
             }
         }

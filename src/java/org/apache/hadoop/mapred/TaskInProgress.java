@@ -42,7 +42,6 @@ class TaskInProgress {
     static final int MAX_TASK_FAILURES = 4;    
     static final double SPECULATIVE_GAP = 0.2;
     static final long SPECULATIVE_LAG = 60 * 1000;
-    static final int MAX_CONCURRENT_TASKS = 2; 
     private static NumberFormat idFormat = NumberFormat.getInstance();
     static {
       idFormat.setMinimumIntegerDigits(6);
@@ -445,21 +444,14 @@ class TaskInProgress {
         // REMIND - mjc - these constants should be examined
         // in more depth eventually...
         //
-        if (isMapTask() &&
-            activeTasks.size() <= MAX_TASK_EXECS &&
+      
+      if( activeTasks.size() <= MAX_TASK_EXECS &&
             runSpeculative &&
             (averageProgress - progress >= SPECULATIVE_GAP) &&
-            (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG)) {
-            return true;
-        }else{
-          //Note: validate criteria for speculative reduce execution
-          if( runSpeculative && (activeTasks.size() < MAX_CONCURRENT_TASKS ) && 
-              (averageProgress - progress >= SPECULATIVE_GAP) &&
-              completes <= 0 &&
-              (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG)) {
-            return true ; 
-          }
-        }
+            (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG) 
+            && completes == 0) {
+          return true;
+      }
         return false;
     }
     
