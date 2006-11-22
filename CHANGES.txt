@@ -125,6 +125,9 @@ Trunk (unreleased changes)
 36. HADOOP-736.  Roll back to Jetty 5.1.4, due to performance problems
     with Jetty 6.0.1.
 
+37. HADOOP-739.  Fix TestIPC to use different port number, making it
+    more reliable.  (Nigel Daley via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

@@ -170,13 +170,13 @@ public class TestIPC extends TestCase {
     throws Exception {
     Server[] servers = new Server[serverCount];
     for (int i = 0; i < serverCount; i++) {
-      servers[i] = new TestServer(ADDRESS, PORT+i, handlerCount, handlerSleep);
+      servers[i] = new TestServer(ADDRESS, PORT+i+1, handlerCount, handlerSleep);
       servers[i].start();
     }
 
     InetSocketAddress[] addresses = new InetSocketAddress[addressCount];
     for (int i = 0; i < addressCount; i++) {
-      addresses[i] = new InetSocketAddress(PORT+(i%serverCount));
+      addresses[i] = new InetSocketAddress(PORT+1+(i%serverCount));
     }
 
     Client[] clients = new Client[clientCount];
