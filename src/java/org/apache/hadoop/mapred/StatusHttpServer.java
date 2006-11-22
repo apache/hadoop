@@ -18,7 +18,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-import java.net.BindException;
 import java.net.URL;
 import java.net.URLDecoder;
 
@@ -27,16 +26,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.mortbay.jetty.handler.ContextHandlerCollection;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.jetty.webapp.WebAppContext;
-import org.mortbay.thread.BoundedThreadPool;
-import org.mortbay.util.MultiException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.*;
-
+import org.mortbay.http.HttpContext;
+import org.mortbay.http.handler.ResourceHandler;
+import org.mortbay.http.SocketListener;
+import org.mortbay.jetty.servlet.WebApplicationContext;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -51,8 +47,9 @@ public class StatusHttpServer {
   private static final boolean isWindows = 
     System.getProperty("os.name").startsWith("Windows");
   private org.mortbay.jetty.Server webServer;
-  private WebAppContext webAppContext ;  
+  private SocketListener listener;
   private boolean findPort;
+  private WebApplicationContext webAppContext;
   private static final Log LOG =
     LogFactory.getLog(StatusHttpServer.class.getName());
   
@@ -66,37 +63,34 @@ public class StatusHttpServer {
    */
   public StatusHttpServer(String name, String bindAddress, int port, 
                           boolean findPort) throws IOException {
-    webServer = new org.mortbay.jetty.Server(port);
+    webServer = new org.mortbay.jetty.Server();
     this.findPort = findPort;
-
-    ContextHandlerCollection contexts = new ContextHandlerCollection();
+    listener = new SocketListener();
+    listener.setPort(port);
+    listener.setHost(bindAddress);
+    webServer.addListener(listener);
 
     // set up the context for "/logs/"
-    Context logContext = new Context(contexts,"/logs");
-    
+    HttpContext logContext = new HttpContext();
+    logContext.setContextPath("/logs/*");
     String logDir = System.getProperty("hadoop.log.dir");
     logContext.setResourceBase(logDir);
-    logContext.addServlet("org.mortbay.jetty.servlet.DefaultServlet","/");
-    
+    logContext.addHandler(new ResourceHandler());
+    webServer.addContext(logContext);
+
     // set up the context for "/static/*"
     String appDir = getWebAppsPath();
-    Context staticContext = new Context(contexts,"/static");
+    HttpContext staticContext = new HttpContext();
+    staticContext.setContextPath("/static/*");
     staticContext.setResourceBase(appDir + File.separator + "static");
-    staticContext.addServlet("org.mortbay.jetty.servlet.DefaultServlet","/");
+    staticContext.addHandler(new ResourceHandler());
+    webServer.addContext(staticContext);
 
     // set up the context for "/" jsp files
-    webAppContext = new WebAppContext() ;
-    webAppContext.setContextPath("/");
-    webAppContext.setWar(appDir + File.separator + name); 
-    contexts.addHandler(webAppContext); 
-
-    Context stackContext = new Context(contexts,"/stacks");
-    stackContext.addServlet(StackServlet.class, "/"); 
-    // used as default but still set, in case it changes in future versions
-    webServer.setThreadPool(new BoundedThreadPool()); 
-    webServer.setHandler(contexts);
+    webAppContext = 
+      webServer.addWebApplication("/", appDir + File.separator + name);
+    addServlet("stacks", "/stacks", StackServlet.class);
   }
-  
 
   /**
    * Set a value in the webapp context. These values are available to the jsp
@@ -117,18 +111,20 @@ public class StatusHttpServer {
   public <T extends HttpServlet> 
   void addServlet(String name, String pathSpec, 
                   Class<T> servletClass) {
-    WebAppContext context = webAppContext;
+    WebApplicationContext context = webAppContext;
     try {
       if (name == null) {
-        context.addServlet(servletClass, pathSpec);
+        context.addServlet(pathSpec, servletClass.getName());
       } else {
-        ServletHolder holder = new ServletHolder(servletClass); 
-        holder.setName(name); 
-        context.addServlet(holder, pathSpec);
+        context.addServlet(name, pathSpec, servletClass.getName());
       } 
-    } catch (Throwable ex) {
+    } catch (ClassNotFoundException ex) {
       throw makeRuntimeException("Problem instantiating class", ex);
-    } 
+    } catch (InstantiationException ex) {
+      throw makeRuntimeException("Problem instantiating class", ex);
+    } catch (IllegalAccessException ex) {
+      throw makeRuntimeException("Problem instantiating class", ex);
+    }
   }
   
   private static RuntimeException makeRuntimeException(String msg, 
@@ -171,13 +167,12 @@ public class StatusHttpServer {
    * @return the port
    */
   public int getPort() {
-    return webServer.getConnectors()[0].getPort(); 
+    return listener.getPort();
   }
 
   public void setThreads(int min, int max) {
-    BoundedThreadPool pool = (BoundedThreadPool) webServer.getThreadPool() ;
-    pool.setMinThreads(min); 
-    pool.setMaxThreads(max); 
+    listener.setMinThreads(min);
+    listener.setMaxThreads(max);
   }
   /**
    * Start the server. Does not wait for the server to start.
@@ -188,34 +183,27 @@ public class StatusHttpServer {
         try {
           webServer.start();
           break;
-        } catch(BindException be){
-          if( findPort ){
-            webServer.getConnectors()[0].setPort(getPort() + 1);
-          }else{
-            throw be ; 
-          }
-        }catch (MultiException ex) {
+        } catch (org.mortbay.util.MultiException ex) {
           // look for the multi exception containing a bind exception,
           // in that case try the next port number.
           boolean needNewPort = false;
           for(int i=0; i < ex.size(); ++i) {
-            Throwable sub = ex.getThrowable(i);
-            
+            Exception sub = ex.getException(i);
             if (sub instanceof java.net.BindException) {
               needNewPort = true;
+              break;
             }
           }
           if (!findPort || !needNewPort) {
             throw ex;
           } else {
-            // Not using multiple connectors
-           webServer.getConnectors()[0].setPort(getPort() + 1);
+            listener.setPort(listener.getPort() + 1);
           }
         }
       }
-    }catch (IOException ie) {
+    } catch (IOException ie) {
       throw ie;
-    }catch (Exception e) {
+    } catch (Exception e) {
       IOException ie = new IOException("Problem starting http server");
       ie.initCause(e);
       throw ie;
@@ -226,13 +214,7 @@ public class StatusHttpServer {
    * stop the server
    */
   public void stop() throws InterruptedException {
-    try{
-      webServer.stop();
-    }catch(InterruptedException ex){
-      throw ex ; 
-    }catch(Exception e){
-      e.printStackTrace(); 
-    }
+    webServer.stop();
   }
   
   /**
