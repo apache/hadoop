@@ -134,6 +134,9 @@ Trunk (unreleased changes)
 39. HADOOP-747.  Fix record serialization to work correctly when
     records are embedded in Maps.  (Milind Bhandarkar via cutting)
 
+40. HADOOP-698.  Fix HDFS client not to retry the same datanode on
+    read failures.  (Milind Bhandarkar via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

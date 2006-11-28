@@ -35,13 +35,12 @@ public class MiniDFSCluster {
   private Thread dataNodeThreads[];
   private NameNodeRunner nameNode;
   private DataNodeRunner dataNodes[];
-  private int maxRetries = 10;
   private int MAX_RETRIES  = 10;
   private int MAX_RETRIES_PER_PORT = 10;
 
   private int nameNodePort = 0;
   private int nameNodeInfoPort = 0;
-
+  
   /**
    * An inner class that runs a name node.
    */
@@ -107,10 +106,12 @@ public class MiniDFSCluster {
         String[] dirs = conf.getStrings("dfs.data.dir");
         for (int idx = 0; idx < dirs.length; idx++) {
           File dataDir = new File(dirs[idx]);
-          if (!dataDir.mkdirs()) {      
-            if (!dataDir.isDirectory()) {
-              throw new RuntimeException("Mkdirs failed to create directory " +
-                                         dataDir.toString());
+          synchronized (DataNodeRunner.class) {
+            if (!dataDir.mkdirs()) {
+              if (!dataDir.isDirectory()) {
+                throw new RuntimeException("Mkdirs failed to create directory " +
+                    dataDir.toString());
+              }
             }
           }
         }
@@ -143,7 +144,7 @@ public class MiniDFSCluster {
   public MiniDFSCluster(int namenodePort, 
                         Configuration conf,
                         boolean dataNodeFirst) throws IOException {
-    this(namenodePort, conf, 1, dataNodeFirst);
+    this(namenodePort, conf, 1, dataNodeFirst, true);
   }
   
   /**
@@ -158,18 +159,36 @@ public class MiniDFSCluster {
                         Configuration conf,
                         int nDatanodes,
                         boolean dataNodeFirst) throws IOException {
+    this(namenodePort, conf, nDatanodes, dataNodeFirst, true);
+  }
+  
+  /**
+   * Create the config and start up the servers.  If either the rpc or info port is already 
+   * in use, we will try new ports.
+   * @param namenodePort suggestion for which rpc port to use.  caller should use 
+   *                     getNameNodePort() to get the actual port used.
+   * @param nDatanodes Number of datanodes   
+   * @param dataNodeFirst should the datanode be brought up before the namenode?
+   * @param formatNamenode should the namenode be formatted before starting up ?
+   */
+  public MiniDFSCluster(int namenodePort, 
+                        Configuration conf,
+                        int nDatanodes,
+                        boolean dataNodeFirst,
+                        boolean formatNamenode) throws IOException {
 
     this.conf = conf;
 
     this.nDatanodes = nDatanodes;
     this.nameNodePort = namenodePort;
-    this.nameNodeInfoPort = 50080;   // We just want this port to be different from the default. 
+    this.nameNodeInfoPort = 50080;   // We just want this port to be different from the default.
     File base_dir = new File(System.getProperty("test.build.data"),
                              "dfs/");
     File data_dir = new File(base_dir, "data");
     conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
         new File(base_dir, "name2").getPath());
     conf.setInt("dfs.replication", Math.min(3, nDatanodes));
+    conf.setInt("dfs.safemode.extension", 0);
     // this timeout seems to control the minimum time for the test, so
     // decrease it considerably.
     conf.setInt("ipc.client.timeout", 1000);
@@ -183,7 +202,7 @@ public class MiniDFSCluster {
                "localhost:"+ Integer.toString(nameNodePort));
       conf.set("dfs.info.port", nameNodeInfoPort);
       
-      NameNode.format(conf);
+      if (formatNamenode) { NameNode.format(conf); }
       nameNode = new NameNodeRunner();
       nameNodeThread = new Thread(nameNode);
       dataNodes = new DataNodeRunner[nDatanodes];

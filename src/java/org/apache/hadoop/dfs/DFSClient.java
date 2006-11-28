@@ -536,7 +536,7 @@ class DFSClient implements FSConstants {
          * Open a DataInputStream to a DataNode so that it can be read from.
          * We get block ID and the IDs of the destinations at startup, from the namenode.
          */
-        private synchronized void blockSeekTo(long target) throws IOException {
+        private synchronized DatanodeInfo blockSeekTo(long target, TreeSet deadNodes) throws IOException {
             if (target >= filelen) {
                 throw new IOException("Attempted to read past end of file");
             }
@@ -572,10 +572,10 @@ class DFSClient implements FSConstants {
             // Connect to best DataNode for desired Block, with potential offset
             //
             int failures = 0;
-            TreeSet deadNodes = new TreeSet();
+            DatanodeInfo chosenNode = null;
             while (s == null) {
                 DNAddrPair retval = chooseDataNode(targetBlock, deadNodes);
-                DatanodeInfo chosenNode = retval.info;
+                chosenNode = retval.info;
                 InetSocketAddress targetAddr = retval.addr;
             
                 try {
@@ -608,6 +608,7 @@ class DFSClient implements FSConstants {
                     this.pos = target;
                     this.blockEnd = targetBlockEnd;
                     this.blockStream = in;
+                    return chosenNode;
                 } catch (IOException ex) {
                     // Put chosen node into dead list, continue
                     LOG.debug("Failed to connect to " + targetAddr + ":" 
@@ -622,6 +623,7 @@ class DFSClient implements FSConstants {
                     s = null;
                 }
             }
+            return chosenNode;
         }
 
         /**
@@ -653,7 +655,7 @@ class DFSClient implements FSConstants {
             int result = -1;
             if (pos < filelen) {
                 if (pos > blockEnd) {
-                    blockSeekTo(pos);
+                    blockSeekTo(pos, new TreeSet());
                 }
                 result = blockStream.read();
                 if (result >= 0) {
@@ -673,10 +675,15 @@ class DFSClient implements FSConstants {
             }
             if (pos < filelen) {
               int retries = 2;
+              DatanodeInfo chosenNode = null;
+              TreeSet deadNodes = null;
               while (retries > 0) {
                 try {
                   if (pos > blockEnd) {
-                      blockSeekTo(pos);
+                      if (deadNodes == null) {
+                        deadNodes = new TreeSet();
+                      }
+                      chosenNode = blockSeekTo(pos, deadNodes);
                   }
                   int realLen = Math.min(len, (int) (blockEnd - pos + 1));
                   int result = blockStream.read(buf, off, realLen);
@@ -687,6 +694,8 @@ class DFSClient implements FSConstants {
                 } catch (IOException e) {
                   LOG.warn("DFS Read: " + StringUtils.stringifyException(e));
                   blockEnd = -1;
+                  if (deadNodes == null) { deadNodes = new TreeSet(); }
+                  if (chosenNode != null) { deadNodes.add(chosenNode); }
                   if (--retries == 0) {
                     throw e;
                   }
