@@ -128,6 +128,9 @@ Trunk (unreleased changes)
 37. HADOOP-739.  Fix TestIPC to use different port number, making it
     more reliable.  (Nigel Daley via cutting)
 
+38. HADOOP-749.  Fix a NullPointerException in jobfailures.jsp.
+    (omalley via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

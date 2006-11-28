@@ -88,21 +88,20 @@
         }
       }
       out.print("</pre></td>");
+      out.print("<td>");
       if (taskAttemptTracker == null) {
-        out.print("&nbsp;");
+        out.print("n/a");
       } else {
         String taskLogUrl = taskAttemptTracker + "/tasklog.jsp?taskid=" + 
                               status.getTaskId();
         String tailFourKBUrl = taskLogUrl + "&tail=true&tailsize=4096";
         String tailEightKBUrl = taskLogUrl + "&tail=true&tailsize=8192";
         String entireLogUrl = taskLogUrl + "&all=true";
-        out.print("<td>");
         out.print("<a href=\"" + tailFourKBUrl + "\">Last 4KB</a><br/>");
         out.print("<a href=\"" + tailEightKBUrl + "\">Last 8KB</a><br/>");
         out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");
-        out.print("</td>");
       }
-      out.println("</tr>\n");
+      out.println("</td></tr>\n");
     }
   }
   %>
