@@ -131,6 +131,9 @@ Trunk (unreleased changes)
 38. HADOOP-749.  Fix a NullPointerException in jobfailures.jsp.
     (omalley via cutting)
 
+39. HADOOP-747.  Fix record serialization to work correctly when
+    records are embedded in Maps.  (Milind Bhandarkar via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

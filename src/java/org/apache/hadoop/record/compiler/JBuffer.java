@@ -48,11 +48,11 @@ public class JBuffer extends JCompType {
         if (decl) {
             ret = "    java.io.ByteArrayOutputStream "+fname+";\n";
         }
-        return ret + "        java.io.ByteArrayOutputStream "+fname+"=a_.readBuffer(\""+tag+"\");\n";
+        return ret + "        "+fname+"=a_.readBuffer(\""+tag+"\");\n";
     }
     
     public String genJavaWriteWrapper(String fname, String tag) {
-        return "        a_.writeBuffer("+fname+"\""+tag+"\");\n";
+        return "        a_.writeBuffer("+fname+",\""+tag+"\");\n";
     }
     
     public String genJavaCompareTo(String fname) {
