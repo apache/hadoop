@@ -137,6 +137,9 @@ Trunk (unreleased changes)
 40. HADOOP-698.  Fix HDFS client not to retry the same datanode on
     read failures.  (Milind Bhandarkar via cutting)
 
+41. HADOOP-689. Add GenericWritable, to facilitate polymorphism in
+    MapReduce, SequenceFile, etc. (Feng Jiang via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
