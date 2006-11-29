@@ -166,7 +166,15 @@ public class DataNode implements FSConstants, Runnable {
         this.infoServer.start();
         this.dnRegistration.infoPort = this.infoServer.getPort();
         // register datanode
-        register();
+        try {
+          register();
+        } catch (IOException ie) {
+          try {
+            infoServer.stop();
+          } catch (Exception e) {
+          }
+          throw ie;
+        }
         datanodeObject = this;
     }
     

@@ -140,6 +140,9 @@ Trunk (unreleased changes)
 41. HADOOP-689. Add GenericWritable, to facilitate polymorphism in
     MapReduce, SequenceFile, etc. (Feng Jiang via cutting)
 
+42. HADOOP-430.  Stop datanode's HTTP server when registration with
+    namenode fails.  (Wendy Chien via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
