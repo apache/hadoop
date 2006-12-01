@@ -1030,9 +1030,11 @@ public class TaskTracker
             // Delete temp directory in case any task used PhasedFileSystem.
             try{
               String systemDir = task.getConf().get("mapred.system.dir");
-              String taskTempDir = systemDir + "/" + 
-                  task.getJobId() + "/" + task.getTipId();
-              fs.delete(new Path(taskTempDir)) ;
+              Path taskTempDir = new Path(systemDir + "/" + 
+                  task.getJobId() + "/" + task.getTipId());
+              if( fs.exists(taskTempDir)){
+                fs.delete(taskTempDir) ;
+              }
             }catch(IOException e){
               LOG.warn("Error in deleting reduce temporary output",e); 
             }

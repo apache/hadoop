@@ -25,7 +25,7 @@ import org.apache.hadoop.util.Progressable;
  * better to commit(Path) individual files when done. Otherwise
  * commit() can be used to commit all open files at once. 
  */
-class PhasedFileSystem extends FileSystem {
+public class PhasedFileSystem extends FileSystem {
 
   private FileSystem baseFS ;
   // Map from final file name to temporary file name
@@ -93,7 +93,9 @@ class PhasedFileSystem extends FileSystem {
         }catch(IOException ioe){
           // ignore if already closed
         }
-        baseFS.delete( fInfo.getTempPath() ); 
+        if( baseFS.exists(fInfo.getTempPath())){
+          baseFS.delete( fInfo.getTempPath() );
+        }
         finalNameToFileInfo.remove(finalFile); 
       }
     }

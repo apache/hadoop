@@ -701,8 +701,6 @@ public class StreamJob {
         } catch (URISyntaxException e) {
           throw (IOException) new IOException().initCause(e);
         }
-      } else {
-        mapsideoutURI_ = primary;
       }
       // an empty reduce output named "part-00002" will go here and not collide.
       channel0 = primary + ".NONE";

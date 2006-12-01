@@ -146,6 +146,9 @@ Trunk (unreleased changes)
 43. HADOOP-750.  Fix a potential race condition during mapreduce
     shuffle.  (omalley via cutting)
 
+44. HADOOP-728.  Fix contrib/streaming-related issues, including
+    '-reducer NONE'.  (Sanjay Dahiya via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 

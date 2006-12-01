@@ -36,6 +36,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.PhasedFileSystem;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.util.StringUtils;
@@ -192,10 +193,6 @@ public abstract class PipeMapRed {
     }
   }
 
-  String makeUniqueFileSuffix() {
-    return "." + System.currentTimeMillis() + "." + job_.get("mapred.task.id");
-  }
-
   public void configure(JobConf job) {
     try {
       String argv = getPipeCommand(job);
@@ -259,20 +256,21 @@ public abstract class PipeMapRed {
         // See StreamJob.setOutputSpec(): if reducerNone_ aka optSideEffect then: 
         // client has renamed outputPath and saved the argv's original output path as:
         if (useSingleSideOutputURI_) {
-          sideEffectURI_ = new URI(sideOutputURI_);
+          finalOutputURI = new URI(sideOutputURI_);
           sideEffectPathFinal_ = null; // in-place, no renaming to final
         } else {
+          sideFs_ = new PhasedFileSystem(sideFs_, job);
           String sideOutputPath = job_.get("stream.sideoutput.dir"); // was: job_.getOutputPath() 
           String fileName = getSideEffectFileName(); // see HADOOP-444 for rationale
           sideEffectPathFinal_ = new Path(sideOutputPath, fileName);
-          sideEffectURI_ = new URI(sideEffectPathFinal_ + makeUniqueFileSuffix()); // implicit dfs: 
+          finalOutputURI = new URI(sideEffectPathFinal_.toString()); // implicit dfs: 
         }
         // apply default scheme
-        if(sideEffectURI_.getScheme() == null) {
-          sideEffectURI_ = new URI("file", sideEffectURI_.getSchemeSpecificPart(), null);
+        if(finalOutputURI.getScheme() == null) {
+          finalOutputURI = new URI("file", finalOutputURI.getSchemeSpecificPart(), null);
         }
         boolean allowSocket = useSingleSideOutputURI_;
-        sideEffectOut_ = getURIOutputStream(sideEffectURI_, allowSocket);
+        sideEffectOut_ = getURIOutputStream(finalOutputURI, allowSocket);
       }
 
       // 
@@ -292,7 +290,7 @@ public abstract class PipeMapRed {
           f = null;
       }
       logprintln("PipeMapRed exec " + Arrays.asList(argvSplit));
-      logprintln("sideEffectURI_=" + sideEffectURI_);
+      logprintln("sideEffectURI_=" + finalOutputURI);
 
       Environment childEnv = (Environment) StreamUtil.env().clone();
       addJobConfToEnvironment(job_, childEnv);
@@ -505,6 +503,7 @@ public abstract class PipeMapRed {
           if (optSideEffect_) {
             sideEffectOut_.write(answer);
             sideEffectOut_.write('\n');
+            sideEffectOut_.flush();
           } else {
             splitKeyVal(answer, key, val);
             output.collect(key, val);
@@ -576,17 +575,11 @@ public abstract class PipeMapRed {
       waitOutputThreads();
       try {
         if (optSideEffect_) {
-          logprintln("closing " + sideEffectURI_);
+          logprintln("closing " + finalOutputURI);
           if (sideEffectOut_ != null) sideEffectOut_.close();
-          logprintln("closed  " + sideEffectURI_);
-          if (useSingleSideOutputURI_) {
-            // With sideEffectPath_ we wrote in-place. 
-            // Possibly a named pipe set up by user or a socket.
-          } else {
-            boolean del = sideFs_.delete(sideEffectPathFinal_);
-            logprintln("deleted  (" + del + ") " + sideEffectPathFinal_);
-            sideFs_.rename(new Path(sideEffectURI_.getSchemeSpecificPart()), sideEffectPathFinal_);
-            logprintln("renamed  " + sideEffectPathFinal_);
+          logprintln("closed  " + finalOutputURI);
+          if ( ! useSingleSideOutputURI_) {
+            ((PhasedFileSystem)sideFs_).commit(); 
           }
         }
       } catch (IOException io) {
@@ -725,7 +718,7 @@ public abstract class PipeMapRed {
   boolean optUseKey_ = true;
 
   private boolean optSideEffect_;
-  private URI sideEffectURI_;
+  private URI finalOutputURI;
   private Path sideEffectPathFinal_;
 
   private boolean useSingleSideOutputURI_;
