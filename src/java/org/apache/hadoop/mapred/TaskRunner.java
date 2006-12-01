@@ -33,7 +33,7 @@ abstract class TaskRunner extends Thread {
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.mapred.TaskRunner");
 
-  boolean killed = false;
+  volatile boolean killed = false;
   private Process process;
   private Task t;
   private TaskTracker tracker;

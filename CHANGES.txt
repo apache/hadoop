@@ -143,6 +143,9 @@ Trunk (unreleased changes)
 42. HADOOP-430.  Stop datanode's HTTP server when registration with
     namenode fails.  (Wendy Chien via cutting)
 
+43. HADOOP-750.  Fix a potential race condition during mapreduce
+    shuffle.  (omalley via cutting)
+
 
 Release 0.8.0 - 2006-11-03
 
