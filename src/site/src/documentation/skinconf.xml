@@ -73,7 +73,7 @@ which will be used to configure the chosen Forrest skin.
   <group-name>Lucene</group-name>
   <group-description>Apache Lucene</group-description>
   <group-url>http://lucene.apache.org/</group-url>
-  <group-logo>http://lucene.apache.org/java/docs/images/lucene_green_150.gif</group-logo>
+  <group-logo>images/lucene_green_150.gif</group-logo>
 
   <!-- optional host logo (e.g. sourceforge logo)
        default skin: renders it at the bottom-left corner -->
