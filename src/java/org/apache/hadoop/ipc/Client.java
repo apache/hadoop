@@ -44,6 +44,7 @@ import org.apache.hadoop.dfs.FSConstants;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
@@ -259,12 +260,9 @@ public class Client {
                                   WritableUtils.readString(in));
             call.setResult(null, ex);
           } else {
-            Writable value = makeValue();
+            Writable value = (Writable)ReflectionUtils.newInstance(valueClass, conf);
             try {
               readingCall = call;
-              if(value instanceof Configurable) {
-                ((Configurable) value).setConf(conf);
-              }
               value.readFields(in);                 // read value
             } finally {
               readingCall = null;
@@ -526,18 +524,6 @@ public class Client {
     //entire system down.
     connection.setupIOstreams();
     return connection;
-  }
-
-  private Writable makeValue() {
-    Writable value;                             // construct value
-    try {
-      value = (Writable)valueClass.newInstance();
-    } catch (InstantiationException e) {
-      throw new RuntimeException(e.toString());
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e.toString());
-    }
-    return value;
   }
 
 }

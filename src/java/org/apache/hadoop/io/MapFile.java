@@ -22,6 +22,7 @@ import java.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /** A file-based map from keys to values.
@@ -470,8 +471,8 @@ public class MapFile {
               ", got " + dataReader.getValueClass().getName());
     }
     long cnt = 0L;
-    Writable key = (Writable)keyClass.getConstructor(new Class[0]).newInstance(new Object[0]);
-    Writable value = (Writable)valueClass.getConstructor(new Class[0]).newInstance(new Object[0]);
+    Writable key = (Writable)ReflectionUtils.newInstance(keyClass, conf);
+    Writable value = (Writable)ReflectionUtils.newInstance(valueClass, conf);
     SequenceFile.Writer indexWriter = null;
     if (!dryrun) indexWriter = SequenceFile.createWriter(fs, conf, index, keyClass, LongWritable.class);
     try {
@@ -510,11 +511,11 @@ public class MapFile {
     FileSystem fs = new LocalFileSystem(conf);
     MapFile.Reader reader = new MapFile.Reader(fs, in, conf);
     MapFile.Writer writer =
-      new MapFile.Writer(fs, out, reader.getKeyClass(), reader.getValueClass());
+      new MapFile.Writer(conf, fs, out, reader.getKeyClass(), reader.getValueClass());
 
     WritableComparable key =
-      (WritableComparable)reader.getKeyClass().newInstance();
-    Writable value = (Writable)reader.getValueClass().newInstance();
+      (WritableComparable)ReflectionUtils.newInstance(reader.getKeyClass(), conf);
+    Writable value = (Writable)ReflectionUtils.newInstance(reader.getValueClass(), conf);
 
     while (reader.next(key, value))               // copy all entries
       writer.append(key, value);

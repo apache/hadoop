@@ -131,16 +131,19 @@ class ReduceTask extends Task {
     private WritableComparator comparator;
     private Class keyClass;
     private Class valClass;
+    private Configuration conf;
     private DataOutputBuffer valOut = new DataOutputBuffer();
     private DataInputBuffer valIn = new DataInputBuffer();
     private DataInputBuffer keyIn = new DataInputBuffer();
 
     public ValuesIterator (SequenceFile.Sorter.RawKeyValueIterator in, 
                            WritableComparator comparator, Class keyClass,
-                           Class valClass, TaskUmbilicalProtocol umbilical)
+                           Class valClass, TaskUmbilicalProtocol umbilical,
+                           Configuration conf)
       throws IOException {
       this.in = in;
       this.umbilical = umbilical;
+      this.conf = conf;
       this.comparator = comparator;
       this.keyClass = keyClass;
       this.valClass = valClass;
@@ -183,8 +186,8 @@ class ReduceTask extends Task {
 
       Writable lastKey = key;                     // save previous key
       try {
-        key = (WritableComparable)keyClass.newInstance();
-        value = (Writable)valClass.newInstance();
+        key = (WritableComparable)ReflectionUtils.newInstance(keyClass, this.conf);
+        value = (Writable)ReflectionUtils.newInstance(valClass, this.conf);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -298,7 +301,7 @@ class ReduceTask extends Task {
       Class keyClass = job.getMapOutputKeyClass();
       Class valClass = job.getMapOutputValueClass();
       ValuesIterator values = new ValuesIterator(rIter, comparator, keyClass, 
-                                                 valClass, umbilical);
+                                                 valClass, umbilical, job);
       while (values.more()) {
         myMetrics.reduceInput();
         reducer.reduce(values.getKey(), values, collector, reporter);

@@ -460,7 +460,7 @@ public abstract class Server {
       if (LOG.isDebugEnabled())
         LOG.debug(" got #" + id);
             
-      Writable param = makeParam();           // read param
+      Writable param = (Writable)ReflectionUtils.newInstance(paramClass, conf);           // read param
       param.readFields(dis);        
         
       Call call = new Call(id, param, this);
@@ -633,21 +633,5 @@ public abstract class Server {
 
   /** Called for each call. */
   public abstract Writable call(Writable param) throws IOException;
-
   
-  private Writable makeParam() {
-    Writable param;                               // construct param
-    try {
-      param = (Writable)paramClass.newInstance();
-      if (param instanceof Configurable) {
-        ((Configurable)param).setConf(conf);
-      }
-    } catch (InstantiationException e) {
-      throw new RuntimeException(e.toString());
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e.toString());
-    }
-    return param;
-  }
-
 }
