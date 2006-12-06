@@ -33,17 +33,17 @@ public class TestStreaming extends TestCase
 
   // "map" command: grep -E (red|green|blue)
   // reduce command: uniq
-  String INPUT_FILE = "input.txt";
-  String OUTPUT_DIR = "out";
-  String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
+  protected File INPUT_FILE = new File("input.txt");
+  protected File OUTPUT_DIR = new File("out");
+  protected String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
   // map behaves like "/usr/bin/tr . \\n"; (split words into lines)
-  String map = StreamUtil.makeJavaCommand(TrApp.class, new String[]{".", "\\n"});
+  protected String map = StreamUtil.makeJavaCommand(TrApp.class, new String[]{".", "\\n"});
   // combine, reduce behave like /usr/bin/uniq. But also prepend lines with C, R.
-  String combine  = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"C"});
-  String reduce = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"R"});
-  String outputExpect = "RCare\t\nRCblue\t\nRCbunnies\t\nRCpink\t\nRCred\t\nRCroses\t\nRCviolets\t\n";
+  protected String combine  = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"C"});
+  protected String reduce = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"R"});
+  protected String outputExpect = "RCare\t\nRCblue\t\nRCbunnies\t\nRCpink\t\nRCred\t\nRCroses\t\nRCviolets\t\n";
 
-  StreamJob job;
+  private StreamJob job;
 
   public TestStreaming() throws IOException
   {
@@ -52,14 +52,27 @@ public class TestStreaming extends TestCase
     utilTest.redirectIfAntJunit();
   }
 
-  void createInput() throws IOException
+  protected void createInput() throws IOException
   {
-    String path = new File(".", INPUT_FILE).getAbsolutePath();// needed from junit forked vm
-    DataOutputStream out = new DataOutputStream(new FileOutputStream(path));
+    DataOutputStream out = new DataOutputStream(
+        new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
     out.write(input.getBytes("UTF-8"));
     out.close();
   }
 
+  protected String[] genArgs() {
+    return new String[] {
+        "-input", INPUT_FILE.getAbsolutePath(),
+        "-output", OUTPUT_DIR.getAbsolutePath(),
+        "-mapper", map,
+        "-combiner", combine,
+        "-reducer", reduce,
+        //"-verbose",
+        //"-jobconf", "stream.debug=set"
+        "-jobconf", "keep.failed.task.files=true"
+        };
+  }
+  
   public void testCommandLine()
   {
     try {
@@ -68,30 +81,23 @@ public class TestStreaming extends TestCase
 
       // During tests, the default Configuration will use a local mapred
       // So don't specify -config or -cluster
-      String argv[] = new String[] {
-          "-input", INPUT_FILE,
-          "-output", OUTPUT_DIR,
-          "-mapper", map,
-          "-combiner", combine,
-          "-reducer", reduce,
-          //"-verbose",
-          //"-jobconf", "stream.debug=set"
-          "-jobconf", "keep.failed.task.files=true",
-      };
-      job = new StreamJob(argv, mayExit);      
+      job = new StreamJob(genArgs(), mayExit);      
       job.go();
-      File outFile = new File(".", OUTPUT_DIR + "/part-00000").getAbsoluteFile();
+      File outFile = new File(OUTPUT_DIR, "part-00000").getAbsoluteFile();
       String output = StreamUtil.slurp(outFile);
+      outFile.delete();
       System.err.println("outEx1=" + outputExpect);
       System.err.println("  out1=" + output);
       assertEquals(outputExpect, output);
-
     } catch(Exception e) {
       failTrace(e);
+    } finally {
+      INPUT_FILE.delete();
+      OUTPUT_DIR.delete();
     }
   }
 
-  void failTrace(Exception e)
+  private void failTrace(Exception e)
   {
     StringWriter sw = new StringWriter();
     e.printStackTrace(new PrintWriter(sw));

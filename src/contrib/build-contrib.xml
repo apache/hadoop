@@ -103,7 +103,7 @@
      srcdir="${src.test}"
      includes="**/*.java"
      destdir="${build.test}"
-     debug="${debug}">
+     debug="${javac.debug}">
       <classpath refid="test.classpath"/>
     </javac>
   </target>
