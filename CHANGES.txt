@@ -12,6 +12,9 @@ Trunk (unreleased changes)
  3. HADOOP-621. Change 'dfs -cat' to exit sooner when output has been
     closed.  (Dhruba Borthakur via cutting) 
 
+ 4. HADOOP-752. Rationalize some synchronization in DFS namenode.
+    (Dhruba Borthakur via cutting) 
+
 
 Release 0.9.1 - 2006-12-06
 

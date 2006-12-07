@@ -329,9 +329,9 @@ class FSNamesystem implements FSConstants {
      *         false if file does not exist or is a directory
      * @author shv
      */
-    public boolean setReplication(String src, 
-                                  short replication
-                                ) throws IOException {
+    public synchronized boolean setReplication(String src, 
+                                               short replication
+                                              ) throws IOException {
       if( isInSafeMode() )
         throw new SafeModeException( "Cannot set replication for " + src, safeMode );
       verifyReplication(src, replication, null );
@@ -1745,7 +1745,7 @@ class FSNamesystem implements FSConstants {
 
     /**
      */
-    public DatanodeInfo[] datanodeReport() {
+    public synchronized DatanodeInfo[] datanodeReport() {
       DatanodeInfo results[] = null;
         synchronized (heartbeats) {
           synchronized (datanodeMap) {
@@ -1760,8 +1760,8 @@ class FSNamesystem implements FSConstants {
     
     /**
      */
-    public void DFSNodesStatus( ArrayList<DatanodeDescriptor> live, 
-                                ArrayList<DatanodeDescriptor> dead ) {
+    public synchronized void DFSNodesStatus( ArrayList<DatanodeDescriptor> live, 
+                                             ArrayList<DatanodeDescriptor> dead ) {
       synchronized (heartbeats) {
         synchronized (datanodeMap) {
           for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext(); ) {
