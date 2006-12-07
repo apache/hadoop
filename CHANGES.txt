@@ -8,6 +8,9 @@ Release 0.9.1 - 2006-12-06
  2. HADOOP-779. Fix contrib/streaming to work correctly with gzipped
     input files.  (Hairong Kuang via cutting)
 
+ 3. HADOOP-763. Change DFS namenode benchmark to not use MapReduce.
+    (Nigel Daley via cutting)
+
 
 Release 0.9.0 - 2006-12-01
 
