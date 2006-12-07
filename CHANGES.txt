@@ -30,6 +30,9 @@ Trunk (unreleased changes)
  8. HADOOP-676. Improved exceptions and error messages for common job
     input specification errors.  (Sanjay Dahiya via cutting)
 
+ 9. HADOOP-639. Restructure InterTrackerProtocol to make task
+    accounting more reliable.  (Arun C Murthy via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 
