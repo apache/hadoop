@@ -1,5 +1,18 @@
 Hadoop Change Log
 
+
+Trunk (unreleased changes)
+
+ 1. HADOOP-763. Change DFS namenode benchmark to not use MapReduce.
+    (Nigel Daley via cutting)
+
+ 2. HADOOP-777. Use fully-qualified hostnames for tasktrackers and
+    datanodes.  (Mahadev Konar via cutting)
+
+ 3. HADOOP-621. Change 'dfs -cat' to exit sooner when output has been
+    closed.  (Dhruba Borthakur via cutting) 
+
+
 Release 0.9.1 - 2006-12-06
 
  1. HADOOP-780. Use ReflectionUtils to instantiate key and value
@@ -7,15 +20,6 @@ Release 0.9.1 - 2006-12-06
 
  2. HADOOP-779. Fix contrib/streaming to work correctly with gzipped
     input files.  (Hairong Kuang via cutting)
-
- 3. HADOOP-763. Change DFS namenode benchmark to not use MapReduce.
-    (Nigel Daley via cutting)
-
- 4. HADOOP-777. Use fully-qualified hostnames for tasktrackers and
-    datanodes.  (Mahadev Konar via cutting)
-
- 5. HADOOP-621. Change 'dfs -cat' to exit sooner when output has been
-    closed.  (Dhruba Borthakur via cutting) 
 
 
 Release 0.9.0 - 2006-12-01
