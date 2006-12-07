@@ -96,6 +96,7 @@ public class DFSAdmin extends DFSShell {
         return;
       }
       FSConstants.SafeModeAction action;
+      Boolean waitExitSafe = false;
 
       if ("leave".equalsIgnoreCase(argv[idx])) {
         action = FSConstants.SafeModeAction.SAFEMODE_LEAVE;
@@ -103,13 +104,32 @@ public class DFSAdmin extends DFSShell {
         action = FSConstants.SafeModeAction.SAFEMODE_ENTER;
       } else if ("get".equalsIgnoreCase(argv[idx])) {
         action = FSConstants.SafeModeAction.SAFEMODE_GET;
+      } else if ("wait".equalsIgnoreCase(argv[idx])) {
+        action = FSConstants.SafeModeAction.SAFEMODE_GET;
+        waitExitSafe = true;
       } else {
         printUsage("-safemode");
         return;
       }
       DistributedFileSystem dfs = (DistributedFileSystem) fs;
-      boolean mode = dfs.setSafeMode(action);
-      System.out.println("Safe mode is " + (mode ? "ON" : "OFF"));
+      boolean inSafeMode = dfs.setSafeMode(action);
+
+      //
+      // If we are waiting for safemode to exit, then poll and
+      // sleep till we are out of safemode.
+      //
+      if (waitExitSafe) {
+        while (inSafeMode) {
+          try {
+            Thread.sleep(5000);
+          } catch (java.lang.InterruptedException e) {
+            throw new IOException("Wait Interrupted");
+          }
+          inSafeMode = dfs.setSafeMode(action);
+        }
+      }
+
+      System.out.println("Safe mode is " + (inSafeMode ? "ON" : "OFF"));
     }
 
     /**
@@ -122,11 +142,11 @@ public class DFSAdmin extends DFSShell {
                 + " [report]");
           } else if ("-safemode".equals(cmd)) {
             System.err.println("Usage: java DFSAdmin"
-                + " [-safemode enter | leave | get]");
+                + " [-safemode enter | leave | get | wait]");
           } else {
             System.err.println("Usage: java DFSAdmin");
             System.err.println("           [-report]");
-            System.err.println("           [-safemode enter | leave | get]");
+            System.err.println("           [-safemode enter | leave | get | wait]");
           }
     }
 

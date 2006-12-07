@@ -33,6 +33,9 @@ Trunk (unreleased changes)
  9. HADOOP-639. Restructure InterTrackerProtocol to make task
     accounting more reliable.  (Arun C Murthy via cutting)
 
+10. HADOOP-756. Add new dfsadmin option to wait for filesystem to be
+    operational.  (Dhruba Borthakur via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 
