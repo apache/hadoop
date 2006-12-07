@@ -361,7 +361,7 @@ public class PhasedFileSystem extends FileSystem {
 
   @Override
   public void copyToLocalFile(
-      Path src, Path dst)
+      Path src, Path dst, boolean copyCrc)
       throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }

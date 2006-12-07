@@ -52,11 +52,20 @@ public class FileUtil {
     return dir.delete();
   }
 
+  /** Copy files between FileSystems. */
+  public static boolean copy(FileSystem srcFS, Path src, 
+                             FileSystem dstFS, Path dst, 
+                             boolean deleteSource,
+                             Configuration conf ) throws IOException {
+    return copy(srcFS, src, dstFS, dst, deleteSource, true, conf);
+  
+  }
 
   /** Copy files between FileSystems. */
   public static boolean copy(FileSystem srcFS, Path src, 
                              FileSystem dstFS, Path dst, 
                              boolean deleteSource,
+                             boolean copyCrc,
                              Configuration conf ) throws IOException {
     dst = checkDest(src.getName(), dstFS, dst);
 
@@ -67,12 +76,16 @@ public class FileUtil {
       Path contents[] = srcFS.listPaths(src);
       for (int i = 0; i < contents.length; i++) {
         copy(srcFS, contents[i], dstFS, new Path(dst, contents[i].getName()),
-             deleteSource, conf);
+             deleteSource, copyCrc, conf);
       }
     } else if (srcFS.isFile(src)) {
       InputStream in = srcFS.open(src);
       try {
-        copyContent(in, dstFS.create(dst), conf);
+        OutputStream out = (copyCrc) ?
+          dstFS.create(dst) :
+          dstFS.createRaw(dst, true, dstFS.getDefaultReplication(),
+            dstFS.getDefaultBlockSize());
+        copyContent(in, out, conf);
       } finally {
         in.close();
       } 

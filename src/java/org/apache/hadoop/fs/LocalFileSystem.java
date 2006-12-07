@@ -338,8 +338,8 @@ public class LocalFileSystem extends FileSystem {
     }
 
     // We can't delete the src file in this case.  Too bad.
-    public void copyToLocalFile(Path src, Path dst) throws IOException {
-      FileUtil.copy(this, src, this, dst, false, getConf());
+    public void copyToLocalFile(Path src, Path dst, boolean copyCrc) throws IOException {
+      FileUtil.copy(this, src, this, dst, false, copyCrc, getConf());
     }
 
     // We can write output directly to the final location

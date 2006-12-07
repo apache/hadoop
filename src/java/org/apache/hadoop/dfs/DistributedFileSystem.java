@@ -181,15 +181,15 @@ public class DistributedFileSystem extends FileSystem {
     }
 
     public void moveFromLocalFile(Path src, Path dst) throws IOException {
-      FileUtil.copy(localFs, src, this, dst, true, getConf());
+      FileUtil.copy(localFs, src, this, dst, true, true, getConf());
     }
 
     public void copyFromLocalFile(Path src, Path dst) throws IOException {
-      FileUtil.copy(localFs, src, this, dst, false, getConf());
+      FileUtil.copy(localFs, src, this, dst, false, true, getConf());
     }
 
-    public void copyToLocalFile(Path src, Path dst) throws IOException {
-      FileUtil.copy(this, src, localFs, dst, false, getConf());
+    public void copyToLocalFile(Path src, Path dst, boolean copyCrc) throws IOException {
+      FileUtil.copy(this, src, localFs, dst, false, copyCrc, getConf());
     }
 
     public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)

@@ -23,6 +23,10 @@ Trunk (unreleased changes)
     processing very large invalid block lists can tie up both the
     namenode and datanode for too long.  (Dhruba Borthakur via cutting) 
 
+ 7. HADOOP-738. Change 'dfs -get' command to not create CRC files by
+    default, adding a -crc option to force their creation.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

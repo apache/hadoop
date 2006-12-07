@@ -731,8 +731,19 @@ public abstract class FileSystem extends Configured {
     /**
      * The src file is under FS, and the dst is on the local disk.
      * Copy it from FS control to the local dst name.
+     * If src and dst are directories, copy crc files as well.
      */
-    public abstract void copyToLocalFile(Path src, Path dst) throws IOException;
+    public void copyToLocalFile(Path src, Path dst) throws IOException {
+      copyToLocalFile(src, dst, true);
+    }
+    
+    /**
+     * The src file is under FS, and the dst is on the local disk.
+     * Copy it from FS control to the local dst name.
+     * If src and dst are directories, the copyCrc parameter
+     * determines whether to copy CRC files.
+     */
+    public abstract void copyToLocalFile(Path src, Path dst, boolean copyCrc) throws IOException;
 
     /**
      * Returns a local File that the user can write output to.  The caller

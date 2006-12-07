@@ -62,12 +62,23 @@ public class DFSShell extends ToolBase {
      * and copy them to the local name. srcf is kept.
      * When copying mutiple files, the destination must be a directory. 
      * Otherwise, IOException is thrown.
-     * @param srcf: a file pattern specifying source files
-     * @param dstf: a destination local file/directory 
+     * @param argv: arguments
+     * @param pos: Ignore everything before argv[pos]  
      * @exception: IOException  
      * @see org.apache.hadoop.fs.FileSystem.globPaths 
      */
-    void copyToLocal(String srcf, String dstf) throws IOException {
+    void copyToLocal(String[]argv, int pos) throws IOException {
+      if(argv.length-pos<2 || (argv.length-pos==2 && argv[pos].equalsIgnoreCase("-crc"))) {
+        System.err.println("Usage: -get [-crc] <src> <dst>");
+        System.exit(-1);
+      }
+      boolean copyCrc = false;
+      if ("-crc".equalsIgnoreCase(argv[pos])) {
+        pos++;
+        copyCrc = true;
+      }
+      String srcf = argv[pos++];
+      String dstf = argv[pos++];
       Path [] srcs = fs.globPaths( new Path(srcf) );
       if( srcs.length > 1 && !new File( dstf ).isDirectory()) {
         throw new IOException( "When copy multiple files, " 
@@ -75,7 +86,7 @@ public class DFSShell extends ToolBase {
       }
       Path dst = new Path( dstf );
       for( int i=0; i<srcs.length; i++ ) {
-        fs.copyToLocalFile( srcs[i], dst );
+        fs.copyToLocalFile( srcs[i], dst, copyCrc );
       }
     }
     
@@ -431,7 +442,7 @@ public class DFSShell extends ToolBase {
             + "destination should be a directory." );
       }
       for( int i=0; i<srcs.length; i++ ) {
-        FileUtil.copy(fs, srcs[i], fs, dst, false, conf);
+        FileUtil.copy(fs, srcs[i], fs, dst, false, true, conf);
       }
     }
 
@@ -644,7 +655,7 @@ public class DFSShell extends ToolBase {
           } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd) ||
                    "-moveToLocal".equals(cmd)) {
             System.err.println("Usage: java DFSShell" + 
-                " [" + cmd + " <src> <localdst>]");
+                " [" + cmd + " [-crc] <src> <localdst>]");
           } else if ("-cat".equals(cmd)) {
             System.out.println("Usage: java DFSShell" + 
                 " [" + cmd + " <src>]");
@@ -669,11 +680,11 @@ public class DFSShell extends ToolBase {
             System.err.println("           [-put <localsrc> <dst>]");
             System.err.println("           [-copyFromLocal <localsrc> <dst>]");
             System.err.println("           [-moveFromLocal <localsrc> <dst>]");
-            System.err.println("           [-get <src> <localdst>]");
+            System.err.println("           [-get [-crc] <src> <localdst>]");
             System.err.println("           [-getmerge <src> <localdst> [addnl]]");
             System.err.println("           [-cat <src>]");
-            System.err.println("           [-copyToLocal <src> <localdst>]");
-            System.err.println("           [-moveToLocal <src> <localdst>]");
+            System.err.println("           [-copyToLocal [-crc] <src> <localdst>]");
+            System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
             System.err.println("           [-mkdir <path>]");
             System.err.println("           [-setrep [-R] <rep> <path/file>]");
           }
@@ -696,10 +707,15 @@ public class DFSShell extends ToolBase {
         //
         // verify that we have enough command line parameters
         //
-        if ("-put".equals(cmd) || "-get".equals(cmd) || 
-            "-copyFromLocal".equals(cmd) || "-moveFromLocal".equals(cmd) || 
-            "-copyToLocal".equals(cmd) || "-moveToLocal".equals(cmd)) {
+        if ("-put".equals(cmd) || 
+            "-copyFromLocal".equals(cmd) || "-moveFromLocal".equals(cmd)) {
                 if (argv.length != 3) {
+                  printUsage(cmd);
+                  return exitCode;
+                }
+        } else if ("-get".equals(cmd) || 
+            "-copyToLocal".equals(cmd) || "-moveToLocal".equals(cmd)) {
+                if (argv.length < 3) {
                   printUsage(cmd);
                   return exitCode;
                 }
@@ -735,7 +751,7 @@ public class DFSShell extends ToolBase {
             } else if ("-moveFromLocal".equals(cmd)) {
                 moveFromLocal(new Path(argv[i++]), argv[i++]);
             } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd)) {
-                copyToLocal(argv[i++], argv[i++]);
+                copyToLocal(argv, i);
             } else if ("-getmerge".equals(cmd)) {
                 if(argv.length>i+2)
                     copyMergeToLocal(argv[i++], new Path(argv[i++]), Boolean.parseBoolean(argv[i++]));
