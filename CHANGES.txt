@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Trunk (unreleased changes)
+Release 0.9.1 - 2006-12-06
 
  1. HADOOP-780. Use ReflectionUtils to instantiate key and value
     objects. (ab)
