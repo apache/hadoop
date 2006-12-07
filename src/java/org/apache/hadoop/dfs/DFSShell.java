@@ -148,8 +148,21 @@ public class DFSShell extends ToolBase {
       try {
         BufferedReader din = new BufferedReader(new InputStreamReader(in));
         String line;
+        int checkFactor = 0;
         while((line = din.readLine()) != null) {
           System.out.println(line);      
+
+          //
+          // Peridically check if the output encountered an error. This can
+          // happen if the output stream has been disconnected
+          //
+          if (checkFactor == 0) {
+            if (System.out.checkError()) {
+              throw new IOException("Unable to write to output stream");
+            }
+            checkFactor = 10000;
+          }
+          checkFactor--;
         }
       } finally {
         in.close();
