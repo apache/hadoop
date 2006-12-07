@@ -128,7 +128,7 @@ public class DNS {
       }
 
     if (hosts.size() == 0)
-      return new String[] { InetAddress.getLocalHost().getHostName() };
+      return new String[] { InetAddress.getLocalHost().getCanonicalHostName() };
     else
       return (String[]) hosts.toArray(new String[] {});
   }
@@ -166,7 +166,7 @@ public class DNS {
   public static String getDefaultHost(String strInterface, String nameserver)
     throws UnknownHostException {
     if (strInterface.equals("default")) 
-      return InetAddress.getLocalHost().getHostName();
+      return InetAddress.getLocalHost().getCanonicalHostName();
 
     if (nameserver.equals("default"))
       return getDefaultHost(strInterface);
