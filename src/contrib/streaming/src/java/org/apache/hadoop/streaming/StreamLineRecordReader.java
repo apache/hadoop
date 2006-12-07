@@ -45,7 +45,7 @@ public class StreamLineRecordReader extends StreamBaseRecordReader {
     super(in, split, reporter, job, fs);
     gzipped_ = StreamInputFormat.isGzippedInput(job);
     if (gzipped_) {
-      din_ = new DataInputStream(new GZIPInputStream(in_));
+      din_ = new BufferedInputStream( (new GZIPInputStream(in_) ) );
     } else {
       din_ = in_;
     }
@@ -88,40 +88,24 @@ public class StreamLineRecordReader extends StreamBaseRecordReader {
     Text tValue = (Text) value;
     byte[] line;
 
-    while (true) {
-      if (gzipped_) {
-        // figure EOS from readLine
-      } else {
-        long pos = in_.getPos();
-        if (pos >= end_) return false;
-      }
-
-      line = UTF8ByteArrayUtils.readLine((InputStream) in_);
-      if (line == null) return false;
-      try {
-        Text.validateUTF8(line);
-      } catch (MalformedInputException m) {
-        System.err.println("line=" + line + "|" + new Text(line));
-        System.out.flush();
-      }
-      try {
-        int tab = UTF8ByteArrayUtils.findTab(line);
-        if (tab == -1) {
-          tKey.set(line);
-          tValue.set("");
-        } else {
-          UTF8ByteArrayUtils.splitKeyVal(line, tKey, tValue, tab);
-        }
-        break;
-      } catch (MalformedInputException e) {
-        LOG.warn(StringUtils.stringifyException(e));
-      }
+    if ( !gzipped_  ) {
+      long pos = in_.getPos();
+      if (pos >= end_) return false;
+    }
+    
+    line = UTF8ByteArrayUtils.readLine((InputStream) din_);
+    if (line == null) return false;
+    int tab = UTF8ByteArrayUtils.findTab(line);
+    if (tab == -1) {
+      tKey.set(line);
+      tValue.set("");
+    } else {
+      UTF8ByteArrayUtils.splitKeyVal(line, tKey, tValue, tab);
     }
     numRecStats(line, 0, line.length);
     return true;
   }
 
   boolean gzipped_;
-  GZIPInputStream zin_;
-  DataInputStream din_; // GZIP or plain  
+  InputStream din_; // GZIP or plain  
 }
