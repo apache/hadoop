@@ -93,11 +93,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       }
     }
     
-    public long getProtocolVersion(String protocol, long clientVersion) {
+    public long getProtocolVersion(String protocol, 
+                                   long clientVersion) throws IOException {
       if (protocol.equals(InterTrackerProtocol.class.getName())) {
         return InterTrackerProtocol.versionID;
-      } else {
+      } else if (protocol.equals(JobSubmissionProtocol.class.getName())){
         return JobSubmissionProtocol.versionID;
+      } else {
+        throw new IOException("Unknown protocol to job tracker: " + protocol);
       }
     }
     /**

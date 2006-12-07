@@ -15,6 +15,9 @@ Trunk (unreleased changes)
  4. HADOOP-752. Rationalize some synchronization in DFS namenode.
     (Dhruba Borthakur via cutting) 
 
+ 5. HADOOP-629. Fix RPC services to better check the protocol name and
+    version.  (omalley via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

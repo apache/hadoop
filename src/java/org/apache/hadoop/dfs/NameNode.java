@@ -63,13 +63,17 @@ import org.apache.hadoop.metrics.Metrics;
  * @author Mike Cafarella
  **********************************************************/
 public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
-    public long getProtocolVersion(String protocol, long clientVersion) { 
+    public long getProtocolVersion(String protocol, 
+                                   long clientVersion) throws IOException { 
       if (protocol.equals(ClientProtocol.class.getName())) {
         return ClientProtocol.versionID; 
-      } else {
+      } else if (protocol.equals(DatanodeProtocol.class.getName())){
         return DatanodeProtocol.versionID;
+      } else {
+        throw new IOException("Unknown protocol to name node: " + protocol);
       }
     }
+    
     public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.NameNode");
     public static final Log stateChangeLog = LogFactory.getLog( "org.apache.hadoop.dfs.StateChange");
 

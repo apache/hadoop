@@ -196,9 +196,16 @@ public class TaskTracker
       return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.JOBCACHE;
     }
     
-    public long getProtocolVersion(String protocol, long clientVersion) {
-      return TaskUmbilicalProtocol.versionID;
+    public long getProtocolVersion(String protocol, 
+                                   long clientVersion) throws IOException {
+      if (protocol.equals(TaskUmbilicalProtocol.class.getName())) {
+        return TaskUmbilicalProtocol.versionID;
+      } else {
+        throw new IOException("Unknown protocol for task tracker: " +
+                              protocol);
+      }
     }
+    
     /**
      * Do the real constructor work here.  It's in a separate method
      * so we can call it again and "recycle" the object after calling
