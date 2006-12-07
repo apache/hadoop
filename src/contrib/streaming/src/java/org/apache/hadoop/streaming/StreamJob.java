@@ -19,6 +19,7 @@
 package org.apache.hadoop.streaming;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -37,6 +38,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.mapred.FileAlreadyExistsException;
+import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.RunningJob;
@@ -786,7 +789,17 @@ public class StreamJob {
       LOG.info("Job complete: " + jobId_);
       LOG.info("Output: " + output_);
       error = false;
-    } finally {
+    } catch(FileNotFoundException fe){
+        LOG.error("Error launching job , bad input path : " + fe.getMessage());
+      }catch(InvalidJobConfException je){
+        LOG.error("Error launching job , Invalid job conf : " + je.getMessage());
+      }catch(FileAlreadyExistsException fae){
+        LOG.error("Error launching job , Output path already exists : " 
+            + fae.getMessage());
+      }catch( IOException ioe){
+        LOG.error("Error Launching job : " + ioe.getMessage());
+      }
+      finally {
       if (error && (running_ != null)) {
         LOG.info("killJob...");
         running_.killJob();

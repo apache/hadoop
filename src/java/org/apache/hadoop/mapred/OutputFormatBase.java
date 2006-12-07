@@ -84,15 +84,17 @@ public abstract class OutputFormatBase implements OutputFormat {
                                                Progressable progress)
     throws IOException;
 
-  public void checkOutputSpecs(FileSystem fs, JobConf job) throws IOException {
+  public void checkOutputSpecs(FileSystem fs, JobConf job) 
+          throws FileAlreadyExistsException, 
+             InvalidJobConfException, IOException {
     // Ensure that the output directory is set and not already there
     Path outDir = job.getOutputPath();
     if (outDir == null && job.getNumReduceTasks() != 0) {
-      throw new IOException("Output directory not set in JobConf.");
+      throw new InvalidJobConfException("Output directory not set in JobConf.");
     }
     if (outDir != null && fs.exists(outDir)) {
-      throw new IOException("Output directory " + outDir + 
-                            " already exists.");
+      throw new FileAlreadyExistsException("Output directory " + outDir + 
+                            " already exists in " + fs.getName() );
     }
   }
 
