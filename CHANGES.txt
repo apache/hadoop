@@ -18,6 +18,11 @@ Trunk (unreleased changes)
  5. HADOOP-629. Fix RPC services to better check the protocol name and
     version.  (omalley via cutting)
 
+ 6. HADOOP-774. Limit the number of invalid blocks returned with
+    heartbeats by the namenode to datanodes.  Transmitting and
+    processing very large invalid block lists can tie up both the
+    namenode and datanode for too long.  (Dhruba Borthakur via cutting) 
+
 
 Release 0.9.1 - 2006-12-06
 

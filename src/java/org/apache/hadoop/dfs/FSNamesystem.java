@@ -1809,23 +1809,54 @@ class FSNamesystem implements FSConstants {
         // only if safe mode is off.
         if( isInSafeMode() )
           return null;
-        
+       
         Collection<Block> invalidateSet = recentInvalidateSets.remove( 
                                                       nodeID.getStorageID() );
  
-        if (invalidateSet == null ) 
+        if (invalidateSet == null) {
             return null;
+        }
+
+        Iterator<Block> it = null;
+        int sendNum = invalidateSet.size();
+        int origSize = sendNum;
+        ArrayList sendBlock = new ArrayList(sendNum);
+
+        //
+        // calculate the number of blocks that we send in one message
+        //
+        if (sendNum > FSConstants.BLOCK_INVALIDATE_CHUNK) {
+            sendNum =  FSConstants.BLOCK_INVALIDATE_CHUNK;
+        }
+        //
+        // Copy the first chunk into sendBlock
+        //
+        for (it = invalidateSet.iterator(); sendNum > 0; sendNum--) {
+            assert(it.hasNext());
+            sendBlock.add(it.next());
+            it.remove();
+        }
+
+        //
+        // If we could not send everything in this message, reinsert this item
+        // into the collection.
+        //
+        if (it.hasNext()) {
+            assert(origSize > FSConstants.BLOCK_INVALIDATE_CHUNK);
+            recentInvalidateSets.put(nodeID.getStorageID(), invalidateSet);
+        }
         
-        if(NameNode.stateChangeLog.isInfoEnabled()) {
+        if (NameNode.stateChangeLog.isInfoEnabled()) {
             StringBuffer blockList = new StringBuffer();
-            for( Iterator<Block> it = invalidateSet.iterator(); it.hasNext(); ) {
+            for (int i = 0; i < sendBlock.size(); i++) {
                 blockList.append(' ');
-                blockList.append(it.next().getBlockName());
+                Block block = (Block) sendBlock.get(i);
+                blockList.append(block.getBlockName());
             }
             NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockToInvalidate: "
                    +"ask "+nodeID.getName()+" to delete " + blockList );
         }
-        return (Block[]) invalidateSet.toArray(new Block[invalidateSet.size()]);
+        return (Block[]) sendBlock.toArray(new Block[sendBlock.size()]);
     }
 
     /**

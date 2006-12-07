@@ -99,6 +99,9 @@ public interface FSConstants {
     public static final int STILL_WAITING = 1;
     public static final int COMPLETE_SUCCESS = 2;
 
+    // Chunk the block Invalidate message
+    public static final int BLOCK_INVALIDATE_CHUNK = 100;
+
     //
     // Timeouts, constants
     //
