@@ -36,6 +36,10 @@ Trunk (unreleased changes)
 10. HADOOP-756. Add new dfsadmin option to wait for filesystem to be
     operational.  (Dhruba Borthakur via cutting)
 
+11. HADOOP-770. Fix jobtracker web interface to display, on restart,
+    jobs that were running when it was last stopped.
+    (Sanjay Dahiya via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

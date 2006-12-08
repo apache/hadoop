@@ -70,7 +70,7 @@
 	  for( JobInfo job : jobs.values() ) {
 		if( null != status && status.equals(job.get(Keys.JOB_STATUS)) ) {
 		  printJob(trackerid, job, out); 
-		}else if( status == null && job.get(Keys.JOB_STATUS) == null ) {
+		}else if( status == null && job.get(Keys.JOB_STATUS).length() == 0 ) {
 		  printJob(trackerid, job, out); 
 		}
 	  }
