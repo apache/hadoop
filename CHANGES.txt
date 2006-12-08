@@ -40,6 +40,11 @@ Trunk (unreleased changes)
     jobs that were running when it was last stopped.
     (Sanjay Dahiya via cutting)
 
+12. HADOOP-331. Write all map outputs to a single file with an index,
+    rather than to a separate file per reduce task.  This should both
+    speed the shuffle and make things more scalable.
+    (Devaraj Das via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

@@ -121,7 +121,7 @@ class ReduceTask extends Task {
   }
 
   /** Iterates values while keys match in sorted input. */
-  private class ValuesIterator implements Iterator {
+  static class ValuesIterator implements Iterator {
     private SequenceFile.Sorter.RawKeyValueIterator in; //input iterator
     private WritableComparable key;               // current key
     private Writable value;                       // current value
@@ -181,9 +181,6 @@ class ReduceTask extends Task {
     public WritableComparable getKey() { return key; }
 
     private void getNext() throws IOException {
-      reducePhase.set(in.getProgress().get()); // update progress
-      reportProgress(umbilical);
-
       Writable lastKey = key;                     // save previous key
       try {
         key = (WritableComparable)ReflectionUtils.newInstance(keyClass, this.conf);
@@ -211,13 +208,25 @@ class ReduceTask extends Task {
       }
     }
   }
+  private class ReduceValuesIterator extends ValuesIterator {
+    public ReduceValuesIterator (SequenceFile.Sorter.RawKeyValueIterator in,
+                               WritableComparator comparator, Class keyClass,
+                               Class valClass, TaskUmbilicalProtocol umbilical,
+                               Configuration conf)
+    throws IOException {
+      super(in, comparator, keyClass, valClass, umbilical, conf);
+    }
+    public void informReduceProgress() {
+      reducePhase.set(super.in.getProgress().get()); // update progress
+      reportProgress(super.umbilical);
+    }
+  }
 
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
     Class valueClass = job.getMapOutputValueClass();
     Reducer reducer = (Reducer)ReflectionUtils.newInstance(
                                   job.getReducerClass(), job);
-    reducer.configure(job);
     FileSystem lfs = FileSystem.getNamed("local", job);
 
     copyPhase.complete();                         // copy is already complete
@@ -262,7 +271,7 @@ class ReduceTask extends Task {
       // sort the input file
       SequenceFile.Sorter sorter =
         new SequenceFile.Sorter(lfs, comparator, valueClass, job);
-      rIter = sorter.sortAndIterate(mapFiles, tempDir, 
+      rIter = sorter.merge(mapFiles, tempDir, 
                                     !conf.getKeepFailedTaskFiles()); // sort
 
     } finally {
@@ -300,12 +309,14 @@ class ReduceTask extends Task {
     try {
       Class keyClass = job.getMapOutputKeyClass();
       Class valClass = job.getMapOutputValueClass();
-      ValuesIterator values = new ValuesIterator(rIter, comparator, keyClass, 
-                                                 valClass, umbilical, job);
+      ReduceValuesIterator values = new ReduceValuesIterator(rIter, comparator, 
+                                  keyClass, valClass, umbilical, job);
+      values.informReduceProgress();
       while (values.more()) {
         myMetrics.reduceInput();
         reducer.reduce(values.getKey(), values, collector, reporter);
         values.nextKey();
+        values.informReduceProgress();
       }
 
     } finally {

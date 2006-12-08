@@ -21,6 +21,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.metrics.Metrics;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -1525,6 +1526,7 @@ public class TaskTracker
      * @author Owen O'Malley
      */
     public static class MapOutputServlet extends HttpServlet {
+      private final int MAX_BYTES_TO_READ = 64 * 1024;
       public void doGet(HttpServletRequest request, 
                         HttpServletResponse response
                        ) throws ServletException, IOException {
@@ -1535,20 +1537,37 @@ public class TaskTracker
         }
         ServletContext context = getServletContext();
         int reduce = Integer.parseInt(reduceId);
-        byte[] buffer = new byte[64*1024];
+        byte[] buffer = new byte[MAX_BYTES_TO_READ];
         OutputStream outStream = response.getOutputStream();
         JobConf conf = (JobConf) context.getAttribute("conf");
         FileSystem fileSys = 
           (FileSystem) context.getAttribute("local.file.system");
-        Path filename = conf.getLocalPath(mapId+"/part-"+reduce+".out");
-        response.setContentLength((int) fileSys.getLength(filename));
-        InputStream inStream = null;
+        //open index file
+        Path indexFileName = conf.getLocalPath(mapId+"/file.out.index");
+        FSDataInputStream in = fileSys.open(indexFileName);
+        //seek to the correct offset for the given reduce
+        in.seek(reduce * 16);
+        
+        //read the offset and length of the partition data
+        long startOffset = in.readLong();
+        long partLength = in.readLong();
+        
+        in.close();
+         
+        Path mapOutputFileName = conf.getLocalPath(mapId+"/file.out"); 
+           
+        response.setContentLength((int) partLength);
+        FSDataInputStream inStream = null;
         // true iff IOException was caused by attempt to access input
         boolean isInputException = true;
         try {
-          inStream = fileSys.open(filename);
+          inStream = fileSys.open(mapOutputFileName);
+          inStream.seek(startOffset);
           try {
-            int len = inStream.read(buffer);
+            int totalRead = 0;
+            int len = inStream.read(buffer, 0,
+                                 partLength < MAX_BYTES_TO_READ 
+                                 ? (int)partLength : MAX_BYTES_TO_READ);
             while (len > 0) {
               try {
                 outStream.write(buffer, 0, len);
@@ -1556,7 +1575,11 @@ public class TaskTracker
                 isInputException = false;
                 throw ie;
               }
-              len = inStream.read(buffer);
+              totalRead += len;
+              if (totalRead == partLength) break;
+              len = inStream.read(buffer, 0, 
+                      (partLength - totalRead) < MAX_BYTES_TO_READ
+                       ? (int)(partLength - totalRead) : MAX_BYTES_TO_READ);
             }
           } finally {
             inStream.close();

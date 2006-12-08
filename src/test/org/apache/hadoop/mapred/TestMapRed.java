@@ -233,16 +233,6 @@ public class TestMapRed extends TestCase {
       }
 
       public void close() throws IOException {
-        MapOutputFile namer = new MapOutputFile();
-        namer.setConf(conf);
-        FileSystem fs = FileSystem.get(conf);
-        Path output = namer.getOutputFile(taskId, 0);
-        assertTrue("map output exists " + output, fs.exists(output));
-        SequenceFile.Reader rdr = 
-          new SequenceFile.Reader(fs, output, conf);
-        assertEquals("is map output compressed " + output, compress, 
-                     rdr.isCompressed());
-        rdr.close();
       }
     }
     
@@ -264,7 +254,7 @@ public class TestMapRed extends TestCase {
                         ) throws IOException {
         if (first) {
           first = false;
-          Path input = conf.getLocalPath(taskId+"/all.2");
+          Path input = conf.getLocalPath(taskId+"/map_0.out");
           FileSystem fs = FileSystem.get(conf);
           assertTrue("reduce input exists " + input, fs.exists(input));
           SequenceFile.Reader rdr = 

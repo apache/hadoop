@@ -32,11 +32,36 @@ class MapOutputFile {
   
   /** Create a local map output file name.
    * @param mapTaskId a map task id
-   * @param partition a reduce partition
    */
-  public Path getOutputFile(String mapTaskId, int partition)
+  public Path getOutputFile(String mapTaskId)
     throws IOException {
-    return conf.getLocalPath(mapTaskId+"/part-"+partition+".out");
+    return conf.getLocalPath(mapTaskId+"/file.out");
+  }
+
+  /** Create a local map output index file name.
+   * @param mapTaskId a map task id
+   */
+  public Path getOutputIndexFile(String mapTaskId)
+    throws IOException {
+    return conf.getLocalPath(mapTaskId+"/file.out.index");
+  }
+
+  /** Create a local map spill file name.
+   * @param mapTaskId a map task id
+   * @param spillNumber the number
+   */
+  public Path getSpillFile(String mapTaskId, int spillNumber)
+    throws IOException {
+    return conf.getLocalPath(mapTaskId+"/spill" +spillNumber+".out");
+  }
+
+  /** Create a local map spill index file name.
+   * @param mapTaskId a map task id
+   * @param spillNumber the number
+   */
+  public Path getSpillIndexFile(String mapTaskId, int spillNumber)
+    throws IOException {
+    return conf.getLocalPath(mapTaskId+"/spill" +spillNumber+".out.index");
   }
 
   /** Create a local reduce input file name.

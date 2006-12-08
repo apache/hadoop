@@ -37,6 +37,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.MergeSort;
 
 /** Support for flat files of binary key/value pairs. */
 public class SequenceFile {
@@ -284,6 +285,42 @@ public class SequenceFile {
     return writer;
   }
 
+  /**
+   * Construct the preferred type of 'raw' SequenceFile Writer.
+   * @param conf The configuration.
+   * @param out The stream on top which the writer is to be constructed.
+   * @param keyClass The 'key' type.
+   * @param valClass The 'value' type.
+   * @param compressionType The compression type.
+   * @param codec The compression codec.
+   * @return Returns the handle to the constructed SequenceFile Writer.
+   * @throws IOException
+   */
+  public static Writer
+  createWriter(Configuration conf, FSDataOutputStream out, 
+      Class keyClass, Class valClass, CompressionType compressionType,
+      CompressionCodec codec)
+  throws IOException {
+    if ((codec instanceof GzipCodec) && 
+        !NativeCodeLoader.isNativeCodeLoaded() && 
+        !ZlibFactory.isNativeZlibLoaded()) {
+      throw new IllegalArgumentException("SequenceFile doesn't work with " +
+          "GzipCodec without native-hadoop code!");
+    }
+
+    Writer writer = null;
+
+    if (compressionType == CompressionType.NONE) {
+      writer = new Writer(conf, out, keyClass, valClass);
+    } else if (compressionType == CompressionType.RECORD) {
+      writer = new RecordCompressWriter(conf, out, keyClass, valClass, codec);
+    } else if (compressionType == CompressionType.BLOCK){
+      writer = new BlockCompressWriter(conf, out, keyClass, valClass, codec);
+    }
+    
+    return writer;
+  }
+
   /** The interface to 'raw' values of SequenceFiles. */
   public static interface ValueBytes {
 
@@ -505,6 +542,10 @@ public class SequenceFile {
 
     /** Returns the compression codec of data in this file. */
     public CompressionCodec getCompressionCodec() { return codec; }
+    
+    /** create a sync point */
+    public void sync() throws IOException {
+    }
 
     /** Returns the configuration of this file. */
     Configuration getConf() { return conf; }
@@ -686,6 +727,10 @@ public class SequenceFile {
       val.writeCompressedBytes(out);              // 'value' data
     }
     
+
+    public void sync() throws IOException {
+    }
+   
   } // RecordCompressionWriter
 
   /** Write compressed key/value blocks to a sequence-format file. */
@@ -802,6 +847,10 @@ public class SequenceFile {
         out.close();
         out = null;
       }
+    }
+
+    public void sync() throws IOException {
+      writeBlock();
     }
 
     /** Append a key/value pair. */
@@ -1508,6 +1557,8 @@ public class SequenceFile {
 
     private WritableComparator comparator;
 
+    private MergeSort mergeSort; //the implementation of merge sort
+    
     private Path[] inFiles;                     // when merging or sorting
 
     private Path outFile;
@@ -1612,6 +1663,7 @@ public class SequenceFile {
     private int sortPass(boolean deleteInput) throws IOException {
       LOG.debug("running sort pass");
       SortPass sortPass = new SortPass();         // make the SortPass
+      mergeSort = new MergeSort(sortPass.new SeqFileComparator());
       try {
         return sortPass.run(deleteInput);         // run it
       } finally {
@@ -1775,11 +1827,7 @@ public class SequenceFile {
           int p = pointers[i];
           writer.appendRaw(rawBuffer, keyOffsets[p], keyLengths[p], rawValues[p]);
         }
-        if (writer instanceof SequenceFile.BlockCompressWriter) {
-          SequenceFile.BlockCompressWriter bcWriter = 
-            (SequenceFile.BlockCompressWriter) writer;
-          bcWriter.writeBlock();
-        }
+        writer.sync();
         writer.out.flush();
         
         
@@ -1793,50 +1841,14 @@ public class SequenceFile {
 
       private void sort(int count) {
         System.arraycopy(pointers, 0, pointersCopy, 0, count);
-        mergeSort(pointersCopy, pointers, 0, count);
+        mergeSort.mergeSort(pointersCopy, pointers, 0, count);
       }
-
-      private int compare(int i, int j) {
-        return comparator.compare(rawBuffer, keyOffsets[i], keyLengths[i],
-                                  rawBuffer, keyOffsets[j], keyLengths[j]);
-      }
-
-      private void mergeSort(int src[], int dest[], int low, int high) {
-        int length = high - low;
-
-        // Insertion sort on smallest arrays
-        if (length < 7) {
-          for (int i=low; i<high; i++)
-            for (int j=i; j>low && compare(dest[j-1], dest[j])>0; j--)
-              swap(dest, j, j-1);
-          return;
+      class SeqFileComparator implements Comparator<IntWritable> {
+        public int compare(IntWritable I, IntWritable J) {
+          return comparator.compare(rawBuffer, keyOffsets[I.get()], 
+                                    keyLengths[I.get()], rawBuffer, 
+                                    keyOffsets[J.get()], keyLengths[J.get()]);
         }
-
-        // Recursively sort halves of dest into src
-        int mid = (low + high) >> 1;
-        mergeSort(dest, src, low, mid);
-        mergeSort(dest, src, mid, high);
-
-        // If list is already sorted, just copy from src to dest.  This is an
-        // optimization that results in faster sorts for nearly ordered lists.
-        if (compare(src[mid-1], src[mid]) <= 0) {
-          System.arraycopy(src, low, dest, low, length);
-          return;
-        }
-
-        // Merge sorted halves (now in src) into dest
-        for (int i = low, p = low, q = mid; i < high; i++) {
-          if (q>=high || p<mid && compare(src[p], src[q]) <= 0)
-            dest[i] = src[p++];
-          else
-            dest[i] = src[q++];
-        }
-      }
-
-      private void swap(int x[], int a, int b) {
-        int t = x[a];
-        x[a] = x[b];
-        x[b] = t;
       }
     } // SequenceFile.Sorter.SortPass
 
@@ -1898,7 +1910,36 @@ public class SequenceFile {
         s.doSync();
         a.add(s);
       }
-      factor = inNames.length;
+      factor = (inNames.length < factor) ? inNames.length : factor;
+      MergeQueue mQueue = new MergeQueue(a);
+      return mQueue.merge();
+    }
+
+    /**
+     * Merges the contents of files passed in Path[]
+     * @param inNames the array of path names
+     * @param tempDir the directory for creating temp files during merge
+     * @param deleteInputs true if the input files should be deleted when 
+     * unnecessary
+     * @return RawKeyValueIteratorMergeQueue
+     * @throws IOException
+     */
+    public RawKeyValueIterator merge(Path [] inNames, Path tempDir, 
+                                     boolean deleteInputs) 
+    throws IOException {
+      //outFile will basically be used as prefix for temp files for the
+      //intermediate merge outputs           
+      this.outFile = new Path(tempDir + Path.SEPARATOR + "merged");
+      //get the segments from inNames
+      ArrayList <SegmentDescriptor> a = new ArrayList <SegmentDescriptor>();
+      for (int i = 0; i < inNames.length; i++) {
+        SegmentDescriptor s = new SegmentDescriptor(0, 
+                              fs.getLength(inNames[i]), inNames[i]);
+        s.preserveInput(!deleteInputs);
+        s.doSync();
+        a.add(s);
+      }
+      factor = (inNames.length < factor) ? inNames.length : factor;
       MergeQueue mQueue = new MergeQueue(a);
       return mQueue.merge();
     }
@@ -1916,7 +1957,7 @@ public class SequenceFile {
      */
     public Writer cloneFileAttributes(FileSystem fileSys, Path inputFile, 
                   Path outputFile, Progressable prog) throws IOException {
-      Reader reader = new Reader(fileSys, inputFile, memory/(factor+1), conf);
+      Reader reader = new Reader(fileSys, inputFile, 4096, conf);
       boolean compress = reader.isCompressed();
       boolean blockCompress = reader.isBlockCompressed();
       CompressionCodec codec = reader.getCompressionCodec();
@@ -1944,11 +1985,7 @@ public class SequenceFile {
         writer.appendRaw(records.getKey().getData(), 0, 
                          records.getKey().getLength(), records.getValue());
       }
-      if (writer instanceof SequenceFile.BlockCompressWriter) {
-        SequenceFile.BlockCompressWriter bcWriter =
-                        (SequenceFile.BlockCompressWriter) writer;
-        bcWriter.writeBlock();
-      }
+      writer.sync();
     }
         
     /** Merge the provided files.
