@@ -66,6 +66,8 @@ Trunk (unreleased changes)
 19. HADOOP-618.  Make JobSubmissionProtocol public.
     (Arun C Murthy via cutting)
 
+20. HADOOP-782.  Fully remove killed tasks.  (Arun C Murthy via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

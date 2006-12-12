@@ -621,7 +621,7 @@ public class TaskTracker
                 LOG.info(tip.getTask().getTaskId() + ": " + msg);
                 ReflectionUtils.logThreadInfo(LOG, "lost task", 30);
                 tip.reportDiagnosticInfo(msg);
-                tasksToCleanup.put(tip);
+                purgeTask(tip, false);
             }
         }
     }
@@ -718,7 +718,7 @@ public class TaskTracker
                          " Killing task.";
             LOG.info(killMe.getTask().getTaskId() + ": " + msg);
             killMe.reportDiagnosticInfo(msg);
-            tasksToCleanup.put(killMe);
+            purgeTask(killMe, false);
           }
         }
       }
