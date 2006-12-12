@@ -7,7 +7,8 @@
   import="org.apache.hadoop.dfs.*"
   import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
-  import="java.lang.Math"    
+  import="java.lang.Math"
+  import="java.net.URLEncoder"
 %>
 <%!
   FSNamesystem fsn = FSNamesystem.getFSNamesystem();
@@ -45,18 +46,28 @@
       return ret;
   }
       
-  public void generateLiveNodeData( JspWriter out, DatanodeDescriptor d,
+  public void generateNodeData( JspWriter out, DatanodeDescriptor d,
                                     String suffix, boolean alive )
     throws IOException {
     
+    String url = d.getName();
+    if ( url.indexOf( ':' ) >= 0 )
+        url = url.substring( 0, url.indexOf( ':' ) );
+    // from nn_browsedfscontent.jsp:
+    url = "http://" + url + ":" + d.getInfoPort() +
+          "/browseDirectory.jsp?namenodeInfoPort=" +
+          fsn.getNameNodeInfoPort() + "&dir=" +
+          URLEncoder.encode("/", "UTF-8");
+    
     String name = d.getName();
     if ( !name.matches( "\\d+\\.\\d+.\\d+\\.\\d+.*" ) ) 
-        name = name.replaceAll( "\\.[^.:]*", "" );
-    
+        name = name.replaceAll( "\\.[^.:]*", "" );    
     int idx = (suffix != null && name.endsWith( suffix )) ?
-        name.indexOf( suffix ) : -1;    
+        name.indexOf( suffix ) : -1;
+    
     out.print( rowTxt() + "<td class=\"name\"><a title=\"" + d.getName() +
-               "\">" + (( idx > 0 ) ? name.substring(0, idx) : name) +
+               "\"href=\"" + url + "\">" +
+               (( idx > 0 ) ? name.substring(0, idx) : name) + "</a>" +
                (( alive ) ? "" : "\n") );
     if ( !alive )
         return;
@@ -140,7 +151,7 @@
         currentTime = System.currentTimeMillis();
 	out.print( "<div id=\"dfsnodetable\"> "+
                    "<a name=\"LiveNodes\" id=\"title\">" +
-                   "Live Datanodes: " + live.size() + "</a>" +
+                   "Live Datanodes : " + live.size() + "</a>" +
                    "<br><br>\n<table border=1 cellspacing=0>\n" );
 
         counterReset();
@@ -161,7 +172,7 @@
                        "> Blocks\n" );
             
 	    for ( int i=0; i < live.size(); i++ ) {
-		generateLiveNodeData( out, live.get(i), port_suffix, true );
+		generateNodeData( out, live.get(i), port_suffix, true );
 	    }
 	}
         out.print("</table>\n");
@@ -176,7 +187,7 @@
 		       "<td> Node \n" );
 	    
 	    for ( int i=0; i < dead.size() ; i++ ) {
-                generateLiveNodeData( out, dead.get(i), port_suffix, false );
+                generateNodeData( out, dead.get(i), port_suffix, false );
 	    }
 	    
 	    out.print("</table>\n");

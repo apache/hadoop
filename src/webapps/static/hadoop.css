@@ -22,13 +22,21 @@ div#dfsnodetable a#title {
 
 div#dfsnodetable td, th {
 	border-bottom-style : none;
-}
-
-div#dfsnodetable th.header, th.headerASC, th.headerDSC {
         padding-bottom : 4px;
         padding-top : 4px;       
 }
-div#dfsnodetable th.header:hover, th.headerASC:hover, th.headerDSC:hover {
+
+div#dfsnodetable A:link, A:visited {
+	text-decoration : none;
+        color : black;
+}
+
+div#dfsnodetable th.header, th.headerASC, th.headerDSC {
+        padding-bottom : 8px;
+        padding-top : 8px;       
+}
+div#dfsnodetable th.header:hover, th.headerASC:hover, th.headerDSC:hover,
+                 td.name:hover {
         text-decoration : underline;
 	cursor : pointer;
 }
