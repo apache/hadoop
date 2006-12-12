@@ -359,7 +359,7 @@ public class DFSShell extends ToolBase {
         if (fs.rename(srcs[i], dst)) {
             System.out.println("Renamed " + srcs[i] + " to " + dstf);
         } else {
-            System.out.println("Rename failed " + srcs[i]);
+            throw new IOException("Rename failed " + srcs[i]);
         }
       }
     }
