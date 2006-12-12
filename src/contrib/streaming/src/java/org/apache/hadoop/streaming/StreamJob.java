@@ -620,8 +620,8 @@ public class StreamJob {
       boolean b = DistributedCache.checkURIs(fileURIs, archiveURIs);
       if (!b)
         fail(LINK_URI);
-      DistributedCache.createSymlink(jobConf_);
     }
+    DistributedCache.createSymlink(jobConf_);
     // set the jobconf for the caching parameters
     if (cacheArchives != null)
       DistributedCache.setCacheArchives(archiveURIs, jobConf_);

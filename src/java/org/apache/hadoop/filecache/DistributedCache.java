@@ -24,6 +24,7 @@ import java.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.*;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.net.URI;
@@ -108,6 +109,8 @@ public class DistributedCache {
     String cacheId = makeRelative(cache, conf);
     synchronized (cachedArchives) {
       CacheStatus lcacheStatus = (CacheStatus) cachedArchives.get(cacheId);
+      if (lcacheStatus == null)
+        return;
       synchronized (lcacheStatus) {
         lcacheStatus.refcount--;
       }
@@ -320,7 +323,29 @@ public class DistributedCache {
 
     return digest;
   }
-
+  
+  /**
+   * This method create symlinks for all files in a given dir in another directory
+   * @param conf the configuration
+   * @param jobCacheDir the target directory for creating symlinks
+   * @param workDir the directory in which the symlinks are created
+   * @throws IOException
+   */
+  public static void createAllSymlink(Configuration conf, File jobCacheDir, File workDir)
+  throws IOException{
+    if ((!jobCacheDir.isDirectory()) || (!workDir.isDirectory())){
+      return;
+    }
+    boolean createSymlink = getSymlink(conf);
+     if (createSymlink){
+       File[] list = jobCacheDir.listFiles();
+       for (int i=0; i < list.length; i++){
+         FileUtil.symLink(list[i].getAbsolutePath(),
+             new File(workDir, list[i].getName()).toString());
+       }
+     }  
+  }
+  
   private static String getFileSysName(URI url) {
     String fsname = url.getScheme();
     if ("dfs".equals(fsname)) {

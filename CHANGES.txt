@@ -71,6 +71,9 @@ Trunk (unreleased changes)
 21. HADOOP-792.  Fix 'dfs -mv' to return correct status.
     (Dhruba Borthakur via cutting) 
 
+22. HADOOP-673.  Give each task its own working directory again.
+    (Mahadev Konar via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

@@ -21,6 +21,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.filecache.*;
+import org.apache.hadoop.util.*;
 import java.io.*;
 import java.util.Vector;
 import java.net.URI;
@@ -82,7 +83,8 @@ abstract class TaskRunner extends Thread {
       
       //before preparing the job localize 
       //all the archives
-      File workDir = new File(new File(t.getJobFile()).getParentFile().getParent(), "work");
+      File workDir = new File(t.getJobFile()).getParentFile();
+      File jobCacheDir = new File(workDir.getParent(), "work");
       URI[] archives = DistributedCache.getCacheArchives(conf);
       URI[] files = DistributedCache.getCacheFiles(conf);
       if ((archives != null) || (files != null)) {
@@ -104,8 +106,6 @@ abstract class TaskRunner extends Thread {
           }
           DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
         }
-        
-        // sets the paths to local archives and paths
         Path localTaskFile = new Path(t.getJobFile());
         FileSystem localFs = FileSystem.getNamed("local", conf);
         localFs.delete(localTaskFile);
@@ -115,6 +115,16 @@ abstract class TaskRunner extends Thread {
         } finally {
           out.close();
         }
+      }
+    
+      // create symlinks for all the files in job cache dir in current
+      // workingdir for streaming
+      try{
+        DistributedCache.createAllSymlink(conf, jobCacheDir, 
+            workDir);
+      } catch(IOException ie){
+        // Do not exit even if symlinks have not been created.
+        LOG.warn(StringUtils.stringifyException(ie));
       }
       
       if (! prepare()) {
@@ -135,7 +145,7 @@ abstract class TaskRunner extends Thread {
       String jar = conf.getJar();
       if (jar != null) {       
     	  // if jar exists, it into workDir
-        File[] libs = new File(workDir, "lib").listFiles();
+        File[] libs = new File(jobCacheDir, "lib").listFiles();
         if (libs != null) {
           for (int i = 0; i < libs.length; i++) {
             classPath.append(sep);            // add libs from jar to classpath
@@ -143,11 +153,13 @@ abstract class TaskRunner extends Thread {
           }
         }
         classPath.append(sep);
-        classPath.append(new File(workDir, "classes"));
+        classPath.append(new File(jobCacheDir, "classes"));
         classPath.append(sep);
-        classPath.append(workDir);
+        classPath.append(jobCacheDir);
+       
       }
-
+      classPath.append(sep);
+      classPath.append(workDir);
       //  Build exec child jmv args.
       Vector vargs = new Vector(8);
       File jvm =                                  // use same jvm as parent

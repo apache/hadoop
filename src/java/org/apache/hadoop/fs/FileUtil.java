@@ -43,6 +43,16 @@ public class FileUtil {
             return false;
           }
         } else {
+          //try deleting the directory
+          // this might be a symlink
+          boolean b = false;
+          b = contents[i].delete();
+          if (b){
+            //this was indeed a symlink or an empty directory
+            continue;
+          }
+          // if not an empty directory or symlink let
+          // fullydelete handle it.
           if (! fullyDelete(contents[i])) {
             return false;
           }
