@@ -27,7 +27,6 @@
   <property name="hadoop.log.dir" location="${build.dir}/test/logs"/>
   <!-- all jars together -->
   <property name="deploy.dir" location="${hadoop.root}/build/"/>
-  <property name="minimr.dir" value="${hadoop.root}/build/minimr"/>
   <property name="javac.deprecation" value="off"/>
   <property name="javac.debug" value="on"/>
 
@@ -52,8 +51,7 @@
   <path id="test.classpath">
     <pathelement location="${build.test}" />
     <pathelement location="${hadoop.root}/build/test/classes"/>
-    <pathelement location="${minimr.dir}" />
-    <pathelement location="${hadoop.root}/src/test"/>
+    <pathelement location="${hadoop.root}/src/contrib/test"/>
     <pathelement location="${conf.dir}"/>
     <pathelement location="${hadoop.root}/build"/>
     <path refid="classpath"/>
@@ -72,7 +70,6 @@
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.test}"/>
     <mkdir dir="${hadoop.log.dir}"/>
-    <mkdir dir="${minimr.dir}"/>
     <antcall target="init-contrib"/>
   </target>
 
@@ -137,10 +134,12 @@
     <delete dir="${hadoop.log.dir}"/>
     <mkdir dir="${hadoop.log.dir}"/>
     <junit
-      printsummary="withOutAndErr" showoutput="no" haltonfailure="no" fork="yes"
+      printsummary="yes" showoutput="${test.output}" 
+      haltonfailure="no" fork="yes"
       errorProperty="tests.failed" failureProperty="tests.failed">
       
       <sysproperty key="test.build.data" value="${build.test}/data"/>
+      <sysproperty key="build.test" value="${build.test}"/>
       
       <!-- requires fork=yes for: 
         relative File paths to use the specified user.dir 
