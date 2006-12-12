@@ -63,6 +63,9 @@ Trunk (unreleased changes)
 18. HADOOP-806. Include link to datanodes on front page of namenode
     web interface.  (Raghu Angadi via cutting)
 
+19. HADOOP-618.  Make JobSubmissionProtocol public.
+    (Arun C Murthy via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

@@ -27,7 +27,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * JobClient can use these methods to submit a Job for execution, and learn about
  * the current system status.
  */ 
-interface JobSubmissionProtocol extends VersionedProtocol {
+public interface JobSubmissionProtocol extends VersionedProtocol {
     public static final long versionID = 1L;
     /**
      * Submit a Job for execution.  Returns the latest profile for
@@ -57,9 +57,13 @@ interface JobSubmissionProtocol extends VersionedProtocol {
     public JobStatus getJobStatus(String jobid) throws IOException;
 
     /**
-     * Grab a bunch of info on the tasks that make up the job
+     * Grab a bunch of info on the map tasks that make up the job
      */
     public TaskReport[] getMapTaskReports(String jobid) throws IOException;
+
+    /**
+     * Grab a bunch of info on the reduce tasks that make up the job
+     */
     public TaskReport[] getReduceTaskReports(String jobid) throws IOException;
 
     /**

@@ -28,7 +28,7 @@ import java.net.*;
  *
  * @author Mike Cafarella
  **************************************************/
-class JobProfile implements Writable {
+public class JobProfile implements Writable {
 
     static {                                      // register a ctor
       WritableFactories.setFactory
@@ -45,11 +45,20 @@ class JobProfile implements Writable {
     String name;
 
     /**
+     * Construct an empty {@link JobProfile}.
      */
     public JobProfile() {
     }
 
     /**
+     * Construct a {@link JobProfile} the userid, jobid, 
+     * job config-file, job-details url and job name. 
+     * 
+     * @param user userid of the person who submitted the job.
+     * @param jobid id of the job.
+     * @param jobFile job configuration file. 
+     * @param url link to the web-ui for details of the job.
+     * @param name user-specified job name.
      */
     public JobProfile(String user, String jobid, String jobFile, String url,
                       String name) {
@@ -68,19 +77,21 @@ class JobProfile implements Writable {
     }
     
     /**
+     * Get the job id.
      */
     public String getJobId() {
         return jobid;
     }
 
     /**
+     * Get the configuration file for the job.
      */
     public String getJobFile() {
         return jobFile;
     }
 
-
     /**
+     * Get the link to the web-ui for details of the job.
      */
     public URL getURL() {
         try {
