@@ -48,6 +48,9 @@ Trunk (unreleased changes)
 13. HADOOP-818. Fix contrib unit tests to not depend on core unit
     tests.  (omalley via cutting)
 
+14. HADOOP-786. Log common exception at debug level.
+    (Sanjay Dahiya via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

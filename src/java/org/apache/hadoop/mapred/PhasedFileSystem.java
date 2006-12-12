@@ -163,7 +163,7 @@ public class PhasedFileSystem extends FileSystem {
       fInfo.getOpenFileStream().close();
     }catch(IOException ioe){
       // ignore if already closed
-      ioe.printStackTrace();
+      LOG.debug("Ignoring exception : " + ioe.getMessage());
     }
     Path tempPath = fInfo.getTempPath(); 
     // ignore .crc files 
