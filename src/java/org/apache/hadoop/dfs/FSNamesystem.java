@@ -1378,10 +1378,9 @@ class FSNamesystem implements FSConstants {
         nodeInfo.isAlive = false;
       }
 
-      Block deadblocks[] = nodeInfo.getBlocks();
-      if( deadblocks != null )
-        for( int i = 0; i < deadblocks.length; i++ )
-          removeStoredBlock(deadblocks[i], nodeInfo);
+      for (Iterator<Block> it = nodeInfo.getBlockIterator(); it.hasNext(); ) {
+          removeStoredBlock(it.next(), nodeInfo);
+      }
       unprotectedRemoveDatanode(nodeInfo);
     }
 
@@ -1464,40 +1463,44 @@ class FSNamesystem implements FSConstants {
         // Modify the (block-->datanode) map, according to the difference
         // between the old and new block report.
         //
-        int oldPos = 0, newPos = 0;
-        Block oldReport[] = node.getBlocks();
-        while (oldReport != null && newReport != null && oldPos < oldReport.length && newPos < newReport.length) {
-            int cmp = oldReport[oldPos].compareTo(newReport[newPos]);
-            
+        int newPos = 0;
+        boolean modified = false;
+        Iterator<Block> iter = node.getBlockIterator();
+        Block oldblk = iter.hasNext() ? iter.next() : null;
+        Block newblk = (newReport != null && newReport.length > 0) ? 
+                        newReport[0]	: null;
+
+        while (oldblk != null || newblk != null) {
+           
+            int cmp = (oldblk == null) ? 1 : 
+                       ((newblk == null) ? -1 : oldblk.compareTo(newblk));
+
             if (cmp == 0) {
                 // Do nothing, blocks are the same
-                oldPos++;
                 newPos++;
+                oldblk = iter.hasNext() ? iter.next() : null;
+                newblk = (newPos < newReport.length)
+                         ? newReport[newPos] : null;
             } else if (cmp < 0) {
                 // The old report has a block the new one does not
-                removeStoredBlock(oldReport[oldPos], node);
-                oldPos++;
+                removeStoredBlock(oldblk, node);
+                modified = true;
+                oldblk = iter.hasNext() ? iter.next() : null;
             } else {
                 // The new report has a block the old one does not
-                addStoredBlock(newReport[newPos], node);
+                addStoredBlock(newblk, node);
+                modified = true;
                 newPos++;
+                newblk = (newPos < newReport.length)
+                         ? newReport[newPos] : null;
             }
         }
-        while (oldReport != null && oldPos < oldReport.length) {
-            // The old report has a block the new one does not
-            removeStoredBlock(oldReport[oldPos], node);
-            oldPos++;
-        }
-        while (newReport != null && newPos < newReport.length) {
-            // The new report has a block the old one does not
-            addStoredBlock(newReport[newPos], node);
-            newPos++;
-        }
-
         //
         // Modify node so it has the new blockreport
         //
-        node.updateBlocks(newReport);
+        if (modified) {
+            node.updateBlocks(newReport);
+        }
 
         //
         // We've now completely updated the node's block report profile.

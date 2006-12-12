@@ -54,6 +54,9 @@ Trunk (unreleased changes)
 15. HADOOP-796. Provide more convenient access to failed task
     information in the web interface.  (Sanjay Dahiya via cutting)
 
+16. HADOOP-764. Reduce memory allocations in namenode some.
+    (Dhruba Borthakur via cutting) 
+
 
 Release 0.9.1 - 2006-12-06
 
