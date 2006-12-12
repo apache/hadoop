@@ -57,6 +57,9 @@ Trunk (unreleased changes)
 16. HADOOP-764. Reduce memory allocations in namenode some.
     (Dhruba Borthakur via cutting) 
 
+17. HADOOP-802. Update description of mapred.speculative.execution to
+    mention reduces.  (Nigel Daley via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 
