@@ -304,8 +304,15 @@ public class JobClient extends ToolBase implements MRConstants  {
 
         FileSystem userFileSys = FileSystem.get(job);
         Path[] inputDirs = job.getInputPaths();
+ 
+        // make sure directories are fully qualified before checking them
+        for(int i=0; i < inputDirs.length; ++i) {
+          if (inputDirs[i].toUri().getScheme() == null) {
+            inputDirs[i] = userFileSys.makeQualified(inputDirs[i]);
+          }
+        }
+
         // input paths should exist. 
-        
         boolean[] validDirs = 
           job.getInputFormat().areValidInputDirectories(userFileSys, inputDirs);
         for(int i=0; i < validDirs.length; ++i) {

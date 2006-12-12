@@ -90,7 +90,6 @@ public class TestPath extends TestCase {
     assertEquals(new Path("foo/bar/baz"), new Path("foo/bar", "baz"));
     assertEquals(new Path("/foo"), new Path("/bar", "/foo"));
     if (Path.WINDOWS) {
-      assertEquals(new Path("c:/foo"), new Path("c:/bar", "/foo"));
       assertEquals(new Path("c:/foo"), new Path("/bar", "c:/foo"));
       assertEquals(new Path("c:/foo"), new Path("d:/bar", "c:/foo"));
     }
@@ -103,6 +102,7 @@ public class TestPath extends TestCase {
   public void testDots() {
     // Test Path(String) 
     assertEquals(new Path("/foo/bar/baz").toString(), "/foo/bar/baz");
+    assertEquals(new Path("/foo/bar", ".").toString(), "/foo/bar");
     assertEquals(new Path("/foo/bar/../baz").toString(), "/foo/baz");
     assertEquals(new Path("/foo/bar/./baz").toString(), "/foo/bar/baz");
     assertEquals(new Path("/foo/bar/baz/../../fud").toString(), "/foo/fud");
@@ -111,7 +111,6 @@ public class TestPath extends TestCase {
     assertEquals(new Path(".././../foo/bar").toString(), "../../foo/bar");
     assertEquals(new Path("./foo/bar/baz").toString(), "foo/bar/baz");
     assertEquals(new Path("/foo/bar/../../baz/boo").toString(), "/baz/boo");
-    assertEquals(new Path("/foo/bar/../../../baz").toString(), "../baz");
     assertEquals(new Path("foo/bar/").toString(), "foo/bar");
     assertEquals(new Path("foo/bar/../baz").toString(), "foo/baz");
     assertEquals(new Path("foo/bar/../../baz/boo").toString(), "baz/boo");
@@ -128,7 +127,6 @@ public class TestPath extends TestCase {
     assertEquals(new Path("/foo/bar/baz","../../boo/bud").toString(), "/foo/boo/bud");
     assertEquals(new Path("foo/bar/baz","../../boo/bud").toString(), "foo/boo/bud");
 
-    assertEquals(new Path("/foo/bar/","../../../baz/boo").toString(), "../baz/boo");
     
     assertEquals(new Path("../../","../../boo/bud").toString(), "../../../../boo/bud");
     assertEquals(new Path("../../foo","../../../boo/bud").toString(), "../../../../boo/bud");

@@ -3,6 +3,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -28,6 +30,8 @@ import org.apache.hadoop.util.Progressable;
 public class PhasedFileSystem extends FileSystem {
 
   private FileSystem baseFS ;
+  private URI uri;
+
   // Map from final file name to temporary file name
   private Map<Path, FileInfo> finalNameToFileInfo = new HashMap(); 
   
@@ -110,6 +114,14 @@ public class PhasedFileSystem extends FileSystem {
     return tempPath ; 
   }
   
+  public URI getUri() {
+    return baseFS.getUri();
+  }
+
+  public void initialize(URI uri, Configuration conf) throws IOException {
+    baseFS.initialize(uri, conf);
+  }
+
   @Override
   public FSOutputStream createRaw(
       Path f, boolean overwrite, short replication, long blockSize)

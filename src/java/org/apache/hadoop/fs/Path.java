@@ -19,6 +19,10 @@
 package org.apache.hadoop.fs;
 
 import java.util.*;
+import java.net.*;
+import java.io.*;
+
+import org.apache.hadoop.conf.Configuration;
 
 /** Names a file or directory in a {@link FileSystem}.
  * Path strings use slash as the directory separator.  A path string is
@@ -32,10 +36,7 @@ public class Path implements Comparable {
   static final boolean WINDOWS
     = System.getProperty("os.name").startsWith("Windows");
 
-  private boolean isAbsolute;                     // if path starts with sepr
-  private String[] elements;                      // tokenized path elements
-  private String drive;                           // Windows drive letter
-  private String asString;                        // cached toString() value
+  private URI uri;                                // a hierarchical uri
 
   /** Resolve a child path against a parent path. */
   public Path(String parent, String child) {
@@ -55,72 +56,142 @@ public class Path implements Comparable {
   /** Resolve a child path against a parent path. */
   public Path(Path parent, Path child) {
     if (child.isAbsolute()) {
-      this.isAbsolute = child.isAbsolute;
-      this.elements = child.elements;
+      this.uri = child.uri;
     } else {
-      this.isAbsolute = parent.isAbsolute;
-      ArrayList list = new ArrayList(parent.elements.length+child.elements.length);
-      for (int i = 0; i < parent.elements.length; i++) {
-        list.add(parent.elements[i]);
-      }
-      for (int i = 0; i < child.elements.length; i++) {
-        list.add(child.elements[i]);
-      }
-      normalize(list);
-      this.elements = (String[])list.toArray(new String[list.size()]);
+      // Add a slash to parent's path so resolution is compatible with URI's
+      URI parentUri = parent.uri;
+      String parentPath = parentUri.getPath();
+      if (!(parentPath.equals("/") || parentPath.equals("")))
+        try {
+          parentUri = new URI(parentUri.getScheme(), parentUri.getAuthority(),
+                              parentUri.getPath()+"/", null, null);
+        } catch (URISyntaxException e) {
+          throw new IllegalArgumentException(e);
+        }
+      URI resolved = parentUri.resolve(child.uri);
+      initialize(resolved.getScheme(), resolved.getAuthority(),
+                 normalizePath(resolved.getPath()));
     }
-    this.drive = child.drive == null ? parent.drive : child.drive;
   }
 
-  /** Construct a path from a String. */
+  /** Construct a path from a String.  Path strings are URIs, but with
+   * unescaped elements and some additional normalization. */
   public Path(String pathString) {
-    if (WINDOWS) {                                // parse Windows path
-      int colon = pathString.indexOf(':');
-      if (colon == 1) {                           // parse Windows drive letter
-        this.drive = pathString.substring(0, 1);
-        pathString = pathString.substring(2);
-      }
-      pathString = pathString.replace('\\','/');  // convert backslash to slash
+    // We can't use 'new URI(String)' directly, since it assumes things are
+    // escaped, which we don't require of Paths. 
+    
+    // add a slash in front of paths with Windows drive letters
+    if (hasWindowsDrive(pathString, false))
+      pathString = "/"+pathString;
+
+    // parse uri components
+    String scheme = null;
+    String authority = null;
+
+    int start = 0;
+
+    // parse uri scheme, if any
+    int colon = pathString.indexOf(':');
+    int slash = pathString.indexOf('/');
+    if ((colon != -1) &&
+        ((slash == -1) || (colon < slash))) {     // has a scheme
+      scheme = pathString.substring(0, colon);
+      start = colon+1;
     }
 
-    // determine whether the path is absolute
-    this.isAbsolute = pathString.startsWith(SEPARATOR);
+    // parse uri authority, if any
+    if (pathString.startsWith("//", start) &&
+        (pathString.length()-start > 2)) {       // has authority
+      int nextSlash = pathString.indexOf('/', start+2);
+      int authEnd = nextSlash > 0 ? nextSlash : pathString.length();
+      authority = pathString.substring(start+2, authEnd);
+      start = authEnd;
+    }
 
-    // tokenize the path into elements
-    Enumeration tokens = new StringTokenizer(pathString, SEPARATOR);    
-    ArrayList list = Collections.list(tokens);
-    normalize(list);
-    this.elements = (String[])list.toArray(new String[list.size()]);
+    // uri path is the rest of the string -- query & fragment not supported
+    String path = pathString.substring(start, pathString.length());
+
+    initialize(scheme, authority, path);
   }
 
-  private Path(boolean isAbsolute, String[] elements, String drive) {
-    this.isAbsolute = isAbsolute;
-    this.elements = elements;
-    this.drive = drive;
+  /** Construct a Path from components. */
+  public Path(String scheme, String authority, String path) {
+    initialize(scheme, authority, path);
   }
 
-  /** True if this path is absolute. */
-  public boolean isAbsolute() { return isAbsolute; }
+  private void initialize(String scheme, String authority, String path) {
+    try {
+      this.uri = new URI(scheme, authority, normalizePath(path), null, null)
+        .normalize();
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+  private String normalizePath(String path) {
+    // remove double slashes & backslashes
+    path = path.replace("//", "/");
+    path = path.replace("\\", "/");
+    
+    // trim trailing slash from non-root path (ignoring windows drive)
+    int minLength = hasWindowsDrive(path, true) ? 4 : 1;
+    if (path.length() > minLength && path.endsWith("/")) {
+      path = path.substring(0, path.length()-1);
+    }
+    
+    return path;
+  }
+
+  private boolean hasWindowsDrive(String path, boolean slashed) {
+    if (!WINDOWS) return false;
+    int start = slashed ? 1 : 0;
+    return
+      path.length() >= start+2 &&
+      (slashed ? path.charAt(0) == '/' : true) &&
+      path.charAt(start+1) == ':' &&
+      ((path.charAt(start) >= 'A' && path.charAt(start) <= 'Z') ||
+       (path.charAt(start) >= 'a' && path.charAt(start) <= 'z'));
+  }
+
+
+  /** Convert this to a URI. */
+  public URI toUri() { return uri; }
+
+  /** Return the FileSystem that owns this Path. */
+  public FileSystem getFileSystem(Configuration conf) throws IOException {
+    return FileSystem.get(this.toUri(), conf);
+  }
+
+  /** True if the directory of this path is absolute. */
+  public boolean isAbsolute() {
+    int start = hasWindowsDrive(uri.getPath(), true) ? 3 : 0;
+    return uri.getPath().startsWith(SEPARATOR, start);
+  }
 
   /** Returns the final component of this path.*/
   public String getName() {
-    if (elements.length == 0) {
-      return "";
-    } else {
-      return elements[elements.length-1];
-    }
+    String path = uri.getPath();
+    int slash = path.lastIndexOf(SEPARATOR);
+    return path.substring(slash+1);
   }
 
-  /** Returns the parent of a path. */
+  /** Returns the parent of a path or null if at root. */
   public Path getParent() {
-    if (elements.length  == 0) {
+    String path = uri.getPath();
+    int lastSlash = path.lastIndexOf('/');
+    int start = hasWindowsDrive(path,true) ? 3 : 0;
+    if ((path.length() == start) ||               // empty path
+        (lastSlash == start && path.length() == start+1)) { // at root
       return null;
     }
-    String[] newElements = new String[elements.length-1];
-    for (int i = 0; i < newElements.length; i++) {
-      newElements[i] = elements[i];
+    String parent;
+    if (lastSlash==-1) {
+      parent = "";
+    } else {
+      int end = hasWindowsDrive(path, true) ? 3 : 0;
+      parent = path.substring(0,lastSlash==end?end+1:lastSlash);
     }
-    return new Path(isAbsolute, newElements, drive);
+    return new Path(uri.getScheme(), uri.getAuthority(), parent);
   }
 
   /** Adds a suffix to the final name in the path.*/
@@ -129,27 +200,27 @@ public class Path implements Comparable {
   }
 
   public String toString() {
-    if (asString == null) {
-      StringBuffer buffer = new StringBuffer();
-
-      if (drive != null) {
-        buffer.append(drive);
-        buffer.append(':');
-      }
-
-      if (elements.length == 0 && isAbsolute) {
-        buffer.append(SEPARATOR);
-      }
-
-      for (int i = 0; i < elements.length; i++) {
-        if (i !=0 || isAbsolute) {
-          buffer.append(SEPARATOR);
-        }
-        buffer.append(elements[i]);
-      }
-      asString = buffer.toString();
+    // we can't use uri.toString(), which escapes everything, because we want
+    // illegal characters unescaped in the string, for glob processing, etc.
+    StringBuffer buffer = new StringBuffer();
+    if (uri.getScheme() != null) {
+      buffer.append(uri.getScheme());
+      buffer.append(":");
     }
-    return asString;
+    if (uri.getAuthority() != null) {
+      buffer.append("//");
+      buffer.append(uri.getAuthority());
+    }
+    if (uri.getPath() != null) {
+      String path = uri.getPath();
+      if (path.indexOf('/')==0 &&
+          hasWindowsDrive(path, true) &&          // has windows drive
+          uri.getScheme() == null &&              // but no scheme
+          uri.getAuthority() == null)             // or authority
+        path = path.substring(1);                 // remove slash before drive
+      buffer.append(path);
+    }
+    return buffer.toString();
   }
 
   public boolean equals(Object o) {
@@ -157,83 +228,28 @@ public class Path implements Comparable {
       return false;
     }
     Path that = (Path)o;
-    return
-      this.isAbsolute == that.isAbsolute &&
-      Arrays.equals(this.elements, that.elements) &&
-      (this.drive == null ? true : this.drive.equals(that.drive));
+    return this.uri.equals(that.uri);
   }
 
   public int hashCode() {
-    int hashCode = isAbsolute ? 1 : -1;
-    for (int i = 0; i < elements.length; i++) {
-      hashCode ^= elements[i].hashCode();
-    }
-    if (drive != null) {
-      hashCode ^= drive.hashCode();
-    }
-    return hashCode;
+    return uri.hashCode();
   }
 
   public int compareTo(Object o) {
     Path that = (Path)o;
-    return this.toString().compareTo(that.toString());
+    return this.uri.compareTo(that.uri);
   }
   
   /** Return the number of elements in this path. */
   public int depth() {
-    return elements.length;
-  }
-
-  /* 
-   * Removes '.' and '..' 
-   */
-  private void normalize(ArrayList list) {
-    boolean canNormalize = this.isAbsolute;
-    boolean changed = false;    // true if we have detected any . or ..
-    int index = 0;
-    int listSize = list.size();
-    for (int i = 0; i < listSize; i++) {
-      // Invariant: (index >= 0) && (index <= i)
-      if (list.get(i).equals(".")) {
-        changed = true;
-      } else {
-        if (canNormalize) {
-          if (list.get(i).equals("..")) {
-            if ((index > 0) && !list.get(index-1).equals("..")) {
-              index--;    // effectively deletes the last element currently in list.
-              changed = true;
-            } else { // index == 0
-              // the first element is now going to be '..'
-              canNormalize = false;
-              list.set(index, "..");
-              isAbsolute = false;
-              index++; 
-            }
-          } else { // list.get(i) != ".." or "."
-            if (changed) {
-              list.set(index, list.get(i));
-            }
-            index++;
-          }
-        } else { // !canNormalize
-          if (changed) {
-            list.set(index, list.get(i));
-          }
-          index++;
-          if (!list.get(i).equals("..")) {
-           canNormalize = true;
-          }
-        }  // else !canNormalize
-      } 
-    }  // for
-    
-    // Remove the junk at the end of the list.
-    for (int j = listSize-1; j >= index; j--) {
-      list.remove(j);
+    String path = uri.getPath();
+    int depth = 0;
+    int slash = path.length()==1 && path.charAt(0)=='/' ? -1 : 0;
+    while (slash != -1) {
+      depth++;
+      slash = path.indexOf(SEPARATOR, slash+1);
     }
-
+    return depth;
   }
-  
   
 }
-

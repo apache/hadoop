@@ -37,21 +37,35 @@ public class DistributedFileSystem extends FileSystem {
     private Path workingDir = 
       new Path("/user", System.getProperty("user.name"));
 
-    private String name;
+    private URI uri;
     private FileSystem localFs;
 
     DFSClient dfs;
 
-    /** Construct a client for the filesystem at <code>namenode</code>.
-     */
-    public DistributedFileSystem(InetSocketAddress namenode, Configuration conf) throws IOException {
-      super(conf);
-      this.dfs = new DFSClient(namenode, conf);
-      this.name = namenode.getHostName() + ":" + namenode.getPort();
-      this.localFs = getNamed("local", conf);
+    public DistributedFileSystem() {}
+
+    /** @deprecated */
+    public DistributedFileSystem(InetSocketAddress namenode,
+                                 Configuration conf) throws IOException {
+      initialize(URI.create("hdfs://"+
+                            namenode.getHostName()+":"+
+                            namenode.getPort()),
+                 conf);
     }
 
-    public String getName() { return name; }
+    /** @deprecated */
+    public String getName() { return uri.getAuthority(); }
+
+    public URI getUri() { return uri; }
+
+    public void initialize(URI uri, Configuration conf) throws IOException {
+      setConf(conf);
+      String host = uri.getHost();
+      int port = uri.getPort();
+      this.dfs = new DFSClient(new InetSocketAddress(host,port), conf);
+      this.uri = URI.create("hdfs://"+host+":"+port);
+      this.localFs = getNamed("file:///", conf);
+    }
 
     public Path getWorkingDirectory() {
       return workingDir;
@@ -62,7 +76,11 @@ public class DistributedFileSystem extends FileSystem {
     }
     
     public long getBlockSize(Path f) throws IOException {
-      return dfs.getBlockSize(makeAbsolute(f));
+      // if we already know the answer, use it.
+      if (f instanceof DfsPath) {
+        return ((DfsPath) f).getBlockSize();
+      }
+      return dfs.getBlockSize(getPath(f));
     }
     
     public short getDefaultReplication() {
@@ -82,7 +100,8 @@ public class DistributedFileSystem extends FileSystem {
     }
     
     private UTF8 getPath(Path file) {
-      return new UTF8(makeAbsolute(file).toString());
+      checkPath(file);
+      return new UTF8(makeAbsolute(file).toUri().getPath());
     }
 
     public String[][] getFileCacheHints(Path f, long start, long len) throws IOException {

@@ -22,6 +22,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.nio.channels.*;
+import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Progressable;
 
@@ -31,6 +32,8 @@ import org.apache.hadoop.util.Progressable;
  * @author Mike Cafarella
  *****************************************************************/
 public class LocalFileSystem extends FileSystem {
+    private static final URI NAME = URI.create("file:///");
+
     private Path workingDir =
       new Path(System.getProperty("user.dir"));
     TreeMap sharedLockDataSet = new TreeMap();
@@ -39,15 +42,11 @@ public class LocalFileSystem extends FileSystem {
     // by default use copy/delete instead of rename
     boolean useCopyForRename = true;
     
-    /** Construct a local filesystem client. */
+    public LocalFileSystem() {}
+
+    /** @deprecated. */
     public LocalFileSystem(Configuration conf) throws IOException {
-        super(conf);
-        // if you find an OS which reliably supports non-POSIX
-        // rename(2) across filesystems / volumes, you can
-        // uncomment this.
-        // String os = System.getProperty("os.name");
-        // if (os.toLowerCase().indexOf("os-with-super-rename") != -1)
-        //     useCopyForRename = false;
+      initialize(NAME, conf);
     }
 
     /**
@@ -65,14 +64,22 @@ public class LocalFileSystem extends FileSystem {
         }
     }
 
+    /** @deprecated */
     public String getName() { return "local"; }
+
+    public URI getUri() { return NAME; }
+
+    public void initialize(URI uri, Configuration conf) {
+      setConf(conf);
+    }
 
     /** Convert a path to a File. */
     public File pathToFile(Path path) {
+      checkPath(path);
       if (!path.isAbsolute()) {
         path = new Path(workingDir, path);
       }
-      return new File(path.toString());
+      return new File(path.toUri().getPath());
     }
 
     /*******************************************************

@@ -132,8 +132,8 @@ public class CopyFiles extends ToolBase {
      */
     public static Path makeRelative(Path root, Path absPath) {
       if (!absPath.isAbsolute()) { return absPath; }
-      String sRoot = root.toString();
-      String sPath = absPath.toString();
+      String sRoot = root.toUri().getPath();
+      String sPath = absPath.toUri().getPath();
       Enumeration rootTokens = new StringTokenizer(sRoot, "/");
       ArrayList rList = Collections.list(rootTokens);
       Enumeration pathTokens = new StringTokenizer(sPath, "/");
@@ -815,7 +815,7 @@ public class CopyFiles extends ToolBase {
     try {
       copy(conf, srcPath, destPath, srcAsList, ignoreReadFailures);
     } catch (Exception e) {
-      System.out.println("Caught: " + e);
+      System.err.println("Copy failed: "+StringUtils.stringifyException(e));
       return -1;
     }
     

@@ -71,12 +71,13 @@ public abstract class InputFormatBase implements InputFormat {
    * @return array of Path objects, never zero length.
    * @throws IOException if zero items.
    */
-  protected Path[] listPaths(FileSystem fs, JobConf job)
+  protected Path[] listPaths(FileSystem ignored, JobConf job)
     throws IOException {
     Path[] dirs = job.getInputPaths();
     String subdir = job.get("mapred.input.subdir");
     ArrayList result = new ArrayList();
     for (int i = 0; i < dirs.length; i++) {
+      FileSystem fs = dirs[i].getFileSystem(job);
       Path[] dir = fs.listPaths(dirs[i]);
       if (dir != null) {
         for (int j = 0; j < dir.length; j++) {
@@ -85,11 +86,11 @@ public abstract class InputFormatBase implements InputFormat {
             Path[] subFiles = fs.listPaths(new Path(file, subdir));
             if (subFiles != null) {
               for (int k = 0; k < subFiles.length; k++) {
-                result.add(subFiles[k]);
+                result.add(fs.makeQualified(subFiles[k]));
               }
             }
           } else {
-            result.add(file);
+            result.add(fs.makeQualified(file));
           }
         }
       }
@@ -101,26 +102,28 @@ public abstract class InputFormatBase implements InputFormat {
     return (Path[])result.toArray(new Path[result.size()]);
   }
 
-  public boolean[] areValidInputDirectories(FileSystem fileSys,
-                                            Path[] inputDirs
-                                            ) throws IOException {
+  // NOTE: should really pass a Configuration here, not a FileSystem
+  public boolean[] areValidInputDirectories(FileSystem fs, Path[] inputDirs)
+    throws IOException {
     boolean[] result = new boolean[inputDirs.length];
     for(int i=0; i < inputDirs.length; ++i) {
-      result[i] = fileSys.isDirectory(inputDirs[i]);
+      result[i] =
+        inputDirs[i].getFileSystem(fs.getConf()).isDirectory(inputDirs[i]);
     }
     return result;
   }
 
   /** Splits files returned by {@link #listPaths(FileSystem,JobConf)} when
    * they're too big.*/ 
-  public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits)
+  public FileSplit[] getSplits(FileSystem ignored, JobConf job, int numSplits)
     throws IOException {
 
-    Path[] files = listPaths(fs, job);
+    Path[] files = listPaths(ignored, job);
 
     long totalSize = 0;                           // compute total size
     for (int i = 0; i < files.length; i++) {      // check we have valid files
       Path file = files[i];
+      FileSystem fs = file.getFileSystem(job);
       if (fs.isDirectory(file) || !fs.exists(file)) {
         throw new IOException("Not a file: "+files[i]);
       }
@@ -135,6 +138,7 @@ public abstract class InputFormatBase implements InputFormat {
     ArrayList splits = new ArrayList(numSplits);  // generate splits
     for (int i = 0; i < files.length; i++) {
       Path file = files[i];
+      FileSystem fs = file.getFileSystem(job);
       long length = fs.getLength(file);
       if (isSplitable(fs, file)) {
         long blockSize = fs.getBlockSize(file);

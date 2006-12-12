@@ -43,22 +43,20 @@ public interface InputFormat {
   
   /** Splits a set of input files.  One split is created per map task.
    *
-   * @param fs the filesystem containing the files to be split
    * @param job the job whose input files are to be split
    * @param numSplits the desired number of splits
    * @return the splits
    */
-  FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits)
+  FileSplit[] getSplits(FileSystem ignored, JobConf job, int numSplits)
     throws IOException;
 
   /** Construct a {@link RecordReader} for a {@link FileSplit}.
    *
-   * @param fs the {@link FileSystem}
    * @param split the {@link FileSplit}
    * @param job the job that this split belongs to
    * @return a {@link RecordReader}
    */
-  RecordReader getRecordReader(FileSystem fs, FileSplit split,
+  RecordReader getRecordReader(FileSystem ignored, FileSplit split,
                                JobConf job, Reporter reporter)
     throws IOException;
 }

@@ -29,13 +29,12 @@ public interface OutputFormat {
 
   /** Construct a {@link RecordWriter} with Progressable.
    *
-   * @param fs the file system to write to
    * @param job the job whose output is being written
    * @param name the unique name for this part of the output
    * @param progress mechanism for reporting progress while writing to file
    * @return a {@link RecordWriter}
    */
-  RecordWriter getRecordWriter(FileSystem fs, JobConf job, String name,
+  RecordWriter getRecordWriter(FileSystem ignored, JobConf job, String name,
           Progressable progress)
     throws IOException;
 
@@ -47,6 +46,6 @@ public interface OutputFormat {
    * @param job the job whose output will be written
    * @throws IOException when output should not be attempted
    */
-  void checkOutputSpecs(FileSystem fs, JobConf job) throws IOException;
+  void checkOutputSpecs(FileSystem ignored, JobConf job) throws IOException;
 }
 

@@ -26,7 +26,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.*;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -50,7 +50,9 @@ import org.apache.hadoop.util.Progressable;
 public abstract class FileSystem extends Configured {
     public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.DistributedFileSystem");
 
-    private static final HashMap NAME_TO_FS = new HashMap();
+    // cache indexed by URI scheme and authority
+    private static final Map<String,Map<String,FileSystem>> CACHE
+      = new HashMap<String,Map<String,FileSystem>>();
     /**
      * Parse the cmd-line args, starting at i.  Remove consumed args
      * from array.  We expect param in the form:
@@ -89,23 +91,98 @@ public abstract class FileSystem extends Configured {
       return getNamed(conf.get("fs.default.name", "local"), conf);
     }
 
-    /** Returns a name for this filesystem, suitable to pass to {@link
-     * FileSystem#getNamed(String,Configuration)}.*/
-    public abstract String getName();
+    /** Called after a new FileSystem instance is constructed.
+     * @param name a uri whose authority section names the host, port, etc.
+     *   for this FileSystem
+     * @param conf the configuration
+     */
+    public abstract void initialize(URI name, Configuration conf)
+      throws IOException;
+
+    /** Returns a URI whose scheme and authority identify this FileSystem.*/
+    public abstract URI getUri();
   
-    /** Returns a named filesystem.  Names are either the string "local" or a
-     * host:port pair, naming an DFS name server.*/
-    public static FileSystem getNamed(String name, Configuration conf) throws IOException {
-      FileSystem fs = (FileSystem)NAME_TO_FS.get(name);
-      if (fs == null) {
-        if ("local".equals(name)) {
-          fs = new LocalFileSystem(conf);
-        } else {
-          fs = new DistributedFileSystem(DataNode.createSocketAddr(name), conf);
-        }
-        NAME_TO_FS.put(name, fs);
+    /** @deprecated call #getUri() instead.*/
+    public abstract String getName();
+
+    /** @deprecated call #get(URI,Configuration) instead. */
+    public static FileSystem getNamed(String name, Configuration conf)
+      throws IOException {
+
+      // convert old-format name to new-format name
+      if (name.equals("local")) {         // "local" is now "file:///".
+        name = "file:///";
+      } else if (name.indexOf('/')==-1) {   // unqualified is "hdfs://"
+        name = "hdfs://"+name;
       }
+
+      return get(URI.create(name), conf);
+    }
+  
+    /** Returns the FileSystem for this URI's scheme and authority.  The scheme
+     * of the URI determines a configuration property name,
+     * <tt>fs.<i>scheme</i>.class</tt> whose value names the FileSystem class.
+     * The entire URI is passed to the FileSystem instance's initialize method.
+     */
+    public static synchronized FileSystem get(URI uri, Configuration conf)
+      throws IOException {
+
+      String scheme = uri.getScheme();
+      String authority = uri.getAuthority();
+
+      if (scheme == null) {                       // no scheme: use default FS
+        return get(conf);
+      }
+
+      Map<String,FileSystem> authorityToFs = CACHE.get(scheme);
+      if (authorityToFs == null) {
+        authorityToFs = new HashMap<String,FileSystem>();
+        CACHE.put(scheme, authorityToFs);
+      }
+
+      FileSystem fs = authorityToFs.get(authority);
+      if (fs == null) {
+        Class fsClass = conf.getClass("fs."+scheme+".impl", null);
+        if (fsClass == null) {
+          throw new IOException("No FileSystem for scheme: " + scheme);
+        }
+        fs = (FileSystem)ReflectionUtils.newInstance(fsClass, conf);
+        fs.initialize(uri, conf);
+        authorityToFs.put(authority, fs);
+      }
+
       return fs;
+    }
+
+    /** Make sure that a path specifies a FileSystem. */
+    public Path makeQualified(Path path) {
+      checkPath(path);
+
+      if (!path.isAbsolute())
+        path = new Path(getWorkingDirectory(), path);
+
+      URI pathUri = path.toUri();
+      URI fsUri = getUri();
+      
+      String scheme = pathUri.getScheme();
+      String authority = pathUri.getAuthority();
+
+      if (scheme != null &&
+          (authority != null || fsUri.getAuthority() == null))
+        return path;
+
+      if (scheme == null) {
+        scheme = fsUri.getScheme();
+      }
+
+      if (authority == null) {
+        authority = fsUri.getAuthority();
+        if (authority == null) {
+          authority = "";
+        }
+      }
+
+      return new Path(scheme+":"+"//"+authority + pathUri.getPath());
     }
 
     /** Return the name of the checksum file associated with a file.*/
@@ -123,8 +200,27 @@ public abstract class FileSystem extends Configured {
     // FileSystem
     ///////////////////////////////////////////////////////////////
 
+    /** @deprecated */
     protected FileSystem(Configuration conf) {
       super(conf);
+    }
+
+    protected FileSystem() {
+      super(null);
+    }
+
+    /** Check that a Path belongs to this FileSystem. */
+    protected void checkPath(Path path) {
+      URI uri = path.toUri();
+      if (uri.getScheme() == null)                // fs is relative 
+        return;
+      String thisAuthority = this.getUri().getAuthority();
+      String thatAuthority = uri.getAuthority();
+      if (!(this.getUri().getScheme().equals(uri.getScheme()) &&
+            (thisAuthority == null && thatAuthority == null)
+            || thisAuthority.equals(thatAuthority)))
+        throw new IllegalArgumentException("Wrong FS: "+path+
+                                           ", expected: "+this.getUri());
     }
 
     /**
@@ -766,7 +862,13 @@ public abstract class FileSystem extends Configured {
      * release any held locks.
      */
     public void close() throws IOException {
-        NAME_TO_FS.remove(getName());
+      URI uri = getUri();
+      synchronized (FileSystem.class) {
+        Map<String,FileSystem> authorityToFs = CACHE.get(uri.getScheme());
+        if (authorityToFs != null) {
+          authorityToFs.remove(uri.getAuthority());
+        }
+      }
     }
 
     /**

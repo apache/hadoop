@@ -165,11 +165,7 @@ class DFSClient implements FSConstants {
       return defaultBlockSize;
     }
     
-    public long getBlockSize(Path f) throws IOException {
-      // if we already know the answer, use it.
-      if (f instanceof DfsPath) {
-        return ((DfsPath) f).getBlockSize();
-      }
+    public long getBlockSize(UTF8 f) throws IOException {
       int retries = 4;
       while (true) {
         try {

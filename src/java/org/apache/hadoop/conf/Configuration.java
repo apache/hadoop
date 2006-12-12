@@ -497,13 +497,15 @@ public class Configuration {
           doc = builder.parse(url.toString());
         }
       } else if (name instanceof Path) {          // a file resource
-        Path file = (Path)name;
-        FileSystem fs = FileSystem.getNamed("local", this);
-        if (fs.exists(file)) {
+        // Can't use FileSystem API or we get an infinite loop
+        // since FileSystem uses Configuration API.  Use java.io.File instead.
+        File file = new File(((Path)name).toUri().getPath())
+          .getAbsoluteFile();
+        if (file.exists()) {
           if (!quiet) {
             LOG.info("parsing " + file);
           }
-          InputStream in = new BufferedInputStream(fs.openRaw(file));
+          InputStream in = new BufferedInputStream(new FileInputStream(file));
           try {
             doc = builder.parse(in);
           } finally {

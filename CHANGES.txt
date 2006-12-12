@@ -74,6 +74,15 @@ Trunk (unreleased changes)
 22. HADOOP-673.  Give each task its own working directory again.
     (Mahadev Konar via cutting)
 
+23. HADOOP-571.  Extend the syntax of Path to be a URI; to be
+    optionally qualified with a scheme and authority.  The scheme
+    determines the FileSystem implementation, while the authority
+    determines the FileSystem instance.  New FileSystem
+    implementations may be provided by defining an fs.<scheme>.impl
+    property, naming the FileSystem implementation class.  This
+    permits easy integration of new FileSystem implementations.
+    (cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

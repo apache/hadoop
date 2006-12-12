@@ -53,10 +53,12 @@ public class TextOutputFormat extends OutputFormatBase {
     }   
   }
   
-  public RecordWriter getRecordWriter(FileSystem fs, JobConf job,
-                                      String name, Progressable progress) throws IOException {
+  public RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
+                                      String name, Progressable progress)
+    throws IOException {
 
     Path dir = job.getOutputPath();
+    FileSystem fs = dir.getFileSystem(job);
     boolean isCompressed = getCompressOutput(job);
     if (!isCompressed) {
       FSDataOutputStream fileOut = fs.create(new Path(dir, name), progress);

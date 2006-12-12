@@ -79,12 +79,12 @@ public abstract class OutputFormatBase implements OutputFormat {
     }
   }
   
-  public abstract RecordWriter getRecordWriter(FileSystem fs,
+  public abstract RecordWriter getRecordWriter(FileSystem ignored,
                                                JobConf job, String name,
                                                Progressable progress)
     throws IOException;
 
-  public void checkOutputSpecs(FileSystem fs, JobConf job) 
+  public void checkOutputSpecs(FileSystem ignored, JobConf job) 
           throws FileAlreadyExistsException, 
              InvalidJobConfException, IOException {
     // Ensure that the output directory is set and not already there
@@ -92,9 +92,9 @@ public abstract class OutputFormatBase implements OutputFormat {
     if (outDir == null && job.getNumReduceTasks() != 0) {
       throw new InvalidJobConfException("Output directory not set in JobConf.");
     }
-    if (outDir != null && fs.exists(outDir)) {
+    if (outDir != null && outDir.getFileSystem(job).exists(outDir)) {
       throw new FileAlreadyExistsException("Output directory " + outDir + 
-                            " already exists in " + fs.getName() );
+                                           " already exists");
     }
   }
 

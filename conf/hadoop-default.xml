@@ -98,9 +98,24 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>fs.default.name</name>
-  <value>local</value>
-  <description>The name of the default file system.  Either the
-  literal string "local" or a host:port for DFS.</description>
+  <value>file:///</value>
+  <description>The name of the default file system.  A URI whose
+  scheme and authority determine the FileSystem implementation.  The
+  uri's scheme determines the config property (fs.SCHEME.impl) naming
+  the FileSystem implementation class.  The uri's authority is used to
+  determine the host, port, etc. for a filesystem.</description>
+</property>
+
+<property>
+  <name>fs.file.impl</name>
+  <value>org.apache.hadoop.fs.LocalFileSystem</value>
+  <description>The FileSystem for file: uris.</description>
+</property>
+
+<property>
+  <name>fs.hdfs.impl</name>
+  <value>org.apache.hadoop.dfs.DistributedFileSystem</value>
+  <description>The FileSystem for hdfs: uris.</description>
 </property>
 
 <property>
