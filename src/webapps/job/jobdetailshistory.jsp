@@ -101,6 +101,40 @@
 	<td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, reduceFinished, reduceStarted) %></td>
 </tr>
  </table>
+
+<br/>
+ <%
+	DefaultJobHistoryParser.BadNodesFilter filter = new DefaultJobHistoryParser.BadNodesFilter();
+	String dir = System.getProperty("hadoop.log.dir") + File.separator + "history" ; 
+ 
+	JobHistory.parseHistory(new File(dir, jobTrackerId+"_" + jobid), filter); 
+	Map<String, Set<String>> badNodes = filter.getValues(); 
+	if( badNodes.size() > 0 ) {
+ %>
+<h3>Failed tasks attempts by nodes </h3>
+<table border="1">
+<tr><td>Hostname</td><td>Failed Tasks</td></tr>
+ <%	  
+	for( String node : badNodes.keySet() ) {
+	  Set<String> failedTasks = badNodes.get(node); 
+%>
+	<tr>
+		<td><%=node %></td>
+		<td>
+<%
+		for( String t : failedTasks ) {
+%>
+		 <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&jobTrackerId=<%=jobTrackerId %>&taskid=<%=t %>"><%=t %></a>,&nbsp;
+<%		  
+		}
+%>	
+		</td>
+	</tr>
+<%	  
+     }
+	}
+ %>
+</table>
  </center>
 
 </body></html>

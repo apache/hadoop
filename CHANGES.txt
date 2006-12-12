@@ -51,6 +51,9 @@ Trunk (unreleased changes)
 14. HADOOP-786. Log common exception at debug level.
     (Sanjay Dahiya via cutting)
 
+15. HADOOP-796. Provide more convenient access to failed task
+    information in the web interface.  (Sanjay Dahiya via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 
