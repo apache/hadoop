@@ -174,7 +174,11 @@ public class TestMiniMRWithDFS extends TestCase {
           assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
                        "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
           checkTaskDirectories(mr, new String[]{"job_0002"}, new String[]{"task_0002_m_000001_0"});
-          
+          // test with maps=0
+          jobConf = new JobConf();
+          result = launchWordCount(namenode, jobTrackerName, jobConf, 
+                                   "owen is oom", 0, 1);
+          assertEquals("is\t1\noom\t1\nowen\t1\n", result);
       } finally {
           if (fileSys != null) { fileSys.close(); }
           if (dfs != null) { dfs.shutdown(); }

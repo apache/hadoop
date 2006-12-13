@@ -130,8 +130,7 @@ public abstract class InputFormatBase implements InputFormat {
       totalSize += fs.getLength(files[i]);
     }
 
-    long goalSize = totalSize / numSplits;   // start w/ desired num splits
-
+    long goalSize = totalSize / (numSplits == 0 ? 1 : numSplits);
     long minSize = Math.max(job.getLong("mapred.min.split.size", 1),
                             minSplitSize);
 
@@ -159,7 +158,7 @@ public abstract class InputFormatBase implements InputFormat {
         }
       }
     }
-    //LOG.info( "Total # of splits: " + splits.size() );
+    LOG.debug( "Total # of splits: " + splits.size() );
     return (FileSplit[])splits.toArray(new FileSplit[splits.size()]);
   }
 

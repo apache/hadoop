@@ -86,6 +86,9 @@ Trunk (unreleased changes)
 24. HADOOP-720.  Add an HDFS white paper to website.
     (Dhruba Borthakur via cutting) 
 
+25. HADOOP-794.  Fix a divide-by-zero exception when a job specifies
+    zero map tasks.  (omalley via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 
