@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import junit.framework.TestCase;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -46,7 +47,7 @@ public class TestDFSShell extends TestCase {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, 2, false);
     FileSystem fileSys = cluster.getFileSystem();
-    DFSShell shell = new DFSShell();
+    FsShell shell = new FsShell();
     shell.setConf(conf);
 
     try {

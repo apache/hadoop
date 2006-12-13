@@ -5,6 +5,7 @@
   import="java.io.*"
   import="java.util.*"
   import="java.net.*"
+  import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.dfs.*"
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
@@ -97,9 +98,9 @@
         cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getName()+"</a>";
         }
         cols[1] = "file";
-        cols[2] = DFSShell.byteDesc(files[i].getLen());
+        cols[2] = FsShell.byteDesc(files[i].getLen());
         cols[3] = Short.toString(files[i].getReplication());
-        cols[4] = DFSShell.byteDesc(files[i].getBlockSize());
+        cols[4] = FsShell.byteDesc(files[i].getBlockSize());
       }
       else {
         String datanodeUrl = req.getRequestURL()+"?dir="+

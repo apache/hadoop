@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Date;
 
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -78,9 +79,9 @@ public class DatanodeInfo extends DatanodeID {
     long r = getRemaining();
     long u = c - r;
     buffer.append("Name: "+name+"\n");
-    buffer.append("Total raw bytes: "+c+" ("+DFSShell.byteDesc(c)+")"+"\n");
-    buffer.append("Used raw bytes: "+u+" ("+DFSShell.byteDesc(u)+")"+"\n");
-    buffer.append("% used: "+DFSShell.limitDecimal(((1.0*u)/c)*100,2)+"%"+"\n");
+    buffer.append("Total raw bytes: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
+    buffer.append("Used raw bytes: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
+    buffer.append("% used: "+FsShell.limitDecimal(((1.0*u)/c)*100,2)+"%"+"\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
   }

@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
@@ -28,7 +29,7 @@ import org.apache.hadoop.ipc.RPC;
  *
  * @author Dhruba Borthakur
  */
-public class DFSAdmin extends DFSShell {
+public class DFSAdmin extends FsShell {
 
     /**
      * Construct a DFSAdmin object.

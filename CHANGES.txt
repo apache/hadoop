@@ -99,6 +99,9 @@ Trunk (unreleased changes)
     fs.s3.awsAccessKeyId and fs.s3.awsSecretAccessKey.
     (Tom White via cutting)
 
+28. HADOOP-824.  Rename DFSShell to be FsShell, since it applies
+    generically to all FileSystem implementations.  (cutting)
+
 
 Release 0.9.1 - 2006-12-06
 

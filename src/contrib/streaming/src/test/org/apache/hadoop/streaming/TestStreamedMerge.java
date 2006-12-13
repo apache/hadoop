@@ -32,7 +32,7 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.DFSShell;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -106,7 +106,7 @@ public class TestStreamedMerge extends TestCase {
   void lsr() {
     try {
       System.out.println("lsr /");
-      DFSShell shell = new DFSShell();
+      FsShell shell = new FsShell();
       shell.setConf(conf_);
       shell.init();
       shell.ls("/", true);

@@ -29,8 +29,8 @@ if [ $# = 0 ]; then
   echo "  namenode          run the DFS namenode"
   echo "  datanode          run a DFS datanode"
   echo "  dfsadmin          run a DFS admin client"
-  echo "  dfs               run a DFS user client"
   echo "  fsck              run a DFS filesystem checking utility"
+  echo "  fs                run a generic filesystem user client"
   echo "  jobtracker        run the MapReduce job Tracker node" 
   echo "  tasktracker       run a MapReduce task Tracker node" 
   echo "  job               manipulate MapReduce jobs" 
@@ -137,8 +137,10 @@ if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.dfs.NameNode'
 elif [ "$COMMAND" = "datanode" ] ; then
   CLASS='org.apache.hadoop.dfs.DataNode'
+elif [ "$COMMAND" = "fs" ] ; then
+  CLASS=org.apache.hadoop.fs.FsShell
 elif [ "$COMMAND" = "dfs" ] ; then
-  CLASS=org.apache.hadoop.dfs.DFSShell
+  CLASS=org.apache.hadoop.fs.FsShell
 elif [ "$COMMAND" = "dfsadmin" ] ; then
   CLASS=org.apache.hadoop.dfs.DFSAdmin
 elif [ "$COMMAND" = "fsck" ] ; then

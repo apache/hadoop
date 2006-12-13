@@ -4,6 +4,7 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
+  import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.dfs.*"
   import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
@@ -78,14 +79,14 @@
     
     String percentUsed;
     if (c > 0) 
-      percentUsed = DFSShell.limitDecimal(((1.0 * u)/c)*100, 2);
+      percentUsed = FsShell.limitDecimal(((1.0 * u)/c)*100, 2);
     else
       percentUsed = "100";
     
     out.print("<td class=\"lastcontact\"> " +
               ((currentTime - d.getLastUpdate())/1000) +
 	      "<td class=\"size\">" +
-              DFSShell.limitDecimal(c*1.0/diskBytes, 2) +
+              FsShell.limitDecimal(c*1.0/diskBytes, 2) +
 	      "<td class=\"pcused\">" + percentUsed +
               "<td class=\"blocks\">" + d.numBlocks() + "\n");
   }
@@ -128,11 +129,11 @@
     
     out.print( "<div id=\"dfstable\"> <table>\n" +
 	       rowTxt() + colTxt() + "Capacity" + colTxt() + ":" + colTxt() +
-	       DFSShell.byteDesc( fsn.totalCapacity() ) +
+	       FsShell.byteDesc( fsn.totalCapacity() ) +
 	       rowTxt() + colTxt() + "Remaining" + colTxt() + ":" + colTxt() +
-	       DFSShell.byteDesc( fsn.totalRemaining() ) +
+	       FsShell.byteDesc( fsn.totalRemaining() ) +
 	       rowTxt() + colTxt() + "Used" + colTxt() + ":" + colTxt() +
-	       DFSShell.limitDecimal((fsn.totalCapacity() -
+	       FsShell.limitDecimal((fsn.totalCapacity() -
 				      fsn.totalRemaining())*100.0/
 				     (fsn.totalCapacity() + 1e-10), 2) + " %" +
 	       rowTxt() + colTxt() +

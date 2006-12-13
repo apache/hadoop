@@ -25,7 +25,7 @@ import java.io.PrintWriter;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.DFSShell;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.dfs.DataNode;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
@@ -96,7 +96,7 @@ public class TestDFSShellGenericOptions extends TestCase {
     }
     
     private void execute( String [] args, String namenode ) {
-        DFSShell shell=new DFSShell();
+        FsShell shell=new FsShell();
         FileSystem fs=null;
         try {
             shell.doMain(new Configuration(), args);

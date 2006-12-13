@@ -15,13 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.dfs;
+package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.text.*;
 
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.util.ToolBase;
 
@@ -30,13 +29,13 @@ import org.apache.hadoop.util.ToolBase;
  *
  * @author Mike Cafarella
  **************************************************/
-public class DFSShell extends ToolBase {
+public class FsShell extends ToolBase {
 
-    FileSystem fs;
+    protected FileSystem fs;
 
     /**
      */
-    public DFSShell() {
+    public FsShell() {
     }
 
     public void init() throws IOException {
@@ -322,8 +321,8 @@ public class DFSShell extends ToolBase {
         } else {
             System.out.println("Found " + items.length + " items");
             for (int i = 0; i < items.length; i++) {
-                DfsPath cur = (DfsPath) items[i];
-                System.out.println(cur + "\t" + cur.getContentsLength());
+              Path cur = items[i];
+              System.out.println(cur + "\t" + fs.getLength(cur));
             }
         }
     }
@@ -345,7 +344,7 @@ public class DFSShell extends ToolBase {
         if (items != null) {
           int totalSize=0;
           for(int j=0; j<items.length; j++) {
-            totalSize += ((DfsPath)items[j]).getContentsLength();
+            totalSize += fs.getLength(items[j]);
           }
           String pathStr = paths[i].toString();
           System.out.println(
@@ -563,7 +562,7 @@ public class DFSShell extends ToolBase {
     /**
      * Return an abbreviated English-language desc of the byte length
      */
-    static String byteDesc(long len) {
+    public static String byteDesc(long len) {
         double val = 0.0;
         String ending = "";
         if (len < 1024 * 1024) {
@@ -585,7 +584,7 @@ public class DFSShell extends ToolBase {
         return limitDecimal(val, 2) + ending;
     }
 
-    static String limitDecimal(double d, int placesAfterDecimal) {
+    public static String limitDecimal(double d, int placesAfterDecimal) {
         String strVal = Double.toString(d);
         int decpt = strVal.indexOf(".");
         if (decpt >= 0) {
@@ -660,42 +659,42 @@ public class DFSShell extends ToolBase {
      */
     public void printUsage(String cmd) {
           if ("-fs".equals(cmd)) {
-            System.err.println("Usage: java DFSShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [-fs <local | namenode:port>]");
           } else if ("-conf".equals(cmd)) {
-            System.err.println("Usage: java DFSShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [-conf <configuration file>]");
           } else if ("-D".equals(cmd)) {
-            System.err.println("Usage: java DFSShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [-D <[property=value>]");
           } else if ("-ls".equals(cmd) || "-lsr".equals(cmd) ||
                    "-du".equals(cmd) || "-dus".equals(cmd) || 
                    "-rm".equals(cmd) || "-rmr".equals(cmd) || 
                    "-mkdir".equals(cmd)) {
-            System.err.println("Usage: java DFSShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [" + cmd + " <path>]");
           } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
-            System.err.println("Usage: java DFSShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [" + cmd + " <src> <dst>]");
           } else if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd) ||
                    "-moveFromLocal".equals(cmd)) {
-            System.err.println("Usage: java DFSShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [" + cmd + " <localsrc> <dst>]");
           } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd) ||
                    "-moveToLocal".equals(cmd)) {
-            System.err.println("Usage: java DFSShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [" + cmd + " [-crc] <src> <localdst>]");
           } else if ("-cat".equals(cmd)) {
-            System.out.println("Usage: java DFSShell" + 
+            System.out.println("Usage: java FsShell" + 
                 " [" + cmd + " <src>]");
           } else if ("-get".equals(cmd)) {
-            System.err.println("Usage: java DFSShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [" + cmd + " <src> <localdst> [addnl]]");
           } else if ("-setrep".equals(cmd)) {
-            System.err.println("Usage: java DFSShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [-setrep [-R] <rep> <path/file>]");
           } else {
-            System.err.println("Usage: java DFSShell");
+            System.err.println("Usage: java FsShell");
             System.err.println("           [-fs <local | namenode:port>]");
             System.err.println("           [-conf <configuration file>]");
             System.err.println("           [-D <[property=value>]");
@@ -762,7 +761,7 @@ public class DFSShell extends ToolBase {
                 }
         }
 
-        // initialize DFSShell
+        // initialize FsShell
         try {
             init();
         } catch (RPC.VersionMismatch v) { 
@@ -863,7 +862,7 @@ public class DFSShell extends ToolBase {
      * main() has some simple utility methods
      */
     public static void main(String argv[]) throws Exception {
-        int res = new DFSShell().doMain(new Configuration(), argv);
+        int res = new FsShell().doMain(new Configuration(), argv);
         System.exit(res);
     }
 }
