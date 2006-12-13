@@ -327,6 +327,32 @@ public class DFSShell extends ToolBase {
             }
         }
     }
+    
+    /**
+     * Show the summary disk usage of each dir/file in DFS 
+     * that matches the file pattern <i>src</i>
+     * @param src a file pattern specifying source files
+     * @throws IOException  
+     * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
+     */
+    public void dus(String src) throws IOException {
+      Path paths[] = fs.globPaths( new Path(src) );
+      if( paths==null && paths.length==0 ) {
+        throw new IOException( "dus: No match: " + src );
+      }
+      for(int i=0; i<paths.length; i++) {
+        Path items[] = fs.listPaths( paths[i] );
+        if (items != null) {
+          int totalSize=0;
+          for(int j=0; j<items.length; j++) {
+            totalSize += ((DfsPath)items[j]).getContentsLength();
+          }
+          String pathStr = paths[i].toString();
+          System.out.println(
+              ("".equals(pathStr)?".":pathStr) + "\t" + totalSize);
+        }
+      }
+    }
 
     /**
      * Create the given dir
@@ -594,6 +620,8 @@ public class DFSShell extends ToolBase {
               delete(argv[i], true);
           } else if ("-du".equals(cmd)) {
               du(argv[i]);
+          } else if ("-dus".equals(cmd)) {
+              dus(argv[i]);
           } else if ("-ls".equals(cmd)) {
               ls(argv[i], false);
           } else if ("-lsr".equals(cmd)) {
@@ -641,8 +669,9 @@ public class DFSShell extends ToolBase {
             System.err.println("Usage: java DFSShell" + 
                 " [-D <[property=value>]");
           } else if ("-ls".equals(cmd) || "-lsr".equals(cmd) ||
-                   "-du".equals(cmd) || "-rm".equals(cmd) ||
-                   "-rmr".equals(cmd) || "-mkdir".equals(cmd)) {
+                   "-du".equals(cmd) || "-dus".equals(cmd) || 
+                   "-rm".equals(cmd) || "-rmr".equals(cmd) || 
+                   "-mkdir".equals(cmd)) {
             System.err.println("Usage: java DFSShell" + 
                 " [" + cmd + " <path>]");
           } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
@@ -673,6 +702,7 @@ public class DFSShell extends ToolBase {
             System.err.println("           [-ls <path>]" );
             System.err.println("           [-lsr <path>]");
             System.err.println("           [-du <path>]");
+            System.err.println("           [-dus <path>]");
             System.err.println("           [-mv <src> <dst>]");
             System.err.println("           [-cp <src> <dst>]");
             System.err.println("           [-rm <path>]");
@@ -789,6 +819,12 @@ public class DFSShell extends ToolBase {
                 } else {
                     du("");
                 }
+            } else if( "-dus".equals(cmd)) {
+              if (i < argv.length) {
+                  exitCode = doall(cmd, argv, conf, i);
+              } else {
+                  dus("");
+              }         
             } else if ("-mkdir".equals(cmd)) {
                 exitCode = doall(cmd, argv, conf, i);
             } else {
