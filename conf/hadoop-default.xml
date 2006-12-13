@@ -119,6 +119,12 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>fs.s3.impl</name>
+  <value>org.apache.hadoop.fs.s3.S3FileSystem</value>
+  <description>The FileSystem for s3: uris.</description>
+</property>
+
+<property>
   <name>dfs.datanode.bindAddress</name>
   <value>0.0.0.0</value>
   <description>

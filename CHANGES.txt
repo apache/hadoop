@@ -92,6 +92,13 @@ Trunk (unreleased changes)
 26. HADOOP-454.  Add a 'dfs -dus' command that provides summary disk
     usage.  (Hairong Kuang via cutting)
 
+27. HADOOP-574.  Add an Amazon S3 implementation of FileSystem.  To
+    use this, one need only specify paths of the form
+    s3://id:secret@bucket/.  Alternately, the AWS access key id and
+    secret can be specified in your config, with the properties
+    fs.s3.awsAccessKeyId and fs.s3.awsSecretAccessKey.
+    (Tom White via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 
