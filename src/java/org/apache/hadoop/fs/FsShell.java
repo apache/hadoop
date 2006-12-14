@@ -24,11 +24,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.util.ToolBase;
 
-/**************************************************
- * This class provides some DFS administrative access.
- *
- * @author Mike Cafarella
- **************************************************/
+/** Provide command line access to a FileSystem. */
 public class FsShell extends ToolBase {
 
     protected FileSystem fs;
@@ -43,21 +39,21 @@ public class FsShell extends ToolBase {
         this.fs = FileSystem.get(conf);
     }
     /**
-     * Add a local file to the indicated name in DFS. src is kept.
+     * Add a local file to the indicated FileSystem name. src is kept.
      */
     void copyFromLocal(Path src, String dstf) throws IOException {
         fs.copyFromLocalFile(src, new Path(dstf));
     }
 
     /**
-     * Add a local file to the indicated name in DFS. src is removed.
+     * Add a local file to the indicated FileSystem name. src is removed.
      */
     void moveFromLocal(Path src, String dstf) throws IOException {
         fs.moveFromLocalFile(src, new Path(dstf));
     }
 
     /**
-     * Obtain the indicated DFS files that match the file pattern <i>srcf</i>
+     * Obtain the indicated files that match the file pattern <i>srcf</i>
      * and copy them to the local name. srcf is kept.
      * When copying mutiple files, the destination must be a directory. 
      * Otherwise, IOException is thrown.
@@ -130,7 +126,7 @@ public class FsShell extends ToolBase {
     }      
 
     /**
-     * Obtain the indicated DFS file and copy to the local name.
+     * Obtain the indicated file and copy to the local name.
      * srcf is removed.
      */
     void moveToLocal(String srcf, Path dst) throws IOException {
@@ -138,7 +134,7 @@ public class FsShell extends ToolBase {
     }
 
     /**
-     * Fetch all DFS files that match the file pattern <i>srcf</i> and display
+     * Fetch all files that match the file pattern <i>srcf</i> and display
      * their content on stdout. 
      * @param srcf: a file pattern specifying source files
      * @exception: IOException
@@ -256,7 +252,7 @@ public class FsShell extends ToolBase {
     /**
      * Actually set the replication for this file
      * If it fails either throw IOException or print an error msg
-     * @param file: a dfs file/directory
+     * @param file: a file/directory
      * @param newRep: new replication factor
      * @throws IOException
      */
@@ -271,7 +267,7 @@ public class FsShell extends ToolBase {
     
     
     /**
-     * Get a listing of all files in DFS that match the file pattern <i>srcf</i>.
+     * Get a listing of all files in that match the file pattern <i>srcf</i>.
      * @param srcf a file pattern specifying source files
      * @param recursive if need to list files in subdirs
      * @throws IOException  
@@ -285,7 +281,7 @@ public class FsShell extends ToolBase {
       }
     }
 
-    /* list all files in dfs under the directory <i>src</i>*/
+    /* list all files under the directory <i>src</i>*/
     private void ls(Path src, boolean recursive, boolean printHeader ) throws IOException {
         Path items[] = fs.listPaths(src);
         if (items == null) {
@@ -309,7 +305,7 @@ public class FsShell extends ToolBase {
     }
 
     /**
-     * Show the size of all files in DFS that match the file pattern <i>src</i>
+     * Show the size of all files that match the file pattern <i>src</i>
      * @param src a file pattern specifying source files
      * @throws IOException  
      * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
@@ -328,7 +324,7 @@ public class FsShell extends ToolBase {
     }
     
     /**
-     * Show the summary disk usage of each dir/file in DFS 
+     * Show the summary disk usage of each dir/file 
      * that matches the file pattern <i>src</i>
      * @param src a file pattern specifying source files
      * @throws IOException  
@@ -364,8 +360,8 @@ public class FsShell extends ToolBase {
     }
     
     /**
-     * Move DFS files that match the file pattern <i>srcf</i>
-     * to a destination dfs file.
+     * Move files that match the file pattern <i>srcf</i>
+     * to a destination file.
      * When moving mutiple files, the destination must be a directory. 
      * Otherwise, IOException is thrown.
      * @param srcf a file pattern specifying source files
@@ -390,7 +386,7 @@ public class FsShell extends ToolBase {
     }
 
     /**
-     * Move/rename DFS file(s) to a destination dfs file. Multiple source
+     * Move/rename file(s) to a destination file. Multiple source
      * files can be specified. The destination is the last element of
      * the argvp[] array.
      * If multiple source files are specified, then the destination 
@@ -419,7 +415,7 @@ public class FsShell extends ToolBase {
       for (; i < argv.length - 1; i++) {
         try {
           //
-          // issue the rename to the remote dfs server
+          // issue the rename to the fs
           //
           rename(argv[i], dest);
         } catch (RemoteException e) {
@@ -450,8 +446,8 @@ public class FsShell extends ToolBase {
     }
 
     /**
-     * Copy DFS files that match the file pattern <i>srcf</i>
-     * to a destination dfs file.
+     * Copy files that match the file pattern <i>srcf</i>
+     * to a destination file.
      * When copying mutiple files, the destination must be a directory. 
      * Otherwise, IOException is thrown.
      * @param srcf a file pattern specifying source files
@@ -472,7 +468,7 @@ public class FsShell extends ToolBase {
     }
 
     /**
-     * Copy DFS file(s) to a destination dfs file. Multiple source
+     * Copy file(s) to a destination file. Multiple source
      * files can be specified. The destination is the last element of
      * the argvp[] array.
      * If multiple source files are specified, then the destination 
@@ -501,7 +497,7 @@ public class FsShell extends ToolBase {
       for (; i < argv.length - 1; i++) {
         try {
           //
-          // issue the copy to the remote dfs server
+          // issue the copy to the fs
           //
           copy(argv[i], dest, conf);
         } catch (RemoteException e) {
@@ -532,7 +528,7 @@ public class FsShell extends ToolBase {
     }
 
     /**
-     * Delete all files in DFS that match the file pattern <i>srcf</i>.
+     * Delete all files that match the file pattern <i>srcf</i>.
      * @param srcf a file pattern specifying source files
      * @param recursive if need to delete subdirs
      * @throws IOException  
@@ -545,7 +541,7 @@ public class FsShell extends ToolBase {
       }
     }
     
-    /* delete an DFS file */
+    /* delete a file */
     private void delete(Path src, boolean recursive ) throws IOException {
       if (fs.isDirectory(src) && !recursive) {
         throw new IOException("Cannot remove directory \"" + src +
@@ -607,7 +603,7 @@ public class FsShell extends ToolBase {
       for (; i < argv.length; i++) {
         try {
           //
-          // issue the command to the remote dfs server
+          // issue the command to the fs
           //
           if ("-cat".equals(cmd)) {
               cat(argv[i]);
@@ -769,7 +765,7 @@ public class FsShell extends ToolBase {
                                "... command aborted.");
             return exitCode;
         } catch (IOException e) {
-            System.err.println("Bad connection to DFS... command aborted.");
+            System.err.println("Bad connection to FS. command aborted.");
             return exitCode;
         }
 
