@@ -110,6 +110,9 @@ Release 0.9.2 - 2006-12-15
  2. HADOOP-827. Turn off speculative execution by default, since it's
     currently broken.  (omalley via cutting)
 
+ 3. HADOOP-791. Fix a deadlock in the task tracker.
+    (Mahadev Konar via cutting)
+
 
 Release 0.9.1 - 2006-12-06
 
