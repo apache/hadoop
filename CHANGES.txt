@@ -101,6 +101,10 @@ Trunk (unreleased changes)
 28. HADOOP-824.  Rename DFSShell to be FsShell, since it applies
     generically to all FileSystem implementations.  (cutting)
 
+29. HADOOP-813.  Fix map output sorting to report progress, so that
+    sorts which take longer than the task timeout do not fail.
+    (Devaraj Das via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
