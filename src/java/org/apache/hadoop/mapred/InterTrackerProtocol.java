@@ -27,31 +27,40 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * The JobTracker is the Server, which implements this protocol.
  */ 
 interface InterTrackerProtocol extends VersionedProtocol {
-  // version 2 introduced to replace TaskStatus.State with an enum
-  public static final long versionID = 2L;
+  /**
+   * version 3 introduced to replace 
+   * emitHearbeat/pollForNewTask/pollForTaskWithClosedJob with
+   * {@link #heartbeat(TaskTrackerStatus, boolean, boolean, short)}
+   */
+  public static final long versionID = 3L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
 
-  /** 
-   * Called regularly by the task tracker to update the status of its tasks
-   * within the job tracker.  JobTracker responds with a code that tells the 
-   * TaskTracker whether all is well.
-   *
-   * TaskTracker must also indicate whether this is the first interaction
-   * (since state refresh)
+  /**
+   * Called regularly by the {@link TaskTracker} to update the status of its 
+   * tasks within the job tracker. {@link JobTracker} responds with a 
+   * {@link HeartbeatResponse} that directs the 
+   * {@link TaskTracker} to undertake a series of 'actions' 
+   * (see {@link org.apache.hadoop.mapred.TaskTrackerAction.ActionType}).  
+   * 
+   * {@link TaskTracker} must also indicate whether this is the first 
+   * interaction (since state refresh) and acknowledge the last response
+   * it recieved from the {@link JobTracker} 
+   * 
+   * @param status the status update
+   * @param initialContact <code>true</code> if this is first interaction since
+   *                       'refresh', <code>false</code> otherwise.
+   * @param acceptNewTasks <code>true</code> if the {@link TaskTracker} is
+   *                       ready to accept new tasks to run.                 
+   * @param responseId the last responseId successfully acted upon by the
+   *                   {@link TaskTracker}.
+   * @return a {@link org.apache.hadoop.mapred.HeartbeatResponse} with 
+   *         fresh instructions.
    */
-  int emitHeartbeat(TaskTrackerStatus status, 
-                    boolean initialContact) throws IOException;
-
-  /** Called to get new tasks from from the job tracker for this tracker.*/
-  Task pollForNewTask(String trackerName) throws IOException;
-
-  /** Called to find which tasks that have been run by this tracker should now
-   * be closed because their job is complete.  This is used to, e.g., 
-   * notify a map task that its output is no longer needed and may 
-   * be removed. */
-  String[] pollForTaskWithClosedJob(String trackerName) throws IOException;
+  HeartbeatResponse heartbeat(TaskTrackerStatus status, 
+          boolean initialContact, boolean acceptNewTasks, short responseId)
+  throws IOException;
 
   /** Called by a reduce task to find which map tasks are completed.
    *

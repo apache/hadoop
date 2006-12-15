@@ -424,6 +424,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // (trackerID->TreeSet of taskids running at that tracker)
     TreeMap trackerToTaskMap = new TreeMap();
 
+    // (trackerID --> last sent HeartBeatResponseID)
+    Map<String, Short> trackerToHeartbeatResponseIDMap = new TreeMap();
+    
     //
     // Watch and expire TaskTracker objects using these structures.
     // We can map from Name->TaskTrackerStatus, or we can expire by time.
@@ -720,6 +723,74 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     ////////////////////////////////////////////////////
 
     /**
+     * The periodic heartbeat mechanism between the {@link TaskTracker} and
+     * the {@link JobTracker}.
+     * 
+     * The {@link JobTracker} processes the status information sent by the 
+     * {@link TaskTracker} and responds with instructions to start/stop 
+     * tasks or jobs, and also 'reset' instructions during contingencies. 
+     */
+    public synchronized HeartbeatResponse heartbeat(TaskTrackerStatus status, 
+            boolean initialContact, boolean acceptNewTasks, short responseId) 
+    throws IOException {
+      LOG.debug("Got heartbeat from: " + status.getTrackerName() + 
+              " (initialContact: " + initialContact + 
+              " acceptNewTasks: " + acceptNewTasks + ")" +
+              " with responseId: " + responseId);
+      
+        // First check if the last heartbeat response got through 
+        String trackerName = status.getTrackerName();
+        Short oldResponseId = trackerToHeartbeatResponseIDMap.get(trackerName);
+      
+        short newResponseId = (short)(responseId + 1);
+        if (!initialContact && oldResponseId != null && 
+                oldResponseId.shortValue() != responseId) {
+            newResponseId = oldResponseId.shortValue();
+        }
+      
+        // Process this heartbeat 
+        if (!processHeartbeat(status, initialContact, 
+                (newResponseId != responseId))) {
+            if (oldResponseId != null) {
+                trackerToHeartbeatResponseIDMap.remove(trackerName);
+            }
+
+            return new HeartbeatResponse(newResponseId, 
+                  new TaskTrackerAction[] {new ReinitTrackerAction()});
+        }
+      
+        // Initialize the response to be sent for the heartbeat
+        HeartbeatResponse response = new HeartbeatResponse(newResponseId, null);
+        List<TaskTrackerAction> actions = new ArrayList();
+      
+        // Check for new tasks to be executed on the tasktracker
+        if (acceptNewTasks) {
+        Task task = getNewTaskForTaskTracker(trackerName);
+            if (task != null) {
+                LOG.debug(trackerName + " -> LaunchTask: " + task.getTaskId());
+                actions.add(new LaunchTaskAction(task));
+            }
+        }
+      
+        // Check for tasks to be killed
+        List<TaskTrackerAction> killTasksList = getTasksToKill(trackerName);
+        if (killTasksList != null) {
+            actions.addAll(killTasksList);
+        }
+     
+        response.setActions(
+                actions.toArray(new TaskTrackerAction[actions.size()]));
+        
+        // Update the trackerToHeartbeatResponseIDMap
+        if (newResponseId != responseId) {
+            trackerToHeartbeatResponseIDMap.put(trackerName, 
+                    new Short(newResponseId));
+        }
+
+        return response;
+    }
+    
+    /**
      * Update the last recorded status for the given task tracker.
      * It assumes that the taskTrackers are locked on entry.
      * @author Owen O'Malley
@@ -749,16 +820,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     /**
      * Process incoming heartbeat messages from the task trackers.
      */
-    public synchronized int emitHeartbeat(TaskTrackerStatus trackerStatus, boolean initialContact) {
+    private synchronized boolean processHeartbeat(
+            TaskTrackerStatus trackerStatus, 
+            boolean initialContact, boolean updateStatusTimestamp) {
         String trackerName = trackerStatus.getTrackerName();
-        trackerStatus.setLastSeen(System.currentTimeMillis());
+        if (initialContact || updateStatusTimestamp) {
+          trackerStatus.setLastSeen(System.currentTimeMillis());
+        }
 
         synchronized (taskTrackers) {
             synchronized (trackerExpiryQueue) {
                 boolean seenBefore = updateTaskTrackerStatus(trackerName,
                                                              trackerStatus);
                 if (initialContact) {
-                    // If it's first contact, then clear out any state hanging around
+                    // If it's first contact, then clear out 
+                    // any state hanging around
                     if (seenBefore) {
                         lostTaskTracker(trackerName, trackerStatus.getHost());
                     }
@@ -767,7 +843,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                     if (!seenBefore) {
                         LOG.warn("Status from unknown Tracker : " + trackerName);
                         taskTrackers.remove(trackerName); 
-                        return InterTrackerProtocol.UNKNOWN_TASKTRACKER;
+                        return false;
                     }
                 }
 
@@ -779,18 +855,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
         updateTaskStatuses(trackerStatus);
         //LOG.info("Got heartbeat from "+trackerName);
-        return InterTrackerProtocol.TRACKERS_OK;
+        return true;
     }
 
     /**
-     * A tracker wants to know if there's a Task to run.  Returns
-     * a task we'd like the TaskTracker to execute right now.
+     * Returns a task we'd like the TaskTracker to execute right now.
      *
      * Eventually this function should compute load on the various TaskTrackers,
      * and incorporate knowledge of DFS file placement.  But for right now, it
      * just grabs a single item out of the pending task list and hands it back.
      */
-    public synchronized Task pollForNewTask(String taskTracker) {
+    private synchronized Task getNewTaskForTaskTracker(String taskTracker) {
         //
         // Compute average map and reduce task numbers across pool
         //
@@ -933,23 +1008,36 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
      * A tracker wants to know if any of its Tasks have been
      * closed (because the job completed, whether successfully or not)
      */
-    public synchronized String[] pollForTaskWithClosedJob(String taskTracker) {
-        TreeSet taskIds = (TreeSet) trackerToTaskMap.get(taskTracker);
+    private synchronized List getTasksToKill(String taskTracker) {
+        Set<String> taskIds = (TreeSet) trackerToTaskMap.get(taskTracker);
         if (taskIds != null) {
-            ArrayList list = new ArrayList();
-            for (Iterator it = taskIds.iterator(); it.hasNext(); ) {
-                String taskId = (String) it.next();
-                TaskInProgress tip = (TaskInProgress) taskidToTIPMap.get(taskId);
-                if (tip.shouldCloseForClosedJob(taskId)) {
+            List<TaskTrackerAction> killList = new ArrayList();
+            Set<String> killJobIds = new TreeSet(); 
+            for (String killTaskId : taskIds ) {
+                TaskInProgress tip = (TaskInProgress) taskidToTIPMap.get(killTaskId);
+                if (tip.shouldCloseForClosedJob(killTaskId)) {
                     // 
                     // This is how the JobTracker ends a task at the TaskTracker.
                     // It may be successfully completed, or may be killed in
                     // mid-execution.
                     //
-                   list.add(taskId);
+                    if (tip.getJob().getStatus().getRunState() == JobStatus.RUNNING) {
+                        killList.add(new KillTaskAction(killTaskId));
+                        LOG.debug(taskTracker + " -> KillTaskAction: " + killTaskId);
+                    } else {
+                      //killTasksList.add(new KillJobAction(taskId));
+                        String killJobId = tip.getJob().getStatus().getJobId(); 
+                        killJobIds.add(killJobId);
+                    }
                 }
             }
-            return (String[]) list.toArray(new String[list.size()]);
+            
+            for (String killJobId : killJobIds) {
+                killList.add(new KillJobAction(killJobId));
+                LOG.debug(taskTracker + " -> KillJobAction: " + killJobId);
+            }
+
+            return killList;
         }
         return null;
     }
