@@ -189,7 +189,8 @@ public abstract class PipeMapRed {
     if (split.getStart() == 0) {
       return leaf;
     } else {
-      return new FileSplit(new Path(leaf), split.getStart(), split.getLength()).toString();
+      return new FileSplit(new Path(leaf), split.getStart(), 
+                           split.getLength(), job_).toString();
     }
   }
 

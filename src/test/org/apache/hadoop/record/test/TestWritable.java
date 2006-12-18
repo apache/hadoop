@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 import org.apache.commons.logging.*;
-import org.apache.hadoop.mapred.FileSplit;
+import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputFormatBase;
 import org.apache.hadoop.mapred.JobConf;
@@ -93,14 +93,14 @@ public class TestWritable extends TestCase {
         int numSplits =
           random.nextInt(MAX_LENGTH/(SequenceFile.SYNC_INTERVAL/20))+1;
         //LOG.info("splitting: requesting = " + numSplits);
-        FileSplit[] splits = format.getSplits(fs, job, numSplits);
+        InputSplit[] splits = format.getSplits(job, numSplits);
         //LOG.info("splitting: got =        " + splits.length);
 
         // check each split
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
           RecordReader reader =
-            format.getRecordReader(fs, splits[j], job, reporter);
+            format.getRecordReader(splits[j], job, reporter);
           try {
             int count = 0;
             while (reader.next(key, value)) {

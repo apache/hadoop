@@ -69,13 +69,7 @@ public abstract class StreamBaseRecordReader implements RecordReader {
   public abstract boolean next(Writable key, Writable value) throws IOException;
 
   /** This implementation always returns true. */
-  public boolean[] areValidInputDirectories(FileSystem fileSys, Path[] inputDirs) throws IOException {
-    int n = inputDirs.length;
-    boolean[] b = new boolean[n];
-    for (int i = 0; i < n; i++) {
-      b[i] = true;
-    }
-    return b;
+  public void validateInput(JobConf job) throws IOException {
   }
 
   /** Returns the current position in the input. */
@@ -88,6 +82,14 @@ public abstract class StreamBaseRecordReader implements RecordReader {
     in_.close();
   }
 
+  public float getProgress() throws IOException {
+    if (end_ == start_) {
+      return 1.0f;
+    } else {
+      return (in_.getPos() - start_) / (end_ - start_);
+    }
+  }
+  
   public WritableComparable createKey() {
     return new Text();
   }

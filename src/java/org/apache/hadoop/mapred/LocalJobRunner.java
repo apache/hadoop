@@ -89,8 +89,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
     public void run() {
       try {
         // split input into minimum number of splits
-        FileSplit[] splits;
-        splits = job.getInputFormat().getSplits(fs, job, 1);
+        InputSplit[] splits;
+        splits = job.getInputFormat().getSplits(job, 1);
         String jobId = profile.getJobId();
         
         // run a map task for each split

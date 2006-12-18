@@ -33,13 +33,10 @@ public interface InputFormat {
    * Are the input directories valid? This method is used to test the input
    * directories when a job is submitted so that the framework can fail early
    * with a useful error message when the input directory does not exist.
-   * @param fileSys the file system to check for the directories
-   * @param inputDirs the list of input directories
-   * @return is each inputDir valid?
-   * @throws IOException
+   * @param job the job to check
+   * @throws InvalidInputException if the job does not have valid input
    */
-  boolean[] areValidInputDirectories(FileSystem fileSys,
-                                     Path[] inputDirs) throws IOException;
+  void validateInput(JobConf job) throws IOException;
   
   /** Splits a set of input files.  One split is created per map task.
    *
@@ -47,17 +44,16 @@ public interface InputFormat {
    * @param numSplits the desired number of splits
    * @return the splits
    */
-  FileSplit[] getSplits(FileSystem ignored, JobConf job, int numSplits)
-    throws IOException;
+  InputSplit[] getSplits(JobConf job, int numSplits) throws IOException;
 
   /** Construct a {@link RecordReader} for a {@link FileSplit}.
    *
-   * @param split the {@link FileSplit}
+   * @param split the {@link InputSplit}
    * @param job the job that this split belongs to
    * @return a {@link RecordReader}
    */
-  RecordReader getRecordReader(FileSystem ignored, FileSplit split,
-                               JobConf job, Reporter reporter)
-    throws IOException;
+  RecordReader getRecordReader(InputSplit split,
+                               JobConf job, 
+                               Reporter reporter) throws IOException;
 }
 

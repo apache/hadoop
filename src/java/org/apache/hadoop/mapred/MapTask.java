@@ -86,14 +86,14 @@ class MapTask extends Task {
   
   private MapTaskMetrics myMetrics = null;
 
-  private FileSplit split;
+  private InputSplit split;
   private MapOutputFile mapOutputFile = new MapOutputFile();
   private JobConf conf;
 
   public MapTask() {}
 
   public MapTask(String jobId, String jobFile, String tipId, String taskId, 
-                 int partition, FileSplit split) {
+                 int partition, InputSplit split) {
     super(jobId, jobFile, tipId, taskId, partition);
     this.split = split;
     myMetrics = new MapTaskMetrics(taskId);
@@ -103,18 +103,25 @@ class MapTask extends Task {
       return true;
   }
 
-  public void localizeConfiguration(JobConf conf) {
+  public void localizeConfiguration(JobConf conf) throws IOException {
     super.localizeConfiguration(conf);
-    conf.set("map.input.file", split.getPath().toString());
-    conf.setLong("map.input.start", split.getStart());
-    conf.setLong("map.input.length", split.getLength());
+    Path localSplit = new Path(new Path(getJobFile()).getParent(), 
+                               "split.dta");
+    DataOutputStream out = LocalFileSystem.get(conf).create(localSplit);
+    split.write(out);
+    out.close();
+    if (split instanceof FileSplit) {
+      conf.set("map.input.file", ((FileSplit) split).getPath().toString());
+      conf.setLong("map.input.start", ((FileSplit) split).getStart());
+      conf.setLong("map.input.length", ((FileSplit) split).getLength());
+    }
   }
   
   public TaskRunner createRunner(TaskTracker tracker) {
     return new MapTaskRunner(this, tracker, this.conf);
   }
 
-  public FileSplit getSplit() { return split; }
+  public InputSplit getSplit() { return split; }
 
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -139,11 +146,9 @@ class MapTask extends Task {
     MapOutputBuffer collector = new MapOutputBuffer(umbilical, job, reporter);
       
     final RecordReader rawIn =                  // open input
-      job.getInputFormat().getRecordReader
-      (FileSystem.get(job), split, job, reporter);
+      job.getInputFormat().getRecordReader(split, job, reporter);
 
     RecordReader in = new RecordReader() {      // wrap in progress reporter
-        private float perByte = 1.0f /(float)split.getLength();
 
         public WritableComparable createKey() {
           return rawIn.createKey();
@@ -156,9 +161,7 @@ class MapTask extends Task {
         public synchronized boolean next(Writable key, Writable value)
           throws IOException {
 
-          float progress =                        // compute progress
-            (float)Math.min((rawIn.getPos()-split.getStart())*perByte, 1.0f);
-          reportProgress(umbilical, progress);
+          reportProgress(umbilical, getProgress());
           long beforePos = getPos();
           boolean ret = rawIn.next(key, value);
           myMetrics.mapInput(getPos() - beforePos);
@@ -166,6 +169,9 @@ class MapTask extends Task {
         }
         public long getPos() throws IOException { return rawIn.getPos(); }
         public void close() throws IOException { rawIn.close(); }
+        public float getProgress() throws IOException {
+          return rawIn.getProgress();
+        }
       };
 
     MapRunnable runner =

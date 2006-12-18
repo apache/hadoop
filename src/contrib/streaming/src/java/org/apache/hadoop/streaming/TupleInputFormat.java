@@ -51,7 +51,8 @@ public class TupleInputFormat extends InputFormatBase {
 
   /**
    */
-  public RecordReader getRecordReader(FileSystem fs, FileSplit split, JobConf job, Reporter reporter) throws IOException {
+  public RecordReader getRecordReader(InputSplit split, JobConf job, 
+                                      Reporter reporter) throws IOException {
 
     reporter.setStatus(split.toString());
 
@@ -82,6 +83,9 @@ public class TupleInputFormat extends InputFormatBase {
       return new UTF8();
     }
 
+    public float getProgress() {
+      return 1.0f;
+    }
   }
 
   ArrayList/*<InputFormat>*/fmts_;

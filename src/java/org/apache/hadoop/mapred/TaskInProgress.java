@@ -52,7 +52,7 @@ class TaskInProgress {
 
     // Defines the TIP
     private String jobFile = null;
-    private FileSplit split = null;
+    private InputSplit split = null;
     private int numMaps;
     private int partition;
     private JobTracker jobtracker;
@@ -88,7 +88,7 @@ class TaskInProgress {
     /**
      * Constructor for MapTask
      */
-    public TaskInProgress(String uniqueString, String jobFile, FileSplit split, 
+    public TaskInProgress(String uniqueString, String jobFile, InputSplit split, 
                           JobTracker jobtracker, JobConf conf, 
                           JobInProgress job, int partition) {
         this.jobFile = jobFile;

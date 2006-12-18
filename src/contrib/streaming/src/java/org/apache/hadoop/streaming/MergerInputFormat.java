@@ -84,20 +84,20 @@ public class MergerInputFormat extends InputFormatBase {
    (and if there was, this index may need to be created for the first time
    full file at a time...    )
    */
-  public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits) throws IOException {
-    checkReady(fs, job);
-    return ((StreamInputFormat) primary_).getFullFileSplits(fs, job);
+  public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
+    return ((StreamInputFormat) primary_).getFullFileSplits(job);
   }
 
   /**
    */
-  public RecordReader getRecordReader(FileSystem fs, FileSplit split, JobConf job, Reporter reporter) throws IOException {
+  public RecordReader getRecordReader(InputSplit split, JobConf job, Reporter reporter) throws IOException {
+    FileSystem fs = ((FileSplit) split).getPath().getFileSystem(job);
     checkReady(fs, job);
 
     reporter.setStatus(split.toString());
 
     ArrayList readers = new ArrayList();
-    String primary = split.getPath().toString();
+    String primary = ((FileSplit) split).getPath().toString();
     CompoundDirSpec spec = CompoundDirSpec.findInputSpecForPrimary(primary, job);
     if (spec == null) {
       throw new IOException("Did not find -input spec in JobConf for primary:" + primary);
@@ -106,7 +106,7 @@ public class MergerInputFormat extends InputFormatBase {
       InputFormat f = (InputFormat) fmts_.get(i);
       Path path = new Path(spec.getPaths()[i][0]);
       FileSplit fsplit = makeFullFileSplit(path);
-      RecordReader r = f.getRecordReader(fs, fsplit, job, reporter);
+      RecordReader r = f.getRecordReader(fsplit, job, reporter);
       readers.add(r);
     }
 
@@ -115,7 +115,7 @@ public class MergerInputFormat extends InputFormatBase {
 
   private FileSplit makeFullFileSplit(Path path) throws IOException {
     long len = fs_.getLength(path);
-    return new FileSplit(path, 0, len);
+    return new FileSplit(path, 0, len, job_);
   }
 
   /*
@@ -188,6 +188,14 @@ public class MergerInputFormat extends InputFormatBase {
       }
     }
 
+    public float getProgress() throws IOException {
+      if (primaryClosed_) {
+        return 1.0f;
+      } else {
+        return primaryReader_.getProgress();
+      }
+    }
+    
     public void close() throws IOException {
       IOException firstErr = null;
 

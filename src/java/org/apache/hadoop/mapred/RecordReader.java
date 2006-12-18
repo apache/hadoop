@@ -55,4 +55,10 @@ public interface RecordReader {
   /** Close this to future operations.*/ 
   public void close() throws IOException;
 
+  /**
+   * How far has the reader gone through the input.
+   * @return progress from 0.0 to 1.0
+   * @throws IOException
+   */
+  float getProgress() throws IOException;
 }

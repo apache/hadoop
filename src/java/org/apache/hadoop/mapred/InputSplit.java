@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.Writable;
 
 /**
-  * InputFormat which simulates the absence of input data
-  * by returning zero split.
-  */
-public class EmptyInputFormat extends InputFormatBase {
+ * The description of the data for a single map task.
+ * @author Owen O'Malley
+ */
+public interface InputSplit extends Writable {
 
-  public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits) throws IOException {
-    return new FileSplit[0];
-  }
-
-  public RecordReader getRecordReader(InputSplit split, JobConf job, Reporter reporter) throws IOException {
-    return new SequenceFileRecordReader(job, (FileSplit) split);
-  }
+  /**
+   * Get the list of hostnames where the input split is located.
+   * @return A list of prefered hostnames
+   * @throws IOException
+   */
+  String[] getLocations() throws IOException;
 }

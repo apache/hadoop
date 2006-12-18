@@ -80,13 +80,14 @@ public class TestSequenceFileInputFilter extends TestCase {
         numSplits =
             random.nextInt(MAX_LENGTH/(SequenceFile.SYNC_INTERVAL/20))+1;
       }
-      FileSplit[] splits = format.getSplits(fs, job, numSplits);
+      InputSplit[] splits = format.getSplits(job, numSplits);
       
       // check each split
       int count = 0;
+      LOG.info("Generated " + splits.length + " splits.");
       for (int j = 0; j < splits.length; j++) {
           RecordReader reader =
-              format.getRecordReader(fs, splits[j], job, reporter);
+              format.getRecordReader(splits[j], job, reporter);
           try {
               while (reader.next(key, value)) {
                   LOG.info("Accept record "+key.toString());

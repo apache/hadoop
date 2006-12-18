@@ -153,7 +153,8 @@ public class IsolationRunner {
     if (isMap) {
       FileSplit split = new FileSplit(new Path(conf.get("map.input.file")),
                                       conf.getLong("map.input.start", 0),
-                                      conf.getLong("map.input.length", 0));
+                                      conf.getLong("map.input.length", 0),
+                                      conf);
       task = new MapTask(jobId, jobFilename.toString(), conf.get("mapred.tip.id"), 
           taskId, partition, split);
     } else {

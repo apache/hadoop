@@ -100,7 +100,7 @@ class ReduceTask extends Task {
   /**
    * Localize the given JobConf to be specific for this task.
    */
-  public void localizeConfiguration(JobConf conf) {
+  public void localizeConfiguration(JobConf conf) throws IOException {
     super.localizeConfiguration(conf);
     conf.setNumMapTasks(numMaps);
   }

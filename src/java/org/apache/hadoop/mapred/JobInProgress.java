@@ -122,7 +122,7 @@ class JobInProgress {
         }
         InputFormat inputFormat = conf.getInputFormat();
 
-        FileSplit[] splits = inputFormat.getSplits(fs, conf, numMapTasks);
+        InputSplit[] splits = inputFormat.getSplits(conf, numMapTasks);
 
         //
         // sort splits by decreasing length, to reduce job's tail
@@ -168,22 +168,16 @@ class JobInProgress {
         // Obtain some tasktracker-cache information for the map task splits.
         //
         for (int i = 0; i < maps.length; i++) {
-            String hints[][] =
-              fs.getFileCacheHints(splits[i].getPath(), splits[i].getStart(),
-                                   splits[i].getLength());
-
-            if (hints != null) {
-              for (int k = 0; k < hints.length; k++) {
-                for (int j = 0; j < hints[k].length; j++) {
-                  ArrayList hostMaps = (ArrayList)hostToMaps.get(hints[k][j]);
-                  if (hostMaps == null) {
-                    hostMaps = new ArrayList();
-                    hostToMaps.put(hints[k][j], hostMaps);
-                  }
-                  hostMaps.add(maps[i]);
-                }
-              }
+          String hints[] = splits[i].getLocations();
+          for (int k = 0; k < hints.length; k++) {
+            ArrayList hostMaps = (ArrayList)hostToMaps.get(hints[k]);
+            if (hostMaps == null) {
+              hostMaps = new ArrayList();
+              hostToMaps.put(hints[k], hostMaps);
             }
+            hostMaps.add(maps[i]);
+            
+          }
         }
 
         this.status = new JobStatus(status.getJobId(), 0.0f, 0.0f, JobStatus.RUNNING);

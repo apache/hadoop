@@ -49,12 +49,7 @@ public class StreamInputFormat extends InputFormatBase {
   protected static final Log LOG = LogFactory.getLog(StreamInputFormat.class.getName());
 
   /** This implementation always returns true. */
-  public boolean[] areValidInputDirectories(FileSystem fileSys, Path[] inputDirs) throws IOException {
-    boolean[] b = new boolean[inputDirs.length];
-    for (int i = 0; i < inputDirs.length; ++i) {
-      b[i] = true;
-    }
-    return b;
+  public void validateInput(JobConf job) throws IOException {
   }
 
   static boolean isGzippedInput(JobConf job) {
@@ -62,29 +57,29 @@ public class StreamInputFormat extends InputFormatBase {
     return "gzip".equals(val);
   }
 
-  public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits) throws IOException {
+  public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
 
     if (isGzippedInput(job)) {
-      return getFullFileSplits(fs, job);
+      return getFullFileSplits(job);
     } else {
-      return super.getSplits(fs, job, numSplits);
+      return super.getSplits(job, numSplits);
     }
   }
 
   /** For the compressed-files case: override InputFormatBase to produce one split. */
-  FileSplit[] getFullFileSplits(FileSystem fs, JobConf job) throws IOException {
-    Path[] files = listPaths(fs, job);
+  FileSplit[] getFullFileSplits(JobConf job) throws IOException {
+    Path[] files = listPaths(job);
     int numSplits = files.length;
     ArrayList splits = new ArrayList(numSplits);
     for (int i = 0; i < files.length; i++) {
       Path file = files[i];
-      long splitSize = fs.getLength(file);
-      splits.add(new FileSplit(file, 0, splitSize));
+      long splitSize = file.getFileSystem(job).getLength(file);
+      splits.add(new FileSplit(file, 0, splitSize, job));
     }
     return (FileSplit[]) splits.toArray(new FileSplit[splits.size()]);
   }
 
-  protected Path[] listPaths(FileSystem fs, JobConf job) throws IOException {
+  protected Path[] listPaths(JobConf job) throws IOException {
     Path[] globs = job.getInputPaths();
     ArrayList list = new ArrayList();
     int dsup = globs.length;
@@ -93,6 +88,7 @@ public class StreamInputFormat extends InputFormatBase {
       LOG.info("StreamInputFormat: globs[" + d + "] leafName = " + leafName);
       Path[] paths;
       Path dir;
+      FileSystem fs = globs[d].getFileSystem(job);
       PathFilter filter = new GlobFilter(fs, leafName);
       dir = new Path(globs[d].getParent().toString());
       if (dir == null) dir = new Path(".");
@@ -132,8 +128,11 @@ public class StreamInputFormat extends InputFormatBase {
     FileSystem fs_;
   }
 
-  public RecordReader getRecordReader(FileSystem fs, final FileSplit split, JobConf job,
-      Reporter reporter) throws IOException {
+  public RecordReader getRecordReader(final InputSplit genericSplit, 
+                                      JobConf job,
+                                      Reporter reporter) throws IOException {
+    FileSplit split = (FileSplit) genericSplit;
+    FileSystem fs = split.getPath().getFileSystem(job);
     LOG.info("getRecordReader start.....split=" + split);
     reporter.setStatus(split.toString());
 

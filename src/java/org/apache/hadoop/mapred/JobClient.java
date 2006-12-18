@@ -313,30 +313,7 @@ public class JobClient extends ToolBase implements MRConstants  {
         }
 
         // input paths should exist. 
-        boolean[] validDirs = 
-          job.getInputFormat().areValidInputDirectories(userFileSys, inputDirs);
-        for(int i=0; i < validDirs.length; ++i) {
-          if (!validDirs[i]) {
-            String msg = null ; 
-            if( !userFileSys.exists(inputDirs[i]) ){
-              msg = "Input directory " + inputDirs[i] + 
-                         " doesn't exist in " + userFileSys.getName();
-              LOG.error(msg);
-              throw new FileNotFoundException(msg);
-            }else if( !userFileSys.isDirectory(inputDirs[i])){
-              msg = "Invalid input path, expecting directory : " + inputDirs[i] ;
-              LOG.error(msg); 
-              throw new InvalidFileTypeException(msg);  
-            }else{
-              // some other error
-              msg = "Input directory " + inputDirs[i] + 
-                           " in " + userFileSys.getName() + " is invalid.";
-              LOG.error(msg);
-              throw new IOException(msg);
-            }
-          }
-        }
-
+        job.getInputFormat().validateInput(job);
 
         // Check the output specification
         job.getOutputFormat().checkOutputSpecs(fs, job);

@@ -40,6 +40,7 @@ public class TextInputFormat extends InputFormatBase implements JobConfigurable 
   }
   
   protected static class LineRecordReader implements RecordReader {
+    private long start;
     private long pos;
     private long end;
     private BufferedInputStream in;
@@ -61,6 +62,7 @@ public class TextInputFormat extends InputFormatBase implements JobConfigurable 
 
     public LineRecordReader(InputStream in, long offset, long endOffset) {
       this.in = new BufferedInputStream(in);
+      this.start = offset;
       this.pos = offset;
       this.end = endOffset;
     }
@@ -71,6 +73,17 @@ public class TextInputFormat extends InputFormatBase implements JobConfigurable 
     
     public Writable createValue() {
       return new Text();
+    }
+    
+    /**
+     * Get the progress within the split
+     */
+    public float getProgress() {
+      if (start == end) {
+        return 0.0f;
+      } else {
+        return (pos - start) / (end - start);
+      }
     }
     
     /** Read a line. */
@@ -101,18 +114,19 @@ public class TextInputFormat extends InputFormatBase implements JobConfigurable 
 
   }
   
-  public RecordReader getRecordReader(FileSystem fs, FileSplit split,
+  public RecordReader getRecordReader(InputSplit genericSplit,
                                       JobConf job, Reporter reporter)
     throws IOException {
 
-    reporter.setStatus(split.toString());
-
+    reporter.setStatus(genericSplit.toString());
+    FileSplit split = (FileSplit) genericSplit;
     long start = split.getStart();
     long end = start + split.getLength();
     final Path file = split.getPath();
     final CompressionCodec codec = compressionCodecs.getCodec(file);
 
     // open the file and seek to the start of the split
+    FileSystem fs = FileSystem.get(job);
     FSDataInputStream fileIn = fs.open(split.getPath());
     InputStream in = fileIn;
     

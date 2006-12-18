@@ -53,19 +53,18 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
     }
     
     /** Create a record reader for the given split
-     * @param fs file system where the file split is stored
      * @param split file split
      * @param job job configuration
      * @param reporter reporter who sends report to task tracker
      * @return RecordReader
      */
-    public RecordReader getRecordReader(FileSystem fs, FileSplit split,
+    public RecordReader getRecordReader(InputSplit split,
             JobConf job, Reporter reporter)
     throws IOException {
         
         reporter.setStatus(split.toString());
         
-        return new FilterRecordReader(job, split);
+        return new FilterRecordReader(job, (FileSplit) split);
     }
 
 

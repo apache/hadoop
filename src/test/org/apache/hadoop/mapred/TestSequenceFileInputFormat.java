@@ -83,14 +83,14 @@ public class TestSequenceFileInputFormat extends TestCase {
         int numSplits =
           random.nextInt(MAX_LENGTH/(SequenceFile.SYNC_INTERVAL/20))+1;
         //LOG.info("splitting: requesting = " + numSplits);
-        FileSplit[] splits = format.getSplits(fs, job, numSplits);
+        InputSplit[] splits = format.getSplits(job, numSplits);
         //LOG.info("splitting: got =        " + splits.length);
 
         // check each split
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
           RecordReader reader =
-            format.getRecordReader(fs, splits[j], job, reporter);
+            format.getRecordReader(splits[j], job, reporter);
           try {
             int count = 0;
             while (reader.next(key, value)) {

@@ -418,7 +418,7 @@ public class StreamUtil {
     Path p = new Path(path);
     long start = Long.parseLong(job.get("map.input.start"));
     long length = Long.parseLong(job.get("map.input.length"));
-    return new FileSplit(p, start, length);
+    return new FileSplit(p, start, length, job);
   }
 
   static class TaskId {

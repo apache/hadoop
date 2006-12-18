@@ -5,8 +5,10 @@
 org.apache.hadoop.fs.FileSystem} that uses <a href="http://aws.amazon.com/s3">Amazon S3</a>.</p>
 
 <p>
-Files are stored in S3 as blocks (represented by {@link Block}), which have an ID and a length.
-Block metadata is stored in S3 as a small record (represented by {@link INode}) using the URL-encoded
+Files are stored in S3 as blocks (represented by 
+{@link org.apache.hadoop.fs.s3.Block}), which have an ID and a length.
+Block metadata is stored in S3 as a small record (represented by 
+{@link org.apache.hadoop.fs.s3.INode}) using the URL-encoded
 path string as a key. Inodes record the file type (regular file or directory) and the list of blocks.
 This design makes it easy to seek to any given position in a file by reading the inode data to compute
 which block to access, then using S3's support for 

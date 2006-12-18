@@ -122,6 +122,12 @@ Trunk (unreleased changes)
 34. HADOOP-823.  Fix problem starting datanode when not all configured
     data directories exist.  (Bryan Pendleton via cutting)
 
+35. HADOOP-451.  Add a Split interface.  CAUTION: This incompatibly
+    changes the InputFormat and RecordReader interfaces.  Not only is
+    FileSplit replaced with Split, but a FileSystem parameter is no
+    longer passed in several methods, input validation has changed,
+    etc.  (omalley via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 

@@ -88,16 +88,15 @@ public class TestTextInputFormat extends TestCase {
       for (int i = 0; i < 3; i++) {
         int numSplits = random.nextInt(MAX_LENGTH/20)+1;
         LOG.debug("splitting: requesting = " + numSplits);
-        FileSplit[] splits = format.getSplits(localFs, job, numSplits);
+        InputSplit[] splits = format.getSplits(job, numSplits);
         LOG.debug("splitting: got =        " + splits.length);
 
         // check each split
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
-          LOG.debug("split["+j+"]= " + splits[j].getStart() + "+" +
-                   splits[j].getLength());
+          LOG.debug("split["+j+"]= " + splits[j]);
           RecordReader reader =
-            format.getRecordReader(localFs, splits[j], job, reporter);
+            format.getRecordReader(splits[j], job, reporter);
           try {
             int count = 0;
             while (reader.next(key, value)) {
@@ -186,10 +185,10 @@ public class TestTextInputFormat extends TestCase {
   private static final Reporter voidReporter = new VoidReporter();
   
   private static List<Text> readSplit(InputFormat format, 
-                                      FileSplit split, 
+                                      InputSplit split, 
                                       JobConf job) throws IOException {
     List<Text> result = new ArrayList<Text>();
-    RecordReader reader = format.getRecordReader(localFs, split, job,
+    RecordReader reader = format.getRecordReader(split, job,
                                                  voidReporter);
     LongWritable key = (LongWritable) reader.createKey();
     Text value = (Text) reader.createValue();
@@ -215,10 +214,10 @@ public class TestTextInputFormat extends TestCase {
     job.setInputPath(workDir);
     TextInputFormat format = new TextInputFormat();
     format.configure(job);
-    FileSplit[] splits = format.getSplits(localFs, job, 100);
+    InputSplit[] splits = format.getSplits(job, 100);
     assertEquals("compressed splits == 2", 2, splits.length);
-    if (splits[0].getPath().getName().equals("part2.txt.gz")) {
-      FileSplit tmp = splits[0];
+    FileSplit tmp = (FileSplit) splits[0];
+    if (tmp.getPath().getName().equals("part2.txt.gz")) {
       splits[0] = splits[1];
       splits[1] = tmp;
     }

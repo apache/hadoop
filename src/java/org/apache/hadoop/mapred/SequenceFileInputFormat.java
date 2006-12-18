@@ -33,26 +33,26 @@ public class SequenceFileInputFormat extends InputFormatBase {
     setMinSplitSize(SequenceFile.SYNC_INTERVAL);
   }
 
-  protected Path[] listPaths(FileSystem fs, JobConf job)
+  protected Path[] listPaths(JobConf job)
     throws IOException {
 
-    Path[] files = super.listPaths(fs, job);
+    Path[] files = super.listPaths(job);
     for (int i = 0; i < files.length; i++) {
       Path file = files[i];
-      if (fs.isDirectory(file)) {                 // it's a MapFile
+      if (file.getFileSystem(job).isDirectory(file)) {     // it's a MapFile
         files[i] = new Path(file, MapFile.DATA_FILE_NAME); // use the data file
       }
     }
     return files;
   }
 
-  public RecordReader getRecordReader(FileSystem fs, FileSplit split,
+  public RecordReader getRecordReader(InputSplit split,
                                       JobConf job, Reporter reporter)
     throws IOException {
 
     reporter.setStatus(split.toString());
 
-    return new SequenceFileRecordReader(job, split);
+    return new SequenceFileRecordReader(job, (FileSplit) split);
   }
 
 }

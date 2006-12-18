@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,6 +37,8 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
  * A JUnit test to test Map-Reduce empty jobs Mini-DFS.
  */
 public class TestEmptyJobWithDFS extends TestCase {
+  private static final Log LOG =
+    LogFactory.getLog(TestEmptyJobWithDFS.class.getName());
   
   /**
    * Simple method running a MapReduce job with no input data. Used
@@ -58,6 +62,7 @@ public class TestEmptyJobWithDFS extends TestCase {
       FileSystem fs = FileSystem.getNamed(fileSys, conf);
       fs.delete(outDir);
       if (!fs.mkdirs(inDir)) {
+          LOG.warn("Can't create " + inDir);
           return false;
       }
 
@@ -88,6 +93,7 @@ public class TestEmptyJobWithDFS extends TestCase {
           }
       }
       // return job result
+      LOG.info("job is complete: " + runningJob.isSuccessful());
       return (runningJob.isSuccessful());
   }
   

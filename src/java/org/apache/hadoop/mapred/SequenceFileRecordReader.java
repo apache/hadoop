@@ -29,6 +29,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 /** An {@link RecordReader} for {@link SequenceFile}s. */
 public class SequenceFileRecordReader implements RecordReader {
   private SequenceFile.Reader in;
+  private long start;
   private long end;
   private boolean more = true;
   private Configuration conf;
@@ -93,6 +94,18 @@ public class SequenceFileRecordReader implements RecordReader {
   protected synchronized void getCurrentValue(Writable value)
       throws IOException {
       in.getCurrentValue(value);
+  }
+  
+  /**
+   * Return the progress within the input split
+   * @return 0.0 to 1.0 of the input byte range
+   */
+  public float getProgress() throws IOException {
+    if (end == start) {
+      return 0.0f;
+    } else {
+      return (in.getPosition() - start) / (end - start);
+    }
   }
   
   public synchronized long getPos() throws IOException {

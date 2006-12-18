@@ -44,7 +44,7 @@ public class LocalFileSystem extends FileSystem {
     
     public LocalFileSystem() {}
 
-    /** @deprecated. */
+    /** @deprecated */
     public LocalFileSystem(Configuration conf) throws IOException {
       initialize(NAME, conf);
     }

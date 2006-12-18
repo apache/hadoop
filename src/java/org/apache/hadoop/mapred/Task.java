@@ -119,7 +119,7 @@ abstract class Task implements Writable, Configurable {
   /**
    * Localize the given JobConf to be specific for this task.
    */
-  public void localizeConfiguration(JobConf conf) {
+  public void localizeConfiguration(JobConf conf) throws IOException {
     conf.set("mapred.tip.id", tipId); 
     conf.set("mapred.task.id", taskId);
     conf.setBoolean("mapred.task.is.map",isMapTask());
