@@ -427,8 +427,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     public long[] getStats() throws IOException {
         long results[] = new long[2];
-        results[0] = namesystem.totalCapacity();
-        results[1] = namesystem.totalCapacity() - namesystem.totalRemaining();
+        long totalCapacity = namesystem.totalCapacity();
+        results[0] = totalCapacity;
+        results[1] = totalCapacity - namesystem.totalRemaining();
         return results;
     }
 
