@@ -194,9 +194,11 @@ class FSNamesystem implements FSConstants {
      * dirs is a list oif directories where the filesystem directory state 
      * is stored
      */
-    public FSNamesystem(File[] dirs, NameNode nn, Configuration conf) throws IOException {
+    public FSNamesystem(File[] dirs, 
+                        String hostname,
+                        int port,
+                        NameNode nn, Configuration conf) throws IOException {
         fsNamesystemObject = this;
-        InetSocketAddress addr = DataNode.createSocketAddr(conf.get("fs.default.name", "local"));
         this.maxReplication = conf.getInt("dfs.replication.max", 512);
         this.minReplication = conf.getInt("dfs.replication.min", 1);
         if( minReplication <= 0 )
@@ -220,8 +222,8 @@ class FSNamesystem implements FSConstants {
         this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
             10 * heartbeatInterval;
 
-        this.localMachine = addr.getHostName();
-        this.port = addr.getPort();
+        this.localMachine = hostname;
+        this.port = port;
         this.dir = new FSDirectory(dirs);
         this.dir.loadFSImage( conf );
         this.safeMode = new SafeModeInfo( conf );

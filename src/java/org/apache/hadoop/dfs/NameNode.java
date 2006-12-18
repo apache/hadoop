@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.*;
+import java.net.*;
 
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.Metrics;
@@ -129,25 +130,38 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       }
     }
     
-    private NameNodeMetrics myMetrics = null;
+    private NameNodeMetrics myMetrics = new NameNodeMetrics();
+    
+    /**
+     * Initialize the server
+     * @param dirs the list of working directories
+     * @param hostname which hostname to bind to
+     * @param port the port number to bind to
+     * @param conf the configuration
+     */
+    private void init(File[] dirs, String hostname, int port, 
+                      Configuration conf) throws IOException {
+      this.namesystem = new FSNamesystem(dirs, hostname, port, this, conf);
+      this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
+      this.server = RPC.getServer(this, hostname, port, handlerCount, 
+                                  false, conf);
+      this.server.start();      
+    }
     
     /**
      * Create a NameNode at the default location
      */
     public NameNode(Configuration conf) throws IOException {
-       this(getDirs(conf),DataNode.createSocketAddr(conf.get("fs.default.name", "local")).getHostName(),
-                       DataNode.createSocketAddr(conf.get("fs.default.name", "local")).getPort(), conf);
+      InetSocketAddress addr = 
+        DataNode.createSocketAddr(conf.get("fs.default.name"));
+      init(getDirs(conf), addr.getHostName(), addr.getPort(), conf);
     }
 
     /**
      * Create a NameNode at the specified location and start it.
      */
     public NameNode(File[] dirs, String bindAddress, int port, Configuration conf) throws IOException {
-        this.namesystem = new FSNamesystem(dirs, this, conf);
-        this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
-        this.server = RPC.getServer(this, bindAddress, port, handlerCount, false, conf);
-        this.server.start();
-        myMetrics = new NameNodeMetrics();
+       init(dirs, bindAddress, port, conf);
     }
 
     /** Return the configured directories where name data is stored. */

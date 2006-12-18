@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -68,13 +69,10 @@ public class DFSck extends ToolBase {
   }
   
   private String getInfoServer() throws IOException {
-    String fsName = conf.get("fs.default.name", "local");
-    if (fsName.equals("local")) {
-      throw new IOException("This tool only checks DFS, but your config uses 'local' FS.");
-    }
-    String[] splits = fsName.split(":", 2);
+    InetSocketAddress addr = 
+      DataNode.createSocketAddr(conf.get("fs.default.name"));
     int infoPort = conf.getInt("dfs.info.port", 50070);
-    return splits[0]+":"+infoPort;
+    return addr.getHostName() + ":" + infoPort;
   }
   
   /**

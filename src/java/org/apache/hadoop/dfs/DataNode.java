@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.Metrics;
@@ -75,18 +76,30 @@ public class DataNode implements FSConstants, Runnable {
     //
 
     /**
-     * Util method to build socket addr from string
+     * Util method to build socket addr from either:
+     *   <host>:<post>
+     *   <fs>://<host>:<port>/<path>
      */
-    public static InetSocketAddress createSocketAddr(String s) throws IOException {
-        String target = s;
+    public static InetSocketAddress createSocketAddr(String target
+                                                     ) throws IOException {
         int colonIndex = target.indexOf(':');
         if (colonIndex < 0) {
-            throw new RuntimeException("Not a host:port pair: " + s);
+            throw new RuntimeException("Not a host:port pair: " + target);
         }
-        String host = target.substring(0, colonIndex);
-        int port = Integer.parseInt(target.substring(colonIndex + 1));
+        String hostname;
+        int port;
+        if (!target.contains("/")) {
+          // must be the old style <host>:<port>
+          hostname = target.substring(0, colonIndex);
+          port = Integer.parseInt(target.substring(colonIndex + 1));
+        } else {
+          // a new uri
+          URI addr = new Path(target).toUri();
+          hostname = addr.getHost();
+          port = addr.getPort();
+        }
 
-        return new InetSocketAddress(host, port);
+        return new InetSocketAddress(hostname, port);
     }
 
     DatanodeProtocol namenode;

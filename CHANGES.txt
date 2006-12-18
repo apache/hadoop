@@ -105,6 +105,9 @@ Trunk (unreleased changes)
     sorts which take longer than the task timeout do not fail.
     (Devaraj Das via cutting)
 
+30. HADOOP-825.  Fix HDFS daemons when configured with new URI syntax.
+    (omalley via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
