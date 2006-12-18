@@ -111,6 +111,9 @@ Trunk (unreleased changes)
 31. HADOOP-596.  Fix a bug in phase reporting during reduce.
     (Sanjay Dahiya via cutting)
 
+32. HADOOP-811.  Add a utility, MultithreadedMapRunner.
+    (Alejandro Abdelnur via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
