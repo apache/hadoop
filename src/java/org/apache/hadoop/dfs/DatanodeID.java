@@ -68,7 +68,14 @@ public class DatanodeID implements WritableComparable {
   public int getInfoPort() {
     return infoPort;
   }
-  
+
+  /**
+   * @sets data storage ID.
+   */
+  void setStorageID(String storageID) {
+    this.storageID = storageID;
+  }
+
   /**
    * @return hostname and no :portNumber.
    */

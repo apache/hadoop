@@ -30,6 +30,8 @@ import org.apache.hadoop.io.WritableFactory;
 
 /** 
  * DatanodeInfo represents the status of a DataNode.
+ * This object is used for communication in the
+ * Datanode Protocol and the Client Protocol.
  *
  * @author Mike Cafarella
  * @author Konstantin Shvachko
@@ -71,6 +73,26 @@ public class DatanodeInfo extends DatanodeID {
 
   /** number of active connections */
   public int getXceiverCount() { return xceiverCount; }
+
+  /** Sets raw capacity. */
+  void setCapacity(long capacity) { 
+    this.capacity = capacity; 
+  }
+
+  /** Sets raw free space. */
+  void setRemaining(long remaining) { 
+    this.remaining = remaining; 
+  }
+
+  /** Sets time when this information was accurate. */
+  void setLastUpdate(long lastUpdate) { 
+    this.lastUpdate = lastUpdate; 
+  }
+
+  /** Sets number of active connections */
+  void setXceiverCount(int xceiverCount) { 
+    this.xceiverCount = xceiverCount; 
+  }
 
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {

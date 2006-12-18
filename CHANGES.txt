@@ -114,6 +114,11 @@ Trunk (unreleased changes)
 32. HADOOP-811.  Add a utility, MultithreadedMapRunner.
     (Alejandro Abdelnur via cutting)
 
+33. HADOOP-829.  Within HDFS, clearly separate three different
+    representations for datanodes: one for RPCs, one for
+    namenode-internal use, and one for namespace persistence.
+    (Dhruba Borthakur via cutting) 
+
 
 Release 0.9.2 - 2006-12-15
 

@@ -25,6 +25,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -32,6 +34,12 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSDirectory.INode;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.UTF8;
 
 /**
@@ -318,8 +326,10 @@ class FSImage {
     Map datanodeMap = FSNamesystem.getFSNamesystem().datanodeMap;
     int size = datanodeMap.size();
     out.writeInt( size );
-    for( Iterator it = datanodeMap.values().iterator(); it.hasNext(); )
-      ((DatanodeDescriptor)it.next()).write( out );
+    for( Iterator it = datanodeMap.values().iterator(); it.hasNext(); ) {
+      DatanodeImage nodeImage = new DatanodeImage((DatanodeDescriptor) it.next());
+      nodeImage.write( out );
+    }
   }
 
   void loadDatanodes( int version, DataInputStream in ) throws IOException {
@@ -328,9 +338,75 @@ class FSImage {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     int size = in.readInt();
     for( int i = 0; i < size; i++ ) {
-      DatanodeDescriptor node = new DatanodeDescriptor();
-      node.readFields(in);
-      fsNamesys.unprotectedAddDatanode( node );
+      DatanodeImage nodeImage = new DatanodeImage();
+      nodeImage.readFields(in);
+      fsNamesys.unprotectedAddDatanode(nodeImage.getDatanodeDescriptor());
+    }
+  }
+
+  class DatanodeImage implements WritableComparable {
+
+    /**************************************************
+     * DatanodeImage is used to store persistent information
+     * about datanodes into the fsImage.
+     **************************************************/
+    DatanodeDescriptor              node;
+
+    DatanodeImage() {
+      node = new DatanodeDescriptor();
+    }
+
+    DatanodeImage(DatanodeDescriptor from) {
+      node = from;
+    }
+
+    /** 
+     * Returns the underlying Datanode Descriptor
+     */
+    DatanodeDescriptor getDatanodeDescriptor() { 
+      return node; 
+    }
+
+    public int compareTo(Object o) {
+      return node.compareTo(o);
+    }
+
+    /////////////////////////////////////////////////
+    // Writable
+    /////////////////////////////////////////////////
+    /**
+     * Public method that serializes the information about a
+     * Datanode to be stored in the fsImage.
+     */
+    public void write(DataOutput out) throws IOException {
+      DatanodeID id = new DatanodeID(node.getName(), node.getStorageID(),
+                                     node.getInfoPort());
+      id.write(out);
+      out.writeLong(node.getCapacity());
+      out.writeLong(node.getRemaining());
+      out.writeLong(node.getLastUpdate());
+      out.writeInt(node.getXceiverCount());
+    }
+
+    /**
+     * Public method that reads a serialized Datanode
+     * from the fsImage.
+     */
+    public void readFields(DataInput in) throws IOException {
+      DatanodeID id = new DatanodeID();
+      id.readFields(in);
+      long capacity = in.readLong();
+      long remaining = in.readLong();
+      long lastUpdate = in.readLong();
+      int xceiverCount = in.readInt();
+
+      // update the DatanodeDescriptor with the data we read in
+      node.updateRegInfo(id);
+      node.setStorageID(id.getStorageID());
+      node.setCapacity(capacity);
+      node.setRemaining(remaining);
+      node.setLastUpdate(lastUpdate);
+      node.setXceiverCount(xceiverCount);
     }
   }
 }
