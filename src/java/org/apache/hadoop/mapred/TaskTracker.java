@@ -1040,6 +1040,7 @@ public class TaskTracker
               }else if( newPhase == TaskStatus.Phase.REDUCE){
                 this.taskStatus.setSortFinishTime(System.currentTimeMillis());
               }
+              this.taskStatus.setPhase(newPhase);
             }
             this.taskStatus.setStateString(state);
         }
