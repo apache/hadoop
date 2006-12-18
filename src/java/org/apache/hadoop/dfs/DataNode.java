@@ -1101,7 +1101,7 @@ public class DataNode implements FSConstants, Runnable {
    */
   static DataNode makeInstance(String[] dataDirs, Configuration conf)
   throws IOException {
-    ArrayList dirs = new ArrayList();
+    ArrayList<String> dirs = new ArrayList<String>();
     for (int i = 0; i < dataDirs.length; i++) {
       File data = new File(dataDirs[i]);
       try {
@@ -1111,7 +1111,7 @@ public class DataNode implements FSConstants, Runnable {
         LOG.warn("Invalid directory in dfs.data.dir: " + e.getMessage() );
       }
     }
-    return ((dirs.size() > 0) ? new DataNode(conf, dataDirs) : null);
+    return ((dirs.size() > 0) ? new DataNode(conf, dirs.toArray(new String[dirs.size()])) : null);
   }
 
   public String toString() {

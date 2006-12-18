@@ -119,6 +119,9 @@ Trunk (unreleased changes)
     namenode-internal use, and one for namespace persistence.
     (Dhruba Borthakur via cutting) 
 
+34. HADOOP-823.  Fix problem starting datanode when not all configured
+    data directories exist.  (Bryan Pendleton via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
