@@ -38,11 +38,39 @@ public class FsShell extends ToolBase {
         conf.setQuietMode(true);
         this.fs = FileSystem.get(conf);
     }
+
+    /**
+     * Copies from stdin to the indicated file.
+     */
+    private void copyFromStdin(Path dst) throws IOException {
+      if (fs.isDirectory(dst)) {
+        throw new IOException("When source is stdin, destination must be a file.");
+      }
+      if (fs.exists(dst)) {
+        throw new IOException("Target " + dst.toString() + " already exists.");
+      }
+      FSDataOutputStream out = fs.create(dst); 
+      byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
+      try {
+        int bytesRead = System.in.read(buf);
+        while (bytesRead >= 0) {
+          out.write(buf, 0, bytesRead);
+          bytesRead = System.in.read(buf);
+        }
+      } finally {
+        out.close();
+      }
+    }
+
     /**
      * Add a local file to the indicated FileSystem name. src is kept.
      */
     void copyFromLocal(Path src, String dstf) throws IOException {
+      if (src.toString().equals("-")) {
+        copyFromStdin(new Path(dstf));
+      } else {
         fs.copyFromLocalFile(src, new Path(dstf));
+      }
     }
 
     /**
@@ -74,14 +102,21 @@ public class FsShell extends ToolBase {
       }
       String srcf = argv[pos++];
       String dstf = argv[pos++];
-      Path [] srcs = fs.globPaths( new Path(srcf) );
-      if( srcs.length > 1 && !new File( dstf ).isDirectory()) {
-        throw new IOException( "When copy multiple files, " 
-            + "destination should be a directory." );
-      }
-      Path dst = new Path( dstf );
-      for( int i=0; i<srcs.length; i++ ) {
-        fs.copyToLocalFile( srcs[i], dst, copyCrc );
+      if( dstf.equals("-")) {
+        if (copyCrc) {
+          System.err.println("-crc option is not valid when destination is stdout.");
+        }
+        cat(srcf);
+      } else {
+        Path [] srcs = fs.globPaths( new Path(srcf) );
+        if( srcs.length > 1 && !new File( dstf ).isDirectory()) {
+          throw new IOException( "When copying multiple files, " 
+                                 + "destination should be a directory." );
+        }
+        Path dst = new Path( dstf );
+        for( int i=0; i<srcs.length; i++ ) {
+          fs.copyToLocalFile( srcs[i], dst, copyCrc );
+        }
       }
     }
     

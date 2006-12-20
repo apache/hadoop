@@ -130,6 +130,10 @@ Trunk (unreleased changes)
 
 36. HADOOP-814.  Optimize locking in namenode. (Dhruba Borthakur via cutting) 
 
+37. HADOOP-738.  Change 'fs -put' and 'fs -get' commands to accept
+    standard input and output, respectively.  Standard i/o is
+    specified by a file named '-'.  (Wendy Chien via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
