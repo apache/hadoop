@@ -25,6 +25,7 @@ import java.net.URLClassLoader;
 import java.io.*;
 import java.util.*;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 
 /** Run a Hadoop job jar. */
@@ -105,7 +106,8 @@ public class RunJar {
     }
     mainClassName = mainClassName.replaceAll("/", ".");
 
-    final File workDir = File.createTempFile("hadoop-unjar","");
+    final File workDir = File.createTempFile("hadoop-unjar","", 
+        new File( new Configuration().get("hadoop.tmp.dir")) );
     workDir.delete();
     if (!workDir.mkdirs()) {
       if (!workDir.isDirectory()) {
