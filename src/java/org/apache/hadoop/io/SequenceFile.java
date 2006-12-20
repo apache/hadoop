@@ -1040,6 +1040,7 @@ public class SequenceFile {
           }
         } else {
           codec = new DefaultCodec();
+          ((Configurable)codec).setConf(conf);
         }
       }
       

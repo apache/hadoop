@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     standard input and output, respectively.  Standard i/o is
     specified by a file named '-'.  (Wendy Chien via cutting)
 
+38. HADOOP-835.  Fix a NullPointerException reading record-compressed
+    SequenceFiles.  (Hairong Kuang via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
