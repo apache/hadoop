@@ -32,7 +32,7 @@
 
 # Add .lo files in $(SUBDIRS) to construct libhadoop.so
 HADOOP_OBJS = $(foreach path,$(addprefix ../,$(SUBDIRS)),$(wildcard $(path)/*.lo))
-AM_LDFLAGS = @JNI_LDFLAGS@
+AM_LDFLAGS = @JNI_LDFLAGS@ -m$(JVM_DATA_MODEL)
 
 lib_LTLIBRARIES = libhadoop.la
 libhadoop_la_SOURCES = 

@@ -146,6 +146,9 @@ Trunk (unreleased changes)
     hadoop.tmp.dir, rather than the system temporary directory.
     (Hairong Kuang via cutting)
 
+41. HADOOP-841.  Fix native library to build 32-bit version even when
+    on a 64-bit host, if a 32-bit JVM is used.  (Arun C Murthy via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
