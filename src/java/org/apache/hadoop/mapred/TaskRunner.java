@@ -107,7 +107,7 @@ abstract class TaskRunner extends Thread {
           DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
         }
         Path localTaskFile = new Path(t.getJobFile());
-        FileSystem localFs = FileSystem.getNamed("local", conf);
+        FileSystem localFs = FileSystem.getLocal(conf);
         localFs.delete(localTaskFile);
         OutputStream out = localFs.create(localTaskFile);
         try {

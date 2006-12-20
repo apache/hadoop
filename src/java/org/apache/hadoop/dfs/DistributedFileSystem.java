@@ -96,12 +96,23 @@ public class DistributedFileSystem extends FileSystem {
     }
     
     public void setWorkingDirectory(Path dir) {
+      Path result = makeAbsolute(dir);
+      if (!FSNamesystem.isValidName(result.toString())) {
+        throw new IllegalArgumentException("Invalid DFS directory name " + 
+                                           result);
+      }
       workingDir = makeAbsolute(dir);
     }
     
     private UTF8 getPath(Path file) {
       checkPath(file);
-      return new UTF8(makeAbsolute(file).toUri().getPath());
+      String result = makeAbsolute(file).toUri().getPath();
+      if (!FSNamesystem.isValidName(result)) {
+        throw new IllegalArgumentException("Pathname " + result + " from " +
+                                            file +
+                                            " is not a valid DFS filename.");
+      }
+      return new UTF8(result);
     }
 
     public String[][] getFileCacheHints(Path f, long start, long len) throws IOException {

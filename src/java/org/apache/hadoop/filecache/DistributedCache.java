@@ -127,7 +127,7 @@ public class DistributedCache {
         CacheStatus lcacheStatus = (CacheStatus) cachedArchives.get(cacheId);
         if (lcacheStatus.refcount == 0) {
           // delete this cache entry
-          FileSystem.getNamed("local", conf).delete(lcacheStatus.localLoadPath);
+          FileSystem.getLocal(conf).delete(lcacheStatus.localLoadPath);
           it.remove();
         }
       }
@@ -195,7 +195,7 @@ public class DistributedCache {
         throw new IOException("Cache " + cacheStatus.localLoadPath.toString()
             + " is in use and cannot be refreshed");
       byte[] checkSum = createMD5(cache, conf);
-      FileSystem localFs = FileSystem.getNamed("local", conf);
+      FileSystem localFs = FileSystem.getLocal(conf);
       localFs.delete(cacheStatus.localLoadPath);
       Path parchive = new Path(cacheStatus.localLoadPath,
                                new Path(cacheStatus.localLoadPath.getName()));

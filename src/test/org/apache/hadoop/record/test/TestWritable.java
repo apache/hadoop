@@ -42,7 +42,7 @@ public class TestWritable extends TestCase {
 
   public void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
-    FileSystem fs = FileSystem.getNamed("local", conf);
+    FileSystem fs = FileSystem.getLocal(conf);
     Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
     Path file = new Path(dir, "test.seq");
     

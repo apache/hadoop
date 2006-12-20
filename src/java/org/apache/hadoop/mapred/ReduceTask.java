@@ -227,7 +227,7 @@ class ReduceTask extends Task {
     Class valueClass = job.getMapOutputValueClass();
     Reducer reducer = (Reducer)ReflectionUtils.newInstance(
                                   job.getReducerClass(), job);
-    FileSystem lfs = FileSystem.getNamed("local", job);
+    FileSystem lfs = FileSystem.getLocal(job);
 
     copyPhase.complete();                         // copy is already complete
     

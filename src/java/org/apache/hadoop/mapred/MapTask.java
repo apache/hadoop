@@ -107,7 +107,7 @@ class MapTask extends Task {
     super.localizeConfiguration(conf);
     Path localSplit = new Path(new Path(getJobFile()).getParent(), 
                                "split.dta");
-    DataOutputStream out = LocalFileSystem.get(conf).create(localSplit);
+    DataOutputStream out = FileSystem.getLocal(conf).create(localSplit);
     split.write(out);
     out.close();
     if (split instanceof FileSplit) {
@@ -248,7 +248,7 @@ class MapTask extends Task {
       this.comparator = job.getOutputKeyComparator();
       this.keyClass = job.getMapOutputKeyClass();
       this.valClass = job.getMapOutputValueClass();
-      this.localFs = FileSystem.getNamed("local", job);
+      this.localFs = FileSystem.getLocal(job);
       this.codec = null;
       this.compressionType = CompressionType.NONE;
       if (job.getCompressMapOutput()) {

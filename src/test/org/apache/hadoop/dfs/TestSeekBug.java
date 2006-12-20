@@ -108,7 +108,7 @@ public class TestSeekBug extends TestCase {
    */
   public void testSeekBugLocalFS() throws IOException {
     Configuration conf = new Configuration();
-    FileSystem fileSys = FileSystem.getNamed("local", conf);
+    FileSystem fileSys = FileSystem.getLocal(conf);
     try {
       Path file1 = new Path("build/test/data", "seektest.dat");
       writeFile(fileSys, file1);

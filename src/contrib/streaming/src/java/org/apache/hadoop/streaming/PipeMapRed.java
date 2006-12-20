@@ -211,7 +211,7 @@ public abstract class PipeMapRed {
       fs_ = FileSystem.get(job_);
       if (job_.getBoolean("stream.sideoutput.localfs", false)) {
         //sideFs_ = new LocalFileSystem(job_);
-        sideFs_ = FileSystem.getNamed("local", job_);
+        sideFs_ = FileSystem.getLocal(job_);
       } else {
         sideFs_ = fs_;
       }

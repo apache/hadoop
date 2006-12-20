@@ -231,7 +231,7 @@ public class MultiJobRunner {
     }
     //new File(localPath).
     Configuration conf = new Configuration();
-    FileSystem localFS = FileSystem.getNamed("local", conf);
+    FileSystem localFS = FileSystem.getLocal(conf);
     FileSystem remoteFS = FileSystem.get(conf);
     
     FileUtil.copy(localFS, new Path(localFile), remoteFS, 
@@ -249,7 +249,7 @@ public class MultiJobRunner {
   throws IOException{
     
     Configuration conf = new Configuration();
-    FileSystem localFS = FileSystem.getNamed("local", conf);
+    FileSystem localFS = FileSystem.getLocal(conf);
     FileSystem remoteFS = FileSystem.get(conf);
     
     FileUtil.copy(remoteFS, remotePath, 

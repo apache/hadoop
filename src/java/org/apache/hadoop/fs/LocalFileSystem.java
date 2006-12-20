@@ -32,7 +32,7 @@ import org.apache.hadoop.util.Progressable;
  * @author Mike Cafarella
  *****************************************************************/
 public class LocalFileSystem extends FileSystem {
-    private static final URI NAME = URI.create("file:///");
+    static final URI NAME = URI.create("file:///");
 
     private Path workingDir =
       new Path(System.getProperty("user.dir"));

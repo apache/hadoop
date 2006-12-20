@@ -258,7 +258,7 @@ class ReduceTaskRunner extends TaskRunner {
     super(task, tracker, conf);
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);
-    localFileSys = FileSystem.getNamed("local", conf);
+    localFileSys = FileSystem.getLocal(conf);
 
     this.reduceTask = (ReduceTask)getTask();
     this.scheduledCopies = new ArrayList(100);

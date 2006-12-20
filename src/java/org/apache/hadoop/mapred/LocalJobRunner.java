@@ -69,7 +69,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
       this.mapoutputFile.setConf(conf);
 
       this.localFile = new JobConf(conf).getLocalPath("localRunner/"+id+".xml");
-      this.localFs = FileSystem.getNamed("local", conf);
+      this.localFs = FileSystem.getLocal(conf);
 
       fs.copyToLocalFile(new Path(file), localFile);
       this.job = new JobConf(localFile);

@@ -198,7 +198,7 @@ public class DFSCIOTest extends TestCase {
       totalSize *= MEGA;
       
       // create instance of local filesystem 
-      FileSystem localFS = FileSystem.getNamed("local", fsConfig);
+      FileSystem localFS = FileSystem.getLocal(fsConfig);
       
       try {
     	  	// native runtime
@@ -300,7 +300,7 @@ public class DFSCIOTest extends TestCase {
     	  totalSize *= MEGA;
       
       // create instance of local filesystem 
-      FileSystem localFS = FileSystem.getNamed("local", fsConfig);
+      FileSystem localFS = FileSystem.getLocal(fsConfig);
       
       try {
   	  	// native runtime

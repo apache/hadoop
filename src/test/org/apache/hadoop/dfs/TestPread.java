@@ -129,7 +129,7 @@ public class TestPread extends TestCase {
    */
   public void testPreadLocalFS() throws IOException {
     Configuration conf = new Configuration();
-    FileSystem fileSys = FileSystem.getNamed("local", conf);
+    FileSystem fileSys = FileSystem.getLocal(conf);
     try {
       Path file1 = new Path("build/test/data", "preadtest.dat");
       writeFile(fileSys, file1);

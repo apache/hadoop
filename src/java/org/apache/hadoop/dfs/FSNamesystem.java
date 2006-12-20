@@ -845,7 +845,7 @@ class FSNamesystem implements FSConstants {
      * Whether the pathname is valid.  Currently prohibits relative paths, 
      * and names which contain a ":" or "/" 
      */
-    private boolean isValidName(String src) {
+    static boolean isValidName(String src) {
       
       // Path must be absolute.
       if (!src.startsWith(Path.SEPARATOR)) {

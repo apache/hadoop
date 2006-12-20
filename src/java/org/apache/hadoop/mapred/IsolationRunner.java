@@ -139,7 +139,7 @@ public class IsolationRunner {
     int partition = conf.getInt("mapred.task.partition", 0);
     
     // setup the local and user working directories
-    FileSystem local = FileSystem.getNamed("local", conf);
+    FileSystem local = FileSystem.getLocal(conf);
     File workDirName = new File(jobFilename.getParent(), "work");
     local.setWorkingDirectory(new Path(workDirName.toString()));
     FileSystem.get(conf).setWorkingDirectory(conf.getWorkingDirectory());

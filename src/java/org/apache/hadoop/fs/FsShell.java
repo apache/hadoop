@@ -152,10 +152,10 @@ public class FsShell extends ToolBase {
       for( int i=0; i<srcs.length; i++ ) {
         if(endline) {
             FileUtil.copyMerge(fs, srcs[i], 
-                    FileSystem.getNamed("local", conf), dst, false, conf, "\n");
+                    FileSystem.getLocal(conf), dst, false, conf, "\n");
         } else {
             FileUtil.copyMerge(fs, srcs[i], 
-                    FileSystem.getNamed("local", conf), dst, false, conf, null);
+                    FileSystem.getLocal(conf), dst, false, conf, null);
         }
       }
     }      

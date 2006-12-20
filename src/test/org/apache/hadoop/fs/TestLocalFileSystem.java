@@ -44,7 +44,7 @@ public class TestLocalFileSystem extends TestCase {
    */
   public void testWorkingDirectory() throws IOException {
     Configuration conf = new Configuration();
-    FileSystem fileSys = FileSystem.getNamed("local", conf);
+    FileSystem fileSys = FileSystem.getLocal(conf);
     Path origDir = fileSys.getWorkingDirectory();
     Path subdir = new Path("build/test/data/work-dir/new subdir");
     try {

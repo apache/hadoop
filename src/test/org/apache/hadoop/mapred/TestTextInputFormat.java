@@ -38,7 +38,7 @@ public class TestTextInputFormat extends TestCase {
   private static FileSystem localFs = null; 
   static {
     try {
-      localFs = FileSystem.getNamed("local", defaultConf);
+      localFs = FileSystem.getLocal(defaultConf);
     } catch (IOException e) {
       throw new RuntimeException("init failure", e);
     }

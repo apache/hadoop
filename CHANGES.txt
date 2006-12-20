@@ -137,6 +137,11 @@ Trunk (unreleased changes)
 38. HADOOP-835.  Fix a NullPointerException reading record-compressed
     SequenceFiles.  (Hairong Kuang via cutting)
 
+39. HADOOP-836.  Fix a MapReduce bug on Windows, where the wrong
+    FileSystem was used.  Also add a static FileSystem.getLocal()
+    method and better Path checking in HDFS, to help avoid such issues
+    in the future.  (omalley via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 

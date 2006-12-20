@@ -363,7 +363,7 @@ public class Configuration {
     throws IOException {
     String[] dirs = getStrings(dirsProp);
     int hashCode = path.hashCode();
-    FileSystem fs = FileSystem.getNamed("local", this);
+    FileSystem fs = FileSystem.getLocal(this);
     for (int i = 0; i < dirs.length; i++) {  // try each local dir
       int index = (hashCode+i & Integer.MAX_VALUE) % dirs.length;
       Path file = new Path(dirs[index], path);

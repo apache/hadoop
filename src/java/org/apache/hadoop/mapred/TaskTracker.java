@@ -287,7 +287,7 @@ public class TaskTracker
                                   jobId + Path.SEPARATOR + "job.jar");
   
           String jobFile = t.getJobFile();
-          FileSystem localFs = FileSystem.getNamed("local", fConf);
+          FileSystem localFs = FileSystem.getLocal(fConf);
           // this will happen on a partial execution of localizeJob.
           // Sometimes the job.xml gets copied but copying job.jar
           // might throw out an exception
@@ -415,7 +415,7 @@ public class TaskTracker
       server.setThreads(1, workerThreads);
       // let the jsp pages get to the task tracker, config, and other relevant
       // objects
-      FileSystem local = FileSystem.getNamed("local", conf);
+      FileSystem local = FileSystem.getLocal(conf);
       server.setAttribute("task.tracker", this);
       server.setAttribute("local.file.system", local);
       server.setAttribute("conf", conf);
@@ -955,7 +955,7 @@ public class TaskTracker
             Path localTaskDir =
               new Path(this.defaultJobConf.getLocalPath(TaskTracker.getJobCacheSubdir()), 
                 (task.getJobId() + Path.SEPARATOR + task.getTaskId()));
-           FileSystem localFs = FileSystem.getNamed("local", fConf);
+           FileSystem localFs = FileSystem.getLocal(fConf);
            if (!localFs.mkdirs(localTaskDir)) {
              throw new IOException("Mkdirs failed to create " + localTaskDir.toString());
            }

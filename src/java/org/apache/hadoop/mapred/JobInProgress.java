@@ -75,7 +75,7 @@ class JobInProgress {
         this.jobtracker = jobtracker;
         this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
         this.startTime = System.currentTimeMillis();
-        this.localFs = (LocalFileSystem)FileSystem.getNamed("local", default_conf);
+        this.localFs = (LocalFileSystem)FileSystem.getLocal(default_conf);
 
         JobConf default_job_conf = new JobConf(default_conf);
         this.localJobFile = default_job_conf.getLocalPath(JobTracker.SUBDIR 

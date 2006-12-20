@@ -46,7 +46,7 @@ public class TestSequenceFileInputFilter extends TestCase {
   static {
       job.setInputPath(inDir);
       try {
-        fs = FileSystem.getNamed( "local", conf);
+        fs = FileSystem.getLocal(conf);
     } catch (IOException e) {
         e.printStackTrace();
         throw new RuntimeException(e);

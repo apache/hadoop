@@ -118,7 +118,17 @@ public abstract class FileSystem extends Configured {
 
       return get(URI.create(name), conf);
     }
-  
+
+    /**
+     * Get the local file syste
+     * @param conf the configuration to configure the file system with
+     * @return a LocalFileSystem
+     */
+    public static LocalFileSystem getLocal(Configuration conf)
+      throws IOException {
+      return (LocalFileSystem)get(LocalFileSystem.NAME, conf);
+    }
+
     /** Returns the FileSystem for this URI's scheme and authority.  The scheme
      * of the URI determines a configuration property name,
      * <tt>fs.<i>scheme</i>.class</tt> whose value names the FileSystem class.
