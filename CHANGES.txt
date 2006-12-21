@@ -149,6 +149,10 @@ Trunk (unreleased changes)
 41. HADOOP-841.  Fix native library to build 32-bit version even when
     on a 64-bit host, if a 32-bit JVM is used.  (Arun C Murthy via cutting)
 
+42. HADOOP-838.  Fix tasktracker to pass java.library.path to
+    sub-processes, so that libhadoop.a is found.
+    (Arun C Murthy via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
