@@ -153,6 +153,8 @@ Trunk (unreleased changes)
     sub-processes, so that libhadoop.a is found.
     (Arun C Murthy via cutting)
 
+43. HADOOP-844.  Send metrics messages on a fixed-delay schedule
+    instead of a fixed-rate schedule.  (David Bowen via cutting)
 
 Release 0.9.2 - 2006-12-15
 

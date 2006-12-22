@@ -247,7 +247,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
                 }
             };
             long millis = period * 1000;
-            timer.schedule(task, millis, millis);
+            timer.scheduleAtFixedRate(task, millis, millis);
          }
     }
     
