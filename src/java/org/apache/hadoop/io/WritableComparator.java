@@ -160,14 +160,19 @@ public class WritableComparator implements Comparator {
       (readInt(bytes, start+4) & 0xFFFFFFFFL);
   }
 
+  /** Parse a double from a byte array. */
+  public static double readDouble(byte[] bytes, int start) {
+    return Double.longBitsToDouble(readLong(bytes, start));
+  }
+
   /**
    * Reads a zero-compressed encoded long from a byte array and returns it.
-   * @param bytes: byte array with decode long
-   * @param start: starting index
+   * @param bytes byte array with decode long
+   * @param start starting index
    * @throws java.io.IOException 
    * @return deserialized long
    */
-  static long readVLong(byte[] bytes, int start) throws IOException {
+  public static long readVLong(byte[] bytes, int start) throws IOException {
       int len = bytes[start];
       if (len >= -112) {
           return len;
@@ -186,12 +191,12 @@ public class WritableComparator implements Comparator {
   
   /**
    * Reads a zero-compressed encoded integer from a byte array and returns it.
-   * @param bytes: byte array with the encoded integer
-   * @param start: start index
+   * @param bytes byte array with the encoded integer
+   * @param start start index
    * @throws java.io.IOException 
    * @return deserialized integer
    */
-  static int readVInt(byte[] bytes, int start) throws IOException {
+  public static int readVInt(byte[] bytes, int start) throws IOException {
       return (int) readVLong(bytes, start);
   }
 }

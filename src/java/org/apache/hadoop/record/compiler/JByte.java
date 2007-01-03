@@ -32,4 +32,29 @@ public class JByte extends JType {
     public String getSignature() {
         return "b";
     }
+    
+    public String genJavaSlurpBytes(String b, String s, String l) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           if ("+l+"<1) {\n");
+      sb.append("             throw new IOException(\"Byte is exactly 1 byte. Provided buffer is smaller.\");\n");
+      sb.append("           }\n");
+      sb.append("           "+s+"++; "+l+"--;\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
+    
+    public String genJavaCompareBytes() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           if (l1<1 || l2<1) {\n");
+      sb.append("             throw new IOException(\"Byte is exactly 1 byte. Provided buffer is smaller.\");\n");
+      sb.append("           }\n");
+      sb.append("           if (b1[s1] != b2[s2]) {\n");
+      sb.append("             return (b1[s1]<b2[s2])?-1:0;\n");
+      sb.append("           }\n");
+      sb.append("           s1++; s2++; l1--; l2--;\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
 }

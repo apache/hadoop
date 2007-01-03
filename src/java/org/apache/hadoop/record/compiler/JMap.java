@@ -49,8 +49,31 @@ public class JMap extends JCompType {
         return "{" + mKey.getSignature() + mValue.getSignature() +"}";
     }
     
-    public String genJavaCompareTo(String fname) {
-        return "";
+    public String genJavaCompareTo(String fname, String other) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("    {\n");
+      sb.append("      java.util.Set "+getId("set1")+" = "+fname+".keySet();\n");
+      sb.append("      java.util.Set "+getId("set2")+" = "+other+".keySet();\n");
+      sb.append("      java.util.Iterator "+getId("miter1")+" = "+
+          getId("set1")+".iterator();\n");
+      sb.append("      java.util.Iterator "+getId("miter2")+" = "+
+          getId("set2")+".iterator();\n");
+      sb.append("      for(; "+getId("miter1")+".hasNext() && "+
+          getId("miter2")+".hasNext(); ) {\n");
+      sb.append("        "+mKey.getJavaWrapperType()+" "+getId("k1")+
+          " = ("+mKey.getJavaWrapperType()+") "+getId("miter1")+".next();\n");
+      sb.append("        "+mKey.getJavaWrapperType()+" "+getId("k2")+
+          " = ("+mKey.getJavaWrapperType()+") "+getId("miter2")+".next();\n");
+      sb.append(mKey.genJavaCompareToWrapper(getId("k1"), getId("k2")));
+      sb.append("         if (ret != 0) { return ret; }\n");
+      sb.append("      }\n");
+      sb.append("      ret = ("+getId("set1")+".size() - "+getId("set2")+".size());\n");
+      sb.append("    }\n");
+      return sb.toString();
+    }
+    
+    public String genJavaCompareToWrapper(String fname, String other) {
+      return genJavaCompareTo(fname, other);
     }
     
     public String genJavaReadWrapper(String fname, String tag, boolean decl) {
@@ -97,5 +120,52 @@ public class JMap extends JCompType {
     
     public String genJavaWriteMethod(String fname, String tag) {
         return genJavaWriteWrapper(fname, tag);
+    }
+    
+    public String genJavaSlurpBytes(String b, String s, String l) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      incrLevel();
+      sb.append("           int "+getId("mi")+
+          " = WritableComparator.readVInt("+b+", "+s+");\n");
+      sb.append("           int "+getId("mz")+
+          " = WritableUtils.getVIntSize("+getId("mi")+");\n");
+      sb.append("           "+s+"+="+getId("mz")+"; "+l+"-="+getId("mz")+";\n");
+      sb.append("           for (int "+getId("midx")+" = 0; "+getId("midx")+
+          " < "+getId("mi")+"; "+getId("midx")+"++) {");
+      sb.append(mKey.genJavaSlurpBytes(b,s,l));
+      sb.append(mValue.genJavaSlurpBytes(b,s,l));
+      sb.append("           }\n");
+      decrLevel();
+      sb.append("        }\n");
+      return sb.toString();
+    }
+    
+    public String genJavaCompareBytes() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      incrLevel();
+      sb.append("           int "+getId("mi1")+
+          " = WritableComparator.readVInt(b1, s1);\n");
+      sb.append("           int "+getId("mi2")+
+          " = WritableComparator.readVInt(b2, s2);\n");
+      sb.append("           int "+getId("mz1")+
+          " = WritableUtils.getVIntSize("+getId("mi1")+");\n");
+      sb.append("           int "+getId("mz2")+
+          " = WritableUtils.getVIntSize("+getId("mi2")+");\n");
+      sb.append("           s1+="+getId("mz1")+"; s2+="+getId("mz2")+
+          "; l1-="+getId("mz1")+"; l2-="+getId("mz2")+";\n");
+      sb.append("           for (int "+getId("midx")+" = 0; "+getId("midx")+
+          " < "+getId("mi1")+" && "+getId("midx")+" < "+getId("mi2")+
+          "; "+getId("midx")+"++) {");
+      sb.append(mKey.genJavaCompareBytes());
+      sb.append(mValue.genJavaSlurpBytes("b1", "s1", "l1"));
+      sb.append(mValue.genJavaSlurpBytes("b2", "s2", "l2"));
+      sb.append("           }\n");
+      sb.append("           if ("+getId("mi1")+" != "+getId("mi2")+
+          ") { return ("+getId("mi1")+"<"+getId("mi2")+")?-1:0; }\n");
+      decrLevel();
+      sb.append("        }\n");
+      return sb.toString();
     }
 }

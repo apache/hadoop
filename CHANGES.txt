@@ -165,6 +165,9 @@ Trunk (unreleased changes)
 46. HADOOP-850.  Add Writable implementations for variable-length
     integers.  (ab via cutting)
 
+47. HADOOP-525.  Add raw comparators to record types.  This greatly
+    improves record sort performance.  (Milind Bhandarkar via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 

@@ -112,8 +112,26 @@ abstract public class JType {
         return "        a_.write"+mMethodSuffix+"("+fname+"."+mUnwrapMethod+"(),\""+tag+"\");\n";
     }
     
-    String genJavaCompareTo(String fname) {
-        return "    ret = ("+fname+" == peer."+fname+")? 0 :(("+fname+"<peer."+fname+")?-1:1);\n";
+    String genJavaCompareToWrapper(String fname, String other) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("          "+mJavaName+" ee1 = ("+fname+"."+mUnwrapMethod+"();\n");
+      sb.append("          "+mJavaName+" ee2 = ("+other+"."+mUnwrapMethod+"();\n");
+      sb.append("          ret = (ee1 == ee2)? 0 :((ee1<ee2)?-1:1);\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
+    
+    String genJavaCompareTo(String fname, String other) {
+        return "    ret = ("+fname+" == "+other+")? 0 :(("+fname+"<"+other+")?-1:1);\n";
+    }
+    
+    String genJavaCompareBytes() {
+      return "        // throw new IOException(\"Not Implemented yet!\");\n";
+    }
+    
+    String genJavaSlurpBytes(String b, String s, String l) {
+      return "        // throw new IOException(\"Not Implemented yet!\");\n";
     }
     
     String genJavaEquals(String fname, String peer) {

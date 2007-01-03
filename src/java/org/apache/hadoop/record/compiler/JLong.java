@@ -36,4 +36,29 @@ public class JLong extends JType {
     public String genJavaHashCode(String fname) {
         return "    ret = (int) ("+fname+"^("+fname+">>>32));\n";
     }
+    
+    public String genJavaSlurpBytes(String b, String s, String l) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           long i = WritableComparator.readVLong("+b+", "+s+");\n");
+      sb.append("           int z = WritableUtils.getVIntSize(i);\n");
+      sb.append("           "+s+"+=z; "+l+"-=z;\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
+    
+    public String genJavaCompareBytes() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           long i1 = WritableComparator.readVLong(b1, s1);\n");
+      sb.append("           long i2 = WritableComparator.readVLong(b2, s2);\n");
+      sb.append("           if (i1 != i2) {\n");
+      sb.append("             return ((i1-i2) < 0) ? -1 : 0;\n");
+      sb.append("           }\n");
+      sb.append("           int z1 = WritableUtils.getVIntSize(i1);\n");
+      sb.append("           int z2 = WritableUtils.getVIntSize(i2);\n");
+      sb.append("           s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
 }

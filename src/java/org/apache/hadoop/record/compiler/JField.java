@@ -78,7 +78,15 @@ public class JField {
     }
     
     public String genJavaCompareTo() {
-        return mType.genJavaCompareTo(getName());
+        return mType.genJavaCompareTo(getName(), "peer."+getName());
+    }
+    
+    public String genJavaSlurpBytes(String b, String s, String l) {
+      return mType.genJavaSlurpBytes(b,s,l);
+    }
+    
+    public String genJavaCompareBytes() {
+      return mType.genJavaCompareBytes();
     }
     
     public String genJavaEquals() {

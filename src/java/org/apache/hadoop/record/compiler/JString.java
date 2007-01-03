@@ -45,5 +45,28 @@ public class JString extends JCompType {
         return "        a_.writeString("+fname+",\""+tag+"\");\n";
     }
     
+    public String genJavaSlurpBytes(String b, String s, String l) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           int i = WritableComparator.readVInt("+b+", "+s+");\n");
+      sb.append("           int z = WritableUtils.getVIntSize(i);\n");
+      sb.append("           "+s+"+=(z+i); "+l+"-= (z+i);\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
     
+    public String genJavaCompareBytes() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           int i1 = WritableComparator.readVInt(b1, s1);\n");
+      sb.append("           int i2 = WritableComparator.readVInt(b2, s2);\n");
+      sb.append("           int z1 = WritableUtils.getVIntSize(i1);\n");
+      sb.append("           int z2 = WritableUtils.getVIntSize(i2);\n");
+      sb.append("           s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
+      sb.append("           int r1 = WritableComparator.compareBytes(b1,s1,l1,b2,s2,l2);\n");
+      sb.append("           if (r1 != 0) { return (r1<0)?-1:0; }\n");
+      sb.append("           s1+=i1; s2+=i2; l1-=i1; l1-=i2;\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
 }

@@ -37,4 +37,31 @@ public class JDouble extends JType {
         String tmp = "Double.doubleToLongBits("+fname+")";
         return "    ret = (int)("+tmp+"^("+tmp+">>>32));\n";
     }
+    
+    public String genJavaSlurpBytes(String b, String s, String l) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           if ("+l+"<8) {\n");
+      sb.append("             throw new IOException(\"Double is exactly 8 bytes. Provided buffer is smaller.\");\n");
+      sb.append("           }\n");
+      sb.append("           "+s+"+=8; "+l+"-=8;\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
+    
+    public String genJavaCompareBytes() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           if (l1<8 || l2<8) {\n");
+      sb.append("             throw new IOException(\"Double is exactly 8 bytes. Provided buffer is smaller.\");\n");
+      sb.append("           }\n");
+      sb.append("           double d1 = WritableComparator.readDouble(b1, s1);\n");
+      sb.append("           double d2 = WritableComparator.readDouble(b2, s2);\n");
+      sb.append("           if (d1 != d2) {\n");
+      sb.append("             return ((d1-d2) < 0) ? -1 : 0;\n");
+      sb.append("           }\n");
+      sb.append("           s1+=8; s2+=8; l1-=8; l2-=8;\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
 }

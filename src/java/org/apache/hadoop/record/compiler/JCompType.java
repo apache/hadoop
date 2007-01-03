@@ -41,8 +41,12 @@ abstract class JCompType extends JType {
         return cgetFunc + getFunc;
     }
     
-    String genJavaCompareTo(String fname) {
-        return "    ret = "+fname+".compareTo(peer."+fname+");\n";
+    String genJavaCompareTo(String fname, String other) {
+        return "    ret = "+fname+".compareTo("+other+");\n";
+    }
+    
+    String genJavaCompareToWrapper(String fname, String other) {
+        return "    "+genJavaCompareTo(fname, other);
     }
     
     String genJavaEquals(String fname, String peer) {

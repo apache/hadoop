@@ -36,4 +36,31 @@ public class JFloat extends JType {
     public String genJavaHashCode(String fname) {
         return "    ret = Float.floatToIntBits("+fname+");\n";
     }
+    
+    public String genJavaSlurpBytes(String b, String s, String l) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           if ("+l+"<4) {\n");
+      sb.append("             throw new IOException(\"Float is exactly 4 bytes. Provided buffer is smaller.\");\n");
+      sb.append("           }\n");
+      sb.append("           "+s+"+=4; "+l+"-=4;\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
+    
+    public String genJavaCompareBytes() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      sb.append("           if (l1<4 || l2<4) {\n");
+      sb.append("             throw new IOException(\"Float is exactly 4 bytes. Provided buffer is smaller.\");\n");
+      sb.append("           }\n");
+      sb.append("           float f1 = WritableComparator.readFloat(b1, s1);\n");
+      sb.append("           float f2 = WritableComparator.readFloat(b2, s2);\n");
+      sb.append("           if (f1 != f2) {\n");
+      sb.append("             return ((f1-f2) < 0) ? -1 : 0;\n");
+      sb.append("           }\n");
+      sb.append("           s1+=4; s2+=4; l1-=4; l2-=4;\n");
+      sb.append("        }\n");
+      return sb.toString();
+    }
 }

@@ -46,8 +46,30 @@ public class JVector extends JCompType {
         return "[" + mElement.getSignature() + "]";
     }
     
-    public String genJavaCompareTo(String fname) {
-        return "";
+    public String genJavaCompareTo(String fname, String other) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("    {\n");
+      sb.append("      int "+getId("len1")+" = "+fname+".size();\n");
+      sb.append("      int "+getId("len2")+" = "+other+".size();\n");
+      sb.append("      for(int "+getId("vidx")+" = 0; "+getId("vidx")+"<"+
+          getId("len1")+" && "+getId("vidx")+"<"+getId("len2")+"; "+
+          getId("vidx")+"++) {\n");
+      sb.append("        "+mElement.getJavaWrapperType()+" "+getId("e1")+
+          " = ("+mElement.getJavaWrapperType()+") "+fname+
+          ".get("+getId("vidx")+");\n");
+      sb.append("        "+mElement.getJavaWrapperType()+" "+getId("e2")+
+          " = ("+mElement.getJavaWrapperType()+") "+other+
+          ".get("+getId("vidx")+");\n");
+      sb.append(mElement.genJavaCompareToWrapper(getId("e1"), getId("e2")));
+      sb.append("         if (ret != 0) { return ret; }\n");
+      sb.append("      }\n");
+      sb.append("      ret = ("+getId("len1")+" - "+getId("len2")+");\n");
+      sb.append("    }\n");
+      return sb.toString();
+    }
+    
+    public String genJavaCompareToWrapper(String fname, String other) {
+      return genJavaCompareTo(fname, other);
     }
     
     public String genJavaReadWrapper(String fname, String tag, boolean decl) {
@@ -90,5 +112,47 @@ public class JVector extends JCompType {
     
     public String genJavaWriteMethod(String fname, String tag) {
         return genJavaWriteWrapper(fname, tag);
+    }
+    
+    public String genJavaSlurpBytes(String b, String s, String l) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      incrLevel();
+      sb.append("           int "+getId("vi")+
+          " = WritableComparator.readVInt("+b+", "+s+");\n");
+      sb.append("           int "+getId("vz")+
+          " = WritableUtils.getVIntSize("+getId("vi")+");\n");
+      sb.append("           "+s+"+="+getId("vz")+"; "+l+"-="+getId("vz")+";\n");
+      sb.append("           for (int "+getId("vidx")+" = 0; "+getId("vidx")+
+          " < "+getId("vi")+"; "+getId("vidx")+"++)");
+      sb.append(mElement.genJavaSlurpBytes(b,s,l));
+      decrLevel();
+      sb.append("        }\n");
+      return sb.toString();
+    }
+    
+    public String genJavaCompareBytes() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("        {\n");
+      incrLevel();
+      sb.append("           int "+getId("vi1")+
+          " = WritableComparator.readVInt(b1, s1);\n");
+      sb.append("           int "+getId("vi2")+
+          " = WritableComparator.readVInt(b2, s2);\n");
+      sb.append("           int "+getId("vz1")+
+          " = WritableUtils.getVIntSize("+getId("vi1")+");\n");
+      sb.append("           int "+getId("vz2")+
+          " = WritableUtils.getVIntSize("+getId("vi2")+");\n");
+      sb.append("           s1+="+getId("vz1")+"; s2+="+getId("vz2")+
+          "; l1-="+getId("vz1")+"; l2-="+getId("vz2")+";\n");
+      sb.append("           for (int "+getId("vidx")+" = 0; "+getId("vidx")+
+          " < "+getId("vi1")+" && "+getId("vidx")+" < "+getId("vi2")+
+          "; "+getId("vidx")+"++)");
+      sb.append(mElement.genJavaCompareBytes());
+      sb.append("           if ("+getId("vi1")+" != "+getId("vi2")+
+          ") { return ("+getId("vi1")+"<"+getId("vi2")+")?-1:0; }\n");
+      decrLevel();
+      sb.append("        }\n");
+      return sb.toString();
     }
 }
