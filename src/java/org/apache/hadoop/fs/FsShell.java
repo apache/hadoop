@@ -40,6 +40,22 @@ public class FsShell extends ToolBase {
     }
 
     /**
+     * Copies from one stream to another.
+     */
+    private void copyBytes(InputStream in, OutputStream out) throws IOException {
+      PrintStream ps = out instanceof PrintStream ? (PrintStream)out : null;
+      byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
+      int bytesRead = in.read(buf);
+      while (bytesRead >= 0) {
+        out.write(buf, 0, bytesRead);
+        if ((ps != null) && ps.checkError()) {
+          throw new IOException("Unable to write to output stream.");
+        }
+        bytesRead = in.read(buf);
+      }
+    }
+      
+    /**
      * Copies from stdin to the indicated file.
      */
     private void copyFromStdin(Path dst) throws IOException {
@@ -50,16 +66,27 @@ public class FsShell extends ToolBase {
         throw new IOException("Target " + dst.toString() + " already exists.");
       }
       FSDataOutputStream out = fs.create(dst); 
-      byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
       try {
-        int bytesRead = System.in.read(buf);
-        while (bytesRead >= 0) {
-          out.write(buf, 0, bytesRead);
-          bytesRead = System.in.read(buf);
-        }
+        copyBytes(System.in, out);
       } finally {
         out.close();
       }
+    }
+
+    /** 
+     * Print from src to stdout.
+     */
+    private void printToStdout(Path src) throws IOException {
+      if (fs.isDirectory(src)) {
+        throw new IOException("Source must be a file.");
+      }
+      FSDataInputStream in = fs.open(src);
+      try {
+        copyBytes(in, System.out);
+      } finally {
+        in.close();
+      }
+
     }
 
     /**
@@ -178,38 +205,10 @@ public class FsShell extends ToolBase {
     void cat(String srcf) throws IOException {
       Path [] srcs = fs.globPaths( new Path( srcf ) );
       for( int i=0; i<srcs.length; i++ ) {
-        cat(srcs[i]);
+        printToStdout(srcs[i]);
       }
     }
     
-
-    /* print the content of src to screen */
-    private void cat(Path src) throws IOException {
-      FSDataInputStream in = fs.open(src);
-      try {
-        BufferedReader din = new BufferedReader(new InputStreamReader(in));
-        String line;
-        int checkFactor = 0;
-        while((line = din.readLine()) != null) {
-          System.out.println(line);      
-
-          //
-          // Peridically check if the output encountered an error. This can
-          // happen if the output stream has been disconnected
-          //
-          if (checkFactor == 0) {
-            if (System.out.checkError()) {
-              throw new IOException("Unable to write to output stream");
-            }
-            checkFactor = 10000;
-          }
-          checkFactor--;
-        }
-      } finally {
-        in.close();
-      }
-    }
-
     /**
      * Parse the incoming command string
      * @param cmd
