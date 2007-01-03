@@ -780,7 +780,7 @@ class FSNamesystem implements FSConstants {
     /**
      * Change the indicated filename.
      */
-    public boolean renameTo(UTF8 src, UTF8 dst) throws IOException {
+    public synchronized boolean renameTo(UTF8 src, UTF8 dst) throws IOException {
         NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src + " to " + dst );
         if( isInSafeMode() )
           throw new SafeModeException( "Cannot rename " + src, safeMode );
@@ -869,7 +869,7 @@ class FSNamesystem implements FSConstants {
     /**
      * Create all the necessary directories
      */
-    public boolean mkdirs( String src ) throws IOException {
+    public synchronized boolean mkdirs( String src ) throws IOException {
         boolean    success;
         NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src );
         if( isInSafeMode() )

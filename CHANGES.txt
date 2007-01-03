@@ -159,6 +159,9 @@ Trunk (unreleased changes)
 44. HADOOP-849.  Fix OutOfMemory exceptions in TaskTracker due to a
     file handle leak in SequenceFile.  (Devaraj Das via cutting)
 
+45. HADOOP-745.  Fix a synchronization bug in the HDFS namenode.
+    (Dhruba Borthakur via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
