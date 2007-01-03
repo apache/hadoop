@@ -2167,6 +2167,17 @@ public class SequenceFile {
             //queue
             this.close();
             
+            //this is required to handle the corner case where we have empty
+            //map outputs to merge. The empty map outputs will just have the 
+            //sequence file header; they won't be inserted in the priority 
+            //queue. Thus, they won't be deleted in the regular process where 
+            //cleanup happens when a stream is popped off (when the key/value
+            //from that stream has been iterated over) from the queue.
+            for (int i = 0; i < mStream.length; i++) {
+              if (mStream[i].in != null) //true if cleanup didn't happen
+                mStream[i].cleanup();
+            }
+
             SegmentDescriptor tempSegment = 
                  new SegmentDescriptor(0, fs.getLength(outputFile), outputFile);
             //put the segment back in the TreeMap
@@ -2305,6 +2316,7 @@ public class SequenceFile {
       /** closes the underlying reader */
       private void close() throws IOException {
         this.in.close();
+        this.in = null;
       }
 
       /** The default cleanup. Subclasses can override this with a custom 

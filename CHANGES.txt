@@ -156,6 +156,10 @@ Trunk (unreleased changes)
 43. HADOOP-844.  Send metrics messages on a fixed-delay schedule
     instead of a fixed-rate schedule.  (David Bowen via cutting)
 
+44. HADOOP-849.  Fix OutOfMemory exceptions in TaskTracker due to a
+    file handle leak in SequenceFile.  (Devaraj Das via cutting)
+
+
 Release 0.9.2 - 2006-12-15
 
  1. HADOOP-639. Restructure InterTrackerProtocol to make task
