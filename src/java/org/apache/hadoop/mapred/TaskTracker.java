@@ -1373,7 +1373,7 @@ public class TaskTracker
     public static class Child {
         public static void main(String[] args) throws Throwable {
           //LogFactory.showTime(false);
-          LOG.info("Child starting");
+          LOG.debug("Child starting");
 
           JobConf defaultConf = new JobConf();
           int port = Integer.parseInt(args[0]);

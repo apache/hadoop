@@ -171,6 +171,9 @@ Trunk (unreleased changes)
 48. HADOOP-628.  Fix a problem with 'fs -cat' command, where some
     characters were replaced with question marks.  (Wendy Chien via cutting)
 
+49. HADOOP-804.  Reduce verbosity of MapReduce logging.
+    (Sanjay Dahiya via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 

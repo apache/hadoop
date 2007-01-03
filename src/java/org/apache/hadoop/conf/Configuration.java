@@ -73,7 +73,7 @@ public class Configuration {
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.conf.Configuration");
 
-  private boolean   quietmode = false;
+  private boolean   quietmode = true;
   private ArrayList defaultResources = new ArrayList();
   private ArrayList finalResources = new ArrayList();
 

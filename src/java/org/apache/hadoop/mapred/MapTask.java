@@ -323,7 +323,7 @@ class MapTask extends Task {
         Path indexFilename = mapOutputFile.getSpillIndexFile(getTaskId(), 
                                                              numSpills);
         indexOut = localFs.create(indexFilename);
-        LOG.info("opened "+
+        LOG.debug("opened "+
         mapOutputFile.getSpillFile(getTaskId(), numSpills).getName());
           
         //invoke the sort

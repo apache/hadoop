@@ -388,7 +388,7 @@ public class Client {
 
     public void run() {
 
-      LOG.info(getName() + ": starting");
+      LOG.debug(getName() + ": starting");
 
       while (running) {
         try {
@@ -429,7 +429,7 @@ public class Client {
     Thread t = new ConnectionCuller();
     t.setDaemon(true);
     t.setName(valueClass.getName() + " Connection Culler");
-    LOG.info(valueClass.getName() + 
+    LOG.debug(valueClass.getName() + 
              "Connection culler maxidletime= " + maxIdleTime + "ms");
     t.start();
   }
