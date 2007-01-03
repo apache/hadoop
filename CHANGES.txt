@@ -162,6 +162,9 @@ Trunk (unreleased changes)
 45. HADOOP-745.  Fix a synchronization bug in the HDFS namenode.
     (Dhruba Borthakur via cutting)
 
+46. HADOOP-850.  Add Writable implementations for variable-length
+    integers.  (ab via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
