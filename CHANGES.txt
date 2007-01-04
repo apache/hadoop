@@ -185,6 +185,9 @@ Trunk (unreleased changes)
     intermediate outputs may happen at any time, potentially causing
     task timeouts.  (Devaraj Das via cutting)
 
+53. HADOOP-840.  In task tracker, queue task cleanups and perform them
+    in a separate thread.  (omalley & Mahadev Konar via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
