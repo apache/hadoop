@@ -23,6 +23,7 @@ import org.apache.hadoop.mapred.TestMapRed;
 import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
 import org.apache.hadoop.dfs.ClusterTestDFS;
+import org.apache.hadoop.dfs.NNBench;
 import org.apache.hadoop.fs.TestFileSystem;
 import org.apache.hadoop.io.TestArrayFile;
 import org.apache.hadoop.io.TestSetFile;
@@ -43,6 +44,7 @@ public class AllTestDriver {
     public static void main(String argv[]){
 	ProgramDriver pgd = new ProgramDriver();
 	try {
+            pgd.addClass("nnbench", NNBench.class, "A benchmark that stresses the namenode.");
 	    pgd.addClass("mapredtest", TestMapRed.class, "A map/reduce test check.");
 	    pgd.addClass("clustertestdfs", ClusterTestDFS.class, "A pseudo distributed test for DFS.");
 	    pgd.addClass("testfilesystem", TestFileSystem.class, "A test for FileSystem read/write.");

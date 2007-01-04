@@ -32,7 +32,7 @@ import org.apache.hadoop.io.Text;
 public class UTF8ByteArrayUtils {
     /**
      * Find the first occured tab in a UTF-8 encoded string
-     * @param utf: a byte array containing a UTF-8 encoded string
+     * @param utf a byte array containing a UTF-8 encoded string
      * @return position that first tab occures otherwise -1
      */
     public static int findTab(byte [] utf) {
@@ -47,11 +47,11 @@ public class UTF8ByteArrayUtils {
     /**
      * split a UTF-8 byte array into key and value 
      * assuming that the delimilator is at splitpos. 
-     * @param ut: utf-8 encoded string
-     * @param key: contains key upon the method is returned
-     * @param val: contains value upon the method is returned
-     * @param splitPos: the split pos
-     * @throws IOException: when 
+     * @param utf utf-8 encoded string
+     * @param key contains key upon the method is returned
+     * @param val contains value upon the method is returned
+     * @param splitPos the split pos
+     * @throws IOException
      */
     public static void splitKeyVal(byte[] utf, Text key, Text val, int splitPos) 
     throws IOException {

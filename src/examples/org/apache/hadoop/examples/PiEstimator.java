@@ -37,7 +37,7 @@ import org.apache.hadoop.mapred.*;
  *
  * @author Milind Bhandarkar
  */
-public class PiBenchmark {
+public class PiEstimator {
   
   /**
    * Mappper class for Pi estimation.
@@ -144,7 +144,7 @@ public class PiBenchmark {
   throws IOException {
 
     Configuration conf = new Configuration();
-    JobConf jobConf = new JobConf(conf, PiBenchmark.class);
+    JobConf jobConf = new JobConf(conf, PiEstimator.class);
     if (jt != null) { jobConf.set("mapred.job.tracker", jt); }
     if (dfs != null) { jobConf.set("fs.default.name", dfs); }
     jobConf.setJobName("test-mini-mr");

@@ -334,7 +334,7 @@ A user can Undelete a file after deleting it as long as it remains in the /trash
     <section>
       <title> References </title>
       <p>
-      <a href="http://lucene.apache.org/hadoop/docs/api/"> 
+      <a href="http://lucene.apache.org/hadoop/api/"> 
         Browse the HDFS Java Interface
       </a>
       </p>

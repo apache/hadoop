@@ -177,6 +177,10 @@ Trunk (unreleased changes)
 50. HADOOP-853.  Rename 'site' to 'docs', in preparation for inclusion
     in releases.  (cutting)
 
+51. HADOOP-371.  Include contrib jars and site documentation in
+    distributions.  Also add contrib and example documentation to
+    distributed javadoc, in separate sections.  (Nigel Daley via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 

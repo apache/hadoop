@@ -27,7 +27,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <faq         label="FAQ"              href="ext:faq" />    
     <wiki        label="Wiki"             href="ext:wiki" />    
     <HDFS        label="Hadoop File System"  href="hdfs_design.html" />    
-    <apidocs     label="API Docs"         href="docs/api/" />
+    <apidocs     label="API Docs"         href="api/index.html" />
   </docs>
 
   <resources label="Resources">

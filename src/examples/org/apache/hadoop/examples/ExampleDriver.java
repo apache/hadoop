@@ -34,10 +34,9 @@ public class ExampleDriver {
 	    pgd.addClass("grep", Grep.class, 
 			 "A map/reduce program that counts the matches of a regex in the input.");
 	    pgd.addClass("randomwriter", RandomWriter.class, 
-                        "A random writer benchmark that writes 10GB per node.");
-            pgd.addClass("sort", Sort.class, "A sort benchmark that sorts the data written by the random writer.");
-            pgd.addClass("pi", PiBenchmark.class, "A benchmark that estimates Pi using monte-carlo method.");
-            pgd.addClass("nnbench", NNBench.class, "A benchmark that stresses the namenode");
+                        "A map/reduce program that writes 10GB of random data per node.");
+            pgd.addClass("sort", Sort.class, "A map/reduce program that sorts the data written by the random writer.");
+            pgd.addClass("pi", PiEstimator.class, "A map/reduce program that estimates Pi using monte-carlo method.");
             pgd.driver(argv);
 	}
 	catch(Throwable e){

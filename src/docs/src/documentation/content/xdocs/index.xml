@@ -190,7 +190,7 @@
       <a href="ext:nightly">downloadable version of Hadoop every
       night</a>.  All unit tests must pass, or a message is sent to
       the developers mailing list and no new version is created.  This
-      also updates the <a href="docs/api/">javadoc</a>.</p>
+      also updates the <a href="api/index.html">javadoc</a>.</p>
       </section>
 
       <section>

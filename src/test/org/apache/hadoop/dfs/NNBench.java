@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.examples;
+package org.apache.hadoop.dfs;
 
 import java.io.IOException;
 import java.util.Date;

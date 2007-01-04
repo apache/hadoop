@@ -417,6 +417,7 @@
     <mkdir dir="${build.javadoc}"/>
     <javadoc
       overview="${src.dir}/overview.html"
+      packagenames="org.apache.hadoop.*"
       destdir="${build.javadoc}"
       author="true"
       version="true"
@@ -427,11 +428,18 @@
       >
     	<packageset dir="${src.dir}"/>
     	<packageset dir="${examples.dir}"/>
+
+    	<packageset dir="src/contrib/streaming/src/java"/>
+    	<packageset dir="src/contrib/smallJobsBenchmark/src/java"/>
+
         <link href="${javadoc.link.java}"/>
         <classpath refid="classpath"/>
 
-    	<group title="Core" packages="org.apache.hadoop.*"/>
-    	<group title="Examples" packages="org.apache.hadoop.examples"/>
+    	<group title="Core" packages="org.apache.*"/>
+    	<group title="Examples" packages="org.apache.hadoop.examples*"/>
+
+       <group title="contrib: Streaming" packages="org.apache.hadoop.streaming*"/>
+       <group title="contrib: Small Jobs Benchmark" packages="org.apache.hadoop.benchmarks.mapred*"/>
 
     </javadoc>
   </target>	
@@ -439,6 +447,9 @@
   <target name="default-doc">
     <style basedir="${conf.dir}" destdir="${build.docs}"
            includes="hadoop-default.xml" style="conf/configuration.xsl"/>
+    <copy todir="${build.docs}">
+      <fileset dir="${docs.dir}" />
+    </copy>
   </target>
 
   <!-- ================================================================== -->
@@ -446,9 +457,10 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc, examples, compile-core-test">
+  <target name="package" depends="jar, javadoc, examples, compile-core-test, deploy-contrib">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/contrib"/>
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/docs"/>
     <mkdir dir="${dist.dir}/docs/api"/>
@@ -465,6 +477,12 @@
 	  <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
 	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
     </exec>
+
+    <copy todir="${dist.dir}/contrib" includeEmptyDirs="false" flatten="true">
+      <fileset dir="build/contrib">
+        <include name="*/*.jar"/>
+      </fileset>
+    </copy>
 
     <copy todir="${dist.dir}/webapps">
       <fileset dir="${build.webapps}"/>
