@@ -142,7 +142,7 @@ abstract class Task implements Writable, Configurable {
   /** The number of milliseconds between progress reports. */
   public static final int PROGRESS_INTERVAL = 1000;
 
-  private transient Progress taskProgress = new Progress();
+  private volatile Progress taskProgress = new Progress();
   private transient long nextProgressTime =
     System.currentTimeMillis() + PROGRESS_INTERVAL;
 
@@ -165,9 +165,13 @@ abstract class Task implements Writable, Configurable {
       };
   }
 
+  public void setProgress(float progress) {
+    taskProgress.set(progress);
+  }
+
   public void reportProgress(TaskUmbilicalProtocol umbilical, float progress)
     throws IOException {
-    taskProgress.set(progress);
+    setProgress(progress);
     reportProgress(umbilical);
   }
 

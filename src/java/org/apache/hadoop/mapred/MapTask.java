@@ -161,7 +161,7 @@ class MapTask extends Task {
         public synchronized boolean next(Writable key, Writable value)
           throws IOException {
 
-          reportProgress(umbilical, getProgress());
+          setProgress(getProgress());
           long beforePos = getPos();
           boolean ret = rawIn.next(key, value);
           myMetrics.mapInput(getPos() - beforePos);
@@ -174,13 +174,13 @@ class MapTask extends Task {
         }
       };
 
+    Thread sortProgress = createProgressThread(umbilical);
     MapRunnable runner =
       (MapRunnable)ReflectionUtils.newInstance(job.getMapRunnerClass(), job);
 
     try {
+      sortProgress.start();
       runner.run(in, collector, reporter);      // run the map
-    } finally {
-      in.close();                               // close input
       //check whether the length of the key/value buffer is 0. If not, then
       //we need to spill that to disk. Note that we reset the key/val buffer
       //upon each spill (so a length > 0 means that we have not spilled yet)
@@ -189,10 +189,38 @@ class MapTask extends Task {
       }
       //merge the partitions from the spilled files and create one output
       collector.mergeParts();
+    } finally {
       //close
+      in.close();                               // close input
       collector.close();
+      sortProgress.interrupt();
     }
     done(umbilical);
+  }
+
+  private Thread createProgressThread(final TaskUmbilicalProtocol umbilical) {
+    //spawn a thread to give merge progress heartbeats
+    Thread sortProgress = new Thread() {
+      public void run() {
+        LOG.info("Started thread: " + getName());
+        while (true) {
+          try {
+            reportProgress(umbilical);
+            Thread.sleep(PROGRESS_INTERVAL);
+          } catch (InterruptedException e) {
+              return;
+          } catch (Throwable e) {
+              LOG.info("Thread Exception in " +
+                                 "reporting sort progress\n" +
+                                 StringUtils.stringifyException(e));
+              continue;
+          }
+        }
+      }
+    };
+    sortProgress.setName("Sort progress reporter for task "+getTaskId());
+    sortProgress.setDaemon(true);
+    return sortProgress;
   }
 
   public void setConf(Configuration conf) {
@@ -298,7 +326,6 @@ class MapTask extends Task {
         int partNumber = partitioner.getPartition(key, value, partitions);
         sortImpl[partNumber].addKeyValue(keyOffset, keyLength, valLength);
 
-        reportProgress(umbilical); 
         myMetrics.mapOutput(keyValBuffer.getLength() - keyOffset);
 
         //now check whether we need to spill to disk
@@ -348,7 +375,6 @@ class MapTask extends Task {
                   throws IOException {
                   synchronized (this) {
                     writer.append(key, value);
-                    reportProgress(umbilical);
                   }
                 }
               };
@@ -374,7 +400,6 @@ class MapTask extends Task {
       while (values.more()) {
         combiner.reduce(values.getKey(), values, combineCollector, reporter);
         values.nextKey();
-        reportProgress(umbilical);
       }
     }
     
@@ -402,7 +427,6 @@ class MapTask extends Task {
         value.readFields(valIn);
 
         writer.append(key, value);
-        reportProgress(umbilical);
       }
     }
     
@@ -435,34 +459,12 @@ class MapTask extends Task {
                   compressionType, codec);
           finalIndexOut.writeLong(segmentStart);
           finalIndexOut.writeLong(finalOut.getPos() - segmentStart);
-          reportProgress(umbilical);
         }
         finalOut.close();
         finalIndexOut.close();
         return;
       }
-      //spawn a thread to give merge progress heartbeats
-      Thread sortProgress = new Thread() {
-        public void run() {
-          while (true) {
-            try {
-              reportProgress(umbilical);
-              Thread.sleep(PROGRESS_INTERVAL);
-            } catch (InterruptedException e) {
-                return;
-            } catch (Throwable e) {
-                LOG.info("Thread Exception in " +
-                                   "reporting sort progress\n" +
-                                   StringUtils.stringifyException(e));
-                continue;
-            }
-          }
-        }
-      };
-      sortProgress.setName("Sort progress reporter for task "+getTaskId());
-      sortProgress.setDaemon(true);
-      sortProgress.start();
-      try {
+      {
         Path [] filename = new Path[numSpills];
         Path [] indexFileName = new Path[numSpills];
         FSDataInputStream in[] = new FSDataInputStream[numSpills];
@@ -514,8 +516,6 @@ class MapTask extends Task {
           in[i].close(); localFs.delete(filename[i]);
           indexIn[i].close(); localFs.delete(indexFileName[i]);
         }
-      } finally {
-        sortProgress.interrupt();
       }
     }
     

@@ -181,6 +181,10 @@ Trunk (unreleased changes)
     distributions.  Also add contrib and example documentation to
     distributed javadoc, in separate sections.  (Nigel Daley via cutting)
 
+52. HADOOP-846.  Report progress during entire map, as sorting of
+    intermediate outputs may happen at any time, potentially causing
+    task timeouts.  (Devaraj Das via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
