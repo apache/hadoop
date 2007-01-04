@@ -27,6 +27,7 @@ import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.io.WritableUtils;
 
 /** 
  * DatanodeInfo represents the status of a DataNode.
@@ -42,8 +43,14 @@ public class DatanodeInfo extends DatanodeID {
   protected long lastUpdate;
   protected int xceiverCount;
 
+  // administrative states of a datanode
+  public enum AdminStates {NORMAL, DECOMMISSION_INPROGRESS, DECOMMISSIONED; }
+  protected AdminStates adminState;
+
+
   DatanodeInfo() {
     super();
+    adminState = null;
   }
   
   DatanodeInfo( DatanodeInfo from ) {
@@ -52,6 +59,7 @@ public class DatanodeInfo extends DatanodeID {
     this.remaining = from.getRemaining();
     this.lastUpdate = from.getLastUpdate();
     this.xceiverCount = from.getXceiverCount();
+    this.adminState = from.adminState;
   }
 
   DatanodeInfo( DatanodeID nodeID ) {
@@ -60,6 +68,7 @@ public class DatanodeInfo extends DatanodeID {
     this.remaining = 0L;
     this.lastUpdate = 0L;
     this.xceiverCount = 0;
+    this.adminState = null;
   }
   
   /** The raw capacity. */
@@ -101,12 +110,85 @@ public class DatanodeInfo extends DatanodeID {
     long r = getRemaining();
     long u = c - r;
     buffer.append("Name: "+name+"\n");
+    if (isDecommissioned()) {
+      buffer.append("State          : Decommissioned\n");
+    } else if (isDecommissionInProgress()) {
+      buffer.append("State          : Decommission in progress\n");
+    } else {
+      buffer.append("State          : In Service\n");
+    }
     buffer.append("Total raw bytes: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
     buffer.append("Used raw bytes: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
     buffer.append("% used: "+FsShell.limitDecimal(((1.0*u)/c)*100,2)+"%"+"\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
   }
+
+  /**
+   * Start decommissioning a node.
+   * old state.
+   */
+  void startDecommission() {
+    adminState = AdminStates.DECOMMISSION_INPROGRESS;
+  }
+
+  /**
+   * Stop decommissioning a node.
+   * old state.
+   */
+  void stopDecommission() {
+    adminState = null;
+  }
+
+  /**
+   * Returns true if the node is in the process of being decommissioned
+   */
+   boolean isDecommissionInProgress() {
+     if (adminState == AdminStates.DECOMMISSION_INPROGRESS) {
+       return true;
+     }
+     return false;
+   }
+
+  /**
+   * Returns true if the node has been decommissioned.
+   */
+   boolean isDecommissioned() {
+     if (adminState == AdminStates.DECOMMISSIONED) {
+       return true;
+     }
+     return false;
+   }
+
+  /**
+   * Sets the admin state to indicate that decommision is complete.
+   */
+   void setDecommissioned() {
+     assert isDecommissionInProgress();
+     adminState = AdminStates.DECOMMISSIONED;
+   }
+
+   /**
+    * Retrieves the admin state of this node.
+    */
+    AdminStates getAdminState() {
+      if (adminState == null) {
+        return AdminStates.NORMAL;
+      }
+      return adminState;
+    }
+
+   /**
+    * Sets the admin state of this node.
+    */
+    void setAdminState(AdminStates newState) {
+      if (newState == AdminStates.NORMAL) {
+        adminState = null;
+      }
+      else {
+        adminState = newState;
+      }
+    }
 
   /////////////////////////////////////////////////
   // Writable
@@ -127,6 +209,7 @@ public class DatanodeInfo extends DatanodeID {
     out.writeLong(remaining);
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
+    WritableUtils.writeEnum(out, getAdminState());
   }
 
   /**
@@ -137,5 +220,8 @@ public class DatanodeInfo extends DatanodeID {
     this.remaining = in.readLong();
     this.lastUpdate = in.readLong();
     this.xceiverCount = in.readInt();
+    AdminStates newState = (AdminStates) WritableUtils.readEnum(in,
+                                         AdminStates.class);
+    setAdminState(newState);
   }
 }

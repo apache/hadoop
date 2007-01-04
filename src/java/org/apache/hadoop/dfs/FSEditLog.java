@@ -258,8 +258,9 @@ class FSEditLog {
             if( logVersion > -3 )
               throw new IOException("Unexpected opcode " + opcode 
                   + " for version " + logVersion );
-            DatanodeDescriptor node = new DatanodeDescriptor();
-            node.readFields(in);
+            FSImage.DatanodeImage nodeimage = new FSImage.DatanodeImage();
+            nodeimage.readFields(in);
+            DatanodeDescriptor node = nodeimage.getDatanodeDescriptor();
             fsNamesys.unprotectedAddDatanode( node );
             break;
           }
@@ -376,7 +377,7 @@ class FSEditLog {
    * registration event.
    */
   void logAddDatanode( DatanodeDescriptor node ) {
-    logEdit( OP_DATANODE_ADD, node, null );
+    logEdit( OP_DATANODE_ADD, new FSImage.DatanodeImage(node), null );
   }
   
   /** 

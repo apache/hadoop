@@ -29,7 +29,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
-  public static final long versionID = 3L;  // setSafeMode() added
+  public static final long versionID = 4L; // decommission node added
   
     ///////////////////////////////////////
     // File contents
@@ -300,4 +300,6 @@ interface ClientProtocol extends VersionedProtocol {
      * @author Konstantin Shvachko
      */
     public boolean setSafeMode( FSConstants.SafeModeAction action ) throws IOException;
+
+    public boolean decommission( FSConstants.DecommissionAction action, String[] nodenames) throws IOException;
 }

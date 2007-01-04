@@ -362,6 +362,18 @@ class DFSClient implements FSConstants {
     }
 
     /**
+     * Set, clear decommission state of datnode(s).
+     * See {@link ClientProtocol#decommission(FSConstants.DecommissionAction)} 
+     * for more details.
+     * 
+     * @see ClientProtocol#decommission(FSConstants.DecommissionAction)
+     */
+    public boolean decommission(DecommissionAction action, String[] nodes)
+                                throws IOException {
+      return namenode.decommission(action, nodes);
+    }
+
+    /**
      */
     public boolean mkdirs(UTF8 src) throws IOException {
         checkOpen();
@@ -526,6 +538,14 @@ class DFSClient implements FSConstants {
             }
             this.blocks = newBlocks;
             this.nodes = (DatanodeInfo[][]) nodeV.toArray(new DatanodeInfo[nodeV.size()][]);
+        }
+
+        /**
+         * Used by the automatic tests to detemine blocks locations of a
+         * file
+         */
+        synchronized DatanodeInfo[][] getDataNodes() {
+          return nodes;
         }
 
         /**

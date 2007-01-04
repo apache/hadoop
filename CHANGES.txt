@@ -188,6 +188,10 @@ Trunk (unreleased changes)
 53. HADOOP-840.  In task tracker, queue task cleanups and perform them
     in a separate thread.  (omalley & Mahadev Konar via cutting)
 
+54. HADOOP-681.  Add to HDFS the ability to decommission nodes.  This
+    causes their blocks to be re-replicated on other nodes, so that
+    they may be removed from a cluster.  (Dhruba Borthakur via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 

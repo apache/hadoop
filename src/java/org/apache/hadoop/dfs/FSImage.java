@@ -74,7 +74,7 @@ class FSImage {
     }
     this.editLog = new FSEditLog( edits );
   }
-  
+
   FSEditLog getEditLog() {
     return editLog;
   }
@@ -344,7 +344,7 @@ class FSImage {
     }
   }
 
-  class DatanodeImage implements WritableComparable {
+  static class DatanodeImage implements WritableComparable {
 
     /**************************************************
      * DatanodeImage is used to store persistent information

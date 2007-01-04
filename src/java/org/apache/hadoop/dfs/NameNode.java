@@ -465,6 +465,27 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     boolean isInSafeMode() {
       return namesystem.isInSafeMode();
     }
+
+    /**
+     * Set administrative commands to decommission datanodes.
+     */
+    public boolean decommission(DecommissionAction action, String[] nodes)
+                                throws IOException {
+      boolean ret = true;
+      switch (action) {
+        case DECOMMISSION_SET: // decommission datanode(s)
+          namesystem.startDecommission(nodes);
+          break;
+        case DECOMMISSION_CLEAR: // remove decommission state of a datanode
+          namesystem.stopDecommission(nodes);
+          break;
+        case DECOMMISSION_GET: // are all the node decommissioned?
+          ret = namesystem.checkDecommissioned(nodes);
+          break;
+        }
+        return ret;
+    }
+
     
     ////////////////////////////////////////////////////////////////
     // DatanodeProtocol
@@ -513,6 +534,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         if (blocks != null) {
             return new BlockCommand(blocks);
         }
+        //
+        // See if the decommissioned node has finished moving all
+        // its datablocks to another replica. This is a loose
+        // heuristic to determine when a decommission is really over.
+        // We can probbaly do it in a seperate thread rather than making
+        // the heartbeat thread do this.
+        //
+        namesystem.checkDecommissionState(nodeReg);
         return null;
     }
 

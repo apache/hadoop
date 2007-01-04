@@ -82,9 +82,15 @@
       percentUsed = FsShell.limitDecimal(((1.0 * u)/c)*100, 2);
     else
       percentUsed = "100";
+
+    String adminState = (d.isDecommissioned() ? "Decommissioned" :
+                         (d.isDecommissionInProgress() ? "Decommission In Progress":
+                          "In Service"));
     
     out.print("<td class=\"lastcontact\"> " +
               ((currentTime - d.getLastUpdate())/1000) +
+	      "<td class=\"adminstate\">" +
+              adminState +
 	      "<td class=\"size\">" +
               FsShell.limitDecimal(c*1.0/diskBytes, 2) +
 	      "<td class=\"pcused\">" + percentUsed +
@@ -167,6 +173,7 @@
 	    out.print( "<tr class=\"headerRow\"> <th " +
                        NodeHeaderStr("name") + "> Node <th " +
                        NodeHeaderStr("lastcontact") + "> Last Contact <th " +
+                       NodeHeaderStr("adminstate") + "> Admin State <th " +
                        NodeHeaderStr("size") + "> Size (" + diskByteStr +
                        ") <th " + NodeHeaderStr("pcused") +
                        "> Used (%) <th " + NodeHeaderStr("blocks") +

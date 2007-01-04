@@ -41,7 +41,7 @@ div#dfsnodetable th.header:hover, th.headerASC:hover, th.headerDSC:hover,
 	cursor : pointer;
 }
 
-div#dfsnodetable td.blocks, td.size, td.pcused, td.lastcontact {
+div#dfsnodetable td.blocks, td.size, td.pcused, td.adminstate, td.lastcontact {
 	text-align : right;
 }
 

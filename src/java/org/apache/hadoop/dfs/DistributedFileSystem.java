@@ -281,7 +281,7 @@ public class DistributedFileSystem extends FileSystem {
         return used;
     }
 
-    /** Return statistics for each datanode.*/
+    /** Return statistics for each datanode. */
     public DatanodeInfo[] getDataNodeStats() throws IOException {
       return dfs.datanodeReport();
     }
@@ -294,5 +294,14 @@ public class DistributedFileSystem extends FileSystem {
     public boolean setSafeMode( FSConstants.SafeModeAction action ) 
     throws IOException {
       return dfs.setSafeMode( action );
+    }
+
+    /**
+     * Set, clear decommission of a set of datanodes.
+     */
+    public boolean decommission(FSConstants.DecommissionAction action,
+                                String[] nodes)
+    throws IOException {
+      return dfs.decommission(action, nodes);
     }
 }
