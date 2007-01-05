@@ -2196,8 +2196,6 @@ class FSNamesystem implements FSConstants {
             DatanodeDescriptor targets[] = 
                       (DatanodeDescriptor[]) replicateTargetSets.get(i);
             int numCurrentReplica = numCurrentReplicas.get(i).intValue();
-            Collection<DatanodeDescriptor> containingNodes = blocksMap.get(block);
-
             if (numCurrentReplica + targets.length >= 
                     dir.getFileByBlock( block).getReplication() ) {
               neededReplications.remove(block);
