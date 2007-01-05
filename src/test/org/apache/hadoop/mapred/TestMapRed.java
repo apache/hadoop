@@ -272,7 +272,7 @@ public class TestMapRed extends TestCase {
                                   boolean compressReduceOutput,
                                   boolean includeCombine
                                   ) throws Exception {
-      JobConf conf = new JobConf();
+      JobConf conf = new JobConf(TestMapRed.class);
       Path testdir = new Path("build/test/test.mapred.compress");
       Path inDir = new Path(testdir, "in");
       Path outDir = new Path(testdir, "out");
@@ -341,7 +341,7 @@ public class TestMapRed extends TestCase {
         //
         // Generate distribution of ints.  This is the answer key.
         //
-        JobConf conf = new JobConf();
+        JobConf conf = new JobConf(TestMapRed.class);
         int countsToGo = counts;
         int dist[] = new int[range];
         for (int i = 0; i < range; i++) {
@@ -402,7 +402,7 @@ public class TestMapRed extends TestCase {
         fs.delete(randomOuts);
 
 
-        JobConf genJob = new JobConf(conf);
+        JobConf genJob = new JobConf(conf,TestMapRed.class);
         genJob.setInputPath(randomIns);
         genJob.setInputFormat(SequenceFileInputFormat.class);
         genJob.setMapperClass(RandomGenMapper.class);
@@ -447,7 +447,7 @@ public class TestMapRed extends TestCase {
         int intermediateReduces = 10;
         Path intermediateOuts = new Path(testdir, "intermediateouts");
         fs.delete(intermediateOuts);
-        JobConf checkJob = new JobConf(conf);
+        JobConf checkJob = new JobConf(conf,TestMapRed.class);
         checkJob.setInputPath(randomOuts);
         checkJob.setInputFormat(TextInputFormat.class);
         checkJob.setMapperClass(RandomCheckMapper.class);
@@ -470,7 +470,7 @@ public class TestMapRed extends TestCase {
         //
         Path finalOuts = new Path(testdir, "finalouts");        
         fs.delete(finalOuts);
-        JobConf mergeJob = new JobConf(conf);
+        JobConf mergeJob = new JobConf(conf,TestMapRed.class);
         mergeJob.setInputPath(intermediateOuts);
         mergeJob.setInputFormat(SequenceFileInputFormat.class);
         mergeJob.setMapperClass(MergeMapper.class);

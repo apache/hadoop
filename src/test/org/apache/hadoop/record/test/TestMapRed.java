@@ -295,7 +295,7 @@ public class TestMapRed extends TestCase {
         fs.delete(randomOuts);
 
 
-        JobConf genJob = new JobConf(conf);
+        JobConf genJob = new JobConf(conf,TestMapRed.class);
         genJob.setInputPath(randomIns);
         genJob.setInputKeyClass(RecInt.class);
         genJob.setInputValueClass(RecInt.class);
@@ -342,7 +342,7 @@ public class TestMapRed extends TestCase {
         int intermediateReduces = 10;
         Path intermediateOuts = new Path(testdir, "intermediateouts");
         fs.delete(intermediateOuts);
-        JobConf checkJob = new JobConf(conf);
+        JobConf checkJob = new JobConf(conf,TestMapRed.class);
         checkJob.setInputPath(randomOuts);
         checkJob.setInputKeyClass(RecInt.class);
         checkJob.setInputValueClass(RecString.class);
@@ -367,7 +367,7 @@ public class TestMapRed extends TestCase {
         //
         Path finalOuts = new Path(testdir, "finalouts");        
         fs.delete(finalOuts);
-        JobConf mergeJob = new JobConf(conf);
+        JobConf mergeJob = new JobConf(conf,TestMapRed.class);
         mergeJob.setInputPath(intermediateOuts);
         mergeJob.setInputKeyClass(RecInt.class);
         mergeJob.setInputValueClass(RecString.class);

@@ -182,7 +182,7 @@ public class TestFileSystem extends TestCase {
     fs.delete(DATA_DIR);
     fs.delete(WRITE_DIR);
     
-    JobConf job = new JobConf(conf);
+    JobConf job = new JobConf(conf, TestFileSystem.class);
     job.setBoolean("fs.test.fastCheck", fastCheck);
 
     job.setInputPath(CONTROL_DIR);
@@ -277,7 +277,7 @@ public class TestFileSystem extends TestCase {
 
     fs.delete(READ_DIR);
 
-    JobConf job = new JobConf(conf);
+    JobConf job = new JobConf(conf, TestFileSystem.class);
     job.setBoolean("fs.test.fastCheck", fastCheck);
 
 
@@ -373,7 +373,7 @@ public class TestFileSystem extends TestCase {
 
     fs.delete(READ_DIR);
 
-    JobConf job = new JobConf(conf);
+    JobConf job = new JobConf(conf, TestFileSystem.class);
     job.setBoolean("fs.test.fastCheck", fastCheck);
 
     job.setInputPath(CONTROL_DIR);

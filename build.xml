@@ -262,7 +262,7 @@
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
-    <jar jarfile="${build.dir}/${final.name}.jar"
+    <jar jarfile="${build.dir}/${final.name}-core.jar"
          basedir="${build.classes}">
       <manifest>
         <section name="org/apache/hadoop">
@@ -488,7 +488,7 @@
       <fileset dir="${build.webapps}"/>
     </copy>
 
-    <copy file="${build.dir}/${final.name}.jar" todir="${dist.dir}"/>
+    <copy file="${build.dir}/${final.name}-core.jar" todir="${dist.dir}"/>
 
     <copy file="${build.dir}/${final.name}-examples.jar" todir="${dist.dir}"/>
     

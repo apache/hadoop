@@ -90,11 +90,11 @@ fi
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
-# for releases, add hadoop jars & webapps to CLASSPATH
+# for releases, add core hadoop jar & webapps to CLASSPATH
 if [ -d "$HADOOP_HOME/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME
 fi
-for f in $HADOOP_HOME/hadoop-*.jar; do
+for f in $HADOOP_HOME/hadoop-*-core.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 

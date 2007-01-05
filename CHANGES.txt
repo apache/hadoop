@@ -195,6 +195,11 @@ Trunk (unreleased changes)
 55. HADOOP-470.  In HDFS web ui, list the datanodes containing each
     copy of a block.  (Hairong Kuang via cutting)
 
+56. HADOOP-700.  Change bin/hadoop to only include core jar file on
+    classpath, not example, test, etc.  Also rename core jar to
+    hadoop-${version}-core.jar so that it can be more easily
+    identified.  (Nigel Daley via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
