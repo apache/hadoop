@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Release 0.10.0 - 2007-01-05
 
  1. HADOOP-763. Change DFS namenode benchmark to not use MapReduce.
     (Nigel Daley via cutting)
