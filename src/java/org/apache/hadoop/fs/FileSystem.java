@@ -652,8 +652,7 @@ public abstract class FileSystem extends Configured {
         throws IOException {
       Path [] parents = new Path[1];
       int level = 0;
-      
-      String filename = filePattern.toString();
+      String filename = filePattern.toUri().getPath();
       if("".equals(filename) || Path.SEPARATOR.equals(filename)) {
         parents[0] = filePattern;
         return parents;

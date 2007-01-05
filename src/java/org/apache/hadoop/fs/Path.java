@@ -32,6 +32,7 @@ public class Path implements Comparable {
 
   /** The directory separator, a slash. */
   public static final String SEPARATOR = "/";
+  public static final char SEPARATOR_CHAR = '/';
   
   static final boolean WINDOWS
     = System.getProperty("os.name").startsWith("Windows");

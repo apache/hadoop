@@ -21,19 +21,12 @@ package org.apache.hadoop.streaming;
 import java.io.*;
 import java.lang.reflect.*;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.FSDataInputStream;
-
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.hadoop.mapred.*;
 
@@ -47,10 +40,6 @@ public class StreamInputFormat extends InputFormatBase {
   // JobTracker's JobInProgress will instantiate with clazz.newInstance() (and a custom ClassLoader)
 
   protected static final Log LOG = LogFactory.getLog(StreamInputFormat.class.getName());
-
-  /** This implementation always returns true. */
-  public void validateInput(JobConf job) throws IOException {
-  }
 
   static boolean isGzippedInput(JobConf job) {
     String val = job.get(StreamBaseRecordReader.CONF_NS + "compression");
@@ -77,55 +66,6 @@ public class StreamInputFormat extends InputFormatBase {
       splits.add(new FileSplit(file, 0, splitSize, job));
     }
     return (FileSplit[]) splits.toArray(new FileSplit[splits.size()]);
-  }
-
-  protected Path[] listPaths(JobConf job) throws IOException {
-    Path[] globs = job.getInputPaths();
-    ArrayList list = new ArrayList();
-    int dsup = globs.length;
-    for (int d = 0; d < dsup; d++) {
-      String leafName = globs[d].getName();
-      LOG.info("StreamInputFormat: globs[" + d + "] leafName = " + leafName);
-      Path[] paths;
-      Path dir;
-      FileSystem fs = globs[d].getFileSystem(job);
-      PathFilter filter = new GlobFilter(fs, leafName);
-      dir = new Path(globs[d].getParent().toString());
-      if (dir == null) dir = new Path(".");
-      paths = fs.listPaths(dir, filter);
-      list.addAll(Arrays.asList(paths));
-    }
-    return (Path[]) list.toArray(new Path[] {});
-  }
-
-  class GlobFilter implements PathFilter {
-
-    public GlobFilter(FileSystem fs, String glob) {
-      fs_ = fs;
-      pat_ = Pattern.compile(globToRegexp(glob));
-    }
-
-    String globToRegexp(String glob) {
-      String re = glob;
-      re = re.replaceAll("\\.", "\\\\.");
-      re = re.replaceAll("\\+", "\\\\+");
-      re = re.replaceAll("\\*", ".*");
-      re = re.replaceAll("\\?", ".");
-      LOG.info("globToRegexp: |" + glob + "|  ->  |" + re + "|");
-      return re;
-    }
-
-    public boolean accept(Path pathname) {
-      boolean acc = !fs_.isChecksumFile(pathname);
-      if (acc) {
-        acc = pat_.matcher(pathname.getName()).matches();
-      }
-      LOG.info("matches " + pat_ + ", " + pathname + " = " + acc);
-      return acc;
-    }
-
-    Pattern pat_;
-    FileSystem fs_;
   }
 
   public RecordReader getRecordReader(final InputSplit genericSplit, 

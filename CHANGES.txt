@@ -200,6 +200,10 @@ Trunk (unreleased changes)
     hadoop-${version}-core.jar so that it can be more easily
     identified.  (Nigel Daley via cutting)
 
+57. HADOOP-619.  Extend InputFormatBase to accept individual files and
+    glob patterns as MapReduce inputs, not just directories.  Also
+    change contrib/streaming to use this.  (Sanjay Dahia via cutting)
+
 
 Release 0.9.2 - 2006-12-15
 
