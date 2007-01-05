@@ -120,31 +120,34 @@
     out.print("<a name=\"blockDetails\"></a>");
     out.print("<B>Total number of blocks: "+blocks.length+"</B><br>");
     //generate a table and dump the info
+    out.println("\n<table>");
     for (int i = 0; i < blocks.length; i++) {
+      out.print("<tr>");
       blockId = blocks[i].getBlock().getBlockId();
       blockSize = blocks[i].getBlock().getNumBytes();
       String blk = "blk_" + Long.toString(blockId);
+      out.print("<td>"+blk+":</td>");
       DatanodeInfo[] locs = blocks[i].getLocations();
-      int r = jspHelper.rand.nextInt(locs.length);
-      String datanodeAddr = locs[r].getName();
-      datanodePort = Integer.parseInt(datanodeAddr.substring(
+      for(int j=0; j<locs.length; j++) {
+        String datanodeAddr = locs[j].getName();
+        datanodePort = Integer.parseInt(datanodeAddr.substring(
                                         datanodeAddr.indexOf(':') + 1, 
                                     datanodeAddr.length())); 
-      fqdn = InetAddress.getByName(locs[r].getHost()).getCanonicalHostName();
-      String blockUrl = "http://"+ fqdn + ":" +
-                        locs[r].getInfoPort() +
+        fqdn = InetAddress.getByName(locs[j].getHost()).getCanonicalHostName();
+        String blockUrl = "http://"+ fqdn + ":" +
+                        locs[j].getInfoPort() +
                         "/browseBlock.jsp?blockId=" + Long.toString(blockId) +
                         "&blockSize=" + blockSize +
                "&filename=" + URLEncoder.encode(filename, "UTF-8")+ 
                         "&datanodePort=" + datanodePort + 
                         "&namenodeInfoPort=" + namenodeInfoPort +
                         "&chunkSizeToView=" + chunkSizeToView;
-      out.print("<a href=\"" + blockUrl + "\">" + "blk_" + blockId + 
-                        "</a>");
-      if (i < blocks.length - 1)
-        out.print("&nbsp;&nbsp;&nbsp;&nbsp;");
-      if (i % 3 == 0) out.print("<br>");
+        out.print("<td>&nbsp</td>" 
+          + "<td><a href=\"" + blockUrl + "\">" + datanodeAddr + "</a></td>");
+      }
+      out.println("</tr>");
     }
+    out.println("</table>");
     out.print("<hr>");
     String namenodeHost = jspHelper.nameNodeAddr.getHostName();
     out.print("<br><a href=\"http://" + 
