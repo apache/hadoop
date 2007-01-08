@@ -17,6 +17,9 @@ Trunk (unreleased changes)
  5. HADOOP-864.  Fix 'bin/hadoop -jar' to operate correctly when
     hadoop.tmp.dir does not yet exist.  (omalley via cutting)
 
+ 6. HADOOP-866.  Fix 'dfs -get' command to remove existing crc files,
+    if any.  (Milind Bhandarkar via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 

@@ -98,7 +98,14 @@ public class FileUtil {
         copyContent(in, out, conf);
       } finally {
         in.close();
-      } 
+      }
+      // if crc copying is disabled, remove the existing crc file if any
+      if (!copyCrc) {
+        Path crcFile = dstFS.getChecksumFile(dst);
+        if (dstFS.exists(crcFile)) {
+          dstFS.deleteRaw(crcFile);
+        }
+      }
     } else {
       throw new IOException(src.toString() + ": No such file or directory");
     }
