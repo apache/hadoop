@@ -83,12 +83,12 @@ public class S3FileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(path);
     INode inode = store.getINode(absolutePath);
     if (inode == null) {
-      store.storeINode(path, INode.DIRECTORY_INODE);
+      store.storeINode(absolutePath, INode.DIRECTORY_INODE);
     } else if (inode.isFile()) {
       throw new IOException(String.format(
-          "Can't make directory for path %s since it is a file.", path));
+          "Can't make directory for path %s since it is a file.", absolutePath));
     }
-    Path parent = path.getParent();
+    Path parent = absolutePath.getParent();
     return (parent == null || mkdirs(parent));
   }
 
@@ -123,13 +123,14 @@ public class S3FileSystem extends FileSystem {
 
   @Override
   public Path[] listPathsRaw(Path path) throws IOException {
-    INode inode = store.getINode(makeAbsolute(path));
+    Path absolutePath = makeAbsolute(path);
+    INode inode = store.getINode(absolutePath);
     if (inode == null) {
       return null;
     } else if (inode.isFile()) {
-      return new Path[] { path };
+      return new Path[] { absolutePath };
     } else { // directory
-      Set<Path> paths = store.listSubPaths(path);
+      Set<Path> paths = store.listSubPaths(absolutePath);
       return paths.toArray(new Path[0]);
     }
   }
@@ -146,10 +147,6 @@ public class S3FileSystem extends FileSystem {
       short replication, long blockSize, Progressable progress)
       throws IOException {
 
-    if (!isDirectory(file.getParent())) {
-      throw new IOException("Cannot create file " + file
-          + " since parent directory does not exist.");
-    }
     INode inode = store.getINode(makeAbsolute(file));
     if (inode != null) {
       if (overwrite) {
@@ -157,6 +154,13 @@ public class S3FileSystem extends FileSystem {
       } else {
         throw new IOException("File already exists: " + file);
       }
+    } else {
+      Path parent = file.getParent();
+      if (parent != null) {
+        if (!mkdirs(parent)) {
+          throw new IOException("Mkdirs failed to create " + parent.toString());
+        }
+      }      
     }
     return new S3OutputStream(getConf(), store, makeAbsolute(file),
         blockSize, progress);

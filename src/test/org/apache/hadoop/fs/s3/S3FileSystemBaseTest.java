@@ -189,15 +189,17 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     
   }
 
-  public void testWriteInNonExistentDirectory() {
+  public void testWriteInNonExistentDirectory() throws IOException {
     Path path = new Path("/test/hadoop/file");    
-    try {
-      s3FileSystem.createRaw(path, false, (short) 1, 128);
-      fail("Should throw IOException.");
-    } catch (IOException e) {
-      // Expected
-    }
+    FSOutputStream out = s3FileSystem.createRaw(path, false, (short) 1, BLOCK_SIZE);
+    out.write(data, 0, BLOCK_SIZE);
+    out.close();
+    
+    assertTrue("Exists", s3FileSystem.exists(path));
+    assertEquals("Length", BLOCK_SIZE, s3FileSystem.getLength(path));
+    assertTrue("Parent exists", s3FileSystem.exists(path.getParent()));
   }
+
 
   public void testRename() throws Exception {
     int len = BLOCK_SIZE;
