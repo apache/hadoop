@@ -221,36 +221,45 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 //
                 // Loop through all expired items in the queue
                 //
-                synchronized (taskTrackers) {
+                // Need to lock the JobTracker here since we are
+                // manipulating it's data-structures via
+                // ExpireTrackers.run -> JobTracker.lostTaskTracker ->
+                // JobInProgress.failedTask -> JobTracker.markCompleteTaskAttempt
+                // Also need to lock JobTracker before locking 'taskTracker' &
+                // 'trackerExpiryQueue' to prevent deadlock:
+                // @see {@link JobTracker.processHeartbeat(TaskTrackerStatus, boolean)} 
+                synchronized (JobTracker.this) {
+                  synchronized (taskTrackers) {
                     synchronized (trackerExpiryQueue) {
-                        long now = System.currentTimeMillis();
-                        TaskTrackerStatus leastRecent = null;
-                        while ((trackerExpiryQueue.size() > 0) &&
-                               ((leastRecent = (TaskTrackerStatus) trackerExpiryQueue.first()) != null) &&
-                               (now - leastRecent.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL)) {
-
-                            // Remove profile from head of queue
-                            trackerExpiryQueue.remove(leastRecent);
-                            String trackerName = leastRecent.getTrackerName();
-
-                            // Figure out if last-seen time should be updated, or if tracker is dead
-                            TaskTrackerStatus newProfile = (TaskTrackerStatus) taskTrackers.get(leastRecent.getTrackerName());
-                            // Items might leave the taskTracker set through other means; the
-                            // status stored in 'taskTrackers' might be null, which means the
-                            // tracker has already been destroyed.
-                            if (newProfile != null) {
-                                if (now - newProfile.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL) {
-                                    // Remove completely
-                                    updateTaskTrackerStatus(trackerName, null);
-                                    lostTaskTracker(leastRecent.getTrackerName(),
-                                                    leastRecent.getHost());
-                                } else {
-                                    // Update time by inserting latest profile
-                                    trackerExpiryQueue.add(newProfile);
-                                }
-                            }
+                      long now = System.currentTimeMillis();
+                      TaskTrackerStatus leastRecent = null;
+                      while ((trackerExpiryQueue.size() > 0) &&
+                              ((leastRecent = (TaskTrackerStatus) trackerExpiryQueue.first()) != null) &&
+                              (now - leastRecent.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL)) {
+                        
+                        // Remove profile from head of queue
+                        trackerExpiryQueue.remove(leastRecent);
+                        String trackerName = leastRecent.getTrackerName();
+                        
+                        // Figure out if last-seen time should be updated, or if tracker is dead
+                        TaskTrackerStatus newProfile = (TaskTrackerStatus) taskTrackers.get(leastRecent.getTrackerName());
+                        // Items might leave the taskTracker set through other means; the
+                        // status stored in 'taskTrackers' might be null, which means the
+                        // tracker has already been destroyed.
+                        if (newProfile != null) {
+                          if (now - newProfile.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL) {
+                            // Remove completely
+                            updateTaskTrackerStatus(trackerName, null);
+                            lostTaskTracker(leastRecent.getTrackerName(),
+                                    leastRecent.getHost());
+                          } else {
+                            // Update time by inserting latest profile
+                            trackerExpiryQueue.add(newProfile);
+                          }
                         }
+                      }
                     }
+                  }
                 }
               } catch (Exception t) {
                 LOG.error("Tracker Expiry Thread got exception: " +

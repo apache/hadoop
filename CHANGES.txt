@@ -11,6 +11,9 @@ Trunk (unreleased changes)
 
  3. HADOOP-815.  Fix memory leaks in JobTracker. (Arun C Murthy via cutting)
 
+ 4. HADOOP-600.  Fix a race condition in JobTracker.
+    (Arun C Murthy via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 
