@@ -6,6 +6,9 @@ Trunk (unreleased changes)
  1. HADOOP-857.  Fix S3 FileSystem implementation to permit its use
     for MapReduce input and output.  (Tom White via cutting)
 
+ 2. HADOOP-863.  Reduce logging verbosity introduced by HADOOP-813.
+    (Devaraj Das via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 

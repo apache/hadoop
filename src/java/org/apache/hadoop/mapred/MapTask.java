@@ -202,7 +202,7 @@ class MapTask extends Task {
     //spawn a thread to give merge progress heartbeats
     Thread sortProgress = new Thread() {
       public void run() {
-        LOG.info("Started thread: " + getName());
+        LOG.debug("Started thread: " + getName());
         while (true) {
           try {
             reportProgress(umbilical);
