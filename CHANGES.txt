@@ -9,6 +9,8 @@ Trunk (unreleased changes)
  2. HADOOP-863.  Reduce logging verbosity introduced by HADOOP-813.
     (Devaraj Das via cutting)
 
+ 3. HADOOP-815.  Fix memory leaks in JobTracker. (Arun C Murthy via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 

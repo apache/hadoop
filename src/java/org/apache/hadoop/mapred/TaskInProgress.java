@@ -57,7 +57,6 @@ class TaskInProgress {
     private int partition;
     private JobTracker jobtracker;
     private String id;
-    private String totalTaskIds[];
     private JobInProgress job;
 
     // Status of the TIP
@@ -70,7 +69,13 @@ class TaskInProgress {
     private int completes = 0;
     private boolean failed = false;
     private boolean killed = false;
-    private TreeSet usableTaskIds = new TreeSet();
+
+    // The 'unique' prefix for taskids of this tip
+    String taskIdPrefix;
+    
+    // The 'next' usable taskid of this tip
+    int nextTaskId = 0;
+    
     // Map from task Id -> TaskTracker Id, contains tasks that are
     // currently runnings
     private TreeMap<String, String> activeTasks = new TreeMap();
@@ -139,13 +144,8 @@ class TaskInProgress {
     void init(String jobUniqueString) {
         this.startTime = System.currentTimeMillis();
         this.runSpeculative = conf.getSpeculativeExecution();
-        String uniqueString = makeUniqueString(jobUniqueString);
-        this.id = "tip_" + uniqueString;
-        this.totalTaskIds = new String[MAX_TASK_EXECS + MAX_TASK_FAILURES];
-        for (int i = 0; i < totalTaskIds.length; i++) {
-          totalTaskIds[i] = "task_" + uniqueString + "_" + i;
-          usableTaskIds.add(totalTaskIds[i]);
-        }
+        this.taskIdPrefix = makeUniqueString(jobUniqueString);
+        this.id = "tip_" + this.taskIdPrefix;
     }
 
     ////////////////////////////////////
@@ -180,11 +180,19 @@ class TaskInProgress {
     }
     
     /**
+     * Is this tip complete?
+     * 
+     * @return <code>true</code> if the tip is complete, else <code>false</code>
      */
     public boolean isComplete() {
         return (completes > 0);
     }
+
     /**
+     * Is the given taskid in this tip complete?
+     * 
+     * @param taskid taskid of attempt to check for completion
+     * @return <code>true</code> if taskid is complete, else <code>false</code>
      */
     public boolean isComplete(String taskid) {
         TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
@@ -194,7 +202,11 @@ class TaskInProgress {
         return ((completes > 0) && 
                 (status.getRunState() == TaskStatus.State.SUCCEEDED));
     }
+
     /**
+     * Is the tip a failure?
+     * 
+     * @return <code>true</code> if tip has failed, else <code>false</code>
      */
     public boolean isFailed() {
         return failed;
@@ -293,6 +305,17 @@ class TaskInProgress {
           TaskStatus.State oldState = oldStatus.getRunState();
           TaskStatus.State newState = status.getRunState();
           
+          // We should never recieve a duplicate success/failure/killed
+          // status update for the same taskid! This is a safety check, 
+          // and is addressed better at the TaskTracker to ensure this.
+          // @see {@link TaskTracker.transmitHeartbeat()}
+          if ((newState != TaskStatus.State.RUNNING) && 
+                  (oldState == newState)) {
+              LOG.warn("Recieved duplicate status update of '" + newState + 
+                      "' for '" + taskid + "' of TIP '" + getTIPId() + "'");
+              return false;
+          }
+
           // The task is not allowed to move from completed back to running.
           // We have seen out of order status messagesmoving tasks from complete
           // to running. This is a spot fix, but it should be addressed more
@@ -346,14 +369,29 @@ class TaskInProgress {
 
     /**
      * Indicate that one of the taskids in this TaskInProgress
-     * has successfully completed!
+     * has successfully completed. 
+     * 
+     * However this may not be the first subtask in this 
+     * TaskInProgress to be completed and hence we might not want to 
+     * manipulate the TaskInProgress to note that it is 'complete' just-as-yet.
      */
-    public void completed(String taskid) {
+    void completedTask(String taskid) {
         LOG.info("Task '" + taskid + "' has completed.");
         TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
         status.setRunState(TaskStatus.State.SUCCEEDED);
         activeTasks.remove(taskid);
-
+    }
+    
+    /**
+     * Indicate that one of the taskids in this TaskInProgress
+     * has successfully completed!
+     */
+    public void completed(String taskid) {
+        //
+        // Record that this taskid is complete
+        //
+        completedTask(taskid);
+        
         //
         // Now that the TIP is complete, the other speculative 
         // subtasks will be closed when the owning tasktracker 
@@ -470,8 +508,17 @@ class TaskInProgress {
           execStartTime = System.currentTimeMillis();
         }
 
-        String taskid = (String) usableTaskIds.first();
-        usableTaskIds.remove(taskid);
+        // Create the 'taskid'
+        String taskid = null;
+        if (nextTaskId < (MAX_TASK_EXECS + MAX_TASK_FAILURES)) {
+          taskid = new String("task_" + taskIdPrefix + "_" + nextTaskId);
+          ++nextTaskId;
+        } else {
+          LOG.warn("Exceeded limit of " + (MAX_TASK_EXECS + MAX_TASK_FAILURES) + 
+                  " attempts for the tip '" + getTIPId() + "'");
+          return null;
+        }
+        
         String jobId = job.getProfile().getJobId();
 
         if (isMapTask()) {
