@@ -20,6 +20,9 @@ Trunk (unreleased changes)
  6. HADOOP-866.  Fix 'dfs -get' command to remove existing crc files,
     if any.  (Milind Bhandarkar via cutting)
 
+ 7. HADOOP-871.  Fix a bug in bin/hadoop setting JAVA_LIBRARY_PATH.
+    (Arun C Murthy via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 
