@@ -199,7 +199,12 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     assertEquals("Length", BLOCK_SIZE, s3FileSystem.getLength(path));
     assertTrue("Parent exists", s3FileSystem.exists(path.getParent()));
   }
-
+  
+  public void testDeleteNonExistentFile() throws IOException {
+    Path path = new Path("/test/hadoop/file");    
+    assertFalse("Doesn't exist", s3FileSystem.exists(path));
+    assertFalse("No deletion", s3FileSystem.delete(path));
+  }
 
   public void testRename() throws Exception {
     int len = BLOCK_SIZE;

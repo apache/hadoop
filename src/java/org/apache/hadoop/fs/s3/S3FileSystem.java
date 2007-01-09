@@ -192,7 +192,7 @@ public class S3FileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(path);
     INode inode = store.getINode(absolutePath);
     if (inode == null) {
-      throw new IOException("No such file or directory.");
+      return false;
     }
     store.deleteINode(absolutePath);
     if (inode.isFile()) {

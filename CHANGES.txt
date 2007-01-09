@@ -26,6 +26,9 @@ Trunk (unreleased changes)
  8. HADOOP-868.  Decrease the number of open files during map,
     respecting io.sort.factor.  (Devaraj Das via cutting)
 
+ 9. HADOOP-865.  Fix S3 FileSystem so that partially created files can
+    be deleted.  (Tom White via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 
