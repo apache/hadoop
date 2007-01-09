@@ -23,6 +23,9 @@ Trunk (unreleased changes)
  7. HADOOP-871.  Fix a bug in bin/hadoop setting JAVA_LIBRARY_PATH.
     (Arun C Murthy via cutting)
 
+ 8. HADOOP-868.  Decrease the number of open files during map,
+    respecting io.sort.factor.  (Devaraj Das via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 
