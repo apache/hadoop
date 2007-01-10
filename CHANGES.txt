@@ -32,6 +32,10 @@ Trunk (unreleased changes)
 10. HADOOP-873.	 Pass java.library.path correctly to child processes.
     (omalley via cutting)
 
+11. HADOOP-851.  Add support for the LZO codec.  This is much faster
+    than the default, zlib-based compression, but it is only available
+    when the native library is built.  (Arun C Murthy via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 

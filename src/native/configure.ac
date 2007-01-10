@@ -64,6 +64,9 @@ AC_SUBST([JNI_LDFLAGS])
 dnl Check for '-lz'
 AC_CHECK_LIB([z], [deflate])
 
+dnl Check for '-llzo2'
+AC_CHECK_LIB([lzo2], [lzo_init])
+
 # Checks for header files.
 dnl Check for Ansi C headers
 AC_HEADER_STDC
@@ -89,6 +92,9 @@ AC_SUBST([JNI_CPPFLAGS])
 dnl Check for zlib headers
 AC_CHECK_HEADERS([zlib.h zconf.h], AC_COMPUTE_NEEDED_DSO(z,HADOOP_ZLIB_LIBRARY), AC_MSG_ERROR(Zlib headers were not found... native-hadoop library needs zlib to build. Please install the requisite zlib development package.))
 
+dnl Check for lzo headers
+AC_CHECK_HEADERS([lzo/lzo1.h lzo/lzo1a.h lzo/lzo1b.h lzo/lzo1c.h lzo/lzo1f.h lzo/lzo1x.h lzo/lzo1y.h lzo/lzo1z.h lzo/lzo2a.h lzo/lzo_asm.h], AC_COMPUTE_NEEDED_DSO(lzo2,HADOOP_LZO_LIBRARY), AC_MSG_ERROR(lzo headers were not found... native-hadoop library needs lzo to build. Please install the requisite lzo development package.))
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
@@ -97,6 +103,7 @@ AC_CHECK_FUNCS([memset])
 
 AC_CONFIG_FILES([Makefile
                  src/org/apache/hadoop/io/compress/zlib/Makefile
+                 src/org/apache/hadoop/io/compress/lzo/Makefile
                  lib/Makefile])
 AC_OUTPUT
 

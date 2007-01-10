@@ -75,11 +75,11 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_initIDs(
 
 	// Locate the requisite symbols from libz.so
 	dlerror();                                 // Clear any existing error
-	LOAD_ZLIB_SYMBOL(dlsym_deflateInit2_, env, libz, "deflateInit2_");
-	LOAD_ZLIB_SYMBOL(dlsym_deflate, env, libz, "deflate");
-	LOAD_ZLIB_SYMBOL(dlsym_deflateSetDictionary, env, libz, "deflateSetDictionary");
-	LOAD_ZLIB_SYMBOL(dlsym_deflateReset, env, libz, "deflateReset");
-	LOAD_ZLIB_SYMBOL(dlsym_deflateEnd, env, libz, "deflateEnd");
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflateInit2_, env, libz, "deflateInit2_");
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflate, env, libz, "deflate");
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflateSetDictionary, env, libz, "deflateSetDictionary");
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflateReset, env, libz, "deflateReset");
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflateEnd, env, libz, "deflateEnd");
 
 	// Initialize the requisite fieldIds
     ZlibCompressor_stream = (*env)->GetFieldID(env, class, "stream", "J");

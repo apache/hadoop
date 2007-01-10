@@ -17,29 +17,33 @@
 #
 
 #
-# Top-level makefile template for native hadoop code
+# Makefile template for building native 'lzo' for hadoop.
 #
 
 #
 # Notes: 
-# 1. This makefile is designed to do the actual builds in $(HADOOP_HOME)/build/native/${os.name}-${os-arch}.
+# 1. This makefile is designed to do the actual builds in $(HADOOP_HOME)/build/native/${os.name}-${os.arch}/$(subdir) .
 # 2. This makefile depends on the following environment variables to function correctly:
 #    * HADOOP_NATIVE_SRCDIR 
 #    * JAVA_HOME
 #    * JVM_DATA_MODEL
-#    * OS_NAME
 #    * OS_ARCH 
-#    All these are setup by build.xml. 
+#    * PLATFORM
+#    All these are setup by build.xml and/or the top-level makefile.
+# 3. The creation of requisite jni headers/stubs are also done by build.xml and they are
+#    assumed to be in $(HADOOP_HOME)/build/native/src/org/apache/hadoop/io/compress/lzo.
 #
 
-# Export $(PLATFORM) to prevent proliferation of sub-shells
-export PLATFORM = $(shell echo $$OS_NAME | tr [A-Z] [a-z])
+# The 'vpath directive' to locate the actual source files 
+vpath %.c $(HADOOP_NATIVE_SRCDIR)/$(subdir)
 
-# List the sub-directories here
-SUBDIRS = src/org/apache/hadoop/io/compress/zlib src/org/apache/hadoop/io/compress/lzo lib
+AM_CPPFLAGS = @JNI_CPPFLAGS@ -I$(HADOOP_NATIVE_SRCDIR)/src
+AM_LDFLAGS = @JNI_LDFLAGS@
+AM_CFLAGS = -g -Wall -fPIC -O2 -m$(JVM_DATA_MODEL)
 
-# The following export is needed to build libhadoop.so in the 'lib' directory
-export SUBDIRS
+noinst_LTLIBRARIES = libnativelzo.la
+libnativelzo_la_SOURCES = LzoCompressor.c LzoDecompressor.c
+libnativelzo_la_LIBADD = -ldl -ljvm
 
 #
 #vim: sw=4: ts=4: noet
