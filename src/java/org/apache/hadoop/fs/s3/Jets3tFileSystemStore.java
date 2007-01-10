@@ -216,7 +216,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
     if (!path.isAbsolute()) {
       throw new IllegalArgumentException("Path must be absolute: " + path);
     }
-    return urlEncode(path.toString());
+    return urlEncode(path.toUri().getPath());
   }
 
   private Path keyToPath(String key) {

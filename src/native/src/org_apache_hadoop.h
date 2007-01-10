@@ -73,6 +73,13 @@ static void *do_dlsym(JNIEnv *env, void *handle, const char *symbol) {
   return func_ptr;
 }
 
+/* A helper macro to dlsym the requisite dynamic symbol and bail-out on error. */
+#define LOAD_DYNAMIC_SYMBOL(func_ptr, env, handle, symbol) \
+  if ((func_ptr = do_dlsym(env, handle, symbol)) == NULL) { \
+    return; \
+  }
+
+
 #endif
 
 //vim: sw=2: ts=2: et

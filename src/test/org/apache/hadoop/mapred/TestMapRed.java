@@ -455,7 +455,7 @@ public class TestMapRed extends TestCase {
         checkJob.setOutputPath(intermediateOuts);
         checkJob.setOutputKeyClass(IntWritable.class);
         checkJob.setOutputValueClass(IntWritable.class);
-        checkJob.setOutputFormat(SequenceFileOutputFormat.class);
+        checkJob.setOutputFormat(MapFileOutputFormat.class);
         checkJob.setReducerClass(RandomCheckReducer.class);
         checkJob.setNumReduceTasks(intermediateReduces);
 

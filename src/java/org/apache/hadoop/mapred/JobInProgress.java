@@ -454,40 +454,52 @@ class JobInProgress {
                                            TaskStatus status,
                                            JobTrackerMetrics metrics) {
         String taskid = status.getTaskId();
+        
+        // Sanity check: is the TIP already complete?
         if (tip.isComplete()) {
           LOG.info("Already complete TIP " + tip.getTIPId() + 
-                   " has completed task " + taskid);
-          return;
-        } else {
-          LOG.info("Task '" + taskid + "' has completed " + tip.getTIPId() + 
-                   " successfully.");          
-
-          String taskTrackerName = status.getTaskTracker();
+               " has completed task " + taskid);
           
-          if(status.getIsMap()){
-            JobHistory.MapAttempt.logStarted(profile.getJobId(), 
-                tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
-                taskTrackerName); 
-            JobHistory.MapAttempt.logFinished(profile.getJobId(), 
-                tip.getTIPId(), status.getTaskId(), status.getFinishTime(), 
-                taskTrackerName); 
-            JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
-                Values.MAP.name(), status.getFinishTime()); 
-          }else{
-              JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
-                  tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
-                  taskTrackerName); 
-              JobHistory.ReduceAttempt.logFinished(profile.getJobId(), 
-                  tip.getTIPId(), status.getTaskId(), status.getShuffleFinishTime(),
-                  status.getSortFinishTime(), status.getFinishTime(), 
-                  taskTrackerName); 
-              JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
-                  Values.REDUCE.name(), status.getFinishTime()); 
+          // Just mark this 'task' as complete
+          tip.completedTask(taskid);
+          
+          // Let the JobTracker cleanup this taskid if the job isn't running
+          if (this.status.getRunState() != JobStatus.RUNNING) {
+            jobtracker.markCompletedTaskAttempt(status.getTaskTracker(), taskid);
           }
+          return;
+        } 
+
+        LOG.info("Task '" + taskid + "' has completed " + tip.getTIPId() + 
+          " successfully.");          
+
+        // Update jobhistory 
+        String taskTrackerName = status.getTaskTracker();
+        if(status.getIsMap()){
+          JobHistory.MapAttempt.logStarted(profile.getJobId(), 
+               tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+               taskTrackerName); 
+          JobHistory.MapAttempt.logFinished(profile.getJobId(), 
+               tip.getTIPId(), status.getTaskId(), status.getFinishTime(), 
+               taskTrackerName); 
+          JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
+               Values.MAP.name(), status.getFinishTime()); 
+        }else{
+          JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
+               tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+               taskTrackerName); 
+          JobHistory.ReduceAttempt.logFinished(profile.getJobId(), 
+               tip.getTIPId(), status.getTaskId(), status.getShuffleFinishTime(),
+               status.getSortFinishTime(), status.getFinishTime(), 
+               taskTrackerName); 
+          JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
+               Values.REDUCE.name(), status.getFinishTime()); 
         }
         
+        // Mark the TIP as complete
         tip.completed(taskid);
-        // updating the running/finished map/reduce counts
+        
+        // Update the running/finished map/reduce counts
         if (tip.isMapTask()){
           runningMapTasks -= 1;
           finishedMapTasks += 1;
@@ -533,6 +545,10 @@ class JobInProgress {
             JobHistory.JobInfo.logFinished(this.status.getJobId(), finishTime, 
                 this.finishedMapTasks, this.finishedReduceTasks, failedMapTasks, failedReduceTasks);
             metrics.completeJob();
+        } else if (this.status.getRunState() != JobStatus.RUNNING) {
+            // The job has been killed/failed, 
+            // JobTracker should cleanup this task
+            jobtracker.markCompletedTaskAttempt(status.getTaskTracker(), taskid);
         }
     }
 
@@ -541,6 +557,7 @@ class JobInProgress {
      */
     public synchronized void kill() {
         if (status.getRunState() != JobStatus.FAILED) {
+            LOG.info("Killing job '" + this.status.getJobId() + "'");
             this.status = new JobStatus(status.getJobId(), 1.0f, 1.0f, JobStatus.FAILED);
             this.finishTime = System.currentTimeMillis();
             this.runningMapTasks = 0;
@@ -575,7 +592,9 @@ class JobInProgress {
     private void failedTask(TaskInProgress tip, String taskid, 
                             TaskStatus status, String trackerName,
                             boolean wasRunning, boolean wasComplete) {
+        // Mark the taskid as a 'failure'
         tip.failedSubTask(taskid, trackerName);
+        
         boolean isRunning = tip.isRunning();
         boolean isComplete = tip.isComplete();
         
@@ -622,6 +641,11 @@ class JobInProgress {
         }
             
         //
+        // Let the JobTracker know that this task has failed
+        //
+        jobtracker.markCompletedTaskAttempt(status.getTaskTracker(), taskid);
+
+        //
         // Check if we need to kill the job because of too many failures
         //
         if (tip.isFailed()) {
@@ -633,9 +657,7 @@ class JobInProgress {
                 System.currentTimeMillis(), this.finishedMapTasks, this.finishedReduceTasks);
             kill();
         }
-
-        jobtracker.removeTaskEntry(taskid);
- }
+    }
 
     /**
      * Fail a task with a given reason, but without a status object.
@@ -669,6 +691,9 @@ class JobInProgress {
      * from the various tables.
      */
     synchronized void garbageCollect() {
+      // Let the JobTracker know that a job is complete
+      jobtracker.finalizeJob(this);
+      
       try {
         // Definitely remove the local-disk copy of the job file
         if (localJobFile != null) {

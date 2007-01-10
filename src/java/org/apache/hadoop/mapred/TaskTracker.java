@@ -74,6 +74,16 @@ public class TaskTracker
     // last heartbeat response recieved
     short heartbeatResponseId = -1;
 
+    /*
+     * This is the last 'status' report sent by this tracker to the JobTracker.
+     * 
+     * If the rpc call succeeds, this 'status' is cleared-out by this tracker;
+     * indicating that a 'fresh' status report be generated; in the event the
+     * rpc calls fails for whatever reason, the previous status report is sent
+     * again.
+     */
+    TaskTrackerStatus status = null;
+    
     StatusHttpServer server = null;
     
     boolean shuttingDown = false;
@@ -249,6 +259,7 @@ public class TaskTracker
         this.mapTotal = 0;
         this.reduceTotal = 0;
         this.acceptNewTasks = true;
+        this.status = null;
         
         this.minSpaceStart = this.fConf.getLong("mapred.local.dir.minspacestart", 0L);
         this.minSpaceKill = this.fConf.getLong("mapred.local.dir.minspacekill", 0L);
@@ -535,20 +546,27 @@ public class TaskTracker
      * @throws IOException
      */
     private HeartbeatResponse transmitHeartBeat() throws IOException {
+      // 
+      // Check if the last heartbeat got through... 
+      // if so then build the heartbeat information for the JobTracker;
+      // else resend the previous status information.
       //
-      // Build the heartbeat information for the JobTracker
-      //
-      List<TaskStatus> taskReports = 
-        new ArrayList<TaskStatus>(runningTasks.size());
-      synchronized (this) {
-        for (TaskInProgress tip: runningTasks.values()) {
-          taskReports.add(tip.createStatus());
+      if (status == null) {
+        List<TaskStatus> taskReports = 
+          new ArrayList<TaskStatus>(runningTasks.size());
+        synchronized (this) {
+          for (TaskInProgress tip: runningTasks.values()) {
+            taskReports.add(tip.createStatus());
+          }
         }
+        status = 
+          new TaskTrackerStatus(taskTrackerName, localHostname, 
+                  httpPort, taskReports, 
+                  failures); 
+      } else {
+        LOG.info("Resending 'status' to '" + jobTrackAddr.getHostName() +
+                "' with reponseId '" + heartbeatResponseId);
       }
-      TaskTrackerStatus status = 
-        new TaskTrackerStatus(taskTrackerName, localHostname, 
-                httpPort, taskReports, 
-                failures); 
       
       //
       // Check if we should ask for a new Task
@@ -569,10 +587,14 @@ public class TaskTracker
       HeartbeatResponse heartbeatResponse = jobClient.heartbeat(status, 
               justStarted, askForNewTask, 
               heartbeatResponseId);
+      
+      //
+      // The heartbeat got through successfully!
+      //
       heartbeatResponseId = heartbeatResponse.getResponseId();
       
       synchronized (this) {
-        for (TaskStatus taskStatus : taskReports) {
+        for (TaskStatus taskStatus : status.getTaskReports()) {
           if (taskStatus.getRunState() != TaskStatus.State.RUNNING) {
             if (taskStatus.getIsMap()) {
               mapTotal--;
@@ -584,6 +606,10 @@ public class TaskTracker
           }
         }
       }
+
+      // Force a rebuild of 'status' on the next iteration
+      status = null;                                
+
       return heartbeatResponse;
     }
 

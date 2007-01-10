@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.compress.LzoCodec;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
 
@@ -41,8 +42,26 @@ public class TestSequenceFile extends TestCase {
   public TestSequenceFile(String name) { super(name); }
 
   /** Unit tests for SequenceFile. */
-  public void testSequenceFile() throws Exception {
+  public void testZlibSequenceFile() throws Exception {
+    LOG.info("Testing SequenceFile with DefaultCodec");
     compressedSeqFileTest(new DefaultCodec());
+    LOG.info("Successfully tested SequenceFile with DefaultCodec");
+  }
+  
+  public void testLzoSequenceFile() throws Exception {
+    if (LzoCodec.isNativeLzoLoaded()) {
+      LOG.info("Testing SequenceFile with LzoCodec");
+      CompressionCodec lzoCodec = null;
+      try {
+        lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(
+                conf.getClassByName(LzoCodec.class.getName()), conf);
+      } catch (ClassNotFoundException cnfe) {
+        throw new IOException("Cannot find LzoCodec!");
+      }
+
+      compressedSeqFileTest(lzoCodec);
+      LOG.info("Successfully tested SequenceFile with LzoCodec");
+    }
   }
   
   public void compressedSeqFileTest(CompressionCodec codec) throws Exception {
@@ -60,8 +79,6 @@ public class TestSequenceFile extends TestCase {
 
     FileSystem fs = new LocalFileSystem(conf);
     try {
-        //LOG.setLevel(Level.FINE);
-
         // SequenceFile.Writer
         writeTest(fs, count, seed, file, CompressionType.NONE, null);
         readTest(fs, count, seed, file);

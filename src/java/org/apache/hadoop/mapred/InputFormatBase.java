@@ -108,9 +108,9 @@ public abstract class InputFormatBase implements InputFormat {
         // while generating splits
         for (Path subPath : fs.listPaths(p, hiddenFileFilter)) {
           FileSystem subFS = subPath.getFileSystem(job); 
-          if (!subFS.isFile(subPath)) {
+          if (!subFS.exists(subPath)) {
             result.add(new IOException(
-                "Input path is not a file : " + subPath)); 
+                "Input path does not exist: " + subPath)); 
           } else {
             totalFiles++; 
           }

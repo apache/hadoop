@@ -55,12 +55,6 @@
 
 #include "org_apache_hadoop.h"
 
-/* A helper macro to dlsym the requisite zlib symbol. */
-#define LOAD_ZLIB_SYMBOL(func_ptr, env, handle, symbol) \
-  if ((func_ptr = do_dlsym(env, handle, symbol)) == NULL) { \
-  	return; \
-  }
-
 /* A helper macro to convert the java 'stream-handle' to a z_stream pointer. */
 #define ZSTREAM(stream) ((z_stream*)((ptrdiff_t)(stream)))
 
