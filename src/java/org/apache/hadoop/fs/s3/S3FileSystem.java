@@ -188,17 +188,27 @@ public class S3FileSystem extends FileSystem {
 
   @Override
   public boolean deleteRaw(Path path) throws IOException {
-    // TODO: Check if path is directory with children
     Path absolutePath = makeAbsolute(path);
     INode inode = store.getINode(absolutePath);
     if (inode == null) {
       return false;
     }
-    store.deleteINode(absolutePath);
     if (inode.isFile()) {
+      store.deleteINode(absolutePath);
       for (Block block : inode.getBlocks()) {
         store.deleteBlock(block);
       }
+    } else {
+      Path[] contents = listPathsRaw(absolutePath);
+      if (contents == null) {
+        return false;
+      }
+      for (Path p : contents) {
+        if (! deleteRaw(p)) {
+          return false;
+        }
+      }
+      store.deleteINode(absolutePath);
     }
     return true;
   }

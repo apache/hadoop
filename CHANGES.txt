@@ -36,6 +36,9 @@ Trunk (unreleased changes)
     than the default, zlib-based compression, but it is only available
     when the native library is built.  (Arun C Murthy via cutting)
 
+12. HADOOP-880.  Fix S3 FileSystem to remove directories.
+    (Tom White via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 

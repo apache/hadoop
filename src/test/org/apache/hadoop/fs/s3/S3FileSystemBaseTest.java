@@ -166,9 +166,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     
     s3FileSystem.mkdirs(path.getParent());
 
-    FSOutputStream out = s3FileSystem.createRaw(path, false, (short) 1, BLOCK_SIZE);
-    out.write(data, 0, BLOCK_SIZE);
-    out.close();
+    createEmptyFile(path);
     
     assertTrue("Exists", s3FileSystem.exists(path));
     assertEquals("Length", BLOCK_SIZE, s3FileSystem.getLength(path));
@@ -180,7 +178,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
       // Expected
     }
     
-    out = s3FileSystem.createRaw(path, true, (short) 1, BLOCK_SIZE);
+    FSOutputStream out = s3FileSystem.createRaw(path, true, (short) 1, BLOCK_SIZE);
     out.write(data, 0, BLOCK_SIZE / 2);
     out.close();
     
@@ -191,19 +189,44 @@ public abstract class S3FileSystemBaseTest extends TestCase {
 
   public void testWriteInNonExistentDirectory() throws IOException {
     Path path = new Path("/test/hadoop/file");    
-    FSOutputStream out = s3FileSystem.createRaw(path, false, (short) 1, BLOCK_SIZE);
-    out.write(data, 0, BLOCK_SIZE);
-    out.close();
+    createEmptyFile(path);
     
     assertTrue("Exists", s3FileSystem.exists(path));
     assertEquals("Length", BLOCK_SIZE, s3FileSystem.getLength(path));
     assertTrue("Parent exists", s3FileSystem.exists(path.getParent()));
   }
-  
+
   public void testDeleteNonExistentFile() throws IOException {
     Path path = new Path("/test/hadoop/file");    
     assertFalse("Doesn't exist", s3FileSystem.exists(path));
     assertFalse("No deletion", s3FileSystem.delete(path));
+  }
+
+  public void testDeleteDirectory() throws IOException {
+    Path subdir = new Path("/test/hadoop");
+    Path dir = subdir.getParent();
+    Path root = dir.getParent();
+    s3FileSystem.mkdirs(subdir);
+    Path file1 = new Path(dir, "file1");
+    Path file2 = new Path(subdir, "file2");
+    
+    createEmptyFile(file1);
+    createEmptyFile(file2);
+    
+    assertTrue("root exists", s3FileSystem.exists(root));
+    assertTrue("dir exists", s3FileSystem.exists(dir));
+    assertTrue("file1 exists", s3FileSystem.exists(file1));
+    assertTrue("subdir exists", s3FileSystem.exists(subdir));
+    assertTrue("file2 exists", s3FileSystem.exists(file2));
+    
+    assertTrue("Delete", s3FileSystem.delete(dir));
+
+    assertTrue("root exists", s3FileSystem.exists(root));
+    assertFalse("dir exists", s3FileSystem.exists(dir));
+    assertFalse("file1 exists", s3FileSystem.exists(file1));
+    assertFalse("subdir exists", s3FileSystem.exists(subdir));
+    assertFalse("file2 exists", s3FileSystem.exists(file2));
+    
   }
 
   public void testRename() throws Exception {
@@ -213,9 +236,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     
     s3FileSystem.mkdirs(path.getParent());
 
-    FSOutputStream out = s3FileSystem.createRaw(path, false, (short) 1, BLOCK_SIZE);
-    out.write(data, 0, len);
-    out.close();
+    createEmptyFile(path);
 
     assertTrue("Exists", s3FileSystem.exists(path));
 
@@ -235,5 +256,10 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     }
   }
 
+  private void createEmptyFile(Path path) throws IOException {
+    FSOutputStream out = s3FileSystem.createRaw(path, false, (short) 1, BLOCK_SIZE);
+    out.write(data, 0, BLOCK_SIZE);
+    out.close();
+  }
 
 }
