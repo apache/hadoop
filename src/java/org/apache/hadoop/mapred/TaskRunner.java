@@ -204,17 +204,18 @@ abstract class TaskRunner extends Thread {
       // Add classpath.
       vargs.add("-classpath");
       vargs.add(classPath.toString());
-      // Add main class and its arguments 
-      vargs.add(TaskTracker.Child.class.getName());  // main of Child
-      vargs.add(tracker.taskReportPort + "");        // pass umbilical port
-      vargs.add(t.getTaskId());                      // pass task identifier
-      
+
       // Add java.library.path; necessary for native-hadoop libraries
       String libraryPath = System.getProperty("java.library.path");
       if (libraryPath != null) {
           vargs.add("-Djava.library.path=" + libraryPath);
       }
-      
+
+      // Add main class and its arguments 
+      vargs.add(TaskTracker.Child.class.getName());  // main of Child
+      vargs.add(tracker.taskReportPort + "");        // pass umbilical port
+      vargs.add(t.getTaskId());                      // pass task identifier
+
       // Run java
       runChild((String[])vargs.toArray(new String[0]), workDir);
     } catch (FSError e) {

@@ -44,6 +44,7 @@ public class NativeCodeLoader {
     } catch (Throwable t) {
       // Ignore failure to load
       LOG.debug("Failed to load native-hadoop with error: " + t);
+      LOG.debug("java.library.path=" + System.getProperty("java.library.path"));
     }
     
     if (!nativeCodeLoaded) {
