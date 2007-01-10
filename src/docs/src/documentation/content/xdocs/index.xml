@@ -15,6 +15,15 @@
       <title>News</title>
 
       <section>
+      <title>10 January, 2007: release 0.10.1 available</title>
+      <p>This fixes critical bugs in 0.10.0.  For details see the <a
+      href="http://tinyurl.com/ycpsms">release notes</a>. The release can
+      be obtained from <a
+      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
+      nearby mirror</a>.
+      </p> </section>
+
+      <section>
       <title>5 January, 2007: release 0.10.0 available</title>
       <p>For details see the <a
       href="http://tinyurl.com/yapkxs">release notes</a>. The release can
