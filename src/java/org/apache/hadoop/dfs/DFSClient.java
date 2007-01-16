@@ -936,6 +936,25 @@ class DFSClient implements FSConstants {
             }
         }
 
+        /* Wrapper for closing backupStream. This sets backupStream to null so
+         * that we do not attempt to write to backupStream that could be
+         * invalid in subsequent writes. Otherwise we might end trying to write
+         * filedescriptor that we don't own.
+         */
+        private void closeBackupStream() throws IOException {
+          OutputStream stream = backupStream;
+          backupStream = null;
+          stream.close();
+        }
+        /* Similar to closeBackupStream(). Theoritically deleting a file
+         * twice could result in deleting a file that we should not.
+         */
+        private void deleteBackupFile() {
+          File file = backupFile;
+          backupFile = null;
+          file.delete();
+        }
+        
         private File newBackupFile() throws IOException {
           File result = conf.getFile("dfs.client.buffer.dir",
                                      "tmp"+File.separator+
@@ -1147,6 +1166,10 @@ class DFSClient implements FSConstants {
             int workingPos = Math.min(pos, maxPos);
             
             if (workingPos > 0) {
+                if ( backupStream == null ) {
+                    throw new IOException( "Trying to write to backupStream " +
+                                           "but it already closed or not open");
+                }
                 //
                 // To the local block backup, write just the bytes
                 //
@@ -1168,7 +1191,7 @@ class DFSClient implements FSConstants {
             //
             // Done with local copy
             //
-            backupStream.close();
+            closeBackupStream();
 
             //
             // Send it to datanode
@@ -1204,10 +1227,11 @@ class DFSClient implements FSConstants {
             //
             // Delete local backup, start new one
             //
-            backupFile.delete();
-            backupFile = newBackupFile();
-            backupStream = new FileOutputStream(backupFile);
+            deleteBackupFile();
+            File tmpFile = newBackupFile();
             bytesWrittenToBlock = 0;
+            backupStream = new FileOutputStream(tmpFile);
+            backupFile = tmpFile;
         }
 
         /**
@@ -1273,8 +1297,12 @@ class DFSClient implements FSConstants {
               }
             }
             
-            backupStream.close();
-            backupFile.delete();
+            if ( backupStream != null ) {
+              closeBackupStream();
+            }
+            if ( backupFile != null ) {
+              deleteBackupFile();
+            }
 
             if (s != null) {
                 s.close();
