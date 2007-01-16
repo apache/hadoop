@@ -10,6 +10,7 @@
   long tailSize = 1024;
   int tailWindow = 1;
   boolean entireLog = false;
+  boolean plainText = false; 
   
   String taskId = request.getParameter("taskid");
   if (taskId == null) {
@@ -46,6 +47,11 @@
   if (sTailWindow != null) {
   	tailWindow = Integer.valueOf(sTailWindow).intValue();
   }
+  
+  String sPlainText = request.getParameter("plaintext");
+  if (sPlainText != null) {
+    plainText = Boolean.valueOf(sPlainText);
+  }
 
   if (logOffset == -1 || logLength == -1) {
   	tailLog = true;
@@ -55,17 +61,18 @@
   if (entireLog) {
     tailLog = false;
   }
+  
+  if( !plainText ) {
+    out.println("<html>");
+    out.println("<title>" + taskId + "Task Logs </title>"); 
+    out.println("<body>");
+    out.println("<h1>" +  taskId + "Task Logs</h1><br>"); 
+    out.println("<h2>Task Logs</h2>");
+    out.println("<pre>");
+
+  }
 %>
 
-<html>
-
-<title><%= taskId %> Task Logs</title>
-
-<body>
-<h1><%= taskId %> Task Logs</h1><br>
-
-<h2>Task Logs</h2>
-<pre>
 <%
   boolean gotRequiredData = true;
   try {
@@ -91,20 +98,30 @@
   	  
   	if (bytesRead != targetLength && 
   	  targetLength <= taskLogReader.getTotalLogSize()) {
-  	  out.println("<b>Warning: Could not fetch " + targetLength + 
-  		  " bytes from the task-logs; probably purged!</b><br/>");
+  	  if( !plainText) {
+	  	  out.println("<b>Warning: Could not fetch " + targetLength + 
+	  		  " bytes from the task-logs; probably purged!</b><br/>");
+  	  }else{
+	  	  out.println("Warning: Could not fetch " + targetLength + 
+  		  " bytes from the task-logs; probably purged!");
+  	  }
   	  gotRequiredData = false;
+  	}
+  	if( plainText ) {
+  	  response.setContentLength(bytesRead); 
   	}
 	String logData = new String(b, 0, bytesRead);
 	out.println(logData);
   } catch (IOException ioe) {
   	out.println("Failed to retrieve logs for task: " + taskId);
   }
+  
+  if( !plainText ) {
+    out.println("</pre>");
+  }
 %>
-</pre>
-
 <%
-  if (!entireLog) {
+  if (!entireLog && !plainText) {
     if (tailLog) {
       if (gotRequiredData) {
   	  	out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
@@ -127,9 +144,10 @@
   		  "&len=" + logLength + "'>Later</a>");
     }
   }
+  if( !plainText ) {
+    out.println("<hr>");
+    out.println("<a href='http://lucene.apache.org/hadoop'>Hadoop</a>, 2006.<br>");
+    out.println("</body>");
+    out.println("</html>");
+  }
 %>
-
-<hr>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
-</body>
-</html>

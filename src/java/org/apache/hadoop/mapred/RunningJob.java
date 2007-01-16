@@ -76,4 +76,8 @@ public interface RunningJob {
      * killed as well.  If the job is no longer running, it simply returns.
      */
     public void killJob() throws IOException;
+    
+    public TaskCompletionEvent[] getTaskCompletionEvents(
+        int startFrom) throws IOException;
+    
 }

@@ -53,6 +53,8 @@ class JobInProgress {
     int failedReduceTasks = 0 ; 
     JobTracker jobtracker = null;
     HashMap hostToMaps = new HashMap();
+    private int taskCompletionEventTracker = 0 ; 
+    List<TaskCompletionEvent> taskCompletionEvents ; 
 
     long startTime;
     long finishTime;
@@ -95,6 +97,8 @@ class JobInProgress {
 
         this.numMapTasks = conf.getNumMapTasks();
         this.numReduceTasks = conf.getNumReduceTasks();
+        this.taskCompletionEvents = new ArrayList(
+            numMapTasks + numReduceTasks + 10);
         JobHistory.JobInfo.logSubmitted(jobid, conf.getJobName(), conf.getUser(), 
             System.currentTimeMillis(), jobFile); 
         
@@ -276,10 +280,29 @@ class JobInProgress {
         boolean change = tip.updateStatus(status);
         if (change) {
           TaskStatus.State state = status.getRunState();
+          TaskTrackerStatus ttStatus = 
+            this.jobtracker.getTaskTracker(status.getTaskTracker());
+          String httpTaskLogLocation = null; 
+          if( null != ttStatus ){
+            httpTaskLogLocation = "http://" + ttStatus.getHost() + ":" + 
+              ttStatus.getHttpPort() + "/tasklog.jsp?plaintext=true&taskid=" +
+              status.getTaskId() + "&all=true";
+          }
+          
           if (state == TaskStatus.State.SUCCEEDED) {
+            this.taskCompletionEvents.add( new TaskCompletionEvent(
+                taskCompletionEventTracker++, 
+                status.getTaskId(), 
+                TaskCompletionEvent.Status.SUCCEEDED,
+                httpTaskLogLocation ));
             completedTask(tip, status, metrics);
           } else if (state == TaskStatus.State.FAILED ||
                      state == TaskStatus.State.KILLED) {
+            this.taskCompletionEvents.add( new TaskCompletionEvent(
+                taskCompletionEventTracker++, 
+                status.getTaskId(), 
+                TaskCompletionEvent.Status.FAILED, 
+                httpTaskLogLocation ));
             // Tell the job to fail the relevant task
             failedTask(tip, status.getTaskId(), status, status.getTaskTracker(),
                        wasRunning, wasComplete);
@@ -753,5 +776,15 @@ class JobInProgress {
          }
        }
        return null;
+    }
+    
+    public TaskCompletionEvent[] getTaskCompletionEvents(int fromEventId) {
+      TaskCompletionEvent[] events = TaskCompletionEvent.EMPTY_ARRAY;
+      if( taskCompletionEvents.size() > fromEventId) {
+        events = (TaskCompletionEvent[])taskCompletionEvents.subList(
+            fromEventId, taskCompletionEvents.size()).
+            toArray(events);        
+      }
+      return events; 
     }
 }

@@ -243,4 +243,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
   }
 
   public JobStatus[] jobsToComplete() {return null;}
+  public TaskCompletionEvent[] getTaskCompletionEvents(
+      String jobid, int fromEventId) throws IOException{
+    return TaskCompletionEvent.EMPTY_ARRAY;
+  }
+  
 }

@@ -25,6 +25,9 @@ Trunk (unreleased changes)
     for better compatibility with some monitoring systems.
     (Nigel Daley via cutting)
 
+ 7. HADOOP-801.  Add to jobtracker a log of task completion events.
+    (Sanjay Dahiya via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

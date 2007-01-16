@@ -91,6 +91,17 @@ interface InterTrackerProtocol extends VersionedProtocol {
   public void reportTaskTrackerError(String taskTracker,
                                      String errorClass,
                                      String errorMessage) throws IOException;
+  /**
+   * Get task completion events for the jobid, starting from fromEventId. 
+   * Returns empty aray if no events are available. 
+   * @param jobid job id 
+   * @param fromEventId event id to start from. 
+   * @return array of task completion events. 
+   * @throws IOException
+   */
+  TaskCompletionEvent[] getTaskCompletionEvents(
+      String jobid, int fromEventId) throws IOException; 
+  
 }
 
 

@@ -1431,6 +1431,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             return (TaskReport[]) reports.toArray(new TaskReport[reports.size()]);
         }
     }
+    
+    /* 
+     * Returns a list of TaskCompletionEvent for the given job, 
+     * starting from fromEventId.
+     * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getTaskCompletionEvents(java.lang.String, int)
+     */
+    public synchronized TaskCompletionEvent[] getTaskCompletionEvents(
+        String jobid, int fromEventId) throws IOException{
+      TaskCompletionEvent[] events = TaskCompletionEvent.EMPTY_ARRAY;
+      JobInProgress job = (JobInProgress)this.jobs.get(jobid);
+      if (null != job) {
+        events = job.getTaskCompletionEvents(fromEventId);
+      }
+      return events;
+    }
 
     /**
      * Get the diagnostics for a given task

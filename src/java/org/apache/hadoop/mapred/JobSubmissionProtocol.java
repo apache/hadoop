@@ -80,4 +80,16 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
      * jobs.
      */
     public JobStatus[] jobsToComplete() throws IOException;
+    
+    /**
+     * Get task completion events for the jobid, starting from fromEventId. 
+     * Returns empty aray if no events are available. 
+     * @param jobid job id 
+     * @param fromEventId event id to start from. 
+     * @return array of task completion events. 
+     * @throws IOException
+     */
+    public TaskCompletionEvent[] getTaskCompletionEvents(
+                String jobid, int fromEventId) throws IOException;
+    
 }
