@@ -223,7 +223,7 @@ class FSDirectory implements FSConstants {
                     v.add(blocks[i]);
                 }
             }
-            Metrics.report(metricsRecord, "files-deleted", ++numFilesDeleted);
+            Metrics.report(metricsRecord, "files_deleted", ++numFilesDeleted);
             for (Iterator it = children.values().iterator(); it.hasNext(); ) {
                 INode child = (INode) it.next();
                 child.collectSubtreeBlocks(v);

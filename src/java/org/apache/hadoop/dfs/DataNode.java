@@ -132,32 +132,32 @@ public class DataNode implements FSConstants, Runnable {
       
       synchronized void readBytes(int nbytes) {
         bytesRead += nbytes;
-        Metrics.report(metricsRecord, "bytes-read", bytesRead);
+        Metrics.report(metricsRecord, "bytes_read", bytesRead);
       }
       
       synchronized void wroteBytes(int nbytes) {
         bytesWritten += nbytes;
-        Metrics.report(metricsRecord, "bytes-written", bytesWritten);
+        Metrics.report(metricsRecord, "bytes_written", bytesWritten);
       }
       
       synchronized void readBlocks(int nblocks) {
         blocksRead += nblocks;
-        Metrics.report(metricsRecord, "blocks-read", blocksRead);
+        Metrics.report(metricsRecord, "blocks_read", blocksRead);
       }
       
       synchronized void wroteBlocks(int nblocks) {
         blocksWritten += nblocks;
-        Metrics.report(metricsRecord, "blocks-written", blocksWritten);
+        Metrics.report(metricsRecord, "blocks_written", blocksWritten);
       }
       
       synchronized void replicatedBlocks(int nblocks) {
         blocksReplicated += nblocks;
-        Metrics.report(metricsRecord, "blocks-replicated", blocksReplicated);
+        Metrics.report(metricsRecord, "blocks_replicated", blocksReplicated);
       }
       
       synchronized void removedBlocks(int nblocks) {
         blocksRemoved += nblocks;
-        Metrics.report(metricsRecord, "blocks-removed", blocksRemoved);
+        Metrics.report(metricsRecord, "blocks_removed", blocksRemoved);
       }
     }
     

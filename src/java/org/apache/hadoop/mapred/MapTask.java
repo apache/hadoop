@@ -71,15 +71,15 @@ class MapTask extends Task {
     }
     
     synchronized void mapInput(long numBytes) {
-      Metrics.report(metricsRecord, "input-records", ++numInputRecords);
+      Metrics.report(metricsRecord, "input_records", ++numInputRecords);
       numInputBytes += numBytes;
-      Metrics.report(metricsRecord, "input-bytes", numInputBytes);
+      Metrics.report(metricsRecord, "input_bytes", numInputBytes);
     }
     
     synchronized void mapOutput(long numBytes) {
-      Metrics.report(metricsRecord, "output-records", ++numOutputRecords);
+      Metrics.report(metricsRecord, "output_records", ++numOutputRecords);
       numOutputBytes += numBytes;
-      Metrics.report(metricsRecord, "output-bytes", numOutputBytes);
+      Metrics.report(metricsRecord, "output_bytes", numOutputBytes);
     }
     
   }

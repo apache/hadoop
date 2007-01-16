@@ -113,20 +113,20 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       }
       
       synchronized void createFile() {
-        Metrics.report(metricsRecord, "files-created", ++numFilesCreated);
+        Metrics.report(metricsRecord, "files_created", ++numFilesCreated);
       }
       
       synchronized void openFile() {
-        Metrics.report(metricsRecord, "files-opened", ++numFilesOpened);
+        Metrics.report(metricsRecord, "files_opened", ++numFilesOpened);
       }
       
       synchronized void renameFile() {
-        Metrics.report(metricsRecord, "files-renamed", ++numFilesRenamed);
+        Metrics.report(metricsRecord, "files_renamed", ++numFilesRenamed);
       }
       
       synchronized void listFile(int nfiles) {
         numFilesListed += nfiles;
-        Metrics.report(metricsRecord, "files-listed", numFilesListed);
+        Metrics.report(metricsRecord, "files_listed", numFilesListed);
       }
     }
     

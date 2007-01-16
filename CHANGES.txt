@@ -21,6 +21,10 @@ Trunk (unreleased changes)
     the TreeSet of block locations with an ArrayList.
     (Raghu Angadi via cutting)
 
+ 6. HADOOP-890.  Replace dashes in metric names with underscores,
+    for better compatibility with some monitoring systems.
+    (Nigel Daley via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

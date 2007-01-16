@@ -386,32 +386,32 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       }
       
       synchronized void launchMap() {
-        Metrics.report(metricsRecord, "maps-launched",
+        Metrics.report(metricsRecord, "maps_launched",
             ++numMapTasksLaunched);
       }
       
       synchronized void completeMap() {
-        Metrics.report(metricsRecord, "maps-completed",
+        Metrics.report(metricsRecord, "maps_completed",
             ++numMapTasksCompleted);
       }
       
       synchronized void launchReduce() {
-        Metrics.report(metricsRecord, "reduces-launched",
+        Metrics.report(metricsRecord, "reduces_launched",
             ++numReduceTasksLaunched);
       }
       
       synchronized void completeReduce() {
-        Metrics.report(metricsRecord, "reduces-completed",
+        Metrics.report(metricsRecord, "reduces_completed",
             ++numReduceTasksCompleted);
       }
       
       synchronized void submitJob() {
-        Metrics.report(metricsRecord, "jobs-submitted",
+        Metrics.report(metricsRecord, "jobs_submitted",
             ++numJobsSubmitted);
       }
       
       synchronized void completeJob() {
-        Metrics.report(metricsRecord, "jobs-completed",
+        Metrics.report(metricsRecord, "jobs_completed",
             ++numJobsCompleted);
       }
     }

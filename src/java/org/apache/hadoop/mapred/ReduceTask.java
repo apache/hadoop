@@ -54,11 +54,11 @@ class ReduceTask extends Task {
     }
     
     synchronized void reduceInput() {
-      Metrics.report(metricsRecord, "input-records", ++numInputRecords);
+      Metrics.report(metricsRecord, "input_records", ++numInputRecords);
     }
     
     synchronized void reduceOutput() {
-      Metrics.report(metricsRecord, "output-records", ++numOutputRecords);
+      Metrics.report(metricsRecord, "output_records", ++numOutputRecords);
     }
   }
   
