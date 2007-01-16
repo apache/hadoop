@@ -121,18 +121,11 @@ class Block implements Writable, Comparable {
     // Comparable
     /////////////////////////////////////
     public int compareTo(Object o) {
-        Block b = (Block) o;
-        if (getBlockId() < b.getBlockId()) {
-            return -1;
-        } else if (getBlockId() == b.getBlockId()) {
-            return 0;
-        } else {
-            return 1;
-        }
+        long diff = getBlockId() - ((Block)o).getBlockId();
+        return ( diff < 0 ) ? -1 : ( ( diff > 0 ) ? 1 : 0 );
     }
     public boolean equals(Object o) {
-        Block b = (Block) o;
-        return (this.compareTo(b) == 0);
+        return (this.compareTo(o) == 0);
     }
     
     public int hashCode() {
