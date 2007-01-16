@@ -517,7 +517,7 @@ class DFSClient implements FSConstants {
         synchronized void openInfo() throws IOException {
             Block oldBlocks[] = this.blocks;
 
-            LocatedBlock results[] = namenode.open(src);            
+            LocatedBlock results[] = namenode.open(localName, src);            
             Vector blockV = new Vector();
             Vector nodeV = new Vector();
             for (int i = 0; i < results.length; i++) {

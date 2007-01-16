@@ -291,7 +291,7 @@ class FSNamesystem implements FSConstants {
      * The client should choose one of the machines from the machineArray
      * at random.
      */
-    public Object[] open(UTF8 src) {
+    public Object[] open(String clientMachine, UTF8 src) {
         Object results[] = null;
         Block blocks[] = dir.getFile(src);
         if (blocks != null) {

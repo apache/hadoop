@@ -204,8 +204,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     
     /**
      */
-    public LocatedBlock[] open(String src) throws IOException {
-        Object openResults[] = namesystem.open(new UTF8(src));
+    public LocatedBlock[] open(String clientMachine, String src) throws IOException {
+        Object openResults[] = namesystem.open(clientMachine, new UTF8(src));
         if (openResults == null) {
             throw new IOException("Cannot open filename " + src);
         } else {

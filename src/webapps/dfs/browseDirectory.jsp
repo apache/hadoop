@@ -9,6 +9,7 @@
   import="org.apache.hadoop.dfs.*"
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
+  import="org.apache.hadoop.net.DNS"
   import="java.text.DateFormat"
 %>
 <%!
@@ -32,7 +33,8 @@
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
     UTF8 target = new UTF8(dir);
     if( !dfs.isDirectory(target) ) { // a file
-      LocatedBlock[] blocks = dfs.namenode.open(dir);
+      LocatedBlock[] blocks = dfs.namenode.open(
+          DNS.getDefaultHost("default"), dir);
       DatanodeInfo [] locations = blocks[0].getLocations();
       if (locations.length == 0) {
         out.print("Empty file");
@@ -86,7 +88,9 @@
       //Get the location of the first block of the file
       if (files[i].getPath().endsWith(".crc")) continue;
       if (!files[i].isDir()) {
-        LocatedBlock[] blocks = dfs.namenode.open(files[i].getPath());
+        LocatedBlock[] blocks = dfs.namenode.open(
+            DNS.getDefaultHost("default"), files[i].getPath());
+
         DatanodeInfo [] locations = blocks[0].getLocations();
         if (locations.length == 0) {
           cols[0] = files[i].getName();

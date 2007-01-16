@@ -38,6 +38,7 @@ public class TestRestartDFS extends TestCase {
   private static String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
     .toString().replace(' ', '+');
+  private static Configuration conf = new Configuration();
 
   /** class MyFile contains enough information to recreate the contents of
    * a single file.
@@ -102,7 +103,6 @@ public class TestRestartDFS extends TestCase {
       files[idx] = new MyFile();
     }
     
-    Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getNamed(fsname, conf);
     Path root = new Path(topdir);
     
@@ -128,7 +128,7 @@ public class TestRestartDFS extends TestCase {
   private static boolean checkFiles(String fsname, String topdir, MyFile[] files) 
   throws IOException {
     
-    Configuration conf = new Configuration();
+    //Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getNamed(fsname, conf);
     Path root = new Path(topdir);
     
@@ -156,7 +156,6 @@ public class TestRestartDFS extends TestCase {
   /** delete directory and everything underneath it.*/
   private static void deldir(String fsname, String topdir)
   throws IOException {
-    Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getNamed(fsname, conf);
     Path root = new Path(topdir);
     fs.delete(root);
@@ -168,7 +167,6 @@ public class TestRestartDFS extends TestCase {
     MiniDFSCluster cluster = null;
     MyFile[] files = null;
     try {
-      Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(65314, conf, 4, false);
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
@@ -179,7 +177,6 @@ public class TestRestartDFS extends TestCase {
     }
     assertTrue("Error creating files", files != null);
     try {
-      Configuration conf = new Configuration();
       // Here we restart the MiniDFScluster without formatting namenode
       cluster = new MiniDFSCluster(65320, conf, 4, false, false);
       namenode = conf.get("fs.default.name", "local");

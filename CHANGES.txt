@@ -6,6 +6,11 @@ Trunk (unreleased changes)
  1. HADOOP-781.  Remove methods deprecated in 0.10 that are no longer
     widely used.  (cutting)
 
+ 2. HADOOP-842.  Change HDFS protocol so that the open() method is
+    passed the client hostname, to permit the namenode to order block
+    locations on the basis of network topology.
+    (Hairong Kuang via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
@@ -30,7 +35,7 @@ Release 0.10.1 - 2007-01-10
     (Arun C Murthy via cutting)
 
  8. HADOOP-868.  Decrease the number of open files during map,
-    respecting io.sort.factor.  (Devaraj Das via cutting)
+    respecting io.sort.fa ctor.  (Devaraj Das via cutting)
 
  9. HADOOP-865.  Fix S3 FileSystem so that partially created files can
     be deleted.  (Tom White via cutting)

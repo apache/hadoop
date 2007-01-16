@@ -36,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.net.DNS;
 
 
 /**
@@ -151,7 +152,8 @@ public class NamenodeFsck {
     }
     res.totalFiles++;
     res.totalSize += file.getLen();
-    LocatedBlock[] blocks = nn.open(file.getPath());
+    LocatedBlock[] blocks = nn.open(DNS.getDefaultHost("default"),
+                                    file.getPath());
     res.totalBlocks += blocks.length;
     if (showFiles) {
       out.print(file.getPath() + " " + file.getLen() + ", " + blocks.length + " block(s): ");

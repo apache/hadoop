@@ -8,6 +8,7 @@
   import="org.apache.hadoop.dfs.*"
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
+  import="org.apache.hadoop.net.DNS"
   import="java.text.DateFormat"
 %>
 
@@ -54,7 +55,8 @@
     //fetch the block from the datanode that has the last block for this file
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, 
                                          jspHelper.conf);
-    LocatedBlock blocks[] = dfs.namenode.open(filename);
+    LocatedBlock blocks[] = dfs.namenode.open(
+        DNS.getDefaultHost("default"), filename); 
     if (blocks == null || blocks.length == 0) {
       out.print("No datanodes contain blocks of file "+filename);
       dfs.close();

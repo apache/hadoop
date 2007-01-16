@@ -29,19 +29,22 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
-  public static final long versionID = 4L; // decommission node added
+  public static final long versionID = 5L; // open() takes a new parameter
   
     ///////////////////////////////////////
     // File contents
     ///////////////////////////////////////
     /**
      * Open an existing file, at the given name.  Returns block 
-     * and DataNode info.  The client will then have to contact
+     * and DataNode info.  DataNodes for each block are sorted by
+     * the distance to the clientMachine, which contains the host name.
+     * The client will then have to contact
      * each indicated DataNode to obtain the actual data.  There
      * is no need to call close() or any other function after
      * calling open().
      */
-    public LocatedBlock[] open(String src) throws IOException;
+    public LocatedBlock[] open( String clientMachine,
+                                String src) throws IOException;
 
     /**
      * Create a new file.  Get back block and datanode info,
