@@ -879,13 +879,13 @@ public abstract class FileSystem extends Configured {
      * Report a checksum error to the file system.
      * @param f the file name containing the error
      * @param in the stream open on the file
-     * @param start the position of the beginning of the bad data in the file
-     * @param length the length of the bad data in the file
-     * @param crc the expected CRC32 of the data
+     * @param inPos the position of the beginning of the bad data in the file
+     * @param sums the stream open on the checksum file
+     * @param sumsPos the position of the beginning of the bad data in the checksum file
      */
-    public abstract void reportChecksumFailure(Path f, FSInputStream in,
-                                               long start, long length,
-                                               int crc);
+    public abstract void reportChecksumFailure(Path f, 
+                                               FSInputStream in, long inPos, 
+                                               FSInputStream sums, long sumsPos);
 
     /**
      * Get the size for a particular file.

@@ -24,7 +24,7 @@ import java.net.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.*;
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -248,15 +248,51 @@ public class DistributedFileSystem extends FileSystem {
         return dfs;
     }
     
-    public void reportChecksumFailure(Path f, FSInputStream in,
-                                      long start, long length, int crc) {
-      
-      // ignore for now, causing task to fail, and hope that when task is
-      // retried it gets a different copy of the block that is not corrupt.
 
-      // FIXME: we should move the bad block(s) involved to a bad block
-      // directory on their datanode, and then re-replicate the blocks, so that
-      // no data is lost. a task may fail, but on retry it should succeed.
+    /**
+     * We need to find the blocks that didn't match.  Likely only one 
+     * is corrupt but we will report both to the namenode.  In the future,
+     * we can consider figuring out exactly which block is corrupt.
+     */
+    public void reportChecksumFailure(Path f, 
+                                      FSInputStream in, long inPos, 
+                                      FSInputStream sums, long sumsPos) {
+      
+      LocatedBlock lblocks[] = new LocatedBlock[2];
+
+      try {
+        // Find block in data stream.
+        DFSClient.DFSInputStream dfsIn = (DFSClient.DFSInputStream) in;
+        Block dataBlock = dfsIn.getCurrentBlock();
+        if (dataBlock == null) {
+          throw new IOException("Error: Current block in data stream is null! ");
+        }
+        DatanodeInfo[] dataNode = {dfsIn.getCurrentDatanode()}; 
+        lblocks[0] = new LocatedBlock(dataBlock, dataNode);
+        LOG.info("Found checksum error in data stream at block=" + dataBlock.getBlockName() + 
+                 " on datanode=" + dataNode[0].getName());
+
+        // Find block in checksum stream
+        DFSClient.DFSInputStream dfsSums = (DFSClient.DFSInputStream) sums;
+        Block sumsBlock = dfsSums.getCurrentBlock();
+        if (sumsBlock == null) {
+          throw new IOException("Error: Current block in checksum stream is null! ");
+        }
+        DatanodeInfo[] sumsNode = {dfsSums.getCurrentDatanode()}; 
+        lblocks[1] = new LocatedBlock(sumsBlock, sumsNode);
+        LOG.info("Found checksum error in checksum stream at block=" + sumsBlock.getBlockName() + 
+                 " on datanode=" + sumsNode[0].getName());
+
+        // Ask client to delete blocks.
+        dfs.reportBadBlocks(lblocks);
+
+      } catch (IOException ie) {
+        LOG.info("Found corruption while reading "
+                 + f.toString() 
+                 + ".  Error repairing corrupt blocks.  Bad blocks remain. " 
+                 + StringUtils.stringifyException(ie));
+      }
+
     }
 
     /** Return the total raw capacity of the filesystem, disregarding

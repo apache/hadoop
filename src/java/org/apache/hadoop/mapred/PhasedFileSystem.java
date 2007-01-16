@@ -388,9 +388,11 @@ public class PhasedFileSystem extends FileSystem {
  }
 
   @Override
-  public void reportChecksumFailure(
-      Path f, FSInputStream in, long start, long length, int crc) {
-    baseFS.reportChecksumFailure(f, in, start, length, crc); 
+
+  public void reportChecksumFailure(Path f, 
+                                    FSInputStream in, long inPos, 
+                                    FSInputStream sums, long sumsPos) {
+    baseFS.reportChecksumFailure(f, in, inPos, sums, sumsPos); 
   }
 
   @Override

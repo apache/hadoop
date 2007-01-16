@@ -367,7 +367,8 @@ public class LocalFileSystem extends FileSystem {
     /** Moves files to a bad file directory on the same device, so that their
      * storage will not be reused. */
     public void reportChecksumFailure(Path p, FSInputStream in,
-                                      long start, long length, int crc) {
+                                      long inPos,
+                                      FSInputStream sums, long sumsPos) {
       try {
         // canonicalize f   
         File f = pathToFile(p).getCanonicalFile();

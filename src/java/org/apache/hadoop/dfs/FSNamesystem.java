@@ -766,6 +766,52 @@ class FSNamesystem implements FSConstants {
         return true;
     }
 
+    /**
+     * Adds block to list of blocks which will be invalidated on 
+     * specified datanode.
+     */
+    private void addToInvalidates(Block b, DatanodeInfo n) {
+      Collection<Block> invalidateSet = recentInvalidateSets.get(n.getStorageID());
+      if (invalidateSet == null) {
+        invalidateSet = new ArrayList<Block>();
+        recentInvalidateSets.put(n.getStorageID(), invalidateSet);
+      }
+      invalidateSet.add(b);
+    }
+
+    /**
+     * Invalidates the given block on the given datanode.
+     */
+    public synchronized void invalidateBlock(Block blk, DatanodeInfo dn)
+        throws IOException {
+      NameNode.stateChangeLog.info("DIR* NameSystem.invalidateBlock: " 
+                                    + blk.getBlockName() + " on " 
+                                    + dn.getName());
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot invalidate block " + blk.getBlockName(), safeMode);
+      }
+
+      List<DatanodeDescriptor> containingNodes = blocksMap.get(blk);
+
+      // Check how many copies we have of the block.  If we have at least one
+      // copy on a live node, then we can delete it. 
+      if (containingNodes != null ) {
+        if ((countContainingNodes(containingNodes) > 1) || 
+            ((countContainingNodes(containingNodes) == 1) &&
+             (dn.isDecommissionInProgress() || dn.isDecommissioned()))) {
+          addToInvalidates(blk, dn);
+          removeStoredBlock(blk, getDatanode(dn));
+          NameNode.stateChangeLog.info("BLOCK* NameSystem.invalidateBlocks: "
+                                        + blk.getBlockName() + " on " 
+                                        + dn.getName() + " listed for deletion.");
+        } else {
+          NameNode.stateChangeLog.info("BLOCK* NameSystem.invalidateBlocks: "
+                                        + blk.getBlockName() + " on " 
+                                        + dn.getName() + " is the only copy and was not deleted.");
+        }
+      }
+    }
+
     ////////////////////////////////////////////////////////////////
     // Here's how to handle block-copy failure during client write:
     // -- As usual, the client's write should result in a streaming
@@ -807,12 +853,7 @@ class FSNamesystem implements FSConstants {
                 if (containingNodes != null) {
                     for (Iterator<DatanodeDescriptor> it = containingNodes.iterator(); it.hasNext(); ) {
                         DatanodeDescriptor node = it.next();
-                        Collection<Block> invalidateSet = recentInvalidateSets.get(node.getStorageID());
-                        if (invalidateSet == null) {
-                            invalidateSet = new ArrayList<Block>();
-                            recentInvalidateSets.put(node.getStorageID(), invalidateSet);
-                        }
-                        invalidateSet.add(b);
+                        addToInvalidates(b, node);
                         NameNode.stateChangeLog.debug("BLOCK* NameSystem.delete: "
                             + b.getBlockName() + " is added to invalidSet of " + node.getName() );
                     }
@@ -1732,7 +1773,7 @@ class FSNamesystem implements FSConstants {
         // be-replicated list.
         //
         FSDirectory.INode fileINode = dir.getFileByBlock(block);
-        if( fileINode != null && (containingNodes.size() < fileINode.getReplication())) {
+        if( fileINode != null && (countContainingNodes(containingNodes) < fileINode.getReplication())) {
             synchronized (neededReplications) {
                 neededReplications.add(block);
             }

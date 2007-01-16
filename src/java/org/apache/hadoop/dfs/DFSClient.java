@@ -179,7 +179,14 @@ class DFSClient implements FSConstants {
         }
       }
     }
-    
+
+    /**
+     * Report corrupt blocks that were discovered by the client.
+     */
+    public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
+      namenode.reportBadBlocks(blocks);
+    }
+  
     public short getDefaultReplication() {
       return defaultReplication;
     }
@@ -496,10 +503,12 @@ class DFSClient implements FSConstants {
         private DataInputStream blockStream;
         private Block blocks[] = null;
         private DatanodeInfo nodes[][] = null;
+        private DatanodeInfo currentNode = null;
+        private Block currentBlock = null;
         private long pos = 0;
         private long filelen = 0;
         private long blockEnd = -1;
-
+        
         /**
          */
         public DFSInputStream(String src) throws IOException {
@@ -538,7 +547,23 @@ class DFSClient implements FSConstants {
             }
             this.blocks = newBlocks;
             this.nodes = (DatanodeInfo[][]) nodeV.toArray(new DatanodeInfo[nodeV.size()][]);
+            this.currentNode = null;
         }
+
+        /**
+         * Returns the datanode from which the stream is currently reading.
+         */
+        public DatanodeInfo getCurrentDatanode() {
+          return currentNode;
+        }
+
+        /**
+         * Returns the block containing the target position. 
+         */
+        public Block getCurrentBlock() {
+          return currentBlock;
+        }
+
 
         /**
          * Used by the automatic tests to detemine blocks locations of a
@@ -623,6 +648,7 @@ class DFSClient implements FSConstants {
 
                     this.pos = target;
                     this.blockEnd = targetBlockEnd;
+                    this.currentBlock = blocks[targetBlock];
                     this.blockStream = in;
                     return chosenNode;
                 } catch (IOException ex) {
@@ -671,7 +697,7 @@ class DFSClient implements FSConstants {
             int result = -1;
             if (pos < filelen) {
                 if (pos > blockEnd) {
-                    blockSeekTo(pos, new TreeSet());
+                   currentNode = blockSeekTo(pos, new TreeSet());
                 }
                 result = blockStream.read();
                 if (result >= 0) {
@@ -691,7 +717,6 @@ class DFSClient implements FSConstants {
             }
             if (pos < filelen) {
               int retries = 2;
-              DatanodeInfo chosenNode = null;
               TreeSet deadNodes = null;
               while (retries > 0) {
                 try {
@@ -699,7 +724,7 @@ class DFSClient implements FSConstants {
                       if (deadNodes == null) {
                         deadNodes = new TreeSet();
                       }
-                      chosenNode = blockSeekTo(pos, deadNodes);
+                      currentNode = blockSeekTo(pos, deadNodes);
                   }
                   int realLen = Math.min(len, (int) (blockEnd - pos + 1));
                   int result = blockStream.read(buf, off, realLen);
@@ -711,7 +736,7 @@ class DFSClient implements FSConstants {
                   LOG.warn("DFS Read: " + StringUtils.stringifyException(e));
                   blockEnd = -1;
                   if (deadNodes == null) { deadNodes = new TreeSet(); }
-                  if (chosenNode != null) { deadNodes.add(chosenNode); }
+                  if (currentNode != null) { deadNodes.add(currentNode); }
                   if (--retries == 0) {
                     throw e;
                   }

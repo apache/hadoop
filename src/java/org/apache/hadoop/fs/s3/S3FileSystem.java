@@ -289,8 +289,9 @@ public class S3FileSystem extends FileSystem {
   }
 
   @Override
-  public void reportChecksumFailure(Path path, FSInputStream in,
-      long start, long length, int crc) {
+  public void reportChecksumFailure(Path f, 
+                                    FSInputStream in, long inPos, 
+                                    FSInputStream sums, long sumsPos) {
     // TODO: What to do here?
   }
 

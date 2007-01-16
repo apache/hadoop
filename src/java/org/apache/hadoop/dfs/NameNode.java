@@ -314,6 +314,25 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
             throw new IOException("Could not complete write to file " + src + " by " + clientName);
         }
     }
+
+    /**
+     * The client has detected an error on the specified located blocks 
+     * and is reporting them to the server.  For now, the namenode will 
+     * delete the blocks from the datanodes.  In the future we might 
+     * check the blocks are actually corrupt. 
+     */
+    public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
+      stateChangeLog.debug("*DIR* NameNode.reportBadBlocks");
+      for (int i = 0; i < blocks.length; i++) {
+        Block blk = blocks[i].getBlock();
+        DatanodeInfo[] nodes = blocks[i].getLocations();
+        for (int j = 0; j < nodes.length; j++) {
+          DatanodeInfo dn = nodes[j];
+          namesystem.invalidateBlock(blk, dn);
+        }
+      }
+    }
+
     /**
      */
     public String[][] getHints(String src, long start, long len) throws IOException {

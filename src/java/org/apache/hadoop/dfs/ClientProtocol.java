@@ -29,7 +29,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
-  public static final long versionID = 5L; // open() takes a new parameter
+    public static final long versionID = 6L; // reportBadBlocks added
   
     ///////////////////////////////////////
     // File contents
@@ -142,6 +142,13 @@ interface ClientProtocol extends VersionedProtocol {
      * times before succeeding.
      */
     public boolean complete(String src, String clientName) throws IOException;
+
+    /**
+     * The client wants to report corrupted blocks (blocks with specified
+     * locations on datanodes).
+     * @param blocks Array of located blocks to report
+     */
+    public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
 
     ///////////////////////////////////////
     // Namespace management

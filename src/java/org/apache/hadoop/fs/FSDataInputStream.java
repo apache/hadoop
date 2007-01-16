@@ -46,6 +46,7 @@ public class FSDataInputStream extends DataInputStream
     private FSDataInputStream sums;
     private Checksum sum = new CRC32();
     private int inSum;
+    private FSInputStream sumsIn;
 
     public Checker(FileSystem fs, Path file, Configuration conf)
       throws IOException {
@@ -55,7 +56,8 @@ public class FSDataInputStream extends DataInputStream
       this.file = file;
       Path sumFile = FileSystem.getChecksumFile(file);
       try {
-        this.sums = new FSDataInputStream(fs.openRaw(sumFile), conf);
+        sumsIn = fs.openRaw(sumFile);
+        this.sums = new FSDataInputStream(sumsIn, conf);
         byte[] version = new byte[VERSION.length];
         sums.readFully(version);
         if (!Arrays.equals(version, VERSION))
@@ -134,7 +136,7 @@ public class FSDataInputStream extends DataInputStream
       if (crc != sumValue) {
         long pos = getPos() - delta;
         fs.reportChecksumFailure(file, (FSInputStream)in,
-                                 pos, bytesPerSum, crc);
+                                 pos, sumsIn, pos/bytesPerSum) ;
         throw new ChecksumException("Checksum error: "+file+" at "+pos);
       }
     }

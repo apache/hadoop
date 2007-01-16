@@ -28,6 +28,10 @@ Trunk (unreleased changes)
  7. HADOOP-801.  Add to jobtracker a log of task completion events.
     (Sanjay Dahiya via cutting)
 
+ 8. HADOOP-855.  In HDFS, try to repair files with checksum errors.
+    An exception is still thrown, but corrupt blocks are now removed
+    when they have replicas.  (Wendy Chien via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
