@@ -77,7 +77,7 @@ public class TestSequenceFile extends TestCase {
     int seed = new Random().nextInt();
     LOG.info("Seed = " + seed);
 
-    FileSystem fs = new LocalFileSystem(conf);
+    FileSystem fs = FileSystem.getLocal(conf);
     try {
         // SequenceFile.Writer
         writeTest(fs, count, seed, file, CompressionType.NONE, null);

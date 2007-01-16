@@ -1,6 +1,12 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1. HADOOP-781.  Remove methods deprecated in 0.10 that are no longer
+    widely used.  (cutting)
+
+
 Release 0.10.1 - 2007-01-10
 
  1. HADOOP-857.  Fix S3 FileSystem implementation to permit its use

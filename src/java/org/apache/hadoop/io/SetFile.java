@@ -29,20 +29,14 @@ public class SetFile extends MapFile {
 
   protected SetFile() {}                            // no public ctor
 
-  /** Write a new set file. */
+  /** Write a new set file.
+   * @deprecated pass a Configuration too
+   */
   public static class Writer extends MapFile.Writer {
 
     /** Create the named set for keys of the named class. */
     public Writer(FileSystem fs, String dirName, Class keyClass) throws IOException {
-      super(fs, dirName, keyClass, NullWritable.class);
-    }
-
-    /** Create the named set using the named key comparator.
-     * @deprecated
-     */
-    public Writer(FileSystem fs, String dirName, WritableComparator comparator)
-      throws IOException {
-      super(new Configuration(), fs, dirName, comparator, NullWritable.class);
+      super(new Configuration(), fs, dirName, keyClass, NullWritable.class);
     }
 
     /** Create a set naming the element class and compression type. */

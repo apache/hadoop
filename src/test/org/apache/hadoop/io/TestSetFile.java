@@ -39,7 +39,7 @@ public class TestSetFile extends TestCase {
   public TestSetFile(String name) { super(name); }
 
   public void testSetFile() throws Exception {
-    FileSystem fs = new LocalFileSystem(conf);
+    FileSystem fs = FileSystem.getLocal(conf);
     try {
         RandomDatum[] data = generate(10000);
         writeTest(fs, data, FILE, CompressionType.NONE);

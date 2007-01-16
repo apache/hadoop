@@ -34,7 +34,7 @@
           sinceHeartbeat = sinceHeartbeat / 1000;
         }
         int numCurTasks = 0;
-        for (Iterator it2 = tt.taskReports(); it2.hasNext(); ) {
+        for (Iterator it2 = tt.getTaskReports().iterator(); it2.hasNext(); ) {
           it2.next();
           numCurTasks++;
         }

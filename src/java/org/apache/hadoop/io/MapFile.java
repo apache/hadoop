@@ -67,16 +67,6 @@ public class MapFile {
     private WritableComparable lastKey;
 
 
-    /** Create the named map for keys of the named class.
-     * @deprecated
-     */
-    public Writer(FileSystem fs, String dirName,
-                  Class keyClass, Class valClass)
-      throws IOException {
-      this(new Configuration(), fs, dirName,
-           WritableComparator.get(keyClass), valClass);
-    }
-
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class keyClass, Class valClass)
@@ -508,7 +498,7 @@ public class MapFile {
 
     Configuration conf = new Configuration();
     int ioFileBufferSize = conf.getInt("io.file.buffer.size", 4096);
-    FileSystem fs = new LocalFileSystem(conf);
+    FileSystem fs = FileSystem.getLocal(conf);
     MapFile.Reader reader = new MapFile.Reader(fs, in, conf);
     MapFile.Writer writer =
       new MapFile.Writer(conf, fs, out, reader.getKeyClass(), reader.getValueClass());

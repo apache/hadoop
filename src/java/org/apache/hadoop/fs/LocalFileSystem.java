@@ -44,11 +44,6 @@ public class LocalFileSystem extends FileSystem {
     
     public LocalFileSystem() {}
 
-    /** @deprecated */
-    public LocalFileSystem(Configuration conf) throws IOException {
-      initialize(NAME, conf);
-    }
-
     /**
      * Return 1x1 'localhost' cell if the file exists.
      * Return null if otherwise.

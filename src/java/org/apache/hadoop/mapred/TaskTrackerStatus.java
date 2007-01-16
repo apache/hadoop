@@ -95,17 +95,6 @@ class TaskTrackerStatus implements Writable {
     }
     
     /**
-     * All current tasks at the TaskTracker.  
-     *
-     * Tasks are tracked by a TaskStatus object.
-     * 
-     * @deprecated use {@link #getTaskReports()} instead
-     */
-    public Iterator taskReports() {
-        return taskReports.iterator();
-    }
-
-    /**
      * Get the current tasks at the TaskTracker.
      * Tasks are tracked by a {@link TaskStatus} object.
      * 

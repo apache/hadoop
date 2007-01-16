@@ -73,7 +73,7 @@ public abstract class FileSystem extends Configured {
             fs = new DistributedFileSystem(addr, conf);
         } else if ("-local".equals(cmd)) {
             i++;
-            fs = new LocalFileSystem(conf);
+            fs = FileSystem.getLocal(conf);
         } else {
             fs = get(conf);                          // using default
             LOG.info("No FS indicated, using default:"+fs.getName());
@@ -209,11 +209,6 @@ public abstract class FileSystem extends Configured {
     ///////////////////////////////////////////////////////////////
     // FileSystem
     ///////////////////////////////////////////////////////////////
-
-    /** @deprecated */
-    protected FileSystem(Configuration conf) {
-      super(conf);
-    }
 
     protected FileSystem() {
       super(null);

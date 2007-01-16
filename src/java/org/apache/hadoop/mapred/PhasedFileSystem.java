@@ -50,8 +50,6 @@ public class PhasedFileSystem extends FileSystem {
    */
   public PhasedFileSystem(FileSystem fs, String jobid, 
       String tipid, String taskid) {
-    super(fs.getConf()); // not used
-    
     this.baseFS = fs ; 
     this.jobid = jobid; 
     this.tipid = tipid ; 
@@ -66,8 +64,6 @@ public class PhasedFileSystem extends FileSystem {
    * @param conf JobConf
    */
   public PhasedFileSystem(FileSystem fs, JobConf conf) {
-    super(fs.getConf()); // not used
-    
     this.baseFS = fs ; 
     this.jobid = conf.get("mapred.job.id"); 
     this.tipid = conf.get("mapred.tip.id"); 
@@ -80,7 +76,6 @@ public class PhasedFileSystem extends FileSystem {
    * @param conf
    */
   protected PhasedFileSystem(Configuration conf){
-    super(conf);
     throw new UnsupportedOperationException("Operation not supported"); 
   }
   

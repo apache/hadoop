@@ -38,7 +38,7 @@ public class TestArrayFile extends TestCase {
 
   public void testArrayFile() throws Exception {
       Configuration conf = new Configuration();
-    FileSystem fs = new LocalFileSystem(conf);
+    FileSystem fs = FileSystem.getLocal(conf);
     RandomDatum[] data = generate(10000);
     writeTest(fs, data, FILE);
     readTest(fs, data, FILE, conf);
@@ -46,7 +46,7 @@ public class TestArrayFile extends TestCase {
 
   public void testEmptyFile() throws Exception {
     Configuration conf = new Configuration();
-    FileSystem fs = new LocalFileSystem(conf);
+    FileSystem fs = FileSystem.getLocal(conf);
     writeTest(fs, new RandomDatum[0], FILE);
     ArrayFile.Reader reader = new ArrayFile.Reader(fs, FILE, conf);
     assertNull(reader.get(0, new RandomDatum()));
