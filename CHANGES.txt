@@ -11,6 +11,9 @@ Trunk (unreleased changes)
     locations on the basis of network topology.
     (Hairong Kuang via cutting)
 
+ 3. HADOOP-852.  Add an ant task to compile record definitions, and
+    use it to compile record unit tests.  (Milind Bhandarkar via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

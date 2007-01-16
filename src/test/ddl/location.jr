@@ -1,8 +1,0 @@
-module org.apache.hadoop.record.Location {
-    class LinkLocation {
-        int RowNum;
-        int ColNum;
-        ustring AnchorText;
-    }
-}
-

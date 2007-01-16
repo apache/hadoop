@@ -30,7 +30,6 @@ import java.util.Iterator;
  * @author Milind Bhandarkar
  */
 class CppGenerator {
-    private String mFullName;
     private String mName;
     private ArrayList mInclFiles;
     private ArrayList mRecList;
@@ -40,10 +39,10 @@ class CppGenerator {
      * @param name possibly full pathname to the file
      * @param ilist included files (as JFile)
      * @param rlist List of records defined within this file
+     * @param destDir Output directory
      */
-    CppGenerator(String name, ArrayList ilist, ArrayList rlist) {
-        mFullName = name;
-        mName = (new File(name)).getName();
+    CppGenerator(String name, ArrayList ilist, ArrayList rlist, String destDir) {
+        mName = new File(destDir, (new File(name)).getName()).getAbsolutePath();
         mInclFiles = ilist;
         mRecList = rlist;
     }

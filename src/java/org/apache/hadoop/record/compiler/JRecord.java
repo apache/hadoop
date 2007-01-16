@@ -237,21 +237,19 @@ public class JRecord extends JCompType {
         
     }
     
-    public void genJavaCode() throws IOException {
+    public void genJavaCode(String destDir) throws IOException {
         String pkg = getJavaPackage();
         String pkgpath = pkg.replaceAll("\\.", "/");
-        File pkgdir = new File(pkgpath);
+        File pkgdir = new File(destDir, pkgpath);
         if (!pkgdir.exists()) {
             // create the pkg directory
             boolean ret = pkgdir.mkdirs();
             if (!ret) {
-                System.out.println("Cannnot create directory: "+pkgpath);
-                System.exit(1);
+                throw new IOException("Cannnot create directory: "+pkgpath);
             }
         } else if (!pkgdir.isDirectory()) {
             // not a directory
-            System.out.println(pkgpath+" is not a directory.");
-            System.exit(1);
+            throw new IOException(pkgpath+" is not a directory.");
         }
         File jfile = new File(pkgdir, getName()+".java");
         FileWriter jj = new FileWriter(jfile);

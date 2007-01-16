@@ -30,62 +30,71 @@ import java.io.IOException;
 
 public class Rcc implements RccConstants {
     private static String language = "java";
+    private static String destDir = ".";
     private static ArrayList recFiles = new ArrayList();
     private static JFile curFile;
     private static Hashtable recTab;
-    private static String curDir = System.getProperty("user.dir");
+    private static String curDir = ".";
     private static String curFileName;
     private static String curModuleName;
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
+        System.exit(driver(args));
+    }
+
+    public static int driver(String[] args) {
         for (int i=0; i<args.length; i++) {
             if ("-l".equalsIgnoreCase(args[i]) ||
                 "--language".equalsIgnoreCase(args[i])) {
                 language = args[i+1].toLowerCase();
+                i++;
+            } else if ("-d".equalsIgnoreCase(args[i]) ||
+                "--destdir".equalsIgnoreCase(args[i])) {
+                destDir = args[i+1];
                 i++;
             } else {
                 recFiles.add(args[i]);
             }
         }
         if (!"c++".equals(language) && !"java".equals(language)) {
-            System.out.println("Cannot recognize language:" + language);
-            System.exit(1);
+            System.err.println("Cannot recognize language:" + language);
+            return 1;
         }
         if (recFiles.size() == 0) {
-            System.out.println("No record files specified. Exiting.");
-            System.exit(1);
+            System.err.println("No record files specified. Exiting.");
+            return 1;
         }
         for (int i=0; i<recFiles.size(); i++) {
             curFileName = (String) recFiles.get(i);
-            File file = new File(curDir, curFileName);
+            File file = new File(curFileName);
             try {
                 FileReader reader = new FileReader(file);
                 Rcc parser = new Rcc(reader);
                 try {
                     recTab = new Hashtable();
                     curFile = parser.Input();
-                    System.out.println((String) recFiles.get(i) +
-                        " Parsed Successfully");
                 } catch (ParseException e) {
-                    System.out.println(e.toString());
-                    System.exit(1);
+                    System.err.println(e.toString());
+                    return 1;
                 }
                 try {
                     reader.close();
                 } catch (IOException e) {
                 }
             } catch (FileNotFoundException e) {
-                System.out.println("File " + (String) recFiles.get(i) +
+                System.err.println("File " + (String) recFiles.get(i) +
                     " Not found.");
-                System.exit(1);
+                return 1;
             }
             try {
-                curFile.genCode(language);
+                int retCode = curFile.genCode(language, destDir);
+                if (retCode != 0) { return retCode; }
             } catch (IOException e) {
-                System.out.println(e.toString());
-                System.exit(1);
+                System.err.println(e.toString());
+                return 1;
             }
         }
+        return 0;
     }
 
   final public JFile Input() throws ParseException {

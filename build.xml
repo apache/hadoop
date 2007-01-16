@@ -37,6 +37,7 @@
 
   <property name="test.src.dir" value="${basedir}/src/test"/>
   <property name="test.build.dir" value="${build.dir}/test"/>
+  <property name="test.generated.dir" value="${test.build.dir}/src"/>
   <property name="test.build.data" value="${test.build.dir}/data"/>
   <property name="test.cache.data" value="${test.build.dir}/cache"/>
   <property name="test.log.dir" value="${test.build.dir}/logs"/>
@@ -143,7 +144,27 @@
       />
   </target>
   
-  <target name="compile-core-classes" depends="init, record-parser">
+  <target name="compile-rcc-compiler" depends="init, record-parser">
+    <javac 
+        encoding="${build.encoding}" 
+        srcdir="${src.dir}"
+        includes="org/apache/hadoop/record/compiler/**/*.java"
+        destdir="${build.classes}"
+        debug="${javac.debug}"
+        optimize="${javac.optimize}"
+        target="${javac.version}"
+        source="${javac.version}"
+        deprecation="${javac.deprecation}">
+        <classpath refid="classpath"/>
+    </javac>
+    
+    <taskdef name="recordcc" classname="org.apache.hadoop.record.compiler.ant.RccTask">
+      <classpath refid="classpath" />
+    </taskdef>
+  </target>
+  
+  
+  <target name="compile-core-classes" depends="init, compile-rcc-compiler">
 
     <copy file="${src.webapps}/datanode/browseDirectory.jsp" todir="${src.webapps}/dfs/"/>
     <jsp-compile
@@ -319,11 +340,29 @@
     </jar>
   </target>
 
-
+  <target name="generate-test-records" depends="compile-rcc-compiler">
+    <recordcc destdir="${test.generated.dir}">
+      <fileset dir="${test.src.dir}"
+	         includes="**/*.jr" />
+    </recordcc>
+  </target>
+  
   <!-- ================================================================== -->
   <!-- Compile test code                                                  --> 
   <!-- ================================================================== -->
-  <target name="compile-core-test" depends="compile-examples">
+  <target name="compile-core-test" depends="compile-examples, generate-test-records">
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${test.generated.dir}"
+     includes="org/apache/hadoop/**/*.java"
+     destdir="${test.build.classes}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <classpath refid="test.classpath"/>
+    </javac>
     <javac 
      encoding="${build.encoding}" 
      srcdir="${test.src.dir}"

@@ -55,16 +55,17 @@ public class JFile {
     /** Generate record code in given language. Language should be all
      *  lowercase.
      */
-    public void genCode(String language) throws IOException {
+    public int genCode(String language, String destDir) throws IOException {
         if ("c++".equals(language)) {
-            CppGenerator gen = new CppGenerator(mName, mInclFiles, mRecords);
+            CppGenerator gen = new CppGenerator(mName, mInclFiles, mRecords, destDir);
             gen.genCode();
         } else if ("java".equals(language)) {
-            JavaGenerator gen = new JavaGenerator(mName, mInclFiles, mRecords);
+            JavaGenerator gen = new JavaGenerator(mName, mInclFiles, mRecords, destDir);
             gen.genCode();
         } else {
-            System.out.println("Cannnot recognize language:"+language);
-            System.exit(1);
+            System.err.println("Cannnot recognize language:"+language);
+            return 1;
         }
+        return 0;
     }
 }
