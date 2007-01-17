@@ -65,6 +65,7 @@
   <property name="javac.optimize" value="on"/>
   <property name="javac.deprecation" value="off"/>
   <property name="javac.version" value="1.5"/>
+  <property name="javac.args" value=""/>
 
   <!-- the normal classpath -->
   <path id="classpath">
@@ -155,6 +156,7 @@
         target="${javac.version}"
         source="${javac.version}"
         deprecation="${javac.deprecation}">
+        <compilerarg line="${javac.args}"/>
         <classpath refid="classpath"/>
     </javac>
     
@@ -205,6 +207,7 @@
      target="${javac.version}"
      source="${javac.version}"
      deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args}" />
       <classpath refid="classpath"/>
     </javac>    
 
@@ -281,6 +284,7 @@
      target="${javac.version}"
      source="${javac.version}"
      deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args}" />
       <classpath refid="classpath"/>
     </javac>    
   </target>
@@ -361,6 +365,7 @@
      target="${javac.version}"
      source="${javac.version}"
      deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args}" />
       <classpath refid="test.classpath"/>
     </javac>
     <javac 
@@ -373,6 +378,7 @@
      target="${javac.version}"
      source="${javac.version}"
      deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args}" />
       <classpath refid="test.classpath"/>
     </javac> 
     <javac
@@ -385,6 +391,7 @@
      target="${javac.version}"
      source="${javac.version}"
      deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args}" />
       <classpath refid="test.classpath"/>
     </javac>                                 
     <delete file="${test.build.testjar}/testjob.jar"/> 
