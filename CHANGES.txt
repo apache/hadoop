@@ -32,6 +32,9 @@ Trunk (unreleased changes)
     An exception is still thrown, but corrupt blocks are now removed
     when they have replicas.  (Wendy Chien via cutting)
 
+ 9. HADOOP-886.  Reduce number of timer threads created by metrics API
+    by pooling contexts.  (Nigel Daley via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

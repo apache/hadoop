@@ -45,6 +45,7 @@ public class ContextFactory {
     
     // private Map<String,Object> attributeMap = new HashMap<String,Object>();
     private Map attributeMap = new HashMap();
+    private Map<String,MetricsContext> contextMap = new HashMap<String,MetricsContext>();
     
     /** Creates a new instance of ContextFactory */
     protected ContextFactory() {
@@ -112,9 +113,10 @@ public class ContextFactory {
      * @param contextName the name of the context
      * @return the named MetricsContext
      */
-    public MetricsContext getContext(String contextName) 
+    public synchronized MetricsContext getContext(String contextName) 
         throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
     {
+        if (contextMap.containsKey(contextName)) return contextMap.get(contextName);
         String classNameAttribute = contextName + CONTEXT_CLASS_SUFFIX;
         String className = (String) getAttribute(classNameAttribute);
         if (className == null) {
@@ -124,6 +126,7 @@ public class ContextFactory {
         AbstractMetricsContext metricsContext = 
                 (AbstractMetricsContext) contextClass.newInstance();
         metricsContext.init(contextName, this);
+        contextMap.put(contextName, metricsContext);
         return metricsContext;
     }
     
