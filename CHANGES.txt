@@ -41,6 +41,9 @@ Trunk (unreleased changes)
 
 12. HADOOP-905.  Remove some dead code from JobClient.  (cutting)
 
+13. HADOOP-902.  Fix a NullPointerException in HDFS client when
+    closing output streams.  (Raghu Angadi via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

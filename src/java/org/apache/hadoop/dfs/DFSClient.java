@@ -967,17 +967,21 @@ class DFSClient implements FSConstants {
          * filedescriptor that we don't own.
          */
         private void closeBackupStream() throws IOException {
-          OutputStream stream = backupStream;
-          backupStream = null;
-          stream.close();
+          if ( backupStream != null ) {
+            OutputStream stream = backupStream;
+            backupStream = null;
+            stream.close();
+          }   
         }
         /* Similar to closeBackupStream(). Theoritically deleting a file
          * twice could result in deleting a file that we should not.
          */
         private void deleteBackupFile() {
-          File file = backupFile;
-          backupFile = null;
-          file.delete();
+          if ( backupFile != null ) {
+            File file = backupFile;
+            backupFile = null;
+            file.delete();
+          }
         }
         
         private File newBackupFile() throws IOException {
@@ -1322,12 +1326,8 @@ class DFSClient implements FSConstants {
               }
             }
             
-            if ( backupStream != null ) {
-              closeBackupStream();
-            }
-            if ( backupFile != null ) {
-              deleteBackupFile();
-            }
+            closeBackupStream();
+            deleteBackupFile();
 
             if (s != null) {
                 s.close();
