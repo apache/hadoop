@@ -38,6 +38,9 @@ Trunk (unreleased changes)
 10. HADOOP-897.  Add a "javac.args" property to build.xml that permits
     one to pass arbitrary options to javac. (Milind Bhandarkar via cutting)
 
+11. HADOOP-899.  Update libhdfs for changes in HADOOP-871.
+    (Sameer Paranjpye via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
