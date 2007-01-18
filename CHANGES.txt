@@ -39,6 +39,8 @@ Trunk (unreleased changes)
 11. HADOOP-899.  Update libhdfs for changes in HADOOP-871.
     (Sameer Paranjpye via cutting)
 
+12. HADOOP-905.  Remove some dead code from JobClient.  (cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
