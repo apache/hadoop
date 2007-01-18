@@ -17,9 +17,7 @@ Trunk (unreleased changes)
  4. HADOOP-757.  Fix "Bad File Descriptor" exception in HDFS client
     when an output file is closed twice.  (Raghu Angadi via cutting)
 
- 5. HADOOP-803.  Reduce memory footprint of HDFS namenode by replacing
-    the TreeSet of block locations with an ArrayList.
-    (Raghu Angadi via cutting)
+ 5. [ intentionally blank ]
 
  6. HADOOP-890.  Replace dashes in metric names with underscores,
     for better compatibility with some monitoring systems.

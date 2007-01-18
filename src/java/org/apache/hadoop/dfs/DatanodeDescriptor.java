@@ -34,7 +34,7 @@ import java.util.*;
  **************************************************/
 class DatanodeDescriptor extends DatanodeInfo {
 
-  private volatile SortedMap<Block, Block> blocks = new TreeMap<Block, Block>();
+  private volatile Collection<Block> blocks = new TreeSet<Block>();
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   protected boolean isAlive = false;
@@ -60,12 +60,17 @@ class DatanodeDescriptor extends DatanodeInfo {
 
   /**
    */
-  void addBlock(Block b) {
-      blocks.put(b, b);
+  void updateBlocks(Block newBlocks[]) {
+    blocks.clear();
+    for (int i = 0; i < newBlocks.length; i++) {
+      blocks.add(newBlocks[i]);
+    }
   }
-  
-  void removeBlock(Block b) {
-      blocks.remove(b);
+
+  /**
+   */
+  void addBlock(Block b) {
+    blocks.add(b);
   }
 
   void resetBlocks() {
@@ -89,14 +94,10 @@ class DatanodeDescriptor extends DatanodeInfo {
   }
   
   Block[] getBlocks() {
-    return blocks.keySet().toArray(new Block[blocks.size()]);
+    return (Block[]) blocks.toArray(new Block[blocks.size()]);
   }
 
   Iterator<Block> getBlockIterator() {
-    return blocks.keySet().iterator();
-  }
-  
-  Block getBlock(long blockId) {
-      return blocks.get( new Block(blockId, 0) );
+    return blocks.iterator();
   }
 }
