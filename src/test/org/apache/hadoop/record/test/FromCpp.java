@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.TreeMap;
 import junit.framework.*;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -56,7 +57,7 @@ public class FromCpp extends TestCase {
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
             r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new ByteArrayOutputStream(20));
+            r1.setBufferVal(new BytesWritable());
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             FileInputStream istream = new FileInputStream(tmpfile);
@@ -82,7 +83,7 @@ public class FromCpp extends TestCase {
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
             r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new ByteArrayOutputStream(20));
+            r1.setBufferVal(new BytesWritable());
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             FileInputStream istream = new FileInputStream(tmpfile);
@@ -108,7 +109,7 @@ public class FromCpp extends TestCase {
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
             r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new ByteArrayOutputStream(20));
+            r1.setBufferVal(new BytesWritable());
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             FileInputStream istream = new FileInputStream(tmpfile);

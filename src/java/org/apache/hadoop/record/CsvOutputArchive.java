@@ -19,12 +19,12 @@
 package org.apache.hadoop.record;
 
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.util.TreeMap;
 import java.util.ArrayList;
 import java.io.PrintStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -97,7 +97,7 @@ public class CsvOutputArchive implements OutputArchive {
         throwExceptionOnError(tag);
     }
     
-    public void writeBuffer(ByteArrayOutputStream buf, String tag)
+    public void writeBuffer(BytesWritable buf, String tag)
     throws IOException {
         printCommaUnlessFirst();
         stream.print(Utils.toCSVBuffer(buf));

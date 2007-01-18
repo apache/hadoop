@@ -26,7 +26,7 @@ public class JBuffer extends JCompType {
     
     /** Creates a new instance of JBuffer */
     public JBuffer() {
-        super(" ::std::string", "java.io.ByteArrayOutputStream", "Buffer", "java.io.ByteArrayOutputStream");
+        super(" ::std::string", "BytesWritable", "Buffer", "BytesWritable");
     }
     
     public String genCppGetSet(String fname, int fIdx) {
@@ -34,7 +34,7 @@ public class JBuffer extends JCompType {
         cgetFunc += "    return m"+fname+";\n";
         cgetFunc += "  }\n";
         String getFunc = "  virtual "+getCppType()+"& get"+fname+"() {\n";
-        getFunc += "    bs_.set("+fIdx+");return m"+fname+";\n";
+        getFunc += "    return m"+fname+";\n";
         getFunc += "  }\n";
         return cgetFunc + getFunc;
     }
@@ -46,7 +46,7 @@ public class JBuffer extends JCompType {
     public String genJavaReadWrapper(String fname, String tag, boolean decl) {
         String ret = "";
         if (decl) {
-            ret = "    java.io.ByteArrayOutputStream "+fname+";\n";
+            ret = "    BytesWritable "+fname+";\n";
         }
         return ret + "        "+fname+"=a_.readBuffer(\""+tag+"\");\n";
     }
@@ -58,9 +58,10 @@ public class JBuffer extends JCompType {
     public String genJavaCompareTo(String fname, String other) {
       StringBuffer sb = new StringBuffer();
       sb.append("    {\n");
-      sb.append("      byte[] my = "+fname+".toByteArray();\n");
-      sb.append("      byte[] ur = "+other+".toByteArray();\n");
-      sb.append("      ret = WritableComparator.compareBytes(my,0,my.length,ur,0,ur.length);\n");
+      sb.append("      byte[] my = "+fname+".get();\n");
+      sb.append("      byte[] ur = "+other+".get();\n");
+      sb.append("      ret = WritableComparator.compareBytes(my,0,"+
+          fname+".getSize(),ur,0,"+other+".getSize());\n");
       sb.append("    }\n");
       return sb.toString();
     }
@@ -70,11 +71,11 @@ public class JBuffer extends JCompType {
     }
     
     public String genJavaEquals(String fname, String peer) {
-        return "    ret = org.apache.hadoop.record.Utils.bufEquals("+fname+","+peer+");\n";
+        return "    ret = "+fname+".equals("+peer+");\n";
     }
     
     public String genJavaHashCode(String fname) {
-        return "    ret = "+fname+".toString().hashCode();\n";
+        return "    ret = "+fname+".hashCode();\n";
     }
     
     public String genJavaSlurpBytes(String b, String s, String l) {

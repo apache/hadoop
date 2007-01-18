@@ -139,13 +139,11 @@ public class JRecord extends JCompType {
             JField jf = (JField) i.next();
             hh.write(jf.genCppDecl());
         }
-        hh.write("  mutable std::bitset<"+mFields.size()+"> bs_;\n");
         hh.write("public:\n");
         hh.write("  virtual void serialize(::hadoop::OArchive& a_, const char* tag) const;\n");
         hh.write("  virtual void deserialize(::hadoop::IArchive& a_, const char* tag);\n");
         hh.write("  virtual const ::std::string& type() const;\n");
         hh.write("  virtual const ::std::string& signature() const;\n");
-        hh.write("  virtual bool validate() const;\n");
         hh.write("  virtual bool operator<(const "+getName()+"& peer_) const;\n");
         hh.write("  virtual bool operator==(const "+getName()+"& peer_) const;\n");
         hh.write("  virtual ~"+getName()+"() {};\n");
@@ -159,7 +157,6 @@ public class JRecord extends JCompType {
             hh.write("} // end namespace "+ns[i]+"\n");
         }
         cc.write("void "+getCppFQName()+"::serialize(::hadoop::OArchive& a_, const char* tag) const {\n");
-        cc.write("  if (!validate()) throw new ::hadoop::IOException(\"All fields not set.\");\n");
         cc.write("  a_.startRecord(*this,tag);\n");
         fIdx = 0;
         for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
@@ -170,7 +167,6 @@ public class JRecord extends JCompType {
             } else {
                 cc.write("  a_.serialize("+name+",\""+jf.getTag()+"\");\n");
             }
-            cc.write("  bs_.reset("+fIdx+");\n");
         }
         cc.write("  a_.endRecord(*this,tag);\n");
         cc.write("  return;\n");
@@ -187,23 +183,11 @@ public class JRecord extends JCompType {
             } else {
                 cc.write("  a_.deserialize("+name+",\""+jf.getTag()+"\");\n");
             }
-            cc.write("  bs_.set("+fIdx+");\n");
         }
         cc.write("  a_.endRecord(*this,tag);\n");
         cc.write("  return;\n");
         cc.write("}\n");
         
-        cc.write("bool "+getCppFQName()+"::validate() const {\n");
-        cc.write("  if (bs_.size() != bs_.count()) return false;\n");
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            JType type = jf.getType();
-            if (type instanceof JRecord) {
-                cc.write("  if (!"+jf.getName()+".validate()) return false;\n");
-            }
-        }
-        cc.write("  return true;\n");
-        cc.write("}\n");
         
         cc.write("bool "+getCppFQName()+"::operator< (const "+getCppFQName()+"& peer_) const {\n");
         cc.write("  return (1\n");
@@ -261,6 +245,7 @@ public class JRecord extends JCompType {
         jj.write("import org.apache.hadoop.io.WritableComparator;\n");
         jj.write("import org.apache.hadoop.io.WritableComparable;\n");
         jj.write("import org.apache.hadoop.io.WritableUtils;\n");
+        jj.write("import org.apache.hadoop.io.BytesWritable;\n");
         jj.write("import org.apache.hadoop.io.Text;\n\n");
         jj.write("public class "+getName()+" implements org.apache.hadoop.record.Record, WritableComparable {\n");
         jj.write("  private static final Log LOG= LogFactory.getLog(\""+
@@ -269,23 +254,17 @@ public class JRecord extends JCompType {
             JField jf = (JField) i.next();
             jj.write(jf.genJavaDecl());
         }
-        jj.write("  private java.util.BitSet bs_;\n");
-        jj.write("  public "+getName()+"() {\n");
-        jj.write("    bs_ = new java.util.BitSet("+(mFields.size()+1)+");\n");
-        jj.write("    bs_.set("+mFields.size()+");\n");
-        jj.write("  }\n");
+        jj.write("  public "+getName()+"() { }\n");
+        
         
         jj.write("  public "+getName()+"(\n");
         int fIdx = 0;
-        int fLen = mFields.size();
         for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
             JField jf = (JField) i.next();
             jj.write(jf.genJavaConstructorParam(fIdx));
-            jj.write((fLen-1 == fIdx)?"":",\n");
+            jj.write((!i.hasNext())?"":",\n");
         }
         jj.write(") {\n");
-        jj.write("    bs_ = new java.util.BitSet("+(mFields.size()+1)+");\n");
-        jj.write("    bs_.set("+mFields.size()+");\n");
         fIdx = 0;
         for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
             JField jf = (JField) i.next();
@@ -298,24 +277,19 @@ public class JRecord extends JCompType {
             jj.write(jf.genJavaGetSet(fIdx));
         }
         jj.write("  public void serialize(org.apache.hadoop.record.OutputArchive a_, String tag) throws java.io.IOException {\n");
-        jj.write("    if (!validate()) throw new java.io.IOException(\"All fields not set:\");\n");
         jj.write("    a_.startRecord(this,tag);\n");
-        fIdx = 0;
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
+        for (Iterator i = mFields.iterator(); i.hasNext();) {
             JField jf = (JField) i.next();
             jj.write(jf.genJavaWriteMethodName());
-            jj.write("    bs_.clear("+fIdx+");\n");
         }
         jj.write("    a_.endRecord(this,tag);\n");
         jj.write("  }\n");
         
         jj.write("  public void deserialize(org.apache.hadoop.record.InputArchive a_, String tag) throws java.io.IOException {\n");
         jj.write("    a_.startRecord(tag);\n");
-        fIdx = 0;
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
+        for (Iterator i = mFields.iterator(); i.hasNext();) {
             JField jf = (JField) i.next();
             jj.write(jf.genJavaReadMethodName());
-            jj.write("    bs_.set("+fIdx+");\n");
         }
         jj.write("    a_.endRecord(tag);\n");
         jj.write("}\n");
@@ -335,9 +309,8 @@ public class JRecord extends JCompType {
         jj.write("      a_.endRecord(this,\"\");\n");
         jj.write("      return new String(s.toByteArray(), \"UTF-8\");\n");
         jj.write("    } catch (Throwable ex) {\n");
-        jj.write("      ex.printStackTrace();\n");
+        jj.write("      throw new RuntimeException(ex);\n");
         jj.write("    }\n");
-        jj.write("    return \"ERROR\";\n");
         jj.write("  }\n");
         
         jj.write("  public void write(java.io.DataOutput out) throws java.io.IOException {\n");
@@ -349,18 +322,6 @@ public class JRecord extends JCompType {
         jj.write("    org.apache.hadoop.record.BinaryInputArchive archive = new org.apache.hadoop.record.BinaryInputArchive(in);\n");
         jj.write("    deserialize(archive, \"\");\n");
         jj.write("  }\n");
-        
-        jj.write("  public boolean validate() {\n");
-        jj.write("    if (bs_.cardinality() != bs_.length()) return false;\n");
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            JType type = jf.getType();
-            if (type instanceof JRecord) {
-                jj.write("    if (!"+jf.getName()+".validate()) return false;\n");
-            }
-        }
-        jj.write("    return true;\n");
-        jj.write("}\n");
         
         jj.write("  public int compareTo (Object peer_) throws ClassCastException {\n");
         jj.write("    if (!(peer_ instanceof "+getName()+")) {\n");

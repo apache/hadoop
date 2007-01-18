@@ -52,7 +52,7 @@ public class RccTask extends Task {
   private String language = "java";
   private File src;
   private File dest = new File(".");
-  private final Vector<FileSet> filesets = new Vector();
+  private final Vector<FileSet> filesets = new Vector<FileSet>();
   private boolean failOnError = true;
   
   /** Creates a new instance of RccTask */

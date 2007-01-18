@@ -22,12 +22,12 @@ import java.io.IOException;
 import junit.framework.*;
 import org.apache.hadoop.record.RecordWriter;
 import org.apache.hadoop.record.RecordReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.TreeMap;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -60,7 +60,7 @@ public class TestRecordIO extends TestCase {
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
             r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new ByteArrayOutputStream(20));
+            r1.setBufferVal(new BytesWritable());
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             RecRecord0 r0 = new RecRecord0();
@@ -94,7 +94,7 @@ public class TestRecordIO extends TestCase {
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
             r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new ByteArrayOutputStream(20));
+            r1.setBufferVal(new BytesWritable());
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             RecRecord0 r0 = new RecRecord0();
@@ -109,11 +109,36 @@ public class TestRecordIO extends TestCase {
             istream.close();
             tmpfile.delete();
             assertTrue("Serialized and deserialized records do not match.", r1.equals(r2));
+            
         } catch (IOException ex) {
             ex.printStackTrace();
-        } 
+        }
     }
 
+    public void testToString() {
+      try {
+            RecRecord1 r1 = new RecRecord1();
+            r1.setBoolVal(true);
+            r1.setByteVal((byte)0x66);
+            r1.setFloatVal(3.145F);
+            r1.setDoubleVal(1.5234);
+            r1.setIntVal(4567);
+            r1.setLongVal(0x5a5a5a5a5a5aL);
+            r1.setStringVal(new Text("random text"));
+            r1.setBufferVal(new BytesWritable());
+            r1.setVectorVal(new ArrayList());
+            r1.setMapVal(new TreeMap());
+            RecRecord0 r0 = new RecRecord0();
+            r0.setStringVal(new Text("other random text"));
+            r1.setRecordVal(r0);
+            System.err.println("Illustrating toString bug"+r1.toString());
+            System.err.println("Illustrating toString bug"+r1.toString());
+        } catch (Throwable ex) {
+            assertTrue("Record.toString cannot be invoked twice in succession."+
+                "This bug has been fixed in the latest version.", false);
+        }
+    }
+    
     public void testXml() {
         File tmpfile;
         try {
@@ -128,7 +153,7 @@ public class TestRecordIO extends TestCase {
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
             r1.setStringVal(new Text("ran\002dom &lt; %text<&more"));
-            r1.setBufferVal(new ByteArrayOutputStream(20));
+            r1.setBufferVal(new BytesWritable());
             r1.setVectorVal(new ArrayList());
             r1.setMapVal(new TreeMap());
             RecRecord0 r0 = new RecRecord0();

@@ -19,12 +19,12 @@
 package org.apache.hadoop.record;
 
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.util.TreeMap;
 import java.util.ArrayList;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.OutputStream;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.io.WritableUtils;
@@ -74,11 +74,12 @@ public class BinaryOutputArchive implements OutputArchive {
         s.write(out);
     }
     
-    public void writeBuffer(ByteArrayOutputStream buf, String tag)
+    public void writeBuffer(BytesWritable buf, String tag)
     throws IOException {
-        byte[] barr = buf.toByteArray();
-        writeInt(barr.length, tag);
-        out.write(barr);
+      byte[] barr = buf.get();
+      int len = buf.getSize();
+      WritableUtils.writeVInt(out, len);
+      out.write(barr, 0, len);
     }
     
     public void writeRecord(Record r, String tag) throws IOException {

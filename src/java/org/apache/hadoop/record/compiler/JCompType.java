@@ -36,7 +36,7 @@ abstract class JCompType extends JType {
         cgetFunc += "    return m"+fname+";\n";
         cgetFunc += "  }\n";
         String getFunc = "  virtual "+getCppType()+"& get"+fname+"() {\n";
-        getFunc += "    bs_.set("+fIdx+");return m"+fname+";\n";
+        getFunc += "    return m"+fname+";\n";
         getFunc += "  }\n";
         return cgetFunc + getFunc;
     }

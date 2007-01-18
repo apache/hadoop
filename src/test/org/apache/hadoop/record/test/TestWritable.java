@@ -63,8 +63,6 @@ public class TestWritable extends TestCase {
     for (int length = 0; length < MAX_LENGTH;
          length+= random.nextInt(MAX_LENGTH/10)+1) {
 
-      //LOG.info("creating; entries = " + length);
-
       // create a file with length entries
       SequenceFile.Writer writer =
         new SequenceFile.Writer(fs, conf, file,
@@ -76,9 +74,7 @@ public class TestWritable extends TestCase {
           byte[] data = new byte[random.nextInt(10)];
           random.nextBytes(data);
           RecBuffer value = new RecBuffer();
-          ByteArrayOutputStream strm = new ByteArrayOutputStream(data.length);
-          strm.write(data);
-          value.setData(strm);
+          value.setData(new BytesWritable(data));
           writer.append(key, value);
         }
       } finally {
@@ -92,9 +88,7 @@ public class TestWritable extends TestCase {
       for (int i = 0; i < 3; i++) {
         int numSplits =
           random.nextInt(MAX_LENGTH/(SequenceFile.SYNC_INTERVAL/20))+1;
-        //LOG.info("splitting: requesting = " + numSplits);
         InputSplit[] splits = format.getSplits(job, numSplits);
-        //LOG.info("splitting: got =        " + splits.length);
 
         // check each split
         BitSet bits = new BitSet(length);
@@ -104,15 +98,10 @@ public class TestWritable extends TestCase {
           try {
             int count = 0;
             while (reader.next(key, value)) {
-              // if (bits.get(key.get())) {
-              // LOG.info("splits["+j+"]="+splits[j]+" : " + key.get());
-              // LOG.info("@"+reader.getPos());
-              // }
               assertFalse("Key in multiple partitions.", bits.get(key.getData()));
               bits.set(key.getData());
               count++;
             }
-            //LOG.info("splits["+j+"]="+splits[j]+" count=" + count);
           } finally {
             reader.close();
           }

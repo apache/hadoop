@@ -19,11 +19,8 @@
 package org.apache.hadoop.record;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.CharacterCodingException;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -36,32 +33,6 @@ public class Utils {
     private Utils() {
     }
    
-    /**
-     * equals function that actually compares two buffers.
-     *
-     * @param one First buffer
-     * @param two Second buffer
-     * @return true if one and two contain exactly the same content, else false.
-     */
-    public static boolean bufEquals(ByteArrayOutputStream one,
-            ByteArrayOutputStream two) {
-        if (one == two) {
-            return true;
-        }
-        byte[] onearray = one.toByteArray();
-        byte[] twoarray = two.toByteArray();
-        boolean ret = (onearray.length == twoarray.length);
-        if (!ret) {
-            return ret;
-        }
-        for (int idx = 0; idx < onearray.length; idx++) {
-            if (onearray[idx] != twoarray[idx]) {
-                return false;
-            }
-        }
-        return true;
-    }
-    
     public static final char[] hexchars = { '0', '1', '2', '3', '4', '5',
                                             '6', '7', '8', '9', 'A', 'B',
                                             'C', 'D', 'E', 'F' };
@@ -200,10 +171,11 @@ public class Utils {
      * @param s 
      * @return 
      */
-    static String toXMLBuffer(ByteArrayOutputStream s) {
-        byte[] barr = s.toByteArray();
-        StringBuffer sb = new StringBuffer(2*barr.length);
-        for (int idx = 0; idx < barr.length; idx++) {
+    static String toXMLBuffer(BytesWritable s) {
+        byte[] barr = s.get();
+        int bsize = s.getSize();
+        StringBuffer sb = new StringBuffer(2*bsize);
+        for (int idx = 0; idx < bsize; idx++) {
             sb.append(Integer.toHexString((int)barr[idx]));
         }
         return sb.toString();
@@ -215,10 +187,9 @@ public class Utils {
      * @throws java.io.IOException 
      * @return 
      */
-    static ByteArrayOutputStream fromXMLBuffer(String s)
+    static BytesWritable fromXMLBuffer(String s)
     throws IOException {
-        ByteArrayOutputStream stream =  new ByteArrayOutputStream();
-        if (s.length() == 0) { return stream; }
+        if (s.length() == 0) { return new BytesWritable(); }
         int blen = s.length()/2;
         byte[] barr = new byte[blen];
         for (int idx = 0; idx < blen; idx++) {
@@ -226,8 +197,7 @@ public class Utils {
             char c2 = s.charAt(2*idx+1);
             barr[idx] = Byte.parseByte(""+c1+c2, 16);
         }
-        stream.write(barr);
-        return stream;
+        return new BytesWritable(barr);
     }
     
     /**
@@ -235,11 +205,12 @@ public class Utils {
      * @param buf 
      * @return 
      */
-    static String toCSVBuffer(ByteArrayOutputStream buf) {
-        byte[] barr = buf.toByteArray();
-        StringBuffer sb = new StringBuffer(barr.length+1);
+    static String toCSVBuffer(BytesWritable buf) {
+        byte[] barr = buf.get();
+        int bsize = buf.getSize();
+        StringBuffer sb = new StringBuffer(bsize+1);
         sb.append('#');
-        for(int idx = 0; idx < barr.length; idx++) {
+        for(int idx = 0; idx < bsize; idx++) {
             sb.append(Integer.toHexString((int)barr[idx]));
         }
         return sb.toString();
@@ -247,18 +218,17 @@ public class Utils {
     
     /**
      * Converts a CSV-serialized representation of buffer to a new
-     * ByteArrayOutputStream.
+     * BytesWritable.
      * @param s CSV-serialized representation of buffer
      * @throws java.io.IOException 
-     * @return Deserialized ByteArrayOutputStream
+     * @return Deserialized BytesWritable
      */
-    static ByteArrayOutputStream fromCSVBuffer(String s)
+    static BytesWritable fromCSVBuffer(String s)
     throws IOException {
         if (s.charAt(0) != '#') {
             throw new IOException("Error deserializing buffer.");
         }
-        ByteArrayOutputStream stream =  new ByteArrayOutputStream();
-        if (s.length() == 1) { return stream; }
+        if (s.length() == 1) { return new BytesWritable(); }
         int blen = (s.length()-1)/2;
         byte[] barr = new byte[blen];
         for (int idx = 0; idx < blen; idx++) {
@@ -266,7 +236,6 @@ public class Utils {
             char c2 = s.charAt(2*idx+2);
             barr[idx] = Byte.parseByte(""+c1+c2, 16);
         }
-        stream.write(barr);
-        return stream;
+        return new BytesWritable(barr);
     }
 }

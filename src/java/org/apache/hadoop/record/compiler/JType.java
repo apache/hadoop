@@ -61,7 +61,7 @@ abstract public class JType {
         getFunc += "    return m"+fname+";\n";
         getFunc += "  }\n";
         String setFunc = "  virtual void set"+fname+"("+mCppName+" m_) {\n";
-        setFunc += "    m"+fname+"=m_; bs_.set("+fIdx+");\n";
+        setFunc += "    m"+fname+"=m_;\n";
         setFunc += "  }\n";
         return getFunc+setFunc;
     }
@@ -71,7 +71,7 @@ abstract public class JType {
         getFunc += "    return m"+fname+";\n";
         getFunc += "  }\n";
         String setFunc = "  public void set"+fname+"("+mJavaName+" m_) {\n";
-        setFunc += "    m"+fname+"=m_; bs_.set("+fIdx+");\n";
+        setFunc += "    m"+fname+"=m_;\n";
         setFunc += "  }\n";
         return getFunc+setFunc;
     }
@@ -143,6 +143,6 @@ abstract public class JType {
     }
 
     String genJavaConstructorSet(String fname, int fIdx) {
-        return "    m"+fname+"=m"+fIdx+"; bs_.set("+fIdx+");\n";
+        return "    m"+fname+"=m"+fIdx+";\n";
     }
 }

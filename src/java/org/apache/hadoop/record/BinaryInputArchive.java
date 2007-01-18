@@ -20,9 +20,9 @@ package org.apache.hadoop.record;
 
 import java.io.DataInput;
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.InputStream;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.io.WritableUtils;
@@ -87,13 +87,11 @@ public class BinaryInputArchive implements InputArchive {
         return text;
     }
     
-    public ByteArrayOutputStream readBuffer(String tag) throws IOException {
-        int len = readInt(tag);
-        ByteArrayOutputStream buf = new ByteArrayOutputStream(len);
-        byte[] arr = new byte[len];
-        in.readFully(arr);
-        buf.write(arr, 0, len);
-        return buf;
+    public BytesWritable readBuffer(String tag) throws IOException {
+      int len = WritableUtils.readVInt(in);
+      byte[] barr = new byte[len];
+      in.readFully(barr);
+      return new BytesWritable(barr);
     }
     
     public void readRecord(Record r, String tag) throws IOException {

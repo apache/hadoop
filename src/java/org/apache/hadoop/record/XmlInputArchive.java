@@ -20,7 +20,6 @@ package org.apache.hadoop.record;
 
 import java.io.InputStream;
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 
 import org.xml.sax.*;
@@ -28,6 +27,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 /**
  *
@@ -207,7 +207,7 @@ class XmlInputArchive implements InputArchive {
         return Utils.fromXMLString(v.getValue());
     }
     
-    public ByteArrayOutputStream readBuffer(String tag) throws IOException {
+    public BytesWritable readBuffer(String tag) throws IOException {
         Value v = next();
         if (!"string".equals(v.getType())) {
             throw new IOException("Error deserializing "+tag+".");

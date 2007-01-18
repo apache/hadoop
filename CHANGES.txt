@@ -44,6 +44,9 @@ Trunk (unreleased changes)
 13. HADOOP-902.  Fix a NullPointerException in HDFS client when
     closing output streams.  (Raghu Angadi via cutting)
 
+14. HADOOP-735.  Switch generated record code to use BytesWritable to
+    represent fields of type 'buffer'. (Milind Bhandarkar via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

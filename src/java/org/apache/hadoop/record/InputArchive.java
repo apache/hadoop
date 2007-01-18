@@ -19,7 +19,7 @@
 package org.apache.hadoop.record;
 
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -35,7 +35,7 @@ public interface InputArchive {
     public float readFloat(String tag) throws IOException;
     public double readDouble(String tag) throws IOException;
     public Text readString(String tag) throws IOException;
-    public ByteArrayOutputStream readBuffer(String tag) throws IOException;
+    public BytesWritable readBuffer(String tag) throws IOException;
     public void readRecord(Record r, String tag) throws IOException;
     public void startRecord(String tag) throws IOException;
     public void endRecord(String tag) throws IOException;

@@ -19,12 +19,12 @@
 package org.apache.hadoop.record;
 
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.util.TreeMap;
 import java.util.ArrayList;
 import java.io.PrintStream;
 import java.io.OutputStream;
 import java.util.Stack;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -199,7 +199,7 @@ class XmlOutputArchive implements OutputArchive {
         printEndEnvelope(tag);
     }
     
-    public void writeBuffer(ByteArrayOutputStream buf, String tag)
+    public void writeBuffer(BytesWritable buf, String tag)
     throws IOException {
         printBeginEnvelope(tag);
         stream.print("<string>");

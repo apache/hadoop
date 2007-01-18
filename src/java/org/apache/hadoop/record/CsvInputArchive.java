@@ -21,9 +21,9 @@ package org.apache.hadoop.record;
 import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.io.PushbackReader;
 import java.io.UnsupportedEncodingException;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -127,7 +127,7 @@ class CsvInputArchive implements InputArchive {
         
     }
     
-    public ByteArrayOutputStream readBuffer(String tag) throws IOException {
+    public BytesWritable readBuffer(String tag) throws IOException {
         String sval = readField(tag);
         return Utils.fromCSVBuffer(sval);
     }
