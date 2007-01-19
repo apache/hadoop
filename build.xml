@@ -488,6 +488,7 @@
 
     	<packageset dir="src/contrib/streaming/src/java"/>
     	<packageset dir="src/contrib/smallJobsBenchmark/src/java"/>
+    	<packageset dir="src/contrib/abacus/src/java"/>
 
         <link href="${javadoc.link.java}"/>
         <classpath refid="classpath"/>
@@ -497,6 +498,7 @@
 
        <group title="contrib: Streaming" packages="org.apache.hadoop.streaming*"/>
        <group title="contrib: Small Jobs Benchmark" packages="org.apache.hadoop.benchmarks.mapred*"/>
+       <group title="contrib: Abacus" packages="org.apache.hadoop.abacus*"/>
 
     </javadoc>
   </target>	

@@ -51,6 +51,9 @@ Trunk (unreleased changes)
     merging multiple map outputs as they arrive at reduce nodes before
     they're written to disk.  (Devaraj Das via cutting)
 
+16. HADOOP-908.  Add a new contrib package, Abacus, that simplifies
+    counting and aggregation, built on MapReduce.  (Runping Qi via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
