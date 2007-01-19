@@ -233,11 +233,18 @@ class ReduceTask extends Task {
     
 
     // open a file to collect map output
-    Path[] mapFiles = new Path[numMaps];
+    // since we don't know how many map outputs got merged in memory, we have
+    // to check whether a given map output exists, and if it does, add it in
+    // the list of files to merge, otherwise not.
+    List <Path> mapFilesList = new ArrayList();
     for(int i=0; i < numMaps; i++) {
-      mapFiles[i] = mapOutputFile.getInputFile(i, getTaskId());
+      Path f = mapOutputFile.getInputFile(i, getTaskId());
+      if (lfs.exists(f))
+        mapFilesList.add(f);
     }
-
+    Path[] mapFiles = new Path[mapFilesList.size()];
+    mapFiles = mapFilesList.toArray(mapFiles);
+    
     // spawn a thread to give sort progress heartbeats
     Thread sortProgress = new Thread() {
         public void run() {

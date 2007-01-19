@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import java.io.*;
 import java.net.*;
+
+import org.apache.hadoop.fs.InMemoryFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.*;
@@ -29,7 +31,7 @@ import org.apache.hadoop.util.Progressable;
 
 /** The location of a map output file, as passed to a reduce task via the
  * {@link InterTrackerProtocol}. */ 
-class MapOutputLocation implements Writable {
+class MapOutputLocation implements Writable, MRConstants {
 
     static {                                      // register a ctor
       WritableFactories.setFactory
@@ -162,4 +164,96 @@ class MapOutputLocation implements Writable {
     }
     return totalBytes;
   }
+  
+  /**
+   * Get the map output into a local file (either in the inmemory fs or on the 
+   * local fs) from the remote server.
+   * We use the file system so that we generate checksum files on the data.
+   * @param inMemFileSys the inmemory filesystem to write the file to
+   * @param localFileSys the local filesystem to write the file to
+   * @param localFilename the filename to write the data into
+   * @param reduce the reduce id to get for
+   * @param timeout number of ms for connection and read timeout
+   * @return the path of the file that got created
+   * @throws IOException when something goes wrong
+   */
+  public Path getFile(InMemoryFileSystem inMemFileSys,
+                      FileSystem localFileSys,
+                      Path localFilename, 
+                      int reduce,
+                      int timeout) throws IOException, InterruptedException {
+    boolean good = false;
+    long totalBytes = 0;
+    FileSystem fileSys = localFileSys;
+    Thread currentThread = Thread.currentThread();
+    URL path = new URL(toString() + "&reduce=" + reduce);
+    try {
+      URLConnection connection = path.openConnection();
+      if (timeout > 0) {
+        connection.setConnectTimeout(timeout);
+        connection.setReadTimeout(timeout);
+      }
+      InputStream input = connection.getInputStream();
+      OutputStream output = null;
+      
+      //We will put a file in memory if it meets certain criteria:
+      //1. The size of the file should be less than 25% of the total inmem fs
+      //2. There is space available in the inmem fs
+      
+      int length = connection.getContentLength();
+      int inMemFSSize = inMemFileSys.getFSSize();
+      int checksumLength = inMemFileSys.getChecksumFileLength(length);
+        
+      boolean createInMem = 
+        (((float)(length + checksumLength) / inMemFSSize <= 
+        MAX_INMEM_FILESIZE_FRACTION) && 
+        inMemFileSys.reserveSpaceWithCheckSum(localFilename, length));
+      
+      if (createInMem)
+        fileSys = inMemFileSys;
+      else
+        fileSys = localFileSys;
+
+      output = fileSys.create(localFilename);
+      try {  
+        try {
+          byte[] buffer = new byte[64 * 1024];
+          if (currentThread.isInterrupted()) {
+            throw new InterruptedException();
+          }
+          int len = input.read(buffer);
+          while (len > 0) {
+            totalBytes += len;
+            output.write(buffer, 0 ,len);
+            if (currentThread.isInterrupted()) {
+              throw new InterruptedException();
+            }
+            len = input.read(buffer);
+          }
+        } finally {
+          output.close();
+        }
+      } finally {
+        input.close();
+      }
+      good = ((int) totalBytes) == connection.getContentLength();
+      if (!good) {
+        throw new IOException("Incomplete map output received for " + path +
+                              " (" + totalBytes + " instead of " + 
+                              connection.getContentLength() + ")");
+      }
+    } finally {
+      if (!good) {
+        try {
+          fileSys.delete(localFilename);
+          totalBytes = 0;
+        } catch (Throwable th) {
+          // IGNORED because we are cleaning up
+        }
+        return null;
+      }
+    }
+    return fileSys.makeQualified(localFilename);
+  }
+
 }

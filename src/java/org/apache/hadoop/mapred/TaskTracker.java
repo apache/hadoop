@@ -885,7 +885,7 @@ public class TaskTracker
     class TaskInProgress {
         Task task;
         float progress;
-        TaskStatus.State runstate;
+        volatile TaskStatus.State runstate;
         long lastProgressReport;
         StringBuffer diagnosticInfo = new StringBuffer();
         TaskRunner runner;

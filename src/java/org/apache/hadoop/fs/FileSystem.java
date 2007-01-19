@@ -200,6 +200,13 @@ public abstract class FileSystem extends Configured {
       return new Path(file.getParent(), "."+file.getName()+".crc");
     }
 
+    /** Return the length of the checksum file given the size of the 
+     * actual file.
+     **/
+    public static long getChecksumFileLength(long fileSize, int bytesPerSum) {
+      return FSDataOutputStream.getChecksumLength(fileSize, bytesPerSum);
+    }
+    
     /** Return true iff file is a checksum file name.*/
     public static boolean isChecksumFile(Path file) {
       String name = file.getName();

@@ -125,6 +125,18 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>fs.ramfs.impl</name>
+  <value>org.apache.hadoop.fs.InMemoryFileSystem</value>
+  <description>The FileSystem for ramfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.inmemory.size.mb</name>
+  <value>75</value>
+  <description>The size of the in-memory filsystem instance in MB</description>
+</property>
+
+<property>
   <name>dfs.datanode.bindAddress</name>
   <value>0.0.0.0</value>
   <description>

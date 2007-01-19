@@ -21,6 +21,8 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
 import org.apache.lucene.util.PriorityQueue;
@@ -1893,7 +1895,8 @@ public class SequenceFile {
     }
 
     /**
-     * Merges the contents of files passed in Path[]
+     * Merges the contents of files passed in Path[] using a max factor value
+     * that is already set
      * @param inNames the array of path names
      * @param deleteInputs true if the input files should be deleted when 
      * unnecessary
@@ -1901,6 +1904,22 @@ public class SequenceFile {
      * @throws IOException
      */
     public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs) 
+    throws IOException {
+      return merge(inNames, deleteInputs, 
+                  (inNames.length < factor) ? inNames.length : factor);
+    }
+
+    /**
+     * Merges the contents of files passed in Path[]
+     * @param inNames the array of path names
+     * @param deleteInputs true if the input files should be deleted when 
+     * unnecessary
+     * @param factor the factor that will be used as the maximum merge fan-in
+     * @return RawKeyValueIteratorMergeQueue
+     * @throws IOException
+     */
+    public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs,
+                                     int factor) 
     throws IOException {
       //get the segments from inNames
       ArrayList <SegmentDescriptor> a = new ArrayList <SegmentDescriptor>();
@@ -1911,7 +1930,7 @@ public class SequenceFile {
         s.doSync();
         a.add(s);
       }
-      factor = (inNames.length < factor) ? inNames.length : factor;
+      this.factor = factor;
       MergeQueue mQueue = new MergeQueue(a);
       return mQueue.merge();
     }
@@ -1948,26 +1967,48 @@ public class SequenceFile {
     /**
      * Clones the attributes (like compression of the input file and creates a 
      * corresponding Writer
-     * @param fileSys the FileSystem object
+     * @param ignoredFileSys the (ignored) FileSystem object
      * @param inputFile the path of the input file whose attributes should be 
      * cloned 
      * @param outputFile the path of the output file 
      * @param prog the Progressable to report status during the file write
      * @return Writer
      * @throws IOException
+     * @deprecated call  #cloneFileAttributes(Path,Path,Progressable) instead
      */
-    public Writer cloneFileAttributes(FileSystem fileSys, Path inputFile, 
-                  Path outputFile, Progressable prog) throws IOException {
-      Reader reader = new Reader(fileSys, inputFile, 4096, conf);
+    public Writer cloneFileAttributes(FileSystem ignoredFileSys,
+                  Path inputFile, Path outputFile, Progressable prog) 
+    throws IOException {
+      return cloneFileAttributes(inputFile, outputFile, prog);
+    }
+
+    /**
+     * Clones the attributes (like compression of the input file and creates a 
+     * corresponding Writer
+     * @param inputFile the path of the input file whose attributes should be 
+     * cloned
+     * @param outputFile the path of the output file 
+     * @param prog the Progressable to report status during the file write
+     * @return Writer
+     * @throws IOException
+     */
+    public Writer cloneFileAttributes(Path inputFile, Path outputFile, 
+                  Progressable prog) throws IOException {
+      FileSystem srcFileSys = inputFile.getFileSystem(conf);
+      Reader reader = new Reader(srcFileSys, inputFile, 4096, conf);
       boolean compress = reader.isCompressed();
       boolean blockCompress = reader.isBlockCompressed();
       CompressionCodec codec = reader.getCompressionCodec();
       reader.close();
+      
+      FileSystem dstFileSys = outputFile.getFileSystem(conf);
       FSDataOutputStream out;
       if (prog != null)
-        out = fs.create(outputFile, true, memory/(factor+1), prog);
+        out = dstFileSys.create(outputFile, true, 
+            conf.getInt("io.file.buffer.size", 4096), prog);
       else
-        out = fs.create(outputFile, true, memory/(factor+1));
+        out = dstFileSys.create(outputFile, true, 
+            conf.getInt("io.file.buffer.size", 4096));
       Writer writer = createWriter(conf, out, keyClass, valClass, compress, 
                           blockCompress, codec);
       return writer;
@@ -2158,7 +2199,8 @@ public class SequenceFile {
             Path outputFile = conf.getLocalPath("mapred.local.dir", 
                                   (outFile.suffix("." + passNo)).toString());
             Writer writer = cloneFileAttributes(fs, 
-                            mStream[0].segmentPathName, outputFile, null);
+                            fs.makeQualified(mStream[0].segmentPathName), 
+                            fs.makeQualified(outputFile), null);
             writer.sync = null; //disable sync for temp files
             writeFile(this, writer);
             writer.close();
@@ -2276,7 +2318,7 @@ public class SequenceFile {
       public boolean nextRawKey() throws IOException {
         if (in == null) {
         Reader reader = new Reader(fs, segmentPathName, 
-                memory/(factor+1), segmentOffset, 
+            conf.getInt("io.file.buffer.size", 4096), segmentOffset, 
                 segmentLength, conf);
         
         //sometimes we ignore syncs especially for temp merge files

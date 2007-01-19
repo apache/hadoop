@@ -177,4 +177,11 @@ public class FSDataOutputStream extends DataOutputStream {
     return ((Buffer)out).getPos();
   }
 
+  public static long getChecksumLength(long size, int bytesPerSum) {
+    //the checksum length is equal to size passed divided by bytesPerSum +
+    //bytes written in the beginning of the checksum file.  
+    return ((long)(Math.ceil((float)size/bytesPerSum)) + 1) * 4 + 
+            CHECKSUM_VERSION.length;  
+  }
+  
 }

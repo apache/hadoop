@@ -47,6 +47,10 @@ Trunk (unreleased changes)
 14. HADOOP-735.  Switch generated record code to use BytesWritable to
     represent fields of type 'buffer'. (Milind Bhandarkar via cutting)
 
+15. HADOOP-830.  Improve mapreduce merge performance by buffering and
+    merging multiple map outputs as they arrive at reduce nodes before
+    they're written to disk.  (Devaraj Das via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
