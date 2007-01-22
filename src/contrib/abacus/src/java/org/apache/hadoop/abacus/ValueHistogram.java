@@ -42,7 +42,7 @@ public class ValueHistogram implements ValueAggregator {
   /**
    * add the given val to the aggregator.
    * 
-   * @param the value to be added. It is expected to be a string
+   * @param val the value to be added. It is expected to be a string
    * in the form of xxxx\tnum, meaning xxxx has num occurrences.
    */
   public void addNextValue(Object val) {

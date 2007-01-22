@@ -41,7 +41,7 @@ public class ValueAggregatorCombiner extends ValueAggregatorJobBase {
   }
 
   /** Combines values for a given key.  
-   * @param key: the key is expected to be a Text object, whose prefix indicates
+   * @param key the key is expected to be a Text object, whose prefix indicates
    * the type of aggregation to aggregate the values. 
    * @param values the values to combine
    * @param output to collect combined values

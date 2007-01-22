@@ -106,8 +106,8 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
    * 
    * @param key
    *          input key
-   * @param valiput
-   *          value
+   * @param val
+   *          input value
    * @return a list of aggregation id/value pairs. An aggregation id encodes an
    *         aggregation type which is used to guide the way to aggregate the
    *         value in the reduce/combiner phrase of an Abacus based job.

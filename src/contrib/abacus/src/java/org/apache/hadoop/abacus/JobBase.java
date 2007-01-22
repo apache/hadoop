@@ -103,7 +103,7 @@ public abstract class JobBase implements Mapper, Reducer {
    * 
    * @param name the counter name
    * @param inc the incremental value
-   * @return
+   * @return the updated value.
    */
   protected Double addDoubleValue(Object name, double inc) {
     Double val = this.doubleCounters.get(name);
