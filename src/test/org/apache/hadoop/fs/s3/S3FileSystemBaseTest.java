@@ -228,32 +228,96 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     assertFalse("file2 exists", s3FileSystem.exists(file2));
     
   }
+  
+  public void testRenameNonExistentPath() throws Exception {
+    Path src = new Path("/test/hadoop/path");
+    Path dst = new Path("/test/new/newpath");
+    rename(src, dst, false, false, false);
+  }
 
-  public void testRename() throws Exception {
-    int len = BLOCK_SIZE;
+  public void testRenameFileMoveToNonExistentDirectory() throws Exception {
+    Path src = new Path("/test/hadoop/file");
+    createEmptyFile(src);
+    Path dst = new Path("/test/new/newfile");
+    rename(src, dst, false, true, false);
+  }
+
+  public void testRenameFileMoveToExistingDirectory() throws Exception {
+    Path src = new Path("/test/hadoop/file");
+    createEmptyFile(src);
+    Path dst = new Path("/test/new/newfile");
+    s3FileSystem.mkdirs(dst.getParent());
+    rename(src, dst, true, false, true);
+  }
+
+  public void testRenameFileAsExistingFile() throws Exception {
+    Path src = new Path("/test/hadoop/file");
+    createEmptyFile(src);
+    Path dst = new Path("/test/new/newfile");
+    createEmptyFile(dst);
+    rename(src, dst, false, true, true);
+  }
+
+  public void testRenameFileAsExistingDirectory() throws Exception {
+    Path src = new Path("/test/hadoop/file");
+    createEmptyFile(src);
+    Path dst = new Path("/test/new/newdir");
+    s3FileSystem.mkdirs(dst);
+    rename(src, dst, true, false, true);
+    assertTrue("Destination changed", s3FileSystem.exists(new Path("/test/new/newdir/file")));    
+  }
+  
+  public void testRenameDirectoryMoveToNonExistentDirectory() throws Exception {
+    Path src = new Path("/test/hadoop/dir");
+    s3FileSystem.mkdirs(src);
+    Path dst = new Path("/test/new/newdir");
+    rename(src, dst, false, true, false);
+  }
+  
+  public void testRenameDirectoryMoveToExistingDirectory() throws Exception {
+    Path src = new Path("/test/hadoop/dir");
+    s3FileSystem.mkdirs(src);
+    createEmptyFile(new Path("/test/hadoop/dir/file1"));
+    createEmptyFile(new Path("/test/hadoop/dir/subdir/file2"));
     
-    Path path = new Path("/test/hadoop/file");
+    Path dst = new Path("/test/new/newdir");
+    s3FileSystem.mkdirs(dst.getParent());
+    rename(src, dst, true, false, true);
     
-    s3FileSystem.mkdirs(path.getParent());
-
-    createEmptyFile(path);
-
-    assertTrue("Exists", s3FileSystem.exists(path));
-
-    Path newPath = new Path("/test/hadoop/newfile");
-    s3FileSystem.rename(path, newPath);
-    assertFalse("No longer exists", s3FileSystem.exists(path));
-    assertTrue("Moved", s3FileSystem.exists(newPath));
-
-    FSInputStream in = s3FileSystem.openRaw(newPath);
-    byte[] buf = new byte[len];
+    assertFalse("Nested file1 exists", s3FileSystem.exists(new Path("/test/hadoop/dir/file1")));
+    assertFalse("Nested file2 exists", s3FileSystem.exists(new Path("/test/hadoop/dir/subdir/file2")));
+    assertTrue("Renamed nested file1 exists", s3FileSystem.exists(new Path("/test/new/newdir/file1")));
+    assertTrue("Renamed nested exists", s3FileSystem.exists(new Path("/test/new/newdir/subdir/file2")));
+  }
+  
+  public void testRenameDirectoryAsExistingFile() throws Exception {
+    Path src = new Path("/test/hadoop/dir");
+    s3FileSystem.mkdirs(src);
+    Path dst = new Path("/test/new/newfile");
+    createEmptyFile(dst);
+    rename(src, dst, false, true, true);
+  }
+  
+  public void testRenameDirectoryAsExistingDirectory() throws Exception {
+    Path src = new Path("/test/hadoop/dir");
+    s3FileSystem.mkdirs(src);
+    createEmptyFile(new Path("/test/hadoop/dir/file1"));
+    createEmptyFile(new Path("/test/hadoop/dir/subdir/file2"));
     
-    in.readFully(0, buf);
-
-    assertEquals(len, buf.length);
-    for (int i = 0; i < buf.length; i++) {
-      assertEquals("Position " + i, data[i], buf[i]);
-    }
+    Path dst = new Path("/test/new/newdir");
+    s3FileSystem.mkdirs(dst);
+    rename(src, dst, true, false, true);
+    assertTrue("Destination changed", s3FileSystem.exists(new Path("/test/new/newdir/dir")));    
+    assertFalse("Nested file1 exists", s3FileSystem.exists(new Path("/test/hadoop/dir/file1")));
+    assertFalse("Nested file2 exists", s3FileSystem.exists(new Path("/test/hadoop/dir/subdir/file2")));
+    assertTrue("Renamed nested file1 exists", s3FileSystem.exists(new Path("/test/new/newdir/dir/file1")));
+    assertTrue("Renamed nested exists", s3FileSystem.exists(new Path("/test/new/newdir/dir/subdir/file2")));
+  }
+  
+  private void rename(Path src, Path dst, boolean renameSucceeded, boolean srcExists, boolean dstExists) throws IOException {
+    assertEquals("Rename result", renameSucceeded, s3FileSystem.rename(src, dst));
+    assertEquals("Source exists", srcExists, s3FileSystem.exists(src));
+    assertEquals("Destination exists", dstExists, s3FileSystem.exists(dst));
   }
 
   private void createEmptyFile(Path path) throws IOException {

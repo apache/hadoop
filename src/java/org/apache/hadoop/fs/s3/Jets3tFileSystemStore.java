@@ -188,6 +188,27 @@ class Jets3tFileSystemStore implements FileSystemStore {
       throw new S3Exception(e);
     }
   }
+  
+  public Set<Path> listDeepSubPaths(Path path) throws IOException {
+    try {
+      String prefix = pathToKey(path);
+      if (!prefix.endsWith(PATH_DELIMITER)) {
+        prefix += PATH_DELIMITER;
+      }
+      S3Object[] objects = s3Service.listObjects(bucket, prefix, null);
+      Set<Path> prefixes = new TreeSet<Path>();
+      for (int i = 0; i < objects.length; i++) {
+        prefixes.add(keyToPath(objects[i].getKey()));
+      }
+      prefixes.remove(path);
+      return prefixes;
+    } catch (S3ServiceException e) {
+      if (e.getCause() instanceof IOException) {
+        throw (IOException) e.getCause();
+      }
+      throw new S3Exception(e);
+    }    
+  }
 
   private void put(String key, InputStream in, long length) throws IOException {
     try {

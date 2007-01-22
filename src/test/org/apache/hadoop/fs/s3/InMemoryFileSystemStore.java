@@ -66,6 +66,21 @@ class InMemoryFileSystemStore implements FileSystemStore {
     return subPaths;
   }
 
+  public Set<Path> listDeepSubPaths(Path path) throws IOException {
+    String pathString = path.toUri().getPath();
+    if (!pathString.endsWith("/")) {
+      pathString += "/";
+    }
+    // This is inefficient but more than adequate for testing purposes.
+    Set<Path> subPaths = new LinkedHashSet<Path>();
+    for (Path p : inodes.tailMap(path).keySet()) {
+      if (p.toUri().getPath().startsWith(pathString)) {
+        subPaths.add(p);
+      }
+    }
+    return subPaths;
+  }
+
   public void storeINode(Path path, INode inode) throws IOException {
     inodes.put(path, inode);
   }

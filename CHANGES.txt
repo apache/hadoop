@@ -54,6 +54,9 @@ Trunk (unreleased changes)
 16. HADOOP-908.  Add a new contrib package, Abacus, that simplifies
     counting and aggregation, built on MapReduce.  (Runping Qi via cutting)
 
+17. HADOOP-901.  Add support for recursive renaming to the S3 filesystem.
+    (Tom White via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

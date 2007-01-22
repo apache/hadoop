@@ -25,6 +25,7 @@ interface FileSystemStore {
   void deleteBlock(Block block) throws IOException;
 
   Set<Path> listSubPaths(Path path) throws IOException;
+  Set<Path> listDeepSubPaths(Path path) throws IOException;
 
   /**
    * Delete everything. Used for testing.

@@ -174,15 +174,48 @@ public class S3FileSystem extends FileSystem {
 
   @Override
   public boolean renameRaw(Path src, Path dst) throws IOException {
-    // TODO: Check corner cases: dst already exists,
-    // or if path is directory with children
     Path absoluteSrc = makeAbsolute(src);
-    INode inode = store.getINode(absoluteSrc);
-    if (inode == null) {
-      throw new IOException("No such file.");
+    INode srcINode = store.getINode(absoluteSrc);
+    if (srcINode == null) {
+      // src path doesn't exist
+      return false; 
     }
-    store.storeINode(makeAbsolute(dst), inode);
-    store.deleteINode(absoluteSrc);
+    Path absoluteDst = makeAbsolute(dst);
+    INode dstINode = store.getINode(absoluteDst);
+    if (dstINode != null && dstINode.isDirectory()) {
+      absoluteDst = new Path(absoluteDst, absoluteSrc.getName());
+      dstINode = store.getINode(absoluteDst);
+    }
+    if (dstINode != null) {
+      // dst path already exists - can't overwrite
+      return false;
+    }
+    Path dstParent = absoluteDst.getParent();
+    if (dstParent != null) {
+      INode dstParentINode = store.getINode(dstParent);
+      if (dstParentINode == null || dstParentINode.isFile()) {
+        // dst parent doesn't exist or is a file
+        return false;
+      }
+    }
+    return renameRawRecursive(absoluteSrc, absoluteDst);
+  }
+  
+  private boolean renameRawRecursive(Path src, Path dst) throws IOException {
+    INode srcINode = store.getINode(src);
+    store.storeINode(dst, srcINode);
+    store.deleteINode(src);
+    if (srcINode.isDirectory()) {
+      for (Path oldSrc : store.listDeepSubPaths(src)) {
+        INode inode = store.getINode(oldSrc);
+        if (inode == null) {
+          return false;
+        }
+        Path newDst = new Path(oldSrc.toString().replaceFirst(src.toString(), dst.toString()));
+        store.storeINode(newDst, inode);
+        store.deleteINode(oldSrc);
+      }
+    }
     return true;
   }
 
