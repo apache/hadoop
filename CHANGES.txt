@@ -57,6 +57,9 @@ Trunk (unreleased changes)
 17. HADOOP-901.  Add support for recursive renaming to the S3 filesystem.
     (Tom White via cutting)
 
+18. HADOOP-912.  Fix a bug in TaskTracker.isIdle() that was
+    sporadically causing unit test failures.  (Arun C Murthy via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

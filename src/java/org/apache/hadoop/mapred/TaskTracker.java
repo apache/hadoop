@@ -1475,7 +1475,7 @@ public class TaskTracker
      * @return has this task tracker finished and cleaned up all of its tasks?
      */
     public synchronized boolean isIdle() {
-      return tasks.isEmpty();
+      return tasks.isEmpty() && tasksToCleanup.isEmpty();
     }
     
     /**
