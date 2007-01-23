@@ -43,8 +43,8 @@ public class MapFileOutputFormat extends OutputFormatBase {
     // ignore the progress parameter, since MapFile is local
     final MapFile.Writer out =
       new MapFile.Writer(job, file.getFileSystem(job), file.toString(),
-                         job.getMapOutputKeyClass(),
-                         job.getMapOutputValueClass(),
+                         job.getOutputKeyClass(),
+                         job.getOutputValueClass(),
                          SequenceFile.getCompressionType(job),
                          progress);
 
