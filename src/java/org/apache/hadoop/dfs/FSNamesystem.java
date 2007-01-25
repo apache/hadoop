@@ -454,7 +454,7 @@ class FSNamesystem implements FSConstants {
                 }
                 
                 public void remove() {
-                    throw new UnsupportedOperationException();
+                    iterator[level].remove();
                 }
             };
         }
