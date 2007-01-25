@@ -111,6 +111,10 @@ Release 0.10.1 - 2007-01-10
     currently usable.  Locking should eventually provided as an
     independent service.  (Raghu Angadi via cutting)
 
+16. HADOOP-758.  Fix exception handling during reduce so that root
+    exceptions are not masked by exceptions in cleanups.
+    (Raghu Angadi via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 

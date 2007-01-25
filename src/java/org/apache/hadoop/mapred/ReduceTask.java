@@ -326,12 +326,24 @@ class ReduceTask extends Task {
         values.informReduceProgress();
       }
 
-    } finally {
+      //Clean up: repeated in catch block below
       reducer.close();
       out.close(reporter);
+      //End of clean up.
+      
       if( runSpeculative ){
         ((PhasedFileSystem)fs).commit(); 
-       }
+      }
+    } catch ( IOException ioe ) {
+      try {
+        reducer.close();
+      } catch ( IOException ignored ) {}
+        
+      try {
+        out.close(reporter);
+      } catch ( IOException ignored ) {}
+      
+      throw ioe;
     }
     done(umbilical);
   }
