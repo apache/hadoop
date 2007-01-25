@@ -815,12 +815,18 @@ public abstract class FileSystem extends Configured {
 
     /**
      * Obtain a lock on the given Path
+     * 
+     * @deprecated FS does not support file locks anymore.
      */
+    @Deprecated
     public abstract void lock(Path f, boolean shared) throws IOException;
 
     /**
      * Release the lock
+     * 
+     * @deprecated FS does not support file locks anymore.     
      */
+    @Deprecated
     public abstract void release(Path f) throws IOException;
 
     /**

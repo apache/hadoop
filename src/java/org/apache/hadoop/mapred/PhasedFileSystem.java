@@ -338,6 +338,7 @@ public class PhasedFileSystem extends FileSystem {
     return baseFS.mkdirs(f) ;
   }
 
+  /** @deprecated */ @Deprecated
   @Override
   public void lock(
       Path f, boolean shared)
@@ -345,6 +346,7 @@ public class PhasedFileSystem extends FileSystem {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
+  /** @deprecated */ @Deprecated
   @Override
   public void release(
       Path f)

@@ -279,6 +279,7 @@ public class LocalFileSystem extends FileSystem {
       return workingDir;
     }
     
+    /** @deprecated */ @Deprecated
     public void lock(Path p, boolean shared) throws IOException {
       File f = pathToFile(p);
       f.createNewFile();
@@ -301,6 +302,7 @@ public class LocalFileSystem extends FileSystem {
       }
     }
 
+    /** @deprecated */ @Deprecated
     public void release(Path p) throws IOException {
       File f = pathToFile(p);
 

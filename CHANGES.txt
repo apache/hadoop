@@ -107,6 +107,10 @@ Release 0.10.1 - 2007-01-10
     under-replicated should be further replicated before blocks which
     are less under-replicated.  (Hairong Kuang via cutting)
 
+15. HADOOP-726.  Deprecate FileSystem locking methods.  They are not
+    currently usable.  Locking should eventually provided as an
+    independent service.  (Raghu Angadi via cutting)
+
 
 Release 0.10.0 - 2007-01-05
 

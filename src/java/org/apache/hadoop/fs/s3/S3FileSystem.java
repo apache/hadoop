@@ -311,11 +311,13 @@ public class S3FileSystem extends FileSystem {
     return new String[][] { { "localhost" } };
   }
 
+  /** @deprecated */ @Deprecated
   @Override
   public void lock(Path path, boolean shared) throws IOException {
     // TODO: Design and implement
   }
 
+  /** @deprecated */ @Deprecated
   @Override
   public void release(Path path) throws IOException {
     // TODO: Design and implement

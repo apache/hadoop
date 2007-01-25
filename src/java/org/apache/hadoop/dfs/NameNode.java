@@ -400,8 +400,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         return namesystem.mkdirs( src );
     }
 
-    /**
-     */
+    /** @deprecated */ @Deprecated
     public boolean obtainLock(String src, String clientName, boolean exclusive) throws IOException {
         int returnCode = namesystem.obtainLock(new UTF8(src), new UTF8(clientName), exclusive);
         if (returnCode == COMPLETE_SUCCESS) {
@@ -413,8 +412,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         }
     }
 
-    /**
-     */
+    /** @deprecated */ @Deprecated
     public boolean releaseLock(String src, String clientName) throws IOException {
         int returnCode = namesystem.releaseLock(new UTF8(src), new UTF8(clientName));
         if (returnCode == COMPLETE_SUCCESS) {

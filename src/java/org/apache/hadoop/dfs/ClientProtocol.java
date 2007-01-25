@@ -206,6 +206,7 @@ interface ClientProtocol extends VersionedProtocol {
      * Locking is a part of most filesystems and is useful for a
      * number of inter-process synchronization tasks.
      */
+    /** @deprecated */ @Deprecated
     public boolean obtainLock(String src, String clientName, boolean exclusive) throws IOException;
 
     /**
@@ -213,6 +214,7 @@ interface ClientProtocol extends VersionedProtocol {
      * a held lock.  It returns true if the lock is correctly released.
      * It returns false if the client should wait and try again.
      */
+    /** @deprecated */ @Deprecated
     public boolean releaseLock(String src, String clientName) throws IOException;
 
     /**

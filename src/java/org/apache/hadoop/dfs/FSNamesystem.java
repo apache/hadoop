@@ -1286,6 +1286,7 @@ class FSNamesystem implements FSConstants {
     /**
      * Get a lock (perhaps exclusive) on the given file
      */
+    /** @deprecated */ @Deprecated
     public synchronized int obtainLock( UTF8 src, 
                                         UTF8 holder, 
                                         boolean exclusive) throws IOException {
@@ -1313,6 +1314,7 @@ class FSNamesystem implements FSConstants {
     /**
      * Release the lock on the given file
      */
+    /** @deprecated */ @Deprecated
     public synchronized int releaseLock(UTF8 src, UTF8 holder) {
         int result = internalReleaseLock(src, holder);
         if (result == COMPLETE_SUCCESS) {

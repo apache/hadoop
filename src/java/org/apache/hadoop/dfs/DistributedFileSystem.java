@@ -202,10 +202,12 @@ public class DistributedFileSystem extends FileSystem {
         return dfs.mkdirs(getPath(f));
     }
 
+    /** @deprecated */ @Deprecated
     public void lock(Path f, boolean shared) throws IOException {
         dfs.lock(getPath(f), ! shared);
     }
 
+    /** @deprecated */ @Deprecated
     public void release(Path f) throws IOException {
         dfs.release(getPath(f));
     }
