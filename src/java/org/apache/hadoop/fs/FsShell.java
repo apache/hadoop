@@ -352,7 +352,7 @@ public class FsShell extends ToolBase {
             System.out.println("Found " + items.length + " items");
             for (int i = 0; i < items.length; i++) {
               Path cur = items[i];
-              System.out.println(cur + "\t" + fs.getLength(cur));
+              System.out.println(cur + "\t" + fs.getContentLength(cur));
             }
         }
     }
@@ -374,7 +374,7 @@ public class FsShell extends ToolBase {
         if (items != null) {
           int totalSize=0;
           for(int j=0; j<items.length; j++) {
-            totalSize += fs.getLength(items[j]);
+            totalSize += fs.getContentLength(items[j]);
           }
           String pathStr = paths[i].toString();
           System.out.println(

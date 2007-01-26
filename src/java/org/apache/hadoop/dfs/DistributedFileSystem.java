@@ -176,6 +176,15 @@ public class DistributedFileSystem extends FileSystem {
         return (info == null) ? 0 : info[0].getLen();
     }
 
+    public long getContentLength(Path f) throws IOException {
+        if (f instanceof DfsPath) {
+            return ((DfsPath)f).getContentsLength();
+          }
+
+          DFSFileInfo info[] = dfs.listPaths(getPath(f));
+          return (info == null) ? 0 : info[0].getContentsLen();
+    }
+
     public short getReplication(Path f) throws IOException {
       if (f instanceof DfsPath) {
         return ((DfsPath)f).getReplication();

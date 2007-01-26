@@ -534,6 +534,25 @@ public abstract class FileSystem extends Configured {
     
     /** The number of bytes in a file. */
     public abstract long getLength(Path f) throws IOException;
+    
+    /** Return the number of bytes of the given path 
+     * If <i>f</i> is a file, return the size of the file;
+     * If <i>f</i> is a directory, return the size of the directory tree
+     */
+    public long getContentLength(Path f) throws IOException {
+        if (!isDirectory(f)) {
+            // f is a file
+            return getLength(f);
+        }
+            
+        // f is a diretory
+        Path[] contents = listPathsRaw(f);
+        long size = 0;
+        for(int i=0; i<contents.length; i++) {
+            size += getContentLength(contents[i]);
+        }
+        return size;
+    }
 
     final private static PathFilter DEFAULT_FILTER = new PathFilter() {
       public boolean accept(Path file) {

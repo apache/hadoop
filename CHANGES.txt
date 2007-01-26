@@ -60,6 +60,9 @@ Trunk (unreleased changes)
 18. HADOOP-912.  Fix a bug in TaskTracker.isIdle() that was
     sporadically causing unit test failures.  (Arun C Murthy via cutting)
 
+19. HADOOP-909.  Fix the 'du' command to correctly compute the size of
+    FileSystem directory trees.  (Hairong Kuang via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
