@@ -317,7 +317,91 @@ public class TestSequenceFile extends TestCase {
     return sorter;
   }
 
+  /** Unit tests for SequenceFile metadata. */
+  public void testSequenceFileMetadata() throws Exception {
+    LOG.info("Testing SequenceFile with metadata");
+    int count = 1024 * 10;
+    int megabytes = 1;
+    int factor = 5;
+    CompressionCodec codec = new DefaultCodec();
+    Path file = new Path(System.getProperty("test.build.data",".")+"/test.seq.metadata");
+    Path recordCompressedFile = 
+      new Path(System.getProperty("test.build.data",".")+"/test.rc.seq.metadata");
+    Path blockCompressedFile = 
+      new Path(System.getProperty("test.build.data",".")+"/test.bc.seq.metadata");
+ 
+    FileSystem fs = FileSystem.getLocal(conf);
+    SequenceFile.Metadata theMetadata = new SequenceFile.Metadata();
+    theMetadata.set(new Text("name_1"), new Text("value_1"));
+    theMetadata.set(new Text("name_2"), new Text("value_2"));
+    theMetadata.set(new Text("name_3"), new Text("value_3"));
+    theMetadata.set(new Text("name_4"), new Text("value_4"));
+    
+    int seed = new Random().nextInt();
+    
+    try {
+      // SequenceFile.Writer
+      writeMetadataTest(fs, count, seed, file, CompressionType.NONE, null, theMetadata);
+      SequenceFile.Metadata aMetadata = readMetadata(fs, file);
+      if (!theMetadata.equals(aMetadata)) {
+        LOG.info("The original metadata:\n" + theMetadata.toString());
+        LOG.info("The retrieved metadata:\n" + aMetadata.toString());
+        throw new RuntimeException("metadata not match:  " + 1);
+      }
+      // SequenceFile.RecordCompressWriter
+      writeMetadataTest(fs, count, seed, recordCompressedFile, CompressionType.RECORD, 
+          codec, theMetadata);
+      aMetadata = readMetadata(fs, recordCompressedFile);
+      if (!theMetadata.equals(aMetadata)) {
+        LOG.info("The original metadata:\n" + theMetadata.toString());
+        LOG.info("The retrieved metadata:\n" + aMetadata.toString());
+        throw new RuntimeException("metadata not match:  " + 2);
+      }
+      // SequenceFile.BlockCompressWriter
+      writeMetadataTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK,
+          codec, theMetadata);
+      aMetadata =readMetadata(fs, blockCompressedFile);
+      if (!theMetadata.equals(aMetadata)) {
+        LOG.info("The original metadata:\n" + theMetadata.toString());
+        LOG.info("The retrieved metadata:\n" + aMetadata.toString());
+        throw new RuntimeException("metadata not match:  " + 3);
+      }
+    } finally {
+      fs.close();
+    }
+    LOG.info("Successfully tested SequenceFile with metadata");
+  }
+  
+  
+  private static SequenceFile.Metadata readMetadata(FileSystem fs, Path file)
+  throws IOException {
+  LOG.info("reading file: " + file.toString() + "\n");
+  SequenceFile.Reader reader = new SequenceFile.Reader(fs, file, conf);
+  SequenceFile.Metadata meta = reader.getMetadata(); 
+  reader.close();
+  return meta;
+  }
 
+  private static void writeMetadataTest(FileSystem fs, int count, int seed, Path file, 
+      CompressionType compressionType, CompressionCodec codec, SequenceFile.Metadata metadata)
+    throws IOException {
+    fs.delete(file);
+    LOG.info("creating " + count + " records with metadata and with" + compressionType +
+              " compression");
+    SequenceFile.Writer writer = 
+      SequenceFile.createWriter(fs, conf, file, 
+          RandomDatum.class, RandomDatum.class, compressionType, codec, null, metadata);
+    RandomDatum.Generator generator = new RandomDatum.Generator(seed);
+    for (int i = 0; i < count; i++) {
+      generator.next();
+      RandomDatum key = generator.getKey();
+      RandomDatum value = generator.getValue();
+
+      writer.append(key, value);
+    }
+    writer.close();
+  }
+  
   /** For debugging and testing. */
   public static void main(String[] args) throws Exception {
     int count = 1024 * 1024;

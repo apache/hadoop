@@ -50,8 +50,9 @@ public class SequenceFile {
 
   private static final byte BLOCK_COMPRESS_VERSION = (byte)4;
   private static final byte CUSTOM_COMPRESS_VERSION = (byte)5;
+  private static final byte VERSION_WITH_METADATA = (byte)6;
   private static byte[] VERSION = new byte[] {
-    (byte)'S', (byte)'E', (byte)'Q', CUSTOM_COMPRESS_VERSION
+    (byte)'S', (byte)'E', (byte)'Q', VERSION_WITH_METADATA
   };
 
   private static final int SYNC_ESCAPE = -1;      // "length" of sync entries
@@ -93,7 +94,7 @@ public class SequenceFile {
                                         CompressionType val) {
     job.set("io.seqfile.compression.type", val.toString());
   }
-  
+    
   /**
    * Construct the preferred type of SequenceFile Writer.
    * @param fs The configured filesystem. 
@@ -130,7 +131,7 @@ public class SequenceFile {
     Writer writer = null;
     
     if (compressionType == CompressionType.NONE) {
-      writer = new Writer(fs, conf, name, keyClass, valClass);
+      writer = new Writer(fs, conf, name, keyClass, valClass, null, new Metadata());
     } else if (compressionType == CompressionType.RECORD) {
       writer = new RecordCompressWriter(fs, conf, name, keyClass, valClass, 
           new DefaultCodec());
@@ -161,13 +162,13 @@ public class SequenceFile {
     Writer writer = null;
     
     if (compressionType == CompressionType.NONE) {
-      writer = new Writer(fs, conf, name, keyClass, valClass, progress); 
+      writer = new Writer(fs, conf, name, keyClass, valClass, progress, new Metadata()); 
     } else if (compressionType == CompressionType.RECORD) {
       writer = new RecordCompressWriter(fs, conf, name, 
-          keyClass, valClass, new DefaultCodec(), progress);
+          keyClass, valClass, new DefaultCodec(), progress, new Metadata());
     } else if (compressionType == CompressionType.BLOCK){
       writer = new BlockCompressWriter(fs, conf, name, 
-          keyClass, valClass, new DefaultCodec(), progress);
+          keyClass, valClass, new DefaultCodec(), progress, new Metadata());
     }
     
     return writer;
@@ -222,6 +223,7 @@ public class SequenceFile {
    * @param compressionType The compression type.
    * @param codec The compression codec.
    * @param progress The Progressable object to track progress.
+   * @param metadata The metadata of the file.
    * @return Returns the handle to the constructed SequenceFile Writer.
    * @throws IOException
    */
@@ -229,7 +231,7 @@ public class SequenceFile {
   createWriter(FileSystem fs, Configuration conf, Path name, 
       Class keyClass, Class valClass, 
       CompressionType compressionType, CompressionCodec codec,
-      Progressable progress) throws IOException {
+      Progressable progress, Metadata metadata) throws IOException {
     if ((codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
         !ZlibFactory.isNativeZlibLoaded()) {
@@ -240,13 +242,72 @@ public class SequenceFile {
     Writer writer = null;
     
     if (compressionType == CompressionType.NONE) {
-      writer = new Writer(fs, conf, name, keyClass, valClass, progress);
+      writer = new Writer(fs, conf, name, keyClass, valClass, progress, metadata);
     } else if (compressionType == CompressionType.RECORD) {
       writer = new RecordCompressWriter(fs, conf, name, 
-          keyClass, valClass, codec, progress);
+          keyClass, valClass, codec, progress, metadata);
     } else if (compressionType == CompressionType.BLOCK){
       writer = new BlockCompressWriter(fs, conf, name, 
-          keyClass, valClass, codec, progress);
+          keyClass, valClass, codec, progress, metadata);
+    }
+    
+    return writer;
+  }
+  
+  /**
+   * Construct the preferred type of SequenceFile Writer.
+   * @param fs The configured filesystem. 
+   * @param conf The configuration.
+   * @param name The name of the file. 
+   * @param keyClass The 'key' type.
+   * @param valClass The 'value' type.
+   * @param compressionType The compression type.
+   * @param codec The compression codec.
+   * @param progress The Progressable object to track progress.
+   * @return Returns the handle to the constructed SequenceFile Writer.
+   * @throws IOException
+   */
+  public static Writer
+  createWriter(FileSystem fs, Configuration conf, Path name, 
+      Class keyClass, Class valClass, 
+      CompressionType compressionType, CompressionCodec codec,
+      Progressable progress) throws IOException {
+    Writer writer = createWriter(fs, conf, name, keyClass, valClass, 
+        compressionType, codec, progress, new Metadata());
+    return writer;
+  }
+
+  /**
+   * Construct the preferred type of 'raw' SequenceFile Writer.
+   * @param out The stream on top which the writer is to be constructed.
+   * @param keyClass The 'key' type.
+   * @param valClass The 'value' type.
+   * @param compress Compress data?
+   * @param blockCompress Compress blocks?
+   * @param metadata The metadata of the file.
+   * @return Returns the handle to the constructed SequenceFile Writer.
+   * @throws IOException
+   */
+  private static Writer
+  createWriter(Configuration conf, FSDataOutputStream out, 
+      Class keyClass, Class valClass, boolean compress, boolean blockCompress,
+      CompressionCodec codec, Metadata metadata)
+  throws IOException {
+    if ((codec instanceof GzipCodec) && 
+        !NativeCodeLoader.isNativeCodeLoaded() && 
+        !ZlibFactory.isNativeZlibLoaded()) {
+      throw new IllegalArgumentException("SequenceFile doesn't work with " +
+          "GzipCodec without native-hadoop code!");
+    }
+
+    Writer writer = null;
+
+    if (!compress) {
+      writer = new Writer(conf, out, keyClass, valClass, metadata);
+    } else if (compress && !blockCompress) {
+      writer = new RecordCompressWriter(conf, out, keyClass, valClass, codec, metadata);
+    } else {
+      writer = new BlockCompressWriter(conf, out, keyClass, valClass, codec, metadata);
     }
     
     return writer;
@@ -267,6 +328,29 @@ public class SequenceFile {
       Class keyClass, Class valClass, boolean compress, boolean blockCompress,
       CompressionCodec codec)
   throws IOException {
+    Writer writer = createWriter(conf, out, keyClass, valClass, compress, 
+        blockCompress, codec, new Metadata());
+    return writer;
+  }
+
+  
+  /**
+   * Construct the preferred type of 'raw' SequenceFile Writer.
+   * @param conf The configuration.
+   * @param out The stream on top which the writer is to be constructed.
+   * @param keyClass The 'key' type.
+   * @param valClass The 'value' type.
+   * @param compressionType The compression type.
+   * @param codec The compression codec.
+   * @param metadata The metadata of the file.
+   * @return Returns the handle to the constructed SequenceFile Writer.
+   * @throws IOException
+   */
+  public static Writer
+  createWriter(Configuration conf, FSDataOutputStream out, 
+      Class keyClass, Class valClass, CompressionType compressionType,
+      CompressionCodec codec, Metadata metadata)
+  throws IOException {
     if ((codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
         !ZlibFactory.isNativeZlibLoaded()) {
@@ -276,17 +360,17 @@ public class SequenceFile {
 
     Writer writer = null;
 
-    if (!compress) {
-      writer = new Writer(conf, out, keyClass, valClass);
-    } else if (compress && !blockCompress) {
-      writer = new RecordCompressWriter(conf, out, keyClass, valClass, codec);
-    } else {
-      writer = new BlockCompressWriter(conf, out, keyClass, valClass, codec);
+    if (compressionType == CompressionType.NONE) {
+      writer = new Writer(conf, out, keyClass, valClass, metadata);
+    } else if (compressionType == CompressionType.RECORD) {
+      writer = new RecordCompressWriter(conf, out, keyClass, valClass, codec, metadata);
+    } else if (compressionType == CompressionType.BLOCK){
+      writer = new BlockCompressWriter(conf, out, keyClass, valClass, codec, metadata);
     }
     
     return writer;
   }
-
+  
   /**
    * Construct the preferred type of 'raw' SequenceFile Writer.
    * @param conf The configuration.
@@ -303,25 +387,11 @@ public class SequenceFile {
       Class keyClass, Class valClass, CompressionType compressionType,
       CompressionCodec codec)
   throws IOException {
-    if ((codec instanceof GzipCodec) && 
-        !NativeCodeLoader.isNativeCodeLoaded() && 
-        !ZlibFactory.isNativeZlibLoaded()) {
-      throw new IllegalArgumentException("SequenceFile doesn't work with " +
-          "GzipCodec without native-hadoop code!");
-    }
-
-    Writer writer = null;
-
-    if (compressionType == CompressionType.NONE) {
-      writer = new Writer(conf, out, keyClass, valClass);
-    } else if (compressionType == CompressionType.RECORD) {
-      writer = new RecordCompressWriter(conf, out, keyClass, valClass, codec);
-    } else if (compressionType == CompressionType.BLOCK){
-      writer = new BlockCompressWriter(conf, out, keyClass, valClass, codec);
-    }
-    
+    Writer writer = createWriter(conf, out, keyClass, valClass, compressionType,
+        codec, new Metadata());
     return writer;
   }
+  
 
   /** The interface to 'raw' values of SequenceFiles. */
   public static interface ValueBytes {
@@ -424,6 +494,99 @@ public class SequenceFile {
 
   } // CompressedBytes
   
+  /**
+   * The class encapsulating with the metadata of a file.
+   * The metadata of a file is a list of attribute name/value
+   * pairs of Text type.
+   *
+   */
+  static class Metadata implements Writable {
+
+    private TreeMap<Text, Text> theMetadata;
+    
+    public Metadata() {
+      this(new TreeMap<Text, Text>());
+    }
+    
+    public Metadata(TreeMap<Text, Text> arg) {
+      if (arg == null) {
+        this.theMetadata = new TreeMap<Text, Text>();
+      } else {
+        this.theMetadata = arg;
+      }
+    }
+    
+    public Text get(Text name) {
+      return this.theMetadata.get(name);
+    }
+    
+    public void set(Text name, Text value) {
+      this.theMetadata.put(name, value);
+    }
+    
+    public TreeMap<Text, Text> getMetadata() {
+      return new TreeMap<Text, Text>(this.theMetadata);
+    }
+    
+    public void write(DataOutput out) throws IOException {
+      out.writeInt(this.theMetadata.size());
+      Iterator iter = this.theMetadata.entrySet().iterator();
+      while (iter.hasNext()) {
+        Map.Entry<Text, Text> en = (Map.Entry<Text, Text>)iter.next();
+        en.getKey().write(out);
+        en.getValue().write(out);
+      }
+    }
+
+    public void readFields(DataInput in) throws IOException {
+      int sz = in.readInt();
+      if (sz < 0) throw new IOException("Invalid size: " + sz + " for file metadata object");
+      this.theMetadata = new TreeMap<Text, Text>();
+      for (int i = 0; i < sz; i++) {
+        Text key = new Text();
+        Text val = new Text();
+        key.readFields(in);
+        val.readFields(in);
+        this.theMetadata.put(key, val);
+      }    
+    }
+    
+    public boolean equals(Metadata other) {
+      if (other == null) return false;
+      if (this.theMetadata.size() != other.theMetadata.size()) {
+        return false;
+      }
+      Iterator iter1 = this.theMetadata.entrySet().iterator();
+      Iterator iter2 = other.theMetadata.entrySet().iterator();
+      while (iter1.hasNext() && iter2.hasNext()) {
+        Map.Entry<Text, Text> en1 = (Map.Entry<Text, Text>)iter1.next();
+        Map.Entry<Text, Text> en2 = (Map.Entry<Text, Text>)iter2.next();
+        if (!en1.getKey().equals(en2.getKey())) {
+           return false;
+        }
+        if (!en1.getValue().equals(en2.getValue())) {
+           return false;
+        }
+      }
+      if (iter1.hasNext() || iter2.hasNext()) {
+        return false;
+      }
+      return true;
+    }
+    
+    public String toString() {
+      StringBuffer sb = new StringBuffer();
+      sb.append("size: ").append(this.theMetadata.size()).append("\n");
+      Iterator iter = this.theMetadata.entrySet().iterator();
+      while (iter.hasNext()) {
+        Map.Entry<Text, Text> en = (Map.Entry<Text, Text>)iter.next();
+        sb.append("\t").append(en.getKey().toString()).append("\t").append(en.getValue().toString());
+        sb.append("\n");
+      }
+      return sb.toString();
+    }
+  }
+  
   /** Write key/value pairs to a sequence-format file. */
   public static class Writer {
     Configuration conf;
@@ -438,6 +601,7 @@ public class SequenceFile {
     CompressionCodec codec = null;
     CompressionOutputStream deflateFilter = null;
     DataOutputStream deflateOut = null;
+    Metadata metadata = null;
 
     // Insert a globally unique 16-byte value every few entries, so that one
     // can seek into the middle of a file and then synchronize with record
@@ -462,24 +626,24 @@ public class SequenceFile {
     public Writer(FileSystem fs, Configuration conf, Path name, 
         Class keyClass, Class valClass)
       throws IOException {
-      this(fs, conf, name, keyClass, valClass, null);
+      this(fs, conf, name, keyClass, valClass, null, new Metadata());
     }
     
     /** Create the named file with write-progress reporter. */
     public Writer(FileSystem fs, Configuration conf, Path name, 
-        Class keyClass, Class valClass, Progressable progress)
+        Class keyClass, Class valClass, Progressable progress, Metadata metadata)
       throws IOException {
-      init(name, conf, fs.create(name, progress), keyClass, valClass, false, null);
+      init(name, conf, fs.create(name, progress), keyClass, valClass, false, null, metadata);
       initializeFileHeader();
       writeFileHeader();
       finalizeFileHeader();
     }
-
+    
     /** Write to an arbitrary stream using a specified buffer size. */
     private Writer(Configuration conf, FSDataOutputStream out, 
-        Class keyClass, Class valClass)
+        Class keyClass, Class valClass, Metadata metadata)
     throws IOException {
-      init(null, conf, out, keyClass, valClass, false, null);
+      init(null, conf, out, keyClass, valClass, false, null, metadata);
       
       initializeFileHeader();
       writeFileHeader();
@@ -514,12 +678,13 @@ public class SequenceFile {
       if(this.isCompressed()) {
         Text.writeString(out, (codec.getClass()).getName());
       }
+      this.metadata.write(out);
     }
-
+    
     /** Initialize. */
     void init(Path name, Configuration conf, FSDataOutputStream out,
                       Class keyClass, Class valClass,
-                      boolean compress, CompressionCodec codec) 
+                      boolean compress, CompressionCodec codec, Metadata metadata) 
     throws IOException {
       this.target = name;
       this.conf = conf;
@@ -528,6 +693,7 @@ public class SequenceFile {
       this.valClass = valClass;
       this.compress = compress;
       this.codec = codec;
+      this.metadata = metadata;
       if(this.codec != null) {
         ReflectionUtils.setConf(this.codec, this.conf);
         this.deflateFilter = this.codec.createOutputStream(buffer);
@@ -644,7 +810,20 @@ public class SequenceFile {
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
         Class keyClass, Class valClass, CompressionCodec codec) 
     throws IOException {
-      super.init(name, conf, fs.create(name), keyClass, valClass, true, codec);
+      super.init(name, conf, fs.create(name), keyClass, valClass, true, codec, new Metadata());
+      
+      initializeFileHeader();
+      writeFileHeader();
+      finalizeFileHeader();
+    }
+    
+    /** Create the named file with write-progress reporter. */
+    public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
+        Class keyClass, Class valClass, CompressionCodec codec,
+        Progressable progress, Metadata metadata)
+    throws IOException {
+      super.init(name, conf, fs.create(name, progress), 
+          keyClass, valClass, true, codec, metadata);
       
       initializeFileHeader();
       writeFileHeader();
@@ -656,26 +835,21 @@ public class SequenceFile {
         Class keyClass, Class valClass, CompressionCodec codec,
         Progressable progress)
     throws IOException {
-      super.init(name, conf, fs.create(name, progress), 
-          keyClass, valClass, true, codec);
-      
-      initializeFileHeader();
-      writeFileHeader();
-      finalizeFileHeader();
+      this(fs, conf, name, keyClass, valClass, codec, progress, new Metadata());
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */
     private RecordCompressWriter(Configuration conf, FSDataOutputStream out,
-                   Class keyClass, Class valClass, CompressionCodec codec)
+                   Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
       throws IOException {
-      super.init(null, conf, out, keyClass, valClass, true, codec);
+      super.init(null, conf, out, keyClass, valClass, true, codec, metadata);
       
       initializeFileHeader();
       writeFileHeader();
       finalizeFileHeader();
       
     }
-
+    
     boolean isCompressed() { return true; }
     boolean isBlockCompressed() { return false; }
 
@@ -752,7 +926,21 @@ public class SequenceFile {
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
         Class keyClass, Class valClass, CompressionCodec codec) 
     throws IOException {
-      super.init(name, conf, fs.create(name), keyClass, valClass, true, codec);
+      super.init(name, conf, fs.create(name), keyClass, valClass, true, codec, new Metadata());
+      init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
+      
+      initializeFileHeader();
+      writeFileHeader();
+      finalizeFileHeader();
+    }
+    
+    /** Create the named file with write-progress reporter. */
+    public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
+        Class keyClass, Class valClass, CompressionCodec codec,
+        Progressable progress, Metadata metadata)
+    throws IOException {
+      super.init(name, conf, fs.create(name, progress), keyClass, valClass, 
+          true, codec, metadata);
       init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
       
       initializeFileHeader();
@@ -765,27 +953,21 @@ public class SequenceFile {
         Class keyClass, Class valClass, CompressionCodec codec,
         Progressable progress)
     throws IOException {
-      super.init(name, conf, fs.create(name, progress), keyClass, valClass, 
-          true, codec);
-      init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
-      
-      initializeFileHeader();
-      writeFileHeader();
-      finalizeFileHeader();
+      this(fs, conf, name, keyClass, valClass, codec, progress, new Metadata());
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */
     private BlockCompressWriter(Configuration conf, FSDataOutputStream out,
-                   Class keyClass, Class valClass, CompressionCodec codec)
+                   Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
       throws IOException {
-      super.init(null, conf, out, keyClass, valClass, true, codec);
+      super.init(null, conf, out, keyClass, valClass, true, codec, metadata);
       init(1000000);
       
       initializeFileHeader();
       writeFileHeader();
       finalizeFileHeader();
     }
-
+    
     boolean isCompressed() { return true; }
     boolean isBlockCompressed() { return true; }
 
@@ -928,6 +1110,7 @@ public class SequenceFile {
     private Class valClass;
 
     private CompressionCodec codec = null;
+    private Metadata metadata = null;
     
     private byte[] sync = new byte[SYNC_HASH_SIZE];
     private byte[] syncCheck = new byte[SYNC_HASH_SIZE];
@@ -1046,6 +1229,11 @@ public class SequenceFile {
         }
       }
       
+      this.metadata = new Metadata();
+      if (version >= VERSION_WITH_METADATA) {    // if version >= 6
+        this.metadata.readFields(in);
+      }
+      
       if (version > 1) {                          // if version > 1
         in.readFully(sync);                       // read sync bytes
       }
@@ -1095,6 +1283,11 @@ public class SequenceFile {
     /** Returns the compression codec of data in this file. */
     public CompressionCodec getCompressionCodec() { return codec; }
 
+    /** Returns the metadata object of the file */
+    public Metadata getMetadata() {
+      return this.metadata;
+    }
+    
     /** Returns the configuration used for this file. */
     Configuration getConf() { return conf; }
     
