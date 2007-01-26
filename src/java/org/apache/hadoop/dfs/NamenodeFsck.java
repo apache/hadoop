@@ -84,7 +84,6 @@ public class NamenodeFsck {
   private String path = "/";
   
   private Configuration conf;
-  private HttpServletResponse response;
   private PrintWriter out;
   
   /**
@@ -101,7 +100,6 @@ public class NamenodeFsck {
       HttpServletResponse response) throws IOException {
     this.conf = conf;
     this.nn = nn;
-    this.response = response;
     this.out = response.getWriter();
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -127,12 +125,14 @@ public class NamenodeFsck {
         for (int i = 0; i < files.length; i++) {
           check(files[i], res);
         }
-      }
-      out.println(res);
-      if (res.isHealthy()) {
-        out.println("\n\nThe filesystem under path '" + path + "' is HEALTHY");
-      }  else {
-        out.println("\n\nThe filesystem under path '" + path + "' is CORRUPT");
+        out.println(res);
+        if (res.isHealthy()) {
+          out.println("\n\nThe filesystem under path '" + path + "' is HEALTHY");
+        }  else {
+          out.println("\n\nThe filesystem under path '" + path + "' is CORRUPT");
+        }
+      } else {
+        out.println("\n\nPath '" + path + "' does not exist.");
       }
     } finally {
       out.close();
@@ -141,8 +141,9 @@ public class NamenodeFsck {
   
   private void check(DFSFileInfo file, FsckResult res) throws IOException {
     if (file.isDir()) {
-      if (showFiles)
+      if (showFiles) {
         out.println(file.getPath() + " <dir>");
+      }
       res.totalDirs++;
       DFSFileInfo[] files = nn.getListing(file.getPath());
       for (int i = 0; i < files.length; i++) {
@@ -160,7 +161,7 @@ public class NamenodeFsck {
     }  else {
       out.print('.');
       out.flush();
-      if (res.totalFiles % 100 == 0)        out.println();
+      if (res.totalFiles % 100 == 0) { out.println(); }
     }
     int missing = 0;
     long missize = 0;
@@ -170,8 +171,12 @@ public class NamenodeFsck {
       long id = block.getBlockId();
       DatanodeInfo[] locs = blocks[i].getLocations();
       short targetFileReplication = file.getReplication();
-      if (locs.length > targetFileReplication) res.overReplicatedBlocks += (locs.length - targetFileReplication);
-      if (locs.length < targetFileReplication && locs.length > 0) res.underReplicatedBlocks += (targetFileReplication - locs.length);
+      if (locs.length > targetFileReplication) {
+        res.overReplicatedBlocks += (locs.length - targetFileReplication);
+      }
+      if (locs.length < targetFileReplication && locs.length > 0) {
+        res.underReplicatedBlocks += (targetFileReplication - locs.length);
+      }
       report.append(i + ". " + id + " len=" + block.getNumBytes());
       if (locs == null || locs.length == 0) {
         report.append(" MISSING!");
@@ -183,7 +188,7 @@ public class NamenodeFsck {
         if (showLocations) {
           StringBuffer sb = new StringBuffer("[");
           for (int j = 0; j < locs.length; j++) {
-            if (j > 0) sb.append(", ");
+            if (j > 0) { sb.append(", "); }
             sb.append(locs[j]);
           }
           sb.append(']');
@@ -193,8 +198,9 @@ public class NamenodeFsck {
       report.append('\n');
     }
     if (missing > 0) {
-      if (!showFiles)
+      if (!showFiles) {
         out.println("\nMISSING " + missing + " blocks of total size " + missize + " B");
+      }
       res.corruptFiles++;
       switch(fixing) {
         case FIXING_NONE:
@@ -209,8 +215,12 @@ public class NamenodeFsck {
     if (showFiles) {
       if (missing > 0) {
         out.println(" MISSING " + missing + " blocks of total size " + missize + " B");
-      }  else        out.println(" OK");
-      if (showBlocks)        out.println(report.toString());
+      }  else {
+        out.println(" OK");
+      }
+      if (showBlocks) {
+        out.println(report.toString());
+      }
     }
   }
   

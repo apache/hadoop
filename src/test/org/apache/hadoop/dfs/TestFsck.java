@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.dfs;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Random;
 import junit.framework.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.util.CopyFiles;
-
 
 /**
  * A JUnit test for doing fsck
@@ -143,7 +142,41 @@ public class TestFsck extends TestCase {
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
+        PrintStream oldOut = System.out;
+        ByteArrayOutputStream bStream = new ByteArrayOutputStream();
+        PrintStream newOut = new PrintStream(bStream, true);
+        System.setOut(newOut);
         assertEquals(0, new DFSck().doMain(conf, new String[] {"/"}));
+        System.setOut(oldOut);
+        String outStr = bStream.toString();
+        assertTrue(-1 != outStr.indexOf("HEALTHY"));
+        System.out.println(outStr);
+        deldir(namenode, "/srcdat");
+      }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+  
+  /** do fsck on non-existent path*/
+  public void testFsckNonExistent() throws Exception {
+    String namenode = null;
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(65314, conf, 4, false);
+      namenode = conf.get("fs.default.name", "local");
+      if (!"local".equals(namenode)) {
+        MyFile[] files = createFiles(namenode, "/srcdat");
+        PrintStream oldOut = System.out;
+        ByteArrayOutputStream bStream = new ByteArrayOutputStream();
+        PrintStream newOut = new PrintStream(bStream, true);
+        System.setOut(newOut);
+        assertEquals(0, new DFSck().doMain(conf, new String[] {"/non-existent"}));
+        System.setOut(oldOut);
+        String outStr = bStream.toString();
+        assertEquals(-1, outStr.indexOf("HEALTHY"));
+        System.out.println(outStr);
         deldir(namenode, "/srcdat");
       }
     } finally {

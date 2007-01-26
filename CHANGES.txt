@@ -79,6 +79,9 @@ Trunk (unreleased changes)
 24. HADOOP-936.  More metric renamings, as in HADOOP-890.
     (Nigel Daley via cutting)
 
+25. HADOOP-856.  Fix HDFS's fsck command to not report that
+    non-existent filesystems are healthy.  (Milind Bhandarkar via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
