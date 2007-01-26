@@ -132,9 +132,9 @@ public class TaskTracker
       
       synchronized void completeTask() {
         if (metricsRecord != null) {
-          metricsRecord.setMetric("tasks-completed", ++totalTasksCompleted);
-          metricsRecord.setMetric("maps-running", mapTotal);
-          metricsRecord.setMetric("reduce-running", reduceTotal);
+          metricsRecord.setMetric("tasks_completed", ++totalTasksCompleted);
+          metricsRecord.setMetric("maps_running", mapTotal);
+          metricsRecord.setMetric("reduce_running", reduceTotal);
           metricsRecord.update();
         }
       }

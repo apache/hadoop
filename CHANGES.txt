@@ -76,6 +76,9 @@ Trunk (unreleased changes)
 23. HADOOP-935.  Fix contrib/abacus to not delete pre-existing output
     files, but rather to fail in this case.  (Runping Qi via cutting)
 
+24. HADOOP-936.  More metric renamings, as in HADOOP-890.
+    (Nigel Daley via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
