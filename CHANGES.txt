@@ -70,6 +70,9 @@ Trunk (unreleased changes)
 21. HADOOP-732.  Add support to SequenceFile for arbitrary metadata,
     as a set of attribute value pairs.  (Runping Qi via cutting)
 
+22. HADOOP-929.  Fix PhasedFileSystem to pass configuration to
+    underlying FileSystem.  (Sanjay Dahiya via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

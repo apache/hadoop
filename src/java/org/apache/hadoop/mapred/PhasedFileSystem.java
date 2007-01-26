@@ -56,6 +56,7 @@ public class PhasedFileSystem extends FileSystem {
     this.taskid = taskid ; 
     
     tempDir = new Path(baseFS.getConf().get("mapred.system.dir") ); 
+    this.setConf(fs.getConf());
   }
   /**
    * This Constructor is used to wrap a FileSystem object to a 
@@ -69,7 +70,8 @@ public class PhasedFileSystem extends FileSystem {
     this.tipid = conf.get("mapred.tip.id"); 
     this.taskid = conf.get("mapred.task.id") ; 
     
-    tempDir = new Path(baseFS.getConf().get("mapred.system.dir") ); 
+    tempDir = new Path(baseFS.getConf().get("mapred.system.dir") );
+    this.setConf(fs.getConf());
   }
   /**
    * This Constructor should not be used in this or any derived class. 
