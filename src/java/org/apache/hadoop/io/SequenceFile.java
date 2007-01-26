@@ -25,7 +25,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
-import org.apache.lucene.util.PriorityQueue;
 import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -40,6 +39,7 @@ import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.MergeSort;
+import org.apache.hadoop.util.PriorityQueue;
 
 /** Support for flat files of binary key/value pairs. */
 public class SequenceFile {

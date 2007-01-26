@@ -24,12 +24,12 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.util.ArrayList;
-import org.apache.lucene.util.PriorityQueue;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.util.PriorityQueue;
 
 /**
  Eventually will be fed TupleInputFormats. 

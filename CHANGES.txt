@@ -82,6 +82,11 @@ Trunk (unreleased changes)
 25. HADOOP-856.  Fix HDFS's fsck command to not report that
     non-existent filesystems are healthy.  (Milind Bhandarkar via cutting)
 
+26. HADOOP-602.  Remove the dependency on Lucene's PriorityQueue
+    utility, by copying it into Hadoop.  This facilitates using Hadoop
+    with different versions of Lucene without worrying about CLASSPATH
+    order.  (Milind Bhandarkar via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
