@@ -87,6 +87,9 @@ Trunk (unreleased changes)
     with different versions of Lucene without worrying about CLASSPATH
     order.  (Milind Bhandarkar via cutting)
 
+27. HADOOP-248.  Optimize location of map outputs to not use random
+    probes.  (Devaraj Das via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

@@ -157,7 +157,7 @@ public class JobClient extends ToolBase implements MRConstants  {
         public synchronized TaskCompletionEvent[] getTaskCompletionEvents(
             int startFrom) throws IOException{
           return jobSubmitClient.getTaskCompletionEvents(
-              getJobID(), startFrom); 
+              getJobID(), startFrom, 10); 
         }
 
         /**

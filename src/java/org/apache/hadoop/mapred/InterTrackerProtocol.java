@@ -28,11 +28,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  */ 
 interface InterTrackerProtocol extends VersionedProtocol {
   /**
-   * version 3 introduced to replace 
-   * emitHearbeat/pollForNewTask/pollForTaskWithClosedJob with
-   * {@link #heartbeat(TaskTrackerStatus, boolean, boolean, short)}
+   * version 4 introduced that removes locateMapOutputs and instead uses
+   * getTaskCompletionEvents to figure finished maps and fetch the outputs
    */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
@@ -62,18 +61,6 @@ interface InterTrackerProtocol extends VersionedProtocol {
           boolean initialContact, boolean acceptNewTasks, short responseId)
   throws IOException;
 
-  /** Called by a reduce task to find which map tasks are completed.
-   *
-   * @param jobId the job id
-   * @param mapTasksNeeded an array of the mapIds that we need
-   * @param partition the reduce's id
-   * @return an array of MapOutputLocation
-   */
-  MapOutputLocation[] locateMapOutputs(String jobId, 
-                                       int[] mapTasksNeeded,
-                                       int partition
-                                       ) throws IOException;
-
   /**
    * The task tracker calls this once, to discern where it can find
    * files referred to by the JobTracker
@@ -96,11 +83,12 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * Returns empty aray if no events are available. 
    * @param jobid job id 
    * @param fromEventId event id to start from. 
+   * @param maxEvents the max number of events we want to look at
    * @return array of task completion events. 
    * @throws IOException
    */
   TaskCompletionEvent[] getTaskCompletionEvents(
-      String jobid, int fromEventId) throws IOException; 
+      String jobid, int fromEventId, int maxEvents) throws IOException;
   
 }
 

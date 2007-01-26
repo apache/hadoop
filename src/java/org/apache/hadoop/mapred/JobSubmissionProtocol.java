@@ -85,11 +85,12 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
      * Get task completion events for the jobid, starting from fromEventId. 
      * Returns empty aray if no events are available. 
      * @param jobid job id 
-     * @param fromEventId event id to start from. 
+     * @param fromEventId event id to start from.
+     * @param maxEvents the max number of events we want to look at 
      * @return array of task completion events. 
      * @throws IOException
      */
     public TaskCompletionEvent[] getTaskCompletionEvents(
-                String jobid, int fromEventId) throws IOException;
+              String jobid, int fromEventId, int maxEvents) throws IOException;
     
 }
