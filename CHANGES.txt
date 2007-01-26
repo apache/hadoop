@@ -73,6 +73,9 @@ Trunk (unreleased changes)
 22. HADOOP-929.  Fix PhasedFileSystem to pass configuration to
     underlying FileSystem.  (Sanjay Dahiya via cutting)
 
+23. HADOOP-935.  Fix contrib/abacus to not delete pre-existing output
+    files, but rather to fail in this case.  (Runping Qi via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
