@@ -38,7 +38,13 @@ public abstract class FSInputStream extends InputStream
      * Return the current offset from the start of the file
      */
     public abstract long getPos() throws IOException;
-    
+
+    /**
+     * Seeks a different copy of the data.  Returns true if 
+     * found a new source, false otherwise.
+     */
+    public abstract boolean seekToNewSource(long targetPos) throws IOException;
+
     public int read(long position, byte[] buffer, int offset, int length)
     throws IOException {
       synchronized (this) {

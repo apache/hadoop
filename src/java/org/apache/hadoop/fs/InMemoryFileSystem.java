@@ -114,6 +114,10 @@ public class InMemoryFileSystem extends FileSystem {
       din.reset(fAttr.data, (int)pos, fAttr.size - (int)pos);
     }
     
+    public boolean seekToNewSource(long targetPos) throws IOException {
+      return false;
+    }
+
     public int available() throws IOException {
       return din.available(); 
     }

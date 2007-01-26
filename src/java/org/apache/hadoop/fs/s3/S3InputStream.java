@@ -61,6 +61,11 @@ class S3InputStream extends FSInputStream {
   }
 
   @Override
+  public synchronized boolean seekToNewSource(long targetPos) throws IOException {
+    return false;
+  }
+
+  @Override
   public synchronized int read() throws IOException {
     if (closed) {
       throw new IOException("Stream closed");

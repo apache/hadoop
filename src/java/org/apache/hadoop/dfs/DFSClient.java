@@ -618,7 +618,7 @@ class DFSClient implements FSConstants {
                 DNAddrPair retval = chooseDataNode(targetBlock, deadNodes);
                 chosenNode = retval.info;
                 InetSocketAddress targetAddr = retval.addr;
-            
+
                 try {
                     s = new Socket();
                     s.connect(targetAddr, READ_TIMEOUT);
@@ -764,7 +764,7 @@ class DFSClient implements FSConstants {
               if (nodes[blockId] == null || nodes[blockId].length == 0) {
                 LOG.info("No node available for block: " + blockInfo);
               }
-              LOG.info("Could not obtain block from any node:  " + ie);
+              LOG.info("Could not obtain block " + blockId + " from any node:  " + ie);
               try {
                 Thread.sleep(3000);
               } catch (InterruptedException iex) {
@@ -889,6 +889,24 @@ class DFSClient implements FSConstants {
             blockEnd = -1;
         }
 
+        /**
+         * Seek to given position on a node other than the current node.  If
+         * a node other than the current node is found, then returns true. 
+         * If another node could not be found, then returns false.
+         */
+        public synchronized boolean seekToNewSource(long targetPos) throws IOException {
+            TreeSet excludeNodes = new TreeSet();       
+            excludeNodes.add(currentNode);
+            String oldNodeID = currentNode.getStorageID();
+            DatanodeInfo newNode = blockSeekTo(targetPos, excludeNodes); 
+            if (!oldNodeID.equals(newNode.getStorageID())) {
+                currentNode = newNode;
+                return true;
+            } else {
+                return false;
+            }
+        }
+        
         /**
          */
         public synchronized long getPos() throws IOException {

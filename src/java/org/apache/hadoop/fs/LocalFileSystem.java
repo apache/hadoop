@@ -95,6 +95,10 @@ public class LocalFileSystem extends FileSystem {
           return fis.getChannel().position();
         }
 
+        public boolean seekToNewSource(long targetPos) throws IOException {
+          return false;
+        }
+
         /*
          * Just forward to the fis
          */

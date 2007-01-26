@@ -63,6 +63,10 @@ Trunk (unreleased changes)
 19. HADOOP-909.  Fix the 'du' command to correctly compute the size of
     FileSystem directory trees.  (Hairong Kuang via cutting)
 
+20. HADOOP-731.  When a checksum error is encountered on a file stored
+    in HDFS, try another replica of the data, if any.
+    (Wendy Chien via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
