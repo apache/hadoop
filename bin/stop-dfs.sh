@@ -8,5 +8,6 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hadoop-config.sh
 
 "$bin"/hadoop-daemon.sh --config $HADOOP_CONF_DIR stop namenode
-"$bin"/hadoop-daemons.sh --config $HADOOP_CONF_DIR stop datanode
+"$bin"/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts slaves stop datanode
+"$bin"/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters stop secondarynamenode
 

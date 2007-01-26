@@ -315,6 +315,10 @@ class FSDirectory implements FSConstants {
     public FSDirectory(File[] dirs) throws IOException {
       this.fsImage = new FSImage( dirs );
     }
+
+    public FSDirectory(FSImage fsImage) throws IOException {
+      this.fsImage = fsImage;
+    }
     
     void loadFSImage( Configuration conf ) throws IOException {
       fsImage.loadFSImage( conf );

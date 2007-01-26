@@ -137,6 +137,44 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>fs.checkpoint.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary images and edits to merge.  
+  </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.period</name>
+  <value>3600</value>
+  <description>The number of seconds between two periodic checkpoints.
+  </description>
+</property>
+
+<property>
+  <name>fs.checkpoint.size</name>
+  <value>67108864</value>
+  <description>The size of the current edit log (in bytes) that triggers
+       a periodic checkpoint even if the fs.checkpoint.period hasn't expired.
+  </description>
+</property>
+
+<property>
+  <name>dfs.secondary.info.port</name>
+  <value>50090</value>
+  <description>The base number for the Secondary namenode info port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.secondary.info.bindAddress</name>
+  <value>0.0.0.0</value>
+  <description>
+    The address where the secondary namenode web UI will listen to.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.bindAddress</name>
   <value>0.0.0.0</value>
   <description>

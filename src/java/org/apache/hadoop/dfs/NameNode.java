@@ -92,12 +92,20 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       for (int idx = 0; idx < dirs.length; idx++) {
         FSImage.format(dirs[idx]);
       }
+      FSImage fsimage = new FSImage(dirs);
+      FSNamesystem namesystem = new FSNamesystem(fsimage);
+      fsimage.create();
     }
 
     /** Format a new filesystem.  Destroys any filesystem that may already
      * exist at this location.  **/
     public static void format(File dir) throws IOException {
+      File dirs[] = new File[1];
+      dirs[0] = dir;
       FSImage.format(dir);
+      FSImage fsimage = new FSImage(dirs);
+      FSNamesystem namesystem = new FSNamesystem(fsimage);
+      fsimage.create();
     }
 
     private class NameNodeMetrics {
@@ -165,7 +173,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
 
     /** Return the configured directories where name data is stored. */
-    private static File[] getDirs(Configuration conf) {
+    static File[] getDirs(Configuration conf) {
       String[] dirNames = conf.getStrings("dfs.name.dir");
       if (dirNames == null) { dirNames = new String[] {"/tmp/hadoop/dfs/name"}; }
       File[] dirs = new File[dirNames.length];
@@ -503,7 +511,27 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         return ret;
     }
 
-    
+    /**
+     * Returns the size of the current edit log.
+     */
+    public long getEditLogSize() throws IOException {
+      return namesystem.getEditLogSize();
+    }
+
+    /**
+     * Roll the edit log.
+     */
+    public void rollEditLog() throws IOException {
+      namesystem.rollEditLog();
+    }
+
+    /**
+     * Roll the image 
+     */
+    public void rollFsImage() throws IOException {
+      namesystem.rollFSImage();
+    }
+
     ////////////////////////////////////////////////////////////////
     // DatanodeProtocol
     ////////////////////////////////////////////////////////////////
@@ -618,7 +646,29 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       if( version != DFS_CURRENT_VERSION )
         throw new IncorrectVersionException( version, "data node" );
     }
-    
+
+    /**
+     * Returns the name of the fsImage file
+     */
+    public File getFsImageName() throws IOException {
+      return namesystem.getFsImageName();
+    }
+
+    /**
+     * Returns the name of the fsImage file uploaded by periodic
+     * checkpointing
+     */
+    public File[] getFsImageNameCheckpoint() throws IOException {
+      return namesystem.getFsImageNameCheckpoint();
+    }
+
+    /**
+     * Returns the name of the edits file
+     */
+    public File getFsEditName() throws IOException {
+      return namesystem.getFsEditName();
+    }
+
     /**
      */
     public static void main(String argv[]) throws Exception {

@@ -29,7 +29,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
-    public static final long versionID = 6L; // reportBadBlocks added
+  public static final long versionID = 7L;  // periodic checkpoint added
   
     ///////////////////////////////////////
     // File contents
@@ -314,4 +314,30 @@ interface ClientProtocol extends VersionedProtocol {
     public boolean setSafeMode( FSConstants.SafeModeAction action ) throws IOException;
 
     public boolean decommission( FSConstants.DecommissionAction action, String[] nodenames) throws IOException;
+
+    /**
+     * Get the size of the current edit log (in bytes).
+     * @return The number of bytes in the current edit log.
+     * @throws IOException
+     */
+    public long getEditLogSize() throws IOException;
+
+    /**
+     * Closes the current edit log and opens a new one. The 
+     * call fails if there are already two or more edits log files or
+     * if the file system is in SafeMode.
+     * @return True if the call was successful, false otherwise.
+     * @throws IOException
+     */
+    public void rollEditLog() throws IOException;
+
+    /**
+     * Rolls the fsImage log. It removes the old fsImage, copies the
+     * new image to fsImage, removes the old edits and renames edits.new 
+     * to edits. The call fails if any of the four files are missing.
+     * @return True if the call was successful, false otherwise.
+     * @throws IOException
+     */
+    public void rollFsImage() throws IOException;
+
 }

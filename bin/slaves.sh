@@ -24,15 +24,24 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/hadoop-config.sh
 
+# If the slaves file is specified in the command line,
+# then it takes precedence over the definition in 
+# hadoop-env.sh. Save it here.
+HOSTLIST=$HADOOP_SLAVES
+
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
-if [ "$HADOOP_SLAVES" = "" ]; then
-  export HADOOP_SLAVES="${HADOOP_CONF_DIR}/slaves"
+if [ "$HOSTLIST" = "" ]; then
+  if [ "$HADOOP_SLAVES" = "" ]; then
+    export HOSTLIST="${HADOOP_CONF_DIR}/slaves"
+  else
+    export HOSTLIST="${HADOOP_SLAVES}"
+  fi
 fi
 
-for slave in `cat "$HADOOP_SLAVES"`; do
+for slave in `cat "$HOSTLIST"`; do
  ssh $HADOOP_SSH_OPTS $slave $"${@// /\\ }" \
    2>&1 | sed "s/^/$slave: /" &
  if [ "$HADOOP_SLAVE_SLEEP" != "" ]; then

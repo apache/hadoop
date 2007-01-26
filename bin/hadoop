@@ -25,20 +25,21 @@ bin=`cd "$bin"; pwd`
 if [ $# = 0 ]; then
   echo "Usage: hadoop [--config confdir] COMMAND"
   echo "where COMMAND is one of:"
-  echo "  namenode -format  format the DFS filesystem"
-  echo "  namenode          run the DFS namenode"
-  echo "  datanode          run a DFS datanode"
-  echo "  dfsadmin          run a DFS admin client"
-  echo "  fsck              run a DFS filesystem checking utility"
-  echo "  fs                run a generic filesystem user client"
-  echo "  jobtracker        run the MapReduce job Tracker node" 
-  echo "  tasktracker       run a MapReduce task Tracker node" 
-  echo "  job               manipulate MapReduce jobs" 
-  echo "  version           print the version"
-  echo "  jar <jar>         run a jar file"
+  echo "  namenode -format     format the DFS filesystem"
+  echo "  secondarynamenode    run the DFS secondary namenode"
+  echo "  namenode             run the DFS namenode"
+  echo "  datanode             run a DFS datanode"
+  echo "  dfsadmin             run a DFS admin client"
+  echo "  fsck                 run a DFS filesystem checking utility"
+  echo "  fs                   run a generic filesystem user client"
+  echo "  jobtracker           run the MapReduce job Tracker node" 
+  echo "  tasktracker          run a MapReduce task Tracker node" 
+  echo "  job                  manipulate MapReduce jobs" 
+  echo "  version              print the version"
+  echo "  jar <jar>            run a jar file"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
   echo " or"
-  echo "  CLASSNAME         run the class named CLASSNAME"
+  echo "  CLASSNAME            run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
   exit 1
 fi
@@ -139,6 +140,8 @@ fi
 # figure out which class to run
 if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.dfs.NameNode'
+elif [ "$COMMAND" = "secondarynamenode" ] ; then
+  CLASS='org.apache.hadoop.dfs.SecondaryNameNode'
 elif [ "$COMMAND" = "datanode" ] ; then
   CLASS='org.apache.hadoop.dfs.DataNode'
 elif [ "$COMMAND" = "fs" ] ; then

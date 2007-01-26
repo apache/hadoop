@@ -278,4 +278,11 @@ public class MiniDFSCluster {
   public FileSystem getFileSystem() throws IOException {
     return FileSystem.get(conf);
   }
+
+  /**
+   * Get the directories where the namenode stores image
+   */
+  public File[] getNameDirs() {
+    return NameNode.getDirs(conf);
+  }
 }

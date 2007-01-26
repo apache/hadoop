@@ -87,8 +87,11 @@ Trunk (unreleased changes)
     with different versions of Lucene without worrying about CLASSPATH
     order.  (Milind Bhandarkar via cutting)
 
-27. HADOOP-248.  Optimize location of map outputs to not use random
-    probes.  (Devaraj Das via cutting)
+27. HADOOP-248.  Optimize location of map outputs to no longer use
+    random probes.  (Devaraj Das via cutting)
+
+28. HADOOP-227.  Add support for backup namenodes, which periodically
+    get snapshots of the namenode state.  (Dhruba Borthakur via cutting) 
 
 
 Release 0.10.1 - 2007-01-10

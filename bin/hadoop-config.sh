@@ -38,3 +38,16 @@ fi
  
 # Allow alternate conf dir location.
 HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
+
+#check to see it is specified whether to use the slaves or the
+# masters file
+if [ $# -gt 1 ]
+then
+    if [ "--hosts" = "$1" ]
+    then
+        shift
+        slavesfile=$1
+        shift
+        export HADOOP_SLAVES="${HADOOP_CONF_DIR}/$slavesfile"
+    fi
+fi

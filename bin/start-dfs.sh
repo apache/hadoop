@@ -12,3 +12,4 @@ bin=`cd "$bin"; pwd`
 # note: datanodes will log connection errors until namenode starts
 "$bin"/hadoop-daemon.sh --config $HADOOP_CONF_DIR start namenode
 "$bin"/hadoop-daemons.sh --config $HADOOP_CONF_DIR start datanode
+"$bin"/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters start secondarynamenode

@@ -48,14 +48,26 @@ import org.apache.hadoop.io.UTF8;
  * @author Konstantin Shvachko
  */
 class FSImage {
-  private static final String FS_IMAGE = "fsimage";
-  private static final String NEW_FS_IMAGE = "fsimage.new";
-  private static final String OLD_FS_IMAGE = "fsimage.old";
-  private static final String FS_TIME = "fstime";
+
+  //
+  // The filenames used for storing the images
+  //
+  private enum NameNodeFile {
+    IMAGE ("fsimage"),
+    CKPT ("fsimage.ckpt"),
+    TIME ("fstime");
+
+    private String fileName;
+    private NameNodeFile(String name) {
+      this.fileName = name;
+    }
+    String getName() {
+      return fileName;
+    }
+  }
 
   private File[] imageDirs;  /// directories that contains the image file 
   private FSEditLog editLog;
-  // private int namespaceID = 0;    /// a persistent attribute of the namespace
 
   /**
    * 
@@ -68,13 +80,61 @@ class FSImage {
         throw new IOException("NameNode not formatted: " + imageDirs[idx]);
       }
     }
-    File[] edits = new File[fsDirs.length];
-    for (int idx = 0; idx < edits.length; idx++) {
-      edits[idx] = new File(fsDirs[idx], "edits");
-    }
-    this.editLog = new FSEditLog( edits );
+    this.editLog = new FSEditLog( fsDirs , this);
   }
 
+  /**
+   * Represents an Image (image and edit file).
+   */
+  FSImage(File imageDir, String edits) throws IOException {
+    this.imageDirs = new File[1];
+    imageDirs[0] = imageDir;
+    if (!imageDirs[0].exists()) {
+      throw new IOException("File " + imageDirs[0] + " not found.");
+    }
+    this.editLog = new FSEditLog(imageDir, this, edits);
+  }
+
+  /*
+   * Create an fsimage and edits log from scratch.
+   */
+  void create() throws IOException {
+    saveFSImage(NameNodeFile.IMAGE.getName());
+    editLog.create();
+  }
+
+  /**
+   * If there is an IO Error on any log operations, remove that
+   * directory from the list of directories. If no more directories
+   * remain, then raise an exception that will possibly cause the
+   * server to exit
+   */
+  void processIOError(int index) throws IOException {
+    if (imageDirs.length == 1) {
+      throw new IOException("Checkpoint directories inaccessible.");
+    }
+    assert(index < imageDirs.length);
+    int newsize = imageDirs.length - 1;
+    int oldsize = imageDirs.length;
+
+    //
+    // save existing values and allocate space for new ones
+    //
+    File[] imageDirs1 = imageDirs;
+    imageDirs = new File[newsize];
+
+    //
+    // copy in saved values, skipping the one on which we had
+    // an error
+    //
+    for (int idx = 0; idx < index; idx++) {
+      imageDirs[idx] = imageDirs1[idx];
+    }
+    for (int idx = index; idx < oldsize - 1; idx++) {
+      imageDirs[idx] = imageDirs1[idx+1];
+    }
+  }
+        
   FSEditLog getEditLog() {
     return editLog;
   }
@@ -85,40 +145,57 @@ class FSImage {
    * "re-save" and consolidate the edit-logs
    */
   void loadFSImage( Configuration conf ) throws IOException {
-    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
-    FSDirectory fsDir = fsNamesys.dir;
     for (int idx = 0; idx < imageDirs.length; idx++) {
       //
       // Atomic move sequence, to recover from interrupted save
       //
-      File curFile = new File(imageDirs[idx], FS_IMAGE);
-      File newFile = new File(imageDirs[idx], NEW_FS_IMAGE);
-      File oldFile = new File(imageDirs[idx], OLD_FS_IMAGE);
+      File curFile = new File(imageDirs[idx], 
+                              NameNodeFile.IMAGE.getName());
+      File ckptFile = new File(imageDirs[idx], 
+                              NameNodeFile.CKPT.getName());
 
-      // Maybe we were interrupted between 2 and 4
-      if (oldFile.exists() && curFile.exists()) {
-        oldFile.delete();
-        if (editLog.exists()) {
-          editLog.deleteAll();
+      //
+      // If we were in the midst of a checkpoint
+      //
+      if (ckptFile.exists()) {
+        if (editLog.existsNew(idx)) {
+          //
+          // checkpointing migth have uploaded a new
+          // merged image, but we discard it here because we are
+          // not sure whether the entire merged image was uploaded
+          // before the namenode crashed.
+          //
+          if (!ckptFile.delete()) {
+            throw new IOException("Unable to delete " + ckptFile);
+          }
+        } else {
+          //
+          // checkpointing was in progress when the namenode
+          // shutdown. The fsimage.ckpt was created and the edits.new
+          // file was moved to edits. We complete that checkpoint by
+          // moving fsimage.new to fsimage. There is no need to 
+          // update the fstime file here.
+          //
+          if (!ckptFile.renameTo(curFile)) {
+            throw new IOException("Unable to rename " + ckptFile +
+                                  " to " + curFile);
+          }
         }
-      } else if (oldFile.exists() && newFile.exists()) {
-        // Or maybe between 1 and 2
-        newFile.renameTo(curFile);
-        oldFile.delete();
-      } else if (curFile.exists() && newFile.exists()) {
-        // Or else before stage 1, in which case we lose the edits
-        newFile.delete();
       }
     }
-    
+
     // Now check all curFiles and see which is the newest
     File curFile = null;
     long maxTimeStamp = Long.MIN_VALUE;
+    int saveidx = 0;
+    boolean needToSave = false;
     for (int idx = 0; idx < imageDirs.length; idx++) {
-      File file = new File(imageDirs[idx], FS_IMAGE);
+      File file = new File(imageDirs[idx], 
+                           NameNodeFile.IMAGE.getName());
       if (file.exists()) {
         long timeStamp = 0;
-        File timeFile = new File(imageDirs[idx], FS_TIME);
+        File timeFile = new File(imageDirs[idx], 
+                                 NameNodeFile.TIME.getName());
         if (timeFile.exists() && timeFile.canRead()) {
           DataInputStream in = new DataInputStream(
               new FileInputStream(timeFile));
@@ -127,14 +204,38 @@ class FSImage {
           } finally {
             in.close();
           }
+        } else {
+          needToSave |= true;
         }
         if (maxTimeStamp < timeStamp) {
           maxTimeStamp = timeStamp;
           curFile = file;
+          saveidx = idx;
         }
+      } else {
+        needToSave |= true;
       }
     }
 
+    //
+    // Load in bits
+    //
+    needToSave |= loadFSImage(conf, curFile);
+
+    //
+    // read in the editlog from the same directory from
+    // which we read in the image
+    //
+    needToSave |= (editLog.loadFSEdits(conf, saveidx) > 0);
+    if (needToSave) {
+      saveFSImage();
+    }
+  }
+
+  boolean loadFSImage(Configuration conf, File curFile)
+                      throws IOException {
+    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSDirectory fsDir = fsNamesys.dir;
     //
     // Load in bits
     //
@@ -154,16 +255,17 @@ class FSImage {
         int numFiles = 0;
         // version 0 does not store version #
         // starts directly with the number of files
-        if( imgVersion >= 0 ) {  
+        if( imgVersion >= 0 ) {
           numFiles = imgVersion;
           imgVersion = 0;
-        } else 
+        } else {
           numFiles = in.readInt();
-        
+        }
+
         needToSave = ( imgVersion != FSConstants.DFS_CURRENT_VERSION );
         if( imgVersion < FSConstants.DFS_CURRENT_VERSION ) // future version
           throw new IncorrectVersionException(imgVersion, "file system image");
-        
+
         // read file info
         short replication = (short)conf.getInt("dfs.replication", 3);
         for (int i = 0; i < numFiles; i++) {
@@ -185,30 +287,27 @@ class FSImage {
           }
           fsDir.unprotectedAddFile(name, blocks, replication );
         }
-        
+
         // load datanode info
         this.loadDatanodes( imgVersion, in );
       } finally {
         in.close();
       }
     }
-    
     if( fsDir.namespaceID == 0 )
       fsDir.namespaceID = newNamespaceID();
-    
-    needToSave |= ( editLog.exists() && editLog.loadFSEdits(conf) > 0 );
-    if( needToSave )
-      saveFSImage();
+
+    return needToSave;
   }
 
   /**
    * Save the contents of the FS image
    */
-  void saveFSImage() throws IOException {
+  void saveFSImage(String filename) throws IOException {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
     for (int idx = 0; idx < imageDirs.length; idx++) {
-      File newFile = new File(imageDirs[idx], NEW_FS_IMAGE);
+      File newFile = new File(imageDirs[idx], filename);
       
       //
       // Write out data
@@ -226,31 +325,25 @@ class FSImage {
         out.close();
       }
     }
-    
-    //
-    // Atomic move sequence
-    //
-    for (int idx = 0; idx < imageDirs.length; idx++) {
-      File curFile = new File(imageDirs[idx], FS_IMAGE);
-      File newFile = new File(imageDirs[idx], NEW_FS_IMAGE);
-      File oldFile = new File(imageDirs[idx], OLD_FS_IMAGE);
-      File timeFile = new File(imageDirs[idx], FS_TIME);
-      // 1.  Move cur to old and delete timeStamp
-      curFile.renameTo(oldFile);
-      if (timeFile.exists()) { timeFile.delete(); }
-      // 2.  Move new to cur and write timestamp
-      newFile.renameTo(curFile);
-      DataOutputStream out = new DataOutputStream(
-            new FileOutputStream(timeFile));
-      try {
-        out.writeLong(System.currentTimeMillis());
-      } finally {
-        out.close();
-      }
-      // 3.  Remove pending-edits file (it's been integrated with newFile)
-      editLog.delete(idx);
-      // 4.  Delete old
-      oldFile.delete();
+  }
+
+  /**
+   * Save the contents of the FS image
+   */
+  void saveFSImage() throws IOException {
+    editLog.createNewIfMissing();
+    saveFSImage(NameNodeFile.CKPT.getName());
+    rollFSImage(false);
+  }
+
+  void updateTimeFile(File timeFile, long timestamp) throws IOException {
+    if (timeFile.exists()) { timeFile.delete(); }
+    DataOutputStream out = new DataOutputStream(
+          new FileOutputStream(timeFile));
+    try {
+      out.writeLong(timestamp);
+    } finally {
+      out.close();
     }
   }
 
@@ -342,6 +435,91 @@ class FSImage {
       nodeImage.readFields(in);
       fsNamesys.unprotectedAddDatanode(nodeImage.getDatanodeDescriptor());
     }
+  }
+  /**
+   * Moves fsimage.ckpt to fsImage and edits.new to edits
+   * Reopens the new edits file.
+   */
+  void rollFSImage() throws IOException {
+    rollFSImage(true);
+  }
+
+  /**
+   * Moves fsimage.ckpt to fsImage and edits.new to edits
+   */
+  void rollFSImage(boolean reopenEdits) throws IOException {
+    //
+    // First, verify that edits.new and fsimage.ckpt exists in all
+    // checkpoint directories.
+    //
+    if (!editLog.existsNew()) {
+      throw new IOException("New Edits file does not exist");
+    }
+    for (int idx = 0; idx < imageDirs.length; idx++) {
+      File ckpt = new File(imageDirs[idx], 
+                           NameNodeFile.CKPT.getName());
+      File curFile = new File(imageDirs[idx], 
+                              NameNodeFile.IMAGE.getName());
+
+      if (!curFile.exists()) {
+        throw new IOException("Image file " + curFile +
+                              " does not exist");
+      }
+      if (!ckpt.exists()) {
+        throw new IOException("Checkpoint file " + ckpt +
+                              " does not exist");
+      }
+    }
+    editLog.purgeEditLog(reopenEdits); // renamed edits.new to edits
+
+    //
+    // Renames new image
+    //
+    for (int idx = 0; idx < imageDirs.length; idx++) {
+      File ckpt = new File(imageDirs[idx], 
+                           NameNodeFile.CKPT.getName());
+      File curFile = new File(imageDirs[idx], 
+                              NameNodeFile.IMAGE.getName());
+      if (!ckpt.renameTo(curFile)) {
+        editLog.processIOError(idx);
+        idx--;
+      }
+    }
+
+    //
+    // Updates the fstime file
+    //
+    long now = System.currentTimeMillis();
+    for (int idx = 0; idx < imageDirs.length; idx++) {
+	  File timeFile = new File(imageDirs[idx], 
+                               NameNodeFile.TIME.getName());
+      try {
+        updateTimeFile(timeFile, now);
+      } catch (IOException e) {
+        editLog.processIOError(idx);
+        idx--;
+      }
+    }
+  }
+
+  /**
+   * Return the name of the image file.
+   */
+  File getFsImageName() {
+      return new File(imageDirs[0], NameNodeFile.IMAGE.getName());
+  }
+
+  /**
+   * Return the name of the image file that is uploaded by periodic
+   * checkpointing.
+   */
+  File[] getFsImageNameCheckpoint() {
+      File[] list = new File[imageDirs.length];
+      for (int i = 0; i < imageDirs.length; i++) {
+        list[i] = new File(imageDirs[i], 
+                           NameNodeFile.CKPT.getName());
+      }
+      return list;
   }
 
   static class DatanodeImage implements WritableComparable {

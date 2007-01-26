@@ -47,18 +47,32 @@ class FSEditLog {
   private static final byte OP_SET_REPLICATION = 4;
   private static final byte OP_DATANODE_ADD = 5;
   private static final byte OP_DATANODE_REMOVE = 6;
+
+  private static final String FS_EDIT = "edits";
+  private static final String FS_EDIT_NEW = "edits.new";
   
-  private File[] editFiles;
+  private File[] editFiles = null;
+  private File[] editFilesNew = null;
+
   DataOutputStream[] editStreams = null;
   FileDescriptor[] editDescriptors = null;
-  
-  FSEditLog( File[] edits ) {
-    this.editFiles = edits;
-  }
-  
-  File[] getEditFiles() {
-    return this.editFiles;
-  }
+  private FSImage fsimage = null;
+
+  FSEditLog(File[] fsDirs, FSImage image)  throws IOException {
+    fsimage = image;
+    editFiles = new File[fsDirs.length];
+    editFilesNew = new File[fsDirs.length];
+    for (int idx = 0; idx < fsDirs.length; idx++) {
+       editFiles[idx] = new File(fsDirs[idx], FS_EDIT);
+       editFilesNew[idx] = new File(fsDirs[idx], FS_EDIT_NEW);
+     }
+   }
+
+  FSEditLog(File imageDir, FSImage image, String edits)  throws IOException {
+    fsimage = image;
+    editFiles = new File[1];
+    editFiles[0] = new File(imageDir, edits);
+   }
 
   /**
    * Initialize the output stream for logging.
@@ -75,40 +89,108 @@ class FSEditLog {
       editStreams[idx].writeInt( FSConstants.DFS_CURRENT_VERSION );
     }
   }
+
+  /**
+   * Create edits.new if non existant.
+   */
+  void createNewIfMissing() throws IOException {
+    for (int idx = 0; idx < editFilesNew.length; idx++) {
+      if (!editFilesNew[idx].exists()) {
+        FileOutputStream stream = new FileOutputStream(editFilesNew[idx]);
+        DataOutputStream editStr = new DataOutputStream(stream);
+        editStr.writeInt( FSConstants.DFS_CURRENT_VERSION );
+        editStr.flush();
+        editStr.close();
+      } 
+    }
+  }
   
   /**
    * Shutdown the filestore
    */
   void close() throws IOException {
+    if (editStreams == null) {
+      return;
+    }
     for (int idx = 0; idx < editStreams.length; idx++) {
-      editStreams[idx].flush();
-      editDescriptors[idx].sync();
-      editStreams[idx].close();
+      try {
+        editStreams[idx].flush();
+        editDescriptors[idx].sync();
+        editStreams[idx].close();
+      } catch (IOException e) {
+        processIOError(idx);
+        idx--;
+      }
     }
   }
+
+  /**
+   * If there is an IO Error on any log operations, remove that
+   * directory from the list of directories. If no more directories
+   * remain, then raise an exception that will possibly cause the
+   * server to exit
+   */
+   void processIOError(int index) throws IOException {
+     if (editStreams.length == 1) {
+       throw new IOException("Checkpoint directories inaccessible.");
+     }
+     assert(index < editFiles.length);
+     assert(editFiles.length == editFilesNew.length);
+     assert(editFiles.length == editStreams.length);
+     int newsize = editStreams.length - 1;
+     int oldsize = editStreams.length;
+
+     //
+     // save existing values and allocate space for new ones
+     //
+     File[] editFiles1 = editFiles;
+     File[] editFilesNew1 = editFilesNew;
+     DataOutputStream[] editStreams1 = editStreams;
+     FileDescriptor[] editDescriptors1 = editDescriptors;
+     editFiles = new File[newsize];
+     editFilesNew = new File[newsize];
+     editStreams = new DataOutputStream[newsize];
+     editDescriptors = new FileDescriptor[newsize];
+
+     //
+     // copy values from old into new, skip the one with error.
+     //
+     for (int idx = 0; idx < index; idx++) {
+       editFiles[idx] = editFiles1[idx];
+       editFilesNew[idx] = editFilesNew1[idx];
+       editStreams[idx] = editStreams1[idx];
+       editDescriptors[idx] = editDescriptors1[idx];
+     }
+     for (int idx = index; idx < oldsize - 1; idx++) {
+       editFiles[idx] = editFiles1[idx+1];
+       editFilesNew[idx] = editFilesNew1[idx+1];
+       editStreams[idx] = editStreams1[idx+1];
+       editDescriptors[idx] = editDescriptors1[idx+1];
+     }
+     //
+     // Invoke the ioerror routine of the fsimage
+     //
+     fsimage.processIOError(index);
+   }
 
   /**
    * Delete specified editLog
    */
   void delete(int idx) throws IOException {
     if (editStreams != null) {
-      editStreams[idx].close();
-    }
-    editFiles[idx].delete();
-  }
-  
-  /**
-   * Delete all editLogs
-   */
-  void deleteAll() throws IOException {
-    for (int idx = 0; idx < editFiles.length; idx++ ) {
-      if (editStreams != null) {
+      try {
         editStreams[idx].close();
+      } catch (IOException e) {
+        processIOError(idx);
       }
-      editFiles[idx].delete();
+    }
+    if (!editFiles[idx].delete() || !editFilesNew[idx].delete()) {
+      if (editStreams != null) {
+        processIOError(idx);
+      }
     }
   }
-  
+
   /**
    * check if ANY edits log exists
    */
@@ -120,37 +202,50 @@ class FSEditLog {
     }
     return false;
   }
+
+  /**
+   * check if ANY edits.new log exists
+   */
+  boolean existsNew() throws IOException {
+    for (int idx = 0; idx < editFilesNew.length; idx++) {
+      if (editFilesNew[idx].exists()) { 
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * check if a particular edits.new log exists
+   */
+  boolean existsNew(int idx) throws IOException {
+    if (editFilesNew[idx].exists()) { 
+      return true;
+    }
+    return false;
+  }
+
   
   /**
    * Load an edit log, and apply the changes to the in-memory structure
-   *
    * This is where we apply edits that we've been writing to disk all
    * along.
    */
-  int loadFSEdits( Configuration conf ) throws IOException {
+  int loadFSEdits(Configuration conf, int index) throws IOException {
+    int numEdits = 0;
+    numEdits = loadFSEdits(conf, editFiles[index]);
+    if (editFilesNew[index].exists()) { 
+      numEdits += loadFSEdits(conf, editFilesNew[index]);
+    }
+    return numEdits;
+  }
+
+  int loadFSEdits( Configuration conf, File edits)
+                                                 throws IOException {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
     int logVersion = 0;
-    
-    // first check how many editFiles exist
-    // and choose the largest editFile, because it is the most recent
-    Vector<File> files = new Vector<File>();
-    for (int idx = 0; idx < editFiles.length; idx++) {
-      if (editFiles[idx].exists()) {
-        files.add(editFiles[idx]);
-      }
-    }
-    long maxLength = Long.MIN_VALUE;
-    File edits = null;
-    for (Iterator<File> it = files.iterator(); it.hasNext();) {
-      File f = it.next();
-      long length = f.length();
-      if (length > maxLength) {
-        maxLength = length;
-        edits = f;
-      }
-    }
     
     if (edits != null) {
       DataInputStream in = new DataInputStream(
@@ -322,11 +417,16 @@ class FSEditLog {
           editStreams[idx].flush();
           editDescriptors[idx].sync();
         } catch (IOException ie) {
-          // TODO: Must report an error here
+          try {
+            processIOError(idx);         
+          } catch (IOException e) {
+            FSNamesystem.LOG.error("Unable to append to edit log. " +
+                                   "Fatal Error.");
+            System.exit(-1);
+          }
         }
       }
     }
-    // TODO: initialize checkpointing if the log is large enough
   }
 
   /** 
@@ -394,5 +494,127 @@ class FSEditLog {
   
   static short fromLogReplication( UTF8 replication ) {
     return Short.parseShort(replication.toString());
+  }
+
+  /**
+   * Return the size of the current EditLog
+   */
+  long getEditLogSize() throws IOException {
+    assert(editFiles.length == editStreams.length);
+    long size = 0;
+    for (int idx = 0; idx < editFiles.length; idx++) {
+      synchronized (editStreams[idx]) {
+        assert(size == 0 || size == editFiles[idx].length());
+        size = editFiles[idx].length();
+      }
+    }
+    return size;
+  }
+ 
+  /**
+   * Closes the current edit log and opens edits.new. 
+   */
+  void rollEditLog() throws IOException {
+    //
+    // If edits.new already exists, then return error.
+    //
+    if (existsNew()) {
+      throw new IOException("Attempt to roll edit log but edits.new exists");
+    }
+
+    close();                     // close existing edit log
+
+    //
+    // Open edits.new
+    //
+    for (int idx = 0; idx < editFiles.length; idx++ ) {
+      try {
+        FileOutputStream stream = new FileOutputStream(editFilesNew[idx]);
+        editStreams[idx] = new DataOutputStream(stream);
+        editDescriptors[idx] = stream.getFD();
+        editStreams[idx].writeInt( FSConstants.DFS_CURRENT_VERSION );
+      } catch (IOException e) {
+        processIOError(idx);
+        idx--;
+      }
+    }
+  }
+
+  /**
+   * Closes the current edit log and opens edits.new. 
+   * If edits.new already exists, then ignore it.
+   */
+  void rollEditLogIfNeeded() throws IOException {
+
+    //
+    // Open edits.new
+    //
+    for (int idx = 0; idx < editFiles.length; idx++ ) {
+      if (existsNew(idx)) {
+        continue;
+      }
+      try {
+        FileOutputStream stream = new FileOutputStream(editFilesNew[idx]);
+        editStreams[idx] = new DataOutputStream(stream);
+        editDescriptors[idx] = stream.getFD();
+        editStreams[idx].writeInt( FSConstants.DFS_CURRENT_VERSION );
+      } catch (IOException e) {
+        processIOError(idx);
+        idx--;
+      }
+    }
+  }
+  /**
+   * Removes the old edit log and renamed edits.new as edits.
+   * Reopens the edits file.
+   */
+  void purgeEditLog() throws IOException {
+    purgeEditLog(true);
+  }
+
+  /**
+   * Removes the old edit log and renamed edits.new as edits.
+   */
+  void purgeEditLog(boolean reopenEdits) throws IOException {
+    //
+    // If edits.new does not exists, then return error.
+    //
+    if (!existsNew()) {
+      throw new IOException("Attempt to purge edit log " +
+                            "but edits.new does not exist.");
+    }
+    close();
+
+    //
+    // Delete edits and rename edits.new to edits.
+    //
+    for (int idx = 0; idx < editFiles.length; idx++ ) {
+      if (!editFilesNew[idx].renameTo(editFiles[idx])) {
+        processIOError(idx); 
+        idx--; 
+      }
+    }
+    //
+    // Reopen all the edits logs.
+    //
+    boolean append = true;
+    for (int idx = 0; reopenEdits && idx < editStreams.length; idx++) {
+      try {
+        FileOutputStream stream = new FileOutputStream(editFiles[idx],
+                                                       append);
+        editStreams[idx] = new DataOutputStream(stream);
+        editDescriptors[idx] = stream.getFD();
+      } catch (IOException e) {
+        processIOError(idx); 
+        idx--; 
+      }
+    }
+  }
+
+  /**
+   * Return the name of the edit file
+   */
+  File getFsEditName() throws IOException {
+      return editFiles[0];
   }
 }

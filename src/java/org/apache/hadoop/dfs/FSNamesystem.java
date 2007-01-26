@@ -242,8 +242,19 @@ class FSNamesystem implements FSConstants {
         this.infoServer.setAttribute("name.node", nn);
         this.infoServer.setAttribute("name.conf", conf);
         this.infoServer.addServlet("fsck", "/fsck", FsckServlet.class);
+        this.infoServer.addServlet("getimage", "/getimage", GetImageServlet.class);
         this.infoServer.start();
     }
+
+    /**
+     * dirs is a list of directories where the filesystem directory state 
+     * is stored
+     */
+    FSNamesystem(FSImage fsImage) throws IOException {
+        fsNamesystemObject = this;
+        this.dir = new FSDirectory(fsImage);
+    }
+
     /** Return the FSNamesystem object
      * 
      */
@@ -3017,6 +3028,40 @@ class FSNamesystem implements FSConstants {
         return "";
       return safeMode.getTurnOffTip();
     }
+
+    long getEditLogSize() throws IOException {
+      return getEditLog().getEditLogSize();
+    }
+
+    synchronized void rollEditLog() throws IOException {
+      if (isInSafeMode()) {
+        throw new SafeModeException("Checkpoint not created",
+                                     safeMode);
+      }
+      LOG.info("Roll Edit Log");
+      getEditLog().rollEditLog();
+    }
+
+    synchronized void rollFSImage() throws IOException {
+      LOG.info("Roll FSImage");
+      if (isInSafeMode()) {
+        throw new SafeModeException("Checkpoint not created",
+                                    safeMode);
+      }
+      dir.fsImage.rollFSImage();
+    }
+
+    File getFsImageName() throws IOException {
+      return dir.fsImage.getFsImageName();
+    }
+
+    File[] getFsImageNameCheckpoint() throws IOException {
+      return dir.fsImage.getFsImageNameCheckpoint();
+    }
+
+    File getFsEditName() throws IOException {
+      return getEditLog().getFsEditName();
+    }
     
     /**
      * This class is used in Namesystem's jetty to do fsck on namenode
@@ -3037,6 +3082,45 @@ class FSNamesystem implements FSConstants {
           StringUtils.stringifyException(ie);
           LOG.warn(ie);
           String errMsg = "Fsck on path " + pmap.get("path") + " failed.";
+          response.sendError(HttpServletResponse.SC_GONE, errMsg);
+          throw ie;
+        }
+      }
+    }
+
+    /**
+     * This class is used in Namesystem's jetty to retrieve a file.
+     * Typically used by the Secondary NameNode to retrieve image and
+     * edit file for periodic checkpointing.
+     * @author Dhruba Borthakur
+     */
+    public static class GetImageServlet extends HttpServlet {
+      public void doGet(HttpServletRequest request,
+          HttpServletResponse response
+          ) throws ServletException, IOException {
+        Map<String,String[]> pmap = request.getParameterMap();
+        try {
+          ServletContext context = getServletContext();
+          NameNode nn = (NameNode) context.getAttribute("name.node");
+          Configuration conf = (Configuration) context.getAttribute("name.conf");
+          TransferFsImage ff = new TransferFsImage(pmap, request, response);
+          if (ff.getImage()) {
+            // send fsImage to Secondary
+            TransferFsImage.getFileServer(response.getOutputStream(),
+                                          nn.getFsImageName()); 
+          } else if (ff.getEdit()) {
+            // send old edits to Secondary
+            TransferFsImage.getFileServer(response.getOutputStream(),
+                                          nn.getFsEditName());
+          } else if (ff.putImage()) {
+            // issue a HTTP get request to download the new fsimage 
+            TransferFsImage.getFileClient(ff.getInfoServer(), "getimage=1", 
+                                          nn.getFsImageNameCheckpoint());
+          }
+        } catch (IOException ie) {
+          StringUtils.stringifyException(ie);
+          LOG.warn(ie);
+          String errMsg = "GetImage failed.";
           response.sendError(HttpServletResponse.SC_GONE, errMsg);
           throw ie;
         }
