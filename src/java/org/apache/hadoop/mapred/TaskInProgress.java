@@ -60,7 +60,6 @@ class TaskInProgress {
     private JobInProgress job;
 
     // Status of the TIP
-    private int successEventNumber = -1;
     private int numTaskFailures = 0;
     private double progress = 0;
     private String state = "";
@@ -139,15 +138,6 @@ class TaskInProgress {
       return result.toString();
     }
     
-    /**
-     * Return the index of the tip within the job, so "tip_0002_m_012345"
-     * would return 12345;
-     * @return int the tip index
-     */
-     public int idWithinJob() {
-       return partition;
-     }    
-
     /**
      * Initialization common to Map and Reduce
      */
@@ -577,19 +567,5 @@ class TaskInProgress {
      */
     public int getIdWithinJob() {
       return partition;
-    }
-    
-    /**
-     * Set the event number that was raised for this tip
-     */
-    public void setSuccessEventNumber(int eventNumber) {
-      successEventNumber = eventNumber;
-    }
-       
-    /**
-     * Get the event number that was raised for this tip
-     */
-    public int getSuccessEventNumber() {
-      return successEventNumber;
     }
 }

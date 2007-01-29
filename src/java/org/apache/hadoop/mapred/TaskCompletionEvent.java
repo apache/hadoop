@@ -12,14 +12,12 @@ import org.apache.hadoop.io.WritableUtils;
  *
  */
 public class TaskCompletionEvent implements Writable{
-    static public enum Status {FAILED, SUCCEEDED, OBSOLETE};
+    static public enum Status {FAILED, SUCCEEDED};
     
     private int eventId ; 
     private String taskTrackerHttp ;
     private String taskId ;
     Status status ; 
-    boolean isMap = false ;
-    private int idWithinJob;
     public static final TaskCompletionEvent[] EMPTY_ARRAY = 
         new TaskCompletionEvent[0];
     /**
@@ -37,15 +35,11 @@ public class TaskCompletionEvent implements Writable{
      * @param taskTrackerHttp task tracker's host:port for http. 
      */
     public TaskCompletionEvent(int eventId, 
-        String taskId,
-        int idWithinJob,
-        boolean isMap,
+        String taskId, 
         Status status, 
         String taskTrackerHttp){
       
-        this.taskId = taskId ;
-        this.idWithinJob = idWithinJob ;
-        this.isMap = isMap ;
+        this.taskId = taskId ; 
         this.eventId = eventId ; 
         this.status =status ; 
         this.taskTrackerHttp = taskTrackerHttp ;
@@ -120,28 +114,17 @@ public class TaskCompletionEvent implements Writable{
         return buf.toString();
     }
     
-    public boolean isMapTask() {
-        return isMap;
-    }
-    
-    public int idWithinJob() {
-      return idWithinJob;
-    }
     //////////////////////////////////////////////
     // Writable
     //////////////////////////////////////////////
     public void write(DataOutput out) throws IOException {
         WritableUtils.writeString(out, taskId); 
-        WritableUtils.writeVInt(out, idWithinJob);
-        out.writeBoolean(isMap);
         WritableUtils.writeEnum(out, status); 
         WritableUtils.writeString(out, taskTrackerHttp);
     }
   
     public void readFields(DataInput in) throws IOException {
         this.taskId = WritableUtils.readString(in) ; 
-        this.idWithinJob = WritableUtils.readVInt(in);
-        this.isMap = in.readBoolean();
         this.status = WritableUtils.readEnum(in, Status.class);
         this.taskTrackerHttp = WritableUtils.readString(in);
     }

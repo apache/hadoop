@@ -1263,6 +1263,48 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
 
     /**
+     * A TaskTracker wants to know the physical locations of completed, but not
+     * yet closed, tasks.  This exists so the reduce task thread can locate
+     * map task outputs.
+     */
+    public synchronized MapOutputLocation[] 
+             locateMapOutputs(String jobId, int[] mapTasksNeeded, int reduce) 
+    throws IOException {
+        // Check to make sure that the job hasn't 'completed'.
+        JobInProgress job = getJob(jobId);
+        if (job.status.getRunState() != JobStatus.RUNNING) {
+          return new MapOutputLocation[0];
+        }
+        
+        ArrayList result = new ArrayList(mapTasksNeeded.length);
+        for (int i = 0; i < mapTasksNeeded.length; i++) {
+          TaskStatus status = job.findFinishedMap(mapTasksNeeded[i]);
+          if (status != null) {
+             String trackerId = 
+               (String) taskidToTrackerMap.get(status.getTaskId());
+             // Safety check, if we can't find the taskid in 
+             // taskidToTrackerMap and job isn't 'running', then just
+             // return an empty array
+             if (trackerId == null && 
+                     job.status.getRunState() != JobStatus.RUNNING) {
+               return new MapOutputLocation[0];
+             }
+             
+             TaskTrackerStatus tracker;
+             synchronized (taskTrackers) {
+               tracker = (TaskTrackerStatus) taskTrackers.get(trackerId);
+             }
+             result.add(new MapOutputLocation(status.getTaskId(), 
+                                              mapTasksNeeded[i],
+                                              tracker.getHost(), 
+                                              tracker.getHttpPort()));
+          }
+        }
+        return (MapOutputLocation[]) 
+               result.toArray(new MapOutputLocation[result.size()]);
+    }
+
+    /**
      * Grab the local fs name
      */
     public synchronized String getFilesystemName() throws IOException {
@@ -1393,14 +1435,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     /* 
      * Returns a list of TaskCompletionEvent for the given job, 
      * starting from fromEventId.
-     * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getTaskCompletionEvents(java.lang.String, int, int)
+     * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getTaskCompletionEvents(java.lang.String, int)
      */
     public synchronized TaskCompletionEvent[] getTaskCompletionEvents(
-        String jobid, int fromEventId, int maxEvents) throws IOException{
+        String jobid, int fromEventId) throws IOException{
       TaskCompletionEvent[] events = TaskCompletionEvent.EMPTY_ARRAY;
       JobInProgress job = (JobInProgress)this.jobs.get(jobid);
       if (null != job) {
-        events = job.getTaskCompletionEvents(fromEventId, maxEvents);
+        events = job.getTaskCompletionEvents(fromEventId);
       }
       return events;
     }
