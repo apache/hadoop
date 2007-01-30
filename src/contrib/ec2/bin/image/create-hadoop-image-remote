@@ -1,0 +1,47 @@
+#!/bin/sh
+# Create a Hadoop AMI. Runs on the EC2 instance.
+
+# Import variables
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+. "$bin"/hadoop-ec2-env.sh
+
+# Install Java
+cd /usr/local
+wget -nv -O java.bin $JAVA_BINARY_URL
+sh java.bin
+rm -f java.bin
+
+# Install tools
+yum install rsync
+
+# Install Hadoop
+cd /usr/local
+wget -nv http://www.apache.org/dist/lucene/hadoop/hadoop-$HADOOP_VERSION.tar.gz
+tar xzf hadoop-$HADOOP_VERSION.tar.gz
+rm -f hadoop-$HADOOP_VERSION.tar.gz
+
+# Configure Hadoop
+sed -i -e "s|# export JAVA_HOME=.*|export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}|" \
+       -e 's|# export HADOOP_LOG_DIR=.*|export HADOOP_LOG_DIR=/mnt/hadoop/logs|' \
+       -e 's|# export HADOOP_SLAVE_SLEEP=.*|export HADOOP_SLAVE_SLEEP=1|' \
+      /usr/local/hadoop-$HADOOP_VERSION/conf/hadoop-env.sh
+mkdir -p /mnt/hadoop/logs
+
+# Do Hadoop configuration for master hostname and cluster size on instance startup for runlevels 3 and 4.
+# Runlevel 4 is used by Xen. See http://developer.amazonwebservices.com/connect/message.jspa?messageID=45948#45948
+ln -s /etc/init.d/hadoop-init /etc/rc3.d/S99hadoop-init
+ln -s /etc/init.d/hadoop-init /etc/rc4.d/S99hadoop-init
+
+# Configure networking
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
+cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+echo '    StrictHostKeyChecking no' >> /etc/ssh/ssh_config
+
+# Bundle and upload image
+cd ~root
+ec2-bundle-vol -d /mnt -k ~root/pk-*.pem -c ~root/cert-*.pem -u $AWS_ACCOUNT_ID -s 1536 -p hadoop-$HADOOP_VERSION
+ec2-upload-bundle -b $S3_BUCKET -m /mnt/hadoop-$HADOOP_VERSION.manifest.xml -a $AWS_ACCESS_KEY_ID -s $AWS_SECRET_ACCESS_KEY
+
+# End
+echo Done

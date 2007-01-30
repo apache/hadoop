@@ -92,6 +92,9 @@ Trunk (unreleased changes)
 28. HADOOP-227.  Add support for backup namenodes, which periodically
     get snapshots of the namenode state.  (Dhruba Borthakur via cutting) 
 
+29. HADOOP-884.  Add scripts in contrib/ec2 to facilitate running
+    Hadoop on an Amazon's EC2 cluster.  (Tom White via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

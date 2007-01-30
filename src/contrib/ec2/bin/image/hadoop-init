@@ -1,0 +1,73 @@
+#!/bin/sh
+
+start() {
+  USER_DATA=`wget -q -O - http://169.254.169.254/1.0/user-data`
+  NO_INSTANCES=`python -c "print '$USER_DATA'.split(',')[0]"`
+  MASTER_HOST=`python -c "print '$USER_DATA'.split(',')[1]"`
+  HADOOP_HOME=`ls -d /usr/local/hadoop-*`
+  echo $NO_INSTANCES, $MASTER_HOST, $HADOOP_HOME
+  
+  sed -i -e "s|# export HADOOP_MASTER=.*|export HADOOP_MASTER=$MASTER_HOST:$HADOOP_HOME|" \
+      $HADOOP_HOME/conf/hadoop-env.sh
+      
+  cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+
+<property>
+  <name>hadoop.tmp.dir</name>
+  <value>/mnt/hadoop</value>
+</property>
+
+<property>
+  <name>fs.default.name</name>
+  <value>$MASTER_HOST:50001</value>
+</property>
+
+<property>
+  <name>mapred.job.tracker</name>
+  <value>$MASTER_HOST:50002</value>
+</property>
+
+</configuration>
+EOF
+
+  cat > $HADOOP_HOME/conf/mapred-default.xml <<EOF
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+
+<property>
+  <name>mapred.map.tasks</name>
+  <value>$(( NO_INSTANCES * 10 ))</value>
+</property>
+
+<property>
+  <name>mapred.reduce.tasks</name>
+  <value>$(( NO_INSTANCES * 3 ))</value>
+</property>
+
+</configuration>
+EOF
+
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        ;;
+  status)
+        ;;
+  restart|reload|condrestart)
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|reload|status}"
+        exit 1
+esac
+
+exit 0

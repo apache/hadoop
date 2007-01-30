@@ -1,0 +1,9 @@
+#!/bin/sh
+# Terminate a cluster.
+
+# Import variables
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+. "$bin"/hadoop-ec2-env.sh
+
+ec2-terminate-instances `ec2-describe-instances | grep INSTANCE | awk '{print $2}'`

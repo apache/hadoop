@@ -1,0 +1,51 @@
+#!/bin/sh
+# Create a Hadoop AMI.
+# Inspired by Jonathan Siegel's EC2 script (http://blogsiegel.blogspot.com/2006/08/sandboxing-amazon-ec2.html)
+
+# Import variables
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+. "$bin"/hadoop-ec2-env.sh
+
+# Use fedora core
+AMI_IMAGE=`ec2-describe-images -a | grep fedora-core4-base | awk '{print $2}'`
+
+echo "Starting a fedora core base AMI with ID $AMI_IMAGE."
+OUTPUT=`ec2-run-instances $AMI_IMAGE -k gsg-keypair`
+BOOTING_INSTANCE=`echo $OUTPUT | awk '{print $6}'`
+
+echo "Instance is $BOOTING_INSTANCE."
+
+echo "Polling server status (ec2-describe-instances $BOOTING_INSTANCE)"
+while true; do
+  printf "."
+  HOSTNAME=`ec2-describe-instances $BOOTING_INSTANCE | grep running | awk '{print $4}'`
+  if [ ! -z $HOSTNAME ]; then
+    break;
+  fi
+  sleep 1
+done
+
+echo "The server is available at $HOSTNAME."
+
+echo "Waiting before trying to connect..."
+sleep 30
+
+echo "Copying scripts."
+
+# Copy setup scripts
+scp $SSH_OPTS "$bin"/hadoop-ec2-env.sh "root@$HOSTNAME:"
+scp $SSH_OPTS "$bin"/image/hadoop-init "root@$HOSTNAME:/etc/init.d/hadoop-init"
+scp $SSH_OPTS "$bin"/image/create-hadoop-image-remote "root@$HOSTNAME:"
+
+# Copy private key and certificate (for bundling image)
+scp $SSH_OPTS $EC2_KEYDIR/pk-*.pem "root@$HOSTNAME:"
+scp $SSH_OPTS $EC2_KEYDIR/cert-*.pem "root@$HOSTNAME:"
+
+# Connect to it
+ssh $SSH_OPTS "root@$HOSTNAME" './create-hadoop-image-remote'
+
+# Register image
+ec2-register $S3_BUCKET/image.manifest.xml
+
+echo "Terminate with: ec2-terminate-instances $BOOTING_INSTANCE"
