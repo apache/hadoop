@@ -1424,7 +1424,7 @@ class FSNamesystem implements FSConstants {
      */
     public synchronized void registerDatanode( DatanodeRegistration nodeReg 
                                               ) throws IOException {
-      NameNode.stateChangeLog.debug(
+      NameNode.stateChangeLog.info(
           "BLOCK* NameSystem.registerDatanode: "
           + "node registration from " + nodeReg.getName()
           + " storage " + nodeReg.getStorageID() );
@@ -1463,8 +1463,16 @@ class FSNamesystem implements FSConstants {
         getEditLog().logRemoveDatanode( nodeS );
         nodeS.updateRegInfo( nodeReg );
         getEditLog().logAddDatanode( nodeS );
+        
+        // also treat the registration message as a heartbeat
+        synchronized( heartbeats ) {
+            heartbeats.add( nodeS );
+            //update its timestamp
+            nodeS.updateHeartbeat( 0L, 0L, 0);
+            nodeS.isAlive = true;
+        }
         return;
-      }
+      } 
 
       // this is a new datanode serving a new data storage
       if( nodeReg.getStorageID().equals("") ) {
@@ -1477,10 +1485,16 @@ class FSNamesystem implements FSConstants {
       }
       // register new datanode
       DatanodeDescriptor nodeDescr = new DatanodeDescriptor( nodeReg );
-      // unless we get a heartbeat from this datanode, we will not mark it Alive
-      nodeDescr.isAlive = false;
       unprotectedAddDatanode( nodeDescr );
       getEditLog().logAddDatanode( nodeDescr );
+      
+      // also treat the registration message as a heartbeat
+      synchronized( heartbeats ) {
+          heartbeats.add( nodeDescr );
+          nodeDescr.isAlive = true;
+          // no need to update its timestamp
+          // because its is done when the descriptor is created
+      }
       return;
     }
     
@@ -1534,28 +1548,28 @@ class FSNamesystem implements FSConstants {
                                  long remaining,
                                  int xceiverCount
                                  ) throws IOException {
-      boolean needBlockReport;
       synchronized (heartbeats) {
         synchronized (datanodeMap) {
-          DatanodeDescriptor nodeinfo = getDatanode( nodeID );
-          needBlockReport = isDatanodeDead(nodeinfo); 
+          DatanodeDescriptor nodeinfo;
+          try {
+            nodeinfo = getDatanode( nodeID );
+            if (nodeinfo == null ) {
+                return true;
+            }
+          } catch(UnregisteredDatanodeException e) {
+              return true;
+          }
           
-          if (nodeinfo == null) {
-            // We do not accept unregistered guests
-            throw new UnregisteredDatanodeException( nodeID );
-          }
-          if (nodeinfo.isAlive) {
-            updateStats(nodeinfo, false);
-          }
-          nodeinfo.updateHeartbeat(capacity, remaining, xceiverCount);
-          updateStats(nodeinfo, true);
-          if (!nodeinfo.isAlive) {
-            heartbeats.add(nodeinfo);
-            nodeinfo.isAlive = true;
+          if( !nodeinfo.isAlive ) {
+              return true;
+          } else {
+              updateStats(nodeinfo, false);
+              nodeinfo.updateHeartbeat(capacity, remaining, xceiverCount);
+              updateStats(nodeinfo, true);
+              return false;
           }
         }
       }
-      return needBlockReport;
     }
 
     private void updateStats(DatanodeDescriptor node, boolean isAdded) {

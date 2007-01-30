@@ -95,6 +95,9 @@ Trunk (unreleased changes)
 29. HADOOP-884.  Add scripts in contrib/ec2 to facilitate running
     Hadoop on an Amazon's EC2 cluster.  (Tom White via cutting)
 
+30. HADOOP-937.  Change the namenode to request re-registration of
+    datanodes in more circumstances.  (Hairong Kuang via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

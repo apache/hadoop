@@ -557,7 +557,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         verifyRequest( nodeReg );
         if( namesystem.gotHeartbeat( nodeReg, capacity, remaining, xceiverCount )) {
           // request block report from the datanode
-          return new BlockCommand( DataNodeAction.DNA_REPORT );
+          return new BlockCommand( DataNodeAction.DNA_REGISTER );
         }
         
         //

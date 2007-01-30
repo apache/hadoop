@@ -403,10 +403,12 @@ public class DataNode implements FSConstants, Runnable {
                 // shut down the data node
                 this.shutdown();
                 continue;
-              case DNA_REPORT:
-                // namenode requested a block report; sending
-                lastBlockReport = 0;
-                break;
+              case DNA_REGISTER:
+                // namenode requested a registration
+                register();
+                lastHeartbeat=0;
+                lastBlockReport=0;
+                continue;
               default:
                 LOG.warn( "Unknown BlockCommand action: " + cmd.action);
               }
