@@ -44,6 +44,7 @@ import java.util.*;
 class DFSClient implements FSConstants {
     public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.DFSClient");
     static int MAX_BLOCK_ACQUIRE_FAILURES = 3;
+    private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
     private static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
     ClientProtocol namenode;
     String localName;
@@ -885,8 +886,25 @@ class DFSClient implements FSConstants {
             if (targetPos > filelen) {
                 throw new IOException("Cannot seek after EOF");
             }
-            pos = targetPos;
-            blockEnd = -1;
+            boolean done = false;
+            if (pos <= targetPos && targetPos <= blockEnd) {
+                //
+                // If this seek is to a positive position in the current
+                // block, and this piece of data might already be lying in
+                // the TCP buffer, then just eat up the intervening data.
+                //
+                int diff = (int)(targetPos - pos);
+                if (diff <= TCP_WINDOW_SIZE) {
+                  blockStream.skipBytes(diff);
+                  pos += diff;
+                  assert(pos == targetPos);
+                  done = true;
+                }
+            }
+            if (!done) {
+                pos = targetPos;
+                blockEnd = -1;
+            }
         }
 
         /**

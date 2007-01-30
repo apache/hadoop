@@ -78,6 +78,37 @@ public class TestSeekBug extends TestCase {
     // all done
     stm.close();
   }
+
+  /*
+   * Read some data, skip a few bytes and read more. HADOOP-922.
+   */
+  private void smallReadSeek(FileSystem fileSys, Path name) throws IOException {
+    FSInputStream stmRaw = fileSys.openRaw(name);
+    byte[] expected = new byte[ONEMB];
+    Random rand = new Random(seed);
+    rand.nextBytes(expected);
+    
+    // Issue a simple read first.
+	byte[] actual = new byte[128];
+    stmRaw.seek(100000);
+    stmRaw.read(actual, 0, actual.length);
+    checkAndEraseData(actual, 100000, expected, "First Small Read Test");
+
+    // now do a small seek of 4 bytes, within the same block.
+    int newpos1 = 100000 + 128 + 4;
+    stmRaw.seek(newpos1);
+    stmRaw.read(actual, 0, actual.length);
+    checkAndEraseData(actual, newpos1, expected, "Small Seek Bug 1");
+
+    // seek another 256 bytes this time
+    int newpos2 = newpos1 + 256;
+    stmRaw.seek(newpos2);
+    stmRaw.read(actual, 0, actual.length);
+    checkAndEraseData(actual, newpos2, expected, "Small Seek Bug 2");
+
+    // all done
+    stmRaw.close();
+  }
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
@@ -96,6 +127,7 @@ public class TestSeekBug extends TestCase {
       Path file1 = new Path("seektest.dat");
       writeFile(fileSys, file1);
       seekReadFile(fileSys, file1);
+      smallReadSeek(fileSys, file1);
       cleanupFile(fileSys, file1);
     } finally {
       fileSys.close();

@@ -98,6 +98,10 @@ Trunk (unreleased changes)
 30. HADOOP-937.  Change the namenode to request re-registration of
     datanodes in more circumstances.  (Hairong Kuang via cutting)
 
+31. HADOOP-922.  Optimize small forward seeks in HDFS.  If data is has
+    likely already in flight, skip ahead rather than re-opening the
+    block.  (Dhruba Borthakur via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
