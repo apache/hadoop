@@ -22,6 +22,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
@@ -601,7 +602,11 @@ public class TaskTracker
             } else {
               reduceTotal--;
             }
-            myMetrics.completeTask();
+            try {
+              myMetrics.completeTask();
+            } catch (MetricsException me) {
+              LOG.warn("Caught: " + StringUtils.stringifyException(me));
+            }
             runningTasks.remove(taskStatus.getTaskId());
           }
         }
