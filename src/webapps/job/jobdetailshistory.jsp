@@ -50,26 +50,33 @@
 	  long finishTime = task.getLong(Keys.FINISH_TIME) ; 
 	  
 	  if( Values.MAP.name().equals(task.get(Keys.TASK_TYPE)) ){
-	    totalMaps++; 
 	    if( mapStarted==0 || mapStarted > startTime ){
 	      mapStarted = startTime; 
 	    }
 	    if(  mapFinished < finishTime ){
 	      mapFinished = finishTime ; 
 	    }
-	    if(Values.FAILED.name().equals(task.get(Keys.TASK_STATUS) ))  {
-	      failedMaps++; 
+	    
+	    Map<String, TaskAttempt> attempts = task.getTaskAttempts();
+	    for( TaskAttempt attempt : attempts.values() ) {
+	        totalMaps++; 
+	        if( Values.FAILED.name().equals(attempt.get(Keys.TASK_STATUS)) ) {
+	            failedMaps++; 
+	        }
 	    }
 	  }else{
-	    totalReduces++; 
 	    if( reduceStarted==0||reduceStarted > startTime ){
 	      reduceStarted = startTime ; 
 	    }
 	    if(  reduceFinished < finishTime ){
 	      reduceFinished = finishTime; 
 	    }
-	    if( Values.FAILED.name().equals(task.get(Keys.TASK_STATUS) ))  {
-	      failedReduces++; 
+	    Map<String, TaskAttempt> attempts = task.getTaskAttempts();
+	    for( TaskAttempt attempt : attempts.values() ) {
+	        totalReduces++; 
+	        if( Values.FAILED.name().equals(attempt.get(Keys.TASK_STATUS)) ) {
+	            failedReduces++; 
+	        }
 	    }
 	  }
 	}

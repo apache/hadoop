@@ -111,6 +111,9 @@ Trunk (unreleased changes)
 34. HADOOP-934.  Fix TaskTracker to catch metrics exceptions that were
     causing heartbeats to fail.  (Arun Murthy via cutting)
 
+35. HADOOP-881.  Fix JobTracker web interface to display the correct
+    number of task failures.  (Sanjay Dahiya via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
