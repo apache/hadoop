@@ -122,6 +122,9 @@ Trunk (unreleased changes)
     add a README; make the environment file use a template.
     (Tom White via cutting)
 
+38. HADOOP-549.  Fix a NullPointerException in TaskReport's
+    serialization.  (omalley via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

@@ -47,6 +47,12 @@ public class TestMiniMRLocalFS extends TestCase {
                                                     + "red fox sox\n");
           // assert the number of lines read during caching
           assertTrue("Failed test archives not matching", ret);
+          // test the task report fetchers
+          JobClient client = new JobClient(jconf);
+          TaskReport[] reports = client.getMapTaskReports("job_0001");
+          assertEquals("number of maps", 10, reports.length);
+          reports = client.getReduceTaskReports("job_0001");
+          assertEquals("number of reduces", 1, reports.length);
       } finally {
           if (mr != null) { mr.shutdown(); }
       }

@@ -84,23 +84,21 @@ public class TaskReport implements Writable {
   // Writable
   //////////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, taskid);
+    Text.writeString(out, taskid);
     out.writeFloat(progress);
-    UTF8.writeString(out, state);
+    Text.writeString(out, state);
     out.writeLong(startTime);
     out.writeLong(finishTime);
-    new ObjectWritable(diagnostics).write(out);
+    WritableUtils.writeStringArray(out, diagnostics);
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.taskid = UTF8.readString(in);
+    this.taskid = Text.readString(in);
     this.progress = in.readFloat();
-    this.state = UTF8.readString(in);
+    this.state = Text.readString(in);
     this.startTime = in.readLong(); 
     this.finishTime = in.readLong() ;
     
-    ObjectWritable wrapper = new ObjectWritable();
-    wrapper.readFields(in);
-    diagnostics = (String[])wrapper.get();
+    diagnostics = WritableUtils.readStringArray(in);
   }
 }

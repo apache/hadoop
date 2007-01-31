@@ -349,12 +349,30 @@ public class JobClient extends ToolBase implements MRConstants  {
         }
     }
 
+    /**
+     * Get the information of the current state of the map tasks of a job.
+     * @param jobId the job to query
+     * @return the list of all of the map tips
+     */
+    public TaskReport[] getMapTaskReports(String jobId) throws IOException {
+      return jobSubmitClient.getMapTaskReports(jobId);
+    }
+    
+    /**
+     * Get the information of the current state of the reduce tasks of a job.
+     * @param jobId the job to query
+     * @return the list of all of the map tips
+     */    
+    public TaskReport[] getReduceTaskReports(String jobId) throws IOException {
+      return jobSubmitClient.getReduceTaskReports(jobId);
+    }
+    
     public ClusterStatus getClusterStatus() throws IOException {
       return jobSubmitClient.getClusterStatus();
     }
     
     public JobStatus[] jobsToComplete() throws IOException {
-	return jobSubmitClient.jobsToComplete();
+      return jobSubmitClient.jobsToComplete();
     }
     
     /** Utility that submits a job, then polls for progress until the job is

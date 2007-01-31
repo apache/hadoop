@@ -31,8 +31,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * version 3 introduced to replace 
    * emitHearbeat/pollForNewTask/pollForTaskWithClosedJob with
    * {@link #heartbeat(TaskTrackerStatus, boolean, boolean, short)}
+   * version 4 changed TaskReport for HADOOP-549.
    */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
