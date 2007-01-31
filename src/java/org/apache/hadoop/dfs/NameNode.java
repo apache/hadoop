@@ -95,6 +95,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       FSImage fsimage = new FSImage(dirs);
       FSNamesystem namesystem = new FSNamesystem(fsimage);
       fsimage.create();
+      fsimage.getEditLog().close();
     }
 
     /** Format a new filesystem.  Destroys any filesystem that may already
@@ -106,6 +107,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       FSImage fsimage = new FSImage(dirs);
       FSNamesystem namesystem = new FSNamesystem(fsimage);
       fsimage.create();
+      fsimage.getEditLog().close();
     }
 
     private class NameNodeMetrics {

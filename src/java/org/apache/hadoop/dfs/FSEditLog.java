@@ -131,7 +131,7 @@ class FSEditLog {
    * server to exit
    */
    void processIOError(int index) throws IOException {
-     if (editStreams.length == 1) {
+     if (editStreams == null || editStreams.length == 1) {
        throw new IOException("Checkpoint directories inaccessible.");
      }
      assert(index < editFiles.length);
@@ -590,8 +590,15 @@ class FSEditLog {
     //
     for (int idx = 0; idx < editFiles.length; idx++ ) {
       if (!editFilesNew[idx].renameTo(editFiles[idx])) {
-        processIOError(idx); 
-        idx--; 
+        //
+        // renameTo() fails on Windows if the destination
+        // file exists.
+        //
+        editFiles[idx].delete();
+        if (!editFilesNew[idx].renameTo(editFiles[idx])) {
+          processIOError(idx); 
+          idx--; 
+        }
       }
     }
     //

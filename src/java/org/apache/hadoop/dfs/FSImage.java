@@ -174,11 +174,15 @@ class FSImage {
           // shutdown. The fsimage.ckpt was created and the edits.new
           // file was moved to edits. We complete that checkpoint by
           // moving fsimage.new to fsimage. There is no need to 
-          // update the fstime file here.
+          // update the fstime file here. renameTo fails on Windows
+          // if the destination file already exists.
           //
           if (!ckptFile.renameTo(curFile)) {
-            throw new IOException("Unable to rename " + ckptFile +
-                                  " to " + curFile);
+            curFile.delete();
+            if (!ckptFile.renameTo(curFile)) {
+              throw new IOException("Unable to rename " + ckptFile +
+                                    " to " + curFile);
+            }
           }
         }
       }
@@ -480,9 +484,14 @@ class FSImage {
                            NameNodeFile.CKPT.getName());
       File curFile = new File(imageDirs[idx], 
                               NameNodeFile.IMAGE.getName());
+      // renameTo fails on Windows if the destination file 
+      // already exists.
       if (!ckpt.renameTo(curFile)) {
-        editLog.processIOError(idx);
-        idx--;
+        curFile.delete();
+        if (!ckpt.renameTo(curFile)) {
+          editLog.processIOError(idx);
+          idx--;
+        }
       }
     }
 

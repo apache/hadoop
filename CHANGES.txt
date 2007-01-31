@@ -105,6 +105,9 @@ Trunk (unreleased changes)
 32. HADOOP-961.  Add a 'job -events' sub-command that prints job
     events, including task completions and failures.  (omalley via cutting)
 
+33. HADOOP-959.  Fix namenode snapshot code added in HADOOP-227 to
+    work on Windows.  (Dhruba Borthakur via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
