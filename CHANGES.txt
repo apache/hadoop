@@ -118,6 +118,10 @@ Trunk (unreleased changes)
     permitting it to take advantage of native compression facilities.
     (Sanjay Dahiya via cutting)
 
+37. HADOOP-962.  In contrib/ec2: make scripts executable in tar file;
+    add a README; make the environment file use a template.
+    (Tom White via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

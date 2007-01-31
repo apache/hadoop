@@ -20,6 +20,7 @@
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
   <property name="docs.dir" value="${basedir}/docs"/>
+  <property name="contrib.dir" value="${basedir}/src/contrib"/>
   <property name="docs.src" value="${basedir}/src/web"/>
   <property name="libhdfs.src" value="${basedir}/src/c++/libhdfs"/>
 
@@ -111,6 +112,7 @@
     <mkdir dir="${test.build.testjar}"/>
     <touch datetime="01/25/1971 2:00 pm">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <fileset dir="${contrib.dir}" includes="**/*.template"/>
     </touch>
 
     <!-- copy all of the jsp and static files -->
@@ -122,6 +124,11 @@
 
     <copy todir="${conf.dir}" verbose="true">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
+
+    <copy todir="${contrib.dir}" verbose="true">
+      <fileset dir="${contrib.dir}" includes="**/*.template"/>
       <mapper type="glob" from="*.template" to="*"/>
     </copy>
 
@@ -266,7 +273,7 @@
 
   <target name="compile-contrib" depends="compile-core">
      <subant target="deploy">
-        <fileset file="${basedir}/src/contrib/build.xml"/>
+        <fileset file="${contrib.dir}/build.xml"/>
      </subant>  	
   </target>
   
@@ -449,7 +456,7 @@
 
   <target name="test-contrib" depends="compile-core, compile-core-test">
     <subant target="test">
-       <fileset file="${basedir}/src/contrib/build.xml"/>
+       <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>   
   
@@ -561,10 +568,6 @@
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
     </copy>
 
-    <chmod perm="ugo+x" type="file">
-        <fileset dir="${dist.dir}/bin"/>
-    </chmod>
-
     <copy todir="${dist.dir}/docs">
       <fileset dir="${build.docs}"/>
     </copy>
@@ -576,10 +579,16 @@
     </copy>
 
     <copy todir="${dist.dir}/src" includeEmptyDirs="true">
-      <fileset dir="src"/>
+      <fileset dir="src" excludes="**/*.template"/>
     </copy>
-
+  	
     <copy todir="${dist.dir}/" file="build.xml"/>
+
+    <chmod perm="ugo+x" type="file">
+        <fileset dir="${dist.dir}/bin"/>
+        <fileset dir="${dist.dir}/src/contrib/ec2/bin"/>
+        <fileset dir="${dist.dir}/src/contrib/ec2/bin/image"/>
+    </chmod>
 
   </target>
 
@@ -590,11 +599,15 @@
     <tar compression="gzip" longfile="gnu"
       destfile="${build.dir}/${final.name}.tar.gz">
       <tarfileset dir="${build.dir}" mode="664">
-	<exclude name="${final.name}/bin/*" />
+        <exclude name="${final.name}/bin/*" />
+        <exclude name="${final.name}/src/contrib/ec2/bin/*" />
+        <exclude name="${final.name}/src/contrib/ec2/bin/image/*" />
         <include name="${final.name}/**" />
       </tarfileset>
       <tarfileset dir="${build.dir}" mode="755">
         <include name="${final.name}/bin/*" />
+        <include name="${final.name}/src/contrib/ec2/bin/*" />
+        <include name="${final.name}/src/contrib/ec2/bin/image/*" />
       </tarfileset>
     </tar>
   </target>
