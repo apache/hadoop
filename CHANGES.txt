@@ -102,6 +102,9 @@ Trunk (unreleased changes)
     likely already in flight, skip ahead rather than re-opening the
     block.  (Dhruba Borthakur via cutting)
 
+32. HADOOP-961.  Add a 'job -events' sub-command that prints job
+    events, including task completions and failures.  (omalley via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

@@ -515,7 +515,9 @@ public class JobClient extends ToolBase implements MRConstants  {
     
     public int run(String[] argv) throws Exception {
         if (argv.length < 2) {
-            System.out.println("JobClient -submit <job> | -status <id> | -kill <id> [-jt <jobtracker:port>|<config>]");
+            System.out.println("JobClient -submit <job> | -status <id> |" + 
+                               " -events <id> |" +
+                               " -kill <id> [-jt <jobtracker:port>|<config>]");
             System.exit(-1);
         }
 
@@ -540,6 +542,8 @@ public class JobClient extends ToolBase implements MRConstants  {
                 jobid = argv[i+1];
                 killJob = true;
                 i++;
+            } else if ("-events".equals(argv[i])) {
+              listEvents(argv[++i]);
             }
         }
 
@@ -572,6 +576,21 @@ public class JobClient extends ToolBase implements MRConstants  {
             close();
         }
         return exitCode;
+    }
+    
+    /**
+     * List the events for the given job
+     * @param jobId the job id for the job's events to list
+     * @throws IOException
+     */
+    private void listEvents(String jobId) throws IOException {
+      TaskCompletionEvent[] events = 
+        jobSubmitClient.getTaskCompletionEvents(jobId, 0);
+      System.out.println("Task completion events for " + jobId);
+      for(TaskCompletionEvent event: events) {
+        System.out.println(event.getTaskStatus() + " " + event.getTaskId() + 
+                           " " + event.getTaskTrackerHttp());
+      }
     }
     
     /**
