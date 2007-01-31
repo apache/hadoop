@@ -114,6 +114,10 @@ Trunk (unreleased changes)
 35. HADOOP-881.  Fix JobTracker web interface to display the correct
     number of task failures.  (Sanjay Dahiya via cutting)
 
+36. HADOOP-788.  Change contrib/streaming to subclass TextInputFormat,
+    permitting it to take advantage of native compression facilities.
+    (Sanjay Dahiya via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

@@ -62,8 +62,19 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
       beginPat_ = makePatternCDataOrMark(beginMark_);
       endPat_ = makePatternCDataOrMark(endMark_);
     }
+    init();
   }
 
+  public void init() throws IOException {
+    LOG.info("StreamBaseRecordReader.init: " + " start_=" + start_ + " end_=" + end_ + " length_="
+        + length_ + " start_ > in_.getPos() =" + (start_ > in_.getPos()) + " " + start_ + " > "
+        + in_.getPos());
+    if (start_ > in_.getPos()) {
+      in_.seek(start_);
+    }
+    seekNextRecordBoundary();
+  }
+  
   int numNext = 0;
 
   public synchronized boolean next(Writable key, Writable value) throws IOException {

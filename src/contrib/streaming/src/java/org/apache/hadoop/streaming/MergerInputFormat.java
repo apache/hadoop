@@ -85,7 +85,7 @@ public class MergerInputFormat extends InputFormatBase {
    full file at a time...    )
    */
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
-    return ((StreamInputFormat) primary_).getFullFileSplits(job);
+    return ((StreamInputFormat) primary_).getSplits(job, numSplits);
   }
 
   /**

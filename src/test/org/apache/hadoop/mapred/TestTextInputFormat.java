@@ -130,14 +130,14 @@ public class TestTextInputFormat extends TestCase {
   public void testUTF8() throws Exception {
     InputStream in = makeStream("abcd\u20acbdcd\u20ac");
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    TextInputFormat.readLine(in, out);
+    LineRecordReader.readLine(in, out);
     Text line = new Text();
     line.set(out.toByteArray());
     assertEquals("readLine changed utf8 characters", 
                  "abcd\u20acbdcd\u20ac", line.toString());
     in = makeStream("abc\u200axyz");
     out.reset();
-    TextInputFormat.readLine(in, out);
+    LineRecordReader.readLine(in, out);
     line.set(out.toByteArray());
     assertEquals("split on fake newline", "abc\u200axyz", line.toString());
   }
@@ -145,24 +145,24 @@ public class TestTextInputFormat extends TestCase {
   public void testNewLines() throws Exception {
     InputStream in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    TextInputFormat.readLine(in, out);
+    LineRecordReader.readLine(in, out);
     assertEquals("line1 length", 1, out.size());
     out.reset();
-    TextInputFormat.readLine(in, out);
+    LineRecordReader.readLine(in, out);
     assertEquals("line2 length", 2, out.size());
     out.reset();
-    TextInputFormat.readLine(in, out);
+    LineRecordReader.readLine(in, out);
     assertEquals("line3 length", 0, out.size());
     out.reset();
-    TextInputFormat.readLine(in, out);
+    LineRecordReader.readLine(in, out);
     assertEquals("line4 length", 3, out.size());
     out.reset();
-    TextInputFormat.readLine(in, out);
+    LineRecordReader.readLine(in, out);
     assertEquals("line5 length", 4, out.size());
     out.reset();
-    TextInputFormat.readLine(in, out);
+    LineRecordReader.readLine(in, out);
     assertEquals("line5 length", 5, out.size());
-    assertEquals("end of file", 0, TextInputFormat.readLine(in, out));
+    assertEquals("end of file", 0, LineRecordReader.readLine(in, out));
   }
   
   private static void writeFile(FileSystem fs, Path name, 

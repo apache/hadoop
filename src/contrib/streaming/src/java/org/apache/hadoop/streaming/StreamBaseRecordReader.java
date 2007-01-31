@@ -100,16 +100,6 @@ public abstract class StreamBaseRecordReader implements RecordReader {
 
   /// StreamBaseRecordReader API
 
-  public void init() throws IOException {
-    LOG.info("StreamBaseRecordReader.init: " + " start_=" + start_ + " end_=" + end_ + " length_="
-        + length_ + " start_ > in_.getPos() =" + (start_ > in_.getPos()) + " " + start_ + " > "
-        + in_.getPos());
-    if (start_ > in_.getPos()) {
-      in_.seek(start_);
-    }
-    seekNextRecordBoundary();
-  }
-
   /** Implementation should seek forward in_ to the first byte of the next record.
    *  The initial byte offset in the stream is arbitrary.
    */

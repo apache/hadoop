@@ -27,6 +27,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.io.compress.GzipCodec;
 
 import org.apache.hadoop.mapred.*;
 
@@ -34,7 +35,7 @@ import org.apache.hadoop.mapred.*;
  * selects a RecordReader based on a JobConf property.
  * @author Michel Tourn
  */
-public class StreamInputFormat extends InputFormatBase {
+public class StreamInputFormat extends TextInputFormat {
 
   // an InputFormat should be public with the synthetic public default constructor
   // JobTracker's JobInProgress will instantiate with clazz.newInstance() (and a custom ClassLoader)
@@ -54,7 +55,6 @@ public class StreamInputFormat extends InputFormatBase {
       return super.getSplits(job, numSplits);
     }
   }
-
   /** For the compressed-files case: override InputFormatBase to produce one split. */
   FileSplit[] getFullFileSplits(JobConf job) throws IOException {
     Path[] files = listPaths(job);
@@ -79,9 +79,8 @@ public class StreamInputFormat extends InputFormatBase {
     final long start = split.getStart();
     final long end = start + split.getLength();
 
-    String splitName = split.getPath() + ":" + start + "-" + end;
-    final FSDataInputStream in = fs.open(split.getPath());
-
+    FSDataInputStream in = fs.open(split.getPath());
+    
     // will open the file and seek to the start of the split
     // Factory dispatch based on available params..
     Class readerClass;
@@ -103,15 +102,13 @@ public class StreamInputFormat extends InputFormatBase {
       throw new RuntimeException(nsm);
     }
 
-    StreamBaseRecordReader reader;
+    RecordReader reader;
     try {
-      reader = (StreamBaseRecordReader) ctor.newInstance(new Object[] { in, split, reporter, job,
+      reader = (RecordReader) ctor.newInstance(new Object[] { in, split, reporter, job,
           fs });
     } catch (Exception nsm) {
       throw new RuntimeException(nsm);
     }
-
-    reader.init();
 
     if (reader instanceof StreamSequenceRecordReader) {
       // override k/v class types with types stored in SequenceFile
