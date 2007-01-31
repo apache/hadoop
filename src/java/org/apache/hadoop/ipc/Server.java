@@ -539,7 +539,7 @@ public abstract class Server {
           } catch (Throwable e) {
             LOG.info(getName() + " call error: " + e, e);
             errorClass = e.getClass().getName();
-            error = getStackTrace(e);
+            error = StringUtils.stringifyException(e);
           }
             
           DataOutputStream out = call.connection.out;
@@ -569,14 +569,6 @@ public abstract class Server {
         }
       }
       LOG.info(getName() + ": exiting");
-    }
-
-    private String getStackTrace(Throwable throwable) {
-      StringWriter stringWriter = new StringWriter();
-      PrintWriter printWriter = new PrintWriter(stringWriter);
-      throwable.printStackTrace(printWriter);
-      printWriter.flush();
-      return stringWriter.toString();
     }
 
   }

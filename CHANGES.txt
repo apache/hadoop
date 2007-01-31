@@ -125,6 +125,9 @@ Trunk (unreleased changes)
 38. HADOOP-549.  Fix a NullPointerException in TaskReport's
     serialization.  (omalley via cutting)
 
+39. HADOOP-963.  Fix remote exceptions to have the stack trace of the
+    caller thread, not the IPC listener thread.  (omalley via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

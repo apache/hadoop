@@ -77,7 +77,8 @@ public class Client {
     int id;                                       // call id
     Writable param;                               // parameter
     Writable value;                               // value, null if error
-    RemoteException error;                        // error, null if value
+    String error;                                 // exception, null if value
+    String errorClass;                            // class of exception
     long lastActivity;                            // time of last i/o
     boolean done;                                 // true when call is done
 
@@ -101,9 +102,12 @@ public class Client {
     }
 
     /** Update lastActivity with the current time. */
-    public synchronized void setResult(Writable value, RemoteException error) {
+    public synchronized void setResult(Writable value, 
+                                       String errorClass,
+                                       String error) {
       this.value = value;
       this.error = error;
+      this.errorClass =errorClass;
       this.done = true;
     }
     
@@ -255,10 +259,8 @@ public class Client {
           Call call = (Call)calls.remove(new Integer(id));
           boolean isError = in.readBoolean();     // read if error
           if (isError) {
-            RemoteException ex = 
-              new RemoteException(WritableUtils.readString(in),
-                                  WritableUtils.readString(in));
-            call.setResult(null, ex);
+            call.setResult(null, WritableUtils.readString(in),
+                           WritableUtils.readString(in));
           } else {
             Writable value = (Writable)ReflectionUtils.newInstance(valueClass, conf);
             try {
@@ -267,7 +269,7 @@ public class Client {
             } finally {
               readingCall = null;
             }
-            call.setResult(value, null);
+            call.setResult(value, null, null);
           }
           call.callComplete();                   // deliver result to caller
           //received the response. So decrement the ref count
@@ -462,7 +464,7 @@ public class Client {
       } while (!call.done && wait > 0);
 
       if (call.error != null) {
-        throw call.error;
+        throw new RemoteException(call.errorClass, call.error);
       } else if (!call.done) {
         throw new SocketTimeoutException("timed out waiting for rpc response");
       } else {
