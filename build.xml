@@ -175,7 +175,6 @@
   
   <target name="compile-core-classes" depends="init, compile-rcc-compiler">
 
-    <copy file="${src.webapps}/datanode/browseDirectory.jsp" todir="${src.webapps}/dfs/"/>
     <jsp-compile
      uriroot="${src.webapps}/task"
      outputdir="${build.src}"
