@@ -56,7 +56,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class Client {
   /** Should the client send the header on the connection? */
-  private static final boolean SEND_HEADER = false;
+  private static final boolean SEND_HEADER = true;
   private static final byte CURRENT_VERSION = 0;
   
   public static final Log LOG =
