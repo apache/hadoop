@@ -137,6 +137,9 @@ Trunk (unreleased changes)
 
 42. HADOOP-969.  Fix a deadlock in JobTracker.  (omalley via cutting)
 
+43. HADOOP-862.  Add support for the S3 FileSystem to the CopyFiles
+    tool.  (Michael Stack via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

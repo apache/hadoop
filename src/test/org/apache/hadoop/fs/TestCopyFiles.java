@@ -183,8 +183,8 @@ public class TestCopyFiles extends TestCase {
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
-        new CopyFiles().doMain(conf, new String[] {"dfs://"+namenode+"/srcdat",
-        "dfs://"+namenode+"/destdat"});
+        new CopyFiles().doMain(conf, new String[] {"hdfs://"+namenode+"/srcdat",
+        "hdfs://"+namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
             checkFiles(namenode, "/destdat", files));
         deldir(namenode, "/destdat");
@@ -206,7 +206,7 @@ public class TestCopyFiles extends TestCase {
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
         new CopyFiles().doMain(conf, new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
-        "dfs://"+namenode+"/destdat"});
+        "hdfs://"+namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
             checkFiles(namenode, "/destdat", files));
         deldir(namenode, "/destdat");
@@ -227,7 +227,7 @@ public class TestCopyFiles extends TestCase {
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
-        new CopyFiles().doMain(conf, new String[] {"dfs://"+namenode+"/srcdat",
+        new CopyFiles().doMain(conf, new String[] {"hdfs://"+namenode+"/srcdat",
         "file://"+TEST_ROOT_DIR+"/destdat"});
         assertTrue("Source and destination directories do not match.",
             checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
