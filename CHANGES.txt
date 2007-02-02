@@ -131,6 +131,10 @@ Trunk (unreleased changes)
 40. HADOOP-967.  Change RPC clients to start sending a version header.
     (omalley via cutting)
 
+41. HADOOP-964.  Fix a bug introduced by HADOOP-830 where jobs failed
+    whose comparators and/or i/o types were in the job's jar.
+    (Dennis Kubes via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

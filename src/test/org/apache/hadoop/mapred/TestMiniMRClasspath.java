@@ -75,6 +75,7 @@ public class TestMiniMRClasspath extends TestCase {
     JobClient.runJob(conf);
     StringBuffer result = new StringBuffer();
     {
+      Path[] parents = fs.listPaths(outDir.getParent());
       Path[] fileList = fs.listPaths(outDir);
       for(int i=0; i < fileList.length; ++i) {
         BufferedReader file = 
@@ -90,7 +91,62 @@ public class TestMiniMRClasspath extends TestCase {
     }
     return result.toString();
   }
-  
+
+   static String launchExternal(String fileSys, String jobTracker, JobConf conf,
+    String input, int numMaps, int numReduces)
+    throws IOException {
+
+    final Path inDir = new Path("/testing/ext/input");
+    final Path outDir = new Path("/testing/ext/output");
+    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+    fs.delete(outDir);
+    if (!fs.mkdirs(inDir)) {
+      throw new IOException("Mkdirs failed to create " + inDir.toString());
+    }
+    {
+      DataOutputStream file = fs.create(new Path(inDir, "part-0"));
+      file.writeBytes(input);
+      file.close();
+    }
+    conf.set("fs.default.name", fileSys);
+    conf.set("mapred.job.tracker", jobTracker);
+    conf.setJobName("wordcount");
+    conf.setInputFormat(TextInputFormat.class);
+
+    // the keys are counts
+    conf.setOutputValueClass(IntWritable.class);
+    // the values are the messages
+    conf.set("mapred.output.key.class", "ExternalWritable");
+
+    conf.setInputPath(inDir);
+    conf.setOutputPath(outDir);
+    conf.setNumMapTasks(numMaps);
+    conf.setNumReduceTasks(numReduces);
+    
+    conf.set("mapred.mapper.class", "ExternalMapperReducer"); 
+    conf.set("mapred.reducer.class", "ExternalMapperReducer");
+
+    //pass a job.jar already included in the hadoop build
+    conf.setJar("build/test/testjar/testjob.jar");
+    JobClient.runJob(conf);
+    StringBuffer result = new StringBuffer();
+
+    Path[] fileList = fs.listPaths(outDir);
+    for (int i = 0; i < fileList.length; ++i) {
+      BufferedReader file = new BufferedReader(new InputStreamReader(
+        fs.open(fileList[i])));
+      String line = file.readLine();
+      while (line != null) {
+        result.append(line);
+        line = file.readLine();
+        result.append("\n");
+      }
+      file.close();
+    }
+
+    return result.toString();
+  }
+   
   public void testClassPath() throws IOException {
       String namenode = null;
       MiniDFSCluster dfs = null;
@@ -122,6 +178,43 @@ public class TestMiniMRClasspath extends TestCase {
           if (mr != null) { mr.shutdown();
           }
       }
+  }
+  
+  public void testExternalWritable()
+    throws IOException {
+ 
+    String namenode = null;
+    MiniDFSCluster dfs = null;
+    MiniMRCluster mr = null;
+    FileSystem fileSys = null;
+
+    try {
+      
+      final int taskTrackers = 4;
+      final int jobTrackerPort = 60050;
+
+      Configuration conf = new Configuration();
+      dfs = new MiniDFSCluster(65314, conf, true);
+      fileSys = dfs.getFileSystem();
+      namenode = fileSys.getName();
+      mr = new MiniMRCluster(jobTrackerPort, 50060, taskTrackers, namenode, 
+        true, 3);      
+      JobConf jobConf = new JobConf();
+      String result;
+      final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
+      
+      result = launchExternal(namenode, jobTrackerName, jobConf, 
+                               "Dennis was here!\nDennis again!",
+                               3, 1);
+      assertEquals("Dennis again!\t1\nDennis was here!\t1\n", result);
+      
+    } 
+    finally {
+      if (fileSys != null) { fileSys.close(); }
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown();
+      }
+    }
   }
   
 }

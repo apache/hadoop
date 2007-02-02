@@ -315,10 +315,47 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
     }
 
   }
+  
+  private void configureClasspath(JobConf conf)
+    throws IOException {
+    
+    // get the task and the current classloader which will become the parent
+    Task task = getTask();
+    ClassLoader parent = conf.getClassLoader();   
+    
+    // get the work directory which holds the elements we are dynamically
+    // adding to the classpath
+    File workDir = new File(task.getJobFile()).getParentFile();
+    File jobCacheDir = new File(workDir.getParent(), "work");
+    ArrayList<URL> urllist = new ArrayList<URL>();
+    
+    // add the jars and directories to the classpath
+    String jar = conf.getJar();
+    if (jar != null) {      
+      File[] libs = new File(jobCacheDir, "lib").listFiles();
+      if (libs != null) {
+        for (int i = 0; i < libs.length; i++) {
+          urllist.add(libs[i].toURL());
+        }
+      }
+      urllist.add(new File(jobCacheDir, "classes").toURL());
+      urllist.add(jobCacheDir.toURL());
+     
+    }
+    urllist.add(workDir.toURL());
+    
+    // create a new classloader with the old classloader as its parent
+    // then set that classloader as the one used by the current jobconf
+    URL[] urls = urllist.toArray(new URL[urllist.size()]);
+    URLClassLoader loader = new URLClassLoader(urls, parent);
+    conf.setClassLoader(loader);
+  }
 
   public ReduceTaskRunner(Task task, TaskTracker tracker, 
                           JobConf conf) throws IOException {
+    
     super(task, tracker, conf);
+    configureClasspath(conf);
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);
 
