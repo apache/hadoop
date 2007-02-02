@@ -140,6 +140,9 @@ Trunk (unreleased changes)
 43. HADOOP-862.  Add support for the S3 FileSystem to the CopyFiles
     tool.  (Michael Stack via cutting)
 
+44. HADOOP-965.  Fix IsolationRunner so that job's jar can be found.
+    (Dennis Kubes via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

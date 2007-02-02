@@ -140,7 +140,8 @@ public class IsolationRunner {
     
     // setup the local and user working directories
     FileSystem local = FileSystem.getLocal(conf);
-    File workDirName = new File(jobFilename.getParent(), "work");
+    File taskDir = new File(jobFilename.getParent());
+    File workDirName = new File(taskDir.getParent(), "work");
     local.setWorkingDirectory(new Path(workDirName.toString()));
     FileSystem.get(conf).setWorkingDirectory(conf.getWorkingDirectory());
     
