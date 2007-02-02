@@ -143,6 +143,9 @@ Trunk (unreleased changes)
 44. HADOOP-965.  Fix IsolationRunner so that job's jar can be found.
     (Dennis Kubes via cutting)
 
+45. HADOOP-309.  Fix two NullPointerExceptions in StatusHttpServer.
+    (navychen via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

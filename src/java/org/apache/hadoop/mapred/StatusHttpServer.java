@@ -70,13 +70,15 @@ public class StatusHttpServer {
     listener.setHost(bindAddress);
     webServer.addListener(listener);
 
-    // set up the context for "/logs/"
-    HttpContext logContext = new HttpContext();
-    logContext.setContextPath("/logs/*");
+    // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
     String logDir = System.getProperty("hadoop.log.dir");
-    logContext.setResourceBase(logDir);
-    logContext.addHandler(new ResourceHandler());
-    webServer.addContext(logContext);
+    if( logDir != null ) {
+      HttpContext logContext = new HttpContext();
+      logContext.setContextPath("/logs/*");
+      logContext.setResourceBase(logDir);
+      logContext.addHandler(new ResourceHandler());
+      webServer.addContext(logContext);
+    }
 
     // set up the context for "/static/*"
     String appDir = getWebAppsPath();
@@ -151,6 +153,8 @@ public class StatusHttpServer {
    */
   private static String getWebAppsPath() throws IOException {
     URL url = StatusHttpServer.class.getClassLoader().getResource("webapps");
+    if( url == null ) 
+      throw new IOException("webapps not found in CLASSPATH"); 
     String path = url.getPath();
     if (isWindows && path.startsWith("/")) {
       path = path.substring(1);
