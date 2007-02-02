@@ -135,6 +135,8 @@ Trunk (unreleased changes)
     whose comparators and/or i/o types were in the job's jar.
     (Dennis Kubes via cutting)
 
+42. HADOOP-969.  Fix a deadlock in JobTracker.  (omalley via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 
