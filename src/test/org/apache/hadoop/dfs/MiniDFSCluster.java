@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.net.NetworkTopology;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -95,9 +96,14 @@ public class MiniDFSCluster {
       this.conf.set("dfs.data.dir",
           new File(dataDir, "data"+(2*index+1)).getPath()+","+
           new File(dataDir, "data"+(2*index+2)).getPath());
-    
     }
     
+    public DataNodeRunner(Configuration conf, File dataDir, 
+        String networkLoc, int index) {
+        this(conf, dataDir, index);
+        this.conf.set("dfs.datanode.rack", networkLoc);
+    }
+        
     /**
      * Create and run the data node.
      */
@@ -115,7 +121,8 @@ public class MiniDFSCluster {
             }
           }
         }
-        node = new DataNode(conf, dirs);
+        node = new DataNode(conf, conf.get("dfs.datanode.rack", 
+            NetworkTopology.DEFAULT_RACK), dirs);
         node.run();
       } catch (Throwable e) {
         node = null;
@@ -144,7 +151,7 @@ public class MiniDFSCluster {
   public MiniDFSCluster(int namenodePort, 
                         Configuration conf,
                         boolean dataNodeFirst) throws IOException {
-    this(namenodePort, conf, 1, dataNodeFirst, true);
+    this(namenodePort, conf, 1, dataNodeFirst, true, null);
   }
   
   /**
@@ -159,7 +166,7 @@ public class MiniDFSCluster {
                         Configuration conf,
                         int nDatanodes,
                         boolean dataNodeFirst) throws IOException {
-    this(namenodePort, conf, nDatanodes, dataNodeFirst, true);
+    this(namenodePort, conf, nDatanodes, dataNodeFirst, true, null);
   }
   
   /**
@@ -175,7 +182,26 @@ public class MiniDFSCluster {
                         Configuration conf,
                         int nDatanodes,
                         boolean dataNodeFirst,
-                        boolean formatNamenode) throws IOException {
+                        boolean formatNamenode ) throws IOException {
+    this(namenodePort, conf, nDatanodes, dataNodeFirst, formatNamenode, null);
+  }
+  
+  /**
+   * Create the config and start up the servers.  If either the rpc or info port is already 
+   * in use, we will try new ports.
+   * @param namenodePort suggestion for which rpc port to use.  caller should use 
+   *                     getNameNodePort() to get the actual port used.
+   * @param nDatanodes Number of datanodes   
+   * @param dataNodeFirst should the datanode be brought up before the namenode?
+   * @param formatNamenode should the namenode be formatted before starting up ?
+   * @param racks array of strings indicating racks that each datanode is on
+   */
+  public MiniDFSCluster(int namenodePort, 
+                        Configuration conf,
+                        int nDatanodes,
+                        boolean dataNodeFirst,
+                        boolean formatNamenode,
+                        String[] racks) throws IOException {
 
     this.conf = conf;
 
@@ -208,7 +234,11 @@ public class MiniDFSCluster {
       dataNodes = new DataNodeRunner[nDatanodes];
       dataNodeThreads = new Thread[nDatanodes];
       for (int idx = 0; idx < nDatanodes; idx++) {
-        dataNodes[idx] = new DataNodeRunner(conf, data_dir, idx);
+        if( racks == null || idx >= racks.length) {
+          dataNodes[idx] = new DataNodeRunner(conf, data_dir, idx);
+        } else {
+          dataNodes[idx] = new DataNodeRunner(conf, data_dir, racks[idx], idx);          
+        }
         dataNodeThreads[idx] = new Thread(dataNodes[idx]);
       }
       if (dataNodeFirst) {

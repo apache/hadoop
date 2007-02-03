@@ -21,21 +21,32 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
 import java.net.*;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.DNS;
 
 /**
  * This class tests the replication of a DFS file.
- * @author Milind Bhandarkar
+ * @author Milind Bhandarkar, Hairong Kuang
  */
 public class TestReplication extends TestCase {
-  static final long seed = 0xDEADBEEFL;
-  static final int blockSize = 8192;
-  static final int fileSize = 16384;
-  static final int numDatanodes = 4;
+  private static final long seed = 0xDEADBEEFL;
+  private static final int blockSize = 8192;
+  private static final int fileSize = 16384;
+  private static final String racks[] = new String[] {
+    "/d1/r1", "/d1/r1", "/d1/r2", "/d1/r2", "/d1/r2", "/d2/r3", "/d2/r3"
+  };
+  private static final int numDatanodes = racks.length;
+  private static final Log LOG = LogFactory.getLog(
+          "org.apache.hadoop.dfs.TestReplication");
+
+
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
   throws IOException {
@@ -49,14 +60,47 @@ public class TestReplication extends TestCase {
     stm.close();
   }
   
-  
+  /* check if there are at least two nodes are on the same rack */
   private void checkFile(FileSystem fileSys, Path name, int repl)
   throws IOException {
-    String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
-    for (int idx = 0; idx < locations.length; idx++) {
-      assertEquals("Number of replicas for block" + idx,
-          Math.min(numDatanodes, repl), locations[idx].length);  
-    }
+      Configuration conf = fileSys.getConf();
+      ClientProtocol namenode = (ClientProtocol) RPC.getProxy(
+              ClientProtocol.class,
+              ClientProtocol.versionID,
+              DataNode.createSocketAddr(conf.get("fs.default.name")), 
+              conf);
+           
+      LocatedBlock[] locations = namenode.open(
+              DNS.getDefaultHost("default"), name.toString());
+      boolean isOnSameRack = true, isNotOnSameRack = true;
+      for (int idx = 0; idx < locations.length; idx++) {
+          DatanodeInfo[] datanodes = locations[idx].getLocations();
+          assertEquals("Number of replicas for block" + idx,
+                  Math.min(numDatanodes, repl), datanodes.length);  
+          if(datanodes.length <= 1) break;
+          if(datanodes.length == 2) {
+              isNotOnSameRack = !( datanodes[0].getNetworkLocation().equals(
+                      datanodes[1].getNetworkLocation() ) );
+              break;
+          }
+          isOnSameRack = false;
+          isNotOnSameRack = false;
+          for (int idy = 0; idy < datanodes.length-1; idy++) {
+                  LOG.info("datanode "+ idy + ": "+ datanodes[idy].getName());
+                  boolean onRack = datanodes[idy].getNetworkLocation().equals(
+                          datanodes[idy+1].getNetworkLocation() );
+                  if( onRack ) {
+                      isOnSameRack = true;
+                  }
+                  if( !onRack ) {
+                      isNotOnSameRack = true;                      
+                  }
+                  if( isOnSameRack && isNotOnSameRack ) break;
+          }
+          if( !isOnSameRack || !isNotOnSameRack ) break;
+      }
+      assertTrue(isOnSameRack);
+      assertTrue(isNotOnSameRack);
   }
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
@@ -70,21 +114,23 @@ public class TestReplication extends TestCase {
    */
   public void testReplication() throws IOException {
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, numDatanodes, false);
+    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, numDatanodes, false, true, racks);
     // Now wait for 15 seconds to give datanodes chance to register
     // themselves and to report heartbeat
     try {
-      Thread.sleep(15000L);
+         Thread.sleep(15000L);
     } catch (InterruptedException e) {
-      // nothing
+         // nothing
     }
+    
     InetSocketAddress addr = new InetSocketAddress("localhost", 65312);
     DFSClient client = new DFSClient(addr, conf);
+    
     DatanodeInfo[] info = client.datanodeReport();
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
     FileSystem fileSys = cluster.getFileSystem();
     try {
-      Path file1 = new Path("smallblocktest.dat");
+      Path file1 = new Path("/smallblocktest.dat");
       writeFile(fileSys, file1, 3);
       checkFile(fileSys, file1, 3);
       cleanupFile(fileSys, file1);
@@ -96,6 +142,9 @@ public class TestReplication extends TestCase {
       cleanupFile(fileSys, file1);
       writeFile(fileSys, file1, 1);
       checkFile(fileSys, file1, 1);
+      cleanupFile(fileSys, file1);
+      writeFile(fileSys, file1, 2);
+      checkFile(fileSys, file1, 2);
       cleanupFile(fileSys, file1);
     } finally {
       fileSys.close();

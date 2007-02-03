@@ -24,10 +24,12 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.Metrics;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.mapred.StatusHttpServer;
+import org.apache.hadoop.net.NetworkTopology;
 
 import java.io.*;
 import java.net.*;
@@ -105,6 +107,7 @@ public class DataNode implements FSConstants, Runnable {
     DatanodeProtocol namenode;
     FSDataset data;
     DatanodeRegistration dnRegistration;
+    private String networkLoc;
     boolean shouldRun = true;
     Vector receivedBlockList = new Vector();
     int xmitsInProgress = 0;
@@ -168,9 +171,15 @@ public class DataNode implements FSConstants, Runnable {
      * 'dataDirs' is where the blocks are stored.
      */
     DataNode(Configuration conf, String[] dataDirs) throws IOException {
-        this(InetAddress.getLocalHost().getHostName(), 
+      this(conf, NetworkTopology.DEFAULT_RACK, dataDirs );
+    }
+    
+    DataNode(Configuration conf, String networkLoc, String[] dataDirs) throws IOException {
+        this(InetAddress.getLocalHost().getHostName(),
+             networkLoc,
              dataDirs,
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
+        // register datanode
         int infoServerPort = conf.getInt("dfs.datanode.info.port", 50075);
         String infoServerBindAddress = conf.get("dfs.datanode.info.bindAddress", "0.0.0.0");
         this.infoServer = new StatusHttpServer("datanode", infoServerBindAddress, infoServerPort, true);
@@ -197,7 +206,8 @@ public class DataNode implements FSConstants, Runnable {
      * 
      * @see DataStorage
      */
-    private DataNode(String machineName, 
+    private DataNode(String machineName,
+                    String networkLoc,
                     String[] dataDirs, 
                     InetSocketAddress nameNodeAddr, 
                     Configuration conf ) throws IOException {
@@ -247,6 +257,7 @@ public class DataNode implements FSConstants, Runnable {
                                         storage.getStorageID(),
                                         -1,
                                         "" );
+      this.networkLoc = networkLoc;
       // initialize data node internal structure
       this.data = new FSDataset(volumes, conf);
       this.dataXceiveServer = new Daemon(new DataXceiveServer(ss));
@@ -292,7 +303,7 @@ public class DataNode implements FSConstants, Runnable {
     private void register() throws IOException {
       while( true ) {
         try {
-          dnRegistration = namenode.register( dnRegistration );
+          dnRegistration = namenode.register( dnRegistration, networkLoc );
           break;
         } catch( SocketTimeoutException e ) {  // namenode is busy
           LOG.info("Problem connecting to server: " + getNameNodeAddr());
@@ -1045,9 +1056,9 @@ public class DataNode implements FSConstants, Runnable {
     
     /** Start datanode daemon.
      */
-    public static void run(Configuration conf) throws IOException {
+    public static void run(Configuration conf, String networkLoc) throws IOException {
         String[] dataDirs = conf.getStrings("dfs.data.dir");
-        DataNode dn = makeInstance(dataDirs, conf);
+        DataNode dn = makeInstance(networkLoc, dataDirs, conf);
         dataNodeList.add(dn);
         if (dn != null) {
           Thread t = new Thread(dn, "DataNode: [" +
@@ -1075,8 +1086,9 @@ public class DataNode implements FSConstants, Runnable {
   /** Start a single datanode daemon and wait for it to finish.
    *  If this thread is specifically interrupted, it will stop waiting.
    */
-  private static void runAndWait(Configuration conf) throws IOException {
-    run(conf);
+  private static void runAndWait(Configuration conf, String networkLoc)
+    throws IOException {
+    run(conf, networkLoc);
     if (dataNodeThreadList.size() > 0) {
       Thread t = (Thread) dataNodeThreadList.remove(dataNodeThreadList.size()-1);
       try {
@@ -1101,7 +1113,12 @@ public class DataNode implements FSConstants, Runnable {
    * no directory from this directory list can be created.
    * @throws IOException
    */
-  static DataNode makeInstance(String[] dataDirs, Configuration conf)
+  static DataNode makeInstance( String[] dataDirs, Configuration conf)
+  throws IOException {
+    return makeInstance(NetworkTopology.DEFAULT_RACK, dataDirs, conf );
+  }
+  
+  static DataNode makeInstance(String networkLoc, String[] dataDirs, Configuration conf)
   throws IOException {
     ArrayList<String> dirs = new ArrayList<String>();
     for (int i = 0; i < dataDirs.length; i++) {
@@ -1113,7 +1130,7 @@ public class DataNode implements FSConstants, Runnable {
         LOG.warn("Invalid directory in dfs.data.dir: " + e.getMessage() );
       }
     }
-    return ((dirs.size() > 0) ? new DataNode(conf, dirs.toArray(new String[dirs.size()])) : null);
+    return ((dirs.size() > 0) ? new DataNode(conf, networkLoc, dirs.toArray(new String[dirs.size()])) : null);
   }
 
   public String toString() {
@@ -1124,13 +1141,118 @@ public class DataNode implements FSConstants, Runnable {
         ", xmitsInProgress=" + xmitsInProgress +
         "}";
   }
+  
+    /* Get the network location by running a script configured in conf */
+    private static String getNetworkLoc( Configuration conf ) 
+                          throws IOException {
+        String locScript = conf.get("dfs.network.script" );
+        if( locScript == null ) return null;
+
+        LOG.info( "Starting to run script to get datanode network location");
+        Process p = Runtime.getRuntime().exec( locScript );
+        StringBuffer networkLoc = new StringBuffer();
+        final BufferedReader inR = new BufferedReader(
+                new InputStreamReader(p.getInputStream() ) );
+        final BufferedReader errR = new BufferedReader(
+                new InputStreamReader( p.getErrorStream() ) );
+
+        // read & log any error messages from the running script
+        Thread errThread = new Thread() {
+            public void start() {
+                try {
+                String errLine = errR.readLine();
+                while(errLine != null) {
+                    LOG.warn("Network script error: "+errLine);
+                    errLine = errR.readLine();
+                }
+                } catch( IOException e) {
+                    
+                }
+            }
+        };
+        try {
+            errThread.start();
+            
+            // fetch output from the process
+            String line = inR.readLine();
+            while( line != null ) {
+                networkLoc.append( line );
+                line = inR.readLine();
+            }
+            try {
+            // wait for the process to finish
+            int returnVal = p.waitFor();
+            // check the exit code
+            if( returnVal != 0 ) {
+                throw new IOException("Process exits with nonzero status: "+locScript);
+            }
+            } catch (InterruptedException e) {
+                throw new IOException( e.getMessage() );
+            } finally {
+                try {
+                    // make sure that the error thread exits
+                    errThread.join();
+                } catch (InterruptedException je) {
+                    LOG.warn( StringUtils.stringifyException(je));
+                }
+            }
+        } finally {
+            // close in & error streams
+            try {
+                inR.close();
+            } catch ( IOException ine ) {
+                throw ine;
+            } finally {
+                errR.close();
+            }
+        }
+
+        return networkLoc.toString();
+    }
+
+
+    /* Get the network location from the command line */
+    private static String getNetworkLoc(String args[]) {
+        for( int i=0; i< args.length; i++ ) { 
+            if ("-r".equals(args[i])||"--rack".equals(args[i]) ) {
+                if( i==args.length-1 ) {
+                    printUsage();
+                } else {
+                    return args[++i];
+                }
+            }
+        }
+        return null;
+    }
+    
+    /* Return the datanode's network location 
+     * either from the command line, from script, or a default value
+     */
+    private static String getNetworkLoc(String args[], Configuration conf)
+                          throws IOException {
+        String networkLoc = getNetworkLoc( args );
+        if( networkLoc == null ) {
+            networkLoc = getNetworkLoc( conf );
+        }
+        if( networkLoc == null ) {
+            return NetworkTopology.DEFAULT_RACK;
+        } else {
+            return NodeBase.normalize( networkLoc );
+        }
+    }
+    
+    private static void printUsage() {
+        System.err.println(
+                "Usage: java DataNode [-r, --rack <network location>]");        
+    }
+
 
     /**
      */
     public static void main(String args[]) throws IOException {
       try {
         Configuration conf = new Configuration();
-        runAndWait(conf);
+        runAndWait(conf, getNetworkLoc(args, conf));
       } catch ( Throwable e ) {
         LOG.error( StringUtils.stringifyException( e ) );
         System.exit(-1);

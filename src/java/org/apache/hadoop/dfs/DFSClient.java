@@ -427,30 +427,17 @@ class DFSClient implements FSConstants {
 
     /**
      * Pick the best node from which to stream the data.
-     * That's the local one, if available.
+     * Entries in <i>nodes</i> are already in the priority order
      */
     private DatanodeInfo bestNode(DatanodeInfo nodes[], TreeSet deadNodes) throws IOException {
-        if ((nodes == null) || 
-            (nodes.length - deadNodes.size() < 1)) {
-            throw new IOException("No live nodes contain current block");
-        }
-        DatanodeInfo chosenNode = null;
+      if (nodes != null) { 
         for (int i = 0; i < nodes.length; i++) {
-            if (deadNodes.contains(nodes[i])) {
-                continue;
-            }
-            String nodename = nodes[i].getHost();
-            if (localName.equals(nodename)) {
-                chosenNode = nodes[i];
-                break;
-            }
+          if (!deadNodes.contains(nodes[i])) {
+            return nodes[i];
+          }
         }
-        if (chosenNode == null) {
-            do {
-                chosenNode = nodes[Math.abs(r.nextInt()) % nodes.length];
-            } while (deadNodes.contains(chosenNode));
-        }
-        return chosenNode;
+      }
+        throw new IOException("No live nodes contain current block");
     }
 
     /***************************************************************

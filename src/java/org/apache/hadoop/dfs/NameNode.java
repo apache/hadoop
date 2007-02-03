@@ -539,10 +539,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     ////////////////////////////////////////////////////////////////
     /** 
      */
-    public DatanodeRegistration register( DatanodeRegistration nodeReg
+    public DatanodeRegistration register( DatanodeRegistration nodeReg,
+                                          String networkLocation
                                         ) throws IOException {
       verifyVersion( nodeReg.getVersion() );
-      namesystem.registerDatanode( nodeReg );
+      namesystem.registerDatanode( nodeReg, networkLocation );
       return nodeReg;
     }
     

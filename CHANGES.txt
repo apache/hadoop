@@ -146,6 +146,9 @@ Trunk (unreleased changes)
 45. HADOOP-309.  Fix two NullPointerExceptions in StatusHttpServer.
     (navychen via cutting)
 
+46. HADOOP-692.  Add rack awareness to HDFS's placement of blocks.
+    (Hairong Kuang via cutting)
+
 
 Release 0.10.1 - 2007-01-10
 

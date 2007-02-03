@@ -31,8 +31,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * @author Michael Cafarella
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
-  public static final long versionID = 4L; // BlockCommand.action:
-                                           // replace DNA_REPORT by DNA_REGISTER
+  public static final long versionID = 5L;  // register takes a new parameter
   
   // error code
   final static int DISK_ERROR = 1;
@@ -52,13 +51,14 @@ interface DatanodeProtocol extends VersionedProtocol {
    * Register Datanode.
    *
    * @see org.apache.hadoop.dfs.DataNode#register()
-   * @see org.apache.hadoop.dfs.FSNamesystem#registerDatanode(DatanodeRegistration)
+   * @see org.apache.hadoop.dfs.FSNamesystem#registerDatanode(DatanodeRegistration, String)
    * 
    * @return updated {@link org.apache.hadoop.dfs.DatanodeRegistration}, which contains 
    * new storageID if the datanode did not have one and
    * registration ID for further communication.
    */
-    public DatanodeRegistration register( DatanodeRegistration registration
+    public DatanodeRegistration register( DatanodeRegistration registration,
+                                          String networkLocation
                                         ) throws IOException;
     /**
      * sendHeartbeat() tells the NameNode that the DataNode is still

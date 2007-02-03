@@ -19,6 +19,9 @@ package org.apache.hadoop.dfs;
 
 import java.util.*;
 
+import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
+
 /**************************************************
  * DatanodeDescriptor tracks stats on a given DataNode,
  * such as available storage capacity, last update time, etc.,
@@ -32,30 +35,64 @@ import java.util.*;
  * @author Mike Cafarella
  * @author Konstantin Shvachko
  **************************************************/
-class DatanodeDescriptor extends DatanodeInfo {
+public class DatanodeDescriptor extends DatanodeInfo {
 
   private volatile Collection<Block> blocks = new TreeSet<Block>();
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   protected boolean isAlive = false;
 
-  DatanodeDescriptor() {
+  /** Default constructor */
+  public DatanodeDescriptor() {
     super();
   }
   
-  DatanodeDescriptor( DatanodeID nodeID ) {
+  /** DatanodeDescriptor constructor
+   * @param nodeID id of the data node
+   */
+  public DatanodeDescriptor( DatanodeID nodeID ) {
     this( nodeID, 0L, 0L, 0 );
   }
-  
-  /**
-   * Create DatanodeDescriptor.
+
+  /** DatanodeDescriptor constructor
+   * 
+   * @param nodeID id of the data node
+   * @param networkLocation location of the data node in network
    */
-  DatanodeDescriptor( DatanodeID nodeID, 
+  public DatanodeDescriptor( DatanodeID nodeID, String networkLocation ) {
+    this( nodeID, networkLocation, 0L, 0L, 0 );
+  }
+  
+  /** DatanodeDescriptor constructor
+   * 
+   * @param nodeID id of the data node
+   * @param capacity capacity of the data node
+   * @param remaining remaing capacity of the data node
+   * @param xceiverCount # of data transfers at the data node
+   */
+  public DatanodeDescriptor( DatanodeID nodeID, 
                       long capacity, 
                       long remaining,
                       int xceiverCount ) {
     super( nodeID );
     updateHeartbeat(capacity, remaining, xceiverCount);
+  }
+
+  /** DatanodeDescriptor constructor
+   * 
+   * @param nodeID id of the data node
+   * @param networkLocation location of the data node in network
+   * @param capacity capacity of the data node
+   * @param remaining remaing capacity of the data node
+   * @param xceiverCount # of data transfers at the data node
+   */
+  public DatanodeDescriptor( DatanodeID nodeID,
+                              String networkLocation,
+                              long capacity, 
+                              long remaining,
+                              int xceiverCount ) {
+    super( nodeID, networkLocation );
+    updateHeartbeat( capacity, remaining, xceiverCount);
   }
 
   /**

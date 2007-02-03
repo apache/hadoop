@@ -23,11 +23,15 @@ import java.io.IOException;
 import java.util.Date;
 
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.NodeBase;
 
 /** 
  * DatanodeInfo represents the status of a DataNode.
@@ -37,11 +41,12 @@ import org.apache.hadoop.io.WritableUtils;
  * @author Mike Cafarella
  * @author Konstantin Shvachko
  */
-public class DatanodeInfo extends DatanodeID {
+public class DatanodeInfo extends DatanodeID implements Node {
   protected long capacity;
   protected long remaining;
   protected long lastUpdate;
   protected int xceiverCount;
+  private String location = NetworkTopology.DEFAULT_RACK;
 
   // administrative states of a datanode
   public enum AdminStates {NORMAL, DECOMMISSION_INPROGRESS, DECOMMISSIONED; }
@@ -59,16 +64,22 @@ public class DatanodeInfo extends DatanodeID {
     this.remaining = from.getRemaining();
     this.lastUpdate = from.getLastUpdate();
     this.xceiverCount = from.getXceiverCount();
+    this.location = from.getNetworkLocation();
     this.adminState = from.adminState;
   }
 
   DatanodeInfo( DatanodeID nodeID ) {
-    super( nodeID );
-    this.capacity = 0L;
-    this.remaining = 0L;
-    this.lastUpdate = 0L;
-    this.xceiverCount = 0;
-    this.adminState = null;
+      super( nodeID );
+      this.capacity = 0L;
+      this.remaining = 0L;
+      this.lastUpdate = 0L;
+      this.xceiverCount = 0;
+      this.adminState = null;    
+  }
+  
+  DatanodeInfo( DatanodeID nodeID, String location ) {
+      this(nodeID);
+      this.location = location;
   }
   
   /** The raw capacity. */
@@ -103,6 +114,18 @@ public class DatanodeInfo extends DatanodeID {
     this.xceiverCount = xceiverCount; 
   }
 
+  /** rack name **/
+  public String getNetworkLocation() {return location;}
+    
+  /** Sets the rack name */
+  void setNetworkLocation(String location) {
+    this.location = NodeBase.normalize(location);
+  }
+  
+  public String getPath() {
+      return location+NodeBase.PATH_SEPARATOR_STR+name;
+  }
+
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {
     StringBuffer buffer = new StringBuffer();
@@ -110,6 +133,9 @@ public class DatanodeInfo extends DatanodeID {
     long r = getRemaining();
     long u = c - r;
     buffer.append("Name: "+name+"\n");
+    if(!NetworkTopology.DEFAULT_RACK.equals(location)) {
+        buffer.append("Rack: "+location+"\n");
+    }
     if (isDecommissioned()) {
       buffer.append("State          : Decommissioned\n");
     } else if (isDecommissionInProgress()) {
@@ -209,6 +235,7 @@ public class DatanodeInfo extends DatanodeID {
     out.writeLong(remaining);
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
+    Text.writeString( out, location );
     WritableUtils.writeEnum(out, getAdminState());
   }
 
@@ -220,6 +247,7 @@ public class DatanodeInfo extends DatanodeID {
     this.remaining = in.readLong();
     this.lastUpdate = in.readLong();
     this.xceiverCount = in.readInt();
+    this.location = Text.readString( in );
     AdminStates newState = (AdminStates) WritableUtils.readEnum(in,
                                          AdminStates.class);
     setAdminState(newState);

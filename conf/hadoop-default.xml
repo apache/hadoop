@@ -346,6 +346,14 @@ creations/deletions), or "all".</description>
  	</description>
 </property>
 
+<property>
+  <name>dfs.network.script</name>
+  <value></value>
+  <description>
+        Specifies a script name that print the network location path
+        of the current machine.
+  </description>
+</property>
 
 <!-- map/reduce properties -->
 
