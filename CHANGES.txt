@@ -1,6 +1,11 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1. HADOOP-976.  Make SequenceFile.Metadata public.  (Runping Qi via cutting)
+
+
 Release 0.11.0 - 2007-02-02
 
  1. HADOOP-781.  Remove methods deprecated in 0.10 that are no longer

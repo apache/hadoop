@@ -500,7 +500,7 @@ public class SequenceFile {
    * pairs of Text type.
    *
    */
-  static class Metadata implements Writable {
+  public static class Metadata implements Writable {
 
     private TreeMap<Text, Text> theMetadata;
     
