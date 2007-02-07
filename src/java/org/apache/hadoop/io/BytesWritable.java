@@ -104,7 +104,27 @@ public class BytesWritable implements WritableComparable {
       bytes = new_data;
     }
   }
-  
+
+  /**
+   * Set the BytesWritable to the contents of the given newData.
+   * @param newData the value to set this BytesWritable to.
+   */
+  public void set(BytesWritable newData) {
+    set(newData.bytes, 0, newData.size);
+  }
+
+  /**
+   * Set the value to a copy of the given byte range
+   * @param newData the new values to copy in
+   * @param offset the offset in newData to start at
+   * @param length the number of bytes to copy
+   */
+  public void set(byte[] newData, int offset, int length) {
+    setSize(0);
+    setSize(length);
+    System.arraycopy(newData, 0, bytes, 0, size);
+  }
+
   // inherit javadoc
   public void readFields(DataInput in) throws IOException {
     setSize(0); // clear the old data
@@ -144,6 +164,26 @@ public class BytesWritable implements WritableComparable {
     return false;
   }
   
+  /**
+   * Generate the stream of bytes as hex pairs separated by ' '.
+   */
+  public String toString() { 
+    StringBuffer sb = new StringBuffer(3*size);
+    for (int idx = 0; idx < size; idx++) {
+      // if not the first, put a blank separator in
+      if (idx != 0) {
+        sb.append(' ');
+      }
+      String num = Integer.toHexString((int) bytes[idx]);
+      // if it is only one digit, add a leading 0.
+      if (num.length() < 2) {
+        sb.append('0');
+      }
+      sb.append(num);
+    }
+    return sb.toString();
+  }
+
   /** A Comparator optimized for BytesWritable. */ 
   public static class Comparator extends WritableComparator {
     public Comparator() {

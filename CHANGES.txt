@@ -6,6 +6,9 @@ Trunk (unreleased changes)
  1. HADOOP-975.  Separate stdout and stderr from tasks.
     (Arun C Murthy via cutting)
 
+ 2. HADOOP-982.  Add some setters and a toString() method to
+    BytesWritable.  (omalley via cutting)
+
 
 Branch 0.11 - unreleased
 
