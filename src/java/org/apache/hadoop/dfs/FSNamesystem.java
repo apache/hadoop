@@ -330,6 +330,14 @@ class FSNamesystem implements FSConstants {
             return size;
         }
         
+        /* Check if a block is in the neededReplication queue */
+        synchronized boolean contains(Block block) {
+            for(TreeSet<Block> set:priorityQueues) {
+                if(set.contains(block)) return true;
+            }
+            return false;
+        }
+        
         /* Return the priority of a block
         * @param block a under replication block
         * @param curReplicas current number of replicas of the block
@@ -1867,7 +1875,9 @@ class FSNamesystem implements FSConstants {
         
         // handle underReplication/overReplication
         short fileReplication = fileINode.getReplication();
-        neededReplications.update(block, curReplicaDelta, 0);
+        if(neededReplications.contains(block)) {
+            neededReplications.update(block, curReplicaDelta, 0);
+        }
         if (numCurrentReplica >= fileReplication ) {
             pendingReplications.remove(block);
         }        
@@ -2471,9 +2481,9 @@ class FSNamesystem implements FSConstants {
                       (DatanodeDescriptor[]) replicateTargetSets.get(i);
             int numCurrentReplica = numCurrentReplicas.get(i).intValue();
             int numExpectedReplica = dir.getFileByBlock( block).getReplication(); 
-            neededReplications.update(
-                    block, numCurrentReplica, numExpectedReplica);
             if (numCurrentReplica + targets.length >= numExpectedReplica) {
+              neededReplications.remove(
+                      block, numCurrentReplica, numExpectedReplica);
               pendingReplications.add(block);
               NameNode.stateChangeLog.debug(
                 "BLOCK* NameSystem.pendingTransfer: "

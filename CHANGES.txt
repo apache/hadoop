@@ -12,6 +12,10 @@ Trunk (unreleased changes)
     HADOOP-331.  If a map output is unavailable, the job tracker is
     once more informed.  (Arun C Murthy via cutting)
 
+ 4. HADOOP-987.  Fix a problem in HDFS where blocks were not removed
+    from neededReplications after a replication target was selected.
+    (Hairong Kuang via cutting)
+
 
 Release 0.11.0 - 2007-02-02
 
