@@ -600,8 +600,9 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
               inMemFileSys.getUri());
           return numCopied == numOutputs;
         }
-        RawKeyValueIterator rIter = sorter.merge(inMemClosedFiles, true, 
-                                                 inMemClosedFiles.length);
+        RawKeyValueIterator rIter = 
+          sorter.merge(inMemClosedFiles, true, inMemClosedFiles.length, 
+                       new Path(reduceTask.getTaskId()));
         //name this output file same as the name of the first file that is 
         //there in the current list of inmem files (this is guaranteed to be
         //absent on the disk currently. So we don't overwrite a prev. 
@@ -722,7 +723,7 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
         if (inMemClosedFiles.length >= 
           (int)(MAX_INMEM_FILESYS_USE/MAX_INMEM_FILESIZE_FRACTION)) {
           RawKeyValueIterator rIter = sorter.merge(inMemClosedFiles, true, 
-              inMemClosedFiles.length);
+              inMemClosedFiles.length, new Path(reduceTask.getTaskId()));
           //name this output file same as the name of the first file that is 
           //there in the current list of inmem files (this is guaranteed to be
           //absent on the disk currently. So we don't overwrite a prev. 

@@ -1815,7 +1815,7 @@ public class SequenceFile {
 
       int segments = sortPass(deleteInput);
       if (segments > 1) {
-        segments = mergePass();
+        segments = mergePass(outFile.getParent());
       }
     }
 
@@ -1841,9 +1841,10 @@ public class SequenceFile {
 
       int segments = sortPass(deleteInput);
       if (segments > 1)
-        return merge(outFile.suffix(".0"), outFile.suffix(".0.index"));
+        return merge(outFile.suffix(".0"), outFile.suffix(".0.index"), 
+                     tempDir);
       else if (segments == 1)
-        return merge(new Path[]{outFile}, true);
+        return merge(new Path[]{outFile}, true, tempDir);
       else return null;
     }
 
@@ -2078,12 +2079,14 @@ public class SequenceFile {
   /**
    * Merges the list of segments of type <code>SegmentDescriptor</code>
    * @param segments the list of SegmentDescriptors
+     * @param tmpDir the directory to write temporary files into
    * @return RawKeyValueIterator
    * @throws IOException
    */
-    public RawKeyValueIterator merge(List <SegmentDescriptor> segments) 
+    public RawKeyValueIterator merge(List <SegmentDescriptor> segments, 
+                                     Path tmpDir) 
     throws IOException {
-      MergeQueue mQueue = new MergeQueue(segments);
+      MergeQueue mQueue = new MergeQueue(segments, tmpDir);
       return mQueue.merge();
     }
 
@@ -2093,13 +2096,16 @@ public class SequenceFile {
      * @param inNames the array of path names
      * @param deleteInputs true if the input files should be deleted when 
      * unnecessary
+     * @param tmpDir the directory to write temporary files into
      * @return RawKeyValueIteratorMergeQueue
      * @throws IOException
      */
-    public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs) 
+    public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs,
+                                     Path tmpDir) 
     throws IOException {
       return merge(inNames, deleteInputs, 
-                  (inNames.length < factor) ? inNames.length : factor);
+                   (inNames.length < factor) ? inNames.length : factor,
+                   tmpDir);
     }
 
     /**
@@ -2108,11 +2114,12 @@ public class SequenceFile {
      * @param deleteInputs true if the input files should be deleted when 
      * unnecessary
      * @param factor the factor that will be used as the maximum merge fan-in
+     * @param tmpDir the directory to write temporary files into
      * @return RawKeyValueIteratorMergeQueue
      * @throws IOException
      */
     public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs,
-                                     int factor) 
+                                     int factor, Path tmpDir) 
     throws IOException {
       //get the segments from inNames
       ArrayList <SegmentDescriptor> a = new ArrayList <SegmentDescriptor>();
@@ -2124,7 +2131,7 @@ public class SequenceFile {
         a.add(s);
       }
       this.factor = factor;
-      MergeQueue mQueue = new MergeQueue(a);
+      MergeQueue mQueue = new MergeQueue(a, tmpDir);
       return mQueue.merge();
     }
 
@@ -2153,7 +2160,7 @@ public class SequenceFile {
         a.add(s);
       }
       factor = (inNames.length < factor) ? inNames.length : factor;
-      MergeQueue mQueue = new MergeQueue(a);
+      MergeQueue mQueue = new MergeQueue(a, tempDir);
       return mQueue.merge();
     }
 
@@ -2232,9 +2239,8 @@ public class SequenceFile {
       if (fs.exists(outFile)) {
         throw new IOException("already exists: " + outFile);
       }
-      RawKeyValueIterator r = merge(inFiles, false);
-      Writer writer = cloneFileAttributes(fs, 
-              inFiles[0], outFile, null);
+      RawKeyValueIterator r = merge(inFiles, false, outFile.getParent());
+      Writer writer = cloneFileAttributes(inFiles[0], outFile, null);
       
       writeFile(r, writer);
 
@@ -2242,12 +2248,12 @@ public class SequenceFile {
     }
 
     /** sort calls this to generate the final merged output */
-    private int mergePass() throws IOException {
+    private int mergePass(Path tmpDir) throws IOException {
       LOG.debug("running merge pass");
-      Writer writer = cloneFileAttributes(fs, 
+      Writer writer = cloneFileAttributes(
               outFile.suffix(".0"), outFile, null);
       RawKeyValueIterator r = merge(outFile.suffix(".0"), 
-                                    outFile.suffix(".0.index"));
+                                    outFile.suffix(".0.index"), tmpDir);
       writeFile(r, writer);
 
       writer.close();
@@ -2257,10 +2263,11 @@ public class SequenceFile {
     /** Used by mergePass to merge the output of the sort
      * @param inName the name of the input file containing sorted segments
      * @param indexIn the offsets of the sorted segments
+     * @param tmpDir the relative directory to store intermediate results in
      * @return RawKeyValueIterator
      * @throws IOException
      */
-    private RawKeyValueIterator merge(Path inName, Path indexIn) 
+    private RawKeyValueIterator merge(Path inName, Path indexIn, Path tmpDir) 
     throws IOException {
       //get the segments from indexIn
       //we create a SegmentContainer so that we can track segments belonging to
@@ -2268,7 +2275,7 @@ public class SequenceFile {
       //the contained segments during the merge process & hence don't need 
       //them anymore
       SegmentContainer container = new SegmentContainer(inName, indexIn);
-      MergeQueue mQueue = new MergeQueue(container.getSegmentList());
+      MergeQueue mQueue = new MergeQueue(container.getSegmentList(), tmpDir);
       return mQueue.merge();
     }
     
@@ -2282,6 +2289,7 @@ public class SequenceFile {
       private long totalBytesProcessed;
       private float progPerByte;
       private Progress mergeProgress = new Progress();
+      private Path tmpDir;
       
       //a TreeMap used to store the segments sorted by size (segment offset and
       //segment path name is used to break ties between segments of same sizes)
@@ -2298,11 +2306,18 @@ public class SequenceFile {
         super.put(stream);
       }
       
-      public MergeQueue(List <SegmentDescriptor> segments) {
+      /**
+       * A queue of file segments to merge
+       * @param segments the file segments to merge
+       * @param tmpDir a relative local directory to save intermediate files in
+       */
+      public MergeQueue(List <SegmentDescriptor> segments,
+                        Path tmpDir) {
         int size = segments.size();
         for (int i = 0; i < size; i++) {
           sortedSegmentSizes.put(segments.get(i), null);
         }
+        this.tmpDir = tmpDir;
       }
       protected boolean lessThan(Object a, Object b) {
         SegmentDescriptor msa = (SegmentDescriptor)a;
@@ -2389,9 +2404,12 @@ public class SequenceFile {
           } else {
             //we want to spread the creation of temp files on multiple disks if 
             //available
+            Path tmpFilename = 
+              new Path(tmpDir, "intermediate").suffix("." + passNo);
             Path outputFile = conf.getLocalPath("mapred.local.dir", 
-                                  (outFile.suffix("." + passNo)).toString());
-            Writer writer = cloneFileAttributes(fs, 
+                                                tmpFilename.toString());
+            LOG.info("writing intermediate results to " + outputFile);
+            Writer writer = cloneFileAttributes(
                             fs.makeQualified(mStream[0].segmentPathName), 
                             fs.makeQualified(outputFile), null);
             writer.sync = null; //disable sync for temp files

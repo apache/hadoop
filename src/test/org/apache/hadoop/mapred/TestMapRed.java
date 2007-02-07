@@ -559,4 +559,58 @@ public class TestMapRed extends TestCase {
         counts = Integer.parseInt(argv[i++]);
 	      launch();
     }
+    
+    public void testSmallInput(){
+      runJob(100);
+    }
+
+    public void testBiggerInput(){
+      runJob(1000);
+    }
+
+    public void runJob(int items) {
+      try {
+        JobConf conf = new JobConf(TestMapRed.class);
+        Path testdir = new Path("build/test/test.mapred.spill");
+        Path inDir = new Path(testdir, "in");
+        Path outDir = new Path(testdir, "out");
+        FileSystem fs = FileSystem.get(conf);
+        fs.delete(testdir);
+        conf.setInt("io.sort.mb", 1);
+        conf.setInputFormat(SequenceFileInputFormat.class);
+        conf.setInputPath(inDir);
+        conf.setOutputPath(outDir);
+        conf.setMapperClass(IdentityMapper.class);
+        conf.setReducerClass(IdentityReducer.class);
+        conf.setOutputKeyClass(Text.class);
+        conf.setOutputValueClass(Text.class);
+        conf.setOutputFormat(SequenceFileOutputFormat.class);
+        if (!fs.mkdirs(testdir)) {
+          throw new IOException("Mkdirs failed to create " + testdir.toString());
+        }
+        if (!fs.mkdirs(inDir)) {
+          throw new IOException("Mkdirs failed to create " + inDir.toString());
+        }
+        Path inFile = new Path(inDir, "part0");
+        SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, inFile,
+            Text.class, Text.class);
+
+        StringBuffer content = new StringBuffer();
+
+        for (int i = 0; i < 1000; i++) {
+          content.append(i).append(": This is one more line of content\n");
+        }
+
+        Text text = new Text(content.toString());
+
+        for (int i = 0; i < items; i++) {
+          writer.append(new Text("rec:" + i), text);
+        }
+        writer.close();
+
+        JobClient.runJob(conf);
+      } catch (Exception e) {
+        fail("Threw exception:" + e);
+      }
+    }
 }
