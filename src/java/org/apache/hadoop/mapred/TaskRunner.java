@@ -41,13 +41,17 @@ abstract class TaskRunner extends Thread {
 
   protected JobConf conf;
 
-  private TaskLog.Writer taskLogWriter;
+  private TaskLog.Writer taskStdOutLogWriter;
+  private TaskLog.Writer taskStdErrLogWriter;
   
   public TaskRunner(Task t, TaskTracker tracker, JobConf conf) {
     this.t = t;
     this.tracker = tracker;
     this.conf = conf;
-    this.taskLogWriter = new TaskLog.Writer(conf, t.getTaskId());
+    this.taskStdOutLogWriter = 
+      new TaskLog.Writer(conf, t.getTaskId(), TaskLog.LogFilter.STDOUT);
+    this.taskStdErrLogWriter = 
+      new TaskLog.Writer(conf, t.getTaskId(), TaskLog.LogFilter.STDERR);
   }
 
   public Task getTask() { return t; }
@@ -57,7 +61,8 @@ abstract class TaskRunner extends Thread {
    * process before the child is spawned.  It should not execute user code,
    * only system code. */
   public boolean prepare() throws IOException {
-    taskLogWriter.init();                   // initialize the child task's log
+    taskStdOutLogWriter.init();       // initialize the child task's stdout log
+    taskStdErrLogWriter.init();       // initialize the child task's stderr log
     return true;
   }
 
@@ -323,11 +328,13 @@ abstract class TaskRunner extends Thread {
     try {
       new Thread() {
         public void run() {
-          logStream(process.getErrorStream());    // copy log output
+          // Copy stderr of the process
+          logStream(process.getErrorStream(), taskStdErrLogWriter); 
         }
       }.start();
         
-      logStream(process.getInputStream());		  // normally empty
+      // Copy stderr of the process; normally empty
+      logStream(process.getInputStream(), taskStdOutLogWriter);		  
       
       int exit_code = process.waitFor();
      
@@ -340,7 +347,8 @@ abstract class TaskRunner extends Thread {
       throw new IOException(e.toString());
     } finally {
       kill();
-      taskLogWriter.close();
+      taskStdOutLogWriter.close();
+      taskStdErrLogWriter.close();
     }
   }
 
@@ -356,13 +364,13 @@ abstract class TaskRunner extends Thread {
 
   /**
    */
-  private void logStream(InputStream output) {
+  private void logStream(InputStream output, TaskLog.Writer taskLog) {
     try {
       byte[] buf = new byte[512];
       int n = 0;
       while ((n = output.read(buf, 0, buf.length)) != -1) {
         // Write out to the task's log
-        taskLogWriter.write(buf, 0, n);
+        taskLog.write(buf, 0, n);
       }
     } catch (IOException e) {
       LOG.warn(t.getTaskId()+" Error reading child output", e);

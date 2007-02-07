@@ -1,6 +1,12 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1. HADOOP-975.  Separate stdout and stderr from tasks.
+    (Arun C Murthy via cutting)
+
+
 Branch 0.11 - unreleased
 
  1. HADOOP-976.  Make SequenceFile.Metadata public.  (Runping Qi via cutting)

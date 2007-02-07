@@ -10,12 +10,26 @@
   long tailSize = 1024;
   int tailWindow = 1;
   boolean entireLog = false;
-  boolean plainText = false; 
+  boolean plainText = false;
+  TaskLog.LogFilter filter = null;
   
   String taskId = request.getParameter("taskid");
   if (taskId == null) {
   	out.println("<h2>Missing 'taskid' for fetching logs!</h2>");
   	return;
+  }
+  
+  String logFilter = request.getParameter("filter");
+  if (logFilter == null) {
+  	logFilter = "stderr";
+  }
+  
+  try {
+    filter = TaskLog.LogFilter.valueOf(TaskLog.LogFilter.class, 
+                                      logFilter.toUpperCase());
+  } catch (IllegalArgumentException iae) {
+    out.println("<h2>Illegal 'filter': " + logFilter + "</h2>");
+    return;
   }
   
   String sLogOff = request.getParameter("off");
@@ -64,10 +78,10 @@
   
   if( !plainText ) {
     out.println("<html>");
-    out.println("<title>" + taskId + "Task Logs </title>"); 
+    out.println("<title>Task Logs: '" + taskId + "' (" + logFilter + ")</title>"); 
     out.println("<body>");
-    out.println("<h1>" +  taskId + "Task Logs</h1><br>"); 
-    out.println("<h2>Task Logs</h2>");
+    out.println("<h1>Task Logs from " +  taskId + "'s " + logFilter + "</h1><br>"); 
+    out.println("<h2>'" + logFilter + "':</h2>");
     out.println("<pre>");
 
   }
@@ -76,7 +90,7 @@
 <%
   boolean gotRequiredData = true;
   try {
-  	TaskLog.Reader taskLogReader = new TaskLog.Reader(taskId);
+  	TaskLog.Reader taskLogReader = new TaskLog.Reader(taskId, filter);
     byte[] b = null;
   	int bytesRead = 0;
   	int targetLength = 0;
@@ -113,7 +127,7 @@
 	String logData = new String(b, 0, bytesRead);
 	out.println(logData);
   } catch (IOException ioe) {
-  	out.println("Failed to retrieve logs for task: " + taskId);
+  	out.println("Failed to retrieve '" + logFilter + "' logs for task: " + taskId);
   }
   
   if( !plainText ) {
@@ -126,25 +140,29 @@
       if (gotRequiredData) {
   	  	out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
   		    "&tail=true&tailsize=" + tailSize + "&tailwindow=" + (tailWindow+1) + 
-  		    "'>Earlier</a>");
+  		    "&filter=" + logFilter + "'>Earlier</a>");
   	  }
   	  if (tailWindow > 1) {
         out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
   	  	    "&tail=true&tailsize=" + tailSize + "&tailwindow=" + (tailWindow-1) 
-  	  	    + "'>Later</a>");
+  	  	    + "&filter=" + logFilter + "'>Later</a>");
   	  }
     } else {
       if (gotRequiredData) {
       	out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
     		"&tail=false&off=" + Math.max(0, (logOffset-logLength)) +
-  		  	"&len=" + logLength + "'>Earlier</a>");
+  		  	"&len=" + logLength + "&filter=" + logFilter + "'>Earlier</a>");
   	  }
   	  out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
   		  "&tail=false&off=" + (logOffset+logLength) +
-  		  "&len=" + logLength + "'>Later</a>");
+  		  "&len=" + logLength + "&filter=" + logFilter + "'>Later</a>");
     }
   }
   if( !plainText ) {
+    String otherFilter = (logFilter.equals("stdout") ? "stderr" : "stdout");
+    out.println("<br><br>See <a href='/tasklog.jsp?taskid=" + taskId + 
+        "&all=true&filter=" + otherFilter + "'>" + otherFilter + "</a>" +
+        " logs of this task");
     out.println("<hr>");
     out.println("<a href='http://lucene.apache.org/hadoop'>Hadoop</a>, 2006.<br>");
     out.println("</body>");
