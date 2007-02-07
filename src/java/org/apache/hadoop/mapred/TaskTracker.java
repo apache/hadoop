@@ -1526,30 +1526,47 @@ public class TaskTracker
         JobConf conf = (JobConf) context.getAttribute("conf");
         FileSystem fileSys = 
           (FileSystem) context.getAttribute("local.file.system");
-        //open index file
+
+        // Index file
         Path indexFileName = conf.getLocalPath(mapId+"/file.out.index");
-        FSDataInputStream in = fileSys.open(indexFileName);
-        //seek to the correct offset for the given reduce
-        in.seek(reduce * 16);
-        
-        //read the offset and length of the partition data
-        long startOffset = in.readLong();
-        long partLength = in.readLong();
-        
-        in.close();
+        FSDataInputStream indexIn = null;
          
+        // Map-output file
         Path mapOutputFileName = conf.getLocalPath(mapId+"/file.out"); 
-           
-        response.setContentLength((int) partLength);
-        FSDataInputStream inStream = null;
+        FSDataInputStream mapOutputIn = null;
+        
         // true iff IOException was caused by attempt to access input
         boolean isInputException = true;
+        
         try {
-          inStream = fileSys.open(mapOutputFileName);
-          inStream.seek(startOffset);
+          /**
+           * Read the index file to get the information about where
+           * the map-output for the given reducer is available. 
+           */
+          //open index file
+          indexIn = fileSys.open(indexFileName);
+
+          //seek to the correct offset for the given reduce
+          indexIn.seek(reduce * 16);
+          
+          //read the offset and length of the partition data
+          long startOffset = indexIn.readLong();
+          long partLength = indexIn.readLong();
+
+          //set the content-length header
+          response.setContentLength((int) partLength);
+
+          /**
+           * Read the data from the sigle map-output file and
+           * send it to the reducer.
+           */
+          //open the map-output file
+          mapOutputIn = fileSys.open(mapOutputFileName);
+          //seek to the correct offset for the reduce
+          mapOutputIn.seek(startOffset);
           try {
             int totalRead = 0;
-            int len = inStream.read(buffer, 0,
+            int len = mapOutputIn.read(buffer, 0,
                                  partLength < MAX_BYTES_TO_READ 
                                  ? (int)partLength : MAX_BYTES_TO_READ);
             while (len > 0) {
@@ -1561,12 +1578,17 @@ public class TaskTracker
               }
               totalRead += len;
               if (totalRead == partLength) break;
-              len = inStream.read(buffer, 0, 
+              len = mapOutputIn.read(buffer, 0, 
                       (partLength - totalRead) < MAX_BYTES_TO_READ
                        ? (int)(partLength - totalRead) : MAX_BYTES_TO_READ);
             }
           } finally {
-            inStream.close();
+            if (indexIn != null) {
+              indexIn.close();
+            }
+            if (mapOutputIn != null) {
+              mapOutputIn.close();
+            }
           }
         } catch (IOException ie) {
           TaskTracker tracker = 

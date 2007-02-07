@@ -495,7 +495,8 @@ class MapTask extends Task {
           SequenceFile.Writer writer = SequenceFile.createWriter(job, finalOut, 
               job.getMapOutputKeyClass(), job.getMapOutputValueClass(), 
               compressionType, codec);
-          sorter.writeFile(sorter.merge(segmentList), writer);
+          sorter.writeFile(sorter.merge(segmentList, new Path(getTaskId())), 
+                           writer);
           //add a sync block - required esp. for block compression to ensure
           //partition data don't span partition boundaries
           writer.sync();
