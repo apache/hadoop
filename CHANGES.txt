@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Branch 0.11 - unreleased
 
  1. HADOOP-976.  Make SequenceFile.Metadata public.  (Runping Qi via cutting)
 
