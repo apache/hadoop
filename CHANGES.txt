@@ -8,6 +8,10 @@ Trunk (unreleased changes)
  2. HADOOP-917.  Fix a NullPointerException in SequenceFile's merger
     with large map outputs.  (omalley via cutting)
 
+ 3. HADOOP-984.  Fix a bug in shuffle error handling introduced by
+    HADOOP-331.  If a map output is unavailable, the job tracker is
+    once more informed.  (Arun C Murthy via cutting)
+
 
 Release 0.11.0 - 2007-02-02
 
