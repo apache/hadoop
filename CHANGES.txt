@@ -9,6 +9,9 @@ Trunk (unreleased changes)
  2. HADOOP-982.  Add some setters and a toString() method to
     BytesWritable.  (omalley via cutting)
 
+ 3. HADOOP-858.  Move contrib/smallJobsBenchmark to src/test, removing
+    obsolete bits. (Nigel Daley via cutting)
+
 
 Branch 0.11 - unreleased
 

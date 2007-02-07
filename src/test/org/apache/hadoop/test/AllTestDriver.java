@@ -19,49 +19,49 @@
 package org.apache.hadoop.test;
 
 import org.apache.hadoop.util.ProgramDriver;
+import org.apache.hadoop.mapred.MRBench;
 import org.apache.hadoop.mapred.TestMapRed;
 import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
 import org.apache.hadoop.dfs.ClusterTestDFS;
 import org.apache.hadoop.dfs.NNBench;
+import org.apache.hadoop.fs.DistributedFSCheck;
+import org.apache.hadoop.fs.TestDFSIO;
+import org.apache.hadoop.fs.DFSCIOTest;
 import org.apache.hadoop.fs.TestFileSystem;
 import org.apache.hadoop.io.TestArrayFile;
 import org.apache.hadoop.io.TestSetFile;
 import org.apache.hadoop.io.TestSequenceFile;
 import org.apache.hadoop.ipc.TestIPC;
 import org.apache.hadoop.ipc.TestRPC;
-import org.apache.hadoop.fs.DistributedFSCheck;
-import org.apache.hadoop.fs.TestDFSIO;
-import org.apache.hadoop.fs.DFSCIOTest;
 
 public class AllTestDriver {
   
   /**
    * A description of the test program for running all the tests using jar file
-   * @date April 2006
    */
-    
-    public static void main(String argv[]){
-	ProgramDriver pgd = new ProgramDriver();
-	try {
-            pgd.addClass("nnbench", NNBench.class, "A benchmark that stresses the namenode.");
-	    pgd.addClass("mapredtest", TestMapRed.class, "A map/reduce test check.");
-	    pgd.addClass("clustertestdfs", ClusterTestDFS.class, "A pseudo distributed test for DFS.");
-	    pgd.addClass("testfilesystem", TestFileSystem.class, "A test for FileSystem read/write.");
-	    pgd.addClass("testsequencefile", TestSequenceFile.class, "A test for flat files of binary key value pairs.");
-	    pgd.addClass("testsetfile", TestSetFile.class, "A test for flat files of binary key/value pairs.");
-	    pgd.addClass("testarrayfile", TestArrayFile.class, "A test for flat files of binary key/value pairs.");
-	    pgd.addClass("testrpc", TestRPC.class, "A test for rpc.");
-	    pgd.addClass("testipc", TestIPC.class, "A test for ipc.");
-	    pgd.addClass("testsequencefileinputformat", TestSequenceFileInputFormat.class, "A test for sequence file input format.");
-	    pgd.addClass("testtextinputformat", TestTextInputFormat.class, "A test for text input format.");
+  public static void main(String argv[]){
+    ProgramDriver pgd = new ProgramDriver();
+    try {
+      pgd.addClass("mrbench", MRBench.class, "A map/reduce benchmark that can create many small jobs");
+      pgd.addClass("nnbench", NNBench.class, "A benchmark that stresses the namenode.");
+      pgd.addClass("mapredtest", TestMapRed.class, "A map/reduce test check.");
+      pgd.addClass("clustertestdfs", ClusterTestDFS.class, "A pseudo distributed test for DFS.");
+      pgd.addClass("testfilesystem", TestFileSystem.class, "A test for FileSystem read/write.");
+      pgd.addClass("testsequencefile", TestSequenceFile.class, "A test for flat files of binary key value pairs.");
+      pgd.addClass("testsetfile", TestSetFile.class, "A test for flat files of binary key/value pairs.");
+      pgd.addClass("testarrayfile", TestArrayFile.class, "A test for flat files of binary key/value pairs.");
+      pgd.addClass("testrpc", TestRPC.class, "A test for rpc.");
+      pgd.addClass("testipc", TestIPC.class, "A test for ipc.");
+      pgd.addClass("testsequencefileinputformat", TestSequenceFileInputFormat.class, "A test for sequence file input format.");
+      pgd.addClass("testtextinputformat", TestTextInputFormat.class, "A test for text input format.");
       pgd.addClass("TestDFSIO", TestDFSIO.class, "Distributed i/o benchmark.");
       pgd.addClass("DFSCIOTest", DFSCIOTest.class, "Distributed i/o benchmark of libhdfs.");
       pgd.addClass("DistributedFSCheck", DistributedFSCheck.class, "Distributed checkup of the file system consistency.");
-	    pgd.driver(argv);
-	}
-	catch(Throwable e){
-	    e.printStackTrace();
-	}
+      pgd.driver(argv);
+    } catch(Throwable e) {
+      e.printStackTrace();
     }
+  }
 }
+
