@@ -35,20 +35,21 @@ public class TestMiniMRLocalFS extends TestCase {
       MiniMRCluster mr = null;
       try {
           mr = new MiniMRCluster(60030, 60040, 2, "local", false, 3);
-          String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
-          double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, jobTrackerName, "local");
+          double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
+                                               mr.createJobConf());
           double error = Math.abs(Math.PI - estimate);
           assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
-          JobConf jconf = new JobConf();
           // run the wordcount example with caching
-          boolean ret = MRCaching.launchMRCache(jobTrackerName, "/tmp/wc/input",
-                                                "/tmp/wc/output", "local", jconf,
+          JobConf job = mr.createJobConf();
+          boolean ret = MRCaching.launchMRCache("/tmp/wc/input",
+                                                "/tmp/wc/output", 
+                                                job,
                                                 "The quick brown fox\nhas many silly\n"
                                                     + "red fox sox\n");
           // assert the number of lines read during caching
           assertTrue("Failed test archives not matching", ret);
           // test the task report fetchers
-          JobClient client = new JobClient(jconf);
+          JobClient client = new JobClient(job);
           TaskReport[] reports = client.getMapTaskReports("job_0001");
           assertEquals("number of maps", 10, reports.length);
           reports = client.getReduceTaskReports("job_0001");

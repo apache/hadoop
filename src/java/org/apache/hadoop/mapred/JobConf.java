@@ -52,14 +52,6 @@ public class JobConf extends Configuration {
     addDefaultResource("mapred-default.xml");
   }
   
-  private void initialize(Class exampleClass) {
-    initialize();
-    String jar = findContainingJar(exampleClass);
-    if (jar != null) {
-      setJar(jar);
-    }   
-  }
-  
   /**
    * Construct a map/reduce job configuration.
    */
@@ -72,7 +64,8 @@ public class JobConf extends Configuration {
    * @param exampleClass a class whose containing jar is used as the job's jar.
    */
   public JobConf(Class exampleClass) {
-    initialize(exampleClass);
+    initialize();
+    setJarByClass(exampleClass);
   }
   
   /**
@@ -93,7 +86,8 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf, Class exampleClass) {
     this(conf);
-    initialize(exampleClass);
+    initialize();
+    setJarByClass(exampleClass);
   }
 
 
@@ -117,6 +111,17 @@ public class JobConf extends Configuration {
 
   public String getJar() { return get("mapred.jar"); }
   public void setJar(String jar) { set("mapred.jar", jar); }
+  
+  /**
+   * Set the job's jar file by finding an example class location.
+   * @param cls the example class
+   */
+  public void setJarByClass(Class cls) {
+    String jar = findContainingJar(cls);
+    if (jar != null) {
+      setJar(jar);
+    }   
+  }
 
   public Path getSystemDir() {
     return new Path(get("mapred.system.dir", "/tmp/hadoop/mapred/system"));

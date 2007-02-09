@@ -35,7 +35,6 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.MapReduceBase;
-import java.io.*;
 import org.apache.hadoop.filecache.*;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -125,12 +124,12 @@ public class MRCaching {
     }
   }
 
-  public static boolean launchMRCache(String jobTracker, String indir,
-      String outdir, String fileSys, JobConf conf, String input)
+  public static boolean launchMRCache(String indir,
+      String outdir, JobConf conf, String input)
       throws IOException {
     final Path inDir = new Path(indir);
     final Path outDir = new Path(outdir);
-    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+    FileSystem fs = FileSystem.get(conf);
     fs.delete(outDir);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
@@ -140,8 +139,6 @@ public class MRCaching {
       file.writeBytes(input);
       file.close();
     }
-    conf.set("fs.default.name", fileSys);
-    conf.set("mapred.job.tracker", jobTracker);
     conf.setJobName("cachetest");
 
     // the keys are words (strings)
@@ -170,6 +167,7 @@ public class MRCaching {
     fs.copyFromLocalFile(jarPath, cacheTest);
     fs.copyFromLocalFile(zipPath, cacheTest);
     // setting the cached archives to zip, jar and simple text files
+    String fileSys = fs.getName();
     String archive1 = "dfs://" + fileSys + "/tmp/cachedir/test.jar";
     String archive2 = "dfs://" + fileSys + "/tmp/cachedir/test.zip"; 
     String file1 = "dfs://" + fileSys + "/tmp/cachedir/test.txt";

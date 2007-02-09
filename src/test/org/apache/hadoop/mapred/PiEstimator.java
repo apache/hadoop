@@ -134,20 +134,15 @@ public class PiEstimator {
    * This is the main driver for computing the value of Pi using
    * monte-carlo method.
    */
-  static double launch(int numMaps, int numPoints, String jt, String dfs)
+  static double launch(int numMaps, int numPoints, JobConf jobConf)
   throws IOException {
 
-    Configuration conf = new Configuration();
-    JobConf jobConf = new JobConf(conf, PiEstimator.class);
-    if (jt != null) { jobConf.set("mapred.job.tracker", jt); }
-    if (dfs != null) { jobConf.set("fs.default.name", dfs); }
+    jobConf.setJarByClass(PiEstimator.class);
     jobConf.setJobName("test-mini-mr");
     
     // turn off speculative execution, because DFS doesn't handle
     // multiple writers to the same file.
     jobConf.setSpeculativeExecution(false);
-    jobConf.setInputKeyClass(IntWritable.class);
-    jobConf.setInputValueClass(IntWritable.class);
     jobConf.setInputFormat(SequenceFileInputFormat.class);
         
     jobConf.setOutputKeyClass(IntWritable.class);
@@ -211,7 +206,7 @@ public class PiEstimator {
         int nMaps = Integer.parseInt(argv[0]);
         int nSamples = Integer.parseInt(argv[1]);
         
-	System.out.println("Estimated value of PI is "+
-                launch(nMaps, nSamples, null, null));
+        System.out.println("Estimated value of PI is "+
+                           launch(nMaps, nSamples, new JobConf()));
     }
 }

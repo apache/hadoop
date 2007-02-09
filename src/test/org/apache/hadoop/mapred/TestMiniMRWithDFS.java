@@ -21,6 +21,9 @@ package org.apache.hadoop.mapred;
 import java.io.*;
 import java.util.*;
 import junit.framework.TestCase;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,19 +38,19 @@ import org.apache.hadoop.examples.WordCount;
  * @author Milind Bhandarkar
  */
 public class TestMiniMRWithDFS extends TestCase {
+  private static final Log LOG =
+    LogFactory.getLog(TestMiniMRWithDFS.class.getName());
   
-    static final int NUM_MAPS = 10;
-    static final int NUM_SAMPLES = 100000;
+  static final int NUM_MAPS = 10;
+  static final int NUM_SAMPLES = 100000;
   
-  public static String launchWordCount(String fileSys,
-                                       String jobTracker,
-                                       JobConf conf,
+  public static String launchWordCount(JobConf conf,
                                        String input,
                                        int numMaps,
                                        int numReduces) throws IOException {
     final Path inDir = new Path("/testing/wc/input");
     final Path outDir = new Path("/testing/wc/output");
-    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+    FileSystem fs = FileSystem.get(conf);
     fs.delete(outDir);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
@@ -57,8 +60,6 @@ public class TestMiniMRWithDFS extends TestCase {
       file.writeBytes(input);
       file.close();
     }
-    conf.set("fs.default.name", fileSys);
-    conf.set("mapred.job.tracker", jobTracker);
     conf.setJobName("wordcount");
     conf.setInputFormat(TextInputFormat.class);
     
@@ -75,6 +76,12 @@ public class TestMiniMRWithDFS extends TestCase {
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
     JobClient.runJob(conf);
+    return readOutput(outDir, conf);
+  }
+
+  public static String readOutput(Path outDir, 
+                                  JobConf conf) throws IOException {
+    FileSystem fs = outDir.getFileSystem(conf);
     StringBuffer result = new StringBuffer();
     {
       Path[] fileList = fs.listPaths(outDir);
@@ -108,6 +115,7 @@ public class TestMiniMRWithDFS extends TestCase {
     for(int i=0; i < trackers; ++i) {
       int numNotDel = 0;
       File localDir = new File(mr.getTaskTrackerLocalDir(i));
+      LOG.debug("Tracker directory: " + localDir);
       File trackerDir = new File(localDir, "taskTracker");
       assertTrue("local dir " + localDir + " does not exist.", 
                    localDir.isDirectory());
@@ -124,6 +132,7 @@ public class TestMiniMRWithDFS extends TestCase {
       for(int fileIdx = 0; fileIdx < contents.length; ++fileIdx) {
         String name = contents[fileIdx];
         if (!("taskTracker".equals(contents[fileIdx]))) {
+          LOG.debug("Looking at " + name);
           int idx = neededDirs.indexOf(name);
           assertTrue("Spurious directory " + name + " found in " +
                      localDir, idx != -1);
@@ -141,7 +150,6 @@ public class TestMiniMRWithDFS extends TestCase {
   }
   
   public void testWithDFS() throws IOException {
-      String namenode = null;
       MiniDFSCluster dfs = null;
       MiniMRCluster mr = null;
       FileSystem fileSys = null;
@@ -152,22 +160,20 @@ public class TestMiniMRWithDFS extends TestCase {
           Configuration conf = new Configuration();
           dfs = new MiniDFSCluster(65314, conf, 4, true);
           fileSys = dfs.getFileSystem();
-          namenode = fileSys.getName();
           mr = new MiniMRCluster(jobTrackerPort, 50060, taskTrackers, 
-                                 namenode, true);
-          final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
+                                 fileSys.getName(), true);
           double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
-                                               jobTrackerName, namenode);
+                                               mr.createJobConf());
           double error = Math.abs(Math.PI - estimate);
           assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
           checkTaskDirectories(mr, new String[]{}, new String[]{});
           
           // Run a word count example
-          JobConf jobConf = new JobConf();
+          JobConf jobConf = mr.createJobConf();
           // Keeping tasks that match this pattern
           jobConf.setKeepTaskFilesPattern("task_[0-9]*_m_000001_.*");
           String result;
-          result = launchWordCount(namenode, jobTrackerName, jobConf, 
+          result = launchWordCount(jobConf, 
                                    "The quick brown fox\nhas many silly\n" + 
                                    "red fox sox\n",
                                    3, 1);
@@ -175,9 +181,8 @@ public class TestMiniMRWithDFS extends TestCase {
                        "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
           checkTaskDirectories(mr, new String[]{"job_0002"}, new String[]{"task_0002_m_000001_0"});
           // test with maps=0
-          jobConf = new JobConf();
-          result = launchWordCount(namenode, jobTrackerName, jobConf, 
-                                   "owen is oom", 0, 1);
+          jobConf = mr.createJobConf();
+          result = launchWordCount(jobConf, "owen is oom", 0, 1);
           assertEquals("is\t1\noom\t1\nowen\t1\n", result);
       } finally {
           if (fileSys != null) { fileSys.close(); }

@@ -28,6 +28,9 @@ Branch 0.11 - unreleased
     from neededReplications after a replication target was selected.
     (Hairong Kuang via cutting)
 
+ 5. HADOOP-992.  Fix MiniMR unit tests to use MiniDFS when specified,
+    rather than the local FS.  (omalley via cutting)
+
 
 Release 0.11.0 - 2007-02-02
 

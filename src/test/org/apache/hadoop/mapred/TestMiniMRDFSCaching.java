@@ -19,13 +19,9 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-import java.util.*;
 import junit.framework.TestCase;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
 
 /**
  * A JUnit test to test caching with DFS
@@ -37,19 +33,16 @@ public class TestMiniMRDFSCaching extends TestCase {
   public void testWithDFS() throws IOException {
     MiniMRCluster mr = null;
     MiniDFSCluster dfs = null;
-    String namenode = null;
     FileSystem fileSys = null;
     try {
       JobConf conf = new JobConf();
       dfs = new MiniDFSCluster(65314, conf, true);
       fileSys = dfs.getFileSystem();
-      namenode = fileSys.getName();
-      mr = new MiniMRCluster(60050, 50060, 2, namenode, true, 4);
+      mr = new MiniMRCluster(60050, 50060, 2, fileSys.getName(), true, 4);
       // run the wordcount example with caching
-      boolean ret = MRCaching.launchMRCache("localhost:"+mr.getJobTrackerPort(),
-                                            "/testing/wc/input",
-                                            "/testing/wc/output", namenode,
-                                            conf,
+      boolean ret = MRCaching.launchMRCache("/testing/wc/input",
+                                            "/testing/wc/output",
+                                            mr.createJobConf(),
                                             "The quick brown fox\nhas many silly\n"
                                                 + "red fox sox\n");
       assertTrue("Archives not matching", ret);

@@ -56,13 +56,7 @@ public class MiniMRCluster {
          */
         public void run() {
             try {
-                JobConf jc = new JobConf();
-                jc.set("fs.name.node", namenode);
-                jc.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
-                jc.set("mapred.job.tracker.info.port", jobTrackerInfoPort);
-                // this timeout seems to control the minimum time for the test, so
-                // set it down at 2 seconds.
-                jc.setInt("ipc.client.timeout", 1000);
+                JobConf jc = createJobConf();
                 jc.set("mapred.local.dir","build/test/mapred/local");
                 JobTracker.startTracker(jc);
             } catch (Throwable e) {
@@ -105,12 +99,7 @@ public class MiniMRCluster {
          */
         public void run() {
             try {
-                JobConf jc = new JobConf();
-                jc.set("fs.name.node", namenode);
-                jc.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
-                // this timeout seems to control the minimum time for the test, so
-                // set it down at 2 seconds.
-                jc.setInt("ipc.client.timeout", 1000);
+                JobConf jc = createJobConf();
                 jc.setInt("mapred.task.tracker.info.port", taskTrackerPort++);
                 jc.setInt("mapred.task.tracker.report.port", taskTrackerPort++);
                 File localDir = new File(jc.get("mapred.local.dir"));
@@ -219,6 +208,17 @@ public class MiniMRCluster {
         return jobTrackerPort;
     }
 
+    public JobConf createJobConf() {
+      JobConf result = new JobConf();
+      result.set("fs.default.name", namenode);
+      result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
+      result.set("mapred.job.tracker.info.port", jobTrackerInfoPort);
+      // this timeout controls the minimum time for the test, so
+      // set it down at 1 seconds.
+      result.setInt("ipc.client.timeout", 1000);
+      return result;
+    }
+    
     /**
      * Create the config and start up the servers.  The ports supplied by the user are
      * just used as suggestions.  If those ports are already in use, new ports
@@ -229,7 +229,8 @@ public class MiniMRCluster {
                          int numTaskTrackers,
                          String namenode,
                          boolean taskTrackerFirst) throws IOException {
-        this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, taskTrackerFirst, 1);
+        this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, 
+             taskTrackerFirst, 1);
     } 
   
     public MiniMRCluster(int jobTrackerPort,
