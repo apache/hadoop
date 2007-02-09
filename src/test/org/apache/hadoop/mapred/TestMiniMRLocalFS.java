@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.io.File;
 import junit.framework.TestCase;
 
 /**
@@ -28,8 +29,11 @@ import junit.framework.TestCase;
  */
 public class TestMiniMRLocalFS extends TestCase {
   
-    static final int NUM_MAPS = 10;
-    static final int NUM_SAMPLES = 100000;
+  static final int NUM_MAPS = 10;
+  static final int NUM_SAMPLES = 100000;
+  private static String TEST_ROOT_DIR =
+    new File(System.getProperty("test.build.data","/tmp"))
+    .toString().replace(' ', '+');
     
   public void testWithLocal() throws IOException {
       MiniMRCluster mr = null;
@@ -41,8 +45,8 @@ public class TestMiniMRLocalFS extends TestCase {
           assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
           // run the wordcount example with caching
           JobConf job = mr.createJobConf();
-          boolean ret = MRCaching.launchMRCache("/tmp/wc/input",
-                                                "/tmp/wc/output", 
+          boolean ret = MRCaching.launchMRCache(TEST_ROOT_DIR + "/wc/input",
+                                                TEST_ROOT_DIR + "/wc/output", 
                                                 job,
                                                 "The quick brown fox\nhas many silly\n"
                                                     + "red fox sox\n");

@@ -75,6 +75,7 @@ public class TestSymLink extends TestCase
             //"-jobconf", "stream.debug=set"
             "-jobconf", strNamenode,
             "-jobconf", strJobtracker,
+            "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
             "-cacheFile", "dfs://"+fileSys.getName()+CACHE_FILE + "#testlink"
         };
 

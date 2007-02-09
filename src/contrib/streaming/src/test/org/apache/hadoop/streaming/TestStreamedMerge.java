@@ -139,6 +139,7 @@ public class TestStreamedMerge extends TestCase {
         "-dfs", conf_.get("fs.default.name"), 
         "-jt", "local",
         "-jobconf", "stream.sideoutput.localfs=true", 
+        "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
     ArrayList argList = new ArrayList();
     argList.addAll(Arrays.asList(testargs));

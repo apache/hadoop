@@ -30,6 +30,8 @@ Trunk (unreleased changes)
     and stderr respectively, with each line tagged by the task's name.
     (Arun C Murthy via cutting)
 
+ 9. HADOOP-761.  Change unit tests to not use /tmp.  (Nigel Daley via cutting)
+
 
 Branch 0.11 - unreleased
 

@@ -62,8 +62,9 @@ public class MRCaching {
         Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
         FileSystem fs = FileSystem.get(conf);
         // read the cached files (unzipped, unjarred and text)
-        // and put it into a single file /tmp/test.txt
-        Path file = new Path("/tmp");
+        // and put it into a single file TEST_ROOT_DIR/test.txt
+        String TEST_ROOT_DIR = jconf.get("test.build.data","/tmp");
+        Path file = new Path(TEST_ROOT_DIR);
         if (!fs.mkdirs(file)) {
           throw new IOException("Mkdirs failed to create " + file.toString());
         }
@@ -127,6 +128,9 @@ public class MRCaching {
   public static boolean launchMRCache(String indir,
       String outdir, JobConf conf, String input)
       throws IOException {
+    String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/tmp"))
+      .toString().replace(' ', '+');
+    conf.set("test.build.data",TEST_ROOT_DIR);
     final Path inDir = new Path(indir);
     final Path outDir = new Path(outdir);
     FileSystem fs = FileSystem.get(conf);
@@ -158,7 +162,7 @@ public class MRCaching {
     Path txtPath = new Path(localPath, new Path("test.txt"));
     Path jarPath = new Path(localPath, new Path("test.jar"));
     Path zipPath = new Path(localPath, new Path("test.zip"));
-    Path cacheTest = new Path("/tmp/cachedir");
+    Path cacheTest = new Path(TEST_ROOT_DIR + "/cachedir");
     fs.delete(cacheTest);
     if (!fs.mkdirs(cacheTest)) {
       throw new IOException("Mkdirs failed to create " + cacheTest.toString());
@@ -168,9 +172,9 @@ public class MRCaching {
     fs.copyFromLocalFile(zipPath, cacheTest);
     // setting the cached archives to zip, jar and simple text files
     String fileSys = fs.getName();
-    String archive1 = "dfs://" + fileSys + "/tmp/cachedir/test.jar";
-    String archive2 = "dfs://" + fileSys + "/tmp/cachedir/test.zip"; 
-    String file1 = "dfs://" + fileSys + "/tmp/cachedir/test.txt";
+    String archive1 = "dfs://" + fileSys + TEST_ROOT_DIR + "/cachedir/test.jar";
+    String archive2 = "dfs://" + fileSys + TEST_ROOT_DIR + "/cachedir/test.zip";
+    String file1 = "dfs://" + fileSys + TEST_ROOT_DIR + "/cachedir/test.txt";
     URI uri1 = null;
     URI uri2 = null;
     URI uri3 = null;
@@ -187,7 +191,7 @@ public class MRCaching {
     int count = 0;
     // after the job ran check to see if the the input from the localized cache
     // match the real string. check if there are 3 instances or not.
-    Path result = new Path("/tmp/test.txt");
+    Path result = new Path(TEST_ROOT_DIR + "/test.txt");
     {
       BufferedReader file = new BufferedReader(new InputStreamReader(fs
           .open(result)));

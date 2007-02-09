@@ -114,31 +114,47 @@ int main(int argc, char **argv) {
         hdfsCloseFile(fs, readFile);
     }
 
- 
+    int totalResult = 0;
+    int result = 0;
     {
         //Generic file-system operations
 
         const char* srcPath = "/tmp/testfile.txt";
+        const char* localSrcPath = "testfile.txt";
         const char* dstPath = "/tmp/testfile2.txt";
+        const char* localDstPath = "testfile2.txt";
 
-        fprintf(stderr, "hdfsCopy(remote-local): %s\n", (hdfsCopy(fs, srcPath, lfs, srcPath) ? "Failed!" : "Success!"));
-        fprintf(stderr, "hdfsCopy(remote-remote): %s\n", (hdfsCopy(fs, srcPath, fs, dstPath) ? "Failed!" : "Success!"));
-        fprintf(stderr, "hdfsMove(local-local): %s\n", (hdfsMove(lfs, srcPath, lfs, dstPath) ? "Failed!" : "Success!"));
-        fprintf(stderr, "hdfsMove(remote-local): %s\n", (hdfsMove(fs, srcPath, lfs, srcPath) ? "Failed!" : "Success!"));
+        fprintf(stderr, "hdfsCopy(remote-local): %s\n", ((result = hdfsCopy(fs, srcPath, lfs, srcPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsCopy(remote-remote): %s\n", ((result = hdfsCopy(fs, srcPath, fs, dstPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsMove(local-local): %s\n", ((result = hdfsMove(lfs, srcPath, lfs, dstPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsMove(remote-local): %s\n", ((result = hdfsMove(fs, srcPath, lfs, srcPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
 
-        fprintf(stderr, "hdfsRename: %s\n", (hdfsRename(fs, dstPath, srcPath) ? "Failed!" : "Success!"));
+        fprintf(stderr, "hdfsRename: %s\n", ((result = hdfsRename(fs, dstPath, srcPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsCopy(remote-remote): %s\n", ((result = hdfsCopy(fs, srcPath, fs, dstPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
 
-        fprintf(stderr, "hdfsLock: %s\n", (hdfsLock(fs, srcPath, 1) ? "Failed!" : "Success!"));
-        fprintf(stderr, "hdfsReleaseLock: %s\n", (hdfsReleaseLock(fs, srcPath) ? "Failed!" : "Success!"));
+        fprintf(stderr, "hdfsLock: %s\n", ((result = hdfsLock(fs, srcPath, 1)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsReleaseLock: %s\n", ((result = hdfsReleaseLock(fs, srcPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
 
         const char* slashTmp = "/tmp";
         const char* newDirectory = "/tmp/newdir";
-        fprintf(stderr, "hdfsCreateDirectory: %s\n", (hdfsCreateDirectory(fs, newDirectory) ? "Failed!" : "Success!"));
+        fprintf(stderr, "hdfsCreateDirectory: %s\n", ((result = hdfsCreateDirectory(fs, newDirectory)) ? "Failed!" : "Success!"));
+        totalResult += result;
 
         char buffer[256];
-        fprintf(stderr, "hdfsGetWorkingDirectory: %s\n", (hdfsGetWorkingDirectory(fs, buffer, sizeof(buffer)) ? buffer : "Failed!"));
-        fprintf(stderr, "hdfsSetWorkingDirectory: %s\n", (hdfsSetWorkingDirectory(fs, slashTmp) ? "Failed!" : "Success!"));
-        fprintf(stderr, "hdfsGetWorkingDirectory: %s\n", (hdfsGetWorkingDirectory(fs, buffer, sizeof(buffer)) ? buffer : "Failed!"));
+        fprintf(stderr, "hdfsGetWorkingDirectory: %s\n", ((result = hdfsGetWorkingDirectory(fs, buffer, sizeof(buffer))) ? buffer : "Failed!"));
+        totalResult += (result ? 0 : 1);
+        fprintf(stderr, "hdfsSetWorkingDirectory: %s\n", ((result = hdfsSetWorkingDirectory(fs, slashTmp)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsGetWorkingDirectory: %s\n", ((result = hdfsGetWorkingDirectory(fs, buffer, sizeof(buffer))) ? buffer : "Failed!"));
+        totalResult += (result ? 0 : 1);
 
         fprintf(stderr, "hdfsGetDefaultBlockSize: %Ld\n", hdfsGetDefaultBlockSize(fs));
         fprintf(stderr, "hdfsGetCapacity: %Ld\n", hdfsGetCapacity(fs));
@@ -152,6 +168,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Size: %ld\n", fileInfo->mSize);
             hdfsFreeFileInfo(fileInfo, 1);
         } else {
+            totalResult++;
             fprintf(stderr, "waah! hdfsGetPathInfo for %s - FAILED!\n", slashTmp);
         }
 
@@ -167,6 +184,7 @@ int main(int argc, char **argv) {
             hdfsFreeFileInfo(fileList, numEntries);
         } else {
             if (errno) {
+                totalResult++;
                 fprintf(stderr, "waah! hdfsListDirectory - FAILED!\n");
             } else {
                 fprintf(stderr, "Empty directory!\n");
@@ -187,18 +205,28 @@ int main(int argc, char **argv) {
                 ++i;
             }
         } else {
+            totalResult++;
             fprintf(stderr, "waah! hdfsGetHosts - FAILED!\n");
         }
         
         // Clean up
-        fprintf(stderr, "hdfsDelete: %s\n", (hdfsDelete(fs, newDirectory) ? "Failed!" : "Success!"));
-        fprintf(stderr, "hdfsDelete: %s\n", (hdfsDelete(fs, srcPath) ? "Failed!" : "Success!"));
-        fprintf(stderr, "hdfsDelete: %s\n", (hdfsDelete(lfs, srcPath) ? "Failed!" : "Success!"));
-        fprintf(stderr, "hdfsDelete: %s\n", (hdfsDelete(lfs, dstPath) ? "Failed!" : "Success!"));
-        fprintf(stderr, "hdfsExists: %s\n", (hdfsExists(fs, newDirectory) ? "Success!" : "Failed!"));
+        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(fs, newDirectory)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(fs, srcPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(lfs, srcPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsDelete: %s\n", ((result = hdfsDelete(lfs, dstPath)) ? "Failed!" : "Success!"));
+        totalResult += result;
+        fprintf(stderr, "hdfsExists: %s\n", ((result = hdfsExists(fs, newDirectory)) ? "Success!" : "Failed!"));
+        totalResult += (result ? 0 : 1);
     }
 
-    return 0;
+    if (totalResult != 0) {
+        return -1;
+    } else {
+        return 0;
+    }
 }
 
 /**

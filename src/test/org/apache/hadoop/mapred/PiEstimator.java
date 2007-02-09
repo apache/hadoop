@@ -31,7 +31,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /**
- * A Map-reduce program to estimaate the valu eof Pi using monte-carlo
+ * A Map-reduce program to estimate the value of Pi using monte-carlo
  * method.
  *
  * @author Milind Bhandarkar
