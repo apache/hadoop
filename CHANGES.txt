@@ -12,6 +12,13 @@ Trunk (unreleased changes)
  3. HADOOP-858.  Move contrib/smallJobsBenchmark to src/test, removing
     obsolete bits. (Nigel Daley via cutting)
 
+ 4. HADOOP-992.  Fix MiniMR unit tests to use MiniDFS when specified,
+    rather than the local FS.  (omalley via cutting)
+
+ 5. HADOOP-954.  Change use of metrics to use callback mechanism.
+    Also rename utility class Metrics to MetricsUtil.
+    (David Bowen & Nigel Daley via cutting)
+
 
 Branch 0.11 - unreleased
 
@@ -27,14 +34,6 @@ Branch 0.11 - unreleased
  4. HADOOP-987.  Fix a problem in HDFS where blocks were not removed
     from neededReplications after a replication target was selected.
     (Hairong Kuang via cutting)
-
- 5. HADOOP-992.  Fix MiniMR unit tests to use MiniDFS when specified,
-    rather than the local FS.  (omalley via cutting)
-
- 6. HADOOP-954.  Change use of metrics to use callback mechanism.
-    Also rename utility class Metrics to MetricsUtil.
-    (David Bowen & Nigel Daley via cutting)
-
 
 Release 0.11.0 - 2007-02-02
 
