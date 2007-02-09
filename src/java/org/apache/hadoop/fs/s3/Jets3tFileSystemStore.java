@@ -133,7 +133,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
       S3Object object = s3Service.getObject(bucket, key);
       return object.getDataInputStream();
     } catch (S3ServiceException e) {
-      if (e.getErrorCode().equals("NoSuchKey")) {
+      if (e.getS3ErrorCode().equals("NoSuchKey")) {
         return null;
       }
       if (e.getCause() instanceof IOException) {
@@ -149,7 +149,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
           null, byteRangeStart, null);
       return object.getDataInputStream();
     } catch (S3ServiceException e) {
-      if (e.getErrorCode().equals("NoSuchKey")) {
+      if (e.getS3ErrorCode().equals("NoSuchKey")) {
         return null;
       }
       if (e.getCause() instanceof IOException) {

@@ -23,6 +23,9 @@ Trunk (unreleased changes)
     The set is no longer reset with each block, but rather is now
     maintained for the life of an open file.  (Raghu Angadi via cutting)
 
+ 7. HADOOP-882.  Upgrade to jets3t version 0.5, used by the S3
+    FileSystem.  This version supports retries.  (Michael Stack via cutting)
+
 
 Branch 0.11 - unreleased
 

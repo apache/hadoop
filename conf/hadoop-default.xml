@@ -355,6 +355,22 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>fs.s3.block.size</name>
+  <value>1048576</value>
+  <description>
+        Block size to use writing S3.  Note, the default block size for jets3t,
+        the library at the base of the S3 filesystem, is less.  Its 131072.
+        If S3 is having a bad day requiring retries, if the retry is at some
+        point after the end of jets3t RepeatableInputStream buffer and end of
+        the S3 block, the transfer will fail. To change the jets3t block size,
+        add a jets3t.properties file to $HADOOP_HOME/conf so it can be found
+        on the CLASSPATH and amend the 's3service.stream-retry-buffer-size'
+        property. See http://jets3t.s3.amazonaws.com/toolkit/configuration.html
+        for more on jets3t configurables.
+  </description>
+</property>
+
 <!-- map/reduce properties -->
 
 <property>
