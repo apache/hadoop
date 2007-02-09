@@ -53,12 +53,12 @@ class ReduceTask extends Task {
     }
     
     synchronized void reduceInput() {
-        inputMetrics.incrMetric("input_records", 1);
+        inputMetrics.incrMetric("reduce_input_records", 1);
         inputMetrics.update();
     }
     
     synchronized void reduceOutput() {
-        outputMetrics.incrMetric("output_records", 1);
+        outputMetrics.incrMetric("reduce_output_records", 1);
         outputMetrics.update();
     }
   }

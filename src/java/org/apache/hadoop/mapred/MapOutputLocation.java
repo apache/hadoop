@@ -228,7 +228,7 @@ class MapOutputLocation implements Writable, MRConstants {
           int len = input.read(buffer);
           while (len > 0) {
             totalBytes += len;
-            shuffleMetrics.incrMetric("input_bytes", len);
+            shuffleMetrics.incrMetric("shuffle_input_bytes", len);
             shuffleMetrics.update();
             output.write(buffer, 0 ,len);
             if (currentThread.isInterrupted()) {

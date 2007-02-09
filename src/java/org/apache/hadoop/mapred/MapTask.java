@@ -71,14 +71,14 @@ class MapTask extends Task {
     }
     
     synchronized void mapInput(int numBytes) {
-        mapInputMetrics.incrMetric("input_records", 1);
-        mapInputMetrics.incrMetric("input_bytes", numBytes);
+        mapInputMetrics.incrMetric("map_input_records", 1);
+        mapInputMetrics.incrMetric("map_input_bytes", numBytes);
         mapInputMetrics.update();
     }
     
     synchronized void mapOutput(int numBytes) {
-        mapOutputMetrics.incrMetric("output_records", 1);
-        mapOutputMetrics.incrMetric("output_bytes", numBytes);
+        mapOutputMetrics.incrMetric("map_output_records", 1);
+        mapOutputMetrics.incrMetric("map_output_bytes", numBytes);
         mapOutputMetrics.update();
     }
     
