@@ -21,7 +21,7 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
@@ -44,21 +44,22 @@ class ReduceTask extends Task {
   }
 
   private class ReduceTaskMetrics {
-    private MetricsRecord metricsRecord = null;
+    private final MetricsRecord inputMetrics, outputMetrics;
     
-    private long numInputRecords = 0L;
-    private long numOutputRecords = 0L;
-    
-    ReduceTaskMetrics(String taskId) {
-      metricsRecord = Metrics.createRecord("mapred", "reduce", "taskid", taskId);
+    ReduceTaskMetrics(String user) {
+        MetricsContext context = MetricsUtil.getContext("mapred");
+        inputMetrics = MetricsUtil.createRecord(context, "reduceInput", "user", user);
+        outputMetrics = MetricsUtil.createRecord(context, "reduceOutput", "user", user);
     }
     
     synchronized void reduceInput() {
-      Metrics.report(metricsRecord, "input_records", ++numInputRecords);
+        inputMetrics.incrMetric("input_records", 1);
+        inputMetrics.update();
     }
     
     synchronized void reduceOutput() {
-      Metrics.report(metricsRecord, "output_records", ++numOutputRecords);
+        outputMetrics.incrMetric("output_records", 1);
+        outputMetrics.update();
     }
   }
   
@@ -84,7 +85,6 @@ class ReduceTask extends Task {
                     int partition, int numMaps) {
     super(jobId, jobFile, tipId, taskId, partition);
     this.numMaps = numMaps;
-    myMetrics = new ReduceTaskMetrics(taskId);
   }
 
   public TaskRunner createRunner(TaskTracker tracker) throws IOException {
@@ -116,7 +116,7 @@ class ReduceTask extends Task {
 
     numMaps = in.readInt();
     if (myMetrics == null) {
-        myMetrics = new ReduceTaskMetrics(getTaskId());
+        myMetrics = new ReduceTaskMetrics("unknown");
     }
   }
 
@@ -224,6 +224,7 @@ class ReduceTask extends Task {
 
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
+    myMetrics = new ReduceTaskMetrics(job.getUser());
     Class valueClass = job.getMapOutputValueClass();
     Reducer reducer = (Reducer)ReflectionUtils.newInstance(
                                   job.getReducerClass(), job);

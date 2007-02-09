@@ -24,6 +24,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
+import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.util.*;
 
 import java.io.*;
@@ -114,6 +117,11 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
    * The threads for fetching the files.
    */
   private MapOutputCopier[] copiers = null;
+  
+  /**
+   * The threads for fetching the files.
+   */
+  private MetricsRecord shuffleMetrics = null;
   
   /**
    * the minimum interval between jobtracker polls
@@ -275,8 +283,8 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
       // a working filename that will be unique to this attempt
       Path tmpFilename = new Path(finalFilename + "-" + id);
       // this copies the map output file
-      tmpFilename = loc.getFile(inMemFileSys, localFileSys, tmpFilename,
-                               reduceTask.getPartition(),
+      tmpFilename = loc.getFile(inMemFileSys, localFileSys, shuffleMetrics,
+                               tmpFilename, reduceTask.getPartition(),
                                STALLED_COPY_TIMEOUT);
       if (tmpFilename == null)
         throw new IOException("File " + finalFilename + "-" + id + 
@@ -384,6 +392,10 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
     this.uniqueHosts = new HashSet();
     
     this.lastPollTime = 0;
+
+    MetricsContext metricsContext = MetricsUtil.getContext("mapred");
+    this.shuffleMetrics = MetricsUtil.createRecord(
+      metricsContext, "shuffleInput", "user", conf.getUser());
   }
 
   /** Assemble all of the map output files */

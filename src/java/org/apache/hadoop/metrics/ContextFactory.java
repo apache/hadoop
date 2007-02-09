@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
+import org.apache.hadoop.metrics.spi.NullContext;
 
 /**
  * Factory class for creating MetricsContext objects.  To obtain an instance
@@ -43,9 +44,14 @@ public class ContextFactory {
     
     private static ContextFactory theFactory = null;
     
-    // private Map<String,Object> attributeMap = new HashMap<String,Object>();
-    private Map attributeMap = new HashMap();
-    private Map<String,MetricsContext> contextMap = new HashMap<String,MetricsContext>();
+    private Map<String,Object> attributeMap = new HashMap<String,Object>();
+    private Map<String,AbstractMetricsContext> contextMap = 
+            new HashMap<String,AbstractMetricsContext>();
+    
+    // Used only when contexts, or the ContextFactory itself, cannot be
+    // created.
+    private static Map<String,MetricsContext> nullContextMap = 
+            new HashMap<String,MetricsContext>();
     
     /** Creates a new instance of ContextFactory */
     protected ContextFactory() {
@@ -116,18 +122,31 @@ public class ContextFactory {
     public synchronized MetricsContext getContext(String contextName) 
         throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
     {
-        if (contextMap.containsKey(contextName)) return contextMap.get(contextName);
-        String classNameAttribute = contextName + CONTEXT_CLASS_SUFFIX;
-        String className = (String) getAttribute(classNameAttribute);
-        if (className == null) {
-            className = DEFAULT_CONTEXT_CLASSNAME;
+        AbstractMetricsContext metricsContext = contextMap.get(contextName);
+        if (metricsContext == null) {
+            String classNameAttribute = contextName + CONTEXT_CLASS_SUFFIX;
+            String className = (String) getAttribute(classNameAttribute);
+            if (className == null) {
+                className = DEFAULT_CONTEXT_CLASSNAME;
+            }
+            Class contextClass = Class.forName(className);
+            metricsContext = (AbstractMetricsContext) contextClass.newInstance();
+            metricsContext.init(contextName, this);
+            contextMap.put(contextName, metricsContext);
         }
-        Class contextClass = Class.forName(className);
-        AbstractMetricsContext metricsContext = 
-                (AbstractMetricsContext) contextClass.newInstance();
-        metricsContext.init(contextName, this);
-        contextMap.put(contextName, metricsContext);
         return metricsContext;
+    }
+    
+    /**
+     * Returns a "null" context - one which does nothing.
+     */
+    public static synchronized MetricsContext getNullContext(String contextName) {
+        MetricsContext nullContext = nullContextMap.get(contextName);
+        if (nullContext == null) {
+            nullContext = new NullContext();
+            nullContextMap.put(contextName, nullContext);
+        }
+        return nullContext;
     }
     
     /**

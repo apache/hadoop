@@ -25,7 +25,8 @@ import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.metrics.MetricsContext;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -223,7 +224,7 @@ class FSDirectory implements FSConstants {
                     v.add(blocks[i]);
                 }
             }
-            Metrics.report(metricsRecord, "files_deleted", ++numFilesDeleted);
+            incrDeletedFileCount();
             for (Iterator it = children.values().iterator(); it.hasNext(); ) {
                 INode child = (INode) it.next();
                 child.collectSubtreeBlocks(v);
@@ -307,19 +308,25 @@ class FSDirectory implements FSConstants {
     FSImage fsImage;  
     boolean ready = false;
     int namespaceID = 0;    // TODO: move to FSImage class, it belongs there
-    // Metrics members
-    private MetricsRecord metricsRecord = null;
-    private int numFilesDeleted = 0;
+    // Metrics record
+    private MetricsRecord directoryMetrics = null;
     
     /** Access an existing dfs name directory. */
     public FSDirectory(File[] dirs) throws IOException {
       this.fsImage = new FSImage( dirs );
+      initialize();
     }
 
     public FSDirectory(FSImage fsImage) throws IOException {
       this.fsImage = fsImage;
+      initialize();
     }
     
+    private void initialize() {
+      MetricsContext metricsContext = MetricsUtil.getContext("dfs");
+      directoryMetrics = MetricsUtil.createRecord(metricsContext, "FSDirectory");
+    }
+
     void loadFSImage( Configuration conf ) throws IOException {
       fsImage.loadFSImage( conf );
       synchronized (this) {
@@ -327,9 +334,13 @@ class FSDirectory implements FSConstants {
         this.notifyAll();
         fsImage.getEditLog().create();
       }
-      metricsRecord = Metrics.createRecord("dfs", "namenode");
     }
 
+    private void incrDeletedFileCount() {
+        directoryMetrics.incrMetric("files_deleted", 1);
+        directoryMetrics.update();
+    }
+    
     /**
      * Shutdown the filestore
      */

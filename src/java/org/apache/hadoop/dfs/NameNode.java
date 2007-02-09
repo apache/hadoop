@@ -27,9 +27,12 @@ import org.apache.hadoop.util.StringUtils;
 
 import java.io.*;
 import java.net.*;
+import org.apache.hadoop.dfs.DatanodeProtocol.DataNodeAction;
 
 import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.Updater;
 
 /**********************************************************
  * NameNode serves as both directory namespace manager and
@@ -110,33 +113,52 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       fsimage.getEditLog().close();
     }
 
-    private class NameNodeMetrics {
-      private MetricsRecord metricsRecord = null;
-      
-      private long numFilesCreated = 0L;
-      private long numFilesOpened = 0L;
-      private long numFilesRenamed = 0L;
-      private long numFilesListed = 0L;
+    private class NameNodeMetrics implements Updater {
+      private final MetricsRecord metricsRecord;
+      private int numFilesCreated = 0;
+      private int numFilesOpened = 0;
+      private int numFilesRenamed = 0;
+      private int numFilesListed = 0;
       
       NameNodeMetrics() {
-        metricsRecord = Metrics.createRecord("dfs", "namenode");
+        MetricsContext metricsContext = MetricsUtil.getContext("dfs");
+        metricsRecord = MetricsUtil.createRecord(metricsContext, "namenode");
+        metricsContext.registerUpdater(this);
+      }
+      
+      /**
+       * Since this object is a registered updater, this method will be called
+       * periodically, e.g. every 5 seconds.
+       */
+      public void doUpdates(MetricsContext unused) {
+        synchronized (this) {
+          metricsRecord.incrMetric("files_created", numFilesCreated);
+          metricsRecord.incrMetric("files_opened", numFilesOpened);
+          metricsRecord.incrMetric("files_renamed", numFilesRenamed);
+          metricsRecord.incrMetric("files_listed", numFilesListed);
+              
+          numFilesCreated = 0;
+          numFilesOpened = 0;
+          numFilesRenamed = 0;
+          numFilesListed = 0;
+        }
+        metricsRecord.update();
       }
       
       synchronized void createFile() {
-        Metrics.report(metricsRecord, "files_created", ++numFilesCreated);
+        ++numFilesCreated;
       }
       
       synchronized void openFile() {
-        Metrics.report(metricsRecord, "files_opened", ++numFilesOpened);
+        ++numFilesOpened;
       }
       
       synchronized void renameFile() {
-        Metrics.report(metricsRecord, "files_renamed", ++numFilesRenamed);
+        ++numFilesRenamed;
       }
       
       synchronized void listFile(int nfiles) {
         numFilesListed += nfiles;
-        Metrics.report(metricsRecord, "files_listed", numFilesListed);
       }
     }
     

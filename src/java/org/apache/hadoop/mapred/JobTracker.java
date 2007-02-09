@@ -31,7 +31,9 @@ import java.text.NumberFormat;
 import java.util.*;
 
 import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.Updater;
 
 /*******************************************************
  * JobTracker is the central location for submitting and 
@@ -372,48 +374,66 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         }
     }
 
-    static class JobTrackerMetrics {
+    static class JobTrackerMetrics implements Updater {
       private MetricsRecord metricsRecord = null;
-      
-      private long numMapTasksLaunched = 0L;
-      private long numMapTasksCompleted = 0L;
-      private long numReduceTasksLaunched = 0L;
-      private long numReduceTasksCompleted = 0L;
-      private long numJobsSubmitted = 0L;
-      private long numJobsCompleted = 0L;
+      private int numMapTasksLaunched = 0;
+      private int numMapTasksCompleted = 0;
+      private int numReduceTasksLaunched = 0;
+      private int numReduceTasksCompleted = 0;
+      private int numJobsSubmitted = 0;
+      private int numJobsCompleted = 0;
       
       JobTrackerMetrics() {
-        metricsRecord = Metrics.createRecord("mapred", "jobtracker");
+          MetricsContext context = MetricsUtil.getContext("mapred");
+          metricsRecord = MetricsUtil.createRecord(context, "jobtracker");
+          context.registerUpdater(this);
+      }
+      
+      /**
+       * Since this object is a registered updater, this method will be called
+       * periodically, e.g. every 5 seconds.
+       */
+      public void doUpdates(MetricsContext unused) {
+        synchronized (this) {
+          metricsRecord.incrMetric("maps_launched", numMapTasksLaunched);
+          metricsRecord.incrMetric("maps_completed", numMapTasksCompleted);
+          metricsRecord.incrMetric("reduces_launched", numReduceTasksLaunched);
+          metricsRecord.incrMetric("reduces_completed", numReduceTasksCompleted);
+          metricsRecord.incrMetric("jobs_submitted", numJobsSubmitted);
+          metricsRecord.incrMetric("jobs_completed", numJobsCompleted);
+              
+          numMapTasksLaunched = 0;
+          numMapTasksCompleted = 0;
+          numReduceTasksLaunched = 0;
+          numReduceTasksCompleted = 0;
+          numJobsSubmitted = 0;
+          numJobsCompleted = 0;
+        }
+        metricsRecord.update();
       }
       
       synchronized void launchMap() {
-        Metrics.report(metricsRecord, "maps_launched",
-            ++numMapTasksLaunched);
+        ++numMapTasksLaunched;
       }
       
       synchronized void completeMap() {
-        Metrics.report(metricsRecord, "maps_completed",
-            ++numMapTasksCompleted);
+        ++numMapTasksCompleted;
       }
       
       synchronized void launchReduce() {
-        Metrics.report(metricsRecord, "reduces_launched",
-            ++numReduceTasksLaunched);
+        ++numReduceTasksLaunched;
       }
       
       synchronized void completeReduce() {
-        Metrics.report(metricsRecord, "reduces_completed",
-            ++numReduceTasksCompleted);
+        ++numReduceTasksCompleted;
       }
       
       synchronized void submitJob() {
-        Metrics.report(metricsRecord, "jobs_submitted",
-            ++numJobsSubmitted);
+        ++numJobsSubmitted;
       }
       
       synchronized void completeJob() {
-        Metrics.report(metricsRecord, "jobs_completed",
-            ++numJobsCompleted);
+        ++numJobsCompleted;
       }
     }
 

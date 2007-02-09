@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.InMemoryFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.util.Progressable;
 
 /** The location of a map output file, as passed to a reduce task via the
@@ -104,7 +105,9 @@ class MapOutputLocation implements Writable, MRConstants {
    * @param pingee a status object that wants to know when we make progress
    * @param timeout number of ms for connection and read timeout
    * @throws IOException when something goes wrong
+   * @deprecated
    */
+  @Deprecated
   public long getFile(FileSystem fileSys, 
                       Path localFilename, 
                       int reduce,
@@ -179,6 +182,7 @@ class MapOutputLocation implements Writable, MRConstants {
    */
   public Path getFile(InMemoryFileSystem inMemFileSys,
                       FileSystem localFileSys,
+                      MetricsRecord shuffleMetrics,
                       Path localFilename, 
                       int reduce,
                       int timeout) throws IOException, InterruptedException {
@@ -224,6 +228,8 @@ class MapOutputLocation implements Writable, MRConstants {
           int len = input.read(buffer);
           while (len > 0) {
             totalBytes += len;
+            shuffleMetrics.incrMetric("input_bytes", len);
+            shuffleMetrics.update();
             output.write(buffer, 0 ,len);
             if (currentThread.isInterrupted()) {
               throw new InterruptedException();

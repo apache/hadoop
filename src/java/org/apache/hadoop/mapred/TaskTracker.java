@@ -21,7 +21,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
-import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -38,6 +38,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.hadoop.metrics.MetricsContext;
 
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.net.DNS;
@@ -125,17 +126,16 @@ public class TaskTracker
     private class TaskTrackerMetrics {
       private MetricsRecord metricsRecord = null;
       
-      private long totalTasksCompleted = 0L;
-      
       TaskTrackerMetrics() {
-        metricsRecord = Metrics.createRecord("mapred", "tasktracker");
+          MetricsContext context = MetricsUtil.getContext("mapred");
+          metricsRecord = MetricsUtil.createRecord(context, "tasktracker");
       }
       
       synchronized void completeTask() {
         if (metricsRecord != null) {
-          metricsRecord.setMetric("tasks_completed", ++totalTasksCompleted);
+          metricsRecord.incrMetric("tasks_completed", 1);
           metricsRecord.setMetric("maps_running", mapTotal);
-          metricsRecord.setMetric("reduce_running", reduceTotal);
+          metricsRecord.setMetric("reduces_running", reduceTotal);
           metricsRecord.update();
         }
       }

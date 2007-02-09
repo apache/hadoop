@@ -31,6 +31,10 @@ Branch 0.11 - unreleased
  5. HADOOP-992.  Fix MiniMR unit tests to use MiniDFS when specified,
     rather than the local FS.  (omalley via cutting)
 
+ 6. HADOOP-954.  Change use of metrics to use callback mechanism.
+    Also rename utility class Metrics to MetricsUtil.
+    (David Bowen & Nigel Daley via cutting)
+
 
 Release 0.11.0 - 2007-02-02
 

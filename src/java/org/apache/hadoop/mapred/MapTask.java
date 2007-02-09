@@ -33,11 +33,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics.MetricsRecord;
 
 import org.apache.commons.logging.*;
-import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.mapred.ReduceTask.ValuesIterator;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.Updater;
 
 
 /** A Map task. */
@@ -59,27 +61,25 @@ class MapTask extends Task {
   }
   
   private class MapTaskMetrics {
-    private MetricsRecord metricsRecord = null;
+    private MetricsRecord mapInputMetrics = null;
+    private MetricsRecord mapOutputMetrics = null;
     
-    private long numInputRecords = 0L;
-    private long numInputBytes = 0L;
-    private long numOutputRecords = 0L;
-    private long numOutputBytes = 0L;
-    
-    MapTaskMetrics(String taskId) {
-      metricsRecord = Metrics.createRecord("mapred", "map", "taskid", taskId);
+    MapTaskMetrics(String user) {
+        MetricsContext context = MetricsUtil.getContext("mapred");
+        mapInputMetrics = MetricsUtil.createRecord(context, "mapInput", "user", user);
+        mapOutputMetrics = MetricsUtil.createRecord(context, "mapOutput", "user", user);
     }
     
-    synchronized void mapInput(long numBytes) {
-      Metrics.report(metricsRecord, "input_records", ++numInputRecords);
-      numInputBytes += numBytes;
-      Metrics.report(metricsRecord, "input_bytes", numInputBytes);
+    synchronized void mapInput(int numBytes) {
+        mapInputMetrics.incrMetric("input_records", 1);
+        mapInputMetrics.incrMetric("input_bytes", numBytes);
+        mapInputMetrics.update();
     }
     
-    synchronized void mapOutput(long numBytes) {
-      Metrics.report(metricsRecord, "output_records", ++numOutputRecords);
-      numOutputBytes += numBytes;
-      Metrics.report(metricsRecord, "output_bytes", numOutputBytes);
+    synchronized void mapOutput(int numBytes) {
+        mapOutputMetrics.incrMetric("output_records", 1);
+        mapOutputMetrics.incrMetric("output_bytes", numBytes);
+        mapOutputMetrics.update();
     }
     
   }
@@ -96,7 +96,6 @@ class MapTask extends Task {
                  int partition, InputSplit split) {
     super(jobId, jobFile, tipId, taskId, partition);
     this.split = split;
-    myMetrics = new MapTaskMetrics(taskId);
   }
 
   public boolean isMapTask() {
@@ -134,13 +133,14 @@ class MapTask extends Task {
     split = new FileSplit();
     split.readFields(in);
     if (myMetrics == null) {
-        myMetrics = new MapTaskMetrics(getTaskId());
+        myMetrics = new MapTaskMetrics("unknown");
     }
   }
 
   public void run(final JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
 
+    myMetrics = new MapTaskMetrics(job.getUser());
     Reporter reporter = getReporter(umbilical, getProgress());
 
     MapOutputBuffer collector = new MapOutputBuffer(umbilical, job, reporter);
@@ -164,7 +164,7 @@ class MapTask extends Task {
           setProgress(getProgress());
           long beforePos = getPos();
           boolean ret = rawIn.next(key, value);
-          myMetrics.mapInput(getPos() - beforePos);
+          myMetrics.mapInput((int)(getPos() - beforePos));
           return ret;
         }
         public long getPos() throws IOException { return rawIn.getPos(); }
@@ -326,7 +326,7 @@ class MapTask extends Task {
         int partNumber = partitioner.getPartition(key, value, partitions);
         sortImpl[partNumber].addKeyValue(keyOffset, keyLength, valLength);
 
-        myMetrics.mapOutput(keyValBuffer.getLength() - keyOffset);
+        myMetrics.mapOutput((int)(keyValBuffer.getLength() - keyOffset));
 
         //now check whether we need to spill to disk
         long totalMem = 0;

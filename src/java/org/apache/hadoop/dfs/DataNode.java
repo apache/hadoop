@@ -22,7 +22,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.metrics.Metrics;
+import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.*;
@@ -34,7 +34,9 @@ import org.apache.hadoop.net.NetworkTopology;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.Updater;
 
 /**********************************************************
  * DataNode is a class (and program) that stores a set of
@@ -116,55 +118,72 @@ public class DataNode implements FSConstants, Runnable {
     long heartBeatInterval;
     private DataStorage storage = null;
     private StatusHttpServer infoServer;
+    private DataNodeMetrics myMetrics = new DataNodeMetrics();
     private static InetSocketAddress nameNodeAddr;
     private static DataNode datanodeObject = null;
-    private class DataNodeMetrics {
-      private MetricsRecord metricsRecord = null;
-      
-      
-      private long bytesWritten = 0L;
-      private long bytesRead = 0L;
-      private long blocksWritten = 0L;
-      private long blocksRead = 0L;
-      private long blocksReplicated = 0L;
-      private long blocksRemoved = 0L;
+
+    private class DataNodeMetrics implements Updater {
+      private final MetricsRecord metricsRecord;
+      private int bytesWritten = 0;
+      private int bytesRead = 0;
+      private int blocksWritten = 0;
+      private int blocksRead = 0;
+      private int blocksReplicated = 0;
+      private int blocksRemoved = 0;
       
       DataNodeMetrics() {
-        metricsRecord = Metrics.createRecord("dfs", "datanode");
+        MetricsContext context = MetricsUtil.getContext("dfs");
+        metricsRecord = MetricsUtil.createRecord(context, "datanode");
+        context.registerUpdater(this);
       }
       
+      /**
+       * Since this object is a registered updater, this method will be called
+       * periodically, e.g. every 5 seconds.
+       */
+      public void doUpdates(MetricsContext unused) {
+        synchronized (this) {
+          metricsRecord.incrMetric("bytes_read", bytesRead);
+          metricsRecord.incrMetric("bytes_written", bytesWritten);
+          metricsRecord.incrMetric("blocks_read", blocksRead);
+          metricsRecord.incrMetric("blocks_written", blocksWritten);
+          metricsRecord.incrMetric("blocks_replicated", blocksReplicated);
+          metricsRecord.incrMetric("blocks_removed", blocksRemoved);
+              
+          bytesWritten = 0;
+          bytesRead = 0;
+          blocksWritten = 0;
+          blocksRead = 0;
+          blocksReplicated = 0;
+          blocksRemoved = 0;
+        }
+        metricsRecord.update();
+      }
+
       synchronized void readBytes(int nbytes) {
         bytesRead += nbytes;
-        Metrics.report(metricsRecord, "bytes_read", bytesRead);
       }
       
       synchronized void wroteBytes(int nbytes) {
         bytesWritten += nbytes;
-        Metrics.report(metricsRecord, "bytes_written", bytesWritten);
       }
       
       synchronized void readBlocks(int nblocks) {
         blocksRead += nblocks;
-        Metrics.report(metricsRecord, "blocks_read", blocksRead);
       }
       
       synchronized void wroteBlocks(int nblocks) {
         blocksWritten += nblocks;
-        Metrics.report(metricsRecord, "blocks_written", blocksWritten);
       }
       
       synchronized void replicatedBlocks(int nblocks) {
         blocksReplicated += nblocks;
-        Metrics.report(metricsRecord, "blocks_replicated", blocksReplicated);
       }
       
       synchronized void removedBlocks(int nblocks) {
         blocksRemoved += nblocks;
-        Metrics.report(metricsRecord, "blocks_removed", blocksRemoved);
       }
     }
-    
-    DataNodeMetrics myMetrics = new DataNodeMetrics();
 
     /**
      * Create the DataNode given a configuration and an array of dataDirs.
