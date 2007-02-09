@@ -19,6 +19,10 @@ Trunk (unreleased changes)
     Also rename utility class Metrics to MetricsUtil.
     (David Bowen & Nigel Daley via cutting)
 
+ 6. HADOOP-893.  Improve HDFS client's handling of dead datanodes.
+    The set is no longer reset with each block, but rather is now
+    maintained for the life of an open file.  (Raghu Angadi via cutting)
+
 
 Branch 0.11 - unreleased
 
