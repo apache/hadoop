@@ -699,6 +699,15 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>jobclient.output.filter</name>
+  <value>FAILED</value>
+  <description>The filter for controlling the output of the task's userlogs sent
+               to the console of the JobClient. 
+               The permissible options are: NONE, FAILED, SUCCEEDED and ALL.
+  </description>
+</property>
+
 <!-- ipc properties -->
 
 <property>

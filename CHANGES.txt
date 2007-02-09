@@ -26,6 +26,10 @@ Trunk (unreleased changes)
  7. HADOOP-882.  Upgrade to jets3t version 0.5, used by the S3
     FileSystem.  This version supports retries.  (Michael Stack via cutting)
 
+ 8. HADOOP-977.  Send task's stdout and stderr to JobClient's stdout
+    and stderr respectively, with each line tagged by the task's name.
+    (Arun C Murthy via cutting)
+
 
 Branch 0.11 - unreleased
 

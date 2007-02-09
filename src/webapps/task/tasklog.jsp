@@ -121,9 +121,6 @@
   	  }
   	  gotRequiredData = false;
   	}
-  	if( plainText ) {
-  	  response.setContentLength(bytesRead); 
-  	}
 	String logData = new String(b, 0, bytesRead);
 	out.println(logData);
   } catch (IOException ioe) {
