@@ -33,7 +33,7 @@ Trunk (unreleased changes)
  9. HADOOP-761.  Change unit tests to not use /tmp.  (Nigel Daley via cutting)
 
 
-Branch 0.11 - unreleased
+Release 0.11.1 - 2007-02-09
 
  1. HADOOP-976.  Make SequenceFile.Metadata public.  (Runping Qi via cutting)
 
