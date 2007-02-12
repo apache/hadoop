@@ -23,9 +23,23 @@ import org.apache.hadoop.util.Progressable;
 
 /** Passed to application code to permit alteration of status. */
 public interface Reporter extends Progressable {
-  /** Alter the application's status description.
-   *
-   * @param status a brief description of the current status
+  
+  /**
+   * A constant of Reporter type that does nothing.
+   */
+  public static final Reporter NULL = new Reporter() {
+    public void setStatus(String s) {
+    }
+
+    public void progress() throws IOException {
+    }
+  };
+
+  /**
+   * Alter the application's status description.
+   * 
+   * @param status
+   *          a brief description of the current status
    */
   void setStatus(String status) throws IOException;
 }
