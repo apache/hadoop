@@ -514,6 +514,9 @@ public class StreamJob {
 
     // general MapRed job properties
     jobConf_ = new JobConf(config_);
+    
+    // All streaming jobs have, by default, no time-out for tasks
+    jobConf_.setLong("mapred.task.timeout", 0);
 
     setUserJobConfProps(true);
 

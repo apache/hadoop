@@ -35,6 +35,10 @@ Trunk (unreleased changes)
 10. HADOOP-1007. Make names of metrics used in Hadoop unique.
     (Nigel Daley via cutting)
 
+11. HADOOP-491.  Change mapred.task.timeout to be per-job, and make a
+    value of zero mean no timeout.  Also change contrib/streaming to
+    disable task timeouts.  (Arun C Murthy via cutting)
+
 
 Release 0.11.1 - 2007-02-09
 

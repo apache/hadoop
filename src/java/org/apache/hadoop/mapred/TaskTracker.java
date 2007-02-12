@@ -53,7 +53,6 @@ import org.apache.hadoop.net.DNS;
 public class TaskTracker 
              implements MRConstants, TaskUmbilicalProtocol, Runnable {
     static final long WAIT_FOR_DONE = 3 * 1000;
-    private long taskTimeout; 
     private int httpPort;
 
     static enum State {NORMAL, STALE, INTERRUPTED}
@@ -435,7 +434,6 @@ public class TaskTracker
       maxCurrentTasks = conf.getInt("mapred.tasktracker.tasks.maximum", 2);
       this.fConf = conf;
       this.jobTrackAddr = JobTracker.getAddress(conf);
-      this.taskTimeout = conf.getInt("mapred.task.timeout", 10* 60 * 1000);
       this.mapOutputFile = new MapOutputFile();
       this.mapOutputFile.setConf(conf);
       int httpPort = conf.getInt("tasktracker.http.port", 50060);
@@ -643,20 +641,29 @@ public class TaskTracker
      */
     private synchronized void markUnresponsiveTasks() throws IOException {
       long now = System.currentTimeMillis();
-        for (TaskInProgress tip: runningTasks.values()) {
-            long timeSinceLastReport = now - tip.getLastProgressReport();
-            if ((tip.getRunState() == TaskStatus.State.RUNNING) &&
-                (timeSinceLastReport > this.taskTimeout) &&
-                !tip.wasKilled) {
-                String msg = "Task failed to report status for " +
-                             (timeSinceLastReport / 1000) + 
-                             " seconds. Killing.";
-                LOG.info(tip.getTask().getTaskId() + ": " + msg);
-                ReflectionUtils.logThreadInfo(LOG, "lost task", 30);
-                tip.reportDiagnosticInfo(msg);
-                purgeTask(tip);
-            }
+      for (TaskInProgress tip: runningTasks.values()) {
+        if (tip.getRunState() == TaskStatus.State.RUNNING) {
+          // Check the per-job timeout interval for tasks;
+          // an interval of '0' implies it is never timed-out
+          long jobTaskTimeout = tip.getTaskTimeout();
+          if (jobTaskTimeout == 0) {
+            continue;
+          }
+          
+          // Check if the task has not reported progress for a 
+          // time-period greater than the configured time-out
+          long timeSinceLastReport = now - tip.getLastProgressReport();
+          if (timeSinceLastReport > jobTaskTimeout && !tip.wasKilled) {
+            String msg = "Task failed to report status for " +
+            (timeSinceLastReport / 1000) + 
+            " seconds. Killing.";
+            LOG.info(tip.getTask().getTaskId() + ": " + msg);
+            ReflectionUtils.logThreadInfo(LOG, "lost task", 30);
+            tip.reportDiagnosticInfo(msg);
+            purgeTask(tip);
+          }
         }
+      }
     }
 
     /**
@@ -902,6 +909,7 @@ public class TaskTracker
         private boolean alwaysKeepTaskFiles;
         private TaskStatus taskStatus ; 
         private boolean keepJobFiles;
+        private long taskTimeout;
         
         /**
          */
@@ -920,6 +928,7 @@ public class TaskTracker
                  getName(), task.isMapTask()? TaskStatus.Phase.MAP:
                    TaskStatus.Phase.SHUFFLE); 
             keepJobFiles = false;
+            taskTimeout = (10 * 60 * 1000);
         }
         
         private void localizeTask(Task task) throws IOException{
@@ -964,6 +973,12 @@ public class TaskTracker
         public void setJobConf(JobConf lconf){
             this.localJobConf = lconf;
             keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
+            taskTimeout = localJobConf.getLong("mapred.task.timeout", 
+                                                10 * 60 * 1000);
+        }
+        
+        public JobConf getJobConf() {
+          return localJobConf;
         }
         
         /**
@@ -1024,6 +1039,15 @@ public class TaskTracker
             return runstate;
         }
 
+        /**
+         * The task's configured timeout.
+         * 
+         * @return the task's configured timeout.
+         */
+        public long getTaskTimeout() {
+          return taskTimeout;
+        }
+        
         /**
          * The task has reported some diagnostic info about its status
          */
