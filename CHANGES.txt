@@ -42,6 +42,10 @@ Trunk (unreleased changes)
 12. HADOOP-1010.  Add Reporter.NULL, a Reporter implementation that
     does nothing.  (Runping Qi via cutting)
 
+13. HADOOP-923.  In HDFS NameNode, move replication computation to a
+    separate thread, to improve heartbeat processing time.
+    (Dhruba Borthakur via cutting) 
+
 
 Release 0.11.1 - 2007-02-09
 

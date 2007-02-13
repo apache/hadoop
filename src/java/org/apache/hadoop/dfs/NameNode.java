@@ -579,18 +579,27 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                       long remaining,
                                       int xmitsInProgress,
                                       int xceiverCount) throws IOException {
+        Object xferResults[] = new Object[2];
+        xferResults[0] = xferResults[1] = null;
+        Object deleteList[] = new Object[1];
+        deleteList[0] = null; 
+
         verifyRequest( nodeReg );
-        if( namesystem.gotHeartbeat( nodeReg, capacity, remaining, xceiverCount )) {
+        if( namesystem.gotHeartbeat( nodeReg, capacity, remaining, 
+                                     xceiverCount, 
+                                     xmitsInProgress,
+                                     xferResults,
+                                     deleteList)) {
           // request block report from the datanode
+          assert(xferResults[0] == null && deleteList[0] == null);
           return new BlockCommand( DataNodeAction.DNA_REGISTER );
         }
         
         //
         // Ask to perform pending transfers, if any
         //
-        Object xferResults[] = namesystem.pendingTransfers( nodeReg,
-                                                            xmitsInProgress );
-        if (xferResults != null) {
+        if (xferResults[0] != null) {
+            assert(deleteList[0] == null);
             return new BlockCommand((Block[]) xferResults[0], (DatanodeInfo[][]) xferResults[1]);
         }
 
@@ -600,18 +609,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         // a block report.  This is just a small fast removal of blocks that have
         // just been removed.
         //
-        Block blocks[] = namesystem.blocksToInvalidate( nodeReg );
-        if (blocks != null) {
-            return new BlockCommand(blocks);
+        if (deleteList[0] != null) {
+            return new BlockCommand((Block[]) deleteList[0]);
         }
-        //
-        // See if the decommissioned node has finished moving all
-        // its datablocks to another replica. This is a loose
-        // heuristic to determine when a decommission is really over.
-        // We can probbaly do it in a seperate thread rather than making
-        // the heartbeat thread do this.
-        //
-        namesystem.checkDecommissionState(nodeReg);
         return null;
     }
 

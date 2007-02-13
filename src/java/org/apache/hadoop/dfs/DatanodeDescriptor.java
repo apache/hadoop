@@ -42,9 +42,19 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // This is an optimization, because contains takes O(n) time on Arraylist
   protected boolean isAlive = false;
 
+  //
+  // List of blocks to be replicated by this datanode
+  // Also, a list of datanodes per block to indicate the target
+  // datanode of this replication.
+  //
+  List<Block> replicateBlocks;
+  List<DatanodeDescriptor[]> replicateTargetSets;
+  List<Block> invalidateBlocks;
+  
   /** Default constructor */
   public DatanodeDescriptor() {
     super();
+    initWorkLists();
   }
   
   /** DatanodeDescriptor constructor
@@ -76,6 +86,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
                       int xceiverCount ) {
     super( nodeID );
     updateHeartbeat(capacity, remaining, xceiverCount);
+    initWorkLists();
   }
 
   /** DatanodeDescriptor constructor
@@ -93,6 +104,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
                               int xceiverCount ) {
     super( nodeID, networkLocation );
     updateHeartbeat( capacity, remaining, xceiverCount);
+    initWorkLists();
+  }
+
+  /*
+   * initialize list of blocks that store work for the datanodes
+   */
+  private void initWorkLists() {
+    replicateBlocks = new ArrayList<Block>();
+    replicateTargetSets = new ArrayList<DatanodeDescriptor[]>();
+    invalidateBlocks = new ArrayList<Block>();
   }
 
   /**
@@ -136,5 +157,109 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   Iterator<Block> getBlockIterator() {
     return blocks.iterator();
+  }
+
+  /*
+   * Store block replication work.
+   */
+  void addBlocksToBeReplicated(Block[] blocklist, 
+                               DatanodeDescriptor[][] targets) {
+    assert(blocklist != null && targets != null);
+    assert(blocklist.length > 0 && targets.length > 0);
+    synchronized (replicateBlocks) {
+      assert(blocklist.length == targets.length);
+      for (int i = 0; i < blocklist.length; i++) {
+        replicateBlocks.add(blocklist[i]);
+        replicateTargetSets.add(targets[i]);
+      }
+    }
+  }
+
+  /*
+   * Store block invalidation work.
+   */
+  void addBlocksToBeInvalidated(Block[] blocklist) {
+    assert(blocklist != null && blocklist.length > 0);
+    synchronized (invalidateBlocks) {
+      for (int i = 0; i < blocklist.length; i++) {
+        invalidateBlocks.add(blocklist[i]);
+      }
+    }
+  }
+
+  /*
+   * The number of work items that are pending to be replicated
+   */
+  int getNumberOfBlocksToBeReplicated() {
+    synchronized (replicateBlocks) {
+      return replicateBlocks.size();
+    }
+  }
+
+  /*
+   * The number of block invalidattion items that are pending to 
+   * be sent to the datanode
+   */
+  int getNumberOfBlocksToBeInvalidated() {
+    synchronized (invalidateBlocks) {
+      return invalidateBlocks.size();
+    }
+  }
+
+  /**
+   * Remove the specified number of target sets
+   */
+  void getReplicationSets(int maxNumTransfers, Object[] xferResults) {
+    assert(xferResults.length == 2);
+    assert(xferResults[0] == null && xferResults[1] == null);
+
+    synchronized (replicateBlocks) {
+      assert(replicateBlocks.size() == replicateTargetSets.size());
+
+      if (maxNumTransfers <= 0 || replicateBlocks.size() == 0) {
+        return;
+      }
+      int numTransfers = 0;
+      int numBlocks = 0;
+      int i;
+      for (i = 0; i < replicateTargetSets.size() && 
+           numTransfers < maxNumTransfers; i++) {
+        numTransfers += replicateTargetSets.get(i).length;
+      }
+      numBlocks = i;
+      Block[] blocklist = new Block[numBlocks];
+      DatanodeDescriptor targets[][] = new DatanodeDescriptor[numBlocks][];
+
+      for (i = 0; i < numBlocks; i++) {
+        blocklist[i] = replicateBlocks.get(0);
+        targets[i] = replicateTargetSets.get(0);
+        replicateBlocks.remove(0);
+        replicateTargetSets.remove(0);
+      }
+      xferResults[0] = blocklist;
+      xferResults[1] = targets;
+      assert(blocklist.length > 0 && targets.length > 0);
+    }
+  }
+
+  /**
+   * Remove the specified number of blocks to be invalidated
+   */
+  void getInvalidateBlocks(int maxblocks, Object[] xferResults) {
+    assert(xferResults[0] == null);
+
+    synchronized (invalidateBlocks) {
+      if (maxblocks <= 0 || invalidateBlocks.size() == 0) {
+        return;
+      }
+      int outnum = Math.min(maxblocks, invalidateBlocks.size());
+      Block[] blocklist = new Block[outnum];
+      for (int i = 0; i < outnum; i++) {
+        blocklist[i] = invalidateBlocks.get(0);
+        invalidateBlocks.remove(0);
+      }
+      assert(blocklist.length > 0);
+      xferResults[0] = blocklist;
+    }
   }
 }
