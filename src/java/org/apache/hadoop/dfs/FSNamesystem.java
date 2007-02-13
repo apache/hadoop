@@ -3019,9 +3019,7 @@ class FSNamesystem implements FSConstants {
             numOfAvailableNodes:numOfReplicas;
         while( numOfReplicas > 0 ) {
           DatanodeDescriptor choosenNode = nodes[r.nextInt(nodes.length)];
-          if(!excludedNodes.contains(choosenNode) &&
-               !choosenNode.isDecommissionInProgress() &&
-               !choosenNode.isDecommissioned()) {
+          if(!excludedNodes.contains(choosenNode)) {
             results.add( choosenNode );
             excludedNodes.add(choosenNode);
             numOfReplicas--;

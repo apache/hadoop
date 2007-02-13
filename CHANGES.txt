@@ -49,6 +49,9 @@ Trunk (unreleased changes)
 14. HADOOP-476.  Rewrite contrib/streaming command-line processing,
     improving parameter validation.  (Sanjay Dahiya via cutting)
 
+15. HADOOP-1009.  Fix an infinite loop in the HDFS namenode.
+    (Dhruba Borthakur via cutting) 
+
 
 Release 0.11.1 - 2007-02-09
 
