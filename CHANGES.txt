@@ -46,6 +46,9 @@ Trunk (unreleased changes)
     separate thread, to improve heartbeat processing time.
     (Dhruba Borthakur via cutting) 
 
+14. HADOOP-476.  Rewrite contrib/streaming command-line processing,
+    improving parameter validation.  (Sanjay Dahiya via cutting)
+
 
 Release 0.11.1 - 2007-02-09
 
