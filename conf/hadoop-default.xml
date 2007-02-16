@@ -132,7 +132,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>fs.inmemory.size.mb</name>
-  <value>75</value>
+  <value>0</value>
   <description>The size of the in-memory filsystem instance in MB</description>
 </property>
 

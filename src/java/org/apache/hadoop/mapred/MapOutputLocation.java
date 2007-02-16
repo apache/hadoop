@@ -208,8 +208,9 @@ class MapOutputLocation implements Writable, MRConstants {
       int inMemFSSize = inMemFileSys.getFSSize();
       int checksumLength = inMemFileSys.getChecksumFileLength(length);
         
-      boolean createInMem = 
-        (((float)(length + checksumLength) / inMemFSSize <= 
+      boolean createInMem = false; 
+      if (inMemFSSize > 0)  
+        createInMem = (((float)(length + checksumLength) / inMemFSSize <= 
         MAX_INMEM_FILESIZE_FRACTION) && 
         inMemFileSys.reserveSpaceWithCheckSum(localFilename, length));
       
