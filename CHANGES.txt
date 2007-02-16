@@ -68,6 +68,9 @@ Trunk (unreleased changes)
 20. HADOOP-943.  Improve HDFS's fsck command to display the filename
     for under-replicated blocks.  (Dhruba Borthakur via cutting) 
 
+21. HADOOP-333.  Add validator for sort benchmark output.
+    (Arun C Murthy via cutting)
+
 
 Branch 0.11 (unreleased)
 
