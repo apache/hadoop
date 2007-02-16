@@ -515,8 +515,24 @@ class FSDataset implements FSConstants {
         File f;
         synchronized (this) {
           f = getFile(invalidBlks[i]);
+          if (f == null) {
+            throw new IOException("Unexpected error trying to delete block "
+                                  + invalidBlks[i] + 
+                                  ". Block not found in blockMap.");
+          }
           FSVolume v = volumeMap.get(invalidBlks[i]);
-          v.clearPath(f.getParentFile());
+          if (v == null) {
+            throw new IOException("Unexpected error trying to delete block "
+                                  + invalidBlks[i] + 
+                                  ". No volume for this block.");
+          }
+          File parent = f.getParentFile();
+          if (parent == null) {
+            throw new IOException("Unexpected error trying to delete block "
+                                  + invalidBlks[i] + 
+                                  ". Parent not found for file " + f + ".");
+          }
+          v.clearPath(parent);
           blockMap.remove(invalidBlks[i]);
           volumeMap.remove(invalidBlks[i]);
         }

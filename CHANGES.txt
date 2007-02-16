@@ -49,6 +49,10 @@ Trunk (unreleased changes)
 14. HADOOP-476.  Rewrite contrib/streaming command-line processing,
     improving parameter validation.  (Sanjay Dahiya via cutting)
 
+15. HADOOP-973.  Improve error messages in Namenode.  This should help
+    to track down a problem that was appearing as a
+    NullPointerException.  (Dhruba Borthakur via cutting) 
+
 
 Branch 0.11 (unreleased)
 
