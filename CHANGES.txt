@@ -56,6 +56,9 @@ Trunk (unreleased changes)
 16. HADOOP-649.  Fix so that jobs with no tasks are not lost.
     (Thomas Friol via cutting)
 
+17. HADOOP-803.  Reduce memory use by HDFS namenode, phase I.
+    (Raghu Angadi via cutting)
+
 
 Branch 0.11 (unreleased)
 

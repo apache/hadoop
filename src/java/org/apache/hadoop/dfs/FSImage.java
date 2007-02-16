@@ -405,9 +405,9 @@ class FSImage {
           root.getBlocks()[i].write(out);
       }
     }
-    for(Iterator it = root.getChildren().values().iterator(); it.hasNext(); ) {
-      INode child = (INode) it.next();
-      saveImage( fullName, child, out );
+    for(Iterator<INode> it = root.getChildIterator(); it != null &&
+                                                      it.hasNext(); ) {
+      saveImage( fullName, it.next(), out );
     }
   }
 

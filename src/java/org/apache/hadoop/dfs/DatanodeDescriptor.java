@@ -37,7 +37,7 @@ import org.apache.hadoop.net.Node;
  **************************************************/
 public class DatanodeDescriptor extends DatanodeInfo {
 
-  private volatile Collection<Block> blocks = new TreeSet<Block>();
+  private volatile SortedMap<Block, Block> blocks = new TreeMap<Block, Block>();
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   protected boolean isAlive = false;
@@ -118,17 +118,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   /**
    */
-  void updateBlocks(Block newBlocks[]) {
-    blocks.clear();
-    for (int i = 0; i < newBlocks.length; i++) {
-      blocks.add(newBlocks[i]);
-    }
-  }
-
-  /**
-   */
   void addBlock(Block b) {
-    blocks.add(b);
+      blocks.put(b, b);
+  }
+  
+  void removeBlock(Block b) {
+      blocks.remove(b);
   }
 
   void resetBlocks() {
@@ -152,13 +147,21 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
   
   Block[] getBlocks() {
-    return (Block[]) blocks.toArray(new Block[blocks.size()]);
+    return (Block[]) blocks.keySet().toArray(new Block[blocks.size()]);
   }
 
   Iterator<Block> getBlockIterator() {
-    return blocks.iterator();
+    return blocks.keySet().iterator();
   }
-
+  
+  Block getBlock(long blockId) {
+    return blocks.get( new Block(blockId, 0) );
+  }
+  
+  Block getBlock(Block b) {
+    return blocks.get(b);
+  }
+  
   /*
    * Store block replication work.
    */

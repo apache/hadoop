@@ -49,7 +49,7 @@ class FSDirectory implements FSConstants {
     class INode {
         private String name;
         private INode parent;
-        private TreeMap children = new TreeMap();
+        private TreeMap<String, INode> children = null;
         private Block blocks[];
         private short blockReplication;
 
@@ -111,11 +111,19 @@ class FSDirectory implements FSConstants {
         }
 
         /**
-         * Get children 
-         * @return TreeMap of children
+         * Get children iterator
+         * @return Iterator of children
          */
-        TreeMap getChildren() {
-          return this.children;
+        Iterator<INode> getChildIterator() {
+          return ( children != null ) ?  children.values().iterator() : null;
+            // instead of null, we could return a static empty iterator.
+        }
+        
+        void addChild(String name, INode node) {
+          if ( children == null ) {
+            children = new TreeMap<String, INode>();
+          }
+          children.put(name, node);
         }
 
         /**
@@ -162,7 +170,7 @@ class FSDirectory implements FSConstants {
         }
         
         INode getChild( String name) {
-          return (INode) children.get( name );
+          return (children == null) ? null : children.get( name );
         }
 
         /**
@@ -197,7 +205,7 @@ class FSDirectory implements FSConstants {
             return null;
           }
           // insert into the parent children list
-          parentNode.children.put(name, newNode);
+          parentNode.addChild(name, newNode);
           newNode.parent = parentNode;
           return newNode;
         }
@@ -225,9 +233,9 @@ class FSDirectory implements FSConstants {
                 }
             }
             incrDeletedFileCount();
-            for (Iterator it = children.values().iterator(); it.hasNext(); ) {
-                INode child = (INode) it.next();
-                child.collectSubtreeBlocks(v);
+            for (Iterator<INode> it = getChildIterator(); it != null &&
+                                                          it.hasNext(); ) {
+                it.next().collectSubtreeBlocks(v);
             }
         }
 
@@ -235,9 +243,9 @@ class FSDirectory implements FSConstants {
          */
         int numItemsInTree() {
             int total = 0;
-            for (Iterator it = children.values().iterator(); it.hasNext(); ) {
-                INode child = (INode) it.next();
-                total += child.numItemsInTree();
+            for (Iterator<INode> it = getChildIterator(); it != null && 
+                                                          it.hasNext(); ) {
+                total += it.next().numItemsInTree();
             }
             return total + 1;
         }
@@ -268,9 +276,9 @@ class FSDirectory implements FSConstants {
          */
         long computeContentsLength() {
             long total = computeFileLength();
-            for (Iterator it = children.values().iterator(); it.hasNext(); ) {
-                INode child = (INode) it.next();
-                total += child.computeContentsLength();
+            for (Iterator<INode> it = getChildIterator(); it != null && 
+                                                          it.hasNext(); ) {
+                total += it.next().computeContentsLength();
             }
             return total;
         }
@@ -294,9 +302,9 @@ class FSDirectory implements FSConstants {
                 v.add(this);
             }
 
-            for (Iterator it = children.values().iterator(); it.hasNext(); ) {
-                INode child = (INode) it.next();
-                v.add(child);
+            for (Iterator<INode> it = getChildIterator(); it != null && 
+                                                          it.hasNext(); ) {
+                v.add(it.next());
             }
         }
     }
