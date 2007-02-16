@@ -47,6 +47,7 @@ public class TestMiniMRLocalFS extends TestCase {
           JobConf job = mr.createJobConf();
           boolean ret = MRCaching.launchMRCache(TEST_ROOT_DIR + "/wc/input",
                                                 TEST_ROOT_DIR + "/wc/output", 
+                                                TEST_ROOT_DIR + "/cachedir",
                                                 job,
                                                 "The quick brown fox\nhas many silly\n"
                                                     + "red fox sox\n");

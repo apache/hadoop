@@ -59,6 +59,9 @@ Trunk (unreleased changes)
 17. HADOOP-803.  Reduce memory use by HDFS namenode, phase I.
     (Raghu Angadi via cutting)
 
+18. HADOOP-1021.  Fix MRCaching-based unit tests on Windows.
+    (Nigel Daley via cutting)
+
 
 Branch 0.11 (unreleased)
 

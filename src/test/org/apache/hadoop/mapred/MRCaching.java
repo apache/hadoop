@@ -60,18 +60,17 @@ public class MRCaching {
       try {
         Path[] localArchives = DistributedCache.getLocalCacheArchives(conf);
         Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
-        FileSystem fs = FileSystem.get(conf);
         // read the cached files (unzipped, unjarred and text)
         // and put it into a single file TEST_ROOT_DIR/test.txt
         String TEST_ROOT_DIR = jconf.get("test.build.data","/tmp");
-        Path file = new Path(TEST_ROOT_DIR);
+        Path file = new Path("file:///",TEST_ROOT_DIR);
+        FileSystem fs = FileSystem.getLocal(conf);
         if (!fs.mkdirs(file)) {
           throw new IOException("Mkdirs failed to create " + file.toString());
         }
         Path fileOut = new Path(file, "test.txt");
         fs.delete(fileOut);
         DataOutputStream out = fs.create(fileOut);
-
         for (int i = 0; i < localArchives.length; i++) {
           // read out the files from these archives
           File f = new File(localArchives[i].toString());
@@ -126,10 +125,11 @@ public class MRCaching {
   }
 
   public static boolean launchMRCache(String indir,
-      String outdir, JobConf conf, String input)
+      String outdir, String cacheDir, JobConf conf, String input)
       throws IOException {
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/tmp"))
       .toString().replace(' ', '+');
+    //if (TEST_ROOT_DIR.startsWith("C:")) TEST_ROOT_DIR = "/tmp";
     conf.set("test.build.data",TEST_ROOT_DIR);
     final Path inDir = new Path(indir);
     final Path outDir = new Path(outdir);
@@ -139,6 +139,7 @@ public class MRCaching {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
     {
+System.out.println("HERE:"+inDir);
       DataOutputStream file = fs.create(new Path(inDir, "part-0"));
       file.writeBytes(input);
       file.close();
@@ -162,19 +163,28 @@ public class MRCaching {
     Path txtPath = new Path(localPath, new Path("test.txt"));
     Path jarPath = new Path(localPath, new Path("test.jar"));
     Path zipPath = new Path(localPath, new Path("test.zip"));
-    Path cacheTest = new Path(TEST_ROOT_DIR + "/cachedir");
-    fs.delete(cacheTest);
-    if (!fs.mkdirs(cacheTest)) {
-      throw new IOException("Mkdirs failed to create " + cacheTest.toString());
+    Path cachePath = new Path(cacheDir);
+    fs.delete(cachePath);
+    if (!fs.mkdirs(cachePath)) {
+      throw new IOException("Mkdirs failed to create " + cachePath.toString());
     }
-    fs.copyFromLocalFile(txtPath, cacheTest);
-    fs.copyFromLocalFile(jarPath, cacheTest);
-    fs.copyFromLocalFile(zipPath, cacheTest);
+    fs.copyFromLocalFile(txtPath, cachePath);
+    fs.copyFromLocalFile(jarPath, cachePath);
+    fs.copyFromLocalFile(zipPath, cachePath);
     // setting the cached archives to zip, jar and simple text files
     String fileSys = fs.getName();
-    String archive1 = "dfs://" + fileSys + TEST_ROOT_DIR + "/cachedir/test.jar";
-    String archive2 = "dfs://" + fileSys + TEST_ROOT_DIR + "/cachedir/test.zip";
-    String file1 = "dfs://" + fileSys + TEST_ROOT_DIR + "/cachedir/test.txt";
+    String archive1;
+    String archive2;
+    String file1;
+    if (fileSys.equals("local")) {
+      archive1 = "file://" + cachePath + "/test.jar";
+      archive2 = "file://" + cachePath + "/test.zip";
+      file1 = "file://" + cachePath + "/test.txt";
+    } else {
+      archive1 = "dfs://" + fileSys + cachePath + "/test.jar";
+      archive2 = "dfs://" + fileSys + cachePath + "/test.zip";
+      file1 = "dfs://" + fileSys + cachePath + "/test.txt";
+    }
     URI uri1 = null;
     URI uri2 = null;
     URI uri3 = null;
@@ -193,8 +203,8 @@ public class MRCaching {
     // match the real string. check if there are 3 instances or not.
     Path result = new Path(TEST_ROOT_DIR + "/test.txt");
     {
-      BufferedReader file = new BufferedReader(new InputStreamReader(fs
-          .open(result)));
+      BufferedReader file = new BufferedReader(new InputStreamReader(
+          FileSystem.getLocal(conf).open(result)));
       String line = file.readLine();
       while (line != null) {
         if (!testStr.equals(line))

@@ -42,6 +42,7 @@ public class TestMiniMRDFSCaching extends TestCase {
       // run the wordcount example with caching
       boolean ret = MRCaching.launchMRCache("/testing/wc/input",
                                             "/testing/wc/output",
+                                            "/cachedir",
                                             mr.createJobConf(),
                                             "The quick brown fox\nhas many silly\n"
                                                 + "red fox sox\n");
