@@ -165,6 +165,7 @@ public class NamenodeFsck {
     }
     int missing = 0;
     long missize = 0;
+    int under = 0;
     StringBuffer report = new StringBuffer();
     for (int i = 0; i < blocks.length; i++) {
       Block block = blocks[i].getBlock();
@@ -173,9 +174,19 @@ public class NamenodeFsck {
       short targetFileReplication = file.getReplication();
       if (locs.length > targetFileReplication) {
         res.overReplicatedBlocks += (locs.length - targetFileReplication);
+        res.numOverReplicatedBlocks += 1;
       }
       if (locs.length < targetFileReplication && locs.length > 0) {
         res.underReplicatedBlocks += (targetFileReplication - locs.length);
+        res.numUnderReplicatedBlocks += 1;
+        under++;
+        if (!showFiles) {
+          out.print("\n" + file.getPath() + ": ");
+        }
+        out.println(" Under replicated " + block.getBlockName() +
+                    ". Target Replicas is " +
+                    targetFileReplication + " but found " +
+                    locs.length + " replica(s).");
       }
       report.append(i + ". " + id + " len=" + block.getNumBytes());
       if (locs == null || locs.length == 0) {
@@ -199,7 +210,9 @@ public class NamenodeFsck {
     }
     if (missing > 0) {
       if (!showFiles) {
-        out.println("\nMISSING " + missing + " blocks of total size " + missize + " B");
+        out.println("\n" + file.getPath() + ": " +
+                    "MISSING " + missing + " blocks of total size " + 
+                    missize + " B.");
       }
       res.corruptFiles++;
       switch(fixing) {
@@ -215,7 +228,7 @@ public class NamenodeFsck {
     if (showFiles) {
       if (missing > 0) {
         out.println(" MISSING " + missing + " blocks of total size " + missize + " B");
-      }  else {
+      }  else if (under == 0) {
         out.println(" OK");
       }
       if (showBlocks) {
@@ -460,6 +473,8 @@ public class NamenodeFsck {
     private long corruptFiles = 0L;
     private long overReplicatedBlocks = 0L;
     private long underReplicatedBlocks = 0L;
+    private long numOverReplicatedBlocks = 0L;
+    private long numUnderReplicatedBlocks = 0L;
     private int replication = 0;
     private long totalBlocks = 0L;
     private long totalFiles = 0L;
@@ -493,7 +508,7 @@ public class NamenodeFsck {
       this.missingSize = missingSize;
     }
     
-    /** Return the number of over-replicsted blocks. */
+    /** Return the number of over-replicated blocks. */
     public long getOverReplicatedBlocks() {
       return overReplicatedBlocks;
     }
@@ -584,10 +599,10 @@ public class NamenodeFsck {
         res.append("\n  MISSING SIZE:\t\t" + missingSize + " B");
         res.append("\n  ********************************");
       }
-      res.append("\n Over-replicated blocks:\t" + overReplicatedBlocks);
+      res.append("\n Over-replicated blocks:\t" + numOverReplicatedBlocks);
       if (totalBlocks > 0)        res.append(" (" + ((float) (overReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
-      res.append("\n Under-replicated blocks:\t" + underReplicatedBlocks);
-      if (totalBlocks > 0)        res.append(" (" + ((float) (underReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
+      res.append("\n Under-replicated blocks:\t" + numUnderReplicatedBlocks);
+      if (totalBlocks > 0)        res.append(" (" + ((float) (numUnderReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
       res.append("\n Target replication factor:\t" + replication);
       res.append("\n Real replication factor:\t" + getReplicationFactor());
       return res.toString();
