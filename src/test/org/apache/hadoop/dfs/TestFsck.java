@@ -19,9 +19,7 @@
 package org.apache.hadoop.dfs;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Random;
 import junit.framework.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -32,52 +30,7 @@ import org.apache.hadoop.fs.*;
  * @author Milind Bhandarkar
  */
 public class TestFsck extends TestCase {
-  
-  private static final int NFILES = 20;
-  private static String TEST_ROOT_DIR =
-    new Path(System.getProperty("test.build.data","/tmp"))
-    .toString().replace(' ', '+');
-
-  /** class MyFile contains enough information to recreate the contents of
-   * a single file.
-   */
-  private static class MyFile {
-    private static Random gen = new Random();
-    private static final int MAX_LEVELS = 3;
-    private static final int MAX_SIZE = 8*1024;
-    private static String[] dirNames = {
-      "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
-    };
-    private String name = "";
-    private int size;
-    private long seed;
-    
-    MyFile() {
-      int nLevels = gen.nextInt(MAX_LEVELS);
-      if(nLevels != 0) {
-        int[] levels = new int[nLevels];
-        for (int idx = 0; idx < nLevels; idx++) {
-          levels[idx] = gen.nextInt(10);
-        }
-        StringBuffer sb = new StringBuffer();
-        for (int idx = 0; idx < nLevels; idx++) {
-          sb.append(dirNames[levels[idx]]);
-          sb.append("/");
-        }
-        name = sb.toString();
-      }
-      long fidx = -1;
-      while (fidx < 0) { fidx = gen.nextLong(); }
-      name = name + Long.toString(fidx);
-      size = gen.nextInt(MAX_SIZE);
-      seed = gen.nextLong();
-    }
-    
-    String getName() { return name; }
-    int getSize() { return size; }
-    long getSeed() { return seed; }
-  }
-  
+ 
   public TestFsck(String testName) {
     super(testName);
   }
@@ -90,69 +43,25 @@ public class TestFsck extends TestCase {
   protected void tearDown() throws Exception {
   }
   
-  /** create NFILES with random names and directory hierarchies
-   * with random (but reproducible) data in them.
-   */
-  private static MyFile[] createFiles(String fsname, String topdir)
-  throws IOException {
-    MyFile[] files = new MyFile[NFILES];
-    
-    for (int idx = 0; idx < NFILES; idx++) {
-      files[idx] = new MyFile();
-    }
-    
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getNamed(fsname, conf);
-    Path root = new Path(topdir);
-    
-    for (int idx = 0; idx < NFILES; idx++) {
-      Path fPath = new Path(root, files[idx].getName());
-      if (!fs.mkdirs(fPath.getParent())) {
-        throw new IOException("Mkdirs failed to create directory " +
-                              fPath.getParent().toString());
-      }
-      FSDataOutputStream out = fs.create(fPath);
-      byte[] toWrite = new byte[files[idx].getSize()];
-      Random rb = new Random(files[idx].getSeed());
-      rb.nextBytes(toWrite);
-      out.write(toWrite);
-      out.close();
-      toWrite = null;
-    }
-    
-    return files;
-  }
-  
-  /** delete directory and everything underneath it.*/
-  private static void deldir(String fsname, String topdir)
-  throws IOException {
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getNamed(fsname, conf);
-    Path root = new Path(topdir);
-    fs.delete(root);
-  }
-  
   /** do fsck */
   public void testFsck() throws Exception {
-    String namenode = null;
+    DFSTestUtil util = new DFSTestUtil("TestFsck", 20, 3, 8*1024);
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(65314, conf, 4, false);
-      namenode = conf.get("fs.default.name", "local");
-      if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles(namenode, "/srcdat");
-        PrintStream oldOut = System.out;
-        ByteArrayOutputStream bStream = new ByteArrayOutputStream();
-        PrintStream newOut = new PrintStream(bStream, true);
-        System.setOut(newOut);
-        assertEquals(0, new DFSck().doMain(conf, new String[] {"/"}));
-        System.setOut(oldOut);
-        String outStr = bStream.toString();
-        assertTrue(-1 != outStr.indexOf("HEALTHY"));
-        System.out.println(outStr);
-        deldir(namenode, "/srcdat");
-      }
+      FileSystem fs = cluster.getFileSystem();
+      util.createFiles(fs, "/srcdat");
+      PrintStream oldOut = System.out;
+      ByteArrayOutputStream bStream = new ByteArrayOutputStream();
+      PrintStream newOut = new PrintStream(bStream, true);
+      System.setOut(newOut);
+      assertEquals(0, new DFSck().doMain(conf, new String[] {"/"}));
+      System.setOut(oldOut);
+      String outStr = bStream.toString();
+      assertTrue(-1 != outStr.indexOf("HEALTHY"));
+      System.out.println(outStr);
+      util.cleanup(fs, "/srcdat");
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }
@@ -160,25 +69,23 @@ public class TestFsck extends TestCase {
   
   /** do fsck on non-existent path*/
   public void testFsckNonExistent() throws Exception {
-    String namenode = null;
+    DFSTestUtil util = new DFSTestUtil("TestFsck", 20, 3, 8*1024);
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(65314, conf, 4, false);
-      namenode = conf.get("fs.default.name", "local");
-      if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles(namenode, "/srcdat");
-        PrintStream oldOut = System.out;
-        ByteArrayOutputStream bStream = new ByteArrayOutputStream();
-        PrintStream newOut = new PrintStream(bStream, true);
-        System.setOut(newOut);
-        assertEquals(0, new DFSck().doMain(conf, new String[] {"/non-existent"}));
-        System.setOut(oldOut);
-        String outStr = bStream.toString();
-        assertEquals(-1, outStr.indexOf("HEALTHY"));
-        System.out.println(outStr);
-        deldir(namenode, "/srcdat");
-      }
+      FileSystem fs = cluster.getFileSystem();
+      util.createFiles(fs, "/srcdat");
+      PrintStream oldOut = System.out;
+      ByteArrayOutputStream bStream = new ByteArrayOutputStream();
+      PrintStream newOut = new PrintStream(bStream, true);
+      System.setOut(newOut);
+      assertEquals(0, new DFSck().doMain(conf, new String[] {"/non-existent"}));
+      System.setOut(oldOut);
+      String outStr = bStream.toString();
+      assertEquals(-1, outStr.indexOf("HEALTHY"));
+      System.out.println(outStr);
+      util.cleanup(fs, "/srcdat");
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }

@@ -62,6 +62,9 @@ Trunk (unreleased changes)
 18. HADOOP-1021.  Fix MRCaching-based unit tests on Windows.
     (Nigel Daley via cutting)
 
+19. HADOOP-889.  Remove duplicate code from HDFS unit tests.
+    (Milind Bhandarkar via cutting)
+
 
 Branch 0.11 (unreleased)
 
