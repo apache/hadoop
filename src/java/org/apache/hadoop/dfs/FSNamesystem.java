@@ -2515,18 +2515,26 @@ class FSNamesystem implements FSConstants {
       return nonCommissionedNodeList;
     }
     /*
-     * Return true if there are any blocks in neededReplication that 
-     * reside on the specified node. Otherwise returns false.
+     * Return true if there are any blocks on this node that have not
+     * yet reached their replication factor. Otherwise returns false.
      */
     private boolean isReplicationInProgress(DatanodeDescriptor srcNode) {
-        for (Iterator<Block> it = neededReplications.iterator(); it.hasNext();){
-            Block block = it.next();
+        Block decommissionBlocks[] = srcNode.getBlocks();
+        for (int i = 0; i < decommissionBlocks.length; i++) {
+            Block block = decommissionBlocks[i];
+            FSDirectory.INode fileINode = dir.getFileByBlock(block);
+            if (fileINode == null) {
+                continue;
+            }
             Collection<DatanodeDescriptor> containingNodes = blocksMap.get(block); 
-            if (containingNodes.contains(srcNode)) {
-                return true;
+            List<DatanodeDescriptor> nodes =
+                filterDecommissionedNodes(containingNodes);
+            int numCurrentReplica = nodes.size();
+            if (fileINode.getReplication() > numCurrentReplica) {
+              return true;
             }
         }
-      return false;
+        return false;
     }
 
     /**
@@ -2535,8 +2543,8 @@ class FSNamesystem implements FSConstants {
      */
     private boolean checkDecommissionStateInternal(DatanodeDescriptor node) {
       //
-      // Check to see if there are any blocks in the neededReplication
-      // data structure that has a replica on the node being decommissioned.
+      // Check to see if there are all blocks in this decommisioned
+      // node has reached their target replication factor.
       //
       if (node.isDecommissionInProgress()) {
         if (!isReplicationInProgress(node)) {

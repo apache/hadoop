@@ -71,6 +71,9 @@ Trunk (unreleased changes)
 21. HADOOP-333.  Add validator for sort benchmark output.
     (Arun C Murthy via cutting)
 
+22. HADOOP-947.  Improve performance of datanode decomissioning.
+    (Dhruba Borthakur via cutting)
+
 
 Branch 0.11 (unreleased)
 
