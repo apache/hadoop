@@ -386,7 +386,9 @@ public class InMemoryFileSystem extends FileSystem {
   }
   
   public float getPercentUsed() {
-    return (float)totalUsed/fsSize;
+    if (fsSize > 0)
+      return (float)totalUsed/fsSize;
+    else return 0.1f;
   }
  
   private boolean canFitInMemory(int size) {
