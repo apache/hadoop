@@ -53,6 +53,9 @@ Trunk (unreleased changes)
     to track down a problem that was appearing as a
     NullPointerException.  (Dhruba Borthakur via cutting) 
 
+16. HADOOP-649.  Fix so that jobs with no tasks are not lost.
+    (Thomas Friol via cutting)
+
 
 Branch 0.11 (unreleased)
 

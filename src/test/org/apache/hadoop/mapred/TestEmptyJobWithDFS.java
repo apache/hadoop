@@ -92,6 +92,15 @@ public class TestEmptyJobWithDFS extends TestCase {
               break;
           }
       }
+      
+      try {
+          assertTrue(runningJob.isComplete());
+          assertTrue(runningJob.isSuccessful());
+      } catch (NullPointerException npe) {
+          // This NPE should no more happens
+          fail("A NPE should not have happened.");
+      }
+          
       // return job result
       LOG.info("job is complete: " + runningJob.isSuccessful());
       return (runningJob.isSuccessful());

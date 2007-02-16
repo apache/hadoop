@@ -146,6 +146,9 @@ class JobInProgress {
         
         // if no split is returned, job is considered completed and successful
         if (numMapTasks == 0) {
+            // Finished time need to be setted here to prevent this job to be retired
+            // from the job tracker jobs at the next retire iteration.
+            this.finishTime = System.currentTimeMillis();
             this.status = new JobStatus(status.getJobId(), 1.0f, 1.0f, JobStatus.SUCCEEDED);
             tasksInited = true;
             return;
