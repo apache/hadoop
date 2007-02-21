@@ -99,6 +99,10 @@ Trunk (unreleased changes)
     transfers. This includes a generic retry mechanism for use
     elsewhere in Hadoop. (tomwhite)
 
+30. HADOOP-990.  Improve HDFS support for full datanode volumes.
+    (Raghu Angadi via cutting)
+
+
 Release 0.11.2 - 2007-02-16
 
  1. HADOOP-1009.  Fix an infinite loop in the HDFS namenode.

@@ -221,8 +221,10 @@ class FSDataset implements FSConstants {
       }
       
       long getAvailable() throws IOException {
-        return ((long) Math.round(usableDiskPct *
-                usage.getAvailable()) - reserved);
+        long freespace = (long)
+            Math.round( ( ( usableDiskPct * usage.getCapacity() )
+                          - usage.getUsed() - reserved ));
+        return ( freespace > 0 ) ? freespace : 0;
       }
       
       String getMount() throws IOException {
@@ -246,7 +248,6 @@ class FSDataset implements FSConstants {
           System.out.println("Exception!  " + ie);
           throw ie;
         }
-        reserved -= b.getNumBytes();
         return f;
       }
       

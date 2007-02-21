@@ -1032,6 +1032,9 @@ class DFSClient implements FSConstants {
                 }
 
                 block = lb.getBlock();
+                if ( block.getNumBytes() < bytesWrittenToBlock ) {
+                  block.setNumBytes( bytesWrittenToBlock );
+                }
                 DatanodeInfo nodes[] = lb.getLocations();
 
                 //
@@ -1074,7 +1077,6 @@ class DFSClient implements FSConstants {
                     nodes[i].write(out);
                 }
                 out.write(CHUNKED_ENCODING);
-                bytesWrittenToBlock = 0;
                 blockStream = out;
                 blockReplyStream = new DataInputStream(new BufferedInputStream(s.getInputStream()));
             } while (retry);
@@ -1274,6 +1276,7 @@ class DFSClient implements FSConstants {
                 }
             }
 
+            bytesWrittenToBlock = 0;
             //
             // Delete local backup, start new one
             //
