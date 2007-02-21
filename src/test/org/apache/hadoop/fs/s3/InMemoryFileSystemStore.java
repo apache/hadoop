@@ -1,9 +1,12 @@
 package org.apache.hadoop.fs.s3;
 
-import java.io.ByteArrayInputStream;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -23,11 +26,12 @@ import org.apache.hadoop.fs.s3.INode.FileType;
  */
 class InMemoryFileSystemStore implements FileSystemStore {
   
+  private Configuration conf;
   private SortedMap<Path, INode> inodes = new TreeMap<Path, INode>();
   private Map<Long, byte[]> blocks = new HashMap<Long, byte[]>();
   
   public void initialize(URI uri, Configuration conf) {
-    // Nothing to initialize
+    this.conf = conf;
   }
 
   public void deleteINode(Path path) throws IOException {
@@ -46,13 +50,33 @@ class InMemoryFileSystemStore implements FileSystemStore {
     return blocks.containsKey(blockId);
   }
 
-  public INode getINode(Path path) throws IOException {
+  public INode retrieveINode(Path path) throws IOException {
     return inodes.get(path);
   }
 
-  public InputStream getBlockStream(Block block, long byteRangeStart) throws IOException {
+  public File retrieveBlock(Block block, long byteRangeStart) throws IOException {
     byte[] data = blocks.get(block.getId());
-    return new ByteArrayInputStream(data, (int) byteRangeStart, data.length - (int) byteRangeStart);
+    File file = createTempFile();
+    BufferedOutputStream out = null;
+    try {
+      out = new BufferedOutputStream(new FileOutputStream(file));
+      out.write(data, (int) byteRangeStart, data.length - (int) byteRangeStart);
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+    }
+    return file;
+  }
+  
+  private File createTempFile() throws IOException {
+    File dir = new File(conf.get("fs.s3.buffer.dir"));
+    if (!dir.exists() && !dir.mkdirs()) {
+      throw new IOException("Cannot create S3 buffer directory: " + dir);
+    }
+    File result = File.createTempFile("test-", ".tmp", dir);
+    result.deleteOnExit();
+    return result;
   }
 
   public Set<Path> listSubPaths(Path path) throws IOException {
@@ -85,12 +109,20 @@ class InMemoryFileSystemStore implements FileSystemStore {
     inodes.put(path, inode);
   }
 
-  public void storeBlock(Block block, InputStream in) throws IOException {
+  public void storeBlock(Block block, File file) throws IOException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] buf = new byte[8192];
     int numRead;
-    while ((numRead = in.read(buf)) >= 0) {
-      out.write(buf, 0, numRead);
+    BufferedInputStream in = null;
+    try {
+      in = new BufferedInputStream(new FileInputStream(file));
+      while ((numRead = in.read(buf)) >= 0) {
+        out.write(buf, 0, numRead);
+      }
+    } finally {
+      if (in != null) {
+        in.close();
+      }
     }
     blocks.put(block.getId(), out.toByteArray());
   }

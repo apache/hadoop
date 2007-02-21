@@ -95,6 +95,9 @@ Trunk (unreleased changes)
     
 28. HADOOP-1025. Remove some obsolete code in ipc.Server.  (cutting)
 
+29. HADOOP-997. Implement S3 retry mechanism for failed block
+    transfers. This includes a generic retry mechanism for use
+    elsewhere in Hadoop. (tomwhite)
 
 Release 0.11.2 - 2007-02-16
 

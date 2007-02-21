@@ -2,7 +2,10 @@ package org.apache.hadoop.fs.s3;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
@@ -10,6 +13,9 @@ import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -20,7 +26,7 @@ import org.apache.hadoop.util.Progressable;
  */
 public class S3FileSystem extends FileSystem {
 
-  private static final long DEFAULT_BLOCK_SIZE = 1 * 1024 * 1024;
+  private static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
   
   private URI uri;
 
@@ -31,9 +37,9 @@ public class S3FileSystem extends FileSystem {
   private Path workingDir = new Path("/user", System.getProperty("user.name"));
 
   public S3FileSystem() {
-    this(new Jets3tFileSystemStore());
+    // set store in initialize()
   }
-
+  
   public S3FileSystem(FileSystemStore store) {
     this.store = store;
   }
@@ -45,12 +51,36 @@ public class S3FileSystem extends FileSystem {
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
+    if (store == null) {
+      store = createDefaultStore(conf);
+    }
     store.initialize(uri, conf);
     setConf(conf);
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());    
     this.localFs = get(URI.create("file:///"), conf);
   }  
 
+  private static FileSystemStore createDefaultStore(Configuration conf) {
+    FileSystemStore store = new Jets3tFileSystemStore();
+    
+    RetryPolicy basePolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
+        conf.getInt("fs.s3.maxRetries", 4),
+        conf.getLong("fs.s3.sleepTimeSeconds", 10), TimeUnit.SECONDS);
+    Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =
+      new HashMap<Class<? extends Exception>, RetryPolicy>();
+    exceptionToPolicyMap.put(IOException.class, basePolicy);
+    exceptionToPolicyMap.put(S3Exception.class, basePolicy);
+    
+    RetryPolicy methodPolicy = RetryPolicies.retryByException(
+        RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
+    Map<String,RetryPolicy> methodNameToPolicyMap = new HashMap<String,RetryPolicy>();
+    methodNameToPolicyMap.put("storeBlock", methodPolicy);
+    methodNameToPolicyMap.put("retrieveBlock", methodPolicy);
+    
+    return (FileSystemStore) RetryProxy.create(FileSystemStore.class,
+        store, methodNameToPolicyMap);
+  }
+  
   @Override
   public String getName() {
     return getUri().toString();
@@ -81,7 +111,7 @@ public class S3FileSystem extends FileSystem {
   @Override
   public boolean mkdirs(Path path) throws IOException {
     Path absolutePath = makeAbsolute(path);
-    INode inode = store.getINode(absolutePath);
+    INode inode = store.retrieveINode(absolutePath);
     if (inode == null) {
       store.storeINode(absolutePath, INode.DIRECTORY_INODE);
     } else if (inode.isFile()) {
@@ -94,7 +124,7 @@ public class S3FileSystem extends FileSystem {
 
   @Override
   public boolean isDirectory(Path path) throws IOException {
-    INode inode = store.getINode(makeAbsolute(path));
+    INode inode = store.retrieveINode(makeAbsolute(path));
     if (inode == null) {
       return false;
     }
@@ -103,7 +133,7 @@ public class S3FileSystem extends FileSystem {
 
   @Override
   public boolean isFile(Path path) throws IOException {
-    INode inode = store.getINode(makeAbsolute(path));
+    INode inode = store.retrieveINode(makeAbsolute(path));
     if (inode == null) {
       return false;
     }
@@ -111,7 +141,7 @@ public class S3FileSystem extends FileSystem {
   }
 
   private INode checkFile(Path path) throws IOException {
-    INode inode = store.getINode(makeAbsolute(path));
+    INode inode = store.retrieveINode(makeAbsolute(path));
     if (inode == null) {
       throw new IOException("No such file.");
     }
@@ -124,7 +154,7 @@ public class S3FileSystem extends FileSystem {
   @Override
   public Path[] listPathsRaw(Path path) throws IOException {
     Path absolutePath = makeAbsolute(path);
-    INode inode = store.getINode(absolutePath);
+    INode inode = store.retrieveINode(absolutePath);
     if (inode == null) {
       return null;
     } else if (inode.isFile()) {
@@ -147,7 +177,7 @@ public class S3FileSystem extends FileSystem {
       short replication, long blockSize, Progressable progress)
       throws IOException {
 
-    INode inode = store.getINode(makeAbsolute(file));
+    INode inode = store.retrieveINode(makeAbsolute(file));
     if (inode != null) {
       if (overwrite) {
         deleteRaw(file);
@@ -175,16 +205,16 @@ public class S3FileSystem extends FileSystem {
   @Override
   public boolean renameRaw(Path src, Path dst) throws IOException {
     Path absoluteSrc = makeAbsolute(src);
-    INode srcINode = store.getINode(absoluteSrc);
+    INode srcINode = store.retrieveINode(absoluteSrc);
     if (srcINode == null) {
       // src path doesn't exist
       return false; 
     }
     Path absoluteDst = makeAbsolute(dst);
-    INode dstINode = store.getINode(absoluteDst);
+    INode dstINode = store.retrieveINode(absoluteDst);
     if (dstINode != null && dstINode.isDirectory()) {
       absoluteDst = new Path(absoluteDst, absoluteSrc.getName());
-      dstINode = store.getINode(absoluteDst);
+      dstINode = store.retrieveINode(absoluteDst);
     }
     if (dstINode != null) {
       // dst path already exists - can't overwrite
@@ -192,7 +222,7 @@ public class S3FileSystem extends FileSystem {
     }
     Path dstParent = absoluteDst.getParent();
     if (dstParent != null) {
-      INode dstParentINode = store.getINode(dstParent);
+      INode dstParentINode = store.retrieveINode(dstParent);
       if (dstParentINode == null || dstParentINode.isFile()) {
         // dst parent doesn't exist or is a file
         return false;
@@ -202,12 +232,12 @@ public class S3FileSystem extends FileSystem {
   }
   
   private boolean renameRawRecursive(Path src, Path dst) throws IOException {
-    INode srcINode = store.getINode(src);
+    INode srcINode = store.retrieveINode(src);
     store.storeINode(dst, srcINode);
     store.deleteINode(src);
     if (srcINode.isDirectory()) {
       for (Path oldSrc : store.listDeepSubPaths(src)) {
-        INode inode = store.getINode(oldSrc);
+        INode inode = store.retrieveINode(oldSrc);
         if (inode == null) {
           return false;
         }
@@ -222,7 +252,7 @@ public class S3FileSystem extends FileSystem {
   @Override
   public boolean deleteRaw(Path path) throws IOException {
     Path absolutePath = makeAbsolute(path);
-    INode inode = store.getINode(absolutePath);
+    INode inode = store.retrieveINode(absolutePath);
     if (inode == null) {
       return false;
     }
@@ -282,9 +312,9 @@ public class S3FileSystem extends FileSystem {
 
   @Override
   public long getBlockSize(Path path) throws IOException {
-    INode inode = store.getINode(makeAbsolute(path));
+    INode inode = store.retrieveINode(makeAbsolute(path));
     if (inode == null) {
-      throw new IOException("No such file or directory.");
+      throw new IOException(path.toString() + ": No such file or directory.");
     }
     Block[] blocks = inode.getBlocks();
     if (blocks == null || blocks.length == 0) {

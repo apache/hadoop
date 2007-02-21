@@ -1,7 +1,14 @@
 package org.apache.hadoop.fs.s3;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -24,11 +31,18 @@ class Jets3tFileSystemStore implements FileSystemStore {
   private static final String PATH_DELIMITER = urlEncode(Path.SEPARATOR);
   private static final String BLOCK_PREFIX = "block_";
 
+  private Configuration conf;
+  
   private S3Service s3Service;
 
   private S3Bucket bucket;
-
+  
+  private int bufferSize;
+  
   public void initialize(URI uri, Configuration conf) throws IOException {
+    
+    this.conf = conf;
+    
     try {
       String accessKey = null;
       String secretAccessKey = null;
@@ -78,6 +92,8 @@ class Jets3tFileSystemStore implements FileSystemStore {
     bucket = new S3Bucket(uri.getHost());
 
     createBucket(bucket.getName());
+    
+    this.bufferSize = conf.getInt("io.file.buffer.size", 4096);
   }  
 
   private void createBucket(String bucketName) throws IOException {
@@ -159,13 +175,47 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
   }
 
-  public INode getINode(Path path) throws IOException {
+  public INode retrieveINode(Path path) throws IOException {
     return INode.deserialize(get(pathToKey(path)));
   }
 
-  public InputStream getBlockStream(Block block, long byteRangeStart)
+  public File retrieveBlock(Block block, long byteRangeStart)
       throws IOException {
-    return get(blockToKey(block), byteRangeStart);
+    File fileBlock = null;
+    InputStream in = null;
+    OutputStream out = null;
+    try {
+      fileBlock = newBackupFile();
+      in = get(blockToKey(block), byteRangeStart);
+      out = new BufferedOutputStream(new FileOutputStream(fileBlock));
+      byte[] buf = new byte[bufferSize];
+      int numRead;
+      while ((numRead = in.read(buf)) >= 0) {
+        out.write(buf, 0, numRead);
+      }
+      return fileBlock;
+    } catch (IOException e) {
+      // close output stream to file then delete file
+      closeQuietly(out);
+      out = null; // to prevent a second close
+      if (fileBlock != null) {
+        fileBlock.delete();
+      }
+      throw e;
+    } finally {
+      closeQuietly(out);
+      closeQuietly(in);
+    }
+  }
+  
+  private File newBackupFile() throws IOException {
+    File dir = new File(conf.get("fs.s3.buffer.dir"));
+    if (!dir.exists() && !dir.mkdirs()) {
+      throw new IOException("Cannot create S3 buffer directory: " + dir);
+    }
+    File result = File.createTempFile("input-", ".tmp", dir);
+    result.deleteOnExit();
+    return result;
   }
 
   public Set<Path> listSubPaths(Path path) throws IOException {
@@ -229,8 +279,24 @@ class Jets3tFileSystemStore implements FileSystemStore {
     put(pathToKey(path), inode.serialize(), inode.getSerializedLength());
   }
 
-  public void storeBlock(Block block, InputStream in) throws IOException {
-    put(blockToKey(block), in, block.getLength());
+  public void storeBlock(Block block, File file) throws IOException {
+    BufferedInputStream in = null;
+    try {
+      in = new BufferedInputStream(new FileInputStream(file));
+      put(blockToKey(block), in, block.getLength());
+    } finally {
+      closeQuietly(in);
+    }    
+  }
+
+  private void closeQuietly(Closeable closeable) {
+    if (closeable != null) {
+      try {
+        closeable.close();
+      } catch (IOException e) {
+        // ignore
+      }
+    }
   }
 
   private String pathToKey(Path path) {
@@ -296,7 +362,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
       for (int i = 0; i < objects.length; i++) {
         Path path = keyToPath(objects[i].getKey());
         sb.append(path).append("\n");
-        INode m = getINode(path);
+        INode m = retrieveINode(path);
         sb.append("\t").append(m.getFileType()).append("\n");
         if (m.getFileType() == FileType.DIRECTORY) {
           continue;

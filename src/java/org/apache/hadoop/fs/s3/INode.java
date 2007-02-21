@@ -11,7 +11,7 @@ import java.io.InputStream;
  * Holds file metadata including type (regular file, or directory),
  * and the list of blocks that are pointers to the data.
  */
-class INode {
+public class INode {
 	
   enum FileType {
     DIRECTORY, FILE

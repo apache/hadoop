@@ -1,6 +1,9 @@
 package org.apache.hadoop.fs.s3;
 
-class Block {
+/**
+ * Holds metadata about a block of data being stored in a {@link FileSystemStore}.
+ */
+public class Block {
   private long id;
 
   private long length;

@@ -1,10 +1,8 @@
 package org.apache.hadoop.fs.s3;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +16,8 @@ import org.apache.hadoop.util.Progressable;
 
 class S3OutputStream extends FSOutputStream {
 
+  private Configuration conf;
+  
   private int bufferSize;
 
   private FileSystemStore store;
@@ -49,6 +49,7 @@ class S3OutputStream extends FSOutputStream {
   public S3OutputStream(Configuration conf, FileSystemStore store,
       Path path, long blockSize, Progressable progress) throws IOException {
     
+    this.conf = conf;
     this.store = store;
     this.path = path;
     this.blockSize = blockSize;
@@ -60,7 +61,11 @@ class S3OutputStream extends FSOutputStream {
   }
 
   private File newBackupFile() throws IOException {
-    File result = File.createTempFile("s3fs-out", "");
+    File dir = new File(conf.get("fs.s3.buffer.dir"));
+    if (!dir.exists() && !dir.mkdirs()) {
+      throw new IOException("Cannot create S3 buffer directory: " + dir);
+    }
+    File result = File.createTempFile("output-", ".tmp", dir);
     result.deleteOnExit();
     return result;
   }
@@ -147,9 +152,7 @@ class S3OutputStream extends FSOutputStream {
     //
     // TODO: Use passed in Progressable to report progress.
     nextBlockOutputStream();
-    InputStream in = new FileInputStream(backupFile);
-    store.storeBlock(nextBlock, in);
-    in.close();
+    store.storeBlock(nextBlock, backupFile);
     internalClose();
 
     //

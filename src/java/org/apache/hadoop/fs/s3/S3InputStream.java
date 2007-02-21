@@ -1,20 +1,14 @@
 package org.apache.hadoop.fs.s3;
 
-import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
 
 class S3InputStream extends FSInputStream {
-
-  private int bufferSize;
 
   private FileSystemStore store;
 
@@ -26,6 +20,8 @@ class S3InputStream extends FSInputStream {
 
   private long pos = 0;
 
+  private File blockFile;
+  
   private DataInputStream blockStream;
 
   private long blockEnd = -1;
@@ -38,7 +34,6 @@ class S3InputStream extends FSInputStream {
     for (Block block : blocks) {
       this.fileLength += block.getLength();
     }
-    this.bufferSize = conf.getInt("io.file.buffer.size", 4096);    
   }
 
   @Override
@@ -128,21 +123,11 @@ class S3InputStream extends FSInputStream {
 
     // read block blocks[targetBlock] from position offsetIntoBlock
 
-    File fileBlock = File.createTempFile("s3fs-in", "");
-    fileBlock.deleteOnExit();
-    InputStream in = store.getBlockStream(blocks[targetBlock], offsetIntoBlock);
-    OutputStream out = new BufferedOutputStream(new FileOutputStream(fileBlock));
-    byte[] buf = new byte[bufferSize];
-    int numRead;
-    while ((numRead = in.read(buf)) >= 0) {
-      out.write(buf, 0, numRead);
-    }
-    out.close();
-    in.close();
+    this.blockFile = store.retrieveBlock(blocks[targetBlock], offsetIntoBlock);
 
     this.pos = target;
     this.blockEnd = targetBlockEnd;
-    this.blockStream = new DataInputStream(new FileInputStream(fileBlock));
+    this.blockStream = new DataInputStream(new FileInputStream(blockFile));
 
   }
 
@@ -153,8 +138,10 @@ class S3InputStream extends FSInputStream {
     }
     if (blockStream != null) {
       blockStream.close();
-      blockStream.close();
       blockStream = null;
+    }
+    if (blockFile != null) {
+      blockFile.delete();
     }
     super.close();
     closed = true;
