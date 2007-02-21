@@ -21,6 +21,8 @@ package org.apache.hadoop.util;
 import java.lang.reflect.Constructor;
 import java.io.*;
 import java.lang.management.*;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.*;
@@ -33,6 +35,12 @@ import org.apache.hadoop.mapred.*;
 public class ReflectionUtils {
     
     private static final Class[] emptyArray = new Class[]{};
+    /** 
+     * Cache of constructors for each class. Pins the classes so they
+     * can't be garbage collected until ReflectionUtils can be collected.
+     */
+    private static final Map<Class<?>, Constructor<?>> CONSTRUCTOR_CACHE = 
+        new ConcurrentHashMap<Class<?>, Constructor<?>>();
 
     /**
      * Check and set 'configuration' if necessary.
@@ -61,8 +69,12 @@ public class ReflectionUtils {
     public static Object newInstance(Class theClass, Configuration conf) {
         Object result;
         try {
-            Constructor meth = theClass.getDeclaredConstructor(emptyArray);
-            meth.setAccessible(true);
+            Constructor meth = CONSTRUCTOR_CACHE.get(theClass);
+            if (meth == null) {
+              meth = theClass.getDeclaredConstructor(emptyArray);
+              meth.setAccessible(true);
+              CONSTRUCTOR_CACHE.put(theClass, meth);
+            }
             result = meth.newInstance();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -152,4 +164,14 @@ public class ReflectionUtils {
         }
       }
     }
+
+    // methods to support testing
+    static void clearCache() {
+      CONSTRUCTOR_CACHE.clear();
+    }
+    
+    static int getCacheSize() {
+      return CONSTRUCTOR_CACHE.size();
+    }
+
 }

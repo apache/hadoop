@@ -78,6 +78,9 @@ Trunk (unreleased changes)
     namenode and jobtracker with include and exclude files.  (Wendy
     Chien via cutting)
 
+24. HADOOP-1017.  Cache constructors, for improved performance.
+    (Ron Bodkin via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 
