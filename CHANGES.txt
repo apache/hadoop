@@ -86,6 +86,9 @@ Trunk (unreleased changes)
     directly, so that user code is no longer required in the
     JobTracker.  (omalley via cutting)
 
+26. HAOOP-1006.  Remove obsolete '-local' option from test code.
+    (Gautam Kowshik via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

@@ -103,7 +103,7 @@ public class TestSetFile extends TestCase {
     String file = FILE;
     String compress = "NONE";
 
-    String usage = "Usage: TestSetFile (-local | -dfs <namenode:port>) [-count N] [-nocreate] [-nocheck] [-compress type] file";
+    String usage = "Usage: TestSetFile [-count N] [-nocreate] [-nocheck] [-compress type] file";
       
     if (args.length == 0) {
       System.err.println(usage);
@@ -111,7 +111,8 @@ public class TestSetFile extends TestCase {
     }
       
     int i = 0;
-    FileSystem fs = FileSystem.parseArgs(args, i, conf);      
+    Path fpath=null;
+    FileSystem fs = null;    
     try {
       for (; i < args.length; i++) {       // parse command line
         if (args[i] == null) {
@@ -127,9 +128,12 @@ public class TestSetFile extends TestCase {
         } else {
           // file is required parameter
           file = args[i];
+          fpath=new Path(file);
         }
       }
-
+      
+      fs = fpath.getFileSystem(conf);
+      
       LOG.info("count = " + count);
       LOG.info("create = " + create);
       LOG.info("check = " + check);

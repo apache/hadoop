@@ -417,7 +417,7 @@ public class TestSequenceFile extends TestCase {
     Path file = null;
     int seed = new Random().nextInt();
 
-    String usage = "Usage: SequenceFile (-local | -dfs <namenode:port>) " +
+    String usage = "Usage: SequenceFile " +
         "[-count N] " + 
         "[-seed #] [-check] [-compressType <NONE|RECORD|BLOCK>] " + 
         "-codec <compressionCodec> " + 
@@ -428,7 +428,7 @@ public class TestSequenceFile extends TestCase {
         System.exit(-1);
     }
     
-    FileSystem fs = FileSystem.parseArgs(args, 0, conf);      
+    FileSystem fs = null;
     try {
       for (int i=0; i < args.length; ++i) {       // parse command line
           if (args[i] == null) {
@@ -460,6 +460,9 @@ public class TestSequenceFile extends TestCase {
               file = new Path(args[i]);
           }
         }
+        
+      	fs = file.getFileSystem(conf);
+
         LOG.info("count = " + count);
         LOG.info("megabytes = " + megabytes);
         LOG.info("factor = " + factor);

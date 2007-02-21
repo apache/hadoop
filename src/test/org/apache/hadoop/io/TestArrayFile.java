@@ -104,7 +104,7 @@ public class TestArrayFile extends TestCase {
     boolean create = true;
     boolean check = true;
     String file = FILE;
-    String usage = "Usage: TestArrayFile (-local | -dfs <namenode:port>) [-count N] [-nocreate] [-nocheck] file";
+    String usage = "Usage: TestArrayFile [-count N] [-nocreate] [-nocheck] file";
       
     if (args.length == 0) {
       System.err.println(usage);
@@ -113,7 +113,8 @@ public class TestArrayFile extends TestCase {
 
     Configuration conf = new Configuration();
     int i = 0;
-    FileSystem fs = FileSystem.parseArgs(args, i, conf);
+    Path fpath = null;
+    FileSystem fs = null;
     try {
         for (; i < args.length; i++) {       // parse command line
             if (args[i] == null) {
@@ -127,9 +128,12 @@ public class TestArrayFile extends TestCase {
             } else {                                       
                 // file is required parameter
                 file = args[i];
+                fpath=new Path(file);
             }
         }
-
+        
+        fs = fpath.getFileSystem(conf);
+        
         LOG.info("count = " + count);
         LOG.info("create = " + create);
         LOG.info("check = " + check);
