@@ -81,6 +81,11 @@ Trunk (unreleased changes)
 24. HADOOP-1017.  Cache constructors, for improved performance.
     (Ron Bodkin via cutting)
 
+25. HADOOP-867.  Move split creation out of JobTracker to client.
+    Splits are now saved in a separate file, read by task processes
+    directly, so that user code is no longer required in the
+    JobTracker.  (omalley via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

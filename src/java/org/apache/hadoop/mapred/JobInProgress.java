@@ -21,6 +21,9 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 import org.apache.hadoop.mapred.JobHistory.Values ; 
 import java.io.*;
@@ -52,7 +55,7 @@ class JobInProgress {
     int failedMapTasks = 0 ; 
     int failedReduceTasks = 0 ; 
     JobTracker jobtracker = null;
-    HashMap hostToMaps = new HashMap();
+    Map<String,List<TaskInProgress>> hostToMaps = new HashMap();
     private int taskCompletionEventTracker = 0 ; 
     List<TaskCompletionEvent> taskCompletionEvents ; 
 
@@ -114,35 +117,35 @@ class JobInProgress {
         }
 
         //
-        // construct input splits
+        // read input splits and create a map per a split
         //
         String jobFile = profile.getJobFile();
 
         FileSystem fs = FileSystem.get(conf);
-        if (localJarFile != null) {
-            ClassLoader loader =
-              new URLClassLoader(new URL[]{ localFs.pathToFile(localJarFile).toURL() });
-            conf.setClassLoader(loader);
+        DataInputStream splitFile =
+          fs.open(new Path(conf.get("mapred.job.split.file")));
+        JobClient.RawSplit[] splits;
+        try {
+          splits = JobClient.readSplitFile(splitFile);
+        } finally {
+          splitFile.close();
         }
-        InputFormat inputFormat = conf.getInputFormat();
-
-        InputSplit[] splits = inputFormat.getSplits(conf, numMapTasks);
-
-        //
-        // sort splits by decreasing length, to reduce job's tail
-        //
-        Arrays.sort(splits, new Comparator() {
-            public int compare(Object a, Object b) {
-                long diff =
-                    ((FileSplit)b).getLength() - ((FileSplit)a).getLength();
-                return diff==0 ? 0 : (diff > 0 ? 1 : -1);
+        numMapTasks = splits.length;
+        maps = new TaskInProgress[numMapTasks];
+        for(int i=0; i < numMapTasks; ++i) {
+          maps[i] = new TaskInProgress(uniqueString, jobFile, 
+                                       splits[i].getClassName(),
+                                       splits[i].getBytes(), 
+                                       jobtracker, conf, this, i);
+          for(String host: splits[i].getLocations()) {
+            List<TaskInProgress> hostMaps = hostToMaps.get(host);
+            if (hostMaps == null) {
+              hostMaps = new ArrayList();
+              hostToMaps.put(host, hostMaps);
             }
-        });
-
-        //
-        // adjust number of map tasks to actual number of splits
-        //
-        this.numMapTasks = splits.length;
+            hostMaps.add(maps[i]);              
+          }
+        }
         
         // if no split is returned, job is considered completed and successful
         if (numMapTasks == 0) {
@@ -154,13 +157,6 @@ class JobInProgress {
             return;
         }
         
-        // create a map task for each split
-        this.maps = new TaskInProgress[numMapTasks];
-        for (int i = 0; i < numMapTasks; i++) {
-            maps[i] = new TaskInProgress(uniqueString, jobFile, splits[i], 
-                                         jobtracker, conf, this, i);
-        }
-
         //
         // Create reduce tasks
         //
@@ -169,22 +165,6 @@ class JobInProgress {
             reduces[i] = new TaskInProgress(uniqueString, jobFile, 
                                             numMapTasks, i, 
                                             jobtracker, conf, this);
-        }
-
-        //
-        // Obtain some tasktracker-cache information for the map task splits.
-        //
-        for (int i = 0; i < maps.length; i++) {
-          String hints[] = splits[i].getLocations();
-          for (int k = 0; k < hints.length; k++) {
-            ArrayList hostMaps = (ArrayList)hostToMaps.get(hints[k]);
-            if (hostMaps == null) {
-              hostMaps = new ArrayList();
-              hostToMaps.put(hints[k], hostMaps);
-            }
-            hostMaps.add(maps[i]);
-            
-          }
         }
 
         this.status = new JobStatus(status.getJobId(), 0.0f, 0.0f, JobStatus.RUNNING);
@@ -342,7 +322,8 @@ class JobInProgress {
     /**
      * Return a MapTask, if appropriate, to run on the given tasktracker
      */
-    public Task obtainNewMapTask(TaskTrackerStatus tts, int clusterSize) {
+    public Task obtainNewMapTask(TaskTrackerStatus tts, int clusterSize
+                                 ) throws IOException {
       if (! tasksInited) {
         LOG.info("Cannot create task split for " + profile.getJobId());
         return null;
@@ -370,7 +351,7 @@ class JobInProgress {
      *  work on temporary MapRed files.  
      */
     public Task obtainNewReduceTask(TaskTrackerStatus tts,
-                                    int clusterSize) {
+                                    int clusterSize) throws IOException {
         if (! tasksInited) {
             LOG.info("Cannot create task split for " + profile.getJobId());
             return null;

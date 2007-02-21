@@ -150,7 +150,7 @@ abstract class Task implements Writable, Configurable {
 
   public Progress getProgress() { return taskProgress; }
 
-  public Reporter getReporter(final TaskUmbilicalProtocol umbilical,
+  protected Reporter getReporter(final TaskUmbilicalProtocol umbilical,
                               final Progress progress) throws IOException {
     return new Reporter() {
         public void setStatus(String status) throws IOException {

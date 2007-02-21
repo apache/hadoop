@@ -44,17 +44,15 @@ import org.apache.hadoop.metrics.Updater;
 
 /** A Map task. */
 class MapTask extends Task {
+  
+  private MapTaskMetrics myMetrics = null;
 
-    public static final Log LOG =
-        LogFactory.getLog("org.apache.hadoop.mapred.MapTask");
+  private BytesWritable split = new BytesWritable();
+  private String splitClass;
+  private MapOutputFile mapOutputFile = new MapOutputFile();
+  private JobConf conf;
 
-  static {                                        // register a ctor
-    WritableFactories.setFactory
-      (MapTask.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new MapTask(); }
-       });
-  }
+  private static final Log LOG = LogFactory.getLog(MapTask.class.getName());
 
   {   // set phase for this task
     setPhase(TaskStatus.Phase.MAP); 
@@ -83,19 +81,15 @@ class MapTask extends Task {
     }
     
   }
-  
-  private MapTaskMetrics myMetrics = null;
-
-  private InputSplit split;
-  private MapOutputFile mapOutputFile = new MapOutputFile();
-  private JobConf conf;
 
   public MapTask() {}
 
   public MapTask(String jobId, String jobFile, String tipId, String taskId, 
-                 int partition, InputSplit split) {
+                 int partition, String splitClass, BytesWritable split
+                 ) throws IOException {
     super(jobId, jobFile, tipId, taskId, partition);
-    this.split = split;
+    this.splitClass = splitClass;
+    this.split.set(split);
   }
 
   public boolean isMapTask() {
@@ -107,30 +101,25 @@ class MapTask extends Task {
     Path localSplit = new Path(new Path(getJobFile()).getParent(), 
                                "split.dta");
     DataOutputStream out = FileSystem.getLocal(conf).create(localSplit);
+    Text.writeString(out, splitClass);
     split.write(out);
     out.close();
-    if (split instanceof FileSplit) {
-      conf.set("map.input.file", ((FileSplit) split).getPath().toString());
-      conf.setLong("map.input.start", ((FileSplit) split).getStart());
-      conf.setLong("map.input.length", ((FileSplit) split).getLength());
-    }
   }
   
   public TaskRunner createRunner(TaskTracker tracker) {
     return new MapTaskRunner(this, tracker, this.conf);
   }
 
-  public InputSplit getSplit() { return split; }
-
   public void write(DataOutput out) throws IOException {
     super.write(out);
+    Text.writeString(out, splitClass);
     split.write(out);
     
   }
+  
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-
-    split = new FileSplit();
+    splitClass = Text.readString(in);
     split.readFields(in);
     if (myMetrics == null) {
         myMetrics = new MapTaskMetrics("unknown");
@@ -144,6 +133,28 @@ class MapTask extends Task {
     Reporter reporter = getReporter(umbilical, getProgress());
 
     MapOutputBuffer collector = new MapOutputBuffer(umbilical, job, reporter);
+    
+    // reinstantiate the split
+    InputSplit split;
+    try {
+      split = (InputSplit) 
+         ReflectionUtils.newInstance(job.getClassByName(splitClass), job);
+    } catch (ClassNotFoundException exp) {
+      IOException wrap = new IOException("Split class " + splitClass + 
+                                         " not found");
+      wrap.initCause(exp);
+      throw wrap;
+    }
+    DataInputBuffer splitBuffer = new DataInputBuffer();
+    splitBuffer.reset(this.split.get(), 0, this.split.getSize());
+    split.readFields(splitBuffer);
+    
+    // if it is a file split, we can give more details
+    if (split instanceof FileSplit) {
+      job.set("map.input.file", ((FileSplit) split).getPath().toString());
+      job.setLong("map.input.start", ((FileSplit) split).getStart());
+      job.setLong("map.input.length", ((FileSplit) split).getLength());
+    }
       
     final RecordReader rawIn =                  // open input
       job.getInputFormat().getRecordReader(split, job, reporter);

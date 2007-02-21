@@ -21,7 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Random;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -43,12 +42,6 @@ public class PiEstimator {
    */
   
   public static class PiMapper extends MapReduceBase implements Mapper {
-    
-    /** Mapper configuration.
-     *
-     */
-    public void configure(JobConf job) {
-    }
     
     static Random r = new Random();
     

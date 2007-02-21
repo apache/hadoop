@@ -216,6 +216,8 @@ public class MiniMRCluster {
       // this timeout controls the minimum time for the test, so
       // set it down at 1 seconds.
       result.setInt("ipc.client.timeout", 1000);
+      // for debugging have all task output sent to the test output
+      JobClient.setTaskOutputFilter(result, JobClient.TaskStatusFilter.ALL);
       return result;
     }
     

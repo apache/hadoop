@@ -46,6 +46,17 @@
 </table>
 </center>
 
+<h2>Non-Running Tasks</h2>
+<table border=2 cellpadding="5" cellspacing="2">
+<tr><td align="center">Task Attempts</td><td>Status</td>
+  <%
+    for(TaskStatus status: tracker.getNonRunningTasks()) {
+      out.print("<tr><td>" + status.getTaskId() + "</td>");
+      out.print("<td>" + status.getRunState() + "</td></tr>\n");
+    }
+  %>
+</table>
+
 <h2>Local Logs</h2>
 <a href="/logs/">Log</a> directory
 

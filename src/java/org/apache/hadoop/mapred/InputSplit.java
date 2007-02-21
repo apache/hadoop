@@ -28,6 +28,13 @@ import org.apache.hadoop.io.Writable;
 public interface InputSplit extends Writable {
 
   /**
+   * Get the number of input bytes in the split.
+   * @return the number of bytes in the input split
+   * @throws IOException
+   */
+  long getLength() throws IOException;
+  
+  /**
    * Get the list of hostnames where the input split is located.
    * @return A list of prefered hostnames
    * @throws IOException

@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
@@ -38,7 +39,7 @@ import java.util.*;
  *******************************************************/
 public class JobClient extends ToolBase implements MRConstants  {
     private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");
-    public static enum TaskStatusFilter { NONE, FAILED, SUCCEEDED, ALL };
+    public static enum TaskStatusFilter { NONE, FAILED, SUCCEEDED, ALL }
     private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
 
     static long MAX_JOBPROFILE_AGE = 1000 * 2;
@@ -259,7 +260,10 @@ public class JobClient extends ToolBase implements MRConstants  {
         Path submitJobDir = new Path(job.getSystemDir(), "submit_" + Integer.toString(Math.abs(r.nextInt()), 36));
         Path submitJobFile = new Path(submitJobDir, "job.xml");
         Path submitJarFile = new Path(submitJobDir, "job.jar");
+        Path submitSplitFile = new Path(submitJobDir, "job.split");
+        
         FileSystem fs = getFs();
+        LOG.debug("default FileSystem: " + fs.getUri());
         // try getting the md5 of the archives
         URI[] tarchives = DistributedCache.getCacheArchives(job);
         URI[] tfiles = DistributedCache.getCacheFiles(job);
@@ -317,8 +321,42 @@ public class JobClient extends ToolBase implements MRConstants  {
         // Check the output specification
         job.getOutputFormat().checkOutputSpecs(fs, job);
 
+        // Create the splits for the job
+        LOG.debug("Creating splits at " + fs.makeQualified(submitSplitFile));
+        InputSplit[] splits = 
+          job.getInputFormat().getSplits(job, job.getNumMapTasks());
+        // sort the splits into order based on size, so that the biggest
+        // go first
+        Arrays.sort(splits, new Comparator() {
+          public int compare(Object a, Object b) {
+            try {
+              long left = ((InputSplit) a).getLength();
+              long right = ((InputSplit) b).getLength();
+              if (left == right) {
+                return 0;
+              } else if (left < right) {
+                return 1;
+              } else {
+                return -1;
+              }
+            } catch (IOException ie) {
+              throw new RuntimeException("Problem getting input split size",
+                                         ie);
+            }
+          }
+        });
+        // write the splits to a file for the job tracker
+        FSDataOutputStream out = fs.create(submitSplitFile);
+        try {
+          writeSplitsFile(splits, out);
+        } finally {
+          out.close();
+        }
+        job.set("mapred.job.split.file", submitSplitFile.toString());
+        job.setNumMapTasks(splits.length);
+        
         // Write job file to JobTracker's fs        
-        FSDataOutputStream out = fs.create(submitJobFile, replication);
+        out = fs.create(submitJobFile, replication);
         try {
           job.write(out);
         } finally {
@@ -336,6 +374,108 @@ public class JobClient extends ToolBase implements MRConstants  {
         }
     }
 
+    static class RawSplit implements Writable {
+      private String splitClass;
+      private BytesWritable bytes = new BytesWritable();
+      private String[] locations;
+      
+      public void setBytes(byte[] data, int offset, int length) {
+        bytes.set(data, offset, length);
+      }
+
+      public void setClassName(String className) {
+        splitClass = className;
+      }
+      
+      public String getClassName() {
+        return splitClass;
+      }
+      
+      public BytesWritable getBytes() {
+        return bytes;
+      }
+      
+      public void setLocations(String[] locations) {
+        this.locations = locations;
+      }
+      
+      public String[] getLocations() {
+        return locations;
+      }
+      
+      public void readFields(DataInput in) throws IOException {
+        splitClass = Text.readString(in);
+        bytes.readFields(in);
+        int len = WritableUtils.readVInt(in);
+        locations = new String[len];
+        for(int i=0; i < len; ++i) {
+          locations[i] = Text.readString(in);
+        }
+      }
+      
+      public void write(DataOutput out) throws IOException {
+        Text.writeString(out, splitClass);
+        bytes.write(out);
+        WritableUtils.writeVInt(out, locations.length);
+        for(int i = 0; i < locations.length; i++) {
+          Text.writeString(out, locations[i]);
+        }        
+      }
+    }
+    
+    private static final int CURRENT_SPLIT_FILE_VERSION = 0;
+    private static final byte[] SPLIT_FILE_HEADER = "SPL".getBytes();
+    
+    /** Create the list of input splits and write them out in a file for
+     *the JobTracker. The format is:
+     * <format version>
+     * <numSplits>
+     * for each split:
+     *    <RawSplit>
+     * @param splits the input splits to write out
+     * @param out the stream to write to
+     */
+    private void writeSplitsFile(InputSplit[] splits, FSDataOutputStream out) throws IOException {
+      out.write(SPLIT_FILE_HEADER);
+      WritableUtils.writeVInt(out, CURRENT_SPLIT_FILE_VERSION);
+      WritableUtils.writeVInt(out, splits.length);
+      DataOutputBuffer buffer = new DataOutputBuffer();
+      RawSplit rawSplit = new RawSplit();
+      for(InputSplit split: splits) {
+        rawSplit.setClassName(split.getClass().getName());
+        buffer.reset();
+        split.write(buffer);
+        rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
+        rawSplit.setLocations(split.getLocations());
+        rawSplit.write(out);
+      }
+    }
+
+    /**
+     * Read a splits file into a list of raw splits
+     * @param in the stream to read from
+     * @return the complete list of splits
+     * @throws IOException
+     */
+    static RawSplit[] readSplitFile(DataInput in) throws IOException {
+      byte[] header = new byte[SPLIT_FILE_HEADER.length];
+      in.readFully(header);
+      if (!Arrays.equals(SPLIT_FILE_HEADER, header)) {
+        throw new IOException("Invalid header on split file");
+      }
+      int vers = WritableUtils.readVInt(in);
+      if (vers != CURRENT_SPLIT_FILE_VERSION) {
+        throw new IOException("Unsupported split version " + vers);
+      }
+      int len = WritableUtils.readVInt(in);
+      RawSplit[] result = new RawSplit[len];
+      for(int i=0; i < len; ++i) {
+        result[i] = new RawSplit();
+        result[i].readFields(in);
+      }
+      return result;
+    }
+    
     /**
      * Get an RunningJob object to track an ongoing job.  Returns
      * null if the id does not correspond to any known job.
@@ -384,15 +524,13 @@ public class JobClient extends ToolBase implements MRConstants  {
       String lastReport = null;
       final int MAX_RETRIES = 5;
       int retries = MAX_RETRIES;
-      String outputFilterName = job.get("jobclient.output.filter", "FAILED");
-
-      if (null != outputFilterName) {
-        try {
-          jc.setTaskOutputFilter(TaskStatusFilter.valueOf(outputFilterName));
-        } catch(IllegalArgumentException e) {
-          LOG.warn("Invalid Output filter : " + outputFilterName + 
-              " Valid values are : NONE, FAILED, SUCCEEDED, ALL"); 
-        }
+      TaskStatusFilter filter;
+      try {
+        filter = getTaskOutputFilter(job);
+      } catch(IllegalArgumentException e) {
+        LOG.warn("Invalid Output filter : " + e.getMessage() + 
+        " Valid values are : NONE, FAILED, SUCCEEDED, ALL");
+        throw e;
       }
       try {
         running = jc.submitJob(job);
@@ -418,12 +556,12 @@ public class JobClient extends ToolBase implements MRConstants  {
               lastReport = report;
             }
             
-            if( jc.getTaskOutputFilter()  != TaskStatusFilter.NONE){
+            if( filter  != TaskStatusFilter.NONE){
               TaskCompletionEvent[] events = 
                 running.getTaskCompletionEvents(eventCounter); 
               eventCounter += events.length ;
               for(TaskCompletionEvent event : events ){
-                switch( jc.getTaskOutputFilter() ){
+                switch( filter ){
                 case SUCCEEDED:
                   if( event.getTaskStatus() == 
                     TaskCompletionEvent.Status.SUCCEEDED){
@@ -524,13 +662,36 @@ public class JobClient extends ToolBase implements MRConstants  {
      * output matches the filter. 
      * @param newValue task filter.
      */
+    @Deprecated
     public void setTaskOutputFilter(TaskStatusFilter newValue){
       this.taskOutputFilter = newValue ;
     }
+    
+    /**
+     * Get the task output filter out of the JobConf
+     * @param job the JobConf to examine
+     * @return the filter level
+     */
+    public static TaskStatusFilter getTaskOutputFilter(JobConf job) {
+      return TaskStatusFilter.valueOf(job.get("jobclient.output.filter", 
+                                              "FAILED"));
+    }
+    
+    /**
+     * Modify the JobConf to set the task output filter
+     * @param job the JobConf to modify
+     * @param newValue the value to set
+     */
+    public static void setTaskOutputFilter(JobConf job, 
+                                           TaskStatusFilter newValue) {
+      job.set("jobclient.output.filter", newValue.toString());
+    }
+    
     /**
      * Returns task output filter.
      * @return task filter. 
      */
+    @Deprecated
     public TaskStatusFilter getTaskOutputFilter(){
       return this.taskOutputFilter; 
     }

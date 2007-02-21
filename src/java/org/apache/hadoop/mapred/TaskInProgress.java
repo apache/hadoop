@@ -18,8 +18,10 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.commons.logging.*;
+import org.apache.hadoop.io.BytesWritable;
 
 import java.text.NumberFormat;
+import java.io.IOException;
 import java.util.*;
 
 
@@ -52,7 +54,8 @@ class TaskInProgress {
 
     // Defines the TIP
     private String jobFile = null;
-    private InputSplit split = null;
+    private String splitClass = null;
+    private BytesWritable split = null;
     private int numMaps;
     private int partition;
     private JobTracker jobtracker;
@@ -93,10 +96,12 @@ class TaskInProgress {
     /**
      * Constructor for MapTask
      */
-    public TaskInProgress(String uniqueString, String jobFile, InputSplit split, 
+    public TaskInProgress(String uniqueString, String jobFile, 
+                          String splitClass, BytesWritable split, 
                           JobTracker jobtracker, JobConf conf, 
                           JobInProgress job, int partition) {
         this.jobFile = jobFile;
+        this.splitClass = splitClass;
         this.split = split;
         this.jobtracker = jobtracker;
         this.job = job;
@@ -501,7 +506,7 @@ class TaskInProgress {
     /**
      * Return a Task that can be sent to a TaskTracker for execution.
      */
-    public Task getTaskToRun(String taskTracker) {
+    public Task getTaskToRun(String taskTracker) throws IOException {
         Task t = null;
         if( 0 == execStartTime ){
           // assume task starts running now
@@ -522,7 +527,8 @@ class TaskInProgress {
         String jobId = job.getProfile().getJobId();
 
         if (isMapTask()) {
-          t = new MapTask(jobId, jobFile, this.id, taskid, partition, split);
+          t = new MapTask(jobId, jobFile, this.id, taskid, partition, 
+                          splitClass, split);
         } else {
           t = new ReduceTask(jobId, jobFile, this.id, taskid, partition, numMaps);
         }

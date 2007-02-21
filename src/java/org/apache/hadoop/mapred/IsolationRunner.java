@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -26,7 +27,9 @@ import java.util.List;
 
 import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 
 public class IsolationRunner {
   private static final Log LOG = 
@@ -152,12 +155,15 @@ public class IsolationRunner {
     
     Task task;
     if (isMap) {
-      FileSplit split = new FileSplit(new Path(conf.get("map.input.file")),
-                                      conf.getLong("map.input.start", 0),
-                                      conf.getLong("map.input.length", 0),
-                                      conf);
+      Path localSplit = new Path(new Path(jobFilename.toString()).getParent(), 
+                                 "split.dta");
+      DataInputStream splitFile = FileSystem.getLocal(conf).open(localSplit);
+      String splitClass = Text.readString(splitFile);
+      BytesWritable split = new BytesWritable();
+      split.readFields(splitFile);
+      splitFile.close();
       task = new MapTask(jobId, jobFilename.toString(), conf.get("mapred.tip.id"), 
-          taskId, partition, split);
+                         taskId, partition, splitClass, split);
     } else {
       int numMaps = conf.getNumMapTasks();
       fillInMissingMapOutputs(local, taskId, numMaps, conf);

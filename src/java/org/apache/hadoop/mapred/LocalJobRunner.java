@@ -25,6 +25,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
@@ -95,12 +96,18 @@ class LocalJobRunner implements JobSubmissionProtocol {
         
         // run a map task for each split
         job.setNumReduceTasks(1);                 // force a single reduce task
+        DataOutputBuffer buffer = new DataOutputBuffer();
         for (int i = 0; i < splits.length; i++) {
           String mapId = "map_" + newId() ; 
           mapIds.add(mapId);
+          buffer.reset();
+          splits[i].write(buffer);
+          BytesWritable split = new BytesWritable();
+          split.set(buffer.getData(), 0, buffer.getLength());
           MapTask map = new MapTask(jobId, file, "tip_m_" + mapId, 
                                     mapId, i,
-                                    splits[i]);
+                                    splits[i].getClass().getName(),
+                                    split);
           JobConf localConf = new JobConf(job);
           map.localizeConfiguration(localConf);
           map.setConf(localConf);

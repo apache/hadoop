@@ -913,8 +913,8 @@ public class TaskTracker
         volatile TaskStatus.State runstate;
         long lastProgressReport;
         StringBuffer diagnosticInfo = new StringBuffer();
-        TaskRunner runner;
-        boolean done = false;
+        private TaskRunner runner;
+        volatile boolean done = false;
         boolean wasKilled = false;
         private JobConf defaultJobConf;
         private JobConf localJobConf;
@@ -1226,7 +1226,9 @@ public class TaskTracker
             }
             synchronized (this) {
               try {
-                runner.close();
+                if (runner != null) {
+                  runner.close();
+                }
                 defaultJobConf.deleteLocalFiles(SUBDIR + Path.SEPARATOR + 
                                                 JOBCACHE + Path.SEPARATOR + 
                                                 task.getJobId() + 
@@ -1398,6 +1400,7 @@ public class TaskTracker
             
           Task task = umbilical.getTask(taskid);
           JobConf job = new JobConf(task.getJobFile());
+          task.setConf(job);
           
           defaultConf.addFinalResource(new Path(task.getJobFile()));
 
@@ -1468,16 +1471,28 @@ public class TaskTracker
      * job tracker in the next heartbeat cycle.
      * @return a copy of the list of TaskStatus objects
      */
-    synchronized List getRunningTaskStatuses() {
-      List result = new ArrayList(runningTasks.size());
-      Iterator itr = runningTasks.values().iterator();
-      while (itr.hasNext()) {
-        TaskInProgress tip = (TaskInProgress) itr.next();
+    synchronized List<TaskStatus> getRunningTaskStatuses() {
+      List<TaskStatus> result = new ArrayList(runningTasks.size());
+      for(TaskInProgress tip: runningTasks.values()) {
         result.add(tip.createStatus());
       }
       return result;
     }
-    
+
+    /**
+     * Get the list of stored tasks on this task tracker.
+     * @return
+     */
+    synchronized List<TaskStatus> getNonRunningTasks() {
+      List<TaskStatus> result = new ArrayList(tasks.size());
+      for(Map.Entry<String, TaskInProgress> task: tasks.entrySet()) {
+        if (!runningTasks.containsKey(task.getKey())) {
+          result.add(task.getValue().createStatus());
+        }
+      }
+      return result;
+    }
+
     /**
      * Get the default job conf for this tracker.
      */

@@ -1143,7 +1143,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
      * and incorporate knowledge of DFS file placement.  But for right now, it
      * just grabs a single item out of the pending task list and hands it back.
      */
-    private synchronized Task getNewTaskForTaskTracker(String taskTracker) {
+    private synchronized Task getNewTaskForTaskTracker(String taskTracker
+                                                       ) throws IOException {
         //
         // Compute average map and reduce task numbers across pool
         //
