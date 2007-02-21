@@ -1,60 +1,18 @@
 #!/bin/sh
-# Launch an EC2 cluster of Hadoop instances and connect to the master.
+# Launch an EC2 cluster of Hadoop instances, start Hadoop, and connect to the master.
 
 # Import variables
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
-. "$bin"/hadoop-ec2-env.sh
 
-ec2-describe-group | grep $GROUP > /dev/null
-if [ ! $? -eq 0 ]; then
-  echo "Creating group $GROUP"
-  ec2-add-group $GROUP -d "Group for Hadoop clusters."
-  ec2-authorize $GROUP -p 22    # ssh
-  ec2-authorize $GROUP -p 50030 # JobTracker web interface
-  ec2-authorize $GROUP -p 50060 # TaskTracker web interface
-  ec2-authorize $GROUP -o $GROUP -u $AWS_ACCOUNT_ID 
+if ! "$bin"/launch-hadoop-cluster ; then
+  exit $?
 fi
 
-# Finding Hadoop image
-AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep available | awk '{print $2}'`
-
-# Start a cluster
-echo "Starting cluster with AMI $AMI_IMAGE"
-RUN_INSTANCES_OUTPUT=`ec2-run-instances $AMI_IMAGE -n $NO_INSTANCES -g $GROUP -k gsg-keypair -d "$NO_INSTANCES,$MASTER_HOST" | grep INSTANCE | awk '{print $2}'`
-for instance in $RUN_INSTANCES_OUTPUT; do
-  echo "Waiting for instance $instance to start"
-  while true; do
-    printf "."
-    HOSTNAME=`ec2-describe-instances $instance | grep running | awk '{print $4}'`
-    if [ ! -z $HOSTNAME ]; then
-      echo "started as $HOSTNAME"
-      break;
-    fi
-    sleep 1
-  done
-done
-
-echo "Appointing master"
-MASTER_EC2_HOST=`ec2-describe-instances | grep INSTANCE | grep running | awk '{if ($7 == 0) print $4}'`
-MASTER_IP=`dig +short $MASTER_EC2_HOST`
-echo "Master is $MASTER_EC2_HOST. Please set up DNS so $MASTER_HOST points to $MASTER_IP then press return to continue."
+echo "Press return to continue."
 read dummy
 
 echo "Waiting before trying to connect..."
 sleep 30
 
-echo "Creating slaves file and copying to master"
-ec2-describe-instances | grep INSTANCE | grep running | awk '{if ($7 != 0) print $4}' > slaves
-scp $SSH_OPTS slaves "root@$MASTER_HOST:/usr/local/hadoop-$HADOOP_VERSION/conf/slaves"
-
-echo "Formatting new cluster's filesystem"
-ssh $SSH_OPTS "root@$MASTER_HOST" "/usr/local/hadoop-$HADOOP_VERSION/bin/hadoop namenode -format"
-
-echo "Starting cluster"
-ssh $SSH_OPTS "root@$MASTER_HOST" "/usr/local/hadoop-$HADOOP_VERSION/bin/start-all.sh"
-
-echo "Finished - check progress at http://$MASTER_HOST:50030/"
-
-echo "Logging in to master $MASTER_HOST."
-ssh $SSH_OPTS "root@$MASTER_HOST"
+"$bin"/start-hadoop

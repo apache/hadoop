@@ -1,0 +1,10 @@
+#!/bin/sh
+# Login to the master node of a running Hadoop EC2 cluster.
+
+# Import variables
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+. "$bin"/hadoop-ec2-env.sh
+
+echo "Logging in to master $MASTER_HOST."
+ssh $SSH_OPTS "root@$MASTER_HOST"

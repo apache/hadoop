@@ -6,6 +6,9 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 . "$bin"/hadoop-ec2-env.sh
 
+# Remove environment script since it contains sensitive information
+rm -f "$bin"/hadoop-ec2-env.sh
+
 # Install Java
 cd /usr/local
 wget -nv -O java.bin $JAVA_BINARY_URL
@@ -28,19 +31,20 @@ sed -i -e "s|# export JAVA_HOME=.*|export JAVA_HOME=/usr/local/jdk${JAVA_VERSION
       /usr/local/hadoop-$HADOOP_VERSION/conf/hadoop-env.sh
 mkdir -p /mnt/hadoop/logs
 
-# Do Hadoop configuration for master hostname and cluster size on instance startup for runlevels 3 and 4.
-# Runlevel 4 is used by Xen. See http://developer.amazonwebservices.com/connect/message.jspa?messageID=45948#45948
-ln -s /etc/init.d/hadoop-init /etc/rc3.d/S99hadoop-init
-ln -s /etc/init.d/hadoop-init /etc/rc4.d/S99hadoop-init
+# Do configuration on instance startup
+echo "/root/hadoop-init" >> /etc/rc.d/rc.local
 
-# Configure networking
-ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
-cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+# Configure networking.
+# Delete SSH authorized_keys since it includes the key it was launched with. (Note that it is re-populated when an instance starts.)
+rm -f /root/.ssh/authorized_keys
+# Ensure logging in to new hosts is seamless.
 echo '    StrictHostKeyChecking no' >> /etc/ssh/ssh_config
 
 # Bundle and upload image
 cd ~root
-ec2-bundle-vol -d /mnt -k ~root/pk-*.pem -c ~root/cert-*.pem -u $AWS_ACCOUNT_ID -s 1536 -p hadoop-$HADOOP_VERSION
+# Don't need to delete .bash_history since it isn't written until exit.
+ec2-bundle-vol -d /mnt -k /mnt/pk-*.pem -c /mnt/cert-*.pem -u $AWS_ACCOUNT_ID -s 1536 -p hadoop-$HADOOP_VERSION
+rm /mnt/pk-*.pem /mnt/cert-*.pem
 ec2-upload-bundle -b $S3_BUCKET -m /mnt/hadoop-$HADOOP_VERSION.manifest.xml -a $AWS_ACCESS_KEY_ID -s $AWS_SECRET_ACCESS_KEY
 
 # End

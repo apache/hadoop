@@ -1,0 +1,39 @@
+#!/bin/sh
+# Start Hadoop on a cluster.
+
+# Import variables
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+. "$bin"/hadoop-ec2-env.sh
+
+echo "Asking master to say hello"
+if ! ssh $SSH_OPTS "root@$MASTER_HOST" echo "hello" ; then
+  echo "SSH failed for root@$MASTER_HOST"
+  exit 1
+fi
+
+echo "Creating slaves file and copying to master"
+ec2-describe-instances | grep INSTANCE | grep running | awk '{if ($7 != 0) print $4}' > slaves
+scp $SSH_OPTS slaves "root@$MASTER_HOST:/usr/local/hadoop-$HADOOP_VERSION/conf/slaves"
+
+echo "Copying private key to master"
+scp $SSH_OPTS $PRIVATE_KEY_PATH "root@$MASTER_HOST:/root/.ssh/id_rsa"
+ssh $SSH_OPTS "root@$MASTER_HOST" "chmod 600 /root/.ssh/id_rsa"
+
+echo "Copying private key to slaves"
+for slave in `cat slaves`; do
+  scp $SSH_OPTS $PRIVATE_KEY_PATH "root@$slave:/root/.ssh/id_rsa"
+  ssh $SSH_OPTS "root@$slave" "chmod 600 /root/.ssh/id_rsa"
+  sleep 1
+done
+
+echo "Formatting new cluster's filesystem"
+ssh $SSH_OPTS "root@$MASTER_HOST" "/usr/local/hadoop-$HADOOP_VERSION/bin/hadoop namenode -format"
+
+echo "Starting cluster"
+ssh $SSH_OPTS "root@$MASTER_HOST" "/usr/local/hadoop-$HADOOP_VERSION/bin/start-all.sh"
+
+echo "Finished - check progress at http://$MASTER_HOST:50030/"
+
+echo "Logging in to master $MASTER_HOST."
+ssh $SSH_OPTS "root@$MASTER_HOST"

@@ -1,0 +1,36 @@
+#!/bin/sh
+
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  echo "Usage: hadoop-ec2 COMMAND"
+  echo "where COMMAND is one of:"
+  echo "  create-image         create a Hadoop AMI"
+  echo "  launch-cluster       launch a cluster of Hadoop EC2 instances"
+  echo "  start-hadoop         start Hadoop daemons on a cluster"
+  echo "  login                login to the master node of the Hadoop EC2 cluster"
+  echo "  run                  'launch-cluster', 'start-hadoop', 'login'"
+  echo "  terminate-cluster    terminate a cluster of Hadoop EC2 instances"
+  exit 1
+fi
+
+# get arguments
+COMMAND=$1
+shift
+
+if [ "$COMMAND" = "create-image" ] ; then
+  . "$bin"/create-hadoop-image
+elif [ "$COMMAND" = "launch-cluster" ] ; then
+  . "$bin"/launch-hadoop-cluster
+elif [ "$COMMAND" = "start-hadoop" ] ; then
+  . "$bin"/start-hadoop
+elif [ "$COMMAND" = "run" ] ; then
+  . "$bin"/run-hadoop-cluster
+elif [ "$COMMAND" = "login" ] ; then
+  . "$bin"/login-hadoop-cluster
+elif [ "$COMMAND" = "terminate-cluster" ] ; then
+  . "$bin"/terminate-hadoop-cluster
+fi
+  

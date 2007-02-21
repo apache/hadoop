@@ -35,17 +35,17 @@ echo "Copying scripts."
 
 # Copy setup scripts
 scp $SSH_OPTS "$bin"/hadoop-ec2-env.sh "root@$HOSTNAME:"
-scp $SSH_OPTS "$bin"/image/hadoop-init "root@$HOSTNAME:/etc/init.d/hadoop-init"
+scp $SSH_OPTS "$bin"/image/hadoop-init "root@$HOSTNAME:"
 scp $SSH_OPTS "$bin"/image/create-hadoop-image-remote "root@$HOSTNAME:"
 
 # Copy private key and certificate (for bundling image)
-scp $SSH_OPTS $EC2_KEYDIR/pk-*.pem "root@$HOSTNAME:"
-scp $SSH_OPTS $EC2_KEYDIR/cert-*.pem "root@$HOSTNAME:"
+scp $SSH_OPTS $EC2_KEYDIR/pk-*.pem "root@$HOSTNAME:/mnt"
+scp $SSH_OPTS $EC2_KEYDIR/cert-*.pem "root@$HOSTNAME:/mnt"
 
 # Connect to it
 ssh $SSH_OPTS "root@$HOSTNAME" './create-hadoop-image-remote'
 
 # Register image
-ec2-register $S3_BUCKET/image.manifest.xml
+ec2-register $S3_BUCKET/hadoop-$HADOOP_VERSION.manifest.xml
 
 echo "Terminate with: ec2-terminate-instances $BOOTING_INSTANCE"
