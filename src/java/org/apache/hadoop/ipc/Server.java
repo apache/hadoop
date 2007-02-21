@@ -111,7 +111,6 @@ public abstract class Server {
 
   private boolean running = true;                 // true while server runs
   private LinkedList callQueue = new LinkedList(); // queued calls
-  private Object callDequeued = new Object();     // used by wait/notify
 
   private List connectionList = 
        Collections.synchronizedList(new LinkedList()); //maintain a list
@@ -511,10 +510,6 @@ public abstract class Server {
             }
             if (!running) break;
             call = (Call)callQueue.removeFirst(); // pop the queue
-          }
-
-          synchronized (callDequeued) {           // tell others we've dequeued
-            callDequeued.notify();
           }
 
           // throw the message away if it is too old

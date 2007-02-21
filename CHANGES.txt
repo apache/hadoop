@@ -93,6 +93,8 @@ Trunk (unreleased changes)
     The EC2 scripts now support launch of public AMIs.
     (tomwhite)
     
+28. HADOOP-1025. Remove some obsolete code in ipc.Server.  (cutting)
+
 
 Release 0.11.2 - 2007-02-16
 
