@@ -671,9 +671,8 @@ public class CopyFiles extends ToolBase {
     ArrayList<String> protocolURIs = new ArrayList<String>(uris.length);
     
     for(int i=0; i < uris.length; ++i) {
-      // uri must start w/ protocol or if protocol is dfs, allow hdfs as alias.
-      if(uris[i].startsWith(protocol) || 
-          (protocol.equalsIgnoreCase("dfs") && uris[i].startsWith("hdfs"))) {
+      // uri must start w/ protocol 
+      if(uris[i].startsWith(protocol)) {
         protocolURIs.add(uris[i]);
       }
     }
@@ -720,8 +719,8 @@ public class CopyFiles extends ToolBase {
       //Source paths
       srcPaths = fetchSrcURIs(conf, srcURI);  
       
-      // Protocol - 'dfs://'
-      String[] dfsUrls = parseInputFile("dfs", srcPaths);
+      // Protocol - 'hdfs://'
+      String[] dfsUrls = parseInputFile(HDFS, srcPaths);
       if(dfsUrls != null) {
         for(int i=0; i < dfsUrls.length; ++i) {
           copy(conf, dfsUrls[i], destPath, false, ignoreReadFailures);

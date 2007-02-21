@@ -44,7 +44,7 @@ public class DistributedCache {
   /**
    * 
    * @param cache the cache to be localized, this should be specified as 
-   * new URI(dfs://hostname:port/absoulte_path_to_file#LINKNAME). If no schema 
+   * new URI(hdfs://hostname:port/absoulte_path_to_file#LINKNAME). If no schema 
    * or hostname:port is provided the file is assumed to be in the filesystem
    * being used in the Configuration
    * @param conf The Confguration file which contains the filesystem
@@ -137,7 +137,7 @@ public class DistributedCache {
   /*
    * Returns the relative path of the dir this cache will be localized in
    * relative path that this cache will be localized in. For
-   * dfs://hostname:port/absolute_path -- the relative path is
+   * hdfs://hostname:port/absolute_path -- the relative path is
    * hostname/absolute path -- if it is just /absolute_path -- then the
    * relative path is hostname of DFS this mapred cluster is running
    * on/absolute_path
@@ -147,7 +147,7 @@ public class DistributedCache {
     String fsname = cache.getScheme();
     String path;
     FileSystem dfs = FileSystem.get(conf);
-    if ("dfs".equals(fsname)) {
+    if ("hdfs".equals(fsname)) {
       path = cache.getHost() + cache.getPath();
     } else {
       String[] split = dfs.getName().split(":");
@@ -348,7 +348,7 @@ public class DistributedCache {
   
   private static String getFileSysName(URI url) {
     String fsname = url.getScheme();
-    if ("dfs".equals(fsname)) {
+    if ("hdfs".equals(fsname)) {
       String host = url.getHost();
       int port = url.getPort();
       return (port == (-1)) ? host : (host + ":" + port);

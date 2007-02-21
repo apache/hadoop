@@ -181,9 +181,9 @@ System.out.println("HERE:"+inDir);
       archive2 = "file://" + cachePath + "/test.zip";
       file1 = "file://" + cachePath + "/test.txt";
     } else {
-      archive1 = "dfs://" + fileSys + cachePath + "/test.jar";
-      archive2 = "dfs://" + fileSys + cachePath + "/test.zip";
-      file1 = "dfs://" + fileSys + cachePath + "/test.txt";
+      archive1 = "hdfs://" + fileSys + cachePath + "/test.jar";
+      archive2 = "hdfs://" + fileSys + cachePath + "/test.zip";
+      file1 = "hdfs://" + fileSys + cachePath + "/test.txt";
     }
     URI uri1 = null;
     URI uri2 = null;

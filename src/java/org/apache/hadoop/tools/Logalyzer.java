@@ -177,7 +177,7 @@ public class Logalyzer {
   doArchive(String logListURI, String archiveDirectory)
   throws IOException
   {
-    String destURL = new String("dfs://" + fsConfig.get("fs.default.name", "local") + 
+    String destURL = new String("hdfs://" + fsConfig.get("fs.default.name", "local") + 
         archiveDirectory);
     CopyFiles.copy(fsConfig, logListURI, destURL, true, false);
   }
