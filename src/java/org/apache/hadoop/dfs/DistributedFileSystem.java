@@ -343,12 +343,11 @@ public class DistributedFileSystem extends FileSystem {
       return dfs.setSafeMode( action );
     }
 
-    /**
-     * Set, clear decommission of a set of datanodes.
+    /*
+     * Refreshes the list of hosts and excluded hosts from the configured 
+     * files.  
      */
-    public boolean decommission(FSConstants.DecommissionAction action,
-                                String[] nodes)
-    throws IOException {
-      return dfs.decommission(action, nodes);
+    public void refreshNodes() throws IOException {
+      dfs.refreshNodes();
     }
 }

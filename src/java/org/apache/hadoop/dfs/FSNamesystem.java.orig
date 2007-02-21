@@ -204,9 +204,6 @@ class FSNamesystem implements FSConstants {
     // for block replicas placement
     Replicator replicator = new Replicator();
 
-    private HostsFileReader hostsReader; 
-    private Daemon dnthread = null;
-
     /**
      * dirs is a list oif directories where the filesystem directory state 
      * is stored
@@ -255,11 +252,6 @@ class FSNamesystem implements FSConstants {
         replthread.start();
         this.systemStart = now();
         this.startTime = new Date(systemStart); 
-        
-        this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
-                                               conf.get("dfs.hosts.exclude",""));
-        this.dnthread = new Daemon(new DecommissionedMonitor());
-        dnthread.start();
 
         this.infoPort = conf.getInt("dfs.info.port", 50070);
         this.infoBindAddress = conf.get("dfs.info.bindAddress", "0.0.0.0");
@@ -300,7 +292,6 @@ class FSNamesystem implements FSConstants {
             infoServer.stop();
             hbthread.join(3000);
             replthread.join(3000);
-            dnthread.join(3000);
         } catch (InterruptedException ie) {
         } finally {
           // using finally to ensure we also wait for lease daemon
@@ -1584,11 +1575,6 @@ class FSNamesystem implements FSConstants {
           (System.currentTimeMillis() - heartbeatExpireInterval));
     }
     
-    void setDatanodeDead(DatanodeID nodeID) throws IOException {
-        DatanodeDescriptor node = getDatanode(nodeID);
-        node.setLastUpdate(0);
-    }
-
     /**
      * The given node has reported in.  This method should:
      * 1) Record the heartbeat, so the datanode isn't timed out
@@ -1620,12 +1606,6 @@ class FSNamesystem implements FSConstants {
               return true;
           }
           
-          // Check if this datanode should actually be shutdown instead. 
-          if (shouldNodeShutdown(nodeinfo)) {
-              setDatanodeDead(nodeinfo);
-              throw new DisallowedDatanodeException(nodeinfo);
-          }
-
           if( !nodeinfo.isAlive ) {
               return true;
           } else {
@@ -1936,12 +1916,6 @@ class FSNamesystem implements FSConstants {
           +"from "+nodeID.getName()+" "+newReport.length+" blocks" );
         DatanodeDescriptor node = getDatanode( nodeID );
 
-        // Check if this datanode should actually be shutdown instead.
-        if (shouldNodeShutdown(node)) {
-          setDatanodeDead(node);
-          throw new DisallowedDatanodeException(node);
-        }
-
         //
         // Modify the (block-->datanode) map, according to the difference
         // between the old and new block report.
@@ -2224,16 +2198,8 @@ class FSNamesystem implements FSConstants {
                 "Unexpected exception.  Got blockReceived message from node " 
                 + block.getBlockName() + ", but there is no info for it");
         }
-
         NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockReceived: "
                 +block.getBlockName()+" is received from " + nodeID.getName() );
-
-        // Check if this datanode should actually be shutdown instead.
-        if (shouldNodeShutdown(node)) {
-            setDatanodeDead(node);
-            throw new DisallowedDatanodeException(node);
-        }
-
         //
         // Modify the blocks->datanode map and node's map.
         // 
@@ -2294,33 +2260,100 @@ class FSNamesystem implements FSConstants {
       }
     }
 
-
     /**
-     * Start decommissioning the specified datanode. 
+     * Start decommissioning the specified datanodes. If a datanode is
+     * already being decommissioned, then this is a no-op.
      */
-    private void startDecommission (DatanodeDescriptor node) 
-        throws IOException {
+    public synchronized void startDecommission (String[] nodes) 
+                             throws IOException {
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot decommission node ", safeMode);
+      }
+      boolean isError = false;
+      String badnodes = "";
 
-      if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
-        LOG.info("Start Decommissioning node " + node.name);
-        node.startDecommission();
-        //
-        // all the blocks that reside on this node have to be 
-        // replicated.
-        Block decommissionBlocks[] = node.getBlocks();
-        for (int j = 0; j < decommissionBlocks.length; j++) {
-            neededReplications.update(decommissionBlocks[j], -1, 0);
+      synchronized (datanodeMap) {
+        for (int i = 0; i < nodes.length; i++) {
+          boolean found = false;
+          for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
+               it.hasNext(); ) {
+            DatanodeDescriptor node = it.next();
+
+            //
+            // If this is a node that we are interested in, set its admin state.
+            //
+            if (node.getName().equals(nodes[i]) || 
+                node.getHost().equals(nodes[i])) {
+              found = true;
+              if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
+                LOG.info("Start Decommissioning node " + node.name);
+                node.startDecommission();
+                //
+                // all those blocks that resides on this node has to be 
+                // replicated.
+                Block decommissionBlocks[] = node.getBlocks();
+                for (int j = 0; j < decommissionBlocks.length; j++) {
+                    neededReplications.update(decommissionBlocks[j], -1, 0);
+                }
+              }
+              break;
+            }
+          }
+          //
+          // Record the fact that a specified node was not found
+          //
+          if (!found) {
+            badnodes += nodes[i] + " ";
+            isError = true;
+          }
         }
+      }
+      if (isError) {
+        throw new IOException("Nodes " + badnodes + " not found");
       }
     }
 
     /**
      * Stop decommissioning the specified datanodes.
      */
-    public void stopDecommission (DatanodeDescriptor node) 
+    public synchronized void stopDecommission (String[] nodes) 
                              throws IOException {
-      LOG.info("Stop Decommissioning node " + node.name);
-      node.stopDecommission();
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot decommission node ", safeMode);
+      }
+      boolean isError = false;
+      String badnodes = "";
+
+      synchronized (datanodeMap) {
+        for (int i = 0; i < nodes.length; i++) {
+          boolean found = false;
+          for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
+               it.hasNext(); ) {
+            DatanodeDescriptor node = it.next();
+
+            //
+            // If this is a node that we are interested in, set its admin state.
+            //
+            if (node.getName().equals(nodes[i]) || 
+                node.getHost().equals(nodes[i])) {
+              LOG.info("Stop Decommissioning node " + node.name);
+              found = true;
+              node.stopDecommission();
+              break;
+            }
+          }
+          //
+          // Record the fact that a specified node was not found
+          //
+          if (!found) {
+            badnodes += nodes[i] + " ";
+            isError = true;
+          }
+        }
+      }
+      if (isError) {
+        throw new IOException("Nodes " + badnodes + " not found");
+      }
     }
 
     /**
@@ -2587,7 +2620,7 @@ class FSNamesystem implements FSConstants {
                 && (excessBlocks == null || ! excessBlocks.contains(block))) {
               // filter out containingNodes that are marked for decommission.
               List<DatanodeDescriptor> nodes = 
-                  filterDecommissionedNodes(containingNodes);
+                filterDecommissionedNodes(containingNodes);
               int numCurrentReplica = nodes.size();
               DatanodeDescriptor targets[] = replicator.chooseTarget(
                   Math.min( fileINode.getReplication() - numCurrentReplica,
@@ -3124,124 +3157,6 @@ class FSNamesystem implements FSConstants {
       
     } //end of Replicator
 
-
-    // Keeps track of which datanodes are allowed to connect to the namenode.
-        
-    private boolean inHostsList(DatanodeID node) {
-      Set<String> hostsList = hostsReader.getHosts();
-      return (hostsList.isEmpty() || 
-              hostsList.contains(node.getName()) || 
-              hostsList.contains(node.getHost()));
-    }
-
-
-    private boolean inExcludedHostsList(DatanodeID node) {
-      Set<String> excludeList = hostsReader.getExcludedHosts();
-      return (excludeList.contains(node.getName()) ||
-              excludeList.contains(node.getHost()));
-    }
-
-    /**
-     * Rereads the files to update the hosts and exclude lists.  It
-     * checks if any of the hosts have changed states:
-     * 1. Added to hosts  --> no further work needed here.
-     * 2. Removed from hosts --> mark AdminState as decommissioned. 
-     * 3. Added to exclude --> start decommission.
-     * 4. Removed from exclude --> stop decommission.
-     */
-    void refreshNodes() throws IOException {
-      hostsReader.refresh();
-      synchronized (this) {
-        for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
-             it.hasNext(); ) {
-          DatanodeDescriptor node = it.next();
-          // Check if not include.
-          if (!inHostsList(node)) {
-            node.setDecommissioned();  // case 2.
-          } else {
-            if (inExcludedHostsList(node)) {
-              if (!node.isDecommissionInProgress() && 
-                  !node.isDecommissioned()) {
-                startDecommission(node);   // case 3.
-              }
-            } else {
-              if (node.isDecommissionInProgress() || 
-                  node.isDecommissioned()) {
-                stopDecommission(node);   // case 4.
-              } 
-            }
-          }
-        }
-      } 
-      
-    }
-    
-
-    /**
-     * Checks if the node is not on the hosts list.  If it is not, then
-     * it will be ignored.  If the node is in the hosts list, but is also 
-     * on the exclude list, then it will be decommissioned.
-     * Returns FALSE if node is rejected for registration. 
-     * Returns TRUE if node is registered (including when it is on the 
-     * exclude list and is being decommissioned). 
-     */
-    public synchronized boolean verifyNodeRegistration(DatanodeRegistration nodeReg) 
-      throws IOException {
-      if (!inHostsList(nodeReg)) {
-        return false;    
-      }
-      if (inExcludedHostsList(nodeReg)) {
-        DatanodeDescriptor node = getDatanode(nodeReg);
-        if (!checkDecommissionStateInternal(node)) {
-          startDecommission(node);
-        }
-      } 
-      return true;
-    }
-    
-    /**
-     * Checks if the Admin state bit is DECOMMISSIONED.  If so, then 
-     * we should shut it down. 
-     * 
-     * Returns true if the node should be shutdown.
-     */
-    private boolean shouldNodeShutdown(DatanodeDescriptor node) {
-      return (node.isDecommissioned());
-    }
-
-    /**
-     * Check if any of the nodes being decommissioned has finished 
-     * moving all its datablocks to another replica. This is a loose
-     * heuristic to determine when a decommission is really over.
-     */
-    public synchronized void decommissionedDatanodeCheck() {
-      for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
-           it.hasNext(); ) {
-        DatanodeDescriptor node = it.next();  
-        checkDecommissionStateInternal(node);
-      }
-    }
-    
-    /**
-     * Periodically calls decommissionedDatanodeCheck().
-     */
-    class DecommissionedMonitor implements Runnable {
-        
-      public void run() {
-        while (fsRunning) {
-          try {
-            decommissionedDatanodeCheck();
-          } catch (Exception e) {
-            FSNamesystem.LOG.info(StringUtils.stringifyException(e));
-          }
-          try {
-            Thread.sleep(1000 * 60 * 5);
-          } catch (InterruptedException ie) {
-          }
-        }
-      }
-    }
-    
 
     /**
      * Information about the file while it is being written to.

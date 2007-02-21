@@ -132,61 +132,23 @@ public class DFSAdmin extends FsShell {
     }
 
     /**
-     * Command related to decommission of a datanode.
-     * Usage: java DFSAdmin -decommission [enter | leave | get]
-     * @param argv List of command line parameters. Each of these items
-              could be a hostname or a hostname:portname.
-     * @param idx The index of the command that is being processed.
-     * @exception IOException if the filesystem does not exist.
-     * @return 0 on success, non zero on error.
+     * Command to ask the namenode to reread the hosts and excluded hosts 
+     * file.
+     * Usage: java DFSAdmin -refreshNodes
+     * @exception IOException 
      */
-    public int decommission(String[] argv, int idx) throws IOException {
+    public int refreshNodes() throws IOException {
       int exitCode = -1;
 
       if (!(fs instanceof DistributedFileSystem)) {
         System.out.println("FileSystem is " + fs.getName());
         return exitCode;
       }
-      if (idx >= argv.length - 1) {
-        printUsage("-decommission");
-        return exitCode;
-      }
-      
-      //
-      // Copy all the datanode names to nodes[]
-      //
-      String[] nodes = new String[argv.length - idx - 1];
-      for (int i = idx + 1, j = 0; i < argv.length; i++, j++) {
-        nodes[j] = argv[i];
-      }
 
-      FSConstants.DecommissionAction action;
-
-      if ("set".equalsIgnoreCase(argv[idx])) {
-        action = FSConstants.DecommissionAction.DECOMMISSION_SET;
-      } else if ("clear".equalsIgnoreCase(argv[idx])) {
-        action = FSConstants.DecommissionAction.DECOMMISSION_CLEAR;
-      } else if ("get".equalsIgnoreCase(argv[idx])) {
-        action = FSConstants.DecommissionAction.DECOMMISSION_GET;
-      } else {
-        printUsage("-decommission");
-        return exitCode;
-      }
       DistributedFileSystem dfs = (DistributedFileSystem) fs;
-      boolean mode = dfs.decommission(action, nodes);
-
-      if (action == FSConstants.DecommissionAction.DECOMMISSION_GET) {
-        if (mode) {
-          System.out.println("Node(s) has finished decommission");
-        }
-        else {
-          System.out.println("Node(s) have not yet been decommissioned");
-        }
-        return 0;
-      }
-      if (mode) {
-        return 0; // success
-      }
+      dfs.refreshNodes();
+      exitCode = 0;
+   
       return exitCode;
     }
 
@@ -197,19 +159,18 @@ public class DFSAdmin extends FsShell {
     public void printUsage(String cmd) {
           if ("-report".equals(cmd)) {
             System.err.println("Usage: java DFSAdmin"
-                + " [report]");
+                + " [-report]");
           } else if ("-safemode".equals(cmd)) {
             System.err.println("Usage: java DFSAdmin"
                 + " [-safemode enter | leave | get | wait]");
-          } else if ("-decommission".equals(cmd)) {
+          } else if ("-refreshNodes".equals(cmd)) {
             System.err.println("Usage: java DFSAdmin"
-                + " [-decommission set | clear | get "
-                + "[datanode1[, datanode2..]]");
+                + " [-refreshNodes]");
           } else {
             System.err.println("Usage: java DFSAdmin");
             System.err.println("           [-report]");
             System.err.println("           [-safemode enter | leave | get | wait]");
-            System.err.println("           [-decommission set | clear | get]");
+            System.err.println("           [-refreshNodes]");
           }
     }
 
@@ -242,12 +203,13 @@ public class DFSAdmin extends FsShell {
                   printUsage(cmd);
                   return exitCode;
                 }
-        } else if ("-decommission".equals(cmd)) {
-                if (argv.length < 2) {
+        } else if ("-refreshNodes".equals(cmd)) {
+                if (argv.length != 1) {
                   printUsage(cmd);
                   return exitCode;
                 }
         }
+
 
         // initialize DFSAdmin
         try {
@@ -267,8 +229,8 @@ public class DFSAdmin extends FsShell {
                 report();
             } else if ("-safemode".equals(cmd)) {
                 setSafeMode(argv, i);
-            } else if ("-decommission".equals(cmd)) {
-                exitCode = decommission(argv, i);
+            } else if ("-refreshNodes".equals(cmd)) {
+                exitCode = refreshNodes();
             } else {
                 exitCode = -1;
                 System.err.println(cmd.substring(1) + ": Unknown command");

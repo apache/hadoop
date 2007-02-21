@@ -74,6 +74,10 @@ Trunk (unreleased changes)
 22. HADOOP-947.  Improve performance of datanode decomissioning.
     (Dhruba Borthakur via cutting)
 
+23. HADOOP-442.  Permit one to specify hosts allowed to connect to
+    namenode and jobtracker with include and exclude files.  (Wendy
+    Chien via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

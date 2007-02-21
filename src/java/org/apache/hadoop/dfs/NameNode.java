@@ -515,24 +515,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       return namesystem.isInSafeMode();
     }
 
-    /**
-     * Set administrative commands to decommission datanodes.
+    /*
+     * Refresh the list of datanodes that the namenode should allow to  
+     * connect.  Uses the files list in the configuration to update the list. 
      */
-    public boolean decommission(DecommissionAction action, String[] nodes)
-                                throws IOException {
-      boolean ret = true;
-      switch (action) {
-        case DECOMMISSION_SET: // decommission datanode(s)
-          namesystem.startDecommission(nodes);
-          break;
-        case DECOMMISSION_CLEAR: // remove decommission state of a datanode
-          namesystem.stopDecommission(nodes);
-          break;
-        case DECOMMISSION_GET: // are all the node decommissioned?
-          ret = namesystem.checkDecommissioned(nodes);
-          break;
-        }
-        return ret;
+    public void refreshNodes() throws IOException {
+      namesystem.refreshNodes();
     }
 
     /**
@@ -564,8 +552,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     public DatanodeRegistration register( DatanodeRegistration nodeReg,
                                           String networkLocation
                                         ) throws IOException {
+      if (!namesystem.verifyNodeRegistration(nodeReg)) {
+        throw new DisallowedDatanodeException( nodeReg );
+      }
       verifyVersion( nodeReg.getVersion() );
       namesystem.registerDatanode( nodeReg, networkLocation );
+      
       return nodeReg;
     }
     
@@ -650,7 +642,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /** 
      * Verify request.
      * 
-     * Verifies correctness of the datanode version and registration ID.
+     * Verifies correctness of the datanode version, registration ID, and 
+     * if the datanode does not need to be shutdown.
      * 
      * @param nodeReg data node registration
      * @throws IOException

@@ -499,7 +499,8 @@ public class DataNode implements FSConstants, Runnable {
           return;
         } catch( RemoteException re ) {
           String reClass = re.getClassName();
-          if( UnregisteredDatanodeException.class.getName().equals( reClass )) {
+          if( UnregisteredDatanodeException.class.getName().equals( reClass ) ||
+              DisallowedDatanodeException.class.getName().equals( reClass )) {
             LOG.warn( "DataNode is shutting down: " + 
                       StringUtils.stringifyException(re));
             shutdown();

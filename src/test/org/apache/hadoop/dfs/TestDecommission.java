@@ -24,6 +24,7 @@ import java.net.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FSOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -35,9 +36,25 @@ public class TestDecommission extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int fileSize = 16384;
-  static final int numDatanodes = 4;
+  static final int numDatanodes = 5;
 
   Random myrand = new Random();
+  Path hostsFile;
+  Path excludeFile;
+
+  private enum NodeState {NORMAL, DECOMMISSION_INPROGRESS, DECOMMISSIONED; }
+
+  private void writeConfigFile(FileSystem fs, Path name, String node) 
+      throws IOException {
+    // delete if it already exists
+    if (fs.exists(name)) {
+      fs.delete(name);
+    }
+    FSDataOutputStream stm = fs.create(name);
+    stm.writeBytes(node);
+    stm.writeBytes("\n");
+    stm.close();
+  }
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
   throws IOException {
@@ -66,7 +83,11 @@ public class TestDecommission extends TestCase {
    * replication factor is 1 more than the specified one.
    */
   private void checkFile(FileSystem fileSys, Path name, int repl,
-                         String[] downnodes) throws IOException {
+                         String downnode) throws IOException {
+    //
+    // sleep an additional 10 seconds for the blockreports from the datanodes
+    // to arrive. 
+    //
     FSInputStream is = fileSys.openRaw(name);
     DFSClient.DFSInputStream dis = (DFSClient.DFSInputStream) is;
     DatanodeInfo[][] dinfo = dis.getDataNodes();
@@ -75,12 +96,10 @@ public class TestDecommission extends TestCase {
       int hasdown = 0;
       DatanodeInfo[] nodes = dinfo[blk];
       for (int j = 0; j < nodes.length; j++) {     // for each replica
-        for (int k = 0; downnodes != null && k < downnodes.length; k++) {
-          if (nodes[j].getName().equals(downnodes[k])) {
-            hasdown++;
-            System.out.println("Block " + blk + " replica " +
-                               nodes[j].getName() + " is decommissioned.");
-          }
+        if (nodes[j].getName().equals(downnode)) {
+          hasdown++;
+          System.out.println("Block " + blk + " replica " +
+                             nodes[j].getName() + " is decommissioned.");
         }
       }
       System.out.println("Block " + blk + " has " + hasdown +
@@ -107,74 +126,92 @@ public class TestDecommission extends TestCase {
   /*
    * decommission one random node.
    */
-  private String[] decommissionNode(DFSClient client, FileSystem filesys)
-                                    throws IOException {
+  private String decommissionNode(DFSClient client, 
+                                  FileSystem filesys,
+                                  FileSystem localFileSys)
+      throws IOException {
     DistributedFileSystem dfs = (DistributedFileSystem) filesys;
     DatanodeInfo[] info = client.datanodeReport();
 
     //
     // pick one datanode randomly.
     //
-    int index = myrand.nextInt(info.length);
+    int index = 0;
+    boolean found = false;
+    while (!found) {
+      index = myrand.nextInt(info.length);
+      if (!info[index].isDecommissioned()) {
+        found = true;
+      }
+    }
     String nodename = info[index].getName();
     System.out.println("Decommissioning node: " + nodename);
-    String[] nodes = new String[1];
-    nodes[0] = nodename;
-    dfs.decommission(FSConstants.DecommissionAction.DECOMMISSION_SET, nodes);
-    return nodes;
+
+    // write nodename into the exclude file. 
+    writeConfigFile(localFileSys, excludeFile, nodename);
+    dfs.refreshNodes();
+    return nodename;
   }
 
   /*
    * put node back in action
    */
-  private void commissionNode(DFSClient client, FileSystem filesys,
-                              String[] nodes) throws IOException {
+  private void commissionNode(FileSystem filesys, FileSystem localFileSys,
+                              String node) throws IOException {
     DistributedFileSystem dfs = (DistributedFileSystem) filesys;
-    DatanodeInfo[] info = client.datanodeReport();
 
-    for (int i = 0; i < nodes.length; i++) {
-      System.out.println("Putting node back in action: " + nodes[i]);
-    }
-    dfs.decommission(FSConstants.DecommissionAction.DECOMMISSION_CLEAR, nodes);
+    System.out.println("Commissioning nodes.");
+    writeConfigFile(localFileSys, excludeFile, "");
+    dfs.refreshNodes();
   }
 
-  /* 
-   * Check that node(s) were decommissioned
+  /*
+   * Check if node is in the requested state.
    */
-  private void checkNodeDecommission(DFSClient client, FileSystem filesys,
-                                     String[] nodes) throws IOException {
+  private boolean checkNodeState(FileSystem filesys, 
+                                 String node, 
+                                 NodeState state) throws IOException {
     DistributedFileSystem dfs = (DistributedFileSystem) filesys;
-    boolean ret = dfs.decommission(
-                    FSConstants.DecommissionAction.DECOMMISSION_GET, nodes);
-    assertEquals("State of Decommissioned Datanode(s) ", ret, true);
+    boolean done = false;
+    boolean foundNode = false;
+    DatanodeInfo[] datanodes = dfs.getDataNodeStats();
+    for (int i = 0; i < datanodes.length; i++) {
+      DatanodeInfo dn = datanodes[i];
+      if (dn.getName().equals(node)) {
+        if (state == NodeState.DECOMMISSIONED) {
+          done = dn.isDecommissioned();
+        } else if (state == NodeState.DECOMMISSION_INPROGRESS) {
+          done = dn.isDecommissionInProgress();
+        } else {
+          done = (!dn.isDecommissionInProgress() && !dn.isDecommissioned());
+        }
+        System.out.println(dn.getDatanodeReport());
+        foundNode = true;
+      }
+    }
+    if (!foundNode) {
+      throw new IOException("Could not find node: " + node);
+    }
+    return done;
   }
 
   /* 
    * Wait till node is fully decommissioned.
    */
-  private void waitNodeDecommission(DFSClient client, FileSystem filesys,
-                                     String[] nodes) throws IOException {
+  private void waitNodeState(FileSystem filesys,
+                             String node,
+                             NodeState state) throws IOException {
     DistributedFileSystem dfs = (DistributedFileSystem) filesys;
-    boolean done = dfs.decommission(
-                     FSConstants.DecommissionAction.DECOMMISSION_GET, nodes);
+    boolean done = checkNodeState(filesys, node, state);
     while (!done) {
-      System.out.println("Waiting for nodes " + nodes[0] +
-                         " to be fully decommissioned...");
+      System.out.println("Waiting for node " + node +
+                         " to change state...");
       try {
-        Thread.sleep(5000L);
+        Thread.sleep(1000);
       } catch (InterruptedException e) {
         // nothing
       }
-      done = dfs.decommission(FSConstants.DecommissionAction.DECOMMISSION_GET,
-                              nodes);
-    }
-    //
-    // sleep an additional 10 seconds for the blockreports from the datanodes
-    // to arrive. 
-    //
-    try {
-      Thread.sleep(10 * 1000L);
-    } catch (Exception e) {
+      done = checkNodeState(filesys, node, state);
     }
   }
   
@@ -183,6 +220,17 @@ public class TestDecommission extends TestCase {
    */
   public void testDecommission() throws IOException {
     Configuration conf = new Configuration();
+
+    // Set up the hosts/exclude files.
+    FileSystem localFileSys = FileSystem.getLocal(conf);
+    Path workingDir = localFileSys.getWorkingDirectory();
+    Path dir = new Path(workingDir, "build/test/data/work-dir/decommission");
+    assertTrue(localFileSys.mkdirs(dir));
+    hostsFile = new Path(dir, "hosts");
+    excludeFile = new Path(dir, "exclude");
+    conf.set("dfs.hosts.exclude", excludeFile.toString());
+    writeConfigFile(localFileSys, excludeFile, "");
+
     MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, numDatanodes, false);
     // Now wait for 15 seconds to give datanodes chance to register
     // themselves and to report heartbeat
@@ -209,11 +257,16 @@ public class TestDecommission extends TestCase {
         Path file1 = new Path("smallblocktest.dat");
         writeFile(fileSys, file1, 3);
         checkFile(fileSys, file1, 3);
-        String downnodes[] = decommissionNode(client, fileSys);
-        waitNodeDecommission(client, fileSys, downnodes);
-        checkFile(fileSys, file1, 3, downnodes);
-        commissionNode(client, fileSys, downnodes);
+
+        String downnode  = decommissionNode(client, fileSys, localFileSys);
+        waitNodeState(fileSys, downnode, NodeState.DECOMMISSION_INPROGRESS);
+        commissionNode(fileSys, localFileSys, downnode);
+        waitNodeState(fileSys, downnode, NodeState.NORMAL);
+        downnode  = decommissionNode(client, fileSys, localFileSys);
+        waitNodeState(fileSys, downnode, NodeState.DECOMMISSIONED);
+        checkFile(fileSys, file1, 3, downnode);
         cleanupFile(fileSys, file1);
+        cleanupFile(localFileSys, dir);
       }
     } catch (IOException e) {
       info = client.datanodeReport();

@@ -23,7 +23,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.*;
 
 import java.io.*;
 import java.net.*;
@@ -449,6 +449,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     Random r = new Random();
 
     private int maxCurrentTasks;
+    private HostsFileReader hostsReader;
 
     //
     // Properties to maintain while running Jobs and Tasks:
@@ -572,6 +573,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         // Same with 'localDir' except it's always on the local disk.
         jobConf.deleteLocalFiles(SUBDIR);
 
+        // Read the hosts/exclude files to restrict access to the jobtracker.
+        this.hostsReader = new HostsFileReader(conf.get("mapred.hosts", ""),
+                                               conf.get("mapred.hosts.exclude", ""));
+                                           
         // Set ports, start RPC servers, etc.
         InetSocketAddress addr = getAddress(conf);
         this.localMachine = addr.getHostName();
@@ -962,7 +967,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
               " (initialContact: " + initialContact + 
               " acceptNewTasks: " + acceptNewTasks + ")" +
               " with responseId: " + responseId);
-      
+
+        // Make sure heartbeat is from a tasktracker allowed by the jobtracker.
+        if (!acceptTaskTracker(status)) {
+          throw new DisallowedTaskTrackerException(status);
+        }
+
         // First check if the last heartbeat response got through 
         String trackerName = status.getTrackerName();
         HeartbeatResponse prevHeartbeatResponse =
@@ -1033,6 +1043,32 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         removeMarkedTasks(trackerName);
         
         return response;
+    }
+    
+    /**
+     * Return if the specified tasktracker is in the hosts list, 
+     * if one was configured.  If none was configured, then this 
+     * returns true.
+     */
+    private boolean inHostsList(TaskTrackerStatus status) {
+      Set<String> hostsList = hostsReader.getHosts();
+      return (hostsList.isEmpty() || hostsList.contains(status.getHost()));
+    }
+
+    /**
+     * Return if the specified tasktracker is in the exclude list.
+     */
+    private boolean inExcludedHostsList(TaskTrackerStatus status) {
+      Set<String> excludeList = hostsReader.getExcludedHosts();
+      return excludeList.contains(status.getHost());
+    }
+
+    /**
+     * Returns true if the tasktracker is in the hosts list and 
+     * not in the exclude list. 
+     */
+    private boolean acceptTaskTracker(TaskTrackerStatus status) {
+      return (inHostsList(status) && !inExcludedHostsList(status));
     }
     
     /**

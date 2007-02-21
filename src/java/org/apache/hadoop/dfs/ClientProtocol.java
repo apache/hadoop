@@ -29,7 +29,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
-  public static final long versionID = 7L;  // periodic checkpoint added
+    public static final long versionID = 8L; // refreshNodes added
   
     ///////////////////////////////////////
     // File contents
@@ -313,7 +313,13 @@ interface ClientProtocol extends VersionedProtocol {
      */
     public boolean setSafeMode( FSConstants.SafeModeAction action ) throws IOException;
 
-    public boolean decommission( FSConstants.DecommissionAction action, String[] nodenames) throws IOException;
+    /**
+     * Tells the namenode to reread the hosts and exclude files. 
+     * @return True if the call was successful, false otherwise.
+     * @throws IOException
+     */
+    public void refreshNodes() throws IOException;
+
 
     /**
      * Get the size of the current edit log (in bytes).

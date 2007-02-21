@@ -190,7 +190,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
    * Sets the admin state to indicate that decommision is complete.
    */
    void setDecommissioned() {
-     assert isDecommissionInProgress();
      adminState = AdminStates.DECOMMISSIONED;
    }
 

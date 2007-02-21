@@ -55,7 +55,7 @@ public class TaskTracker
     static final long WAIT_FOR_DONE = 3 * 1000;
     private int httpPort;
 
-    static enum State {NORMAL, STALE, INTERRUPTED}
+    static enum State {NORMAL, STALE, INTERRUPTED, DENIED}
 
     public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.mapred.TaskTracker");
@@ -529,6 +529,12 @@ public class TaskTracker
             jobClient.reportTaskTrackerError(taskTrackerName, 
                     "DiskErrorException", msg);
             return State.STALE;
+          } catch (RemoteException re) {
+            String reClass = re.getClassName();
+            if (DisallowedTaskTrackerException.class.getName().equals(reClass)) {
+              LOG.info("Tasktracker disallowed by JobTracker.");
+              return State.DENIED;
+            }
           } catch (Exception except) {
             String msg = "Caught exception: " + 
                          StringUtils.stringifyException(except);
@@ -855,14 +861,18 @@ public class TaskTracker
      */
     public void run() {
         try {
-            while (running && !shuttingDown) {
+            boolean denied = false;
+            while (running && !shuttingDown && !denied) {
                 boolean staleState = false;
                 try {
                     // This while-loop attempts reconnects if we get network errors
-                    while (running && ! staleState && !shuttingDown ) {
+                    while (running && ! staleState && !shuttingDown && !denied) {
                         try {
-                            if (offerService() == State.STALE) {
+                            State osState = offerService();
+                            if (osState == State.STALE) {
                                 staleState = true;
+                            } else if (osState == State.DENIED) {
+                                denied = true;
                             }
                         } catch (Exception ex) {
                             if (!shuttingDown) {
@@ -881,6 +891,9 @@ public class TaskTracker
                 if (shuttingDown) { return; }
                 LOG.warn("Reinitializing local state");
                 initialize();
+            }
+            if (denied) {
+                shutdown();
             }
         } catch (IOException iex) {
             LOG.error("Got fatal exception while reinitializing TaskTracker: " +

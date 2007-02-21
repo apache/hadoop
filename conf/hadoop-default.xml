@@ -356,6 +356,24 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.hosts</name>
+  <value></value>
+  <description>Names a file that contains a list of hosts that are
+  permitted to connect to the namenode. The full pathname of the file
+  must be specified.  If the value is empty, all hosts are
+  permitted.</description>
+</property>
+
+<property>
+  <name>dfs.hosts.exclude</name>
+  <value></value>
+  <description>Names a file that contains a list of hosts that are
+  not permitted to connect to the namenode.  The full pathname of the
+  file must be specified.  If the value is empty, no hosts are
+  excluded.</description>
+</property> 
+
+<property>
   <name>fs.s3.block.size</name>
   <value>1048576</value>
   <description>
@@ -698,6 +716,22 @@ creations/deletions), or "all".</description>
   				retained.
   </description>
 </property>
+
+<property>
+  <name>mapred.hosts</name>
+  <value></value>
+  <description>Names a file that contains the list of nodes that may
+  connect to the jobtracker.  If the value is empty, all hosts are
+  permitted.</description>
+</property>
+
+<property>
+  <name>mapred.hosts.exclude</name>
+  <value></value>
+  <description>Names a file that contains the list of hosts that
+  should be excluded by the jobtracker.  If the value is empty, no
+  hosts are excluded.</description>
+</property> 
 
 <property>
   <name>jobclient.output.filter</name>

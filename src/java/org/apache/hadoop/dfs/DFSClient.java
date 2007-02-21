@@ -370,17 +370,16 @@ class DFSClient implements FSConstants {
     }
 
     /**
-     * Set, clear decommission state of datnode(s).
-     * See {@link ClientProtocol#decommission(FSConstants.DecommissionAction)} 
+     * Refresh the hosts and exclude files.  (Rereads them.)
+     * See {@link ClientProtocol#refreshNodes()} 
      * for more details.
      * 
-     * @see ClientProtocol#decommission(FSConstants.DecommissionAction)
+     * @see ClientProtocol#refreshNodes()
      */
-    public boolean decommission(DecommissionAction action, String[] nodes)
-                                throws IOException {
-      return namenode.decommission(action, nodes);
+    public void refreshNodes() throws IOException {
+      namenode.refreshNodes();
     }
-
+    
     /**
      */
     public boolean mkdirs(UTF8 src) throws IOException {
