@@ -15,6 +15,12 @@
 </property>
 
 <property>
+  <name>ipc.client.timeout</name>
+  <value>2000</value>
+  <description>Decreased value to speed unit tests.</description>
+</property>
+
+<property>
   <name>test.fs.s3.name</name>
   <value>s3:///</value>
   <description>The name of the s3 file system for testing.</description>

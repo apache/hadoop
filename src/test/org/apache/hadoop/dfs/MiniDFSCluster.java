@@ -215,9 +215,6 @@ public class MiniDFSCluster {
         new File(base_dir, "name2").getPath());
     conf.setInt("dfs.replication", Math.min(3, nDatanodes));
     conf.setInt("dfs.safemode.extension", 0);
-    // this timeout seems to control the minimum time for the test, so
-    // decrease it considerably.
-    conf.setInt("ipc.client.timeout", 1000);
 
     // Loops until we find ports that work or we give up because 
     // too many tries have failed.

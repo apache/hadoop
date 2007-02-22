@@ -44,11 +44,6 @@ public class TestRPC extends TestCase {
   
   private static Configuration conf = new Configuration();
 
-  // quiet during testing, since output ends up on console
-  static {
-    conf.setInt("ipc.client.timeout", 5000);
-  }
-
   public TestRPC(String name) { super(name); }
 	
   public interface TestProtocol extends VersionedProtocol {
