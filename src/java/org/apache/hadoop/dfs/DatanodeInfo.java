@@ -48,6 +48,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
   protected int xceiverCount;
   private String location = NetworkTopology.DEFAULT_RACK;
 
+  /** HostName as suplied by the datanode during registration as its 
+   * name. Namenode uses datanode IP address as the name.
+   */
+  private String hostName = null;
+  
   // administrative states of a datanode
   public enum AdminStates {NORMAL, DECOMMISSION_INPROGRESS, DECOMMISSIONED; }
   protected AdminStates adminState;
@@ -66,6 +71,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.xceiverCount = from.getXceiverCount();
     this.location = from.getNetworkLocation();
     this.adminState = from.adminState;
+    this.hostName = from.hostName;
   }
 
   DatanodeInfo( DatanodeID nodeID ) {
@@ -77,9 +83,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
       this.adminState = null;    
   }
   
-  DatanodeInfo( DatanodeID nodeID, String location ) {
+  DatanodeInfo( DatanodeID nodeID, String location, String hostName ) {
       this(nodeID);
       this.location = location;
+      this.hostName = hostName;
   }
   
   /** The raw capacity. */
@@ -126,6 +133,15 @@ public class DatanodeInfo extends DatanodeID implements Node {
       return location+NodeBase.PATH_SEPARATOR_STR+name;
   }
 
+  
+  public String getHostName() {
+    return ( hostName == null || hostName.length()==0 ) ? getHost() : hostName;
+  }
+  
+  public void setHostName( String host ) {
+    hostName = host;
+  }
+  
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {
     StringBuffer buffer = new StringBuffer();

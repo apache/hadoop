@@ -236,7 +236,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     
     /**
      */
-    public LocatedBlock[] open(String clientMachine, String src) throws IOException {
+    public LocatedBlock[] open(String src) throws IOException {
+        String clientMachine = Server.getRemoteAddress();
+        if ( clientMachine == null ) {
+            clientMachine = "";
+        }
         Object openResults[] = namesystem.open(clientMachine, new UTF8(src));
         if (openResults == null) {
             throw new IOException("Cannot open filename " + src);
@@ -256,11 +260,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     public LocatedBlock create(String src, 
                                String clientName, 
-                               String clientMachine, 
                                boolean overwrite,
                                short replication,
                                long blockSize
     ) throws IOException {
+       String clientMachine = Server.getRemoteAddress();
+       if ( clientMachine == null ) {
+           clientMachine = "";
+       }
        stateChangeLog.debug("*DIR* NameNode.create: file "
             +src+" for "+clientName+" at "+clientMachine);
        if (!checkPathLength(src)) {

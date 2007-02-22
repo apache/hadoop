@@ -26,6 +26,7 @@ import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ipc.Server;
 
 import java.io.*;
 import java.util.*;
@@ -1211,7 +1212,7 @@ class FSNamesystem implements FSConstants {
                 Collection<String> v = new ArrayList<String>();
                 if (containingNodes != null) {
                   for (Iterator<DatanodeDescriptor> it =containingNodes.iterator(); it.hasNext();) {
-                    v.add( it.next().getHost() );
+                    v.add( it.next().getHostName() );
                   }
                 }
                 hosts[i-startBlock] = v.toArray(new String[v.size()]);
@@ -1469,6 +1470,22 @@ class FSNamesystem implements FSConstants {
     public synchronized void registerDatanode( DatanodeRegistration nodeReg,
                                                String networkLocation
                                               ) throws IOException {
+
+      String dnAddress = Server.getRemoteAddress();
+      if ( dnAddress == null ) {
+        //Mostly not called inside an RPC.
+        throw new IOException( "Could not find remote address for " +
+                               "registration from " + nodeReg.getName() );
+      }      
+
+      String hostName = nodeReg.getHost();
+      
+      // update the datanode's name with ip:port
+      DatanodeID dnReg = new DatanodeID( dnAddress + ":" + nodeReg.getPort(),
+                                         nodeReg.getStorageID(),
+                                         nodeReg.getInfoPort() );
+      nodeReg.updateRegInfo( dnReg );
+      
       NameNode.stateChangeLog.info(
           "BLOCK* NameSystem.registerDatanode: "
           + "node registration from " + nodeReg.getName()
@@ -1513,6 +1530,7 @@ class FSNamesystem implements FSConstants {
         nodeS.updateRegInfo( nodeReg );
         nodeS.setNetworkLocation( networkLocation );
         clusterMap.add( nodeS );
+        nodeS.setHostName( hostName );
         getEditLog().logAddDatanode( nodeS );
         
         // also treat the registration message as a heartbeat
@@ -1536,7 +1554,7 @@ class FSNamesystem implements FSConstants {
       }
       // register new datanode
       DatanodeDescriptor nodeDescr 
-                  = new DatanodeDescriptor( nodeReg, networkLocation );
+              = new DatanodeDescriptor( nodeReg, networkLocation, hostName );
       unprotectedAddDatanode( nodeDescr );
       getEditLog().logAddDatanode( nodeDescr );
       

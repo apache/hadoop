@@ -236,7 +236,7 @@ public class JspHelper {
                     ret = (ddbl < 0) ? -1 : ( (ddbl > 0) ? 1 : 0 );
                     break;
                 case FIELD_NAME: 
-                    ret = d1.getName().compareTo(d2.getName());
+                    ret = d1.getHostName().compareTo(d2.getHostName());
                     break;
                 }
                 return ( sortOrder == SORT_ORDER_DSC ) ? -ret : ret;

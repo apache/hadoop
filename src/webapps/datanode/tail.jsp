@@ -55,8 +55,7 @@
     //fetch the block from the datanode that has the last block for this file
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, 
                                          jspHelper.conf);
-    LocatedBlock blocks[] = dfs.namenode.open(
-        DNS.getDefaultHost("default"), filename); 
+    LocatedBlock blocks[] = dfs.namenode.open(filename); 
     if (blocks == null || blocks.length == 0) {
       out.print("No datanodes contain blocks of file "+filename);
       dfs.close();

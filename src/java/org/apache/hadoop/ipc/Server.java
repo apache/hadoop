@@ -80,15 +80,39 @@ public abstract class Server {
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.Server");
 
-  private static final ThreadLocal SERVER = new ThreadLocal();
+  private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
 
   /** Returns the server instance called under or null.  May be called under
    * {@link #call(Writable)} implementations, and under {@link Writable}
    * methods of paramters and return values.  Permits applications to access
    * the server context.*/
   public static Server get() {
-    return (Server)SERVER.get();
+    return SERVER.get();
   }
+ 
+  /** This is set to Call object before Handler invokes an RPC and reset
+   * after the call returns.
+   */
+  private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
+  
+  /** Returns the remote side ip address when invoked inside an RPC 
+   *  Returns null incase of an error.
+   */
+  public static InetAddress getRemoteIp() {
+    Call call = CurCall.get();
+    if ( call != null ) {
+      return call.connection.socket.getInetAddress();
+    }
+    return null;
+  }
+  /** Returns remote address as a string when invoked inside an RPC.
+   *  Returns null in case of an error.
+   */
+  public static String getRemoteAddress() {
+    InetAddress addr = getRemoteIp();
+    return ( addr == null ) ? null : addr.getHostAddress();
+  }
+  
   private String bindAddress; 
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads
@@ -529,6 +553,8 @@ public abstract class Server {
           String errorClass = null;
           String error = null;
           Writable value = null;
+          
+          CurCall.set( call );
           try {
             value = call(call.param);             // make the call
           } catch (Throwable e) {
@@ -536,6 +562,7 @@ public abstract class Server {
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
+          CurCall.set( null );
             
           DataOutputStream out = call.connection.out;
           synchronized (out) {

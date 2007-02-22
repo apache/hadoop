@@ -50,24 +50,34 @@
   public void generateNodeData( JspWriter out, DatanodeDescriptor d,
                                     String suffix, boolean alive )
     throws IOException {
-    
-    String url = d.getName();
-    if ( url.indexOf( ':' ) >= 0 )
-        url = url.substring( 0, url.indexOf( ':' ) );
+      
+    /* Say the datanode is dn1.hadoop.apache.org with ip 192.168.0.5
+       we use:
+       1) d.getHostName():d.getPort() to display.
+           Domain and port are stripped if they are common across the nodes.
+           i.e. "dn1"
+       2) d.getHost():d.Port() for "title".
+          i.e. "192.168.0.5:50010"
+       3) d.getHostName():d.getInfoPort() for url.
+          i.e. "http://dn1.hadoop.apache.org:50075/..."
+          Note that "d.getHost():d.getPort()" is what DFS clients use
+          to interact with datanodes.
+    */
     // from nn_browsedfscontent.jsp:
-    url = "http://" + url + ":" + d.getInfoPort() +
-          "/browseDirectory.jsp?namenodeInfoPort=" +
-          fsn.getNameNodeInfoPort() + "&dir=" +
-          URLEncoder.encode("/", "UTF-8");
-    
-    String name = d.getName();
+    String url = "http://" + d.getHostName() + ":" + d.getInfoPort() +
+                 "/browseDirectory.jsp?namenodeInfoPort=" +
+                 fsn.getNameNodeInfoPort() + "&dir=" +
+                 URLEncoder.encode("/", "UTF-8");
+     
+    String name = d.getHostName() + ":" + d.getPort();
     if ( !name.matches( "\\d+\\.\\d+.\\d+\\.\\d+.*" ) ) 
         name = name.replaceAll( "\\.[^.:]*", "" );    
     int idx = (suffix != null && name.endsWith( suffix )) ?
         name.indexOf( suffix ) : -1;
     
-    out.print( rowTxt() + "<td class=\"name\"><a title=\"" + d.getName() +
-               "\"href=\"" + url + "\">" +
+    out.print( rowTxt() + "<td class=\"name\"><a title=\""
+               + d.getHost() + ":" + d.getPort() +
+               "\" href=\"" + url + "\">" +
                (( idx > 0 ) ? name.substring(0, idx) : name) + "</a>" +
                (( alive ) ? "" : "\n") );
     if ( !alive )

@@ -47,7 +47,6 @@ class DFSClient implements FSConstants {
     private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
     private static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
     ClientProtocol namenode;
-    String localName;
     boolean running = true;
     Random r = new Random();
     String clientName;
@@ -105,11 +104,6 @@ class DFSClient implements FSConstants {
         this.conf = conf;
         this.namenode = (ClientProtocol) RPC.getProxy(ClientProtocol.class,
             ClientProtocol.versionID, nameNodeAddr, conf);
-        try {
-            this.localName = InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException uhe) {
-            this.localName = "";
-        }
         String taskId = conf.get("mapred.task.id");
         if (taskId != null) {
             this.clientName = "DFSClient_" + taskId; 
@@ -514,7 +508,7 @@ class DFSClient implements FSConstants {
         synchronized void openInfo() throws IOException {
             Block oldBlocks[] = this.blocks;
 
-            LocatedBlock results[] = namenode.open(localName, src);            
+            LocatedBlock results[] = namenode.open(src);            
             Vector blockV = new Vector();
             Vector nodeV = new Vector();
             for (int i = 0; i < results.length; i++) {
@@ -1089,7 +1083,7 @@ class DFSClient implements FSConstants {
             while (true) {
               try {
                 return namenode.create(src.toString(), clientName.toString(),
-                    localName, overwrite, replication, blockSize);
+                                       overwrite, replication, blockSize);
               } catch (RemoteException e) {
                 if (--retries == 0 || 
                     !AlreadyBeingCreatedException.class.getName().

@@ -153,8 +153,7 @@ public class NamenodeFsck {
     }
     res.totalFiles++;
     res.totalSize += file.getLen();
-    LocatedBlock[] blocks = nn.open(DNS.getDefaultHost("default"),
-                                    file.getPath());
+    LocatedBlock[] blocks = nn.open(file.getPath());
     res.totalBlocks += blocks.length;
     if (showFiles) {
       out.print(file.getPath() + " " + file.getLen() + ", " + blocks.length + " block(s): ");
@@ -415,10 +414,6 @@ public class NamenodeFsck {
       int colon = nodename.indexOf(':');
       if (colon >= 0) {
         nodename = nodename.substring(0, colon);
-      }
-      if (dfs.localName.equals(nodename)) {
-        chosenNode = nodes[i];
-        break;
       }
     }
     if (chosenNode == null) {

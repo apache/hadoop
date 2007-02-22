@@ -121,6 +121,7 @@ public class DataNode implements FSConstants, Runnable {
     private DataNodeMetrics myMetrics = new DataNodeMetrics();
     private static InetSocketAddress nameNodeAddr;
     private static DataNode datanodeObject = null;
+    String machineName;
 
     private class DataNodeMetrics implements Updater {
       private final MetricsRecord metricsRecord;
@@ -194,9 +195,7 @@ public class DataNode implements FSConstants, Runnable {
     }
     
     DataNode(Configuration conf, String networkLoc, String[] dataDirs) throws IOException {
-        this(InetAddress.getLocalHost().getHostName(),
-             networkLoc,
-             dataDirs,
+        this(networkLoc, dataDirs,
              createSocketAddr(conf.get("fs.default.name", "local")), conf);
         // register datanode
         int infoServerPort = conf.getInt("dfs.datanode.info.port", 50075);
@@ -225,8 +224,7 @@ public class DataNode implements FSConstants, Runnable {
      * 
      * @see DataStorage
      */
-    private DataNode(String machineName,
-                    String networkLoc,
+    private DataNode(String networkLoc,
                     String[] dataDirs, 
                     InetSocketAddress nameNodeAddr, 
                     Configuration conf ) throws IOException {
@@ -322,6 +320,8 @@ public class DataNode implements FSConstants, Runnable {
     private void register() throws IOException {
       while( true ) {
         try {
+          // reset name to machineName. Mainly for web interface.
+          dnRegistration.name = machineName + ":" + dnRegistration.getPort();
           dnRegistration = namenode.register( dnRegistration, networkLoc );
           break;
         } catch( SocketTimeoutException e ) {  // namenode is busy

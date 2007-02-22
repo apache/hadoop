@@ -113,6 +113,9 @@ Trunk (unreleased changes)
     failed more than a specified number in the job.
     (Arun C Murthy via cutting)
 
+34. HADOOP-985.  Change HDFS to identify nodes by IP address rather
+    than by DNS hostname.  (Raghu Angadi via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

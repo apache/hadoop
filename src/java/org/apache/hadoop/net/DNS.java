@@ -168,7 +168,7 @@ public class DNS {
     if (strInterface.equals("default")) 
       return InetAddress.getLocalHost().getCanonicalHostName();
 
-    if (nameserver.equals("default"))
+    if (nameserver != null && nameserver.equals("default"))
       return getDefaultHost(strInterface);
 
     String[] hosts = getHosts(strInterface, nameserver);

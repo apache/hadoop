@@ -32,7 +32,6 @@ import java.io.*;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.*;
 
 /** A simple RPC mechanism.

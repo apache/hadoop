@@ -70,8 +70,7 @@ public class TestReplication extends TestCase {
               DataNode.createSocketAddr(conf.get("fs.default.name")), 
               conf);
            
-      LocatedBlock[] locations = namenode.open(
-              DNS.getDefaultHost("default"), name.toString());
+      LocatedBlock[] locations = namenode.open(name.toString());
       boolean isOnSameRack = true, isNotOnSameRack = true;
       for (int idx = 0; idx < locations.length; idx++) {
           DatanodeInfo[] datanodes = locations[idx].getLocations();

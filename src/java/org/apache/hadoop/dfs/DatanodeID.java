@@ -88,6 +88,14 @@ public class DatanodeID implements WritableComparable {
     }
   }
   
+  public int getPort() {
+    int colon = name.indexOf(":");
+    if ( colon < 0 ) {
+      return 50010; // default port.
+    }
+    return Integer.parseInt(name.substring(colon+1));
+  }
+
   public boolean equals( Object to ) {
     return (name.equals(((DatanodeID)to).getName()) &&
         storageID.equals(((DatanodeID)to).getStorageID()));
