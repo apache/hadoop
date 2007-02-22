@@ -282,24 +282,40 @@ class JobInProgress {
           
           if (state == TaskStatus.State.SUCCEEDED) {
             this.taskCompletionEvents.add( new TaskCompletionEvent(
-                taskCompletionEventTracker++, 
-                status.getTaskId(), 
+                taskCompletionEventTracker, 
+                status.getTaskId(),
+                tip.idWithinJob(),
+                status.getIsMap(),
                 TaskCompletionEvent.Status.SUCCEEDED,
                 httpTaskLogLocation ));
+            tip.setSuccessEventNumber(taskCompletionEventTracker);
             completedTask(tip, status, metrics);
           } else if (state == TaskStatus.State.FAILED ||
                      state == TaskStatus.State.KILLED) {
             this.taskCompletionEvents.add( new TaskCompletionEvent(
-                taskCompletionEventTracker++, 
-                status.getTaskId(), 
+                taskCompletionEventTracker, 
+                status.getTaskId(),
+                tip.idWithinJob(),
+                status.getIsMap(),
                 TaskCompletionEvent.Status.FAILED, 
                 httpTaskLogLocation ));
+            // Get the event number for the (possibly) previously successful
+            // task. If there exists one, then set that status to OBSOLETE 
+            int eventNumber;
+            if ((eventNumber = tip.getSuccessEventNumber()) != -1) {
+              TaskCompletionEvent t = 
+                this.taskCompletionEvents.get(eventNumber);
+              if (t.getTaskId().equals(status.getTaskId()))
+                t.setTaskStatus(TaskCompletionEvent.Status.OBSOLETE);
+            }
             // Tell the job to fail the relevant task
             failedTask(tip, status.getTaskId(), status, status.getTaskTracker(),
                        wasRunning, wasComplete);
           }          
         }
 
+        taskCompletionEventTracker++;
+        
         //
         // Update JobInProgress status
         //
@@ -849,12 +865,14 @@ class JobInProgress {
        return null;
     }
     
-    public TaskCompletionEvent[] getTaskCompletionEvents(int fromEventId) {
+    public TaskCompletionEvent[] getTaskCompletionEvents(int fromEventId, 
+        int maxEvents) {
       TaskCompletionEvent[] events = TaskCompletionEvent.EMPTY_ARRAY;
       if( taskCompletionEvents.size() > fromEventId) {
+        int actualMax = Math.min(maxEvents, 
+            (taskCompletionEvents.size() - fromEventId));
         events = (TaskCompletionEvent[])taskCompletionEvents.subList(
-            fromEventId, taskCompletionEvents.size()).
-            toArray(events);        
+            fromEventId, actualMax + fromEventId).toArray(events);        
       }
       return events; 
     }

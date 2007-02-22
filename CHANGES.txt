@@ -116,6 +116,9 @@ Trunk (unreleased changes)
 34. HADOOP-985.  Change HDFS to identify nodes by IP address rather
     than by DNS hostname.  (Raghu Angadi via cutting)
 
+35. HADOOP-248.  Optimize location of map outputs to not use random
+    probes.  (Devaraj Das via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

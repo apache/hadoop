@@ -158,7 +158,7 @@ public class JobClient extends ToolBase implements MRConstants  {
         public synchronized TaskCompletionEvent[] getTaskCompletionEvents(
             int startFrom) throws IOException{
           return jobSubmitClient.getTaskCompletionEvents(
-              getJobID(), startFrom); 
+              getJobID(), startFrom, 10); 
         }
 
         /**
@@ -726,7 +726,9 @@ public class JobClient extends ToolBase implements MRConstants  {
                 killJob = true;
                 i++;
             } else if ("-events".equals(argv[i])) {
-              listEvents(argv[++i]);
+              listEvents(argv[i+1], Integer.parseInt(argv[i+2]), 
+                         Integer.parseInt(argv[i+3]));
+              i += 3;
             }
         }
 
@@ -766,10 +768,13 @@ public class JobClient extends ToolBase implements MRConstants  {
      * @param jobId the job id for the job's events to list
      * @throws IOException
      */
-    private void listEvents(String jobId) throws IOException {
+    private void listEvents(String jobId, int fromEventId, int numEvents)
+    throws IOException {
       TaskCompletionEvent[] events = 
-        jobSubmitClient.getTaskCompletionEvents(jobId, 0);
+        jobSubmitClient.getTaskCompletionEvents(jobId, fromEventId, numEvents);
       System.out.println("Task completion events for " + jobId);
+      System.out.println("Number of events (from " + fromEventId + 
+          ") are: " + events.length);
       for(TaskCompletionEvent event: events) {
         System.out.println(event.getTaskStatus() + " " + event.getTaskId() + 
                            " " + event.getTaskTrackerHttp());
