@@ -532,6 +532,24 @@ public class JobConf extends Configuration {
     set("mapred.job.name", name);
   }
   
+  /**
+   * Set the maximum no. of failures of a given job per tasktracker.
+   * 
+   * @param noFailures maximum no. of failures of a given job per tasktracker.
+   */
+  public void setMaxTaskFailuresPerTracker(int noFailures) {
+    setInt("mapred.max.tracker.failures", noFailures);
+  }
+  
+  /**
+   * Get the maximum no. of failures of a given job per tasktracker.
+   * 
+   * @return the maximum no. of failures of a given job per tasktracker.
+   */
+  public int getMaxTaskFailuresPerTracker() {
+    return getInt("mapred.max.tracker.failures", 4); 
+  }
+  
   /** Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
    * on the class path that has a class with the same name.

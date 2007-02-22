@@ -748,6 +748,14 @@ creations/deletions), or "all".</description>
 </property> 
 
 <property>
+  <name>mapred.max.tracker.failures</name>
+  <value>4</value>
+  <description>The number of task-failures on a tasktracker of a given job 
+               after which new tasks of that job aren't assigned to it.
+  </description>
+</property>
+
+<property>
   <name>jobclient.output.filter</name>
   <value>FAILED</value>
   <description>The filter for controlling the output of the task's userlogs sent

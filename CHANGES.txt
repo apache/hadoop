@@ -109,6 +109,10 @@ Trunk (unreleased changes)
     Also increase the value used from one to two seconds, in hopes of
     making tests complete more reliably.  (cutting)
 
+33. HADOOP-654.  Stop assigning tasks to a tasktracker if it has
+    failed more than a specified number in the job.
+    (Arun C Murthy via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

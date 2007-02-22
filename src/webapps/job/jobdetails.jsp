@@ -60,6 +60,7 @@
     JobProfile profile = job.getProfile();
     JobStatus status = job.getStatus();
     int runState = status.getRunState();
+    int flakyTaskTrackers = job.getNoOfBlackListedTrackers();
     out.print("<b>User:</b> " + profile.getUser() + "<br>\n");
     out.print("<b>Job Name:</b> " + profile.getJobName() + "<br>\n");
     if (runState == JobStatus.RUNNING) {
@@ -79,6 +80,11 @@
       }
       out.print("<b>Finished at:</b> " + new Date(job.getFinishTime()) +
                 "<br>\n");
+    }
+    if (flakyTaskTrackers > 0) {
+      out.print("<b>Black-listed TaskTrackers:</b> " + 
+          "<a href=\"/jobblacklistedtrackers.jsp?jobid=" + jobId + "\">" +
+          flakyTaskTrackers + "</a><br>\n");
     }
     out.print("<hr>\n");
     out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
