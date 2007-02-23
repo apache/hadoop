@@ -20,6 +20,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <news        label="News"             href="index.html" />    
     <about       label="About"            href="about.html" />    
     <credits     label="Credits"          href="credits.html" />    
+    <download    label="Download"         href="ext:releases" />
     <store       label="Buy Stuff"        href="ext:store" />    
   </project>
 
@@ -30,11 +31,11 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <apidocs     label="API Docs"         href="api/index.html" />
   </docs>
 
-  <resources label="Resources">
-    <download    label="Download"         href="ext:releases" />
+  <resources label="Developer">
     <contact     label="Mailing Lists"    href="mailing_lists.html" />
     <issues      label="Issue Tracking"   href="issue_tracking.html" />
     <vcs         label="Version Control"  href="version_control.html" />
+    <nightly     label="Nightly Build"    href="ext:nightly" />
   </resources>
 
   <projects label="Related Projects">
@@ -47,7 +48,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <nutch     href="http://lucene.apache.org/nutch/" />
     <wiki      href="http://wiki.apache.org/lucene-hadoop/" />
     <faq       href="http://wiki.apache.org/lucene-hadoop/FAQ" />
-    <nightly   href="http://cvs.apache.org/dist/lucene/hadoop/nightly/" />
+    <nightly   href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/" />
     <releases  href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/" />
     <store     href="http://www.cafepress.com/hadoop/" />
   </external-refs>
