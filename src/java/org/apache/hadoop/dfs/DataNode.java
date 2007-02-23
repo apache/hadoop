@@ -607,8 +607,8 @@ public class DataNode implements FSConstants, Runnable {
                 } finally {
                     in.close();
                 }
-            } catch (IOException ie) {
-              LOG.warn("DataXCeiver", ie);
+            } catch (Throwable t) {
+              LOG.error("DataXCeiver", t);
             } finally {
                 try {
                     xceiverCount.decr();
