@@ -55,14 +55,15 @@
     out.print("<h2>Tasks</h2>");
     out.print("<center>");
     out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
-    out.print("<tr><td align=\"center\">Task</td><td>Complete</td><td>Status</td><td>Start Time</td><td>Finish Time</td><td>Errors</td></tr>");
+    out.print("<tr><td align=\"center\">Task</td><td>Complete</td><td>Status</td>" +
+              "<td>Start Time</td><td>Finish Time</td><td>Errors</td><td>Counters</td></tr>");
     if (end_index > report_len){
         end_index = report_len;
     }
     for (int i = start_index ; i < end_index; i++) {
           TaskReport report = reports[i];
           out.print("<tr><td><a href=\"taskdetails.jsp?jobid=" + jobid + 
-                    "&taskid=" + report.getTaskId() + "\">"  + 
+                    "&tipid=" + report.getTaskId() + "\">"  + 
                     report.getTaskId() + "</a></td>");
          out.print("<td>" + StringUtils.formatPercent(report.getProgress(),2) + 
                    "</td>");
@@ -71,10 +72,16 @@
          out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
              report.getFinishTime(), report.getStartTime()) + "</td>");
          String[] diagnostics = report.getDiagnostics();
+         out.print("<td><pre>");
          for (int j = 0; j < diagnostics.length ; j++) {
-                out.print("<td><pre>" + diagnostics[j] + "</pre></td>");
+             out.println(diagnostics[j]);
          }
-         out.print("</tr>\n");
+         out.println("</pre><br/></td>");
+         out.println("<td>" + 
+             "<a href=\"/taskstats.jsp?jobid=" + jobid + 
+             "&tipid=" + report.getTaskId() +
+             "\">" + report.getCounters().size() +
+             "</a></td></tr>");
     }
     out.print("</table>");
     out.print("</center>");

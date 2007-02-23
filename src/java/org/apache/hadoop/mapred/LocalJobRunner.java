@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Random;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.conf.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 
@@ -58,6 +61,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private JobProfile profile;
     private Path localFile;
     private FileSystem localFs;
+    
+    // Contains the counters summed over all the tasks which
+    // have successfully completed
+    private Counters counters = new Counters();
 
     public long getProtocolVersion(String protocol, long clientVersion) {
       return TaskUmbilicalProtocol.versionID;
@@ -116,6 +123,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
           map.run(localConf, this);
           myMetrics.completeMap();
           map_tasks -= 1;
+          updateCounters(map);
         }
 
         // move map output to reduce input
@@ -144,6 +152,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
           reduce.run(localConf, this);
           myMetrics.completeReduce();
           reduce_tasks -= 1;
+          updateCounters(reduce);
         }
         this.mapoutputFile.removeAll(reduceId);
         
@@ -162,7 +171,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
         }
       }
     }
-
+    
     private String newId() {
       return Integer.toString(Math.abs(random.nextInt()),36);
     }
@@ -172,7 +181,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     public Task getTask(String taskid) { return null; }
 
     public void progress(String taskId, float progress, String state, 
-                         TaskStatus.Phase phase) {
+                         TaskStatus.Phase phase, Counters taskStats) {
       LOG.info(state);
       float taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
@@ -183,6 +192,30 @@ class LocalJobRunner implements JobSubmissionProtocol {
       }
       
       // ignore phase
+      updateStatusCounters(taskStats);
+    }
+    
+    /**
+     * Updates counters corresponding to completed tasks.
+     * @param task A map or reduce task which has just been 
+     * successfully completed
+     */ 
+    private void updateCounters(Task task) {
+      counters.incrAllCounters(task.getCounters());
+      status.setCounters(counters);
+    }
+
+    /**
+     * Sets status counters to the sum of (1) the counters from
+     * all completed tasks, and (2) the counters from a particular
+     * task in progress.
+     * @param taskCounters Counters from a task that is in progress
+     */
+    private void updateStatusCounters(Counters taskCounters) {
+      Counters newStats = new Counters();
+      newStats.incrAllCounters(counters);
+      newStats.incrAllCounters(taskCounters);
+      status.setCounters(newStats);
     }
 
     public void reportDiagnosticInfo(String taskid, String trace) {

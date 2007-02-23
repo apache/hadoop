@@ -18,19 +18,31 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.util.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
-import java.io.*;
-import java.util.*;
-import java.text.*;
-
-import org.apache.hadoop.metrics.ContextFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.util.Progress;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /** A Reduce task. */
 class ReduceTask extends Task {
@@ -43,27 +55,7 @@ class ReduceTask extends Task {
        });
   }
 
-  private class ReduceTaskMetrics {
-    private final MetricsRecord inputMetrics, outputMetrics;
-    
-    ReduceTaskMetrics(String user) {
-        MetricsContext context = MetricsUtil.getContext("mapred");
-        inputMetrics = MetricsUtil.createRecord(context, "reduceInput", "user", user);
-        outputMetrics = MetricsUtil.createRecord(context, "reduceOutput", "user", user);
-    }
-    
-    synchronized void reduceInput() {
-        inputMetrics.incrMetric("reduce_input_records", 1);
-        inputMetrics.update();
-    }
-    
-    synchronized void reduceOutput() {
-        outputMetrics.incrMetric("reduce_output_records", 1);
-        outputMetrics.update();
-    }
-  }
-  
-  private ReduceTaskMetrics myMetrics = null;
+  private enum Counter { INPUT_RECORDS, OUTPUT_RECORDS }
   
   private int numMaps;
   private boolean sortComplete;
@@ -115,9 +107,6 @@ class ReduceTask extends Task {
     super.readFields(in);
 
     numMaps = in.readInt();
-    if (myMetrics == null) {
-        myMetrics = new ReduceTaskMetrics("unknown");
-    }
   }
 
   /** Iterates values while keys match in sorted input. */
@@ -224,7 +213,6 @@ class ReduceTask extends Task {
 
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
-    myMetrics = new ReduceTaskMetrics(job.getUser());
     Class valueClass = job.getMapOutputValueClass();
     Reducer reducer = (Reducer)ReflectionUtils.newInstance(
                                   job.getReducerClass(), job);
@@ -289,7 +277,7 @@ class ReduceTask extends Task {
     sortPhase.complete();                         // sort is complete
     setPhase(TaskStatus.Phase.REDUCE); 
 
-    Reporter reporter = getReporter(umbilical, getProgress());
+    final Reporter reporter = getReporter(umbilical);
     
     // make output collector
     String finalName = getOutputName(getPartition());
@@ -308,7 +296,7 @@ class ReduceTask extends Task {
         public void collect(WritableComparable key, Writable value)
           throws IOException {
           out.write(key, value);
-          myMetrics.reduceOutput();
+          reporter.incrCounter(Counter.OUTPUT_RECORDS, 1);
           reportProgress(umbilical);
         }
       };
@@ -321,7 +309,7 @@ class ReduceTask extends Task {
                                   keyClass, valClass, umbilical, job);
       values.informReduceProgress();
       while (values.more()) {
-        myMetrics.reduceInput();
+        reporter.incrCounter(Counter.INPUT_RECORDS, 1);
         reducer.reduce(values.getKey(), values, collector, reporter);
         values.nextKey();
         values.informReduceProgress();

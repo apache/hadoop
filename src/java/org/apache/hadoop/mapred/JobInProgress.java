@@ -17,18 +17,27 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.*;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.Vector;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
-import org.apache.hadoop.mapred.JobHistory.Values ; 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.MetricsUtil;
 
 ///////////////////////////////////////////////////////
 // JobInProgress maintains all the info for keeping
@@ -74,6 +83,9 @@ class JobInProgress {
 
     private LocalFileSystem localFs;
     private String uniqueString;
+    
+    private Counters counters = new Counters();
+    private MetricsRecord jobMetrics;
   
     /**
      * Create a JobInProgress with the given job file, plus a handle
@@ -113,6 +125,10 @@ class JobInProgress {
         JobHistory.JobInfo.logSubmitted(jobid, conf.getJobName(), conf.getUser(), 
             System.currentTimeMillis(), jobFile); 
         
+        MetricsContext metricsContext = MetricsUtil.getContext("mapred");
+        this.jobMetrics = metricsContext.createRecord("job");
+        this.jobMetrics.setTag("user", conf.getUser());
+        this.jobMetrics.setTag("jobName", conf.getJobName());
     }
 
     /**
@@ -337,6 +353,28 @@ class JobInProgress {
                  ((float) (this.status.reduceProgress() +
                            (progressDelta / reduces.length)));
           }
+        }
+        
+        //
+        // Update counters by summing over all tasks in progress
+        //
+        Counters newCounters = new Counters();
+        for (TaskInProgress mapTask : maps) {
+          newCounters.incrAllCounters(mapTask.getCounters());
+        }
+        for (TaskInProgress reduceTask : reduces) {
+          newCounters.incrAllCounters(reduceTask.getCounters());
+        }
+        this.status.setCounters(newCounters);
+        
+        //
+        // Send counter data to the metrics package.
+        //
+        for (String counter : newCounters.getCounterNames()) {
+          long value = newCounters.getCounter(counter);
+          jobMetrics.setTag("counter", counter);
+          jobMetrics.setMetric("value", (float) value);
+          jobMetrics.update();
         }
     }   
 
@@ -787,7 +825,8 @@ class JobInProgress {
                                           TaskStatus.State.FAILED,
                                           reason,
                                           reason,
-                                          trackerName, phase);
+                                          trackerName, phase,
+                                          tip.getCounters());
        updateTaskStatus(tip, status, metrics);
        JobHistory.Task.logFailed(profile.getJobId(), tip.getTIPId(), 
            tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(), 
@@ -831,8 +870,8 @@ class JobInProgress {
     }
 
     /**
-      * Return the TaskInProgress that matches the tipid.
-      */
+     * Return the TaskInProgress that matches the tipid.
+     */
     public TaskInProgress getTaskInProgress(String tipid){
       for (int i = 0; i < maps.length; i++) {
         if (tipid.equals(maps[i].getTIPId())){

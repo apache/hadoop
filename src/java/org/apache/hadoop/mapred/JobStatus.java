@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
-import java.io.*;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 
 /**************************************************
  * Describes the current status of a job.  This is
@@ -49,6 +54,7 @@ public class JobStatus implements Writable {
     private int runState;
     private long startTime;
     private String user;
+    private Counters counters = new Counters();
     /**
      */
     public JobStatus() {
@@ -133,6 +139,16 @@ public class JobStatus implements Writable {
       * @return the username of the job
       */
     public String getUsername() { return this.user;};
+    
+    /**
+     * @param counters Counters for the job.
+     */
+    void setCounters(Counters counters) { this.counters = counters; }
+    /**
+     * @return the counters for the job
+     */
+    public Counters getCounters() { return counters; }
+    
     ///////////////////////////////////////
     // Writable
     ///////////////////////////////////////
@@ -143,6 +159,7 @@ public class JobStatus implements Writable {
         out.writeInt(runState);
         out.writeLong(startTime);
         UTF8.writeString(out, user);
+        counters.write(out);
     }
     public void readFields(DataInput in) throws IOException {
         this.jobid = UTF8.readString(in);
@@ -151,5 +168,6 @@ public class JobStatus implements Writable {
         this.runState = in.readInt();
         this.startTime = in.readLong();
         this.user = UTF8.readString(in);
+        counters.readFields(in);
     }
 }

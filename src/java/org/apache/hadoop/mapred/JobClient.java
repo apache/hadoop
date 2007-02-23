@@ -175,6 +175,10 @@ public class JobClient extends ToolBase implements MRConstants  {
                 "map() completion: " + status.mapProgress() + "\n" + 
                 "reduce() completion: " + status.reduceProgress();
         }
+        
+        public Counters getCounters() {
+          return status.getCounters();
+        }
     }
 
     JobSubmissionProtocol jobSubmitClient;
@@ -597,6 +601,7 @@ public class JobClient extends ToolBase implements MRConstants  {
           throw new IOException("Job failed!");
         }
         LOG.info("Job complete: " + jobId);
+        running.getCounters().log(LOG);
         error = false;
       } finally {
         if (error && (running != null)) {
@@ -604,6 +609,7 @@ public class JobClient extends ToolBase implements MRConstants  {
         }
         jc.close();
       }
+      
     }
 
     private static void displayTaskLogs(String taskId, String baseUrl)

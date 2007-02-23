@@ -122,6 +122,13 @@ Trunk (unreleased changes)
 36. HADOOP-1029.  Fix streaming's input format to correctly seek to
     the start of splits.  (Arun C Murthy via cutting)
 
+37. HADOOP-492.  Add per-job and per-task counters.  These are
+    incremented via the Reporter interface and available through the
+    web ui and the JobClient API.  The mapreduce framework maintains a
+    few basic counters, and applications may add their own.  Counters
+    are also passed to the metrics system.
+    (David Bowen via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

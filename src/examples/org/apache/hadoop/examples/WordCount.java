@@ -47,6 +47,9 @@ import org.apache.hadoop.mapred.MapReduceBase;
  */
 public class WordCount {
   
+  // These are just for testing counters
+  private enum Counter { WORDS, VALUES }
+  
   /**
    * Counts the words in each line.
    * For each line of input, break the line into words and emit them as
@@ -65,6 +68,7 @@ public class WordCount {
       while (itr.hasMoreTokens()) {
         word.set(itr.nextToken());
         output.collect(word, one);
+        reporter.incrCounter(Counter.WORDS, 1);
       }
     }
   }
@@ -80,6 +84,7 @@ public class WordCount {
       int sum = 0;
       while (values.hasNext()) {
         sum += ((IntWritable) values.next()).get();
+        reporter.incrCounter(Counter.VALUES, 1);
       }
       output.collect(key, new IntWritable(sum));
     }

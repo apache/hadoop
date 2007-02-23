@@ -17,18 +17,22 @@
  */
  package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.ipc.*;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.MetricsException;
-import org.apache.hadoop.util.*;
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
-
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.net.BindException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
@@ -38,10 +42,27 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.hadoop.metrics.MetricsContext;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.DF;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSError;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.RunJar;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /*******************************************************
  * TaskTracker is a process that starts and tracks MR Tasks
@@ -939,7 +960,8 @@ public class TaskTracker
                 diagnosticInfo.toString(), 
                 "initializing",  
                  getName(), task.isMapTask()? TaskStatus.Phase.MAP:
-                   TaskStatus.Phase.SHUFFLE); 
+                   TaskStatus.Phase.SHUFFLE,
+                 task.getCounters()); 
             keepJobFiles = false;
             taskTimeout = (10 * 60 * 1000);
         }
@@ -1022,7 +1044,9 @@ public class TaskTracker
          * The task is reporting its progress
          */
         public synchronized void reportProgress(float p, String state, 
-                                                TaskStatus.Phase newPhase) {
+                                                TaskStatus.Phase newPhase,
+                                                Counters counters) 
+        {
             LOG.info(task.getTaskId()+" "+p+"% "+state);
             this.progress = p;
             this.runstate = TaskStatus.State.RUNNING;
@@ -1038,6 +1062,7 @@ public class TaskTracker
               this.taskStatus.setPhase(newPhase);
             }
             this.taskStatus.setStateString(state);
+            this.taskStatus.setCounters(counters);
         }
 
         /**
@@ -1272,11 +1297,12 @@ public class TaskTracker
      */
     public synchronized void progress(String taskid, float progress, 
                                       String state, 
-                                      TaskStatus.Phase phase
+                                      TaskStatus.Phase phase,
+                                      Counters counters
                                       ) throws IOException {
         TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
         if (tip != null) {
-          tip.reportProgress(progress, state, phase);
+          tip.reportProgress(progress, state, phase, counters);
         } else {
           LOG.warn("Progress from unknown child task: "+taskid+". Ignored.");
         }

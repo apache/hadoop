@@ -405,8 +405,9 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
     this.lastPollTime = 0;
 
     MetricsContext metricsContext = MetricsUtil.getContext("mapred");
-    this.shuffleMetrics = MetricsUtil.createRecord(
-      metricsContext, "shuffleInput", "user", conf.getUser());
+    this.shuffleMetrics = 
+        MetricsUtil.createRecord(metricsContext, "shuffleInput");
+    this.shuffleMetrics.setTag("user", conf.getUser());
   }
 
   /** Assemble all of the map output files */

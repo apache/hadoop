@@ -25,8 +25,6 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * Utility class to simplify creation and reporting of hadoop metrics.
- * This class makes the simplifying assumption that each metrics record has
- * exactly one tag, which defaults to being the hostName.
  *
  * For examples of usage, see {@link org.apache.hadoop.dfs.DataNode}.
  * @see org.apache.hadoop.metrics.MetricsRecord
@@ -62,26 +60,6 @@ public class MetricsUtil {
         }
         return metricsContext;
     }
-    
-    /**
-     * Utility method to create and return a new metrics record instance 
-     * within the given name and the specified tag.
-     *
-     * @param context the context
-     * @param recordName the name of the record
-     * @param tagName name of the tag field of metrics record
-     * @param tagValue value of the tag field
-     * @return newly created metrics record
-     */
-    public static MetricsRecord createRecord(MetricsContext context, 
-                                             String recordName,
-                                             String tagName, 
-                                             String tagValue) 
-    {
-        MetricsRecord metricsRecord = context.createRecord(recordName);
-        metricsRecord.setTag(tagName, tagValue);
-        return metricsRecord;
-    }
 
     /**
      * Utility method to create and return new metrics record instance within the
@@ -92,9 +70,11 @@ public class MetricsUtil {
      * @return newly created metrics record
      */
     public static MetricsRecord createRecord(MetricsContext context, 
-                                            String recordName) 
+                                             String recordName) 
     {
-        return createRecord(context, recordName, "hostName", getHostName());
+      MetricsRecord metricsRecord = context.createRecord(recordName);
+      metricsRecord.setTag("hostName", getHostName());
+      return metricsRecord;        
     }
     
     /**

@@ -98,6 +98,16 @@
     printTaskSummary(out, jobId, "reduce", status.reduceProgress(),
                      job.getReduceTasks());
     out.print("</table>\n");
+    
+    Counters counters = status.getCounters();
+    out.println("<p/>");
+    out.println("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
+    out.println("<tr><th>Counter</th><th>Value</th></tr>");
+    for (String counter : counters.getCounterNames()) {
+      out.print("<tr><td>" + counter + "</td><td>" + counters.getCounter(counter) +
+                "</td></tr>\n");
+    }
+    out.print("</table>\n");
   }
 %>
 

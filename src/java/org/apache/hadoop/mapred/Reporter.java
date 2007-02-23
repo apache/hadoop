@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+
 import org.apache.hadoop.util.Progressable;
 
 /** Passed to application code to permit alteration of status. */
@@ -30,8 +31,9 @@ public interface Reporter extends Progressable {
   public static final Reporter NULL = new Reporter() {
     public void setStatus(String s) {
     }
-
     public void progress() throws IOException {
+    }
+    public void incrCounter(Enum key, long amount) {
     }
   };
 
@@ -41,5 +43,14 @@ public interface Reporter extends Progressable {
    * @param status
    *          a brief description of the current status
    */
-  void setStatus(String status) throws IOException;
+  public abstract void setStatus(String status) throws IOException;
+  
+  /**
+   * Increments the counter identified by the key, which can be of
+   * any enum type, by the specified amount.
+   * @param key A value of any enum type
+   * @param amount A non-negative amount by which the counter is to 
+   * be incremented
+   */
+  public abstract void incrCounter(Enum key, long amount);
 }

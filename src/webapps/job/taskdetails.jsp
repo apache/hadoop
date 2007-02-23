@@ -15,7 +15,7 @@
   String jobid = request.getParameter("jobid");
   JobTracker tracker = JobTracker.getTracker();
   JobInProgress job = (JobInProgress) tracker.getJob(jobid);
-  String tipid = request.getParameter("taskid");
+  String tipid = request.getParameter("tipid");
   TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(jobid, tipid): null;
 %>
 
@@ -44,7 +44,7 @@
   <%
 	}
   %>
-<td>Finish Time</td><td>Errors</td><td>Task Logs</td></tr>
+<td>Finish Time</td><td>Errors</td><td>Task Logs</td><td>Counters</td></tr>
   <%
     for (int i = 0; i < ts.length; i++) {
       TaskStatus status = ts[i];
@@ -101,7 +101,11 @@
         out.print("<a href=\"" + tailEightKBUrl + "\">Last 8KB</a><br/>");
         out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");
       }
-      out.println("</td></tr>\n");
+      out.println("</td><td>" + 
+                 "<a href=\"/taskstats.jsp?jobid=" + jobid + 
+                 "&tipid=" + tipid + "&taskid=" + status.getTaskId() + 
+                 "\">" + status.getCounters().size() +
+                 "</a></td></tr>");
     }
   }
   %>

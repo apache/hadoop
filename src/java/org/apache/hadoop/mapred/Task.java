@@ -18,13 +18,17 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.*;
-
-import java.io.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.Progress;
+import org.apache.hadoop.util.StringUtils;
 
 /** Base class for tasks. */
 abstract class Task implements Writable, Configurable {
@@ -40,7 +44,8 @@ abstract class Task implements Writable, Configurable {
   private String jobId;                           // unique jobid
   private String tipId ;
   private int partition;                          // id within job
-  private TaskStatus.Phase phase ;                         // current phase of the task 
+  private TaskStatus.Phase phase ;                // current phase of the task 
+  
 
   ////////////////////////////////////////////
   // Constructors
@@ -64,6 +69,7 @@ abstract class Task implements Writable, Configurable {
   public String getJobFile() { return jobFile; }
   public String getTaskId() { return taskId; }
   public String getTipId(){ return tipId ; }
+  public Counters getCounters() { return counters; }
   
   /**
    * Get the job name for this task.
@@ -142,26 +148,36 @@ abstract class Task implements Writable, Configurable {
   /** The number of milliseconds between progress reports. */
   public static final int PROGRESS_INTERVAL = 1000;
 
-  private volatile Progress taskProgress = new Progress();
+  private transient Progress taskProgress = new Progress();
   private transient long nextProgressTime =
     System.currentTimeMillis() + PROGRESS_INTERVAL;
 
+  private transient Counters counters = new Counters();
+  
   public abstract boolean isMapTask();
 
   public Progress getProgress() { return taskProgress; }
 
-  protected Reporter getReporter(final TaskUmbilicalProtocol umbilical,
-                              final Progress progress) throws IOException {
+  protected Reporter getReporter(final TaskUmbilicalProtocol umbilical) 
+    throws IOException 
+  {
     return new Reporter() {
         public void setStatus(String status) throws IOException {
           synchronized (this) {
-            progress.setStatus(status);
+            taskProgress.setStatus(status);
             progress();
           }
         }
         public void progress() throws IOException {
             reportProgress(umbilical);
         }
+        public void incrCounter(Enum key, long amount) {
+            Counters counters = getCounters();
+            if (counters != null) {
+              String name = key.getDeclaringClass().getName()+"#"+key.toString();
+              counters.incrCounter(name, amount);
+            }
+          }
       };
   }
 
@@ -169,21 +185,15 @@ abstract class Task implements Writable, Configurable {
     taskProgress.set(progress);
   }
 
-  public void reportProgress(TaskUmbilicalProtocol umbilical, float progress)
-    throws IOException {
-    setProgress(progress);
-    reportProgress(umbilical);
-  }
-
   public void reportProgress(TaskUmbilicalProtocol umbilical) {
     long now = System.currentTimeMillis();
-    if (now > nextProgressTime)  {
-      synchronized (this) {
+    synchronized (this) {
+      if (now > nextProgressTime)  {
         nextProgressTime = now + PROGRESS_INTERVAL;
         float progress = taskProgress.get();
         String status = taskProgress.toString();
         try {
-          umbilical.progress(getTaskId(), progress, status, phase);
+          umbilical.progress(getTaskId(), progress, status, phase, counters);
         } catch (IOException ie) {
           LOG.warn(StringUtils.stringifyException(ie));
         }
@@ -199,7 +209,7 @@ abstract class Task implements Writable, Configurable {
         if (needProgress) {
           // send a final status report
           umbilical.progress(getTaskId(), taskProgress.get(), 
-                             taskProgress.toString(), phase);
+                             taskProgress.toString(), phase, counters);
           needProgress = false;
         }
         umbilical.done(getTaskId());

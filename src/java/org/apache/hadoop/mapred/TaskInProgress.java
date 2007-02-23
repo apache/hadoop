@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.*;
-import org.apache.hadoop.io.BytesWritable;
 
-import java.text.NumberFormat;
 import java.io.IOException;
-import java.util.*;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.BytesWritable;
 
 
 ////////////////////////////////////////////////////////
@@ -89,10 +96,13 @@ class TaskInProgress {
     /**
      * Map from taskId -> TaskStatus
      */
-    private TreeMap taskStatuses = new TreeMap();
+    private TreeMap<String,TaskStatus> taskStatuses = 
+      new TreeMap<String,TaskStatus>();
 
     private TreeSet machinesWhereFailed = new TreeSet();
     private TreeSet tasksReportedClosed = new TreeSet();
+    
+    private Counters counters = new Counters();
 
     /**
      * Constructor for MapTask
@@ -240,6 +250,13 @@ class TaskInProgress {
     public double getProgress() {
         return progress;
     }
+    
+    /**
+     * Get the task's counters
+     */
+    public Counters getCounters() {
+      return counters;
+    }
     /**
      * Returns whether a component task-thread should be 
      * closed because the containing JobInProgress has completed.
@@ -278,7 +295,7 @@ class TaskInProgress {
       TaskReport report = new TaskReport
       (getTIPId(), (float)progress, state,
           (String[])diagnostics.toArray(new String[diagnostics.size()]),
-          execStartTime, execFinishTime);
+          execStartTime, execFinishTime, counters);
       
       return report ;
     }
@@ -361,7 +378,7 @@ class TaskInProgress {
         // Note the failure and its location
         //
         LOG.info("Task '" + taskid + "' has been lost.");
-        TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
+        TaskStatus status = taskStatuses.get(taskid);
         if (status != null) {
             status.setRunState(TaskStatus.State.FAILED);
             // tasktracker went down and failed time was not reported. 
@@ -392,7 +409,7 @@ class TaskInProgress {
      */
     void completedTask(String taskid) {
         LOG.info("Task '" + taskid + "' has completed.");
-        TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
+        TaskStatus status = taskStatuses.get(taskid);
         status.setRunState(TaskStatus.State.SUCCEEDED);
         activeTasks.remove(taskid);
     }
@@ -421,9 +438,17 @@ class TaskInProgress {
      * Get the Status of the tasks managed by this TIP
      */
     public TaskStatus[] getTaskStatuses() {
-	return (TaskStatus[])taskStatuses.values().toArray(new TaskStatus[taskStatuses.size()]);
+	    return taskStatuses.values().toArray(new TaskStatus[taskStatuses.size()]);
     }
 
+    /**
+     * Get the status of the specified task
+     * @param taskid
+     * @return
+     */
+    public TaskStatus getTaskStatus(String taskid) {
+      return taskStatuses.get(taskid);
+    }
      /**
      * The TIP's been ordered kill()ed.
      */
@@ -460,22 +485,26 @@ class TaskInProgress {
         } else {
             double bestProgress = 0;
             String bestState = "";
+            Counters bestCounters = new Counters();
             for (Iterator it = taskStatuses.keySet().iterator(); it.hasNext(); ) {
                 String taskid = (String) it.next();
-                TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
+                TaskStatus status = taskStatuses.get(taskid);
                 if (status.getRunState() == TaskStatus.State.SUCCEEDED) {
                     bestProgress = 1;
                     bestState = status.getStateString();
+                    bestCounters = status.getCounters();
                     break;
                 } else if (status.getRunState() == TaskStatus.State.RUNNING) {
                   if (status.getProgress() >= bestProgress) {
                     bestProgress = status.getProgress();
                     bestState = status.getStateString();
+                    bestCounters = status.getCounters();
                   }
                 }
             }
             this.progress = bestProgress;
             this.state = bestState;
+            this.counters = bestCounters;
         }
     }
 

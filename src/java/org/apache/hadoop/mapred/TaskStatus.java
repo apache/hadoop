@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
-import java.io.*;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 /**************************************************
  * Describes the current status of a task.  This is
  * not intended to be a comprehensive piece of data.
@@ -49,13 +53,14 @@ class TaskStatus implements Writable {
     private long sortFinishTime ; 
     
     private Phase phase = Phase.STARTING; 
+    private Counters counters;
 
     public TaskStatus() {}
 
     public TaskStatus(String taskid, boolean isMap, float progress,
                       State runState, String diagnosticInfo,
                       String stateString, String taskTracker,
-                      Phase phase) {
+                      Phase phase, Counters counters) {
         this.taskid = taskid;
         this.isMap = isMap;
         this.progress = progress;
@@ -64,6 +69,7 @@ class TaskStatus implements Writable {
         this.stateString = stateString;
         this.taskTracker = taskTracker;
         this.phase = phase ;
+        this.counters = counters;
     }
     
     public String getTaskId() { return taskid; }
@@ -176,6 +182,20 @@ class TaskStatus implements Writable {
     void setPhase(Phase p){
       this.phase = p ; 
     }
+    /**
+     * Get task's counters.
+     */
+    public Counters getCounters() {
+      return counters;
+    }
+    /**
+     * Set the task's counters.
+     * @param counters
+     */
+    public void setCounters(Counters counters) {
+      this.counters = counters;
+    }
+    
     //////////////////////////////////////////////
     // Writable
     //////////////////////////////////////////////
@@ -193,6 +213,7 @@ class TaskStatus implements Writable {
           out.writeLong(shuffleFinishTime);
           out.writeLong(sortFinishTime);
         }
+        counters.write(out);
     }
 
     public void readFields(DataInput in) throws IOException {
@@ -209,6 +230,8 @@ class TaskStatus implements Writable {
           shuffleFinishTime = in.readLong(); 
           sortFinishTime = in.readLong(); 
         }
+        counters = new Counters();
+        counters.readFields(in);
      }
 }
 

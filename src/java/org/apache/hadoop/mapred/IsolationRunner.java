@@ -25,8 +25,10 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.*;
-import org.apache.hadoop.fs.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -58,7 +60,9 @@ public class IsolationRunner {
     }
 
     public void progress(String taskid, float progress, String state,
-                         TaskStatus.Phase phase) throws IOException {
+                         TaskStatus.Phase phase, Counters counters) 
+      throws IOException 
+    {
       StringBuffer buf = new StringBuffer("Task ");
       buf.append(taskid);
       buf.append(" making progress to ");
@@ -69,6 +73,7 @@ public class IsolationRunner {
       }
       LOG.info(buf.toString());
       // ignore phase
+      // ignore counters
     }
 
     public void reportDiagnosticInfo(String taskid, String trace) throws IOException {

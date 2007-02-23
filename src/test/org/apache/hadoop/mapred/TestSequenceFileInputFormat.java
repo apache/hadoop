@@ -40,10 +40,7 @@ public class TestSequenceFileInputFormat extends TestCase {
     Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
     Path file = new Path(dir, "test.seq");
     
-    Reporter reporter = new Reporter() {
-        public void setStatus(String status) throws IOException {}
-        public void progress() throws IOException {}
-      };
+    Reporter reporter = Reporter.NULL;
     
     int seed = new Random().nextInt();
     //LOG.info("seed = "+seed);

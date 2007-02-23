@@ -38,10 +38,7 @@ public class TestSequenceFileInputFilter extends TestCase {
   private static final Path inDir = new Path(System.getProperty("test.build.data",".") + "/mapred");
   private static final Path inFile = new Path(inDir, "test.seq");
   private static final Random random = new Random(1);
-  private static final Reporter reporter = new Reporter() {
-      public void setStatus(String status) throws IOException {}
-      public void progress() throws IOException {}
-  };
+  private static final Reporter reporter = Reporter.NULL;
   
   static {
       job.setInputPath(inDir);

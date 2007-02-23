@@ -51,10 +51,8 @@ public class TestTextInputFormat extends TestCase {
     JobConf job = new JobConf();
     Path file = new Path(workDir, "test.txt");
 
-    Reporter reporter = new Reporter() {
-        public void setStatus(String status) throws IOException {}
-        public void progress() throws IOException {}
-      };
+    // A reporter that does nothing
+    Reporter reporter = Reporter.NULL;
     
     int seed = new Random().nextInt();
     LOG.info("seed = "+seed);
@@ -178,11 +176,7 @@ public class TestTextInputFormat extends TestCase {
     stm.close();
   }
   
-  private static class VoidReporter implements Reporter {
-    public void progress() {}
-    public void setStatus(String msg) {}
-  }
-  private static final Reporter voidReporter = new VoidReporter();
+  private static final Reporter voidReporter = Reporter.NULL;
   
   private static List<Text> readSplit(InputFormat format, 
                                       InputSplit split, 

@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
-import java.io.*;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 /** A report on the state of a task. */
 public class TaskReport implements Writable {
@@ -29,17 +33,20 @@ public class TaskReport implements Writable {
   private String[] diagnostics;
   private long startTime ; 
   private long finishTime; 
+  private Counters counters;
 
   public TaskReport() {}
 
   TaskReport(String taskid, float progress, String state,
-             String[] diagnostics, long startTime, long finishTime) {
+             String[] diagnostics, long startTime, long finishTime,
+             Counters counters) {
     this.taskid = taskid;
     this.progress = progress;
     this.state = state;
     this.diagnostics = diagnostics;
     this.startTime = startTime ; 
     this.finishTime = finishTime ;
+    this.counters = counters;
   }
     
   /** The id of the task. */
@@ -50,6 +57,9 @@ public class TaskReport implements Writable {
   public String getState() { return state; }
   /** A list of error messages. */
   public String[] getDiagnostics() { return diagnostics; }
+  /** A table of counters. */
+  public Counters getCounters() { return counters; }
+  
   /**
    * Get finish time of task. 
    * @return 0, if finish time was not set else returns finish time.
@@ -90,6 +100,7 @@ public class TaskReport implements Writable {
     out.writeLong(startTime);
     out.writeLong(finishTime);
     WritableUtils.writeStringArray(out, diagnostics);
+    counters.write(out);
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -100,5 +111,7 @@ public class TaskReport implements Writable {
     this.finishTime = in.readLong() ;
     
     diagnostics = WritableUtils.readStringArray(in);
+    counters = new Counters();
+    counters.readFields(in);
   }
 }

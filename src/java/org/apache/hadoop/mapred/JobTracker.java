@@ -18,22 +18,36 @@
 package org.apache.hadoop.mapred;
 
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.ipc.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.*;
-
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.Vector;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.util.HostsFileReader;
+import org.apache.hadoop.util.StringUtils;
 
 /*******************************************************
  * JobTracker is the central location for submitting and 
@@ -1485,18 +1499,36 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
     
     /** Get all the TaskStatuses from the tipid. */
-    TaskStatus[] getTaskStatuses(String jobid, String tipid){
-	JobInProgress job = (JobInProgress) jobs.get(jobid);
-	if (job == null){
-	    return new TaskStatus[0];
-	}
-	TaskInProgress tip = (TaskInProgress) job.getTaskInProgress(tipid);
-	if (tip == null){
-	    return new TaskStatus[0];
-	}
-	return tip.getTaskStatuses();
+    TaskStatus[] getTaskStatuses(String jobid, String tipid) {
+      TaskInProgress tip = getTip(jobid, tipid);
+      return (tip == null ? new TaskStatus[0] 
+             : tip.getTaskStatuses());
     }
 
+    /** Returns the TaskStatus for a particular taskid. */
+    TaskStatus getTaskStatus(String jobid, String tipid, String taskid) {
+      TaskInProgress tip = getTip(jobid, tipid);
+      return (tip == null ? null 
+             : tip.getTaskStatus(taskid));
+    }
+    
+    /**
+     * Returns the counters for the specified task in progress.
+     */
+    Counters getTipCounters(String jobid, String tipid) {
+      TaskInProgress tip = getTip(jobid, tipid);
+      return (tip == null ? null : tip.getCounters());
+    }
+    
+    /**
+     * Returns specified TaskInProgress, or null.
+     */
+    private TaskInProgress getTip(String jobid, String tipid) {
+      JobInProgress job = (JobInProgress) jobs.get(jobid);
+      return (job == null ? null 
+             : (TaskInProgress) job.getTaskInProgress(tipid));
+    }
+    
     /**
      * Get tracker name for a given task id.
      * @param taskId the name of the task
