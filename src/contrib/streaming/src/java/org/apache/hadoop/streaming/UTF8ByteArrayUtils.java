@@ -33,17 +33,55 @@ public class UTF8ByteArrayUtils {
     /**
      * Find the first occured tab in a UTF-8 encoded string
      * @param utf a byte array containing a UTF-8 encoded string
+     * @param start starting offset
+     * @param length no. of bytes
      * @return position that first tab occures otherwise -1
      */
-    public static int findTab(byte [] utf) {
-        for(int i=0; i<utf.length; i++) {
+    public static int findTab(byte [] utf, int start, int length) {
+        for(int i=start; i<(start+length); i++) {
             if(utf[i]==(byte)'\t') {
                 return i;
             }
-          }
-          return -1;      
+        }
+        return -1;      
     }
     
+    /**
+     * Find the first occured tab in a UTF-8 encoded string
+     * @param utf a byte array containing a UTF-8 encoded string
+     * @return position that first tab occures otherwise -1
+     */
+    public static int findTab(byte [] utf) {
+      return findTab(utf, 0, utf.length);
+    }
+
+    /**
+     * split a UTF-8 byte array into key and value 
+     * assuming that the delimilator is at splitpos. 
+     * @param utf utf-8 encoded string
+     * @param start starting offset
+     * @param length no. of bytes
+     * @param key contains key upon the method is returned
+     * @param val contains value upon the method is returned
+     * @param splitPos the split pos
+     * @throws IOException
+     */
+    public static void splitKeyVal(byte[] utf, int start, int length, 
+            Text key, Text val, int splitPos) throws IOException {
+        if(splitPos<start || splitPos >= (start+length))
+            throw new IllegalArgumentException( "splitPos must be in the range " +
+                "[" + start + ", " + (start+length) + "]: " + splitPos);
+        int keyLen = (splitPos-start);
+        byte [] keyBytes = new byte[keyLen];
+        System.arraycopy(utf, start, keyBytes, 0, keyLen);
+        int valLen = (start+length)-splitPos-1;
+        byte [] valBytes = new byte[valLen];
+        System.arraycopy(utf, splitPos+1, valBytes, 0, valLen);
+        key.set(keyBytes);
+        val.set(valBytes);
+    }
+    
+
     /**
      * split a UTF-8 byte array into key and value 
      * assuming that the delimilator is at splitpos. 
@@ -55,16 +93,7 @@ public class UTF8ByteArrayUtils {
      */
     public static void splitKeyVal(byte[] utf, Text key, Text val, int splitPos) 
     throws IOException {
-        if(splitPos<0 || splitPos >= utf.length)
-            throw new IllegalArgumentException(
-                    "splitPos must be in the range [0, "+splitPos+"]: " +splitPos);
-        byte [] keyBytes = new byte[splitPos];
-        System.arraycopy(utf, 0, keyBytes, 0, splitPos);
-        int valLen = utf.length-splitPos-1;
-        byte [] valBytes = new byte[valLen];
-        System.arraycopy(utf,splitPos+1, valBytes, 0, valLen );
-        key.set(keyBytes);
-        val.set(valBytes);
+        splitKeyVal(utf, 0, utf.length, key, val, splitPos);
     }
     
     /**

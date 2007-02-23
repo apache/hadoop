@@ -72,16 +72,27 @@ public class StreamInputFormat extends TextInputFormat {
                                       JobConf job,
                                       Reporter reporter) throws IOException {
     FileSplit split = (FileSplit) genericSplit;
-    FileSystem fs = split.getPath().getFileSystem(job);
     LOG.info("getRecordReader start.....split=" + split);
     reporter.setStatus(split.toString());
 
-    final long start = split.getStart();
-    final long end = start + split.getLength();
-
-    FSDataInputStream in = fs.open(split.getPath());
+    long start = split.getStart();
+    long length  = split.getLength();
     
-    // will open the file and seek to the start of the split
+    // Open the file and seek to the start of the split
+    FileSystem fs = split.getPath().getFileSystem(job);
+    FSDataInputStream in = fs.open(split.getPath());
+    if (isGzippedInput(job)) {
+      length = Long.MAX_VALUE;
+    } else if (start != 0) {
+      in.seek(start-1);
+      LineRecordReader.readLine(in, null);
+      long oldStart = start;
+      start = in.getPos();
+      length -= (start - oldStart); 
+    }
+    // Ugly hack! 
+    split = new FileSplit(split.getPath(), start, length, job);
+
     // Factory dispatch based on available params..
     Class readerClass;
     String c = job.get("stream.recordreader.class");

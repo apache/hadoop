@@ -55,7 +55,7 @@ public class StreamLineRecordReader extends LineRecordReader {
       Reporter reporter,
       JobConf job, FileSystem fs) throws IOException {
     super(createStream(in, job), split.getStart(), 
-        split.getStart() + split.getLength());
+            (split.getStart() + split.getLength()));
     this.split = split ; 
     this.reporter = reporter ; 
   }
@@ -92,21 +92,23 @@ public class StreamLineRecordReader extends LineRecordReader {
 
     Text tKey = (Text) key;
     Text tValue = (Text) value;
-    byte[] line = null ; 
+    byte[] line = null ;
+    int lineLen = -1;
     if( super.next(dummyKey, innerValue) ){
-      line = innerValue.getBytes(); 
+      line = innerValue.getBytes();
+      lineLen = innerValue.getLength();
     }else{
       return false;
     }
     if (line == null) return false;
-    int tab = UTF8ByteArrayUtils.findTab(line);
+    int tab = UTF8ByteArrayUtils.findTab(line, 0, lineLen);
     if (tab == -1) {
-      tKey.set(line);
+      tKey.set(line, 0, lineLen);
       tValue.set("");
     } else {
-      UTF8ByteArrayUtils.splitKeyVal(line, tKey, tValue, tab);
+      UTF8ByteArrayUtils.splitKeyVal(line, 0, lineLen, tKey, tValue, tab);
     }
-    numRecStats(line, 0, line.length);
+    numRecStats(line, 0, lineLen);
     return true;
   }
   

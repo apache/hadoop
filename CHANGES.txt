@@ -119,6 +119,9 @@ Trunk (unreleased changes)
 35. HADOOP-248.  Optimize location of map outputs to not use random
     probes.  (Devaraj Das via cutting)
 
+36. HADOOP-1029.  Fix streaming's input format to correctly seek to
+    the start of splits.  (Arun C Murthy via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 
