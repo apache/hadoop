@@ -185,13 +185,8 @@ public abstract class PipeMapRed {
 
   String getSideEffectFileName() {
     FileSplit split = StreamUtil.getCurrentSplit(job_);
-    String leaf = split.getPath().getName();
-    if (split.getStart() == 0) {
-      return leaf;
-    } else {
-      return new FileSplit(new Path(leaf), split.getStart(), 
-                           split.getLength(), job_).toString();
-    }
+    return new String(split.getPath().getName() + "-" + split.getStart() + 
+            "-" + split.getLength());
   }
 
   public void configure(JobConf job) {
