@@ -860,9 +860,9 @@ public class TaskTracker
       }
       try {
     	  localizeJob(tip);
-      } catch (IOException ie) {
+      } catch (Throwable e) {
         String msg = ("Error initializing " + tip.getTask().getTaskId() + 
-                      ":\n" + StringUtils.stringifyException(ie));
+                      ":\n" + StringUtils.stringifyException(e));
         LOG.warn(msg);
         tip.reportDiagnosticInfo(msg);
         try {
@@ -870,6 +870,12 @@ public class TaskTracker
         } catch (IOException ie2) {
           LOG.info("Error cleaning up " + tip.getTask().getTaskId() + ":\n" +
                    StringUtils.stringifyException(ie2));          
+        }
+        
+        // Careful! 
+        // This might not be an 'Exception' - don't handle 'Error' here!
+        if (e instanceof Error) {
+          throw ((Error) e);
         }
       }
     }
