@@ -135,6 +135,9 @@ Trunk (unreleased changes)
 39. HADOOP-878.  In contrib/streaming, fix reducer=NONE to work with
     multiple maps.  (Arun C Murthy via cutting)
 
+40. HADOOP-1039.  In HDFS's TestCheckpoint, avoid restarting
+    MiniDFSCluster so often, speeding this test.  (Dhruba Borthakur via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

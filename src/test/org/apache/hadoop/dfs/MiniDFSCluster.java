@@ -18,6 +18,7 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
+import java.net.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.net.NetworkTopology;
@@ -36,8 +37,8 @@ public class MiniDFSCluster {
   private Thread dataNodeThreads[];
   private NameNodeRunner nameNode;
   private DataNodeRunner dataNodes[];
-  private int MAX_RETRIES  = 10;
-  private int MAX_RETRIES_PER_PORT = 10;
+  static public int MAX_RETRIES  = 10;
+  static public int MAX_RETRIES_PER_PORT = 10;
 
   private int nameNodePort = 0;
   private int nameNodeInfoPort = 0;
@@ -151,9 +152,24 @@ public class MiniDFSCluster {
   public MiniDFSCluster(int namenodePort, 
                         Configuration conf,
                         boolean dataNodeFirst) throws IOException {
-    this(namenodePort, conf, 1, dataNodeFirst, true, null);
+    this(namenodePort, conf, 1, dataNodeFirst, true, 
+         MAX_RETRIES, MAX_RETRIES_PER_PORT, null);
   }
-  
+
+  /**
+   * Create the config and start up the only the namenode.  If either the rpc or info port is already 
+   * in use, we will try new ports.
+   * @param namenodePort suggestion for which rpc port to use.  caller should use 
+   *                     getNameNodePort() to get the actual port used.
+   */
+  public MiniDFSCluster(int namenodePort, 
+                        Configuration conf,
+                        int numRetries,
+                        int numRetriesPerPort) throws IOException {
+    this(namenodePort, conf, 0, false, false, 
+         numRetries, numRetriesPerPort, null);
+  }
+
   /**
    * Create the config and start up the servers.  If either the rpc or info port is already 
    * in use, we will try new ports.
@@ -166,7 +182,8 @@ public class MiniDFSCluster {
                         Configuration conf,
                         int nDatanodes,
                         boolean dataNodeFirst) throws IOException {
-    this(namenodePort, conf, nDatanodes, dataNodeFirst, true, null);
+    this(namenodePort, conf, nDatanodes, dataNodeFirst, true, 
+         MAX_RETRIES, MAX_RETRIES_PER_PORT, null);
   }
   
   /**
@@ -183,7 +200,18 @@ public class MiniDFSCluster {
                         int nDatanodes,
                         boolean dataNodeFirst,
                         boolean formatNamenode ) throws IOException {
-    this(namenodePort, conf, nDatanodes, dataNodeFirst, formatNamenode, null);
+    this(namenodePort, conf, nDatanodes, dataNodeFirst, formatNamenode, 
+         MAX_RETRIES, MAX_RETRIES_PER_PORT, null);
+  }
+
+  public MiniDFSCluster(int namenodePort, 
+                        Configuration conf,
+                        int nDatanodes,
+                        boolean dataNodeFirst,
+                        boolean formatNamenode,
+                        String[] racks) throws IOException {
+    this(namenodePort, conf, nDatanodes, dataNodeFirst, formatNamenode, 
+         MAX_RETRIES, MAX_RETRIES_PER_PORT, racks);
   }
   
   /**
@@ -201,6 +229,8 @@ public class MiniDFSCluster {
                         int nDatanodes,
                         boolean dataNodeFirst,
                         boolean formatNamenode,
+                        int numRetries,
+                        int numRetriesPerPort,
                         String[] racks) throws IOException {
 
     this.conf = conf;
@@ -220,7 +250,7 @@ public class MiniDFSCluster {
     // too many tries have failed.
     boolean foundPorts = false;
     int portsTried = 0;
-    while ((!foundPorts) && (portsTried < MAX_RETRIES)) {
+    while ((!foundPorts) && (portsTried < numRetries)) {
       conf.set("fs.default.name", 
                "localhost:"+ Integer.toString(nameNodePort));
       conf.set("dfs.info.port", nameNodeInfoPort);
@@ -251,7 +281,7 @@ public class MiniDFSCluster {
       }
 
       int retry = 0;
-      while (!nameNode.isUp() && (retry < MAX_RETRIES_PER_PORT)) {
+      while (!nameNode.isUp() && (retry < numRetriesPerPort)) {
         try {                                     // let daemons get started
           System.out.println("waiting for dfs minicluster to start");
           Thread.sleep(1000);
@@ -259,7 +289,7 @@ public class MiniDFSCluster {
         }
         retry++;
       }
-      if (retry >= MAX_RETRIES_PER_PORT) {
+      if (retry >= numRetriesPerPort) {
         this.nameNodePort += 3;
         this.nameNodeInfoPort += 7;
         System.out.println("Failed to start DFS minicluster in " + retry + " attempts.  Trying new ports:");
@@ -276,7 +306,8 @@ public class MiniDFSCluster {
       }
       portsTried++;
     } 
-    if (portsTried >= MAX_RETRIES) {
+    System.out.println("\tNameNode portsTried " + portsTried);
+    if (portsTried >= numRetries) {
         throw new IOException("Failed to start a DFS minicluster after trying " + portsTried + " ports.");
     }
   }
@@ -311,5 +342,48 @@ public class MiniDFSCluster {
    */
   public File[] getNameDirs() {
     return NameNode.getDirs(conf);
+  }
+
+   /**
+   * Wait till the cluster is active and running.
+   */
+  public void waitActive() throws IOException {
+    InetSocketAddress addr = new InetSocketAddress("localhost",
+                                             getNameNodePort());
+    DFSClient client = new DFSClient(addr, conf);
+
+    //
+    // get initial state of datanodes
+    //  
+    DatanodeInfo[] oldinfo = client.datanodeReport();
+    while (oldinfo.length != nDatanodes) {
+      try {
+        Thread.sleep(500);
+      } catch (Exception e) {
+      }
+      oldinfo = client.datanodeReport();
+    }
+
+    // 
+    // wait till all datanodes send at least yet another heartbeat
+    //
+    int numdead = 0;
+    while (numdead > 0) {
+      try {
+        Thread.sleep(500);
+      } catch (Exception e) {
+      }
+      DatanodeInfo[] info = client.datanodeReport();
+      if (info.length != nDatanodes) {
+        continue;
+      }
+      numdead = 0;
+      for (int i = 0; i < info.length; i++) {
+        if (oldinfo[i].getLastUpdate() >= info[i].getLastUpdate()) {
+          numdead++;
+        }
+      }
+    }
+    client.close();
   }
 }
