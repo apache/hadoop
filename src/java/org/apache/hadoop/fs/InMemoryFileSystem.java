@@ -98,10 +98,13 @@ public class InMemoryFileSystem extends FileSystem {
     private FileAttributes fAttr;
     
     public InMemoryInputStream(Path f) throws IOException {
-      fAttr = pathToFileAttribs.get(getPath(f));
-      if (fAttr == null) throw new FileNotFoundException("File " + f + 
-                                                         " does not exist");
-      din.reset(fAttr.data, 0, fAttr.size);
+      synchronized (InMemoryFileSystem.this) {
+        fAttr = pathToFileAttribs.get(getPath(f));
+        if (fAttr == null) { 
+          throw new FileNotFoundException("File " + f + " does not exist");
+        }                            
+        din.reset(fAttr.data, 0, fAttr.size);
+      }
     }
     
     public long getPos() throws IOException {
@@ -214,12 +217,16 @@ public class InMemoryFileSystem extends FileSystem {
 
   public void close() throws IOException {
     super.close();
-    if (pathToFileAttribs != null) 
-      pathToFileAttribs.clear();
-    pathToFileAttribs = null;
-    if (tempFileAttribs != null)
-      tempFileAttribs.clear();
-    tempFileAttribs = null;
+    synchronized (this) {
+      if (pathToFileAttribs != null) { 
+        pathToFileAttribs.clear();
+      }
+      pathToFileAttribs = null;
+      if (tempFileAttribs != null) {
+        tempFileAttribs.clear();
+      }
+      tempFileAttribs = null;
+    }
   }
 
   /**
@@ -236,6 +243,9 @@ public class InMemoryFileSystem extends FileSystem {
 
   public boolean renameRaw(Path src, Path dst) throws IOException {
     synchronized (this) {
+      if (exists(dst)) {
+        throw new IOException ("Path " + dst + " already exists");
+      }
       FileAttributes fAttr = pathToFileAttribs.remove(getPath(src));
       if (fAttr == null) return false;
       pathToFileAttribs.put(getPath(dst), fAttr);
@@ -256,7 +266,9 @@ public class InMemoryFileSystem extends FileSystem {
   }
 
   public boolean exists(Path f) throws IOException {
-    return pathToFileAttribs.containsKey(getPath(f));
+    synchronized (this) {
+      return pathToFileAttribs.containsKey(getPath(f));
+    }
   }
   
   /**
@@ -267,7 +279,9 @@ public class InMemoryFileSystem extends FileSystem {
   }
 
   public long getLength(Path f) throws IOException {
-    return pathToFileAttribs.get(getPath(f)).size;
+    synchronized (this) {
+      return pathToFileAttribs.get(getPath(f)).size;
+    }
   }
   
   /**
@@ -363,13 +377,18 @@ public class InMemoryFileSystem extends FileSystem {
   public Path[] getFiles(PathFilter filter) {
     synchronized (this) {
       List <String> closedFilesList = new ArrayList();
-      Set paths = pathToFileAttribs.keySet();
-      if (paths == null || paths.isEmpty()) return new Path[0];
-      Iterator iter = paths.iterator();
-      while (iter.hasNext()) {
-        String f = (String)iter.next();
-        if (filter.accept(new Path(f)))
-          closedFilesList.add(f);
+      synchronized (pathToFileAttribs) {
+        Set paths = pathToFileAttribs.keySet();
+        if (paths == null || paths.isEmpty()) {
+          return new Path[0];
+        }
+        Iterator iter = paths.iterator();
+        while (iter.hasNext()) {
+          String f = (String)iter.next();
+          if (filter.accept(new Path(f))) {
+            closedFilesList.add(f);
+          }
+        }
       }
       String [] names = 
         closedFilesList.toArray(new String[closedFilesList.size()]);
@@ -381,6 +400,10 @@ public class InMemoryFileSystem extends FileSystem {
     }
   }
   
+  public int getNumFiles(PathFilter filter) {
+    return getFiles(filter).length;
+  }
+
   public int getFSSize() {
     return fsSize;
   }

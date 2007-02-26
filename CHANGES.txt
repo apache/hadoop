@@ -141,6 +141,9 @@ Trunk (unreleased changes)
 41. HADOOP-1040.  Update RandomWriter example to use counters and
     user-defined input and output formats.  (omalley via cutting)
 
+42. HADOOP-1027.  Fix problems with in-memory merging during shuffle
+    and re-enable this optimization.  (Devaraj Das via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

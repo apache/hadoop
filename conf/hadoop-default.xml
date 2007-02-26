@@ -132,7 +132,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>fs.inmemory.size.mb</name>
-  <value>0</value>
+  <value>75</value>
   <description>The size of the in-memory filsystem instance in MB</description>
 </property>
 
@@ -556,6 +556,17 @@ creations/deletions), or "all".</description>
   /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
 
         -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+  </description>
+</property>
+
+<property>
+  <name>mapred.inmem.merge.threshold</name>
+  <value>1000</value>
+  <description>The threshold, in terms of the number of files 
+  for the in-memory merge process. When we accumulate threshold number of files
+  we initiate the in-memory merge and spill to disk. A value of 0 or less than
+  0 indicates we want to DON'T have any threshold and instead depend only on
+  the ramfs's memory consumption to trigger the merge.
   </description>
 </property>
 

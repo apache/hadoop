@@ -2381,14 +2381,37 @@ public class SequenceFile {
         do {
           //get the factor for this pass of merge
           factor = getPassFactor(passNo, numSegments);
-          //extract the smallest 'factor' number of segment pointers from the 
-          //TreeMap
-          SegmentDescriptor[] mStream = getSegmentDescriptors(factor);
-          
+          List <SegmentDescriptor> segmentsToMerge = new ArrayList();
+          int segmentsConsidered = 0;
+          int numSegmentsToConsider = factor;
+          while (true) {
+            //extract the smallest 'factor' number of segment pointers from the 
+            //TreeMap. Call cleanup on the empty segments (no key/value data)
+            SegmentDescriptor[] mStream = 
+              getSegmentDescriptors(numSegmentsToConsider);
+            for (int i = 0; i < mStream.length; i++) {
+              if (mStream[i].nextRawKey()) {
+                segmentsToMerge.add(mStream[i]);
+                segmentsConsidered++;
+              }
+              else {
+                mStream[i].cleanup();
+                numSegments--; //we ignore this segment for the merge
+              }
+            }
+            //if we have the desired number of segments
+            //or looked at all available segments, we break
+            if (segmentsConsidered == factor || 
+                sortedSegmentSizes.size() == 0) {
+              break;
+            }
+              
+            numSegmentsToConsider = factor - segmentsConsidered;
+          }
           //feed the streams to the priority queue
-          initialize(mStream.length); clear();
-          for (int i = 0; i < mStream.length; i++) {
-            if (mStream[i].nextRawKey()) put(mStream[i]);
+          initialize(segmentsToMerge.size()); clear();
+          for (int i = 0; i < segmentsToMerge.size(); i++) {
+            put(segmentsToMerge.get(i));
           }
           //if we have lesser number of segments remaining, then just return the
           //iterator, else do another single level merge
@@ -2396,10 +2419,13 @@ public class SequenceFile {
             //calculate the length of the remaining segments. Required for 
             //calculating the merge progress
             long totalBytes = 0;
-            for (int i = 0; i < numSegments; i++)
-              totalBytes += mStream[i].segmentLength;
+            for (int i = 0; i < segmentsToMerge.size(); i++) {
+              totalBytes += segmentsToMerge.get(i).segmentLength;
+            }
             if (totalBytes != 0) //being paranoid
               progPerByte = 1.0f / (float)totalBytes;
+            //reset factor to what it originally was
+            factor = origFactor;
             return this;
           } else {
             //we want to spread the creation of temp files on multiple disks if 
@@ -2410,8 +2436,8 @@ public class SequenceFile {
                                                 tmpFilename.toString());
             LOG.info("writing intermediate results to " + outputFile);
             Writer writer = cloneFileAttributes(
-                            fs.makeQualified(mStream[0].segmentPathName), 
-                            fs.makeQualified(outputFile), null);
+                      fs.makeQualified(segmentsToMerge.get(0).segmentPathName), 
+                      fs.makeQualified(outputFile), null);
             writer.sync = null; //disable sync for temp files
             writeFile(this, writer);
             writer.close();
@@ -2420,17 +2446,6 @@ public class SequenceFile {
             //queue
             this.close();
             
-            //this is required to handle the corner case where we have empty
-            //map outputs to merge. The empty map outputs will just have the 
-            //sequence file header; they won't be inserted in the priority 
-            //queue. Thus, they won't be deleted in the regular process where 
-            //cleanup happens when a stream is popped off (when the key/value
-            //from that stream has been iterated over) from the queue.
-            for (int i = 0; i < mStream.length; i++) {
-              if (mStream[i].in != null) //true if cleanup didn't happen
-                mStream[i].cleanup();
-            }
-
             SegmentDescriptor tempSegment = 
                  new SegmentDescriptor(0, fs.getLength(outputFile), outputFile);
             //put the segment back in the TreeMap
@@ -2528,8 +2543,12 @@ public class SequenceFile {
        */
       public boolean nextRawKey() throws IOException {
         if (in == null) {
+        int bufferSize = conf.getInt("io.file.buffer.size", 4096); 
+        if (fs.getUri().getScheme().startsWith("ramfs")) {
+          bufferSize = conf.getInt("io.bytes.per.checksum", 512);
+        }
         Reader reader = new Reader(fs, segmentPathName, 
-            conf.getInt("io.file.buffer.size", 4096), segmentOffset, 
+            bufferSize, segmentOffset, 
                 segmentLength, conf);
         
         //sometimes we ignore syncs especially for temp merge files
