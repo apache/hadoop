@@ -147,6 +147,9 @@ Trunk (unreleased changes)
 43. HADOOP-1036.  Fix exception handling in TaskTracker to keep tasks
     from being lost.  (Arun C Murthy via cutting)
 
+44. HADOOP-1042.  Improve the handling of failed map output fetches.
+    (Devaraj Das via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 
