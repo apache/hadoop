@@ -18,196 +18,19 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.zip.*;
-
-import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.StringUtils;
 
 /** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
  * and buffers input through a {@link BufferedInputStream}. */
 public class FSDataInputStream extends DataInputStream
     implements Seekable, PositionedReadable {
-  private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.fs.DataInputStream");
-
-  private static final byte[] VERSION = FSDataOutputStream.CHECKSUM_VERSION;
-  private static final int HEADER_LENGTH = 8;
-  
-  private int bytesPerSum = 1;
-  
-  /** Verify that data matches checksums. */
-  private class Checker extends FilterInputStream
-      implements Seekable, PositionedReadable {
-    private FileSystem fs;
-    private Path file;
-    private FSDataInputStream sums;
-    private Checksum sum = new CRC32();
-    private int inSum;
-    private FSInputStream sumsIn;
-
-    public Checker(FileSystem fs, Path file, Configuration conf)
-      throws IOException {
-      super(fs.openRaw(file));
-      
-      this.fs = fs;
-      this.file = file;
-      Path sumFile = FileSystem.getChecksumFile(file);
-      try {
-        sumsIn = fs.openRaw(sumFile);
-        this.sums = new FSDataInputStream(sumsIn, conf);
-        byte[] version = new byte[VERSION.length];
-        sums.readFully(version);
-        if (!Arrays.equals(version, VERSION))
-          throw new IOException("Not a checksum file: "+sumFile);
-        bytesPerSum = sums.readInt();
-      } catch (FileNotFoundException e) {         // quietly ignore
-        stopSumming();
-      } catch (IOException e) {                   // loudly ignore
-        LOG.warn("Problem opening checksum file: "+ file + 
-                 ".  Ignoring exception: " + 
-                 StringUtils.stringifyException(e));
-        stopSumming();
-      }
-    }
-
-    public void seek(long desired) throws IOException {
-      ((Seekable)in).seek(desired);
-      if (sums != null) {
-        if (desired % bytesPerSum != 0)
-          throw new IOException("Seek to non-checksummed position.");
-        try {
-          sums.seek(HEADER_LENGTH + 4*(desired/bytesPerSum));
-        } catch (IOException e) {
-          LOG.warn("Problem seeking checksum file: "+e+". Ignoring.");
-          stopSumming();
-        }
-        sum.reset();
-        inSum = 0;
-      }
-    }
-    
-    public int read(byte b[], int off, int len) throws IOException {
-      int read;
-      boolean retry;
-      int retriesLeft = 3;
-      long oldPos = getPos();
-      do {
-        retriesLeft--;
-        retry = false;
-
-        read = in.read(b, off, len);
-        
-        if (sums != null) {
-          long oldSumsPos = sums.getPos();
-          try {
-            int summed = 0;
-            while (summed < read) {
-              int goal = bytesPerSum - inSum;
-              int inBuf = read - summed;
-              int toSum = inBuf <= goal ? inBuf : goal;
-          
-              try {
-                sum.update(b, off+summed, toSum);
-              } catch (ArrayIndexOutOfBoundsException e) {
-                throw new RuntimeException("Summer buffer overflow b.len=" + 
-                                           b.length + ", off=" + off + 
-                                           ", summed=" + summed + ", read=" + 
-                                           read + ", bytesPerSum=" + bytesPerSum +
-                                           ", inSum=" + inSum, e);
-              }
-              summed += toSum;
-          
-              inSum += toSum;
-              if (inSum == bytesPerSum) {
-                verifySum(read-(summed-bytesPerSum));
-              }
-            }
-          } catch (ChecksumException ce) {
-            LOG.info("Found checksum error: " + StringUtils.stringifyException(ce));
-            if (retriesLeft == 0) {
-              throw ce;
-            }
-            sums.seek(oldSumsPos);
-            if (!((FSInputStream)in).seekToNewSource(oldPos) ||
-                !((FSInputStream)sumsIn).seekToNewSource(oldSumsPos)) {
-              // Neither the data stream nor the checksum stream are being read from
-              // different sources, meaning we'll still get a checksum error if we 
-              // try to do the read again.  We throw an exception instead.
-              throw ce;
-            } else {
-              // Since at least one of the sources is different, the read might succeed,
-              // so we'll retry.
-              retry = true;
-            }
-          }
-        }
-      } while (retry);
-      return read;
-    }
-
-    private void verifySum(int delta) throws IOException {
-      int crc;
-      try {
-        crc = sums.readInt();
-      } catch (IOException e) {
-        LOG.warn("Problem reading checksum file: "+e+". Ignoring.");
-        stopSumming();
-        return;
-      }
-      int sumValue = (int)sum.getValue();
-      sum.reset();
-      inSum = 0;
-      if (crc != sumValue) {
-        long pos = getPos() - delta;
-        fs.reportChecksumFailure(file, (FSInputStream)in,
-                                 pos, sumsIn, pos/bytesPerSum) ;
-        throw new ChecksumException("Checksum error: "+file+" at "+pos);
-      }
-    }
-
-    public long getPos() throws IOException {
-      return ((FSInputStream)in).getPos();
-    }
-
-    public int read(long position, byte[] buffer, int offset, int length)
-    throws IOException {
-      return ((FSInputStream)in).read(position, buffer, offset, length);
-    }
-    
-    public void readFully(long position, byte[] buffer, int offset, int length)
-    throws IOException {
-      ((FSInputStream)in).readFully(position, buffer, offset, length);
-    }
-    
-    public void readFully(long position, byte[] buffer)
-    throws IOException {
-      ((FSInputStream)in).readFully(position, buffer);
-    }
-
-    public void close() throws IOException {
-      super.close();
-      stopSumming();
-    }
-
-    private void stopSumming() {
-      if (sums != null) {
-        try {
-          sums.close();
-        } catch (IOException f) {}
-        sums = null;
-        bytesPerSum = 1;
-      }
-    }
-  }
 
   /** Cache the file position.  This improves performance significantly.*/
   private static class PositionCache extends FilterInputStream {
     long position;
 
-    public PositionCache(InputStream in) throws IOException {
+    public PositionCache(FSInputStream in) throws IOException {
       super(in);
     }
 
@@ -221,7 +44,7 @@ public class FSDataInputStream extends DataInputStream
     }
 
     public void seek(long desired) throws IOException {
-      ((Seekable)in).seek(desired);               // seek underlying stream
+      ((FSInputStream)in).seek(desired);          // seek underlying stream
       position = desired;                         // update position
     }
       
@@ -231,18 +54,17 @@ public class FSDataInputStream extends DataInputStream
     
     public int read(long position, byte[] buffer, int offset, int length)
     throws IOException {
-      return ((PositionedReadable)in).read(position, buffer, offset, length);
+      return ((FSInputStream)in).read(position, buffer, offset, length);
     }
     
     public void readFully(long position, byte[] buffer, int offset, int length)
     throws IOException {
-      ((PositionedReadable)in).readFully(position, buffer, offset, length);
+      ((FSInputStream)in).readFully(position, buffer, offset, length);
     }
-    
   }
 
   /** Buffer input.  This improves performance significantly.*/
-  private class Buffer extends BufferedInputStream {
+  private static class Buffer extends BufferedInputStream {
     public Buffer(PositionCache in, int bufferSize)
       throws IOException {
       super(in, bufferSize);
@@ -257,18 +79,8 @@ public class FSDataInputStream extends DataInputStream
       } else {
         this.count = 0;                           // invalidate buffer
         this.pos = 0;
-
-        long delta = desired % bytesPerSum;
-        
-        // seek to last checksummed point, if any
-        ((PositionCache)in).seek(desired - delta);
-
-        // scan to desired position
-        for (int i = 0; i < delta; i++) {
-          read();
-        }
+        ((PositionCache)in).seek(desired);
       }
-
     }
       
     public long getPos() throws IOException {     // adjust for buffer
@@ -291,40 +103,18 @@ public class FSDataInputStream extends DataInputStream
     throws IOException {
       ((PositionCache)in).readFully(position, buffer, offset, length);
     }
-}
-  
-  
-  public FSDataInputStream(FileSystem fs, Path file, int bufferSize, Configuration conf)
-      throws IOException {
-    super(null);
-    Checker chkr = new Checker(fs, file, conf);  // sets bytesPerSum
-    if (bufferSize % bytesPerSum != 0) {
-      throw new IOException("Buffer size must be multiple of " + bytesPerSum);
-    }
-    this.in = new Buffer(new PositionCache(chkr), bufferSize);
   }
+
+  protected FSInputStream inStream;
   
-  
-  public FSDataInputStream(FileSystem fs, Path file, Configuration conf)
-    throws IOException {
-    super(null);
-    int bufferSize = conf.getInt("io.file.buffer.size", 4096);
-    Checker chkr = new Checker(fs, file, conf);
-    if (bufferSize % bytesPerSum != 0) {
-      throw new IOException("Buffer size must be multiple of " + bytesPerSum);
-    }
-    this.in = new Buffer(new PositionCache(chkr), bufferSize);
-  }
-    
-  /** Construct without checksums. */
   public FSDataInputStream(FSInputStream in, Configuration conf) throws IOException {
     this(in, conf.getInt("io.file.buffer.size", 4096));
   }
-  /** Construct without checksums. */
+  
   public FSDataInputStream(FSInputStream in, int bufferSize)
     throws IOException {
-    super(null);
-    this.in = new Buffer(new PositionCache(in), bufferSize);
+    super( new Buffer(new PositionCache(in), bufferSize) );
+    this.inStream = in;
   }
   
   public synchronized void seek(long desired) throws IOException {
@@ -334,7 +124,7 @@ public class FSDataInputStream extends DataInputStream
   public long getPos() throws IOException {
     return ((Buffer)in).getPos();
   }
-
+  
   public int read(long position, byte[] buffer, int offset, int length)
   throws IOException {
     return ((Buffer)in).read(position, buffer, offset, length);
@@ -348,5 +138,9 @@ public class FSDataInputStream extends DataInputStream
   public void readFully(long position, byte[] buffer)
   throws IOException {
     ((Buffer)in).readFully(position, buffer, 0, buffer.length);
+  }
+  
+  public boolean seekToNewSource(long targetPos) throws IOException {
+    return inStream.seekToNewSource(targetPos); 
   }
 }

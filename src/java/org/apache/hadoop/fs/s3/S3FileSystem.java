@@ -8,8 +8,8 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSOutputStream;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -152,7 +152,7 @@ public class S3FileSystem extends FileSystem {
   }
 
   @Override
-  public Path[] listPathsRaw(Path path) throws IOException {
+  public Path[] listPaths(Path path) throws IOException {
     Path absolutePath = makeAbsolute(path);
     INode inode = store.retrieveINode(absolutePath);
     if (inode == null) {
@@ -166,21 +166,14 @@ public class S3FileSystem extends FileSystem {
   }
 
   @Override
-  public FSOutputStream createRaw(Path file, boolean overwrite,
-      short replication, long blockSize) throws IOException {
-
-    return createRaw(file, overwrite, replication, blockSize, null);
-  }
-
-  @Override
-  public FSOutputStream createRaw(Path file, boolean overwrite,
+  public FSDataOutputStream create(Path file, boolean overwrite, int bufferSize,
       short replication, long blockSize, Progressable progress)
       throws IOException {
 
     INode inode = store.retrieveINode(makeAbsolute(file));
     if (inode != null) {
       if (overwrite) {
-        deleteRaw(file);
+        delete(file);
       } else {
         throw new IOException("File already exists: " + file);
       }
@@ -192,18 +185,20 @@ public class S3FileSystem extends FileSystem {
         }
       }      
     }
-    return new S3OutputStream(getConf(), store, makeAbsolute(file),
-        blockSize, progress);
+    return new FSDataOutputStream( 
+            new S3OutputStream(getConf(), store, makeAbsolute(file),
+                blockSize, progress), bufferSize );
   }
 
   @Override
-  public FSInputStream openRaw(Path path) throws IOException {
+  public FSDataInputStream open(Path path, int bufferSize) throws IOException {
     INode inode = checkFile(path);
-    return new S3InputStream(getConf(), store, inode);
+    return new FSDataInputStream( new S3InputStream(getConf(), store, inode),
+            bufferSize);
   }
 
   @Override
-  public boolean renameRaw(Path src, Path dst) throws IOException {
+  public boolean rename(Path src, Path dst) throws IOException {
     Path absoluteSrc = makeAbsolute(src);
     INode srcINode = store.retrieveINode(absoluteSrc);
     if (srcINode == null) {
@@ -228,10 +223,10 @@ public class S3FileSystem extends FileSystem {
         return false;
       }
     }
-    return renameRawRecursive(absoluteSrc, absoluteDst);
+    return renameRecursive(absoluteSrc, absoluteDst);
   }
   
-  private boolean renameRawRecursive(Path src, Path dst) throws IOException {
+  private boolean renameRecursive(Path src, Path dst) throws IOException {
     INode srcINode = store.retrieveINode(src);
     store.storeINode(dst, srcINode);
     store.deleteINode(src);
@@ -250,7 +245,7 @@ public class S3FileSystem extends FileSystem {
   }
 
   @Override
-  public boolean deleteRaw(Path path) throws IOException {
+  public boolean delete(Path path) throws IOException {
     Path absolutePath = makeAbsolute(path);
     INode inode = store.retrieveINode(absolutePath);
     if (inode == null) {
@@ -262,12 +257,12 @@ public class S3FileSystem extends FileSystem {
         store.deleteBlock(block);
       }
     } else {
-      Path[] contents = listPathsRaw(absolutePath);
+      Path[] contents = listPaths(absolutePath);
       if (contents == null) {
         return false;
       }
       for (Path p : contents) {
-        if (! deleteRaw(p)) {
+        if (! delete(p)) {
           return false;
         }
       }
@@ -305,7 +300,7 @@ public class S3FileSystem extends FileSystem {
    * us.
    */
   @Override
-  public boolean setReplicationRaw(Path path, short replication)
+  public boolean setReplication(Path path, short replication)
       throws IOException {
     return true;
   }
@@ -354,25 +349,13 @@ public class S3FileSystem extends FileSystem {
   }
 
   @Override
-  public void reportChecksumFailure(Path f, 
-                                    FSInputStream in, long inPos, 
-                                    FSInputStream sums, long sumsPos) {
-    // TODO: What to do here?
+  public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
+    FileUtil.copy(localFs, src, this, dst, delSrc, getConf());
   }
 
   @Override
-  public void moveFromLocalFile(Path src, Path dst) throws IOException {
-    FileUtil.copy(localFs, src, this, dst, true, getConf());
-  }
-
-  @Override
-  public void copyFromLocalFile(Path src, Path dst) throws IOException {
-    FileUtil.copy(localFs, src, this, dst, false, true, getConf());
-  }
-
-  @Override
-  public void copyToLocalFile(Path src, Path dst, boolean copyCrc) throws IOException {
-    FileUtil.copy(this, src, localFs, dst, false, copyCrc, getConf());
+  public void copyToLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
+    FileUtil.copy(this, src, localFs, dst, delSrc, getConf());
   }
 
   @Override

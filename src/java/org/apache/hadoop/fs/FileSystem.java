@@ -48,7 +48,7 @@ import org.apache.hadoop.util.*;
  * @author Mike Cafarella
  *****************************************************************/
 public abstract class FileSystem extends Configured {
-    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.DistributedFileSystem");
+    public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FileSystem");
 
     // cache indexed by URI scheme and authority
     private static final Map<String,Map<String,FileSystem>> CACHE
@@ -194,25 +194,7 @@ public abstract class FileSystem extends Configured {
 
       return new Path(scheme+":"+"//"+authority + pathUri.getPath());
     }
-
-    /** Return the name of the checksum file associated with a file.*/
-    public static Path getChecksumFile(Path file) {
-      return new Path(file.getParent(), "."+file.getName()+".crc");
-    }
-
-    /** Return the length of the checksum file given the size of the 
-     * actual file.
-     **/
-    public static long getChecksumFileLength(long fileSize, int bytesPerSum) {
-      return FSDataOutputStream.getChecksumLength(fileSize, bytesPerSum);
-    }
     
-    /** Return true iff file is a checksum file name.*/
-    public static boolean isChecksumFile(Path file) {
-      String name = file.getName();
-      return name.startsWith(".") && name.endsWith(".crc");
-    }
-
     ///////////////////////////////////////////////////////////////
     // FileSystem
     ///////////////////////////////////////////////////////////////
@@ -252,23 +234,16 @@ public abstract class FileSystem extends Configured {
      * @param f the file name to open
      * @param bufferSize the size of the buffer to be used.
      */
-    public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-      return new FSDataInputStream(this, f, bufferSize, getConf());
-    }
+    public abstract FSDataInputStream open(Path f, int bufferSize)
+    throws IOException;
     
     /**
      * Opens an FSDataInputStream at the indicated Path.
      * @param f the file to open
      */
     public FSDataInputStream open(Path f) throws IOException {
-      return new FSDataInputStream(this, f, getConf());
+      return open(f, getConf().getInt("io.file.buffer.size", 4096));
     }
-
-    /**
-     * Opens an InputStream for the indicated Path, whether local
-     * or via DFS.
-     */
-    public abstract FSInputStream openRaw(Path f) throws IOException;
 
     /**
      * Opens an FSDataOutputStream at the indicated Path.
@@ -368,8 +343,7 @@ public abstract class FileSystem extends Configured {
                                       short replication,
                                       long blockSize
                                     ) throws IOException {
-      return new FSDataOutputStream(this, f, overwrite, getConf(), 
-                                    bufferSize, replication, blockSize );
+      return create(f, overwrite, bufferSize, replication, blockSize, null);
     }
 
     /**
@@ -381,72 +355,25 @@ public abstract class FileSystem extends Configured {
      * @param bufferSize the size of the buffer to be used.
      * @param replication required block replication for the file. 
      */
-    public FSDataOutputStream create( Path f, 
-                                      boolean overwrite,
-                                      int bufferSize,
-                                      short replication,
-                                      long blockSize,
-                                      Progressable progress
-                                    ) throws IOException {
-      return new FSDataOutputStream(this, f, overwrite, getConf(), 
-                                    bufferSize, replication, blockSize, progress );
-    }
+    public abstract FSDataOutputStream create( Path f, 
+                                               boolean overwrite,
+                                               int bufferSize,
+                                               short replication,
+                                               long blockSize,
+                                               Progressable progress
+                                             ) throws IOException;
 
-    /** Opens an OutputStream at the indicated Path.
-     * @param f the file name to open
-     * @param overwrite if a file with this name already exists, then if true,
-     *   the file will be overwritten, and if false an error will be thrown.
-     * @param replication required block replication for the file. 
-     */
-    public abstract FSOutputStream createRaw(Path f, boolean overwrite, 
-                                             short replication,
-                                             long blockSize)
-      throws IOException;
-
-    /** Opens an OutputStream at the indicated Path with write-progress
-     * reporting.
-     * @param f the file name to open
-     * @param overwrite if a file with this name already exists, then if true,
-     *   the file will be overwritten, and if false an error will be thrown.
-     * @param replication required block replication for the file. 
-     */
-    public abstract FSOutputStream createRaw(Path f, boolean overwrite, 
-                                             short replication,
-                                             long blockSize, Progressable progress)
-      throws IOException;
-    
     /**
      * Creates the given Path as a brand-new zero-length file.  If
      * create fails, or if it already existed, return false.
      */
     public boolean createNewFile(Path f) throws IOException {
-        if (exists(f)) {
-            return false;
-        } else {
-          create(f,false,getConf().getInt("io.file.buffer.size", 4096)).close();
-          return true;
-        }
-    }
-
-    /**
-     * Set replication for an existing file.
-     * 
-     * @param src file name
-     * @param replication new replication
-     * @throws IOException
-     * @return true if successful;
-     *         false if file does not exist or is a directory
-     */
-    public boolean setReplication(Path src, short replication) throws IOException {
-      boolean value = setReplicationRaw(src, replication);
-      if( ! value )
+      if (exists(f)) {
         return false;
-
-      Path checkFile = getChecksumFile(src);
-      if (exists(checkFile))
-        setReplicationRaw(checkFile, replication);
-
-      return true;
+      } else {
+        create(f, false, getConf().getInt("io.file.buffer.size", 4096)).close();
+        return true;
+      }
     }
 
     /**
@@ -467,57 +394,20 @@ public abstract class FileSystem extends Configured {
      * @return true if successful;
      *         false if file does not exist or is a directory
      */
-    public abstract boolean setReplicationRaw(Path src, short replication) throws IOException;
+    public abstract boolean setReplication(Path src, short replication) throws IOException;
 
     /**
      * Renames Path src to Path dst.  Can take place on local fs
      * or remote DFS.
      */
-    public boolean rename(Path src, Path dst) throws IOException {
-      if (isDirectory(src)) {
-        return renameRaw(src, dst);
-      } else {
-
-        boolean value = renameRaw(src, dst);
-        if (!value)
-          return false;
-
-        Path checkFile = getChecksumFile(src);
-        if (exists(checkFile)) { //try to rename checksum
-          if(isDirectory(dst)) {
-            renameRaw(checkFile, dst);
-          } else {
-            renameRaw(checkFile, getChecksumFile(dst)); 
-          }
-        }
-
-        return value;
-      }
-      
-    }
-
-    /**
-     * Renames Path src to Path dst.  Can take place on local fs
-     * or remote DFS.
+    public abstract boolean rename(Path src, Path dst) throws IOException;
+    
+    /** Delete a file */
+    public abstract boolean delete(Path f) throws IOException;
+    
+    /** Check if exists.
+     * @param f source file
      */
-    public abstract boolean renameRaw(Path src, Path dst) throws IOException;
-
-    /** Delete a file. */
-    public boolean delete(Path f) throws IOException {
-      if (isDirectory(f)) {
-        return deleteRaw(f);
-      } else {
-        deleteRaw(getChecksumFile(f));            // try to delete checksum
-        return deleteRaw(f);
-      }
-    }
-
-    /**
-     * Deletes Path
-     */
-    public abstract boolean deleteRaw(Path f) throws IOException;
-
-    /** Check if exists. */
     public abstract boolean exists(Path f) throws IOException;
 
     /** True iff the named path is a directory. */
@@ -525,11 +415,11 @@ public abstract class FileSystem extends Configured {
 
     /** True iff the named path is a regular file. */
     public boolean isFile(Path f) throws IOException {
-        if (exists(f) && ! isDirectory(f)) {
-            return true;
-        } else {
-            return false;
-        }
+      if (exists(f) && ! isDirectory(f)) {
+        return true;
+      } else {
+        return false;
+      }
     }
     
     /** The number of bytes in a file. */
@@ -540,38 +430,43 @@ public abstract class FileSystem extends Configured {
      * If <i>f</i> is a directory, return the size of the directory tree
      */
     public long getContentLength(Path f) throws IOException {
-        if (!isDirectory(f)) {
-            // f is a file
-            return getLength(f);
-        }
-            
-        // f is a diretory
-        Path[] contents = listPathsRaw(f);
-        long size = 0;
-        for(int i=0; i<contents.length; i++) {
-            size += getContentLength(contents[i]);
-        }
-        return size;
+      if (!isDirectory(f)) {
+        // f is a file
+        return getLength(f);
+      }
+      
+      // f is a diretory
+      Path[] contents = listPaths(f);
+      long size = 0;
+      for(int i=0; i<contents.length; i++) {
+        size += getContentLength(contents[i]);
+      }
+      return size;
     }
 
     final private static PathFilter DEFAULT_FILTER = new PathFilter() {
       public boolean accept(Path file) {
-        return !isChecksumFile(file);
+        return true;
       }     
     };
-  
-    /** List files in a directory. */
-    public Path[] listPaths(Path f) throws IOException {
-      return listPaths(f, DEFAULT_FILTER);
-    }
     
     /** List files in a directory. */
-    public abstract Path[] listPathsRaw(Path f) throws IOException;
+    public abstract Path[] listPaths(Path f) throws IOException;
+    
+    /** 
+     * Filter files in the given pathes using the default checksum filter. 
+     * @param files a list of paths
+     * @return a list of files under the source paths
+     * @exception IOException
+     */
+    public Path[] listPaths(Path[] files ) throws IOException {
+      return listPaths(files, DEFAULT_FILTER);
+    }
 
-    /** Filter raw files in a directory. */
+    /** Filter files in a directory. */
     private void listPaths(ArrayList<Path> results, Path f, PathFilter filter)
       throws IOException {
-      Path listing[] = listPathsRaw(f);
+      Path listing[] = listPaths(f);
       if (listing != null) {
         for (int i = 0; i < listing.length; i++) {
           if (filter.accept(listing[i])) {
@@ -581,25 +476,15 @@ public abstract class FileSystem extends Configured {
       }      
     }
     
-    /** Filter raw files in a directory. */
+    /** Filter files in a directory. */
     public Path[] listPaths(Path f, PathFilter filter) throws IOException {
-        ArrayList<Path> results = new ArrayList<Path>();
-        listPaths(results, f, filter);
-        return (Path[]) results.toArray(new Path[results.size()]);
-    }
-
-    /** 
-     * Filter raw files in a list directories using the default checksum filter. 
-     * @param files a list of paths
-     * @return a list of files under the source paths
-     * @exception IOException
-     */
-    public Path[] listPaths(Path[] files ) throws IOException {
-      return listPaths( files, DEFAULT_FILTER );
+      ArrayList<Path> results = new ArrayList<Path>();
+      listPaths(results, f, filter);
+      return (Path[]) results.toArray(new Path[results.size()]);
     }
     
     /** 
-     * Filter raw files in a list directories using user-supplied path filter. 
+     * Filter files in a list directories using user-supplied path filter. 
      * @param files a list of paths
      * @return a list of files under the source paths
      * @exception IOException
@@ -713,7 +598,7 @@ public abstract class FileSystem extends Configured {
       private boolean hasPattern = false;
       
       /** Default pattern character: Escape any special meaning. */
-      private static final char  PAT_ESCAPE =  '\\';
+      private static final char  PAT_ESCAPE = '\\';
       /** Default pattern character: Any single character. */
       private static final char  PAT_ANY = '.';
       /** Default pattern character: Character set close. */
@@ -740,60 +625,58 @@ public abstract class FileSystem extends Configured {
         // Validate the pattern
         len = filePattern.length();
         if (len == 0)
-            return;
+          return;
 
-        setOpen =  0;
+        setOpen = 0;
         setRange = false;
-
-        for (int i = 0;  i < len;  i++)
-        {
-            char  pCh;
-
-            // Examine a single pattern character
-            pCh = filePattern.charAt(i);            
-            if( pCh == PAT_ESCAPE ) {
-              fileRegex.append( pCh );
-              i++;
-              if (i >= len)
-                  error( "An escaped character does not present",
-                      filePattern, i);
-              pCh = filePattern.charAt(i);
-            } else if( pCh == '.' ) {
-              fileRegex.append( PAT_ESCAPE );
-            } else if( pCh == '*' ) {
-                fileRegex.append( PAT_ANY );
-                hasPattern = true;
-            } else if( pCh == '?' ) {
-                pCh = PAT_ANY ;
-                hasPattern = true;
-            } else if( pCh == '[' && setOpen == 0 ) {
-                setOpen++;
-                hasPattern = true;
-            } else if( pCh == '^' && setOpen > 0) {
-            } else if (pCh == '-'  &&  setOpen > 0) {
-                // Character set range
-                setRange = true;
-            } else if (pCh == PAT_SET_CLOSE  &&  setRange) {
-                // Incomplete character set range
-                error("Incomplete character set range", filePattern, i);
-            } else if (pCh == PAT_SET_CLOSE  &&  setOpen > 0) {
-                // End of a character set
-                if (setOpen < 2)
-                    error("Unexpected end of set", filePattern, i);
-                setOpen = 0;
-            } else if (setOpen > 0) {
-                // Normal character, or the end of a character set range
-                setOpen++;
-                setRange = false;
-            }
-            fileRegex.append( pCh );
+        
+        for (int i = 0; i < len; i++) {
+          char pCh;
+          
+          // Examine a single pattern character
+          pCh = filePattern.charAt(i);
+          if (pCh == PAT_ESCAPE) {
+            fileRegex.append(pCh);
+            i++;
+            if (i >= len)
+              error("An escaped character does not present", filePattern, i);
+            pCh = filePattern.charAt(i);
+          } else if (pCh == '.') {
+            fileRegex.append(PAT_ESCAPE);
+          } else if (pCh == '*') {
+            fileRegex.append(PAT_ANY);
+            hasPattern = true;
+          } else if (pCh == '?') {
+            pCh = PAT_ANY;
+            hasPattern = true;
+          } else if (pCh == '[' && setOpen == 0) {
+            setOpen++;
+            hasPattern = true;
+          } else if (pCh == '^' && setOpen > 0) {
+          } else if (pCh == '-' && setOpen > 0) {
+            // Character set range
+            setRange = true;
+          } else if (pCh == PAT_SET_CLOSE && setRange) {
+            // Incomplete character set range
+            error("Incomplete character set range", filePattern, i);
+          } else if (pCh == PAT_SET_CLOSE && setOpen > 0) {
+            // End of a character set
+            if (setOpen < 2)
+              error("Unexpected end of set", filePattern, i);
+            setOpen = 0;
+          } else if (setOpen > 0) {
+            // Normal character, or the end of a character set range
+            setOpen++;
+            setRange = false;
+          }
+          fileRegex.append(pCh);
         }
-
+        
         // Check for a well-formed pattern
-        if (setOpen > 0  ||  setRange)
-        {
-            // Incomplete character set or character range
-            error("Expecting set closure character or end of range", filePattern, len);
+        if (setOpen > 0 || setRange) {
+          // Incomplete character set or character range
+          error("Expecting set closure character or end of range", filePattern,
+              len);
         }
         regex = Pattern.compile(fileRegex.toString());
       }
@@ -808,13 +691,14 @@ public abstract class FileSystem extends Configured {
       
       private void error(String s, String pattern, int pos) throws IOException {
         throw new IOException("Illegal file pattern: "
-                                 +s+" for glob "+pattern + " at " + pos);
+                                 +s+ " for glob "+ pattern + " at " + pos);
       }
     }
     
     /**
-     * Set the current working directory for the given file system.
-     * All relative paths will be resolved relative to it.
+     * Set the current working directory for the given file system. All relative
+     * paths will be resolved relative to it.
+     * 
      * @param new_dir
      */
     public abstract void setWorkingDirectory(Path new_dir);
@@ -852,30 +736,52 @@ public abstract class FileSystem extends Configured {
      * The src file is on the local disk.  Add it to FS at
      * the given dst name and the source is kept intact afterwards
      */
-    public abstract void copyFromLocalFile(Path src, Path dst) throws IOException;
+    public void copyFromLocalFile(Path src, Path dst)
+    throws IOException {
+      copyFromLocalFile(false, src, dst);
+    }
 
     /**
      * The src file is on the local disk.  Add it to FS at
      * the given dst name, removing the source afterwards.
      */
-    public abstract void moveFromLocalFile(Path src, Path dst) throws IOException;
+    public void moveFromLocalFile(Path src, Path dst)
+    throws IOException {
+      copyFromLocalFile(true, src, dst);
+    }
 
+    /**
+     * The src file is on the local disk.  Add it to FS at
+     * the given dst name.
+     * delSrc indicates if the source should be removed
+     */
+    public abstract void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException;
+    
     /**
      * The src file is under FS, and the dst is on the local disk.
      * Copy it from FS control to the local dst name.
-     * If src and dst are directories, copy crc files as well.
      */
     public void copyToLocalFile(Path src, Path dst) throws IOException {
-      copyToLocalFile(src, dst, true);
+      copyToLocalFile(false, src, dst);
     }
     
     /**
      * The src file is under FS, and the dst is on the local disk.
      * Copy it from FS control to the local dst name.
-     * If src and dst are directories, the copyCrc parameter
-     * determines whether to copy CRC files.
+     * Remove the source afterwards
      */
-    public abstract void copyToLocalFile(Path src, Path dst, boolean copyCrc) throws IOException;
+    public void moveToLocalFile(Path src, Path dst) throws IOException {
+      copyToLocalFile(true, src, dst);
+    }
+
+    /**
+     * The src file is under FS, and the dst is on the local disk.
+     * Copy it from FS control to the local dst name.
+     * delSrc indicates if the src will be removed or not.
+     */   
+    public abstract void copyToLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException;
 
     /**
      * Returns a local File that the user can write output to.  The caller
@@ -907,20 +813,18 @@ public abstract class FileSystem extends Configured {
       }
     }
 
-    /**
-     * Report a checksum error to the file system.
-     * @param f the file name containing the error
-     * @param in the stream open on the file
-     * @param inPos the position of the beginning of the bad data in the file
-     * @param sums the stream open on the checksum file
-     * @param sumsPos the position of the beginning of the bad data in the checksum file
-     */
-    public abstract void reportChecksumFailure(Path f, 
-                                               FSInputStream in, long inPos, 
-                                               FSInputStream sums, long sumsPos);
+    /** Return the total size of all files in the filesystem.*/
+    public long getUsed() throws IOException{
+      long used = 0;
+      Path[] files = listPaths(new Path("/"));
+      for(Path file:files){
+        used += getContentLength(file);
+      }
+      return used;
+    }
 
     /**
-     * Get the size for a particular file.
+     * Get the block size for a particular file.
      * @param f the filename
      * @return the number of bytes in a block
      */
@@ -928,7 +832,10 @@ public abstract class FileSystem extends Configured {
     
     /** Return the number of bytes that large input files should be optimally
      * be split into to minimize i/o time. */
-    public abstract long getDefaultBlockSize();
+    public long getDefaultBlockSize() {
+      // default to 32MB: large enough to minimize the impact of seeks
+      return getConf().getLong("fs.local.block.size", 32 * 1024 * 1024);
+    }
     
     /**
      * Get the default replication.

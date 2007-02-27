@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSOutputStream;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
@@ -78,13 +78,13 @@ public class NNBench {
      */
     static int createWrite() {
       int exceptions = 0;
-      FSOutputStream out = null;
+      FSDataOutputStream out = null;
       boolean success = false;
       for (int index = 0; index < numFiles; index++) {
         do { // create file until is succeeds
           try {
-              out = fileSys.createRaw(
-              new Path(taskDir, "" + index), false, (short)1, bytesPerBlock);
+              out = fileSys.create(
+              new Path(taskDir, "" + index), false, 512, (short)1, bytesPerBlock);
             success = true;
           } catch (IOException ioe) { success=false; exceptions++; }
         } while (!success);
@@ -115,10 +115,10 @@ public class NNBench {
      */
     static int openRead() {
       int exceptions = 0;
-      FSInputStream in = null;
+      FSDataInputStream in = null;
       for (int index = 0; index < numFiles; index++) {
         try {
-          in = fileSys.openRaw(new Path(taskDir, "" + index));
+          in = fileSys.open(new Path(taskDir, "" + index), 512);
           long toBeRead = bytesPerFile;
           while (toBeRead > 0) {
             int nbytes = (int) Math.min(buffer.length, toBeRead);
@@ -149,7 +149,7 @@ public class NNBench {
       for (int index = 0; index < numFiles; index++) {
         do { // rename file until is succeeds
           try {
-            boolean result = fileSys.renameRaw(
+            boolean result = fileSys.rename(
               new Path(taskDir, "" + index), new Path(taskDir, "A" + index));
             success = true;
           } catch (IOException ioe) { success=false; exceptions++; }
@@ -170,7 +170,7 @@ public class NNBench {
       for (int index = 0; index < numFiles; index++) {
         do { // delete file until is succeeds
           try {
-            boolean result = fileSys.deleteRaw(new Path(taskDir, "A" + index));
+            boolean result = fileSys.delete(new Path(taskDir, "A" + index));
             success = true;
           } catch (IOException ioe) { success=false; exceptions++; }
         } while (!success);

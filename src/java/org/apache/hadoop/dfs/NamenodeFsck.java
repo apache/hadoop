@@ -22,6 +22,7 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -34,7 +35,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.net.DNS;
 
@@ -255,7 +255,7 @@ public class NamenodeFsck {
       }
       // create chains
       int chain = 0;
-      FSOutputStream fos = null;
+      OutputStream fos = null;
       for (int i = 0; i < blocks.length; i++) {
         LocatedBlock lblock = blocks[i];
         DatanodeInfo[] locs = lblock.getLocations();
@@ -305,7 +305,7 @@ public class NamenodeFsck {
    * around.
    */
       private void copyBlock(DFSClient dfs, LocatedBlock lblock,
-          FSOutputStream fos) throws Exception {
+          OutputStream fos) throws Exception {
     int failures = 0;
     InetSocketAddress targetAddr = null;
     TreeSet deadNodes = new TreeSet();

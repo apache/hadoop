@@ -201,7 +201,7 @@ class DFSClient implements FSConstants {
      * inner subclass of InputStream that does the right out-of-band
      * work.
      */
-    public FSInputStream open(UTF8 src) throws IOException {
+    public DFSInputStream open(UTF8 src) throws IOException {
         checkOpen();
         //    Get block info from namenode
         return new DFSInputStream(src.toString());
@@ -215,7 +215,7 @@ class DFSClient implements FSConstants {
      * @return output stream
      * @throws IOException
      */
-    public FSOutputStream create( UTF8 src, 
+    public OutputStream create( UTF8 src, 
                                   boolean overwrite
                                 ) throws IOException {
       return create( src, overwrite, defaultReplication, defaultBlockSize, null);
@@ -230,7 +230,7 @@ class DFSClient implements FSConstants {
      * @return output stream
      * @throws IOException
      */
-    public FSOutputStream create( UTF8 src, 
+    public OutputStream create( UTF8 src, 
                                   boolean overwrite,
                                   Progressable progress
                                 ) throws IOException {
@@ -247,7 +247,7 @@ class DFSClient implements FSConstants {
      * @return output stream
      * @throws IOException
      */
-    public FSOutputStream create( UTF8 src, 
+    public OutputStream create( UTF8 src, 
                                   boolean overwrite, 
                                   short replication,
                                   long blockSize
@@ -266,14 +266,14 @@ class DFSClient implements FSConstants {
      * @return output stream
      * @throws IOException
      */
-    public FSOutputStream create( UTF8 src, 
+    public OutputStream create( UTF8 src, 
                                   boolean overwrite, 
                                   short replication,
                                   long blockSize,
                                   Progressable progress
                                 ) throws IOException {
       checkOpen();
-      FSOutputStream result = new DFSOutputStream(src, overwrite, 
+      OutputStream result = new DFSOutputStream(src, overwrite, 
                                                   replication, blockSize, progress);
       synchronized (pendingCreates) {
         pendingCreates.put(src.toString(), result);
@@ -931,11 +931,45 @@ class DFSClient implements FSConstants {
             throw new IOException("Mark not supported");
         }
     }
+    
+    static class DFSDataInputStream extends FSDataInputStream {
+      DFSDataInputStream(DFSInputStream in, Configuration conf)
+      throws IOException {
+        super(in, conf);
+      }
+      
+      DFSDataInputStream(DFSInputStream in, int bufferSize) throws IOException {
+        super(in, bufferSize);
+      }
+      
+      /**
+       * Returns the datanode from which the stream is currently reading.
+       */
+      public DatanodeInfo getCurrentDatanode() {
+        return ((DFSInputStream)inStream).getCurrentDatanode();
+      }
+      
+      /**
+       * Returns the block containing the target position. 
+       */
+      public Block getCurrentBlock() {
+        return ((DFSInputStream)inStream).getCurrentBlock();
+      }
+
+      /**
+       * Used by the automatic tests to detemine blocks locations of a
+       * file
+       */
+      synchronized DatanodeInfo[][] getDataNodes() {
+        return ((DFSInputStream)inStream).getDataNodes();
+      }
+
+    }
 
     /****************************************************************
      * DFSOutputStream creates files from a stream of bytes.
      ****************************************************************/
-    class DFSOutputStream extends FSOutputStream {
+    class DFSOutputStream extends OutputStream {
         private Socket s;
         boolean closed = false;
 

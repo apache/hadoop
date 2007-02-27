@@ -21,6 +21,7 @@ import java.io.*;
 import java.text.*;
 
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.dfs.DistributedFileSystem;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.util.ToolBase;
 
@@ -142,7 +143,7 @@ public class FsShell extends ToolBase {
         }
         Path dst = new Path( dstf );
         for( int i=0; i<srcs.length; i++ ) {
-          fs.copyToLocalFile( srcs[i], dst, copyCrc );
+          ((DistributedFileSystem)fs).copyToLocalFile(srcs[i], dst, copyCrc);
         }
       }
     }
@@ -497,7 +498,7 @@ public class FsShell extends ToolBase {
             + "destination should be a directory." );
       }
       for( int i=0; i<srcs.length; i++ ) {
-        FileUtil.copy(fs, srcs[i], fs, dst, false, true, conf);
+        FileUtil.copy(fs, srcs[i], fs, dst, false, conf);
       }
     }
 

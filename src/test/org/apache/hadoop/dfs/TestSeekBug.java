@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.dfs;
 
-import javax.swing.filechooser.FileSystemView;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -57,8 +56,7 @@ public class TestSeekBug extends TestCase {
   }
   
   private void seekReadFile(FileSystem fileSys, Path name) throws IOException {
-    FSInputStream stmRaw = fileSys.openRaw(name);
-    FSDataInputStream stm = new FSDataInputStream(stmRaw, 4096);
+    FSDataInputStream stm = fileSys.open(name, 4096);
     byte[] expected = new byte[ONEMB];
     Random rand = new Random(seed);
     rand.nextBytes(expected);
@@ -83,7 +81,11 @@ public class TestSeekBug extends TestCase {
    * Read some data, skip a few bytes and read more. HADOOP-922.
    */
   private void smallReadSeek(FileSystem fileSys, Path name) throws IOException {
-    FSInputStream stmRaw = fileSys.openRaw(name);
+    if (fileSys instanceof ChecksumFileSystem) {
+        fileSys = ((ChecksumFileSystem)fileSys).getRawFileSystem();
+    }
+    // Make the buffer size small to trigger code for HADOOP-922
+    FSDataInputStream stmRaw = fileSys.open(name, 1);
     byte[] expected = new byte[ONEMB];
     Random rand = new Random(seed);
     rand.nextBytes(expected);

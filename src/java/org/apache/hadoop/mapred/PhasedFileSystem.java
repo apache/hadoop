@@ -1,17 +1,16 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Progressable;
 
@@ -27,13 +26,9 @@ import org.apache.hadoop.util.Progressable;
  * better to commit(Path) individual files when done. Otherwise
  * commit() can be used to commit all open files at once. 
  */
-public class PhasedFileSystem extends FileSystem {
-
-  private FileSystem baseFS ;
-  private URI uri;
-
+public class PhasedFileSystem extends FilterFileSystem {
   // Map from final file name to temporary file name
-  private Map<Path, FileInfo> finalNameToFileInfo = new HashMap(); 
+  private Map<Path, FileInfo> finalNameToFileInfo = new HashMap<Path, FileInfo>(); 
   
   private String jobid ; 
   private String tipid ; 
@@ -50,12 +45,12 @@ public class PhasedFileSystem extends FileSystem {
    */
   public PhasedFileSystem(FileSystem fs, String jobid, 
       String tipid, String taskid) {
-    this.baseFS = fs ; 
+    super(fs); 
     this.jobid = jobid; 
     this.tipid = tipid ; 
     this.taskid = taskid ; 
     
-    tempDir = new Path(baseFS.getConf().get("mapred.system.dir") ); 
+    tempDir = new Path(fs.getConf().get("mapred.system.dir") ); 
     this.setConf(fs.getConf());
   }
   /**
@@ -65,20 +60,13 @@ public class PhasedFileSystem extends FileSystem {
    * @param conf JobConf
    */
   public PhasedFileSystem(FileSystem fs, JobConf conf) {
-    this.baseFS = fs ; 
+    super(fs); 
     this.jobid = conf.get("mapred.job.id"); 
     this.tipid = conf.get("mapred.tip.id"); 
     this.taskid = conf.get("mapred.task.id") ; 
     
-    tempDir = new Path(baseFS.getConf().get("mapred.system.dir") );
+    tempDir = new Path(fs.getConf().get("mapred.system.dir") );
     this.setConf(fs.getConf());
-  }
-  /**
-   * This Constructor should not be used in this or any derived class. 
-   * @param conf
-   */
-  protected PhasedFileSystem(Configuration conf){
-    throw new UnsupportedOperationException("Operation not supported"); 
   }
   
   private Path setupFile(Path finalFile, boolean overwrite) throws IOException{
@@ -94,8 +82,8 @@ public class PhasedFileSystem extends FileSystem {
         }catch(IOException ioe){
           // ignore if already closed
         }
-        if( baseFS.exists(fInfo.getTempPath())){
-          baseFS.delete( fInfo.getTempPath() );
+        if( fs.exists(fInfo.getTempPath())){
+          fs.delete( fInfo.getTempPath() );
         }
         finalNameToFileInfo.remove(finalFile); 
       }
@@ -111,45 +99,19 @@ public class PhasedFileSystem extends FileSystem {
     return tempPath ; 
   }
   
-  public URI getUri() {
-    return baseFS.getUri();
-  }
-
-  public void initialize(URI uri, Configuration conf) throws IOException {
-    baseFS.initialize(uri, conf);
-  }
-
-  @Override
-  public FSOutputStream createRaw(
-      Path f, boolean overwrite, short replication, long blockSize)
+  public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
+          short replication, long blockSize,Progressable progress)
       throws IOException {
-    
-    // for reduce output its checked in job client but lets check it anyways
-    // as tasks with side effect may write to locations not set in jobconf
-    // as output path. 
-    if( baseFS.exists(f) && !overwrite ){
+    if( fs.exists(f) && !overwrite ){
       throw new IOException("Error creating file - already exists : " + f); 
     }
-    FSOutputStream stream = 
-      baseFS.createRaw(setupFile(f, overwrite), overwrite, replication, blockSize); 
-    finalNameToFileInfo.get(f).setOpenFileStream(stream); 
-    return stream; 
-  }
-
-  @Override
-  public FSOutputStream createRaw(
-      Path f, boolean overwrite, short replication, long blockSize,
-      Progressable progress)
-      throws IOException {
-    if( baseFS.exists(f) && !overwrite ){
-      throw new IOException("Error creating file - already exists : " + f); 
-    }
-    FSOutputStream stream = 
-      baseFS.createRaw(setupFile(f, overwrite), overwrite, replication, 
+    FSDataOutputStream stream = 
+      fs.create(setupFile(f, overwrite), overwrite, bufferSize, replication, 
           blockSize, progress);
     finalNameToFileInfo.get(f).setOpenFileStream(stream); 
     return stream ; 
   }
+  
   /**
    * Commits a single file file to its final locations as passed in create* methods. 
    * If a file already exists in final location then temporary file is deleted. 
@@ -177,29 +139,29 @@ public class PhasedFileSystem extends FileSystem {
     Path tempPath = fInfo.getTempPath(); 
     // ignore .crc files 
     if(! tempPath.toString().endsWith(".crc")){
-      if( !baseFS.exists(fPath) || fInfo.isOverwrite()){
-        if(! baseFS.exists(fPath.getParent())){
-          baseFS.mkdirs(fPath.getParent());
+      if( !fs.exists(fPath) || fInfo.isOverwrite()){
+        if(!fs.exists(fPath.getParent())){
+          fs.mkdirs(fPath.getParent());
         }
         
-        if( baseFS.exists(fPath) && fInfo.isOverwrite()){
-          baseFS.delete(fPath); 
+        if( fs.exists(fPath) && fInfo.isOverwrite()){
+          fs.delete(fPath); 
         }
         
         try {
-          if( ! baseFS.rename(fInfo.getTempPath(), fPath) ){
+          if( !fs.rename(fInfo.getTempPath(), fPath) ){
             // delete the temp file if rename failed
-            baseFS.delete(fInfo.getTempPath());
+            fs.delete(fInfo.getTempPath());
           }
         }catch(IOException ioe){
           // rename failed, log error and delete temp files
           LOG.error("PhasedFileSystem failed to commit file : " + fPath 
               + " error : " + ioe.getMessage()); 
-          baseFS.delete(fInfo.getTempPath());
+          fs.delete(fInfo.getTempPath());
         }
       }else{
         // delete temp file
-        baseFS.delete(fInfo.getTempPath());
+        fs.delete(fInfo.getTempPath());
       }
       // done with the file
       if( removeFromMap ){
@@ -241,7 +203,7 @@ public class PhasedFileSystem extends FileSystem {
       }catch(IOException ioe){
         // ignore if already closed
       }
-      baseFS.delete(fInfo.getTempPath()); 
+      fs.delete(fInfo.getTempPath()); 
       if( removeFromMap ){
         finalNameToFileInfo.remove(p);
       }
@@ -261,24 +223,9 @@ public class PhasedFileSystem extends FileSystem {
     // safe to clean now
     finalNameToFileInfo.clear();
   }
-  /**
-   * Closes base file system. 
-   */
-  public void close() throws IOException { 
-    baseFS.close(); 
-  } 
   
   @Override
-  public short getReplication(
-      Path src)
-      throws IOException {
-    // keep replication same for temp file as for 
-    // final file. 
-    return baseFS.getReplication(src);
-  }
-
-  @Override
-  public boolean setReplicationRaw(
+  public boolean setReplication(
       Path src, short replication)
       throws IOException {
     // throw IOException for interface compatibility with 
@@ -287,57 +234,17 @@ public class PhasedFileSystem extends FileSystem {
   }
 
   @Override
-  public boolean renameRaw(
+  public boolean rename(
       Path src, Path dst)
       throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
   @Override
-  public boolean deleteRaw(
+  public boolean delete(
       Path f)
       throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
-  }
-
-  @Override
-  public boolean exists(Path f)
-      throws IOException {
-    return baseFS.exists(f);
-  }
-
-  @Override
-  public boolean isDirectory(Path f)
-      throws IOException {
-    return baseFS.isDirectory(f);  
-  }
-
-  @Override
-  public long getLength(Path f)
-      throws IOException {
-    return baseFS.getLength(f); 
-  }
-
-  @Override
-  public Path[] listPathsRaw(Path f)
-      throws IOException {
-    return baseFS.listPathsRaw(f);
-  }
-
-  @Override
-  public void setWorkingDirectory(Path new_dir) {
-    baseFS.setWorkingDirectory(new_dir);   
-  }
-
-  @Override
-  public Path getWorkingDirectory() {
-    return baseFS.getWorkingDirectory();  
-  }
-
-  @Override
-  public boolean mkdirs(Path f)
-      throws IOException {
-    return baseFS.mkdirs(f) ;
   }
 
   /** @deprecated */ @Deprecated
@@ -358,21 +265,14 @@ public class PhasedFileSystem extends FileSystem {
 
   @Override
   public void copyFromLocalFile(
-      Path src, Path dst)
-      throws IOException {
-    throw new UnsupportedOperationException("Operation not supported");  
-  }
-
-  @Override
-  public void moveFromLocalFile(
-      Path src, Path dst)
+      boolean delSrc, Path src, Path dst)
       throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
   @Override
   public void copyToLocalFile(
-      Path src, Path dst, boolean copyCrc)
+      boolean delSrc, Path src, Path dst)
       throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }
@@ -392,31 +292,6 @@ public class PhasedFileSystem extends FileSystem {
  }
 
   @Override
-
-  public void reportChecksumFailure(Path f, 
-                                    FSInputStream in, long inPos, 
-                                    FSInputStream sums, long sumsPos) {
-    baseFS.reportChecksumFailure(f, in, inPos, sums, sumsPos); 
-  }
-
-  @Override
-  public long getBlockSize(
-      Path f)
-      throws IOException {
-    return baseFS.getBlockSize(f);
-  }
-
-  @Override
-  public long getDefaultBlockSize() {
-    return baseFS.getDefaultBlockSize();
-  }
-
-  @Override
-  public short getDefaultReplication() {
-    return baseFS.getDefaultReplication();
-  }
-
-  @Override
   public String[][] getFileCacheHints(
       Path f, long start, long len)
       throws IOException {
@@ -428,16 +303,10 @@ public class PhasedFileSystem extends FileSystem {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
-  @Override
-  public FSInputStream openRaw(Path f)
-      throws IOException {
-    return baseFS.openRaw(f);   
-  }
-  
   private class FileInfo {
     private Path tempPath ;
     private Path finalPath ; 
-    private FSOutputStream openFileStream ; 
+    private OutputStream openFileStream ; 
     private boolean overwrite ;
     
     FileInfo(Path tempPath, Path finalPath, boolean overwrite){
@@ -445,11 +314,11 @@ public class PhasedFileSystem extends FileSystem {
       this.finalPath = finalPath ; 
       this.overwrite = overwrite; 
     }
-    public FSOutputStream getOpenFileStream() {
+    public OutputStream getOpenFileStream() {
       return openFileStream;
     }
     public void setOpenFileStream(
-        FSOutputStream openFileStream) {
+        OutputStream openFileStream) {
       this.openFileStream = openFileStream;
     }
     public Path getFinalPath() {
@@ -473,7 +342,5 @@ public class PhasedFileSystem extends FileSystem {
         Path tempPath) {
       this.tempPath = tempPath;
     }
-    
   }
-
 }

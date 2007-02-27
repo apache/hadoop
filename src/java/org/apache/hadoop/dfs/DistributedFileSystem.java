@@ -33,19 +33,21 @@ import org.apache.hadoop.util.*;
  *
  * @author Mike Cafarella
  *****************************************************************/
-public class DistributedFileSystem extends FileSystem {
-    private Path workingDir = 
-      new Path("/user", System.getProperty("user.name"));
-
+public class DistributedFileSystem extends ChecksumFileSystem {
+    private static class RawDistributedFileSystem extends FileSystem {
+    private Path workingDir =
+        new Path("/user", System.getProperty("user.name")); 
     private URI uri;
     private FileSystem localFs;
 
     DFSClient dfs;
 
-    public DistributedFileSystem() {}
+    public RawDistributedFileSystem() {
+    }
+
 
     /** @deprecated */
-    public DistributedFileSystem(InetSocketAddress namenode,
+    public RawDistributedFileSystem(InetSocketAddress namenode,
                                  Configuration conf) throws IOException {
       initialize(URI.create("hdfs://"+
                             namenode.getHostName()+":"+
@@ -119,24 +121,32 @@ public class DistributedFileSystem extends FileSystem {
       return dfs.getHints(getPath(f), start, len);
     }
 
-    public FSInputStream openRaw(Path f) throws IOException {
-      return dfs.open(getPath(f));
+    public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+      if (! exists(f)) {
+        throw new FileNotFoundException(f.toString());
+      }
+
+      return new DFSClient.DFSDataInputStream(dfs.open(getPath(f)), bufferSize);
     }
 
-    public FSOutputStream createRaw(Path f, boolean overwrite, 
-                                    short replication, long blockSize)
-      throws IOException {
-      return dfs.create(getPath(f), overwrite, replication, blockSize);
-    }
-
-    public FSOutputStream createRaw(Path f, boolean overwrite, 
-                                    short replication, long blockSize,
-                                    Progressable progress)
-      throws IOException {
-      return dfs.create(getPath(f), overwrite, replication, blockSize, progress);
+    public FSDataOutputStream create(Path f, boolean overwrite,
+            int bufferSize, short replication, long blockSize,
+            Progressable progress) throws IOException {
+      if (exists(f) && ! overwrite) {
+         throw new IOException("File already exists:"+f);
+      }
+      Path parent = f.getParent();
+      if (parent != null && !mkdirs(parent)) {
+        throw new IOException("Mkdirs failed to create " + parent);
+      }
+      
+      return new FSDataOutputStream(
+           dfs.create(getPath(f), overwrite,
+                   replication, blockSize, progress),
+           bufferSize);
     }
     
-    public boolean setReplicationRaw( Path src, 
+    public boolean setReplication( Path src, 
                                       short replication
                                     ) throws IOException {
       return dfs.setReplication(getPath(src), replication);
@@ -145,14 +155,14 @@ public class DistributedFileSystem extends FileSystem {
     /**
      * Rename files/dirs
      */
-    public boolean renameRaw(Path src, Path dst) throws IOException {
+    public boolean rename(Path src, Path dst) throws IOException {
       return dfs.rename(getPath(src), getPath(dst));
     }
 
     /**
      * Get rid of Path f, whether a true file or dir.
      */
-    public boolean deleteRaw(Path f) throws IOException {
+    public boolean delete(Path f) throws IOException {
         return dfs.delete(getPath(f));
     }
 
@@ -194,7 +204,7 @@ public class DistributedFileSystem extends FileSystem {
       return info[0].getReplication();
   }
 
-    public Path[] listPathsRaw(Path f) throws IOException {
+    public Path[] listPaths(Path f) throws IOException {
         DFSFileInfo info[] = dfs.listPaths(getPath(f));
         if (info == null) {
             return new Path[0];
@@ -221,16 +231,16 @@ public class DistributedFileSystem extends FileSystem {
         dfs.release(getPath(f));
     }
 
-    public void moveFromLocalFile(Path src, Path dst) throws IOException {
-      FileUtil.copy(localFs, src, this, dst, true, true, getConf());
+    @Override
+    public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException {
+      FileUtil.copy(localFs, src, this, dst, delSrc, getConf());
     }
 
-    public void copyFromLocalFile(Path src, Path dst) throws IOException {
-      FileUtil.copy(localFs, src, this, dst, false, true, getConf());
-    }
-
-    public void copyToLocalFile(Path src, Path dst, boolean copyCrc) throws IOException {
-      FileUtil.copy(this, src, localFs, dst, false, copyCrc, getConf());
+    @Override
+    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException {
+      FileUtil.copy(this, src, localFs, dst, delSrc, getConf());
     }
 
     public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
@@ -257,55 +267,7 @@ public class DistributedFileSystem extends FileSystem {
 
     DFSClient getClient() {
         return dfs;
-    }
-    
-
-    /**
-     * We need to find the blocks that didn't match.  Likely only one 
-     * is corrupt but we will report both to the namenode.  In the future,
-     * we can consider figuring out exactly which block is corrupt.
-     */
-    public void reportChecksumFailure(Path f, 
-                                      FSInputStream in, long inPos, 
-                                      FSInputStream sums, long sumsPos) {
-      
-      LocatedBlock lblocks[] = new LocatedBlock[2];
-
-      try {
-        // Find block in data stream.
-        DFSClient.DFSInputStream dfsIn = (DFSClient.DFSInputStream) in;
-        Block dataBlock = dfsIn.getCurrentBlock();
-        if (dataBlock == null) {
-          throw new IOException("Error: Current block in data stream is null! ");
-        }
-        DatanodeInfo[] dataNode = {dfsIn.getCurrentDatanode()}; 
-        lblocks[0] = new LocatedBlock(dataBlock, dataNode);
-        LOG.info("Found checksum error in data stream at block=" + dataBlock.getBlockName() + 
-                 " on datanode=" + dataNode[0].getName());
-
-        // Find block in checksum stream
-        DFSClient.DFSInputStream dfsSums = (DFSClient.DFSInputStream) sums;
-        Block sumsBlock = dfsSums.getCurrentBlock();
-        if (sumsBlock == null) {
-          throw new IOException("Error: Current block in checksum stream is null! ");
-        }
-        DatanodeInfo[] sumsNode = {dfsSums.getCurrentDatanode()}; 
-        lblocks[1] = new LocatedBlock(sumsBlock, sumsNode);
-        LOG.info("Found checksum error in checksum stream at block=" + sumsBlock.getBlockName() + 
-                 " on datanode=" + sumsNode[0].getName());
-
-        // Ask client to delete blocks.
-        dfs.reportBadBlocks(lblocks);
-
-      } catch (IOException ie) {
-        LOG.info("Found corruption while reading "
-                 + f.toString() 
-                 + ".  Error repairing corrupt blocks.  Bad blocks remain. " 
-                 + StringUtils.stringifyException(ie));
-      }
-
-    }
-
+    }        
     /** Return the total raw capacity of the filesystem, disregarding
      * replication .*/
     public long getRawCapacity() throws IOException{
@@ -316,16 +278,6 @@ public class DistributedFileSystem extends FileSystem {
      * replication .*/
     public long getRawUsed() throws IOException{
         return dfs.totalRawUsed();
-    }
-
-    /** Return the total size of all files in the filesystem.*/
-    public long getUsed()throws IOException{
-        long used = 0;
-        DFSFileInfo dfsFiles[] = dfs.listPaths(getPath(new Path("/")));
-        for(int i=0;i<dfsFiles.length;i++){
-            used += dfsFiles[i].getContentsLen();
-        }
-        return used;
     }
 
     /** Return statistics for each datanode. */
@@ -349,5 +301,108 @@ public class DistributedFileSystem extends FileSystem {
      */
     public void refreshNodes() throws IOException {
       dfs.refreshNodes();
+    }
+
+    /**
+     * We need to find the blocks that didn't match.  Likely only one 
+     * is corrupt but we will report both to the namenode.  In the future,
+     * we can consider figuring out exactly which block is corrupt.
+     */
+    public void reportChecksumFailure(Path f, 
+                                      FSDataInputStream in, long inPos, 
+                                      FSDataInputStream sums, long sumsPos) {
+      
+      LocatedBlock lblocks[] = new LocatedBlock[2];
+
+      try {
+        // Find block in data stream.
+        DFSClient.DFSDataInputStream dfsIn = (DFSClient.DFSDataInputStream) in;
+        Block dataBlock = dfsIn.getCurrentBlock();
+        if (dataBlock == null) {
+          throw new IOException("Error: Current block in data stream is null! ");
+        }
+        DatanodeInfo[] dataNode = {dfsIn.getCurrentDatanode()}; 
+        lblocks[0] = new LocatedBlock(dataBlock, dataNode);
+        LOG.info("Found checksum error in data stream at block=" + dataBlock.getBlockName() + 
+                 " on datanode=" + dataNode[0].getName());
+
+        // Find block in checksum stream
+        DFSClient.DFSDataInputStream dfsSums = (DFSClient.DFSDataInputStream) sums;
+        Block sumsBlock = dfsSums.getCurrentBlock();
+        if (sumsBlock == null) {
+          throw new IOException("Error: Current block in checksum stream is null! ");
+        }
+        DatanodeInfo[] sumsNode = {dfsSums.getCurrentDatanode()}; 
+        lblocks[1] = new LocatedBlock(sumsBlock, sumsNode);
+        LOG.info("Found checksum error in checksum stream at block=" + sumsBlock.getBlockName() + 
+                 " on datanode=" + sumsNode[0].getName());
+
+        // Ask client to delete blocks.
+        dfs.reportBadBlocks(lblocks);
+
+      } catch (IOException ie) {
+        LOG.info("Found corruption while reading "
+                 + f.toString() 
+                 + ".  Error repairing corrupt blocks.  Bad blocks remain. " 
+                 + StringUtils.stringifyException(ie));
+      }
+
+    }
+    }
+
+    public DistributedFileSystem() {
+        super( new RawDistributedFileSystem() );
+    }
+
+    /** @deprecated */
+    public DistributedFileSystem(InetSocketAddress namenode,
+                                 Configuration conf) throws IOException {
+      super( new RawDistributedFileSystem(namenode, conf) );
+    }
+
+    /** Return the total raw capacity of the filesystem, disregarding
+     * replication .*/
+    public long getRawCapacity() throws IOException{
+        return ((RawDistributedFileSystem)fs).getRawCapacity();
+    }
+
+    /** Return the total raw used space in the filesystem, disregarding
+     * replication .*/
+    public long getRawUsed() throws IOException{
+        return ((RawDistributedFileSystem)fs).getRawUsed();
+    }
+
+    /** Return statistics for each datanode. */
+    public DatanodeInfo[] getDataNodeStats() throws IOException {
+      return ((RawDistributedFileSystem)fs).getDataNodeStats();
+    }
+    
+    /**
+     * Enter, leave or get safe mode.
+     *  
+     * @see org.apache.hadoop.dfs.ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
+     */
+    public boolean setSafeMode( FSConstants.SafeModeAction action ) 
+    throws IOException {
+      return ((RawDistributedFileSystem)fs).setSafeMode( action );
+    }
+
+    /*
+     * Refreshes the list of hosts and excluded hosts from the configured 
+     * files.  
+     */
+    public void refreshNodes() throws IOException {
+      ((RawDistributedFileSystem)fs).refreshNodes();
+    }
+    /**
+     * We need to find the blocks that didn't match.  Likely only one 
+     * is corrupt but we will report both to the namenode.  In the future,
+     * we can consider figuring out exactly which block is corrupt.
+     */
+    public void reportChecksumFailure(Path f, 
+                                      FSDataInputStream in, long inPos, 
+                                      FSDataInputStream sums, long sumsPos) {
+      ((RawDistributedFileSystem)fs).reportChecksumFailure(
+                f, in, inPos, sums, sumsPos);
     }
 }

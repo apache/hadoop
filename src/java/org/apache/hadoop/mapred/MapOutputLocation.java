@@ -206,7 +206,8 @@ class MapOutputLocation implements Writable, MRConstants {
       
       int length = connection.getContentLength();
       int inMemFSSize = inMemFileSys.getFSSize();
-      int checksumLength = inMemFileSys.getChecksumFileLength(length);
+      int checksumLength = (int)inMemFileSys.getChecksumFileLength(
+              localFilename, length);
         
       boolean createInMem = false; 
       if (inMemFSSize > 0)  

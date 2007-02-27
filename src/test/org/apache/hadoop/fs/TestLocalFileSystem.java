@@ -83,7 +83,7 @@ public class TestLocalFileSystem extends TestCase {
       fileSys.rename(file2, file1);
       
       // try reading a file
-      InputStream stm = fileSys.openRaw(file1);
+      InputStream stm = fileSys.open(file1);
       byte[] buffer = new byte[3];
       int bytesRead = stm.read(buffer, 0, 3);
       assertEquals("42\n", new String(buffer, 0, bytesRead));

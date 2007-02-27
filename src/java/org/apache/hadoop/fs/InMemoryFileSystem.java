@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
 import java.util.*;
 
@@ -35,12 +36,12 @@ import org.apache.hadoop.util.Progressable;
  * @author ddas
  *
  */
-public class InMemoryFileSystem extends FileSystem {
+public class InMemoryFileSystem extends ChecksumFileSystem {
+  private static class RawInMemoryFileSystem extends FileSystem {
   private URI uri;
   private int fsSize;
   private volatile int totalUsed;
   private Path staticWorkingDir;
-  private int bytesPerSum;
   
   //pathToFileAttribs is the final place where a file is put after it is closed
   private Map <String, FileAttributes> pathToFileAttribs = 
@@ -53,19 +54,21 @@ public class InMemoryFileSystem extends FileSystem {
   private Map <String, FileAttributes> tempFileAttribs = 
     Collections.synchronizedMap(new HashMap());
   
-  public InMemoryFileSystem() {}
-  
-  public InMemoryFileSystem(URI uri, Configuration conf) {
+  public RawInMemoryFileSystem() {
+    setConf(new Configuration());
+  }
+
+  public RawInMemoryFileSystem(URI uri, Configuration conf) {
     initialize(uri, conf);
   }
   
   //inherit javadoc
   public void initialize(URI uri, Configuration conf) {
+    setConf(conf);
     int size = Integer.parseInt(conf.get("fs.inmemory.size.mb", "100"));
     this.fsSize = size * 1024 * 1024;
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.staticWorkingDir = new Path(this.uri.getPath());
-    this.bytesPerSum = conf.getInt("io.bytes.per.checksum", 512);
     LOG.info("Initialized InMemoryFileSystem: " + uri.toString() + 
              " of size (in bytes): " + fsSize);
   }
@@ -98,7 +101,7 @@ public class InMemoryFileSystem extends FileSystem {
     private FileAttributes fAttr;
     
     public InMemoryInputStream(Path f) throws IOException {
-      synchronized (InMemoryFileSystem.this) {
+      synchronized (RawInMemoryFileSystem.this) {
         fAttr = pathToFileAttribs.get(getPath(f));
         if (fAttr == null) { 
           throw new FileNotFoundException("File " + f + " does not exist");
@@ -137,11 +140,11 @@ public class InMemoryFileSystem extends FileSystem {
     public long skip(long n) throws IOException { return din.skip(n); }
   }
 
-  public FSInputStream openRaw(Path f) throws IOException {
-    return new InMemoryInputStream(f);
+  public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+    return new FSDataInputStream(new InMemoryInputStream(f), bufferSize);
   }
 
-  private class InMemoryOutputStream extends FSOutputStream {
+  private class InMemoryOutputStream extends OutputStream {
     private int count;
     private FileAttributes fAttr;
     private Path f;
@@ -157,7 +160,7 @@ public class InMemoryFileSystem extends FileSystem {
     }
     
     public void close() throws IOException {
-      synchronized (InMemoryFileSystem.this) {
+      synchronized (RawInMemoryFileSystem.this) {
         pathToFileAttribs.put(getPath(f), fAttr);
       }
     }
@@ -187,32 +190,28 @@ public class InMemoryFileSystem extends FileSystem {
     }
   }
   
-  public FSOutputStream createRaw(Path f, boolean overwrite, short replication,
-      long blockSize) throws IOException {
+  public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
+      short replication, long blockSize, Progressable progress)
+      throws IOException {
     if (exists(f) && ! overwrite) {
       throw new IOException("File already exists:"+f);
     }
     synchronized (this) {
-      FileAttributes fAttr =(FileAttributes)tempFileAttribs.remove(getPath(f));
+      FileAttributes fAttr =(FileAttributes) tempFileAttribs.remove(getPath(f));
       if (fAttr != null)
-        return createRaw(f, fAttr);
+        return create(f, fAttr);
       return null;
     }
   }
-
-  public FSOutputStream createRaw(Path f, boolean overwrite, short replication,
-      long blockSize, Progressable progress) throws IOException {
-    //ignore write-progress reporter for in-mem files
-    return createRaw(f, overwrite, replication, blockSize);
-  }
-
-  public FSOutputStream createRaw(Path f, FileAttributes fAttr) 
-  throws IOException {
-    //the path is not added into the filesystem (in the pathToFileAttribs
-    //map) until close is called on the outputstream that this method is 
-    //going to return
-    //Create an output stream out of data byte array
-    return new InMemoryOutputStream(f, fAttr);
+  
+  public FSDataOutputStream create(Path f, FileAttributes fAttr)
+      throws IOException {
+    // the path is not added into the filesystem (in the pathToFileAttribs
+    // map) until close is called on the outputstream that this method is
+    // going to return
+    // Create an output stream out of data byte array
+    return new FSDataOutputStream(new InMemoryOutputStream(f, fAttr),
+        getConf());
   }
 
   public void close() throws IOException {
@@ -236,12 +235,12 @@ public class InMemoryFileSystem extends FileSystem {
     return 1;
   }
 
-  public boolean setReplicationRaw(Path src, short replication)
+  public boolean setReplication(Path src, short replication)
       throws IOException {
     return true;
   }
 
-  public boolean renameRaw(Path src, Path dst) throws IOException {
+  public boolean rename(Path src, Path dst) throws IOException {
     synchronized (this) {
       if (exists(dst)) {
         throw new IOException ("Path " + dst + " already exists");
@@ -253,7 +252,7 @@ public class InMemoryFileSystem extends FileSystem {
     }
   }
 
-  public boolean deleteRaw(Path f) throws IOException {
+  public boolean delete(Path f) throws IOException {
     synchronized (this) {
       FileAttributes fAttr = pathToFileAttribs.remove(getPath(f));
       if (fAttr != null) {
@@ -275,7 +274,11 @@ public class InMemoryFileSystem extends FileSystem {
    * Directory operations are not supported
    */
   public boolean isDirectory(Path f) throws IOException {
-    return false;
+    return !isFile(f);
+  }
+
+  public boolean isFile(Path f) throws IOException {
+    return exists(f);
   }
 
   public long getLength(Path f) throws IOException {
@@ -287,15 +290,20 @@ public class InMemoryFileSystem extends FileSystem {
   /**
    * Directory operations are not supported
    */
-  public Path[] listPathsRaw(Path f) throws IOException {
+  public Path[] listPaths(Path f) throws IOException {
     return null;
   }
-  public void setWorkingDirectory(Path new_dir) {}
+
+  public void setWorkingDirectory(Path new_dir) {
+    staticWorkingDir = new_dir;
+  }
+  
   public Path getWorkingDirectory() {
     return staticWorkingDir;
   }
+
   public boolean mkdirs(Path f) throws IOException {
-    return false;
+    return true;
   }
   
   /** lock operations are not supported */
@@ -303,10 +311,13 @@ public class InMemoryFileSystem extends FileSystem {
   public void release(Path f) throws IOException {}
   
   /** copy/move operations are not supported */
-  public void copyFromLocalFile(Path src, Path dst) throws IOException {}
-  public void moveFromLocalFile(Path src, Path dst) throws IOException {}
-  public void copyToLocalFile(Path src, Path dst, boolean copyCrc)
-  throws IOException {}
+  public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+      throws IOException {
+  }
+
+  public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+      throws IOException {
+  }
 
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
       throws IOException {
@@ -315,11 +326,6 @@ public class InMemoryFileSystem extends FileSystem {
 
   public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
       throws IOException {
-  }
-
-  public void reportChecksumFailure(Path p, FSInputStream in,
-      long inPos,
-      FSInputStream sums, long sumsPos) {
   }
 
   public long getBlockSize(Path f) throws IOException {
@@ -336,38 +342,21 @@ public class InMemoryFileSystem extends FileSystem {
   
   /** Some APIs exclusively for InMemoryFileSystem */
   
-  /** Register a path with its size. This will also register a checksum for 
-   * the file that the user is trying to create. This is required since none
-   * of the FileSystem APIs accept the size of the file as argument. But since
-   * it is required for us to apriori know the size of the file we are going to
-   * create, the user must call this method for each file he wants to create
-   * and reserve memory for that file. We either succeed in reserving memory
-   * for both the main file and the checksum file and return true, or return 
-   * false.
-   */
-  public boolean reserveSpaceWithCheckSum(Path f, int size) {
-    //get the size of the checksum file (we know it is going to be 'int'
-    //since this is an inmem fs with file sizes that will fit in 4 bytes)
-    int checksumSize = getChecksumFileLength(size);
+  /** Register a path with its size. */
+  public boolean reserveSpace(Path f, int size) {
     synchronized (this) {
-      if (!canFitInMemory(size + checksumSize)) return false;
+      if (!canFitInMemory(size))
+        return false;
       FileAttributes fileAttr;
-      FileAttributes checksumAttr;
       try {
         fileAttr = new FileAttributes(size);
-        checksumAttr = new FileAttributes(checksumSize);
       } catch (OutOfMemoryError o) {
         return false;
       }
-      totalUsed += size + checksumSize;
+      totalUsed += size;
       tempFileAttribs.put(getPath(f), fileAttr);
-      tempFileAttribs.put(getPath(FileSystem.getChecksumFile(f)),checksumAttr); 
       return true;
     }
-  }
-  
-  public int getChecksumFileLength(int size) {
-    return (int)super.getChecksumFileLength(size, bytesPerSum);
   }
   
   /** This API getClosedFiles could have been implemented over listPathsRaw
@@ -376,7 +365,7 @@ public class InMemoryFileSystem extends FileSystem {
    */
   public Path[] getFiles(PathFilter filter) {
     synchronized (this) {
-      List <String> closedFilesList = new ArrayList();
+      List<String> closedFilesList = new ArrayList<String>();
       synchronized (pathToFileAttribs) {
         Set paths = pathToFileAttribs.keySet();
         if (paths == null || paths.isEmpty()) {
@@ -433,4 +422,70 @@ public class InMemoryFileSystem extends FileSystem {
       this.data = new byte[size];
     }
   }
+  }
+    
+    public InMemoryFileSystem() {
+        super(new RawInMemoryFileSystem());
+    }
+    
+    public InMemoryFileSystem(URI uri, Configuration conf) {
+        super(new RawInMemoryFileSystem(uri, conf));
+    }
+    
+    /** copy/move operations are not supported */
+    public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException {}
+    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException {}
+    
+    public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
+    throws IOException {
+        return fsOutputFile;
+    }
+    
+    public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
+    throws IOException {
+    }
+    
+    public void reportChecksumFailure(Path p, FSDataInputStream in,
+            long inPos,
+            FSDataInputStream sums, long sumsPos) {
+    }
+    
+    /**
+     * Register a file with its size. This will also register a checksum for the
+     * file that the user is trying to create. This is required since none of
+     * the FileSystem APIs accept the size of the file as argument. But since it
+     * is required for us to apriori know the size of the file we are going to
+     * create, the user must call this method for each file he wants to create
+     * and reserve memory for that file. We either succeed in reserving memory
+     * for both the main file and the checksum file and return true, or return
+     * false.
+     */
+    public boolean reserveSpaceWithCheckSum(Path f, int size) {
+        // get the size of the checksum file (we know it is going to be 'int'
+        // since this is an inmem fs with file sizes that will fit in 4 bytes)
+        long checksumSize = getChecksumFileLength(f, size);
+        RawInMemoryFileSystem mfs = (RawInMemoryFileSystem)getRawFileSystem();
+        synchronized(mfs) {
+            return mfs.reserveSpace(f, size) && 
+            mfs.reserveSpace(getChecksumFile(f),
+                    (int)getChecksumFileLength(f, size));
+        }
+    }
+    public Path[] getFiles(PathFilter filter) {
+        return ((RawInMemoryFileSystem)getRawFileSystem()).getFiles(filter);
+    }
+    
+    public int getNumFiles(PathFilter filter) {
+      return ((RawInMemoryFileSystem)getRawFileSystem()).getNumFiles(filter);
+    }
+
+    public int getFSSize() {
+        return ((RawInMemoryFileSystem)getRawFileSystem()).getFSSize();
+    }
+    
+    public float getPercentUsed() {
+        return ((RawInMemoryFileSystem)getRawFileSystem()).getPercentUsed();
+    }
 }

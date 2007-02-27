@@ -23,7 +23,6 @@ import junit.framework.AssertionFailedError;
 
 import org.apache.commons.logging.*;
 
-import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +33,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
@@ -223,7 +223,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     //
     byte[] buffer = new byte[BUFFER_SIZE];
     UTF8 testFileName = new UTF8(filename); // hardcode filename
-    FSOutputStream nos;
+    OutputStream nos;
 	nos = dfsClient.create(testFileName, false);
     try {
       for (long nBytesWritten = 0L;

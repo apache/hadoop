@@ -23,13 +23,13 @@ import junit.framework.AssertionFailedError;
 
 import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -259,7 +259,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
         for (int iFileNumber = 0; iFileNumber < numFiles; iFileNumber++) {
           testFileName = new UTF8("/f" + iFileNumber);
           testfilesList.add(testFileName);
-          FSOutputStream nos = dfsClient.create(testFileName, false);
+          OutputStream nos = dfsClient.create(testFileName, false);
           try {
             for (long nBytesWritten = 0L;
                  nBytesWritten < nBytes;

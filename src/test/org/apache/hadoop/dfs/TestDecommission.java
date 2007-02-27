@@ -22,8 +22,6 @@ import java.io.*;
 import java.util.Random;
 import java.net.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -59,8 +57,9 @@ public class TestDecommission extends TestCase {
   private void writeFile(FileSystem fileSys, Path name, int repl)
   throws IOException {
     // create and write a file that contains three blocks of data
-    FSOutputStream stm = fileSys.createRaw(name, true, (short)repl,
-        (long)blockSize);
+    FSDataOutputStream stm = fileSys.create(name, true, 
+            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+            (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -88,8 +87,11 @@ public class TestDecommission extends TestCase {
     // sleep an additional 10 seconds for the blockreports from the datanodes
     // to arrive. 
     //
-    FSInputStream is = fileSys.openRaw(name);
-    DFSClient.DFSInputStream dis = (DFSClient.DFSInputStream) is;
+    // need a raw stream
+    assertTrue("Not HDFS:"+fileSys.getUri(), fileSys instanceof DistributedFileSystem);
+        
+    DFSClient.DFSDataInputStream dis = (DFSClient.DFSDataInputStream) 
+        ((DistributedFileSystem)fileSys).getRawFileSystem().open(name);
     DatanodeInfo[][] dinfo = dis.getDataNodes();
 
     for (int blk = 0; blk < dinfo.length; blk++) { // for each block

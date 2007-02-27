@@ -25,7 +25,7 @@ import java.net.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
@@ -51,8 +51,9 @@ public class TestReplication extends TestCase {
   private void writeFile(FileSystem fileSys, Path name, int repl)
   throws IOException {
     // create and write a file that contains three blocks of data
-    FSOutputStream stm = fileSys.createRaw(name, true, (short)repl,
-        (long)blockSize);
+    FSDataOutputStream stm = fileSys.create(name, true,
+            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+            (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);

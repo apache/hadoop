@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.StringUtils;
 
 
 /**
@@ -46,7 +47,10 @@ public class TestDFSShell extends TestCase {
   public void testDFSShell() throws IOException {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, 2, false);
-    FileSystem fileSys = cluster.getFileSystem();
+    FileSystem fs = cluster.getFileSystem();
+    assertTrue("Not a HDFS: "+fs.getUri(),
+            fs instanceof DistributedFileSystem);
+    DistributedFileSystem fileSys = (DistributedFileSystem)fs;
     FsShell shell = new FsShell();
     shell.setConf(conf);
 
@@ -60,6 +64,7 @@ public class TestDFSShell extends TestCase {
     	// Second, create a file in that directory.
     	Path myFile = new Path("/test/mkdirs/myFile");
     	writeFile(fileSys, myFile);
+        assertTrue(fileSys.exists(myFile));
 
         // Verify that we can read the file
         {
@@ -70,20 +75,19 @@ public class TestDFSShell extends TestCase {
           try {
             val = shell.run(args);
             } catch (Exception e) {
-            System.err.println("Exception raised from DFSShell.run " +
-                               e.getLocalizedMessage()); 
+            System.err.println("Exception raised from DFSShell.run: " +
+                               StringUtils.stringifyException(e)); 
           }
           assertTrue(val == 0);
         }
 
         // Verify that we can get with and without crc
         {
-          File testFile = new File(TEST_ROOT_DIR, "mkdirs/myFile");
+          File testFile = new File(TEST_ROOT_DIR, "myFile");
           File checksumFile = new File(fileSys.getChecksumFile(
               new Path(testFile.getAbsolutePath())).toString());
           testFile.delete();
           checksumFile.delete();
-          new File(TEST_ROOT_DIR, "mkdirs").delete();
           
           String[] args = new String[3];
           args[0] = "-get";
@@ -102,12 +106,11 @@ public class TestDFSShell extends TestCase {
           testFile.delete();
         }
         {
-          File testFile = new File(TEST_ROOT_DIR, "mkdirs/myFile");
+          File testFile = new File(TEST_ROOT_DIR, "myFile");
           File checksumFile = new File(fileSys.getChecksumFile(
               new Path(testFile.getAbsolutePath())).toString());
           testFile.delete();
           checksumFile.delete();
-          new File(TEST_ROOT_DIR, "mkdirs").delete();
           
           String[] args = new String[4];
           args[0] = "-get";

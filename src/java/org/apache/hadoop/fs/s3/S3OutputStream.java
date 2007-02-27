@@ -9,12 +9,11 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3.INode.FileType;
 import org.apache.hadoop.util.Progressable;
 
-class S3OutputStream extends FSOutputStream {
+class S3OutputStream extends OutputStream {
 
   private Configuration conf;
   
@@ -70,7 +69,6 @@ class S3OutputStream extends FSOutputStream {
     return result;
   }
 
-  @Override
   public long getPos() throws IOException {
     return filePos;
   }

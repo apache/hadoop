@@ -18,89 +18,13 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
-import java.util.zip.Checksum;
-import java.util.zip.CRC32;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Progressable;
 
-/** Utility that wraps a {@link FSOutputStream} in a {@link DataOutputStream},
+import org.apache.hadoop.conf.Configuration;
+
+/** Utility that wraps a {@link OutputStream} in a {@link DataOutputStream},
  * buffers output through a {@link BufferedOutputStream} and creates a checksum
  * file. */
 public class FSDataOutputStream extends DataOutputStream {
-  public static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};
-  
-  /** Store checksums for data. */
-  private static class Summer extends FilterOutputStream {
-
-    private FSDataOutputStream sums;
-    private Checksum sum = new CRC32();
-    private int inSum;
-    private int bytesPerSum;
-
-    public Summer(FileSystem fs, 
-                  Path file, 
-                  boolean overwrite, 
-                  short replication,
-                  long blockSize,
-                  Configuration conf)
-      throws IOException {
-      this(fs, file, overwrite, replication, blockSize, conf, null);
-    }
-
-    public Summer(FileSystem fs, 
-                  Path file, 
-                  boolean overwrite, 
-                  short replication,
-                  long blockSize,
-                  Configuration conf,
-                  Progressable progress)
-      throws IOException {
-      super(fs.createRaw(file, overwrite, replication, blockSize, progress));
-      this.bytesPerSum = conf.getInt("io.bytes.per.checksum", 512);
-      this.sums = new FSDataOutputStream(
-            fs.createRaw(FileSystem.getChecksumFile(file), true, 
-                         replication, blockSize), 
-            conf);
-      sums.write(CHECKSUM_VERSION, 0, CHECKSUM_VERSION.length);
-      sums.writeInt(this.bytesPerSum);
-    }
-    
-    public void write(byte b[], int off, int len) throws IOException {
-      int summed = 0;
-      while (summed < len) {
-
-        int goal = this.bytesPerSum - inSum;
-        int inBuf = len - summed;
-        int toSum = inBuf <= goal ? inBuf : goal;
-
-        sum.update(b, off+summed, toSum);
-        summed += toSum;
-
-        inSum += toSum;
-        if (inSum == this.bytesPerSum) {
-          writeSum();
-        }
-      }
-
-      out.write(b, off, len);
-    }
-
-    private void writeSum() throws IOException {
-      if (inSum != 0) {
-        sums.writeInt((int)sum.getValue());
-        sum.reset();
-        inSum = 0;
-      }
-    }
-
-    public void close() throws IOException {
-      writeSum();
-      sums.close();
-      super.close();
-    }
-
-  }
-
   private static class PositionCache extends FilterOutputStream {
     long position;
 
@@ -122,7 +46,7 @@ public class FSDataOutputStream extends DataOutputStream {
   }
 
   private static class Buffer extends BufferedOutputStream {
-    public Buffer(OutputStream out, int bufferSize) throws IOException {
+    public Buffer(PositionCache out, int bufferSize) throws IOException {
       super(out, bufferSize);
     }
 
@@ -138,50 +62,19 @@ public class FSDataOutputStream extends DataOutputStream {
         buf[count++] = (byte)b;
       }
     }
-
   }
 
-  public FSDataOutputStream(FileSystem fs, Path file,
-                            boolean overwrite, Configuration conf,
-                            int bufferSize, short replication, long blockSize )
+  public FSDataOutputStream(OutputStream out, int bufferSize)
   throws IOException {
-    super(new Buffer(
-            new PositionCache(
-                new Summer(fs, file, overwrite, replication, blockSize, conf)), 
-            bufferSize));
-  }
-
-  public FSDataOutputStream(FileSystem fs, Path file,
-                            boolean overwrite, Configuration conf,
-                            int bufferSize, short replication, long blockSize,
-                            Progressable progress)
-  throws IOException {
-    super(new Buffer(
-            new PositionCache(
-                new Summer(fs, file, overwrite, replication, blockSize, conf, progress)), 
-            bufferSize));
+    super(new Buffer(new PositionCache(out), bufferSize));
   }
   
-  /** Construct without checksums. */
-  private FSDataOutputStream(FSOutputStream out, Configuration conf) throws IOException {
+  public FSDataOutputStream(OutputStream out, Configuration conf)
+  throws IOException {
     this(out, conf.getInt("io.file.buffer.size", 4096));
-  }
-
-  /** Construct without checksums. */
-  private FSDataOutputStream(FSOutputStream out, int bufferSize)
-    throws IOException {
-    super(new Buffer(new PositionCache(out), bufferSize));
   }
 
   public long getPos() throws IOException {
     return ((Buffer)out).getPos();
   }
-
-  public static long getChecksumLength(long size, int bytesPerSum) {
-    //the checksum length is equal to size passed divided by bytesPerSum +
-    //bytes written in the beginning of the checksum file.  
-    return ((long)(Math.ceil((float)size/bytesPerSum)) + 1) * 4 + 
-            CHECKSUM_VERSION.length;  
-  }
-  
 }

@@ -20,10 +20,8 @@ package org.apache.hadoop.dfs;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
-import java.net.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -39,8 +37,9 @@ public class TestCheckpoint extends TestCase {
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
   throws IOException {
-    FSOutputStream stm = fileSys.createRaw(name, true, (short)repl,
-        (long)blockSize);
+    FSDataOutputStream stm = fileSys.create(name, true,
+            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+            (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);

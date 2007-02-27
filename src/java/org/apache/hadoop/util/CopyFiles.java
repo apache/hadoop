@@ -554,11 +554,9 @@ public class CopyFiles extends ToolBase {
         BufferedInputStream is = 
           new BufferedInputStream(connection.getInputStream());
         
-        FSDataOutputStream os = 
-          new FSDataOutputStream(destFileSys, destinationPath, true, 
-              jobConf,	bufferSize, (short)jobConf.getInt("dfs.replication", 3), 
-              jobConf.getLong("dfs.block.size", 67108864)
-          );
+        FSDataOutputStream os = destFileSys.create(destinationPath, true, 
+              bufferSize, (short)jobConf.getInt("dfs.replication", 3), 
+              jobConf.getLong("dfs.block.size", 67108864));
         
         int readBytes = 0;
         while((readBytes = is.read(buffer, 0, bufferSize)) != -1) {
@@ -624,7 +622,7 @@ public class CopyFiles extends ToolBase {
           HDFS.equalsIgnoreCase(srcListURIScheme)) {
       FileSystem fs = FileSystem.get(srcListURI, conf);
       fis = new BufferedReader(
-          new InputStreamReader(new FSDataInputStream(fs, new Path(srcListURIPath), conf))
+          new InputStreamReader(fs.open(new Path(srcListURIPath)))
           );
     } else if("http".equalsIgnoreCase(srcListURIScheme)) {
       //Copy the file 

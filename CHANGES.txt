@@ -150,6 +150,9 @@ Trunk (unreleased changes)
 44. HADOOP-1042.  Improve the handling of failed map output fetches.
     (Devaraj Das via cutting)
 
+45. HADOOP-928.  Make checksums optional per FileSystem.
+    (Hairong Kuang via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

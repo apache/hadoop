@@ -288,6 +288,10 @@ public class DistributedCache {
     byte[] digest = null;
 
     FileSystem fileSystem = getFileSystem(cache, conf);
+    if(!(fileSystem instanceof ChecksumFileSystem)) {
+        throw new IOException( "Not a checksummed file system: "
+                +fileSystem.getUri() );
+    }
     String filename = cache.getPath();
     Path filePath = new Path(filename);
     Path md5File = new Path(filePath.getParent().toString() + Path.SEPARATOR
@@ -299,8 +303,15 @@ public class DistributedCache {
       // do nothing
     }
     if (!fileSystem.exists(md5File)) {
-      FSInputStream fsStream = fileSystem.openRaw(FileSystem
-          .getChecksumFile(filePath));
+      ChecksumFileSystem checksumFs;
+      if(!(fileSystem instanceof ChecksumFileSystem)) {
+          throw new IOException(
+                  "Not a checksumed file system: "+fileSystem.getUri());
+      } else {
+          checksumFs = (ChecksumFileSystem)fileSystem;
+      }
+      FSDataInputStream fsStream = checksumFs.getRawFileSystem().open(
+              checksumFs.getChecksumFile(filePath));
       int read = fsStream.read(b);
       while (read != -1) {
         md5.update(b, 0, read);
@@ -313,7 +324,7 @@ public class DistributedCache {
       out.write(digest);
       out.close();
     } else {
-      FSInputStream fsStream = fileSystem.openRaw(md5File);
+      FSDataInputStream fsStream = fileSystem.open(md5File);
       digest = new byte[md5.getDigestLength()];
       // assuming reading 16 bytes once is not a problem
       // though it should be checked if 16 bytes have been read or not

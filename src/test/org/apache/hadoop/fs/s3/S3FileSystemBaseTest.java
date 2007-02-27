@@ -6,8 +6,8 @@ import java.net.URI;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSOutputStream;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 
 public abstract class S3FileSystemBaseTest extends TestCase {
@@ -84,28 +84,28 @@ public abstract class S3FileSystemBaseTest extends TestCase {
   public void testListPathsRaw() throws Exception {
     Path[] testDirs = { new Path("/test/hadoop/a"), new Path("/test/hadoop/b"),
         new Path("/test/hadoop/c/1"), };
-    assertNull(s3FileSystem.listPathsRaw(testDirs[0]));
+    assertNull(s3FileSystem.listPaths(testDirs[0]));
 
     for (Path path : testDirs) {
       assertTrue(s3FileSystem.mkdirs(path));
     }
 
-    Path[] paths = s3FileSystem.listPathsRaw(new Path("/"));
+    Path[] paths = s3FileSystem.listPaths(new Path("/"));
 
     assertEquals(1, paths.length);
     assertEquals(new Path("/test"), paths[0]);
 
-    paths = s3FileSystem.listPathsRaw(new Path("/test"));
+    paths = s3FileSystem.listPaths(new Path("/test"));
     assertEquals(1, paths.length);
     assertEquals(new Path("/test/hadoop"), paths[0]);
 
-    paths = s3FileSystem.listPathsRaw(new Path("/test/hadoop"));
+    paths = s3FileSystem.listPaths(new Path("/test/hadoop"));
     assertEquals(3, paths.length);
     assertEquals(new Path("/test/hadoop/a"), paths[0]);
     assertEquals(new Path("/test/hadoop/b"), paths[1]);
     assertEquals(new Path("/test/hadoop/c"), paths[2]);
 
-    paths = s3FileSystem.listPathsRaw(new Path("/test/hadoop/a"));
+    paths = s3FileSystem.listPaths(new Path("/test/hadoop/a"));
     assertEquals(0, paths.length);
   }
 
@@ -135,7 +135,9 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     
     s3FileSystem.mkdirs(path.getParent());
 
-    FSOutputStream out = s3FileSystem.createRaw(path, false, (short) 1, BLOCK_SIZE);
+    FSDataOutputStream out = s3FileSystem.create(path, false,
+            s3FileSystem.getConf().getInt("io.file.buffer.size", 4096), 
+            (short) 1, BLOCK_SIZE);
     out.write(data, 0, len);
     out.close();
 
@@ -145,7 +147,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
 
     assertEquals("Length", len, s3FileSystem.getLength(path));
 
-    FSInputStream in = s3FileSystem.openRaw(path);
+    FSDataInputStream in = s3FileSystem.open(path);
     byte[] buf = new byte[len];
 
     in.readFully(0, buf);
@@ -155,7 +157,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
       assertEquals("Position " + i, data[i], buf[i]);
     }
     
-    assertTrue("Deleted", s3FileSystem.deleteRaw(path));
+    assertTrue("Deleted", s3FileSystem.delete(path));
     
     assertFalse("No longer exists", s3FileSystem.exists(path));
 
@@ -172,13 +174,17 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     assertEquals("Length", BLOCK_SIZE, s3FileSystem.getLength(path));
     
     try {
-      s3FileSystem.createRaw(path, false, (short) 1, 128);
+      s3FileSystem.create(path, false,
+              s3FileSystem.getConf().getInt("io.file.buffer.size", 4096),
+              (short) 1, 128);
       fail("Should throw IOException.");
     } catch (IOException e) {
       // Expected
     }
     
-    FSOutputStream out = s3FileSystem.createRaw(path, true, (short) 1, BLOCK_SIZE);
+    FSDataOutputStream out = s3FileSystem.create(path, true,
+            s3FileSystem.getConf().getInt("io.file.buffer.size", 4096), 
+            (short) 1, BLOCK_SIZE);
     out.write(data, 0, BLOCK_SIZE / 2);
     out.close();
     
@@ -321,7 +327,9 @@ public abstract class S3FileSystemBaseTest extends TestCase {
   }
 
   private void createEmptyFile(Path path) throws IOException {
-    FSOutputStream out = s3FileSystem.createRaw(path, false, (short) 1, BLOCK_SIZE);
+    FSDataOutputStream out = s3FileSystem.create(path, false,
+            s3FileSystem.getConf().getInt("io.file.buffer.size", 4096),
+            (short) 1, BLOCK_SIZE);
     out.write(data, 0, BLOCK_SIZE);
     out.close();
   }
