@@ -156,7 +156,7 @@ class FSNamesystem implements FSConstants {
     // Set of: Block
     //
     private UnderReplicationBlocks neededReplications = new UnderReplicationBlocks();
-    private Collection<Block> pendingReplications = new TreeSet<Block>();
+    private PendingReplicationBlocks pendingReplications;
 
     //
     // Used for handling lock-leases
@@ -248,6 +248,7 @@ class FSNamesystem implements FSConstants {
         this.dir.loadFSImage( conf );
         this.safeMode = new SafeModeInfo( conf );
         setBlockTotal();
+        pendingReplications = new PendingReplicationBlocks(LOG);
         this.hbthread = new Daemon(new HeartbeatMonitor());
         this.lmthread = new Daemon(new LeaseMonitor());
         this.replthread = new Daemon(new ReplicationMonitor());
@@ -298,6 +299,7 @@ class FSNamesystem implements FSConstants {
         fsRunning = false;
       }
         try {
+            pendingReplications.stop();
             infoServer.stop();
             hbthread.join(3000);
             replthread.join(3000);
@@ -1706,6 +1708,7 @@ class FSNamesystem implements FSConstants {
         while (fsRunning) {
           try {
             computeDatanodeWork();
+            processPendingReplications();
             Thread.sleep(replicationRecheckInterval);
           } catch (InterruptedException ie) {
           } catch (IOException ie) {
@@ -1788,6 +1791,21 @@ class FSNamesystem implements FSConstants {
           // heuristic to determine when a decommission is really over.
           //
           checkDecommissionState(node);
+        }
+      }
+    }
+
+    /**
+     * If there were any replication requests that timed out, reap them
+     * and put them back into the neededReplication queue
+     */
+    void processPendingReplications() {
+      Block[] timedOutItems = pendingReplications.getTimedOutBlocks();
+      if (timedOutItems != null) {
+        synchronized (this) {
+          for (int i = 0; i < timedOutItems.length; i++) {
+            neededReplications.add(timedOutItems[i]);
+          }
         }
       }
     }
@@ -2094,9 +2112,6 @@ class FSNamesystem implements FSConstants {
         if(neededReplications.contains(block)) {
             neededReplications.update(block, curReplicaDelta, 0);
         }
-        if (numCurrentReplica >= fileReplication ) {
-            pendingReplications.remove(block);
-        }        
         proccessOverReplicatedBlock( block, fileReplication );
         return block;
     }
@@ -2256,6 +2271,7 @@ class FSNamesystem implements FSConstants {
         // Modify the blocks->datanode map and node's map.
         // 
         node.addBlock( addStoredBlock(block, node) );
+        pendingReplications.remove(block);
     }
 
     /**
@@ -2606,7 +2622,8 @@ class FSNamesystem implements FSConstants {
               // filter out containingNodes that are marked for decommission.
               List<DatanodeDescriptor> nodes = 
                   filterDecommissionedNodes(containingNodes);
-              int numCurrentReplica = nodes.size();
+              int numCurrentReplica = nodes.size() +
+                                      pendingReplications.getNumReplicas(block);
               DatanodeDescriptor targets[] = replicator.chooseTarget(
                   Math.min( fileINode.getReplication() - numCurrentReplica,
                             needed),
@@ -2640,7 +2657,7 @@ class FSNamesystem implements FSConstants {
             if (numCurrentReplica + targets.length >= numExpectedReplica) {
               neededReplications.remove(
                       block, numCurrentReplica, numExpectedReplica);
-              pendingReplications.add(block);
+              pendingReplications.add(block, targets.length);
               NameNode.stateChangeLog.debug(
                 "BLOCK* NameSystem.pendingTransfer: "
                 + block.getBlockName()
