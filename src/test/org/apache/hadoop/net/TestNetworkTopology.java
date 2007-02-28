@@ -1,6 +1,6 @@
 package org.apache.hadoop.net;
 
-import java.util.HashSet;
+
 import org.apache.hadoop.dfs.DatanodeDescriptor;
 import org.apache.hadoop.dfs.DatanodeID;
 import junit.framework.TestCase;
@@ -40,20 +40,6 @@ public class TestNetworkTopology extends TestCase {
     assertEquals(cluster.getNumOfRacks(), 3);
   }
   
-  public void testGetLeaves() throws Exception {
-    DatanodeDescriptor [] leaves = cluster.getLeaves(NodeBase.ROOT);
-    assertEquals(leaves.length, dataNodes.length);
-    HashSet<DatanodeDescriptor> set1 = 
-      new HashSet<DatanodeDescriptor>(leaves.length);
-    HashSet<DatanodeDescriptor> set2 = 
-      new HashSet<DatanodeDescriptor>(dataNodes.length);
-    for(int i=0; i<leaves.length; i++) {
-      set1.add(leaves[i]);
-      set2.add(dataNodes[i]);
-    }
-    assertTrue(set1.equals(set2));
-  }
-  
   public void testGetDistance() throws Exception {
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[0]), 0);
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[1]), 2);
@@ -73,6 +59,4 @@ public class TestNetworkTopology extends TestCase {
       cluster.add( dataNodes[i] );
     }
   }
-
-
 }

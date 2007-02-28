@@ -19,8 +19,8 @@ package org.apache.hadoop.net;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,8 +46,8 @@ public class NetworkTopology {
      * Different from a leave node, it has non-null children.
      */
     private class InnerNode extends NodeBase {
-        private HashMap<String, Node> children = 
-            new HashMap<String, Node>(); // maps a name to a node 
+        private ArrayList<Node> children=new ArrayList<Node>();
+        private int numOfLeaves;
         
         /** Construct an InnerNode from a path-like string */
         InnerNode( String path ) {
@@ -60,7 +60,7 @@ public class NetworkTopology {
         }
         
         /** Get its children */
-        HashMap<String, Node> getChildren() {return children;}
+        Collection<Node> getChildren() {return children;}
         
         /** Return the number of children this node has */
         int getNumOfChildren() {
@@ -75,7 +75,7 @@ public class NetworkTopology {
                 return true;
             }
             
-            Node firstChild = children.values().iterator().next();
+            Node firstChild = children.get(0);
             if(firstChild instanceof InnerNode) {
                 return false;
             }
@@ -89,7 +89,9 @@ public class NetworkTopology {
          * @return true if this node is an ancestor of <i>n</i>
          */
         boolean isAncestor(Node n) {
-            return n.getNetworkLocation().startsWith(getPath());
+            return getPath().equals(NodeBase.PATH_SEPARATOR_STR) ||
+                   (n.getNetworkLocation()+NodeBase.PATH_SEPARATOR_STR).
+                    startsWith(getPath()+NodeBase.PATH_SEPARATOR_STR);
         }
         
         /** Judge if this node is the parent of node <i>n</i>
@@ -121,7 +123,7 @@ public class NetworkTopology {
          * @param n node to be added
          * @return true if the node is added; false otherwise
          */
-        boolean add( Node n ) {
+        boolean add( DatanodeDescriptor n ) {
             String parent = n.getNetworkLocation();
             String currentPath = getPath();
             if( !isAncestor( n ) )
@@ -129,18 +131,36 @@ public class NetworkTopology {
                         +parent+", is not a decendent of "+currentPath);
             if( isParent( n ) ) {
                 // this node is the parent of n; add n directly
-                return (null == children.put(n.getName(), n) );
+                for(int i=0; i<children.size(); i++) {
+                    if(children.get(i).getName().equals(n.getName())) {
+                        children.set(i, n);
+                        return false;
+                    }
+                }
+                children.add(n);
+                numOfLeaves++;
+                return true;
             } else {
                 // find the next ancestor node
                 String parentName = getNextAncestorName( n );
-                InnerNode parentNode = (InnerNode)children.get(parentName);
+                InnerNode parentNode = null;
+                for(int i=0; i<children.size(); i++) {
+                    if(children.get(i).getName().equals(parentName)) {
+                        parentNode = (InnerNode)children.get(i);
+                    }
+                }
                 if( parentNode == null ) {
                     // create a new InnerNode
                     parentNode = new InnerNode( parentName, currentPath );
-                    children.put(parentName, parentNode);
+                    children.add(parentNode);
                 }
                 // add n to the subtree of the next ancestor node
-                return parentNode.add(n);
+                if( parentNode.add(n) ) {
+                    numOfLeaves++;
+                    return true;
+                } else {
+                    return false;
+                }
             }
         }
         
@@ -148,19 +168,34 @@ public class NetworkTopology {
          * @parameter n node to be deleted 
          * @return true if the node is deleted; false otherwise
          */
-        boolean remove( Node n ) {
+        boolean remove( DatanodeDescriptor n ) {
             String parent = n.getNetworkLocation();
             String currentPath = getPath();
             if(!isAncestor(n))
-                throw new IllegalArgumentException( n.getName()+", which is located at "
+                throw new IllegalArgumentException( n.getName()
+                        +", which is located at "
                         +parent+", is not a decendent of "+currentPath);
             if( isParent(n) ) {
                 // this node is the parent of n; remove n directly
-                return (n == children.remove(n.getName()));
+                for(int i=0; i<children.size(); i++) {
+                    if(children.get(i).getName().equals(n.getName())) {
+                        children.remove(i);
+                        numOfLeaves--;
+                        return true;
+                    }
+                }
+                return false;
             } else {
                 // find the next ancestor node: the parent node
                 String parentName = getNextAncestorName( n );
-                InnerNode parentNode = (InnerNode)children.get(parentName);
+                InnerNode parentNode = null;
+                int i;
+                for(i=0; i<children.size(); i++) {
+                    if(children.get(i).getName().equals(parentName)) {
+                        parentNode = (InnerNode)children.get(i);
+                        break;
+                    }
+                }
                 if(parentNode==null) {
                     throw new IllegalArgumentException( n.getName()
                             + ", which is located at "
@@ -169,8 +204,11 @@ public class NetworkTopology {
                 // remove n from the parent node
                 boolean isRemoved = parentNode.remove( n );
                 // if the parent node has no children, remove the parent node too
-                if(parentNode.getNumOfChildren() == 0 ) {
-                    children.remove(parentName);
+                if(isRemoved) {
+                    if(parentNode.getNumOfChildren() == 0 ) {
+                        children.remove(i);
+                    }
+                    numOfLeaves--;
                 }
                 return isRemoved;
             }
@@ -179,8 +217,14 @@ public class NetworkTopology {
         /** Given a node's string representation, return a reference to the node */ 
         Node getLoc( String loc ) {
             if( loc == null || loc.length() == 0 ) return this;
+            
             String[] path = loc.split(PATH_SEPARATOR_STR, 2);
-            Node childnode = children.get( path[0] );
+            Node childnode = null;
+            for(int i=0; i<children.size(); i++) {
+                if(children.get(i).getName().equals(path[0])) {
+                    childnode = children.get(i);
+                }
+            }
             if(childnode == null ) return null; // non-existing node
             if( path.length == 1 ) return childnode;
             if( childnode instanceof InnerNode ) {
@@ -190,22 +234,62 @@ public class NetworkTopology {
             }
         }
         
-        /** Get all the data nodes belonged to the subtree of this node */
-        void getLeaves( Collection<DatanodeDescriptor> results ) {
-            for( Iterator<Node> iter = children.values().iterator();
-            iter.hasNext(); ) {
-                Node childNode = iter.next();
-                if( childNode instanceof InnerNode ) {
-                    ((InnerNode)childNode).getLeaves(results);
-                } else {
-                    results.add( (DatanodeDescriptor)childNode );
-                }
+        /** get <i>leaveIndex</i> leaf of this subtree 
+         * if it is not in the <i>excludedNode</i>*/
+        private DatanodeDescriptor getLeaf(int leaveIndex, Node excludedNode) {
+            int count=0;
+            int numOfExcludedLeaves = 1;
+            if( excludedNode instanceof InnerNode ) {
+                numOfExcludedLeaves = ((InnerNode)excludedNode).getNumOfLeaves();
             }
+            if( isRack() ) { // children are leaves
+                // range check
+                if(leaveIndex<0 || leaveIndex>=this.getNumOfChildren()) {
+                    return null;
+                }
+                DatanodeDescriptor child =
+                    (DatanodeDescriptor)children.get(leaveIndex);
+                if(excludedNode == null || excludedNode != child) {
+                    // child is not the excludedNode
+                    return child;
+                } else { // child is the excludedNode so return the next child
+                    if(leaveIndex+1>=this.getNumOfChildren()) {
+                        return null;
+                    } else {
+                        return (DatanodeDescriptor)children.get(leaveIndex+1);
+                    }
+                }
+            } else {
+                for( int i=0; i<children.size(); i++ ) {
+                    InnerNode child = (InnerNode)children.get(i);
+                    if(excludedNode == null || excludedNode != child) {
+                        // not the excludedNode
+                        int numOfLeaves = child.getNumOfLeaves();
+                        if( excludedNode != null && child.isAncestor(excludedNode) ) {
+                            numOfLeaves -= numOfExcludedLeaves;
+                        }
+                        if( count+numOfLeaves > leaveIndex ) {
+                            // the leaf is in the child subtree
+                            return child.getLeaf(leaveIndex-count, excludedNode);
+                        } else {
+                            // go to the next child
+                            count = count+numOfLeaves;
+                        }
+                    } else { // it is the excluededNode
+                        // skip it and set the excludedNode to be null
+                        excludedNode = null;
+                    }
+                }
+                return null;
+            }
+        }
+        
+        int getNumOfLeaves() {
+            return numOfLeaves;
         }
     } // end of InnerNode
     
-    InnerNode clusterMap = new InnerNode( InnerNode.ROOT ); //the root of the tree
-    private int numOfLeaves = 0; // data nodes counter
+    InnerNode clusterMap = new InnerNode( InnerNode.ROOT ); // the root
     private int numOfRacks = 0;  // rack counter
     
     public NetworkTopology() {
@@ -215,7 +299,7 @@ public class NetworkTopology {
      * Update data node counter & rack counter if neccessary
      * @param node
      *          data node to be added
-     * @exception IllegalArgumentException if add a data node to an existing leave
+     * @exception IllegalArgumentException if add a data node to a leave
      */
     public synchronized void add( DatanodeDescriptor node ) {
         if( node==null ) return;
@@ -227,7 +311,6 @@ public class NetworkTopology {
                     + " at an illegal network location");
         }
         if( clusterMap.add( node) ) {
-            numOfLeaves++;
             if( rack == null ) {
                 numOfRacks++;
             }
@@ -244,7 +327,6 @@ public class NetworkTopology {
         if( node==null ) return;
         LOG.info("Removing a node: "+node.getPath());
         if( clusterMap.remove( node ) ) {
-            numOfLeaves--;
             InnerNode rack = (InnerNode)getNode(node.getNetworkLocation());
             if(rack == null) {
                 numOfRacks--;
@@ -265,7 +347,7 @@ public class NetworkTopology {
         return (rNode == node); 
     }
     
-    /** Given a string representation of a node, return the reference to the node
+    /** Given a string representation of a node, return its reference
      * 
      * @param loc
      *          a path-like string representation of a node
@@ -278,54 +360,14 @@ public class NetworkTopology {
         return clusterMap.getLoc( loc );
     }
     
-    /* Add all the data nodes that belong to 
-     * the subtree of the node <i>loc</i> to <i>results</i>*/
-    private synchronized void getLeaves( String loc,
-            Collection<DatanodeDescriptor> results ) {
-        Node node = getNode(loc);
-        if( node instanceof InnerNode )
-            ((InnerNode)node).getLeaves(results);
-        else {
-            results.add((DatanodeDescriptor)node);
-        }
-    }
-    
-    /** Return all the data nodes that belong to the subtree of <i>loc</i>
-     * @param loc
-     *          a path-like string representation of a node
-     * @return an array of data nodes that belong to the subtree of <i>loc</i>
-     */
-    public synchronized DatanodeDescriptor[] getLeaves( String loc ) {
-        Collection<DatanodeDescriptor> results = new ArrayList<DatanodeDescriptor>();
-        getLeaves(loc, results);
-        return results.toArray(new DatanodeDescriptor[results.size()]);
-    }
-    
-    /** Return all the data nodes that belong to the subtrees of <i>locs</i>
-     * @param locs
-     *          a collection of strings representing nodes
-     * @return an array of data nodes that belong to subtrees of <i>locs</i>
-     */
-    public synchronized DatanodeDescriptor[] getLeaves(
-            Collection<String> locs ) {
-        Collection<DatanodeDescriptor> nodes = new ArrayList<DatanodeDescriptor>();
-        if( locs != null ) { 
-            Iterator<String> iter = locs.iterator();
-            while(iter.hasNext()) {
-                getLeaves( iter.next(), nodes );
-            }
-        }
-        return nodes.toArray(new DatanodeDescriptor[nodes.size()]);
-    }
-    
     /** Return the total number of racks */
-    public int getNumOfRacks( ) {
+    public synchronized int getNumOfRacks( ) {
         return numOfRacks;
     }
     
     /** Return the total number of data nodes */
-    public int getNumOfLeaves() {
-        return numOfLeaves;
+    public synchronized int getNumOfLeaves() {
+        return clusterMap.getNumOfLeaves();
     }
     
     private void checkArgument( DatanodeDescriptor node ) {
@@ -354,11 +396,7 @@ public class NetworkTopology {
     public int getDistance(DatanodeDescriptor node1, DatanodeDescriptor node2 ) {
         checkArgument( node1 );
         checkArgument( node2 );
-        /*
-        if( !contains(node1) || !contains(node2) ) {
-            return Integer.MAX_VALUE;
-        }
-        */
+
         if( node1 == node2 || node1.equals(node2)) {
             return 0;
         }
@@ -398,6 +436,85 @@ public class NetworkTopology {
         return location1.equals(location2);
     }
     
+    final private static Random r = new Random();
+    /** randomly choose one node from <i>scope</i>
+     * if scope starts with ~, choose one from the all datanodes except for the
+     * ones in <i>scope</i>; otherwise, choose one from <i>scope</i>
+     * @param scope range of datanodes from which a node will be choosen
+     * @return the choosen data node
+     */
+    public DatanodeDescriptor chooseRandom(String scope) {
+        if(scope.startsWith("~")) {
+            return chooseRandom(NodeBase.ROOT, scope.substring(1));
+        } else {
+            return chooseRandom(scope, null);
+        }
+    }
+    
+    private DatanodeDescriptor chooseRandom(String scope, String excludedScope){
+        if(excludedScope != null) {
+            if(scope.startsWith(excludedScope)) {
+                return null;
+            }
+            if(!excludedScope.startsWith(scope)) {
+                excludedScope = null;
+            }
+        }
+        Node node = getNode(scope);
+        if(node instanceof DatanodeDescriptor) {
+            return (DatanodeDescriptor)node;
+        }
+       InnerNode innerNode = (InnerNode)node;
+       int numOfDatanodes = innerNode.getNumOfLeaves();
+       if(excludedScope == null) {
+           node = null;
+       } else {
+           node = getNode(excludedScope);
+           if(node instanceof DatanodeDescriptor) {
+               numOfDatanodes -= 1;
+           } else {
+               numOfDatanodes -= ((InnerNode)node).getNumOfLeaves();
+           }
+       }
+       int leaveIndex = r.nextInt(numOfDatanodes);
+       return innerNode.getLeaf(leaveIndex, node);
+    }
+       
+    /** return the number of leaves in <i>scope</i> but not in <i>excludedNodes</i>
+     * if scope starts with ~, return the number of datanodes that are not
+     * in <i>scope</i> and <i>excludedNodes</i>; 
+     * @param scope a path string that may start with ~
+     * @param excludedNodes a list of data nodes
+     * @return number of available data nodes
+     */
+    public int countNumOfAvailableNodes(String scope,
+            List<DatanodeDescriptor> excludedNodes) {
+        boolean isExcluded=false;
+        if(scope.startsWith("~")) {
+            isExcluded=true;
+            scope=scope.substring(1);
+        }
+        scope = NodeBase.normalize(scope);
+        int count=0; // the number of nodes in both scope & excludedNodes
+        for( DatanodeDescriptor node:excludedNodes) {
+            if( (node.getPath()+NodeBase.PATH_SEPARATOR_STR).
+                    startsWith(scope+NodeBase.PATH_SEPARATOR_STR)) {
+                count++;
+            }
+        }
+        Node n=getNode(scope);
+        int scopeNodeCount=1;
+        if(n instanceof InnerNode) {
+            scopeNodeCount=((InnerNode)n).getNumOfLeaves();
+        }
+        if(isExcluded) {
+            return clusterMap.getNumOfLeaves()-
+                scopeNodeCount-excludedNodes.size()+count;
+        } else {
+            return scopeNodeCount-count;
+        }
+    }
+    
     /** convert a network tree to a string */
     public String toString() {
         // print the number of racks
@@ -406,18 +523,13 @@ public class NetworkTopology {
         tree.append( numOfRacks );
         tree.append( "\n" );
         // print the number of leaves
+        int numOfLeaves = getNumOfLeaves();
         tree.append( "Expected number of leaves:" );
         tree.append( numOfLeaves );
         tree.append( "\n" );
-        // get all datanodes
-        DatanodeDescriptor[] datanodes = getLeaves( NodeBase.ROOT );
-        // print the number of leaves
-        tree.append( "Actual number of leaves:" );
-        tree.append( datanodes.length );
-        tree.append( "\n" );
         // print datanodes
-        for( int i=0; i<datanodes.length; i++ ) {
-            tree.append( datanodes[i].getPath() );
+        for( int i=0; i<numOfLeaves; i++ ) {
+            tree.append( clusterMap.getLeaf(i, null).getPath() );
             tree.append( "\n");
         }
         return tree.toString();

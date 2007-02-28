@@ -1,6 +1,5 @@
 package org.apache.hadoop.dfs;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +15,7 @@ public class TestReplicationPolicy extends TestCase {
   private static final Configuration CONF = new Configuration();
   private static final NetworkTopology cluster;
   private static NameNode namenode;
-  private static FSNamesystem.Replicator replicator;
+  private static FSNamesystem.ReplicationTargetChooser replicator;
   private static DatanodeDescriptor dataNodes[] = 
          new DatanodeDescriptor[] {
     new DatanodeDescriptor(new DatanodeID("h1:5020", "0", -1), "/d1/r1"),
@@ -33,6 +32,7 @@ private final static DatanodeDescriptor NODE =
   static {
     try {
       CONF.set("fs.default.name", "localhost:8020");
+      NameNode.format(CONF);
       namenode = new NameNode(CONF);
     } catch (IOException e) {
       // TODO Auto-generated catch block
@@ -61,6 +61,10 @@ private final static DatanodeDescriptor NODE =
    * @throws Exception
    */
   public void testChooseTarget1() throws Exception {
+    dataNodes[0].updateHeartbeat(
+              2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
+              FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 4); // overloaded
+
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(
         0, dataNodes[0], null, BLOCK_SIZE);
@@ -91,6 +95,10 @@ private final static DatanodeDescriptor NODE =
     assertTrue(cluster.isOnSameRack(targets[0], targets[1]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[3]));
+
+    dataNodes[0].updateHeartbeat(
+        2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
+        FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0); 
   }
 
   /**
@@ -161,8 +169,8 @@ private final static DatanodeDescriptor NODE =
     // make data node 0 to be not qualified to choose
     dataNodes[0].updateHeartbeat(
         2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
-        FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 4); // overloaded
-      
+        (FSConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0); // no space
+        
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(
         0, dataNodes[0], null, BLOCK_SIZE);
