@@ -140,6 +140,7 @@
       
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
+      <sysproperty key="contrib.name" value="${name}"/>
       
       <!-- requires fork=yes for: 
         relative File paths to use the specified user.dir 

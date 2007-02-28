@@ -136,4 +136,10 @@ public class TestPath extends TestCase {
     assertEquals(new Path("foo/bar/baz","../../../../..").toString(), "../..");
   }
   
+  public void testScheme() throws java.io.IOException {
+    assertEquals("foo:/bar", new Path("foo:/","/bar").toString()); 
+    assertEquals("foo://bar/baz", new Path("foo://bar/","/baz").toString()); 
+  }
+
+
 }

@@ -56,23 +56,19 @@ public class Path implements Comparable {
 
   /** Resolve a child path against a parent path. */
   public Path(Path parent, Path child) {
-    if (child.isAbsolute()) {
-      this.uri = child.uri;
-    } else {
-      // Add a slash to parent's path so resolution is compatible with URI's
-      URI parentUri = parent.uri;
-      String parentPath = parentUri.getPath();
-      if (!(parentPath.equals("/") || parentPath.equals("")))
-        try {
-          parentUri = new URI(parentUri.getScheme(), parentUri.getAuthority(),
-                              parentUri.getPath()+"/", null, null);
-        } catch (URISyntaxException e) {
-          throw new IllegalArgumentException(e);
-        }
-      URI resolved = parentUri.resolve(child.uri);
-      initialize(resolved.getScheme(), resolved.getAuthority(),
-                 normalizePath(resolved.getPath()));
-    }
+    // Add a slash to parent's path so resolution is compatible with URI's
+    URI parentUri = parent.uri;
+    String parentPath = parentUri.getPath();
+    if (!(parentPath.equals("/") || parentPath.equals("")))
+      try {
+        parentUri = new URI(parentUri.getScheme(), parentUri.getAuthority(),
+                            parentUri.getPath()+"/", null, null);
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException(e);
+      }
+    URI resolved = parentUri.resolve(child.uri);
+    initialize(resolved.getScheme(), resolved.getAuthority(),
+               normalizePath(resolved.getPath()));
   }
 
   /** Construct a path from a String.  Path strings are URIs, but with

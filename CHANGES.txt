@@ -165,6 +165,9 @@ Trunk (unreleased changes)
 49. HADOOP-940.  Improve HDFS's replication scheduling.
     (Dhruba Borthakur via cutting) 
 
+50. HADOOP-1020.  Fix a bug in Path resolution, and a with unit tests
+    on Windows.  (cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

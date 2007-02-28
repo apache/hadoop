@@ -14,5 +14,10 @@
   <description>A base for other temporary directories.</description>
 </property>
 
+<property>
+  <name>mapred.system.dir</name>
+  <value>build/contrib/${contrib.name}/test/system</value>
+</property>
+
 
 </configuration>
