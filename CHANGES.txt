@@ -159,6 +159,9 @@ Trunk (unreleased changes)
 47. HADOOP-972.  Optimize HDFS's rack-aware block placement algorithm.
     (Hairong Kuang via cutting)
 
+48. HADOOP-1043.  Optimize shuffle, increasing parallelism.
+    (Devaraj Das via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

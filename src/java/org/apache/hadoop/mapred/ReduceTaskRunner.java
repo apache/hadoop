@@ -608,9 +608,17 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
           numInFlight--;
         }
         
+        boolean busy = true;
         // ensure we have enough to keep us busy
         if (numInFlight < lowThreshold && (numOutputs-numCopied) > probe_sample_size) {
-          break;
+          busy = false;
+        }
+        //Check whether we have more CopyResult to check. If there is none, and
+        //we are not busy enough, break
+        synchronized (copyResults) {
+          if (copyResults.size() == 0 && !busy) {
+            break;
+          }
         }
       }
       
