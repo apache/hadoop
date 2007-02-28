@@ -159,7 +159,7 @@ Release 0.11.2 - 2007-02-16
  1. HADOOP-1009.  Fix an infinite loop in the HDFS namenode.
     (Dhruba Borthakur via cutting) 
 
- 2. HADOOP-947.  Disable in-memory merging during shuffle, as this is
+ 2. HADOOP-1014.  Disable in-memory merging during shuffle, as this is
     causing data corruption.  (Devaraj Das via cutting)
 
 
