@@ -153,6 +153,9 @@ Trunk (unreleased changes)
 45. HADOOP-928.  Make checksums optional per FileSystem.
     (Hairong Kuang via cutting)
 
+46. HADOOP-1044.  Fix HDFS's TestDecommission to not spuriously fail.
+    (Wendy Chien via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 
