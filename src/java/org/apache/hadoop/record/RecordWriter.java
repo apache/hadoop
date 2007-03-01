@@ -21,13 +21,10 @@ package org.apache.hadoop.record;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.DataOutputStream;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import javax.xml.parsers.ParserConfigurationException;
-import org.xml.sax.SAXException;
 
 /**
  * Front-end for serializers. Also serves as a factory for serializers.

@@ -29,10 +29,12 @@ import java.util.ArrayList;
  * @author Milind Bhandarkar
  */
 public class JFile {
-    
+    /** Possibly full name of the file */
     private String mName;
-    private ArrayList mInclFiles;
-    private ArrayList mRecords;
+    /** Ordered list of included files */
+    private ArrayList<JFile> mInclFiles;
+    /** Ordered list of records declared in this file */
+    private ArrayList<JRecord> mRecords;
     
     /** Creates a new instance of JFile
      *
@@ -40,7 +42,8 @@ public class JFile {
      * @param inclFiles included files (as JFile)
      * @param recList List of records defined within this file
      */
-    public JFile(String name, ArrayList inclFiles, ArrayList recList) {
+    public JFile(String name, ArrayList<JFile> inclFiles,
+        ArrayList<JRecord> recList) {
         mName = name;
         mInclFiles = inclFiles;
         mRecords = recList;
@@ -55,17 +58,15 @@ public class JFile {
     /** Generate record code in given language. Language should be all
      *  lowercase.
      */
-    public int genCode(String language, String destDir) throws IOException {
-        if ("c++".equals(language)) {
-            CppGenerator gen = new CppGenerator(mName, mInclFiles, mRecords, destDir);
-            gen.genCode();
-        } else if ("java".equals(language)) {
-            JavaGenerator gen = new JavaGenerator(mName, mInclFiles, mRecords, destDir);
-            gen.genCode();
-        } else {
-            System.err.println("Cannnot recognize language:"+language);
-            return 1;
-        }
-        return 0;
+    public int genCode(String language, String destDir, ArrayList<String> options)
+    throws IOException {
+      CodeGenerator gen = CodeGenerator.get(language);
+      if (gen != null) {
+        gen.genCode(mName, mInclFiles, mRecords, destDir, options);
+      } else {
+        System.err.println("Cannnot recognize language:"+language);
+        return 1;
+      }
+      return 0;
     }
 }

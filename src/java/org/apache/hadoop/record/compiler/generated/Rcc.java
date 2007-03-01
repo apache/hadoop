@@ -31,9 +31,10 @@ import java.io.IOException;
 public class Rcc implements RccConstants {
     private static String language = "java";
     private static String destDir = ".";
-    private static ArrayList recFiles = new ArrayList();
+    private static ArrayList<String> recFiles = new ArrayList<String>();
+    private static ArrayList<String> cmdargs = new ArrayList<String>();
     private static JFile curFile;
-    private static Hashtable recTab;
+    private static Hashtable<String,JRecord> recTab;
     private static String curDir = ".";
     private static String curFileName;
     private static String curModuleName;
@@ -52,26 +53,28 @@ public class Rcc implements RccConstants {
                 "--destdir".equalsIgnoreCase(args[i])) {
                 destDir = args[i+1];
                 i++;
+            } else if (args[i].startsWith("-")) {
+              String arg = args[i].substring(1);
+              if (arg.startsWith("-")) {
+                arg = arg.substring(1);
+              }
+              cmdargs.add(arg.toLowerCase());
             } else {
                 recFiles.add(args[i]);
             }
-        }
-        if (!"c++".equals(language) && !"java".equals(language)) {
-            System.err.println("Cannot recognize language:" + language);
-            return 1;
         }
         if (recFiles.size() == 0) {
             System.err.println("No record files specified. Exiting.");
             return 1;
         }
         for (int i=0; i<recFiles.size(); i++) {
-            curFileName = (String) recFiles.get(i);
+            curFileName = recFiles.get(i);
             File file = new File(curFileName);
             try {
                 FileReader reader = new FileReader(file);
                 Rcc parser = new Rcc(reader);
                 try {
-                    recTab = new Hashtable();
+                    recTab = new Hashtable<String,JRecord>();
                     curFile = parser.Input();
                 } catch (ParseException e) {
                     System.err.println(e.toString());
@@ -87,7 +90,7 @@ public class Rcc implements RccConstants {
                 return 1;
             }
             try {
-                int retCode = curFile.genCode(language, destDir);
+                int retCode = curFile.genCode(language, destDir, cmdargs);
                 if (retCode != 0) { return retCode; }
             } catch (IOException e) {
                 System.err.println(e.toString());
@@ -98,10 +101,10 @@ public class Rcc implements RccConstants {
     }
 
   final public JFile Input() throws ParseException {
-    ArrayList ilist = new ArrayList();
-    ArrayList rlist = new ArrayList();
+    ArrayList<JFile> ilist = new ArrayList<JFile>();
+    ArrayList<JRecord> rlist = new ArrayList<JRecord>();
     JFile i;
-    ArrayList l;
+    ArrayList<JRecord> l;
     label_1:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -170,9 +173,9 @@ public class Rcc implements RccConstants {
     throw new Error("Missing return statement in function");
   }
 
-  final public ArrayList Module() throws ParseException {
+  final public ArrayList<JRecord> Module() throws ParseException {
     String mName;
-    ArrayList rlist;
+    ArrayList<JRecord> rlist;
     jj_consume_token(MODULE_TKN);
     mName = ModuleName();
       curModuleName = mName;
@@ -206,8 +209,8 @@ public class Rcc implements RccConstants {
     throw new Error("Missing return statement in function");
   }
 
-  final public ArrayList RecordList() throws ParseException {
-    ArrayList rlist = new ArrayList();
+  final public ArrayList<JRecord> RecordList() throws ParseException {
+    ArrayList<JRecord> rlist = new ArrayList<JRecord>();
     JRecord r;
     label_3:
     while (true) {
@@ -228,9 +231,9 @@ public class Rcc implements RccConstants {
 
   final public JRecord Record() throws ParseException {
     String rname;
-    ArrayList flist = new ArrayList();
+    ArrayList<JField<JType>> flist = new ArrayList<JField<JType>>();
     Token t;
-    JField f;
+    JField<JType> f;
     jj_consume_token(RECORD_TKN);
     t = jj_consume_token(IDENT_TKN);
       rname = t.image;
@@ -267,12 +270,12 @@ public class Rcc implements RccConstants {
     throw new Error("Missing return statement in function");
   }
 
-  final public JField Field() throws ParseException {
+  final public JField<JType> Field() throws ParseException {
     JType jt;
     Token t;
     jt = Type();
     t = jj_consume_token(IDENT_TKN);
-      {if (true) return new JField(jt, t.image);}
+      {if (true) return new JField<JType>(t.image, jt);}
     throw new Error("Missing return statement in function");
   }
 
@@ -326,7 +329,7 @@ public class Rcc implements RccConstants {
         if (rname.indexOf('.', 0) < 0) {
             rname = curModuleName + "." + rname;
         }
-        JRecord r = (JRecord) recTab.get(rname);
+        JRecord r = recTab.get(rname);
         if (r == null) {
             System.out.println("Type " + rname + " not known. Exiting.");
             System.exit(1);

@@ -22,11 +22,6 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.io.DataInputStream;
 import java.io.InputStream;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
-
-import org.apache.hadoop.io.WritableUtils;
-
 
 /**
  *
@@ -34,7 +29,7 @@ import org.apache.hadoop.io.WritableUtils;
  */
 public class BinaryInputArchive implements InputArchive {
     
-    private DataInput in;
+    final private DataInput in;
     
     static BinaryInputArchive getArchive(InputStream strm) {
         return new BinaryInputArchive(new DataInputStream(strm));
@@ -42,8 +37,8 @@ public class BinaryInputArchive implements InputArchive {
     
     static private class BinaryIndex implements Index {
         private int nelems;
-        BinaryIndex(int nelems) {
-            this.nelems = nelems;
+        private BinaryIndex(int nelems) {
+          this.nelems = nelems;
         }
         public boolean done() {
             return (nelems <= 0);
@@ -57,61 +52,69 @@ public class BinaryInputArchive implements InputArchive {
         this.in = in;
     }
     
-    public byte readByte(String tag) throws IOException {
+    public byte readByte(final String tag) throws IOException {
         return in.readByte();
     }
     
-    public boolean readBool(String tag) throws IOException {
+    public boolean readBool(final String tag) throws IOException {
         return in.readBoolean();
     }
     
-    public int readInt(String tag) throws IOException {
-        return WritableUtils.readVInt(in);
+    public int readInt(final String tag) throws IOException {
+        return Utils.readVInt(in);
     }
     
-    public long readLong(String tag) throws IOException {
-        return WritableUtils.readVLong(in);
+    public long readLong(final String tag) throws IOException {
+        return Utils.readVLong(in);
     }
     
-    public float readFloat(String tag) throws IOException {
+    public float readFloat(final String tag) throws IOException {
         return in.readFloat();
     }
     
-    public double readDouble(String tag) throws IOException {
+    public double readDouble(final String tag) throws IOException {
         return in.readDouble();
     }
     
-    public Text readString(String tag) throws IOException {
-        Text text = new Text();
-        text.readFields(in);
-        return text;
+    public String readString(final String tag) throws IOException {
+      final int length = Utils.readVInt(in);
+      final byte[] bytes = new byte[length];
+      in.readFully(bytes);
+      return new String(bytes, "UTF-8");
     }
     
-    public BytesWritable readBuffer(String tag) throws IOException {
-      int len = WritableUtils.readVInt(in);
-      byte[] barr = new byte[len];
+    public Buffer readBuffer(final String tag) throws IOException {
+      final int len = Utils.readVInt(in);
+      final byte[] barr = new byte[len];
       in.readFully(barr);
-      return new BytesWritable(barr);
+      return new Buffer(barr);
     }
     
-    public void readRecord(Record r, String tag) throws IOException {
-        r.deserialize(this, tag);
+    public void readRecord(final Record record, final String tag) throws IOException {
+        record.deserialize(this, tag);
     }
     
-    public void startRecord(String tag) throws IOException {}
+    public void startRecord(final String tag) throws IOException {
+      // no-op
+    }
     
-    public void endRecord(String tag) throws IOException {}
+    public void endRecord(final String tag) throws IOException {
+      // no-op
+    }
     
-    public Index startVector(String tag) throws IOException {
+    public Index startVector(final String tag) throws IOException {
+      return new BinaryIndex(readInt(tag));
+    }
+    
+    public void endVector(final String tag) throws IOException {
+      // no-op
+}
+    
+    public Index startMap(final String tag) throws IOException {
         return new BinaryIndex(readInt(tag));
     }
     
-    public void endVector(String tag) throws IOException {}
-    
-    public Index startMap(String tag) throws IOException {
-        return new BinaryIndex(readInt(tag));
+    public void endMap(final String tag) throws IOException {
+      // no-op
     }
-    
-    public void endMap(String tag) throws IOException {}
-    
 }

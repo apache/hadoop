@@ -19,8 +19,6 @@
 package org.apache.hadoop.record;
 
 import java.io.IOException;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
 
 /**
  * Interface that all the Deserializers have to implement.
@@ -34,8 +32,8 @@ public interface InputArchive {
     public long readLong(String tag) throws IOException;
     public float readFloat(String tag) throws IOException;
     public double readDouble(String tag) throws IOException;
-    public Text readString(String tag) throws IOException;
-    public BytesWritable readBuffer(String tag) throws IOException;
+    public String readString(String tag) throws IOException;
+    public Buffer readBuffer(String tag) throws IOException;
     public void readRecord(Record r, String tag) throws IOException;
     public void startRecord(String tag) throws IOException;
     public void endRecord(String tag) throws IOException;

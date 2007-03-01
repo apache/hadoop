@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.record.test;
+package org.apache.hadoop.record;
 
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.fs.*;
@@ -61,7 +61,7 @@ import java.util.*;
  * 7) A mapred job integrates all the count files into a single one.
  *
  **********************************************************/
-public class TestMapRed extends TestCase {
+public class TestRecordMR extends TestCase {
     /**
      * Modified to make it a junit test.
      * The RandomGen Job does the actual work of creating
@@ -97,7 +97,7 @@ public class TestMapRed extends TestCase {
 
             for (int i = 0; i < randomCount; i++) {
                 out.collect(new RecInt(Math.abs(r.nextInt())),
-                        new RecString(new Text(Integer.toString(randomVal))));
+                        new RecString(Integer.toString(randomVal)));
             }
         }
         public void close() {
@@ -116,9 +116,9 @@ public class TestMapRed extends TestCase {
                 throws IOException {
             int keyint = ((RecInt) key).getData();
             while (it.hasNext()) {
-                Text val = ((RecString) it.next()).getData();
-                out.collect(new RecInt(Integer.parseInt(val.toString())),
-                        new RecString(new Text("")));
+                String val = ((RecString) it.next()).getData();
+                out.collect(new RecInt(Integer.parseInt(val)),
+                        new RecString(""));
             }
         }
         public void close() {
@@ -147,8 +147,8 @@ public class TestMapRed extends TestCase {
 
         public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
             int pos = ((RecInt) key).getData();
-            Text str = ((RecString) val).getData();
-            out.collect(new RecInt(pos), new RecString(new Text("1")));
+            String str = ((RecString) val).getData();
+            out.collect(new RecInt(pos), new RecString("1"));
         }
         public void close() {
         }
@@ -166,7 +166,7 @@ public class TestMapRed extends TestCase {
                 it.next();
                 count++;
             }
-            out.collect(new RecInt(keyint), new RecString(new Text(Integer.toString(count))));
+            out.collect(new RecInt(keyint), new RecString(Integer.toString(count)));
         }
         public void close() {
         }
@@ -186,8 +186,8 @@ public class TestMapRed extends TestCase {
 
         public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
             int keyint = ((RecInt) key).getData();
-            Text valstr = ((RecString) val).getData();
-            out.collect(new RecInt(keyint), new RecInt(Integer.parseInt(valstr.toString())));
+            String valstr = ((RecString) val).getData();
+            out.collect(new RecInt(keyint), new RecInt(Integer.parseInt(valstr)));
         }
         public void close() {
         }
@@ -212,14 +212,6 @@ public class TestMapRed extends TestCase {
     private static int counts = 100;
     private static Random r = new Random();
     private static Configuration conf = new Configuration();
-
-    /**
-       public TestMapRed(int range, int counts, Configuration conf) throws IOException {
-       this.range = range;
-       this.counts = counts;
-       this.conf = conf;
-       }
-    **/
 
     public void testMapred() throws Exception {
 	launch();
@@ -295,7 +287,7 @@ public class TestMapRed extends TestCase {
         fs.delete(randomOuts);
 
 
-        JobConf genJob = new JobConf(conf,TestMapRed.class);
+        JobConf genJob = new JobConf(conf,TestRecordMR.class);
         genJob.setInputPath(randomIns);
         genJob.setInputKeyClass(RecInt.class);
         genJob.setInputValueClass(RecInt.class);
@@ -342,7 +334,7 @@ public class TestMapRed extends TestCase {
         int intermediateReduces = 10;
         Path intermediateOuts = new Path(testdir, "intermediateouts");
         fs.delete(intermediateOuts);
-        JobConf checkJob = new JobConf(conf,TestMapRed.class);
+        JobConf checkJob = new JobConf(conf,TestRecordMR.class);
         checkJob.setInputPath(randomOuts);
         checkJob.setInputKeyClass(RecInt.class);
         checkJob.setInputValueClass(RecString.class);
@@ -367,7 +359,7 @@ public class TestMapRed extends TestCase {
         //
         Path finalOuts = new Path(testdir, "finalouts");        
         fs.delete(finalOuts);
-        JobConf mergeJob = new JobConf(conf,TestMapRed.class);
+        JobConf mergeJob = new JobConf(conf,TestRecordMR.class);
         mergeJob.setInputPath(intermediateOuts);
         mergeJob.setInputKeyClass(RecInt.class);
         mergeJob.setInputValueClass(RecString.class);
@@ -447,7 +439,7 @@ public class TestMapRed extends TestCase {
      */
     public static void main(String[] argv) throws Exception {
         if (argv.length < 2) {
-            System.err.println("Usage: TestMapRed <range> <counts>");
+            System.err.println("Usage: TestRecordMR <range> <counts>");
             System.err.println();
             System.err.println("Note: a good test will have a <counts> value that is substantially larger than the <range>");
             return;

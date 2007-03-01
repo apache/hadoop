@@ -18,49 +18,58 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.record.compiler.JType.CType;
+import org.apache.hadoop.record.compiler.JType.CppType;
+
 /**
  *
  * @author Milind Bhandarkar
  */
 public class JFloat extends JType {
+  
+  class JavaFloat extends JavaType {
     
-    /** Creates a new instance of JFloat */
-    public JFloat() {
-        super("float", "float", "Float", "Float", "toFloat");
+    JavaFloat() {
+      super("float", "Float", "Float");
     }
     
-    public String getSignature() {
-        return "f";
+    void genHashCode(CodeBuffer cb, String fname) {
+      cb.append("ret = Float.floatToIntBits("+fname+");\n");
     }
     
-    public String genJavaHashCode(String fname) {
-        return "    ret = Float.floatToIntBits("+fname+");\n";
+    void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
+      cb.append("{\n");
+      cb.append("if ("+l+"<4) {\n");
+      cb.append("throw new java.io.IOException(\"Float is exactly 4 bytes."+
+          " Provided buffer is smaller.\");\n");
+      cb.append("}\n");
+      cb.append(s+"+=4; "+l+"-=4;\n");
+      cb.append("}\n");
     }
     
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           if ("+l+"<4) {\n");
-      sb.append("             throw new IOException(\"Float is exactly 4 bytes. Provided buffer is smaller.\");\n");
-      sb.append("           }\n");
-      sb.append("           "+s+"+=4; "+l+"-=4;\n");
-      sb.append("        }\n");
-      return sb.toString();
+    void genCompareBytes(CodeBuffer cb) {
+      cb.append("{\n");
+      cb.append("if (l1<4 || l2<4) {\n");
+      cb.append("throw new java.io.IOException(\"Float is exactly 4 bytes."+
+          " Provided buffer is smaller.\");\n");
+      cb.append("}\n");
+      cb.append("float f1 = org.apache.hadoop.record.Utils.readFloat(b1, s1);\n");
+      cb.append("float f2 = org.apache.hadoop.record.Utils.readFloat(b2, s2);\n");
+      cb.append("if (f1 != f2) {\n");
+      cb.append("return ((f1-f2) < 0) ? -1 : 0;\n");
+      cb.append("}\n");
+      cb.append("s1+=4; s2+=4; l1-=4; l2-=4;\n");
+      cb.append("}\n");
     }
-    
-    public String genJavaCompareBytes() {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           if (l1<4 || l2<4) {\n");
-      sb.append("             throw new IOException(\"Float is exactly 4 bytes. Provided buffer is smaller.\");\n");
-      sb.append("           }\n");
-      sb.append("           float f1 = WritableComparator.readFloat(b1, s1);\n");
-      sb.append("           float f2 = WritableComparator.readFloat(b2, s2);\n");
-      sb.append("           if (f1 != f2) {\n");
-      sb.append("             return ((f1-f2) < 0) ? -1 : 0;\n");
-      sb.append("           }\n");
-      sb.append("           s1+=4; s2+=4; l1-=4; l2-=4;\n");
-      sb.append("        }\n");
-      return sb.toString();
-    }
+  }
+  /** Creates a new instance of JFloat */
+  public JFloat() {
+    setJavaType(new JavaFloat());
+    setCppType(new CppType("float"));
+    setCType(new CType());
+  }
+  
+  String getSignature() {
+    return "f";
+  }
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.record.test;
+package org.apache.hadoop.record;
 
 import java.io.IOException;
 import junit.framework.*;
@@ -26,8 +26,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.TreeMap;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
 
 /**
  *
@@ -58,10 +56,10 @@ public class ToCpp extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new BytesWritable());
-            r1.setVectorVal(new ArrayList());
-            r1.setMapVal(new TreeMap());
+            r1.setStringVal("random text");
+            r1.setBufferVal(new Buffer());
+            r1.setVectorVal(new ArrayList<String>());
+            r1.setMapVal(new TreeMap<String,String>());
             out.write(r1);
             ostream.close();
         } catch (IOException ex) {
@@ -82,10 +80,10 @@ public class ToCpp extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new BytesWritable());
-            r1.setVectorVal(new ArrayList());
-            r1.setMapVal(new TreeMap());
+            r1.setStringVal("random text");
+            r1.setBufferVal(new Buffer());
+            r1.setVectorVal(new ArrayList<String>());
+            r1.setMapVal(new TreeMap<String,String>());
             out.write(r1);
             ostream.close();
         } catch (IOException ex) {
@@ -106,10 +104,10 @@ public class ToCpp extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new BytesWritable());
-            r1.setVectorVal(new ArrayList());
-            r1.setMapVal(new TreeMap());
+            r1.setStringVal("random text");
+            r1.setBufferVal(new Buffer());
+            r1.setVectorVal(new ArrayList<String>());
+            r1.setMapVal(new TreeMap<String,String>());
             out.write(r1);
             ostream.close();
         } catch (IOException ex) {

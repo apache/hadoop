@@ -18,88 +18,83 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.record.compiler.JCompType.CCompType;
+
 /**
+ * Code generator for "buffer" type.
  *
  * @author Milind Bhandarkar
  */
 public class JBuffer extends JCompType {
+  
+  class JavaBuffer extends JavaCompType {
     
-    /** Creates a new instance of JBuffer */
-    public JBuffer() {
-        super(" ::std::string", "BytesWritable", "Buffer", "BytesWritable");
+    JavaBuffer() {
+      super("org.apache.hadoop.record.Buffer", "Buffer", "org.apache.hadoop.record.Buffer");
     }
     
-    public String genCppGetSet(String fname, int fIdx) {
-        String cgetFunc = "  virtual const "+getCppType()+"& get"+fname+"() const {\n";
-        cgetFunc += "    return m"+fname+";\n";
-        cgetFunc += "  }\n";
-        String getFunc = "  virtual "+getCppType()+"& get"+fname+"() {\n";
-        getFunc += "    return m"+fname+";\n";
-        getFunc += "  }\n";
-        return cgetFunc + getFunc;
+    void genWriteMethod(CodeBuffer cb, String fname, String tag) {
+      cb.append("a_.writeBuffer("+fname+",\""+tag+"\");\n");
     }
     
-    public String getSignature() {
-        return "B";
+    void genCompareTo(CodeBuffer cb, String fname, String other) {
+      cb.append("ret = "+fname+".compareTo("+other+");\n");
     }
     
-    public String genJavaReadWrapper(String fname, String tag, boolean decl) {
-        String ret = "";
-        if (decl) {
-            ret = "    BytesWritable "+fname+";\n";
-        }
-        return ret + "        "+fname+"=a_.readBuffer(\""+tag+"\");\n";
+    void genEquals(CodeBuffer cb, String fname, String peer) {
+      cb.append("ret = "+fname+".equals("+peer+");\n");
     }
     
-    public String genJavaWriteWrapper(String fname, String tag) {
-        return "        a_.writeBuffer("+fname+",\""+tag+"\");\n";
+    void genHashCode(CodeBuffer cb, String fname) {
+      cb.append("ret = "+fname+".hashCode();\n");
     }
     
-    public String genJavaCompareTo(String fname, String other) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("    {\n");
-      sb.append("      byte[] my = "+fname+".get();\n");
-      sb.append("      byte[] ur = "+other+".get();\n");
-      sb.append("      ret = WritableComparator.compareBytes(my,0,"+
-          fname+".getSize(),ur,0,"+other+".getSize());\n");
-      sb.append("    }\n");
-      return sb.toString();
+    void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
+      cb.append("{\n");
+      cb.append("int i = org.apache.hadoop.record.Utils.readVInt("+
+          b+", "+s+");\n");
+      cb.append("int z = org.apache.hadoop.record.Utils.getVIntSize(i);\n");
+      cb.append(s+" += z+i; "+l+" -= (z+i);\n");
+      cb.append("}\n");
     }
     
-    public String genJavaCompareToWrapper(String fname, String other) {
-      return "    "+genJavaCompareTo(fname, other);
+    void genCompareBytes(CodeBuffer cb) {
+      cb.append("{\n");
+      cb.append("int i1 = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
+      cb.append("int i2 = org.apache.hadoop.record.Utils.readVInt(b2, s2);\n");
+      cb.append("int z1 = org.apache.hadoop.record.Utils.getVIntSize(i1);\n");
+      cb.append("int z2 = org.apache.hadoop.record.Utils.getVIntSize(i2);\n");
+      cb.append("s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
+      cb.append("int r1 = org.apache.hadoop.record.Utils.compareBytes(b1,s1,l1,b2,s2,l2);\n");
+      cb.append("if (r1 != 0) { return (r1<0)?-1:0; }\n");
+      cb.append("s1+=i1; s2+=i2; l1-=i1; l1-=i2;\n");
+      cb.append("}\n");
+    }
+  }
+  
+  class CppBuffer extends CppCompType {
+    
+    CppBuffer() {
+      super(" ::std::string");
     }
     
-    public String genJavaEquals(String fname, String peer) {
-        return "    ret = "+fname+".equals("+peer+");\n";
+    void genGetSet(CodeBuffer cb, String fname) {
+      cb.append("virtual const "+getType()+"& get"+toCamelCase(fname)+"() const {\n");
+      cb.append("return "+fname+";\n");
+      cb.append("}\n");
+      cb.append("virtual "+getType()+"& get"+toCamelCase(fname)+"() {\n");
+      cb.append("return "+fname+";\n");
+      cb.append("}\n");
     }
-    
-    public String genJavaHashCode(String fname) {
-        return "    ret = "+fname+".hashCode();\n";
-    }
-    
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           int i = WritableComparator.readVInt("+b+", "+s+");\n");
-      sb.append("           int z = WritableUtils.getVIntSize(i);\n");
-      sb.append("           "+s+" += z+i; "+l+" -= (z+i);\n");
-      sb.append("        }\n");
-      return sb.toString();
-    }
-    
-    public String genJavaCompareBytes() {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           int i1 = WritableComparator.readVInt(b1, s1);\n");
-      sb.append("           int i2 = WritableComparator.readVInt(b2, s2);\n");
-      sb.append("           int z1 = WritableUtils.getVIntSize(i1);\n");
-      sb.append("           int z2 = WritableUtils.getVIntSize(i2);\n");
-      sb.append("           s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
-      sb.append("           int r1 = WritableComparator.compareBytes(b1,s1,l1,b2,s2,l2);\n");
-      sb.append("           if (r1 != 0) { return (r1<0)?-1:0; }\n");
-      sb.append("           s1+=i1; s2+=i2; l1-=i1; l1-=i2;\n");
-      sb.append("        }\n");
-      return sb.toString();
-    }
+  }
+  /** Creates a new instance of JBuffer */
+  public JBuffer() {
+    setJavaType(new JavaBuffer());
+    setCppType(new CppBuffer());
+    setCType(new CCompType());
+  }
+  
+  String getSignature() {
+    return "B";
+  }
 }

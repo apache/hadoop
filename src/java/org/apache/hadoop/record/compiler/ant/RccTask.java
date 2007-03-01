@@ -16,7 +16,7 @@
 package org.apache.hadoop.record.compiler.ant;
 
 import java.io.File;
-import java.util.Vector;
+import java.util.ArrayList;
 import org.apache.hadoop.record.compiler.generated.Rcc;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.DirectoryScanner;
@@ -52,7 +52,7 @@ public class RccTask extends Task {
   private String language = "java";
   private File src;
   private File dest = new File(".");
-  private final Vector<FileSet> filesets = new Vector<FileSet>();
+  private final ArrayList<FileSet> filesets = new ArrayList<FileSet>();
   private boolean failOnError = true;
   
   /** Creates a new instance of RccTask */
@@ -111,7 +111,7 @@ public class RccTask extends Task {
     }
     Project myProject = getProject();
     for (int i = 0; i < filesets.size(); i++) {
-      FileSet fs = filesets.elementAt(i);
+      FileSet fs = filesets.get(i);
       DirectoryScanner ds = fs.getDirectoryScanner(myProject);
       File dir = fs.getDir(myProject);
       String[] srcs = ds.getIncludedFiles();

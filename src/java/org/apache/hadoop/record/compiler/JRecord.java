@@ -29,391 +29,451 @@ import java.util.Iterator;
  * @author Milind Bhandarkar
  */
 public class JRecord extends JCompType {
-
-    private String mFQName;
-    private String mName;
-    private String mModule;
-    private ArrayList mFields;
+  
+  class JavaRecord extends JavaCompType {
     
-    /**
-     * Creates a new instance of JRecord
-     */
-    public JRecord(String name, ArrayList flist) {
-        super(name.replaceAll("\\.","::"), name, "Record", name);
-        mFQName = name;
-        int idx = name.lastIndexOf('.');
-        mName = name.substring(idx+1);
-        mModule = name.substring(0, idx);
-        mFields = flist;
+    private String fullName;
+    private String name;
+    private String module;
+    private ArrayList<JField<JavaType>> fields =
+        new ArrayList<JField<JavaType>>();
+    
+    JavaRecord(String name, ArrayList<JField<JType>> flist) {
+      super(name, "Record", name);
+      this.fullName = name;
+      int idx = name.lastIndexOf('.');
+      this.name = name.substring(idx+1);
+      this.module = name.substring(0, idx);
+      for (Iterator<JField<JType>> iter = flist.iterator(); iter.hasNext();) {
+        JField<JType> f = iter.next();
+        fields.add(new JField<JavaType>(f.getName(), f.getType().getJavaType()));
+      }
     }
     
-    public String getName() {
-        return mName;
+    void genReadMethod(CodeBuffer cb, String fname, String tag, boolean decl) {
+      if (decl) {
+        cb.append(fullName+" "+fname+";\n");
+      }
+      cb.append(fname+"= new "+fullName+"();\n");
+      cb.append("a_.readRecord("+fname+",\""+tag+"\");\n");
     }
     
-    public String getJavaFQName() {
-        return mFQName;
+    void genWriteMethod(CodeBuffer cb, String fname, String tag) {
+      cb.append("a_.writeRecord("+fname+",\""+tag+"\");\n");
     }
     
-    public String getCppFQName() {
-        return mFQName.replaceAll("\\.", "::");
-    }
-    
-    public String getJavaPackage() {
-        return mModule;
-    }
-    
-    public String getCppNameSpace() {
-        return mModule.replaceAll("\\.", "::");
-    }
-    
-    public ArrayList getFields() {
-        return mFields;
-    }
-    
-    public String getSignature() {
-        StringBuffer sb = new StringBuffer();
-        sb.append("L").append(mName).append("(");
-        for (Iterator i = mFields.iterator(); i.hasNext();) {
-            String s = ((JField) i.next()).getSignature();
-            sb.append(s);
-        }
-        sb.append(")");
-        return sb.toString();
-    }
-    
-    public String genCppDecl(String fname) {
-        return "  "+mName+" "+fname+";\n";
-    }
-    
-    public String genJavaReadMethod(String fname, String tag) {
-        return genJavaReadWrapper(fname, tag, false);
-    }
-    
-    public String genJavaReadWrapper(String fname, String tag, boolean decl) {
-        StringBuffer ret = new StringBuffer("");
-        if (decl) {
-            ret.append("    "+getJavaFQName()+" "+fname+";\n");
-        }
-        ret.append("    "+fname+"= new "+getJavaFQName()+"();\n");
-        ret.append("    a_.readRecord("+fname+",\""+tag+"\");\n");
-        return ret.toString();
-    }
-    
-    public String genJavaWriteWrapper(String fname, String tag) {
-        return "    a_.writeRecord("+fname+",\""+tag+"\");\n";
-    }
-    
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           int r = "+getJavaFQName()+
+    void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
+      cb.append("{\n");
+      cb.append("int r = "+fullName+
           ".Comparator.slurpRaw("+b+","+s+","+l+");\n");
-      sb.append("           "+s+"+=r; "+l+"-=r;\n");
-      sb.append("        }\n");
-      return sb.toString();
+      cb.append(s+"+=r; "+l+"-=r;\n");
+      cb.append("}\n");
     }
     
-    public String genJavaCompareBytes() {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           int r1 = "+getJavaFQName()+
+    void genCompareBytes(CodeBuffer cb) {
+      cb.append("{\n");
+      cb.append("int r1 = "+fullName+
           ".Comparator.compareRaw(b1,s1,l1,b2,s2,l2);\n");
-      sb.append("           if (r1 <= 0) { return r1; }\n");
-      sb.append("           s1+=r1; s2+=r1; l1-=r1; l2-=r1;\n");
-      sb.append("        }\n");
-      return sb.toString();
+      cb.append("if (r1 <= 0) { return r1; }\n");
+      cb.append("s1+=r1; s2+=r1; l1-=r1; l2-=r1;\n");
+      cb.append("}\n");
     }
     
-    public void genCppCode(FileWriter hh, FileWriter cc)
-        throws IOException {
-        String[] ns = getCppNameSpace().split("::");
-        for (int i = 0; i < ns.length; i++) {
-            hh.write("namespace "+ns[i]+" {\n");
+    void genCode(String destDir, ArrayList<String> options) throws IOException {
+      String pkg = module;
+      String pkgpath = pkg.replaceAll("\\.", "/");
+      File pkgdir = new File(destDir, pkgpath);
+      if (!pkgdir.exists()) {
+        // create the pkg directory
+        boolean ret = pkgdir.mkdirs();
+        if (!ret) {
+          throw new IOException("Cannnot create directory: "+pkgpath);
         }
-        
-        hh.write("class "+getName()+" : public ::hadoop::Record {\n");
-        hh.write("private:\n");
-        
-        for (Iterator i = mFields.iterator(); i.hasNext();) {
-            JField jf = (JField) i.next();
-            hh.write(jf.genCppDecl());
-        }
-        hh.write("public:\n");
-        hh.write("  virtual void serialize(::hadoop::OArchive& a_, const char* tag) const;\n");
-        hh.write("  virtual void deserialize(::hadoop::IArchive& a_, const char* tag);\n");
-        hh.write("  virtual const ::std::string& type() const;\n");
-        hh.write("  virtual const ::std::string& signature() const;\n");
-        hh.write("  virtual bool operator<(const "+getName()+"& peer_) const;\n");
-        hh.write("  virtual bool operator==(const "+getName()+"& peer_) const;\n");
-        hh.write("  virtual ~"+getName()+"() {};\n");
-        int fIdx = 0;
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            hh.write(jf.genCppGetSet(fIdx));
-        }
-        hh.write("}; // end record "+getName()+"\n");
-        for (int i=ns.length-1; i>=0; i--) {
-            hh.write("} // end namespace "+ns[i]+"\n");
-        }
-        cc.write("void "+getCppFQName()+"::serialize(::hadoop::OArchive& a_, const char* tag) const {\n");
-        cc.write("  a_.startRecord(*this,tag);\n");
-        fIdx = 0;
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            String name = jf.getName();
-            if (jf.getType() instanceof JBuffer) {
-                cc.write("  a_.serialize("+name+","+name+".length(),\""+jf.getTag()+"\");\n");
-            } else {
-                cc.write("  a_.serialize("+name+",\""+jf.getTag()+"\");\n");
-            }
-        }
-        cc.write("  a_.endRecord(*this,tag);\n");
-        cc.write("  return;\n");
-        cc.write("}\n");
-        
-        cc.write("void "+getCppFQName()+"::deserialize(::hadoop::IArchive& a_, const char* tag) {\n");
-        cc.write("  a_.startRecord(*this,tag);\n");
-        fIdx = 0;
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            String name = jf.getName();
-            if (jf.getType() instanceof JBuffer) {
-                cc.write("  { size_t len=0; a_.deserialize("+name+",len,\""+jf.getTag()+"\");}\n");
-            } else {
-                cc.write("  a_.deserialize("+name+",\""+jf.getTag()+"\");\n");
-            }
-        }
-        cc.write("  a_.endRecord(*this,tag);\n");
-        cc.write("  return;\n");
-        cc.write("}\n");
-        
-        
-        cc.write("bool "+getCppFQName()+"::operator< (const "+getCppFQName()+"& peer_) const {\n");
-        cc.write("  return (1\n");
-        for (Iterator i = mFields.iterator(); i.hasNext();) {
-            JField jf = (JField) i.next();
-            String name = jf.getName();
-            cc.write("    && ("+name+" < peer_."+name+")\n");
-        }
-        cc.write("  );\n");
-        cc.write("}\n");
-        
-        cc.write("bool "+getCppFQName()+"::operator== (const "+getCppFQName()+"& peer_) const {\n");
-        cc.write("  return (1\n");
-        for (Iterator i = mFields.iterator(); i.hasNext();) {
-            JField jf = (JField) i.next();
-            String name = jf.getName();
-            cc.write("    && ("+name+" == peer_."+name+")\n");
-        }
-        cc.write("  );\n");
-        cc.write("}\n");
-        
-        cc.write("const ::std::string&"+getCppFQName()+"::type() const {\n");
-        cc.write("  static const ::std::string type_(\""+mName+"\");\n");
-        cc.write("  return type_;\n");
-        cc.write("}\n");
-        
-        cc.write("const ::std::string&"+getCppFQName()+"::signature() const {\n");
-        cc.write("  static const ::std::string sig_(\""+getSignature()+"\");\n");
-        cc.write("  return sig_;\n");
-        cc.write("}\n");
-        
+      } else if (!pkgdir.isDirectory()) {
+        // not a directory
+        throw new IOException(pkgpath+" is not a directory.");
+      }
+      File jfile = new File(pkgdir, name+".java");
+      FileWriter jj = new FileWriter(jfile);
+      
+      CodeBuffer cb = new CodeBuffer();
+      cb.append("// File generated by hadoop record compiler. Do not edit.\n");
+      cb.append("package "+module+";\n\n");
+      cb.append("public class "+name+
+          " implements org.apache.hadoop.record.Record");
+      cb.append(", org.apache.hadoop.io.WritableComparable");
+      cb.append(" {\n");
+      
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genDecl(cb, name);
+      }
+      cb.append("public "+name+"() { }\n");
+      
+      
+      cb.append("public "+name+"(\n");
+      int fIdx = 0;
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext(); fIdx++) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genConstructorParam(cb, name);
+        cb.append((!i.hasNext())?"":",\n");
+      }
+      cb.append(") {\n");
+      fIdx = 0;
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext(); fIdx++) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genConstructorSet(cb, name);
+      }
+      cb.append("}\n");
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genGetSet(cb, name);
+      }
+      cb.append("public void serialize("+
+          "final org.apache.hadoop.record.OutputArchive a_, final String tag)\n"+
+          "throws java.io.IOException {\n");
+      cb.append("a_.startRecord(this,tag);\n");
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genWriteMethod(cb, name, name);
+      }
+      cb.append("a_.endRecord(this,tag);\n");
+      cb.append("}\n");
+      
+      cb.append("public void deserialize("+
+          "final org.apache.hadoop.record.InputArchive a_, final String tag)\n"+
+          "throws java.io.IOException {\n");
+      cb.append("a_.startRecord(tag);\n");
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genReadMethod(cb, name, name, false);
+      }
+      cb.append("a_.endRecord(tag);\n");
+      cb.append("}\n");
+      
+      cb.append("public String toString() {\n");
+      cb.append("try {\n");
+      cb.append("java.io.ByteArrayOutputStream s =\n");
+      cb.append("  new java.io.ByteArrayOutputStream();\n");
+      cb.append("org.apache.hadoop.record.CsvOutputArchive a_ = \n");
+      cb.append("  new org.apache.hadoop.record.CsvOutputArchive(s);\n");
+      cb.append("this.serialize(a_,\"\");\n");
+      cb.append("return new String(s.toByteArray(), \"UTF-8\");\n");
+      cb.append("} catch (Throwable ex) {\n");
+      cb.append("throw new RuntimeException(ex);\n");
+      cb.append("}\n");
+      cb.append("}\n");
+      
+      cb.append("public void write(final java.io.DataOutput out)\n"+
+          "throws java.io.IOException {\n");
+      cb.append("org.apache.hadoop.record.BinaryOutputArchive archive =\n"+
+          "new org.apache.hadoop.record.BinaryOutputArchive(out);\n");
+      cb.append("this.serialize(archive, \"\");\n");
+      cb.append("}\n");
+      
+      cb.append("public void readFields(final java.io.DataInput in)\n"+
+          "throws java.io.IOException {\n");
+      cb.append("org.apache.hadoop.record.BinaryInputArchive archive =\n"+
+          "new org.apache.hadoop.record.BinaryInputArchive(in);\n");
+      cb.append("this.deserialize(archive, \"\");\n");
+      cb.append("}\n");
+      cb.append("public int compareTo (final Object peer_) throws ClassCastException {\n");
+      cb.append("if (!(peer_ instanceof "+name+")) {\n");
+      cb.append("throw new ClassCastException(\"Comparing different types of records.\");\n");
+      cb.append("}\n");
+      cb.append(name+" peer = ("+name+") peer_;\n");
+      cb.append("int ret = 0;\n");
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genCompareTo(cb, name, "peer."+name);
+        cb.append("if (ret != 0) return ret;\n");
+      }
+      cb.append("return ret;\n");
+      cb.append("}\n");
+      
+      cb.append("public boolean equals(final Object peer_) {\n");
+      cb.append("if (!(peer_ instanceof "+name+")) {\n");
+      cb.append("return false;\n");
+      cb.append("}\n");
+      cb.append("if (peer_ == this) {\n");
+      cb.append("return true;\n");
+      cb.append("}\n");
+      cb.append(name+" peer = ("+name+") peer_;\n");
+      cb.append("boolean ret = false;\n");
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genEquals(cb, name, "peer."+name);
+        cb.append("if (!ret) return ret;\n");
+      }
+      cb.append("return ret;\n");
+      cb.append("}\n");
+      
+      cb.append("public Object clone() throws CloneNotSupportedException {\n");
+      cb.append(name+" other = new "+name+"();\n");
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genClone(cb, name);
+      }
+      cb.append("return other;\n");
+      cb.append("}\n");
+      
+      cb.append("public int hashCode() {\n");
+      cb.append("int result = 17;\n");
+      cb.append("int ret;\n");
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genHashCode(cb, name);
+        cb.append("result = 37*result + ret;\n");
+      }
+      cb.append("return result;\n");
+      cb.append("}\n");
+      
+      cb.append("public static String signature() {\n");
+      cb.append("return \""+getSignature()+"\";\n");
+      cb.append("}\n");
+      
+      cb.append("public static class Comparator extends"+
+          " org.apache.hadoop.io.WritableComparator {\n");
+      cb.append("public Comparator() {\n");
+      cb.append("super("+name+".class);\n");
+      cb.append("}\n");
+      
+      cb.append("static public int slurpRaw(byte[] b, int s, int l) {\n");
+      cb.append("try {\n");
+      cb.append("int os = s;\n");
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genSlurpBytes(cb, "b","s","l");
+      }
+      cb.append("return (os - s);\n");
+      cb.append("} catch(java.io.IOException e) {\n");
+      cb.append("throw new RuntimeException(e);\n");
+      cb.append("}\n");
+      cb.append("}\n");
+      
+      cb.append("static public int compareRaw(byte[] b1, int s1, int l1,\n");
+      cb.append("                             byte[] b2, int s2, int l2) {\n");
+      cb.append("try {\n");
+      cb.append("int os1 = s1;\n");
+      for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
+        JField<JavaType> jf = i.next();
+        String name = jf.getName();
+        JavaType type = jf.getType();
+        type.genCompareBytes(cb);
+      }
+      cb.append("return (os1 - s1);\n");
+      cb.append("} catch(java.io.IOException e) {\n");
+      cb.append("throw new RuntimeException(e);\n");
+      cb.append("}\n");
+      cb.append("}\n");
+      cb.append("public int compare(byte[] b1, int s1, int l1,\n");
+      cb.append("                   byte[] b2, int s2, int l2) {\n");
+      cb.append("int ret = compareRaw(b1,s1,l1,b2,s2,l2);\n");
+      cb.append("return (ret == -1)? -1 : ((ret==0)? 1 : 0);");
+      cb.append("}\n");
+      cb.append("}\n\n");
+      cb.append("static {\n");
+      cb.append("org.apache.hadoop.io.WritableComparator.define("
+          +name+".class, new Comparator());\n");
+      cb.append("}\n");
+      cb.append("}\n");
+
+      jj.write(cb.toString());
+      jj.close();
+    }
+  }
+  
+  class CppRecord extends CppCompType {
+    
+    private String fullName;
+    private String name;
+    private String module;
+    private ArrayList<JField<CppType>> fields = 
+        new ArrayList<JField<CppType>>();
+    
+    CppRecord(String name, ArrayList<JField<JType>> flist) {
+      super(name.replaceAll("\\.","::"));
+      this.fullName = name.replaceAll("\\.", "::");
+      int idx = name.lastIndexOf('.');
+      this.name = name.substring(idx+1);
+      this.module = name.substring(0, idx).replaceAll("\\.", "::");
+      for (Iterator<JField<JType>> iter = flist.iterator(); iter.hasNext();) {
+        JField<JType> f = iter.next();
+        fields.add(new JField<CppType>(f.getName(), f.getType().getCppType()));
+      }
     }
     
-    public void genJavaCode(String destDir) throws IOException {
-        String pkg = getJavaPackage();
-        String pkgpath = pkg.replaceAll("\\.", "/");
-        File pkgdir = new File(destDir, pkgpath);
-        if (!pkgdir.exists()) {
-            // create the pkg directory
-            boolean ret = pkgdir.mkdirs();
-            if (!ret) {
-                throw new IOException("Cannnot create directory: "+pkgpath);
-            }
-        } else if (!pkgdir.isDirectory()) {
-            // not a directory
-            throw new IOException(pkgpath+" is not a directory.");
-        }
-        File jfile = new File(pkgdir, getName()+".java");
-        FileWriter jj = new FileWriter(jfile);
-        jj.write("// File generated by hadoop record compiler. Do not edit.\n");
-        jj.write("package "+getJavaPackage()+";\n\n");
-        jj.write("import java.io.IOException;\n");
-        jj.write("import org.apache.commons.logging.Log;\n");
-        jj.write("import org.apache.commons.logging.LogFactory;\n");
-        jj.write("import org.apache.hadoop.io.WritableComparator;\n");
-        jj.write("import org.apache.hadoop.io.WritableComparable;\n");
-        jj.write("import org.apache.hadoop.io.WritableUtils;\n");
-        jj.write("import org.apache.hadoop.io.BytesWritable;\n");
-        jj.write("import org.apache.hadoop.io.Text;\n\n");
-        jj.write("public class "+getName()+" implements org.apache.hadoop.record.Record, WritableComparable {\n");
-        jj.write("  private static final Log LOG= LogFactory.getLog(\""+
-            this.getJavaFQName()+"\");\n");
-        for (Iterator i = mFields.iterator(); i.hasNext();) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaDecl());
-        }
-        jj.write("  public "+getName()+"() { }\n");
-        
-        
-        jj.write("  public "+getName()+"(\n");
-        int fIdx = 0;
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaConstructorParam(fIdx));
-            jj.write((!i.hasNext())?"":",\n");
-        }
-        jj.write(") {\n");
-        fIdx = 0;
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaConstructorSet(fIdx));
-        }
-        jj.write("  }\n");
-        fIdx = 0;
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaGetSet(fIdx));
-        }
-        jj.write("  public void serialize(org.apache.hadoop.record.OutputArchive a_, String tag) throws java.io.IOException {\n");
-        jj.write("    a_.startRecord(this,tag);\n");
-        for (Iterator i = mFields.iterator(); i.hasNext();) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaWriteMethodName());
-        }
-        jj.write("    a_.endRecord(this,tag);\n");
-        jj.write("  }\n");
-        
-        jj.write("  public void deserialize(org.apache.hadoop.record.InputArchive a_, String tag) throws java.io.IOException {\n");
-        jj.write("    a_.startRecord(tag);\n");
-        for (Iterator i = mFields.iterator(); i.hasNext();) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaReadMethodName());
-        }
-        jj.write("    a_.endRecord(tag);\n");
-        jj.write("}\n");
-        
-        jj.write("  public String toString() {\n");
-        jj.write("    try {\n");
-        jj.write("      java.io.ByteArrayOutputStream s =\n");
-        jj.write("        new java.io.ByteArrayOutputStream();\n");
-        jj.write("      org.apache.hadoop.record.CsvOutputArchive a_ = \n");
-        jj.write("        new org.apache.hadoop.record.CsvOutputArchive(s);\n");
-        jj.write("      a_.startRecord(this,\"\");\n");
-        fIdx = 0;
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaWriteMethodName());
-        }
-        jj.write("      a_.endRecord(this,\"\");\n");
-        jj.write("      return new String(s.toByteArray(), \"UTF-8\");\n");
-        jj.write("    } catch (Throwable ex) {\n");
-        jj.write("      throw new RuntimeException(ex);\n");
-        jj.write("    }\n");
-        jj.write("  }\n");
-        
-        jj.write("  public void write(java.io.DataOutput out) throws java.io.IOException {\n");
-        jj.write("    org.apache.hadoop.record.BinaryOutputArchive archive = new org.apache.hadoop.record.BinaryOutputArchive(out);\n");
-        jj.write("    serialize(archive, \"\");\n");
-        jj.write("  }\n");
-        
-        jj.write("  public void readFields(java.io.DataInput in) throws java.io.IOException {\n");
-        jj.write("    org.apache.hadoop.record.BinaryInputArchive archive = new org.apache.hadoop.record.BinaryInputArchive(in);\n");
-        jj.write("    deserialize(archive, \"\");\n");
-        jj.write("  }\n");
-        
-        jj.write("  public int compareTo (Object peer_) throws ClassCastException {\n");
-        jj.write("    if (!(peer_ instanceof "+getName()+")) {\n");
-        jj.write("      throw new ClassCastException(\"Comparing different types of records.\");\n");
-        jj.write("    }\n");
-        jj.write("    "+getName()+" peer = ("+getName()+") peer_;\n");
-        jj.write("    int ret = 0;\n");
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaCompareTo());
-            jj.write("    if (ret != 0) return ret;\n");
-        }
-        jj.write("     return ret;\n");
-        jj.write("  }\n");
-        
-        jj.write("  public boolean equals(Object peer_) {\n");
-        jj.write("    if (!(peer_ instanceof "+getName()+")) {\n");
-        jj.write("      return false;\n");
-        jj.write("    }\n");
-        jj.write("    if (peer_ == this) {\n");
-        jj.write("      return true;\n");
-        jj.write("    }\n");
-        jj.write("    "+getName()+" peer = ("+getName()+") peer_;\n");
-        jj.write("    boolean ret = false;\n");
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaEquals());
-            jj.write("    if (!ret) return ret;\n");
-        }
-        jj.write("     return ret;\n");
-        jj.write("  }\n");
-        
-        jj.write("  public int hashCode() {\n");
-        jj.write("    int result = 17;\n");
-        jj.write("    int ret;\n");
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaHashCode());
-            jj.write("    result = 37*result + ret;\n");
-        }
-        jj.write("    return result;\n");
-        jj.write("  }\n");
-        jj.write("  public static String signature() {\n");
-        jj.write("    return \""+getSignature()+"\";\n");
-        jj.write("  }\n");
-        
-        jj.write("  public static class Comparator extends WritableComparator {\n");
-        jj.write("    public Comparator() {\n");
-        jj.write("      super("+getName()+".class);\n");
-        jj.write("    }\n");
-
-        jj.write("    static public int slurpRaw(byte[] b, int s, int l) {\n");
-        jj.write("      try {\n");
-        jj.write("        int os = s;\n");
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaSlurpBytes("b","s","l"));
-        }
-        jj.write("        return (os - s);\n");
-        jj.write("      } catch(IOException e) {\n");
-        jj.write("        LOG.warn(e);\n");
-        jj.write("        throw new RuntimeException(e);\n");
-        jj.write("      }\n");
-        jj.write("    }\n");
-        
-        jj.write("    static public int compareRaw(byte[] b1, int s1, int l1,\n");
-        jj.write("                       byte[] b2, int s2, int l2) {\n");
-        jj.write("      try {\n");
-        jj.write("        int os1 = s1;\n");
-        for (Iterator i = mFields.iterator(); i.hasNext(); fIdx++) {
-            JField jf = (JField) i.next();
-            jj.write(jf.genJavaCompareBytes());
-        }
-        jj.write("        return (os1 - s1);\n");
-        jj.write("      } catch(IOException e) {\n");
-        jj.write("        LOG.warn(e);\n");
-        jj.write("        throw new RuntimeException(e);\n");
-        jj.write("      }\n");
-        jj.write("    }\n");
-        jj.write("    public int compare(byte[] b1, int s1, int l1,\n");
-        jj.write("                       byte[] b2, int s2, int l2) {\n");
-        jj.write("      int ret = compareRaw(b1,s1,l1,b2,s2,l2);\n");
-        jj.write("      return (ret == -1)? -1 : ((ret==0)? 1 : 0);");
-        jj.write("    }\n");
-        jj.write("  }\n\n");
-        jj.write("  static {\n");
-        jj.write("    WritableComparator.define("+getName()+".class, new Comparator());\n");
-        jj.write("  }\n");
-
-        
-        jj.write("}\n");
-        
-        jj.close();
+    String genDecl(String fname) {
+      return "  "+name+" "+fname+";\n";
     }
+    
+    void genCode(FileWriter hh, FileWriter cc, ArrayList<String> options)
+    throws IOException {
+      CodeBuffer hb = new CodeBuffer();
+      
+      String[] ns = module.split("::");
+      for (int i = 0; i < ns.length; i++) {
+        hb.append("namespace "+ns[i]+" {\n");
+      }
+      
+      hb.append("class "+name+" : public ::hadoop::Record {\n");
+      hb.append("private:\n");
+      
+      for (Iterator<JField<CppType>> i = fields.iterator(); i.hasNext();) {
+        JField<CppType> jf = i.next();
+        String name = jf.getName();
+        CppType type = jf.getType();
+        type.genDecl(hb, name);
+      }
+      hb.append("public:\n");
+      hb.append("virtual void serialize(::hadoop::OArchive& a_, const char* tag) const;\n");
+      hb.append("virtual void deserialize(::hadoop::IArchive& a_, const char* tag);\n");
+      hb.append("virtual const ::std::string& type() const;\n");
+      hb.append("virtual const ::std::string& signature() const;\n");
+      hb.append("virtual bool operator<(const "+name+"& peer_) const;\n");
+      hb.append("virtual bool operator==(const "+name+"& peer_) const;\n");
+      hb.append("virtual ~"+name+"() {};\n");
+      for (Iterator<JField<CppType>> i = fields.iterator(); i.hasNext();) {
+        JField<CppType> jf = i.next();
+        String name = jf.getName();
+        CppType type = jf.getType();
+        type.genGetSet(hb, name);
+      }
+      hb.append("}; // end record "+name+"\n");
+      for (int i=ns.length-1; i>=0; i--) {
+        hb.append("} // end namespace "+ns[i]+"\n");
+      }
+      
+      hh.write(hb.toString());
+      
+      CodeBuffer cb = new CodeBuffer();
+      
+      cb.append("void "+fullName+"::serialize(::hadoop::OArchive& a_, const char* tag) const {\n");
+      cb.append("a_.startRecord(*this,tag);\n");
+      for (Iterator<JField<CppType>> i = fields.iterator(); i.hasNext();) {
+        JField<CppType> jf = i.next();
+        String name = jf.getName();
+        CppType type = jf.getType();
+        if (type instanceof JBuffer.CppBuffer) {
+          cb.append("a_.serialize("+name+","+name+".length(),\""+name+"\");\n");
+        } else {
+          cb.append("a_.serialize("+name+",\""+name+"\");\n");
+        }
+      }
+      cb.append("a_.endRecord(*this,tag);\n");
+      cb.append("return;\n");
+      cb.append("}\n");
+      
+      cb.append("void "+fullName+"::deserialize(::hadoop::IArchive& a_, const char* tag) {\n");
+      cb.append("a_.startRecord(*this,tag);\n");
+      for (Iterator<JField<CppType>> i = fields.iterator(); i.hasNext();) {
+        JField<CppType> jf = i.next();
+        String name = jf.getName();
+        CppType type = jf.getType();
+        if (type instanceof JBuffer.CppBuffer) {
+          cb.append("{\nsize_t len=0; a_.deserialize("+name+",len,\""+name+"\");\n}\n");
+        } else {
+          cb.append("a_.deserialize("+name+",\""+name+"\");\n");
+        }
+      }
+      cb.append("a_.endRecord(*this,tag);\n");
+      cb.append("return;\n");
+      cb.append("}\n");
+      
+      
+      cb.append("bool "+fullName+"::operator< (const "+fullName+"& peer_) const {\n");
+      cb.append("return (1\n");
+      for (Iterator<JField<CppType>> i = fields.iterator(); i.hasNext();) {
+        JField<CppType> jf = i.next();
+        String name = jf.getName();
+        cb.append("&& ("+name+" < peer_."+name+")\n");
+      }
+      cb.append(");\n");
+      cb.append("}\n");
+      
+      cb.append("bool "+fullName+"::operator== (const "+fullName+"& peer_) const {\n");
+      cb.append("return (1\n");
+      for (Iterator<JField<CppType>> i = fields.iterator(); i.hasNext();) {
+        JField<CppType> jf = i.next();
+        String name = jf.getName();
+        cb.append("&& ("+name+" == peer_."+name+")\n");
+      }
+      cb.append(");\n");
+      cb.append("}\n");
+      
+      cb.append("const ::std::string&"+fullName+"::type() const {\n");
+      cb.append("static const ::std::string type_(\""+name+"\");\n");
+      cb.append("return type_;\n");
+      cb.append("}\n");
+      
+      cb.append("const ::std::string&"+fullName+"::signature() const {\n");
+      cb.append("static const ::std::string sig_(\""+getSignature()+"\");\n");
+      cb.append("return sig_;\n");
+      cb.append("}\n");
+      
+      cc.write(cb.toString());
+    }
+  }
+  
+  class CRecord extends CCompType {
+    
+  }
+  
+  private String signature;
+  
+  /**
+   * Creates a new instance of JRecord
+   */
+  public JRecord(String name, ArrayList<JField<JType>> flist) {
+    setJavaType(new JavaRecord(name, flist));
+    setCppType(new CppRecord(name, flist));
+    setCType(new CRecord());
+    // precompute signature
+    int idx = name.lastIndexOf('.');
+    String recName = name.substring(idx+1);
+    StringBuffer sb = new StringBuffer();
+    sb.append("L").append(recName).append("(");
+    for (Iterator<JField<JType>> i = flist.iterator(); i.hasNext();) {
+      String s = i.next().getType().getSignature();
+      sb.append(s);
+    }
+    sb.append(")");
+    signature = sb.toString();
+  }
+  
+  String getSignature() {
+    return signature;
+  }
+  
+  void genCppCode(FileWriter hh, FileWriter cc, ArrayList<String> options)
+    throws IOException {
+    ((CppRecord)getCppType()).genCode(hh,cc, options);
+  }
+  
+  void genJavaCode(String destDir, ArrayList<String> options)
+  throws IOException {
+    ((JavaRecord)getJavaType()).genCode(destDir, options);
+  }
 }

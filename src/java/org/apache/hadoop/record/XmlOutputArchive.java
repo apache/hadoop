@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.io.PrintStream;
 import java.io.OutputStream;
 import java.util.Stack;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
 
 /**
  *
@@ -191,7 +189,7 @@ class XmlOutputArchive implements OutputArchive {
         printEndEnvelope(tag);
     }
     
-    public void writeString(Text s, String tag) throws IOException {
+    public void writeString(String s, String tag) throws IOException {
         printBeginEnvelope(tag);
         stream.print("<string>");
         stream.print(Utils.toXMLString(s));
@@ -199,7 +197,7 @@ class XmlOutputArchive implements OutputArchive {
         printEndEnvelope(tag);
     }
     
-    public void writeBuffer(BytesWritable buf, String tag)
+    public void writeBuffer(Buffer buf, String tag)
     throws IOException {
         printBeginEnvelope(tag);
         stream.print("<string>");

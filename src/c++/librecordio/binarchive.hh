@@ -20,7 +20,6 @@
 #define BINARCHIVE_HH_
 
 #include "recordio.hh"
-#include <rpc/xdr.h>
 
 namespace hadoop {
 

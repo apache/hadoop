@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.record.test;
+package org.apache.hadoop.record;
 
 import java.io.*;
 import java.util.*;
@@ -34,7 +34,7 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 
-public class TestWritable extends TestCase {
+public class TestRecordWritable extends TestCase {
   private static final Log LOG = InputFormatBase.LOG;
 
   private static int MAX_LENGTH = 10000;
@@ -46,8 +46,11 @@ public class TestWritable extends TestCase {
     Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
     Path file = new Path(dir, "test.seq");
     
-    // A reporter that does nothing
-    Reporter reporter = Reporter.NULL;
+    Reporter reporter = new Reporter() {
+        public void setStatus(String status) throws IOException {}
+        public void progress() throws IOException {}
+        public void incrCounter(Enum key, long amount) {}
+      };
     
     int seed = new Random().nextInt();
     //LOG.info("seed = "+seed);
@@ -72,7 +75,7 @@ public class TestWritable extends TestCase {
           byte[] data = new byte[random.nextInt(10)];
           random.nextBytes(data);
           RecBuffer value = new RecBuffer();
-          value.setData(new BytesWritable(data));
+          value.setData(new Buffer(data));
           writer.append(key, value);
         }
       } finally {
@@ -111,6 +114,6 @@ public class TestWritable extends TestCase {
   }
 
   public static void main(String[] args) throws Exception {
-    new TestWritable().testFormat();
+    new TestRecordWritable().testFormat();
   }
 }

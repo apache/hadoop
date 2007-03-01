@@ -20,129 +20,154 @@ package org.apache.hadoop.record.compiler;
 
 /**
  * Abstract Base class for all types supported by Hadoop Record I/O.
- * 
+ *
  * @author Milind Bhandarkar
  */
 abstract public class JType {
+  
+  static String toCamelCase(String name) {
+    char firstChar = name.charAt(0);
+    if (Character.isLowerCase(firstChar)) {
+      return ""+Character.toUpperCase(firstChar) + name.substring(1);
+    }
+    return name;
+  }
+  
+  JavaType javaType;
+  CppType cppType;
+  CType cType;
+  
+  abstract class JavaType {
+    private String name;
+    private String methodSuffix;
+    private String wrapper;
     
-    private String mCppName;
-    private String mJavaName;
-    private String mMethodSuffix;
-    private String mWrapper;
-    private String mUnwrapMethod;
-    
-    /**
-     * Creates a new instance of JType
-     */
-    JType(String cppname, String javaname, String suffix, String wrapper, String unwrap) {
-        mCppName = cppname;
-        mJavaName = javaname;
-        mMethodSuffix = suffix;
-        mWrapper = wrapper;
-        mUnwrapMethod = unwrap;
+    JavaType(String javaname,
+        String suffix,
+        String wrapper) {
+      this.name = javaname;
+      this.methodSuffix = suffix;
+      this.wrapper = wrapper;
     }
     
-    abstract String getSignature();
-    
-    String genCppDecl(String fname) {
-        return "  "+mCppName+" m"+fname+";\n"; 
+    void genDecl(CodeBuffer cb, String fname) {
+      cb.append("private "+name+" "+fname+";\n");
     }
     
-    String genJavaDecl (String fname) {
-        return "  private "+mJavaName+" m"+fname+";\n";
+    void genConstructorParam(CodeBuffer cb, String fname) {
+      cb.append("final "+name+" "+fname);
     }
     
-    String genJavaConstructorParam (int fIdx) {
-        return "        "+mJavaName+" m"+fIdx;
+    void genGetSet(CodeBuffer cb, String fname) {
+      cb.append("public "+name+" get"+toCamelCase(fname)+"() {\n");
+      cb.append("return "+fname+";\n");
+      cb.append("}\n");
+      cb.append("public void set"+toCamelCase(fname)+"(final "+name+" "+fname+") {\n");
+      cb.append("this."+fname+"="+fname+";\n");
+      cb.append("}\n");
     }
     
-    String genCppGetSet(String fname, int fIdx) {
-        String getFunc = "  virtual "+mCppName+" get"+fname+"() const {\n";
-        getFunc += "    return m"+fname+";\n";
-        getFunc += "  }\n";
-        String setFunc = "  virtual void set"+fname+"("+mCppName+" m_) {\n";
-        setFunc += "    m"+fname+"=m_;\n";
-        setFunc += "  }\n";
-        return getFunc+setFunc;
+    String getType() {
+      return name;
     }
     
-    String genJavaGetSet(String fname, int fIdx) {
-        String getFunc = "  public "+mJavaName+" get"+fname+"() {\n";
-        getFunc += "    return m"+fname+";\n";
-        getFunc += "  }\n";
-        String setFunc = "  public void set"+fname+"("+mJavaName+" m_) {\n";
-        setFunc += "    m"+fname+"=m_;\n";
-        setFunc += "  }\n";
-        return getFunc+setFunc;
-    }
-    
-    String getCppType() {
-        return mCppName;
-    }
-    
-    String getJavaType() {
-        return mJavaName;
-    }
-   
-    String getJavaWrapperType() {
-        return mWrapper;
+    String getWrapperType() {
+      return wrapper;
     }
     
     String getMethodSuffix() {
-        return mMethodSuffix;
+      return methodSuffix;
     }
     
-    String genJavaWriteMethod(String fname, String tag) {
-        return "    a_.write"+mMethodSuffix+"("+fname+",\""+tag+"\");\n";
+    void genWriteMethod(CodeBuffer cb, String fname, String tag) {
+      cb.append("a_.write"+methodSuffix+"("+fname+",\""+tag+"\");\n");
     }
     
-    String genJavaReadMethod(String fname, String tag) {
-        return "    "+fname+"=a_.read"+mMethodSuffix+"(\""+tag+"\");\n";
+    void genReadMethod(CodeBuffer cb, String fname, String tag, boolean decl) {
+      if (decl) {
+        cb.append(name+" "+fname+";\n");
+      }
+      cb.append(fname+"=a_.read"+methodSuffix+"(\""+tag+"\");\n");
     }
     
-    String genJavaReadWrapper(String fname, String tag, boolean decl) {
-        String ret = "";
-        if (decl) {
-            ret = "    "+mWrapper+" "+fname+";\n";
-        }
-        return ret + "    "+fname+"=new "+mWrapper+"(a_.read"+mMethodSuffix+"(\""+tag+"\"));\n";
+    void genCompareTo(CodeBuffer cb, String fname, String other) {
+      cb.append("ret = ("+fname+" == "+other+")? 0 :(("+fname+"<"+other+
+          ")?-1:1);\n");
     }
     
-    String genJavaWriteWrapper(String fname, String tag) {
-        return "        a_.write"+mMethodSuffix+"("+fname+"."+mUnwrapMethod+"(),\""+tag+"\");\n";
+    abstract void genCompareBytes(CodeBuffer cb);
+    
+    abstract void genSlurpBytes(CodeBuffer cb, String b, String s, String l);
+    
+    void genEquals(CodeBuffer cb, String fname, String peer) {
+      cb.append("ret = ("+fname+"=="+peer+");\n");
     }
     
-    String genJavaCompareToWrapper(String fname, String other) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("          "+mJavaName+" ee1 = ("+fname+"."+mUnwrapMethod+"();\n");
-      sb.append("          "+mJavaName+" ee2 = ("+other+"."+mUnwrapMethod+"();\n");
-      sb.append("          ret = (ee1 == ee2)? 0 :((ee1<ee2)?-1:1);\n");
-      sb.append("        }\n");
-      return sb.toString();
+    void genHashCode(CodeBuffer cb, String fname) {
+      cb.append("ret = (int)"+fname+";\n");
     }
     
-    String genJavaCompareTo(String fname, String other) {
-        return "    ret = ("+fname+" == "+other+")? 0 :(("+fname+"<"+other+")?-1:1);\n";
+    void genConstructorSet(CodeBuffer cb, String fname) {
+      cb.append("this."+fname+" = "+fname+";\n");
     }
     
-    String genJavaCompareBytes() {
-      return "        // throw new IOException(\"Not Implemented yet!\");\n";
+    void genClone(CodeBuffer cb, String fname) {
+      cb.append("other."+fname+" = this."+fname+";\n");
+    }
+  }
+  
+  class CppType {
+    private String name;
+    
+    CppType(String cppname) {
+      name = cppname;
     }
     
-    String genJavaSlurpBytes(String b, String s, String l) {
-      return "        // throw new IOException(\"Not Implemented yet!\");\n";
+    void genDecl(CodeBuffer cb, String fname) {
+      cb.append(name+" "+fname+";\n");
     }
     
-    String genJavaEquals(String fname, String peer) {
-        return "    ret = ("+fname+"=="+peer+");\n";
+    void genGetSet(CodeBuffer cb, String fname) {
+      cb.append("virtual "+name+" get"+toCamelCase(fname)+"() const {\n");
+      cb.append("return "+fname+";\n");
+      cb.append("}\n");
+      cb.append("virtual void set"+toCamelCase(fname)+"("+name+" m_) {\n");
+      cb.append(fname+"=m_;\n");
+      cb.append("}\n");
     }
     
-    String genJavaHashCode(String fname) {
-        return "    ret = (int)"+fname+";\n";
+    String getType() {
+      return name;
     }
-
-    String genJavaConstructorSet(String fname, int fIdx) {
-        return "    m"+fname+"=m"+fIdx+";\n";
-    }
+  }
+  
+  class CType {
+    
+  }
+  
+  abstract String getSignature();
+  
+  void setJavaType(JavaType jType) {
+    this.javaType = jType;
+  }
+  
+  JavaType getJavaType() {
+    return javaType;
+  }
+  
+  void setCppType(CppType cppType) {
+    this.cppType = cppType;
+  }
+  
+  CppType getCppType() {
+    return cppType;
+  }
+  
+  void setCType(CType cType) {
+    this.cType = cType;
+  }
+  
+  CType getCType() {
+    return cType;
+  }
 }

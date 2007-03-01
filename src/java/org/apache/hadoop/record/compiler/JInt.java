@@ -18,43 +18,50 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.record.compiler.JType.CType;
+import org.apache.hadoop.record.compiler.JType.CppType;
+
 /**
- *
+ * Code generator for "int" type
  * @author Milind Bhandarkar
  */
 public class JInt extends JType {
+  
+  class JavaInt extends JavaType {
     
-    /** Creates a new instance of JInt */
-    public JInt() {
-        super("int32_t", "int", "Int", "Integer", "toInt");
+    JavaInt() {
+      super("int", "Int", "Integer");
     }
     
-    public String getSignature() {
-        return "i";
+    void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
+      cb.append("{\n");
+      cb.append("int i = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
+      cb.append("int z = org.apache.hadoop.record.Utils.getVIntSize(i);\n");
+      cb.append(s+"+=z; "+l+"-=z;\n");
+      cb.append("}\n");
     }
     
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           int i = WritableComparator.readVInt("+b+", "+s+");\n");
-      sb.append("           int z = WritableUtils.getVIntSize(i);\n");
-      sb.append("           "+s+"+=z; "+l+"-=z;\n");
-      sb.append("        }\n");
-      return sb.toString();
+    void genCompareBytes(CodeBuffer cb) {
+      cb.append("{\n");
+      cb.append("int i1 = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
+      cb.append("int i2 = org.apache.hadoop.record.Utils.readVInt(b2, s2);\n");
+      cb.append("if (i1 != i2) {\n");
+      cb.append("return ((i1-i2) < 0) ? -1 : 0;\n");
+      cb.append("}\n");
+      cb.append("int z1 = org.apache.hadoop.record.Utils.getVIntSize(i1);\n");
+      cb.append("int z2 = org.apache.hadoop.record.Utils.getVIntSize(i2);\n");
+      cb.append("s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
+      cb.append("}\n");
     }
-    
-    public String genJavaCompareBytes() {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           int i1 = WritableComparator.readVInt(b1, s1);\n");
-      sb.append("           int i2 = WritableComparator.readVInt(b2, s2);\n");
-      sb.append("           if (i1 != i2) {\n");
-      sb.append("             return ((i1-i2) < 0) ? -1 : 0;\n");
-      sb.append("           }\n");
-      sb.append("           int z1 = WritableUtils.getVIntSize(i1);\n");
-      sb.append("           int z2 = WritableUtils.getVIntSize(i2);\n");
-      sb.append("           s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
-      sb.append("        }\n");
-      return sb.toString();
-    }
+  }
+  /** Creates a new instance of JInt */
+  public JInt() {
+    setJavaType(new JavaInt());
+    setCppType(new CppType("int32_t"));
+    setCType(new CType());
+  }
+  
+  String getSignature() {
+    return "i";
+  }
 }

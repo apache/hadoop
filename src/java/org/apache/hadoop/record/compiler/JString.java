@@ -18,55 +18,54 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.record.compiler.JCompType.CCompType;
+import org.apache.hadoop.record.compiler.JCompType.CppCompType;
+
 /**
  *
  * @author Milind Bhandarkar
  */
 public class JString extends JCompType {
     
+  class JavaString extends JavaCompType {
+    
+    JavaString() {
+      super("String", "String", "String");
+    }
+    
+    void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
+      cb.append("{\n");
+      cb.append("int i = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
+      cb.append("int z = org.apache.hadoop.record.Utils.getVIntSize(i);\n");
+      cb.append(s+"+=(z+i); "+l+"-= (z+i);\n");
+      cb.append("}\n");
+    }
+    
+    void genCompareBytes(CodeBuffer cb) {
+      cb.append("{\n");
+      cb.append("int i1 = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
+      cb.append("int i2 = org.apache.hadoop.record.Utils.readVInt(b2, s2);\n");
+      cb.append("int z1 = org.apache.hadoop.record.Utils.getVIntSize(i1);\n");
+      cb.append("int z2 = org.apache.hadoop.record.Utils.getVIntSize(i2);\n");
+      cb.append("s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
+      cb.append("int r1 = org.apache.hadoop.record.Utils.compareBytes(b1,s1,l1,b2,s2,l2);\n");
+      cb.append("if (r1 != 0) { return (r1<0)?-1:0; }\n");
+      cb.append("s1+=i1; s2+=i2; l1-=i1; l1-=i2;\n");
+      cb.append("}\n");
+    }
+    
+    void genClone(CodeBuffer cb, String fname) {
+      cb.append("other."+fname+" = this."+fname+";\n");
+    }
+  }
     /** Creates a new instance of JString */
     public JString() {
-        super(" ::std::string", "Text", "String", "Text");
+      setJavaType(new JavaString());
+      setCppType(new CppCompType(" ::std::string"));
+      setCType(new CCompType());
     }
     
-    public String getSignature() {
+    String getSignature() {
         return "s";
-    }
-    
-    public String genJavaReadWrapper(String fname, String tag, boolean decl) {
-        String ret = "";
-        if (decl) {
-            ret = "    Text "+fname+";\n";
-        }
-        return ret + "        "+fname+"=a_.readString(\""+tag+"\");\n";
-    }
-    
-    public String genJavaWriteWrapper(String fname, String tag) {
-        return "        a_.writeString("+fname+",\""+tag+"\");\n";
-    }
-    
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           int i = WritableComparator.readVInt("+b+", "+s+");\n");
-      sb.append("           int z = WritableUtils.getVIntSize(i);\n");
-      sb.append("           "+s+"+=(z+i); "+l+"-= (z+i);\n");
-      sb.append("        }\n");
-      return sb.toString();
-    }
-    
-    public String genJavaCompareBytes() {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           int i1 = WritableComparator.readVInt(b1, s1);\n");
-      sb.append("           int i2 = WritableComparator.readVInt(b2, s2);\n");
-      sb.append("           int z1 = WritableUtils.getVIntSize(i1);\n");
-      sb.append("           int z2 = WritableUtils.getVIntSize(i2);\n");
-      sb.append("           s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
-      sb.append("           int r1 = WritableComparator.compareBytes(b1,s1,l1,b2,s2,l2);\n");
-      sb.append("           if (r1 != 0) { return (r1<0)?-1:0; }\n");
-      sb.append("           s1+=i1; s2+=i2; l1-=i1; l1-=i2;\n");
-      sb.append("        }\n");
-      return sb.toString();
     }
 }

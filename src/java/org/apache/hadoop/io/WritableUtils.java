@@ -312,15 +312,15 @@ public final class WritableUtils  {
       if (len >= -112) {
           return len;
       }
-      len = (len < -120) ? -(len + 120) : -(len + 112);
-      byte[] barr = new byte[len];
-      stream.readFully(barr);
+      boolean isNegative = (len < -120);
+      len = isNegative ? -(len + 120) : -(len + 112);
       long i = 0;
       for (int idx = 0; idx < len; idx++) {
+          byte b = stream.readByte();
           i = i << 8;
-          i = i | (barr[idx] & 0xFF);
+          i = i | (b & 0xFF);
       }
-      return i;
+      return (isNegative ? (i | 0x8000000000000000L) : i);
   }
 
   /**

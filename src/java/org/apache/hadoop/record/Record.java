@@ -25,9 +25,9 @@ import java.io.IOException;
  * 
  * @author Milind Bhandarkar
  */
-public interface Record {
-    public void serialize(OutputArchive archive, String tag)
+public interface Record extends Cloneable {
+    void serialize(OutputArchive archive, String tag)
         throws IOException;
-    public void deserialize(InputArchive archive, String tag)
+    void deserialize(InputArchive archive, String tag)
         throws IOException;
 }

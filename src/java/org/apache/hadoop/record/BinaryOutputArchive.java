@@ -24,10 +24,6 @@ import java.util.ArrayList;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.OutputStream;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
-
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  *
@@ -55,11 +51,11 @@ public class BinaryOutputArchive implements OutputArchive {
     }
     
     public void writeInt(int i, String tag) throws IOException {
-        WritableUtils.writeVInt(out, i);
+        Utils.writeVInt(out, i);
     }
     
     public void writeLong(long l, String tag) throws IOException {
-        WritableUtils.writeVLong(out, l);
+        Utils.writeVLong(out, l);
     }
     
     public void writeFloat(float f, String tag) throws IOException {
@@ -70,15 +66,18 @@ public class BinaryOutputArchive implements OutputArchive {
         out.writeDouble(d);
     }
     
-    public void writeString(Text s, String tag) throws IOException {
-        s.write(out);
+    public void writeString(String s, String tag) throws IOException {
+      byte[] bytes = s.getBytes("UTF-8");
+      int length = bytes.length;
+      Utils.writeVInt(out, length);
+      out.write(bytes);
     }
     
-    public void writeBuffer(BytesWritable buf, String tag)
+    public void writeBuffer(Buffer buf, String tag)
     throws IOException {
       byte[] barr = buf.get();
-      int len = buf.getSize();
-      WritableUtils.writeVInt(out, len);
+      int len = buf.getCount();
+      Utils.writeVInt(out, len);
       out.write(barr, 0, len);
     }
     

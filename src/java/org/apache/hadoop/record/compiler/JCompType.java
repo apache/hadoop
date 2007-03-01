@@ -25,35 +25,47 @@ package org.apache.hadoop.record.compiler;
  * @author Milind Bhandarkar
  */
 abstract class JCompType extends JType {
+  
+  abstract class JavaCompType extends JavaType {
     
-    /** Creates a new instance of JCompType */
-    JCompType(String cppType, String javaType, String suffix, String wrapper) {
-        super(cppType, javaType, suffix, wrapper, null);
+    JavaCompType(String type, String suffix, String wrapper) {
+      super(type, suffix, wrapper);
     }
     
-    String genCppGetSet(String fname, int fIdx) {
-        String cgetFunc = "  virtual const "+getCppType()+"& get"+fname+"() const {\n";
-        cgetFunc += "    return m"+fname+";\n";
-        cgetFunc += "  }\n";
-        String getFunc = "  virtual "+getCppType()+"& get"+fname+"() {\n";
-        getFunc += "    return m"+fname+";\n";
-        getFunc += "  }\n";
-        return cgetFunc + getFunc;
+    void genCompareTo(CodeBuffer cb, String fname, String other) {
+      cb.append("ret = "+fname+".compareTo("+other+");\n");
     }
     
-    String genJavaCompareTo(String fname, String other) {
-        return "    ret = "+fname+".compareTo("+other+");\n";
+    void genEquals(CodeBuffer cb, String fname, String peer) {
+      cb.append("ret = "+fname+".equals("+peer+");\n");
     }
     
-    String genJavaCompareToWrapper(String fname, String other) {
-        return "    "+genJavaCompareTo(fname, other);
+    void genHashCode(CodeBuffer cb, String fname) {
+      cb.append("ret = "+fname+".hashCode();\n");
     }
     
-    String genJavaEquals(String fname, String peer) {
-        return "    ret = "+fname+".equals("+peer+");\n";
+    void genClone(CodeBuffer cb, String fname) {
+      cb.append("other."+fname+" = ("+getType()+") this."+fname+".clone();\n");
+    }
+  }
+  
+  class CppCompType extends CppType {
+    
+    CppCompType(String type) {
+      super(type);
     }
     
-    String genJavaHashCode(String fname) {
-        return "    ret = "+fname+".hashCode();\n";
+    void genGetSet(CodeBuffer cb, String fname) {
+      cb.append("virtual const "+getType()+"& get"+toCamelCase(fname)+"() const {\n");
+      cb.append("return "+fname+";\n");
+      cb.append("}\n");
+      cb.append("virtual "+getType()+"& get"+toCamelCase(fname)+"() {\n");
+      cb.append("return "+fname+";\n");
+      cb.append("}\n");
     }
+  }
+  
+  class CCompType extends CType {
+    
+  }
 }

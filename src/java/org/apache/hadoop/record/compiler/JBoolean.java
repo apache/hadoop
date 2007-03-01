@@ -18,63 +18,63 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.record.compiler.JType.CType;
+import org.apache.hadoop.record.compiler.JType.CppType;
+
 /**
  *
  * @author Milind Bhandarkar
  */
 public class JBoolean extends JType {
+  
+  class JavaBoolean extends JType.JavaType {
     
-    /** Creates a new instance of JBoolean */
-    public JBoolean() {
-        super("bool", "boolean", "Bool", "Boolean", "toBoolean");
+    JavaBoolean() {
+      super("boolean", "Bool", "Boolean");
     }
     
-    public String getSignature() {
-        return "z";
+    void genCompareTo(CodeBuffer cb, String fname, String other) {
+      cb.append("ret = ("+fname+" == "+other+")? 0 : ("+fname+"?1:-1);\n");
     }
     
-    String getJavaCompareToWrapper(String fname, String other) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("          boolean ee1 = ("+fname+".toBoolean()\n");
-      sb.append("          boolean ee2 = ("+other+".toBoolean()\n");
-      sb.append("          ret = (ee1 == ee2)? 0 :(ee1?-1:1);\n");
-      sb.append("        }\n");
-      return sb.toString();
-    }
-    
-    public String genJavaCompareTo(String fname, String other) {
-        return "    ret = ("+fname+" == "+other+")? 0 : ("+fname+"?1:-1);\n";
-    }
-    
-    public String genJavaHashCode(String fname) {
-        return "     ret = ("+fname+")?0:1;\n";
+    void genHashCode(CodeBuffer cb, String fname) {
+      cb.append("ret = ("+fname+")?0:1;\n");
     }
     
     // In Binary format, boolean is written as byte. true = 1, false = 0
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           if ("+l+"<1) {\n");
-      sb.append("             throw new IOException(\"Boolean is exactly 1 byte. Provided buffer is smaller.\");\n");
-      sb.append("           }\n");
-      sb.append("           "+s+"++; "+l+"--;\n");
-      sb.append("        }\n");
-      return sb.toString();
+    void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
+      cb.append("{\n");
+      cb.append("if ("+l+"<1) {\n");
+      cb.append("throw new java.io.IOException(\"Boolean is exactly 1 byte."+
+          " Provided buffer is smaller.\");\n");
+      cb.append("}\n");
+      cb.append(s+"++; "+l+"--;\n");
+      cb.append("}\n");
     }
     
     // In Binary format, boolean is written as byte. true = 1, false = 0
-    public String genJavaCompareBytes() {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           if (l1<1 || l2<1) {\n");
-      sb.append("             throw new IOException(\"Boolean is exactly 1 byte. Provided buffer is smaller.\");\n");
-      sb.append("           }\n");
-      sb.append("           if (b1[s1] != b2[s2]) {\n");
-      sb.append("             return (b1[s1]<b2[s2])? -1 : 0;\n");
-      sb.append("           }\n");
-      sb.append("           s1++; s2++; l1--; l2--;\n");
-      sb.append("        }\n");
-      return sb.toString();
+    void genCompareBytes(CodeBuffer cb) {
+      cb.append("{\n");
+      cb.append("if (l1<1 || l2<1) {\n");
+      cb.append("throw new java.io.IOException(\"Boolean is exactly 1 byte."+
+          " Provided buffer is smaller.\");\n");
+      cb.append("}\n");
+      cb.append("if (b1[s1] != b2[s2]) {\n");
+      cb.append("return (b1[s1]<b2[s2])? -1 : 0;\n");
+      cb.append("}\n");
+      cb.append("s1++; s2++; l1--; l2--;\n");
+      cb.append("}\n");
     }
+  }
+  
+  /** Creates a new instance of JBoolean */
+  public JBoolean() {
+    setJavaType(new JavaBoolean());
+    setCppType(new CppType("bool"));
+    setCType(new CType());
+  }
+  
+  String getSignature() {
+    return "z";
+  }
 }

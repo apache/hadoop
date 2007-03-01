@@ -18,47 +18,54 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.record.compiler.JType.CType;
+import org.apache.hadoop.record.compiler.JType.CppType;
+
 /**
- *
+ * Code generator for "long" type
  * @author Milind Bhandarkar
  */
 public class JLong extends JType {
+  
+  class JavaLong extends JavaType {
     
-    /** Creates a new instance of JLong */
-    public JLong() {
-        super("int64_t", "long", "Long", "Long", "toLong");
+    JavaLong() {
+      super("long", "Long", "Long");
     }
     
-    public String getSignature() {
-        return "l";
+    void genHashCode(CodeBuffer cb, String fname) {
+      cb.append("ret = (int) ("+fname+"^("+fname+">>>32));\n");
     }
     
-    public String genJavaHashCode(String fname) {
-        return "    ret = (int) ("+fname+"^("+fname+">>>32));\n";
+    void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
+      cb.append("{\n");
+      cb.append("long i = org.apache.hadoop.record.Utils.readVLong("+b+", "+s+");\n");
+      cb.append("int z = org.apache.hadoop.record.Utils.getVIntSize(i);\n");
+      cb.append(s+"+=z; "+l+"-=z;\n");
+      cb.append("}\n");
     }
     
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           long i = WritableComparator.readVLong("+b+", "+s+");\n");
-      sb.append("           int z = WritableUtils.getVIntSize(i);\n");
-      sb.append("           "+s+"+=z; "+l+"-=z;\n");
-      sb.append("        }\n");
-      return sb.toString();
+    void genCompareBytes(CodeBuffer cb) {
+      cb.append("{\n");
+      cb.append("long i1 = org.apache.hadoop.record.Utils.readVLong(b1, s1);\n");
+      cb.append("long i2 = org.apache.hadoop.record.Utils.readVLong(b2, s2);\n");
+      cb.append("if (i1 != i2) {\n");
+      cb.append("return ((i1-i2) < 0) ? -1 : 0;\n");
+      cb.append("}\n");
+      cb.append("int z1 = org.apache.hadoop.record.Utils.getVIntSize(i1);\n");
+      cb.append("int z2 = org.apache.hadoop.record.Utils.getVIntSize(i2);\n");
+      cb.append("s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
+      cb.append("}\n");
     }
-    
-    public String genJavaCompareBytes() {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           long i1 = WritableComparator.readVLong(b1, s1);\n");
-      sb.append("           long i2 = WritableComparator.readVLong(b2, s2);\n");
-      sb.append("           if (i1 != i2) {\n");
-      sb.append("             return ((i1-i2) < 0) ? -1 : 0;\n");
-      sb.append("           }\n");
-      sb.append("           int z1 = WritableUtils.getVIntSize(i1);\n");
-      sb.append("           int z2 = WritableUtils.getVIntSize(i2);\n");
-      sb.append("           s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
-      sb.append("        }\n");
-      return sb.toString();
-    }
+  }
+  /** Creates a new instance of JLong */
+  public JLong() {
+    setJavaType(new JavaLong());
+    setCppType(new CppType("int64_t"));
+    setCType(new CType());
+  }
+  
+  String getSignature() {
+    return "l";
+  }
 }

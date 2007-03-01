@@ -20,13 +20,9 @@ package org.apache.hadoop.record;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.DataInputStream;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import javax.xml.parsers.ParserConfigurationException;
-import org.xml.sax.SAXException;
 
 /**
  * Front-end interface to deserializers. Also acts as a factory

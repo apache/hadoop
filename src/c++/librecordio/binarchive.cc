@@ -17,6 +17,8 @@
  */
 
 #include "binarchive.hh"
+#include <rpc/xdr.h>
+
 
 using namespace hadoop;
 
@@ -77,15 +79,19 @@ static void deserializeInt(int32_t& t, InStream& stream)
     t = b;
     return;
   }
-  b = (b < -124) ? -(b + 124) : -(b + 120);
+  bool isNegative = (b < -124);
+  b = isNegative ? -(b + 124) : -(b + 120);
   uint8_t barr[b];
   if (b != stream.read(barr, b)) {
-    throw new IOException("Error deserializing long");
+    throw new IOException("Error deserializing int");
   }
   t = 0;
   for (int idx = 0; idx < b; idx++) {
     t = t << 8;
     t |= (barr[idx] & 0xFF);
+  }
+  if (isNegative) {
+    t |= 0x80000000;
   }
 }
 
@@ -131,7 +137,8 @@ static void deserializeLong(int64_t& t, InStream& stream)
     t = b;
     return;
   }
-  b = (b < -120) ? -(b + 120) : -(b + 112);
+  bool isNegative = (b < -120);
+  b = isNegative ? -(b + 120) : -(b + 112);
   uint8_t barr[b];
   if (b != stream.read(barr, b)) {
     throw new IOException("Error deserializing long.");
@@ -140,6 +147,9 @@ static void deserializeLong(int64_t& t, InStream& stream)
   for (int idx = 0; idx < b; idx++) {
     t = t << 8;
     t |= (barr[idx] & 0xFF);
+  }
+  if (isNegative) {
+    t |= 0x8000000000000000L;
   }
 }
 

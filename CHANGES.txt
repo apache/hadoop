@@ -168,6 +168,9 @@ Trunk (unreleased changes)
 50. HADOOP-1020.  Fix a bug in Path resolution, and a with unit tests
     on Windows.  (cutting)
 
+51. HADOOP-941.  Enhance record facility.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

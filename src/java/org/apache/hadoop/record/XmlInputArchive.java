@@ -27,8 +27,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
+
 /**
  *
  * @author Milind Bhandarkar
@@ -199,7 +198,7 @@ class XmlInputArchive implements InputArchive {
         return Double.parseDouble(v.getValue());
     }
     
-    public Text readString(String tag) throws IOException {
+    public String readString(String tag) throws IOException {
         Value v = next();
         if (!"string".equals(v.getType())) {
             throw new IOException("Error deserializing "+tag+".");
@@ -207,7 +206,7 @@ class XmlInputArchive implements InputArchive {
         return Utils.fromXMLString(v.getValue());
     }
     
-    public BytesWritable readBuffer(String tag) throws IOException {
+    public Buffer readBuffer(String tag) throws IOException {
         Value v = next();
         if (!"string".equals(v.getType())) {
             throw new IOException("Error deserializing "+tag+".");

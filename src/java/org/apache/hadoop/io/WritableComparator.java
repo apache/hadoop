@@ -177,7 +177,8 @@ public class WritableComparator implements Comparator {
       if (len >= -112) {
           return len;
       }
-      len = (len < -120) ? -(len + 120) : -(len + 112);
+      boolean isNegative = (len < -120);
+      len = isNegative ? -(len + 120) : -(len + 112);
       if (start+1+len>bytes.length)
           throw new IOException(
                   "Not enough number of bytes for a zero-compressed integer");
@@ -186,7 +187,7 @@ public class WritableComparator implements Comparator {
           i = i << 8;
           i = i | (bytes[start+1+idx] & 0xFF);
       }
-      return i;
+      return (isNegative ? (i | 0x8000000000000000L) : i);
   }
   
   /**

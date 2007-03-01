@@ -21,8 +21,6 @@ package org.apache.hadoop.record;
 import java.io.IOException;
 import java.util.TreeMap;
 import java.util.ArrayList;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
 
 /**
  * Interface that alll the serializers have to implement.
@@ -36,8 +34,8 @@ public interface OutputArchive {
     public void writeLong(long l, String tag) throws IOException;
     public void writeFloat(float f, String tag) throws IOException;
     public void writeDouble(double d, String tag) throws IOException;
-    public void writeString(Text s, String tag) throws IOException;
-    public void writeBuffer(BytesWritable buf, String tag)
+    public void writeString(String s, String tag) throws IOException;
+    public void writeBuffer(Buffer buf, String tag)
         throws IOException;
     public void writeRecord(Record r, String tag) throws IOException;
     public void startRecord(Record r, String tag) throws IOException;

@@ -19,85 +19,28 @@
 package org.apache.hadoop.record.compiler;
 
 /**
+ * A thin wrappper around record field.
  *
  * @author Milind Bhandarkar
  */
-public class JField {
-    private JType mType;
-    private String mName;
-    /**
-     * Creates a new instance of JField
-     */
-    public JField(JType type, String name) {
-        mType = type;
-        mName = name;
-    }
-    
-    public String getSignature() {
-        return mType.getSignature();
-    }
-    
-    public String genCppDecl() {
-        return mType.genCppDecl(mName);
-    }
-    
-    public String genJavaDecl() {
-        return mType.genJavaDecl(mName);
-    }
-    
-    public String genJavaConstructorParam(int fIdx) {
-        return mType.genJavaConstructorParam(fIdx);
-    }
-    
-    public String getName() {
-        return "m"+mName;
-    }
-    
-    public String getTag() {
-        return mName;
-    }
-    
-    public JType getType() {
-        return mType;
-    }
-    
-    public String genCppGetSet(int fIdx) {
-        return mType.genCppGetSet(mName, fIdx);
-    }
-    
-    public String genJavaGetSet(int fIdx) {
-        return mType.genJavaGetSet(mName, fIdx);
-    }
-    
-    public String genJavaWriteMethodName() {
-        return mType.genJavaWriteMethod(getName(), getTag());
-    }
-    
-    public String genJavaReadMethodName() {
-        return mType.genJavaReadMethod(getName(), getTag());
-    }
-    
-    public String genJavaCompareTo() {
-        return mType.genJavaCompareTo(getName(), "peer."+getName());
-    }
-    
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      return mType.genJavaSlurpBytes(b,s,l);
-    }
-    
-    public String genJavaCompareBytes() {
-      return mType.genJavaCompareBytes();
-    }
-    
-    public String genJavaEquals() {
-        return mType.genJavaEquals(getName(), "peer."+getName());
-    }
-    
-    public String genJavaHashCode() {
-        return mType.genJavaHashCode(getName());
-    }
-
-    public String genJavaConstructorSet(int fIdx) {
-        return mType.genJavaConstructorSet(mName, fIdx);
-    }
+public class JField<T> {
+  
+  private String name;
+  private T type;
+  
+  /**
+   * Creates a new instance of JField
+   */
+  public JField(String name, T type) {
+    this.type = type;
+    this.name = name;
+  }
+  
+  String getName() {
+    return name;
+  }
+  
+  T getType() {
+    return type;
+  }
 }

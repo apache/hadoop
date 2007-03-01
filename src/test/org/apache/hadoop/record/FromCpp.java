@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.record.test;
+package org.apache.hadoop.record;
 
-import org.apache.hadoop.record.RecordReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,8 +25,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.TreeMap;
 import junit.framework.*;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
 
 /**
  *
@@ -56,10 +53,10 @@ public class FromCpp extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new BytesWritable());
-            r1.setVectorVal(new ArrayList());
-            r1.setMapVal(new TreeMap());
+            r1.setStringVal("random text");
+            r1.setBufferVal(new Buffer());
+            r1.setVectorVal(new ArrayList<String>());
+            r1.setMapVal(new TreeMap<String,String>());
             FileInputStream istream = new FileInputStream(tmpfile);
             RecordReader in = new RecordReader(istream, "binary");
             RecRecord1 r2 = new RecRecord1();
@@ -82,10 +79,10 @@ public class FromCpp extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new BytesWritable());
-            r1.setVectorVal(new ArrayList());
-            r1.setMapVal(new TreeMap());
+            r1.setStringVal("random text");
+            r1.setBufferVal(new Buffer());
+            r1.setVectorVal(new ArrayList<String>());
+            r1.setMapVal(new TreeMap<String,String>());
             FileInputStream istream = new FileInputStream(tmpfile);
             RecordReader in = new RecordReader(istream, "csv");
             RecRecord1 r2 = new RecRecord1();
@@ -108,10 +105,10 @@ public class FromCpp extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal(new Text("random text"));
-            r1.setBufferVal(new BytesWritable());
-            r1.setVectorVal(new ArrayList());
-            r1.setMapVal(new TreeMap());
+            r1.setStringVal("random text");
+            r1.setBufferVal(new Buffer());
+            r1.setVectorVal(new ArrayList<String>());
+            r1.setMapVal(new TreeMap<String,String>());
             FileInputStream istream = new FileInputStream(tmpfile);
             RecordReader in = new RecordReader(istream, "xml");
             RecRecord1 r2 = new RecRecord1();

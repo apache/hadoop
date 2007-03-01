@@ -35,9 +35,10 @@ import java.io.IOException;
 public class Rcc {
     private static String language = "java";
     private static String destDir = ".";
-    private static ArrayList recFiles = new ArrayList();
+    private static ArrayList<String> recFiles = new ArrayList<String>();
+    private static ArrayList<String> cmdargs = new ArrayList<String>();
     private static JFile curFile;
-    private static Hashtable recTab;
+    private static Hashtable<String,JRecord> recTab;
     private static String curDir = ".";
     private static String curFileName;
     private static String curModuleName;
@@ -56,26 +57,28 @@ public class Rcc {
                 "--destdir".equalsIgnoreCase(args[i])) {
                 destDir = args[i+1];
                 i++;
+            } else if (args[i].startsWith("-")) {
+              String arg = args[i].substring(1);
+              if (arg.startsWith("-")) {
+                arg = arg.substring(1);
+              }
+              cmdargs.add(arg.toLowerCase());
             } else {
                 recFiles.add(args[i]);
             }
-        }
-        if (!"c++".equals(language) && !"java".equals(language)) {
-            System.err.println("Cannot recognize language:" + language);
-            return 1;
         }
         if (recFiles.size() == 0) {
             System.err.println("No record files specified. Exiting.");
             return 1;
         }
         for (int i=0; i<recFiles.size(); i++) {
-            curFileName = (String) recFiles.get(i);
+            curFileName = recFiles.get(i);
             File file = new File(curFileName);
             try {
                 FileReader reader = new FileReader(file);
                 Rcc parser = new Rcc(reader);
                 try {
-                    recTab = new Hashtable();
+                    recTab = new Hashtable<String,JRecord>();
                     curFile = parser.Input();
                 } catch (ParseException e) {
                     System.err.println(e.toString());
@@ -91,7 +94,7 @@ public class Rcc {
                 return 1;
             }
             try {
-                int retCode = curFile.genCode(language, destDir);
+                int retCode = curFile.genCode(language, destDir, cmdargs);
                 if (retCode != 0) { return retCode; }
             } catch (IOException e) {
                 System.err.println(e.toString());
@@ -170,10 +173,10 @@ TOKEN :
 
 JFile Input() :
 {
-    ArrayList ilist = new ArrayList();
-    ArrayList rlist = new ArrayList();
+    ArrayList<JFile> ilist = new ArrayList<JFile>();
+    ArrayList<JRecord> rlist = new ArrayList<JRecord>();
     JFile i;
-    ArrayList l;
+    ArrayList<JRecord> l;
 }
 {
     (
@@ -227,10 +230,10 @@ JFile Include() :
     }
 }
 
-ArrayList Module() :
+ArrayList<JRecord> Module() :
 {
     String mName;
-    ArrayList rlist;
+    ArrayList<JRecord> rlist;
 }
 {
     <MODULE_TKN>
@@ -258,9 +261,9 @@ String ModuleName() :
     { return name; }
 }
 
-ArrayList RecordList() :
+ArrayList<JRecord> RecordList() :
 {
-    ArrayList rlist = new ArrayList();
+    ArrayList<JRecord> rlist = new ArrayList<JRecord>();
     JRecord r;
 }
 {
@@ -274,9 +277,9 @@ ArrayList RecordList() :
 JRecord Record() :
 {
     String rname;
-    ArrayList flist = new ArrayList();
+    ArrayList<JField<JType>> flist = new ArrayList<JField<JType>>();
     Token t;
-    JField f;
+    JField<JType> f;
 }
 {
     <RECORD_TKN>
@@ -297,7 +300,7 @@ JRecord Record() :
     }
 }
 
-JField Field() :
+JField<JType> Field() :
 {
     JType jt;
     Token t;
@@ -305,7 +308,7 @@ JField Field() :
 {
     jt = Type()
     t = <IDENT_TKN>
-    { return new JField(jt, t.image); }
+    { return new JField<JType>(t.image, jt); }
 }
 
 JType Type() :
@@ -340,7 +343,7 @@ JType Type() :
         if (rname.indexOf('.', 0) < 0) {
             rname = curModuleName + "." + rname;
         }
-        JRecord r = (JRecord) recTab.get(rname);
+        JRecord r = recTab.get(rname);
         if (r == null) {
             System.out.println("Type " + rname + " not known. Exiting.");
             System.exit(1);

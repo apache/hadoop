@@ -18,43 +18,52 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.record.compiler.JType.CType;
+import org.apache.hadoop.record.compiler.JType.CppType;
+
 /**
- *
+ * Code generator for "byte" type.
  * @author Milind Bhandarkar
  */
 public class JByte extends JType {
+  
+  class JavaByte extends JavaType {
     
-    /** Creates a new instance of JByte */
-    public JByte() {
-        super("int8_t", "byte", "Byte", "Byte", "toByte");
+    JavaByte() {
+      super("byte", "Byte", "Byte");
     }
     
-    public String getSignature() {
-        return "b";
+    void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
+      cb.append("{\n");
+      cb.append("if ("+l+"<1) {\n");
+      cb.append("throw new java.io.IOException(\"Byte is exactly 1 byte."+
+          " Provided buffer is smaller.\");\n");
+      cb.append("}\n");
+      cb.append(s+"++; "+l+"--;\n");
+      cb.append("}\n");
     }
     
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           if ("+l+"<1) {\n");
-      sb.append("             throw new IOException(\"Byte is exactly 1 byte. Provided buffer is smaller.\");\n");
-      sb.append("           }\n");
-      sb.append("           "+s+"++; "+l+"--;\n");
-      sb.append("        }\n");
-      return sb.toString();
+    void genCompareBytes(CodeBuffer cb) {
+      cb.append("{\n");
+      cb.append("if (l1<1 || l2<1) {\n");
+      cb.append("throw new java.io.IOException(\"Byte is exactly 1 byte."+
+          " Provided buffer is smaller.\");\n");
+      cb.append("}\n");
+      cb.append("if (b1[s1] != b2[s2]) {\n");
+      cb.append("return (b1[s1]<b2[s2])?-1:0;\n");
+      cb.append("}\n");
+      cb.append("s1++; s2++; l1--; l2--;\n");
+      cb.append("}\n");
     }
-    
-    public String genJavaCompareBytes() {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
-      sb.append("           if (l1<1 || l2<1) {\n");
-      sb.append("             throw new IOException(\"Byte is exactly 1 byte. Provided buffer is smaller.\");\n");
-      sb.append("           }\n");
-      sb.append("           if (b1[s1] != b2[s2]) {\n");
-      sb.append("             return (b1[s1]<b2[s2])?-1:0;\n");
-      sb.append("           }\n");
-      sb.append("           s1++; s2++; l1--; l2--;\n");
-      sb.append("        }\n");
-      return sb.toString();
-    }
+  }
+  
+  public JByte() {
+    setJavaType(new JavaByte());
+    setCppType(new CppType("int8_t"));
+    setCType(new CType());
+  }
+  
+  String getSignature() {
+    return "b";
+  }
 }

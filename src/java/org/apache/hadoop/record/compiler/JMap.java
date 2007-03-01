@@ -23,149 +23,152 @@ package org.apache.hadoop.record.compiler;
  * @author Milind Bhandarkar
  */
 public class JMap extends JCompType {
-   
-    static private int level = 0;
+  
+  static private int level = 0;
+  
+  static private String getLevel() { return Integer.toString(level); }
+  
+  static private void incrLevel() { level++; }
+  
+  static private void decrLevel() { level--; }
+  
+  static private String getId(String id) { return id+getLevel(); }
+  
+  private JType keyType;
+  private JType valueType;
+  
+  class JavaMap extends JavaCompType {
     
-    static private String getLevel() { return Integer.toString(level); }
+    JType.JavaType key;
+    JType.JavaType value;
     
-    static private void incrLevel() { level++; }
-    
-    static private void decrLevel() { level--; }
-    
-    static private String getId(String id) { return id+getLevel(); }
-    
-    private JType mKey;
-    private JType mValue;
-    
-    /** Creates a new instance of JMap */
-    public JMap(JType t1, JType t2) {
-        super(" ::std::map<"+t1.getCppType()+","+t2.getCppType()+">",
-                "java.util.TreeMap", "Map", "java.util.TreeMap");
-        mKey = t1;
-        mValue = t2;
+    JavaMap(JType.JavaType key, JType.JavaType value) {
+      super("java.util.TreeMap<"+key.getWrapperType()+","+value.getWrapperType()+">",
+          "Map",
+          "java.util.TreeMap<"+key.getWrapperType()+","+value.getWrapperType()+">");
+      this.key = key;
+      this.value = value;
     }
     
-    public String getSignature() {
-        return "{" + mKey.getSignature() + mValue.getSignature() +"}";
-    }
-    
-    public String genJavaCompareTo(String fname, String other) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("    {\n");
-      sb.append("      java.util.Set "+getId("set1")+" = "+fname+".keySet();\n");
-      sb.append("      java.util.Set "+getId("set2")+" = "+other+".keySet();\n");
-      sb.append("      java.util.Iterator "+getId("miter1")+" = "+
+    void genCompareTo(CodeBuffer cb, String fname, String other) {
+      String setType = "java.util.Set<"+key.getWrapperType()+"> ";
+      String iterType = "java.util.Iterator<"+key.getWrapperType()+"> ";
+      cb.append("{\n");
+      cb.append(setType+getId("set1")+" = "+fname+".keySet();\n");
+      cb.append(setType+getId("set2")+" = "+other+".keySet();\n");
+      cb.append(iterType+getId("miter1")+" = "+
           getId("set1")+".iterator();\n");
-      sb.append("      java.util.Iterator "+getId("miter2")+" = "+
+      cb.append(iterType+getId("miter2")+" = "+
           getId("set2")+".iterator();\n");
-      sb.append("      for(; "+getId("miter1")+".hasNext() && "+
+      cb.append("for(; "+getId("miter1")+".hasNext() && "+
           getId("miter2")+".hasNext(); ) {\n");
-      sb.append("        "+mKey.getJavaWrapperType()+" "+getId("k1")+
-          " = ("+mKey.getJavaWrapperType()+") "+getId("miter1")+".next();\n");
-      sb.append("        "+mKey.getJavaWrapperType()+" "+getId("k2")+
-          " = ("+mKey.getJavaWrapperType()+") "+getId("miter2")+".next();\n");
-      sb.append(mKey.genJavaCompareToWrapper(getId("k1"), getId("k2")));
-      sb.append("         if (ret != 0) { return ret; }\n");
-      sb.append("      }\n");
-      sb.append("      ret = ("+getId("set1")+".size() - "+getId("set2")+".size());\n");
-      sb.append("    }\n");
-      return sb.toString();
+      cb.append(key.getType()+" "+getId("k1")+
+          " = "+getId("miter1")+".next();\n");
+      cb.append(key.getType()+" "+getId("k2")+
+          " = "+getId("miter2")+".next();\n");
+      key.genCompareTo(cb, getId("k1"), getId("k2"));
+      cb.append("if (ret != 0) { return ret; }\n");
+      cb.append("}\n");
+      cb.append("ret = ("+getId("set1")+".size() - "+getId("set2")+".size());\n");
+      cb.append("}\n");
     }
     
-    public String genJavaCompareToWrapper(String fname, String other) {
-      return genJavaCompareTo(fname, other);
-    }
-    
-    public String genJavaReadWrapper(String fname, String tag, boolean decl) {
-        StringBuffer ret = new StringBuffer("");
-        if (decl) {
-            ret.append("    java.util.TreeMap "+fname+";\n");
-        }
-        ret.append("    {\n");
-        incrLevel();
-        ret.append("      org.apache.hadoop.record.Index "+getId("midx")+" = a_.startMap(\""+tag+"\");\n");
-        ret.append("      "+fname+"=new java.util.TreeMap();\n");
-        ret.append("      for (; !"+getId("midx")+".done(); "+getId("midx")+".incr()) {\n");
-        ret.append(mKey.genJavaReadWrapper(getId("k"),getId("k"),true));
-        ret.append(mValue.genJavaReadWrapper(getId("v"),getId("v"),true));
-        ret.append("        "+fname+".put("+getId("k")+","+getId("v")+");\n");
-        ret.append("      }\n");
-        ret.append("    a_.endMap(\""+tag+"\");\n");
-        decrLevel();
-        ret.append("    }\n");
-        return ret.toString();
-    }
-    
-    public String genJavaReadMethod(String fname, String tag) {
-        return genJavaReadWrapper(fname, tag, false);
-    }
-    
-    public String genJavaWriteWrapper(String fname, String tag) {
-        StringBuffer ret = new StringBuffer("    {\n");
-        incrLevel();
-        ret.append("      a_.startMap("+fname+",\""+tag+"\");\n");
-        ret.append("      java.util.Set "+getId("es")+" = "+fname+".entrySet();\n");
-        ret.append("      for(java.util.Iterator "+getId("midx")+" = "+getId("es")+".iterator(); "+getId("midx")+".hasNext(); ) {\n");
-        ret.append("        java.util.Map.Entry "+getId("me")+" = (java.util.Map.Entry) "+getId("midx")+".next();\n");
-        ret.append("        "+mKey.getJavaWrapperType()+" "+getId("k")+" = ("+mKey.getJavaWrapperType()+") "+getId("me")+".getKey();\n");
-        ret.append("        "+mValue.getJavaWrapperType()+" "+getId("v")+" = ("+mValue.getJavaWrapperType()+") "+getId("me")+".getValue();\n");
-        ret.append(mKey.genJavaWriteWrapper(getId("k"),getId("k")));
-        ret.append(mValue.genJavaWriteWrapper(getId("v"),getId("v")));
-        ret.append("      }\n");
-        ret.append("      a_.endMap("+fname+",\""+tag+"\");\n");
-        ret.append("    }\n");
-        decrLevel();
-        return ret.toString();
-    }
-    
-    public String genJavaWriteMethod(String fname, String tag) {
-        return genJavaWriteWrapper(fname, tag);
-    }
-    
-    public String genJavaSlurpBytes(String b, String s, String l) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
+    void genReadMethod(CodeBuffer cb, String fname, String tag, boolean decl) {
+      if (decl) {
+        cb.append(getType()+" "+fname+";\n");
+      }
+      cb.append("{\n");
       incrLevel();
-      sb.append("           int "+getId("mi")+
-          " = WritableComparator.readVInt("+b+", "+s+");\n");
-      sb.append("           int "+getId("mz")+
-          " = WritableUtils.getVIntSize("+getId("mi")+");\n");
-      sb.append("           "+s+"+="+getId("mz")+"; "+l+"-="+getId("mz")+";\n");
-      sb.append("           for (int "+getId("midx")+" = 0; "+getId("midx")+
-          " < "+getId("mi")+"; "+getId("midx")+"++) {");
-      sb.append(mKey.genJavaSlurpBytes(b,s,l));
-      sb.append(mValue.genJavaSlurpBytes(b,s,l));
-      sb.append("           }\n");
+      cb.append("org.apache.hadoop.record.Index "+getId("midx")+" = a_.startMap(\""+tag+"\");\n");
+      cb.append(fname+"=new "+getType()+"();\n");
+      cb.append("for (; !"+getId("midx")+".done(); "+getId("midx")+".incr()) {\n");
+      key.genReadMethod(cb, getId("k"),getId("k"),true);
+      value.genReadMethod(cb, getId("v"),getId("v"),true);
+      cb.append(fname+".put("+getId("k")+","+getId("v")+");\n");
+      cb.append("}\n");
+      cb.append("a_.endMap(\""+tag+"\");\n");
       decrLevel();
-      sb.append("        }\n");
-      return sb.toString();
+      cb.append("}\n");
     }
     
-    public String genJavaCompareBytes() {
-      StringBuffer sb = new StringBuffer();
-      sb.append("        {\n");
+    void genWriteMethod(CodeBuffer cb, String fname, String tag) {
+      String setType = "java.util.Set<java.util.Map.Entry<"+
+          key.getWrapperType()+","+value.getWrapperType()+">> ";
+      String entryType = "java.util.Map.Entry<"+
+          key.getWrapperType()+","+value.getWrapperType()+"> ";
+      String iterType = "java.util.Iterator<java.util.Map.Entry<"+
+          key.getWrapperType()+","+value.getWrapperType()+">> ";
+      cb.append("{\n");
       incrLevel();
-      sb.append("           int "+getId("mi1")+
-          " = WritableComparator.readVInt(b1, s1);\n");
-      sb.append("           int "+getId("mi2")+
-          " = WritableComparator.readVInt(b2, s2);\n");
-      sb.append("           int "+getId("mz1")+
-          " = WritableUtils.getVIntSize("+getId("mi1")+");\n");
-      sb.append("           int "+getId("mz2")+
-          " = WritableUtils.getVIntSize("+getId("mi2")+");\n");
-      sb.append("           s1+="+getId("mz1")+"; s2+="+getId("mz2")+
+      cb.append("a_.startMap("+fname+",\""+tag+"\");\n");
+      cb.append(setType+getId("es")+" = "+fname+".entrySet();\n");
+      cb.append("for("+iterType+getId("midx")+" = "+getId("es")+".iterator(); "+getId("midx")+".hasNext(); ) {\n");
+      cb.append(entryType+getId("me")+" = "+getId("midx")+".next();\n");
+      cb.append(key.getType()+" "+getId("k")+" = "+getId("me")+".getKey();\n");
+      cb.append(value.getType()+" "+getId("v")+" = "+getId("me")+".getValue();\n");
+      key.genWriteMethod(cb, getId("k"),getId("k"));
+      value.genWriteMethod(cb, getId("v"),getId("v"));
+      cb.append("}\n");
+      cb.append("a_.endMap("+fname+",\""+tag+"\");\n");
+      cb.append("}\n");
+      decrLevel();
+    }
+    
+    void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
+      cb.append("{\n");
+      incrLevel();
+      cb.append("int "+getId("mi")+
+          " = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
+      cb.append("int "+getId("mz")+
+          " = org.apache.hadoop.record.Utils.getVIntSize("+getId("mi")+");\n");
+      cb.append(s+"+="+getId("mz")+"; "+l+"-="+getId("mz")+";\n");
+      cb.append("for (int "+getId("midx")+" = 0; "+getId("midx")+
+          " < "+getId("mi")+"; "+getId("midx")+"++) {");
+      key.genSlurpBytes(cb, b,s,l);
+      value.genSlurpBytes(cb, b,s,l);
+      cb.append("}\n");
+      decrLevel();
+      cb.append("}\n");
+    }
+    
+    void genCompareBytes(CodeBuffer cb) {
+      cb.append("{\n");
+      incrLevel();
+      cb.append("int "+getId("mi1")+
+          " = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
+      cb.append("int "+getId("mi2")+
+          " = org.apache.hadoop.record.Utils.readVInt(b2, s2);\n");
+      cb.append("int "+getId("mz1")+
+          " = org.apache.hadoop.record.Utils.getVIntSize("+getId("mi1")+");\n");
+      cb.append("int "+getId("mz2")+
+          " = org.apache.hadoop.record.Utils.getVIntSize("+getId("mi2")+");\n");
+      cb.append("s1+="+getId("mz1")+"; s2+="+getId("mz2")+
           "; l1-="+getId("mz1")+"; l2-="+getId("mz2")+";\n");
-      sb.append("           for (int "+getId("midx")+" = 0; "+getId("midx")+
+      cb.append("for (int "+getId("midx")+" = 0; "+getId("midx")+
           " < "+getId("mi1")+" && "+getId("midx")+" < "+getId("mi2")+
           "; "+getId("midx")+"++) {");
-      sb.append(mKey.genJavaCompareBytes());
-      sb.append(mValue.genJavaSlurpBytes("b1", "s1", "l1"));
-      sb.append(mValue.genJavaSlurpBytes("b2", "s2", "l2"));
-      sb.append("           }\n");
-      sb.append("           if ("+getId("mi1")+" != "+getId("mi2")+
+      key.genCompareBytes(cb);
+      value.genSlurpBytes(cb, "b1", "s1", "l1");
+      value.genSlurpBytes(cb, "b2", "s2", "l2");
+      cb.append("}\n");
+      cb.append("if ("+getId("mi1")+" != "+getId("mi2")+
           ") { return ("+getId("mi1")+"<"+getId("mi2")+")?-1:0; }\n");
       decrLevel();
-      sb.append("        }\n");
-      return sb.toString();
+      cb.append("}\n");
     }
+  }
+  
+  /** Creates a new instance of JMap */
+  public JMap(JType t1, JType t2) {
+    setJavaType(new JavaMap(t1.getJavaType(), t2.getJavaType()));
+    setCppType(new CppType(" ::std::map<"+t1.getCppType().getType()+","+
+        t2.getCppType().getType()+">"));
+    setCType(new CType());
+    keyType = t1;
+    valueType = t2;
+  }
+  
+  String getSignature() {
+    return "{" + keyType.getSignature() + valueType.getSignature() +"}";
+  }
 }
