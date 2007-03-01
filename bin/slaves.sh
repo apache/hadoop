@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # 
 # Run a shell command on all slave hosts.
 #
