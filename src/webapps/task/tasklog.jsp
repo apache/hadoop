@@ -4,7 +4,8 @@
   import="javax.servlet.http.*"
   import="java.io.*"
 %>
-<%
+<%!
+  String taskId = null;
   long logOffset = -1, logLength = -1;
   boolean tailLog = false;
   long tailSize = 1024;
@@ -12,8 +13,93 @@
   boolean entireLog = false;
   boolean plainText = false;
   TaskLog.LogFilter filter = null;
+
+  private void printTaskLog(JspWriter out, TaskLog.LogFilter filter) 
+  throws IOException {
+    if (!plainText) {
+      out.println("<br><b><u>" + filter + " logs</u></b><br>");
+      out.println("<table border=2 cellpadding=\"2\">");
+    }
+    
+    boolean gotRequiredData = true;
+    try {
+  	  TaskLog.Reader taskLogReader = new TaskLog.Reader(taskId, filter);
+      byte[] b = null;
+  	  int bytesRead = 0;
+  	  int targetLength = 0;
+
+  	  if (entireLog) {
+  	    b = taskLogReader.fetchAll();
+  	    targetLength = bytesRead = b.length;
+  	  } else {
+  	    if (tailLog) {
+  		  b = new byte[(int)tailSize];
+  		  targetLength = (int)tailSize;
+  		  bytesRead = taskLogReader.tail(b, 0, b.length, tailSize, tailWindow);
+  	    } else {
+  		  b = new byte[(int)logLength];
+  		  targetLength = (int)logLength;
+  		  bytesRead = taskLogReader.read(b, 0, b.length, logOffset, logLength);
+    	}
+  	  }
+  	  
+  	  if (bytesRead != targetLength && 
+  	    targetLength <= taskLogReader.getTotalLogSize()) {
+  	    if( !plainText) {
+	  	  out.println("<b>Warning: Could not fetch " + targetLength + 
+	  		  " bytes from the task-logs; probably purged!</b><br/>");
+  	    }else{
+	  	  out.println("Warning: Could not fetch " + targetLength + 
+  		  " bytes from the task-logs; probably purged!");
+  	    }
+  	    gotRequiredData = false;
+  	  }
+	  String logData = new String(b, 0, bytesRead);
+	  if (!plainText) {
+	    out.print("<tr><td><pre>" + logData + "</pre></td></tr>");
+	  } else {
+	    out.print(logData);
+	  }
+    } catch (IOException ioe) {
+  	  out.println("Failed to retrieve '" + filter + "' logs for task: " + taskId);
+    }
   
-  String taskId = request.getParameter("taskid");
+    if( !plainText ) {
+     out.println("</table>\n");
+    } 
+
+    if (!entireLog && !plainText) {
+      if (tailLog) {
+        if (gotRequiredData) {
+  	  	  out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
+  		    "&tail=true&tailsize=" + tailSize + "&tailwindow=" + (tailWindow+1) + 
+  		    "&filter=" + filter + "'>Earlier</a>");
+  	    }
+  	    if (tailWindow > 1) {
+          out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
+  	  	    "&tail=true&tailsize=" + tailSize + "&tailwindow=" + (tailWindow-1) 
+  	  	    + "&filter=" + filter + "'>Later</a>");
+  	    }
+      } else {
+        if (gotRequiredData) {
+      	  out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
+    		"&tail=false&off=" + Math.max(0, (logOffset-logLength)) +
+  		  	"&len=" + logLength + "&filter=" + filter + "'>Earlier</a>");
+  	    }
+  	    out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
+  		  "&tail=false&off=" + (logOffset+logLength) +
+  		  "&len=" + logLength + "&filter=" + filter + "'>Later</a>");
+      }
+    }
+    
+    if (!plainText) {
+      out.println("<hr><br>");
+    }
+  }
+%>
+
+<%  
+  taskId = request.getParameter("taskid");
   if (taskId == null) {
   	out.println("<h2>Missing 'taskid' for fetching logs!</h2>");
   	return;
@@ -78,91 +164,18 @@
   
   if( !plainText ) {
     out.println("<html>");
-    out.println("<title>Task Logs: '" + taskId + "' (" + logFilter + ")</title>"); 
+    out.println("<title>Task Logs: '" + taskId + "'</title>"); 
     out.println("<body>");
-    out.println("<h1>Task Logs from " +  taskId + "'s " + logFilter + "</h1><br>"); 
-    out.println("<h2>'" + logFilter + "':</h2>");
-    out.println("<pre>");
-
-  }
-%>
-
-<%
-  boolean gotRequiredData = true;
-  try {
-  	TaskLog.Reader taskLogReader = new TaskLog.Reader(taskId, filter);
-    byte[] b = null;
-  	int bytesRead = 0;
-  	int targetLength = 0;
-
-  	if (entireLog) {
-  	  b = taskLogReader.fetchAll();
-  	  targetLength = bytesRead = b.length;
-  	} else {
-  	  if (tailLog) {
-  		b = new byte[(int)tailSize];
-  		targetLength = (int)tailSize;
-  		bytesRead = taskLogReader.tail(b, 0, b.length, tailSize, tailWindow);
-  	  } else {
-  		b = new byte[(int)logLength];
-  		targetLength = (int)logLength;
-  		bytesRead = taskLogReader.read(b, 0, b.length, logOffset, logLength);
-   	  }
-  	}
-  	  
-  	if (bytesRead != targetLength && 
-  	  targetLength <= taskLogReader.getTotalLogSize()) {
-  	  if( !plainText) {
-	  	  out.println("<b>Warning: Could not fetch " + targetLength + 
-	  		  " bytes from the task-logs; probably purged!</b><br/>");
-  	  }else{
-	  	  out.println("Warning: Could not fetch " + targetLength + 
-  		  " bytes from the task-logs; probably purged!");
-  	  }
-  	  gotRequiredData = false;
-  	}
-	String logData = new String(b, 0, bytesRead);
-	out.println(logData);
-  } catch (IOException ioe) {
-  	out.println("Failed to retrieve '" + logFilter + "' logs for task: " + taskId);
-  }
-  
-  if( !plainText ) {
-    out.println("</pre>");
-  }
-%>
-<%
-  if (!entireLog && !plainText) {
-    if (tailLog) {
-      if (gotRequiredData) {
-  	  	out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
-  		    "&tail=true&tailsize=" + tailSize + "&tailwindow=" + (tailWindow+1) + 
-  		    "&filter=" + logFilter + "'>Earlier</a>");
-  	  }
-  	  if (tailWindow > 1) {
-        out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
-  	  	    "&tail=true&tailsize=" + tailSize + "&tailwindow=" + (tailWindow-1) 
-  	  	    + "&filter=" + logFilter + "'>Later</a>");
-  	  }
-    } else {
-      if (gotRequiredData) {
-      	out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
-    		"&tail=false&off=" + Math.max(0, (logOffset-logLength)) +
-  		  	"&len=" + logLength + "&filter=" + logFilter + "'>Earlier</a>");
-  	  }
-  	  out.println("<a href='/tasklog.jsp?taskid=" + taskId + 
-  		  "&tail=false&off=" + (logOffset+logLength) +
-  		  "&len=" + logLength + "&filter=" + logFilter + "'>Later</a>");
-    }
-  }
-  if( !plainText ) {
-    String otherFilter = (logFilter.equals("stdout") ? "stderr" : "stdout");
-    out.println("<br><br>See <a href='/tasklog.jsp?taskid=" + taskId + 
-        "&all=true&filter=" + otherFilter + "'>" + otherFilter + "</a>" +
-        " logs of this task");
-    out.println("<hr>");
+    out.println("<h1>Task Logs: '" +  taskId +  "'</h1><br>"); 
+    
+    printTaskLog(out, TaskLog.LogFilter.STDOUT);
+    printTaskLog(out, TaskLog.LogFilter.STDERR);
+    printTaskLog(out, TaskLog.LogFilter.SYSLOG);
+    
     out.println("<a href='http://lucene.apache.org/hadoop'>Hadoop</a>, 2006.<br>");
     out.println("</body>");
     out.println("</html>");
-  }
+  } else {
+    printTaskLog(out, filter);
+  } 
 %>

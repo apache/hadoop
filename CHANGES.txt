@@ -171,6 +171,9 @@ Trunk (unreleased changes)
 51. HADOOP-941.  Enhance record facility.
     (Milind Bhandarkar via cutting)
 
+52. HADOOP-1000.  Fix so that log messages in task subprocesses are
+    not written to a task's standard error.  (Arun C Murthy via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

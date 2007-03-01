@@ -63,6 +63,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.log4j.LogManager;
 
 /*******************************************************
  * TaskTracker is a process that starts and tracks MR Tasks
@@ -1451,6 +1452,11 @@ public class TaskTracker
               ByteArrayOutputStream baos = new ByteArrayOutputStream();
               throwable.printStackTrace(new PrintStream(baos));
               umbilical.reportDiagnosticInfo(taskid, baos.toString());
+          } finally {
+            // Shutting down log4j of the child-vm... 
+            // This assumes that on return from Task.run() 
+            // there is no more logging done.
+            LogManager.shutdown();
           }
         }
 

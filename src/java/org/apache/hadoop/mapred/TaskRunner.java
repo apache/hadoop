@@ -49,9 +49,17 @@ abstract class TaskRunner extends Thread {
     this.tracker = tracker;
     this.conf = conf;
     this.taskStdOutLogWriter = 
-      new TaskLog.Writer(conf, t.getTaskId(), TaskLog.LogFilter.STDOUT);
+      new TaskLog.Writer(t.getTaskId(), TaskLog.LogFilter.STDOUT, 
+              this.conf.getInt("mapred.userlog.num.splits", 4), 
+              this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024, 
+              this.conf.getBoolean("mapred.userlog.purgesplits", true),
+              this.conf.getInt("mapred.userlog.retain.hours", 12));
     this.taskStdErrLogWriter = 
-      new TaskLog.Writer(conf, t.getTaskId(), TaskLog.LogFilter.STDERR);
+      new TaskLog.Writer(t.getTaskId(), TaskLog.LogFilter.STDERR, 
+              this.conf.getInt("mapred.userlog.num.splits", 4), 
+              this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024, 
+              this.conf.getBoolean("mapred.userlog.purgesplits", true),
+              this.conf.getInt("mapred.userlog.retain.hours", 12));
   }
 
   public Task getTask() { return t; }
@@ -166,7 +174,7 @@ abstract class TaskRunner extends Thread {
       classPath.append(sep);
       classPath.append(workDir);
       //  Build exec child jmv args.
-      Vector vargs = new Vector(8);
+      Vector<String> vargs = new Vector<String>(8);
       File jvm =                                  // use same jvm as parent
         new File(new File(System.getProperty("java.home"), "bin"), "java");
 
@@ -209,6 +217,15 @@ abstract class TaskRunner extends Thread {
       // Add classpath.
       vargs.add("-classpath");
       vargs.add(classPath.toString());
+
+      // Setup the log4j prop
+      vargs.add("-Dhadoop.log.dir=" + System.getProperty("hadoop.log.dir"));
+      vargs.add("-Dhadoop.root.logger=INFO,TLA");
+      vargs.add("-Dhadoop.tasklog.taskid=" + t.getTaskId());
+      vargs.add("-Dhadoop.tasklog.noKeepSplits=" + conf.getInt("mapred.userlog.num.splits", 4)); 
+      vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + (conf.getInt("mapred.userlog.limit.kb", 100) * 1024));
+      vargs.add("-Dhadoop.tasklog.purgeLogSplits=" + conf.getBoolean("mapred.userlog.purgesplits", true));
+      vargs.add("-Dhadoop.tasklog.logsRetainHours=" + conf.getInt("mapred.userlog.retain.hours", 12)); 
 
       // Add java.library.path; necessary for native-hadoop libraries
       String libraryPath = System.getProperty("java.library.path");

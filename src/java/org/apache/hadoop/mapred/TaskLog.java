@@ -45,6 +45,10 @@ class TaskLog {
     }
   }
 
+  private static File getTaskLogDir(String taskid, LogFilter filter) {
+    return new File(new File(LOG_DIR, taskid), filter.getPrefix());
+  }
+  
   /**
    * The filter for userlogs.
    */
@@ -53,7 +57,10 @@ class TaskLog {
     STDOUT ("stdout"),
 
     /** Log on the stderr of the task. */
-    STDERR ("stderr");
+    STDERR ("stderr"),
+    
+    /** Log on the map-reduce system logs of the task. */
+    SYSLOG ("syslog");
     
     private String prefix;
     
@@ -102,20 +109,17 @@ class TaskLog {
      * @param taskId taskid of the task
      * @param filter the {@link LogFilter} to apply on userlogs.
      */
-    Writer(JobConf conf, String taskId, LogFilter filter) {
-      this.conf = conf;
+    Writer(String taskId, LogFilter filter, 
+            int noKeepSplits, long totalLogSize, boolean purgeLogSplits, int logsRetainHours) {
       this.taskId = taskId;
       this.filter = filter;
       
-      this.taskLogDir = new File(new File(LOG_DIR, this.taskId), 
-                                this.filter.getPrefix());
+      this.taskLogDir = getTaskLogDir(this.taskId, this.filter);
       
-      noKeepSplits = this.conf.getInt("mapred.userlog.num.splits", 4);
-      splitFileSize = 
-        (this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024) / noKeepSplits; 
-      purgeLogSplits = this.conf.getBoolean("mapred.userlog.purgesplits", 
-                                      true);
-      logsRetainHours = this.conf.getInt("mapred.userlog.retain.hours", 12);
+      this.noKeepSplits = noKeepSplits;
+      this.splitFileSize = (totalLogSize / noKeepSplits);
+      this.purgeLogSplits = purgeLogSplits;
+      this.logsRetainHours = logsRetainHours;
     }
     
     private static class TaskLogsPurgeFilter implements FileFilter {
@@ -220,7 +224,7 @@ class TaskLog {
      * 
      * @throws IOException
      */
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
       // Close the final split
       if (out != null) {
         out.close();
@@ -306,8 +310,7 @@ class TaskLog {
       this.taskId = taskId;
       this.filter = filter;
       
-      this.taskLogDir = new File(new File(LOG_DIR, this.taskId), 
-                                this.filter.getPrefix());
+      this.taskLogDir = getTaskLogDir(this.taskId, this.filter);
     }
 
     private static class IndexRecord {
