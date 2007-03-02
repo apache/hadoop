@@ -465,7 +465,30 @@
     <subant target="test">
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
-  </target>   
+  </target>
+	
+  <target name="checkstyle" depends="check-for-checkstyle" if="checkstyle.present">
+ 	<taskdef resource="checkstyletask.properties"
+      classpath="${lib.dir}/checkstyle-all-4.3.jar"/>
+  	
+	<mkdir dir="${test.build.dir}"/>
+  	
+  	<checkstyle config="${test.src.dir}/checkstyle.xml"
+  		failOnViolation="false">
+      <fileset dir="${src.dir}" includes="**/*.java"/>
+      <formatter type="xml" toFile="${test.build.dir}/checkstyle-errors.xml"/>
+  	</checkstyle>
+  	
+  	<xslt style="${test.src.dir}/checkstyle-noframes-sorted.xsl"
+        in="${test.build.dir}/checkstyle-errors.xml"
+        out="${test.build.dir}/checkstyle-errors.html"/>
+  </target>
+	
+  <target name="check-for-checkstyle">
+    <available property="checkstyle.present"
+    	file="${lib.dir}/checkstyle-all-4.3.jar">
+    </available>  	
+  </target>
   
   <target name="test" depends="test-core, test-contrib">
   </target>

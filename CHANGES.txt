@@ -185,6 +185,10 @@ Trunk (unreleased changes)
 56. HADOOP-1032.  Permit one to specify jars that will be cached
     across multiple jobs.  (Gautam Kowshik via cutting)
 
+57. HADOOP-1051.  Add optional checkstyle task to build.xml.  To use
+    this developers must download the (LGPL'd) checkstyle jar
+    themselves.  (tomwhite via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 
