@@ -179,6 +179,10 @@ Trunk (unreleased changes)
 
 54. HADOOP-1046. Clean up tmp from partially received stale block files. (ab)
 
+55. HADOOP-1041.  Optimize mapred counter implementation.  Also group
+    counters by their declaring Enum.  (David Bowen via cutting)
+
+
 Release 0.11.2 - 2007-02-16
 
  1. HADOOP-1009.  Fix an infinite loop in the HDFS namenode.

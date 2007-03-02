@@ -32,7 +32,7 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
      *Changing the versionID to 2L since the getTaskCompletionEvents method has
      *changed
      */
-    public static final long versionID = 2L;
+    public static final long versionID = 3L;
     /**
      * Submit a Job for execution.  Returns the latest profile for
      * that job.
@@ -60,6 +60,11 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
      */
     public JobStatus getJobStatus(String jobid) throws IOException;
 
+    /**
+     * Grab the current job counters
+     */
+    public Counters getJobCounters(String jobid) throws IOException;
+    
     /**
      * Grab a bunch of info on the map tasks that make up the job
      */

@@ -216,6 +216,14 @@
       <compilerarg line="${javac.args}" />
       <classpath refid="classpath"/>
     </javac>    
+    
+    <copy todir="${build.classes}">
+      <fileset 
+        dir="${src.dir}" 
+        includes="**/*.properties"
+      />
+    </copy>
+     
 
     </target>
 

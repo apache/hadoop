@@ -36,7 +36,9 @@
 %>
 
 <html>
-<title>Hadoop <%=type%> task list for <%=jobid%> on <%=trackerLabel%></title>
+  <head>
+    <title>Hadoop <%=type%> task list for <%=jobid%> on <%=trackerLabel%></title>
+  </head>
 <body>
 <h1>Hadoop <%=type%> task list for 
 <a href="/jobdetails.jsp?jobid=<%=jobid%>"><%=jobid%></a> on 
@@ -67,10 +69,10 @@
                     report.getTaskId() + "</a></td>");
          out.print("<td>" + StringUtils.formatPercent(report.getProgress(),2) + 
                    "</td>");
-         out.print("<td>"  + report.getState() + "</td>");
-         out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, report.getStartTime(),0) + "</td>");
+         out.print("<td>"  + report.getState() + "<br/></td>");
+         out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, report.getStartTime(),0) + "<br/></td>");
          out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
-             report.getFinishTime(), report.getStartTime()) + "</td>");
+             report.getFinishTime(), report.getStartTime()) + "<br/></td>");
          String[] diagnostics = report.getDiagnostics();
          out.print("<td><pre>");
          for (int j = 0; j < diagnostics.length ; j++) {

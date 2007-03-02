@@ -54,7 +54,7 @@ public class JobStatus implements Writable {
     private int runState;
     private long startTime;
     private String user;
-    private Counters counters = new Counters();
+    
     /**
      */
     public JobStatus() {
@@ -118,7 +118,7 @@ public class JobStatus implements Writable {
     public void setRunState(int state) {
       this.runState = state;
     }
-    
+
     /** 
      * Set the start time of the job
      * @param startTime The startTime of the job
@@ -140,15 +140,6 @@ public class JobStatus implements Writable {
       */
     public String getUsername() { return this.user;};
     
-    /**
-     * @param counters Counters for the job.
-     */
-    void setCounters(Counters counters) { this.counters = counters; }
-    /**
-     * @return the counters for the job
-     */
-    public Counters getCounters() { return counters; }
-    
     ///////////////////////////////////////
     // Writable
     ///////////////////////////////////////
@@ -159,8 +150,8 @@ public class JobStatus implements Writable {
         out.writeInt(runState);
         out.writeLong(startTime);
         UTF8.writeString(out, user);
-        counters.write(out);
     }
+
     public void readFields(DataInput in) throws IOException {
         this.jobid = UTF8.readString(in);
         this.mapProgress = in.readFloat();
@@ -168,6 +159,5 @@ public class JobStatus implements Writable {
         this.runState = in.readInt();
         this.startTime = in.readLong();
         this.user = UTF8.readString(in);
-        counters.readFields(in);
     }
 }

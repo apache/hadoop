@@ -176,8 +176,11 @@ public class JobClient extends ToolBase implements MRConstants  {
                 "reduce() completion: " + status.reduceProgress();
         }
         
-        public Counters getCounters() {
-          return status.getCounters();
+        /**
+         * Returns the counters for this job
+         */
+        public Counters getCounters() throws IOException {
+          return jobSubmitClient.getJobCounters(getJobID());
         }
     }
 

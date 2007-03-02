@@ -424,6 +424,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           numJobsCompleted = 0;
         }
         metricsRecord.update();
+        
+        if (tracker != null) {
+          for (JobInProgress jip : tracker.getRunningJobs()) {
+              jip.updateMetrics();
+          }
+        }
       }
       
       synchronized void launchMap() {
@@ -929,6 +935,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         }
         return v;
     }
+    /**
+     * Version that is called from a timer thread, and therefore needs to be
+     * careful to synchronize.
+     */
+    public synchronized List<JobInProgress> getRunningJobs() {
+      synchronized (jobs) {
+        return (List<JobInProgress>) runningJobs();
+      }
+    }
     public Vector failedJobs() {
         Vector v = new Vector();
         for (Iterator it = jobs.values().iterator(); it.hasNext(); ) {
@@ -1422,6 +1437,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             return null;
         }
     }
+    public synchronized Counters getJobCounters(String jobid) {
+        JobInProgress job = (JobInProgress) jobs.get(jobid);
+        if (job != null) {
+          return job.getCounters();
+        } else {
+          return null;
+        }
+    }
     public synchronized TaskReport[] getMapTaskReports(String jobid) {
         JobInProgress job = (JobInProgress) jobs.get(jobid);
         if (job == null) {
@@ -1545,7 +1568,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             JobStatus status = jip.getStatus();
             if (status.getRunState() == JobStatus.RUNNING 
 		|| status.getRunState() == JobStatus.PREP) {
-		status.setStartTime(jip.getStartTime());
+                status.setStartTime(jip.getStartTime());
                 status.setUsername(jip.getProfile().getUser());
                 v.add(status);
             }

@@ -14,7 +14,7 @@
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
 
-  public void generateJobTable(JspWriter out, String label, Vector jobs) throws IOException {
+  public void generateJobTable(JspWriter out, String label, Vector jobs, int refresh) throws IOException {
       out.print("<center>\n");
       out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
       out.print("<tr><td align=\"center\" colspan=\"9\"><b>" + label + " Jobs </b></td></tr>\n");
@@ -39,7 +39,8 @@
           int completedReduces = job.finishedReduces();
           String name = profile.getJobName();
 
-          out.print( "<tr><td><a href=\"jobdetails.jsp?jobid=" + jobid + "\">" +
+          out.print("<tr><td><a href=\"jobdetails.jsp?jobid=" + jobid + 
+                     "&refresh=" + refresh + "\">" +
                      jobid + "</a></td>" +
                   "<td>" + profile.getUser() + "</td>" 
                     + "<td>" + ("".equals(name) ? "&nbsp;" : name) + "</td>" + 
@@ -95,20 +96,20 @@
 
 <h2>Running Jobs</h2>
 <%
-    generateJobTable(out, "Running", tracker.runningJobs());
+    generateJobTable(out, "Running", tracker.runningJobs(), 10);
 %>
 <hr>
 
 <h2>Completed Jobs</h2>
 <%
-    generateJobTable(out, "Completed", tracker.completedJobs());
+    generateJobTable(out, "Completed", tracker.completedJobs(), 0);
 %>
 
 <hr>
 
 <h2>Failed Jobs</h2>
 <%
-    generateJobTable(out, "Failed", tracker.failedJobs());
+    generateJobTable(out, "Failed", tracker.failedJobs(), 0);
 %>
 
 <hr>

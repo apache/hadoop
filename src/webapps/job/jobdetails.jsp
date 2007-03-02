@@ -3,6 +3,7 @@
   import="javax.servlet.*"
   import="javax.servlet.http.*"
   import="java.io.*"
+  import="java.text.*"
   import="java.util.*"
   import="java.text.DecimalFormat"
   import="org.apache.hadoop.mapred.*"
@@ -10,6 +11,7 @@
 %>
 
 <%!
+  
   JobTracker tracker = JobTracker.getTracker();
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
@@ -37,21 +39,53 @@
       failures += task.numTaskFailures();
     }
     out.print("<tr><th><a href=\"/jobtasks.jsp?jobid=" + jobId + 
-              "&type="+ kind + "&pagenum=1\">" + kind + "</a></th><td>" + 
+              "&type="+ kind + "&pagenum=1\">" + kind + 
+              "</a></th><td align=\"right\">" + 
               StringUtils.formatPercent(completePercent, 2) +
-              "</td><td>" + totalTasks + "</td><td>" + 
+              "</td><td align=\"right\">" + 
+              totalTasks + 
+              "</td><td align=\"right\">" + 
               (totalTasks - runningTasks - finishedTasks - killedTasks) + 
-              "</td><td>" +
-              runningTasks + "</td><td>" +
-              finishedTasks + "</td><td>" +
+              "</td><td align=\"right\">" +
+              runningTasks + 
+              "</td><td align=\"right\">" +
+              finishedTasks + 
+              "</td><td align=\"right\">" +
               killedTasks +
-              "</td><td><a href=\"/jobfailures.jsp?jobid=" + jobId +
+              "</td><td align=\"right\"><a href=\"/jobfailures.jsp?jobid=" + jobId +
               "&kind=" + kind + "\">" +
               failures + "</a></td></tr>\n");
   }
-           
-  private void printJobStatus(JspWriter out, 
-                              String jobId) throws IOException {
+%>       
+<%   
+    String jobId = request.getParameter("jobid"); 
+    String refreshParam = request.getParameter("refresh");
+    
+    int refresh = 60; // refresh every 60 seconds by default
+    if (refreshParam != null) {
+        try {
+            refresh = Integer.parseInt(refreshParam);
+        }
+        catch (NumberFormatException ignored) {
+        }
+    }
+%>
+
+<html>
+<head>
+  <% 
+  if (refresh != 0) {
+      %>
+      <meta http-equiv="refresh" content="<%=refresh%>">
+      <%
+  }
+  %>
+<title>Hadoop <%=jobId%> on <%=trackerName%></title>
+</head>
+<body>
+<h1>Hadoop <%=jobId%> on <a href="/jobtracker.jsp"><%=trackerName%></a></h1>
+
+<% 
     JobInProgress job = (JobInProgress) tracker.getJob(jobId);
     if (job == null) {
       out.print("<b>Job " + jobId + " not found.</b><br>\n");
@@ -99,33 +133,53 @@
                      job.getReduceTasks());
     out.print("</table>\n");
     
-    Counters counters = status.getCounters();
-    out.println("<p/>");
-    out.println("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
-    out.println("<tr><th>Counter</th><th>Value</th></tr>");
-    for (String counter : counters.getCounterNames()) {
-      out.print("<tr><td>" + counter + "</td><td>" + counters.getCounter(counter) +
-                "</td></tr>\n");
+    %>
+    <p/>
+    <table border=2 cellpadding="5" cellspacing="2">
+    <tr>
+      <th><br/></th>
+      <th>Counter</th>
+      <th>Map</th>
+      <th>Reduce</th>
+      <th>Total</th>
+    </tr>
+    <%
+    Counters mapCounters = job.getMapCounters();
+    Counters reduceCounters = job.getReduceCounters();
+    Counters totalCounters = Counters.sum(mapCounters,reduceCounters);
+    
+    for (String groupName : totalCounters.getGroupNames()) {
+      Counters.Group totalGroup = totalCounters.getGroup(groupName);
+      Counters.Group mapGroup = mapCounters.getGroup(groupName);
+      Counters.Group reduceGroup = reduceCounters.getGroup(groupName);
+      
+      Format decimal = new DecimalFormat();
+      
+      boolean isFirst = true;
+      for (String counter : totalGroup.getCounterNames()) {
+        String mapValue = decimal.format(mapGroup.getCounter(counter));
+        String reduceValue = decimal.format(reduceGroup.getCounter(counter));
+        String totalValue = decimal.format(totalGroup.getCounter(counter));
+        %>
+        <tr>
+          <%
+          if (isFirst) {
+            isFirst = false;
+            %>
+            <td rowspan="<%=totalGroup.size()%>"><%=totalGroup.getDisplayName()%></td>
+            <%
+          }
+          %>
+          <td><%=totalGroup.getDisplayName(counter)%></td>
+          <td align="right"><%=mapValue%></td>
+          <td align="right"><%=reduceValue%></td>
+          <td align="right"><%=totalValue%></td>
+        </tr>
+        <%
+      }
     }
-    out.print("</table>\n");
-  }
-%>
-
-<%
-    String jobid = request.getParameter("jobid");
-%>
-
-<html>
-<head>
-<meta http-equiv="refresh" content=60>
-<title>Hadoop <%=jobid%> on <%=trackerName%></title>
-</head>
-<body>
-<h1>Hadoop <%=jobid%> on <a href="/jobtracker.jsp"><%=trackerName%></a></h1>
-
-<% 
-    printJobStatus(out, jobid); 
-%>
+    %>
+    </table>
 
 <hr>
 <a href="/jobtracker.jsp">Go back to JobTracker</a><br>

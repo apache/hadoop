@@ -62,9 +62,12 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private Path localFile;
     private FileSystem localFs;
     
-    // Contains the counters summed over all the tasks which
+    // Counters summed over all the map/reduce tasks which
     // have successfully completed
-    private Counters counters = new Counters();
+    private Counters completedTaskCounters = new Counters();
+    
+    // Current counters, including incomplete task(s)
+    private Counters currentCounters = new Counters();
 
     public long getProtocolVersion(String protocol, long clientVersion) {
       return TaskUmbilicalProtocol.versionID;
@@ -181,7 +184,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     public Task getTask(String taskid) { return null; }
 
     public void progress(String taskId, float progress, String state, 
-                         TaskStatus.Phase phase, Counters taskStats) {
+                         TaskStatus.Phase phase, Counters taskCounters) {
       LOG.info(state);
       float taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
@@ -190,9 +193,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
       } else {
         status.setReduceProgress(progress);
       }
+      currentCounters = Counters.sum(completedTaskCounters, taskCounters);
       
       // ignore phase
-      updateStatusCounters(taskStats);
     }
     
     /**
@@ -201,21 +204,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
      * successfully completed
      */ 
     private void updateCounters(Task task) {
-      counters.incrAllCounters(task.getCounters());
-      status.setCounters(counters);
-    }
-
-    /**
-     * Sets status counters to the sum of (1) the counters from
-     * all completed tasks, and (2) the counters from a particular
-     * task in progress.
-     * @param taskCounters Counters from a task that is in progress
-     */
-    private void updateStatusCounters(Counters taskCounters) {
-      Counters newStats = new Counters();
-      newStats.incrAllCounters(counters);
-      newStats.incrAllCounters(taskCounters);
-      status.setCounters(newStats);
+      completedTaskCounters.incrAllCounters(task.getCounters());
     }
 
     public void reportDiagnosticInfo(String taskid, String trace) {
@@ -272,6 +261,11 @@ class LocalJobRunner implements JobSubmissionProtocol {
   public JobStatus getJobStatus(String id) {
     Job job = (Job)jobs.get(id);
     return job.status;
+  }
+  
+  public Counters getJobCounters(String id) {
+    Job job = (Job)jobs.get(id);
+    return job.currentCounters;
   }
 
   public String getFilesystemName() throws IOException {

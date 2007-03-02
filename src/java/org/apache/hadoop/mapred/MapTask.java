@@ -50,6 +50,7 @@ import org.apache.hadoop.mapred.ReduceTask.ValuesIterator;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.mapred.Task.Counter.*;
 
 /** A Map task. */
 class MapTask extends Task {
@@ -63,13 +64,6 @@ class MapTask extends Task {
 
   {   // set phase for this task
     setPhase(TaskStatus.Phase.MAP); 
-  }
-  
-  private enum Counter { 
-    INPUT_RECORDS, 
-    INPUT_BYTES, 
-    OUTPUT_RECORDS,
-    OUTPUT_BYTES
   }
 
   public MapTask() {}
@@ -161,8 +155,8 @@ class MapTask extends Task {
           setProgress(getProgress());
           long beforePos = getPos();
           boolean ret = rawIn.next(key, value);
-          reporter.incrCounter(Counter.INPUT_RECORDS, 1);
-          reporter.incrCounter(Counter.INPUT_BYTES, (getPos() - beforePos));
+          reporter.incrCounter(MAP_INPUT_RECORDS, 1);
+          reporter.incrCounter(MAP_INPUT_BYTES, (getPos() - beforePos));
           return ret;
         }
         public long getPos() throws IOException { return rawIn.getPos(); }
@@ -324,8 +318,8 @@ class MapTask extends Task {
         int partNumber = partitioner.getPartition(key, value, partitions);
         sortImpl[partNumber].addKeyValue(keyOffset, keyLength, valLength);
 
-        reporter.incrCounter(Counter.OUTPUT_RECORDS, 1);
-        reporter.incrCounter(Counter.OUTPUT_BYTES,
+        reporter.incrCounter(MAP_OUTPUT_RECORDS, 1);
+        reporter.incrCounter(MAP_OUTPUT_BYTES,
                              (keyValBuffer.getLength() - keyOffset));
 
         //now check whether we need to spill to disk

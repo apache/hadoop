@@ -84,7 +84,8 @@ class JobInProgress {
     private LocalFileSystem localFs;
     private String uniqueString;
     
-    private Counters counters = new Counters();
+    private Counters mapCounters = new Counters();
+    private Counters reduceCounters = new Counters();
     private MetricsRecord jobMetrics;
   
     /**
@@ -131,6 +132,25 @@ class JobInProgress {
         this.jobMetrics.setTag("jobName", conf.getJobName());
     }
 
+    /**
+     * Called periodically by JobTrackerMetrics to update the metrics for
+     * this job.
+     */
+    public void updateMetrics() {
+        Counters counters = getCounters();
+        for (String groupName : counters.getGroupNames()) {
+          Counters.Group group = counters.getGroup(groupName);
+          jobMetrics.setTag("group", group.getDisplayName());
+          
+          for (String counter : group.getCounterNames()) {
+            long value = group.getCounter(counter);
+            jobMetrics.setTag("counter", group.getDisplayName(counter));
+            jobMetrics.setMetric("value", (float) value);
+            jobMetrics.update();
+          }
+        }
+    }
+    
     /**
      * Construct the splits, etc.  This is invoked from an async
      * thread so that split-computation doesn't block anyone.
@@ -354,29 +374,41 @@ class JobInProgress {
                            (progressDelta / reduces.length)));
           }
         }
-        
-        //
-        // Update counters by summing over all tasks in progress
-        //
-        Counters newCounters = new Counters();
-        for (TaskInProgress mapTask : maps) {
-          newCounters.incrAllCounters(mapTask.getCounters());
-        }
-        for (TaskInProgress reduceTask : reduces) {
-          newCounters.incrAllCounters(reduceTask.getCounters());
-        }
-        this.status.setCounters(newCounters);
-        
-        //
-        // Send counter data to the metrics package.
-        //
-        for (String counter : newCounters.getCounterNames()) {
-          long value = newCounters.getCounter(counter);
-          jobMetrics.setTag("counter", counter);
-          jobMetrics.setMetric("value", (float) value);
-          jobMetrics.update();
-        }
-    }   
+    }
+    
+    /**
+     *  Returns map phase counters by summing over all map tasks in progress.
+     */
+    public synchronized Counters getMapCounters() {
+      return sumTaskCounters(maps);
+    }
+    
+    /**
+     *  Returns map phase counters by summing over all map tasks in progress.
+     */
+    public synchronized Counters getReduceCounters() {
+      return sumTaskCounters(reduces);
+    }
+    
+    /**
+     *  Returns the total job counters, by adding together the map and the
+     *  reduce counters.
+     */
+    public Counters getCounters() {
+      return Counters.sum(getMapCounters(), getReduceCounters());
+    }
+    
+    /**
+     * Returns a Counters instance representing the sum of all the counters in
+     * the array of tasks in progress.
+     */
+    private Counters sumTaskCounters(TaskInProgress[] tips) {
+      Counters counters = new Counters();
+      for (TaskInProgress tip : tips) {
+        counters.incrAllCounters(tip.getCounters());
+      }
+      return counters;
+    }
 
     /////////////////////////////////////////////////////
     // Create/manage tasks

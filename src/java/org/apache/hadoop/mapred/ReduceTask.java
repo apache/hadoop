@@ -44,6 +44,8 @@ import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.mapred.Task.Counter.*;
+
 /** A Reduce task. */
 class ReduceTask extends Task {
 
@@ -54,8 +56,6 @@ class ReduceTask extends Task {
          public Writable newInstance() { return new ReduceTask(); }
        });
   }
-
-  private enum Counter { INPUT_RECORDS, OUTPUT_RECORDS }
   
   private int numMaps;
   private boolean sortComplete;
@@ -296,7 +296,7 @@ class ReduceTask extends Task {
         public void collect(WritableComparable key, Writable value)
           throws IOException {
           out.write(key, value);
-          reporter.incrCounter(Counter.OUTPUT_RECORDS, 1);
+          reporter.incrCounter(REDUCE_OUTPUT_RECORDS, 1);
           reportProgress(umbilical);
         }
       };
@@ -309,7 +309,7 @@ class ReduceTask extends Task {
                                   keyClass, valClass, umbilical, job);
       values.informReduceProgress();
       while (values.more()) {
-        reporter.incrCounter(Counter.INPUT_RECORDS, 1);
+        reporter.incrCounter(REDUCE_INPUT_RECORDS, 1);
         reducer.reduce(values.getKey(), values, collector, reporter);
         values.nextKey();
         values.informReduceProgress();

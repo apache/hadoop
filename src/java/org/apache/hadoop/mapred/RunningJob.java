@@ -80,5 +80,8 @@ public interface RunningJob {
     public TaskCompletionEvent[] getTaskCompletionEvents(
         int startFrom) throws IOException;
     
-    public Counters getCounters();
+    /**
+     * Gets the counters for this job.
+     */
+    public Counters getCounters() throws IOException;
 }

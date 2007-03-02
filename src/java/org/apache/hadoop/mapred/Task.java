@@ -35,6 +35,17 @@ abstract class Task implements Writable, Configurable {
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.mapred.TaskRunner");
 
+  // Counters used by Task subclasses
+  protected static enum Counter { 
+    MAP_INPUT_RECORDS, 
+    MAP_OUTPUT_RECORDS,
+    MAP_INPUT_BYTES, 
+    MAP_OUTPUT_BYTES,
+    REDUCE_INPUT_RECORDS,
+    REDUCE_OUTPUT_RECORDS
+  }
+  
+  
   ////////////////////////////////////////////
   // Fields
   ////////////////////////////////////////////
@@ -152,6 +163,7 @@ abstract class Task implements Writable, Configurable {
   private transient long nextProgressTime =
     System.currentTimeMillis() + PROGRESS_INTERVAL;
 
+  // Current counters
   private transient Counters counters = new Counters();
   
   public abstract boolean isMapTask();
@@ -174,8 +186,7 @@ abstract class Task implements Writable, Configurable {
         public void incrCounter(Enum key, long amount) {
             Counters counters = getCounters();
             if (counters != null) {
-              String name = key.getDeclaringClass().getName()+"#"+key.toString();
-              counters.incrCounter(name, amount);
+              counters.incrCounter(key, amount);
             }
           }
       };
