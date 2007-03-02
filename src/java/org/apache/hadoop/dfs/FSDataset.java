@@ -435,8 +435,18 @@ class FSDataset implements FSConstants {
             // Is it already in the create process?
             //
             if (ongoingCreates.containsKey(b)) {
+              // check how old is the temp file - wait 1 hour
+              File tmp = (File)ongoingCreates.get(b);
+              if ((System.currentTimeMillis() - tmp.lastModified()) < 3600 * 1000) {
                 throw new IOException("Block " + b +
                     " has already been started (though not completed), and thus cannot be created.");
+              } else {
+                // stale temp file - remove
+                if (!tmp.delete()) {
+                  throw new IOException("Can't write the block - unable to remove stale temp file " + tmp);
+                }
+                ongoingCreates.remove(b);
+              }
             }
             FSVolume v = null;
             synchronized ( volumes ) {

@@ -177,6 +177,7 @@ Trunk (unreleased changes)
 53. HADOOP-1037.  Fix bin/slaves.sh, which currently only works with
     /bin/bash, to specify /bin/bash rather than /bin/sh.  (cutting)
 
+54. HADOOP-1046. Clean up tmp from partially received stale block files. (ab)
 
 Release 0.11.2 - 2007-02-16
 
