@@ -189,6 +189,9 @@ Trunk (unreleased changes)
     this developers must download the (LGPL'd) checkstyle jar
     themselves.  (tomwhite via cutting)
 
+58. HADOOP-1049.  Fix a race condition in IPC client.
+    (Devaraj Das via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

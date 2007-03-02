@@ -155,6 +155,10 @@ public class Client {
             //inUse to infinity (everytime getConnection is called inUse is
             //incremented)!
             inUse = 0;
+            // set socket to null so that the next call to setupIOstreams
+            // can start the process of connect all over again.
+            socket.close();
+            socket = null;
             throw ie;
           }
           failures++;
