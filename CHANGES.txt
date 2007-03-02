@@ -182,6 +182,9 @@ Trunk (unreleased changes)
 55. HADOOP-1041.  Optimize mapred counter implementation.  Also group
     counters by their declaring Enum.  (David Bowen via cutting)
 
+56. HADOOP-1032.  Permit one to specify jars that will be cached
+    across multiple jobs.  (Gautam Kowshik via cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

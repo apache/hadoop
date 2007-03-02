@@ -171,6 +171,45 @@ abstract class TaskRunner extends Thread {
         classPath.append(jobCacheDir);
        
       }
+
+  		// include the user specified classpath
+  		
+  		//archive paths
+  		Path[] archiveClasspaths = DistributedCache.getArchiveClassPaths(conf);
+  		if (archiveClasspaths != null && archives != null) {
+  			Path[] localArchives = DistributedCache
+  					.getLocalCacheArchives(conf);
+  			if (localArchives != null){
+  				for (int i=0;i<archives.length;i++){
+  					for(int j=0;j<archiveClasspaths.length;j++){
+  						if(archives[i].getPath().equals(
+  								archiveClasspaths[j].toString())){
+  							classPath.append(sep);
+  							classPath.append(localArchives[i]
+  									.toString());
+  						}
+  					}
+  				}
+  			}
+  		}
+  		//file paths
+  		Path[] fileClasspaths = DistributedCache.getFileClassPaths(conf);
+  		if(fileClasspaths!=null && files != null) {
+  			Path[] localFiles = DistributedCache
+  					.getLocalCacheFiles(conf);
+  			if (localFiles != null) {
+  				for (int i = 0; i < files.length; i++) {
+  					for (int j = 0; j < fileClasspaths.length; j++) {
+  						if (files[i].getPath().equals(
+  								fileClasspaths[j].toString())) {
+  							classPath.append(sep);
+  							classPath.append(localFiles[i].toString());
+  						}
+  					}
+  				}
+  			}
+  		}
+
       classPath.append(sep);
       classPath.append(workDir);
       //  Build exec child jmv args.

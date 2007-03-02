@@ -521,7 +521,80 @@ public class DistributedCache {
     conf.set("mapred.cache.files", files == null ? uri.toString() : files + ","
         + uri.toString());
   }
-  
+
+	/**
+	 * Add an file path to the current set of classpath entries It adds the file
+	 * to cache as well.
+	 * 
+	 * @param file Path of the file to be added
+	 * @param conf Configuration that contains the classpath setting
+	 */
+	public static void addFileToClassPath(Path file, Configuration conf)
+			throws IOException {
+		String classpath = conf.get("mapred.job.classpath.files");
+		conf.set("mapred.job.classpath.files", classpath == null ? file.toString()
+				: classpath + System.getProperty("path.separator") + file.toString());
+		FileSystem fs = FileSystem.get(conf);
+		URI uri = fs.makeQualified(file).toUri();
+
+		addCacheFile(uri, conf);
+	}
+
+	/**
+	 * Get the file entries in classpath as an array of Path
+	 * 
+	 * @param conf Configuration that contains the classpath setting
+	 */
+	public static Path[] getFileClassPaths(Configuration conf) {
+		String classpath = conf.get("mapred.job.classpath.files");
+		if (classpath == null)
+			return null;
+		ArrayList list = Collections.list(new StringTokenizer(classpath, System
+				.getProperty("path.separator")));
+		Path[] paths = new Path[list.size()];
+		for (int i = 0; i < list.size(); i++) {
+			paths[i] = new Path((String) list.get(i));
+		}
+		return paths;
+	}
+
+	/**
+	 * Add an archive path to the current set of classpath entries. It adds the
+	 * archive to cache as well.
+	 * 
+	 * @param archive Path of the archive to be added
+	 * @param conf Configuration that contains the classpath setting
+	 */
+	public static void addArchiveToClassPath(Path archive, Configuration conf)
+			throws IOException {
+		String classpath = conf.get("mapred.job.classpath.archives");
+		conf.set("mapred.job.classpath.archives", classpath == null ? archive
+				.toString() : classpath + System.getProperty("path.separator")
+				+ archive.toString());
+		FileSystem fs = FileSystem.get(conf);
+		URI uri = fs.makeQualified(archive).toUri();
+
+		addCacheArchive(uri, conf);
+	}
+
+	/**
+	 * Get the archive entries in classpath as an array of Path
+	 * 
+	 * @param conf Configuration that contains the classpath setting
+	 */
+	public static Path[] getArchiveClassPaths(Configuration conf) {
+		String classpath = conf.get("mapred.job.classpath.archives");
+		if (classpath == null)
+			return null;
+		ArrayList list = Collections.list(new StringTokenizer(classpath, System
+				.getProperty("path.separator")));
+		Path[] paths = new Path[list.size()];
+		for (int i = 0; i < list.size(); i++) {
+			paths[i] = new Path((String) list.get(i));
+		}
+		return paths;
+	}
+
   /**
    * This method allows you to create symlinks in the current working directory
    * of the task to all the cache files/archives
