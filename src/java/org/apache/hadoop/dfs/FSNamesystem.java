@@ -2047,10 +2047,20 @@ class FSNamesystem implements FSConstants {
         for (Iterator<Block> it = node.getBlockIterator(); it.hasNext(); ) {
             Block b = it.next();
 
-            if (! dir.isValidBlock(b) && ! pendingCreateBlocks.contains(b)) {
-                obsolete.add(b);
-                NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
+            // 
+            // A block report can only send BLOCK_INVALIDATE_CHUNK number of
+            // blocks to be deleted. If there are more blocks to be deleted, 
+            // they are added to recentInvalidateSets and will be sent out
+            // thorugh succeeding heartbeat responses.
+            //
+            if (obsolete.size() > FSConstants.BLOCK_INVALIDATE_CHUNK) {
+                addToInvalidates(b, node);
+            } else {
+                if (! dir.isValidBlock(b) && ! pendingCreateBlocks.contains(b)) {
+                  obsolete.add(b);
+                  NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
                         +"ask "+nodeID.getName()+" to delete "+b.getBlockName() );
+                }
             }
         }
         return (Block[]) obsolete.toArray(new Block[obsolete.size()]);

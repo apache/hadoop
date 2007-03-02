@@ -195,6 +195,10 @@ Trunk (unreleased changes)
 60. HADOOP-1056.  Check HDFS include/exclude node lists with both IP
     address and hostname.  (Wendy Chien via cutting)
 
+61. HADOOP-994.  In HDFS, limit the number of blocks invalidated at
+    once.  Large lists were causing datenodes to timeout.
+    (Dhruba Borthakur via cutting) 
+
 
 Release 0.11.2 - 2007-02-16
 
