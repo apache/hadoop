@@ -1473,6 +1473,10 @@ class FSNamesystem implements FSConstants {
                                                String networkLocation
                                               ) throws IOException {
 
+      if (!verifyNodeRegistration(nodeReg)) {
+        throw new DisallowedDatanodeException( nodeReg );
+      }
+
       String dnAddress = Server.getRemoteAddress();
       if ( dnAddress == null ) {
         //Mostly not called inside an RPC.
@@ -3157,14 +3161,18 @@ class FSNamesystem implements FSConstants {
       Set<String> hostsList = hostsReader.getHosts();
       return (hostsList.isEmpty() || 
               hostsList.contains(node.getName()) || 
-              hostsList.contains(node.getHost()));
+              hostsList.contains(node.getHost()) ||
+              ((node instanceof DatanodeInfo) && 
+               hostsList.contains(((DatanodeInfo)node).getHostName())));
     }
 
 
     private boolean inExcludedHostsList(DatanodeID node) {
       Set<String> excludeList = hostsReader.getExcludedHosts();
       return (excludeList.contains(node.getName()) ||
-              excludeList.contains(node.getHost()));
+              excludeList.contains(node.getHost()) ||
+              ((node instanceof DatanodeInfo) && 
+               excludeList.contains(((DatanodeInfo)node).getHostName())));
     }
 
     /**

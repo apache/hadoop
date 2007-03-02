@@ -559,9 +559,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     public DatanodeRegistration register( DatanodeRegistration nodeReg,
                                           String networkLocation
                                         ) throws IOException {
-      if (!namesystem.verifyNodeRegistration(nodeReg)) {
-        throw new DisallowedDatanodeException( nodeReg );
-      }
       verifyVersion( nodeReg.getVersion() );
       namesystem.registerDatanode( nodeReg, networkLocation );
       
