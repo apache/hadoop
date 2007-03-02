@@ -199,6 +199,11 @@ Trunk (unreleased changes)
     once.  Large lists were causing datenodes to timeout.
     (Dhruba Borthakur via cutting) 
 
+62. HADOOP-432.  Add a trash feature, disabled by default.  When
+    enabled, the FSShell 'rm' command will move things to a trash
+    directory in the filesystem.  In HDFS, a thread periodically
+    checkpoints the trash and removes old checkpoints.  (cutting)
+
 
 Release 0.11.2 - 2007-02-16
 

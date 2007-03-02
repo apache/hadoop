@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
@@ -83,6 +84,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     private FSNamesystem namesystem;
     private Server server;
+    private Thread emptier;
     private int handlerCount = 2;
     
     /** only used for testing purposes  */
@@ -178,6 +180,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       this.server = RPC.getServer(this, hostname, port, handlerCount, 
                                   false, conf);
       this.server.start();      
+
+      this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
+      this.emptier.setDaemon(true);
+      this.emptier.start();
     }
     
     /**
@@ -225,8 +231,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       if (! stopRequested) {
         stopRequested = true;
         namesystem.close();
+        emptier.interrupt();
         server.stop();
-        //this.join();
       }
     }
 

@@ -107,6 +107,21 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>fs.trash.root</name>
+  <value>${hadoop.tmp.dir}/Trash</value>
+  <description>The trash directory, used by FsShell's 'rm' command.
+  </description>
+</property>
+
+<property>
+  <name>fs.trash.interval</name>
+  <value>0</value>
+  <description>Number of minutes between trash checkpoints.
+  If zero, the trash feature is disabled.
+  </description>
+</property>
+
+<property>
   <name>fs.file.impl</name>
   <value>org.apache.hadoop.fs.LocalFileSystem</value>
   <description>The FileSystem for file: uris.</description>

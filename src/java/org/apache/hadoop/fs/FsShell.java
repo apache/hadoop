@@ -29,6 +29,7 @@ import org.apache.hadoop.util.ToolBase;
 public class FsShell extends ToolBase {
 
     protected FileSystem fs;
+    private Trash trash;
 
     /**
      */
@@ -38,6 +39,7 @@ public class FsShell extends ToolBase {
     public void init() throws IOException {
         conf.setQuietMode(true);
         this.fs = FileSystem.get(conf);
+        this.trash = new Trash(conf);
     }
 
     /**
@@ -583,11 +585,20 @@ public class FsShell extends ToolBase {
                            "\", use -rmr instead");
       }
 
+      if (trash.moveToTrash(src)) {
+        System.out.println("Moved to trash: " + src);
+        return;
+      }
       if (fs.delete(src)) {
         System.out.println("Deleted " + src);
       } else {
         throw new IOException("Delete failed " + src);
       }
+    }
+
+    private void expunge() throws IOException {
+      trash.expunge();
+      trash.checkpoint();
     }
 
     /**
@@ -737,6 +748,7 @@ public class FsShell extends ToolBase {
             System.err.println("           [-cp <src> <dst>]");
             System.err.println("           [-rm <path>]");
             System.err.println("           [-rmr <path>]");
+            System.err.println("           [-expunge]");
             System.err.println("           [-put <localsrc> <dst>]");
             System.err.println("           [-copyFromLocal <localsrc> <dst>]");
             System.err.println("           [-moveFromLocal <localsrc> <dst>]");
@@ -843,6 +855,8 @@ public class FsShell extends ToolBase {
                 exitCode = doall(cmd, argv, conf, i);
             } else if ("-rmr".equals(cmd)) {
                 exitCode = doall(cmd, argv, conf, i);
+            } else if ("-expunge".equals(cmd)) {
+                expunge();
             } else if ("-du".equals(cmd)) {
                 if (i < argv.length) {
                     exitCode = doall(cmd, argv, conf, i);
