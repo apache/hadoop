@@ -6,6 +6,11 @@ Trunk (unreleased changes)
  1. HADOOP-1035.  Fix a StackOverflowError in FSDataSet.
     (Raghu Angadi via cutting)
 
+ 2. HADOOP-1053.  Fix VInt representation of negative values.  Also
+    remove references in generated record code to methods outside of
+    the record package and improve some record documentation.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.12.0 - 2007-03-02
 

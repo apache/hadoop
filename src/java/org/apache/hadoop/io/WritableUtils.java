@@ -279,7 +279,7 @@ public final class WritableUtils  {
       
       int len = -112;
       if (i < 0) {
-          i &= 0x7FFFFFFFFFFFFFFFL; // reset the sign bit
+          i ^= -1L; // take one's complement'
           len = -120;
       }
       
@@ -320,7 +320,7 @@ public final class WritableUtils  {
           i = i << 8;
           i = i | (b & 0xFF);
       }
-      return (isNegative ? (i | 0x8000000000000000L) : i);
+      return (isNegative ? (i ^ -1L) : i);
   }
 
   /**
@@ -345,7 +345,7 @@ public final class WritableUtils  {
       
       int len = -112;
       if (i < 0) {
-          i &= 0x7FFFFFFFFFFFFFFFL; // reset the sign bit
+          i ^= -1L; // take one's complement'
           len = -120;
       }
       

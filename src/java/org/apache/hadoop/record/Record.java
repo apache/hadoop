@@ -18,16 +18,47 @@
 
 package org.apache.hadoop.record;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Interface that is implemented by generated classes.
+ * Abstract class that is extended by generated classes.
  * 
  * @author Milind Bhandarkar
  */
-public interface Record extends Cloneable {
-    void serialize(OutputArchive archive, String tag)
-        throws IOException;
-    void deserialize(InputArchive archive, String tag)
-        throws IOException;
+public abstract class Record implements WritableComparable, Cloneable {
+  
+  /**
+   * Serialize a record into archive
+   * @param archive Output Archive
+   * @parram record tag (Used only in tagged serialization e.g. XML)
+   */
+  public abstract void serialize(OutputArchive archive, String tag)
+  throws IOException;
+  
+  /**
+   * Deserialize a record from archive
+   * @param archive Input Archive
+   * @param tag Record tag (Used only in tagged serialization e.g. XML)
+   */
+  public abstract void deserialize(InputArchive archive, String tag)
+  throws IOException;
+  
+  // inheric javadoc
+  public abstract int compareTo (final Object peer) throws ClassCastException;
+  
+  // inherit javadoc
+  public void write(final DataOutput out) throws java.io.IOException {
+    BinaryOutputArchive archive = new BinaryOutputArchive(out);
+    this.serialize(archive, "");
+  }
+  
+  // inherit javadoc
+  public void readFields(final DataInput in) throws java.io.IOException {
+    BinaryInputArchive archive = new BinaryInputArchive(in);
+    this.deserialize(archive, "");
+  }
+  
 }

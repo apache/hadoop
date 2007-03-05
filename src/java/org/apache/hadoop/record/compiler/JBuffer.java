@@ -65,7 +65,7 @@ public class JBuffer extends JCompType {
       cb.append("int z1 = org.apache.hadoop.record.Utils.getVIntSize(i1);\n");
       cb.append("int z2 = org.apache.hadoop.record.Utils.getVIntSize(i2);\n");
       cb.append("s1+=z1; s2+=z2; l1-=z1; l2-=z2;\n");
-      cb.append("int r1 = org.apache.hadoop.record.Utils.compareBytes(b1,s1,l1,b2,s2,l2);\n");
+      cb.append("int r1 = org.apache.hadoop.record.Utils.compareBytes(b1,s1,i1,b2,s2,i2);\n");
       cb.append("if (r1 != 0) { return (r1<0)?-1:0; }\n");
       cb.append("s1+=i1; s2+=i2; l1-=i1; l1-=i2;\n");
       cb.append("}\n");

@@ -48,7 +48,7 @@ static void serializeInt(int32_t t, OutStream& stream)
         
   int8_t len = -120;
   if (t < 0) {
-    t &= 0x7FFFFFFF; // reset the sign bit
+    t ^= 0xFFFFFFFF; // take one's complement
     len = -124;
   }
         
@@ -91,7 +91,7 @@ static void deserializeInt(int32_t& t, InStream& stream)
     t |= (barr[idx] & 0xFF);
   }
   if (isNegative) {
-    t |= 0x80000000;
+    t ^= 0xFFFFFFFF;
   }
 }
 
@@ -105,7 +105,7 @@ static void serializeLong(int64_t t, OutStream& stream)
         
   int8_t len = -112;
   if (t < 0) {
-    t &= 0x7FFFFFFFFFFFFFFFLL; // reset the sign bit
+    t &= 0xFFFFFFFFFFFFFFFFLL; // take one's complement
     len = -120;
   }
         
@@ -149,7 +149,7 @@ static void deserializeLong(int64_t& t, InStream& stream)
     t |= (barr[idx] & 0xFF);
   }
   if (isNegative) {
-    t |= 0x8000000000000000L;
+    t ^= 0xFFFFFFFFFFFFFFFFL;
   }
 }
 
