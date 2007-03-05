@@ -1,6 +1,12 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1. HADOOP-1035.  Fix a StackOverflowError in FSDataSet.
+    (Raghu Angadi via cutting)
+
+
 Release 0.12.0 - 2007-03-02
 
  1. HADOOP-975.  Separate stdout and stderr from tasks.
