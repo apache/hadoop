@@ -39,8 +39,8 @@ public abstract class RecordComparator extends WritableComparator {
   /**
    * Register an optimized comparator for a {@link Record} implementation.
    *
-   * @param recordClass record classs for which a raw comparator is provided
-   * @param comparator Raw comparator instance for recordClass 
+   * @param c record classs for which a raw comparator is provided
+   * @param comparator Raw comparator instance for class c 
    */
   public static synchronized void define(Class c, RecordComparator comparator) {
     WritableComparator.define(c, comparator);

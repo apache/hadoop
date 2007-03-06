@@ -33,7 +33,7 @@ public abstract class Record implements WritableComparable, Cloneable {
   /**
    * Serialize a record into archive
    * @param archive Output Archive
-   * @parram record tag (Used only in tagged serialization e.g. XML)
+   * @param tag record tag (Used only in tagged serialization e.g. XML)
    */
   public abstract void serialize(OutputArchive archive, String tag)
   throws IOException;
