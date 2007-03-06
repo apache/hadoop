@@ -73,6 +73,7 @@
     <pathelement location="${build.classes}"/>
     <fileset dir="${lib.dir}">
       <include name="**/*.jar" />
+      <exclude name="**/excluded/" />
     </fileset>
     <pathelement location="${conf.dir}"/>
   </path>
@@ -468,8 +469,13 @@
   </target>
 	
   <target name="checkstyle" depends="check-for-checkstyle" if="checkstyle.present">
- 	<taskdef resource="checkstyletask.properties"
-      classpath="${lib.dir}/checkstyle-all-4.3.jar"/>
+ 	<taskdef resource="checkstyletask.properties">
+      <classpath>
+        <fileset dir="${lib.dir}">
+          <include name="excluded/checkstyle-all-*.jar"/>
+        </fileset>
+      </classpath>
+    </taskdef>
   	
 	<mkdir dir="${test.build.dir}"/>
   	
@@ -485,8 +491,12 @@
   </target>
 	
   <target name="check-for-checkstyle">
-    <available property="checkstyle.present"
-    	file="${lib.dir}/checkstyle-all-4.3.jar">
+    <available property="checkstyle.present" resource="checkstyletask.properties">
+      <classpath>
+        <fileset dir="${lib.dir}">
+          <include name="excluded/checkstyle-all-*.jar"/>
+        </fileset>
+      </classpath>    	
     </available>  	
   </target>
   
