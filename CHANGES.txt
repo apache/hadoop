@@ -15,6 +15,10 @@ Trunk (unreleased changes)
     directory. Also remove dependency on a particular Checkstyle
     version number. (tomwhite)
 
+ 4. HADOOP-1060.  Fix an IndexOutOfBoundsException in the JobTracker
+    that could cause jobs to hang.  (Arun C Murthy via cutting)
+
+
 Release 0.12.0 - 2007-03-02
 
  1. HADOOP-975.  Separate stdout and stderr from tasks.

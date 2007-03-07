@@ -315,26 +315,29 @@ class JobInProgress {
               ttStatus.getHttpPort() + "/tasklog.jsp?plaintext=true&taskid=" +
               status.getTaskId() + "&all=true";
           }
-          
+
+          TaskCompletionEvent taskEvent = null;
           if (state == TaskStatus.State.SUCCEEDED) {
-            this.taskCompletionEvents.add( new TaskCompletionEvent(
-                taskCompletionEventTracker, 
-                status.getTaskId(),
-                tip.idWithinJob(),
-                status.getIsMap(),
-                TaskCompletionEvent.Status.SUCCEEDED,
-                httpTaskLogLocation ));
+            taskEvent = new TaskCompletionEvent(
+                          taskCompletionEventTracker, 
+                          status.getTaskId(),
+                          tip.idWithinJob(),
+                          status.getIsMap(),
+                          TaskCompletionEvent.Status.SUCCEEDED,
+                          httpTaskLogLocation 
+                          );
             tip.setSuccessEventNumber(taskCompletionEventTracker);
             completedTask(tip, status, metrics);
           } else if (state == TaskStatus.State.FAILED ||
                      state == TaskStatus.State.KILLED) {
-            this.taskCompletionEvents.add( new TaskCompletionEvent(
-                taskCompletionEventTracker, 
-                status.getTaskId(),
-                tip.idWithinJob(),
-                status.getIsMap(),
-                TaskCompletionEvent.Status.FAILED, 
-                httpTaskLogLocation ));
+            taskEvent = new TaskCompletionEvent(
+                          taskCompletionEventTracker, 
+                          status.getTaskId(),
+                          tip.idWithinJob(),
+                          status.getIsMap(),
+                          TaskCompletionEvent.Status.FAILED, 
+                          httpTaskLogLocation
+                          );
             // Get the event number for the (possibly) previously successful
             // task. If there exists one, then set that status to OBSOLETE 
             int eventNumber;
@@ -348,9 +351,13 @@ class JobInProgress {
             failedTask(tip, status.getTaskId(), status, status.getTaskTracker(),
                        wasRunning, wasComplete);
           }          
-        }
 
-        taskCompletionEventTracker++;
+          // Add the 'complete' task i.e. successful/failed
+          if (taskEvent != null) {
+            this.taskCompletionEvents.add(taskEvent);
+            taskCompletionEventTracker++;
+          }
+        }
         
         //
         // Update JobInProgress status
@@ -936,8 +943,8 @@ class JobInProgress {
        return null;
     }
     
-    public TaskCompletionEvent[] getTaskCompletionEvents(int fromEventId, 
-        int maxEvents) {
+    synchronized public TaskCompletionEvent[] getTaskCompletionEvents(
+            int fromEventId, int maxEvents) {
       TaskCompletionEvent[] events = TaskCompletionEvent.EMPTY_ARRAY;
       if( taskCompletionEvents.size() > fromEventId) {
         int actualMax = Math.min(maxEvents, 
