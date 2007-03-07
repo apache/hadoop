@@ -21,6 +21,10 @@ Trunk (unreleased changes)
  5. HADOOP-1077.  Fix a race condition fetching map outputs that could
     hang reduces.  (Devaraj Das via cutting)
 
+ 6. HADOOP-1083.  Fix so that when a cluster restarts with a missing
+    datanode, its blocks are replicated.  (Hairong Kuang via cutting)
+
+
 Release 0.12.0 - 2007-03-02
 
  1. HADOOP-975.  Separate stdout and stderr from tasks.

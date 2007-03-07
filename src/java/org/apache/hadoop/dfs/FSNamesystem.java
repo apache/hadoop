@@ -2115,7 +2115,8 @@ class FSNamesystem implements FSConstants {
             return block;
         
         // filter out containingNodes that are marked for decommission.
-        int numCurrentReplica = countContainingNodes(containingNodes);
+        int numCurrentReplica = countContainingNodes(containingNodes)
+                              + pendingReplications.getNumReplicas(block);
         
         // check whether safe replication is reached for the block
         // only if it is a part of a files
@@ -2123,8 +2124,8 @@ class FSNamesystem implements FSConstants {
         
         // handle underReplication/overReplication
         short fileReplication = fileINode.getReplication();
-        if(neededReplications.contains(block)) {
-            neededReplications.update(block, curReplicaDelta, 0);
+        if(numCurrentReplica < fileReplication) {
+          neededReplications.update(block, curReplicaDelta, 0);
         }
         proccessOverReplicatedBlock( block, fileReplication );
         return block;
