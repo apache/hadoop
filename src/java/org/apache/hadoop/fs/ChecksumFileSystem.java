@@ -135,11 +135,15 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       long checksumBoundary = desired/bytesPerSum*bytesPerSum;
       if(checksumBoundary != getPos()) {
         datas.seek(checksumBoundary);
-        sums.seek(HEADER_LENGTH + 4*(checksumBoundary/bytesPerSum));
+        if(sums != null) {
+          sums.seek(HEADER_LENGTH + 4*(checksumBoundary/bytesPerSum));
+        }
       }
       
-      sum.reset();
-      inSum = 0;
+      if(sums != null) {
+        sum.reset();
+        inSum = 0;
+      }
       
       // scan to desired position
       int delta = (int)(desired - checksumBoundary);
