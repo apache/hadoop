@@ -18,6 +18,8 @@ Trunk (unreleased changes)
  4. HADOOP-1060.  Fix an IndexOutOfBoundsException in the JobTracker
     that could cause jobs to hang.  (Arun C Murthy via cutting)
 
+ 5. HADOOP-1077.  Fix a race condition fetching map outputs that could
+    hang reduces.  (Devaraj Das via cutting)
 
 Release 0.12.0 - 2007-03-02
 
