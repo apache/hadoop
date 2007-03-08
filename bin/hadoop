@@ -21,6 +21,11 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/hadoop-config.sh
 
+cygwin=false
+case "`uname`" in
+CYGWIN*) cygwin=true;;
+esac
+
 # if no args specified, show usage
 if [ $# = 0 ]; then
   echo "Usage: hadoop [--config confdir] COMMAND"
@@ -108,6 +113,21 @@ for f in $HADOOP_HOME/lib/jetty-ext/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+
+# default log directory & file
+if [ "$HADOOP_LOG_DIR" = "" ]; then
+  HADOOP_LOG_DIR="$HADOOP_HOME/logs"
+fi
+if [ "$HADOOP_LOGFILE" = "" ]; then
+  HADOOP_LOGFILE='hadoop.log'
+fi
+
+# cygwin path translation
+if $cygwin; then
+  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+  HADOOP_HOME=`cygpath -d "$HADOOP_HOME"`
+  HADOOP_LOG_DIR=`cygpath -d "$HADOOP_LOG_DIR"`
+fi
 # setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
 if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
@@ -125,17 +145,14 @@ if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
     fi
   fi
 fi
+
+# cygwin path translation
+if $cygwin; then
+  JAVA_LIBRARY_PATH=`cygpath -p "$JAVA_LIBRARY_PATH"`
+fi
  
 # restore ordinary behaviour
 unset IFS
-
-# default log directory & file
-if [ "$HADOOP_LOG_DIR" = "" ]; then
-  HADOOP_LOG_DIR="$HADOOP_HOME/logs"
-fi
-if [ "$HADOOP_LOGFILE" = "" ]; then
-  HADOOP_LOGFILE='hadoop.log'
-fi
 
 # figure out which class to run
 if [ "$COMMAND" = "namenode" ] ; then
@@ -168,12 +185,6 @@ else
   CLASS=$COMMAND
 fi
 
-# cygwin path translation
-if expr `uname` : 'CYGWIN*' > /dev/null; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-  HADOOP_HOME=`cygpath -d "$HADOOP_HOME"`
-  HADOOP_LOG_DIR=`cygpath -d "$HADOOP_LOG_DIR"`
-fi
 
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"

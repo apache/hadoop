@@ -30,6 +30,9 @@ Trunk (unreleased changes)
  8. HADOOP-1088.  Fix record serialization of negative values.
     (Milind Bhandarkar via cutting)
 
+ 9. HADOOP-1080.  Fix bug in bin/hadoop on Windows when native
+    libraries are present.  (ab via cutting)
+
 
 Release 0.12.0 - 2007-03-02
 
