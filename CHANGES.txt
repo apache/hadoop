@@ -27,6 +27,9 @@ Trunk (unreleased changes)
  7. HADOOP-1082.  Fix a NullPointerException in ChecksumFileSystem.
     (Hairong Kuang via cutting)
 
+ 8. HADOOP-1088.  Fix record serialization of negative values.
+    (Milind Bhandarkar via cutting)
+
 
 Release 0.12.0 - 2007-03-02
 

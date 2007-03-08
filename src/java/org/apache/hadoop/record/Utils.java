@@ -196,7 +196,7 @@ public class Utils {
     for (int idx = 0; idx < blen; idx++) {
       char c1 = s.charAt(2*idx);
       char c2 = s.charAt(2*idx+1);
-      barr[idx] = Byte.parseByte(""+c1+c2, 16);
+      barr[idx] = (byte)Integer.parseInt(""+c1+c2, 16);
     }
     return new Buffer(barr);
   }
@@ -230,7 +230,7 @@ public class Utils {
     for (int idx = 0; idx < blen; idx++) {
       char c1 = s.charAt(2*idx+1);
       char c2 = s.charAt(2*idx+2);
-      barr[idx] = Byte.parseByte(""+c1+c2, 16);
+      barr[idx] = (byte)Integer.parseInt(""+c1+c2, 16);
     }
     return new Buffer(barr);
   }
