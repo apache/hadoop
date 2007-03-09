@@ -21,13 +21,13 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.*;
@@ -174,7 +174,7 @@ public class Counters implements Writable {
    * @return Set of counter names.
    */
   public synchronized Collection<String> getGroupNames() {
-    return counters.keySet();
+    return new ArrayList<String>(counters.keySet());
   }
   
   /**

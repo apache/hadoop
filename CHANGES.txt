@@ -33,6 +33,8 @@ Trunk (unreleased changes)
  9. HADOOP-1080.  Fix bug in bin/hadoop on Windows when native
     libraries are present.  (ab via cutting)
 
+10. HADOOP-1091.  Fix a NullPointerException in MetricsRecord.
+    (David Bowen via tomwhite)
 
 Release 0.12.0 - 2007-03-02
 

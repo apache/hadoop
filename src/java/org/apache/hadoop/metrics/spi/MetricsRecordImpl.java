@@ -64,6 +64,9 @@ public class MetricsRecordImpl implements MetricsRecord {
      * @throws MetricsException if the tagName conflicts with the configuration
      */
     public void setTag(String tagName, String tagValue) {
+        if (tagValue == null) {
+            tagValue = "";
+        }
         tagTable.put(tagName, tagValue);
     }
     
