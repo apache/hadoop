@@ -369,7 +369,7 @@ class FSNamesystem implements FSConstants {
         */
         private int getPriority(Block block, 
                 int curReplicas, int expectedReplicas) {
-            if (curReplicas>=expectedReplicas) {
+            if (curReplicas==0 || curReplicas>=expectedReplicas) {
                 return LEVEL; // no need to replicate
             } else if(curReplicas==1) {
                 return 0; // highest priority
@@ -2502,6 +2502,7 @@ class FSNamesystem implements FSConstants {
      * that are marked for decommission.
      */
     private int countContainingNodes(Collection<DatanodeDescriptor> nodelist) {
+      if( nodelist == null ) return 0;
       int count = 0;
       for (Iterator<DatanodeDescriptor> it = nodelist.iterator(); 
            it.hasNext(); ) {

@@ -36,6 +36,9 @@ Trunk (unreleased changes)
 10. HADOOP-1091.  Fix a NullPointerException in MetricsRecord.
     (David Bowen via tomwhite)
 
+11. HADOOP-1092.  Fix a NullPointerException in HeartbeatMonitor
+    thread. (Hairong Kuang via tomwhite)
+
 Release 0.12.0 - 2007-03-02
 
  1. HADOOP-975.  Separate stdout and stderr from tasks.
