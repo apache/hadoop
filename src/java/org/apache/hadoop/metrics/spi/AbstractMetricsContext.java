@@ -323,7 +323,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
         //Map<String,MetricValue> metricUpdates = record.getMetricTable();
         Map metricUpdates = record.getMetricTable();
         
-        RecordMap recordMap = (RecordMap) bufferedData.get(recordName);
+        RecordMap recordMap = getRecordMap(recordName);
         synchronized (recordMap) {
             MetricMap metricMap = (MetricMap) recordMap.get(tagTable);
             if (metricMap == null) {
@@ -347,6 +347,10 @@ public abstract class AbstractMetricsContext implements MetricsContext {
                 }
             }
         }
+    }
+    
+    private synchronized RecordMap getRecordMap(String recordName) {
+        return (RecordMap) bufferedData.get(recordName);
     }
     
     /**
@@ -382,7 +386,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
         String recordName = record.getRecordName();
         TagMap tagTable = record.getTagTable();
         
-        RecordMap recordMap = (RecordMap) bufferedData.get(recordName);
+        RecordMap recordMap = getRecordMap(recordName);
         synchronized (recordMap) {
             recordMap.remove(tagTable);
         }
