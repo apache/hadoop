@@ -197,9 +197,7 @@ public class NetworkTopology {
                     }
                 }
                 if(parentNode==null) {
-                    throw new IllegalArgumentException( n.getName()
-                            + ", which is located at "
-                            + parent+", is not a decendent of " + currentPath);
+                    return false;
                 }
                 // remove n from the parent node
                 boolean isRemoved = parentNode.remove( n );

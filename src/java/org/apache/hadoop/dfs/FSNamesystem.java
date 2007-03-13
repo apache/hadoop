@@ -1562,6 +1562,7 @@ class FSNamesystem implements FSConstants {
       DatanodeDescriptor nodeDescr 
               = new DatanodeDescriptor( nodeReg, networkLocation, hostName );
       unprotectedAddDatanode( nodeDescr );
+      clusterMap.add(nodeDescr);
       getEditLog().logAddDatanode( nodeDescr );
       
       // also treat the registration message as a heartbeat
@@ -1890,7 +1891,6 @@ class FSNamesystem implements FSConstants {
     
     void unprotectedAddDatanode( DatanodeDescriptor nodeDescr ) {
       datanodeMap.put( nodeDescr.getStorageID(), nodeDescr );
-      clusterMap.add(nodeDescr);
       NameNode.stateChangeLog.debug(
           "BLOCK* NameSystem.unprotectedAddDatanode: "
           + "node " + nodeDescr.getName() + " is added to datanodeMap." );

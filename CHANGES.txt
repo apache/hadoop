@@ -46,6 +46,9 @@ Trunk (unreleased changes)
     different replica is found when handling ChecksumException.
     (Hairong Kuang via tomwhite)
 
+14. HADOOP-1070.  Fix a problem with number of racks and datanodes
+    temporarily doubling.  (Konstantin Shvachko via tomwhite)
+
 
 Release 0.12.0 - 2007-03-02
 
