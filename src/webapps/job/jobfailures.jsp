@@ -24,7 +24,7 @@
         TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
         out.print("<tr><td>" + statuses[i].getTaskId() +
                   "</td><td><a href=\"/taskdetails.jsp?jobid="+ jobId + 
-                  "&taskid=" + tipId + "\">" + tipId +
+                  "&tipid=" + tipId + "\">" + tipId +
                   "</a></td>");
         if (taskTracker == null) {
           out.print("<td>" + taskTrackerName + "</td>");
