@@ -34,9 +34,6 @@ int main()
     r1.setLongVal(0x5a5a5a5a5a5aLL);
     std::string& s = r1.getStringVal();
     s = "random text";
-    std::string& buf = r1.getBufferVal();
-    std::vector<std::string>& v = r1.getVectorVal();
-    std::map<std::string,std::string>& m = r1.getMapVal();
     writer.write(r1);
     ostream.close();
     hadoop::FileInStream istream;
@@ -62,9 +59,6 @@ int main()
     r1.setLongVal(0x5a5a5a5a5a5aLL);
     std::string& s = r1.getStringVal();
     s = "random text";
-    std::string& buf = r1.getBufferVal();
-    std::vector<std::string>& v = r1.getVectorVal();
-    std::map<std::string,std::string>& m = r1.getMapVal();
     writer.write(r1);
     ostream.close();
     hadoop::FileInStream istream;
@@ -90,9 +84,6 @@ int main()
     r1.setLongVal(0x5a5a5a5a5a5aLL);
     std::string& s = r1.getStringVal();
     s = "random text";
-    std::string& buf = r1.getBufferVal();
-    std::vector<std::string>& v = r1.getVectorVal();
-    std::map<std::string,std::string>& m = r1.getMapVal();
     writer.write(r1);
     ostream.close();
     hadoop::FileInStream istream;

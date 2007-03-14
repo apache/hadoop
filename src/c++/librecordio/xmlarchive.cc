@@ -164,7 +164,7 @@ static std::string fromXMLBuffer(std::string s, size_t& len)
   if (len%2 == 1) { // len is guaranteed to be even
     throw new IOException("Errror deserializing buffer.");
   }
-  len >> 1;
+  len = len >> 1;
   std::string t;
   for (size_t idx = 0; idx < len; idx++) {
     char buf[3];

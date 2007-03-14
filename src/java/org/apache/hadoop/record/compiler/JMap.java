@@ -161,7 +161,7 @@ public class JMap extends JCompType {
   /** Creates a new instance of JMap */
   public JMap(JType t1, JType t2) {
     setJavaType(new JavaMap(t1.getJavaType(), t2.getJavaType()));
-    setCppType(new CppType(" ::std::map<"+t1.getCppType().getType()+","+
+    setCppType(new CppCompType(" ::std::map<"+t1.getCppType().getType()+","+
         t2.getCppType().getType()+">"));
     setCType(new CType());
     keyType = t1;

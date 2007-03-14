@@ -114,7 +114,7 @@ void hadoop::ICsvArchive::deserialize(std::string& t, size_t& len, const char* t
   if (len%2 == 1) { // len is guaranteed to be even
     throw new IOException("Errror deserializing buffer.");
   }
-  len >> 1;
+  len = len >> 1;
   for (size_t idx = 0; idx < len; idx++) {
     char buf[3];
     buf[0] = s[2*idx];
@@ -298,7 +298,7 @@ void hadoop::OCsvArchive::serialize(const std::string& t, size_t len, const char
 {
   printCommaUnlessFirst();
   stream.write("#",1);
-  for(int idx = 0; idx < len; idx++) {
+  for(size_t idx = 0; idx < len; idx++) {
     uint8_t b = t[idx];
     char sval[3];
     sprintf(sval,"%2x",b);

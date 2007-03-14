@@ -17,7 +17,9 @@
  */
 
 #include "exception.hh"
+#ifdef USE_EXECINFO
 #include <execinfo.h>
+#endif
 
 #include <errno.h>
 #include <sstream>
@@ -42,7 +44,11 @@ namespace hadoop {
                           mReason(reason)
                           
   {
+#ifdef USE_EXECINFO
     mCalls = backtrace(mCallStack, sMaxCallStackDepth);
+#else
+    mCalls = 0;
+#endif
   }
 
   /**
@@ -81,7 +87,9 @@ namespace hadoop {
     if (mLocation.size() != 0) {
       stream << "  thrown at " << mLocation << "\n";
     }
+#ifdef USE_EXECINFO
     printCallStack(stream);
+#endif
     if (mReason) {
       stream << "caused by: ";
       mReason->print(stream);
@@ -98,6 +106,7 @@ namespace hadoop {
     return stream.str();
 }
 
+#ifdef USE_EXECINFO
   /**
    * Print the call stack where the exception was created.
    */
@@ -114,6 +123,7 @@ namespace hadoop {
       }
       free(symbols);
   }
+#endif
 
   const char* Exception::getTypename() const {
     return "Exception";

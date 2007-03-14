@@ -17,6 +17,7 @@
  */
 
 #include "binarchive.hh"
+#include <rpc/types.h>
 #include <rpc/xdr.h>
 
 
@@ -38,63 +39,6 @@ static void deserialize(T& t, InStream& stream)
   }
 }
 
-static void serializeInt(int32_t t, OutStream& stream)
-{
-  if (t >= -120 && t <= 127) {
-    int8_t b = t;
-    stream.write(&b, 1);
-    return;
-  }
-        
-  int8_t len = -120;
-  if (t < 0) {
-    t ^= 0xFFFFFFFF; // take one's complement
-    len = -124;
-  }
-        
-  uint32_t tmp = t;
-  while (tmp != 0) {
-    tmp = tmp >> 8;
-    len--;
-  }
-  
-  stream.write(&len, 1);      
-  len = (len < -124) ? -(len + 124) : -(len + 120);
-        
-  for (uint32_t idx = len; idx != 0; idx--) {
-    uint32_t shiftbits = (idx - 1) * 8;
-    uint32_t mask = 0xFF << shiftbits;
-    uint8_t b = (t & mask) >> shiftbits;
-    stream.write(&b, 1);
-  }
-}
-
-static void deserializeInt(int32_t& t, InStream& stream)
-{
-  int8_t b;
-  if (1 != stream.read(&b, 1)) {
-    throw new IOException("Error deserializing int");
-  }
-  if (b >= -120) {
-    t = b;
-    return;
-  }
-  bool isNegative = (b < -124);
-  b = isNegative ? -(b + 124) : -(b + 120);
-  uint8_t barr[b];
-  if (b != stream.read(barr, b)) {
-    throw new IOException("Error deserializing int");
-  }
-  t = 0;
-  for (int idx = 0; idx < b; idx++) {
-    t = t << 8;
-    t |= (barr[idx] & 0xFF);
-  }
-  if (isNegative) {
-    t ^= 0xFFFFFFFF;
-  }
-}
-
 static void serializeLong(int64_t t, OutStream& stream)
 {
   if (t >= -112 && t <= 127) {
@@ -105,7 +49,7 @@ static void serializeLong(int64_t t, OutStream& stream)
         
   int8_t len = -112;
   if (t < 0) {
-    t &= 0xFFFFFFFFFFFFFFFFLL; // take one's complement
+    t ^= 0xFFFFFFFFFFFFFFFFLL; // take one's complement
     len = -120;
   }
         
@@ -149,8 +93,21 @@ static void deserializeLong(int64_t& t, InStream& stream)
     t |= (barr[idx] & 0xFF);
   }
   if (isNegative) {
-    t ^= 0xFFFFFFFFFFFFFFFFL;
+    t ^= 0xFFFFFFFFFFFFFFFFLL;
   }
+}
+
+static void serializeInt(int32_t t, OutStream& stream)
+{
+  int64_t longVal = t;
+  ::serializeLong(longVal, stream);
+}
+
+static void deserializeInt(int32_t& t, InStream& stream)
+{
+  int64_t longVal;
+  ::deserializeLong(longVal, stream);
+  t = longVal;
 }
 
 static void serializeFloat(float t, OutStream& stream)
@@ -223,7 +180,9 @@ void hadoop::IBinArchive::deserialize(bool& t, const char* tag)
 
 void hadoop::IBinArchive::deserialize(int32_t& t, const char* tag)
 {
-  ::deserializeInt(t, stream);
+  int64_t longVal = 0LL;
+  ::deserializeLong(longVal, stream);
+  t = longVal;
 }
 
 void hadoop::IBinArchive::deserialize(int64_t& t, const char* tag)
@@ -302,7 +261,8 @@ void hadoop::OBinArchive::serialize(bool t, const char* tag)
 
 void hadoop::OBinArchive::serialize(int32_t t, const char* tag)
 {
-  ::serializeInt(t, stream);
+  int64_t longVal = t;
+  ::serializeLong(longVal, stream);
 }
 
 void hadoop::OBinArchive::serialize(int64_t t, const char* tag)
