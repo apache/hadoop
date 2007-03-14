@@ -37,6 +37,7 @@ public class StreamSequenceRecordReader extends StreamBaseRecordReader {
       JobConf job, FileSystem fs) throws IOException {
     super(in, split, reporter, job, fs);
     numFailed_ = 0;
+    seekNextRecordBoundary();
     // super.in_ ignored, using rin_ instead
   }
 
