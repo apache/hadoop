@@ -2121,10 +2121,12 @@ class FSNamesystem implements FSConstants {
         // check whether safe replication is reached for the block
         // only if it is a part of a files
         incrementSafeBlockCount( numCurrentReplica );
-        
+ 
         // handle underReplication/overReplication
         short fileReplication = fileINode.getReplication();
-        if(numCurrentReplica < fileReplication) {
+        if (numCurrentReplica >= fileReplication) {
+          neededReplications.remove(block);
+        } else {
           neededReplications.update(block, curReplicaDelta, 0);
         }
         proccessOverReplicatedBlock( block, fileReplication );
@@ -2640,17 +2642,21 @@ class FSNamesystem implements FSConstants {
                   filterDecommissionedNodes(containingNodes);
               int numCurrentReplica = nodes.size() +
                                       pendingReplications.getNumReplicas(block);
-              DatanodeDescriptor targets[] = replicator.chooseTarget(
+              if (numCurrentReplica >= fileINode.getReplication()) {
+                it.remove();
+              } else {
+                DatanodeDescriptor targets[] = replicator.chooseTarget(
                   Math.min( fileINode.getReplication() - numCurrentReplica,
                             needed),
                   datanodeMap.get(srcNode.getStorageID()),
                   nodes, null, blockSize);
-              if (targets.length > 0) {
-                // Build items to return
-                replicateBlocks.add(block);
-                numCurrentReplicas.add(new Integer(numCurrentReplica));
-                replicateTargetSets.add(targets);
-                needed -= targets.length;
+                if (targets.length > 0) {
+                  // Build items to return
+                  replicateBlocks.add(block);
+                  numCurrentReplicas.add(new Integer(numCurrentReplica));
+                  replicateTargetSets.add(targets);
+                  needed -= targets.length;
+                }
               }
             }
           }
