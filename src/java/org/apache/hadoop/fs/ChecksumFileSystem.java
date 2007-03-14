@@ -605,7 +605,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     } else {
       Path[] srcs = listPaths(src);
       for (Path srcFile : srcs) {
-        copyToLocalFile(srcFile, dst, copyCrc);
+        copyToLocalFile(srcFile, new Path(dst, srcFile.getName()), copyCrc);
       }
     }
   }
