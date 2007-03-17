@@ -404,7 +404,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       if(sums != null) {
         sums.close();
       }
-      super.close();
+      out.close();
     }
     
     public static long getChecksumLength(long size, int bytesPerSum) {

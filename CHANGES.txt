@@ -73,6 +73,9 @@ Trunk (unreleased changes)
     (Espen Amble Kolstad, Andrzej Bialecki, and Owen O'Malley
     via tomwhite)
 
+22. HADOOP-1129.  Fix DFSClient to not hide IOExceptions in
+    flush method.  (Hairong Kuang via tomwhite)
+
 
 Release 0.12.0 - 2007-03-02
 
