@@ -28,7 +28,7 @@ import java.io.UnsupportedEncodingException;
  *
  * @author Milind Bhandarkar
  */
-class CsvInputArchive implements InputArchive {
+public class CsvRecordInput implements RecordInput {
     
     private PushbackReader stream;
     
@@ -71,15 +71,13 @@ class CsvInputArchive implements InputArchive {
         }
     }
     
-    static CsvInputArchive getArchive(InputStream strm)
-    throws UnsupportedEncodingException {
-        return new CsvInputArchive(strm);
-    }
-    
-    /** Creates a new instance of CsvInputArchive */
-    public CsvInputArchive(InputStream in)
-    throws UnsupportedEncodingException {
-        stream = new PushbackReader(new InputStreamReader(in, "UTF-8"));
+    /** Creates a new instance of CsvRecordInput */
+    public CsvRecordInput(InputStream in) {
+      try {
+      stream = new PushbackReader(new InputStreamReader(in, "UTF-8"));
+      } catch (UnsupportedEncodingException ex) {
+        throw new RuntimeException(ex);
+      }
     }
     
     public byte readByte(String tag) throws IOException {
@@ -127,10 +125,6 @@ class CsvInputArchive implements InputArchive {
     public Buffer readBuffer(String tag) throws IOException {
         String sval = readField(tag);
         return Utils.fromCSVBuffer(sval);
-    }
-    
-    public void readRecord(Record r, String tag) throws IOException {
-        r.deserialize(this, tag);
     }
     
     public void startRecord(String tag) throws IOException {

@@ -23,13 +23,14 @@ import java.util.TreeMap;
 import java.util.ArrayList;
 import java.io.PrintStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.Stack;
 
 /**
  *
  * @author Milind Bhandarkar
  */
-class XmlOutputArchive implements OutputArchive {
+class XmlRecordOutput implements RecordOutput {
 
     private PrintStream stream;
     
@@ -131,14 +132,14 @@ class XmlOutputArchive implements OutputArchive {
         printEndEnvelope(tag);
     }
     
-    static XmlOutputArchive getArchive(OutputStream strm) {
-        return new XmlOutputArchive(strm);
-    }
-    
-    /** Creates a new instance of XmlOutputArchive */
-    public XmlOutputArchive(OutputStream out) {
-        stream = new PrintStream(out);
+    /** Creates a new instance of XmlRecordOutput */
+    public XmlRecordOutput(OutputStream out) {
+      try {
+        stream = new PrintStream(out, true, "UTF-8");
         compoundStack = new Stack();
+      } catch (UnsupportedEncodingException ex) {
+        throw new RuntimeException(ex);
+      }
     }
     
     public void writeByte(byte b, String tag) throws IOException {
@@ -204,10 +205,6 @@ class XmlOutputArchive implements OutputArchive {
         stream.print(Utils.toXMLBuffer(buf));
         stream.print("</string>");
         printEndEnvelope(tag);
-    }
-    
-    public void writeRecord(Record r, String tag) throws IOException {
-        r.serialize(this, tag);
     }
     
     public void startRecord(Record r, String tag) throws IOException {

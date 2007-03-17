@@ -29,18 +29,20 @@ import java.io.OutputStream;
  *
  * @author Milind Bhandarkar
  */
-public class BinaryOutputArchive implements OutputArchive {
+public class BinaryRecordOutput implements RecordOutput {
     
     private DataOutput out;
     
-    static BinaryOutputArchive getArchive(OutputStream strm) {
-        return new BinaryOutputArchive(new DataOutputStream(strm));
+    /** Creates a new instance of BinaryRecordOutput */
+    public BinaryRecordOutput(OutputStream out) {
+        this.out = new DataOutputStream(out);
     }
     
-    /** Creates a new instance of BinaryOutputArchive */
-    public BinaryOutputArchive(DataOutput out) {
+    /** Creates a new instance of BinaryRecordOutput */
+    public BinaryRecordOutput(DataOutput out) {
         this.out = out;
     }
+    
     
     public void writeByte(byte b, String tag) throws IOException {
         out.writeByte(b);
@@ -67,10 +69,7 @@ public class BinaryOutputArchive implements OutputArchive {
     }
     
     public void writeString(String s, String tag) throws IOException {
-      byte[] bytes = s.getBytes("UTF-8");
-      int length = bytes.length;
-      Utils.writeVInt(out, length);
-      out.write(bytes);
+      Utils.toBinaryString(out, s);
     }
     
     public void writeBuffer(Buffer buf, String tag)
@@ -79,10 +78,6 @@ public class BinaryOutputArchive implements OutputArchive {
       int len = buf.getCount();
       Utils.writeVInt(out, len);
       out.write(barr, 0, len);
-    }
-    
-    public void writeRecord(Record r, String tag) throws IOException {
-        r.serialize(this, tag);
     }
     
     public void startRecord(Record r, String tag) throws IOException {}

@@ -27,13 +27,9 @@ import java.io.InputStream;
  *
  * @author Milind Bhandarkar
  */
-public class BinaryInputArchive implements InputArchive {
+public class BinaryRecordInput implements RecordInput {
     
     final private DataInput in;
-    
-    static BinaryInputArchive getArchive(InputStream strm) {
-        return new BinaryInputArchive(new DataInputStream(strm));
-    }
     
     static private class BinaryIndex implements Index {
         private int nelems;
@@ -47,9 +43,15 @@ public class BinaryInputArchive implements InputArchive {
             nelems--;
         }
     }
-    /** Creates a new instance of BinaryInputArchive */
-    public BinaryInputArchive(DataInput in) {
-        this.in = in;
+    
+    /** Creates a new instance of BinaryRecordInput */
+    public BinaryRecordInput(InputStream strm) {
+        this.in = new DataInputStream(strm);
+    }
+    
+    /** Creates a new instance of BinaryRecordInput */
+    public BinaryRecordInput(DataInput din) {
+        this.in = din;
     }
     
     public byte readByte(final String tag) throws IOException {
@@ -77,10 +79,7 @@ public class BinaryInputArchive implements InputArchive {
     }
     
     public String readString(final String tag) throws IOException {
-      final int length = Utils.readVInt(in);
-      final byte[] bytes = new byte[length];
-      in.readFully(bytes);
-      return new String(bytes, "UTF-8");
+      return Utils.fromBinaryString(in);
     }
     
     public Buffer readBuffer(final String tag) throws IOException {
@@ -88,10 +87,6 @@ public class BinaryInputArchive implements InputArchive {
       final byte[] barr = new byte[len];
       in.readFully(barr);
       return new Buffer(barr);
-    }
-    
-    public void readRecord(final Record record, final String tag) throws IOException {
-        record.deserialize(this, tag);
     }
     
     public void startRecord(final String tag) throws IOException {
