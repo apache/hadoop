@@ -155,7 +155,7 @@ class FSNamesystem implements FSConstants {
     // We also store pending replication-orders.
     // Set of: Block
     //
-    private UnderReplicationBlocks neededReplications = new UnderReplicationBlocks();
+    private UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
     private PendingReplicationBlocks pendingReplications;
 
     //
@@ -334,12 +334,12 @@ class FSNamesystem implements FSConstants {
      * Blocks have replication priority, with priority 0 indicating the highest
      * Blocks have only one replicas has the highest
      */
-    private class UnderReplicationBlocks {
+    private class UnderReplicatedBlocks {
         private static final int LEVEL = 3;
         TreeSet<Block>[] priorityQueues = new TreeSet[LEVEL];
         
         /* constructor */
-        UnderReplicationBlocks() {
+        UnderReplicatedBlocks() {
             for(int i=0; i<LEVEL; i++) {
                 priorityQueues[i] = new TreeSet<Block>();
             }
@@ -369,7 +369,7 @@ class FSNamesystem implements FSConstants {
         */
         private int getPriority(Block block, 
                 int curReplicas, int expectedReplicas) {
-            if (curReplicas==0 || curReplicas>=expectedReplicas) {
+            if (curReplicas<=0 || curReplicas>=expectedReplicas) {
                 return LEVEL; // no need to replicate
             } else if(curReplicas==1) {
                 return 0; // highest priority
@@ -414,16 +414,14 @@ class FSNamesystem implements FSConstants {
         /* remove a block from a under replication queue */
         synchronized boolean remove(Block block, 
                 int oldReplicas, int oldExpectedReplicas) {
-            if(oldExpectedReplicas <= oldReplicas) {
-                return false;
-            }
             int priLevel = getPriority(block, oldReplicas, oldExpectedReplicas);
             return remove(block, priLevel);
         }
         
         /* remove a block from a under replication queue given a priority*/
         private boolean remove(Block block, int priLevel ) {
-            if( priorityQueues[priLevel].remove(block) ) {
+            if( priLevel >= 0 && priLevel < LEVEL 
+                    && priorityQueues[priLevel].remove(block) ) {
                 NameNode.stateChangeLog.debug(
                      "BLOCK* NameSystem.UnderReplicationBlock.remove: "
                    + "Removing block " + block.getBlockName()
@@ -3536,6 +3534,8 @@ class FSNamesystem implements FSConstants {
         NameNode.stateChangeLog.info("STATE* Network topology has "
                 +clusterMap.getNumOfRacks()+" racks and "
                 +clusterMap.getNumOfLeaves()+ " datanodes");
+        NameNode.stateChangeLog.info("STATE* UnderReplicatedBlocks has "
+                +neededReplications.size()+" blocks" );
       }
       
       /** 
