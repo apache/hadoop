@@ -113,7 +113,7 @@ public class LineRecordReader implements RecordReader {
     if (start == end) {
       return 0.0f;
     } else {
-      return (pos - start) / (end - start);
+      return Math.min(1.0f, (pos - start) / (float)(end - start));
     }
   }
   
