@@ -44,7 +44,8 @@ public class SequenceFileRecordReader implements RecordReader {
     if (split.getStart() > in.getPosition())
       in.sync(split.getStart());                  // sync to start
 
-    more = in.getPosition() < end;
+    this.start = in.getPosition();
+    more = start < end;
   }
 
 
@@ -104,7 +105,7 @@ public class SequenceFileRecordReader implements RecordReader {
     if (end == start) {
       return 0.0f;
     } else {
-      return (in.getPosition() - start) / (end - start);
+      return Math.min(1.0f, (in.getPosition() - start) / (float)(end - start));
     }
   }
   

@@ -14,23 +14,25 @@
 # limitations under the License.
 #
 
+COPTS=-g3 -O0 -Wall
+
 all: test testFromJava
 
 test: test.o test.jr.o
 	g++ -g3 -O0 -o test test.o test.jr.o -L.. -L${XERCESCROOT}/lib -lrecordio -lxerces-c
 	
 test.o: test.cc
-	g++ -g3 -O0 -c -I.. -o test.o test.cc
+	g++ ${COPTS} -c -I.. -o test.o test.cc
 
 testFromJava: testFromJava.o test.jr.o
 	g++ -g3 -O0 -o testFromJava testFromJava.o test.jr.o -L.. -L${XERCESCROOT}/lib -lrecordio -lxerces-c
 	
 testFromJava.o: testFromJava.cc
-	g++ -g3 -O0 -c -I.. -o testFromJava.o testFromJava.cc
+	g++ ${COPTS} -c -I.. -o testFromJava.o testFromJava.cc
 
 
 test.jr.o: test.jr.cc
-	g++ -g3 -O0 -c -I.. -o test.jr.o test.jr.cc
+	g++ ${COPTS} -c -I.. -o test.jr.o test.jr.cc
 
 %.jr.cc %.jr.hh: %.jr
 	${HADOOP_HOME}/bin/rcc --language c++ $<

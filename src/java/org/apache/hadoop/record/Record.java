@@ -18,16 +18,62 @@
 
 package org.apache.hadoop.record;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Interface that is implemented by generated classes.
+ * Abstract class that is extended by generated classes.
  * 
  * @author Milind Bhandarkar
  */
-public interface Record extends Cloneable {
-    void serialize(OutputArchive archive, String tag)
-        throws IOException;
-    void deserialize(InputArchive archive, String tag)
-        throws IOException;
+public abstract class Record implements WritableComparable, Cloneable {
+  
+  /**
+   * Serialize a record with tag (ususally field name)
+   * @param rout Record output destination
+   * @param tag record tag (Used only in tagged serialization e.g. XML)
+   */
+  public abstract void serialize(RecordOutput rout, String tag)
+  throws IOException;
+  
+  /**
+   * Deserialize a record with a tag (usually field name)
+   * @param rin Record input source
+   * @param tag Record tag (Used only in tagged serialization e.g. XML)
+   */
+  public abstract void deserialize(RecordInput rin, String tag)
+  throws IOException;
+  
+  // inheric javadoc
+  public abstract int compareTo (final Object peer) throws ClassCastException;
+  
+  /**
+   * Serialize a record without a tag
+   * @param rout Record output destination
+   */
+  public void serialize(RecordOutput rout) throws IOException {
+    this.serialize(rout, "");
+  }
+  
+  /**
+   * Deserialize a record without a tag
+   * @param rin Record input source
+   */
+  public void deserialize(RecordInput rin) throws IOException {
+    this.deserialize(rin, "");
+  }
+  
+  // inherit javadoc
+  public void write(final DataOutput out) throws java.io.IOException {
+    BinaryRecordOutput bout = new BinaryRecordOutput(out);
+    this.serialize(bout);
+  }
+  
+  // inherit javadoc
+  public void readFields(final DataInput din) throws java.io.IOException {
+    BinaryRecordInput rin = new BinaryRecordInput(din);
+    this.deserialize(rin);
+  }
 }

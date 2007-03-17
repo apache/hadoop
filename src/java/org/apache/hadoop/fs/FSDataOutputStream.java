@@ -43,6 +43,10 @@ public class FSDataOutputStream extends DataOutputStream {
       return position;                            // return cached position
     }
     
+    public void close() throws IOException {
+      flush();
+      out.close();
+    }
   }
 
   private static class Buffer extends BufferedOutputStream {
@@ -62,6 +66,11 @@ public class FSDataOutputStream extends DataOutputStream {
         buf[count++] = (byte)b;
       }
     }
+
+    public void close() throws IOException {
+      flush();
+      out.close();
+    }
   }
 
   public FSDataOutputStream(OutputStream out, int bufferSize)
@@ -76,5 +85,10 @@ public class FSDataOutputStream extends DataOutputStream {
 
   public long getPos() throws IOException {
     return ((Buffer)out).getPos();
+  }
+
+  public void close() throws IOException {
+    flush();
+    out.close();
   }
 }

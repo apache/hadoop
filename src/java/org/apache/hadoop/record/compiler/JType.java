@@ -80,14 +80,14 @@ abstract public class JType {
     }
     
     void genWriteMethod(CodeBuffer cb, String fname, String tag) {
-      cb.append("a_.write"+methodSuffix+"("+fname+",\""+tag+"\");\n");
+      cb.append("a.write"+methodSuffix+"("+fname+",\""+tag+"\");\n");
     }
     
     void genReadMethod(CodeBuffer cb, String fname, String tag, boolean decl) {
       if (decl) {
         cb.append(name+" "+fname+";\n");
       }
-      cb.append(fname+"=a_.read"+methodSuffix+"(\""+tag+"\");\n");
+      cb.append(fname+"=a.read"+methodSuffix+"(\""+tag+"\");\n");
     }
     
     void genCompareTo(CodeBuffer cb, String fname, String other) {

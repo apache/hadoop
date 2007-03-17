@@ -617,11 +617,14 @@ public class JobClient extends ToolBase implements MRConstants  {
 
     private static void displayTaskLogs(String taskId, String baseUrl)
     throws IOException {
-      // Copy tasks's stdout of the JobClient
-      getTaskLogs(taskId, new URL(baseUrl+"&filter=stdout"), System.out);
-      
-      // Copy task's stderr to stderr of the JobClient 
-      getTaskLogs(taskId, new URL(baseUrl+"&filter=stderr"), System.err);
+      // The tasktracker for a 'failed/killed' job might not be around...
+      if (baseUrl != null) {
+        // Copy tasks's stdout of the JobClient
+        getTaskLogs(taskId, new URL(baseUrl+"&filter=stdout"), System.out);
+        
+        // Copy task's stderr to stderr of the JobClient 
+        getTaskLogs(taskId, new URL(baseUrl+"&filter=stderr"), System.err);
+      }
     }
     
     private static void getTaskLogs(String taskId, URL taskLogUrl, 

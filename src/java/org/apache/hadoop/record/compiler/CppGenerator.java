@@ -46,20 +46,21 @@ class CppGenerator extends CodeGenerator {
     FileWriter cc = new FileWriter(name+".cc");
     FileWriter hh = new FileWriter(name+".hh");
     
-    hh.write("#ifndef __"+name.toUpperCase().replace('.','_')+"__\n");
-    hh.write("#define __"+name.toUpperCase().replace('.','_')+"__\n");
+    String fileName = (new File(name)).getName();
+    hh.write("#ifndef __"+fileName.toUpperCase().replace('.','_')+"__\n");
+    hh.write("#define __"+fileName.toUpperCase().replace('.','_')+"__\n");
     hh.write("#include \"recordio.hh\"\n");
     for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
       hh.write("#include \""+iter.next().getName()+".hh\"\n");
     }
     
-    cc.write("#include \""+name+".hh\"\n");
+    cc.write("#include \""+fileName+".hh\"\n");
     
     for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
       iter.next().genCppCode(hh, cc, options);
     }
     
-    hh.write("#endif //"+name.toUpperCase().replace('.','_')+"__\n");
+    hh.write("#endif //"+fileName.toUpperCase().replace('.','_')+"__\n");
     
     hh.close();
     cc.close();

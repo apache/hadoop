@@ -68,10 +68,12 @@ namespace hadoop {
      */
     virtual std::string toString() const;
 
+#ifdef USE_EXECINFO
     /**
      * Print the call stack where the exception was created.
      */
     virtual void printCallStack(std::ostream& stream=std::cerr) const;
+#endif
 
     const std::string& getMessage() const {
       return mMessage;

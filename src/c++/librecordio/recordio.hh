@@ -33,11 +33,13 @@ namespace hadoop {
 class InStream {
 public:
   virtual ssize_t read(void *buf, size_t buflen) = 0;
+  virtual ~InStream() {}
 };
 
 class OutStream {
 public:
   virtual ssize_t write(const void *buf, size_t len) = 0;
+  virtual ~OutStream() {}
 };
 
 class IArchive;
@@ -45,11 +47,11 @@ class OArchive;
 
 class Record {
 public:
-  virtual bool validate() const = 0;
   virtual void serialize(OArchive& archive, const char* tag) const = 0;
   virtual void deserialize(IArchive& archive, const char* tag) = 0;
   virtual const std::string& type() const = 0;
   virtual const std::string& signature() const = 0;
+  virtual ~Record() {}
 };
 
 enum RecFormat { kBinary, kXML, kCSV };

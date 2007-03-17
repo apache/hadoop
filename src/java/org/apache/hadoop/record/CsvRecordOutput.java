@@ -29,15 +29,10 @@ import java.io.UnsupportedEncodingException;
  *
  * @author Milind Bhandarkar
  */
-public class CsvOutputArchive implements OutputArchive {
+public class CsvRecordOutput implements RecordOutput {
 
     private PrintStream stream;
     private boolean isFirst = true;
-    
-    static CsvOutputArchive getArchive(OutputStream strm)
-    throws UnsupportedEncodingException {
-        return new CsvOutputArchive(strm);
-    }
     
     private void throwExceptionOnError(String tag) throws IOException {
         if (stream.checkError()) {
@@ -52,10 +47,13 @@ public class CsvOutputArchive implements OutputArchive {
         isFirst = false;
     }
     
-    /** Creates a new instance of CsvOutputArchive */
-    public CsvOutputArchive(OutputStream out)
-    throws UnsupportedEncodingException {
+    /** Creates a new instance of CsvRecordOutput */
+    public CsvRecordOutput(OutputStream out) {
+      try {
         stream = new PrintStream(out, true, "UTF-8");
+      } catch (UnsupportedEncodingException ex) {
+        throw new RuntimeException(ex);
+      }
     }
     
     public void writeByte(byte b, String tag) throws IOException {
@@ -100,10 +98,6 @@ public class CsvOutputArchive implements OutputArchive {
         printCommaUnlessFirst();
         stream.print(Utils.toCSVBuffer(buf));
         throwExceptionOnError(tag);
-    }
-    
-    public void writeRecord(Record r, String tag) throws IOException {
-        r.serialize(this, tag);
     }
     
     public void startRecord(Record r, String tag) throws IOException {

@@ -72,6 +72,7 @@ public:
     }
     endMap(idx, tag);
   }
+  virtual ~IArchive() {}
 };
 
 class OArchive {
@@ -115,6 +116,7 @@ public:
     }
     endMap(v.size(), tag);
  }
+  virtual ~OArchive() {}
 };
 }; // end namespace hadoop
 #endif /*ARCHIVE_HH_*/

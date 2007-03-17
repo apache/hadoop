@@ -479,9 +479,9 @@ namespace inclrec {
 
   private:
 
-    int32_t      mI32;
-    double       mD;
-    std::string  mS;
+    int32_t      I32;
+    double       D;
+    std::string  S;
 
   public:
 
@@ -491,14 +491,14 @@ namespace inclrec {
     virtual bool operator==(const RI& peer) const;
     virtual bool operator<(const RI& peer) const;
 
-    virtual int32_t getI32(void) const { return mI32; }
-    virtual void setI32(int32_t v) { mI32 = v; }
+    virtual int32_t getI32(void) const { return I32; }
+    virtual void setI32(int32_t v) { I32 = v; }
 
-    virtual double getD(void) const { return mD; }
-    virtual void setD(double v) { mD = v; }
+    virtual double getD(void) const { return D; }
+    virtual void setD(double v) { D = v; }
 
-    virtual std::string& getS(void) const { return mS; }
-    virtual const std::string& getS(void) const { return mS; }
+    virtual std::string& getS(void) const { return S; }
+    virtual const std::string& getS(void) const { return S; }
 
     virtual std::string type(void) const;
     virtual std::string signature(void) const;
@@ -507,8 +507,6 @@ namespace inclrec {
 
     virtual void serialize(hadoop::OArchive& a) const;
     virtual void deserialize(hadoop::IArchive& a);
-
-    virtual bool validate(void);
   };
 } // end namespace inclrec
 
@@ -531,9 +529,9 @@ namespace testrec {
 
   private:
 
-    std::vector<float> mVF;
-    inclrec::RI        mRec;
-    std::string        mBuf;
+    std::vector<float> VF;
+    inclrec::RI        Rec;
+    std::string        Buf;
 
   public:
 
@@ -595,11 +593,11 @@ int             int32_t             int
 long            int64_t             long
 float           float               float
 double          double              double
-ustring         std::string         Text
-buffer          std::string         java.io.ByteArrayOutputStream
+ustring         std::string         java.lang.String
+buffer          std::string         org.apache.hadoop.record.Buffer
 class type      class type          class type
-vector<type>    std::vector<type>   java.util.ArrayList
-map<type,type>  std::map<type,type> java.util.TreeMap
+vector<type>    std::vector<type>   java.util.ArrayList<type>
+map<type,type>  std::map<type,type> java.util.TreeMap<type,type>
 </code></pre>
 
 <h2>Data encodings</h2>

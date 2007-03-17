@@ -187,7 +187,7 @@ public class WritableComparator implements Comparator {
           i = i << 8;
           i = i | (bytes[start+1+idx] & 0xFF);
       }
-      return (isNegative ? (i | 0x8000000000000000L) : i);
+      return (isNegative ? (i ^ -1L) : i);
   }
   
   /**

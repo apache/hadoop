@@ -32,7 +32,7 @@ import javax.xml.parsers.SAXParser;
  *
  * @author Milind Bhandarkar
  */
-class XmlInputArchive implements InputArchive {
+class XmlRecordInput implements RecordInput {
     
     static private class Value {
         private String type;
@@ -132,14 +132,9 @@ class XmlInputArchive implements InputArchive {
         }
     }
     
-    static XmlInputArchive getArchive(InputStream strm)
-    throws ParserConfigurationException, SAXException, IOException {
-        return new XmlInputArchive(strm);
-    }
-    
-    /** Creates a new instance of BinaryInputArchive */
-    public XmlInputArchive(InputStream in)
-    throws ParserConfigurationException, SAXException, IOException {
+    /** Creates a new instance of XmlRecordInput */
+    public XmlRecordInput(InputStream in) {
+      try{
         valList = new ArrayList();
         DefaultHandler handler = new XMLParser(valList);
         SAXParserFactory factory = SAXParserFactory.newInstance();
@@ -147,6 +142,9 @@ class XmlInputArchive implements InputArchive {
         parser.parse(in, handler);
         vLen = valList.size();
         vIdx = 0;
+      } catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
     }
     
     public byte readByte(String tag) throws IOException {
@@ -212,10 +210,6 @@ class XmlInputArchive implements InputArchive {
             throw new IOException("Error deserializing "+tag+".");
         }
         return Utils.fromXMLBuffer(v.getValue());
-    }
-    
-    public void readRecord(Record r, String tag) throws IOException {
-        r.deserialize(this, tag);
     }
     
     public void startRecord(String tag) throws IOException {

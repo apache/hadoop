@@ -14,28 +14,30 @@
 # limitations under the License.
 #
 
+COPTS=-g3 -O0 -Wall
+
 all: librecordio.a test
 
 librecordio.a: recordio.o filestream.o binarchive.o csvarchive.o xmlarchive.o exception.o
 	ar cru librecordio.a recordio.o filestream.o binarchive.o csvarchive.o xmlarchive.o exception.o
 
 recordio.o: recordio.cc recordio.hh archive.hh
-	g++ -g3 -O0 -c -I${XERCESCROOT}/include -o recordio.o recordio.cc
+	g++ ${COPTS} -c -I${XERCESCROOT}/include -o recordio.o recordio.cc
 	
 filestream.o: filestream.cc recordio.hh filestream.hh
-	g++ -g3 -O0 -c -o filestream.o filestream.cc
+	g++ ${COPTS} -c -o filestream.o filestream.cc
 	
 binarchive.o: binarchive.cc recordio.hh binarchive.hh archive.hh
-	g++ -g3 -O0 -c -o binarchive.o binarchive.cc
+	g++ ${COPTS} -c -o binarchive.o binarchive.cc
 
 csvarchive.o: csvarchive.cc recordio.hh csvarchive.hh archive.hh
-	g++ -g3 -O0 -c -o csvarchive.o csvarchive.cc
+	g++ ${COPTS} -c -o csvarchive.o csvarchive.cc
 
 xmlarchive.o: xmlarchive.cc recordio.hh xmlarchive.hh archive.hh
-	g++ -g3 -O0 -c -I${XERCESCROOT}/include -o xmlarchive.o xmlarchive.cc
+	g++ ${COPTS} -c -I${XERCESCROOT}/include -o xmlarchive.o xmlarchive.cc
 		
 exception.o: exception.cc exception.hh
-	g++ -g3 -O0 -c -o exception.o exception.cc
+	g++ ${COPTS} -c -o exception.o exception.cc
 	
 recordio.cc: recordio.hh archive.hh exception.hh
 filestream.cc: recordio.hh filestream.hh 

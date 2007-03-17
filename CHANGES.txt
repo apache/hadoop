@@ -1,6 +1,85 @@
 Hadoop Change Log
 
 
+Release 0.12.1 - 2007-03-17
+
+ 1. HADOOP-1035.  Fix a StackOverflowError in FSDataSet.
+    (Raghu Angadi via cutting)
+
+ 2. HADOOP-1053.  Fix VInt representation of negative values.  Also
+    remove references in generated record code to methods outside of
+    the record package and improve some record documentation.
+    (Milind Bhandarkar via cutting)
+
+ 3. HADOOP-1067.  Compile fails if Checkstyle jar is present in lib
+    directory. Also remove dependency on a particular Checkstyle
+    version number. (tomwhite)
+
+ 4. HADOOP-1060.  Fix an IndexOutOfBoundsException in the JobTracker
+    that could cause jobs to hang.  (Arun C Murthy via cutting)
+
+ 5. HADOOP-1077.  Fix a race condition fetching map outputs that could
+    hang reduces.  (Devaraj Das via cutting)
+
+ 6. HADOOP-1083.  Fix so that when a cluster restarts with a missing
+    datanode, its blocks are replicated.  (Hairong Kuang via cutting)
+
+ 7. HADOOP-1082.  Fix a NullPointerException in ChecksumFileSystem.
+    (Hairong Kuang via cutting)
+
+ 8. HADOOP-1088.  Fix record serialization of negative values.
+    (Milind Bhandarkar via cutting)
+
+ 9. HADOOP-1080.  Fix bug in bin/hadoop on Windows when native
+    libraries are present.  (ab via cutting)
+
+10. HADOOP-1091.  Fix a NullPointerException in MetricsRecord.
+    (David Bowen via tomwhite)
+
+11. HADOOP-1092.  Fix a NullPointerException in HeartbeatMonitor
+    thread. (Hairong Kuang via tomwhite)
+
+12. HADOOP-1112.  Fix a race condition in Hadoop metrics.
+    (David Bowen via tomwhite)
+
+13. HADOOP-1108.  Checksummed file system should retry reading if a
+    different replica is found when handling ChecksumException.
+    (Hairong Kuang via tomwhite)
+
+14. HADOOP-1070.  Fix a problem with number of racks and datanodes
+    temporarily doubling.  (Konstantin Shvachko via tomwhite)
+
+15. HADOOP-1099.  Fix NullPointerException in JobInProgress.
+    (Gautam Kowshik via tomwhite)
+
+16. HADOOP-1115.  Fix bug where FsShell copyToLocal doesn't
+    copy directories.  (Hairong Kuang via tomwhite)
+
+17. HADOOP-1109.  Fix NullPointerException in StreamInputFormat.
+    (Koji Noguchi via tomwhite)
+
+18. HADOOP-1117.  Fix DFS scalability: when the namenode is
+    restarted it consumes 80% CPU. (Dhruba Borthakur via
+    tomwhite)
+
+19. HADOOP-1089.  Make the C++ version of write and read v-int
+    agree with the Java versions.  (Milind Bhandarkar via
+    tomwhite)
+
+20. HADOOP-1096.  Rename InputArchive and OutputArchive and
+    make them public. (Milind Bhandarkar via tomwhite)
+
+21. HADOOP-1128.  Fix missing progress information in map tasks.
+    (Espen Amble Kolstad, Andrzej Bialecki, and Owen O'Malley
+    via tomwhite)
+
+22. HADOOP-1129.  Fix DFSClient to not hide IOExceptions in
+    flush method.  (Hairong Kuang via tomwhite)
+
+23. HADOOP-1126.  Optimize CPU usage for under replicated blocks
+    when cluster restarts.  (Hairong Kuang via tomwhite)
+
+
 Release 0.12.0 - 2007-03-02
 
  1. HADOOP-975.  Separate stdout and stderr from tasks.

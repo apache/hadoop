@@ -75,13 +75,13 @@ public class JVector extends JCompType {
       }
       cb.append("{\n");
       incrLevel();
-      cb.append("org.apache.hadoop.record.Index "+getId("vidx")+" = a_.startVector(\""+tag+"\");\n");
+      cb.append("org.apache.hadoop.record.Index "+getId("vidx")+" = a.startVector(\""+tag+"\");\n");
       cb.append(fname+"=new "+getType()+"();\n");
       cb.append("for (; !"+getId("vidx")+".done(); "+getId("vidx")+".incr()) {\n");
       element.genReadMethod(cb, getId("e"), getId("e"), true);
       cb.append(fname+".add("+getId("e")+");\n");
       cb.append("}\n");
-      cb.append("a_.endVector(\""+tag+"\");\n");
+      cb.append("a.endVector(\""+tag+"\");\n");
       decrLevel();
       cb.append("}\n");
     }
@@ -89,13 +89,13 @@ public class JVector extends JCompType {
     void genWriteMethod(CodeBuffer cb, String fname, String tag) {
       cb.append("{\n");
       incrLevel();
-      cb.append("a_.startVector("+fname+",\""+tag+"\");\n");
+      cb.append("a.startVector("+fname+",\""+tag+"\");\n");
       cb.append("int "+getId("len")+" = "+fname+".size();\n");
       cb.append("for(int "+getId("vidx")+" = 0; "+getId("vidx")+"<"+getId("len")+"; "+getId("vidx")+"++) {\n");
       cb.append(element.getType()+" "+getId("e")+" = "+fname+".get("+getId("vidx")+");\n");
       element.genWriteMethod(cb, getId("e"), getId("e"));
       cb.append("}\n");
-      cb.append("a_.endVector("+fname+",\""+tag+"\");\n");
+      cb.append("a.endVector("+fname+",\""+tag+"\");\n");
       cb.append("}\n");
       decrLevel();
     }

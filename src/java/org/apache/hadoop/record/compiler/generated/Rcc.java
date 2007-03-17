@@ -43,6 +43,10 @@ public class Rcc implements RccConstants {
         System.exit(driver(args));
     }
 
+    public static void usage() {
+        System.err.println("Usage: rcc --language [java|c++] ddl-files");
+    }
+
     public static int driver(String[] args) {
         for (int i=0; i<args.length; i++) {
             if ("-l".equalsIgnoreCase(args[i]) ||
@@ -64,7 +68,7 @@ public class Rcc implements RccConstants {
             }
         }
         if (recFiles.size() == 0) {
-            System.err.println("No record files specified. Exiting.");
+            usage();
             return 1;
         }
         for (int i=0; i<recFiles.size(); i++) {

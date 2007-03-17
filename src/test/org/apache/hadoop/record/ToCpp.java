@@ -20,8 +20,6 @@ package org.apache.hadoop.record;
 
 import java.io.IOException;
 import junit.framework.*;
-import org.apache.hadoop.record.RecordWriter;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
@@ -46,9 +44,9 @@ public class ToCpp extends TestCase {
     public void testBinary() {
         File tmpfile;
         try {
-            tmpfile = new File("/temp/hadooptemp.dat");
+            tmpfile = new File("/tmp/hadooptemp.dat");
             FileOutputStream ostream = new FileOutputStream(tmpfile);
-            RecordWriter out = new RecordWriter(ostream, "binary");
+            BinaryRecordOutput out = new BinaryRecordOutput(ostream);
             RecRecord1 r1 = new RecRecord1();
             r1.setBoolVal(true);
             r1.setByteVal((byte)0x66);
@@ -60,7 +58,7 @@ public class ToCpp extends TestCase {
             r1.setBufferVal(new Buffer());
             r1.setVectorVal(new ArrayList<String>());
             r1.setMapVal(new TreeMap<String,String>());
-            out.write(r1);
+            r1.serialize(out, "");
             ostream.close();
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -70,9 +68,9 @@ public class ToCpp extends TestCase {
     public void testCsv() {
         File tmpfile;
         try {
-            tmpfile = new File("/temp/hadooptemp.txt");
+            tmpfile = new File("/tmp/hadooptemp.txt");
             FileOutputStream ostream = new FileOutputStream(tmpfile);
-            RecordWriter out = new RecordWriter(ostream, "csv");
+            CsvRecordOutput out = new CsvRecordOutput(ostream);
             RecRecord1 r1 = new RecRecord1();
             r1.setBoolVal(true);
             r1.setByteVal((byte)0x66);
@@ -84,7 +82,7 @@ public class ToCpp extends TestCase {
             r1.setBufferVal(new Buffer());
             r1.setVectorVal(new ArrayList<String>());
             r1.setMapVal(new TreeMap<String,String>());
-            out.write(r1);
+            r1.serialize(out, "");
             ostream.close();
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -94,9 +92,9 @@ public class ToCpp extends TestCase {
     public void testXml() {
         File tmpfile;
         try {
-            tmpfile = new File("/temp/hadooptemp.xml");
+            tmpfile = new File("/tmp/hadooptemp.xml");
             FileOutputStream ostream = new FileOutputStream(tmpfile);
-            RecordWriter out = new RecordWriter(ostream, "xml");
+            XmlRecordOutput out = new XmlRecordOutput(ostream);
             RecRecord1 r1 = new RecRecord1();
             r1.setBoolVal(true);
             r1.setByteVal((byte)0x66);
@@ -108,7 +106,7 @@ public class ToCpp extends TestCase {
             r1.setBufferVal(new Buffer());
             r1.setVectorVal(new ArrayList<String>());
             r1.setMapVal(new TreeMap<String,String>());
-            out.write(r1);
+            r1.serialize(out, "");
             ostream.close();
         } catch (IOException ex) {
             ex.printStackTrace();
