@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Release 0.12.1 - 2007-03-17
 
  1. HADOOP-1035.  Fix a StackOverflowError in FSDataSet.
     (Raghu Angadi via cutting)
