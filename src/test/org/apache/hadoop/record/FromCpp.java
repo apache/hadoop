@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.record;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -58,9 +57,9 @@ public class FromCpp extends TestCase {
             r1.setVectorVal(new ArrayList<String>());
             r1.setMapVal(new TreeMap<String,String>());
             FileInputStream istream = new FileInputStream(tmpfile);
-            RecordReader in = new RecordReader(istream, "binary");
+            BinaryRecordInput in = new BinaryRecordInput(istream);
             RecRecord1 r2 = new RecRecord1();
-            in.read(r2);
+            r2.deserialize(in, "");
             istream.close();
             assertTrue(r1.equals(r2));
         } catch (IOException ex) {
@@ -84,9 +83,9 @@ public class FromCpp extends TestCase {
             r1.setVectorVal(new ArrayList<String>());
             r1.setMapVal(new TreeMap<String,String>());
             FileInputStream istream = new FileInputStream(tmpfile);
-            RecordReader in = new RecordReader(istream, "csv");
+            CsvRecordInput in = new CsvRecordInput(istream);
             RecRecord1 r2 = new RecRecord1();
-            in.read(r2);
+            r2.deserialize(in, "");
             istream.close();
             assertTrue(r1.equals(r2));
         } catch (IOException ex) {
@@ -110,9 +109,9 @@ public class FromCpp extends TestCase {
             r1.setVectorVal(new ArrayList<String>());
             r1.setMapVal(new TreeMap<String,String>());
             FileInputStream istream = new FileInputStream(tmpfile);
-            RecordReader in = new RecordReader(istream, "xml");
+            XmlRecordInput in = new XmlRecordInput(istream);
             RecRecord1 r2 = new RecRecord1();
-            in.read(r2);
+            r2.deserialize(in, "");
             istream.close();
             assertTrue(r1.equals(r2));
         } catch (IOException ex) {

@@ -85,12 +85,14 @@ static std::string toXMLString(std::string s)
     } else if (ch == '&') {
         r.append("&amp;");
     } else if (ch == '%') {
-        r.append("%25");
+        r.append("%0025");
     } else if (ch < 0x20) {
         uint8_t* pb = (uint8_t*) &ch;
         char ch1 = hexchars[*pb/16];
         char ch2 = hexchars[*pb%16];
         r.push_back('%');
+        r.push_back('0');
+        r.push_back('0');
         r.push_back(ch1);
         r.push_back(ch2);
     } else {
@@ -105,10 +107,10 @@ static uint8_t h2b(char ch) {
     return ch - '0';
   }
   if ((ch >= 'a') || (ch <= 'f')) {
-    return ch - 'a';
+    return ch - 'a' + 10;
   }
   if ((ch >= 'A') || (ch <= 'F')) {
-    return ch - 'A';
+    return ch - 'A' + 10;
   }
   return 0;
 }
@@ -123,20 +125,18 @@ static std::string fromXMLString(std::string s)
     uint8_t b = *pb;
     if (b == '%') {
       char *pc = (char*) (pb+1);
-      if (*pc == '%') {
-        r.push_back('%');
-        pb += 1;
-      } else {
-        char ch1 = *pc++;
-        char ch2 = *pc++;
-        pb += 2;
-        uint8_t cnv = h2b(ch1)*16 + h2b(ch2);
-        pc = (char*) &cnv;
-        r.push_back(*pc);
-      }
+      // ignore the first two characters, which are always '0'
+      *pc++;
+      *pc++;;
+      char ch1 = *pc++;
+      char ch2 = *pc++;
+      pb += 4;
+      uint8_t cnv = h2b(ch1)*16 + h2b(ch2);
+      pc = (char*) &cnv;
+      r.push_back(*pc);
     } else {
-        char *pc = (char*) pb;
-        r.push_back(*pc);
+      char *pc = (char*) pb;
+      r.push_back(*pc);
     }
     pb++;
   }

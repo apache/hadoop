@@ -79,14 +79,14 @@ public class JMap extends JCompType {
       }
       cb.append("{\n");
       incrLevel();
-      cb.append("org.apache.hadoop.record.Index "+getId("midx")+" = a_.startMap(\""+tag+"\");\n");
+      cb.append("org.apache.hadoop.record.Index "+getId("midx")+" = a.startMap(\""+tag+"\");\n");
       cb.append(fname+"=new "+getType()+"();\n");
       cb.append("for (; !"+getId("midx")+".done(); "+getId("midx")+".incr()) {\n");
       key.genReadMethod(cb, getId("k"),getId("k"),true);
       value.genReadMethod(cb, getId("v"),getId("v"),true);
       cb.append(fname+".put("+getId("k")+","+getId("v")+");\n");
       cb.append("}\n");
-      cb.append("a_.endMap(\""+tag+"\");\n");
+      cb.append("a.endMap(\""+tag+"\");\n");
       decrLevel();
       cb.append("}\n");
     }
@@ -100,7 +100,7 @@ public class JMap extends JCompType {
           key.getWrapperType()+","+value.getWrapperType()+">> ";
       cb.append("{\n");
       incrLevel();
-      cb.append("a_.startMap("+fname+",\""+tag+"\");\n");
+      cb.append("a.startMap("+fname+",\""+tag+"\");\n");
       cb.append(setType+getId("es")+" = "+fname+".entrySet();\n");
       cb.append("for("+iterType+getId("midx")+" = "+getId("es")+".iterator(); "+getId("midx")+".hasNext(); ) {\n");
       cb.append(entryType+getId("me")+" = "+getId("midx")+".next();\n");
@@ -109,7 +109,7 @@ public class JMap extends JCompType {
       key.genWriteMethod(cb, getId("k"),getId("k"));
       value.genWriteMethod(cb, getId("v"),getId("v"));
       cb.append("}\n");
-      cb.append("a_.endMap("+fname+",\""+tag+"\");\n");
+      cb.append("a.endMap("+fname+",\""+tag+"\");\n");
       cb.append("}\n");
       decrLevel();
     }

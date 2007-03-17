@@ -33,10 +33,6 @@ public class JBuffer extends JCompType {
       super("org.apache.hadoop.record.Buffer", "Buffer", "org.apache.hadoop.record.Buffer");
     }
     
-    void genWriteMethod(CodeBuffer cb, String fname, String tag) {
-      cb.append("a_.writeBuffer("+fname+",\""+tag+"\");\n");
-    }
-    
     void genCompareTo(CodeBuffer cb, String fname, String other) {
       cb.append("ret = "+fname+".compareTo("+other+");\n");
     }

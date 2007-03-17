@@ -55,11 +55,11 @@ public class JRecord extends JCompType {
         cb.append(fullName+" "+fname+";\n");
       }
       cb.append(fname+"= new "+fullName+"();\n");
-      cb.append("a_.readRecord("+fname+",\""+tag+"\");\n");
+      cb.append(fname+".deserialize(a,\""+tag+"\");\n");
     }
     
     void genWriteMethod(CodeBuffer cb, String fname, String tag) {
-      cb.append("a_.writeRecord("+fname+",\""+tag+"\");\n");
+      cb.append(fname+".serialize(a,\""+tag+"\");\n");
     }
     
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
@@ -136,38 +136,38 @@ public class JRecord extends JCompType {
         type.genGetSet(cb, name);
       }
       cb.append("public void serialize("+
-          "final org.apache.hadoop.record.OutputArchive a_, final String tag)\n"+
+          "final org.apache.hadoop.record.RecordOutput a, final String tag)\n"+
           "throws java.io.IOException {\n");
-      cb.append("a_.startRecord(this,tag);\n");
+      cb.append("a.startRecord(this,tag);\n");
       for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
         JField<JavaType> jf = i.next();
         String name = jf.getName();
         JavaType type = jf.getType();
         type.genWriteMethod(cb, name, name);
       }
-      cb.append("a_.endRecord(this,tag);\n");
+      cb.append("a.endRecord(this,tag);\n");
       cb.append("}\n");
       
       cb.append("public void deserialize("+
-          "final org.apache.hadoop.record.InputArchive a_, final String tag)\n"+
+          "final org.apache.hadoop.record.RecordInput a, final String tag)\n"+
           "throws java.io.IOException {\n");
-      cb.append("a_.startRecord(tag);\n");
+      cb.append("a.startRecord(tag);\n");
       for (Iterator<JField<JavaType>> i = fields.iterator(); i.hasNext();) {
         JField<JavaType> jf = i.next();
         String name = jf.getName();
         JavaType type = jf.getType();
         type.genReadMethod(cb, name, name, false);
       }
-      cb.append("a_.endRecord(tag);\n");
+      cb.append("a.endRecord(tag);\n");
       cb.append("}\n");
       
       cb.append("public String toString() {\n");
       cb.append("try {\n");
       cb.append("java.io.ByteArrayOutputStream s =\n");
       cb.append("  new java.io.ByteArrayOutputStream();\n");
-      cb.append("org.apache.hadoop.record.CsvOutputArchive a_ = \n");
-      cb.append("  new org.apache.hadoop.record.CsvOutputArchive(s);\n");
-      cb.append("this.serialize(a_,\"\");\n");
+      cb.append("org.apache.hadoop.record.CsvRecordOutput a = \n");
+      cb.append("  new org.apache.hadoop.record.CsvRecordOutput(s);\n");
+      cb.append("this.serialize(a);\n");
       cb.append("return new String(s.toByteArray(), \"UTF-8\");\n");
       cb.append("} catch (Throwable ex) {\n");
       cb.append("throw new RuntimeException(ex);\n");

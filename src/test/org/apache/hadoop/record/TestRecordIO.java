@@ -47,7 +47,7 @@ public class TestRecordIO extends TestCase {
         try {
             tmpfile = File.createTempFile("hadooprec", ".dat");
             FileOutputStream ostream = new FileOutputStream(tmpfile);
-            RecordWriter out = new RecordWriter(ostream, "binary");
+            BinaryRecordOutput out = new BinaryRecordOutput(ostream);
             RecRecord1 r1 = new RecRecord1();
             r1.setBoolVal(true);
             r1.setByteVal((byte)0x66);
@@ -62,12 +62,12 @@ public class TestRecordIO extends TestCase {
             RecRecord0 r0 = new RecRecord0();
             r0.setStringVal("other random text");
             r1.setRecordVal(r0);
-            out.write(r1);
+            r1.serialize(out, "");
             ostream.close();
             FileInputStream istream = new FileInputStream(tmpfile);
-            RecordReader in = new RecordReader(istream, "binary");
+            BinaryRecordInput in = new BinaryRecordInput(istream);
             RecRecord1 r2 = new RecRecord1();
-            in.read(r2);
+            r2.deserialize(in, "");
             istream.close();
             tmpfile.delete();
             assertTrue("Serialized and deserialized records do not match.", r1.equals(r2));
@@ -81,7 +81,7 @@ public class TestRecordIO extends TestCase {
         try {
             tmpfile = File.createTempFile("hadooprec", ".txt");
             FileOutputStream ostream = new FileOutputStream(tmpfile);
-            RecordWriter out = new RecordWriter(ostream, "csv");
+            CsvRecordOutput out = new CsvRecordOutput(ostream);
             RecRecord1 r1 = new RecRecord1();
             r1.setBoolVal(true);
             r1.setByteVal((byte)0x66);
@@ -96,12 +96,12 @@ public class TestRecordIO extends TestCase {
             RecRecord0 r0 = new RecRecord0();
             r0.setStringVal("other random text");
             r1.setRecordVal(r0);
-            out.write(r1);
+            r1.serialize(out, "");
             ostream.close();
             FileInputStream istream = new FileInputStream(tmpfile);
-            RecordReader in = new RecordReader(istream, "csv");
+            CsvRecordInput in = new CsvRecordInput(istream);
             RecRecord1 r2 = new RecRecord1();
-            in.read(r2);
+            r2.deserialize(in, "");
             istream.close();
             tmpfile.delete();
             assertTrue("Serialized and deserialized records do not match.", r1.equals(r2));
@@ -140,7 +140,7 @@ public class TestRecordIO extends TestCase {
         try {
             tmpfile = File.createTempFile("hadooprec", ".xml");
             FileOutputStream ostream = new FileOutputStream(tmpfile);
-            RecordWriter out = new RecordWriter(ostream, "xml");
+            XmlRecordOutput out = new XmlRecordOutput(ostream);
             RecRecord1 r1 = new RecRecord1();
             r1.setBoolVal(true);
             r1.setByteVal((byte)0x66);
@@ -148,19 +148,19 @@ public class TestRecordIO extends TestCase {
             r1.setDoubleVal(1.5234);
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("ran\002dom &lt; %text<&more");
+            r1.setStringVal("ran\002dom &lt; %text<&more\uffff");
             r1.setBufferVal(new Buffer());
             r1.setVectorVal(new ArrayList<String>());
             r1.setMapVal(new TreeMap<String,String>());
             RecRecord0 r0 = new RecRecord0();
             r0.setStringVal("other %rando\007m &amp; >&more text");
             r1.setRecordVal(r0);
-            out.write(r1);
+            r1.serialize(out, "");
             ostream.close();
             FileInputStream istream = new FileInputStream(tmpfile);
-            RecordReader in = new RecordReader(istream, "xml");
+            XmlRecordInput in = new XmlRecordInput(istream);
             RecRecord1 r2 = new RecRecord1();
-            in.read(r2);
+            r2.deserialize(in, "");
             istream.close();
             tmpfile.delete();
             assertTrue("Serialized and deserialized records do not match.", r1.equals(r2));
