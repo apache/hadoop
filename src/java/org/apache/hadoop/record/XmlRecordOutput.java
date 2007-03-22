@@ -27,10 +27,10 @@ import java.io.UnsupportedEncodingException;
 import java.util.Stack;
 
 /**
- *
+ * XML Serializer.
  * @author Milind Bhandarkar
  */
-class XmlRecordOutput implements RecordOutput {
+public class XmlRecordOutput implements RecordOutput {
 
     private PrintStream stream;
     

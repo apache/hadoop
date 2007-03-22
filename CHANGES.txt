@@ -6,6 +6,9 @@ Trunk (unreleased changes)
  1. HADOOP-1135.  Fix bug in block report processing which may cause
     the namenode to delete blocks.  (Dhruba Borthakur via tomwhite)
 
+ 2. HADOOP-1145.  Make XML serializer and deserializer classes public
+    in record package.  (Milind Bhandarkar via cutting)
+
 
 Release 0.12.1 - 2007-03-17
 
