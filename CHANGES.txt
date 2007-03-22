@@ -9,6 +9,8 @@ Trunk (unreleased changes)
  2. HADOOP-1145.  Make XML serializer and deserializer classes public
     in record package.  (Milind Bhandarkar via cutting)
 
+ 3. HADOOP-1140.  Fix a deadlock in metrics. (David Bowen via cutting)
+
 
 Release 0.12.1 - 2007-03-17
 

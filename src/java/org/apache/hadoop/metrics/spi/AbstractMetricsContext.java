@@ -21,6 +21,8 @@
 package org.apache.hadoop.metrics.spi;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -50,35 +52,30 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     private int period = MetricsContext.DEFAULT_PERIOD;
     private Timer timer = null;
     
-    //private Set<Updater> updaters = new HashSet<Updater>(1);
-    private Set updaters = new HashSet(1);
-    private boolean isMonitoring = false;
+    private Set<Updater> updaters = new HashSet<Updater>(1);
+    private volatile boolean isMonitoring = false;
     
     private ContextFactory factory = null;
     private String contextName = null;
     
-    //static class TagMap extends TreeMap<String,Object> {
-    static class TagMap extends TreeMap {
-		private static final long serialVersionUID = 3546309335061952993L;
-		TagMap() {
+    static class TagMap extends TreeMap<String,Object> {
+        private static final long serialVersionUID = 3546309335061952993L;
+        TagMap() {
             super();
         }
         TagMap(TagMap orig) {
             super(orig);
         }
     }
-    //static class MetricMap extends TreeMap<String,Number> {}
-    static class MetricMap extends TreeMap {
-		private static final long serialVersionUID = -7495051861141631609L;
+    static class MetricMap extends TreeMap<String,Number> {
+        private static final long serialVersionUID = -7495051861141631609L;
     }
             
-    //static class RecordMap extends HashMap<TagMap,MetricMap> {}
-    static class RecordMap extends HashMap {
-		private static final long serialVersionUID = 259835619700264611L;
+    static class RecordMap extends HashMap<TagMap,MetricMap> {
+        private static final long serialVersionUID = 259835619700264611L;
     }
     
-    //private Map<String,RecordMap> bufferedData = new HashMap<String,RecordMap>();
-    private Map bufferedData = new HashMap();
+    private Map<String,RecordMap> bufferedData = new HashMap<String,RecordMap>();
     
 
     /**
@@ -110,15 +107,10 @@ public abstract class AbstractMetricsContext implements MetricsContext {
      * <i>contextName</i>.<i>tableName</i>.  The returned map consists of
      * those attributes with the contextName and tableName stripped off.
      */
-    //protected Map<String,String> getAttributeTable(String tableName) {
-    protected Map getAttributeTable(String tableName) {
+    protected Map<String,String> getAttributeTable(String tableName) {
         String prefix = contextName + "." + tableName + ".";
-        //Map<String,String> result = new HashMap<String,String>();
-        //for (String attributeName : factory.getAttributeNames()) {
-        Map result = new HashMap();
-        String[] attributeNames = factory.getAttributeNames();
-        for (int i = 0; i < attributeNames.length; i++) {
-            String attributeName = attributeNames[i];
+        Map<String,String> result = new HashMap<String,String>();
+        for (String attributeName : factory.getAttributeNames()) {
             if (attributeName.startsWith(prefix)) {
                 String name = attributeName.substring(prefix.length());
                 String value = (String) factory.getAttribute(attributeName);
@@ -201,7 +193,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
      * @return newly created instance of MetricsRecordImpl or subclass
      */
     protected MetricsRecordImpl newRecord(String recordName) {
-    	return new MetricsRecordImpl(recordName, this);
+        return new MetricsRecordImpl(recordName, this);
     }
     
     /**
@@ -238,12 +230,12 @@ public abstract class AbstractMetricsContext implements MetricsContext {
             timer = new Timer();
             TimerTask task = new TimerTask() {
                 public void run() {
-                	try {
-                		timerEvent();
-                	}
-                	catch (IOException ioe) {
-                		ioe.printStackTrace();
-                	}
+                    try {
+                        timerEvent();
+                    }
+                    catch (IOException ioe) {
+                        ioe.printStackTrace();
+                    }
                 }
             };
             long millis = period * 1000;
@@ -264,13 +256,15 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     /**
      * Timer callback.
      */
-    private synchronized void timerEvent() throws IOException {
+    private void timerEvent() throws IOException {
         if (isMonitoring) {
-            // Run all the registered updates
-            // for (Updater updater : updaters) {
-            Iterator it = updaters.iterator();
-            while (it.hasNext()) {
-                Updater updater = (Updater) it.next();
+            Collection<Updater> myUpdaters;
+            synchronized (this) {
+                myUpdaters = new ArrayList<Updater>(updaters);
+            }     
+            // Run all the registered updates without holding a lock
+            // on this context
+            for (Updater updater : myUpdaters) {
                 try {
                     updater.doUpdates(this);
                 }
@@ -278,28 +272,27 @@ public abstract class AbstractMetricsContext implements MetricsContext {
                     throwable.printStackTrace();
                 }
             }
-            
-            // Emit the records
-            //for (String recordName : bufferedData.keySet()) {
-            Iterator recordIt = bufferedData.keySet().iterator();
-            while (recordIt.hasNext()) {
-                String recordName = (String) recordIt.next();
-                RecordMap recordMap = (RecordMap) bufferedData.get(recordName);
-                synchronized (recordMap) {
-                    //for (TagMap tagMap : recordMap.keySet()) {
-                    Iterator tagIt = recordMap.keySet().iterator();
-                    while (tagIt.hasNext()) {
-                        TagMap tagMap = (TagMap) tagIt.next();
-                        MetricMap metricMap = (MetricMap) recordMap.get(tagMap);
-                        OutputRecord outRec = new OutputRecord(tagMap, metricMap);
-                        emitRecord(contextName, recordName, outRec);
-                    }
-                }
-            }
-            flush();
+            emitRecords();
         }
     }
     
+    /**
+     *  Emits the records.
+     */
+    private synchronized void emitRecords() throws IOException {
+        for (String recordName : bufferedData.keySet()) {
+            RecordMap recordMap = bufferedData.get(recordName);
+            synchronized (recordMap) {
+                for (TagMap tagMap : recordMap.keySet()) {
+                    MetricMap metricMap = recordMap.get(tagMap);
+                    OutputRecord outRec = new OutputRecord(tagMap, metricMap);
+                    emitRecord(contextName, recordName, outRec);
+                }
+            }
+        }
+        flush();
+    }
+
     /**
      * Sends a record to the metrics system.
      */
@@ -320,24 +313,20 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     protected void update(MetricsRecordImpl record) {
         String recordName = record.getRecordName();
         TagMap tagTable = record.getTagTable();
-        //Map<String,MetricValue> metricUpdates = record.getMetricTable();
-        Map metricUpdates = record.getMetricTable();
+        Map<String,MetricValue> metricUpdates = record.getMetricTable();
         
         RecordMap recordMap = getRecordMap(recordName);
         synchronized (recordMap) {
-            MetricMap metricMap = (MetricMap) recordMap.get(tagTable);
+            MetricMap metricMap = recordMap.get(tagTable);
             if (metricMap == null) {
                 metricMap = new MetricMap();
                 TagMap tagMap = new TagMap(tagTable); // clone tags
                 recordMap.put(tagMap, metricMap);
             }
-            //for (String metricName : metricUpdates.keySet()) {
-            Iterator metricIt = metricUpdates.keySet().iterator();
-            while (metricIt.hasNext()) {
-                String metricName = (String) metricIt.next();
-                MetricValue updateValue = (MetricValue) metricUpdates.get(metricName);
+            for (String metricName : metricUpdates.keySet()) {
+                MetricValue updateValue = metricUpdates.get(metricName);
                 Number updateNumber = updateValue.getNumber();
-                Number currentNumber = (Number) metricMap.get(metricName);
+                Number currentNumber = metricMap.get(metricName);
                 if (currentNumber == null || updateValue.isAbsolute()) {
                     metricMap.put(metricName, updateNumber);
                 }
@@ -350,7 +339,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     }
     
     private synchronized RecordMap getRecordMap(String recordName) {
-        return (RecordMap) bufferedData.get(recordName);
+        return bufferedData.get(recordName);
     }
     
     /**
