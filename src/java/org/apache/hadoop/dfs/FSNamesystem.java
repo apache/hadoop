@@ -203,7 +203,7 @@ class FSNamesystem implements FSConstants {
     // datanode networktoplogy
     NetworkTopology clusterMap = new NetworkTopology();
     // for block replicas placement
-    ReplicationTargetChooser replicator = new ReplicationTargetChooser();
+    ReplicationTargetChooser replicator;
 
     private HostsFileReader hostsReader; 
     private Daemon dnthread = null;
@@ -217,6 +217,8 @@ class FSNamesystem implements FSConstants {
                         int port,
                         NameNode nn, Configuration conf) throws IOException {
         fsNamesystemObject = this;
+        this.replicator = new ReplicationTargetChooser(
+                conf.getBoolean("dfs.replication.considerLoad", true));
         this.defaultReplication = conf.getInt("dfs.replication", 3);
         this.maxReplication = conf.getInt("dfs.replication.max", 512);
         this.minReplication = conf.getInt("dfs.replication.min", 1);
@@ -2729,6 +2731,12 @@ class FSNamesystem implements FSConstants {
      *
      */
     class ReplicationTargetChooser {
+      final boolean considerLoad; 
+      
+      ReplicationTargetChooser( boolean considerLoad ) {
+          this.considerLoad = considerLoad;
+      }
+      
       private class NotEnoughReplicasException extends Exception {
         NotEnoughReplicasException( String msg ) {
           super( msg );
@@ -3054,7 +3062,8 @@ class FSNamesystem implements FSConstants {
       private boolean isGoodTarget( DatanodeDescriptor node,
               long blockSize, int maxTargetPerLoc,
               List<DatanodeDescriptor> results) {
-          return isGoodTarget(node, blockSize, maxTargetPerLoc, true, results);
+          return isGoodTarget(node, blockSize, maxTargetPerLoc,
+                  this.considerLoad, results);
       }
       
       private boolean isGoodTarget( DatanodeDescriptor node,

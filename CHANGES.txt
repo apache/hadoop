@@ -1,6 +1,12 @@
 Hadoop Change Log
 
 
+Trunk (unreleased changes)
+
+ 1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
+    (Hairong Kuang via cutting)
+
+
 Release 0.12.2 - 2007-23-17
 
  1. HADOOP-1135.  Fix bug in block report processing which may cause
