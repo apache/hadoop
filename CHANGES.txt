@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Release 0.12.2 - 2007-23-17
 
  1. HADOOP-1135.  Fix bug in block report processing which may cause
     the namenode to delete blocks.  (Dhruba Borthakur via tomwhite)
