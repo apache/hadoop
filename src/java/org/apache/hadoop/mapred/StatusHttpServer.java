@@ -84,7 +84,7 @@ public class StatusHttpServer {
     String appDir = getWebAppsPath();
     HttpContext staticContext = new HttpContext();
     staticContext.setContextPath("/static/*");
-    staticContext.setResourceBase(appDir + File.separator + "static");
+    staticContext.setResourceBase(appDir + "/static");
     staticContext.addHandler(new ResourceHandler());
     webServer.addContext(staticContext);
 
@@ -149,21 +149,13 @@ public class StatusHttpServer {
   
   /**
    * Get the pathname to the webapps files.
-   * @return the pathname
+   * @return the pathname as a URL
    */
   private static String getWebAppsPath() throws IOException {
     URL url = StatusHttpServer.class.getClassLoader().getResource("webapps");
     if( url == null ) 
       throw new IOException("webapps not found in CLASSPATH"); 
-    String path = url.getPath();
-    if (isWindows && path.startsWith("/")) {
-      path = path.substring(1);
-      try {
-        path = URLDecoder.decode(path, "UTF-8");
-      } catch (UnsupportedEncodingException e) {
-      }
-    }
-    return new File(path).getCanonicalPath();
+    return url.toString();
   }
   
   /**

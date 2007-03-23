@@ -24,6 +24,9 @@ Trunk (unreleased changes)
  7. HADOOP-1064.  Reduce log level of some DFSClient messages.
     (Dhruba Borthakur via cutting)
 
+ 8. HADOOP-1137.  Fix StatusHttpServer to work correctly when
+    resources are in a jar file.  (Benjamin Reed via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 
