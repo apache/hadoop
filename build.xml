@@ -535,6 +535,7 @@
 
     	<packageset dir="src/contrib/streaming/src/java"/>
     	<packageset dir="src/contrib/abacus/src/java"/>
+    	<packageset dir="src/contrib/data_join/src/java"/>
 
         <link href="${javadoc.link.java}"/>
         <classpath refid="classpath"/>
@@ -544,6 +545,7 @@
 
        <group title="contrib: Streaming" packages="org.apache.hadoop.streaming*"/>
        <group title="contrib: Abacus" packages="org.apache.hadoop.abacus*"/>
+       <group title="contrib: DataJoin" packages="org.apache.hadoop.contrib/join*"/>
 
     </javadoc>
   </target>	

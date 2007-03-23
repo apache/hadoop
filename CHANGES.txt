@@ -18,6 +18,9 @@ Trunk (unreleased changes)
  5. HADOOP-1116.  Increase heap size used for contrib unit tests.
     (Philippe Gassmann via cutting)
 
+ 6. HADOOP-1120.  Add contrib/data_join, tools to simplify joining
+    data from multiple sources using MapReduce.  (Runping Qi via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 

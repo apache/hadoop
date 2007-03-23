@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.contrib.utils.join;
 
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -36,7 +36,7 @@ import org.apache.hadoop.mapred.Reducer;
  */
 public abstract class JobBase implements Mapper, Reducer {
 
-  public static final Log LOG = LogFactory.getLog("abacus.job");
+  public static final Log LOG = LogFactory.getLog("datajoin.job");
 
   private SortedMap<Object, Long> longCounters = null;
 
@@ -44,8 +44,11 @@ public abstract class JobBase implements Mapper, Reducer {
 
   /**
    * Set the given counter to the given value
-   * @param name the counter name
-   * @param value the value for the counter
+   * 
+   * @param name
+   *          the counter name
+   * @param value
+   *          the value for the counter
    */
   protected void setLongValue(Object name, long value) {
     this.longCounters.put(name, new Long(value));
@@ -53,8 +56,11 @@ public abstract class JobBase implements Mapper, Reducer {
 
   /**
    * Set the given counter to the given value
-   * @param name the counter name
-   * @param value the value for the counter
+   * 
+   * @param name
+   *          the counter name
+   * @param value
+   *          the value for the counter
    */
   protected void setDoubleValue(Object name, double value) {
     this.doubleCounters.put(name, new Double(value));
@@ -62,7 +68,8 @@ public abstract class JobBase implements Mapper, Reducer {
 
   /**
    * 
-   * @param name the counter name
+   * @param name
+   *          the counter name
    * @return return the value of the given counter.
    */
   protected Long getLongValue(Object name) {
@@ -71,7 +78,8 @@ public abstract class JobBase implements Mapper, Reducer {
 
   /**
    * 
-   * @param name the counter name
+   * @param name
+   *          the counter name
    * @return return the value of the given counter.
    */
   protected Double getDoubleValue(Object name) {
@@ -79,11 +87,13 @@ public abstract class JobBase implements Mapper, Reducer {
   }
 
   /**
-   * Increment the given counter by the given incremental value
-   * If the counter does not exist, one is created with value 0.
+   * Increment the given counter by the given incremental value If the counter
+   * does not exist, one is created with value 0.
    * 
-   * @param name the counter name
-   * @param inc the incremental value
+   * @param name
+   *          the counter name
+   * @param inc
+   *          the incremental value
    * @return the updated value.
    */
   protected Long addLongValue(Object name, long inc) {
@@ -99,11 +109,13 @@ public abstract class JobBase implements Mapper, Reducer {
   }
 
   /**
-   * Increment the given counter by the given incremental value
-   * If the counter does not exist, one is created with value 0.
+   * Increment the given counter by the given incremental value If the counter
+   * does not exist, one is created with value 0.
    * 
-   * @param name the counter name
-   * @param inc the incremental value
+   * @param name
+   *          the counter name
+   * @param inc
+   *          the incremental value
    * @return the updated value.
    */
   protected Double addDoubleValue(Object name, double inc) {
@@ -155,7 +167,7 @@ public abstract class JobBase implements Mapper, Reducer {
    *          the configuration
    */
   public void configure(JobConf job) {
-    this.longCounters = new TreeMap<Object,Long> ();
-    this.doubleCounters = new TreeMap<Object,Double> ();
+    this.longCounters = new TreeMap<Object, Long>();
+    this.doubleCounters = new TreeMap<Object, Double>();
   }
 }

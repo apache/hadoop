@@ -101,7 +101,7 @@ public class ValueAggregatorJob {
       throws IOException {
 
     if (args.length < 2) {
-      System.out.println("usage: inputDirs outDir [numOfReducer [textinputformat|seq [specfile]]]");
+      System.out.println("usage: inputDirs outDir [numOfReducer [textinputformat|seq [specfile [jobName]]]]");
       System.exit(1);
     }
     String inputDir = args[0];
@@ -122,12 +122,18 @@ public class ValueAggregatorJob {
       specFile = new Path(args[4]);
     }
 
+    String jobName = "";
+    
+    if (args.length > 5) {
+      jobName = args[5];
+    }
+    
     JobConf theJob = new JobConf(ValueAggregatorJob.class);
     if (specFile != null) {
       theJob.addDefaultResource(specFile);
     }
     FileSystem fs = FileSystem.get(theJob);
-    theJob.setJobName("ValueAggregatorJob");
+    theJob.setJobName("ValueAggregatorJob: " + jobName);
 
     String[] inputDirsSpecs = inputDir.split(",");
     for (int i = 0; i < inputDirsSpecs.length; i++) {
