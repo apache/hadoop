@@ -11,6 +11,9 @@ Trunk (unreleased changes)
 
  3. HADOOP-1140.  Fix a deadlock in metrics. (David Bowen via cutting)
 
+ 4. HADOOP-1150.  Fix streaming -reducer and -mapper to give them
+    defaults. (Owen O'Malley via tomwhite)
+
 
 Release 0.12.1 - 2007-03-17
 
