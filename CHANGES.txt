@@ -12,6 +12,9 @@ Trunk (unreleased changes)
  3. HADOOP-1101.  In web ui, split shuffle statistics from reduce
     statistics, and add some task averages.  (Devaraj Das via cutting)
 
+ 4. HADOOP-1071.  Improve handling of protocol version mismatch in
+    JobTracker.  (Tahir Hashmi via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 

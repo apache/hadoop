@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -91,6 +92,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         try {
           tracker = new JobTracker(conf);
           break;
+        } catch (VersionMismatch v) {
+          // Can't recover from a version mismatch. Avoid the retry loop and re-throw
+          throw v;
         } catch (IOException e) {
           LOG.warn("Error starting tracker: " + 
                    StringUtils.stringifyException(e));
@@ -1669,7 +1673,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         Configuration conf=new Configuration();
         startTracker(conf);
       } catch ( Throwable e ) {
-        LOG.error( StringUtils.stringifyException( e ) );
+        LOG.fatal( StringUtils.stringifyException( e ) );
         System.exit(-1);
       }
     }
