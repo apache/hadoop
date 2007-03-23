@@ -27,6 +27,10 @@ Trunk (unreleased changes)
  8. HADOOP-1137.  Fix StatusHttpServer to work correctly when
     resources are in a jar file.  (Benjamin Reed via cutting)
 
+ 9. HADOOP-1094.  Optimize generated Writable implementations for
+    records to not allocate a new BinaryOutputArchive or
+    BinaryInputArchive per call.  (Milind Bhandarkar via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 

@@ -33,6 +33,29 @@ public class BinaryRecordOutput implements RecordOutput {
     
     private DataOutput out;
     
+    private BinaryRecordOutput() {}
+    
+    private void setDataOutput(DataOutput out) {
+      this.out = out;
+    }
+    
+    private static ThreadLocal bOut = new ThreadLocal() {
+      protected synchronized Object initialValue() {
+        return new BinaryRecordOutput();
+      }
+    };
+    
+    /**
+     * Get a thread-local record output for the supplied DataOutput.
+     * @param out data output stream
+     * @return binary record output corresponding to the supplied DataOutput.
+     */
+    public static BinaryRecordOutput get(DataOutput out) {
+      BinaryRecordOutput bout = (BinaryRecordOutput) bOut.get();
+      bout.setDataOutput(out);
+      return bout;
+    }
+    
     /** Creates a new instance of BinaryRecordOutput */
     public BinaryRecordOutput(OutputStream out) {
         this.out = new DataOutputStream(out);

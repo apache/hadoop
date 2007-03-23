@@ -29,7 +29,7 @@ import java.io.InputStream;
  */
 public class BinaryRecordInput implements RecordInput {
     
-    final private DataInput in;
+    private DataInput in;
     
     static private class BinaryIndex implements Index {
         private int nelems;
@@ -42,6 +42,29 @@ public class BinaryRecordInput implements RecordInput {
         public void incr() {
             nelems--;
         }
+    }
+    
+    private BinaryRecordInput() {}
+    
+    private void setDataInput(DataInput inp) {
+      this.in = inp;
+    }
+    
+    private static ThreadLocal bIn = new ThreadLocal() {
+      protected synchronized Object initialValue() {
+        return new BinaryRecordInput();
+      }
+    };
+    
+    /**
+     * Get a thread-local record input for the supplied DataInput.
+     * @param inp data input stream
+     * @return binary record input corresponding to the supplied DataInput.
+     */
+    public static BinaryRecordInput get(DataInput inp) {
+      BinaryRecordInput bin = (BinaryRecordInput) bIn.get();
+      bin.setDataInput(inp);
+      return bin;
     }
     
     /** Creates a new instance of BinaryRecordInput */

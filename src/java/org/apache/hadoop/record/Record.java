@@ -67,13 +67,13 @@ public abstract class Record implements WritableComparable, Cloneable {
   
   // inherit javadoc
   public void write(final DataOutput out) throws java.io.IOException {
-    BinaryRecordOutput bout = new BinaryRecordOutput(out);
+    BinaryRecordOutput bout = BinaryRecordOutput.get(out);
     this.serialize(bout);
   }
   
   // inherit javadoc
   public void readFields(final DataInput din) throws java.io.IOException {
-    BinaryRecordInput rin = new BinaryRecordInput(din);
+    BinaryRecordInput rin = BinaryRecordInput.get(din);
     this.deserialize(rin);
   }
 }
