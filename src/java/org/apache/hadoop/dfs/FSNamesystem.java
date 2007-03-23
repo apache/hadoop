@@ -2051,14 +2051,14 @@ class FSNamesystem implements FSConstants {
             // they are added to recentInvalidateSets and will be sent out
             // thorugh succeeding heartbeat responses.
             //
-            if (obsolete.size() > FSConstants.BLOCK_INVALIDATE_CHUNK) {
+            if (! dir.isValidBlock(b) && ! pendingCreateBlocks.contains(b)) {
+              if (obsolete.size() > FSConstants.BLOCK_INVALIDATE_CHUNK) {
                 addToInvalidates(b, node);
-            } else {
-                if (! dir.isValidBlock(b) && ! pendingCreateBlocks.contains(b)) {
-                  obsolete.add(b);
-                  NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
+              } else {
+                obsolete.add(b);
+              }
+              NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
                         +"ask "+nodeID.getName()+" to delete "+b.getBlockName() );
-                }
             }
         }
         return (Block[]) obsolete.toArray(new Block[obsolete.size()]);

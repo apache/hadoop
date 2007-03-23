@@ -29,10 +29,10 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 
 /**
- *
+ * XML Deserializer.
  * @author Milind Bhandarkar
  */
-class XmlRecordInput implements RecordInput {
+public class XmlRecordInput implements RecordInput {
     
     static private class Value {
         private String type;

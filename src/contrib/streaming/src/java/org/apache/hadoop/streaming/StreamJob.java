@@ -368,12 +368,12 @@ public class StreamJob {
         "DFS output directory for the Reduce step", 
         "path", 1, true); 
     Option mapper  = createOption("mapper", 
-        "The streaming command to run", "cmd", 1, true);
+        "The streaming command to run", "cmd", 1, false);
     Option combiner = createOption("combiner", 
         "The streaming command to run", "cmd",1, false);
     // reducer could be NONE 
     Option reducer = createOption("reducer", 
-        "The streaming command to run", "cmd", 1, true); 
+        "The streaming command to run", "cmd", 1, false); 
     Option file = createOption("file", 
         "File/dir to be shipped in the Job jar file", 
         "file", Integer.MAX_VALUE, false, execValidator); 
@@ -692,12 +692,16 @@ public class StreamJob {
 
     String defaultPackage = this.getClass().getPackage().getName();
 
-    Class c = StreamUtil.goodClassOrNull(mapCmd_, defaultPackage);
-    if (c != null) {
-      jobConf_.setMapperClass(c);
-    } else {
-      jobConf_.setMapperClass(PipeMapper.class);
-      jobConf_.set("stream.map.streamprocessor", URLEncoder.encode(mapCmd_, "UTF-8"));
+    Class c;
+    if (mapCmd_ != null) {
+      c = StreamUtil.goodClassOrNull(mapCmd_, defaultPackage);
+      if (c != null) {
+        jobConf_.setMapperClass(c);
+      } else {
+        jobConf_.setMapperClass(PipeMapper.class);
+        jobConf_.set("stream.map.streamprocessor", 
+                     URLEncoder.encode(mapCmd_, "UTF-8"));
+      }
     }
 
     if (comCmd_ != null) {
