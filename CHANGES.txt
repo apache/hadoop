@@ -9,6 +9,9 @@ Trunk (unreleased changes)
  2. HADOOP-1063.  Fix a race condition in MiniDFSCluster test code.
     (Hairong Kuang via cutting)
 
+ 3. HADOOP-1101.  In web ui, split shuffle statistics from reduce
+    statistics, and add some task averages.  (Devaraj Das via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 
