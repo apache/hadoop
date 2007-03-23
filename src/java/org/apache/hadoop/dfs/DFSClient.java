@@ -166,11 +166,13 @@ class DFSClient implements FSConstants {
         try {
           return namenode.getBlockSize(f.toString());
         } catch (IOException ie) {
-          LOG.info("Problem getting block size: " + 
-                   StringUtils.stringifyException(ie));
           if (--retries == 0) {
+            LOG.warn("Problem getting block size: " + 
+                      StringUtils.stringifyException(ie));
             throw ie;
           }
+          LOG.debug("Problem getting block size: " + 
+                    StringUtils.stringifyException(ie));
         }
       }
     }
@@ -710,7 +712,9 @@ class DFSClient implements FSConstants {
                   }
                   return result;
                 } catch (IOException e) {
-                  LOG.warn("DFS Read: " + StringUtils.stringifyException(e));
+                  if (retries == 1) {
+                    LOG.warn("DFS Read: " + StringUtils.stringifyException(e));
+                  }
                   blockEnd = -1;
                   if (currentNode != null) { deadNodes.add(currentNode); }
                   if (--retries == 0) {

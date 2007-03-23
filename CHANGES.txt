@@ -21,6 +21,9 @@ Trunk (unreleased changes)
  6. HADOOP-1120.  Add contrib/data_join, tools to simplify joining
     data from multiple sources using MapReduce.  (Runping Qi via cutting)
 
+ 7. HADOOP-1064.  Reduce log level of some DFSClient messages.
+    (Dhruba Borthakur via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 
