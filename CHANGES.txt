@@ -6,6 +6,9 @@ Trunk (unreleased changes)
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
     (Hairong Kuang via cutting)
 
+ 2. HADOOP-1063.  Fix a race condition in MiniDFSCluster test code.
+    (Hairong Kuang via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 
