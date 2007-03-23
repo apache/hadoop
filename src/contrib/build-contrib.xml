@@ -135,7 +135,7 @@
     <mkdir dir="${hadoop.log.dir}"/>
     <junit
       printsummary="yes" showoutput="${test.output}" 
-      haltonfailure="no" fork="yes"
+      haltonfailure="no" fork="yes" maxmemory="256m"
       errorProperty="tests.failed" failureProperty="tests.failed">
       
       <sysproperty key="test.build.data" value="${build.test}/data"/>

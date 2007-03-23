@@ -15,6 +15,9 @@ Trunk (unreleased changes)
  4. HADOOP-1071.  Improve handling of protocol version mismatch in
     JobTracker.  (Tahir Hashmi via cutting)
 
+ 5. HADOOP-1116.  Increase heap size used for contrib unit tests.
+    (Philippe Gassmann via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 
