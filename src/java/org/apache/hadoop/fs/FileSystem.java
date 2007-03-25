@@ -164,6 +164,20 @@ public abstract class FileSystem extends Configured {
       return fs;
     }
 
+    /**
+     * Close all cached filesystems. Be sure those filesystems are not
+     * used anymore.
+     * 
+     * @throws IOException
+     */
+    public static synchronized void closeAll() throws IOException{
+      for(Map<String, FileSystem>  fss : CACHE.values()){
+        for(FileSystem fs : fss.values()){
+          fs.close();
+        }
+      }
+    }
+
     /** Make sure that a path specifies a FileSystem. */
     public Path makeQualified(Path path) {
       checkPath(path);
