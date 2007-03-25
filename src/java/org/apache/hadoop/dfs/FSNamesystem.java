@@ -724,10 +724,19 @@ class FSNamesystem implements FSConstants {
         DatanodeDescriptor targets[] = replicator.chooseTarget(replication,
             getDatanodeByHost(clientMachine.toString()), null, blockSize);
         if (targets.length < this.minReplication) {
-            throw new IOException("failed to create file "+src
-                    +" on client " + clientMachine
-                    +" because target-length is " + targets.length 
-                    +", below MIN_REPLICATION (" + minReplication+ ")");
+            if (clusterMap.getNumOfLeaves() == 0) {
+              throw new IOException("Failed to create file "+src
+                    + " on client " + clientMachine
+                    + " because this cluster has no datanodes.");
+            }
+            throw new IOException("Failed to create file "+src
+                    + " on client " + clientMachine
+                    + " because there were not enough datanodes available. "
+                    + "Found " + targets.length
+                    + " datanodes but MIN_REPLICATION for the cluster is "
+                    + "configured to be "
+                    + this.minReplication
+                    + ".");
        }
 
         // Reserve space for this pending file

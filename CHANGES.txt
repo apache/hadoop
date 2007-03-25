@@ -31,6 +31,9 @@ Trunk (unreleased changes)
     records to not allocate a new BinaryOutputArchive or
     BinaryInputArchive per call.  (Milind Bhandarkar via cutting)
 
+10. HADOOP-1068.  Improve error message for clusters with 0 datanodes.
+    (Dhruba Borthakur via tomwhite)
+
 
 Release 0.12.2 - 2007-23-17
 
