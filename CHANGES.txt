@@ -34,6 +34,9 @@ Trunk (unreleased changes)
 10. HADOOP-1068.  Improve error message for clusters with 0 datanodes.
     (Dhruba Borthakur via tomwhite)
 
+11. HADOOP-1122.  Fix divide-by-zero exception in FSNamesystem
+    chooseTarget method.  (Dhruba Borthakur via tomwhite)
+
 
 Release 0.12.2 - 2007-23-17
 

@@ -2794,8 +2794,9 @@ class FSNamesystem implements FSConstants {
           List<DatanodeDescriptor> choosenNodes,
           List<DatanodeDescriptor> excludedNodes,
           long blocksize ) {
-        if( numOfReplicas == 0 )
+        if( numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0 ) {
           return new DatanodeDescriptor[0];
+        }
         
         if( excludedNodes == null) {
           excludedNodes = new ArrayList<DatanodeDescriptor>();
