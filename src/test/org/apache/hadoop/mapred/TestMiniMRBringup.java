@@ -31,7 +31,7 @@ public class TestMiniMRBringup extends TestCase {
     public void testBringUp() throws IOException {
       MiniMRCluster mr = null;
       try {
-          mr = new MiniMRCluster(50000, 50010, 1, "local", false);
+          mr = new MiniMRCluster(1, "local", 1);
       } finally {
           if (mr != null) { mr.shutdown(); }
       }

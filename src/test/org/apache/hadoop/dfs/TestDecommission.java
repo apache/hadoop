@@ -249,7 +249,7 @@ public class TestDecommission extends TestCase {
     conf.set("dfs.hosts.exclude", excludeFile.toString());
     writeConfigFile(localFileSys, excludeFile, null);
 
-    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, numDatanodes, false);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
     // Now wait for 15 seconds to give datanodes chance to register
     // themselves and to report heartbeat
     try {

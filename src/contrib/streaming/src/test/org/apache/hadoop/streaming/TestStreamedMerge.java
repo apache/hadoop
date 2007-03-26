@@ -218,7 +218,7 @@ public class TestStreamedMerge extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       if(overrideFS == null) {
-        cluster = new MiniDFSCluster(NAME_PORT, conf_, false);
+        cluster = new MiniDFSCluster(conf_, 1, true, null);
         fs_ = cluster.getFileSystem();
       } else {
         System.out.println("overrideFS: " + overrideFS);

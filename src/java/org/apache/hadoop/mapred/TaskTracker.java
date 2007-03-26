@@ -306,6 +306,12 @@ public class TaskTracker
             }
         
         }
+        // The rpc-server port can be ephemeral... 
+        // ... ensure we have the correct info
+        this.taskReportPort = taskReportServer.getListenerAddress().getPort();
+        this.fConf.setInt("mapred.task.tracker.report.port", this.taskReportPort);
+        LOG.info("TaskTracker up at: " + this.taskReportPort);
+
         this.taskTrackerName = "tracker_" + 
                                localHostname + ":" + taskReportPort;
         LOG.info("Starting tracker " + taskTrackerName);

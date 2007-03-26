@@ -35,7 +35,7 @@ public class TestGlobPaths extends TestCase {
   protected void setUp() throws Exception {
     try {
       Configuration conf = new Configuration();
-      dfsCluster = new MiniDFSCluster(8889, conf, true);
+      dfsCluster = new MiniDFSCluster(conf, 1, true, null);
       fs = FileSystem.get(conf);
     } catch (IOException e) {
       e.printStackTrace();

@@ -48,7 +48,8 @@ public class TestIPC extends TestCase {
   private static class TestServer extends Server {
     private boolean sleep;
 
-    public TestServer(String bindAddress, int port, int handlerCount, boolean sleep) {
+    public TestServer(String bindAddress, int port, int handlerCount, boolean sleep) 
+    throws IOException {
       super(bindAddress, port, LongWritable.class, handlerCount, conf);
       this.setTimeout(1000);
       this.sleep = sleep;

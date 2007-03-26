@@ -182,6 +182,7 @@ public abstract class Server {
 
       // Bind the server socket to the local host and port
       acceptChannel.socket().bind(address, backlogLength);
+      port = acceptChannel.socket().getLocalPort(); //Could be an ephemeral port
       // create a selector;
       selector= Selector.open();
 
@@ -313,6 +314,10 @@ public abstract class Server {
       }
     }
 
+    InetSocketAddress getAddress() {
+      return new InetSocketAddress(acceptChannel.socket().getInetAddress(), acceptChannel.socket().getLocalPort());
+    }
+    
     void doAccept(SelectionKey key) throws IOException,  OutOfMemoryError {
       Connection c = null;
       ServerSocketChannel server = (ServerSocketChannel) key.channel();
@@ -599,7 +604,8 @@ public abstract class Server {
    * the number of handler threads that will be used to process calls.
    * 
    */
-  protected Server(String bindAddress, int port, Class paramClass, int handlerCount, Configuration conf) {
+  protected Server(String bindAddress, int port, Class paramClass, int handlerCount, Configuration conf) 
+  throws IOException {
     this.bindAddress = bindAddress;
     this.conf = conf;
     this.port = port;
@@ -611,6 +617,10 @@ public abstract class Server {
     this.maxIdleTime = conf.getInt("ipc.client.maxidletime", 120000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
+    
+    // Start the listener here and let it bind to the port
+    listener = new Listener();
+    this.port = listener.getAddress().getPort();    
   }
 
   /** Sets the timeout used for network i/o. */
@@ -618,7 +628,6 @@ public abstract class Server {
 
   /** Starts the service.  Must be called before any calls will be handled. */
   public synchronized void start() throws IOException {
-    listener = new Listener();
     listener.start();
     
     for (int i = 0; i < handlerCount; i++) {
@@ -645,6 +654,14 @@ public abstract class Server {
     }
   }
 
+  /**
+   * Return the socket (ip+port) on which the RPC server is listening to.
+   * @return the socket (ip+port) on which the RPC server is listening to.
+   */
+  public synchronized InetSocketAddress getListenerAddress() {
+    return listener.getAddress();
+  }
+  
   /** Called for each call. */
   public abstract Writable call(Writable param) throws IOException;
   

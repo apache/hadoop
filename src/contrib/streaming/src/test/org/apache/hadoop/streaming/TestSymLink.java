@@ -52,16 +52,15 @@ public class TestSymLink extends TestCase
   {
     try {
       boolean mayExit = false;
-      int jobTrackerPort = 60050;
       MiniMRCluster mr = null;
       MiniDFSCluster dfs = null; 
       FileSystem fileSys = null;
       try{
         Configuration conf = new Configuration();
-        dfs = new MiniDFSCluster(8050, conf, false);
+        dfs = new MiniDFSCluster(conf, 1, true, null);
         fileSys = dfs.getFileSystem();
         String namenode = fileSys.getName();
-        mr  = new MiniMRCluster(jobTrackerPort, 60060, 1, namenode, true, 3);
+        mr  = new MiniMRCluster(1, namenode, 3);
         // During tests, the default Configuration will use a local mapred
         // So don't specify -config or -cluster
         String strJobtracker = "mapred.job.tracker=" + "localhost:" + mr.getJobTrackerPort();

@@ -274,6 +274,11 @@ class FSNamesystem implements FSConstants {
         this.infoServer.addServlet("fsck", "/fsck", FsckServlet.class);
         this.infoServer.addServlet("getimage", "/getimage", GetImageServlet.class);
         this.infoServer.start();
+        
+        // The web-server port can be ephemeral... ensure we have the correct info
+        this.infoPort = this.infoServer.getPort();
+        conf.set("dfs.info.port", this.infoPort); 
+        LOG.info("Web-server up at: " + conf.get("dfs.info.port"));
     }
 
     /**

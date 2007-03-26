@@ -40,6 +40,11 @@ Trunk (unreleased changes)
 12. HADOOP-1131.  Add a closeAll() static method to FileSystem.
     (Philippe Gassmann via tomwhite)
 
+13. HADOOP-1085.  Improve port selection in HDFS and MapReduce test
+    code.  Ports are now selected by the OS during testing rather than
+    by probing for free ports, improving test reliability.
+    (Arun C Murthy via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 

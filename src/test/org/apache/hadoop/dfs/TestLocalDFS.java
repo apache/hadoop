@@ -55,7 +55,7 @@ public class TestLocalDFS extends TestCase {
    */
   public void testWorkingDirectory() throws IOException {
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, false);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path orig_path = fileSys.getWorkingDirectory();

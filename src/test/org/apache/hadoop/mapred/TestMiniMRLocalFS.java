@@ -48,7 +48,7 @@ public class TestMiniMRLocalFS extends TestCase {
   public void testWithLocal() throws IOException {
       MiniMRCluster mr = null;
       try {
-          mr = new MiniMRCluster(60030, 60040, 2, "local", false, 3);
+          mr = new MiniMRCluster(2, "local", 3);
           double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
                                                mr.createJobConf());
           double error = Math.abs(Math.PI - estimate);

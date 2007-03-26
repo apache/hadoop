@@ -84,6 +84,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
     private static JobTracker tracker = null;
     private static boolean runTracker = true;
+    
+    /**
+     * Start the JobTracker with given configuration.
+     * 
+     * The conf will be modified to reflect the actual ports on which 
+     * the JobTracker is up and running if the user passes the port as
+     * <code>zero</code>.
+     *   
+     * @param conf configuration for the JobTracker.
+     * @throws IOException
+     */
     public static void startTracker(Configuration conf) throws IOException {
       if (tracker != null)
         throw new IOException("JobTracker already running.");
@@ -630,6 +641,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         this.initJobsThread = new Thread(this.initJobs, "initJobs");
         this.initJobsThread.start();
         expireLaunchingTaskThread.start();
+        
+        // The rpc/web-server ports can be ephemeral ports... 
+        // ... ensure we have the correct info
+        this.port = interTrackerServer.getListenerAddress().getPort();
+        this.conf.set("mapred.job.tracker", new String(this.localMachine + ":" + this.port));
+        LOG.info("JobTracker up at: " + this.port);
+        this.infoPort = this.infoServer.getPort();
+        this.conf.set("mapred.job.tracker.info.port", this.infoPort); 
+        LOG.info("JobTracker webserver: " + this.infoServer.getPort());
     }
 
     public static InetSocketAddress getAddress(Configuration conf) {

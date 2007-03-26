@@ -43,7 +43,7 @@ public class TestDFSMkdirs extends TestCase {
    */
   public void testDFSMkdirs() throws IOException {
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, 2, false);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
     	// First create a new directory with mkdirs

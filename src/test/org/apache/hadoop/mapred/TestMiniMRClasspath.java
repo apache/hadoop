@@ -157,11 +157,10 @@ public class TestMiniMRClasspath extends TestCase {
           final int jobTrackerPort = 60050;
 
           Configuration conf = new Configuration();
-          dfs = new MiniDFSCluster(65314, conf, true);
+          dfs = new MiniDFSCluster(conf, 1, true, null);
           fileSys = dfs.getFileSystem();
           namenode = fileSys.getName();
-          mr = new MiniMRCluster(jobTrackerPort, 50060, taskTrackers, 
-                                 namenode, true, 3);
+          mr = new MiniMRCluster(taskTrackers, namenode, 3);
           JobConf jobConf = new JobConf();
           String result;
           final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
@@ -191,14 +190,12 @@ public class TestMiniMRClasspath extends TestCase {
     try {
       
       final int taskTrackers = 4;
-      final int jobTrackerPort = 60050;
 
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(65314, conf, true);
+      dfs = new MiniDFSCluster(conf, 1, true, null);
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getName();
-      mr = new MiniMRCluster(jobTrackerPort, 50060, taskTrackers, namenode, 
-        true, 3);      
+      mr = new MiniMRCluster(taskTrackers, namenode, 3);      
       JobConf jobConf = new JobConf();
       String result;
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();

@@ -279,7 +279,8 @@ public class RPC {
 
   /** Construct a server for a protocol implementation instance listening on a
    * port and address. */
-  public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf) {
+  public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf) 
+  throws IOException {
     return getServer(instance, bindAddress, port, 1, false, conf);
   }
 
@@ -287,7 +288,8 @@ public class RPC {
    * port and address. */
   public static Server getServer(final Object instance, final String bindAddress, final int port,
                                  final int numHandlers,
-                                 final boolean verbose, Configuration conf) {
+                                 final boolean verbose, Configuration conf) 
+  throws IOException {
     return new Server(instance, conf, bindAddress,port, numHandlers, verbose);
   }
 
@@ -303,7 +305,8 @@ public class RPC {
      * @param bindAddress the address to bind on to listen for connection
      * @param port the port to listen for connections on
      */
-    public Server(Object instance, Configuration conf, String bindAddress, int port) {
+    public Server(Object instance, Configuration conf, String bindAddress, int port) 
+    throws IOException {
       this(instance, conf,  bindAddress, port, 1, false);
     }
 
@@ -316,7 +319,7 @@ public class RPC {
      * @param verbose whether each call should be logged
      */
     public Server(Object instance, Configuration conf, String bindAddress,  int port,
-                  int numHandlers, boolean verbose) {
+                  int numHandlers, boolean verbose) throws IOException {
       super(bindAddress, port, Invocation.class, numHandlers, conf);
       this.instance = instance;
       this.implementation = instance.getClass();

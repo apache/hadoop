@@ -131,7 +131,7 @@ public class TestReplication extends TestCase {
   public void testReplication() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean("dfs.replication.considerLoad", false);
-    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, numDatanodes, false, true, racks);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, racks);
     cluster.waitActive();
     
     InetSocketAddress addr = new InetSocketAddress("localhost",

@@ -46,7 +46,7 @@ public class TestDFSShell extends TestCase {
    */
   public void testDFSShell() throws IOException {
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, 2, false);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
             fs instanceof DistributedFileSystem);

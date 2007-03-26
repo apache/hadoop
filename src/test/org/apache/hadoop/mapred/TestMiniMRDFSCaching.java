@@ -36,9 +36,9 @@ public class TestMiniMRDFSCaching extends TestCase {
     FileSystem fileSys = null;
     try {
       JobConf conf = new JobConf();
-      dfs = new MiniDFSCluster(65314, conf, true);
+      dfs = new MiniDFSCluster(conf, 1, true, null);
       fileSys = dfs.getFileSystem();
-      mr = new MiniMRCluster(60050, 50060, 2, fileSys.getName(), true, 4);
+      mr = new MiniMRCluster(2, fileSys.getName(), 4);
       // run the wordcount example with caching
       boolean ret = MRCaching.launchMRCache("/testing/wc/input",
                                             "/testing/wc/output",

@@ -82,7 +82,7 @@ public class TestSmallBlock extends TestCase {
    */
   public void testSmallBlock() throws IOException {
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, 1, false);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("smallblocktest.dat");

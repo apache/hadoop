@@ -35,28 +35,36 @@ public class MiniMRCluster {
     private int jobTrackerInfoPort = 0;
     private int numTaskTrackers;
     
-    private List taskTrackerList = new ArrayList();
-    private List taskTrackerThreadList = new ArrayList();
+    private List<TaskTrackerRunner> taskTrackerList = new ArrayList<TaskTrackerRunner>();
+    private List<Thread> taskTrackerThreadList = new ArrayList<Thread>();
     
     private String namenode;
     
-    private int MAX_RETRIES_PER_PORT = 10;
-    private int MAX_RETRIES = 10;
-
     /**
      * An inner class that runs a job tracker.
      */
     class JobTrackerRunner implements Runnable {
 
+        JobConf jc = null;
+        
         public boolean isUp() {
             return (JobTracker.getTracker() != null);
         }
+        
+        public int getJobTrackerPort() {
+          return JobTracker.getAddress(jc).getPort();
+        }
+
+        public int getJobTrackerInfoPort() {
+          return jc.getInt("mapred.job.tracker.info.port", 50030);
+        }
+        
         /**
          * Create the job tracker and run it.
          */
         public void run() {
             try {
-                JobConf jc = createJobConf();
+                jc = createJobConf();
                 jc.set("mapred.local.dir","build/test/mapred/local");
                 JobTracker.startTracker(jc);
             } catch (Throwable e) {
@@ -83,12 +91,14 @@ public class MiniMRCluster {
      */
     class TaskTrackerRunner implements Runnable {
         volatile TaskTracker tt;
+        int trackerId;
         // the localDirs for this taskTracker
         String[] localDir;
         volatile boolean isInitialized = false;
         volatile boolean isDead = false;
         int numDir;       
-        TaskTrackerRunner(int numDir) {
+        TaskTrackerRunner(int trackerId, int numDir) {
+          this.trackerId = trackerId;
           this.numDir = numDir;
           // a maximum of 10 local dirs can be specified in MinMRCluster
           localDir = new String[10];
@@ -100,11 +110,11 @@ public class MiniMRCluster {
         public void run() {
             try {
                 JobConf jc = createJobConf();
-                jc.setInt("mapred.task.tracker.info.port", taskTrackerPort++);
-                jc.setInt("mapred.task.tracker.report.port", taskTrackerPort++);
+                jc.setInt("mapred.task.tracker.info.port", 0);
+                jc.setInt("mapred.task.tracker.report.port", taskTrackerPort);
                 File localDir = new File(jc.get("mapred.local.dir"));
                 String mapredDir = "";
-                File ttDir = new File(localDir, Integer.toString(taskTrackerPort) + "_" + 0);
+                File ttDir = new File(localDir, Integer.toString(trackerId) + "_" + 0);
                 if (!ttDir.mkdirs()) {
                   if (!ttDir.isDirectory()) {
                     throw new IOException("Mkdirs failed to create " + ttDir.toString());
@@ -113,7 +123,7 @@ public class MiniMRCluster {
                 this.localDir[0] = ttDir.getAbsolutePath();
                 mapredDir = ttDir.getAbsolutePath();
                 for (int i = 1; i < numDir; i++){
-                  ttDir = new File(localDir, Integer.toString(taskTrackerPort) + "_" + i);
+                  ttDir = new File(localDir, Integer.toString(trackerId) + "_" + i);
                   ttDir.mkdirs();
                   if (!ttDir.mkdirs()) {
                     if (!ttDir.isDirectory()) {
@@ -217,11 +227,24 @@ public class MiniMRCluster {
       JobClient.setTaskOutputFilter(result, JobClient.TaskStatusFilter.ALL);
       return result;
     }
+
+    /**
+     * Create the config and the cluster.
+     * @param numTaskTrackers no. of tasktrackers in the cluster
+     * @param namenode the namenode
+     * @param numDir no. of directories
+     * @throws IOException
+     */
+    public MiniMRCluster(int numTaskTrackers, String namenode, int numDir) 
+    throws IOException {
+      this(0, 0, numTaskTrackers, namenode, false, numDir);
+    }
     
     /**
      * Create the config and start up the servers.  The ports supplied by the user are
      * just used as suggestions.  If those ports are already in use, new ports
      * are tried.  The caller should call getJobTrackerPort to get the actual rpc port used.
+     * @deprecated use {@link #MiniMRCluster(int, String, int)}
      */
     public MiniMRCluster(int jobTrackerPort,
                          int taskTrackerPort,
@@ -231,71 +254,59 @@ public class MiniMRCluster {
         this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, 
              taskTrackerFirst, 1);
     } 
-  
+
     public MiniMRCluster(int jobTrackerPort,
             int taskTrackerPort,
             int numTaskTrackers,
             String namenode,
             boolean taskTrackerFirst, int numDir) throws IOException {
-        
+
         this.jobTrackerPort = jobTrackerPort;
         this.taskTrackerPort = taskTrackerPort;
-        this.jobTrackerInfoPort = 50030;
+        this.jobTrackerInfoPort = 0;
         this.numTaskTrackers = numTaskTrackers;
         this.namenode = namenode;
 
-        // Loop until we find a set of ports that are all unused or until we
-        // give up because it's taken too many tries.
-        boolean foundPorts = false;
-        int portsTried = 0;
-        while ((!foundPorts) && (portsTried < MAX_RETRIES)) {
-          jobTracker = new JobTrackerRunner();
-          jobTrackerThread = new Thread(jobTracker);
-          if (!taskTrackerFirst) {
-            jobTrackerThread.start();
-          }
-          for (int idx = 0; idx < numTaskTrackers; idx++) {
-            TaskTrackerRunner taskTracker = new TaskTrackerRunner(numDir);
-            Thread taskTrackerThread = new Thread(taskTracker);
-            taskTrackerThread.start();
-            taskTrackerList.add(taskTracker);
-            taskTrackerThreadList.add(taskTrackerThread);
-          }
-          if (taskTrackerFirst) {
-            jobTrackerThread.start();
-          }
-          int retry = 0;
-          while (!jobTracker.isUp() && (retry < MAX_RETRIES_PER_PORT)) {
-            try {                                     // let daemons get started
-              System.err.println("waiting for jobtracker to start");
-              Thread.sleep(1000);
-            } catch(InterruptedException e) {
-            }
-            retry++;
-          }
-          if (retry >= MAX_RETRIES_PER_PORT) {
-              // Try new ports.
-              this.jobTrackerPort += 7;
-              this.jobTrackerInfoPort += 3;
-              this.taskTrackerPort++;
-
-              System.err.println("Failed to start MR minicluster in " + retry + 
-                                 " attempts.  Retrying with new ports:");
-              System.err.println("\tJobTracker RPC port = " + jobTrackerPort);
-              System.err.println("\tJobTracker info port = " + jobTrackerInfoPort);
-              System.err.println("\tTaskTracker RPC port(s) = " + 
-                                 taskTrackerPort + "-" + (taskTrackerPort+numTaskTrackers-1));
-              shutdown();
-              taskTrackerList.clear();
-          } else {
-            foundPorts = true;
-          }
-          portsTried++;
+        // Create the JobTracker
+        jobTracker = new JobTrackerRunner();
+        jobTrackerThread = new Thread(jobTracker);
+        
+        // Create the TaskTrackers
+        for (int idx = 0; idx < numTaskTrackers; idx++) {
+          TaskTrackerRunner taskTracker = new TaskTrackerRunner(idx, numDir);
+          Thread taskTrackerThread = new Thread(taskTracker);
+          taskTrackerList.add(taskTracker);
+          taskTrackerThreadList.add(taskTrackerThread);
         }
-        if (portsTried >= MAX_RETRIES) {
-            throw new IOException("Failed to start MR minicluster after trying " + portsTried + " ports.");
+
+        // Start the MiniMRCluster
+        
+        if (taskTrackerFirst) {
+          for (Thread taskTrackerThread : taskTrackerThreadList){
+            taskTrackerThread.start();
+          }
         }
         
+        jobTrackerThread.start();
+        while (!jobTracker.isUp()) {
+          try {                                     // let daemons get started
+            System.err.println("Waiting for JobTracker to start...");
+            Thread.sleep(1000);
+          } catch(InterruptedException e) {
+          }
+        }
+        
+        // Set the configuration for the task-trackers
+        this.jobTrackerPort = jobTracker.getJobTrackerPort();
+        this.jobTrackerInfoPort = jobTracker.getJobTrackerInfoPort();
+
+        if (!taskTrackerFirst) {
+          for (Thread taskTrackerThread : taskTrackerThreadList){
+            taskTrackerThread.start();
+          }
+        }
+
+        // Wait till the MR cluster stabilizes
         waitUntilIdle();
     }
     
@@ -332,7 +343,7 @@ public class MiniMRCluster {
     
     public static void main(String[] args) throws IOException {
         System.out.println("Bringing up Jobtracker and tasktrackers.");
-        MiniMRCluster mr = new MiniMRCluster(50000, 50002, 4, "local", false);
+        MiniMRCluster mr = new MiniMRCluster(4, "local", 1);
         System.out.println("JobTracker and TaskTrackers are up.");
         mr.shutdown();
         System.out.println("JobTracker and TaskTrackers brought down.");

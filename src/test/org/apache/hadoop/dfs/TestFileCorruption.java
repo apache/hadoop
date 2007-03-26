@@ -48,7 +48,7 @@ public class TestFileCorruption extends TestCase {
     DFSTestUtil util = new DFSTestUtil("TestFileCorruption", 20, 3, 8*1024);
     try {
       Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(65314, conf, 3, false);
+      cluster = new MiniDFSCluster(conf, 3, true, null);
       FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       // Now deliberately remove the blocks

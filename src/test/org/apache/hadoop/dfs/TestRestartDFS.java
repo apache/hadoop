@@ -48,11 +48,10 @@ public class TestRestartDFS extends TestCase {
   
   /** check if DFS remains in proper condition after a restart */
   public void testRestartDFS() throws Exception {
-    String namenode = null;
     MiniDFSCluster cluster = null;
     DFSTestUtil files = new DFSTestUtil("TestRestartDFS", 20, 3, 8*1024);
     try {
-      cluster = new MiniDFSCluster(65314, conf, 4, false);
+      cluster = new MiniDFSCluster(conf, 4, true, null);
       FileSystem fs = cluster.getFileSystem();
       files.createFiles(fs, "/srcdat");
     } finally {
@@ -60,7 +59,7 @@ public class TestRestartDFS extends TestCase {
     }
     try {
       // Here we restart the MiniDFScluster without formatting namenode
-      cluster = new MiniDFSCluster(65320, conf, 4, false, false);
+      cluster = new MiniDFSCluster(conf, 4, false, null);
       FileSystem fs = cluster.getFileSystem();
       assertTrue("Filesystem corrupted after restart.",
             files.checkFiles(fs, "/srcdat"));

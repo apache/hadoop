@@ -179,7 +179,7 @@ public class TestCopyFiles extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(65314, conf, 2, false);
+      cluster = new MiniDFSCluster(conf, 2, true, null);
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
@@ -201,7 +201,7 @@ public class TestCopyFiles extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(65316, conf, false);
+      cluster = new MiniDFSCluster(conf, 1, true, null);
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
@@ -223,7 +223,7 @@ public class TestCopyFiles extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(65318, conf, false);
+      cluster = new MiniDFSCluster(conf, 1, true, null);
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");

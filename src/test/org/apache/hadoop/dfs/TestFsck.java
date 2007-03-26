@@ -49,7 +49,7 @@ public class TestFsck extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(65314, conf, 4, false);
+      cluster = new MiniDFSCluster(conf, 4, true, null);
       FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       PrintStream oldOut = System.out;
@@ -73,7 +73,7 @@ public class TestFsck extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(65314, conf, 4, false);
+      cluster = new MiniDFSCluster(conf, 4, true, null);
       FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       PrintStream oldOut = System.out;

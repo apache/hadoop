@@ -123,7 +123,7 @@ public class TestSeekBug extends TestCase {
    */
   public void testSeekBugDFS() throws IOException {
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster(65312, conf, false);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("seektest.dat");

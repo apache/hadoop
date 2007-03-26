@@ -87,6 +87,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     private Thread emptier;
     private int handlerCount = 2;
     
+    private InetSocketAddress nameNodeAddress = null;
+    
     /** only used for testing purposes  */
     private boolean stopRequested = false;
 
@@ -175,11 +177,17 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      */
     private void init(File[] dirs, String hostname, int port, 
                       Configuration conf) throws IOException {
-      this.namesystem = new FSNamesystem(dirs, hostname, port, this, conf);
       this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
       this.server = RPC.getServer(this, hostname, port, handlerCount, 
                                   false, conf);
       this.server.start();      
+
+      // The rpc-server port can be ephemeral... ensure we have the correct info
+      this.nameNodeAddress = this.server.getListenerAddress(); 
+      conf.set("fs.default.name", new String(nameNodeAddress.getHostName() + ":" + nameNodeAddress.getPort()));
+      LOG.info("Namenode up at: " + this.nameNodeAddress);
+
+      this.namesystem = new FSNamesystem(dirs, this.nameNodeAddress.getHostName(), this.nameNodeAddress.getPort(), this, conf);
 
       this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
       this.emptier.setDaemon(true);
@@ -187,7 +195,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
     
     /**
-     * Create a NameNode at the default location
+     * Create a NameNode at the default location.
+     * 
+     * The conf will be modified to reflect the actual ports on which 
+     * the NameNode is up and running if the user passes the port as
+     * <code>zero</code> in the conf.
      */
     public NameNode(Configuration conf) throws IOException {
       InetSocketAddress addr = 
@@ -197,6 +209,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     /**
      * Create a NameNode at the specified location and start it.
+     * 
+     * The conf will be modified to reflect the actual ports on which 
+     * the NameNode is up and running if the user passes the port as
+     * <code>zero</code>.  
      */
     public NameNode(File[] dirs, String bindAddress, int port, Configuration conf) throws IOException {
        init(dirs, bindAddress, port, conf);
@@ -697,6 +713,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       return namesystem.getFsEditName();
     }
 
+    /**
+     * Returns the address on which the NameNodes is listening to.
+     * @return the address on which the NameNodes is listening to.
+     */
+    public InetSocketAddress getNameNodeAddress() {
+      return nameNodeAddress;
+    }
+    
     /**
      */
     public static void main(String argv[]) throws Exception {
