@@ -250,13 +250,7 @@ public class TestDecommission extends TestCase {
     writeConfigFile(localFileSys, excludeFile, null);
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
-    // Now wait for 15 seconds to give datanodes chance to register
-    // themselves and to report heartbeat
-    try {
-      Thread.sleep(15000L);
-    } catch (InterruptedException e) {
-      // nothing
-    }
+    cluster.waitActive();
     InetSocketAddress addr = new InetSocketAddress("localhost", 
                                              cluster.getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);

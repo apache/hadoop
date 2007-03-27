@@ -174,7 +174,7 @@ class FSNamesystem implements FSConstants {
     Daemon lmthread = null;   // LeaseMonitor thread
     Daemon smmthread = null;  // SafeModeMonitor thread
     Daemon replthread = null;  // Replication thread
-    boolean fsRunning = true;
+    volatile boolean fsRunning = true;
     long systemStart = 0;
 
     //  The maximum number of replicates we should allow for a single block
@@ -302,20 +302,22 @@ class FSNamesystem implements FSConstants {
      * them to finish, but a short timeout returns control back to caller.
      */
     public void close() {
-      synchronized (this) {
         fsRunning = false;
-      }
         try {
-            pendingReplications.stop();
-            infoServer.stop();
-            hbthread.join(3000);
-            replthread.join(3000);
-            dnthread.join(3000);
+          if (pendingReplications != null) pendingReplications.stop();
+          if (infoServer != null) infoServer.stop();
+          if (hbthread != null) hbthread.interrupt();
+          if (replthread != null) replthread.interrupt();
+          if (dnthread != null) dnthread.interrupt();
+          if (smmthread != null) smmthread.interrupt();
         } catch (InterruptedException ie) {
         } finally {
           // using finally to ensure we also wait for lease daemon
           try {
-            lmthread.join(3000);
+            if (lmthread != null) {
+              lmthread.interrupt();
+              lmthread.join(3000);
+            }
           } catch (InterruptedException ie) {
           } finally {
               try {
@@ -3710,7 +3712,7 @@ class FSNamesystem implements FSConstants {
       /**
        */
       public void run() {
-        while( ! safeMode.canLeave() ) {
+        while (fsRunning && !safeMode.canLeave()) {
           try {
             Thread.sleep(recheckInterval);
           } catch (InterruptedException ie) {

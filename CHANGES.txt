@@ -45,6 +45,9 @@ Trunk (unreleased changes)
     by probing for free ports, improving test reliability.
     (Arun C Murthy via cutting)
 
+14. HADOOP-1153.  Fix HDFS daemons to correctly stop their threads.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 

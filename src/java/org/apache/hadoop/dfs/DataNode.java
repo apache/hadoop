@@ -110,7 +110,7 @@ public class DataNode implements FSConstants, Runnable {
     FSDataset data;
     DatanodeRegistration dnRegistration;
     private String networkLoc;
-    boolean shouldRun = true;
+    volatile boolean shouldRun = true;
     Vector receivedBlockList = new Vector();
     int xmitsInProgress = 0;
     Daemon dataXceiveServer = null;
@@ -318,7 +318,7 @@ public class DataNode implements FSConstants, Runnable {
      * @throws IOException
      */
     private void register() throws IOException {
-      while( true ) {
+      while( shouldRun ) {
         try {
           // reset name to machineName. Mainly for web interface.
           dnRegistration.name = machineName + ":" + dnRegistration.getPort();
@@ -342,15 +342,22 @@ public class DataNode implements FSConstants, Runnable {
      * Returns only after shutdown is complete.
      */
     public void shutdown() {
-        try {
-          infoServer.stop();
-        } catch (Exception e) {
+        if (infoServer != null) {
+          try {
+            infoServer.stop();
+          } catch (Exception e) {
+          }
         }
         this.shouldRun = false;
-        ((DataXceiveServer) this.dataXceiveServer.getRunnable()).kill();
-        try {
-          this.storage.closeAll();
-        } catch (IOException ie) {
+        if (dataXceiveServer != null) {
+          ((DataXceiveServer) this.dataXceiveServer.getRunnable()).kill();
+          this.dataXceiveServer.interrupt();
+        }
+        if (storage != null) {
+          try {
+            this.storage.closeAll();
+          } catch (IOException ie) {
+          }
         }
     }
 
@@ -539,7 +546,6 @@ public class DataNode implements FSConstants, Runnable {
      * Hadoop IPC mechanism.
      */
     class DataXceiveServer implements Runnable {
-        boolean shouldListen = true;
         ServerSocket ss;
         public DataXceiveServer(ServerSocket ss) {
             this.ss = ss;
@@ -549,7 +555,7 @@ public class DataNode implements FSConstants, Runnable {
          */
         public void run() {
             try {
-                while (shouldListen) {
+                while (shouldRun) {
                     Socket s = ss.accept();
                     //s.setSoTimeout(READ_TIMEOUT);
                     data.checkDataDir();
@@ -566,7 +572,8 @@ public class DataNode implements FSConstants, Runnable {
             }
         }
         public void kill() {
-            this.shouldListen = false;
+            assert shouldRun == false :
+              "shoudRun should be set to false before killing";
             try {
                 this.ss.close();
             } catch (IOException iex) {
@@ -1071,16 +1078,16 @@ public class DataNode implements FSConstants, Runnable {
         LOG.info("Finishing DataNode in: "+data);
     }
 
-    private static ArrayList dataNodeList = new ArrayList();
-    private static ArrayList dataNodeThreadList = new ArrayList();
+    private static ArrayList<DataNode> dataNodeList = new ArrayList<DataNode>();
+    private static ArrayList<Thread> dataNodeThreadList = new ArrayList<Thread>();
     
     /** Start datanode daemon.
      */
     public static void run(Configuration conf, String networkLoc) throws IOException {
         String[] dataDirs = conf.getStrings("dfs.data.dir");
         DataNode dn = makeInstance(networkLoc, dataDirs, conf);
-        dataNodeList.add(dn);
         if (dn != null) {
+          dataNodeList.add(dn);
           Thread t = new Thread(dn, "DataNode: [" +
               StringUtils.arrayToString(dataDirs) + "]");
           t.setDaemon(true); // needed for JUnit testing
@@ -1090,15 +1097,14 @@ public class DataNode implements FSConstants, Runnable {
     }
     
     /**
-     * Shut down all datanodes that where started via the run(conf) method.
+     * Shut down all datanodes that where started via the 
+     * run(conf,networkLoc) method.
      * Returns only after shutdown is complete.
      */
     public static void shutdownAll(){
-      if(!dataNodeList.isEmpty()){
-        for (Iterator iterator = dataNodeList.iterator(); iterator.hasNext();) {
-          DataNode dataNode = (DataNode) iterator.next();
-          dataNode.shutdown();
-        }
+      while (!dataNodeList.isEmpty()) {
+        dataNodeList.remove(0).shutdown();
+        dataNodeThreadList.remove(0).interrupt();
       }
     }
 
@@ -1113,12 +1119,7 @@ public class DataNode implements FSConstants, Runnable {
       Thread t = (Thread) dataNodeThreadList.remove(dataNodeThreadList.size()-1);
       try {
         t.join();
-      } catch (InterruptedException e) {
-        if (Thread.currentThread().isInterrupted()) {
-          // did someone knock?
-          return;
-        }
-      }
+      } catch (InterruptedException e) {}
     }
   }
 

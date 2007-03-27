@@ -38,7 +38,7 @@ class PendingReplicationBlocks {
   private Map<Block, PendingBlockInfo> pendingReplications;
   private ArrayList<Block> timedOutItems;
   Daemon timerThread = null;
-  private boolean fsRunning = true;
+  private volatile boolean fsRunning = true;
 
   //
   // It might take anywhere between 5 to 10 minutes before
