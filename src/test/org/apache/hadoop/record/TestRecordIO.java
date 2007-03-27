@@ -121,7 +121,11 @@ public class TestRecordIO extends TestCase {
             r1.setIntVal(4567);
             r1.setLongVal(0x5a5a5a5a5a5aL);
             r1.setStringVal("random text");
-            r1.setBufferVal(new Buffer());
+            byte[] barr = new byte[256];
+            for (int idx = 0; idx < 256; idx++) {
+              barr[idx] = (byte) idx;
+            }
+            r1.setBufferVal(new Buffer(barr));
             r1.setVectorVal(new ArrayList<String>());
             r1.setMapVal(new TreeMap<String,String>());
             RecRecord0 r0 = new RecRecord0();

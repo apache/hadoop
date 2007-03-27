@@ -49,6 +49,12 @@ Trunk (unreleased changes)
     (Konstantin Shvachko via cutting)
 
 
+Release 0.12.3 (not yet released)
+
+15. HADOOP-1162.  Fix bug in record CSV and XML serialization of
+    binary values.  (Milind Bhandarkar via cutting)
+
+
 Release 0.12.2 - 2007-23-17
 
  1. HADOOP-1135.  Fix bug in block report processing which may cause
