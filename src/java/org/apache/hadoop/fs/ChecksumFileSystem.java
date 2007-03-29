@@ -207,13 +207,18 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
               summed += toSum;
               
               inSum += toSum;
-              if (inSum == bytesPerSum || endOfFile) {
+              if (inSum == bytesPerSum ) {
                 verifySum(read-(summed-bytesPerSum));
+              } else if( read == summed && endOfFile ) {
+                verifySum(read-read/bytesPerSum*bytesPerSum);
               }
             }
           } catch (ChecksumException ce) {
             LOG.info("Found checksum error: "+StringUtils.stringifyException(ce));
-            if (retriesLeft == 0) {
+            long errPos = ce.getPos();
+            boolean shouldRetry = fs.reportChecksumFailure(
+                file, datas, errPos, sums, errPos/bytesPerSum);
+            if (!shouldRetry || retriesLeft == 0) {
               throw ce;
             }
             
@@ -250,8 +255,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       inSum = 0;
       if (crc != sumValue) {
         long pos = getPos() - delta;
-        fs.reportChecksumFailure(file, datas, pos, sums, pos/bytesPerSum);
-        throw new ChecksumException("Checksum error: "+file+" at "+pos);
+        throw new ChecksumException("Checksum error: "+file+" at "+pos, pos);
       }
     }
     
@@ -629,7 +633,10 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @param inPos the position of the beginning of the bad data in the file
    * @param sums the stream open on the checksum file
    * @param sumsPos the position of the beginning of the bad data in the checksum file
+   * @return if retry is neccessary
    */
-  public abstract void reportChecksumFailure(Path f, FSDataInputStream in,
-                                             long inPos, FSDataInputStream sums, long sumsPos);
+  public boolean reportChecksumFailure(Path f, FSDataInputStream in,
+                                             long inPos, FSDataInputStream sums, long sumsPos) {
+    return false;
+  }
 }

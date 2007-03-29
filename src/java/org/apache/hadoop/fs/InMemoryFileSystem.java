@@ -447,11 +447,6 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
     throws IOException {
     }
     
-    public void reportChecksumFailure(Path p, FSDataInputStream in,
-            long inPos,
-            FSDataInputStream sums, long sumsPos) {
-    }
-    
     /**
      * Register a file with its size. This will also register a checksum for the
      * file that the user is trying to create. This is required since none of

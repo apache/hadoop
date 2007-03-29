@@ -59,7 +59,7 @@ public class LocalFileSystem extends ChecksumFileSystem {
      * Moves files to a bad file directory on the same device, so that their
      * storage will not be reused.
      */
-    public void reportChecksumFailure(Path p, FSDataInputStream in,
+    public boolean reportChecksumFailure(Path p, FSDataInputStream in,
                                       long inPos,
                                       FSDataInputStream sums, long sumsPos) {
       try {
@@ -69,12 +69,17 @@ public class LocalFileSystem extends ChecksumFileSystem {
         // find highest writable parent dir of f on the same device
         String device = new DF(f, getConf()).getMount();
         File parent = f.getParentFile();
-        File dir;
-        do {
+        File dir = null;
+        while (parent!=null && parent.canWrite() && parent.toString().startsWith(device)) {
           dir = parent;
           parent = parent.getParentFile();
-        } while (parent.canWrite() && parent.toString().startsWith(device));
+        }
 
+        if (dir==null) {
+          throw new IOException(
+              "not able to find the highest writable parent dir");
+        }
+        
         // move the file there
         File badDir = new File(dir, "bad_files");
         if (!badDir.mkdirs()) {
@@ -95,5 +100,6 @@ public class LocalFileSystem extends ChecksumFileSystem {
       } catch (IOException e) {
         LOG.warn("Error moving bad file " + p + ": " + e);
       }
+      return false;
     }
 }
