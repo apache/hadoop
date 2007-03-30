@@ -133,14 +133,15 @@ public abstract class Server {
   private long maxCallStartAge;
   private int maxQueueSize;
 
-  private boolean running = true;                 // true while server runs
+  volatile private boolean running = true;         // true while server runs
   private LinkedList callQueue = new LinkedList(); // queued calls
 
   private List connectionList = 
        Collections.synchronizedList(new LinkedList()); //maintain a list
                                                        //of client connectionss
-  private Listener listener;
+  private Listener listener = null;
   private int numConnections = 0;
+  private Handler[] handlers = null;
   
   /** A call queued for handling. */
   private static class Call {
@@ -374,6 +375,13 @@ public abstract class Server {
       if (selector != null) {
         selector.wakeup();
         Thread.yield();
+      }
+      if (acceptChannel != null) {
+        try {
+          acceptChannel.socket().close();
+        } catch (IOException e) {
+            LOG.info(getName() + ":Exception in closing listener socket. " + e);
+        }
       }
     }
   }
@@ -629,10 +637,11 @@ public abstract class Server {
   /** Starts the service.  Must be called before any calls will be handled. */
   public synchronized void start() throws IOException {
     listener.start();
+    handlers = new Handler[handlerCount];
     
     for (int i = 0; i < handlerCount; i++) {
-      Handler handler = new Handler(i);
-      handler.start();
+      handlers[i] = new Handler(i);
+      handlers[i].start();
     }
   }
 
@@ -640,6 +649,14 @@ public abstract class Server {
   public synchronized void stop() {
     LOG.info("Stopping server on " + port);
     running = false;
+    if (handlers != null) {
+      for (int i = 0; i < handlerCount; i++) {
+        if (handlers[i] != null) {
+          handlers[i].interrupt();
+        }
+      }
+    }
+    listener.interrupt();
     listener.doStop();
     notifyAll();
   }

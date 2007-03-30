@@ -180,18 +180,24 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
       this.server = RPC.getServer(this, hostname, port, handlerCount, 
                                   false, conf);
-      this.server.start();      
 
       // The rpc-server port can be ephemeral... ensure we have the correct info
       this.nameNodeAddress = this.server.getListenerAddress(); 
       conf.set("fs.default.name", new String(nameNodeAddress.getHostName() + ":" + nameNodeAddress.getPort()));
       LOG.info("Namenode up at: " + this.nameNodeAddress);
 
-      this.namesystem = new FSNamesystem(dirs, this.nameNodeAddress.getHostName(), this.nameNodeAddress.getPort(), this, conf);
+      try {
+        this.namesystem = new FSNamesystem(dirs, this.nameNodeAddress.getHostName(), this.nameNodeAddress.getPort(), this, conf);
+        this.server.start();  //start RPC server   
 
-      this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
-      this.emptier.setDaemon(true);
-      this.emptier.start();
+        this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
+        this.emptier.setDaemon(true);
+        this.emptier.start();
+      } catch (IOException e) {
+        this.server.stop();
+        throw e;
+      }
+      
     }
     
     /**

@@ -70,6 +70,9 @@ Trunk (unreleased changes)
 21. HADOOP-1110.  Fix an off-by-one error counting map inputs.
     (David Bowen via cutting)
 
+22. HADOOP-1178.  Fix a NullPointerException during namenode startup.
+    (Dhruba Borthakur via cutting)
+
 
 Release 0.12.3 (not yet released)
 
