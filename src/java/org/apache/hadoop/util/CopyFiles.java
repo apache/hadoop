@@ -739,16 +739,14 @@ public class CopyFiles extends ToolBase {
         srcPaths = httpUrls;
         mapper = CopyMapperFactory.getMapper(conf, "http");
       } else {   
-        return;
-      }
-      
-      // Protocol - 's3://'
-      String[] s3Urls = parseInputFile(S3, srcPaths);
-      if(httpUrls != null) {
+        // Protocol - 's3://'
+        String[] s3Urls = parseInputFile(S3, srcPaths);
+        if(s3Urls != null) {
           srcPaths = s3Urls;
-        mapper = CopyMapperFactory.getMapper(conf, S3);
-      } else {   
-        return;
+          mapper = CopyMapperFactory.getMapper(conf, S3);
+        } else {   
+          return;
+        }
       }
       
       // TODO: Add support for URIs w/o scheme (In this case, use the 'default'

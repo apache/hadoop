@@ -61,6 +61,9 @@ Trunk (unreleased changes)
 18. HADOOP-1166.  Add a NullOutputFormat and use it in the
     RandomWriter example.  (omalley via cutting)
 
+19. HADOOP-1169.  Fix a cut/paste error in CopyFiles utility so that
+    S3-based source files are correctly copied.  (Michael Stack via cutting)
+
 
 Release 0.12.3 (not yet released)
 
