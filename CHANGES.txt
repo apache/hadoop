@@ -55,6 +55,9 @@ Trunk (unreleased changes)
 16. HADOOP-1165.  In records, replace idential generated toString
     methods with a method on the base class.  (Milind Bhandarkar via cutting)
 
+17. HADOOP-1164.  Fix TestReplicationPolicy to specify port zero, so
+    that a free port is automatically selected.  (omalley via cutting)
+
 
 Release 0.12.3 (not yet released)
 

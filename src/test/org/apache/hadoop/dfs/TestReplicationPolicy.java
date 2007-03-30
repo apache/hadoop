@@ -31,7 +31,7 @@ private final static DatanodeDescriptor NODE =
   
   static {
     try {
-      CONF.set("fs.default.name", "localhost:8020");
+      CONF.set("fs.default.name", "localhost:0");
       NameNode.format(CONF);
       namenode = new NameNode(CONF);
     } catch (IOException e) {
