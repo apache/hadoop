@@ -198,16 +198,22 @@ class ReduceTask extends Task {
     }
   }
   private class ReduceValuesIterator extends ValuesIterator {
+    private Reporter reporter;
     public ReduceValuesIterator (SequenceFile.Sorter.RawKeyValueIterator in,
                                WritableComparator comparator, Class keyClass,
                                Class valClass, TaskUmbilicalProtocol umbilical,
-                               Configuration conf)
+                               Configuration conf, Reporter reporter)
     throws IOException {
       super(in, comparator, keyClass, valClass, umbilical, conf);
+      this.reporter = reporter;
     }
     public void informReduceProgress() {
       reducePhase.set(super.in.getProgress().get()); // update progress
       reportProgress(super.umbilical);
+    }
+    public Object next() {
+      reporter.incrCounter(REDUCE_INPUT_RECORDS, 1);
+      return super.next();
     }
   }
 
@@ -306,10 +312,10 @@ class ReduceTask extends Task {
       Class keyClass = job.getMapOutputKeyClass();
       Class valClass = job.getMapOutputValueClass();
       ReduceValuesIterator values = new ReduceValuesIterator(rIter, comparator, 
-                                  keyClass, valClass, umbilical, job);
+                                  keyClass, valClass, umbilical, job, reporter);
       values.informReduceProgress();
       while (values.more()) {
-        reporter.incrCounter(REDUCE_INPUT_RECORDS, 1);
+        reporter.incrCounter(REDUCE_INPUT_GROUPS, 1);
         reducer.reduce(values.getKey(), values, collector, reporter);
         values.nextKey();
         values.informReduceProgress();

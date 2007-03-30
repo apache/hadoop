@@ -48,6 +48,10 @@ Trunk (unreleased changes)
 14. HADOOP-1153.  Fix HDFS daemons to correctly stop their threads.
     (Konstantin Shvachko via cutting)
 
+15. HADOOP-1146.  Add a counter for reduce input keys and rename the
+    "reduce input records" counter to be "reduce input groups".
+    (David Bowen via cutting)
+
 
 Release 0.12.3 (not yet released)
 

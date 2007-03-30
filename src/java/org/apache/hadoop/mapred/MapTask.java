@@ -394,6 +394,7 @@ class MapTask extends Task {
       while (values.more()) {
         combiner.reduce(values.getKey(), values, combineCollector, reporter);
         values.nextKey();
+        reporter.incrCounter(COMBINE_OUTPUT_RECORDS, 1);
       }
     }
     
@@ -524,6 +525,11 @@ class MapTask extends Task {
               Configuration conf) 
       throws IOException {
         super(in, comparator, keyClass, valClass, umbilical, conf);
+      }
+      
+      public Object next() {
+        reporter.incrCounter(COMBINE_INPUT_RECORDS, 1);
+        return super.next();
       }
     }
   }
