@@ -67,17 +67,20 @@ Trunk (unreleased changes)
 20. HADOOP-1167.  Remove extra synchronization in InMemoryFileSystem.
     (omalley via cutting)
 
+21. HADOOP-1110.  Fix an off-by-one error counting map inputs.
+    (David Bowen via cutting)
+
 
 Release 0.12.3 (not yet released)
 
-15. HADOOP-1162.  Fix bug in record CSV and XML serialization of
+ 1. HADOOP-1162.  Fix bug in record CSV and XML serialization of
     binary values.  (Milind Bhandarkar via cutting)
 
-16. HADOOP-1123.  Fix NullPointerException in LocalFileSystem when
+ 2. HADOOP-1123.  Fix NullPointerException in LocalFileSystem when
     trying to recover from a checksum error.
     (Hairong Kuang & Nigel Daley via tomwhite)
 
-17. HADOOP-1177.  Fix bug where IOException in MapOutputLocation.getFile
+ 3. HADOOP-1177.  Fix bug where IOException in MapOutputLocation.getFile
     was not being logged.  (Devaraj Das via tomwhite)
 
 

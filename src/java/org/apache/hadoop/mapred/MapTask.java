@@ -155,8 +155,10 @@ class MapTask extends Task {
           setProgress(getProgress());
           long beforePos = getPos();
           boolean ret = rawIn.next(key, value);
-          reporter.incrCounter(MAP_INPUT_RECORDS, 1);
-          reporter.incrCounter(MAP_INPUT_BYTES, (getPos() - beforePos));
+          if (ret) {
+            reporter.incrCounter(MAP_INPUT_RECORDS, 1);
+            reporter.incrCounter(MAP_INPUT_BYTES, (getPos() - beforePos));
+          }
           return ret;
         }
         public long getPos() throws IOException { return rawIn.getPos(); }
