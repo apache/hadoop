@@ -64,6 +64,9 @@ Trunk (unreleased changes)
 19. HADOOP-1169.  Fix a cut/paste error in CopyFiles utility so that
     S3-based source files are correctly copied.  (Michael Stack via cutting)
 
+20. HADOOP-1167.  Remove extra synchronization in InMemoryFileSystem.
+    (omalley via cutting)
+
 
 Release 0.12.3 (not yet released)
 

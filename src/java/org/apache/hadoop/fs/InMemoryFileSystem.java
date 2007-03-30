@@ -44,15 +44,13 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
   private Path staticWorkingDir;
   
   //pathToFileAttribs is the final place where a file is put after it is closed
-  private Map <String, FileAttributes> pathToFileAttribs = 
-    Collections.synchronizedMap(new HashMap());
+  private Map <String, FileAttributes> pathToFileAttribs = new HashMap();
   
   //tempFileAttribs is a temp place which is updated while reserving memory for
   //files we are going to create. It is read in the createRaw method and the
   //temp key/value is discarded. If the file makes it to "close", then it
   //ends up being in the pathToFileAttribs map.
-  private Map <String, FileAttributes> tempFileAttribs = 
-    Collections.synchronizedMap(new HashMap());
+  private Map <String, FileAttributes> tempFileAttribs = new HashMap();
   
   public RawInMemoryFileSystem() {
     setConf(new Configuration());
@@ -193,10 +191,10 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
   public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
       short replication, long blockSize, Progressable progress)
       throws IOException {
-    if (exists(f) && ! overwrite) {
-      throw new IOException("File already exists:"+f);
-    }
     synchronized (this) {
+      if (exists(f) && ! overwrite) {
+        throw new IOException("File already exists:"+f);
+      }
       FileAttributes fAttr =(FileAttributes) tempFileAttribs.remove(getPath(f));
       if (fAttr != null)
         return create(f, fAttr);
