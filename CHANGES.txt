@@ -79,6 +79,9 @@ Trunk (unreleased changes)
 24. HADOOP-672.  Improve help for fs shell commands.
     (Dhruba Borthakur via cutting)
 
+25. HADOOP-1170.  Improve datanode performance by removing device
+    checks from common operations.  (Igor Bolotin via cutting)
+
 
 Release 0.12.3 (not yet released)
 

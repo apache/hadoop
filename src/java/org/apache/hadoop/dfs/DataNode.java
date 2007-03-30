@@ -419,7 +419,6 @@ public class DataNode implements FSConstants, Runnable {
             lastHeartbeat = now;
 
             if( cmd != null ) {
-              data.checkDataDir();
               switch( cmd.action ) {
               case DNA_TRANSFER:
                 //
@@ -454,9 +453,6 @@ public class DataNode implements FSConstants, Runnable {
             
           // send block report
           if (now - lastBlockReport > blockReportInterval) {
-            // before send block report, check if data directory is healthy
-            data.checkDataDir();
-                
             //
             // Send latest blockinfo report if timer has expired.
             // Get back a list of local block(s) that are obsolete
@@ -558,15 +554,10 @@ public class DataNode implements FSConstants, Runnable {
                 while (shouldRun) {
                     Socket s = ss.accept();
                     //s.setSoTimeout(READ_TIMEOUT);
-                    data.checkDataDir();
                     xceiverCount.incr();
                     new Daemon(new DataXceiver(s)).start();
                 }
                 ss.close();
-            } catch (DiskErrorException de ) {
-                String errMsgr = de.getMessage();
-                LOG.warn("Exiting DataXceiveServer due to "+ errMsgr );
-                handleDiskError(errMsgr);
             } catch (IOException ie) {
                 LOG.info("Exiting DataXceiveServer due to " + ie.toString());
             }
