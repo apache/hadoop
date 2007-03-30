@@ -87,7 +87,7 @@ public class DFSAdmin extends FsShell {
      */
     public void setSafeMode(String[] argv, int idx) throws IOException {
       if (!(fs instanceof DistributedFileSystem)) {
-        System.out.println("FileSystem is " + fs.getName());
+        System.err.println("FileSystem is " + fs.getName());
         return;
       }
       if (idx != argv.length - 1) {
@@ -141,7 +141,7 @@ public class DFSAdmin extends FsShell {
       int exitCode = -1;
 
       if (!(fs instanceof DistributedFileSystem)) {
-        System.out.println("FileSystem is " + fs.getName());
+        System.err.println("FileSystem is " + fs.getName());
         return exitCode;
       }
 
@@ -151,6 +151,50 @@ public class DFSAdmin extends FsShell {
    
       return exitCode;
     }
+
+    private void printHelp(String cmd) {
+        String summary = "hadoop dfsadmin is the command to execute dfs administrative commands.\n" +
+            "The full syntax is: \n\n" +
+            "hadoop dfsadmin [-report] [-safemode <enter | leave | get | wait>]\n" +
+            "\t[-refreshNodes] [-help [cmd]]\n";
+
+        String report ="-report: \tReports basic filesystem information and statistics.\n";
+        
+        String safemode = "-safemode <enter|leave|get|wait>:  Safemode maintenance command.\n" + 
+            "\t\tSafe mode is a name node state when it\n" +
+            "\t\t\t1.  does not accept changes to name space (read-only)\n" +
+            "\t\t\t2.  does not replicate or delete blocks.\n" +
+            "\t\tSafe mode is entered automatically at name node startup, and\n" +
+            "\t\tleaves safe mode automatically when the configured minimum\n" +
+            "\t\tpercentage of blocks satisfies the minimal replication\n" +
+            "\t\tcondition.  Safe mode can also be entered manually, but then\n" +
+            "\t\tcan only be turned off manually as well.\n";
+
+        String refreshNodes = "-refreshNodes: \tReread the hosts and exclude files to update the set\n" +
+            "\t\tof datanodes that are allowed to connect to the namenode\n" +
+            "\t\tand those that should be decommissioned/recommissioned.\n";
+
+        String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
+            "\t\tis specified.\n";
+
+        if ("report".equals(cmd)) {
+            System.out.println(report);
+        } else if ("safemode".equals(cmd)) {
+            System.out.println(safemode);
+        } else if ("refreshNodes".equals(cmd)) {
+            System.out.println(refreshNodes);
+        } else if ("help".equals(cmd)) {
+            System.out.println(help);
+        } else {
+            System.out.println(summary);
+            System.out.println(report);
+            System.out.println(safemode);
+            System.out.println(refreshNodes);
+            System.out.println(help);
+        }
+
+    }
+
 
     /**
      * Displays format of commands.
@@ -171,6 +215,7 @@ public class DFSAdmin extends FsShell {
             System.err.println("           [-report]");
             System.err.println("           [-safemode enter | leave | get | wait]");
             System.err.println("           [-refreshNodes]");
+            System.err.println("           [-help [cmd]]");
           }
     }
 
@@ -231,6 +276,12 @@ public class DFSAdmin extends FsShell {
                 setSafeMode(argv, i);
             } else if ("-refreshNodes".equals(cmd)) {
                 exitCode = refreshNodes();
+            } else if ("-help".equals(cmd)) {
+                if (i < argv.length) {
+                    printHelp(argv[i]);
+                } else {
+                    printHelp("");
+                }
             } else {
                 exitCode = -1;
                 System.err.println(cmd.substring(1) + ": Unknown command");

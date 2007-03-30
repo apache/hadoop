@@ -76,6 +76,9 @@ Trunk (unreleased changes)
 23. HADOOP-1011.  Fix a ConcurrentModificationException when viewing
     job history.  (Tahir Hashmi via cutting)
 
+24. HADOOP-672.  Improve help for fs shell commands.
+    (Dhruba Borthakur via cutting)
+
 
 Release 0.12.3 (not yet released)
 

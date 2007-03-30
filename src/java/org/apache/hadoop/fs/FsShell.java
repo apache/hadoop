@@ -635,6 +635,181 @@ public class FsShell extends ToolBase {
         return strVal;
     }
 
+    private void printHelp(String cmd) {
+        String summary = "hadoop fs is the command to execute fs commands. " +
+            "The full syntax is: \n\n" +
+            "hadoop fs [-fs <local | file system URI>] [-conf <configuration file>]\n\t" +
+            "[-D <property=value>] [-ls <path>] [-lsr <path>] [-du <path>]\n\t" + 
+            "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]\n\t" + 
+            "[-rmr <src>] [-put <localsrc> <dst>] [-copyFromLocal <localsrc> <dst>]\n\t" +
+            "[-moveFromLocal <localsrc> <dst>] [-get <src> <localdst>]\n\t" +
+            "[-getmerge <src> <localdst> [addnl]] [-cat <src>]\n\t" +
+            "[-copyToLocal <src><localdst>] [-moveToLocal <src> <localdst>]\n\t" +
+            "[-mkdir <path>] [-report] [-setrep [-R] <rep> <path/file>]\n" +
+            "[-help [cmd]]\n"; 
+
+        String conf ="-conf <configuration file>:  Specify an application configuration file.";
+ 
+        String D = "-D <property=value>:  Use value for given property.";
+  
+        String fs = "-fs [local | <file system URI>]: \tSpecify the file system to use.\n" + 
+            "\t\tIf not specified, the current configuration is used, \n" +
+            "\t\ttaken from the following, in increasing precedence: \n" + 
+            "\t\t\thadoop-default.xml inside the hadoop jar file \n" +
+            "\t\t\thadoop-default.xml in $HADOOP_CONF_DIR \n" +
+            "\t\t\thadoop-site.xml in $HADOOP_CONF_DIR \n" +
+            "\t\t'local' means use the local file system as your DFS. \n" +
+            "\t\t<file system URI> specifies a particular file system to \n" +
+            "\t\tcontact. This argument is optional but if used must appear\n" +
+            "\t\tappear first on the command line.  Exactly one additional\n" +
+            "\t\targument must be specified. \n";
+
+        
+        String ls = "-ls <path>: \tList the contents that match the specified file pattern. If\n" + 
+            "\t\tpath is not specified, the contents of /user/<currentUser>\n" +
+            "\t\twill be listed. Directory entries are of the form \n" +
+            "\t\t\tdirName (full path) <dir> \n" +
+            "\t\tand file entries are of the form \n" + 
+            "\t\t\tfileName(full path) <r n> size \n" +
+            "\t\twhere n is the number of replicas specified for the file \n" + 
+            "\t\tand size is the size of the file, in bytes.\n";
+
+        String lsr = "-lsr <path>: \tRecursively list the contents that match the specified\n" +
+            "\t\tfile pattern.  Behaves very similarly to hadoop fs -ls,\n" + 
+            "\t\texcept that the data is shown for all the entries in the\n" +
+            "\t\tsubtree.\n";
+
+        String du = "-du <path>: \tShow the amount of space, in bytes, used by the files that \n" +
+            "\t\tmatch the specified file pattern.  Equivalent to the unix\n" + 
+            "\t\tcommand \"du -sb <path>/*\" in case of a directory, \n" +
+            "\t\tand to \"du -b <path>\" in case of a file.\n" +
+            "\t\tThe output is in the form \n" + 
+            "\t\t\tname(full path) size (in bytes)\n"; 
+
+        String dus = "-dus <path>: \tShow the amount of space, in bytes, used by the files that \n" +
+            "\t\tmatch the specified file pattern.  Equivalent to the unix\n" + 
+            "\t\tcommand \"du -sb\"  The output is in the form \n" + 
+            "\t\t\tname(full path) size (in bytes)\n"; 
+    
+        String mv = "-mv <src> <dst>:   Move files that match the specified file pattern <src>\n" +
+            "\t\tto a destination <dst>.  When moving multiple files, the \n" +
+            "\t\tdestination must be a directory. \n";
+
+        String cp = "-cp <src> <dst>:   Copy files that match the file pattern <src> to a \n" +
+            "\t\tdestination.  When copying multiple files, the destination\n" +
+            "\t\tmust be a directory. \n";
+
+        String rm = "-rm <src>: \tDelete all files that match the specified file pattern.\n" +
+            "\t\tEquivlent to the Unix command \"rm <src>\"\n";
+
+        String rmr = "-rmr <src>: \tRemove all directories which match the specified file \n" +
+            "\t\tpattern. Equivlent to the Unix command \"rm -rf <src>\"\n";
+
+        String put = "-put <localsrc> <dst>: \tCopy a single file from the local file system \n" +
+            "\t\tinto fs. \n";
+
+        String copyFromLocal = "-copyFromLocal <localsrc> <dst>:  Identical to the -put command.\n";
+
+        String moveFromLocal = "-moveFromLocal <localsrc> <dst>:  Same as -put, except that the source is\n" +
+            "\t\tdeleted after it's copied.\n"; 
+
+        String get = "-get <src> <localdst>:  Copy files that match the file pattern <src> \n" +
+            "\t\tto the local name.  <src> is kept.  When copying mutiple, \n" +
+            "\t\tfiles, the destination must be a directory. \n";
+
+        String getmerge = "-getmerge <src> <localdst>:  Get all the files in the directories that \n" +
+            "\t\tmatch the source file pattern and merge and sort them to only\n" +
+            "\t\tone file on local fs. <src> is kept.\n";
+
+        String cat = "-cat <src>: \tFetch all files that match the file pattern <src> \n" +
+            "\t\tand display their content on stdout.\n";
+        
+        String copyToLocal = "-copyToLocal <src> <localdst>:  Identical to the -get command.\n";
+
+        String moveToLocal = "-moveToLocal <src> <localdst>:  Not implemented yet \n";
+        
+        String mkdir = "-mkdir <path>: \tCreate a directory in specified location. \n";
+
+        String setrep = "-setrep [-R] <rep> <path/file>:  Set the replication level of a file. \n" +
+            "\t\tThe -R flag requests a recursive change of replication level \n" + 
+            "\t\tfor an entire tree.\n"; 
+        
+        String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
+            "\t\tis specified.\n";
+
+        if ("fs".equals(cmd)) {
+            System.out.println(fs);
+        } else if ("conf".equals(cmd)) {
+            System.out.println(conf);
+        } else if ("D".equals(cmd)) {
+            System.out.println(D);
+        } else if ("ls".equals(cmd)) {
+            System.out.println(ls);
+        } else if ("lsr".equals(cmd)) {
+            System.out.println(lsr);
+        } else if ("du".equals(cmd)) {
+            System.out.println(du);
+        } else if ("dus".equals(cmd)) {
+            System.out.println(dus);
+        } else if ("rm".equals(cmd)) {
+            System.out.println(rm);
+        } else if ("rmr".equals(cmd)) {
+            System.out.println(rmr);
+        } else if ("mkdir".equals(cmd)) {
+            System.out.println(mkdir);
+        } else if ("mv".equals(cmd)) {
+            System.out.println(mv);
+        } else if ("cp".equals(cmd)) {
+            System.out.println(cp);
+        } else if ("put".equals(cmd)) {
+            System.out.println(put);
+        } else if ("copyFromLocal".equals(cmd)) {
+            System.out.println(copyFromLocal);
+        } else if ("moveFromLocal".equals(cmd)) {
+            System.out.println(moveFromLocal);
+        } else if ("get".equals(cmd)) {
+            System.out.println(get);
+        } else if ("getmerge".equals(cmd)) {
+            System.out.println(getmerge);
+        } else if ("copyToLocal".equals(cmd)) {
+            System.out.println(copyToLocal);
+        } else if ("moveToLocal".equals(cmd)) {
+            System.out.println(moveToLocal);
+        } else if ("cat".equals(cmd)) {
+            System.out.println(cat);
+        } else if ("get".equals(cmd)) {
+            System.out.println(get);
+        } else if ("setrep".equals(cmd)) {
+            System.out.println(setrep);
+        } else if ("help".equals(cmd)) {
+            System.out.println(help);
+        } else {
+            System.out.println(summary);
+            System.out.println(fs);
+            System.out.println(ls);
+            System.out.println(lsr);
+            System.out.println(du);
+            System.out.println(dus);
+            System.out.println(mv);
+            System.out.println(cp);
+            System.out.println(rm);
+            System.out.println(rmr);
+            System.out.println(put);
+            System.out.println(copyFromLocal);
+            System.out.println(moveFromLocal);
+            System.out.println(get);
+            System.out.println(getmerge);
+            System.out.println(cat);
+            System.out.println(copyToLocal);
+            System.out.println(moveToLocal);
+            System.out.println(mkdir);
+            System.out.println(setrep);
+            System.out.println(help);
+        }        
+
+                           
+    }
+
     /**
      * Apply operation specified by 'cmd' on all parameters
      * starting from argv[startindex].
@@ -702,7 +877,7 @@ public class FsShell extends ToolBase {
     public void printUsage(String cmd) {
           if ("-fs".equals(cmd)) {
             System.err.println("Usage: java FsShell" + 
-                " [-fs <local | namenode:port>]");
+                " [-fs <local | file system URI>]");
           } else if ("-conf".equals(cmd)) {
             System.err.println("Usage: java FsShell" + 
                 " [-conf <configuration file>]");
@@ -727,7 +902,7 @@ public class FsShell extends ToolBase {
             System.err.println("Usage: java FsShell" + 
                 " [" + cmd + " [-crc] <src> <localdst>]");
           } else if ("-cat".equals(cmd)) {
-            System.out.println("Usage: java FsShell" + 
+            System.err.println("Usage: java FsShell" + 
                 " [" + cmd + " <src>]");
           } else if ("-get".equals(cmd)) {
             System.err.println("Usage: java FsShell" + 
@@ -737,7 +912,7 @@ public class FsShell extends ToolBase {
                 " [-setrep [-R] <rep> <path/file>]");
           } else {
             System.err.println("Usage: java FsShell");
-            System.err.println("           [-fs <local | namenode:port>]");
+            System.err.println("           [-fs <local | file system URI>]");
             System.err.println("           [-conf <configuration file>]");
             System.err.println("           [-D <[property=value>]");
             System.err.println("           [-ls <path>]" );
@@ -759,6 +934,7 @@ public class FsShell extends ToolBase {
             System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
             System.err.println("           [-mkdir <path>]");
             System.err.println("           [-setrep [-R] <rep> <path/file>]");
+            System.err.println("           [-help [cmd]]");
           }
     }
 
@@ -871,6 +1047,12 @@ public class FsShell extends ToolBase {
               }         
             } else if ("-mkdir".equals(cmd)) {
                 exitCode = doall(cmd, argv, conf, i);
+            } else if ("-help".equals(cmd)) {
+                if (i < argv.length) {
+                    printHelp(argv[i]);
+                } else {
+                    printHelp("");
+                }
             } else {
                 exitCode = -1;
                 System.err.println(cmd.substring(1) + ": Unknown command");
