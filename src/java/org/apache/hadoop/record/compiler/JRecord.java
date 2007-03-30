@@ -161,19 +161,6 @@ public class JRecord extends JCompType {
       cb.append("a.endRecord(tag);\n");
       cb.append("}\n");
       
-      cb.append("public String toString() {\n");
-      cb.append("try {\n");
-      cb.append("java.io.ByteArrayOutputStream s =\n");
-      cb.append("  new java.io.ByteArrayOutputStream();\n");
-      cb.append("org.apache.hadoop.record.CsvRecordOutput a = \n");
-      cb.append("  new org.apache.hadoop.record.CsvRecordOutput(s);\n");
-      cb.append("this.serialize(a);\n");
-      cb.append("return new String(s.toByteArray(), \"UTF-8\");\n");
-      cb.append("} catch (Throwable ex) {\n");
-      cb.append("throw new RuntimeException(ex);\n");
-      cb.append("}\n");
-      cb.append("}\n");
-      
       cb.append("public int compareTo (final Object peer_) throws ClassCastException {\n");
       cb.append("if (!(peer_ instanceof "+name+")) {\n");
       cb.append("throw new ClassCastException(\"Comparing different types of records.\");\n");

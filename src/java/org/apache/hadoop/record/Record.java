@@ -20,6 +20,7 @@ package org.apache.hadoop.record;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -75,5 +76,17 @@ public abstract class Record implements WritableComparable, Cloneable {
   public void readFields(final DataInput din) throws java.io.IOException {
     BinaryRecordInput rin = BinaryRecordInput.get(din);
     this.deserialize(rin);
+  }
+
+  // inherit javadoc
+  public String toString() {
+    try {
+      ByteArrayOutputStream s = new ByteArrayOutputStream();
+      CsvRecordOutput a = new CsvRecordOutput(s);
+      this.serialize(a);
+      return new String(s.toByteArray(), "UTF-8");
+    } catch (Throwable ex) {
+      throw new RuntimeException(ex);
+    }
   }
 }
