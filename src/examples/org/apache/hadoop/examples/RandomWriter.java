@@ -28,7 +28,7 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.mapred.lib.NullOutputFormat;
 
 /**
  * This program uses map/reduce to just run a distributed job where there is
@@ -105,20 +105,6 @@ public class RandomWriter {
                                         Reporter reporter) throws IOException {
       return new RandomRecordReader(((FileSplit) split).getPath());
     }
-  }
-
-  /**
-   * Consume all outputs and put them in /dev/null. 
-   */
-  static class DataSink implements OutputFormat {
-    public RecordWriter getRecordWriter(FileSystem ignored, JobConf job, 
-                                        String name, Progressable progress) {
-      return new RecordWriter(){
-        public void write(WritableComparable key, Writable value) { }
-        public void close(Reporter reporter) { }
-      };
-    }
-    public void checkOutputSpecs(FileSystem ignored, JobConf job) { }
   }
 
   static class Map extends MapReduceBase implements Mapper {
@@ -202,14 +188,6 @@ public class RandomWriter {
    * It runs 10 maps/node and each node writes 1 gig of data to a DFS file.
    * The reduce doesn't do anything.
    * 
-   * This program uses a useful pattern for dealing with Hadoop's constraints
-   * on InputSplits. Since each input split can only consist of a file and 
-   * byte range and we want to control how many maps there are (and we don't 
-   * really have any inputs), we create a directory with a set of artificial
-   * files that each contain the filename that we want a given map to write 
-   * to. Then, using the text line reader and this "fake" input directory, we
-   * generate exactly the right number of maps. Each map gets a single record
-   * that is the filename it is supposed to write its output to. 
    * @throws IOException 
    */
   public static void main(String[] args) throws IOException {
@@ -237,7 +215,7 @@ public class RandomWriter {
     job.setInputFormat(RandomInputFormat.class);
     job.setMapperClass(Map.class);        
     job.setReducerClass(IdentityReducer.class);
-    job.setOutputFormat(DataSink.class);
+    job.setOutputFormat(NullOutputFormat.class);
     
     JobClient client = new JobClient(job);
     ClusterStatus cluster = client.getClusterStatus();

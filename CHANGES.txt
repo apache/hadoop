@@ -58,6 +58,9 @@ Trunk (unreleased changes)
 17. HADOOP-1164.  Fix TestReplicationPolicy to specify port zero, so
     that a free port is automatically selected.  (omalley via cutting)
 
+18. HADOOP-1166.  Add a NullOutputFormat and use it in the
+    RandomWriter example.  (omalley via cutting)
+
 
 Release 0.12.3 (not yet released)
 
