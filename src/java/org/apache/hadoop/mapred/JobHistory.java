@@ -266,7 +266,7 @@ public class JobHistory {
      * Reads values back from the history, input is same Map as passed to Listener by parseHistory().  
      * @param values
      */
-    public void handle(Map<Keys, String> values){
+    public synchronized void handle(Map<Keys, String> values){
       set(values); 
     }
     /**

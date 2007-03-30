@@ -73,6 +73,9 @@ Trunk (unreleased changes)
 22. HADOOP-1178.  Fix a NullPointerException during namenode startup.
     (Dhruba Borthakur via cutting)
 
+23. HADOOP-1011.  Fix a ConcurrentModificationException when viewing
+    job history.  (Tahir Hashmi via cutting)
+
 
 Release 0.12.3 (not yet released)
 
