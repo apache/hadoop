@@ -72,7 +72,7 @@ public class SortValidator {
     }
     
     // value == one for sort-input; value == two for sort-output
-    return (inputFile.toString().startsWith(inputPaths[0].toString())) ? 
+    return (inputFile.startsWith(inputPaths[0].toString()+"/")) ? 
             sortInput : sortOutput;
   }
   

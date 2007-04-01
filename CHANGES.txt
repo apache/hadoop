@@ -82,6 +82,10 @@ Trunk (unreleased changes)
 25. HADOOP-1170.  Improve datanode performance by removing device
     checks from common operations.  (Igor Bolotin via cutting)
 
+26. HADOOP-1090.  Fix SortValidator's detection of whether the input 
+    file belongs to the sort-input or sort-output directory.
+    (Arun C Murthy via tomwhite)
+
 
 Release 0.12.3 (not yet released)
 
