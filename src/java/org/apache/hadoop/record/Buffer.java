@@ -222,7 +222,8 @@ public class Buffer implements Comparable, Cloneable {
   public String toString() {
     StringBuffer sb = new StringBuffer(2*count);
     for(int idx = 0; idx < count; idx++) {
-      sb.append(Integer.toHexString((int)bytes[idx]));
+      sb.append(Character.forDigit((bytes[idx] & 0xF0) >> 4, 16));
+      sb.append(Character.forDigit(bytes[idx] & 0x0F, 16));
     }
     return sb.toString();
   }
