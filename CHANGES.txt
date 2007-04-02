@@ -102,6 +102,9 @@ Release 0.12.3 (not yet released)
  4. HADOOP-1175.  Fix bugs in JSP for displaying a task's log messages.
     (Arun C Murthy via cutting)
 
+ 5. HADOOP-1191.  Fix map tasks to wait until sort progress thread has
+    stopped before reporting the task done.  (Devaraj Das via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 

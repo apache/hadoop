@@ -188,6 +188,9 @@ class MapTask extends Task {
       in.close();                               // close input
       collector.close();
       sortProgress.interrupt();
+      try {
+        sortProgress.join();
+      } catch (InterruptedException ie){ }
     }
     done(umbilical);
   }
