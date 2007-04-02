@@ -308,7 +308,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
      * is corrupt but we will report both to the namenode.  In the future,
      * we can consider figuring out exactly which block is corrupt.
      */
-    public void reportChecksumFailure(Path f, 
+    public boolean reportChecksumFailure(Path f, 
                                       FSDataInputStream in, long inPos, 
                                       FSDataInputStream sums, long sumsPos) {
       
@@ -347,6 +347,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
                  + StringUtils.stringifyException(ie));
       }
 
+      return true;
     }
     }
 
@@ -399,10 +400,10 @@ public class DistributedFileSystem extends ChecksumFileSystem {
      * is corrupt but we will report both to the namenode.  In the future,
      * we can consider figuring out exactly which block is corrupt.
      */
-    public void reportChecksumFailure(Path f, 
+    public boolean reportChecksumFailure(Path f, 
                                       FSDataInputStream in, long inPos, 
                                       FSDataInputStream sums, long sumsPos) {
-      ((RawDistributedFileSystem)fs).reportChecksumFailure(
+      return ((RawDistributedFileSystem)fs).reportChecksumFailure(
                 f, in, inPos, sums, sumsPos);
     }
 }

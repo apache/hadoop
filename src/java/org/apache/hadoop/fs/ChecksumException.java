@@ -22,7 +22,13 @@ import java.io.IOException;
 
 /** Thrown for checksum errors. */
 public class ChecksumException extends IOException {
-  public ChecksumException(String description) {
+  private long pos;
+  public ChecksumException(String description, long pos) {
     super(description);
+    this.pos = pos;
+  }
+  
+  public long getPos() {
+    return pos;
   }
 }

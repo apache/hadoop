@@ -22,11 +22,12 @@ import java.io.*;
 import junit.framework.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.Path;
 
 /**
  * A JUnit test for corrupted file handling.
- *
- * @author Milind Bhandarkar
  */
 public class TestFileCorruption extends TestCase {
   
@@ -34,8 +35,6 @@ public class TestFileCorruption extends TestCase {
     super(testName);
   }
 
-  
-  
   protected void setUp() throws Exception {
   }
 
@@ -70,5 +69,28 @@ public class TestFileCorruption extends TestCase {
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }
+  }
+
+  /** check if local FS can handle corrupted blocks properly */
+  public void testLocalFileCorruption() throws Exception {
+    Configuration conf = new Configuration();
+    Path file = new Path(System.getProperty("test.build.data"), "corruptFile");
+    FileSystem fs = FileSystem.getLocal(conf);
+    DataOutputStream dos = fs.create(file);
+    dos.writeBytes("original bytes");
+    dos.close();
+    // Now deliberately corrupt the file
+    dos = new DataOutputStream(new FileOutputStream(file.toString()));
+    dos.writeBytes("corruption");
+    dos.close();
+    // Now attempt to read the file
+    DataInputStream dis = fs.open(file,512);
+    try {
+      System.out.println("A ChecksumException is expected to be logged.");
+      dis.readByte();
+    } catch (ChecksumException ignore) {
+      //expect this exception but let any NPE get thrown
+    }
+    fs.delete(file);
   }
 }
