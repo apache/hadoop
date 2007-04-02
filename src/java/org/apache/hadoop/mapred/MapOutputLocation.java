@@ -258,7 +258,6 @@ class MapOutputLocation implements Writable, MRConstants {
         } catch (Throwable th) {
           // IGNORED because we are cleaning up
         }
-        return null;
       }
     }
     return fileSys.makeQualified(localFilename);
