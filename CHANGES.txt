@@ -99,6 +99,9 @@ Release 0.12.3 (not yet released)
  3. HADOOP-1177.  Fix bug where IOException in MapOutputLocation.getFile
     was not being logged.  (Devaraj Das via tomwhite)
 
+ 4. HADOOP-1175.  Fix bugs in JSP for displaying a task's log messages.
+    (Arun C Murthy via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 
