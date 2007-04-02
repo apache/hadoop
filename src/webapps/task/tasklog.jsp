@@ -5,16 +5,10 @@
   import="java.io.*"
 %>
 <%!
-  String taskId = null;
-  long logOffset = -1, logLength = -1;
-  boolean tailLog = false;
-  long tailSize = 1024;
-  int tailWindow = 1;
-  boolean entireLog = false;
-  boolean plainText = false;
-  TaskLog.LogFilter filter = null;
-
-  private void printTaskLog(JspWriter out, TaskLog.LogFilter filter) 
+  private void printTaskLog(JspWriter out, String taskId, 
+      long logOffset, long logLength, 
+      boolean tailLog, long tailSize, int tailWindow,
+      boolean entireLog, boolean plainText, TaskLog.LogFilter filter) 
   throws IOException {
     if (!plainText) {
       out.println("<br><b><u>" + filter + " logs</u></b><br>");
@@ -99,6 +93,15 @@
 %>
 
 <%  
+  String taskId = null;
+  long logOffset = -1, logLength = -1;
+  boolean tailLog = false;
+  long tailSize = 1024;
+  int tailWindow = 1;
+  boolean entireLog = false;
+  boolean plainText = false;
+  TaskLog.LogFilter filter = null;
+
   taskId = request.getParameter("taskid");
   if (taskId == null) {
   	out.println("<h2>Missing 'taskid' for fetching logs!</h2>");
@@ -106,16 +109,14 @@
   }
   
   String logFilter = request.getParameter("filter");
-  if (logFilter == null) {
-  	logFilter = "stderr";
-  }
-  
-  try {
-    filter = TaskLog.LogFilter.valueOf(TaskLog.LogFilter.class, 
+  if (logFilter != null) {
+    try {
+      filter = TaskLog.LogFilter.valueOf(TaskLog.LogFilter.class, 
                                       logFilter.toUpperCase());
-  } catch (IllegalArgumentException iae) {
-    out.println("<h2>Illegal 'filter': " + logFilter + "</h2>");
-    return;
+    } catch (IllegalArgumentException iae) {
+      out.println("<h2>Illegal 'filter': " + logFilter + "</h2>");
+      return;
+    }
   }
   
   String sLogOff = request.getParameter("off");
@@ -167,15 +168,28 @@
     out.println("<title>Task Logs: '" + taskId + "'</title>"); 
     out.println("<body>");
     out.println("<h1>Task Logs: '" +  taskId +  "'</h1><br>"); 
-    
-    printTaskLog(out, TaskLog.LogFilter.STDOUT);
-    printTaskLog(out, TaskLog.LogFilter.STDERR);
-    printTaskLog(out, TaskLog.LogFilter.SYSLOG);
+
+    if (filter == null) {
+      printTaskLog(out, taskId, logOffset, logLength, 
+          tailLog, tailSize, tailWindow, 
+          entireLog, plainText, TaskLog.LogFilter.STDOUT);
+      printTaskLog(out, taskId, logOffset, logLength, 
+          tailLog, tailSize, tailWindow, 
+          entireLog, plainText, TaskLog.LogFilter.STDERR);
+      printTaskLog(out, taskId, logOffset, logLength, 
+          tailLog, tailSize, tailWindow, 
+          entireLog, plainText, TaskLog.LogFilter.SYSLOG);
+    } else {
+      printTaskLog(out, taskId, logOffset, logLength, 
+          tailLog, tailSize, tailWindow, 
+          entireLog, plainText, filter);
+    }
     
     out.println("<a href='http://lucene.apache.org/hadoop'>Hadoop</a>, 2006.<br>");
     out.println("</body>");
     out.println("</html>");
   } else {
-    printTaskLog(out, filter);
+    printTaskLog(out, taskId, logOffset, logLength, tailLog, tailSize, tailWindow, 
+        entireLog, plainText, filter);
   } 
 %>
