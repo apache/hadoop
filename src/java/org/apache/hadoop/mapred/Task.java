@@ -208,6 +208,8 @@ abstract class Task implements Writable, Configurable {
         String status = taskProgress.toString();
         try {
           umbilical.progress(getTaskId(), progress, status, phase, counters);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();     // interrupt ourself
         } catch (IOException ie) {
           LOG.warn(StringUtils.stringifyException(ie));
         }
@@ -222,9 +224,13 @@ abstract class Task implements Writable, Configurable {
       try {
         if (needProgress) {
           // send a final status report
-          umbilical.progress(getTaskId(), taskProgress.get(), 
-                             taskProgress.toString(), phase, counters);
-          needProgress = false;
+          try {
+            umbilical.progress(getTaskId(), taskProgress.get(), 
+                               taskProgress.toString(), phase, counters);
+            needProgress = false;
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();       // interrupt ourself
+          }
         }
         umbilical.done(getTaskId());
         return;

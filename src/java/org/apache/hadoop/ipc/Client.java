@@ -454,16 +454,14 @@ public class Client {
    * <code>address</code>, returning the value.  Throws exceptions if there are
    * network problems or if the remote code threw an exception. */
   public Writable call(Writable param, InetSocketAddress address)
-    throws IOException {
+    throws InterruptedException, IOException {
     Connection connection = getConnection(address);
     Call call = new Call(param);
     synchronized (call) {
       connection.sendParam(call);                 // send the parameter
       long wait = timeout;
       do {
-        try {
-          call.wait(wait);                       // wait for the result
-        } catch (InterruptedException e) {}
+        call.wait(wait);                       // wait for the result
         wait = timeout - (System.currentTimeMillis() - call.lastActivity);
       } while (!call.done && wait > 0);
 
