@@ -105,6 +105,10 @@ Release 0.12.3 (not yet released)
  5. HADOOP-1191.  Fix map tasks to wait until sort progress thread has
     stopped before reporting the task done.  (Devaraj Das via cutting)
 
+ 6. HADOOP-1192.  Fix an integer overflow bug in FSShell's 'dus'
+    command and a performance problem in HDFS's implementation of it.
+    (Hairong Kuang via cutting)
+
 
 Release 0.12.2 - 2007-23-17
 
