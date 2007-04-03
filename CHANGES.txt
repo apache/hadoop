@@ -91,6 +91,9 @@ Trunk (unreleased changes)
 28. HADOOP-1045.  Add contrib/hbase, a BigTable-like online database.
     (Jim Kellerman via cutting)
 
+29. HADOOP-1156.  Fix a NullPointerException in MiniDFSCluster.
+    (Hairong Kuang via cutting)
+
 
 Release 0.12.3 (not yet released)
 

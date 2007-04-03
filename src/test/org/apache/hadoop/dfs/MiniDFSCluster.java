@@ -90,7 +90,7 @@ public class MiniDFSCluster {
           isInitialized = true;
         }
       } catch (Throwable e) {
-        node = null;
+        shutdown();
         System.err.println("Name node crashed:");
         e.printStackTrace();
         synchronized (this) {
@@ -107,6 +107,7 @@ public class MiniDFSCluster {
       if (node != null) {
         node.stop();
         node.join();
+        node = null;
       }
     }
   }
@@ -157,8 +158,7 @@ public class MiniDFSCluster {
         }
         node.run();
       } catch (Throwable e) {
-        node.shutdown();
-        node = null;
+        shutdown();
         System.err.println("Data node crashed:");
         e.printStackTrace();
       }
@@ -171,6 +171,7 @@ public class MiniDFSCluster {
       isRunning = false;
       if (node != null) {
         node.shutdown();
+        node = null;
       }
     }
   }
