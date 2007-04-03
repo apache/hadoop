@@ -304,6 +304,14 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     }
 
     /**
+     * Finalize previously upgraded files system state.
+     * @throws IOException
+     */
+    public void finalizeUpgrade() throws IOException {
+      dfs.finalizeUpgrade();
+    }
+
+    /**
      * We need to find the blocks that didn't match.  Likely only one 
      * is corrupt but we will report both to the namenode.  In the future,
      * we can consider figuring out exactly which block is corrupt.
@@ -400,6 +408,14 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     public void refreshNodes() throws IOException {
       ((RawDistributedFileSystem)fs).refreshNodes();
     }
+
+    /**
+     * Finalize previously upgraded files system state.
+     */
+    public void finalizeUpgrade() throws IOException {
+      ((RawDistributedFileSystem)fs).finalizeUpgrade();
+    }
+
     /**
      * We need to find the blocks that didn't match.  Likely only one 
      * is corrupt but we will report both to the namenode.  In the future,

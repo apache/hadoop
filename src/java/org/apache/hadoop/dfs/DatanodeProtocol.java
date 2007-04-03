@@ -31,9 +31,15 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * @author Michael Cafarella
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
-  public static final long versionID = 5L;  // register takes a new parameter
+  /*
+   * 6: versionRequest() added;
+   * sendHeartbeat() and blockReport() return DatanodeCommand;
+   * DatanodeRegistration contains StorageInfo
+   */
+  public static final long versionID = 6L;
   
   // error code
+  final static int NOTIFY = 0;
   final static int DISK_ERROR = 1;
   final static int INVALID_BLOCK = 2;
 
@@ -45,7 +51,8 @@ interface DatanodeProtocol extends VersionedProtocol {
                               DNA_TRANSFER,   // transfer blocks to another datanode
                               DNA_INVALIDATE, // invalidate blocks
                               DNA_SHUTDOWN,   // shutdown node
-                              DNA_REGISTER; }   // re-register
+                              DNA_REGISTER,   // re-register
+                              DNA_FINALIZE; } // finalize previous upgrade
 
   /** 
    * Register Datanode.
@@ -63,14 +70,14 @@ interface DatanodeProtocol extends VersionedProtocol {
     /**
      * sendHeartbeat() tells the NameNode that the DataNode is still
      * alive and well.  Includes some status info, too. 
-     * It also gives the NameNode a chance to return a "BlockCommand" object.
-     * A BlockCommand tells the DataNode to invalidate local block(s), 
+     * It also gives the NameNode a chance to return a "DatanodeCommand" object.
+     * A DatanodeCommand tells the DataNode to invalidate local block(s), 
      * or to copy them to other DataNodes, etc.
      */
-    public BlockCommand sendHeartbeat(DatanodeRegistration registration,
-                                      long capacity, long remaining,
-                                      int xmitsInProgress,
-                                      int xceiverCount) throws IOException;
+    public DatanodeCommand sendHeartbeat( DatanodeRegistration registration,
+                                          long capacity, long remaining,
+                                          int xmitsInProgress,
+                                          int xceiverCount) throws IOException;
 
     /**
      * blockReport() tells the NameNode about all the locally-stored blocks.
@@ -79,8 +86,8 @@ interface DatanodeProtocol extends VersionedProtocol {
      * the locally-stored blocks.  It's invoked upon startup and then
      * infrequently afterwards.
      */
-    public Block[] blockReport( DatanodeRegistration registration,
-                                Block blocks[]) throws IOException;
+    public DatanodeCommand blockReport( DatanodeRegistration registration,
+                                        Block blocks[]) throws IOException;
     
     /**
      * blockReceived() allows the DataNode to tell the NameNode about
@@ -98,4 +105,6 @@ interface DatanodeProtocol extends VersionedProtocol {
     public void errorReport(DatanodeRegistration registration,
                             int errorCode, 
                             String msg) throws IOException;
+    
+    public NamespaceInfo versionRequest() throws IOException;
 }

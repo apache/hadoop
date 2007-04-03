@@ -28,7 +28,8 @@ import org.apache.hadoop.util.StringUtils;
 
 import java.io.*;
 import java.net.*;
-import org.apache.hadoop.dfs.DatanodeProtocol.DataNodeAction;
+import java.util.Collection;
+import java.util.Iterator;
 
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -95,26 +96,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     /** Format a new filesystem.  Destroys any filesystem that may already
      * exist at this location.  **/
     public static void format(Configuration conf) throws IOException {
-      File[] dirs = getDirs(conf);
-      for (int idx = 0; idx < dirs.length; idx++) {
-        FSImage.format(dirs[idx]);
-      }
-      FSImage fsimage = new FSImage(dirs);
-      FSNamesystem namesystem = new FSNamesystem(fsimage);
-      fsimage.create();
-      fsimage.getEditLog().close();
-    }
-
-    /** Format a new filesystem.  Destroys any filesystem that may already
-     * exist at this location.  **/
-    public static void format(File dir) throws IOException {
-      File dirs[] = new File[1];
-      dirs[0] = dir;
-      FSImage.format(dir);
-      FSImage fsimage = new FSImage(dirs);
-      FSNamesystem namesystem = new FSNamesystem(fsimage);
-      fsimage.create();
-      fsimage.getEditLog().close();
+      format( conf, false );
     }
 
     private class NameNodeMetrics implements Updater {
@@ -170,13 +152,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     
     /**
      * Initialize the server
-     * @param dirs the list of working directories
+     * 
      * @param hostname which hostname to bind to
      * @param port the port number to bind to
      * @param conf the configuration
      */
-    private void init(File[] dirs, String hostname, int port, 
-                      Configuration conf) throws IOException {
+    private void init(String hostname, int port, 
+                      Configuration conf
+                      ) throws IOException {
       this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
       this.server = RPC.getServer(this, hostname, port, handlerCount, 
                                   false, conf);
@@ -187,9 +170,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       LOG.info("Namenode up at: " + this.nameNodeAddress);
 
       try {
-        this.namesystem = new FSNamesystem(dirs, this.nameNodeAddress.getHostName(), this.nameNodeAddress.getPort(), this, conf);
+        this.namesystem = new FSNamesystem(this.nameNodeAddress.getHostName(), this.nameNodeAddress.getPort(), this, conf);
         this.server.start();  //start RPC server   
-
+  
         this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
         this.emptier.setDaemon(true);
         this.emptier.start();
@@ -201,16 +184,31 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
     
     /**
-     * Create a NameNode at the default location.
+     * Start NameNode.
+     * <p>
+     * The name-node can be started with one of the following startup options:
+     * <ul> 
+     * <li>{@link FSConstants.StartupOption#REGULAR REGULAR} - normal startup</li>
+     * <li>{@link FSConstants.StartupOption#FORMAT FORMAT} - format name node</li>
+     * <li>{@link FSConstants.StartupOption#UPGRADE UPGRADE} - start the cluster  
+     * upgrade and create a snapshot of the current file system state</li> 
+     * <li>{@link FSConstants.StartupOption#ROLLBACK ROLLBACK} - roll the  
+     *            cluster back to the previous state</li>
+     * </ul>
+     * The option is passed via configuration field: 
+     * <tt>dfs.namenode.startup</tt>
      * 
      * The conf will be modified to reflect the actual ports on which 
      * the NameNode is up and running if the user passes the port as
      * <code>zero</code> in the conf.
+     * 
+     * @param conf  confirguration
+     * @throws IOException
      */
     public NameNode(Configuration conf) throws IOException {
       InetSocketAddress addr = 
         DataNode.createSocketAddr(conf.get("fs.default.name"));
-      init(getDirs(conf), addr.getHostName(), addr.getPort(), conf);
+      init( addr.getHostName(), addr.getPort(), conf );
     }
 
     /**
@@ -220,11 +218,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * the NameNode is up and running if the user passes the port as
      * <code>zero</code>.  
      */
-    public NameNode(File[] dirs, String bindAddress, int port, Configuration conf) throws IOException {
-       init(dirs, bindAddress, port, conf);
+    public NameNode(String bindAddress, int port, 
+                    Configuration conf
+                    ) throws IOException {
+      init( bindAddress, port, conf );
     }
 
-    /** Return the configured directories where name data is stored. */
+    /** Return the configured directories where name data is stored. 
+     * @deprecated
+     */
     static File[] getDirs(Configuration conf) {
       String[] dirNames = conf.getStrings("dfs.name.dir");
       if (dirNames == null) { dirNames = new String[] {"/tmp/hadoop/dfs/name"}; }
@@ -578,6 +580,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     public void rollFsImage() throws IOException {
       namesystem.rollFSImage();
     }
+    
+    public void finalizeUpgrade() throws IOException {
+      getFSImage().finalizeUpgrade();
+    }
 
     ////////////////////////////////////////////////////////////////
     // DatanodeProtocol
@@ -598,11 +604,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * Return a block-oriented command for the datanode to execute.
      * This will be either a transfer or a delete operation.
      */
-    public BlockCommand sendHeartbeat(DatanodeRegistration nodeReg,
-                                      long capacity, 
-                                      long remaining,
-                                      int xmitsInProgress,
-                                      int xceiverCount) throws IOException {
+    public DatanodeCommand sendHeartbeat( DatanodeRegistration nodeReg,
+                                          long capacity, 
+                                          long remaining,
+                                          int xmitsInProgress,
+                                          int xceiverCount) throws IOException {
         Object xferResults[] = new Object[2];
         xferResults[0] = xferResults[1] = null;
         Object deleteList[] = new Object[1];
@@ -616,7 +622,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                      deleteList)) {
           // request block report from the datanode
           assert(xferResults[0] == null && deleteList[0] == null);
-          return new BlockCommand( DataNodeAction.DNA_REGISTER );
+          return new DatanodeCommand( DataNodeAction.DNA_REGISTER );
         }
         
         //
@@ -639,14 +645,19 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
         return null;
     }
 
-    public Block[] blockReport( DatanodeRegistration nodeReg,
-                                Block blocks[]) throws IOException {
+    public DatanodeCommand blockReport( DatanodeRegistration nodeReg,
+                                        Block blocks[]) throws IOException {
         verifyRequest( nodeReg );
         stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
                 +"from "+nodeReg.getName()+" "+blocks.length+" blocks" );
 
-        return namesystem.processReport( nodeReg, blocks );
-     }
+        Block blocksToDelete[] = namesystem.processReport( nodeReg, blocks );
+        if( blocksToDelete != null && blocksToDelete.length > 0 )
+            return new BlockCommand( blocksToDelete );
+        if( getFSImage().isUpgradeFinalized() )
+          return new DatanodeCommand( DataNodeAction.DNA_FINALIZE );
+        return null;
+    }
 
     public void blockReceived(DatanodeRegistration nodeReg, 
                               Block blocks[]) throws IOException {
@@ -664,11 +675,18 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                             int errorCode, 
                             String msg) throws IOException {
       // Log error message from datanode
+      LOG.info("Report from " + nodeReg.getName() + ": " + msg);
+      if( errorCode == DatanodeProtocol.NOTIFY ) {
+        return;
+      }
       verifyRequest( nodeReg );
-      LOG.warn("Report from " + nodeReg.getName() + ": " + msg);
       if( errorCode == DatanodeProtocol.DISK_ERROR ) {
           namesystem.removeDatanode( nodeReg );            
       }
+    }
+    
+    public NamespaceInfo versionRequest() throws IOException {
+      return namesystem.getNamespaceInfo();
     }
 
     /** 
@@ -693,7 +711,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * @throws IOException
      */
     public void verifyVersion( int version ) throws IOException {
-      if( version != DFS_CURRENT_VERSION )
+      if( version != LAYOUT_VERSION )
         throw new IncorrectVersionException( version, "data node" );
     }
 
@@ -701,7 +719,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * Returns the name of the fsImage file
      */
     public File getFsImageName() throws IOException {
-      return namesystem.getFsImageName();
+      return getFSImage().getFsImageName();
+    }
+    
+    FSImage getFSImage() {
+      return namesystem.dir.fsImage;
     }
 
     /**
@@ -709,7 +731,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
      * checkpointing
      */
     public File[] getFsImageNameCheckpoint() throws IOException {
-      return namesystem.getFsImageNameCheckpoint();
+      return getFSImage().getFsImageNameCheckpoint();
     }
 
     /**
@@ -726,38 +748,92 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     public InetSocketAddress getNameNodeAddress() {
       return nameNodeAddress;
     }
+
+    /**
+     * Verify that configured directories exist, then
+     * Interactively confirm that formatting is desired 
+     * for each existing directory and format them.
+     * 
+     * @param conf
+     * @param isConfirmationNeeded
+     * @return true if formatting was aborted, false otherwise
+     * @throws IOException
+     */
+    private static boolean format(Configuration conf,
+                                  boolean isConfirmationNeeded
+                                ) throws IOException {
+      Collection<File> dirsToFormat = FSNamesystem.getNamespaceDirs( conf );
+      for( Iterator<File> it = dirsToFormat.iterator(); it.hasNext(); ) {
+        File curDir = it.next();
+        if( ! curDir.exists() )
+          continue;
+        if( isConfirmationNeeded ) {
+          System.err.print("Re-format filesystem in " + curDir +" ? (Y or N) ");
+          if (!(System.in.read() == 'Y')) {
+            System.err.println("Format aborted in "+ curDir);
+            return true;
+          }
+          while( System.in.read() != '\n' ); // discard the enter-key
+        }
+      }
+
+      FSNamesystem nsys = new FSNamesystem(new FSImage( dirsToFormat ));
+      nsys.dir.fsImage.format();
+      return false;
+    }
+
+    private static void printUsage() {
+      System.err.println(
+      "Usage: java NameNode [-format] | [-upgrade] | [-rollback]");
+    }
+
+    private static StartupOption parseArguments(String args[], 
+                                                Configuration conf ) {
+      int argsLen = (args == null) ? 0 : args.length;
+      StartupOption startOpt = StartupOption.REGULAR;
+      for( int i=0; i < argsLen; i++ ) {
+        String cmd = args[i];
+        if( "-format".equalsIgnoreCase(cmd) ) {
+          startOpt = StartupOption.FORMAT;
+        } else if( "-regular".equalsIgnoreCase(cmd) ) {
+          startOpt = StartupOption.REGULAR;
+        } else if( "-upgrade".equalsIgnoreCase(cmd) ) {
+          startOpt = StartupOption.UPGRADE;
+        } else if( "-rollback".equalsIgnoreCase(cmd) ) {
+          startOpt = StartupOption.ROLLBACK;
+        } else
+          return null;
+      }
+      conf.setObject( "dfs.namenode.startup", startOpt );
+      return startOpt;
+    }
+
+    static NameNode createNameNode( String argv[], 
+                                    Configuration conf ) throws Exception {
+      if( conf == null )
+        conf = new Configuration();
+      StartupOption startOpt = parseArguments( argv, conf );
+      if( startOpt == null ) {
+        printUsage();
+        return null;
+      }
+      
+      if( startOpt == StartupOption.FORMAT ) {
+        boolean aborted = format( conf, true );
+        System.exit(aborted ? 1 : 0);
+      }
+      
+      NameNode namenode = new NameNode(conf);
+      return namenode;
+    }
     
     /**
      */
     public static void main(String argv[]) throws Exception {
       try {
-        Configuration conf = new Configuration();
-
-        if (argv.length == 1 && argv[0].equals("-format")) {
-          boolean aborted = false;
-          File[] dirs = getDirs(conf);
-          for (int idx = 0; idx < dirs.length; idx++) {
-            if (dirs[idx].exists()) {
-              System.err.print("Re-format filesystem in " + dirs[idx] +" ? (Y or N) ");
-              if (!(System.in.read() == 'Y')) {
-                System.err.println("Format aborted in "+ dirs[idx]);
-                aborted = true;
-              } else {
-                format(dirs[idx]);
-                System.err.println("Formatted "+dirs[idx]);
-              }
-              System.in.read(); // discard the enter-key
-            }else{
-              format(dirs[idx]);
-              System.err.println("Formatted "+dirs[idx]);
-            }
-          }
-          System.exit(aborted ? 1 : 0);
-        }
-        
-        NameNode namenode = new NameNode(conf);
-        namenode.join();
-        
+        NameNode namenode = createNameNode( argv, null );
+        if( namenode != null )
+          namenode.join();
       } catch ( Throwable e ) {
         LOG.error( StringUtils.stringifyException( e ) );
         System.exit(-1);

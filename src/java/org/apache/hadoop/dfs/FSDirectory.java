@@ -22,7 +22,6 @@ import org.apache.hadoop.io.*;
 import java.io.*;
 import java.util.*;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -315,13 +314,12 @@ class FSDirectory implements FSConstants {
     TreeMap activeLocks = new TreeMap();
     FSImage fsImage;  
     boolean ready = false;
-    int namespaceID = 0;    // TODO: move to FSImage class, it belongs there
     // Metrics record
     private MetricsRecord directoryMetrics = null;
     
     /** Access an existing dfs name directory. */
-    public FSDirectory(File[] dirs) throws IOException {
-      this.fsImage = new FSImage( dirs );
+    public FSDirectory() throws IOException {
+      this.fsImage = new FSImage();
       initialize();
     }
 
@@ -335,12 +333,23 @@ class FSDirectory implements FSConstants {
       directoryMetrics = MetricsUtil.createRecord(metricsContext, "FSDirectory");
     }
 
-    void loadFSImage( Configuration conf ) throws IOException {
-      fsImage.loadFSImage( conf );
+    void loadFSImage( Collection<File> dataDirs,
+                      StartupOption startOpt ) throws IOException {
+      // format before starting up if requested
+      if( startOpt == StartupOption.FORMAT ) {
+        fsImage.setStorageDirectories( dataDirs );
+        fsImage.format();
+        startOpt = StartupOption.REGULAR;
+      }
+      try {
+        fsImage.recoverTransitionRead( dataDirs, startOpt );
+      } catch( IOException e ) {
+        fsImage.close();
+        throw e;
+      }
       synchronized (this) {
         this.ready = true;
         this.notifyAll();
-        fsImage.getEditLog().create();
       }
     }
 
@@ -353,7 +362,7 @@ class FSDirectory implements FSConstants {
      * Shutdown the filestore
      */
     public void close() throws IOException {
-        fsImage.getEditLog().close();
+        fsImage.close();
     }
 
     /**

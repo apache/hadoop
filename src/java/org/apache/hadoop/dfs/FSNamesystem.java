@@ -212,8 +212,7 @@ class FSNamesystem implements FSConstants {
      * dirs is a list oif directories where the filesystem directory state 
      * is stored
      */
-    public FSNamesystem(File[] dirs, 
-                        String hostname,
+    public FSNamesystem(String hostname,
                         int port,
                         NameNode nn, Configuration conf) throws IOException {
         fsNamesystemObject = this;
@@ -246,8 +245,10 @@ class FSNamesystem implements FSConstants {
 
         this.localMachine = hostname;
         this.port = port;
-        this.dir = new FSDirectory(dirs);
-        this.dir.loadFSImage( conf );
+        this.dir = new FSDirectory();
+        StartupOption startOpt = (StartupOption)conf.get( 
+                                "dfs.namenode.startup", StartupOption.REGULAR );
+        this.dir.loadFSImage( getNamespaceDirs(conf), startOpt );
         this.safeMode = new SafeModeInfo( conf );
         setBlockTotal();
         pendingReplications = new PendingReplicationBlocks(LOG);
@@ -281,6 +282,17 @@ class FSNamesystem implements FSConstants {
         LOG.info("Web-server up at: " + conf.get("dfs.info.port"));
     }
 
+    static Collection<File> getNamespaceDirs(Configuration conf) {
+      String[] dirNames = conf.getStrings("dfs.name.dir");
+      if (dirNames == null)
+        dirNames = new String[] {"/tmp/hadoop/dfs/name"};
+      Collection<File> dirs = new ArrayList<File>( dirNames.length );
+      for( int idx = 0; idx < dirNames.length; idx++ ) {
+        dirs.add( new File(dirNames[idx] ));
+      }
+      return dirs;
+    }
+
     /**
      * dirs is a list of directories where the filesystem directory state 
      * is stored
@@ -296,6 +308,11 @@ class FSNamesystem implements FSConstants {
     public static FSNamesystem getFSNamesystem() {
         return fsNamesystemObject;
     } 
+    
+    NamespaceInfo getNamespaceInfo() {
+      return new NamespaceInfo( dir.fsImage.getNamespaceID(),
+                                dir.fsImage.getCTime() );
+    }
 
     /** Close down this filesystem manager.
      * Causes heartbeat and lease daemons to stop; waits briefly for
@@ -1513,7 +1530,6 @@ class FSNamesystem implements FSConstants {
           + "node registration from " + nodeReg.getName()
           + " storage " + nodeReg.getStorageID() );
 
-      nodeReg.registrationID = getRegistrationID();
       DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
       DatanodeDescriptor nodeN = getDatanodeByName( nodeReg.getName() );
       
@@ -1594,12 +1610,12 @@ class FSNamesystem implements FSConstants {
     /**
      * Get registrationID for datanodes based on the namespaceID.
      * 
-     * @see #registerDatanode(DatanodeRegistration)
+     * @see #registerDatanode(DatanodeRegistration,String)
      * @see FSImage#newNamespaceID()
      * @return registration ID
      */
     public String getRegistrationID() {
-      return "NS" + Integer.toString( dir.namespaceID );
+      return Storage.getRegistrationID( dir.fsImage );
     }
     
     /**
@@ -1622,7 +1638,7 @@ class FSNamesystem implements FSConstants {
     
     private boolean isDatanodeDead(DatanodeDescriptor node) {
       return (node.getLastUpdate() <
-          (System.currentTimeMillis() - heartbeatExpireInterval));
+          (now() - heartbeatExpireInterval));
     }
     
     void setDatanodeDead(DatanodeID nodeID) throws IOException {
@@ -2450,6 +2466,11 @@ class FSNamesystem implements FSConstants {
     public Date getStartTime() {
         return startTime;
     }
+    
+    short getMaxReplication()     { return (short)maxReplication; }
+    short getMinReplication()     { return (short)minReplication; }
+    short getDefaultReplication() { return (short)defaultReplication; }
+    
     /////////////////////////////////////////////////////////
     //
     // These methods are called by the Namenode system, to see
@@ -2476,7 +2497,7 @@ class FSNamesystem implements FSConstants {
         Iterator<Block> it = null;
         int sendNum = invalidateSet.size();
         int origSize = sendNum;
-        ArrayList sendBlock = new ArrayList(sendNum);
+        ArrayList<Block> sendBlock = new ArrayList<Block>(sendNum);
 
         //
         // calculate the number of blocks that we send in one message
@@ -3825,14 +3846,6 @@ class FSNamesystem implements FSConstants {
       dir.fsImage.rollFSImage();
     }
 
-    File getFsImageName() throws IOException {
-      return dir.fsImage.getFsImageName();
-    }
-
-    File[] getFsImageNameCheckpoint() throws IOException {
-      return dir.fsImage.getFsImageNameCheckpoint();
-    }
-
     File getFsEditName() throws IOException {
       return getEditLog().getFsEditName();
     }
@@ -3876,7 +3889,6 @@ class FSNamesystem implements FSConstants {
         try {
           ServletContext context = getServletContext();
           NameNode nn = (NameNode) context.getAttribute("name.node");
-          Configuration conf = (Configuration) context.getAttribute("name.conf");
           TransferFsImage ff = new TransferFsImage(pmap, request, response);
           if (ff.getImage()) {
             // send fsImage to Secondary

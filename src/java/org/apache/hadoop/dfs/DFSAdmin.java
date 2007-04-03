@@ -197,6 +197,26 @@ public class DFSAdmin extends FsShell {
 
 
     /**
+     * Command to ask the namenode to finalize previously performed upgrade.
+     * Usage: java DFSAdmin -finalizeUpgrade
+     * @exception IOException 
+     */
+    public int finalizeUpgrade() throws IOException {
+      int exitCode = -1;
+
+      if (!(fs instanceof DistributedFileSystem)) {
+        System.out.println("FileSystem is " + fs.getUri());
+        return exitCode;
+      }
+
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      dfs.finalizeUpgrade();
+      exitCode = 0;
+   
+      return exitCode;
+    }
+
+    /**
      * Displays format of commands.
      * @param cmd The command that is being executed.
      */
@@ -210,11 +230,15 @@ public class DFSAdmin extends FsShell {
           } else if ("-refreshNodes".equals(cmd)) {
             System.err.println("Usage: java DFSAdmin"
                 + " [-refreshNodes]");
+          } else if ("-finalizeUpgrade".equals(cmd)) {
+            System.err.println("Usage: java DFSAdmin"
+                + " [-finalizeUpgrade]");
           } else {
             System.err.println("Usage: java DFSAdmin");
             System.err.println("           [-report]");
             System.err.println("           [-safemode enter | leave | get | wait]");
             System.err.println("           [-refreshNodes]");
+            System.err.println("           [-finalizeUpgrade]");
             System.err.println("           [-help [cmd]]");
           }
     }
@@ -253,6 +277,11 @@ public class DFSAdmin extends FsShell {
                   printUsage(cmd);
                   return exitCode;
                 }
+        } else if ("-finalizeUpgrade".equals(cmd)) {
+                if (argv.length != 1) {
+                  printUsage(cmd);
+                  return exitCode;
+                }
         }
 
 
@@ -276,6 +305,8 @@ public class DFSAdmin extends FsShell {
                 setSafeMode(argv, i);
             } else if ("-refreshNodes".equals(cmd)) {
                 exitCode = refreshNodes();
+            } else if ("-finalizeUpgrade".equals(cmd)) {
+                exitCode = finalizeUpgrade();
             } else if ("-help".equals(cmd)) {
                 if (i < argv.length) {
                     printHelp(argv[i]);

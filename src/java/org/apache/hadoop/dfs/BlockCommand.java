@@ -17,9 +17,40 @@
  */
 package org.apache.hadoop.dfs;
 
+import java.io.*;
 import org.apache.hadoop.io.*;
 
-import java.io.*;
+class DatanodeCommand implements Writable {
+  DatanodeProtocol.DataNodeAction action;
+  
+  public DatanodeCommand() {
+    this( DatanodeProtocol.DataNodeAction.DNA_UNKNOWN );
+  }
+  
+  public DatanodeCommand( DatanodeProtocol.DataNodeAction action ) {
+    this.action = action;
+  }
+
+  ///////////////////////////////////////////
+  // Writable
+  ///////////////////////////////////////////
+  static {                                      // register a ctor
+    WritableFactories.setFactory
+      (BlockCommand.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new DatanodeCommand(); }
+       });
+  }
+
+  public void write(DataOutput out) throws IOException {
+    WritableUtils.writeEnum( out, action );
+  }
+  
+  public void readFields(DataInput in) throws IOException {
+    this.action = (DatanodeProtocol.DataNodeAction)
+          WritableUtils.readEnum( in, DatanodeProtocol.DataNodeAction.class );
+  }
+}
 
 /****************************************************
  * A BlockCommand is an instruction to a datanode 
@@ -30,25 +61,11 @@ import java.io.*;
  * 
  * @author Mike Cafarella
  ****************************************************/
-class BlockCommand implements Writable {
-
-    static {                                      // register a ctor
-      WritableFactories.setFactory
-        (BlockCommand.class,
-         new WritableFactory() {
-           public Writable newInstance() { return new BlockCommand(); }
-         });
-    }
-
-    DatanodeProtocol.DataNodeAction action;
+class BlockCommand extends DatanodeCommand {
     Block blocks[];
     DatanodeInfo targets[][];
 
-    public BlockCommand() {
-      this.action = DatanodeProtocol.DataNodeAction.DNA_UNKNOWN;
-      this.blocks = new Block[0];
-      this.targets = new DatanodeInfo[0][];
-    }
+    public BlockCommand() {}
 
     /**
      * Create BlockCommand for transferring blocks to another datanode
@@ -56,7 +73,7 @@ class BlockCommand implements Writable {
      * @param targets   nodes to transfer
      */
     public BlockCommand(Block blocks[], DatanodeInfo targets[][]) {
-      this.action = DatanodeProtocol.DataNodeAction.DNA_TRANSFER;
+      super(  DatanodeProtocol.DataNodeAction.DNA_TRANSFER );
       this.blocks = blocks;
       this.targets = targets;
     }
@@ -66,14 +83,9 @@ class BlockCommand implements Writable {
      * @param blocks  blocks to invalidate
      */
     public BlockCommand(Block blocks[]) {
-      this.action = DatanodeProtocol.DataNodeAction.DNA_INVALIDATE;
+      super( DatanodeProtocol.DataNodeAction.DNA_INVALIDATE );
       this.blocks = blocks;
       this.targets = new DatanodeInfo[0][];
-    }
-
-    public BlockCommand( DatanodeProtocol.DataNodeAction action ) {
-      this();
-      this.action = action;
     }
 
     public Block[] getBlocks() {
@@ -87,8 +99,16 @@ class BlockCommand implements Writable {
     ///////////////////////////////////////////
     // Writable
     ///////////////////////////////////////////
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (BlockCommand.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new BlockCommand(); }
+         });
+    }
+
     public void write(DataOutput out) throws IOException {
-        WritableUtils.writeEnum( out, action );
+        super.write( out );
         out.writeInt(blocks.length);
         for (int i = 0; i < blocks.length; i++) {
             blocks[i].write(out);
@@ -103,8 +123,7 @@ class BlockCommand implements Writable {
     }
 
     public void readFields(DataInput in) throws IOException {
-        this.action = (DatanodeProtocol.DataNodeAction)
-            WritableUtils.readEnum( in, DatanodeProtocol.DataNodeAction.class );
+        super.readFields( in );
         this.blocks = new Block[in.readInt()];
         for (int i = 0; i < blocks.length; i++) {
             blocks[i] = new Block();

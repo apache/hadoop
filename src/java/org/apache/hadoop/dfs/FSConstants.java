@@ -122,11 +122,23 @@ public interface FSConstants {
     // SafeMode actions
     public enum SafeModeAction{ SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET; }
 
+    // Startup options
+    public enum StartupOption{ FORMAT, REGULAR, UPGRADE, ROLLBACK; }
+
+    /**
+     * Type of the node
+     */
+    static public enum NodeType {
+      NAME_NODE,
+      DATA_NODE;
+    }
+
     // Version is reflected in the dfs image and edit log files.
     // Version is reflected in the data storage file.
     // Versions are negative.
-    // Decrement DFS_CURRENT_VERSION to define a new version.
-    public static final int DFS_CURRENT_VERSION = -3;
-    // Current version: New operations OP_DATANODE_REMOVE and OP_DATANODE_ADD
-    // are introduced
+    // Decrement LAYOUT_VERSION to define a new version.
+    public static final int LAYOUT_VERSION = -4;
+    // Current version: 
+    // Top level directory is reorganized to allow file system state 
+    // transitions: upgrade, rollback, and finalize.
 }

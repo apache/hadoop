@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import java.io.*;
 import java.net.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.net.NetworkTopology;
 
@@ -180,7 +181,7 @@ public class MiniDFSCluster {
           int nDatanodes,
           boolean formatNamenode,
           String[] racks) throws IOException {
-    this(0, conf, nDatanodes, false, formatNamenode, racks);
+    this(0, conf, nDatanodes, formatNamenode, racks);
   }
   
   /**
@@ -254,6 +255,7 @@ public class MiniDFSCluster {
    * @param dataNodeFirst should the datanode be brought up before the namenode?
    * @param formatNamenode should the namenode be formatted before starting up ?
    * @param racks array of strings indicating racks that each datanode is on
+   * @deprecated use {@link #MiniDFSCluster(Configuration, int, String[])}
    */
   public MiniDFSCluster(int namenodePort, 
                         Configuration conf,
@@ -261,7 +263,42 @@ public class MiniDFSCluster {
                         boolean dataNodeFirst,
                         boolean formatNamenode,
                         String[] racks) throws IOException {
+    this(namenodePort, conf, nDatanodes, 
+        ! cannotStartDataNodeFirst(dataNodeFirst) &&  
+        formatNamenode, racks);
+  }
 
+  /**
+   * NameNode should be always started first.
+   * Data-nodes need to handshake with the name-node before they can start.
+   * 
+   * @param dataNodeFirst should the datanode be brought up before the namenode?
+   * @return false if dataNodeFirst is false
+   * @throws IOException if dataNodeFirst is true
+   * 
+   * @deprecated should be removed when dataNodeFirst is gone.
+   */
+  private static boolean cannotStartDataNodeFirst( boolean dataNodeFirst 
+                                                  ) throws IOException {
+    if( dataNodeFirst )
+      throw new IOException( "NameNode should be always started first." );
+    return false;
+  }
+
+  /**
+   * Create the config and start up the servers.  If either the rpc or info port is already 
+   * in use, we will try new ports.
+   * @param namenodePort suggestion for which rpc port to use.  caller should use 
+   *                     getNameNodePort() to get the actual port used.
+   * @param nDatanodes Number of datanodes   
+   * @param formatNamenode should the namenode be formatted before starting up ?
+   * @param racks array of strings indicating racks that each datanode is on
+   */
+  public MiniDFSCluster(int namenodePort, 
+                        Configuration conf,
+                        int nDatanodes,
+                        boolean formatNamenode,
+                        String[] racks) throws IOException {
     this.conf = conf;
     
     this.nDatanodes = nDatanodes;
@@ -279,18 +316,16 @@ public class MiniDFSCluster {
     this.conf.setInt("dfs.safemode.extension", 0);
 
     // Create the NameNode
-    if (formatNamenode) { NameNode.format(conf); }
+    StartupOption startOpt = 
+      formatNamenode ? StartupOption.FORMAT : StartupOption.REGULAR;
+    conf.setObject( "dfs.namenode.startup", startOpt );
+    conf.setObject( "dfs.datanode.startup", startOpt );
     nameNode = new NameNodeRunner();
     nameNodeThread = new Thread(nameNode);
 
     //
     // Start the MiniDFSCluster
     //
-    
-    if (dataNodeFirst) {
-      startDataNodes(conf, racks, data_dir);
-    }
-    
     // Start the namenode and wait for it to be initialized
     nameNodeThread.start();
     while (!nameNode.isCrashed() && !nameNode.isInitialized()) {
@@ -310,9 +345,7 @@ public class MiniDFSCluster {
     this.conf.set("fs.default.name", nnAddr.getHostName()+ ":" + Integer.toString(nameNodePort));
     
     // Start the datanodes
-    if (!dataNodeFirst) {
-      startDataNodes(conf, racks, data_dir);
-    }
+    startDataNodes(conf, racks, data_dir);
     
     while (!nameNode.isCrashed() && !nameNode.isUp()) {
       try {                                     // let daemons get started

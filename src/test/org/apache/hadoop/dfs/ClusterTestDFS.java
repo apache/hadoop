@@ -219,8 +219,8 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
 
     int nameNodePort = 9000 + testCycleNumber++; // ToDo: settable base port
     String nameNodeSocketAddr = "localhost:" + nameNodePort;
-    NameNode nameNodeDaemon = new NameNode(new File[] { new File(nameFSDir) },
-        "localhost", nameNodePort, conf);
+    conf.set("dfs.name.dir", nameFSDir);
+    NameNode nameNodeDaemon = new NameNode("localhost", nameNodePort, conf);
     DFSClient dfsClient = null;
     try {
       //

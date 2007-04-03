@@ -19,8 +19,6 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
@@ -60,7 +58,6 @@ public class SecondaryNameNode implements FSConstants, Runnable {
 
     private ClientProtocol namenode;
     private Configuration conf;
-    private String localName;
     private InetSocketAddress nameNodeAddr;
     private boolean shouldRun;
     private StatusHttpServer infoServer;
@@ -95,11 +92,6 @@ public class SecondaryNameNode implements FSConstants, Runnable {
       this.conf = conf;
       this.namenode = (ClientProtocol) RPC.getProxy(ClientProtocol.class,
                        ClientProtocol.versionID, nameNodeAddr, conf);
-      try {
-        this.localName = InetAddress.getLocalHost().getHostName();
-      } catch (UnknownHostException uhe) {
-        this.localName = "";
-      }
 
       //
       // initialize the webserver for uploading files.
@@ -250,7 +242,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     void doCheckpoint() throws IOException {
 
       //
-      // Do the rquired initialization of the merge work area.
+      // Do the required initialization of the merge work area.
       //
       doSetup();
 
@@ -297,11 +289,12 @@ public class SecondaryNameNode implements FSConstants, Runnable {
      * DEST_FS_IMAGE
      */
     private void doMerge() throws IOException {
-      FSImage fsImage = new FSImage(checkpointDir, FS_EDITS);
-      FSNamesystem namesystem = new FSNamesystem(fsImage);
-      fsImage.loadFSImage(conf, srcImage);
-      fsImage.getEditLog().loadFSEdits(conf, editFile);
-      fsImage.saveFSImage(DEST_FS_IMAGE);
+      FSNamesystem namesystem = new FSNamesystem(
+                                    new FSImage(checkpointDir));
+      FSImage fsImage = namesystem.dir.fsImage;
+      fsImage.loadFSImage(srcImage);
+      fsImage.getEditLog().loadFSEdits(editFile);
+      fsImage.saveFSImage(destImage);
     }
 
     /**

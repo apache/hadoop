@@ -94,6 +94,9 @@ Trunk (unreleased changes)
 29. HADOOP-1156.  Fix a NullPointerException in MiniDFSCluster.
     (Hairong Kuang via cutting)
 
+30. HADOOP-702.  Add tools to help automate HDFS upgrades.
+    (Konstantin Shvachko via cutting)
+
 
 Release 0.12.3 (not yet released)
 

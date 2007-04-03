@@ -17,26 +17,31 @@
  */
 package org.apache.hadoop.dfs;
 
+import java.io.File;
 import java.io.IOException;
+import org.apache.hadoop.util.StringUtils;
 
 /**
- * The exception is thrown when external version does not match 
- * current version of the appication.
+ * The exception is thrown when file system state is inconsistent 
+ * and is not recoverable. 
  * 
  * @author Konstantin Shvachko
  */
-class IncorrectVersionException extends IOException {
+class InconsistentFSStateException extends IOException {
 
-  public IncorrectVersionException( int versionReported, String ofWhat ) {
-    this( versionReported, ofWhat, FSConstants.LAYOUT_VERSION );
+  public InconsistentFSStateException( File dir, String descr ) {
+    super( "Directory " + getFilePath( dir )
+          + " is in an inconsistent state: " + descr );
+  }
+
+  public InconsistentFSStateException( File dir, String descr, Throwable ex ) {
+    this( dir, descr + "\n" + StringUtils.stringifyException(ex) );
   }
   
-  public IncorrectVersionException( int versionReported,
-                                    String ofWhat,
-                                    int versionExpected ) {
-    super( "Unexpected version " 
-        + (ofWhat==null ? "" : "of " + ofWhat) + ". Reported: "
-        + versionReported + ". Expecting = " + versionExpected + "." );
+  private static String getFilePath( File dir ) {
+    try {
+      return dir.getCanonicalPath();
+    } catch( IOException e ) {}
+    return dir.getPath();
   }
-
 }

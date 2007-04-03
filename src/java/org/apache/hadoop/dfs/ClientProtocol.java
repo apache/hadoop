@@ -29,11 +29,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
-    /* 7 : periodic checkpoint added.
-     * 8 : refreshNodes added
-     * 9 : clientMachine is removed from open() and create().
+    /*
+     * 10: finalizeUpgrade() added
      */
-    public static final long versionID = 9L;  
+    public static final long versionID = 10L;  
   
     ///////////////////////////////////////
     // File contents
@@ -348,4 +347,12 @@ interface ClientProtocol extends VersionedProtocol {
      */
     public void rollFsImage() throws IOException;
 
+    /**
+     * Finalize previous upgrade.
+     * Remove file system state saved during the upgrade.
+     * The upgrade will become irreversible.
+     * 
+     * @throws IOException
+     */
+    public void finalizeUpgrade() throws IOException;
 }

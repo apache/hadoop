@@ -118,7 +118,7 @@ class FSDataset implements FSConstants {
             if ( children == null || children.length == 0 ) {
               children = new FSDir[maxBlocksPerDir];
               for (int idx = 0; idx < maxBlocksPerDir; idx++) {
-                children[idx] = new FSDir( new File(dir, "subdir"+idx) );
+                children[idx] = new FSDir( new File(dir, DataStorage.BLOCK_SUBDIR_PREFIX+idx) );
               }
             }
             
@@ -256,19 +256,19 @@ class FSDataset implements FSConstants {
     class FSVolume {
       static final double USABLE_DISK_PCT_DEFAULT = 0.98f; 
 
-      private File dir;
+      private File dir; // TODO this field is redundant equals this.dataDir.dir.getParent()
       private FSDir dataDir;
       private File tmpDir;
       private DF usage;
       private long reserved;
       private double usableDiskPct = USABLE_DISK_PCT_DEFAULT;
     
-      FSVolume(File dir, Configuration conf) throws IOException {
+      FSVolume( File currentDir, Configuration conf) throws IOException {
         this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
         this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct",
             (float) USABLE_DISK_PCT_DEFAULT);
-        this.dir = dir;
-        this.dataDir = new FSDir(new File(dir, "data"));
+        this.dir = currentDir.getParentFile();
+        this.dataDir = new FSDir( currentDir );
         this.tmpDir = new File(dir, "tmp");
         if (tmpDir.exists()) {
           FileUtil.fullyDelete(tmpDir);
@@ -431,11 +431,11 @@ class FSDataset implements FSConstants {
     /**
      * An FSDataset has a directory where it loads its data files.
      */
-    public FSDataset(File[] dirs, Configuration conf) throws IOException {
+    public FSDataset( DataStorage storage, Configuration conf) throws IOException {
     	this.maxBlocksPerDir = conf.getInt("dfs.datanode.numblocks", 64);
-        FSVolume[] volArray = new FSVolume[dirs.length];
-        for (int idx = 0; idx < dirs.length; idx++) {
-          volArray[idx] = new FSVolume(dirs[idx], conf);
+        FSVolume[] volArray = new FSVolume[storage.getNumStorageDirs()];
+        for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
+          volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(), conf);
         }
         volumes = new FSVolumeSet(volArray);
         volumeMap = new HashMap<Block,FSVolume>();

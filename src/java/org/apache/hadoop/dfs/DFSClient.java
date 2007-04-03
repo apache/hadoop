@@ -377,6 +377,13 @@ class DFSClient implements FSConstants {
     }
     
     /**
+     * @see ClientProtocol#finalizeUpgrade()
+     */
+    public void finalizeUpgrade() throws IOException {
+      namenode.finalizeUpgrade();
+    }
+
+    /**
      */
     public boolean mkdirs(UTF8 src) throws IOException {
         checkOpen();

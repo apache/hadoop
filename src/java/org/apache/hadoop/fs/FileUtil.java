@@ -24,6 +24,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A collection of file-processing util methods
@@ -318,6 +319,65 @@ public class FileUtil {
     }
   }
   
+  /**
+   * Class for creating hardlinks.
+   * Supports Unix, Cygwin, WindXP.
+   *  
+   * @author Konstantin Shvachko
+   */
+  public static class HardLink { 
+    enum OSType {
+      OS_TYPE_UNIX, 
+      OS_TYPE_WINXP; 
+    }
+  
+    private static String[] hardLinkCommand;
+    
+    static {
+      switch( getOSType() ) {
+      case OS_TYPE_WINXP:
+        hardLinkCommand = new String[] {"fsutil","hardlink","create",null,null};
+        break;
+      case OS_TYPE_UNIX:
+      default:
+        hardLinkCommand = new String[] {"ln",null,null};
+      }
+    }
+
+    static OSType getOSType() {
+      String osName = System.getProperty("os.name");
+      if( osName.indexOf( "Windows") >= 0 && 
+          (osName.indexOf( "XpP") >= 0 || osName.indexOf( "2003") >= 0 ) )
+        return OSType.OS_TYPE_WINXP;
+      else
+        return OSType.OS_TYPE_UNIX;
+    }
+    
+    public static void createHardLink(File target, 
+                                      File linkName ) throws IOException {
+      int len = hardLinkCommand.length;
+      hardLinkCommand[len-2] = target.getCanonicalPath();
+      hardLinkCommand[len-1] = linkName.getCanonicalPath();
+      // execute shell command
+      Process process = Runtime.getRuntime().exec( hardLinkCommand );
+      try {
+        if (process.waitFor() != 0) {
+          String errMsg = new BufferedReader(new InputStreamReader(
+              process.getInputStream())).readLine();
+          if( errMsg == null )  errMsg = "";
+          String inpMsg = new BufferedReader(new InputStreamReader(
+              process.getErrorStream())).readLine();
+          if( inpMsg == null )  inpMsg = "";
+          throw new IOException( errMsg + inpMsg );
+        }
+      } catch (InterruptedException e) {
+        throw new IOException( StringUtils.stringifyException( e ));
+      } finally {
+        process.destroy();
+      }
+    }
+  }
+
   /**
    * Create a soft link between a src and destination
    * only on a local disk. HDFS does not support this

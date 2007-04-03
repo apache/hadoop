@@ -25,19 +25,30 @@ class DatanodeRegistration extends DatanodeID implements Writable {
        });
   }
 
-  int version;            /// current Datanode version
-  String registrationID;  /// a unique per namenode id; indicates   
-                          /// the namenode the datanode is registered with
+  StorageInfo storageInfo;
 
   /**
    * Default constructor.
    */
   public DatanodeRegistration() {
-    this( 0, null, null, -1, null );
+    super( null, null, -1 );
+    this.storageInfo = new StorageInfo();
   }
   
   /**
    * Create DatanodeRegistration
+   */
+  public DatanodeRegistration(String nodeName, 
+                              int infoPort,
+                              DataStorage storage ) {
+    super( nodeName, storage.getStorageID(), infoPort );
+    this.storageInfo = new StorageInfo( storage );
+  }
+
+  /**
+   * Create DatanodeRegistration
+   * @deprecated 
+   * use {@link #DatanodeRegistration(String, int, DataStorage)} instead
    */
   public DatanodeRegistration(int version, 
                               String nodeName, 
@@ -45,20 +56,19 @@ class DatanodeRegistration extends DatanodeID implements Writable {
                               int infoPort,
                               String registrationID ) {
     super( nodeName, storageID, infoPort );
-    this.version = version;
-    this.registrationID = registrationID;
+    this.storageInfo = new StorageInfo();
   }
 
   /**
    */
   public int getVersion() {
-    return version;
+    return storageInfo.getLayoutVersion();
   }
   
   /**
    */
   public String getRegistrationID() {
-    return registrationID;
+    return Storage.getRegistrationID( storageInfo );
   }
 
   /////////////////////////////////////////////////
@@ -67,16 +77,18 @@ class DatanodeRegistration extends DatanodeID implements Writable {
   /**
    */
   public void write(DataOutput out) throws IOException {
-    out.writeInt(this.version);
     super.write( out );
-    UTF8.writeString(out, registrationID);
+    out.writeInt( storageInfo.getLayoutVersion() );
+    out.writeInt( storageInfo.getNamespaceID() );
+    out.writeLong( storageInfo.getCTime() );
   }
 
   /**
    */
   public void readFields(DataInput in) throws IOException {
-    this.version = in.readInt();
     super.readFields(in);
-    this.registrationID = UTF8.readString(in);   
+    storageInfo.layoutVersion = in.readInt();
+    storageInfo.namespaceID = in.readInt();
+    storageInfo.cTime = in.readLong();
   }
 }
