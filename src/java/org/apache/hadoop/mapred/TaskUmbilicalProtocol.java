@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.lang.InterruptedException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
 
@@ -42,7 +43,7 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    */
   void progress(String taskid, float progress, String state, 
                 TaskStatus.Phase phase, Counters counters)
-    throws IOException;
+    throws IOException, InterruptedException;
 
   /** Report error messages back to parent.  Calls should be sparing, since all
    *  such messages are held in the job tracker.
