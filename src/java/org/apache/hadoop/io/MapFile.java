@@ -298,6 +298,21 @@ public class MapFile {
       data.seek(firstPosition);
     }
 
+    /** Get the key at approximately the middle of the file.
+     * 
+     * @throws IOException
+     */
+    public synchronized WritableComparable midKey() throws IOException {
+
+      readIndex();
+      int pos = ((count - 1) / 2);              // middle of the index
+      if(pos < 0) {
+        throw new IOException("MapFile empty");
+      }
+      
+      return keys[pos];
+    }
+    
     /** Reads the final key from the file.
      *
      * @param key key to read into
@@ -324,7 +339,19 @@ public class MapFile {
      * first entry after the named key.  Returns true iff the named key exists
      * in this map.
      */
-    public synchronized boolean seek(WritableComparable key)
+    public synchronized boolean seek(WritableComparable key) throws IOException {
+      return seekInternal(key) == 0;
+    }
+
+    /** 
+     * Positions the reader at the named key, or if none such exists, at the
+     * first entry after the named key.
+     * 
+     * @return  0   - exact match found
+     *          < 0 - positioned at next record
+     *          1   - no more records in file
+     */
+    private synchronized int seekInternal(WritableComparable key)
       throws IOException {
       readIndex();                                // make sure index is read
 
@@ -352,11 +379,11 @@ public class MapFile {
       while (data.next(nextKey)) {
         int c = comparator.compare(key, nextKey);
         if (c <= 0) {                             // at or beyond desired
-          return c == 0;
+          return c;
         }
       }
 
-      return false;
+      return 1;
     }
 
     private int binarySearch(WritableComparable key) {
@@ -394,6 +421,23 @@ public class MapFile {
         return val;
       } else
         return null;
+    }
+
+    /** 
+     * Finds the record that is the closest match to the specified key.
+     * 
+     * @param key       - key that we're trying to find
+     * @param val       - data value if key is found
+     * @return          - returns the key that was the closest match or null if eof.
+     */
+    public synchronized WritableComparable getClosest(WritableComparable key, Writable val)
+        throws IOException {
+      
+      if(seekInternal(key) > 0) {
+        return null;
+      }
+      data.getCurrentValue(val);
+      return nextKey;
     }
 
     /** Close the map. */
