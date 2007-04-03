@@ -375,7 +375,7 @@ public class FsShell extends ToolBase {
       for(int i=0; i<paths.length; i++) {
         Path items[] = fs.listPaths( paths[i] );
         if (items != null) {
-          int totalSize=0;
+          long totalSize=0;
           for(int j=0; j<items.length; j++) {
             totalSize += fs.getContentLength(items[j]);
           }
