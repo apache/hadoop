@@ -120,6 +120,9 @@ Release 0.12.3 (not yet released)
     command and a performance problem in HDFS's implementation of it.
     (Hairong Kuang via cutting)
 
+ 7. HADOOP-1105. Fix reducers to make "progress" while iterating 
+    through values.  (Devaraj Das & Owen O'Malley via tomwhite)
+
 
 Release 0.12.2 - 2007-23-17
 

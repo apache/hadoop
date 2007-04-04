@@ -395,7 +395,7 @@ class MapTask extends Task {
     Reducer combiner, OutputCollector combineCollector) throws IOException {
       //combine the key/value obtained from the offset & indices arrays.
       CombineValuesIterator values = new CombineValuesIterator(resultIter,
-              comparator, keyClass, valClass, umbilical, job);
+              comparator, keyClass, valClass, job, reporter);
       while (values.more()) {
         combiner.reduce(values.getKey(), values, combineCollector, reporter);
         values.nextKey();
@@ -526,10 +526,9 @@ class MapTask extends Task {
         
       public CombineValuesIterator(SequenceFile.Sorter.RawKeyValueIterator in, 
               WritableComparator comparator, Class keyClass,
-              Class valClass, TaskUmbilicalProtocol umbilical, 
-              Configuration conf) 
+              Class valClass, Configuration conf, Reporter reporter) 
       throws IOException {
-        super(in, comparator, keyClass, valClass, umbilical, conf);
+        super(in, comparator, keyClass, valClass, conf, reporter);
       }
       
       public Object next() {
