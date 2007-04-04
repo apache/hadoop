@@ -30,7 +30,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 interface ClientProtocol extends VersionedProtocol {
 
     /*
-     * 10: finalizeUpgrade() added
+     * 11: metasave() added
      */
     public static final long versionID = 10L;  
   
@@ -355,4 +355,11 @@ interface ClientProtocol extends VersionedProtocol {
      * @throws IOException
      */
     public void finalizeUpgrade() throws IOException;
+
+   /**
+    * Dumps namenode data structures into specified file. If file
+    * already exists, then append.
+    * @throws IOException
+    */
+    public void metaSave(String filename) throws IOException;
 }

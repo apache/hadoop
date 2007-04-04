@@ -585,6 +585,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       getFSImage().finalizeUpgrade();
     }
 
+    /**
+     * Dumps namenode state into specified file
+     */
+    public void metaSave(String filename) throws IOException {
+      namesystem.metaSave(filename);
+    }
+
     ////////////////////////////////////////////////////////////////
     // DatanodeProtocol
     ////////////////////////////////////////////////////////////////

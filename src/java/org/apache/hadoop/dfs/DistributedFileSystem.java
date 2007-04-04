@@ -311,6 +311,14 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       dfs.finalizeUpgrade();
     }
 
+    /*
+     * Requests the namenode to dump data strcutures into specified 
+     * file.
+     */
+    public void metaSave(String pathname) throws IOException {
+      dfs.metaSave(pathname);
+    }
+
     /**
      * We need to find the blocks that didn't match.  Likely only one 
      * is corrupt but we will report both to the namenode.  In the future,
@@ -415,6 +423,13 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     public void finalizeUpgrade() throws IOException {
       ((RawDistributedFileSystem)fs).finalizeUpgrade();
     }
+
+    /*
+     * Dumps dfs data structures into specified file.
+     */
+     public void metaSave(String pathname) throws IOException {
+       ((RawDistributedFileSystem)fs).metaSave(pathname);
+     }
 
     /**
      * We need to find the blocks that didn't match.  Likely only one 

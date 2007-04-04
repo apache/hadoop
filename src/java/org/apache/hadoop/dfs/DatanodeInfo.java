@@ -166,6 +166,30 @@ public class DatanodeInfo extends DatanodeID implements Node {
     return buffer.toString();
   }
 
+  /** A formatted string for printing the status of the DataNode. */
+  String dumpDatanode() {
+    StringBuffer buffer = new StringBuffer();
+    long c = getCapacity();
+    long r = getRemaining();
+    long u = c - r;
+    buffer.append(name);
+    if(!NetworkTopology.DEFAULT_RACK.equals(location)) {
+        buffer.append(" "+location);
+    }
+    if (isDecommissioned()) {
+      buffer.append(" DD");
+    } else if (isDecommissionInProgress()) {
+      buffer.append(" DP");
+    } else {
+      buffer.append(" IN");
+    }
+    buffer.append(" " + c + "(" + FsShell.byteDesc(c)+")");
+    buffer.append(" " + u + "(" + FsShell.byteDesc(u)+")");
+    buffer.append(" " + FsShell.limitDecimal(((1.0*u)/c)*100,2)+"%");
+    buffer.append(" " + new Date(lastUpdate));
+    return buffer.toString();
+  }
+
   /**
    * Start decommissioning a node.
    * old state.

@@ -217,6 +217,23 @@ public class DFSAdmin extends FsShell {
     }
 
     /**
+     * Dumps DFS data structures into specified file.
+     * Usage: java DFSAdmin -metasave filename
+     * @param argv List of of command line parameters.
+     * @param idx The index of the command that is being processed.
+     * @exception IOException if an error accoured wile accessing
+     *            the file or path.
+     */
+    public int metaSave(String[] argv, int idx) throws IOException {
+      String pathname = argv[idx];
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      dfs.metaSave(pathname);
+      System.out.println("Created file " + pathname + " on server " +
+                          dfs.getUri());
+      return 0;
+    }
+
+    /**
      * Displays format of commands.
      * @param cmd The command that is being executed.
      */
@@ -233,12 +250,16 @@ public class DFSAdmin extends FsShell {
           } else if ("-finalizeUpgrade".equals(cmd)) {
             System.err.println("Usage: java DFSAdmin"
                 + " [-finalizeUpgrade]");
+           } else if ("-metasave".equals(cmd)) {
+             System.err.println("Usage: java DFSAdmin"
+                 + " [-metasave filename]");
           } else {
             System.err.println("Usage: java DFSAdmin");
             System.err.println("           [-report]");
             System.err.println("           [-safemode enter | leave | get | wait]");
             System.err.println("           [-refreshNodes]");
             System.err.println("           [-finalizeUpgrade]");
+            System.err.println("           [-metasave filename]");
             System.err.println("           [-help [cmd]]");
           }
     }
@@ -282,6 +303,11 @@ public class DFSAdmin extends FsShell {
                   printUsage(cmd);
                   return exitCode;
                 }
+        } else if ("-metasave".equals(cmd)) {
+                if (argv.length != 2) {
+                  printUsage(cmd);
+                  return exitCode;
+                }
         }
 
 
@@ -307,6 +333,8 @@ public class DFSAdmin extends FsShell {
                 exitCode = refreshNodes();
             } else if ("-finalizeUpgrade".equals(cmd)) {
                 exitCode = finalizeUpgrade();
+            } else if ("-metasave".equals(cmd)) {
+                 exitCode = metaSave(argv, i);
             } else if ("-help".equals(cmd)) {
                 if (i < argv.length) {
                     printHelp(argv[i]);

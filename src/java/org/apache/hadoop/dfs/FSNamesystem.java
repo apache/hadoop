@@ -345,6 +345,59 @@ class FSNamesystem implements FSConstants {
           }
         }
     }
+
+    /**
+     * Dump all metadata into specified file
+     */
+    void metaSave(String filename) throws IOException {
+      File file = new File(System.getProperty("hadoop.log.dir"), 
+                           filename);
+      PrintWriter out = new PrintWriter(new BufferedWriter(
+                                        new FileWriter(file, true)));
+ 
+
+      //
+      // Dump contents of neededReplication
+      //
+      synchronized (neededReplications) {
+        out.println("Metasave: Blocks waiting for replication: " + 
+                    neededReplications.size());
+        if (neededReplications.size() > 0) {
+          for (Iterator<Block> it = neededReplications.iterator(); 
+               it.hasNext();) {
+            Block block = it.next();
+            Collection<DatanodeDescriptor> containingNodes = blocksMap.get(block);
+            out.print(block);
+            if (containingNodes != null) {
+              for (Iterator<DatanodeDescriptor> jt = containingNodes.iterator();
+                   jt.hasNext(); ) {
+                DatanodeDescriptor node = jt.next();
+                out.print(" " + node + " : " );
+              }
+            }
+            out.println("");
+          }
+        }
+      }
+
+      //
+      // Dump blocks from pendingReplication
+      //
+      pendingReplications.metaSave(out);
+
+      //
+      // Dump blocks that are waiting to be deleted
+      //
+      dumpRecentInvalidateSets(out);
+
+      //
+      // Dump all datanodes
+      //
+      datanodeDump(out);
+
+      out.flush();
+      out.close();
+    }
     
     /* get replication factor of a block */
     private int getReplication( Block block ) {
@@ -1050,6 +1103,34 @@ class FSNamesystem implements FSConstants {
         recentInvalidateSets.put(n.getStorageID(), invalidateSet);
       }
       invalidateSet.add(b);
+    }
+
+    /**
+     * dumps the contents of recentInvalidateSets
+     */
+    private synchronized void dumpRecentInvalidateSets(PrintWriter out) {
+      Collection<Collection<Block>> values = recentInvalidateSets.values();
+      Iterator it = recentInvalidateSets.entrySet().iterator();
+      if (values.size() == 0) {
+        out.println("Metasave: Blocks waiting deletion: 0");
+        return;
+      }
+      out.println("Metasave: Blocks waiting deletion from " +
+                   values.size() + " datanodes.");
+      while (it.hasNext()) {
+        Map.Entry entry = (Map.Entry) it.next();
+        String storageId = (String) entry.getKey();
+        DatanodeDescriptor node = datanodeMap.get(storageId);
+        Collection<Block> blklist = (Collection<Block>) entry.getValue();
+        if (blklist.size() > 0) {
+          out.print(node.getName());
+          for (Iterator jt = blklist.iterator(); jt.hasNext();) {
+            Block block = (Block) jt.next();
+            out.print(" " + block); 
+          }
+          out.println("");
+        }
+      }
     }
 
     /**
@@ -2380,6 +2461,18 @@ class FSNamesystem implements FSConstants {
       }
     }
 
+    /**
+     * Prints information about all datanodes.
+     */
+    private synchronized void datanodeDump(PrintWriter out) {
+      synchronized (datanodeMap) {
+        out.println("Metasave: Number of datanodes: " + datanodeMap.size());
+        for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext(); ) {
+          DatanodeDescriptor node = it.next();
+          out.println(node.dumpDatanode());
+        }
+      }
+    }
 
     /**
      * Start decommissioning the specified datanode. 

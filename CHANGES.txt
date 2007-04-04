@@ -106,6 +106,9 @@ Trunk (unreleased changes)
 33. HADOOP-1187.  Improve DFS Scalability: avoid scanning entire list of
     datanodes in getAdditionalBlocks.  (Dhruba Borthakur via tomwhite)
 
+34. HADOOP-1133.  Add tool to analyze and debug namenode on a production
+    cluster.  (Dhruba Borthakur via tomwhite)
+
 
 Release 0.12.3 (not yet released)
 

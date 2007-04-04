@@ -19,7 +19,9 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 import org.apache.hadoop.util.*;
+import java.io.*;
 import java.util.*;
+import java.sql.Time;
 
 /***************************************************
  * PendingReplicationBlocks does the bookkeeping of all
@@ -226,6 +228,26 @@ class PendingReplicationBlocks {
     try {
       timerThread.join(3000);
     } catch (InterruptedException ie) {
+    }
+  }
+
+  /**
+   * Iterate through all items and print them.
+   */
+  void metaSave(PrintWriter out) {
+    synchronized (pendingReplications) {
+      out.println("Metasave: Blocks being replicated: " +
+                  pendingReplications.size());
+      Iterator iter = pendingReplications.entrySet().iterator();
+      while (iter.hasNext()) {
+        Map.Entry entry = (Map.Entry) iter.next();
+        PendingBlockInfo pendingBlock = (PendingBlockInfo) entry.getValue();
+        Block block = (Block) entry.getKey();
+        out.println(block + 
+                    " StartTime: " + new Time(pendingBlock.timeStamp) +
+                    " NumReplicaInProgress: " + 
+                    pendingBlock.numReplicasInProgress);
+      }
     }
   }
 }

@@ -375,6 +375,17 @@ class DFSClient implements FSConstants {
     public void refreshNodes() throws IOException {
       namenode.refreshNodes();
     }
+
+    /**
+     * Dumps DFS data structures into specified file.
+     * See {@link ClientProtocol#metaSave()} 
+     * for more details.
+     * 
+     * @see ClientProtocol#metaSave()
+     */
+    public void metaSave(String pathname) throws IOException {
+      namenode.metaSave(pathname);
+    }
     
     /**
      * @see ClientProtocol#finalizeUpgrade()
