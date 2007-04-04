@@ -131,7 +131,7 @@ public class RunJar {
 
     unJar(file, workDir);
     
-    ArrayList classPath = new ArrayList();
+    ArrayList<URL> classPath = new ArrayList<URL>();
     classPath.add(new File(workDir+"/").toURL());
     classPath.add(file.toURL());
     classPath.add(new File(workDir, "classes/").toURL());
@@ -142,7 +142,7 @@ public class RunJar {
       }
     }
     ClassLoader loader =
-      new URLClassLoader((URL[])classPath.toArray(new URL[0]));
+      new URLClassLoader(classPath.toArray(new URL[0]));
 
     Thread.currentThread().setContextClassLoader(loader);
     Class mainClass = Class.forName(mainClassName, true, loader);

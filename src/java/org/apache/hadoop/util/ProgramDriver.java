@@ -20,10 +20,8 @@ package org.apache.hadoop.util;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.TreeMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.TreeMap;
 
 /** A driver that is used to run programs added to it
  */
@@ -36,10 +34,10 @@ public class ProgramDriver {
      * @author Owen O'Malley
      * @date april 2006
      */
-     Map programs;
+     Map<String, ProgramDescription> programs;
      
      public ProgramDriver(){
-        programs = new TreeMap();
+        programs = new TreeMap<String, ProgramDescription>();
      }
      
     static private class ProgramDescription {
@@ -82,13 +80,12 @@ public class ProgramDriver {
 	private String description;
     }
     
-    private static void printUsage(Map programs) {
+    private static void printUsage(Map<String, ProgramDescription> programs) {
 	System.out.println("Valid program names are:");
-	for(Iterator itr=programs.entrySet().iterator(); itr.hasNext();) {
-	    Map.Entry item = (Entry) itr.next();
-	    System.out.println("  " + (String) item.getKey() + ": " +
-			       ((ProgramDescription) item.getValue()).getDescription());
-	}   
+        for(Map.Entry<String, ProgramDescription> item : programs.entrySet()) {
+            System.out.println("  " + item.getKey() + ": " +
+                       item.getValue().getDescription());         
+        } 
     }
     
     /**
@@ -128,7 +125,7 @@ public class ProgramDriver {
 	}
 	
 	// And that it is good.
-	ProgramDescription pgm = (ProgramDescription) programs.get(args[0]);
+	ProgramDescription pgm = programs.get(args[0]);
 	if (pgm == null) {
 	    System.out.println("Unknown program '" + args[0] + "' chosen.");
 	    printUsage(programs);

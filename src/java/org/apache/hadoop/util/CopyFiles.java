@@ -122,9 +122,9 @@ public class CopyFiles extends ToolBase {
       if (!absPath.isAbsolute()) { return absPath; }
       String sRoot = root.toUri().getPath();
       String sPath = absPath.toUri().getPath();
-      Enumeration rootTokens = new StringTokenizer(sRoot, "/");
+      Enumeration<Object> rootTokens = new StringTokenizer(sRoot, "/");
       ArrayList rList = Collections.list(rootTokens);
-      Enumeration pathTokens = new StringTokenizer(sPath, "/");
+      Enumeration<Object> pathTokens = new StringTokenizer(sPath, "/");
       ArrayList pList = Collections.list(pathTokens);
       Iterator rIter = rList.iterator();
       Iterator pIter = pList.iterator();
@@ -312,13 +312,13 @@ public class CopyFiles extends ToolBase {
       jobConf.setOutputPath(fakeOutDir);
       
       // create new sequence-files for holding paths
-      ArrayList pathList = new ArrayList();
-      ArrayList finalPathList = new ArrayList();
+      ArrayList<Path> pathList = new ArrayList<Path>();
+      ArrayList<String> finalPathList = new ArrayList<String>();
       pathList.add(new Path(srcPath));
       long totalBytes = 0;
       //int part = 0;
       while(!pathList.isEmpty()) {
-        Path top = (Path) pathList.remove(0);
+        Path top = pathList.remove(0);
         if (srcfs.isFile(top)) {
           totalBytes += srcfs.getLength(top);
           top = makeRelative(rootPath, top);
@@ -349,7 +349,7 @@ public class CopyFiles extends ToolBase {
         SequenceFile.Writer writer = 
           SequenceFile.createWriter(fileSys,conf,file,Text.class,Text.class);
         for (int ipath = idx; ipath < finalPathList.size(); ipath += numMaps) {
-          String path = (String) finalPathList.get(ipath);
+          String path = finalPathList.get(ipath);
           writer.append(new Text(path), new Text(""));
         }
         writer.close();

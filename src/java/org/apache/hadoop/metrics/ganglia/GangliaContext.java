@@ -26,9 +26,9 @@ import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
@@ -55,8 +55,7 @@ public class GangliaContext extends AbstractMetricsContext {
     private static final int DEFAULT_PORT = 8649;
     private static final int BUFFER_SIZE = 1500;       // as per libgmond.c
     
-    //private static final Map<Class,String> typeTable = new HashMap<Class,String>(5);
-    private static final Map typeTable = new HashMap(5);
+    private static final Map<Class,String> typeTable = new HashMap<Class,String>(5);
     
     static {
         typeTable.put(String.class, "string");
@@ -69,16 +68,11 @@ public class GangliaContext extends AbstractMetricsContext {
     private byte[] buffer = new byte[BUFFER_SIZE];
     private int offset;
     
-    //private List<SocketAddress> metricsServers;
-    private List metricsServers;
-    //private Map<String,String> unitsTable;
-    private Map unitsTable;
-    //private Map<String,String> slopeTable;
-    private Map slopeTable;
-    //private Map<String,String> tmaxTable;
-    private Map tmaxTable;
-    //private Map<String,String> dmaxTable;
-    private Map dmaxTable;
+    private List<? extends SocketAddress> metricsServers;
+    private Map<String,String> unitsTable;
+    private Map<String,String> slopeTable;
+    private Map<String,String> tmaxTable;
+    private Map<String,String> dmaxTable;
     
     private DatagramSocket datagramSocket;
     
@@ -125,24 +119,18 @@ public class GangliaContext extends AbstractMetricsContext {
         
         // metric name formed from record name and tag values
         StringBuffer nameBuf = new StringBuffer(recordName);
-        // for (String tagName : outRec.getTagNames()) {
-        Iterator tagIt = outRec.getTagNames().iterator();
-        while (tagIt.hasNext()) {
-            String tagName = (String) tagIt.next();
-            nameBuf.append('.');
-            nameBuf.append(outRec.getTag(tagName));
+        for (String tagName : outRec.getTagNames()) {
+          nameBuf.append('.');
+          nameBuf.append(outRec.getTag(tagName));
         }
         nameBuf.append('.');
         String namePrefix = new String(nameBuf);
         
         // emit each metric in turn
-        // for (String metricName : outRec.getMetricNames()) {
-        Iterator metricIt = outRec.getMetricNames().iterator();
-        while (metricIt.hasNext()) {
-            String metricName = (String) metricIt.next();
-            Object metric = outRec.getMetric(metricName);
-            String type = (String) typeTable.get(metric.getClass());
-            emitMetric(namePrefix + metricName, type, metric.toString());
+        for (String metricName : outRec.getMetricNames()) {
+          Object metric = outRec.getMetric(metricName);
+          String type = (String) typeTable.get(metric.getClass());
+          emitMetric(namePrefix + metricName, type, metric.toString());
         }
         
     }
@@ -165,13 +153,10 @@ public class GangliaContext extends AbstractMetricsContext {
         xdr_int(tmax);
         xdr_int(dmax);
         
-        // for (SocketAddress socketAddress : metricsServers) {
-        Iterator socketIt = metricsServers.iterator();
-        while (socketIt.hasNext()) {
-            SocketAddress socketAddress = (SocketAddress) socketIt.next();
-            DatagramPacket packet = 
-                new DatagramPacket(buffer, offset, socketAddress);
-            datagramSocket.send(packet);
+        for (SocketAddress socketAddress : metricsServers) {
+          DatagramPacket packet = 
+              new DatagramPacket(buffer, offset, socketAddress);
+          datagramSocket.send(packet);
         }
     }
     

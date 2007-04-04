@@ -27,9 +27,10 @@ public class MergeSort {
   IntWritable I = new IntWritable(0);
   IntWritable J = new IntWritable(0);
   
-  private Comparator comparator; //the comparator that the algo should use
+  //the comparator that the algo should use
+  private Comparator<IntWritable> comparator;
   
-  public MergeSort(Comparator comparator) {
+  public MergeSort(Comparator<IntWritable> comparator) {
     this.comparator = comparator;
   }
   

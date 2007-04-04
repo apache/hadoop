@@ -33,8 +33,7 @@ import org.apache.hadoop.metrics.spi.AbstractMetricsContext.TagMap;
 public class MetricsRecordImpl implements MetricsRecord {
     
     private TagMap tagTable = new TagMap();
-    //private Map<String,MetricValue> metricTable = new LinkedHashMap<String,MetricValue>();
-    private Map metricTable = new LinkedHashMap();
+    private Map<String,MetricValue> metricTable = new LinkedHashMap<String,MetricValue>();
     
     private String recordName;
     private AbstractMetricsContext context;
@@ -228,8 +227,7 @@ public class MetricsRecordImpl implements MetricsRecord {
         return tagTable;
     }
 
-    //Map<String, MetricValue> getMetricTable() {
-    Map getMetricTable() {
+    Map<String, MetricValue> getMetricTable() {
         return metricTable;
     }
 }

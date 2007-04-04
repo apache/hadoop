@@ -134,11 +134,12 @@ public abstract class Server {
   private int maxQueueSize;
 
   volatile private boolean running = true;         // true while server runs
-  private LinkedList callQueue = new LinkedList(); // queued calls
+  private LinkedList<Call> callQueue = new LinkedList<Call>(); // queued calls
 
-  private List connectionList = 
-       Collections.synchronizedList(new LinkedList()); //maintain a list
-                                                       //of client connectionss
+  private List<Connection> connectionList = 
+       Collections.synchronizedList(new LinkedList<Connection>());
+                                                       //maintain a list
+                                                       //of client connections
   private Listener listener = null;
   private int numConnections = 0;
   private Handler[] handlers = null;

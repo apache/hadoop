@@ -37,7 +37,7 @@ import java.net.URI;
  ******************************************************************************/
 public class DistributedCache {
   // cacheID to cacheStatus mapping
-  private static TreeMap cachedArchives = new TreeMap();
+  private static TreeMap<String, CacheStatus> cachedArchives = new TreeMap<String, CacheStatus>();
   // buffer size for reading checksum files
   private static final int CRC_BUFFER_SIZE = 64 * 1024;
   

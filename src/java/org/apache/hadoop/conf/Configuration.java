@@ -74,8 +74,8 @@ public class Configuration {
     LogFactory.getLog("org.apache.hadoop.conf.Configuration");
 
   private boolean   quietmode = true;
-  private ArrayList defaultResources = new ArrayList();
-  private ArrayList finalResources = new ArrayList();
+  private ArrayList<Object> defaultResources = new ArrayList<Object>();
+  private ArrayList<Object> finalResources = new ArrayList<Object>();
 
   private Properties properties;
   private Properties overlay;
@@ -97,6 +97,7 @@ public class Configuration {
   }
 
   /** A new configuration with the same settings cloned from another. */
+  @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(StringUtils.stringifyException
@@ -140,7 +141,9 @@ public class Configuration {
     addResource(finalResources, file);
   }
 
-  private synchronized void addResource(ArrayList resources, Object resource) {
+  private synchronized void addResource(ArrayList<Object> resources,
+      Object resource) {
+    
     resources.add(resource);                      // add to resources
     properties = null;                            // trigger reload
   }
@@ -311,14 +314,14 @@ public class Configuration {
    * @return the class object
    * @throws ClassNotFoundException if the class is not found
    */
-  public Class getClassByName(String name) throws ClassNotFoundException {
+  public Class<?> getClassByName(String name) throws ClassNotFoundException {
     return Class.forName(name, true, classLoader);
   }
   
   /** Returns the value of the <code>name</code> property as a Class.  If no
    * such property is specified, then <code>defaultValue</code> is returned.
    */
-  public Class getClass(String name, Class defaultValue) {
+  public Class<?> getClass(String name, Class<?> defaultValue) {
     String valueString = get(name);
     if (valueString == null)
       return defaultValue;
@@ -334,9 +337,11 @@ public class Configuration {
    * An error is thrown if the returned class does not implement the named
    * interface. 
    */
-  public Class getClass(String propertyName, Class defaultValue,Class xface) {
+  public Class<?> getClass(String propertyName, Class<?> defaultValue,
+      Class<?> xface) {
+    
     try {
-      Class theClass = getClass(propertyName, defaultValue);
+      Class<?> theClass = getClass(propertyName, defaultValue);
       if (theClass != null && !xface.isAssignableFrom(theClass))
         throw new RuntimeException(theClass+" not "+xface.getName());
       return theClass;
@@ -348,7 +353,9 @@ public class Configuration {
   /** Sets the value of the <code>name</code> property to the name of a class.
    * First checks that the class implements the named interface. 
    */
-  public void setClass(String propertyName, Class theClass, Class xface) {
+  public void setClass(String propertyName, Class<?> theClass,
+      Class<?> xface) {
+    
     if (!xface.isAssignableFrom(theClass))
       throw new RuntimeException(theClass+" not "+xface.getName());
     set(propertyName, theClass.getName());

@@ -29,7 +29,7 @@ public class Progress {
   private String status = "";
   private float progress;
   private int currentPhase;
-  private ArrayList phases = new ArrayList();
+  private ArrayList<Progress> phases = new ArrayList<Progress>();
   private Progress parent;
   private float progressPerPhase;
 
@@ -60,7 +60,7 @@ public class Progress {
 
   /** Returns the current sub-node executing. */
   public Progress phase() {
-    return (Progress)phases.get(currentPhase);
+    return phases.get(currentPhase);
   }
 
   /** Completes this node, moving the parent node to its next child. */

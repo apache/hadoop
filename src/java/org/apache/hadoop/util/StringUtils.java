@@ -261,7 +261,7 @@ public class StringUtils {
     if (str == null)
       return null;
     StringTokenizer tokenizer = new StringTokenizer (str,",");
-    List values = new ArrayList();
+    List<String> values = new ArrayList<String>();
     while (tokenizer.hasMoreTokens()) {
       values.add(tokenizer.nextToken());
     }

@@ -114,7 +114,7 @@ public class WordCount {
     conf.setCombinerClass(Reduce.class);
     conf.setReducerClass(Reduce.class);
     
-    List other_args = new ArrayList();
+    List<String> other_args = new ArrayList<String>();
     for(int i=0; i < args.length; ++i) {
       try {
         if ("-m".equals(args[i])) {

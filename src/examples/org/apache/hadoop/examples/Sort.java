@@ -70,7 +70,7 @@ public class Sort {
          jobConf.getInt("test.sort.maps_per_host", 10);
     int num_reduces = cluster.getTaskTrackers() * 
         jobConf.getInt("test.sort.reduces_per_host", cluster.getMaxTasks());
-    List otherArgs = new ArrayList();
+    List<String> otherArgs = new ArrayList<String>();
     for(int i=0; i < args.length; ++i) {
       try {
         if ("-m".equals(args[i])) {

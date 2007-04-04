@@ -42,8 +42,7 @@ public class OutputRecord {
     /**
      * Returns the set of tag names
      */
-    //public Set<String> getTagNames() {
-    public Set getTagNames() {
+    public Set<String> getTagNames() {
         return Collections.unmodifiableSet(tagMap.keySet());
     }
     
@@ -59,8 +58,7 @@ public class OutputRecord {
     /**
      * Returns the set of metric names.
      */
-    //public Set<String> getMetricNames() {
-    public Set getMetricNames() {
+    public Set<String> getMetricNames() {
         return Collections.unmodifiableSet(metricMap.keySet());
     }
     

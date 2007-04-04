@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.SAXParserFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 
 /**
@@ -52,9 +51,9 @@ public class XmlRecordInput implements RecordInput {
     private class XMLParser extends DefaultHandler {
         private boolean charsValid = false;
         
-        private ArrayList valList;
+        private ArrayList<Value> valList;
         
-        private XMLParser(ArrayList vlist) {
+        private XMLParser(ArrayList<Value> vlist) {
             valList = vlist;
         }
         
@@ -96,7 +95,7 @@ public class XmlRecordInput implements RecordInput {
         public void characters(char buf[], int offset, int len)
         throws SAXException {
             if (charsValid) {
-                Value v = (Value) valList.get(valList.size()-1);
+                Value v = valList.get(valList.size()-1);
                 v.addChars(buf, offset,len);
             }
         }
@@ -105,7 +104,7 @@ public class XmlRecordInput implements RecordInput {
     
     private class XmlIndex implements Index {
         public boolean done() {
-            Value v = (Value) valList.get(vIdx);
+            Value v = valList.get(vIdx);
             if ("/array".equals(v.getType())) {
                 valList.set(vIdx, null);
                 vIdx++;
@@ -117,13 +116,13 @@ public class XmlRecordInput implements RecordInput {
         public void incr() {}
     }
     
-    private ArrayList valList;
+    private ArrayList<Value> valList;
     private int vLen;
     private int vIdx;
     
     private Value next() throws IOException {
         if (vIdx < vLen) {
-            Value v = (Value) valList.get(vIdx);
+            Value v = valList.get(vIdx);
             valList.set(vIdx, null);
             vIdx++;
             return v;
@@ -135,7 +134,7 @@ public class XmlRecordInput implements RecordInput {
     /** Creates a new instance of XmlRecordInput */
     public XmlRecordInput(InputStream in) {
       try{
-        valList = new ArrayList();
+        valList = new ArrayList<Value>();
         DefaultHandler handler = new XMLParser(valList);
         SAXParserFactory factory = SAXParserFactory.newInstance();
         SAXParser parser = factory.newSAXParser();

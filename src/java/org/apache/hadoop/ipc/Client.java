@@ -61,7 +61,8 @@ public class Client {
   
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.Client");
-  private Hashtable connections = new Hashtable();
+  private Hashtable<InetSocketAddress, Connection> connections =
+    new Hashtable<InetSocketAddress, Connection>();
 
   private Class valueClass;                       // class of call values
   private int timeout ;// timeout for calls
@@ -121,7 +122,8 @@ public class Client {
     private Socket socket = null;                 // connected socket
     private DataInputStream in;                   
     private DataOutputStream out;
-    private Hashtable calls = new Hashtable();    // currently active calls
+    // currently active calls
+    private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
     private Call readingCall;
     private Call writingCall;
     private int inUse = 0;

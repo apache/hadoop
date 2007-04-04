@@ -1,6 +1,5 @@
 package org.apache.hadoop.net;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -77,7 +76,7 @@ public class DNS {
         return new String[] { InetAddress.getLocalHost()
                               .getHostAddress() };
       else {
-        Vector ips = new Vector();
+        Vector<String> ips = new Vector<String>();
         Enumeration e = netIF.getInetAddresses();
         while (e.hasMoreElements())
           ips.add(((InetAddress) e.nextElement()).getHostAddress());
@@ -119,7 +118,7 @@ public class DNS {
   public static String[] getHosts(String strInterface, String nameserver)
     throws UnknownHostException {
     String[] ips = getIPs(strInterface);
-    Vector hosts = new Vector();
+    Vector<String> hosts = new Vector<String>();
     for (int ctr = 0; ctr < ips.length; ctr++)
       try {
         hosts.add(reverseDns(InetAddress.getByName(ips[ctr]),

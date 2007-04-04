@@ -25,7 +25,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Iterator;
+
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
@@ -126,20 +126,14 @@ public class FileContext extends AbstractMetricsContext {
         writer.print(".");
         writer.print(recordName);
         String separator = ": ";
-        // for (String tagName : outRec.getTagNames()) {
-        Iterator tagIt = outRec.getTagNames().iterator();
-        while (tagIt.hasNext()) {
-            String tagName = (String) tagIt.next();
+        for (String tagName : outRec.getTagNames()) {
             writer.print(separator);
             separator = ", ";
             writer.print(tagName);
             writer.print("=");
             writer.print(outRec.getTag(tagName));
         }
-        // for (String metricName : outRec.getMetricNames()) {
-        Iterator metricIt = outRec.getMetricNames().iterator();
-        while (metricIt.hasNext()) {
-            String metricName = (String) metricIt.next();
+        for (String metricName : outRec.getMetricNames()) {
             writer.print(separator);
             separator = ", ";
             writer.print(metricName);

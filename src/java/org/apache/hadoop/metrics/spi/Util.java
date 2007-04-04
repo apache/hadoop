@@ -22,6 +22,7 @@
 package org.apache.hadoop.metrics.spi;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,16 +43,14 @@ public class Util {
      * 
      * @return a list of InetSocketAddress objects.
      */
-    public static List parse(String specs, int defaultPort) {
-        List result = new ArrayList(1); // ArrayList<InetSocketAddress>
+    public static List<InetSocketAddress> parse(String specs, int defaultPort) {
+        List<InetSocketAddress> result = new ArrayList<InetSocketAddress>(1);
         if (specs == null) {
                 result.add(new InetSocketAddress("localhost", defaultPort));
         }
         else {
             String[] specStrings = specs.split("[ ,]+");
-            //for (String specString : specStrings) {
-            for (int i = 0; i < specStrings.length; i++) {
-                String specString = specStrings[i];
+            for (String specString : specStrings) {
                 int colon = specString.indexOf(':');
                 if (colon < 0 || colon == specString.length() - 1) {
                     result.add(new InetSocketAddress(specString, defaultPort));
