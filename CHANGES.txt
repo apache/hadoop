@@ -97,6 +97,9 @@ Trunk (unreleased changes)
 30. HADOOP-702.  Add tools to help automate HDFS upgrades.
     (Konstantin Shvachko via cutting)
 
+31. HADOOP-1163.  Fix ganglia metrics to aggregate metrics from different
+    hosts properly.  (Michael Bieniosek via tomwhite)
+
 
 Release 0.12.3 (not yet released)
 

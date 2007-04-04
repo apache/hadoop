@@ -116,21 +116,11 @@ public class GangliaContext extends AbstractMetricsContext {
     public void emitRecord(String contextName, String recordName, OutputRecord outRec) 
         throws IOException
     {
-        
-        // metric name formed from record name and tag values
-        StringBuffer nameBuf = new StringBuffer(recordName);
-        for (String tagName : outRec.getTagNames()) {
-          nameBuf.append('.');
-          nameBuf.append(outRec.getTag(tagName));
-        }
-        nameBuf.append('.');
-        String namePrefix = new String(nameBuf);
-        
         // emit each metric in turn
         for (String metricName : outRec.getMetricNames()) {
           Object metric = outRec.getMetric(metricName);
           String type = (String) typeTable.get(metric.getClass());
-          emitMetric(namePrefix + metricName, type, metric.toString());
+          emitMetric(metricName, type, metric.toString());
         }
         
     }
