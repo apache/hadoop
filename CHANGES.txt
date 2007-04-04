@@ -100,6 +100,9 @@ Trunk (unreleased changes)
 31. HADOOP-1163.  Fix ganglia metrics to aggregate metrics from different
     hosts properly.  (Michael Bieniosek via tomwhite)
 
+32. HADOOP-1194.  Make compression style record level for map output
+    compression.  (Arun C Murthy via tomwhite)
+
 
 Release 0.12.3 (not yet released)
 

@@ -334,12 +334,8 @@ public class JobConf extends Configuration {
    * @return the compression type, defaulting to job output compression type
    */
   public SequenceFile.CompressionType getMapOutputCompressionType() {
-    String val = get("map.output.compression.type");
-    if (val == null) {
-      return SequenceFile.getCompressionType(this);
-    } else {
-      return SequenceFile.CompressionType.valueOf(val);
-    }
+    String val = get("map.output.compression.type", "RECORD");
+    return SequenceFile.CompressionType.valueOf(val);
   }
   
   /**
