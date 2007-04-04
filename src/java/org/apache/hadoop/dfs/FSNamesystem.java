@@ -561,6 +561,7 @@ class FSNamesystem implements FSConstants {
         if (blocks != null) {
             results = new Object[2];
             DatanodeDescriptor machineSets[][] = new DatanodeDescriptor[blocks.length][];
+            DatanodeDescriptor clientNode = getDatanodeByHost(clientMachine);
 
             for (int i = 0; i < blocks.length; i++) {
                 Collection<DatanodeDescriptor> containingNodes = blocksMap.get(blocks[i]);
@@ -573,7 +574,7 @@ class FSNamesystem implements FSConstants {
                     containingNodesList.addAll(containingNodes);
                     
                     machineSets[i] = replicator.sortByDistance(
-                        getDatanodeByHost(clientMachine), containingNodesList);
+                        clientNode, containingNodesList);
                 }
             }
 
@@ -745,8 +746,9 @@ class FSNamesystem implements FSConstants {
         }
 
         // Get the array of replication targets
+        DatanodeDescriptor clientNode = getDatanodeByHost(clientMachine.toString());
         DatanodeDescriptor targets[] = replicator.chooseTarget(replication,
-            getDatanodeByHost(clientMachine.toString()), null, blockSize);
+                                                      clientNode, null, blockSize);
         if (targets.length < this.minReplication) {
             if (clusterMap.getNumOfLeaves() == 0) {
               throw new IOException("Failed to create file "+src
@@ -768,7 +770,8 @@ class FSNamesystem implements FSConstants {
                            new FileUnderConstruction(replication, 
                                                      blockSize,
                                                      holder,
-                                                     clientMachine));
+                                                     clientMachine, 
+                                                     clientNode));
         NameNode.stateChangeLog.debug( "DIR* NameSystem.startFile: "
                    +"add "+src+" to pendingCreates for "+holder );
         synchronized (leases) {
@@ -837,10 +840,10 @@ class FSNamesystem implements FSConstants {
         }
         
         // Get the array of replication targets
-        String clientHost = pendingFile.getClientMachine().toString();
+        DatanodeDescriptor clientNode = pendingFile.getClientNode();
         DatanodeDescriptor targets[] = replicator.chooseTarget(
             (int)(pendingFile.getReplication()),
-            getDatanodeByHost(clientHost),
+            clientNode,
             null,
             pendingFile.getBlockSize());
         if (targets.length < this.minReplication) {
@@ -3355,16 +3358,19 @@ class FSNamesystem implements FSConstants {
       private Collection<Block> blocks;
       private UTF8 clientName;         // lease holder
       private UTF8 clientMachine;
+      private DatanodeDescriptor clientNode; // if client is a cluster node too.
       
       FileUnderConstruction(short replication,
                             long blockSize,
                             UTF8 clientName,
-                            UTF8 clientMachine) throws IOException {
+                            UTF8 clientMachine,
+                            DatanodeDescriptor clientNode) throws IOException {
         this.blockReplication = replication;
         this.blockSize = blockSize;
         this.blocks = new ArrayList<Block>();
         this.clientName = clientName;
         this.clientMachine = clientMachine;
+        this.clientNode = clientNode;
       }
       
       public short getReplication() {
@@ -3385,6 +3391,10 @@ class FSNamesystem implements FSConstants {
       
       public UTF8 getClientMachine() {
         return clientMachine;
+      }
+
+      public DatanodeDescriptor getClientNode() {
+        return clientNode;
       }
     }
 

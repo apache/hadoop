@@ -103,6 +103,9 @@ Trunk (unreleased changes)
 32. HADOOP-1194.  Make compression style record level for map output
     compression.  (Arun C Murthy via tomwhite)
 
+33. HADOOP-1187.  Improve DFS Scalability: avoid scanning entire list of
+    datanodes in getAdditionalBlocks.  (Dhruba Borthakur via tomwhite)
+
 
 Release 0.12.3 (not yet released)
 
