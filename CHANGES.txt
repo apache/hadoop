@@ -123,6 +123,10 @@ Release 0.12.3 (not yet released)
  7. HADOOP-1105. Fix reducers to make "progress" while iterating 
     through values.  (Devaraj Das & Owen O'Malley via tomwhite)
 
+ 8. HADOOP-1179. Make Task Tracker close index file as soon as the read 
+    is done when serving get-map-output requests.  
+    (Devaraj Das via tomwhite)
+
 
 Release 0.12.2 - 2007-23-17
 
