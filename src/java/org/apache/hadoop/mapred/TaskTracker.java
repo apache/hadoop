@@ -1643,6 +1643,9 @@ public class TaskTracker
           long startOffset = indexIn.readLong();
           long partLength = indexIn.readLong();
 
+          indexIn.close();
+          indexIn = null;
+          
           //set the content-length header
           response.setContentLength((int) partLength);
 
@@ -1654,31 +1657,23 @@ public class TaskTracker
           mapOutputIn = fileSys.open(mapOutputFileName);
           //seek to the correct offset for the reduce
           mapOutputIn.seek(startOffset);
-          try {
-            int totalRead = 0;
-            int len = mapOutputIn.read(buffer, 0,
-                                 partLength < MAX_BYTES_TO_READ 
-                                 ? (int)partLength : MAX_BYTES_TO_READ);
-            while (len > 0) {
-              try {
-                outStream.write(buffer, 0, len);
-              } catch (IOException ie) {
-                isInputException = false;
-                throw ie;
-              }
-              totalRead += len;
-              if (totalRead == partLength) break;
-              len = mapOutputIn.read(buffer, 0, 
-                      (partLength - totalRead) < MAX_BYTES_TO_READ
-                       ? (int)(partLength - totalRead) : MAX_BYTES_TO_READ);
+          
+          int totalRead = 0;
+          int len = mapOutputIn.read(buffer, 0,
+                               partLength < MAX_BYTES_TO_READ 
+                               ? (int)partLength : MAX_BYTES_TO_READ);
+          while (len > 0) {
+            try {
+              outStream.write(buffer, 0, len);
+            } catch (IOException ie) {
+              isInputException = false;
+              throw ie;
             }
-          } finally {
-            if (indexIn != null) {
-              indexIn.close();
-            }
-            if (mapOutputIn != null) {
-              mapOutputIn.close();
-            }
+            totalRead += len;
+            if (totalRead == partLength) break;
+            len = mapOutputIn.read(buffer, 0, 
+                    (partLength - totalRead) < MAX_BYTES_TO_READ
+                     ? (int)(partLength - totalRead) : MAX_BYTES_TO_READ);
           }
         } catch (IOException ie) {
           TaskTracker tracker = 
@@ -1693,7 +1688,14 @@ public class TaskTracker
           }
           response.sendError(HttpServletResponse.SC_GONE, errorMsg);
           throw ie;
-        } 
+        } finally {
+          if (indexIn != null) {
+            indexIn.close();
+          }
+          if (mapOutputIn != null) {
+            mapOutputIn.close();
+          }
+        }
         outStream.close();
       }
     }
