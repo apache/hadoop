@@ -119,6 +119,10 @@ Trunk (unreleased changes)
     MiniDFSCluster to start and stop NameNode/DataNodes.
     (Nigel Daley via tomwhite)
 
+38. HADOOP-1217.  Add test.timeout property to build.xml, so that
+    long-running unit tests may be automatically terminated.
+    (Nigel Daley via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

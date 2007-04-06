@@ -48,6 +48,7 @@
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
   <property name="test.output" value="no"/>
+  <property name="test.timeout" value="900000"/>
   <property name="test.junit.output.format" value="plain"/>
 
   <property name="libhdfs.test.conf.dir" value="${libhdfs.src}/tests/conf"/>
@@ -438,7 +439,7 @@
     <delete dir="${test.log.dir}"/>
     <mkdir dir="${test.log.dir}"/>
     <junit showoutput="${test.output}" printsummary="yes" haltonfailure="no" 
-           fork="yes" maxmemory="256m" dir="${basedir}"
+           fork="yes" maxmemory="256m" dir="${basedir}" timeout="${test.timeout}"
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
       <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>

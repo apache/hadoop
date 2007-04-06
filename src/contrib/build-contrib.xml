@@ -21,6 +21,8 @@
 
   <property name="conf.dir" location="${hadoop.root}/conf"/>
   <property name="test.junit.output.format" value="plain"/>
+  <property name="test.output" value="no"/>
+  <property name="test.timeout" value="900000"/>
   <property name="build.dir" location="${hadoop.root}/build/contrib/${name}"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
@@ -136,7 +138,8 @@
     <junit
       printsummary="yes" showoutput="${test.output}" 
       haltonfailure="no" fork="yes" maxmemory="256m"
-      errorProperty="tests.failed" failureProperty="tests.failed">
+      errorProperty="tests.failed" failureProperty="tests.failed"
+      timeout="${test.timeout}">
       
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
