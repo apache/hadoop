@@ -47,13 +47,9 @@ import org.apache.hadoop.dfs.Storage.StorageDirectory;
  * block files).  The master directories are lazily created.  They are then
  * copied by the createStorageDirs() method to create new storage
  * directories of the appropriate type (Namenode or Datanode).
- * 
- * @author Nigel Daley
  */
 public class UpgradeUtilities {
 
-  // The fs.default.name configuration host:port value for the Namenode
-  private static final String NAMENODE_HOST = "localhost:0";
   // Root scratch directory on local filesystem 
   private static File TEST_ROOT_DIR = new File(
     System.getProperty("test.build.data","/tmp").toString().replace(' ', '+'));
@@ -69,25 +65,79 @@ public class UpgradeUtilities {
   private static File datanodeStorage = new File(TEST_ROOT_DIR, "datanodeMaster");
   // A checksum of the contents in datanodeStorage directory
   private static long datanodeStorageChecksum;
-  // The NameNode started by this Utility class
-  private static NameNode namenode = null;
-  // The DataNode started by this Utility class
-  private static DataNode datanode = null;
   
   /**
    * Initialize the data structures used by this class.  
    * IMPORTANT NOTE: This method must be called once before calling 
    *                 any other public method on this class.  
+   * <p>
+   * Creates a singleton master populated storage
+   * directory for a Namenode (contains edits, fsimage,
+   * version, and time files) and a Datanode (contains version and
+   * block files).  This can be a lengthy operation.
    */
   public static void initialize() throws Exception {
     createEmptyDirs(new String[] {TEST_ROOT_DIR.toString()});
-    initializeStorage();
+    Configuration config = new Configuration();
+    config.set("dfs.name.dir", namenodeStorage.toString());
+    config.set("dfs.data.dir", datanodeStorage.toString());
+    MiniDFSCluster cluster = null;
+    try {
+      // format data-node
+      createEmptyDirs(new String[] {datanodeStorage.toString()});
+      
+      // format and start NameNode and start DataNode
+      NameNode.format(config); 
+      cluster = new MiniDFSCluster(config,1,StartupOption.REGULAR);
+        
+      NameNode namenode = cluster.getNameNode();
+      namenodeStorageNamespaceID = namenode.versionRequest().getNamespaceID();
+      namenodeStorageFsscTime = namenode.versionRequest().getCTime();
+      
+      FileSystem fs = FileSystem.get(config);
+      Path baseDir = new Path("/TestUpgrade");
+      fs.mkdirs( baseDir );
+      
+      // write some files
+      int bufferSize = 4096;
+      byte[] buffer = new byte[bufferSize];
+      for( int i=0; i < bufferSize; i++ )
+        buffer[i] = (byte)('0' + i % 50);
+      writeFile(fs, new Path(baseDir, "file1"), buffer, bufferSize);
+      writeFile(fs, new Path(baseDir, "file2"), buffer, bufferSize);
+      
+      // save image
+      namenode.getFSImage().saveFSImage();
+      namenode.getFSImage().getEditLog().open();
+      
+      // write more files
+      writeFile(fs, new Path(baseDir, "file3"), buffer, bufferSize);
+      writeFile(fs, new Path(baseDir, "file4"), buffer, bufferSize);
+    } finally {
+      // shutdown
+      if (cluster != null) cluster.shutdown();
+      FileUtil.fullyDelete(new File(namenodeStorage,"in_use.lock"));
+      FileUtil.fullyDelete(new File(datanodeStorage,"in_use.lock"));
+    }
+    namenodeStorageChecksum = checksumContents(
+      NAME_NODE, new File(namenodeStorage,"current"));
+    datanodeStorageChecksum = checksumContents(
+      DATA_NODE, new File(datanodeStorage,"current"));
+  }
+  
+  // Private helper method that writes a file to the given file system.
+  private static void writeFile(FileSystem fs, Path path, byte[] buffer,
+    int bufferSize ) throws IOException 
+  {
+    OutputStream out;
+    out = fs.create(path, true, bufferSize, (short) 1, 1024);
+    out.write( buffer, 0, bufferSize );
+    out.close();
   }
   
   /**
    * Initialize dfs.name.dir and dfs.data.dir with the specified number of
-   * directory entries. Also initialize fs.default.name and 
-   * dfs.blockreport.intervalMsec.
+   * directory entries. Also initialize dfs.blockreport.intervalMsec.
    */
   public static Configuration initializeStorageStateConf(int numDirs) {
     StringBuffer nameNodeDirs =
@@ -106,150 +156,14 @@ public class UpgradeUtilities {
   }
   
   /**
-   * Starts the given type of node or all nodes.
-   *
-   * The UpgradeUtilities.initialize() method must be called once before
-   * calling this method.
-   *
-   * @param nodeType
-   *    The type of node to start.  If NAME_NODE, then one
-   *    Namenode is started.  If DATA_NODE, then one Datanode
-   *    is started.
-   * @param operation
-   *    The operation with which to startup the given type
-   *    node. FORMAT and null are treated as a REGULAR startup. If nodeType
-   *    if DATA_NODE, then UPGRADE is also treated as REGULAR.
-   * @param conf
-   *    The configuration to be used in starting the node.
-   *
-   * @throw IllegalStateException
-   *    If this method is called to start a
-   *    node that is already running.
-   */
-  public static void startCluster(NodeType nodeType, StartupOption operation, Configuration conf) throws Exception {
-    if (isNodeRunning(nodeType)) {
-      throw new IllegalStateException("Attempting to start "
-        + nodeType + " but it is already running");
-    }
-    if (nodeType == DATA_NODE && operation == StartupOption.UPGRADE) {
-      operation = StartupOption.REGULAR;
-    }
-    String[] args = (operation == null ||
-      operation == StartupOption.FORMAT ||
-      operation == StartupOption.REGULAR) ?
-        new String[] {} : new String[] {"-"+operation.toString()};
-    switch (nodeType) {
-      case NAME_NODE:
-        // Set up the right ports for the datanodes
-        conf.set("fs.default.name",NAMENODE_HOST);
-        namenode = NameNode.createNameNode(args, conf);
-        break;
-      case DATA_NODE:
-        if (namenode == null) {
-          throw new IllegalStateException("Attempting to start DATA_NODE "
-            + "but NAME_NODE is not running");
-        }
-        // Set up the right ports for the datanodes
-        InetSocketAddress nnAddr = namenode.getNameNodeAddress(); 
-        conf.set("fs.default.name", nnAddr.getHostName()+ ":" + nnAddr.getPort());
-        conf.setInt("dfs.info.port", 0);
-        conf.setInt("dfs.datanode.info.port", 0);
-        datanode = DataNode.createDataNode(args, conf);
-        break;
-    }
-  }
-  
-  /**
-   * Stops the given type of node or all nodes.
-   *
-   * The UpgradeUtilities.initialize() method must be called once before
-   * calling this method.
-   *
-   * @param nodeType
-   *    The type of node to stop if it is running. If null, then both
-   *    Namenode and Datanodes are stopped if they are running.
-   */
-  public static void stopCluster(NodeType nodeType) {
-    if (nodeType == NAME_NODE || nodeType == null) {
-      if (namenode != null) {
-        namenode.stop();
-      }
-      namenode = null;
-    }
-    if (nodeType == DATA_NODE || nodeType == null) {
-      if (datanode != null) {
-        datanode.shutdown(); 
-      }
-      DataNode.shutdownAll();
-      datanode = null;
-    }
-  }
-  
-  /**
-   * If the Namenode is running, attempt to finalize a previous upgrade.
-   * When this method return, the NameNode should be finalized, but
-   * DataNodes may not be since that occurs asynchronously.
-   *
-   * @throw IllegalStateException if the Namenode is not running.
-   */
-  public static void finalizeCluster(Configuration conf) throws Exception {
-    if (! isNodeRunning(NAME_NODE)) {
-      throw new IllegalStateException("Attempting to finalize "
-        + "Namenode but it is not running");
-    }
-    new DFSAdmin().doMain(conf, new String[] {"-finalizeUpgrade"});
-  }
-  
-  /**
-   * Determines if the given node type is currently running.
-   * If the node type is DATA_NODE, then all started Datanodes
-   * must be running in-order for this method to return
-   * <code>true</code>.
-   *
-   * The UpgradeUtilities.initialize() method must be called once before
-   * calling this method.
-   */
-  public static boolean isNodeRunning(NodeType nodeType) {
-    switch( nodeType ) {
-      case NAME_NODE:
-        return namenode != null;
-      case DATA_NODE:
-        return datanode != null;
-      default:
-        assert false : "Invalid node type: " + nodeType;
-    }
-    return false;
-  }
-  
-  /**
-   * Format the given directories.  This is equivalent to the Namenode
-   * formatting the given directories.  If a given directory already exists,
-   * it is first deleted; otherwise if it does not exist, it is first created.
-   *
-   * @throw IOException if unable to format one of the given dirs
-   */
-  public static void format(File... dirs) throws IOException {
-    String imageDirs = "";
-    for (int i = 0; i < dirs.length; i++) {
-      if( i == 0 )
-        imageDirs = dirs[i].getCanonicalPath();
-      else
-        imageDirs += "," + dirs[i].getCanonicalPath();
-    }
-    Configuration conf = new Configuration();
-    conf.set("dfs.name.dir", imageDirs);
-    NameNode.format(conf);
-  }
-  
-  /**
    * Create empty directories.  If a specified directory already exists
    * then it is first removed.
    */
-  public static void createEmptyDirs(String[] dirs) {
+  public static void createEmptyDirs(String[] dirs) throws IOException {
     for (String d : dirs) {
       File dir = new File(d);
       if (dir.exists()) {
-        remove(dir);
+        FileUtil.fullyDelete(dir);
       }
       dir.mkdirs();
     }
@@ -333,7 +247,21 @@ public class UpgradeUtilities {
     for (int i = 0; i < parents.length; i++) {
       File newDir = new File(parents[i], dirName);
       createEmptyDirs(new String[] {newDir.toString()});
-      populateDir(nodeType, newDir);
+      LocalFileSystem localFS = FileSystem.getLocal(new Configuration());
+      switch (nodeType) {
+        case NAME_NODE:
+          localFS.copyToLocalFile(
+            new Path(namenodeStorage.toString(), "current"),
+            new Path(newDir.toString()),
+            false);
+          break;
+        case DATA_NODE:
+          localFS.copyToLocalFile(
+            new Path(datanodeStorage.toString(), "current"),
+            new Path(newDir.toString()),
+            false);
+          break;
+      }
       retVal[i] = newDir;
     }
     return retVal;
@@ -343,8 +271,7 @@ public class UpgradeUtilities {
    * Create a <code>version</code> file inside the specified parent
    * directory.  If such a file already exists, it will be overwritten.
    * The given version string will be written to the file as the layout
-   * version. If null, then the current layout version will be used.
-   * The parent and nodeType parameters must not be null.
+   * version. None of the parameters may be null.
    *
    * @param version
    *
@@ -353,20 +280,16 @@ public class UpgradeUtilities {
   public static File[] createVersionFile(NodeType nodeType, File[] parent,
     StorageInfo version) throws IOException 
   {
-    if (version == null)
-      version = getCurrentNamespaceInfo();
     Storage storage = null;
     File[] versionFiles = new File[parent.length];
     for (int i = 0; i < parent.length; i++) {
       File versionFile = new File(parent[i], "VERSION");
-      remove(versionFile);
+      FileUtil.fullyDelete(versionFile);
       switch (nodeType) {
         case NAME_NODE:
-          System.out.println("HERE");
           storage = new FSImage( version );
           break;
         case DATA_NODE:
-                  System.out.println("HERE2");
           storage = new DataStorage( version, "doNotCare" );
           break;
       }
@@ -375,21 +298,6 @@ public class UpgradeUtilities {
       versionFiles[i] = versionFile;
     }
     return versionFiles;
-  }
-  
-  /**
-   * Remove the specified file.  If the given file is a directory,
-   * then the directory and all its contents will be removed.
-   */
-  public static boolean remove(File file) {
-    try {
-      boolean retVal = FileUtil.fullyDelete(file);
-      return retVal;
-    } catch (IOException ioe) {
-      // this should never happen
-      throw new IllegalStateException(
-        "WHAT? FileUtil.fullyDelete threw and IOException?",ioe);
-    }
   }
   
   /**
@@ -416,15 +324,6 @@ public class UpgradeUtilities {
   }
   
   /**
-   * Retrieve the current NamespaceInfo object from a running Namenode.
-   */
-  public static NamespaceInfo getCurrentNamespaceInfo() throws IOException {
-    if (isNodeRunning(NAME_NODE))
-      return namenode.versionRequest();
-    return null;
-  }
-  
-  /**
    * Return the layout version inherent in the current version
    * of the Namenode, whether it is running or not.
    */
@@ -440,9 +339,9 @@ public class UpgradeUtilities {
    * The UpgradeUtilities.initialize() method must be called once before
    * calling this method.
    */
-  public static int getCurrentNamespaceID() throws IOException {
-    if (isNodeRunning(NAME_NODE)) {
-      return namenode.versionRequest().getNamespaceID();
+  public static int getCurrentNamespaceID(MiniDFSCluster cluster) throws IOException {
+    if (cluster != null) {
+      return cluster.getNameNode().versionRequest().getNamespaceID();
     }
     return namenodeStorageNamespaceID;
   }
@@ -455,120 +354,11 @@ public class UpgradeUtilities {
    * The UpgradeUtilities.initialize() method must be called once before
    * calling this method.
    */
-  public static long getCurrentFsscTime() throws IOException {
-    if (isNodeRunning(NAME_NODE)) {
-      return namenode.versionRequest().getCTime();
+  public static long getCurrentFsscTime(MiniDFSCluster cluster) throws IOException {
+    if (cluster != null) {
+      return cluster.getNameNode().versionRequest().getCTime();
     }
     return namenodeStorageFsscTime;
   }
-  
-  /**********************************************************************
-   ********************* PRIVATE METHODS ********************************
-   *********************************************************************/
-  
-  /**
-   * Populates the given directory with valid version, edits, and fsimage
-   * files.  The version file will contain the current layout version.
-   *
-   * The UpgradeUtilities.initialize() method must be called once before
-   * calling this method.
-   *
-   * @throw IllegalArgumentException if dir does not already exist
-   */
-  private static void populateDir(NodeType nodeType, File dir) throws Exception {
-    if (!dir.exists()) {
-      throw new IllegalArgumentException(
-        "Given argument is not an existing directory:" + dir);
-    }
-    LocalFileSystem localFS = FileSystem.getLocal(new Configuration());
-    switch (nodeType) {
-      case NAME_NODE:
-        localFS.copyToLocalFile(
-          new Path(namenodeStorage.toString(), "current"),
-          new Path(dir.toString()),
-          false);
-        break;
-      case DATA_NODE:
-        localFS.copyToLocalFile(
-          new Path(datanodeStorage.toString(), "current"),
-          new Path(dir.toString()),
-          false);
-        break;
-    }
-  }
-  
-  static void writeFile(FileSystem fs,
-    Path path,
-    byte[] buffer,
-    int bufferSize ) throws IOException {
-    OutputStream out;
-    out = fs.create(path, true, bufferSize, (short) 1, 1024);
-    out.write( buffer, 0, bufferSize );
-    out.close();
-  }
-  
-  /**
-   * Creates a singleton master populated storage
-   * directory for a Namenode (contains edits, fsimage,
-   * version, and time files) and a Datanode (contains version and
-   * block files).  This can be a lengthy operation.
-   *
-   * @param conf must not be null.  These properties will be set:
-   *    fs.default.name
-   *    dfs.name.dir
-   *    dfs.data.dir
-   */
-  private static void initializeStorage() throws Exception {
-    Configuration config = new Configuration();
-    config.set("fs.default.name",NAMENODE_HOST);
-    config.set("dfs.name.dir", namenodeStorage.toString());
-    config.set("dfs.data.dir", datanodeStorage.toString());
-
-    try {
-      // format data-node
-      createEmptyDirs(new String[] {datanodeStorage.toString()});
-
-      // format name-node
-      NameNode.format(config);
-      
-      // start name-node
-      startCluster(NAME_NODE, null, config);
-      namenodeStorageNamespaceID = namenode.versionRequest().getNamespaceID();
-      namenodeStorageFsscTime = namenode.versionRequest().getCTime();
-      
-      // start data-node
-      startCluster(DATA_NODE, null, config);
-      
-      FileSystem fs = FileSystem.get(config);
-      Path baseDir = new Path("/TestUpgrade");
-      fs.mkdirs( baseDir );
-      
-      // write some files
-      int bufferSize = 4096;
-      byte[] buffer = new byte[bufferSize];
-      for( int i=0; i < bufferSize; i++ )
-        buffer[i] = (byte)('0' + i % 50);
-      writeFile(fs, new Path(baseDir, "file1"), buffer, bufferSize);
-      writeFile(fs, new Path(baseDir, "file2"), buffer, bufferSize);
-      
-      // save image
-      namenode.getFSImage().saveFSImage();
-      namenode.getFSImage().getEditLog().open();
-      
-      // write more files
-      writeFile(fs, new Path(baseDir, "file3"), buffer, bufferSize);
-      writeFile(fs, new Path(baseDir, "file4"), buffer, bufferSize);
-    } finally {
-      // shutdown
-      stopCluster(null);
-      remove(new File(namenodeStorage,"in_use.lock"));
-      remove(new File(datanodeStorage,"in_use.lock"));
-    }
-    namenodeStorageChecksum = checksumContents(
-      NAME_NODE, new File(namenodeStorage,"current"));
-    datanodeStorageChecksum = checksumContents(
-      DATA_NODE, new File(datanodeStorage,"current"));
-  }
-
 }
 

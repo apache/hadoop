@@ -816,7 +816,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
 
     static NameNode createNameNode( String argv[], 
-                                    Configuration conf ) throws Exception {
+                                    Configuration conf ) throws IOException {
       if( conf == null )
         conf = new Configuration();
       StartupOption startOpt = parseArguments( argv, conf );

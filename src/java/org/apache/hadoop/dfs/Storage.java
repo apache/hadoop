@@ -523,16 +523,4 @@ abstract class Storage extends StorageInfo {
            + "-" + Integer.toString( storage.getLayoutVersion() )
            + "-" + Long.toString( storage.getCTime() );
   }
-  
-  /**
-   * @deprecated
-   * Provides conversion for deprecated DataNode constructor, should be removed
-   */
-  static AbstractList<File> makeListOfFiles( String[] dirs ) {
-    AbstractList<File> list = new ArrayList<File>( dirs.length );
-    for (int idx = 0; idx < dirs.length; idx++) {
-      list.add(new File(dirs[idx]));
-    }
-    return list;
-  }
 }

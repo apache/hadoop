@@ -32,16 +32,15 @@ import org.apache.hadoop.fs.Path;
 /**
  * This test ensures the appropriate response from the system when 
  * the system is finalized.
- *
- * @author Nigel Daley
  */
 public class TestDFSFinalize extends TestCase {
  
   private static final Log LOG = LogFactory.getLog(
     "org.apache.hadoop.dfs.TestDFSFinalize");
-  Configuration conf;
+  private Configuration conf;
   private int testCounter = 0;
-  
+  private MiniDFSCluster cluster = null;
+    
   /**
    * Writes an INFO log message containing the parameters.
    */
@@ -94,22 +93,27 @@ public class TestDFSFinalize extends TestCase {
       log("Finalize with existing previous dir",numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "previous");
-      UpgradeUtilities.startCluster(NAME_NODE,StartupOption.REGULAR,conf);
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
-      UpgradeUtilities.startCluster(DATA_NODE,StartupOption.REGULAR,conf);
-      UpgradeUtilities.finalizeCluster(conf);
+      cluster = new MiniDFSCluster(conf,1,StartupOption.REGULAR);
+      cluster.finalizeCluster(conf);
       checkResult(nameNodeDirs, dataNodeDirs);
-      
+
       log("Finalize without existing previous dir",numDirs);
-      UpgradeUtilities.finalizeCluster(conf);
+      cluster.finalizeCluster(conf);
       checkResult(nameNodeDirs, dataNodeDirs);
-      UpgradeUtilities.stopCluster(null);
+
+      cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
     } // end numDir loop
   }
  
+  protected void tearDown() throws Exception {
+    LOG.info("Shutting down MiniDFSCluster");
+    if (cluster != null) cluster.shutdown();
+  }
+  
   public static void main(String[] args) throws Exception {
     new TestDFSFinalize().testFinalize();
   }

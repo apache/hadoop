@@ -31,8 +31,6 @@ import org.apache.hadoop.fs.Path;
 /**
  * This test ensures the appropriate response (successful or failure) from 
  * a Datanode when the system is started with differing version combinations. 
- * 
- * @author Nigel Daley
  */
 public class TestDFSStartupVersions extends TestCase {
   
@@ -40,6 +38,7 @@ public class TestDFSStartupVersions extends TestCase {
     "org.apache.hadoop.dfs.TestDFSStartupVersions");
   private static Path TEST_ROOT_DIR = new Path(
     System.getProperty("test.build.data","/tmp").toString().replace(' ', '+'));
+  private MiniDFSCluster cluster = null;
   
   /**
    * Writes an INFO log message containing the parameters.
@@ -69,10 +68,10 @@ public class TestDFSStartupVersions extends TestCase {
     int layoutVersionOld = -3;
     int layoutVersionCur = UpgradeUtilities.getCurrentLayoutVersion();
     int layoutVersionNew = Integer.MIN_VALUE;
-    int namespaceIdCur = UpgradeUtilities.getCurrentNamespaceID();
+    int namespaceIdCur = UpgradeUtilities.getCurrentNamespaceID(null);
     int namespaceIdOld = Integer.MIN_VALUE;
     long fsscTimeOld = Long.MIN_VALUE;
-    long fsscTimeCur = UpgradeUtilities.getCurrentFsscTime();
+    long fsscTimeCur = UpgradeUtilities.getCurrentFsscTime(null);
     long fsscTimeNew = Long.MAX_VALUE;
     
     return new StorageInfo[] {
@@ -170,34 +169,35 @@ public class TestDFSStartupVersions extends TestCase {
     StorageInfo[] versions = initializeVersions();
     UpgradeUtilities.createStorageDirs(
       NAME_NODE, conf.getStrings("dfs.name.dir"), "current");
-    UpgradeUtilities.startCluster(NAME_NODE,StartupOption.REGULAR,conf);
+    cluster = new MiniDFSCluster(conf,0,StartupOption.REGULAR);
     StorageInfo nameNodeVersion = new StorageInfo(
       UpgradeUtilities.getCurrentLayoutVersion(),
-      UpgradeUtilities.getCurrentNamespaceID(),
-      UpgradeUtilities.getCurrentFsscTime());
+      UpgradeUtilities.getCurrentNamespaceID(cluster),
+      UpgradeUtilities.getCurrentFsscTime(cluster));
     log("NameNode version info",NAME_NODE,null,nameNodeVersion);
-    try {
-      for (int i = 0; i < versions.length; i++) {
-        File[] storage = UpgradeUtilities.createStorageDirs(
-          DATA_NODE, conf.getStrings("dfs.data.dir"), "current");
-        log("DataNode version info",DATA_NODE,i,versions[i]);
-        UpgradeUtilities.createVersionFile(DATA_NODE, storage, versions[i]);
-        try {
-          UpgradeUtilities.startCluster(DATA_NODE,StartupOption.REGULAR,conf);
-        } catch (Exception ignore) {
-          // Ignore.  The asserts below will check for problems.
-          // ignore.printStackTrace();
-        }
-        assertTrue(UpgradeUtilities.isNodeRunning(NAME_NODE));
-        assertEquals(isVersionCompatible(nameNodeVersion, versions[i]),
-          UpgradeUtilities.isNodeRunning(DATA_NODE));
-        UpgradeUtilities.stopCluster(DATA_NODE);
+    for (int i = 0; i < versions.length; i++) {
+      File[] storage = UpgradeUtilities.createStorageDirs(
+        DATA_NODE, conf.getStrings("dfs.data.dir"), "current");
+      log("DataNode version info",DATA_NODE,i,versions[i]);
+      UpgradeUtilities.createVersionFile(DATA_NODE, storage, versions[i]);
+      try {
+        cluster.startDataNodes(conf,1,false,StartupOption.REGULAR,null);
+      } catch (Exception ignore) {
+        // Ignore.  The asserts below will check for problems.
+        // ignore.printStackTrace();
       }
-    } finally {
-      UpgradeUtilities.stopCluster(null);
+      assertTrue(cluster.getNameNode() != null);
+      assertEquals(isVersionCompatible(nameNodeVersion, versions[i]),
+        cluster.isDataNodeUp());
+      cluster.shutdownDataNodes();
     }
   }
-
+  
+  protected void tearDown() throws Exception {
+    LOG.info("Shutting down MiniDFSCluster");
+    if (cluster != null) cluster.shutdown();
+  }
+  
   public static void main(String[] args) throws Exception {
     new TestDFSStartupVersions().testVersions();
   }

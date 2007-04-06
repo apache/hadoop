@@ -33,15 +33,14 @@ import org.apache.hadoop.fs.Path;
 * This test ensures the appropriate response (successful or failure) from
 * the system when the system is started under various storage state and
 * version conditions.
-*
-* @author Nigel Daley
 */
 public class TestDFSStorageStateRecovery extends TestCase {
  
   private static final Log LOG = LogFactory.getLog(
     "org.apache.hadoop.dfs.TestDFSStorageStateRecovery");
-  Configuration conf;
+  private Configuration conf;
   private int testCounter = 0;
+  private MiniDFSCluster cluster = null;
   
   /**
    * The test case table.  Each row represents a test case.  This table is
@@ -172,30 +171,6 @@ public class TestDFSStorageStateRecovery extends TestCase {
   }
  
   /**
-   * Does a regular start of the given nodeType.
-   * 
-   * @param nodeType must not be null
-   * @param indicates whether or not the node should start
-   */
-  void runTest(NodeType nodeType, boolean shouldStart) throws Exception {
-    if (shouldStart) {
-      UpgradeUtilities.startCluster(nodeType, StartupOption.REGULAR, conf);
-      UpgradeUtilities.stopCluster(nodeType);
-    } else {
-      try {
-        UpgradeUtilities.startCluster(nodeType, StartupOption.REGULAR, conf); // should fail
-        throw new AssertionError("Cluster should have failed to start");
-      } catch (Exception expected) {
-        // expected
-        //expected.printStackTrace();
-        assertFalse(UpgradeUtilities.isNodeRunning(nodeType));
-      } finally {
-        UpgradeUtilities.stopCluster(nodeType);
-      }
-    }
-  }
- 
-  /**
    * This test iterates over the testCases table and attempts
    * to startup the NameNode and DataNode normally.
    */
@@ -213,29 +188,49 @@ public class TestDFSStorageStateRecovery extends TestCase {
 
         log("NAME_NODE recovery",numDirs,i,testCase);
         baseDirs = createStorageState(NAME_NODE, testCase);
-        runTest(NAME_NODE, shouldRecover);
         if (shouldRecover) {
+          cluster = new MiniDFSCluster(conf,0,StartupOption.REGULAR);
           checkResult(NAME_NODE, baseDirs, curAfterRecover, prevAfterRecover);
+          cluster.shutdown();
+        } else {
+          try {
+            cluster = new MiniDFSCluster(conf,0,StartupOption.REGULAR);
+            throw new AssertionError("NameNode should have failed to start");
+          } catch (Exception expected) {
+            // expected
+          }
         }
         
         log("DATA_NODE recovery",numDirs,i,testCase);
         createStorageState(NAME_NODE, new boolean[] {true,true,false,false});
-        UpgradeUtilities.startCluster(NAME_NODE,StartupOption.REGULAR,conf);
+        cluster = new MiniDFSCluster(conf,0,StartupOption.REGULAR);
         baseDirs = createStorageState(DATA_NODE, testCase);
         if (!testCase[0] && !testCase[1] && !testCase[2] && !testCase[3]) {
           // DataNode will create and format current if no directories exist
-          runTest(DATA_NODE, true);
+          cluster.startDataNodes(conf,1,false,StartupOption.REGULAR,null);
         } else {
-          runTest(DATA_NODE, shouldRecover);
           if (shouldRecover) {
+            cluster.startDataNodes(conf,1,false,StartupOption.REGULAR,null);
             checkResult(DATA_NODE, baseDirs, curAfterRecover, prevAfterRecover);
+          } else {
+            try {
+              cluster.startDataNodes(conf,1,false,StartupOption.REGULAR,null);
+              throw new AssertionError("DataNode should have failed to start");
+            } catch (Exception expected) {
+              // expected
+            }
           }
         }
-        UpgradeUtilities.stopCluster(null);
+        cluster.shutdown();
       } // end testCases loop
     } // end numDirs loop
   }
  
+  protected void tearDown() throws Exception {
+    LOG.info("Shutting down MiniDFSCluster");
+    if (cluster != null) cluster.shutdown();
+  }
+  
   public static void main(String[] args) throws Exception {
     new TestDFSStorageStateRecovery().testStorageStates();
   }

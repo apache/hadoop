@@ -115,6 +115,10 @@ Trunk (unreleased changes)
 36. HADOOP-988.  Change namenode to use a single map of blocks to metadata.
     (Raghu Angadi via tomwhite)
 
+37. HADOOP-1203.  Change UpgradeUtilities used by DFS tests to use
+    MiniDFSCluster to start and stop NameNode/DataNodes.
+    (Nigel Daley via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

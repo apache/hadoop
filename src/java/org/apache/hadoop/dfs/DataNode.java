@@ -123,6 +123,7 @@ public class DataNode implements FSConstants, Runnable {
     private DataNodeMetrics myMetrics = new DataNodeMetrics();
     private static InetSocketAddress nameNodeAddr;
     private static DataNode datanodeObject = null;
+    private static Thread dataNodeThread = null;
     String machineName;
 
     private class DataNodeMetrics implements Updater {
@@ -186,15 +187,6 @@ public class DataNode implements FSConstants, Runnable {
       synchronized void removedBlocks(int nblocks) {
         blocksRemoved += nblocks;
       }
-    }
-
-    /**
-     * @deprecated
-     * TODO: only MiniDFSCluster needs it, should be removed
-     */
-    DataNode( Configuration conf, String networkLoc, String[] dataDirs ) throws IOException {
-      // networkLoc is ignored since it is already in the conf
-      this( conf, Storage.makeListOfFiles( dataDirs ) );
     }
     
     /**
@@ -387,6 +379,13 @@ public class DataNode implements FSConstants, Runnable {
           try {
             this.storage.unlockAll();
           } catch (IOException ie) {
+          }
+        }
+        if (dataNodeThread != null) {
+          dataNodeThread.interrupt();
+          try {
+            dataNodeThread.join();
+          } catch (InterruptedException ie) {
           }
         }
     }
@@ -1112,36 +1111,20 @@ public class DataNode implements FSConstants, Runnable {
         
         LOG.info("Finishing DataNode in: "+data);
     }
-
-    private static ArrayList<DataNode> dataNodeList = new ArrayList<DataNode>();
-    private static ArrayList<Thread> dataNodeThreadList = new ArrayList<Thread>();
     
     /** Start datanode daemon.
      */
-    public static void run(Configuration conf) throws IOException {
+    public static DataNode run(Configuration conf) throws IOException {
         String[] dataDirs = conf.getStrings("dfs.data.dir");
         DataNode dn = makeInstance(dataDirs, conf);
         if (dn != null) {
-          dataNodeList.add(dn);
-          Thread t = new Thread(dn, "DataNode: [" +
+          dataNodeThread = new Thread(dn, "DataNode: [" +
               StringUtils.arrayToString(dataDirs) + "]");
-          t.setDaemon(true); // needed for JUnit testing
-          t.start();
-          dataNodeThreadList.add(t);
+          dataNodeThread.setDaemon(true); // needed for JUnit testing
+          dataNodeThread.start();
         }
+        return dn;
     }
-    
-  /**
-   * Shut down all datanodes that where started via the 
-   * run(conf,networkLoc) method.
-   * Returns only after shutdown is complete.
-   */
-  public static void shutdownAll(){
-    while (!dataNodeList.isEmpty()) {
-      dataNodeList.remove(0).shutdown();
-      dataNodeThreadList.remove(0).interrupt();
-    }
-  }
 
   /** Start a single datanode daemon and wait for it to finish.
    *  If this thread is specifically interrupted, it will stop waiting.
@@ -1154,15 +1137,13 @@ public class DataNode implements FSConstants, Runnable {
       printUsage();
       return null;
     }
-    run(conf);
-    return (DataNode)dataNodeList.get(0);
+    return run(conf);
   }
 
   void join() {
-    if (dataNodeThreadList.size() > 0) {
-      Thread t = (Thread) dataNodeThreadList.remove(dataNodeThreadList.size()-1);
+    if (dataNodeThread != null) {
       try {
-        t.join();
+        dataNodeThread.join();
       } catch (InterruptedException e) {}
     }
   }

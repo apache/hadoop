@@ -109,7 +109,7 @@ public class TestHRegion extends TestCase {
         Logger.getLogger("org.apache.hadoop.hbase").setLevel(Environment.logLevel);
       }
       
-      cluster = new MiniDFSCluster(65312, conf, 2, false);
+      cluster = new MiniDFSCluster(conf, 2, true, null);
       fs = cluster.getFileSystem();
       parentdir = new Path("/hbase");
       fs.mkdirs(parentdir);
