@@ -19,8 +19,10 @@ package org.apache.hadoop.net;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -531,5 +533,26 @@ public class NetworkTopology {
             tree.append( "\n");
         }
         return tree.toString();
+    }
+
+    /* Set and used only inside sortByDistance. 
+     * This saves an allocation each time we sort.
+     */
+    private DatanodeDescriptor distFrom = null;
+    private final Comparator<DatanodeDescriptor> nodeDistanceComparator = 
+      new Comparator<DatanodeDescriptor>() {
+        public int compare(DatanodeDescriptor n1, DatanodeDescriptor n2) {
+          return getDistance(distFrom, n1) - getDistance(distFrom, n2);
+        }
+    };
+      
+    /** Sorts nodes array by their distances to <i>reader</i>. */
+    public synchronized void sortByDistance( final DatanodeDescriptor reader,
+                                             DatanodeDescriptor[] nodes ) { 
+      if(reader != null && contains(reader)) {
+        distFrom = reader;
+        Arrays.sort( nodes, nodeDistanceComparator );
+        distFrom = null;
+      }
     }
 }

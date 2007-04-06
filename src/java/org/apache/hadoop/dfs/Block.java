@@ -131,10 +131,10 @@ class Block implements Writable, Comparable {
         }
     }
     public boolean equals(Object o) {
-        return (this.compareTo(o) == 0);
+        return blkid == ((Block)o).blkid;
     }
     
     public int hashCode() {
-        return 37 * 17 + (int) (getBlockId()^(getBlockId()>>>32));
+        return 37 * 17 + (int) (blkid^(blkid>>>32));
     }
 }

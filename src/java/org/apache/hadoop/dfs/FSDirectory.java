@@ -308,9 +308,8 @@ class FSDirectory implements FSConstants {
         }
     }
 
-    
+    FSNamesystem namesystem = null;
     INode rootDir = new INode("");
-    Map activeBlocks = new HashMap();
     TreeMap activeLocks = new TreeMap();
     FSImage fsImage;  
     boolean ready = false;
@@ -318,13 +317,15 @@ class FSDirectory implements FSConstants {
     private MetricsRecord directoryMetrics = null;
     
     /** Access an existing dfs name directory. */
-    public FSDirectory() throws IOException {
+    public FSDirectory(FSNamesystem ns) throws IOException {
       this.fsImage = new FSImage();
+      namesystem = ns;
       initialize();
     }
 
-    public FSDirectory(FSImage fsImage) throws IOException {
+    public FSDirectory(FSImage fsImage, FSNamesystem ns) throws IOException {
       this.fsImage = fsImage;
+      namesystem = ns;
       initialize();
     }
     
@@ -415,7 +416,7 @@ class FSDirectory implements FSConstants {
                 int nrBlocks = (newNode.blocks == null) ? 0 : newNode.blocks.length;
                 // Add file->block mapping
                 for (int i = 0; i < nrBlocks; i++)
-                    activeBlocks.put(newNode.blocks[i], newNode);
+                    namesystem.blocksMap.addINode(newNode.blocks[i], newNode);
                 return true;
             } else {
                 return false;
@@ -586,7 +587,7 @@ class FSDirectory implements FSConstants {
                     targetNode.collectSubtreeBlocks(v);
                     for (Iterator it = v.iterator(); it.hasNext(); ) {
                         Block b = (Block) it.next();
-                        activeBlocks.remove(b);
+                        namesystem.blocksMap.removeINode(b);
                     }
                     return (Block[]) v.toArray(new Block[v.size()]);
                 }
@@ -755,27 +756,5 @@ class FSDirectory implements FSConstants {
             srcs = srcs.substring(0, srcs.length() - 1);
         }
         return srcs;
-    }
-
-    /**
-     * Returns whether the given block is one pointed-to by a file.
-     */
-    public boolean isValidBlock(Block b) {
-        synchronized (rootDir) {
-            if (activeBlocks.containsKey(b)) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
-
-    /**
-     * Returns whether the given block is one pointed-to by a file.
-     */
-    public INode getFileByBlock(Block b) {
-      synchronized (rootDir) {
-        return (INode)activeBlocks.get(b);
-      }
     }
 }
