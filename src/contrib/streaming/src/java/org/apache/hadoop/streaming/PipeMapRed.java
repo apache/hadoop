@@ -598,7 +598,6 @@ public abstract class PipeMapRed {
       String info = numRecInfo();
       logprintln(info);
       logflush();
-      System.err.println(info);
       //nextRecReadLog_ *= 10;
       nextRecReadLog_ += 100;
     }

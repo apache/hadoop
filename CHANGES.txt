@@ -109,6 +109,9 @@ Trunk (unreleased changes)
 34. HADOOP-1133.  Add tool to analyze and debug namenode on a production
     cluster.  (Dhruba Borthakur via tomwhite)
 
+35. HADOOP-1151.  Remove spurious printing to stderr in streaming 
+    PipeMapRed.  (Koji Noguchi via tomwhite)
+
 
 Release 0.12.3 (not yet released)
 
