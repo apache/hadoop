@@ -123,6 +123,10 @@ Trunk (unreleased changes)
     long-running unit tests may be automatically terminated.
     (Nigel Daley via cutting)
 
+39. HADOOP-1149.  Improve DFS Scalability: make 
+    processOverReplicatedBlock() a no-op if blocks are not 
+    over-replicated.  (Raghu Angadi via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

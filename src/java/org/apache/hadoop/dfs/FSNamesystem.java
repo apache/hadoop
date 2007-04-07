@@ -2198,8 +2198,10 @@ class FSNamesystem implements FSConstants {
             // they simply take up all the space in the log file 
             // So I set the level to be trace
             //
-            NameNode.stateChangeLog.trace("BLOCK* NameSystem.addStoredBlock: "
+            if ( NameNode.stateChangeLog.isTraceEnabled() ) {
+              NameNode.stateChangeLog.trace("BLOCK* NameSystem.addStoredBlock: "
                     +"blockMap updated: "+node.getName()+" is added to "+block.getBlockName() );
+            }
         } else {
             NameNode.stateChangeLog.warn("BLOCK* NameSystem.addStoredBlock: "
                     + "Redundant addStoredBlock request received for " 
@@ -2224,7 +2226,9 @@ class FSNamesystem implements FSConstants {
         } else {
           neededReplications.update(block, curReplicaDelta, 0);
         }
-        proccessOverReplicatedBlock( block, fileReplication );
+        if ( numCurrentReplica > fileReplication ) {
+          proccessOverReplicatedBlock( block, fileReplication );
+        }
         return block;
     }
     
@@ -2360,9 +2364,11 @@ class FSNamesystem implements FSConstants {
                 "Unexpected exception.  Got blockReceived message from node " 
                 + block.getBlockName() + ", but there is no info for it");
         }
-
-        NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockReceived: "
+        
+        if ( NameNode.stateChangeLog.isDebugEnabled() ) {
+          NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockReceived: "
                 +block.getBlockName()+" is received from " + nodeID.getName() );
+        }
 
         // Check if this datanode should actually be shutdown instead.
         if (shouldNodeShutdown(node)) {
@@ -2589,7 +2595,7 @@ class FSNamesystem implements FSConstants {
             recentInvalidateSets.put(nodeID.getStorageID(), invalidateSet);
         }
         
-        if (NameNode.stateChangeLog.isInfoEnabled()) {
+        if (NameNode.stateChangeLog.isDebugEnabled()) {
             StringBuffer blockList = new StringBuffer();
             for (int i = 0; i < sendBlock.size(); i++) {
                 blockList.append(' ');
