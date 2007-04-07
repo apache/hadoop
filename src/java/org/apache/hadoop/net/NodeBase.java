@@ -30,6 +30,8 @@ public class NodeBase implements Node {
   
   protected String name; //host:port#
   protected String location; //string representation of this node's location
+  protected int level; //which level of the tree the node resides
+  protected Node parent; //its parent
   
   /** Default constructor */
   public NodeBase( ) {
@@ -57,6 +59,18 @@ public class NodeBase implements Node {
     set(name, normalize(location));
   }
   
+  /** Construct a node from its name and its location
+   * @param name this node's name 
+   * @param location this node's location 
+   * @param parent this node's parent node
+   * @param level this node's level in the tree
+   */
+  public NodeBase( String name, String location, Node parent, int level ) {
+    set(name, normalize(location));
+    this.parent = parent;
+    this.level = level;
+  }
+
   /* set this node's name and location */
   private void set( String name, String location ) {
     if(name != null && name.contains(PATH_SEPARATOR_STR))
@@ -98,4 +112,12 @@ public class NodeBase implements Node {
     }
     return path;
   }
+  
+  /** Return this node's parent */
+  public Node getParent() { return parent; }
+  
+  /** Return this node's level in the tree.
+   * E.g. the root of a tree returns 0 and its children return 1
+   */
+  public int getLevel() { return level; }
 }

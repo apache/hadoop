@@ -34,4 +34,10 @@ public interface Node {
   public String getNetworkLocation();
   /** Return this node's name */
   public String getName();
+  /** Return this node's parent */
+  public Node getParent();
+  /** Return this node's level in the tree.
+   * E.g. the root of a tree returns 0 and its children return 1
+   */
+  public int getLevel();
 }

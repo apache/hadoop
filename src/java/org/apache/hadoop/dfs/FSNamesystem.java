@@ -2916,7 +2916,8 @@ class FSNamesystem implements FSConstants {
         results.removeAll(choosenNodes);
         
         // sorting nodes to form a pipeline
-        return getPipeline((writer==null)?localNode:writer, results);
+        return getPipeline((writer==null)?localNode:writer,
+                 results.toArray(new DatanodeDescriptor[results.size()]));
       }
       
       /* choose <i>numOfReplicas</i> from all data nodes */
@@ -3225,22 +3226,20 @@ class FSNamesystem implements FSConstants {
        */
       private DatanodeDescriptor[] getPipeline(
           DatanodeDescriptor writer,
-          List<DatanodeDescriptor> nodes ) {
-        int numOfNodes = nodes.size();
-        DatanodeDescriptor[] results = new DatanodeDescriptor[numOfNodes];
-        if( numOfNodes==0 ) return results;
+          DatanodeDescriptor[] nodes ) {
+        if( nodes.length==0 ) return nodes;
         
         synchronized( clusterMap ) {
           int index=0;
           if(writer == null || !clusterMap.contains(writer)) {
-            writer = nodes.get(0);
+            writer = nodes[0];
           }
-          for( ;index<numOfNodes; index++ ) {
+          for( ;index<nodes.length; index++ ) {
             DatanodeDescriptor shortestNode = null;
             int shortestDistance = Integer.MAX_VALUE;
             int shortestIndex = index;
-            for( int i=index; i<numOfNodes; i++ ) {
-              DatanodeDescriptor currentNode = nodes.get(i);
+            for( int i=index; i<nodes.length; i++ ) {
+              DatanodeDescriptor currentNode = nodes[i];
               int currentDistance = clusterMap.getDistance( writer, currentNode );
               if(shortestDistance>currentDistance ) {
                 shortestDistance = currentDistance;
@@ -3250,13 +3249,13 @@ class FSNamesystem implements FSConstants {
             }
             //switch position index & shortestIndex
             if( index != shortestIndex ) {
-              nodes.set(shortestIndex, nodes.get(index));
-              nodes.set(index, shortestNode);
+              nodes[shortestIndex] = nodes[index];
+              nodes[index] = shortestNode;
             }
             writer = shortestNode;
           }
         }
-        return nodes.toArray( results );
+        return nodes;
       }
     } //end of Replicator
 

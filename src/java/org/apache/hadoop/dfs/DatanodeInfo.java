@@ -255,6 +255,19 @@ public class DatanodeInfo extends DatanodeID implements Node {
       }
     }
 
+  private int level; //which level of the tree the node resides
+  private Node parent; //its parent
+
+  /** Return this node's parent */
+  public Node getParent() { return parent; }
+  public void setParent( Node parent ) {this.parent = parent;}
+   
+  /** Return this node's level in the tree.
+   * E.g. the root of a tree returns 0 and its children return 1
+   */
+  public int getLevel() { return level; }
+  public void setLevel( int level) {this.level = level;}
+
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////

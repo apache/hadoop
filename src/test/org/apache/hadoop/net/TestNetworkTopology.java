@@ -6,7 +6,7 @@ import org.apache.hadoop.dfs.DatanodeID;
 import junit.framework.TestCase;
 
 public class TestNetworkTopology extends TestCase {
-  private NetworkTopology cluster = new NetworkTopology();
+  private final static NetworkTopology cluster = new NetworkTopology();
   private final static DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
       new DatanodeDescriptor(new DatanodeID("h1:5020", "0", -1), "/d1/r1"),
       new DatanodeDescriptor(new DatanodeID("h2:5020", "0", -1), "/d1/r1"),
@@ -19,10 +19,10 @@ public class TestNetworkTopology extends TestCase {
   private final static DatanodeDescriptor NODE = 
     new DatanodeDescriptor(new DatanodeID("h8:5020", "0", -1), "/d2/r4");
   
-  public TestNetworkTopology() {
+  static {
     for(int i=0; i<dataNodes.length; i++) {
       cluster.add( dataNodes[i] );
-    }    
+    }
   }
   
   public void testContains() {
@@ -36,8 +36,14 @@ public class TestNetworkTopology extends TestCase {
     assertEquals(cluster.getNumOfLeaves(), dataNodes.length);
   }
 
-  public void testNumOfRacks() throws Exception {
+  public void testRacks() throws Exception {
     assertEquals(cluster.getNumOfRacks(), 3);
+    assertTrue(cluster.isOnSameRack(dataNodes[0], dataNodes[1]));
+    assertFalse(cluster.isOnSameRack(dataNodes[1], dataNodes[2]));
+    assertTrue(cluster.isOnSameRack(dataNodes[2], dataNodes[3]));
+    assertTrue(cluster.isOnSameRack(dataNodes[3], dataNodes[4]));
+    assertFalse(cluster.isOnSameRack(dataNodes[4], dataNodes[5]));
+    assertTrue(cluster.isOnSameRack(dataNodes[5], dataNodes[6]));
   }
   
   public void testGetDistance() throws Exception {

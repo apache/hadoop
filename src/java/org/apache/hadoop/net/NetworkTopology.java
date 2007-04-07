@@ -61,6 +61,12 @@ public class NetworkTopology {
             super( name, location );
         }
         
+        /** Construct an InnerNode
+         * from its name, its network location, its parent, and its level */
+        InnerNode( String name, String location, InnerNode parent, int level ) {
+            super( name, location, parent, level );
+        }
+        
         /** Get its children */
         Collection<Node> getChildren() {return children;}
         
@@ -126,13 +132,13 @@ public class NetworkTopology {
          * @return true if the node is added; false otherwise
          */
         boolean add( DatanodeDescriptor n ) {
-            String parent = n.getNetworkLocation();
-            String currentPath = getPath();
             if( !isAncestor( n ) )
                 throw new IllegalArgumentException( n.getName()+", which is located at "
-                        +parent+", is not a decendent of "+currentPath);
+                        +n.getNetworkLocation()+", is not a decendent of "+getPath());
             if( isParent( n ) ) {
                 // this node is the parent of n; add n directly
+                n.setParent( this );
+                n.setLevel( this.level+1 );
                 for(int i=0; i<children.size(); i++) {
                     if(children.get(i).getName().equals(n.getName())) {
                         children.set(i, n);
@@ -149,11 +155,13 @@ public class NetworkTopology {
                 for(int i=0; i<children.size(); i++) {
                     if(children.get(i).getName().equals(parentName)) {
                         parentNode = (InnerNode)children.get(i);
+                        break;
                     }
                 }
                 if( parentNode == null ) {
                     // create a new InnerNode
-                    parentNode = new InnerNode( parentName, currentPath );
+                    parentNode = new InnerNode( parentName, getPath(),
+                        this, this.getLevel()+1 );
                     children.add(parentNode);
                 }
                 // add n to the subtree of the next ancestor node
@@ -183,6 +191,7 @@ public class NetworkTopology {
                     if(children.get(i).getName().equals(n.getName())) {
                         children.remove(i);
                         numOfLeaves--;
+                        n.setParent(null);
                         return true;
                     }
                 }
@@ -341,10 +350,15 @@ public class NetworkTopology {
      *          a data node
      * @return true if <i>node</i> is already in the tree; false otherwise
      */
-    public boolean contains( DatanodeDescriptor node ) {
+    public synchronized boolean contains( DatanodeDescriptor node ) {
         if( node == null ) return false;
-        Node rNode = getNode(node.getPath());
-        return (rNode == node); 
+        Node parent = node.getParent();
+        for( int level=node.getLevel(); parent!=null&&level>0;
+                 parent=parent.getParent(), level-- ) {
+          if(parent == clusterMap)
+            return true;
+        }
+        return false; 
     }
     
     /** Given a string representation of a node, return its reference
@@ -370,19 +384,6 @@ public class NetworkTopology {
         return clusterMap.getNumOfLeaves();
     }
     
-    private void checkArgument( DatanodeDescriptor node ) {
-        if( node == null ) {
-            throw new IllegalArgumentException( 
-                    "Unexpected null pointer argument" );
-        }
-        if( !contains(node) ) {
-            String path = node.getPath();
-            LOG.warn("The cluster does not contain data node: " + path);
-            throw new IllegalArgumentException(
-                    "Unexpected non-existing data node: " +path);
-        }
-    }
-    
     /** Return the distance between two data nodes
      * It is assumed that the distance from one node to its parent is 1
      * The distance between two nodes is calculated by summing up their distances
@@ -390,27 +391,40 @@ public class NetworkTopology {
      * @param node1 one data node
      * @param node2 another data node
      * @return the distance between node1 and node2
-     * @exception IllegalArgumentException when either node1 or node2 is null, or
      * node1 or node2 do not belong to the cluster
      */
     public int getDistance(DatanodeDescriptor node1, DatanodeDescriptor node2 ) {
-        checkArgument( node1 );
-        checkArgument( node2 );
-
-        if( node1 == node2 || node1.equals(node2)) {
+        if( node1 == node2 ) {
             return 0;
         }
-        String[] path1 = node1.getNetworkLocation().split("/");
-        String[] path2 = node2.getNetworkLocation().split("/");
-        
         int i;
-        for(i=0; i<Math.min(path1.length, path2.length); i++) {
-            if( path1[i]!=path2[i] && (path1[i]!=null 
-                    && !path1[i].equals(path2[i]))) {
-                break;
-            }
+        Node n1=node1, n2=node2;
+        int level1=node1.getLevel(), level2=node2.getLevel();
+        int dis = 0;
+        while( n1!=null && level1>level2 ) {
+          n1 = n1.getParent();
+          level1--;
+          dis++;
         }
-        return 2+(path1.length-i)+(path2.length-i);
+        while( n2!=null && level2>level1 ) {
+          n2 = n2.getParent();
+          level2--;
+          dis++;
+        }
+        while(n1!=null && n2!=null && n1.getParent()!=n2.getParent()) {
+          n1=n1.getParent();
+          n2=n2.getParent();
+          dis+=2;
+        }
+        if (n1==null) {
+          LOG.warn("The cluster does not contain data node: "+node1.getPath());
+          return Integer.MAX_VALUE;
+        }
+        if(n2==null) {
+          LOG.warn("The cluster does not contain data node: "+node2.getPath());
+          return Integer.MAX_VALUE;
+        }
+        return dis+2;
     } 
     
     /** Check if two data nodes are on the same rack
@@ -422,18 +436,15 @@ public class NetworkTopology {
      */
     public boolean isOnSameRack(
             DatanodeDescriptor node1, DatanodeDescriptor node2) {
-        checkArgument( node1 );
-        checkArgument( node2 );
+      if( node1 == null || node2 == null ) {
+        return false;
+      }
+      
         if( node1 == node2 || node1.equals(node2)) {
             return true;
         }
         
-        String location1 = node1.getNetworkLocation();
-        String location2 = node2.getNetworkLocation();
-        
-        if(location1 == location2 ) return true;
-        if(location1 == null || location2 == null) return false;
-        return location1.equals(location2);
+        return node1.getParent()==node2.getParent();
     }
     
     final private static Random r = new Random();
