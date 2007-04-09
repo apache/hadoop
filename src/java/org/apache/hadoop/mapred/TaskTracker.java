@@ -219,7 +219,9 @@ public class TaskTracker
         } else {
           rJob = runningJobs.get(jobId);
         }
-        rJob.tasks.add(tip);
+        synchronized (rJob) {
+          rJob.tasks.add(tip);
+        }
         return rJob;
       }
     }

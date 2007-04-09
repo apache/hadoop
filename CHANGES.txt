@@ -131,6 +131,9 @@ Trunk (unreleased changes)
     contains(), and isOnSameRack() in NetworkTopology.  
     (Hairong Kuang via tomwhite)
 
+41. HADOOP-1218.  Make synchronization on TaskTracker's RunningJob 
+    object consistent.  (Devaraj Das via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 
