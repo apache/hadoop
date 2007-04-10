@@ -1062,6 +1062,11 @@ public class TaskTracker
                                                 TaskStatus.Phase newPhase,
                                                 Counters counters) 
         {
+            if (this.done) {
+              //make sure we ignore progress messages after a task has 
+              //invoked TaskUmbilicalProtocol.done()
+              return;
+            }
             LOG.info(task.getTaskId()+" "+p+"% "+state);
             this.progress = p;
             this.runstate = TaskStatus.State.RUNNING;

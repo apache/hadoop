@@ -134,6 +134,9 @@ Trunk (unreleased changes)
 41. HADOOP-1218.  Make synchronization on TaskTracker's RunningJob 
     object consistent.  (Devaraj Das via tomwhite)
 
+42. HADOOP-1219.  Ignore progress report once a task has reported as 
+    'done'.  (Devaraj Das via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 
