@@ -140,6 +140,10 @@ Trunk (unreleased changes)
 43. HADOOP-1114.  Respect user's classpath variable in hadoop script.  
     (Michael Bieniosek via tomwhite)
 
+44. HADOOP-1198.  Remove ipc.client.timeout parameter override from 
+    unit test configuration.  Using the default is more robust and
+    has almost the same run time.  (Arun C Murthy via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 
