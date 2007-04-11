@@ -256,7 +256,6 @@ class FSDataset implements FSConstants {
     class FSVolume {
       static final double USABLE_DISK_PCT_DEFAULT = 0.98f; 
 
-      private File dir; // TODO this field is redundant equals this.dataDir.dir.getParent()
       private FSDir dataDir;
       private File tmpDir;
       private DF usage;
@@ -267,9 +266,9 @@ class FSDataset implements FSConstants {
         this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
         this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct",
             (float) USABLE_DISK_PCT_DEFAULT);
-        this.dir = currentDir.getParentFile();
+        File parent = currentDir.getParentFile();
         this.dataDir = new FSDir( currentDir );
-        this.tmpDir = new File(dir, "tmp");
+        this.tmpDir = new File(parent, "tmp");
         if (tmpDir.exists()) {
           FileUtil.fullyDelete(tmpDir);
         }
@@ -278,7 +277,7 @@ class FSDataset implements FSConstants {
             throw new IOException("Mkdirs failed to create " + tmpDir.toString());
           }
         }
-        this.usage = new DF(dir, conf);
+        this.usage = new DF(parent, conf);
       }
       
       long getCapacity() throws IOException {
@@ -342,7 +341,7 @@ class FSDataset implements FSConstants {
       }
       
       public String toString() {
-        return dir.getAbsolutePath();
+        return dataDir.dir.getAbsolutePath();
       }
     }
     

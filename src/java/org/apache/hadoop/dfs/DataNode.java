@@ -277,8 +277,8 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     private NamespaceInfo handshake() throws IOException {
-      NamespaceInfo nsInfo;
-      while( true ) {
+      NamespaceInfo nsInfo = new NamespaceInfo();
+      while (shouldRun) {
         try {
           nsInfo = namenode.versionRequest();
           break;

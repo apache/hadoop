@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import junit.framework.TestCase;
 import java.io.*;
+import java.util.Collection;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -68,12 +69,12 @@ public class TestCheckpoint extends TestCase {
   /**
    * put back the old namedir
    */
-  private void resurrectNameDir(File[] namedirs) 
+  private void resurrectNameDir(File namedir) 
   throws IOException {
-    String parentdir = namedirs[0].getParent();
-    String name = namedirs[0].getName();
+    String parentdir = namedir.getParent();
+    String name = namedir.getName();
     File oldname =  new File(parentdir, name + ".old");
-    if (!oldname.renameTo(namedirs[0])) {
+    if (!oldname.renameTo(namedir)) {
       assertTrue(false);
     }
   }
@@ -81,12 +82,12 @@ public class TestCheckpoint extends TestCase {
   /**
    * remove one namedir
    */
-  private void removeOneNameDir(File[] namedirs) 
+  private void removeOneNameDir(File namedir) 
   throws IOException {
-    String parentdir = namedirs[0].getParent();
-    String name = namedirs[0].getName();
+    String parentdir = namedir.getParent();
+    String name = namedir.getName();
     File newname =  new File(parentdir, name + ".old");
-    if (!namedirs[0].renameTo(newname)) {
+    if (!namedir.renameTo(newname)) {
       assertTrue(false);
     }
   }
@@ -94,27 +95,28 @@ public class TestCheckpoint extends TestCase {
   /*
    * Verify that namenode does not startup if one namedir is bad.
    */
-  private void testNamedirError(Configuration conf, File[] namedirs) 
+  private void testNamedirError(Configuration conf, Collection<File> namedirs) 
   throws IOException {
     System.out.println("Starting testNamedirError");
-    Path file1 = new Path("checkpoint.dat");
     MiniDFSCluster cluster = null;
 
-    if (namedirs.length <= 1) {
+    if (namedirs.size() <= 1) {
       return;
     }
     
     //
     // Remove one namedir & Restart cluster. This should fail.
     //
-    removeOneNameDir(namedirs);
+    File first = namedirs.iterator().next();
+    removeOneNameDir(first);
     try {
       cluster = new MiniDFSCluster(conf, 0, false, null);
+      cluster.shutdown();
       assertTrue(false);
     } catch (Throwable t) {
       // no nothing
     }
-    resurrectNameDir(namedirs); // put back namedir
+    resurrectNameDir(first); // put back namedir
   }
 
   /*
@@ -241,7 +243,7 @@ public class TestCheckpoint extends TestCase {
   public void testCheckpoint() throws IOException {
     Path file1 = new Path("checkpoint.dat");
     Path file2 = new Path("checkpoint2.dat");
-    File[] namedirs = null;
+    Collection<File> namedirs = null;
 
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);

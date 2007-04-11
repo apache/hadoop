@@ -23,8 +23,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
-import java.util.AbstractList;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
 import java.util.Properties;

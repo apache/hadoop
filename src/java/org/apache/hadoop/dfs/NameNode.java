@@ -224,19 +224,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       init( bindAddress, port, conf );
     }
 
-    /** Return the configured directories where name data is stored. 
-     * @deprecated
-     */
-    static File[] getDirs(Configuration conf) {
-      String[] dirNames = conf.getStrings("dfs.name.dir");
-      if (dirNames == null) { dirNames = new String[] {"/tmp/hadoop/dfs/name"}; }
-      File[] dirs = new File[dirNames.length];
-      for (int idx = 0; idx < dirs.length; idx++) {
-        dirs[idx] = new File(dirNames[idx]);
-      }
-      return dirs;
-    }
-
     /**
      * Wait for service to finish.
      * (Normally, it runs forever.)

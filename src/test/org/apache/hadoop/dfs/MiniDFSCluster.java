@@ -20,6 +20,8 @@ package org.apache.hadoop.dfs;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collection;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.fs.*;
@@ -300,11 +302,11 @@ public class MiniDFSCluster {
   /**
    * Get the directories where the namenode stores its state.
    */
-  public File[] getNameDirs() {
-    return NameNode.getDirs(conf);
+  public Collection<File> getNameDirs() {
+    return FSNamesystem.getNamespaceDirs(conf);
   }
 
-   /**
+  /**
    * Wait until the cluster is active and running.
    */
   public void waitActive() throws IOException {

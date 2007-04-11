@@ -1102,7 +1102,8 @@ class FSNamesystem implements FSConstants {
      */
     private synchronized void dumpRecentInvalidateSets(PrintWriter out) {
       Collection<Collection<Block>> values = recentInvalidateSets.values();
-      Iterator it = recentInvalidateSets.entrySet().iterator();
+      Iterator<Map.Entry<String,Collection<Block>>> it = 
+                                recentInvalidateSets.entrySet().iterator();
       if (values.size() == 0) {
         out.println("Metasave: Blocks waiting deletion: 0");
         return;
@@ -1110,10 +1111,10 @@ class FSNamesystem implements FSConstants {
       out.println("Metasave: Blocks waiting deletion from " +
                    values.size() + " datanodes.");
       while (it.hasNext()) {
-        Map.Entry entry = (Map.Entry) it.next();
+        Map.Entry<String,Collection<Block>> entry = it.next();
         String storageId = (String) entry.getKey();
         DatanodeDescriptor node = datanodeMap.get(storageId);
-        Collection<Block> blklist = (Collection<Block>) entry.getValue();
+        Collection<Block> blklist = entry.getValue();
         if (blklist.size() > 0) {
           out.print(node.getName());
           for (Iterator jt = blklist.iterator(); jt.hasNext();) {

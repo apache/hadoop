@@ -144,6 +144,9 @@ Trunk (unreleased changes)
     unit test configuration.  Using the default is more robust and
     has almost the same run time.  (Arun C Murthy via tomwhite)
 
+45. HADOOP-1211.  Remove deprecated constructor and unused static 
+    members in DataNode class.  (Konstantin Shvachko via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

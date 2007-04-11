@@ -46,20 +46,6 @@ class DatanodeRegistration extends DatanodeID implements Writable {
   }
 
   /**
-   * Create DatanodeRegistration
-   * @deprecated 
-   * use {@link #DatanodeRegistration(String, int, DataStorage)} instead
-   */
-  public DatanodeRegistration(int version, 
-                              String nodeName, 
-                              String storageID,
-                              int infoPort,
-                              String registrationID ) {
-    super( nodeName, storageID, infoPort );
-    this.storageInfo = new StorageInfo();
-  }
-
-  /**
    */
   public int getVersion() {
     return storageInfo.getLayoutVersion();
