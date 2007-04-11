@@ -554,8 +554,8 @@ public abstract class Server {
           if (System.currentTimeMillis() - call.receivedTime > 
               maxCallStartAge) {
             ReflectionUtils.logThreadInfo(LOG, "Discarding call " + call, 30);
-            LOG.warn("Call " + call.toString() + 
-                     " discarded for being too old (" +
+            LOG.warn(getName()+", call "+call
+                     +": discarded for being too old (" +
                      (System.currentTimeMillis() - call.receivedTime) + ")");
             continue;
           }
@@ -572,7 +572,7 @@ public abstract class Server {
           try {
             value = call(call.param);             // make the call
           } catch (Throwable e) {
-            LOG.info(getName() + " call error: " + e, e);
+            LOG.info(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
@@ -591,7 +591,7 @@ public abstract class Server {
               }
               out.flush();
             } catch (Exception e) {
-              LOG.warn("handler output error", e);
+              LOG.warn(getName()+", call "+call+": output error", e);
               synchronized (connectionList) {
                 if (connectionList.remove(call.connection))
                   numConnections--;

@@ -173,6 +173,9 @@ Trunk (unreleased changes)
     deprecate InputFormatBase.  Also make LineRecordReader easier to
     extend.  (Runping Qi via cutting)
 
+53. HADOOP-1213.  Improve logging of errors by IPC server, to
+    consistently include the service name and the call.  (cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
