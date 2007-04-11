@@ -137,8 +137,8 @@ Trunk (unreleased changes)
 42. HADOOP-1219.  Ignore progress report once a task has reported as 
     'done'.  (Devaraj Das via tomwhite)
 
-43. HADOOP-1114.  Respect user's classpath variable in hadoop script.  
-    (Michael Bieniosek via tomwhite)
+43. HADOOP-1114.  Permit user to specify additional CLASSPATH elements
+    with a HADOOP_CLASSPATH environment variable. (cutting)
 
 44. HADOOP-1198.  Remove ipc.client.timeout parameter override from 
     unit test configuration.  Using the default is more robust and

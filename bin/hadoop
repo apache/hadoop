@@ -6,6 +6,8 @@
 #
 #   JAVA_HOME        The java implementation to use.  Overrides JAVA_HOME.
 #
+#   HADOOP_CLASSPATH Extra Java CLASSPATH entries.
+#
 #   HADOOP_HEAPSIZE  The maximum amount of heap to use, in MB. 
 #                    Default is 1000.
 #
@@ -79,8 +81,7 @@ if [ "$HADOOP_HEAPSIZE" != "" ]; then
 fi
 
 # CLASSPATH initially contains $HADOOP_CONF_DIR
-# respect previously set CLASSPATH
-CLASSPATH="${CLASSPATH}:${HADOOP_CONF_DIR}"
+CLASSPATH="${HADOOP_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add Hadoop classes to CLASSPATH
@@ -114,6 +115,10 @@ for f in $HADOOP_HOME/lib/jetty-ext/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+# add user-specified CLASSPATH last
+if [ "$HADOOP_CLASSPATH" != "" ]; then
+  CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
+fi
 
 # default log directory & file
 if [ "$HADOOP_LOG_DIR" = "" ]; then
