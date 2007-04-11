@@ -612,6 +612,8 @@ class FSNamesystem implements FSConstants {
         if (blocks != null) {
             results = new Object[2];
             DatanodeDescriptor machineSets[][] = new DatanodeDescriptor[blocks.length][];
+            DatanodeDescriptor client = 
+              host2DataNodeMap.getDatanodeByHost(clientMachine);
 
             for (int i = 0; i < blocks.length; i++) {
                 int numNodes = blocksMap.numNodes( blocks[i] );
@@ -624,8 +626,7 @@ class FSNamesystem implements FSConstants {
                          blocksMap.nodeIterator( blocks[i] ); it.hasNext(); ) {
                         machineSets[i][ numNodes++ ] = it.next();
                     }
-                    clusterMap.sortByDistance( getDatanodeByHost(clientMachine),
-                                               machineSets[i] );
+                    clusterMap.sortByDistance( client, machineSets[i] );
                 }
             }
 
@@ -799,7 +800,8 @@ class FSNamesystem implements FSConstants {
         }
 
         // Get the array of replication targets
-        DatanodeDescriptor clientNode = getDatanodeByHost(clientMachine.toString());
+        DatanodeDescriptor clientNode = 
+          host2DataNodeMap.getDatanodeByHost(clientMachine.toString());
         DatanodeDescriptor targets[] = replicator.chooseTarget(replication,
                                                       clientNode, null, blockSize);
         if (targets.length < this.minReplication) {
@@ -1603,7 +1605,7 @@ class FSNamesystem implements FSConstants {
           + " storage " + nodeReg.getStorageID() );
 
       DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
-      DatanodeDescriptor nodeN = getDatanodeByName( nodeReg.getName() );
+      DatanodeDescriptor nodeN = host2DataNodeMap.getDatanodeByName( nodeReg.getName() );
       
       if( nodeN != null && nodeN != nodeS ) {
           NameNode.LOG.info( "BLOCK* NameSystem.registerDatanode: "
@@ -1995,6 +1997,8 @@ class FSNamesystem implements FSConstants {
     
     void unprotectedAddDatanode( DatanodeDescriptor nodeDescr ) {
       datanodeMap.put( nodeDescr.getStorageID(), nodeDescr );
+      host2DataNodeMap.add(nodeDescr);
+      
       NameNode.stateChangeLog.debug(
           "BLOCK* NameSystem.unprotectedAddDatanode: "
           + "node " + nodeDescr.getName() + " is added to datanodeMap." );
@@ -2006,12 +2010,13 @@ class FSNamesystem implements FSConstants {
      * 
      * @param nodeID node
      */
-    void wipeDatanode( DatanodeID nodeID ) {
+    void wipeDatanode( DatanodeID nodeID ) throws IOException {
       String key = nodeID.getStorageID();
       datanodeMap.remove(key);
+      host2DataNodeMap.remove(getDatanode( nodeID ));
       NameNode.stateChangeLog.debug(
           "BLOCK* NameSystem.wipeDatanode: "
-          + nodeID.getName() + " storage " + nodeID.getStorageID() 
+          + nodeID.getName() + " storage " + key 
           + " is removed from datanodeMap.");
     }
     
@@ -3460,37 +3465,136 @@ class FSNamesystem implements FSConstants {
       return node;
     }
     
-    /**
-     * Find data node by its name.
-     * 
-     * This method is called when the node is registering.
-     * Not performance critical.
-     * Otherwise an additional tree-like structure will be required.
-     * 
-     * @param name
-     * @return DatanodeDescriptor if found or null otherwise 
-     * @throws IOException
-     */
-    public DatanodeDescriptor getDatanodeByName( String name ) throws IOException {
-      for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext(); ) {
-        DatanodeDescriptor node = it.next();
-        if( node.getName().equals(name) )
-           return node;
+    static class Host2NodesMap {
+      private HashMap<String, DatanodeDescriptor[]> map
+                        = new HashMap<String, DatanodeDescriptor[]>();
+      private Random r = new Random();
+                        
+      /** Check if node is already in the map */
+      synchronized boolean contains(DatanodeDescriptor node) {
+        if( node==null ) return false;
+        
+        String host = node.getHost();
+        DatanodeDescriptor[] nodes = map.get(host);
+        if( nodes != null ) {
+          for(DatanodeDescriptor containedNode:nodes) {
+            if(node==containedNode)
+              return true;
+          }
+        }
+        return false;
       }
-      return null;
-    }
-    
-    /* Find data node by its host name. */
-    private DatanodeDescriptor getDatanodeByHost( String name ) {
-        for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); 
-        it.hasNext(); ) {
-            DatanodeDescriptor node = it.next();
-            if( node.getHost().equals(name) )
-                return node;
+      
+      /** add <node.getHost(), node> to the map 
+       * return true if the node is added; false otherwise
+       */
+      synchronized boolean add(DatanodeDescriptor node) {
+        if(node==null || contains(node)) return false;
+        
+        String host = node.getHost();
+        DatanodeDescriptor[] nodes = map.get(host);
+        DatanodeDescriptor[] newNodes;
+        if(nodes==null) {
+          newNodes = new DatanodeDescriptor[1];
+          newNodes[0]=node;
+        } else { // rare case: more than one datanode on the host
+          newNodes = new DatanodeDescriptor[nodes.length+1];
+          System.arraycopy(nodes, 0, newNodes, 0, nodes.length);
+          newNodes[nodes.length] = node;
+        }
+        map.put(host, newNodes);
+        return true;
+      }
+      
+      /** remove node from the map 
+       * return true if the node is removed; false otherwise
+       */
+      synchronized boolean remove(DatanodeDescriptor node) {
+        if(node==null) return false;
+        
+        String host = node.getHost();
+        DatanodeDescriptor[] nodes = map.get(host);
+        if(nodes==null) {
+          return false;
+        }
+        if( nodes.length==1 ) {
+          if( nodes[0]==node ) {
+            map.remove(host);
+            return true;
+          } else {
+            return false;
+          }
+        }
+        //rare case
+        int i=0;
+        for(; i<nodes.length; i++) {
+          if(nodes[i]==node) {
+            break;
+          }
+        }
+        if( i==nodes.length ) {
+          return false;
+        } else {
+          DatanodeDescriptor[] newNodes;
+          newNodes = new DatanodeDescriptor[nodes.length-1];
+          System.arraycopy(nodes, 0, newNodes, 0, i);
+          System.arraycopy(nodes, i+1, newNodes, i, nodes.length-i-1);
+          map.put(host, newNodes);
+          return true;
+        }
+      }
+      
+      /** get a data node by its host
+      * @return DatanodeDescriptor if found; otherwise null
+      */
+      synchronized DatanodeDescriptor getDatanodeByHost( String host ) {
+        if(host==null) return null;
+        
+        DatanodeDescriptor[] nodes = map.get(host);
+        // no entry
+        if( nodes== null ) {
+          return null;
+        }
+        // one node
+        if (nodes.length == 1) {
+          return nodes[0];
+        }
+        // more than one node
+        return nodes[r.nextInt(nodes.length)];
+      }
+      
+      /**
+       * Find data node by its name.
+       * 
+       * @return DatanodeDescriptor if found or null otherwise 
+       */
+      public DatanodeDescriptor getDatanodeByName( String name ) {
+        if(name==null) return null;
+        
+        int colon = name.indexOf(":");
+        String host;
+        if (colon < 0) {
+          host = name;
+        } else {
+          host = name.substring(0, colon);
+        }
+
+        DatanodeDescriptor[] nodes = map.get(host);
+        // no entry
+        if( nodes== null ) {
+          return null;
+        }
+        for(DatanodeDescriptor containedNode:nodes) {
+          if(name.equals(containedNode.getName())) {
+            return containedNode;
+          }
         }
         return null;
+      }
     }
     
+    private Host2NodesMap host2DataNodeMap = new Host2NodesMap();
+       
     /** Stop at and return the datanode at index (used for content browsing)*/
     private DatanodeInfo getDatanodeByIndex( int index ) {
       int i = 0;
