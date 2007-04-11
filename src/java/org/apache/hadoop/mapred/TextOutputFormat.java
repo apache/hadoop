@@ -42,15 +42,26 @@ public class TextOutputFormat extends OutputFormatBase {
     }
     
     public synchronized void write(WritableComparable key, Writable value)
-    throws IOException {
-      out.write(key.toString().getBytes("UTF-8"));
-      out.writeByte('\t');
-      out.write(value.toString().getBytes("UTF-8"));
+        throws IOException {
+
+      if (key == null && value == null) {
+        return;
+      }
+      if (key != null) {
+        out.write(key.toString().getBytes("UTF-8"));
+      }
+      if (key != null && value != null) {
+        out.write("\t".getBytes("UTF-8"));
+      }
+      if (value != null) {
+        out.write(value.toString().getBytes("UTF-8"));
+      }
       out.writeByte('\n');
     }
+
     public synchronized void close(Reporter reporter) throws IOException {
       out.close();
-    }   
+    }
   }
   
   public RecordWriter getRecordWriter(FileSystem ignored, JobConf job,

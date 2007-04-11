@@ -165,6 +165,10 @@ Trunk (unreleased changes)
 50. HADOOP-1189.  Fix 'No space left on device' exceptions on datanodes.
     (Raghu Angadi via tomwhite)
 
+51. HADOOP-819.  Change LineRecordWriter to not insert a tab between
+    key and value when either is null, and to print nothing when both
+    are null.  (Runping Qi via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
