@@ -26,7 +26,7 @@ import org.apache.hadoop.io.compress.*;
 /** An {@link InputFormat} for plain text files.  Files are broken into lines.
  * Either linefeed or carriage-return are used to signal end of line.  Keys are
  * the position in the file, and values are the line of text.. */
-public class TextInputFormat extends InputFormatBase implements JobConfigurable {
+public class TextInputFormat extends FileInputFormat implements JobConfigurable {
 
   private CompressionCodecFactory compressionCodecs = null;
   
@@ -37,32 +37,10 @@ public class TextInputFormat extends InputFormatBase implements JobConfigurable 
   protected boolean isSplitable(FileSystem fs, Path file) {
     return compressionCodecs.getCodec(file) == null;
   }
-  
-  public RecordReader getRecordReader(InputSplit genericSplit,
-                                      JobConf job, Reporter reporter)
-    throws IOException {
 
+  public RecordReader getRecordReader(InputSplit genericSplit, JobConf job,
+      Reporter reporter) throws IOException {
     reporter.setStatus(genericSplit.toString());
-    FileSplit split = (FileSplit) genericSplit;
-    long start = split.getStart();
-    long end = start + split.getLength();
-    final Path file = split.getPath();
-    final CompressionCodec codec = compressionCodecs.getCodec(file);
-
-    // open the file and seek to the start of the split
-    FileSystem fs = FileSystem.get(job);
-    FSDataInputStream fileIn = fs.open(split.getPath());
-    InputStream in = fileIn;
-    if (codec != null) {
-      in = codec.createInputStream(fileIn);
-      end = Long.MAX_VALUE;
-    } else if (start != 0) {
-      fileIn.seek(start-1);
-      LineRecordReader.readLine(fileIn, null);
-      start = fileIn.getPos();
-    }
-    
-    return new LineRecordReader(in, start, end);
+    return new LineRecordReader(job, (FileSplit) genericSplit);
   }
 }
-

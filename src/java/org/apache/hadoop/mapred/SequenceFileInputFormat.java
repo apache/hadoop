@@ -20,14 +20,13 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.MapFile;
 
 /** An {@link InputFormat} for {@link SequenceFile}s. */
-public class SequenceFileInputFormat extends InputFormatBase {
+public class SequenceFileInputFormat extends FileInputFormat {
 
   public SequenceFileInputFormat() {
     setMinSplitSize(SequenceFile.SYNC_INTERVAL);

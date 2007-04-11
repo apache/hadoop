@@ -6,10 +6,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 
 /**
  * Treats keys as offset in file and value as line. 
@@ -17,6 +23,7 @@ import org.apache.hadoop.io.WritableComparable;
  *
  */
 public class LineRecordReader implements RecordReader {
+  private CompressionCodecFactory compressionCodecs = null;
   private long start; 
   private long pos;
   private long end;
@@ -37,6 +44,33 @@ public class LineRecordReader implements RecordReader {
   }
   private TextStuffer bridge = new TextStuffer();
 
+  public LineRecordReader(Configuration job, FileSplit split)
+      throws IOException {
+    long start = split.getStart();
+    long end = start + split.getLength();
+    final Path file = split.getPath();
+    compressionCodecs = new CompressionCodecFactory(job);
+    final CompressionCodec codec = compressionCodecs.getCodec(file);
+
+    // open the file and seek to the start of the split
+    FileSystem fs = FileSystem.get(job);
+    FSDataInputStream fileIn = fs.open(split.getPath());
+    InputStream in = fileIn;
+    if (codec != null) {
+      in = codec.createInputStream(fileIn);
+      end = Long.MAX_VALUE;
+    } else if (start != 0) {
+      fileIn.seek(start - 1);
+      LineRecordReader.readLine(fileIn, null);
+      start = fileIn.getPos();
+    }
+
+    this.in = new BufferedInputStream(in);
+    this.start = start;
+    this.pos = start;
+    this.end = end;
+  }
+  
   public LineRecordReader(InputStream in, long offset, long endOffset) 
     throws IOException{
     this.in = new BufferedInputStream(in);
@@ -62,7 +96,7 @@ public class LineRecordReader implements RecordReader {
 
     ((LongWritable)key).set(pos);           // key is position
     buffer.reset();
-    long bytesRead = readLine(in, buffer);
+    long bytesRead = readLine();
     if (bytesRead == 0) {
       return false;
     }
@@ -70,6 +104,10 @@ public class LineRecordReader implements RecordReader {
     bridge.target = (Text) value;
     buffer.writeTo(bridge);
     return true;
+  }
+  
+  protected long readLine() throws IOException {
+    return LineRecordReader.readLine(in, buffer);
   }
 
   public static long readLine(InputStream in, 

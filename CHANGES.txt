@@ -169,6 +169,10 @@ Trunk (unreleased changes)
     key and value when either is null, and to print nothing when both
     are null.  (Runping Qi via cutting)
 
+52. HADOOP-1204.  Rename InputFormatBase to be FileInputFormat, and
+    deprecate InputFormatBase.  Also make LineRecordReader easier to
+    extend.  (Runping Qi via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
