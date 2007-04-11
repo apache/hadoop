@@ -463,7 +463,7 @@ class FSNamesystem implements FSConstants {
          */
         synchronized boolean add(
             Block block, int curReplicas, int expectedReplicas) {
-            if(expectedReplicas <= curReplicas) {
+            if(curReplicas<=0 || expectedReplicas <= curReplicas) {
                 return false;
             }
             int priLevel = getPriority(block, curReplicas, expectedReplicas);
