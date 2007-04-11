@@ -312,6 +312,18 @@ class MapTask extends Task {
     
     public void collect(WritableComparable key,
               Writable value) throws IOException {
+      
+      if (key.getClass() != keyClass) {
+        throw new IOException("Type mismatch in key from map: expected "
+                              + keyClass.getName() + ", recieved "
+                              + key.getClass().getName());
+      }
+      if (value.getClass() != valClass) {
+        throw new IOException("Type mismatch in value from map: expected "
+                              + valClass.getName() + ", recieved "
+                              + value.getClass().getName());
+      }
+      
       synchronized (this) {
         //dump the key/value to buffer
         int keyOffset = keyValBuffer.getLength(); 
