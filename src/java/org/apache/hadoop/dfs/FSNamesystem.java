@@ -777,7 +777,9 @@ class FSNamesystem implements FSConstants {
             throw new AlreadyBeingCreatedException(
                   "failed to create file " + src + " for " + holder +
                   " on client " + clientMachine + 
-                  " because pendingCreates is non-null.");
+                  ", because this file is already being created by " +
+                  pendingFile.getClientName() + 
+                  " on " + pendingFile.getClientMachine());
           }
         }
 
