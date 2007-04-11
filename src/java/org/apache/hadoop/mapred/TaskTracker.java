@@ -155,10 +155,15 @@ public class TaskTracker
       synchronized void completeTask() {
         if (metricsRecord != null) {
           metricsRecord.incrMetric("tasks_completed", 1);
-          metricsRecord.setMetric("maps_running", mapTotal);
-          metricsRecord.setMetric("reduces_running", reduceTotal);
-          metricsRecord.update();
         }
+      }
+      
+      synchronized void update() {
+          if (metricsRecord != null) {
+            metricsRecord.setMetric("maps_running", mapTotal);
+            metricsRecord.setMetric("reduces_running", reduceTotal);
+            metricsRecord.update();
+          }
       }
     }
     
@@ -638,6 +643,7 @@ public class TaskTracker
             }
             try {
               myMetrics.completeTask();
+              myMetrics.update();
             } catch (MetricsException me) {
               LOG.warn("Caught: " + StringUtils.stringifyException(me));
             }
@@ -866,6 +872,7 @@ public class TaskTracker
         } else {
           reduceTotal++;
         }
+        myMetrics.update();
       }
       try {
     	  localizeJob(tip);
@@ -1245,6 +1252,7 @@ public class TaskTracker
                                    failure);
               runningTasks.put(task.getTaskId(), this);
               mapTotal++;
+              myMetrics.update();
             } else {
               LOG.warn("Output already reported lost:"+task.getTaskId());
             }

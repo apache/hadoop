@@ -176,6 +176,10 @@ Trunk (unreleased changes)
 53. HADOOP-1213.  Improve logging of errors by IPC server, to
     consistently include the service name and the call.  (cutting)
 
+54. HADOOP-1238.  Fix metrics reporting by TaskTracker to correctly
+    track maps_running and reduces_running.
+    (Michael Bieniosek via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
