@@ -110,6 +110,22 @@ public class DF {
     return mount;
   }
   
+  public long getCapacitySkipRefresh() { 
+    return capacity; 
+  }
+  
+  public long getUsedSkipRefresh() { 
+    return used;
+  }
+  
+  public long getAvailableSkipRefresh() { 
+    return available;
+  }
+  
+  public int getPercentUsedSkipRefresh() {
+    return percentUsed;
+  }
+  
   public String toString() {
     return
       "df -k " + mount +"\n" +

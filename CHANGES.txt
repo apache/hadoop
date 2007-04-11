@@ -162,6 +162,9 @@ Trunk (unreleased changes)
 49. HADOOP-971.  Improve DFS Scalability: Improve name node performance
     by adding a hostname to datanodes map.  (Hairong Kuang via tomwhite)
 
+50. HADOOP-1189.  Fix 'No space left on device' exceptions on datanodes.
+    (Raghu Angadi via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

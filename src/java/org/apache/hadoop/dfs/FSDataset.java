@@ -285,9 +285,9 @@ class FSDataset implements FSConstants {
       }
       
       long getAvailable() throws IOException {
-        long freespace = (long)
-            Math.round( ( ( usableDiskPct * usage.getCapacity() )
-                          - usage.getUsed() - reserved ));
+        long capacity = usage.getCapacity();
+        long freespace = Math.round(usage.getAvailableSkipRefresh() -
+                                    capacity * (1 - usableDiskPct) - reserved); 
         return ( freespace > 0 ) ? freespace : 0;
       }
       
