@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+package testjar;
 
 import java.io.*;
 import java.util.*;

@@ -63,9 +63,9 @@ public class TestMiniMRClasspath extends TestCase {
     // the values are counts (ints)
     conf.setOutputValueClass(IntWritable.class);
     
-    conf.set("mapred.mapper.class", "ClassWordCount$MapClass");        
-    conf.set("mapred.combine.class", "ClassWordCount$Reduce");
-    conf.set("mapred.reducer.class", "ClassWordCount$Reduce");
+    conf.set("mapred.mapper.class", "testjar.ClassWordCount$MapClass");        
+    conf.set("mapred.combine.class", "testjar.ClassWordCount$Reduce");
+    conf.set("mapred.reducer.class", "testjar.ClassWordCount$Reduce");
     conf.setInputPath(inDir);
     conf.setOutputPath(outDir);
     conf.setNumMapTasks(numMaps);
@@ -116,15 +116,15 @@ public class TestMiniMRClasspath extends TestCase {
     // the keys are counts
     conf.setOutputValueClass(IntWritable.class);
     // the values are the messages
-    conf.set("mapred.output.key.class", "ExternalWritable");
+    conf.set("mapred.output.key.class", "testjar.ExternalWritable");
 
     conf.setInputPath(inDir);
     conf.setOutputPath(outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
     
-    conf.set("mapred.mapper.class", "ExternalMapperReducer"); 
-    conf.set("mapred.reducer.class", "ExternalMapperReducer");
+    conf.set("mapred.mapper.class", "testjar.ExternalMapperReducer"); 
+    conf.set("mapred.reducer.class", "testjar.ExternalMapperReducer");
 
     //pass a job.jar already included in the hadoop build
     conf.setJar("build/test/testjar/testjob.jar");
