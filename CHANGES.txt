@@ -180,6 +180,10 @@ Trunk (unreleased changes)
     track maps_running and reduces_running.
     (Michael Bieniosek via cutting)
 
+55. HADOOP-1093.  Fix a race condition in HDFS where blocks were
+    sometimes erased before they were reported written.
+    (Dhruba Borthakur via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

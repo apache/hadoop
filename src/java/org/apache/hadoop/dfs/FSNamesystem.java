@@ -883,17 +883,14 @@ class FSNamesystem implements FSConstants {
               " owned by " + pendingFile.getClientName() + 
               " and appended by " + clientName);
         }
-        if (dir.getFile(src) != null) {
-          throw new IOException("File " + src + " created during write");
-        }
 
         //
         // If we fail this, bad things happen!
         //
-        if (!checkFileProgress(src)) {
-          throw new NotReplicatedYetException("Not replicated yet");
+        if (!checkFileProgress(pendingFile, false)) {
+          throw new NotReplicatedYetException("Not replicated yet:" + src);
         }
-        
+
         // Get the array of replication targets
         DatanodeDescriptor clientNode = pendingFile.getClientNode();
         DatanodeDescriptor targets[] = replicator.chooseTarget(
@@ -977,17 +974,18 @@ class FSNamesystem implements FSConstants {
         NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder );
         if( isInSafeMode() )
           throw new SafeModeException( "Cannot complete file " + src, safeMode );
-        if (dir.getFile(src) != null || pendingCreates.get(src) == null) {
+        FileUnderConstruction pendingFile = pendingCreates.get(src);
+
+        if (dir.getFile(src) != null || pendingFile == null) {
             NameNode.stateChangeLog.warn( "DIR* NameSystem.completeFile: "
                     + "failed to complete " + src
                     + " because dir.getFile()==" + dir.getFile(src) 
-                    + " and " + pendingCreates.get(src));
+                    + " and " + pendingFile);
             return OPERATION_FAILED;
-        } else if (! checkFileProgress(src)) {
+        } else if (! checkFileProgress(pendingFile, true)) {
             return STILL_WAITING;
         }
         
-        FileUnderConstruction pendingFile = pendingCreates.get(src);
         Collection<Block> blocks = pendingFile.getBlocks();
         int nrBlocks = blocks.size();
         Block pendingBlocks[] = blocks.toArray(new Block[nrBlocks]);
@@ -1075,15 +1073,29 @@ class FSNamesystem implements FSConstants {
 
     /**
      * Check that the indicated file's blocks are present and
-     * replicated.  If not, return false.
+     * replicated.  If not, return false. If checkall is true, then check
+     * all blocks, otherwise check only penultimate block.
      */
-    synchronized boolean checkFileProgress(UTF8 src) {
-        FileUnderConstruction v = pendingCreates.get(src);
-
-        for (Iterator<Block> it = v.getBlocks().iterator(); it.hasNext(); ) {
+    synchronized boolean checkFileProgress(FileUnderConstruction v, boolean checkall) {
+        if (checkall) {
+          //
+          // check all blocks of the file.
+          //
+          for (Iterator<Block> it = v.getBlocks().iterator(); it.hasNext(); ) {
             if ( blocksMap.numNodes(it.next()) < this.minReplication ) {
                 return false;
             }
+          }
+        } else {
+          //
+          // check the penultimate block of this file
+          //
+          Block b = v.getPenultimateBlock();
+          if (b != null) {
+            if (blocksMap.numNodes(b) < this.minReplication) {
+                return false;
+            }
+          }
         }
         return true;
     }
@@ -3441,6 +3453,16 @@ class FSNamesystem implements FSConstants {
 
       public DatanodeDescriptor getClientNode() {
         return clientNode;
+      }
+
+      /**
+       * Return the penultimate allocated block for this file
+       */
+      public Block getPenultimateBlock() {
+        if (blocks.size() <= 1) {
+          return null;
+        }
+        return ((ArrayList<Block>)blocks).get(blocks.size() - 2);
       }
     }
 

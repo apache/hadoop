@@ -348,6 +348,12 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.namenode.handler.count</name>
+  <value>10</value>
+  <description>The number of server threads for the namenode.</description>
+</property>
+
+<property>
   <name>dfs.safemode.threshold.pct</name>
   <value>0.999f</value>
   <description>

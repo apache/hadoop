@@ -448,20 +448,6 @@ public class DataNode implements FSConstants, Runnable {
             if( ! processCommand( cmd ) )
               continue;
           }
-
-          // send block report
-          if (now - lastBlockReport > blockReportInterval) {
-            //
-            // Send latest blockinfo report if timer has expired.
-            // Get back a list of local block(s) that are obsolete
-            // and can be safely GC'ed.
-            //
-            DatanodeCommand cmd = namenode.blockReport( dnRegistration,
-                                                        data.getBlockReport());
-            processCommand( cmd );
-            lastBlockReport = now;
-            continue;
-          }
             
           // check if there are newly received blocks
           Block [] blockArray=null;
@@ -480,6 +466,19 @@ public class DataNode implements FSConstants, Runnable {
                 receivedBlockList.remove(b);
               }
             }
+          }
+
+          // send block report
+          if (now - lastBlockReport > blockReportInterval) {
+            //
+            // Send latest blockinfo report if timer has expired.
+            // Get back a list of local block(s) that are obsolete
+            // and can be safely GC'ed.
+            //
+            DatanodeCommand cmd = namenode.blockReport( dnRegistration,
+                                                        data.getBlockReport());
+            processCommand( cmd );
+            lastBlockReport = now;
           }
             
           //
@@ -855,7 +854,9 @@ public class DataNode implements FSConstants, Runnable {
               
               //
               // Process incoming data, copy to disk and
-              // maybe to network.
+              // maybe to network. First copy to the network before
+              // writing to local disk so that all datanodes might
+              // write to local disk in parallel.
               //
               boolean anotherChunk = len != 0;
               byte buf[] = new byte[BUFFER_SIZE];
@@ -867,17 +868,6 @@ public class DataNode implements FSConstants, Runnable {
                     throw new EOFException("EOF reading from "+s.toString());
                   }
                   if (bytesRead > 0) {
-                    try {
-                      out.write(buf, 0, bytesRead);
-                      myMetrics.wroteBytes(bytesRead);
-                    } catch (IOException iex) {
-                      if (iex.getMessage().startsWith("No space left on device")) {
-                    	  throw new DiskOutOfSpaceException("No space left on device");
-                      } else {
-                        shutdown();
-                        throw iex;
-                      }
-                    }
                     if (out2 != null) {
                       try {
                         out2.write(buf, 0, bytesRead);
@@ -897,6 +887,17 @@ public class DataNode implements FSConstants, Runnable {
                           out2 = null;
                           in2 = null;
                         }
+                      }
+                    }
+                    try {
+                      out.write(buf, 0, bytesRead);
+                      myMetrics.wroteBytes(bytesRead);
+                    } catch (IOException iex) {
+                      if (iex.getMessage().startsWith("No space left on device")) {
+                    	  throw new DiskOutOfSpaceException("No space left on device");
+                      } else {
+                        shutdown();
+                        throw iex;
                       }
                     }
                     len -= bytesRead;

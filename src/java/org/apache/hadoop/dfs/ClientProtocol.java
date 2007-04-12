@@ -30,9 +30,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 interface ClientProtocol extends VersionedProtocol {
 
     /*
-     * 11: metasave() added
+     * 11: metasave() added and reportWrittenBlock() removed.
      */
-    public static final long versionID = 10L;  
+    public static final long versionID = 11L;  
   
     ///////////////////////////////////////
     // File contents
@@ -86,14 +86,6 @@ interface ClientProtocol extends VersionedProtocol {
     public boolean setReplication( String src, 
                                 short replication
                               ) throws IOException;
-
-    /**
-     * A client that has written a block of data can report completion
-     * back to the NameNode with reportWrittenBlock().  Clients cannot
-     * obtain an additional block until the previous one has either been 
-     * reported as written or abandoned.
-     */
-    public void reportWrittenBlock(LocatedBlock b) throws IOException;
 
     /**
      * If the client has not yet called reportWrittenBlock(), it can

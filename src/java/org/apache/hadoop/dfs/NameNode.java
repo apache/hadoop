@@ -324,23 +324,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
 
     /**
-     * The client can report in a set written blocks that it wrote.
-     * These blocks are reported via the client instead of the datanode
-     * to prevent weird heartbeat race conditions.
-     */
-    public void reportWrittenBlock(LocatedBlock lb) throws IOException {
-        Block b = lb.getBlock();        
-        DatanodeInfo targets[] = lb.getLocations();
-        stateChangeLog.debug("*BLOCK* NameNode.reportWrittenBlock"
-                +": " + b.getBlockName() +" is written to "
-                +targets.length + " locations" );
-
-        for (int i = 0; i < targets.length; i++) {
-            namesystem.blockReceived( targets[i], b );
-        }
-    }
-
-    /**
      * The client needs to give up on the block.
      */
     public void abandonBlock(Block b, String src) throws IOException {

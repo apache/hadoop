@@ -1120,7 +1120,7 @@ class DFSClient implements FSConstants {
                 //
                 DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
                 out.write(OP_WRITE_BLOCK);
-                out.writeBoolean(false);
+                out.writeBoolean(true);
                 block.write(out);
                 out.writeInt(nodes.length);
                 for (int i = 0; i < nodes.length; i++) {
@@ -1164,6 +1164,7 @@ class DFSClient implements FSConstants {
         private LocatedBlock locateFollowingBlock(long start
                                                   ) throws IOException {     
           int retries = 5;
+          long sleeptime = 400;
           while (true) {
             long localstart = System.currentTimeMillis();
             while (true) {
@@ -1183,7 +1184,9 @@ class DFSClient implements FSConstants {
                              " seconds");
                   }
                   try {
-                    Thread.sleep(400);
+                    LOG.debug("NotReplicatedYetException sleeping " + src +
+                              " retries left " + retries);
+                    Thread.sleep(sleeptime);
                   } catch (InterruptedException ie) {
                   }
                 }                
@@ -1290,6 +1293,7 @@ class DFSClient implements FSConstants {
          * We're done writing to the current block.
          */
         private synchronized void endBlock() throws IOException {
+            long sleeptime = 400;
             //
             // Done with local copy
             //
@@ -1320,6 +1324,10 @@ class DFSClient implements FSConstants {
                     remainingAttempts -= 1;
                     if (remainingAttempts == 0) {
                       throw ie;
+                    }
+                    try {
+                      Thread.sleep(sleeptime);
+                    } catch (InterruptedException e) {
                     }
                 } finally {
                   in.close();
@@ -1360,7 +1368,6 @@ class DFSClient implements FSConstants {
                     
             LocatedBlock lb = new LocatedBlock();
             lb.readFields(blockReplyStream);
-            namenode.reportWrittenBlock(lb);
 
             s.close();
             s = null;
