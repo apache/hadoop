@@ -187,6 +187,9 @@ Trunk (unreleased changes)
 56. HADOOP-1239.  Add a package name to some testjar test classes.
     (Jim Kellerman via cutting)
 
+57. HADOOP-1241.  Fix NullPointerException in processReport when 
+    namenode is restarted.  (Dhruba Borthakur via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

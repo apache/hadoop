@@ -2093,9 +2093,15 @@ class FSNamesystem implements FSConstants {
     public synchronized Block[] processReport(DatanodeID nodeID, 
                                               Block newReport[]
                                             ) throws IOException {
-        NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
-          +"from "+nodeID.getName()+" "+newReport.length+" blocks" );
+        if (NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
+            +"from "+nodeID.getName()+" "+newReport.length+" blocks" );
+        }
         DatanodeDescriptor node = getDatanode( nodeID );
+        if (node == null) {
+          throw new IOException("ProcessReport from unregisterted node: "
+                                + nodeID.getName());
+        }
 
         // Check if this datanode should actually be shutdown instead.
         if (shouldNodeShutdown(node)) {
