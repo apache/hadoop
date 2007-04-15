@@ -190,6 +190,10 @@ Trunk (unreleased changes)
 57. HADOOP-1241.  Fix NullPointerException in processReport when 
     namenode is restarted.  (Dhruba Borthakur via tomwhite)
 
+58. HADOOP-1244.  Fix stop-dfs.sh to no longer incorrectly specify 
+    slaves file for stopping datanode.  
+    (Michael Bieniosek via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 
