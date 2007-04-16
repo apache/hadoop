@@ -25,7 +25,7 @@ public class TestNetworkTopology extends TestCase {
     }
   }
   
-  public void testContains() {
+  public void testContains() throws Exception {
     for(int i=0; i<dataNodes.length; i++) {
       assertTrue( cluster.contains(dataNodes[i]));
     }
@@ -53,6 +53,46 @@ public class TestNetworkTopology extends TestCase {
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[6]), 6);
   }
 
+  public void testPseudoSortByDistance() throws Exception {
+    DatanodeDescriptor[] testNodes = new DatanodeDescriptor[3];
+    
+    // array contains both local node & local rack node
+    testNodes[0] = dataNodes[1];
+    testNodes[1] = dataNodes[2];
+    testNodes[2] = dataNodes[0];
+    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    assertTrue(testNodes[0] == dataNodes[0]);
+    assertTrue(testNodes[1] == dataNodes[1]);
+    assertTrue(testNodes[2] == dataNodes[2]);
+
+    // array contains local node
+    testNodes[0] = dataNodes[1];
+    testNodes[1] = dataNodes[3];
+    testNodes[2] = dataNodes[0];
+    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    assertTrue(testNodes[0] == dataNodes[0]);
+    assertTrue(testNodes[1] == dataNodes[1]);
+    assertTrue(testNodes[2] == dataNodes[3]);
+
+    // array contains local rack node
+    testNodes[0] = dataNodes[5];
+    testNodes[1] = dataNodes[3];
+    testNodes[2] = dataNodes[1];
+    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    assertTrue(testNodes[0] == dataNodes[1]);
+    assertTrue(testNodes[1] == dataNodes[3]);
+    assertTrue(testNodes[2] == dataNodes[5]);
+
+    // array contains neither local node & local rack node
+    testNodes[0] = dataNodes[5];
+    testNodes[1] = dataNodes[3];
+    testNodes[2] = dataNodes[2];
+    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    assertTrue(testNodes[0] == dataNodes[5]);
+    assertTrue(testNodes[1] == dataNodes[3]);
+    assertTrue(testNodes[2] == dataNodes[2]);
+  }
+  
   public void testRemove() throws Exception {
     for(int i=0; i<dataNodes.length; i++) {
       cluster.remove( dataNodes[i] );
