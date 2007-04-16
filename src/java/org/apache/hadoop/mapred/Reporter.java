@@ -35,6 +35,9 @@ public interface Reporter extends Progressable {
       }
       public void incrCounter(Enum key, long amount) {
       }
+      public InputSplit getInputSplit() throws UnsupportedOperationException {
+        throw new UnsupportedOperationException("NULL reporter has no input");
+      }
     };
 
   /**
@@ -53,4 +56,12 @@ public interface Reporter extends Progressable {
    * be incremented
    */
   public abstract void incrCounter(Enum key, long amount);
+  
+  /**
+   * Get the InputSplit object for a map.
+   * @return the input split that the map is reading from
+   * @throws UnsupportedOperationException if called outside a mapper
+   */
+  public abstract InputSplit getInputSplit() 
+    throws UnsupportedOperationException;
 }

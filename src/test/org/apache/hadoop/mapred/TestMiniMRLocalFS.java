@@ -21,7 +21,6 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.Progressable;
 
 import java.io.DataInput;
@@ -215,6 +214,11 @@ public class TestMiniMRLocalFS extends TestCase {
                     OutputCollector out, Reporter reporter) throws IOException {
       System.out.println("map: " + key + ", " + value);
       out.collect((WritableComparable) value, key);
+      InputSplit split = reporter.getInputSplit();
+      if (split.getClass() != MyInputFormat.MySplit.class) {
+        throw new IOException("Got wrong split in MyMapper! " + 
+                              split.getClass().getName());
+      }
     }
   }
 
@@ -222,6 +226,12 @@ public class TestMiniMRLocalFS extends TestCase {
     public void reduce(WritableComparable key, Iterator values, 
                        OutputCollector output, Reporter reporter
                        ) throws IOException {
+      try {
+        InputSplit split = reporter.getInputSplit();
+        throw new IOException("Got an input split of " + split);
+      } catch (UnsupportedOperationException e) {
+        // expected result
+      }
       while (values.hasNext()) {
         Writable value = (Writable) values.next();
         System.out.println("reduce: " + key + ", " + value);

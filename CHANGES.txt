@@ -213,6 +213,9 @@ Trunk (unreleased changes)
 64. HADOOP-1148.  Re-indent all Java source code to consistently use
     two spaces per indent level.  (cutting)
 
+65. HADOOP-1251.  Add a method to Reporter to get the map InputSplit.
+    (omalley via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

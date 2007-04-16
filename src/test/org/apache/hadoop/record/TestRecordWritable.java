@@ -46,12 +46,6 @@ public class TestRecordWritable extends TestCase {
     Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
     Path file = new Path(dir, "test.seq");
     
-    Reporter reporter = new Reporter() {
-        public void setStatus(String status) throws IOException {}
-        public void progress() throws IOException {}
-        public void incrCounter(Enum key, long amount) {}
-      };
-    
     int seed = new Random().nextInt();
     //LOG.info("seed = "+seed);
     Random random = new Random(seed);
@@ -95,7 +89,7 @@ public class TestRecordWritable extends TestCase {
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
           RecordReader reader =
-            format.getRecordReader(splits[j], job, reporter);
+            format.getRecordReader(splits[j], job, Reporter.NULL);
           try {
             int count = 0;
             while (reader.next(key, value)) {

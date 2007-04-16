@@ -173,6 +173,10 @@ abstract class Task implements Writable, Configurable {
 
   public Progress getProgress() { return taskProgress; }
 
+  InputSplit getInputSplit() throws UnsupportedOperationException {
+    throw new UnsupportedOperationException("Input only available on map");
+  }
+
   protected Reporter getReporter(final TaskUmbilicalProtocol umbilical) 
     throws IOException 
   {
@@ -191,6 +195,9 @@ abstract class Task implements Writable, Configurable {
           if (counters != null) {
             counters.incrCounter(key, amount);
           }
+        }
+        public InputSplit getInputSplit() throws UnsupportedOperationException {
+          return Task.this.getInputSplit();
         }
       };
   }

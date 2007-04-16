@@ -59,6 +59,7 @@ class MapTask extends Task {
   private String splitClass;
   private MapOutputFile mapOutputFile = new MapOutputFile();
   private JobConf conf;
+  private InputSplit instantiatedSplit = null;
 
   private static final Log LOG = LogFactory.getLog(MapTask.class.getName());
 
@@ -84,6 +85,7 @@ class MapTask extends Task {
     super.localizeConfiguration(conf);
     Path localSplit = new Path(new Path(getJobFile()).getParent(), 
                                "split.dta");
+    LOG.debug("Writing local split to " + localSplit);
     DataOutputStream out = FileSystem.getLocal(conf).create(localSplit);
     Text.writeString(out, splitClass);
     split.write(out);
@@ -107,6 +109,10 @@ class MapTask extends Task {
     split.readFields(in);
   }
 
+  InputSplit getInputSplit() throws UnsupportedOperationException {
+    return instantiatedSplit;
+  }
+
   public void run(final JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
 
@@ -115,9 +121,8 @@ class MapTask extends Task {
     MapOutputBuffer collector = new MapOutputBuffer(umbilical, job, reporter);
     
     // reinstantiate the split
-    InputSplit split;
     try {
-      split = (InputSplit) 
+      instantiatedSplit = (InputSplit) 
         ReflectionUtils.newInstance(job.getClassByName(splitClass), job);
     } catch (ClassNotFoundException exp) {
       IOException wrap = new IOException("Split class " + splitClass + 
@@ -126,18 +131,19 @@ class MapTask extends Task {
       throw wrap;
     }
     DataInputBuffer splitBuffer = new DataInputBuffer();
-    splitBuffer.reset(this.split.get(), 0, this.split.getSize());
-    split.readFields(splitBuffer);
+    splitBuffer.reset(split.get(), 0, split.getSize());
+    instantiatedSplit.readFields(splitBuffer);
     
     // if it is a file split, we can give more details
-    if (split instanceof FileSplit) {
-      job.set("map.input.file", ((FileSplit) split).getPath().toString());
-      job.setLong("map.input.start", ((FileSplit) split).getStart());
-      job.setLong("map.input.length", ((FileSplit) split).getLength());
+    if (instantiatedSplit instanceof FileSplit) {
+      FileSplit fileSplit = (FileSplit) instantiatedSplit;
+      job.set("map.input.file", fileSplit.getPath().toString());
+      job.setLong("map.input.start", fileSplit.getStart());
+      job.setLong("map.input.length", fileSplit.getLength());
     }
       
     final RecordReader rawIn =                  // open input
-      job.getInputFormat().getRecordReader(split, job, reporter);
+      job.getInputFormat().getRecordReader(instantiatedSplit, job, reporter);
 
     RecordReader in = new RecordReader() {      // wrap in progress reporter
 
