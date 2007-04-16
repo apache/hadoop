@@ -306,6 +306,7 @@ public class TestCheckpoint extends TestCase {
     // file1 does not exist.
     //
     cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+    cluster.waitActive();
     fileSys = cluster.getFileSystem();
 
     assertTrue(!fileSys.exists(file1));
