@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred.jobcontrol;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Hashtable;
 import java.util.Iterator;
 
@@ -74,10 +75,13 @@ public class JobControl implements Runnable{
 	
 	private static ArrayList toArrayList(Hashtable jobs) {
 		ArrayList retv = new ArrayList();
-		Iterator iter = jobs.values().iterator();
-		while (iter.hasNext()) {
-			retv.add(iter.next());
+		synchronized (jobs) {
+			Iterator iter = jobs.values().iterator();
+			while (iter.hasNext()) {
+				retv.add(iter.next());
+			}
 		}
+		
 		return retv;
 	}
 	
@@ -159,13 +163,16 @@ public class JobControl implements Runnable{
 	}
 	
 	/**
-	 * @param args
+	 * Add a collection of jobs
+	 * 
+	 * @param jobs
 	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
+	public void addJobs(Collection<Job> jobs) {
+		for (Job job : jobs) {
+			addJob(job);
+		}
 	}
-
+	
 	/**
 	 * @return the thread state
 	 */

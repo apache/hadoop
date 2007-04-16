@@ -243,7 +243,8 @@ public class Job {
 			this.state = Job.FAILED;
 			this.message = StringUtils.stringifyException(ioe);
 			try {
-				running.killJob();
+				if(running != null)
+					running.killJob();
 			} catch (IOException e1) {
 
 			}
