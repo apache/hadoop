@@ -34,9 +34,9 @@ import org.apache.hadoop.util.*;
  * @author Mike Cafarella
  *****************************************************************/
 public class DistributedFileSystem extends ChecksumFileSystem {
-    private static class RawDistributedFileSystem extends FileSystem {
+  private static class RawDistributedFileSystem extends FileSystem {
     private Path workingDir =
-        new Path("/user", System.getProperty("user.name")); 
+      new Path("/user", System.getProperty("user.name")); 
     private URI uri;
     private FileSystem localFs;
 
@@ -48,7 +48,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
 
     /** @deprecated */
     public RawDistributedFileSystem(InetSocketAddress namenode,
-                                 Configuration conf) throws IOException {
+                                    Configuration conf) throws IOException {
       initialize(URI.create("hdfs://"+
                             namenode.getHostName()+":"+
                             namenode.getPort()),
@@ -111,8 +111,8 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       String result = makeAbsolute(file).toUri().getPath();
       if (!FSNamesystem.isValidName(result)) {
         throw new IllegalArgumentException("Pathname " + result + " from " +
-                                            file +
-                                            " is not a valid DFS filename.");
+                                           file +
+                                           " is not a valid DFS filename.");
       }
       return new UTF8(result);
     }
@@ -130,10 +130,10 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     }
 
     public FSDataOutputStream create(Path f, boolean overwrite,
-            int bufferSize, short replication, long blockSize,
-            Progressable progress) throws IOException {
+                                     int bufferSize, short replication, long blockSize,
+                                     Progressable progress) throws IOException {
       if (exists(f) && ! overwrite) {
-         throw new IOException("File already exists:"+f);
+        throw new IOException("File already exists:"+f);
       }
       Path parent = f.getParent();
       if (parent != null && !mkdirs(parent)) {
@@ -141,14 +141,14 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       }
       
       return new FSDataOutputStream(
-           dfs.create(getPath(f), overwrite,
-                   replication, blockSize, progress),
-           bufferSize);
+                                    dfs.create(getPath(f), overwrite,
+                                               replication, blockSize, progress),
+                                    bufferSize);
     }
     
     public boolean setReplication( Path src, 
-                                      short replication
-                                    ) throws IOException {
+                                   short replication
+                                   ) throws IOException {
       return dfs.setReplication(getPath(src), replication);
     }
     
@@ -163,36 +163,36 @@ public class DistributedFileSystem extends ChecksumFileSystem {
      * Get rid of Path f, whether a true file or dir.
      */
     public boolean delete(Path f) throws IOException {
-        return dfs.delete(getPath(f));
+      return dfs.delete(getPath(f));
     }
 
     public boolean exists(Path f) throws IOException {
-        return dfs.exists(getPath(f));
+      return dfs.exists(getPath(f));
     }
 
     public boolean isDirectory(Path f) throws IOException {
-        if (f instanceof DfsPath) {
-          return ((DfsPath)f).isDirectory();
-        }
-        return dfs.isDirectory(getPath(f));
+      if (f instanceof DfsPath) {
+        return ((DfsPath)f).isDirectory();
+      }
+      return dfs.isDirectory(getPath(f));
     }
 
     public long getLength(Path f) throws IOException {
-        if (f instanceof DfsPath) {
-          return ((DfsPath)f).length();
-        }
+      if (f instanceof DfsPath) {
+        return ((DfsPath)f).length();
+      }
 
-        DFSFileInfo info[] = dfs.listPaths(getPath(f));
-        return (info == null) ? 0 : info[0].getLen();
+      DFSFileInfo info[] = dfs.listPaths(getPath(f));
+      return (info == null) ? 0 : info[0].getLen();
     }
 
     public long getContentLength(Path f) throws IOException {
-        if (f instanceof DfsPath) {
-            return ((DfsPath)f).getContentsLength();
-          }
+      if (f instanceof DfsPath) {
+        return ((DfsPath)f).getContentsLength();
+      }
 
-          DFSFileInfo info[] = dfs.listPaths(getPath(f));
-          return (info == null) ? 0 : info[0].getContentsLen();
+      DFSFileInfo info[] = dfs.listPaths(getPath(f));
+      return (info == null) ? 0 : info[0].getContentsLen();
     }
 
     public short getReplication(Path f) throws IOException {
@@ -202,44 +202,44 @@ public class DistributedFileSystem extends ChecksumFileSystem {
 
       DFSFileInfo info[] = dfs.listPaths(getPath(f));
       return info[0].getReplication();
-  }
+    }
 
     public Path[] listPaths(Path f) throws IOException {
-        DFSFileInfo info[] = dfs.listPaths(getPath(f));
-        if (info == null) {
-            return new Path[0];
-        } else {
-            Path results[] = new DfsPath[info.length];
-            for (int i = 0; i < info.length; i++) {
-                results[i] = new DfsPath(info[i]);
-            }
-            return results;
+      DFSFileInfo info[] = dfs.listPaths(getPath(f));
+      if (info == null) {
+        return new Path[0];
+      } else {
+        Path results[] = new DfsPath[info.length];
+        for (int i = 0; i < info.length; i++) {
+          results[i] = new DfsPath(info[i]);
         }
+        return results;
+      }
     }
 
     public boolean mkdirs(Path f) throws IOException {
-        return dfs.mkdirs(getPath(f));
+      return dfs.mkdirs(getPath(f));
     }
 
     /** @deprecated */ @Deprecated
-    public void lock(Path f, boolean shared) throws IOException {
-        dfs.lock(getPath(f), ! shared);
+      public void lock(Path f, boolean shared) throws IOException {
+      dfs.lock(getPath(f), ! shared);
     }
 
     /** @deprecated */ @Deprecated
-    public void release(Path f) throws IOException {
-        dfs.release(getPath(f));
+      public void release(Path f) throws IOException {
+      dfs.release(getPath(f));
     }
 
     @Override
-    public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
-    throws IOException {
+      public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+      throws IOException {
       FileUtil.copy(localFs, src, this, dst, delSrc, getConf());
     }
 
     @Override
-    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
-    throws IOException {
+      public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+      throws IOException {
       FileUtil.copy(this, src, localFs, dst, delSrc, getConf());
     }
 
@@ -257,27 +257,27 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     }
 
     public void close() throws IOException {
-        super.close();
-        dfs.close();
+      super.close();
+      dfs.close();
     }
 
     public String toString() {
-        return "DFS[" + dfs + "]";
+      return "DFS[" + dfs + "]";
     }
 
     DFSClient getClient() {
-        return dfs;
+      return dfs;
     }        
     /** Return the total raw capacity of the filesystem, disregarding
      * replication .*/
     public long getRawCapacity() throws IOException{
-        return dfs.totalRawCapacity();
+      return dfs.totalRawCapacity();
     }
 
     /** Return the total raw used space in the filesystem, disregarding
      * replication .*/
     public long getRawUsed() throws IOException{
-        return dfs.totalRawUsed();
+      return dfs.totalRawUsed();
     }
 
     /** Return statistics for each datanode. */
@@ -291,7 +291,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
      * @see org.apache.hadoop.dfs.ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
      */
     public boolean setSafeMode( FSConstants.SafeModeAction action ) 
-    throws IOException {
+      throws IOException {
       return dfs.setSafeMode( action );
     }
 
@@ -325,8 +325,8 @@ public class DistributedFileSystem extends ChecksumFileSystem {
      * we can consider figuring out exactly which block is corrupt.
      */
     public boolean reportChecksumFailure(Path f, 
-                                      FSDataInputStream in, long inPos, 
-                                      FSDataInputStream sums, long sumsPos) {
+                                         FSDataInputStream in, long inPos, 
+                                         FSDataInputStream sums, long sumsPos) {
       
       LocatedBlock lblocks[] = new LocatedBlock[2];
 
@@ -365,81 +365,81 @@ public class DistributedFileSystem extends ChecksumFileSystem {
 
       return true;
     }
-    }
+  }
 
-    public DistributedFileSystem() {
-        super( new RawDistributedFileSystem() );
-    }
+  public DistributedFileSystem() {
+    super( new RawDistributedFileSystem() );
+  }
 
-    /** @deprecated */
-    public DistributedFileSystem(InetSocketAddress namenode,
-                                 Configuration conf) throws IOException {
-      super( new RawDistributedFileSystem(namenode, conf) );
-    }
+  /** @deprecated */
+  public DistributedFileSystem(InetSocketAddress namenode,
+                               Configuration conf) throws IOException {
+    super( new RawDistributedFileSystem(namenode, conf) );
+  }
 
-    @Override
+  @Override
     public long getContentLength(Path f) throws IOException {
-      return fs.getContentLength(f);
-    }
+    return fs.getContentLength(f);
+  }
 
-    /** Return the total raw capacity of the filesystem, disregarding
-     * replication .*/
-    public long getRawCapacity() throws IOException{
-        return ((RawDistributedFileSystem)fs).getRawCapacity();
-    }
+  /** Return the total raw capacity of the filesystem, disregarding
+   * replication .*/
+  public long getRawCapacity() throws IOException{
+    return ((RawDistributedFileSystem)fs).getRawCapacity();
+  }
 
-    /** Return the total raw used space in the filesystem, disregarding
-     * replication .*/
-    public long getRawUsed() throws IOException{
-        return ((RawDistributedFileSystem)fs).getRawUsed();
-    }
+  /** Return the total raw used space in the filesystem, disregarding
+   * replication .*/
+  public long getRawUsed() throws IOException{
+    return ((RawDistributedFileSystem)fs).getRawUsed();
+  }
 
-    /** Return statistics for each datanode. */
-    public DatanodeInfo[] getDataNodeStats() throws IOException {
-      return ((RawDistributedFileSystem)fs).getDataNodeStats();
-    }
+  /** Return statistics for each datanode. */
+  public DatanodeInfo[] getDataNodeStats() throws IOException {
+    return ((RawDistributedFileSystem)fs).getDataNodeStats();
+  }
     
-    /**
-     * Enter, leave or get safe mode.
-     *  
-     * @see org.apache.hadoop.dfs.ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
-     */
-    public boolean setSafeMode( FSConstants.SafeModeAction action ) 
+  /**
+   * Enter, leave or get safe mode.
+   *  
+   * @see org.apache.hadoop.dfs.ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
+   */
+  public boolean setSafeMode( FSConstants.SafeModeAction action ) 
     throws IOException {
-      return ((RawDistributedFileSystem)fs).setSafeMode( action );
-    }
+    return ((RawDistributedFileSystem)fs).setSafeMode( action );
+  }
 
-    /*
-     * Refreshes the list of hosts and excluded hosts from the configured 
-     * files.  
-     */
-    public void refreshNodes() throws IOException {
-      ((RawDistributedFileSystem)fs).refreshNodes();
-    }
+  /*
+   * Refreshes the list of hosts and excluded hosts from the configured 
+   * files.  
+   */
+  public void refreshNodes() throws IOException {
+    ((RawDistributedFileSystem)fs).refreshNodes();
+  }
 
-    /**
-     * Finalize previously upgraded files system state.
-     */
-    public void finalizeUpgrade() throws IOException {
-      ((RawDistributedFileSystem)fs).finalizeUpgrade();
-    }
+  /**
+   * Finalize previously upgraded files system state.
+   */
+  public void finalizeUpgrade() throws IOException {
+    ((RawDistributedFileSystem)fs).finalizeUpgrade();
+  }
 
-    /*
-     * Dumps dfs data structures into specified file.
-     */
-     public void metaSave(String pathname) throws IOException {
-       ((RawDistributedFileSystem)fs).metaSave(pathname);
-     }
+  /*
+   * Dumps dfs data structures into specified file.
+   */
+  public void metaSave(String pathname) throws IOException {
+    ((RawDistributedFileSystem)fs).metaSave(pathname);
+  }
 
-    /**
-     * We need to find the blocks that didn't match.  Likely only one 
-     * is corrupt but we will report both to the namenode.  In the future,
-     * we can consider figuring out exactly which block is corrupt.
-     */
-    public boolean reportChecksumFailure(Path f, 
-                                      FSDataInputStream in, long inPos, 
-                                      FSDataInputStream sums, long sumsPos) {
-      return ((RawDistributedFileSystem)fs).reportChecksumFailure(
-                f, in, inPos, sums, sumsPos);
-    }
+  /**
+   * We need to find the blocks that didn't match.  Likely only one 
+   * is corrupt but we will report both to the namenode.  In the future,
+   * we can consider figuring out exactly which block is corrupt.
+   */
+  public boolean reportChecksumFailure(Path f, 
+                                       FSDataInputStream in, long inPos, 
+                                       FSDataInputStream sums, long sumsPos) {
+    return ((RawDistributedFileSystem)fs).reportChecksumFailure(
+                                                                f, in, inPos, sums, sumsPos);
+  }
 }

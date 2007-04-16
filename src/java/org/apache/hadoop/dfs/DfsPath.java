@@ -26,29 +26,29 @@ import org.apache.hadoop.fs.Path;
  * a file with the names in a directory listing to make accesses faster.
  */
 class DfsPath extends Path {
-    DFSFileInfo info;
+  DFSFileInfo info;
 
-    public DfsPath(DFSFileInfo info) {
-        super(info.getPath());
-        this.info = info;
-    }
+  public DfsPath(DFSFileInfo info) {
+    super(info.getPath());
+    this.info = info;
+  }
 
-    public boolean isDirectory() {
-        return info.isDir();
-    }
-    public boolean isFile() {
-        return ! isDirectory();
-    }
-    public long length() {
-        return info.getLen();
-    }
-    public long getContentsLength() {
-        return info.getContentsLen();
-    }
-    public short getReplication() {
-      return info.getReplication();
-    }
-    public long getBlockSize() {
-      return info.getBlockSize();
-    }
+  public boolean isDirectory() {
+    return info.isDir();
+  }
+  public boolean isFile() {
+    return ! isDirectory();
+  }
+  public long length() {
+    return info.getLen();
+  }
+  public long getContentsLength() {
+    return info.getContentsLen();
+  }
+  public short getReplication() {
+    return info.getReplication();
+  }
+  public long getBlockSize() {
+    return info.getBlockSize();
+  }
 }

@@ -32,154 +32,154 @@ import java.util.*;
  **************************************************/
 class TaskTrackerStatus implements Writable {
 
-    static {                                        // register a ctor
-      WritableFactories.setFactory
-        (TaskTrackerStatus.class,
-         new WritableFactory() {
-           public Writable newInstance() { return new TaskTrackerStatus(); }
-         });
-    }
+  static {                                        // register a ctor
+    WritableFactories.setFactory
+      (TaskTrackerStatus.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new TaskTrackerStatus(); }
+       });
+  }
 
-    String trackerName;
-    String host;
-    int httpPort;
-    int failures;
-    List<TaskStatus> taskReports;
+  String trackerName;
+  String host;
+  int httpPort;
+  int failures;
+  List<TaskStatus> taskReports;
     
-    volatile long lastSeen;
+  volatile long lastSeen;
     
-    /**
-     */
-    public TaskTrackerStatus() {
-      taskReports = new ArrayList();
-    }
+  /**
+   */
+  public TaskTrackerStatus() {
+    taskReports = new ArrayList();
+  }
 
-    /**
-     */
-    public TaskTrackerStatus(String trackerName, String host, 
-                             int httpPort, List<TaskStatus> taskReports, 
-                             int failures) {
-        this.trackerName = trackerName;
-        this.host = host;
-        this.httpPort = httpPort;
+  /**
+   */
+  public TaskTrackerStatus(String trackerName, String host, 
+                           int httpPort, List<TaskStatus> taskReports, 
+                           int failures) {
+    this.trackerName = trackerName;
+    this.host = host;
+    this.httpPort = httpPort;
 
-        this.taskReports = new ArrayList(taskReports);
-        this.failures = failures;
-    }
+    this.taskReports = new ArrayList(taskReports);
+    this.failures = failures;
+  }
 
-    /**
-     */
-    public String getTrackerName() {
-        return trackerName;
-    }
-    /**
-     */
-    public String getHost() {
-        return host;
-    }
+  /**
+   */
+  public String getTrackerName() {
+    return trackerName;
+  }
+  /**
+   */
+  public String getHost() {
+    return host;
+  }
 
-    /**
-     * Get the port that this task tracker is serving http requests on.
-     * @return the http port
-     */
-    public int getHttpPort() {
-      return httpPort;
-    }
+  /**
+   * Get the port that this task tracker is serving http requests on.
+   * @return the http port
+   */
+  public int getHttpPort() {
+    return httpPort;
+  }
     
-    /**
-     * Get the number of tasks that have failed on this tracker.
-     * @return The number of failed tasks
-     */
-    public int getFailures() {
-      return failures;
-    }
+  /**
+   * Get the number of tasks that have failed on this tracker.
+   * @return The number of failed tasks
+   */
+  public int getFailures() {
+    return failures;
+  }
     
-    /**
-     * Get the current tasks at the TaskTracker.
-     * Tasks are tracked by a {@link TaskStatus} object.
-     * 
-     * @return a list of {@link TaskStatus} representing 
-     *         the current tasks at the TaskTracker.
-     */
-    public List<TaskStatus> getTaskReports() {
-      return taskReports;
-    }
+  /**
+   * Get the current tasks at the TaskTracker.
+   * Tasks are tracked by a {@link TaskStatus} object.
+   * 
+   * @return a list of {@link TaskStatus} representing 
+   *         the current tasks at the TaskTracker.
+   */
+  public List<TaskStatus> getTaskReports() {
+    return taskReports;
+  }
     
-    /**
-     * Return the current MapTask count
-     */
-    public int countMapTasks() {
-      int mapCount = 0;
-      for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
-        TaskStatus ts = (TaskStatus) it.next();
-        TaskStatus.State state = ts.getRunState();
-        if (ts.getIsMap() &&
-            ((state == TaskStatus.State.RUNNING) ||
-                (state == TaskStatus.State.UNASSIGNED))) {
-          mapCount++;
-        }
+  /**
+   * Return the current MapTask count
+   */
+  public int countMapTasks() {
+    int mapCount = 0;
+    for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
+      TaskStatus ts = (TaskStatus) it.next();
+      TaskStatus.State state = ts.getRunState();
+      if (ts.getIsMap() &&
+          ((state == TaskStatus.State.RUNNING) ||
+           (state == TaskStatus.State.UNASSIGNED))) {
+        mapCount++;
       }
-      return mapCount;
     }
+    return mapCount;
+  }
 
-    /**
-     * Return the current ReduceTask count
-     */
-    public int countReduceTasks() {
-      int reduceCount = 0;
-      for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
-        TaskStatus ts = (TaskStatus) it.next();
-        TaskStatus.State state = ts.getRunState();
-        if ((!ts.getIsMap()) &&
-            ((state == TaskStatus.State.RUNNING) ||  
-                (state == TaskStatus.State.UNASSIGNED))) {
-          reduceCount++;
-        }
+  /**
+   * Return the current ReduceTask count
+   */
+  public int countReduceTasks() {
+    int reduceCount = 0;
+    for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
+      TaskStatus ts = (TaskStatus) it.next();
+      TaskStatus.State state = ts.getRunState();
+      if ((!ts.getIsMap()) &&
+          ((state == TaskStatus.State.RUNNING) ||  
+           (state == TaskStatus.State.UNASSIGNED))) {
+        reduceCount++;
       }
-      return reduceCount;
     }
+    return reduceCount;
+  }
 
-    /**
-     */
-    public long getLastSeen() {
-        return lastSeen;
+  /**
+   */
+  public long getLastSeen() {
+    return lastSeen;
+  }
+  /**
+   */
+  public void setLastSeen(long lastSeen) {
+    this.lastSeen = lastSeen;
+  }
+
+  ///////////////////////////////////////////
+  // Writable
+  ///////////////////////////////////////////
+  public void write(DataOutput out) throws IOException {
+    UTF8.writeString(out, trackerName);
+    UTF8.writeString(out, host);
+    out.writeInt(httpPort);
+
+    out.writeInt(taskReports.size());
+    out.writeInt(failures);
+    for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
+      ((TaskStatus) it.next()).write(out);
     }
-    /**
-     */
-    public void setLastSeen(long lastSeen) {
-        this.lastSeen = lastSeen;
+  }
+
+  /**
+   */     
+  public void readFields(DataInput in) throws IOException {
+    this.trackerName = UTF8.readString(in);
+    this.host = UTF8.readString(in);
+    this.httpPort = in.readInt();
+
+    taskReports.clear();
+
+    int numTasks = in.readInt();
+    this.failures = in.readInt();
+    for (int i = 0; i < numTasks; i++) {
+      TaskStatus tmp = new TaskStatus();
+      tmp.readFields(in);
+      taskReports.add(tmp);
     }
-
-    ///////////////////////////////////////////
-    // Writable
-    ///////////////////////////////////////////
-    public void write(DataOutput out) throws IOException {
-        UTF8.writeString(out, trackerName);
-        UTF8.writeString(out, host);
-        out.writeInt(httpPort);
-
-        out.writeInt(taskReports.size());
-        out.writeInt(failures);
-        for (Iterator it = taskReports.iterator(); it.hasNext(); ) {
-            ((TaskStatus) it.next()).write(out);
-        }
-    }
-
-    /**
-     */     
-    public void readFields(DataInput in) throws IOException {
-        this.trackerName = UTF8.readString(in);
-        this.host = UTF8.readString(in);
-        this.httpPort = in.readInt();
-
-        taskReports.clear();
-
-        int numTasks = in.readInt();
-        this.failures = in.readInt();
-        for (int i = 0; i < numTasks; i++) {
-            TaskStatus tmp = new TaskStatus();
-            tmp.readFields(in);
-            taskReports.add(tmp);
-        }
-    }
+  }
 }

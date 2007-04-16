@@ -41,7 +41,7 @@ public class StreamFile extends HttpServlet {
     }
   }
   public void doGet(HttpServletRequest request, HttpServletResponse response)
-                                     throws ServletException, IOException {
+    throws ServletException, IOException {
     String filename = request.getParameter("filename");
     if (filename == null || filename.length() == 0) {
       response.setContentType("text/plain");
@@ -53,7 +53,7 @@ public class StreamFile extends HttpServlet {
     FSInputStream in = dfs.open(new UTF8(filename));
     OutputStream os = response.getOutputStream();
     response.setHeader("Content-Disposition", "attachment; filename=\"" + 
-                        filename + "\"");
+                       filename + "\"");
     response.setContentType("application/octet-stream");
     byte buf[] = new byte[4096];
     try {

@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.FileSplit;
 public class StreamLineRecordReader extends KeyValueLineRecordReader {
 
   public StreamLineRecordReader(Configuration job, FileSplit split)
-      throws IOException {
+    throws IOException {
     super(job, split);
   }
 }

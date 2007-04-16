@@ -30,7 +30,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestTextOutputFormat extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestTextOutputFormat.class
-      .getName());
+                                                   .getName());
 
   private static JobConf defaultConf = new JobConf();
 
@@ -44,7 +44,7 @@ public class TestTextOutputFormat extends TestCase {
   }
 
   private static Path workDir = new Path(new Path(System.getProperty(
-      "test.build.data", "."), "data"), "TestTextOutputFormat");
+                                                                     "test.build.data", "."), "data"), "TestTextOutputFormat");
 
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
@@ -56,7 +56,7 @@ public class TestTextOutputFormat extends TestCase {
 
     TextOutputFormat theOutputFormat = new TextOutputFormat();
     RecordWriter theRecodWriter = theOutputFormat.getRecordWriter(localFs, job,
-        file, reporter);
+                                                                  file, reporter);
 
     Text key1 = new Text("key1");
     Text key2 = new Text("key2");

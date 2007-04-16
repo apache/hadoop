@@ -36,7 +36,7 @@ public class TestGzipInput extends TestStreaming
   protected void createInput() throws IOException
   {
     GZIPOutputStream out = new GZIPOutputStream(
-        new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
+                                                new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
     out.write(input.getBytes("UTF-8"));
     out.close();
   }
@@ -44,12 +44,12 @@ public class TestGzipInput extends TestStreaming
 
   protected String[] genArgs() {
     return new String[] {
-        "-input", INPUT_FILE.getAbsolutePath(),
-        "-output", OUTPUT_DIR.getAbsolutePath(),
-        "-mapper", map,
-        "-combiner", combine,
-        "-reducer", reduce,
-        "-jobconf", "stream.recordreader.compression=gzip"
+      "-input", INPUT_FILE.getAbsolutePath(),
+      "-output", OUTPUT_DIR.getAbsolutePath(),
+      "-mapper", map,
+      "-combiner", combine,
+      "-reducer", reduce,
+      "-jobconf", "stream.recordreader.compression=gzip"
     };
     
   }

@@ -33,115 +33,115 @@ import java.nio.channels.SocketChannel;
  */
 class SocketChannelOutputStream extends OutputStream {    
     
-    ByteBuffer buffer;
-    ByteBuffer flush;
-    SocketChannel channel;
-    Selector selector;
+  ByteBuffer buffer;
+  ByteBuffer flush;
+  SocketChannel channel;
+  Selector selector;
     
-    /* ------------------------------------------------------------------------------- */
-    /** Constructor.
-     * 
-     */
-    public SocketChannelOutputStream(SocketChannel channel)
-    {
-        this.channel = channel;
-        buffer = ByteBuffer.allocate(8); // only for small writes
-    }
+  /* ------------------------------------------------------------------------------- */
+  /** Constructor.
+   * 
+   */
+  public SocketChannelOutputStream(SocketChannel channel)
+  {
+    this.channel = channel;
+    buffer = ByteBuffer.allocate(8); // only for small writes
+  }
 
-    /* ------------------------------------------------------------------------------- */
-    /*
-     * @see java.io.OutputStream#write(int)
-     */
-    public void write(int b) throws IOException
-    {
-        buffer.clear();
-        buffer.put((byte)b);
-        buffer.flip();
-        flush = buffer;
-        flushBuffer();
-    }
+  /* ------------------------------------------------------------------------------- */
+  /*
+   * @see java.io.OutputStream#write(int)
+   */
+  public void write(int b) throws IOException
+  {
+    buffer.clear();
+    buffer.put((byte)b);
+    buffer.flip();
+    flush = buffer;
+    flushBuffer();
+  }
 
     
-    /* ------------------------------------------------------------------------------- */
-    /*
-     * @see java.io.OutputStream#close()
-     */
-    public void close() throws IOException
-    {
-        channel.close();
-    }
+  /* ------------------------------------------------------------------------------- */
+  /*
+   * @see java.io.OutputStream#close()
+   */
+  public void close() throws IOException
+  {
+    channel.close();
+  }
 
-    /* ------------------------------------------------------------------------------- */
-    /*
-     * @see java.io.OutputStream#flush()
-     */
-    public void flush() throws IOException
-    {
-    }
+  /* ------------------------------------------------------------------------------- */
+  /*
+   * @see java.io.OutputStream#flush()
+   */
+  public void flush() throws IOException
+  {
+  }
 
-    /* ------------------------------------------------------------------------------- */
-    /*
-     * @see java.io.OutputStream#write(byte[], int, int)
-     */
-    public void write(byte[] buf, int offset, int length) throws IOException
-    {
-        flush = ByteBuffer.wrap(buf,offset,length);
-        flushBuffer();
-    }
+  /* ------------------------------------------------------------------------------- */
+  /*
+   * @see java.io.OutputStream#write(byte[], int, int)
+   */
+  public void write(byte[] buf, int offset, int length) throws IOException
+  {
+    flush = ByteBuffer.wrap(buf,offset,length);
+    flushBuffer();
+  }
 
-    /* ------------------------------------------------------------------------------- */
-    /*
-     * @see java.io.OutputStream#write(byte[])
-     */
-    public void write(byte[] buf) throws IOException
-    {
-        flush = ByteBuffer.wrap(buf);
-        flushBuffer();
-    }
+  /* ------------------------------------------------------------------------------- */
+  /*
+   * @see java.io.OutputStream#write(byte[])
+   */
+  public void write(byte[] buf) throws IOException
+  {
+    flush = ByteBuffer.wrap(buf);
+    flushBuffer();
+  }
 
 
-    /* ------------------------------------------------------------------------------- */
-    private void flushBuffer() throws IOException
-    {
-        while (flush.hasRemaining())
-        {
-            int len = channel.write(flush);
+  /* ------------------------------------------------------------------------------- */
+  private void flushBuffer() throws IOException
+  {
+    while (flush.hasRemaining())
+      {
+        int len = channel.write(flush);
+        if (len < 0)
+          throw new IOException("EOF");
+        if (len == 0)
+          {
+            // write channel full.  Try letting other threads have a go.
+            Thread.yield();
+            len = channel.write(flush);
             if (len < 0)
-                throw new IOException("EOF");
+              throw new IOException("EOF");
             if (len == 0)
-            {
-                // write channel full.  Try letting other threads have a go.
-                Thread.yield();
-                len = channel.write(flush);
-                if (len < 0)
-                    throw new IOException("EOF");
-                if (len == 0)
-                {
-                    // still full.  need to  block until it is writable.
-                    if (selector==null)
-                     {
-                            selector = Selector.open();
-                            channel.register(selector, SelectionKey.OP_WRITE);
-                     }
+              {
+                // still full.  need to  block until it is writable.
+                if (selector==null)
+                  {
+                    selector = Selector.open();
+                    channel.register(selector, SelectionKey.OP_WRITE);
+                  }
 
-                     selector.select();
-                }
-            }
-        }
+                selector.select();
+              }
+          }
+      }
+    flush = null;
+  }
+
+  /* ------------------------------------------------------------------------------- */
+  public void destroy()
+  {
+    if (selector != null)
+      {
+        try{ selector.close();}
+        catch(IOException e){}
+        selector = null;
+        buffer = null;
         flush = null;
-    }
-
-    /* ------------------------------------------------------------------------------- */
-    public void destroy()
-    {
-        if (selector != null)
-        {
-            try{ selector.close();}
-            catch(IOException e){}
-            selector = null;
-            buffer = null;
-            flush = null;
-            channel = null;
-        }
-    }
+        channel = null;
+      }
+  }
 }

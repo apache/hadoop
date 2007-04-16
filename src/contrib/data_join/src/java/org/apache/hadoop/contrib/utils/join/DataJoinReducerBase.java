@@ -69,7 +69,7 @@ public abstract class DataJoinReducerBase extends JobBase {
     super.configure(job);
     this.job = job;
     this.maxNumOfValuesPerGroup = job.getLong("ultjoin.maxNumOfValuesPerGroup",
-        100);
+                                              100);
   }
 
   /**
@@ -92,7 +92,7 @@ public abstract class DataJoinReducerBase extends JobBase {
    * @return
    */
   private SortedMap<Object, ResetableIterator> regroup(Writable key,
-      Iterator arg1, Reporter reporter) throws IOException {
+                                                       Iterator arg1, Reporter reporter) throws IOException {
     this.numOfValues = 0;
     SortedMap<Object, ResetableIterator> retv = new TreeMap<Object, ResetableIterator>();
     TaggedMapOutput aRecord = null;
@@ -101,7 +101,7 @@ public abstract class DataJoinReducerBase extends JobBase {
       this.numOfValues += 1;
       if (this.numOfValues % 100 == 0) {
         reporter.setStatus("key: " + key.toString() + " numOfValues: "
-            + this.numOfValues);
+                           + this.numOfValues);
       }
       if (this.numOfValues > this.maxNumOfValuesPerGroup) {
         continue;
@@ -117,13 +117,13 @@ public abstract class DataJoinReducerBase extends JobBase {
     if (this.numOfValues > this.largestNumOfValues) {
       this.largestNumOfValues = numOfValues;
       LOG.info("key: " + key.toString() + " this.largestNumOfValues: "
-          + this.largestNumOfValues);
+               + this.largestNumOfValues);
     }
     return retv;
   }
 
   public void reduce(WritableComparable key, Iterator values,
-      OutputCollector output, Reporter reporter) throws IOException {
+                     OutputCollector output, Reporter reporter) throws IOException {
     if (this.reporter == null) {
       this.reporter = reporter;
     }
@@ -152,7 +152,7 @@ public abstract class DataJoinReducerBase extends JobBase {
    * @throws IOException
    */
   protected void collect(WritableComparable key, TaggedMapOutput aRecord,
-      OutputCollector output, Reporter reporter) throws IOException {
+                         OutputCollector output, Reporter reporter) throws IOException {
     this.collected += 1;
     addLongValue("collectedCount", 1);
     if (aRecord != null && this.collected % 1 == 0) {
@@ -174,8 +174,8 @@ public abstract class DataJoinReducerBase extends JobBase {
    * @throws IOException
    */
   private void joinAndCollect(Object[] tags, ResetableIterator[] values,
-      WritableComparable key, OutputCollector output, Reporter reporter)
-      throws IOException {
+                              WritableComparable key, OutputCollector output, Reporter reporter)
+    throws IOException {
     if (values.length < 1) {
       return;
     }
@@ -199,8 +199,8 @@ public abstract class DataJoinReducerBase extends JobBase {
    * @throws IOException
    */
   private void joinAndCollect(Object[] tags, ResetableIterator[] values,
-      int pos, Object[] partialList, WritableComparable key,
-      OutputCollector output, Reporter reporter) throws IOException {
+                              int pos, Object[] partialList, WritableComparable key,
+                              OutputCollector output, Reporter reporter) throws IOException {
 
     if (values.length == pos) {
       // get a value from each source. Combine them
@@ -232,7 +232,7 @@ public abstract class DataJoinReducerBase extends JobBase {
   protected abstract TaggedMapOutput combine(Object[] tags, Object[] values);
 
   public void map(WritableComparable arg0, Writable arg1, OutputCollector arg2,
-      Reporter arg3) throws IOException {
+                  Reporter arg3) throws IOException {
     // TODO Auto-generated method stub
 
   }

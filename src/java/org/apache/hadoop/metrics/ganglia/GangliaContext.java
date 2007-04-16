@@ -41,183 +41,183 @@ import org.apache.hadoop.metrics.spi.Util;
  */
 public class GangliaContext extends AbstractMetricsContext {
     
-    private static final String PERIOD_PROPERTY = "period";
-    private static final String SERVERS_PROPERTY = "servers";
-    private static final String UNITS_PROPERTY = "units";
-    private static final String SLOPE_PROPERTY = "slope";
-    private static final String TMAX_PROPERTY = "tmax";
-    private static final String DMAX_PROPERTY = "dmax";
+  private static final String PERIOD_PROPERTY = "period";
+  private static final String SERVERS_PROPERTY = "servers";
+  private static final String UNITS_PROPERTY = "units";
+  private static final String SLOPE_PROPERTY = "slope";
+  private static final String TMAX_PROPERTY = "tmax";
+  private static final String DMAX_PROPERTY = "dmax";
     
-    private static final String DEFAULT_UNITS = "";
-    private static final String DEFAULT_SLOPE = "both";
-    private static final int DEFAULT_TMAX = 60;
-    private static final int DEFAULT_DMAX = 0;
-    private static final int DEFAULT_PORT = 8649;
-    private static final int BUFFER_SIZE = 1500;       // as per libgmond.c
+  private static final String DEFAULT_UNITS = "";
+  private static final String DEFAULT_SLOPE = "both";
+  private static final int DEFAULT_TMAX = 60;
+  private static final int DEFAULT_DMAX = 0;
+  private static final int DEFAULT_PORT = 8649;
+  private static final int BUFFER_SIZE = 1500;       // as per libgmond.c
     
-    private static final Map<Class,String> typeTable = new HashMap<Class,String>(5);
+  private static final Map<Class,String> typeTable = new HashMap<Class,String>(5);
     
-    static {
-        typeTable.put(String.class, "string");
-        typeTable.put(Byte.class, "int8");
-        typeTable.put(Short.class, "int16");
-        typeTable.put(Integer.class, "int32");
-        typeTable.put(Float.class, "float");
-    }
+  static {
+    typeTable.put(String.class, "string");
+    typeTable.put(Byte.class, "int8");
+    typeTable.put(Short.class, "int16");
+    typeTable.put(Integer.class, "int32");
+    typeTable.put(Float.class, "float");
+  }
     
-    private byte[] buffer = new byte[BUFFER_SIZE];
-    private int offset;
+  private byte[] buffer = new byte[BUFFER_SIZE];
+  private int offset;
     
-    private List<? extends SocketAddress> metricsServers;
-    private Map<String,String> unitsTable;
-    private Map<String,String> slopeTable;
-    private Map<String,String> tmaxTable;
-    private Map<String,String> dmaxTable;
+  private List<? extends SocketAddress> metricsServers;
+  private Map<String,String> unitsTable;
+  private Map<String,String> slopeTable;
+  private Map<String,String> tmaxTable;
+  private Map<String,String> dmaxTable;
     
-    private DatagramSocket datagramSocket;
+  private DatagramSocket datagramSocket;
     
-    /** Creates a new instance of GangliaContext */
-    public GangliaContext() {
-    }
+  /** Creates a new instance of GangliaContext */
+  public GangliaContext() {
+  }
     
-    public void init(String contextName, ContextFactory factory) 
-    {
-        super.init(contextName, factory);
+  public void init(String contextName, ContextFactory factory) 
+  {
+    super.init(contextName, factory);
         
-        String periodStr = getAttribute(PERIOD_PROPERTY);
-        if (periodStr != null) {
-            int period = 0;
-            try {
-                period = Integer.parseInt(periodStr);
-            } catch (NumberFormatException nfe) {
-            }
-            if (period <= 0) {
-                throw new MetricsException("Invalid period: " + periodStr);
-            }
-            setPeriod(period);
-        }
-        
-        metricsServers = 
-                Util.parse(getAttribute(SERVERS_PROPERTY), DEFAULT_PORT); 
-        
-        unitsTable = getAttributeTable(UNITS_PROPERTY);
-        slopeTable = getAttributeTable(SLOPE_PROPERTY);
-        tmaxTable  = getAttributeTable(TMAX_PROPERTY);
-        dmaxTable  = getAttributeTable(DMAX_PROPERTY);
-        
-        try {
-            datagramSocket = new DatagramSocket();
-        }
-        catch (SocketException se) {
-            se.printStackTrace();
-        }
+    String periodStr = getAttribute(PERIOD_PROPERTY);
+    if (periodStr != null) {
+      int period = 0;
+      try {
+        period = Integer.parseInt(periodStr);
+      } catch (NumberFormatException nfe) {
+      }
+      if (period <= 0) {
+        throw new MetricsException("Invalid period: " + periodStr);
+      }
+      setPeriod(period);
     }
         
-    public void emitRecord(String contextName, String recordName, OutputRecord outRec) 
-        throws IOException
-    {
-        // emit each metric in turn
-        for (String metricName : outRec.getMetricNames()) {
-          Object metric = outRec.getMetric(metricName);
-          String type = (String) typeTable.get(metric.getClass());
-          emitMetric(metricName, type, metric.toString());
-        }
+    metricsServers = 
+      Util.parse(getAttribute(SERVERS_PROPERTY), DEFAULT_PORT); 
         
-    }
-    
-    private void emitMetric(String name, String type,  String value) 
-        throws IOException
-    {
-        String units = getUnits(name);
-        int slope = getSlope(name);
-        int tmax = getTmax(name);
-        int dmax = getDmax(name);
+    unitsTable = getAttributeTable(UNITS_PROPERTY);
+    slopeTable = getAttributeTable(SLOPE_PROPERTY);
+    tmaxTable  = getAttributeTable(TMAX_PROPERTY);
+    dmaxTable  = getAttributeTable(DMAX_PROPERTY);
         
-        offset = 0;
-        xdr_int(0);             // metric_user_defined
-        xdr_string(type);
-        xdr_string(name);
-        xdr_string(value);
-        xdr_string(units);
-        xdr_int(slope);
-        xdr_int(tmax);
-        xdr_int(dmax);
+    try {
+      datagramSocket = new DatagramSocket();
+    }
+    catch (SocketException se) {
+      se.printStackTrace();
+    }
+  }
         
-        for (SocketAddress socketAddress : metricsServers) {
-          DatagramPacket packet = 
-              new DatagramPacket(buffer, offset, socketAddress);
-          datagramSocket.send(packet);
-        }
+  public void emitRecord(String contextName, String recordName, OutputRecord outRec) 
+    throws IOException
+  {
+    // emit each metric in turn
+    for (String metricName : outRec.getMetricNames()) {
+      Object metric = outRec.getMetric(metricName);
+      String type = (String) typeTable.get(metric.getClass());
+      emitMetric(metricName, type, metric.toString());
     }
+        
+  }
     
-    private String getUnits(String metricName) {
-        String result = (String) unitsTable.get(metricName);
-        if (result == null) {
-            result = DEFAULT_UNITS;
-        }
-        return result;
+  private void emitMetric(String name, String type,  String value) 
+    throws IOException
+  {
+    String units = getUnits(name);
+    int slope = getSlope(name);
+    int tmax = getTmax(name);
+    int dmax = getDmax(name);
+        
+    offset = 0;
+    xdr_int(0);             // metric_user_defined
+    xdr_string(type);
+    xdr_string(name);
+    xdr_string(value);
+    xdr_string(units);
+    xdr_int(slope);
+    xdr_int(tmax);
+    xdr_int(dmax);
+        
+    for (SocketAddress socketAddress : metricsServers) {
+      DatagramPacket packet = 
+        new DatagramPacket(buffer, offset, socketAddress);
+      datagramSocket.send(packet);
     }
+  }
     
-    private int getSlope(String metricName) {
-        String slopeString = (String) slopeTable.get(metricName);
-        if (slopeString == null) {
-            slopeString = DEFAULT_SLOPE; 
-        }
-        return ("zero".equals(slopeString) ? 0 : 3); // see gmetric.c
+  private String getUnits(String metricName) {
+    String result = (String) unitsTable.get(metricName);
+    if (result == null) {
+      result = DEFAULT_UNITS;
     }
+    return result;
+  }
     
-    private int getTmax(String metricName) {
-        String tmaxString = (String) tmaxTable.get(metricName);
-        if (tmaxString == null) {
-            return DEFAULT_TMAX;
-        }
-        else {
-            return Integer.parseInt(tmaxString);
-        }
+  private int getSlope(String metricName) {
+    String slopeString = (String) slopeTable.get(metricName);
+    if (slopeString == null) {
+      slopeString = DEFAULT_SLOPE; 
     }
+    return ("zero".equals(slopeString) ? 0 : 3); // see gmetric.c
+  }
     
-    private int getDmax(String metricName) {
-        String dmaxString = (String) dmaxTable.get(metricName);
-        if (dmaxString == null) {
-            return DEFAULT_DMAX;
-        }
-        else {
-            return Integer.parseInt(dmaxString);
-        }
+  private int getTmax(String metricName) {
+    String tmaxString = (String) tmaxTable.get(metricName);
+    if (tmaxString == null) {
+      return DEFAULT_TMAX;
     }
+    else {
+      return Integer.parseInt(tmaxString);
+    }
+  }
     
-    /**
-     * Puts a string into the buffer by first writing the size of the string
-     * as an int, followed by the bytes of the string, padded if necessary to
-     * a multiple of 4.
-     */
-    private void xdr_string(String s) {
-	byte[] bytes = s.getBytes();
-        int len = bytes.length;
-        xdr_int(len);
-        System.arraycopy(bytes, 0, buffer, offset, len);
-        offset += len;
-        pad();
+  private int getDmax(String metricName) {
+    String dmaxString = (String) dmaxTable.get(metricName);
+    if (dmaxString == null) {
+      return DEFAULT_DMAX;
     }
+    else {
+      return Integer.parseInt(dmaxString);
+    }
+  }
+    
+  /**
+   * Puts a string into the buffer by first writing the size of the string
+   * as an int, followed by the bytes of the string, padded if necessary to
+   * a multiple of 4.
+   */
+  private void xdr_string(String s) {
+    byte[] bytes = s.getBytes();
+    int len = bytes.length;
+    xdr_int(len);
+    System.arraycopy(bytes, 0, buffer, offset, len);
+    offset += len;
+    pad();
+  }
 
-    /**
-     * Pads the buffer with zero bytes up to the nearest multiple of 4.
-     */
-    private void pad() {
-	int newOffset = ((offset + 3) / 4) * 4;
-	while (offset < newOffset) {
-            buffer[offset++] = 0;
-        }
+  /**
+   * Pads the buffer with zero bytes up to the nearest multiple of 4.
+   */
+  private void pad() {
+    int newOffset = ((offset + 3) / 4) * 4;
+    while (offset < newOffset) {
+      buffer[offset++] = 0;
     }
+  }
         
-    /**
-     * Puts an integer into the buffer as 4 bytes, big-endian.
-     */
-    private void xdr_int(int i) {
-	buffer[offset++] = (byte)((i >> 24) & 0xff);
-	buffer[offset++] = (byte)((i >> 16) & 0xff);
-	buffer[offset++] = (byte)((i >> 8) & 0xff);
-	buffer[offset++] = (byte)(i & 0xff);
-    }
+  /**
+   * Puts an integer into the buffer as 4 bytes, big-endian.
+   */
+  private void xdr_int(int i) {
+    buffer[offset++] = (byte)((i >> 24) & 0xff);
+    buffer[offset++] = (byte)((i >> 16) & 0xff);
+    buffer[offset++] = (byte)((i >> 8) & 0xff);
+    buffer[offset++] = (byte)(i & 0xff);
+  }
     
 }

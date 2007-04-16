@@ -28,7 +28,7 @@ public interface PositionedReadable {
    * change the current offset of a file, and is thread-safe.
    */
   public int read(long position, byte[] buffer, int offset, int length)
-  throws IOException;
+    throws IOException;
   
   /**
    * Read the specified number of bytes, from a given
@@ -36,7 +36,7 @@ public interface PositionedReadable {
    * change the current offset of a file, and is thread-safe.
    */
   public void readFully(long position, byte[] buffer, int offset, int length)
-  throws IOException;
+    throws IOException;
   
   /**
    * Read number of bytes equalt to the length of the buffer, from a given

@@ -31,21 +31,21 @@ public class TestTextNonUTF8 extends TestCase {
   private static final Log LOG= LogFactory.getLog("org.apache.hadoop.io.TestTextNonUTF8");
 
   public void testNonUTF8() throws Exception{
-   // this is a non UTF8 byte array
-   byte b[] = {-0x01, -0x01, -0x01, -0x01, -0x01, -0x01, -0x01};
-   boolean nonUTF8 = false;
-   Text t = new Text(b);
-   try{
-     Text.validateUTF8(b);
-   }catch(MalformedInputException me){
-     nonUTF8 = false;
-   }
-   // asserting that the byte array is non utf8
-   assertFalse(nonUTF8);
-   byte ret[] = t.getBytes();
-   // asseting that the byte array are the same when the Text
-   // object is created.
-   assertTrue(Arrays.equals(b, ret));
+    // this is a non UTF8 byte array
+    byte b[] = {-0x01, -0x01, -0x01, -0x01, -0x01, -0x01, -0x01};
+    boolean nonUTF8 = false;
+    Text t = new Text(b);
+    try{
+      Text.validateUTF8(b);
+    }catch(MalformedInputException me){
+      nonUTF8 = false;
+    }
+    // asserting that the byte array is non utf8
+    assertFalse(nonUTF8);
+    byte ret[] = t.getBytes();
+    // asseting that the byte array are the same when the Text
+    // object is created.
+    assertTrue(Arrays.equals(b, ret));
   }
 
   public static void main(String[] args)  throws Exception

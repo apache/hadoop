@@ -49,8 +49,8 @@ public class TestSeekBug extends TestCase {
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
       this.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-          expected[from+idx]+" actual "+actual[idx],
-          actual[idx], expected[from+idx]);
+                        expected[from+idx]+" actual "+actual[idx],
+                        actual[idx], expected[from+idx]);
       actual[idx] = 0;
     }
   }
@@ -82,7 +82,7 @@ public class TestSeekBug extends TestCase {
    */
   private void smallReadSeek(FileSystem fileSys, Path name) throws IOException {
     if (fileSys instanceof ChecksumFileSystem) {
-        fileSys = ((ChecksumFileSystem)fileSys).getRawFileSystem();
+      fileSys = ((ChecksumFileSystem)fileSys).getRawFileSystem();
     }
     // Make the buffer size small to trigger code for HADOOP-922
     FSDataInputStream stmRaw = fileSys.open(name, 1);
@@ -91,7 +91,7 @@ public class TestSeekBug extends TestCase {
     rand.nextBytes(expected);
     
     // Issue a simple read first.
-	byte[] actual = new byte[128];
+    byte[] actual = new byte[128];
     stmRaw.seek(100000);
     stmRaw.read(actual, 0, actual.length);
     checkAndEraseData(actual, 100000, expected, "First Small Read Test");

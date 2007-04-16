@@ -62,8 +62,8 @@ interface InterTrackerProtocol extends VersionedProtocol {
    *         fresh instructions.
    */
   HeartbeatResponse heartbeat(TaskTrackerStatus status, 
-          boolean initialContact, boolean acceptNewTasks, short responseId)
-  throws IOException;
+                              boolean initialContact, boolean acceptNewTasks, short responseId)
+    throws IOException;
 
   /**
    * The task tracker calls this once, to discern where it can find
@@ -92,7 +92,7 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * @throws IOException
    */
   TaskCompletionEvent[] getTaskCompletionEvents(
-      String jobid, int fromEventId, int maxEvents) throws IOException;
+                                                String jobid, int fromEventId, int maxEvents) throws IOException;
   
 }
 

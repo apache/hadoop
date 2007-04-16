@@ -34,7 +34,7 @@ public interface CompressionCodec {
    * @return a stream the user can write uncompressed data to
    */
   CompressionOutputStream createOutputStream(OutputStream out) 
-  throws IOException;
+    throws IOException;
   
   /**
    * Create a stream decompressor that will read from the given input stream.

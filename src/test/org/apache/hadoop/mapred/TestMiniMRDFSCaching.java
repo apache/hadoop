@@ -45,7 +45,7 @@ public class TestMiniMRDFSCaching extends TestCase {
                                             "/cachedir",
                                             mr.createJobConf(),
                                             "The quick brown fox\nhas many silly\n"
-                                                + "red fox sox\n");
+                                            + "red fox sox\n");
       assertTrue("Archives not matching", ret);
     } finally {
       if (fileSys != null) {

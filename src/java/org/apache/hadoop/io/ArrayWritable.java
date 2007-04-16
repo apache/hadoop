@@ -48,8 +48,8 @@ public class ArrayWritable implements Writable {
 
   public void setValueClass(Class valueClass) {
     if (valueClass != this.valueClass) {
-        this.valueClass = valueClass;
-        this.values = null;
+      this.valueClass = valueClass;
+      this.values = null;
     }
   }
   

@@ -39,8 +39,8 @@ public class TestSmallBlock extends TestCase {
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     // create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, true, 
-            fileSys.getConf().getInt("io.file.buffer.size", 4096),
-            (short)1, (long)blockSize);
+                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+                                            (short)1, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -51,8 +51,8 @@ public class TestSmallBlock extends TestCase {
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
       this.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-          expected[from+idx]+" actual "+actual[idx],
-          actual[idx], expected[from+idx]);
+                        expected[from+idx]+" actual "+actual[idx],
+                        actual[idx], expected[from+idx]);
       actual[idx] = 0;
     }
   }

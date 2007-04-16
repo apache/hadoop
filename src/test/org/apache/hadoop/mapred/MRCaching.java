@@ -41,7 +41,7 @@ import java.net.URISyntaxException;
 
 public class MRCaching {
   static String testStr = "This is a test file " + "used for testing caching "
-      + "jars, zip and normal files.";
+    + "jars, zip and normal files.";
 
   /**
    * Using the wordcount example and adding caching to it. The cache
@@ -98,7 +98,7 @@ public class MRCaching {
     }
 
     public void map(WritableComparable key, Writable value,
-        OutputCollector output, Reporter reporter) throws IOException {
+                    OutputCollector output, Reporter reporter) throws IOException {
       String line = ((Text) value).toString();
       StringTokenizer itr = new StringTokenizer(line);
       while (itr.hasMoreTokens()) {
@@ -115,7 +115,7 @@ public class MRCaching {
   public static class ReduceClass extends MapReduceBase implements Reducer {
 
     public void reduce(WritableComparable key, Iterator values,
-        OutputCollector output, Reporter reporter) throws IOException {
+                       OutputCollector output, Reporter reporter) throws IOException {
       int sum = 0;
       while (values.hasNext()) {
         sum += ((IntWritable) values.next()).get();
@@ -125,8 +125,8 @@ public class MRCaching {
   }
 
   public static boolean launchMRCache(String indir,
-      String outdir, String cacheDir, JobConf conf, String input)
-      throws IOException {
+                                      String outdir, String cacheDir, JobConf conf, String input)
+    throws IOException {
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/tmp"))
       .toString().replace(' ', '+');
     //if (TEST_ROOT_DIR.startsWith("C:")) TEST_ROOT_DIR = "/tmp";
@@ -139,7 +139,7 @@ public class MRCaching {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
     {
-System.out.println("HERE:"+inDir);
+      System.out.println("HERE:"+inDir);
       DataOutputStream file = fs.create(new Path(inDir, "part-0"));
       file.writeBytes(input);
       file.close();
@@ -204,7 +204,7 @@ System.out.println("HERE:"+inDir);
     Path result = new Path(TEST_ROOT_DIR + "/test.txt");
     {
       BufferedReader file = new BufferedReader(new InputStreamReader(
-          FileSystem.getLocal(conf).open(result)));
+                                                                     FileSystem.getLocal(conf).open(result)));
       String line = file.readLine();
       while (line != null) {
         if (!testStr.equals(line))

@@ -29,13 +29,13 @@ public interface Reporter extends Progressable {
    * A constant of Reporter type that does nothing.
    */
   public static final Reporter NULL = new Reporter() {
-    public void setStatus(String s) {
-    }
-    public void progress() throws IOException {
-    }
-    public void incrCounter(Enum key, long amount) {
-    }
-  };
+      public void setStatus(String s) {
+      }
+      public void progress() throws IOException {
+      }
+      public void incrCounter(Enum key, long amount) {
+      }
+    };
 
   /**
    * Alter the application's status description.

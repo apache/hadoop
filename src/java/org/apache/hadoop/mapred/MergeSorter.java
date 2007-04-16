@@ -47,7 +47,7 @@ implements Comparator<IntWritable> {
     System.arraycopy(pointers, 0, pointersCopy, 0, count);
     m.mergeSort(pointers, pointersCopy, 0, count);
     return new MRSortResultIterator(super.keyValBuffer, pointersCopy, 
-           super.startOffsets, super.keyLengths, super.valueLengths);
+                                    super.startOffsets, super.keyLengths, super.valueLengths);
   }
   /** The implementation of the compare method from Comparator. This basically
    * forwards the call to the super class's compare. Note that

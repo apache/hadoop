@@ -80,10 +80,10 @@ public class MergerInputFormat extends InputFormatBase {
   }
 
   /** Delegate to the primary InputFormat. 
-   Force full-file splits since there's no index to sync secondaries.
-   (and if there was, this index may need to be created for the first time
-   full file at a time...    )
-   */
+      Force full-file splits since there's no index to sync secondaries.
+      (and if there was, this index may need to be created for the first time
+      full file at a time...    )
+  */
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     return ((StreamInputFormat) primary_).getSplits(job, numSplits);
   }
@@ -119,20 +119,20 @@ public class MergerInputFormat extends InputFormatBase {
   }
 
   /*
-   private FileSplit relatedSplit(FileSplit primarySplit, int i, CompoundDirSpec spec) throws IOException
-   {
-   if(i == 0) {
-   return primarySplit;
-   }
+    private FileSplit relatedSplit(FileSplit primarySplit, int i, CompoundDirSpec spec) throws IOException
+    {
+    if(i == 0) {
+    return primarySplit;
+    }
 
-   // TODO based on custom JobConf (or indirectly: InputFormat-s?)
-   String path = primarySplit.getFile().getAbsolutePath();
-   Path rpath = new Path(path + "." + i);
+    // TODO based on custom JobConf (or indirectly: InputFormat-s?)
+    String path = primarySplit.getFile().getAbsolutePath();
+    Path rpath = new Path(path + "." + i);
 
-   long rlength = fs_.getLength(rpath);
-   FileSplit related = new FileSplit(rpath, 0, rlength);
-   return related;    
-   }*/
+    long rlength = fs_.getLength(rpath);
+    FileSplit related = new FileSplit(rpath, 0, rlength);
+    return related;    
+    }*/
 
   class MergedRecordReader implements RecordReader {
 
@@ -237,7 +237,7 @@ public class MergerInputFormat extends InputFormatBase {
             src = new Text(">" + tag + "\t" + src.toString()); // breaks anything?
           } else {
             throw new UnsupportedOperationException("Cannot use with tags with key class "
-                + src.getClass());
+                                                    + src.getClass());
           }
         }
         src.write(outBuf);

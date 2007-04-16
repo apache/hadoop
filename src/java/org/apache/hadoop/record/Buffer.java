@@ -123,7 +123,7 @@ public class Buffer implements Comparable, Cloneable {
    */
   public void setCapacity(int newCapacity) {
     if (newCapacity < 0) {
-     throw new IllegalArgumentException("Invalid capacity argument "+newCapacity); 
+      throw new IllegalArgumentException("Invalid capacity argument "+newCapacity); 
     }
     if (newCapacity == 0) {
       this.bytes = null;
@@ -164,7 +164,7 @@ public class Buffer implements Comparable, Cloneable {
    * @param offset offset into byte array
    * @param length length of data
 
-   */
+  */
   public void append(byte[] bytes, int offset, int length) {
     setCapacity(count+length);
     System.arraycopy(bytes, offset, this.get(), count, length);
@@ -234,7 +234,7 @@ public class Buffer implements Comparable, Cloneable {
    * @param charsetName Valid Java Character Set Name
    */
   public String toString(String charsetName)
-  throws UnsupportedEncodingException {
+    throws UnsupportedEncodingException {
     return new String(this.get(), 0, this.getCount(), charsetName);
   }
   

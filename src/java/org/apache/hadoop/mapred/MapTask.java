@@ -77,7 +77,7 @@ class MapTask extends Task {
   }
 
   public boolean isMapTask() {
-      return true;
+    return true;
   }
 
   public void localizeConfiguration(JobConf conf) throws IOException {
@@ -118,7 +118,7 @@ class MapTask extends Task {
     InputSplit split;
     try {
       split = (InputSplit) 
-         ReflectionUtils.newInstance(job.getClassByName(splitClass), job);
+        ReflectionUtils.newInstance(job.getClassByName(splitClass), job);
     } catch (ClassNotFoundException exp) {
       IOException wrap = new IOException("Split class " + splitClass + 
                                          " not found");
@@ -198,23 +198,23 @@ class MapTask extends Task {
   private Thread createProgressThread(final TaskUmbilicalProtocol umbilical) {
     //spawn a thread to give merge progress heartbeats
     Thread sortProgress = new Thread() {
-      public void run() {
-        LOG.debug("Started thread: " + getName());
-        while (true) {
-          try {
-            reportProgress(umbilical);
-            Thread.sleep(PROGRESS_INTERVAL);
-          } catch (InterruptedException e) {
+        public void run() {
+          LOG.debug("Started thread: " + getName());
+          while (true) {
+            try {
+              reportProgress(umbilical);
+              Thread.sleep(PROGRESS_INTERVAL);
+            } catch (InterruptedException e) {
               return;
-          } catch (Throwable e) {
+            } catch (Throwable e) {
               LOG.info("Thread Exception in " +
-                                 "reporting sort progress\n" +
-                                 StringUtils.stringifyException(e));
+                       "reporting sort progress\n" +
+                       StringUtils.stringifyException(e));
               continue;
+            }
           }
         }
-      }
-    };
+      };
     sortProgress.setName("Sort progress reporter for task "+getTaskId());
     sortProgress.setDaemon(true);
     return sortProgress;
@@ -260,10 +260,10 @@ class MapTask extends Task {
     private FSDataOutputStream indexOut;
     private long segmentStart;
     public MapOutputBuffer(TaskUmbilicalProtocol umbilical, JobConf job, 
-            Reporter reporter) throws IOException {
+                           Reporter reporter) throws IOException {
       this.partitions = job.getNumReduceTasks();
       this.partitioner = (Partitioner)ReflectionUtils.newInstance(
-                                      job.getPartitionerClass(), job);
+                                                                  job.getPartitionerClass(), job);
       maxBufferSize = job.getInt("io.sort.mb", 100) * 1024 * 1024;
       keyValBuffer = new DataOutputBuffer();
 
@@ -284,21 +284,21 @@ class MapTask extends Task {
         Class codecClass = 
           job.getMapOutputCompressorClass(DefaultCodec.class);
         codec = (CompressionCodec) 
-                   ReflectionUtils.newInstance(codecClass, job);
+          ReflectionUtils.newInstance(codecClass, job);
       }
       sortImpl = new BufferSorter[partitions];
       for (int i = 0; i < partitions; i++)
         sortImpl[i] = (BufferSorter)ReflectionUtils.newInstance(
-                   job.getClass("map.sort.class", MergeSorter.class,
-                   BufferSorter.class), job);
+                                                                job.getClass("map.sort.class", MergeSorter.class,
+                                                                             BufferSorter.class), job);
     }
     public void startPartition(int partNumber) throws IOException {
       //We create the sort output as multiple sequence files within a spilled
       //file. So we create a writer for each partition. 
       segmentStart = out.getPos();
       writer =
-          SequenceFile.createWriter(job, out, job.getMapOutputKeyClass(),
-                  job.getMapOutputValueClass(), compressionType, codec);
+        SequenceFile.createWriter(job, out, job.getMapOutputKeyClass(),
+                                  job.getMapOutputValueClass(), compressionType, codec);
     }
     private void endPartition(int partNumber) throws IOException {
       //Need to write syncs especially if block compression is in use
@@ -311,7 +311,7 @@ class MapTask extends Task {
     }
     
     public void collect(WritableComparable key,
-              Writable value) throws IOException {
+                        Writable value) throws IOException {
       
       if (key.getClass() != keyClass) {
         throw new IOException("Type mismatch in key from map: expected "
@@ -362,7 +362,7 @@ class MapTask extends Task {
                                                              numSpills);
         indexOut = localFs.create(indexFilename);
         LOG.debug("opened "+
-        mapOutputFile.getSpillFile(getTaskId(), numSpills).getName());
+                  mapOutputFile.getSpillFile(getTaskId(), numSpills).getName());
           
         //invoke the sort
         for (int i = 0; i < partitions; i++) {
@@ -379,16 +379,16 @@ class MapTask extends Task {
               //got all the input key/val, processed, and output the result 
               //key/vals before we write the partition header in the output file
               Reducer combiner = (Reducer)ReflectionUtils.newInstance(
-                                         job.getCombinerClass(), job);
+                                                                      job.getCombinerClass(), job);
               // make collector
               OutputCollector combineCollector = new OutputCollector() {
-                public void collect(WritableComparable key, Writable value)
-                  throws IOException {
-                  synchronized (this) {
-                    writer.append(key, value);
+                  public void collect(WritableComparable key, Writable value)
+                    throws IOException {
+                    synchronized (this) {
+                      writer.append(key, value);
+                    }
                   }
-                }
-              };
+                };
               combineAndSpill(rIter, combiner, combineCollector);
               combiner.close();
             }
@@ -404,10 +404,10 @@ class MapTask extends Task {
     }
     
     private void combineAndSpill(RawKeyValueIterator resultIter, 
-    Reducer combiner, OutputCollector combineCollector) throws IOException {
+                                 Reducer combiner, OutputCollector combineCollector) throws IOException {
       //combine the key/value obtained from the offset & indices arrays.
       CombineValuesIterator values = new CombineValuesIterator(resultIter,
-              comparator, keyClass, valClass, job, reporter);
+                                                               comparator, keyClass, valClass, job, reporter);
       while (values.more()) {
         combiner.reduce(values.getKey(), values, combineCollector, reporter);
         values.nextKey();
@@ -459,7 +459,7 @@ class MapTask extends Task {
                                                    4096);
       //The final index file output stream
       FSDataOutputStream finalIndexOut = localFs.create(finalIndexFile, true,
-                                                           4096);
+                                                        4096);
       long segmentStart;
       
       if (numSpills == 0) {
@@ -467,8 +467,8 @@ class MapTask extends Task {
         for (int i = 0; i < partitions; i++) {
           segmentStart = finalOut.getPos();
           SequenceFile.createWriter(job, finalOut, 
-                  job.getMapOutputKeyClass(), job.getMapOutputValueClass(), 
-                  compressionType, codec);
+                                    job.getMapOutputKeyClass(), job.getMapOutputValueClass(), 
+                                    compressionType, codec);
           finalIndexOut.writeLong(segmentStart);
           finalIndexOut.writeLong(finalOut.getPos() - segmentStart);
         }
@@ -498,15 +498,15 @@ class MapTask extends Task {
             long segmentLength = indexIn.readLong();
             indexIn.close();
             SegmentDescriptor s = sorter.new SegmentDescriptor(segmentOffset,
-                segmentLength, filename[i]);
+                                                               segmentLength, filename[i]);
             s.preserveInput(true);
             s.doSync();
             segmentList.add(i, s);
           }
           segmentStart = finalOut.getPos();
           SequenceFile.Writer writer = SequenceFile.createWriter(job, finalOut, 
-              job.getMapOutputKeyClass(), job.getMapOutputValueClass(), 
-              compressionType, codec);
+                                                                 job.getMapOutputKeyClass(), job.getMapOutputValueClass(), 
+                                                                 compressionType, codec);
           sorter.writeFile(sorter.merge(segmentList, new Path(getTaskId())), 
                            writer);
           //add a sync block - required esp. for block compression to ensure
@@ -537,9 +537,9 @@ class MapTask extends Task {
     private class CombineValuesIterator extends ValuesIterator {
         
       public CombineValuesIterator(SequenceFile.Sorter.RawKeyValueIterator in, 
-              WritableComparator comparator, Class keyClass,
-              Class valClass, Configuration conf, Reporter reporter) 
-      throws IOException {
+                                   WritableComparator comparator, Class keyClass,
+                                   Class valClass, Configuration conf, Reporter reporter) 
+        throws IOException {
         super(in, comparator, keyClass, valClass, conf, reporter);
       }
       

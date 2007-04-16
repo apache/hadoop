@@ -31,70 +31,70 @@ import org.apache.hadoop.mapred.JobConf;
  */
 public abstract class ValueAggregatorJobBase extends JobBase {
  
-    protected ArrayList aggregatorDescriptorList = null;
+  protected ArrayList aggregatorDescriptorList = null;
         
-    public void configure(JobConf job) {
-        super.configure(job);
+  public void configure(JobConf job) {
+    super.configure(job);
         
-        setLongValue("totalCount", 0);
-        setLongValue("errorCount", 0);
-        setLongValue("collectedCount", 0);
-        setLongValue("groupCount", 0);
+    setLongValue("totalCount", 0);
+    setLongValue("errorCount", 0);
+    setLongValue("collectedCount", 0);
+    setLongValue("groupCount", 0);
         
-        this.initializeMySpec(job);
-        this.logSpec();
-    }
+    this.initializeMySpec(job);
+    this.logSpec();
+  }
 
-    private static ValueAggregatorDescriptor getValueAggregatorDescriptor(
-            String spec, JobConf job) {
-        if (spec == null)
-            return null;
-        String[] segments = spec.split(",", -1);
-        String type = segments[0];
-        if (type.compareToIgnoreCase("UserDefined") == 0) {
-            String className = segments[1];
-            return new UserDefinedValueAggregatorDescriptor(className, job);
-        } 
-        return null;
-    }
+  private static ValueAggregatorDescriptor getValueAggregatorDescriptor(
+                                                                        String spec, JobConf job) {
+    if (spec == null)
+      return null;
+    String[] segments = spec.split(",", -1);
+    String type = segments[0];
+    if (type.compareToIgnoreCase("UserDefined") == 0) {
+      String className = segments[1];
+      return new UserDefinedValueAggregatorDescriptor(className, job);
+    } 
+    return null;
+  }
 
-    private static ArrayList getAggregatorDescriptors(JobConf job) {
-        String advn = "aggregator.descriptor";
-        int num = job.getInt(advn + ".num", 0);
-        ArrayList retv = new ArrayList(num);
-        for (int i = 0; i < num; i++) {
-            String spec = job.get(advn + "." + i);
-            ValueAggregatorDescriptor ad = getValueAggregatorDescriptor(spec, job);
-            if (ad != null) {
-                retv.add(ad);
-            }
-        }
-        return retv;
+  private static ArrayList getAggregatorDescriptors(JobConf job) {
+    String advn = "aggregator.descriptor";
+    int num = job.getInt(advn + ".num", 0);
+    ArrayList retv = new ArrayList(num);
+    for (int i = 0; i < num; i++) {
+      String spec = job.get(advn + "." + i);
+      ValueAggregatorDescriptor ad = getValueAggregatorDescriptor(spec, job);
+      if (ad != null) {
+        retv.add(ad);
+      }
     }
+    return retv;
+  }
     
-    private void initializeMySpec(JobConf job) {
-        this.aggregatorDescriptorList = getAggregatorDescriptors(job);
-        if (this.aggregatorDescriptorList.size() == 0) {
-            this.aggregatorDescriptorList.add(new UserDefinedValueAggregatorDescriptor(
-                    ValueAggregatorBaseDescriptor.class.getCanonicalName(), job));
-        }
+  private void initializeMySpec(JobConf job) {
+    this.aggregatorDescriptorList = getAggregatorDescriptors(job);
+    if (this.aggregatorDescriptorList.size() == 0) {
+      this.aggregatorDescriptorList.add(new UserDefinedValueAggregatorDescriptor(
+                                                                                 ValueAggregatorBaseDescriptor.class.getCanonicalName(), job));
     }
+  }
     
-    protected void logSpec() {
-        StringBuffer sb = new StringBuffer();
-        sb.append("\n");
-        if (aggregatorDescriptorList == null) {
-            sb.append(" aggregatorDescriptorList: null");
-        } else {
-            sb.append(" aggregatorDescriptorList: ");
-            for (int i = 0; i < aggregatorDescriptorList.size(); i++) {
-                sb.append(" ").append(aggregatorDescriptorList.get(i).toString());
-            }
-        }      
-        LOG.info(sb.toString());
-    }
+  protected void logSpec() {
+    StringBuffer sb = new StringBuffer();
+    sb.append("\n");
+    if (aggregatorDescriptorList == null) {
+      sb.append(" aggregatorDescriptorList: null");
+    } else {
+      sb.append(" aggregatorDescriptorList: ");
+      for (int i = 0; i < aggregatorDescriptorList.size(); i++) {
+        sb.append(" ").append(aggregatorDescriptorList.get(i).toString());
+      }
+    }      
+    LOG.info(sb.toString());
+  }
 
-    public void close() throws IOException {
-        report();
-    }
+  public void close() throws IOException {
+    report();
+  }
 }

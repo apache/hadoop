@@ -54,7 +54,7 @@ public class TestSequenceFile extends TestCase {
       CompressionCodec lzoCodec = null;
       try {
         lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(
-                conf.getClassByName(LzoCodec.class.getName()), conf);
+                                                                  conf.getClassByName(LzoCodec.class.getName()), conf);
       } catch (ClassNotFoundException cnfe) {
         throw new IOException("Cannot find LzoCodec!");
       }
@@ -79,76 +79,76 @@ public class TestSequenceFile extends TestCase {
 
     FileSystem fs = FileSystem.getLocal(conf);
     try {
-        // SequenceFile.Writer
-        writeTest(fs, count, seed, file, CompressionType.NONE, null);
-        readTest(fs, count, seed, file);
+      // SequenceFile.Writer
+      writeTest(fs, count, seed, file, CompressionType.NONE, null);
+      readTest(fs, count, seed, file);
 
-        sortTest(fs, count, megabytes, factor, false, file);
-        checkSort(fs, count, seed, file);
+      sortTest(fs, count, megabytes, factor, false, file);
+      checkSort(fs, count, seed, file);
 
-        sortTest(fs, count, megabytes, factor, true, file);
-        checkSort(fs, count, seed, file);
+      sortTest(fs, count, megabytes, factor, true, file);
+      checkSort(fs, count, seed, file);
 
-        mergeTest(fs, count, seed, file, CompressionType.NONE, false, 
-            factor, megabytes);
-        checkSort(fs, count, seed, file);
+      mergeTest(fs, count, seed, file, CompressionType.NONE, false, 
+                factor, megabytes);
+      checkSort(fs, count, seed, file);
 
-        mergeTest(fs, count, seed, file, CompressionType.NONE, true, 
-            factor, megabytes);
-        checkSort(fs, count, seed, file);
+      mergeTest(fs, count, seed, file, CompressionType.NONE, true, 
+                factor, megabytes);
+      checkSort(fs, count, seed, file);
         
-        // SequenceFile.RecordCompressWriter
-        writeTest(fs, count, seed, recordCompressedFile, CompressionType.RECORD, 
-            codec);
-        readTest(fs, count, seed, recordCompressedFile);
+      // SequenceFile.RecordCompressWriter
+      writeTest(fs, count, seed, recordCompressedFile, CompressionType.RECORD, 
+                codec);
+      readTest(fs, count, seed, recordCompressedFile);
 
-        sortTest(fs, count, megabytes, factor, false, recordCompressedFile);
-        checkSort(fs, count, seed, recordCompressedFile);
+      sortTest(fs, count, megabytes, factor, false, recordCompressedFile);
+      checkSort(fs, count, seed, recordCompressedFile);
 
-        sortTest(fs, count, megabytes, factor, true, recordCompressedFile);
-        checkSort(fs, count, seed, recordCompressedFile);
+      sortTest(fs, count, megabytes, factor, true, recordCompressedFile);
+      checkSort(fs, count, seed, recordCompressedFile);
 
-        mergeTest(fs, count, seed, recordCompressedFile, 
-            CompressionType.RECORD, false, factor, megabytes);
-        checkSort(fs, count, seed, recordCompressedFile);
+      mergeTest(fs, count, seed, recordCompressedFile, 
+                CompressionType.RECORD, false, factor, megabytes);
+      checkSort(fs, count, seed, recordCompressedFile);
 
-        mergeTest(fs, count, seed, recordCompressedFile, 
-            CompressionType.RECORD, true, factor, megabytes);
-        checkSort(fs, count, seed, recordCompressedFile);
+      mergeTest(fs, count, seed, recordCompressedFile, 
+                CompressionType.RECORD, true, factor, megabytes);
+      checkSort(fs, count, seed, recordCompressedFile);
         
-        // SequenceFile.BlockCompressWriter
-        writeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK,
-            codec);
-        readTest(fs, count, seed, blockCompressedFile);
+      // SequenceFile.BlockCompressWriter
+      writeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK,
+                codec);
+      readTest(fs, count, seed, blockCompressedFile);
 
-        sortTest(fs, count, megabytes, factor, false, blockCompressedFile);
-        checkSort(fs, count, seed, blockCompressedFile);
+      sortTest(fs, count, megabytes, factor, false, blockCompressedFile);
+      checkSort(fs, count, seed, blockCompressedFile);
 
-        sortTest(fs, count, megabytes, factor, true, blockCompressedFile);
-        checkSort(fs, count, seed, blockCompressedFile);
+      sortTest(fs, count, megabytes, factor, true, blockCompressedFile);
+      checkSort(fs, count, seed, blockCompressedFile);
 
-        mergeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK, 
-            false, factor, megabytes);
-        checkSort(fs, count, seed, blockCompressedFile);
+      mergeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK, 
+                false, factor, megabytes);
+      checkSort(fs, count, seed, blockCompressedFile);
 
-        mergeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK, 
-            true, factor, megabytes);
-        checkSort(fs, count, seed, blockCompressedFile);
+      mergeTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK, 
+                true, factor, megabytes);
+      checkSort(fs, count, seed, blockCompressedFile);
 
-        } finally {
-        fs.close();
+    } finally {
+      fs.close();
     }
   }
 
   private static void writeTest(FileSystem fs, int count, int seed, Path file, 
-      CompressionType compressionType, CompressionCodec codec)
+                                CompressionType compressionType, CompressionCodec codec)
     throws IOException {
     fs.delete(file);
     LOG.info("creating " + count + " records with " + compressionType +
-              " compression");
+             " compression");
     SequenceFile.Writer writer = 
       SequenceFile.createWriter(fs, conf, file, 
-          RandomDatum.class, RandomDatum.class, compressionType, codec);
+                                RandomDatum.class, RandomDatum.class, compressionType, codec);
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
     for (int i = 0; i < count; i++) {
       generator.next();
@@ -278,7 +278,7 @@ public class TestSequenceFile extends TestCase {
       fs.delete(names[i]);
       fs.delete(sortedNames[i]);
       writers[i] = SequenceFile.createWriter(fs, conf, names[i], 
-          RandomDatum.class, RandomDatum.class, compressionType);
+                                             RandomDatum.class, RandomDatum.class, compressionType);
     }
 
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
@@ -350,7 +350,7 @@ public class TestSequenceFile extends TestCase {
       }
       // SequenceFile.RecordCompressWriter
       writeMetadataTest(fs, count, seed, recordCompressedFile, CompressionType.RECORD, 
-          codec, theMetadata);
+                        codec, theMetadata);
       aMetadata = readMetadata(fs, recordCompressedFile);
       if (!theMetadata.equals(aMetadata)) {
         LOG.info("The original metadata:\n" + theMetadata.toString());
@@ -359,7 +359,7 @@ public class TestSequenceFile extends TestCase {
       }
       // SequenceFile.BlockCompressWriter
       writeMetadataTest(fs, count, seed, blockCompressedFile, CompressionType.BLOCK,
-          codec, theMetadata);
+                        codec, theMetadata);
       aMetadata =readMetadata(fs, blockCompressedFile);
       if (!theMetadata.equals(aMetadata)) {
         LOG.info("The original metadata:\n" + theMetadata.toString());
@@ -374,23 +374,23 @@ public class TestSequenceFile extends TestCase {
   
   
   private static SequenceFile.Metadata readMetadata(FileSystem fs, Path file)
-  throws IOException {
-  LOG.info("reading file: " + file.toString() + "\n");
-  SequenceFile.Reader reader = new SequenceFile.Reader(fs, file, conf);
-  SequenceFile.Metadata meta = reader.getMetadata(); 
-  reader.close();
-  return meta;
+    throws IOException {
+    LOG.info("reading file: " + file.toString() + "\n");
+    SequenceFile.Reader reader = new SequenceFile.Reader(fs, file, conf);
+    SequenceFile.Metadata meta = reader.getMetadata(); 
+    reader.close();
+    return meta;
   }
 
   private static void writeMetadataTest(FileSystem fs, int count, int seed, Path file, 
-      CompressionType compressionType, CompressionCodec codec, SequenceFile.Metadata metadata)
+                                        CompressionType compressionType, CompressionCodec codec, SequenceFile.Metadata metadata)
     throws IOException {
     fs.delete(file);
     LOG.info("creating " + count + " records with metadata and with" + compressionType +
-              " compression");
+             " compression");
     SequenceFile.Writer writer = 
       SequenceFile.createWriter(fs, conf, file, 
-          RandomDatum.class, RandomDatum.class, compressionType, codec, null, metadata);
+                                RandomDatum.class, RandomDatum.class, compressionType, codec, null, metadata);
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
     for (int i = 0; i < count; i++) {
       generator.next();
@@ -418,94 +418,94 @@ public class TestSequenceFile extends TestCase {
     int seed = new Random().nextInt();
 
     String usage = "Usage: SequenceFile " +
-        "[-count N] " + 
-        "[-seed #] [-check] [-compressType <NONE|RECORD|BLOCK>] " + 
-        "-codec <compressionCodec> " + 
-        "[[-rwonly] | {[-megabytes M] [-factor F] [-nocreate] [-fast] [-merge]}] " +
-        " file";
+      "[-count N] " + 
+      "[-seed #] [-check] [-compressType <NONE|RECORD|BLOCK>] " + 
+      "-codec <compressionCodec> " + 
+      "[[-rwonly] | {[-megabytes M] [-factor F] [-nocreate] [-fast] [-merge]}] " +
+      " file";
     if (args.length == 0) {
-        System.err.println(usage);
-        System.exit(-1);
+      System.err.println(usage);
+      System.exit(-1);
     }
     
     FileSystem fs = null;
     try {
       for (int i=0; i < args.length; ++i) {       // parse command line
-          if (args[i] == null) {
-              continue;
-          } else if (args[i].equals("-count")) {
-              count = Integer.parseInt(args[++i]);
-          } else if (args[i].equals("-megabytes")) {
-              megabytes = Integer.parseInt(args[++i]);
-          } else if (args[i].equals("-factor")) {
-            factor = Integer.parseInt(args[++i]);
-          } else if (args[i].equals("-seed")) {
-            seed = Integer.parseInt(args[++i]);
-          } else if (args[i].equals("-rwonly")) {
-              rwonly = true;
-          } else if (args[i].equals("-nocreate")) {
-              create = false;
-          } else if (args[i].equals("-check")) {
-              check = true;
-          } else if (args[i].equals("-fast")) {
-              fast = true;
-          } else if (args[i].equals("-merge")) {
-              merge = true;
-          } else if (args[i].equals("-compressType")) {
-              compressType = args[++i];
-          } else if (args[i].equals("-codec")) {
-              compressionCodec = args[++i];
-          } else {
-              // file is required parameter
-              file = new Path(args[i]);
-          }
+        if (args[i] == null) {
+          continue;
+        } else if (args[i].equals("-count")) {
+          count = Integer.parseInt(args[++i]);
+        } else if (args[i].equals("-megabytes")) {
+          megabytes = Integer.parseInt(args[++i]);
+        } else if (args[i].equals("-factor")) {
+          factor = Integer.parseInt(args[++i]);
+        } else if (args[i].equals("-seed")) {
+          seed = Integer.parseInt(args[++i]);
+        } else if (args[i].equals("-rwonly")) {
+          rwonly = true;
+        } else if (args[i].equals("-nocreate")) {
+          create = false;
+        } else if (args[i].equals("-check")) {
+          check = true;
+        } else if (args[i].equals("-fast")) {
+          fast = true;
+        } else if (args[i].equals("-merge")) {
+          merge = true;
+        } else if (args[i].equals("-compressType")) {
+          compressType = args[++i];
+        } else if (args[i].equals("-codec")) {
+          compressionCodec = args[++i];
+        } else {
+          // file is required parameter
+          file = new Path(args[i]);
         }
-        
-      	fs = file.getFileSystem(conf);
-
-        LOG.info("count = " + count);
-        LOG.info("megabytes = " + megabytes);
-        LOG.info("factor = " + factor);
-        LOG.info("create = " + create);
-        LOG.info("seed = " + seed);
-        LOG.info("rwonly = " + rwonly);
-        LOG.info("check = " + check);
-        LOG.info("fast = " + fast);
-        LOG.info("merge = " + merge);
-        LOG.info("compressType = " + compressType);
-        LOG.info("compressionCodec = " + compressionCodec);
-        LOG.info("file = " + file);
-
-        if (rwonly && (!create || merge || fast)) {
-          System.err.println(usage);
-          System.exit(-1);
-        }
-
-        CompressionType compressionType = 
-          CompressionType.valueOf(compressType);
-        CompressionCodec codec = (CompressionCodec)ReflectionUtils.newInstance(
-                                    conf.getClassByName(compressionCodec), 
-                                    conf);
-
-        if (rwonly || (create && !merge)) {
-            writeTest(fs, count, seed, file, compressionType, codec);
-            readTest(fs, count, seed, file);
-        }
-
-        if (!rwonly) {
-          if (merge) {
-            mergeTest(fs, count, seed, file, compressionType, 
-                fast, factor, megabytes);
-          } else {
-            sortTest(fs, count, megabytes, factor, fast, file);
-          }
-        }
-    
-        if (check) {
-            checkSort(fs, count, seed, file);
-        }
-      } finally {
-          fs.close();
       }
+        
+      fs = file.getFileSystem(conf);
+
+      LOG.info("count = " + count);
+      LOG.info("megabytes = " + megabytes);
+      LOG.info("factor = " + factor);
+      LOG.info("create = " + create);
+      LOG.info("seed = " + seed);
+      LOG.info("rwonly = " + rwonly);
+      LOG.info("check = " + check);
+      LOG.info("fast = " + fast);
+      LOG.info("merge = " + merge);
+      LOG.info("compressType = " + compressType);
+      LOG.info("compressionCodec = " + compressionCodec);
+      LOG.info("file = " + file);
+
+      if (rwonly && (!create || merge || fast)) {
+        System.err.println(usage);
+        System.exit(-1);
+      }
+
+      CompressionType compressionType = 
+        CompressionType.valueOf(compressType);
+      CompressionCodec codec = (CompressionCodec)ReflectionUtils.newInstance(
+                                                                             conf.getClassByName(compressionCodec), 
+                                                                             conf);
+
+      if (rwonly || (create && !merge)) {
+        writeTest(fs, count, seed, file, compressionType, codec);
+        readTest(fs, count, seed, file);
+      }
+
+      if (!rwonly) {
+        if (merge) {
+          mergeTest(fs, count, seed, file, compressionType, 
+                    fast, factor, megabytes);
+        } else {
+          sortTest(fs, count, megabytes, factor, fast, file);
+        }
+      }
+    
+      if (check) {
+        checkSort(fs, count, seed, file);
+      }
+    } finally {
+      fs.close();
+    }
   }
 }

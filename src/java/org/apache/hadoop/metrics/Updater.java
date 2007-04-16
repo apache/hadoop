@@ -25,9 +25,9 @@ package org.apache.hadoop.metrics;
  */
 public interface Updater {
     
-    /**
-     * Timer-based call-back from the metric library. 
-     */
-    public abstract void doUpdates(MetricsContext context);
+  /**
+   * Timer-based call-back from the metric library. 
+   */
+  public abstract void doUpdates(MetricsContext context);
 
 }

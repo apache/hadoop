@@ -120,8 +120,8 @@ public class TestDFSIO extends TestCase {
       SequenceFile.Writer writer = null;
       try {
         writer = SequenceFile.createWriter(fs, fsConfig, controlFile,
-                                         UTF8.class, LongWritable.class,
-                                         CompressionType.NONE);
+                                           UTF8.class, LongWritable.class,
+                                           CompressionType.NONE);
         writer.append(new UTF8(name), new LongWritable(fileSize));
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());

@@ -64,47 +64,47 @@ interface DatanodeProtocol extends VersionedProtocol {
    * new storageID if the datanode did not have one and
    * registration ID for further communication.
    */
-    public DatanodeRegistration register( DatanodeRegistration registration,
-                                          String networkLocation
+  public DatanodeRegistration register( DatanodeRegistration registration,
+                                        String networkLocation
                                         ) throws IOException;
-    /**
-     * sendHeartbeat() tells the NameNode that the DataNode is still
-     * alive and well.  Includes some status info, too. 
-     * It also gives the NameNode a chance to return a "DatanodeCommand" object.
-     * A DatanodeCommand tells the DataNode to invalidate local block(s), 
-     * or to copy them to other DataNodes, etc.
-     */
-    public DatanodeCommand sendHeartbeat( DatanodeRegistration registration,
-                                          long capacity, long remaining,
-                                          int xmitsInProgress,
-                                          int xceiverCount) throws IOException;
+  /**
+   * sendHeartbeat() tells the NameNode that the DataNode is still
+   * alive and well.  Includes some status info, too. 
+   * It also gives the NameNode a chance to return a "DatanodeCommand" object.
+   * A DatanodeCommand tells the DataNode to invalidate local block(s), 
+   * or to copy them to other DataNodes, etc.
+   */
+  public DatanodeCommand sendHeartbeat( DatanodeRegistration registration,
+                                        long capacity, long remaining,
+                                        int xmitsInProgress,
+                                        int xceiverCount) throws IOException;
 
-    /**
-     * blockReport() tells the NameNode about all the locally-stored blocks.
-     * The NameNode returns an array of Blocks that have become obsolete
-     * and should be deleted.  This function is meant to upload *all*
-     * the locally-stored blocks.  It's invoked upon startup and then
-     * infrequently afterwards.
-     */
-    public DatanodeCommand blockReport( DatanodeRegistration registration,
-                                        Block blocks[]) throws IOException;
+  /**
+   * blockReport() tells the NameNode about all the locally-stored blocks.
+   * The NameNode returns an array of Blocks that have become obsolete
+   * and should be deleted.  This function is meant to upload *all*
+   * the locally-stored blocks.  It's invoked upon startup and then
+   * infrequently afterwards.
+   */
+  public DatanodeCommand blockReport( DatanodeRegistration registration,
+                                      Block blocks[]) throws IOException;
     
-    /**
-     * blockReceived() allows the DataNode to tell the NameNode about
-     * recently-received block data.  For example, whenever client code
-     * writes a new Block here, or another DataNode copies a Block to
-     * this DataNode, it will call blockReceived().
-     */
-    public void blockReceived(DatanodeRegistration registration,
-                              Block blocks[]) throws IOException;
+  /**
+   * blockReceived() allows the DataNode to tell the NameNode about
+   * recently-received block data.  For example, whenever client code
+   * writes a new Block here, or another DataNode copies a Block to
+   * this DataNode, it will call blockReceived().
+   */
+  public void blockReceived(DatanodeRegistration registration,
+                            Block blocks[]) throws IOException;
 
-    /**
-     * errorReport() tells the NameNode about something that has gone
-     * awry.  Useful for debugging.
-     */
-    public void errorReport(DatanodeRegistration registration,
-                            int errorCode, 
-                            String msg) throws IOException;
+  /**
+   * errorReport() tells the NameNode about something that has gone
+   * awry.  Useful for debugging.
+   */
+  public void errorReport(DatanodeRegistration registration,
+                          int errorCode, 
+                          String msg) throws IOException;
     
-    public NamespaceInfo versionRequest() throws IOException;
+  public NamespaceInfo versionRequest() throws IOException;
 }

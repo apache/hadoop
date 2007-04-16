@@ -39,7 +39,7 @@ public class TestPread extends TestCase {
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     // create and write a file that contains three blocks of data
     DataOutputStream stm = fileSys.create(name, true, 4096, (short)1,
-        (long)blockSize);
+                                          (long)blockSize);
     byte[] buffer = new byte[(int)(3*blockSize)];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -50,14 +50,14 @@ public class TestPread extends TestCase {
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
       this.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-          expected[from+idx]+" actual "+actual[idx],
-          actual[idx], expected[from+idx]);
+                        expected[from+idx]+" actual "+actual[idx],
+                        actual[idx], expected[from+idx]);
       actual[idx] = 0;
     }
   }
   
   private void doPread(FSDataInputStream stm, long position, byte[] buffer,
-      int offset, int length) throws IOException {
+                       int offset, int length) throws IOException {
     int nread = 0;
     while (nread < length) {
       int nbytes = stm.read(position+nread, buffer, offset+nread, length-nread);

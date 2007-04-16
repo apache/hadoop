@@ -52,58 +52,58 @@ public class TestEmptyJobWithDFS extends TestCase {
    * @throws IOException
    */
   public static boolean launchEmptyJob(String fileSys,
-                                      String jobTracker,
-                                      JobConf conf,
-                                      int numMaps,
-                                      int numReduces) throws IOException {
-      // create an empty input dir
-      final Path inDir = new Path("/testing/empty/input");
-      final Path outDir = new Path("/testing/empty/output");
-      FileSystem fs = FileSystem.getNamed(fileSys, conf);
-      fs.delete(outDir);
-      if (!fs.mkdirs(inDir)) {
-          LOG.warn("Can't create " + inDir);
-          return false;
-      }
+                                       String jobTracker,
+                                       JobConf conf,
+                                       int numMaps,
+                                       int numReduces) throws IOException {
+    // create an empty input dir
+    final Path inDir = new Path("/testing/empty/input");
+    final Path outDir = new Path("/testing/empty/output");
+    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+    fs.delete(outDir);
+    if (!fs.mkdirs(inDir)) {
+      LOG.warn("Can't create " + inDir);
+      return false;
+    }
 
-      // use WordCount example
-      conf.set("fs.default.name", fileSys);
-      conf.set("mapred.job.tracker", jobTracker);
-      conf.setJobName("empty");
-      // use an InputFormat which returns no split
-      conf.setInputFormat(EmptyInputFormat.class);
-      conf.setOutputKeyClass(Text.class);
-      conf.setOutputValueClass(IntWritable.class);
-      conf.setMapperClass(IdentityMapper.class);        
-      conf.setReducerClass(IdentityReducer.class);
-      conf.setInputPath(inDir);
-      conf.setOutputPath(outDir);
-      conf.setNumMapTasks(numMaps);
-      conf.setNumReduceTasks(numReduces);
+    // use WordCount example
+    conf.set("fs.default.name", fileSys);
+    conf.set("mapred.job.tracker", jobTracker);
+    conf.setJobName("empty");
+    // use an InputFormat which returns no split
+    conf.setInputFormat(EmptyInputFormat.class);
+    conf.setOutputKeyClass(Text.class);
+    conf.setOutputValueClass(IntWritable.class);
+    conf.setMapperClass(IdentityMapper.class);        
+    conf.setReducerClass(IdentityReducer.class);
+    conf.setInputPath(inDir);
+    conf.setOutputPath(outDir);
+    conf.setNumMapTasks(numMaps);
+    conf.setNumReduceTasks(numReduces);
       
-      // run job and wait for completion
-      JobClient jc = new JobClient(conf);
-      RunningJob runningJob = jc.submitJob(conf);
-      while (true) {
-          try {
-              Thread.sleep(1000);
-          } catch (InterruptedException e) {}
-          if (runningJob.isComplete()) {
-              break;
-          }
-      }
-      
+    // run job and wait for completion
+    JobClient jc = new JobClient(conf);
+    RunningJob runningJob = jc.submitJob(conf);
+    while (true) {
       try {
-          assertTrue(runningJob.isComplete());
-          assertTrue(runningJob.isSuccessful());
-      } catch (NullPointerException npe) {
-          // This NPE should no more happens
-          fail("A NPE should not have happened.");
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {}
+      if (runningJob.isComplete()) {
+        break;
       }
+    }
+      
+    try {
+      assertTrue(runningJob.isComplete());
+      assertTrue(runningJob.isSuccessful());
+    } catch (NullPointerException npe) {
+      // This NPE should no more happens
+      fail("A NPE should not have happened.");
+    }
           
-      // return job result
-      LOG.info("job is complete: " + runningJob.isSuccessful());
-      return (runningJob.isSuccessful());
+    // return job result
+    LOG.info("job is complete: " + runningJob.isSuccessful());
+    return (runningJob.isSuccessful());
   }
   
   /**
@@ -112,30 +112,30 @@ public class TestEmptyJobWithDFS extends TestCase {
    * @throws IOException
    */
   public void testEmptyJobWithDFS() throws IOException {
-      String namenode = null;
-      MiniDFSCluster dfs = null;
-      MiniMRCluster mr = null;
-      FileSystem fileSys = null;
-      try {
-          final int taskTrackers = 4;
-          final int jobTrackerPort = 60050;
-          Configuration conf = new Configuration();
-          dfs = new MiniDFSCluster(conf, 1, true, null);
-          fileSys = dfs.getFileSystem();
-          namenode = fileSys.getName();
-          mr = new MiniMRCluster(taskTrackers, namenode, 2);
-          final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
-          JobConf jobConf = new JobConf();
-          boolean result;
-          result = launchEmptyJob(namenode, jobTrackerName, jobConf, 
-                                   3, 1);
-          assertTrue(result);
+    String namenode = null;
+    MiniDFSCluster dfs = null;
+    MiniMRCluster mr = null;
+    FileSystem fileSys = null;
+    try {
+      final int taskTrackers = 4;
+      final int jobTrackerPort = 60050;
+      Configuration conf = new Configuration();
+      dfs = new MiniDFSCluster(conf, 1, true, null);
+      fileSys = dfs.getFileSystem();
+      namenode = fileSys.getName();
+      mr = new MiniMRCluster(taskTrackers, namenode, 2);
+      final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
+      JobConf jobConf = new JobConf();
+      boolean result;
+      result = launchEmptyJob(namenode, jobTrackerName, jobConf, 
+                              3, 1);
+      assertTrue(result);
           
-      } finally {
-          if (fileSys != null) { fileSys.close(); }
-          if (dfs != null) { dfs.shutdown(); }
-          if (mr != null) { mr.shutdown(); }
-      }
+    } finally {
+      if (fileSys != null) { fileSys.close(); }
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown(); }
+    }
   }
   
 }

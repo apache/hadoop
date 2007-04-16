@@ -48,7 +48,7 @@ public abstract class StreamBaseRecordReader implements RecordReader {
   final static String CONF_NS = "stream.recordreader.";
 
   public StreamBaseRecordReader(FSDataInputStream in, FileSplit split, Reporter reporter,
-      JobConf job, FileSystem fs) throws IOException {
+                                JobConf job, FileSystem fs) throws IOException {
     in_ = in;
     split_ = split;
     start_ = split_.getStart();
@@ -131,9 +131,9 @@ public abstract class StreamBaseRecordReader implements RecordReader {
       recStr = record.toString();
     }
     String unqualSplit = split_.getFile().getName() + ":" + split_.getStart() + "+"
-        + split_.getLength();
+      + split_.getLength();
     String status = "HSTR " + StreamUtil.HOST + " " + numRec_ + ". pos=" + pos + " " + unqualSplit
-        + " Processing record=" + recStr;
+      + " Processing record=" + recStr;
     status += " " + splitName_;
     return status;
   }

@@ -308,8 +308,8 @@ public class Text implements WritableComparable {
   }
   
   public static String decode(byte[] utf8, int start, int length) 
-      throws CharacterCodingException {
-      return decode(ByteBuffer.wrap(utf8, start, length), true);
+    throws CharacterCodingException {
+    return decode(ByteBuffer.wrap(utf8, start, length), true);
   }
   
   /**
@@ -414,7 +414,7 @@ public class Text implements WritableComparable {
    * @throws MalformedInputException if the byte array contains invalid utf-8
    */
   public static void validateUTF8(byte[] utf8) throws MalformedInputException {
-     validateUTF8(utf8, 0, utf8.length);     
+    validateUTF8(utf8, 0, utf8.length);     
   }
   
   /**

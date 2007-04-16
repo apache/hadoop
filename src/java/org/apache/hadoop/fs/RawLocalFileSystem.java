@@ -123,7 +123,7 @@ public class RawLocalFileSystem extends FileSystem {
     }
     
     public int read(long position, byte[] b, int off, int len)
-    throws IOException {
+      throws IOException {
       ByteBuffer bb = ByteBuffer.wrap(b, off, len);
       try {
         return fis.getChannel().read(bb, position);
@@ -179,8 +179,8 @@ public class RawLocalFileSystem extends FileSystem {
   }
   
   public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
-      short replication, long blockSize, Progressable progress)
-  throws IOException {
+                                   short replication, long blockSize, Progressable progress)
+    throws IOException {
     if (exists(f) && ! overwrite) {
       throw new IOException("File already exists:"+f);
     }
@@ -200,8 +200,8 @@ public class RawLocalFileSystem extends FileSystem {
   
   /** Set the replication of the given file */
   public boolean setReplication( Path src,
-      short replication
-  ) throws IOException {
+                                 short replication
+                                 ) throws IOException {
     return true;
   }
   
@@ -261,24 +261,24 @@ public class RawLocalFileSystem extends FileSystem {
     Path parent = f.getParent();
     File p2f = pathToFile(f);
     return (parent == null || mkdirs(parent)) &&
-    (p2f.mkdir() || p2f.isDirectory());
+      (p2f.mkdir() || p2f.isDirectory());
   }
   
   /**
    * Set the working directory to the given directory.
    */
   @Override
-  public void setWorkingDirectory(Path newDir) {
+    public void setWorkingDirectory(Path newDir) {
     workingDir = newDir;
   }
   
   @Override
-  public Path getWorkingDirectory() {
+    public Path getWorkingDirectory() {
     return workingDir;
   }
   
   /** @deprecated */ @Deprecated
-  public void lock(Path p, boolean shared) throws IOException {
+    public void lock(Path p, boolean shared) throws IOException {
     File f = pathToFile(p);
     f.createNewFile();
     
@@ -301,7 +301,7 @@ public class RawLocalFileSystem extends FileSystem {
   }
   
   /** @deprecated */ @Deprecated
-  public void release(Path p) throws IOException {
+    public void release(Path p) throws IOException {
     File f = pathToFile(p);
     
     FileLock lockObj;
@@ -335,26 +335,26 @@ public class RawLocalFileSystem extends FileSystem {
   }
   
   @Override
-  public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
-  throws IOException {
+    public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException {
     FileUtil.copy(this, src, this, dst, delSrc, getConf());
   }
   
   @Override
-  public void copyToLocalFile(boolean delSrc, Path src, Path dst)
-  throws IOException {
+    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException {
     FileUtil.copy(this, src, this, dst, delSrc, getConf());
   }
   
   // We can write output directly to the final location
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-  throws IOException {
+    throws IOException {
     return fsOutputFile;
   }
   
   // It's in the right place - nothing to do.
   public void completeLocalOutput(Path fsWorkingFile, Path tmpLocalFile)
-  throws IOException {
+    throws IOException {
   }
   
   public void close() throws IOException {

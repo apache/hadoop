@@ -47,7 +47,7 @@ import org.apache.hadoop.mapred.JobConf;
 public class StreamXmlRecordReader extends StreamBaseRecordReader {
 
   public StreamXmlRecordReader(FSDataInputStream in, FileSplit split, Reporter reporter,
-      JobConf job, FileSystem fs) throws IOException {
+                               JobConf job, FileSystem fs) throws IOException {
     super(in, split, reporter, job, fs);
 
     beginMark_ = checkJobGet(CONF_NS + "begin");
@@ -67,8 +67,8 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
 
   public void init() throws IOException {
     LOG.info("StreamBaseRecordReader.init: " + " start_=" + start_ + " end_=" + end_ + " length_="
-        + length_ + " start_ > in_.getPos() =" + (start_ > in_.getPos()) + " " + start_ + " > "
-        + in_.getPos());
+             + length_ + " start_ > in_.getPos() =" + (start_ > in_.getPos()) + " " + start_ + " > "
+             + in_.getPos());
     if (start_ > in_.getPos()) {
       in_.seek(start_);
     }
@@ -102,9 +102,9 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     ((Text) value).set("");
 
     /*if(numNext < 5) {
-     System.out.println("@@@ " + numNext + ". true next k=|" + key.toString().replaceAll("[\\r\\n]", " ")
-     + "|, len=" + buf.length() + " v=|" + value.toString().replaceAll("[\\r\\n]", " ") + "|");
-     }*/
+      System.out.println("@@@ " + numNext + ". true next k=|" + key.toString().replaceAll("[\\r\\n]", " ")
+      + "|, len=" + buf.length() + " v=|" + value.toString().replaceAll("[\\r\\n]", " ") + "|");
+      }*/
 
     return true;
   }
@@ -130,7 +130,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   }
 
   private boolean slowReadUntilMatch(Pattern markPattern, boolean includePat,
-      DataOutputBuffer outBufOrNull) throws IOException {
+                                     DataOutputBuffer outBufOrNull) throws IOException {
     try {
       long inStart = in_.getPos();
       byte[] buf = new byte[Math.max(lookAhead_, maxRecSize_)];
@@ -168,10 +168,10 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
         }
         state = nextState(state, input, match.start());
         /*System.out.println("@@@" +
-         s + ". Match " + match.start() + " " + match.groupCount() +
-         " state=" + state + " input=" + input + 
-         " firstMatchStart_=" + firstMatchStart_ + " startinstream=" + (inStart+firstMatchStart_) + 
-         " match=" + match.group(0) + " in=" + in_.getPos());*/
+          s + ". Match " + match.start() + " " + match.groupCount() +
+          " state=" + state + " input=" + input + 
+          " firstMatchStart_=" + firstMatchStart_ + " startinstream=" + (inStart+firstMatchStart_) + 
+          " match=" + match.group(0) + " in=" + in_.getPos());*/
         if (state == RECORD_ACCEPT) {
           break;
         }
@@ -230,7 +230,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
       case RECORD_MAYBE:
         return (state == CDATA_UNK) ? CDATA_UNK : RECORD_ACCEPT;
       }
-    break;
+      break;
     case CDATA_IN:
       return (input == CDATA_END) ? CDATA_OUT : CDATA_IN;
     }

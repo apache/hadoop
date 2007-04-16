@@ -81,7 +81,7 @@ public class TestFileSystem extends TestCase {
 
     SequenceFile.Writer writer =
       SequenceFile.createWriter(fs, conf, controlFile, 
-          UTF8.class, LongWritable.class, CompressionType.NONE);
+                                UTF8.class, LongWritable.class, CompressionType.NONE);
 
     long totalSize = 0;
     long maxSize = ((megaBytes / numFiles) * 2) + 1;
@@ -404,8 +404,8 @@ public class TestFileSystem extends TestCase {
     String usage = "Usage: TestFileSystem -files N -megaBytes M [-noread] [-nowrite] [-noseek] [-fastcheck]";
     
     if (args.length == 0) {
-        System.err.println(usage);
-        System.exit(-1);
+      System.err.println(usage);
+      System.exit(-1);
     }
     for (int i = 0; i < args.length; i++) {       // parse command line
       if (args[i].equals("-files")) {

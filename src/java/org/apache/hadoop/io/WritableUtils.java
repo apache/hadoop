@@ -36,14 +36,14 @@ public final class WritableUtils  {
     GZIPInputStream gzi = new GZIPInputStream(new ByteArrayInputStream(buffer, 0, buffer.length));
     byte[] outbuf = new byte[length];
     ByteArrayOutputStream bos =  new ByteArrayOutputStream();
-     int len;
-     while((len=gzi.read(outbuf,0,outbuf.length)) != -1){
-       bos.write(outbuf,0,len);
-     }
-     byte[] decompressed =  bos.toByteArray();
-     bos.close();
-     gzi.close();
-     return decompressed;
+    int len;
+    while((len=gzi.read(outbuf,0,outbuf.length)) != -1){
+      bos.write(outbuf,0,len);
+    }
+    byte[] decompressed =  bos.toByteArray();
+    bos.close();
+    gzi.close();
+    return decompressed;
   }
 
   public static void skipCompressedByteArray(DataInput in) throws IOException {
@@ -61,7 +61,7 @@ public final class WritableUtils  {
       int len = buffer.length;
       out.writeInt(len);
       out.write(buffer,0,len);
-    /* debug only! Once we have confidence, can lose this. */
+      /* debug only! Once we have confidence, can lose this. */
       return ((bytes.length != 0) ? (100*buffer.length)/bytes.length : 0);
     } else {
       out.writeInt(-1);
@@ -212,10 +212,10 @@ public final class WritableUtils  {
    * Allocate a buffer for each thread that tries to clone objects.
    */
   private static ThreadLocal cloneBuffers = new ThreadLocal() {
-    protected synchronized Object initialValue() {
-      return new CopyInCopyOutBuffer();
-    }
-  };
+      protected synchronized Object initialValue() {
+        return new CopyInCopyOutBuffer();
+      }
+    };
   
   /**
    * Make a copy of a writable object using serialization to a buffer.
@@ -253,7 +253,7 @@ public final class WritableUtils  {
    * @throws java.io.IOException 
    */
   public static void writeVInt(DataOutput stream, int i) throws IOException {
-      writeVLong(stream, i);
+    writeVLong(stream, i);
   }
   
   /**
@@ -272,32 +272,32 @@ public final class WritableUtils  {
    * @throws java.io.IOException 
    */
   public static void writeVLong(DataOutput stream, long i) throws IOException {
-      if (i >= -112 && i <= 127) {
-          stream.writeByte((byte)i);
-          return;
-      }
+    if (i >= -112 && i <= 127) {
+      stream.writeByte((byte)i);
+      return;
+    }
       
-      int len = -112;
-      if (i < 0) {
-          i ^= -1L; // take one's complement'
-          len = -120;
-      }
+    int len = -112;
+    if (i < 0) {
+      i ^= -1L; // take one's complement'
+      len = -120;
+    }
       
-      long tmp = i;
-      while (tmp != 0) {
-          tmp = tmp >> 8;
-          len--;
-      }
+    long tmp = i;
+    while (tmp != 0) {
+      tmp = tmp >> 8;
+      len--;
+    }
       
-      stream.writeByte((byte)len);
+    stream.writeByte((byte)len);
       
-      len = (len < -120) ? -(len + 120) : -(len + 112);
+    len = (len < -120) ? -(len + 120) : -(len + 112);
       
-      for (int idx = len; idx != 0; idx--) {
-          int shiftbits = (idx - 1) * 8;
-          long mask = 0xFFL << shiftbits;
-          stream.writeByte((byte)((i & mask) >> shiftbits));
-      }
+    for (int idx = len; idx != 0; idx--) {
+      int shiftbits = (idx - 1) * 8;
+      long mask = 0xFFL << shiftbits;
+      stream.writeByte((byte)((i & mask) >> shiftbits));
+    }
   }
   
 
@@ -308,19 +308,19 @@ public final class WritableUtils  {
    * @return deserialized long from stream.
    */
   public static long readVLong(DataInput stream) throws IOException {
-      int len = stream.readByte();
-      if (len >= -112) {
-          return len;
-      }
-      boolean isNegative = (len < -120);
-      len = isNegative ? -(len + 120) : -(len + 112);
-      long i = 0;
-      for (int idx = 0; idx < len; idx++) {
-          byte b = stream.readByte();
-          i = i << 8;
-          i = i | (b & 0xFF);
-      }
-      return (isNegative ? (i ^ -1L) : i);
+    int len = stream.readByte();
+    if (len >= -112) {
+      return len;
+    }
+    boolean isNegative = (len < -120);
+    len = isNegative ? -(len + 120) : -(len + 112);
+    long i = 0;
+    for (int idx = 0; idx < len; idx++) {
+      byte b = stream.readByte();
+      i = i << 8;
+      i = i | (b & 0xFF);
+    }
+    return (isNegative ? (i ^ -1L) : i);
   }
 
   /**
@@ -330,7 +330,7 @@ public final class WritableUtils  {
    * @return deserialized integer from stream.
    */
   public static int readVInt(DataInput stream) throws IOException {
-      return (int) readVLong(stream);
+    return (int) readVLong(stream);
   }
   
 
@@ -339,25 +339,25 @@ public final class WritableUtils  {
    * @return the encoded length 
    */
   public static int getVIntSize(long i) {
-      if (i >= -112 && i <= 127) {
-          return 1;
-      }
+    if (i >= -112 && i <= 127) {
+      return 1;
+    }
       
-      int len = -112;
-      if (i < 0) {
-          i ^= -1L; // take one's complement'
-          len = -120;
-      }
+    int len = -112;
+    if (i < 0) {
+      i ^= -1L; // take one's complement'
+      len = -120;
+    }
       
-      long tmp = i;
-      while (tmp != 0) {
-          tmp = tmp >> 8;
-          len--;
-      }
+    long tmp = i;
+    while (tmp != 0) {
+      tmp = tmp >> 8;
+      len--;
+    }
       
-      len = (len < -120) ? -(len + 120) : -(len + 112);
+    len = (len < -120) ? -(len + 120) : -(len + 112);
       
-      return len+1;
+    return len+1;
   }
   /**
    * Read an Enum value from DataInput, Enums are read and written 
@@ -379,7 +379,7 @@ public final class WritableUtils  {
    * @throws IOException
    */
   public static void writeEnum(DataOutput out,  Enum enumVal) 
-  throws IOException{
+    throws IOException{
     Text.writeString(out, enumVal.name()); 
   }
 }

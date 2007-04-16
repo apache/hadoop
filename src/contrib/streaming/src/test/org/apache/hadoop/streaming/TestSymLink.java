@@ -66,16 +66,16 @@ public class TestSymLink extends TestCase
         String strJobtracker = "mapred.job.tracker=" + "localhost:" + mr.getJobTrackerPort();
         String strNamenode = "fs.default.name=" + namenode;
         String argv[] = new String[] {
-            "-input", INPUT_FILE,
-            "-output", OUTPUT_DIR,
-            "-mapper", map,
-            "-reducer", reduce,
-            //"-verbose",
-            //"-jobconf", "stream.debug=set"
-            "-jobconf", strNamenode,
-            "-jobconf", strJobtracker,
-            "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
-            "-cacheFile", "hdfs://"+fileSys.getName()+CACHE_FILE + "#testlink"
+          "-input", INPUT_FILE,
+          "-output", OUTPUT_DIR,
+          "-mapper", map,
+          "-reducer", reduce,
+          //"-verbose",
+          //"-jobconf", "stream.debug=set"
+          "-jobconf", strNamenode,
+          "-jobconf", strJobtracker,
+          "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
+          "-cacheFile", "hdfs://"+fileSys.getName()+CACHE_FILE + "#testlink"
         };
 
         fileSys.delete(new Path(OUTPUT_DIR));

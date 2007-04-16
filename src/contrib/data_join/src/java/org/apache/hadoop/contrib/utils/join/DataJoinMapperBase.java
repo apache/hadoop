@@ -90,7 +90,7 @@ public abstract class DataJoinMapperBase extends JobBase {
   protected abstract Text generateGroupKey(TaggedMapOutput aRecord);
 
   public void map(WritableComparable key, Writable value,
-      OutputCollector output, Reporter reporter) throws IOException {
+                  OutputCollector output, Reporter reporter) throws IOException {
     if (this.reporter == null) {
       this.reporter = reporter;
     }
@@ -116,7 +116,7 @@ public abstract class DataJoinMapperBase extends JobBase {
   }
 
   public void reduce(WritableComparable arg0, Iterator arg1,
-      OutputCollector arg2, Reporter arg3) throws IOException {
+                     OutputCollector arg2, Reporter arg3) throws IOException {
     // TODO Auto-generated method stub
 
   }

@@ -49,7 +49,7 @@ public class NativeCodeLoader {
     
     if (!nativeCodeLoaded) {
       LOG.warn("Unable to load native-hadoop library for your platform... " +
-      "using builtin-java classes where applicable");
+               "using builtin-java classes where applicable");
     }
   }
 

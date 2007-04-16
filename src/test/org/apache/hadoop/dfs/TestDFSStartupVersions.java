@@ -35,9 +35,9 @@ import org.apache.hadoop.fs.Path;
 public class TestDFSStartupVersions extends TestCase {
   
   private static final Log LOG = LogFactory.getLog(
-    "org.apache.hadoop.dfs.TestDFSStartupVersions");
+                                                   "org.apache.hadoop.dfs.TestDFSStartupVersions");
   private static Path TEST_ROOT_DIR = new Path(
-    System.getProperty("test.build.data","/tmp").toString().replace(' ', '+'));
+                                               System.getProperty("test.build.data","/tmp").toString().replace(' ', '+'));
   private MiniDFSCluster cluster = null;
   
   /**
@@ -50,11 +50,11 @@ public class TestDFSStartupVersions extends TestCase {
     }
     LOG.info("============================================================");
     LOG.info("***TEST*** " + label + ":"
-      + testCaseLine
-      + " nodeType="+nodeType
-      + " layoutVersion="+version.getLayoutVersion()
-      + " namespaceID="+version.getNamespaceID()
-      + " fsscTime="+version.getCTime());
+             + testCaseLine
+             + " nodeType="+nodeType
+             + " layoutVersion="+version.getLayoutVersion()
+             + " namespaceID="+version.getNamespaceID()
+             + " fsscTime="+version.getCTime());
   }
   
   /**
@@ -130,20 +130,20 @@ public class TestDFSStartupVersions extends TestCase {
     int storedLV = datanodeVer.getLayoutVersion();
     if (softwareLV == storedLV &&  
         datanodeVer.getCTime() == namenodeVer.getCTime()) 
-    {
-      LOG.info("layoutVersions and cTimes are equal: isVersionCompatible=true");
-      return true;
-    }
+      {
+        LOG.info("layoutVersions and cTimes are equal: isVersionCompatible=true");
+        return true;
+      }
     // check #2
     long absSoftwareLV = Math.abs((long)softwareLV);
     long absStoredLV = Math.abs((long)storedLV);
     if (absSoftwareLV > absStoredLV ||
         (softwareLV == storedLV &&
          datanodeVer.getCTime() < namenodeVer.getCTime())) 
-    {
-      LOG.info("softwareLayoutVersion is newer OR namenode cTime is newer: isVersionCompatible=true");
-      return true;
-    }
+      {
+        LOG.info("softwareLayoutVersion is newer OR namenode cTime is newer: isVersionCompatible=true");
+        return true;
+      }
     // check #4
     LOG.info("default case: isVersionCompatible=false");
     return false;
@@ -168,16 +168,16 @@ public class TestDFSStartupVersions extends TestCase {
     Configuration conf = UpgradeUtilities.initializeStorageStateConf(1);
     StorageInfo[] versions = initializeVersions();
     UpgradeUtilities.createStorageDirs(
-      NAME_NODE, conf.getStrings("dfs.name.dir"), "current");
+                                       NAME_NODE, conf.getStrings("dfs.name.dir"), "current");
     cluster = new MiniDFSCluster(conf,0,StartupOption.REGULAR);
     StorageInfo nameNodeVersion = new StorageInfo(
-      UpgradeUtilities.getCurrentLayoutVersion(),
-      UpgradeUtilities.getCurrentNamespaceID(cluster),
-      UpgradeUtilities.getCurrentFsscTime(cluster));
+                                                  UpgradeUtilities.getCurrentLayoutVersion(),
+                                                  UpgradeUtilities.getCurrentNamespaceID(cluster),
+                                                  UpgradeUtilities.getCurrentFsscTime(cluster));
     log("NameNode version info",NAME_NODE,null,nameNodeVersion);
     for (int i = 0; i < versions.length; i++) {
       File[] storage = UpgradeUtilities.createStorageDirs(
-        DATA_NODE, conf.getStrings("dfs.data.dir"), "current");
+                                                          DATA_NODE, conf.getStrings("dfs.data.dir"), "current");
       log("DataNode version info",DATA_NODE,i,versions[i]);
       UpgradeUtilities.createVersionFile(DATA_NODE, storage, versions[i]);
       try {
@@ -188,7 +188,7 @@ public class TestDFSStartupVersions extends TestCase {
       }
       assertTrue(cluster.getNameNode() != null);
       assertEquals(isVersionCompatible(nameNodeVersion, versions[i]),
-        cluster.isDataNodeUp());
+                   cluster.isDataNodeUp());
       cluster.shutdownDataNodes();
     }
   }

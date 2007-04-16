@@ -55,30 +55,30 @@ public class TestStreaming extends TestCase
   protected void createInput() throws IOException
   {
     DataOutputStream out = new DataOutputStream(
-        new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
+                                                new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
     out.write(input.getBytes("UTF-8"));
     out.close();
   }
 
   protected String[] genArgs() {
     return new String[] {
-        "-input", INPUT_FILE.getAbsolutePath(),
-        "-output", OUTPUT_DIR.getAbsolutePath(),
-        "-mapper", map,
-        "-combiner", combine,
-        "-reducer", reduce,
-        //"-verbose",
-        //"-jobconf", "stream.debug=set"
-        "-jobconf", "keep.failed.task.files=true",
-        "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
-        };
+      "-input", INPUT_FILE.getAbsolutePath(),
+      "-output", OUTPUT_DIR.getAbsolutePath(),
+      "-mapper", map,
+      "-combiner", combine,
+      "-reducer", reduce,
+      //"-verbose",
+      //"-jobconf", "stream.debug=set"
+      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
+    };
   }
   
   public void testCommandLine()
   {
     try {
       try {
-         OUTPUT_DIR.getAbsoluteFile().delete();
+        OUTPUT_DIR.getAbsoluteFile().delete();
       } catch (Exception e) {
       }
 

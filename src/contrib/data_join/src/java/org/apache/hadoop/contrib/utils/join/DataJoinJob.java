@@ -97,7 +97,7 @@ public class DataJoinJob {
     job.setOutputPath(new Path(outputDir));
     job.setOutputFormat(outputFormat);
     SequenceFile.setCompressionType(job,
-        SequenceFile.CompressionType.BLOCK);
+                                    SequenceFile.CompressionType.BLOCK);
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(mapoutputValueClass);
     job.setOutputKeyClass(Text.class);
@@ -107,7 +107,7 @@ public class DataJoinJob {
     job.setNumMapTasks(1);
     job.setNumReduceTasks(numOfReducers);
     job.setLong("ultjoin.maxNumOfValuesPerGroup",
-        maxNumOfValuesPerGroup);
+                maxNumOfValuesPerGroup);
     job.set("mapred.child.java.opts", "-Xmx1024m");
     job.setKeepFailedTaskFiles(true);
     return job;
@@ -153,9 +153,9 @@ public class DataJoinJob {
     boolean success;
     if (args.length < 7 || args.length > 9) {
       System.out.println("usage: DataJoinJob " + "inputdirs outputdir "
-          + "numofParts " + "mapper_class " + "reducer_class "
-          + "map_output_value_class "
-          + "output_value_class [maxNumOfValuesPerGroup [descriptionOfJob]]]");
+                         + "numofParts " + "mapper_class " + "reducer_class "
+                         + "map_output_value_class "
+                         + "output_value_class [maxNumOfValuesPerGroup [descriptionOfJob]]]");
       System.exit(-1);
     }
 

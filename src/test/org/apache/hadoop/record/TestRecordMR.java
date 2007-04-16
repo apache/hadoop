@@ -62,392 +62,392 @@ import java.util.*;
  *
  **********************************************************/
 public class TestRecordMR extends TestCase {
-    /**
-     * Modified to make it a junit test.
-     * The RandomGen Job does the actual work of creating
-     * a huge file of assorted numbers.  It receives instructions
-     * as to how many times each number should be counted.  Then
-     * it emits those numbers in a crazy order.
-     *
-     * The map() function takes a key/val pair that describes
-     * a value-to-be-emitted (the key) and how many times it 
-     * should be emitted (the value), aka "numtimes".  map() then
-     * emits a series of intermediate key/val pairs.  It emits
-     * 'numtimes' of these.  The key is a random number and the
-     * value is the 'value-to-be-emitted'.
-     *
-     * The system collates and merges these pairs according to
-     * the random number.  reduce() function takes in a key/value
-     * pair that consists of a crazy random number and a series
-     * of values that should be emitted.  The random number key
-     * is now dropped, and reduce() emits a pair for every intermediate value.
-     * The emitted key is an intermediate value.  The emitted value
-     * is just a blank string.  Thus, we've created a huge file
-     * of numbers in random order, but where each number appears
-     * as many times as we were instructed.
-     */
-    static public class RandomGenMapper implements Mapper {
-        Random r = new Random();
-        public void configure(JobConf job) {
-        }
-
-        public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-            int randomVal = ((RecInt) key).getData();
-            int randomCount = ((RecInt) val).getData();
-
-            for (int i = 0; i < randomCount; i++) {
-                out.collect(new RecInt(Math.abs(r.nextInt())),
-                        new RecString(Integer.toString(randomVal)));
-            }
-        }
-        public void close() {
-        }
-    }
-    /**
-     */
-    static public class RandomGenReducer implements Reducer {
-        public void configure(JobConf job) {
-        }
-
-        public void reduce(WritableComparable key,
-                Iterator it,
-                OutputCollector out,
-                Reporter reporter)
-                throws IOException {
-            int keyint = ((RecInt) key).getData();
-            while (it.hasNext()) {
-                String val = ((RecString) it.next()).getData();
-                out.collect(new RecInt(Integer.parseInt(val)),
-                        new RecString(""));
-            }
-        }
-        public void close() {
-        }
+  /**
+   * Modified to make it a junit test.
+   * The RandomGen Job does the actual work of creating
+   * a huge file of assorted numbers.  It receives instructions
+   * as to how many times each number should be counted.  Then
+   * it emits those numbers in a crazy order.
+   *
+   * The map() function takes a key/val pair that describes
+   * a value-to-be-emitted (the key) and how many times it 
+   * should be emitted (the value), aka "numtimes".  map() then
+   * emits a series of intermediate key/val pairs.  It emits
+   * 'numtimes' of these.  The key is a random number and the
+   * value is the 'value-to-be-emitted'.
+   *
+   * The system collates and merges these pairs according to
+   * the random number.  reduce() function takes in a key/value
+   * pair that consists of a crazy random number and a series
+   * of values that should be emitted.  The random number key
+   * is now dropped, and reduce() emits a pair for every intermediate value.
+   * The emitted key is an intermediate value.  The emitted value
+   * is just a blank string.  Thus, we've created a huge file
+   * of numbers in random order, but where each number appears
+   * as many times as we were instructed.
+   */
+  static public class RandomGenMapper implements Mapper {
+    Random r = new Random();
+    public void configure(JobConf job) {
     }
 
-    /**
-     * The RandomCheck Job does a lot of our work.  It takes
-     * in a num/string keyspace, and transforms it into a
-     * key/count(int) keyspace.
-     *
-     * The map() function just emits a num/1 pair for every
-     * num/string input pair.
-     *
-     * The reduce() function sums up all the 1s that were
-     * emitted for a single key.  It then emits the key/total
-     * pair.
-     *
-     * This is used to regenerate the random number "answer key".
-     * Each key here is a random number, and the count is the
-     * number of times the number was emitted.
-     */
-    static public class RandomCheckMapper implements Mapper {
-        public void configure(JobConf job) {
-        }
+    public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
+      int randomVal = ((RecInt) key).getData();
+      int randomCount = ((RecInt) val).getData();
 
-        public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-            int pos = ((RecInt) key).getData();
-            String str = ((RecString) val).getData();
-            out.collect(new RecInt(pos), new RecString("1"));
-        }
-        public void close() {
-        }
+      for (int i = 0; i < randomCount; i++) {
+        out.collect(new RecInt(Math.abs(r.nextInt())),
+                    new RecString(Integer.toString(randomVal)));
+      }
     }
-    /**
-     */
-    static public class RandomCheckReducer implements Reducer {
-        public void configure(JobConf job) {
-        }
+    public void close() {
+    }
+  }
+  /**
+   */
+  static public class RandomGenReducer implements Reducer {
+    public void configure(JobConf job) {
+    }
+
+    public void reduce(WritableComparable key,
+                       Iterator it,
+                       OutputCollector out,
+                       Reporter reporter)
+      throws IOException {
+      int keyint = ((RecInt) key).getData();
+      while (it.hasNext()) {
+        String val = ((RecString) it.next()).getData();
+        out.collect(new RecInt(Integer.parseInt(val)),
+                    new RecString(""));
+      }
+    }
+    public void close() {
+    }
+  }
+
+  /**
+   * The RandomCheck Job does a lot of our work.  It takes
+   * in a num/string keyspace, and transforms it into a
+   * key/count(int) keyspace.
+   *
+   * The map() function just emits a num/1 pair for every
+   * num/string input pair.
+   *
+   * The reduce() function sums up all the 1s that were
+   * emitted for a single key.  It then emits the key/total
+   * pair.
+   *
+   * This is used to regenerate the random number "answer key".
+   * Each key here is a random number, and the count is the
+   * number of times the number was emitted.
+   */
+  static public class RandomCheckMapper implements Mapper {
+    public void configure(JobConf job) {
+    }
+
+    public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
+      int pos = ((RecInt) key).getData();
+      String str = ((RecString) val).getData();
+      out.collect(new RecInt(pos), new RecString("1"));
+    }
+    public void close() {
+    }
+  }
+  /**
+   */
+  static public class RandomCheckReducer implements Reducer {
+    public void configure(JobConf job) {
+    }
         
-        public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
-            int keyint = ((RecInt) key).getData();
-            int count = 0;
-            while (it.hasNext()) {
-                it.next();
-                count++;
-            }
-            out.collect(new RecInt(keyint), new RecString(Integer.toString(count)));
-        }
-        public void close() {
-        }
+    public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
+      int keyint = ((RecInt) key).getData();
+      int count = 0;
+      while (it.hasNext()) {
+        it.next();
+        count++;
+      }
+      out.collect(new RecInt(keyint), new RecString(Integer.toString(count)));
+    }
+    public void close() {
+    }
+  }
+
+  /**
+   * The Merge Job is a really simple one.  It takes in
+   * an int/int key-value set, and emits the same set.
+   * But it merges identical keys by adding their values.
+   *
+   * Thus, the map() function is just the identity function
+   * and reduce() just sums.  Nothing to see here!
+   */
+  static public class MergeMapper implements Mapper {
+    public void configure(JobConf job) {
     }
 
-    /**
-     * The Merge Job is a really simple one.  It takes in
-     * an int/int key-value set, and emits the same set.
-     * But it merges identical keys by adding their values.
-     *
-     * Thus, the map() function is just the identity function
-     * and reduce() just sums.  Nothing to see here!
-     */
-    static public class MergeMapper implements Mapper {
-        public void configure(JobConf job) {
-        }
-
-        public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-            int keyint = ((RecInt) key).getData();
-            String valstr = ((RecString) val).getData();
-            out.collect(new RecInt(keyint), new RecInt(Integer.parseInt(valstr)));
-        }
-        public void close() {
-        }
+    public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
+      int keyint = ((RecInt) key).getData();
+      String valstr = ((RecString) val).getData();
+      out.collect(new RecInt(keyint), new RecInt(Integer.parseInt(valstr)));
     }
-    static public class MergeReducer implements Reducer {
-        public void configure(JobConf job) {
-        }
+    public void close() {
+    }
+  }
+  static public class MergeReducer implements Reducer {
+    public void configure(JobConf job) {
+    }
         
-        public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
-            int keyint = ((RecInt) key).getData();
-            int total = 0;
-            while (it.hasNext()) {
-                total += ((RecInt) it.next()).getData();
-            }
-            out.collect(new RecInt(keyint), new RecInt(total));
-        }
-        public void close() {
-        }
+    public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
+      int keyint = ((RecInt) key).getData();
+      int total = 0;
+      while (it.hasNext()) {
+        total += ((RecInt) it.next()).getData();
+      }
+      out.collect(new RecInt(keyint), new RecInt(total));
+    }
+    public void close() {
+    }
+  }
+
+  private static int range = 10;
+  private static int counts = 100;
+  private static Random r = new Random();
+  private static Configuration conf = new Configuration();
+
+  public void testMapred() throws Exception {
+    launch();
+  }
+
+  /**
+   * 
+   */
+  public static void launch() throws Exception {
+    //
+    // Generate distribution of ints.  This is the answer key.
+    //
+    int countsToGo = counts;
+    int dist[] = new int[range];
+    for (int i = 0; i < range; i++) {
+      double avgInts = (1.0 * countsToGo) / (range - i);
+      dist[i] = (int) Math.max(0, Math.round(avgInts + (Math.sqrt(avgInts) * r.nextGaussian())));
+      countsToGo -= dist[i];
+    }
+    if (countsToGo > 0) {
+      dist[dist.length-1] += countsToGo;
     }
 
-    private static int range = 10;
-    private static int counts = 100;
-    private static Random r = new Random();
-    private static Configuration conf = new Configuration();
-
-    public void testMapred() throws Exception {
-	launch();
+    //
+    // Write the answer key to a file.  
+    //
+    FileSystem fs = FileSystem.get(conf);
+    Path testdir = new Path("mapred.loadtest");
+    if (!fs.mkdirs(testdir)) {
+      throw new IOException("Mkdirs failed to create directory " + testdir.toString());
     }
 
-    /**
-     * 
-     */
-    public static void launch() throws Exception {
-        //
-        // Generate distribution of ints.  This is the answer key.
-        //
-        int countsToGo = counts;
-        int dist[] = new int[range];
-        for (int i = 0; i < range; i++) {
-            double avgInts = (1.0 * countsToGo) / (range - i);
-            dist[i] = (int) Math.max(0, Math.round(avgInts + (Math.sqrt(avgInts) * r.nextGaussian())));
-            countsToGo -= dist[i];
-        }
-        if (countsToGo > 0) {
-            dist[dist.length-1] += countsToGo;
-        }
+    Path randomIns = new Path(testdir, "genins");
+    if (!fs.mkdirs(randomIns)) {
+      throw new IOException("Mkdirs failed to create directory " + randomIns.toString());
+    }
 
-        //
-        // Write the answer key to a file.  
-        //
-        FileSystem fs = FileSystem.get(conf);
-        Path testdir = new Path("mapred.loadtest");
-        if (!fs.mkdirs(testdir)) {
-          throw new IOException("Mkdirs failed to create directory " + testdir.toString());
-        }
+    Path answerkey = new Path(randomIns, "answer.key");
+    SequenceFile.Writer out = SequenceFile.createWriter(fs, conf, 
+                                                        answerkey, RecInt.class, RecInt.class, 
+                                                        CompressionType.NONE);
+    try {
+      for (int i = 0; i < range; i++) {
+        RecInt k = new RecInt();
+        RecInt v = new RecInt();
+        k.setData(i);
+        v.setData(dist[i]);
+        out.append(k, v);
+      }
+    } finally {
+      out.close();
+    }
 
-        Path randomIns = new Path(testdir, "genins");
-        if (!fs.mkdirs(randomIns)) {
-          throw new IOException("Mkdirs failed to create directory " + randomIns.toString());
-        }
-
-        Path answerkey = new Path(randomIns, "answer.key");
-        SequenceFile.Writer out = SequenceFile.createWriter(fs, conf, 
-            answerkey, RecInt.class, RecInt.class, 
-            CompressionType.NONE);
-        try {
-            for (int i = 0; i < range; i++) {
-                RecInt k = new RecInt();
-                RecInt v = new RecInt();
-                k.setData(i);
-                v.setData(dist[i]);
-                out.append(k, v);
-            }
-        } finally {
-            out.close();
-        }
-
-        //
-        // Now we need to generate the random numbers according to
-        // the above distribution.
-        //
-        // We create a lot of map tasks, each of which takes at least
-        // one "line" of the distribution.  (That is, a certain number
-        // X is to be generated Y number of times.)
-        //
-        // A map task emits Y key/val pairs.  The val is X.  The key
-        // is a randomly-generated number.
-        //
-        // The reduce task gets its input sorted by key.  That is, sorted
-        // in random order.  It then emits a single line of text that
-        // for the given values.  It does not emit the key.
-        //
-        // Because there's just one reduce task, we emit a single big
-        // file of random numbers.
-        //
-        Path randomOuts = new Path(testdir, "genouts");
-        fs.delete(randomOuts);
+    //
+    // Now we need to generate the random numbers according to
+    // the above distribution.
+    //
+    // We create a lot of map tasks, each of which takes at least
+    // one "line" of the distribution.  (That is, a certain number
+    // X is to be generated Y number of times.)
+    //
+    // A map task emits Y key/val pairs.  The val is X.  The key
+    // is a randomly-generated number.
+    //
+    // The reduce task gets its input sorted by key.  That is, sorted
+    // in random order.  It then emits a single line of text that
+    // for the given values.  It does not emit the key.
+    //
+    // Because there's just one reduce task, we emit a single big
+    // file of random numbers.
+    //
+    Path randomOuts = new Path(testdir, "genouts");
+    fs.delete(randomOuts);
 
 
-        JobConf genJob = new JobConf(conf,TestRecordMR.class);
-        genJob.setInputPath(randomIns);
-        genJob.setInputKeyClass(RecInt.class);
-        genJob.setInputValueClass(RecInt.class);
-        genJob.setInputFormat(SequenceFileInputFormat.class);
-        genJob.setMapperClass(RandomGenMapper.class);
+    JobConf genJob = new JobConf(conf,TestRecordMR.class);
+    genJob.setInputPath(randomIns);
+    genJob.setInputKeyClass(RecInt.class);
+    genJob.setInputValueClass(RecInt.class);
+    genJob.setInputFormat(SequenceFileInputFormat.class);
+    genJob.setMapperClass(RandomGenMapper.class);
 
-        genJob.setOutputPath(randomOuts);
-        genJob.setOutputKeyClass(RecInt.class);
-        genJob.setOutputValueClass(RecString.class);
-        genJob.setOutputFormat(SequenceFileOutputFormat.class);
-        genJob.setReducerClass(RandomGenReducer.class);
-        genJob.setNumReduceTasks(1);
+    genJob.setOutputPath(randomOuts);
+    genJob.setOutputKeyClass(RecInt.class);
+    genJob.setOutputValueClass(RecString.class);
+    genJob.setOutputFormat(SequenceFileOutputFormat.class);
+    genJob.setReducerClass(RandomGenReducer.class);
+    genJob.setNumReduceTasks(1);
 
-        JobClient.runJob(genJob);
+    JobClient.runJob(genJob);
 
-        //
-        // Next, we read the big file in and regenerate the 
-        // original map.  It's split into a number of parts.
-        // (That number is 'intermediateReduces'.)
-        //
-        // We have many map tasks, each of which read at least one
-        // of the output numbers.  For each number read in, the
-        // map task emits a key/value pair where the key is the
-        // number and the value is "1".
-        //
-        // We have a single reduce task, which receives its input
-        // sorted by the key emitted above.  For each key, there will
-        // be a certain number of "1" values.  The reduce task sums
-        // these values to compute how many times the given key was
-        // emitted.
-        //
-        // The reduce task then emits a key/val pair where the key
-        // is the number in question, and the value is the number of
-        // times the key was emitted.  This is the same format as the
-        // original answer key (except that numbers emitted zero times
-        // will not appear in the regenerated key.)  The answer set
-        // is split into a number of pieces.  A final MapReduce job
-        // will merge them.
-        //
-        // There's not really a need to go to 10 reduces here 
-        // instead of 1.  But we want to test what happens when
-        // you have multiple reduces at once.
-        //
-        int intermediateReduces = 10;
-        Path intermediateOuts = new Path(testdir, "intermediateouts");
-        fs.delete(intermediateOuts);
-        JobConf checkJob = new JobConf(conf,TestRecordMR.class);
-        checkJob.setInputPath(randomOuts);
-        checkJob.setInputKeyClass(RecInt.class);
-        checkJob.setInputValueClass(RecString.class);
-        checkJob.setInputFormat(SequenceFileInputFormat.class);
-        checkJob.setMapperClass(RandomCheckMapper.class);
+    //
+    // Next, we read the big file in and regenerate the 
+    // original map.  It's split into a number of parts.
+    // (That number is 'intermediateReduces'.)
+    //
+    // We have many map tasks, each of which read at least one
+    // of the output numbers.  For each number read in, the
+    // map task emits a key/value pair where the key is the
+    // number and the value is "1".
+    //
+    // We have a single reduce task, which receives its input
+    // sorted by the key emitted above.  For each key, there will
+    // be a certain number of "1" values.  The reduce task sums
+    // these values to compute how many times the given key was
+    // emitted.
+    //
+    // The reduce task then emits a key/val pair where the key
+    // is the number in question, and the value is the number of
+    // times the key was emitted.  This is the same format as the
+    // original answer key (except that numbers emitted zero times
+    // will not appear in the regenerated key.)  The answer set
+    // is split into a number of pieces.  A final MapReduce job
+    // will merge them.
+    //
+    // There's not really a need to go to 10 reduces here 
+    // instead of 1.  But we want to test what happens when
+    // you have multiple reduces at once.
+    //
+    int intermediateReduces = 10;
+    Path intermediateOuts = new Path(testdir, "intermediateouts");
+    fs.delete(intermediateOuts);
+    JobConf checkJob = new JobConf(conf,TestRecordMR.class);
+    checkJob.setInputPath(randomOuts);
+    checkJob.setInputKeyClass(RecInt.class);
+    checkJob.setInputValueClass(RecString.class);
+    checkJob.setInputFormat(SequenceFileInputFormat.class);
+    checkJob.setMapperClass(RandomCheckMapper.class);
 
-        checkJob.setOutputPath(intermediateOuts);
-        checkJob.setOutputKeyClass(RecInt.class);
-        checkJob.setOutputValueClass(RecString.class);
-        checkJob.setOutputFormat(SequenceFileOutputFormat.class);
-        checkJob.setReducerClass(RandomCheckReducer.class);
-        checkJob.setNumReduceTasks(intermediateReduces);
+    checkJob.setOutputPath(intermediateOuts);
+    checkJob.setOutputKeyClass(RecInt.class);
+    checkJob.setOutputValueClass(RecString.class);
+    checkJob.setOutputFormat(SequenceFileOutputFormat.class);
+    checkJob.setReducerClass(RandomCheckReducer.class);
+    checkJob.setNumReduceTasks(intermediateReduces);
 
-        JobClient.runJob(checkJob);
+    JobClient.runJob(checkJob);
 
-        //
-        // OK, now we take the output from the last job and
-        // merge it down to a single file.  The map() and reduce()
-        // functions don't really do anything except reemit tuples.
-        // But by having a single reduce task here, we end up merging
-        // all the files.
-        //
-        Path finalOuts = new Path(testdir, "finalouts");        
-        fs.delete(finalOuts);
-        JobConf mergeJob = new JobConf(conf,TestRecordMR.class);
-        mergeJob.setInputPath(intermediateOuts);
-        mergeJob.setInputKeyClass(RecInt.class);
-        mergeJob.setInputValueClass(RecString.class);
-        mergeJob.setInputFormat(SequenceFileInputFormat.class);
-        mergeJob.setMapperClass(MergeMapper.class);
+    //
+    // OK, now we take the output from the last job and
+    // merge it down to a single file.  The map() and reduce()
+    // functions don't really do anything except reemit tuples.
+    // But by having a single reduce task here, we end up merging
+    // all the files.
+    //
+    Path finalOuts = new Path(testdir, "finalouts");        
+    fs.delete(finalOuts);
+    JobConf mergeJob = new JobConf(conf,TestRecordMR.class);
+    mergeJob.setInputPath(intermediateOuts);
+    mergeJob.setInputKeyClass(RecInt.class);
+    mergeJob.setInputValueClass(RecString.class);
+    mergeJob.setInputFormat(SequenceFileInputFormat.class);
+    mergeJob.setMapperClass(MergeMapper.class);
         
-        mergeJob.setOutputPath(finalOuts);
-        mergeJob.setOutputKeyClass(RecInt.class);
-        mergeJob.setOutputValueClass(RecInt.class);
-        mergeJob.setOutputFormat(SequenceFileOutputFormat.class);
-        mergeJob.setReducerClass(MergeReducer.class);
-        mergeJob.setNumReduceTasks(1);
+    mergeJob.setOutputPath(finalOuts);
+    mergeJob.setOutputKeyClass(RecInt.class);
+    mergeJob.setOutputValueClass(RecInt.class);
+    mergeJob.setOutputFormat(SequenceFileOutputFormat.class);
+    mergeJob.setReducerClass(MergeReducer.class);
+    mergeJob.setNumReduceTasks(1);
         
-        JobClient.runJob(mergeJob);
+    JobClient.runJob(mergeJob);
         
  
-        //
-        // Finally, we compare the reconstructed answer key with the
-        // original one.  Remember, we need to ignore zero-count items
-        // in the original key.
-        //
-        boolean success = true;
-        Path recomputedkey = new Path(finalOuts, "part-00000");
-        SequenceFile.Reader in = new SequenceFile.Reader(fs, recomputedkey, conf);
-        int totalseen = 0;
-        try {
-            RecInt key = new RecInt();
-            RecInt val = new RecInt();            
-            for (int i = 0; i < range; i++) {
-                if (dist[i] == 0) {
-                    continue;
-                }
-                if (! in.next(key, val)) {
-                    System.err.println("Cannot read entry " + i);
-                    success = false;
-                    break;
-                } else {
-                    if ( !((key.getData() == i ) && (val.getData() == dist[i]))) {
-                        System.err.println("Mismatch!  Pos=" + key.getData() + ", i=" + i + ", val=" + val.getData() + ", dist[i]=" + dist[i]);
-                        success = false;
-                    }
-                    totalseen += val.getData();
-                }
-            }
-            if (success) {
-                if (in.next(key, val)) {
-                    System.err.println("Unnecessary lines in recomputed key!");
-                    success = false;
-                }
-            }
-        } finally {
-            in.close();
+    //
+    // Finally, we compare the reconstructed answer key with the
+    // original one.  Remember, we need to ignore zero-count items
+    // in the original key.
+    //
+    boolean success = true;
+    Path recomputedkey = new Path(finalOuts, "part-00000");
+    SequenceFile.Reader in = new SequenceFile.Reader(fs, recomputedkey, conf);
+    int totalseen = 0;
+    try {
+      RecInt key = new RecInt();
+      RecInt val = new RecInt();            
+      for (int i = 0; i < range; i++) {
+        if (dist[i] == 0) {
+          continue;
         }
-        int originalTotal = 0;
-        for (int i = 0; i < dist.length; i++) {
-            originalTotal += dist[i];
+        if (! in.next(key, val)) {
+          System.err.println("Cannot read entry " + i);
+          success = false;
+          break;
+        } else {
+          if ( !((key.getData() == i ) && (val.getData() == dist[i]))) {
+            System.err.println("Mismatch!  Pos=" + key.getData() + ", i=" + i + ", val=" + val.getData() + ", dist[i]=" + dist[i]);
+            success = false;
+          }
+          totalseen += val.getData();
         }
-        System.out.println("Original sum: " + originalTotal);
-        System.out.println("Recomputed sum: " + totalseen);
+      }
+      if (success) {
+        if (in.next(key, val)) {
+          System.err.println("Unnecessary lines in recomputed key!");
+          success = false;
+        }
+      }
+    } finally {
+      in.close();
+    }
+    int originalTotal = 0;
+    for (int i = 0; i < dist.length; i++) {
+      originalTotal += dist[i];
+    }
+    System.out.println("Original sum: " + originalTotal);
+    System.out.println("Recomputed sum: " + totalseen);
 
-        //
-        // Write to "results" whether the test succeeded or not.
-        //
-        Path resultFile = new Path(testdir, "results");
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fs.create(resultFile)));
-        try {
-            bw.write("Success=" + success + "\n");
-            System.out.println("Success=" + success);            
-        } finally {
-            bw.close();
-        }
-	fs.delete(testdir);
+    //
+    // Write to "results" whether the test succeeded or not.
+    //
+    Path resultFile = new Path(testdir, "results");
+    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fs.create(resultFile)));
+    try {
+      bw.write("Success=" + success + "\n");
+      System.out.println("Success=" + success);            
+    } finally {
+      bw.close();
+    }
+    fs.delete(testdir);
+  }
+
+  /**
+   * Launches all the tasks in order.
+   */
+  public static void main(String[] argv) throws Exception {
+    if (argv.length < 2) {
+      System.err.println("Usage: TestRecordMR <range> <counts>");
+      System.err.println();
+      System.err.println("Note: a good test will have a <counts> value that is substantially larger than the <range>");
+      return;
     }
 
-    /**
-     * Launches all the tasks in order.
-     */
-    public static void main(String[] argv) throws Exception {
-        if (argv.length < 2) {
-            System.err.println("Usage: TestRecordMR <range> <counts>");
-            System.err.println();
-            System.err.println("Note: a good test will have a <counts> value that is substantially larger than the <range>");
-            return;
-        }
-
-        int i = 0;
-        int range = Integer.parseInt(argv[i++]);
-        int counts = Integer.parseInt(argv[i++]);
-	launch();
-    }
+    int i = 0;
+    int range = Integer.parseInt(argv[i++]);
+    int counts = Integer.parseInt(argv[i++]);
+    launch();
+  }
 }

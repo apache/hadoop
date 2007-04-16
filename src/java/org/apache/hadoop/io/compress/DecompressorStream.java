@@ -95,7 +95,7 @@ class DecompressorStream extends CompressionInputStream {
   
     int n = in.read(buffer, 0, buffer.length);
     if (n == -1) {
-        throw new EOFException("Unexpected end of input stream");
+      throw new EOFException("Unexpected end of input stream");
     }
 
     decompressor.setInput(buffer, 0, n);

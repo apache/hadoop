@@ -61,8 +61,8 @@ public class WordCount {
     private Text word = new Text();
     
     public void map(WritableComparable key, Writable value, 
-        OutputCollector output, 
-        Reporter reporter) throws IOException {
+                    OutputCollector output, 
+                    Reporter reporter) throws IOException {
       String line = ((Text)value).toString();
       StringTokenizer itr = new StringTokenizer(line);
       while (itr.hasMoreTokens()) {
@@ -79,8 +79,8 @@ public class WordCount {
   public static class Reduce extends MapReduceBase implements Reducer {
     
     public void reduce(WritableComparable key, Iterator values,
-        OutputCollector output, 
-        Reporter reporter) throws IOException {
+                       OutputCollector output, 
+                       Reporter reporter) throws IOException {
       int sum = 0;
       while (values.hasNext()) {
         sum += ((IntWritable) values.next()).get();
@@ -136,7 +136,7 @@ public class WordCount {
     // Make sure there are exactly 2 parameters left.
     if (other_args.size() != 2) {
       System.out.println("ERROR: Wrong number of parameters: " +
-          other_args.size() + " instead of 2.");
+                         other_args.size() + " instead of 2.");
       printUsage();
     }
     conf.setInputPath(new Path((String) other_args.get(0)));

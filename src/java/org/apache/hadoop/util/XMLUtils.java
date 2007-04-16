@@ -38,17 +38,17 @@ public class XMLUtils {
    * @throws TransformerException
    */
   public static void transform(
-          InputStream styleSheet, InputStream xml, Writer out
-          ) 
-  throws TransformerConfigurationException, TransformerException {
+                               InputStream styleSheet, InputStream xml, Writer out
+                               ) 
+    throws TransformerConfigurationException, TransformerException {
     // Instantiate a TransformerFactory
     TransformerFactory tFactory = TransformerFactory.newInstance();
 
     // Use the TransformerFactory to process the  
     // stylesheet and generate a Transformer
     Transformer transformer = tFactory.newTransformer(
-                                  new StreamSource(styleSheet)
-                                );
+                                                      new StreamSource(styleSheet)
+                                                      );
 
     // Use the Transformer to transform an XML Source 
     // and send the output to a Result object.

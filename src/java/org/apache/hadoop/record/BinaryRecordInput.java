@@ -29,110 +29,110 @@ import java.io.InputStream;
  */
 public class BinaryRecordInput implements RecordInput {
     
-    private DataInput in;
+  private DataInput in;
     
-    static private class BinaryIndex implements Index {
-        private int nelems;
-        private BinaryIndex(int nelems) {
-          this.nelems = nelems;
-        }
-        public boolean done() {
-            return (nelems <= 0);
-        }
-        public void incr() {
-            nelems--;
-        }
+  static private class BinaryIndex implements Index {
+    private int nelems;
+    private BinaryIndex(int nelems) {
+      this.nelems = nelems;
     }
-    
-    private BinaryRecordInput() {}
-    
-    private void setDataInput(DataInput inp) {
-      this.in = inp;
+    public boolean done() {
+      return (nelems <= 0);
     }
+    public void incr() {
+      nelems--;
+    }
+  }
     
-    private static ThreadLocal bIn = new ThreadLocal() {
+  private BinaryRecordInput() {}
+    
+  private void setDataInput(DataInput inp) {
+    this.in = inp;
+  }
+    
+  private static ThreadLocal bIn = new ThreadLocal() {
       protected synchronized Object initialValue() {
         return new BinaryRecordInput();
       }
     };
     
-    /**
-     * Get a thread-local record input for the supplied DataInput.
-     * @param inp data input stream
-     * @return binary record input corresponding to the supplied DataInput.
-     */
-    public static BinaryRecordInput get(DataInput inp) {
-      BinaryRecordInput bin = (BinaryRecordInput) bIn.get();
-      bin.setDataInput(inp);
-      return bin;
-    }
+  /**
+   * Get a thread-local record input for the supplied DataInput.
+   * @param inp data input stream
+   * @return binary record input corresponding to the supplied DataInput.
+   */
+  public static BinaryRecordInput get(DataInput inp) {
+    BinaryRecordInput bin = (BinaryRecordInput) bIn.get();
+    bin.setDataInput(inp);
+    return bin;
+  }
     
-    /** Creates a new instance of BinaryRecordInput */
-    public BinaryRecordInput(InputStream strm) {
-        this.in = new DataInputStream(strm);
-    }
+  /** Creates a new instance of BinaryRecordInput */
+  public BinaryRecordInput(InputStream strm) {
+    this.in = new DataInputStream(strm);
+  }
     
-    /** Creates a new instance of BinaryRecordInput */
-    public BinaryRecordInput(DataInput din) {
-        this.in = din;
-    }
+  /** Creates a new instance of BinaryRecordInput */
+  public BinaryRecordInput(DataInput din) {
+    this.in = din;
+  }
     
-    public byte readByte(final String tag) throws IOException {
-        return in.readByte();
-    }
+  public byte readByte(final String tag) throws IOException {
+    return in.readByte();
+  }
     
-    public boolean readBool(final String tag) throws IOException {
-        return in.readBoolean();
-    }
+  public boolean readBool(final String tag) throws IOException {
+    return in.readBoolean();
+  }
     
-    public int readInt(final String tag) throws IOException {
-        return Utils.readVInt(in);
-    }
+  public int readInt(final String tag) throws IOException {
+    return Utils.readVInt(in);
+  }
     
-    public long readLong(final String tag) throws IOException {
-        return Utils.readVLong(in);
-    }
+  public long readLong(final String tag) throws IOException {
+    return Utils.readVLong(in);
+  }
     
-    public float readFloat(final String tag) throws IOException {
-        return in.readFloat();
-    }
+  public float readFloat(final String tag) throws IOException {
+    return in.readFloat();
+  }
     
-    public double readDouble(final String tag) throws IOException {
-        return in.readDouble();
-    }
+  public double readDouble(final String tag) throws IOException {
+    return in.readDouble();
+  }
     
-    public String readString(final String tag) throws IOException {
-      return Utils.fromBinaryString(in);
-    }
+  public String readString(final String tag) throws IOException {
+    return Utils.fromBinaryString(in);
+  }
     
-    public Buffer readBuffer(final String tag) throws IOException {
-      final int len = Utils.readVInt(in);
-      final byte[] barr = new byte[len];
-      in.readFully(barr);
-      return new Buffer(barr);
-    }
+  public Buffer readBuffer(final String tag) throws IOException {
+    final int len = Utils.readVInt(in);
+    final byte[] barr = new byte[len];
+    in.readFully(barr);
+    return new Buffer(barr);
+  }
     
-    public void startRecord(final String tag) throws IOException {
-      // no-op
-    }
+  public void startRecord(final String tag) throws IOException {
+    // no-op
+  }
     
-    public void endRecord(final String tag) throws IOException {
-      // no-op
-    }
+  public void endRecord(final String tag) throws IOException {
+    // no-op
+  }
     
-    public Index startVector(final String tag) throws IOException {
-      return new BinaryIndex(readInt(tag));
-    }
+  public Index startVector(final String tag) throws IOException {
+    return new BinaryIndex(readInt(tag));
+  }
     
-    public void endVector(final String tag) throws IOException {
-      // no-op
-}
+  public void endVector(final String tag) throws IOException {
+    // no-op
+  }
     
-    public Index startMap(final String tag) throws IOException {
-        return new BinaryIndex(readInt(tag));
-    }
+  public Index startMap(final String tag) throws IOException {
+    return new BinaryIndex(readInt(tag));
+  }
     
-    public void endMap(final String tag) throws IOException {
-      // no-op
-    }
+  public void endMap(final String tag) throws IOException {
+    // no-op
+  }
 }

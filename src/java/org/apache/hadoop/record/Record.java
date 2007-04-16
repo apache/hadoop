@@ -37,7 +37,7 @@ public abstract class Record implements WritableComparable, Cloneable {
    * @param tag record tag (Used only in tagged serialization e.g. XML)
    */
   public abstract void serialize(RecordOutput rout, String tag)
-  throws IOException;
+    throws IOException;
   
   /**
    * Deserialize a record with a tag (usually field name)
@@ -45,7 +45,7 @@ public abstract class Record implements WritableComparable, Cloneable {
    * @param tag Record tag (Used only in tagged serialization e.g. XML)
    */
   public abstract void deserialize(RecordInput rin, String tag)
-  throws IOException;
+    throws IOException;
   
   // inheric javadoc
   public abstract int compareTo (final Object peer) throws ClassCastException;

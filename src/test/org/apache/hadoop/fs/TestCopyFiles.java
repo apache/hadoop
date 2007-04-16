@@ -94,7 +94,7 @@ public class TestCopyFiles extends TestCase {
    * with random (but reproducible) data in them.
    */
   private static MyFile[] createFiles(String fsname, String topdir)
-  throws IOException {
+    throws IOException {
     MyFile[] files = new MyFile[NFILES];
     
     for (int idx = 0; idx < NFILES; idx++) {
@@ -125,7 +125,7 @@ public class TestCopyFiles extends TestCase {
   
   /** check if the files have been copied correctly. */
   private static boolean checkFiles(String fsname, String topdir, MyFile[] files) 
-  throws IOException {
+    throws IOException {
     
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getNamed(fsname, conf);
@@ -154,7 +154,7 @@ public class TestCopyFiles extends TestCase {
   
   /** delete directory and everything underneath it.*/
   private static void deldir(String fsname, String topdir)
-  throws IOException {
+    throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getNamed(fsname, conf);
     Path root = new Path(topdir);
@@ -165,10 +165,10 @@ public class TestCopyFiles extends TestCase {
   public void testCopyFromLocalToLocal() throws Exception {
     MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
     new CopyFiles().doMain(new Configuration(),
-        new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
-          "file://"+TEST_ROOT_DIR+"/destdat"});
+                           new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
+                                         "file://"+TEST_ROOT_DIR+"/destdat"});
     assertTrue("Source and destination directories do not match.",
-        checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
+               checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
     deldir("local", TEST_ROOT_DIR+"/destdat");
     deldir("local", TEST_ROOT_DIR+"/srcdat");
   }
@@ -184,9 +184,9 @@ public class TestCopyFiles extends TestCase {
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
         new CopyFiles().doMain(conf, new String[] {"hdfs://"+namenode+"/srcdat",
-        "hdfs://"+namenode+"/destdat"});
+                                                   "hdfs://"+namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-            checkFiles(namenode, "/destdat", files));
+                   checkFiles(namenode, "/destdat", files));
         deldir(namenode, "/destdat");
         deldir(namenode, "/srcdat");
       }
@@ -206,9 +206,9 @@ public class TestCopyFiles extends TestCase {
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
         new CopyFiles().doMain(conf, new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
-        "hdfs://"+namenode+"/destdat"});
+                                                   "hdfs://"+namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-            checkFiles(namenode, "/destdat", files));
+                   checkFiles(namenode, "/destdat", files));
         deldir(namenode, "/destdat");
         deldir("local", TEST_ROOT_DIR+"/srcdat");
       }
@@ -228,15 +228,15 @@ public class TestCopyFiles extends TestCase {
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
         new CopyFiles().doMain(conf, new String[] {"hdfs://"+namenode+"/srcdat",
-        "file://"+TEST_ROOT_DIR+"/destdat"});
+                                                   "file://"+TEST_ROOT_DIR+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-            checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
+                   checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
         deldir("local", TEST_ROOT_DIR+"/destdat");
         deldir(namenode, "/srcdat");
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }
- }
+  }
   
 }

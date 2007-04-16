@@ -96,7 +96,7 @@ public class ValueHistogram implements ValueAggregator {
       }
       acc += nextVal * (j - i);
       //sbVal.append("\t").append(nextVal).append("\t").append(j - i)
-          //.append("\n");
+      //.append("\n");
       i = j;
     }
     double average = 0.0;
@@ -137,7 +137,7 @@ public class ValueHistogram implements ValueAggregator {
       Object val = en.getKey();
       Long count = (Long) en.getValue();
       sb.append("\t").append(val.toString()).append("\t").append(
-          count.longValue()).append("\n");
+                                                                 count.longValue()).append("\n");
     }
     return sb.toString();
   }

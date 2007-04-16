@@ -66,7 +66,7 @@ class ReduceTask extends Task {
   { 
     getProgress().setStatus("reduce"); 
     setPhase(TaskStatus.Phase.SHUFFLE);        // phase to start with 
- }
+  }
 
   private Progress copyPhase = getProgress().addPhase("copy");
   private Progress sortPhase  = getProgress().addPhase("sort");
@@ -87,7 +87,7 @@ class ReduceTask extends Task {
   }
 
   public boolean isMapTask() {
-      return false;
+    return false;
   }
 
   public int getNumMaps() { return numMaps; }
@@ -208,10 +208,10 @@ class ReduceTask extends Task {
   }
   private class ReduceValuesIterator extends ValuesIterator {
     public ReduceValuesIterator (SequenceFile.Sorter.RawKeyValueIterator in,
-                               WritableComparator comparator, Class keyClass,
-                               Class valClass,
-                               Configuration conf, Reporter reporter)
-    throws IOException {
+                                 WritableComparator comparator, Class keyClass,
+                                 Class valClass,
+                                 Configuration conf, Reporter reporter)
+      throws IOException {
       super(in, comparator, keyClass, valClass, conf, reporter);
     }
     public void informReduceProgress() {
@@ -232,7 +232,7 @@ class ReduceTask extends Task {
     throws IOException {
     Class valueClass = job.getMapOutputValueClass();
     Reducer reducer = (Reducer)ReflectionUtils.newInstance(
-                                  job.getReducerClass(), job);
+                                                           job.getReducerClass(), job);
     FileSystem lfs = FileSystem.getLocal(job);
 
     copyPhase.complete();                         // copy is already complete
@@ -259,12 +259,12 @@ class ReduceTask extends Task {
               reportProgress(umbilical);
               Thread.sleep(PROGRESS_INTERVAL);
             } catch (InterruptedException e) {
-                return;
+              return;
             } catch (Throwable e) {
-                System.out.println("Thread Exception in " +
-                                   "reporting sort progress\n" +
-                                   StringUtils.stringifyException(e));
-                continue;
+              System.out.println("Thread Exception in " +
+                                 "reporting sort progress\n" +
+                                 StringUtils.stringifyException(e));
+              continue;
             }
           }
         }
@@ -285,7 +285,7 @@ class ReduceTask extends Task {
       SequenceFile.Sorter sorter =
         new SequenceFile.Sorter(lfs, comparator, valueClass, job);
       rIter = sorter.merge(mapFiles, tempDir, 
-                                    !conf.getKeepFailedTaskFiles()); // sort
+                           !conf.getKeepFailedTaskFiles()); // sort
 
     } finally {
       sortComplete = true;
@@ -302,8 +302,8 @@ class ReduceTask extends Task {
     FileSystem fs = FileSystem.get(job) ;
 
     if( runSpeculative ){
-        fs = new PhasedFileSystem (fs , 
-                      getJobId(), getTipId(), getTaskId());
+      fs = new PhasedFileSystem (fs , 
+                                 getJobId(), getTipId(), getTaskId());
     }
     
     final RecordWriter out = 
@@ -323,7 +323,7 @@ class ReduceTask extends Task {
       Class keyClass = job.getMapOutputKeyClass();
       Class valClass = job.getMapOutputValueClass();
       ReduceValuesIterator values = new ReduceValuesIterator(rIter, comparator, 
-                                  keyClass, valClass, job, reporter);
+                                                             keyClass, valClass, job, reporter);
       values.informReduceProgress();
       while (values.more()) {
         reporter.incrCounter(REDUCE_INPUT_GROUPS, 1);

@@ -61,10 +61,10 @@ public class TestBytesWritable extends TestCase {
   
   public void testCompare() throws Exception {
     byte[][] values = new byte[][]{"abc".getBytes(), 
-        "ad".getBytes(),
-        "abcd".getBytes(),
-        "".getBytes(),
-        "b".getBytes()};
+                                   "ad".getBytes(),
+                                   "abcd".getBytes(),
+                                   "".getBytes(),
+                                   "b".getBytes()};
     BytesWritable[] buf = new BytesWritable[values.length];
     for(int i=0; i < values.length; ++i) {
       buf[i] = new BytesWritable(values[i]);

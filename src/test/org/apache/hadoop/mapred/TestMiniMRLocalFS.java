@@ -46,34 +46,34 @@ public class TestMiniMRLocalFS extends TestCase {
     .toString().replace(' ', '+');
     
   public void testWithLocal() throws IOException {
-      MiniMRCluster mr = null;
-      try {
-          mr = new MiniMRCluster(2, "local", 3);
-          double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
-                                               mr.createJobConf());
-          double error = Math.abs(Math.PI - estimate);
-          assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
-          // run the wordcount example with caching
-          JobConf job = mr.createJobConf();
-          boolean ret = MRCaching.launchMRCache(TEST_ROOT_DIR + "/wc/input",
-                                                TEST_ROOT_DIR + "/wc/output", 
-                                                TEST_ROOT_DIR + "/cachedir",
-                                                job,
-                                                "The quick brown fox\n" 
-                                                + "has many silly\n"
-                                                + "red fox sox\n");
-          // assert the number of lines read during caching
-          assertTrue("Failed test archives not matching", ret);
-          // test the task report fetchers
-          JobClient client = new JobClient(job);
-          TaskReport[] reports = client.getMapTaskReports("job_0001");
-          assertEquals("number of maps", 10, reports.length);
-          reports = client.getReduceTaskReports("job_0001");
-          assertEquals("number of reduces", 1, reports.length);
-          runCustomFormats(mr);
-      } finally {
-          if (mr != null) { mr.shutdown(); }
-      }
+    MiniMRCluster mr = null;
+    try {
+      mr = new MiniMRCluster(2, "local", 3);
+      double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
+                                           mr.createJobConf());
+      double error = Math.abs(Math.PI - estimate);
+      assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
+      // run the wordcount example with caching
+      JobConf job = mr.createJobConf();
+      boolean ret = MRCaching.launchMRCache(TEST_ROOT_DIR + "/wc/input",
+                                            TEST_ROOT_DIR + "/wc/output", 
+                                            TEST_ROOT_DIR + "/cachedir",
+                                            job,
+                                            "The quick brown fox\n" 
+                                            + "has many silly\n"
+                                            + "red fox sox\n");
+      // assert the number of lines read during caching
+      assertTrue("Failed test archives not matching", ret);
+      // test the task report fetchers
+      JobClient client = new JobClient(job);
+      TaskReport[] reports = client.getMapTaskReports("job_0001");
+      assertEquals("number of maps", 10, reports.length);
+      reports = client.getReduceTaskReports("job_0001");
+      assertEquals("number of reduces", 1, reports.length);
+      runCustomFormats(mr);
+    } finally {
+      if (mr != null) { mr.shutdown(); }
+    }
   }
   
   private void runCustomFormats(MiniMRCluster mr) throws IOException {
@@ -114,13 +114,13 @@ public class TestMiniMRLocalFS extends TestCase {
   
   private static class MyInputFormat implements InputFormat {
     static final String[] data = new String[]{
-                                              "crocodile pants", 
-                                              "aunt annie", 
-                                              "eggs",
-                                              "finagle the agent",
-                                              "bumble boat", 
-                                              "duck-dog",
-                                              };
+      "crocodile pants", 
+      "aunt annie", 
+      "eggs",
+      "finagle the agent",
+      "bumble boat", 
+      "duck-dog",
+    };
 
     private static class MySplit implements InputSplit {
       int first;

@@ -73,7 +73,7 @@ public class GzipCodec extends DefaultCodec {
     }
     
     public void write(byte[] data, int offset, int length) 
-    throws IOException {
+      throws IOException {
       out.write(data, offset, length);
     }
     
@@ -141,18 +141,18 @@ public class GzipCodec extends DefaultCodec {
    * @return a stream the user can write uncompressed data to
    */
   public CompressionOutputStream createOutputStream(OutputStream out) 
-  throws IOException {
+    throws IOException {
     CompressionOutputStream compOutStream = null;
     
     if (ZlibFactory.isNativeZlibLoaded()) {
       Compressor compressor = 
         new ZlibCompressor(ZlibCompressor.CompressionLevel.DEFAULT_COMPRESSION,
-            ZlibCompressor.CompressionStrategy.DEFAULT_STRATEGY,
-            ZlibCompressor.CompressionHeader.GZIP_FORMAT,
-            64*1024); 
+                           ZlibCompressor.CompressionStrategy.DEFAULT_STRATEGY,
+                           ZlibCompressor.CompressionHeader.GZIP_FORMAT,
+                           64*1024); 
      
       compOutStream = new CompressorStream(out, compressor,
-                        conf.getInt("io.file.buffer.size", 4*1024)); 
+                                           conf.getInt("io.file.buffer.size", 4*1024)); 
     } else {
       compOutStream = new GzipOutputStream(out);
     }
@@ -166,16 +166,16 @@ public class GzipCodec extends DefaultCodec {
    * @return a stream to read uncompressed bytes from
    */
   public CompressionInputStream createInputStream(InputStream in) 
-  throws IOException {
+    throws IOException {
     CompressionInputStream compInStream = null;
     
     if (ZlibFactory.isNativeZlibLoaded()) {
       Decompressor decompressor =
         new ZlibDecompressor(ZlibDecompressor.CompressionHeader.AUTODETECT_GZIP_ZLIB,
-            64*1-24);
+                             64*1-24);
 
       compInStream = new DecompressorStream(in, decompressor,
-                        conf.getInt("io.file.buffer.size", 4*1024)); 
+                                            conf.getInt("io.file.buffer.size", 4*1024)); 
     } else {
       compInStream = new GzipInputStream(in);
     }

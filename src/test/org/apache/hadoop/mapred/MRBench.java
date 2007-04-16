@@ -56,7 +56,7 @@ public class MRBench {
    */
   public static class Map extends MapReduceBase implements Mapper {
     public void map(WritableComparable key, Writable value,
-        OutputCollector output, Reporter reporter) throws IOException 
+                    OutputCollector output, Reporter reporter) throws IOException 
     {
       String line = value.toString();
       output.collect(new UTF8(process(line)), new UTF8(""));		
@@ -71,7 +71,7 @@ public class MRBench {
    */
   public static class Reduce extends MapReduceBase implements Reducer {
     public void reduce(WritableComparable key, Iterator values,
-        OutputCollector output, Reporter reporter) throws IOException 
+                       OutputCollector output, Reporter reporter) throws IOException 
     {
       while(values.hasNext()) {
         output.collect(key, new UTF8(values.next().toString()));
@@ -88,7 +88,7 @@ public class MRBench {
    * generated data is one of ascending, descending, or random.
    */
   public static void generateTextFile(FileSystem fs, Path inputFile, 
-    long numLines, Order sortOrder) throws IOException 
+                                      long numLines, Order sortOrder) throws IOException 
   {
     LOG.info("creating control file: "+numLines+" numLines, "+sortOrder+" sortOrder");
     PrintStream output = null;
@@ -96,21 +96,21 @@ public class MRBench {
       output = new PrintStream(fs.create(inputFile));
       int padding = String.valueOf(numLines).length();
       switch(sortOrder) {
-        case RANDOM:
-          for (long l = 0; l < numLines; l++) {
-            output.println(pad((new Random()).nextLong(), padding));
-          }
-          break; 
-        case ASCENDING: 
-          for (long l = 0; l < numLines; l++) {
-            output.println(pad(l, padding));
-          }
-          break;
-        case DESCENDING: 
-          for (long l = numLines; l > 0; l--) {
-            output.println(pad(l, padding));
-          }
-          break;
+      case RANDOM:
+        for (long l = 0; l < numLines; l++) {
+          output.println(pad((new Random()).nextLong(), padding));
+        }
+        break; 
+      case ASCENDING: 
+        for (long l = 0; l < numLines; l++) {
+          output.println(pad(l, padding));
+        }
+        break;
+      case DESCENDING: 
+        for (long l = numLines; l > 0; l--) {
+          output.println(pad(l, padding));
+        }
+        break;
       }
     } finally {
       if (output != null)
@@ -180,8 +180,8 @@ public class MRBench {
       jobConf.setOutputPath(new Path(OUTPUT_DIR, "output_" + rand.nextInt()));
 
       LOG.info("Running job " + i + ":" +
-        " input=" + jobConf.getInputPaths()[0] + 
-        " output=" + jobConf.getOutputPath());
+               " input=" + jobConf.getInputPaths()[0] + 
+               " output=" + jobConf.getOutputPath());
       
       // run the mapred task now 
       long curTime = System.currentTimeMillis();
@@ -259,14 +259,14 @@ public class MRBench {
     }
     
     if (numRuns < 1 ||  // verify args
-      numMaps < 1 ||
-      numReduces < 1 ||
-      inputLines < 0 ||
-      inputSortOrder == null)
-    {
-      System.err.println(usage);
-      System.exit(-1);
-    }
+        numMaps < 1 ||
+        numReduces < 1 ||
+        inputLines < 0 ||
+        inputSortOrder == null)
+      {
+        System.err.println(usage);
+        System.exit(-1);
+      }
 
     JobConf jobConf = setupJob(numMaps, numReduces, jarFile);
     FileSystem fs = FileSystem.get(jobConf);
@@ -296,13 +296,13 @@ public class MRBench {
       totalTime += time.longValue(); 
       if (verbose) {
         System.out.println("Total milliseconds for task: " + (++i) + 
-            " = " +  time);
+                           " = " +  time);
       }
     }
     long avgTime = totalTime / numRuns;    
     System.out.println("DataLines\tMaps\tReduces\tAvgTime (milliseconds)");
     System.out.println(inputLines + "\t\t" + numMaps + "\t" + 
-        numReduces + "\t" + avgTime);
+                       numReduces + "\t" + avgTime);
   }
   
 }

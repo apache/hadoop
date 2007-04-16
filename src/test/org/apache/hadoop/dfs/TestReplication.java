@@ -44,14 +44,14 @@ public class TestReplication extends TestCase {
   };
   private static final int numDatanodes = racks.length;
   private static final Log LOG = LogFactory.getLog(
-          "org.apache.hadoop.dfs.TestReplication");
+                                                   "org.apache.hadoop.dfs.TestReplication");
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
+    throws IOException {
     // create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, true,
-            fileSys.getConf().getInt("io.file.buffer.size", 4096),
-            (short)repl, (long)blockSize);
+                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+                                            (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -61,62 +61,62 @@ public class TestReplication extends TestCase {
   
   /* check if there are at least two nodes are on the same rack */
   private void checkFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
-      Configuration conf = fileSys.getConf();
-      ClientProtocol namenode = (ClientProtocol) RPC.getProxy(
-              ClientProtocol.class,
-              ClientProtocol.versionID,
-              DataNode.createSocketAddr(conf.get("fs.default.name")), 
-              conf);
+    throws IOException {
+    Configuration conf = fileSys.getConf();
+    ClientProtocol namenode = (ClientProtocol) RPC.getProxy(
+                                                            ClientProtocol.class,
+                                                            ClientProtocol.versionID,
+                                                            DataNode.createSocketAddr(conf.get("fs.default.name")), 
+                                                            conf);
       
-      LocatedBlock[] locations;
-      boolean isReplicationDone;
-      do {
-          locations = namenode.open(name.toString());
-          isReplicationDone = true;
-          for (int idx = 0; idx < locations.length; idx++) {
-              DatanodeInfo[] datanodes = locations[idx].getLocations();
-              if(Math.min(numDatanodes, repl) != datanodes.length) {
-                  isReplicationDone=false;
-                  LOG.warn("File has "+datanodes.length+" replicas, expecting "
-                          +Math.min(numDatanodes, repl));
-                  try {
-                      Thread.sleep(15000L);
-                 } catch (InterruptedException e) {
-                      // nothing
-                 }
-                 break;
-              }
-          }
-      } while(!isReplicationDone);
-      
-      boolean isOnSameRack = true, isNotOnSameRack = true;
+    LocatedBlock[] locations;
+    boolean isReplicationDone;
+    do {
+      locations = namenode.open(name.toString());
+      isReplicationDone = true;
       for (int idx = 0; idx < locations.length; idx++) {
-          DatanodeInfo[] datanodes = locations[idx].getLocations();
-          if(datanodes.length <= 1) break;
-          if(datanodes.length == 2) {
-              isNotOnSameRack = !( datanodes[0].getNetworkLocation().equals(
-                      datanodes[1].getNetworkLocation() ) );
-              break;
+        DatanodeInfo[] datanodes = locations[idx].getLocations();
+        if(Math.min(numDatanodes, repl) != datanodes.length) {
+          isReplicationDone=false;
+          LOG.warn("File has "+datanodes.length+" replicas, expecting "
+                   +Math.min(numDatanodes, repl));
+          try {
+            Thread.sleep(15000L);
+          } catch (InterruptedException e) {
+            // nothing
           }
-          isOnSameRack = false;
-          isNotOnSameRack = false;
-          for (int idy = 0; idy < datanodes.length-1; idy++) {
-                  LOG.info("datanode "+ idy + ": "+ datanodes[idy].getName());
-                  boolean onRack = datanodes[idy].getNetworkLocation().equals(
-                          datanodes[idy+1].getNetworkLocation() );
-                  if( onRack ) {
-                      isOnSameRack = true;
-                  }
-                  if( !onRack ) {
-                      isNotOnSameRack = true;                      
-                  }
-                  if( isOnSameRack && isNotOnSameRack ) break;
-          }
-          if( !isOnSameRack || !isNotOnSameRack ) break;
+          break;
+        }
       }
-      assertTrue(isOnSameRack);
-      assertTrue(isNotOnSameRack);
+    } while(!isReplicationDone);
+      
+    boolean isOnSameRack = true, isNotOnSameRack = true;
+    for (int idx = 0; idx < locations.length; idx++) {
+      DatanodeInfo[] datanodes = locations[idx].getLocations();
+      if(datanodes.length <= 1) break;
+      if(datanodes.length == 2) {
+        isNotOnSameRack = !( datanodes[0].getNetworkLocation().equals(
+                                                                      datanodes[1].getNetworkLocation() ) );
+        break;
+      }
+      isOnSameRack = false;
+      isNotOnSameRack = false;
+      for (int idy = 0; idy < datanodes.length-1; idy++) {
+        LOG.info("datanode "+ idy + ": "+ datanodes[idy].getName());
+        boolean onRack = datanodes[idy].getNetworkLocation().equals(
+                                                                    datanodes[idy+1].getNetworkLocation() );
+        if( onRack ) {
+          isOnSameRack = true;
+        }
+        if( !onRack ) {
+          isNotOnSameRack = true;                      
+        }
+        if( isOnSameRack && isNotOnSameRack ) break;
+      }
+      if( !isOnSameRack || !isNotOnSameRack ) break;
+    }
+    assertTrue(isOnSameRack);
+    assertTrue(isNotOnSameRack);
   }
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
@@ -135,7 +135,7 @@ public class TestReplication extends TestCase {
     cluster.waitActive();
     
     InetSocketAddress addr = new InetSocketAddress("localhost",
-            cluster.getNameNodePort());
+                                                   cluster.getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
     
     DatanodeInfo[] info = client.datanodeReport();

@@ -27,32 +27,32 @@ package org.apache.hadoop.metrics.spi;
  */
 public class NullContext extends AbstractMetricsContext {
     
-    /** Creates a new instance of NullContext */
-    public NullContext() {
-    }
+  /** Creates a new instance of NullContext */
+  public NullContext() {
+  }
     
-    /**
-     * Do-nothing version of startMonitoring
-     */
-    public void startMonitoring() {
-    }
+  /**
+   * Do-nothing version of startMonitoring
+   */
+  public void startMonitoring() {
+  }
     
-    /**
-     * Do-nothing version of emitRecord
-     */
-    protected void emitRecord(String contextName, String recordName,
-                              OutputRecord outRec) 
-    {}
+  /**
+   * Do-nothing version of emitRecord
+   */
+  protected void emitRecord(String contextName, String recordName,
+                            OutputRecord outRec) 
+  {}
     
-    /**
-     * Do-nothing version of update
-     */
-    protected void update(MetricsRecordImpl record) {
-    }
+  /**
+   * Do-nothing version of update
+   */
+  protected void update(MetricsRecordImpl record) {
+  }
     
-    /**
-     * Do-nothing version of remove
-     */
-    protected void remove(MetricsRecordImpl record) {
-    }
+  /**
+   * Do-nothing version of remove
+   */
+  protected void remove(MetricsRecordImpl record) {
+  }
 }

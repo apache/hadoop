@@ -111,8 +111,8 @@ public class StatusHttpServer {
    * @param servletClass The servlet class
    */
   public <T extends HttpServlet> 
-  void addServlet(String name, String pathSpec, 
-                  Class<T> servletClass) {
+                    void addServlet(String name, String pathSpec, 
+                                    Class<T> servletClass) {
     WebApplicationContext context = webAppContext;
     try {
       if (name == null) {
@@ -223,7 +223,7 @@ public class StatusHttpServer {
   public static class StackServlet extends HttpServlet {
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
-                     ) throws ServletException, IOException {
+                      ) throws ServletException, IOException {
       OutputStream outStream = response.getOutputStream();
       ReflectionUtils.printThreadInfo(new PrintWriter(outStream), "");
       outStream.close();

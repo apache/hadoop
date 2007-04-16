@@ -232,7 +232,7 @@ public class TestGlobPaths extends TestCase {
   }
   
   private Path[] prepareTesting( String pattern, String[] files)
-  throws IOException {
+    throws IOException {
     for(int i=0; i<Math.min(NUM_OF_PATHS, files.length); i++) {
       path[i] = new Path( files[i] );
       if (!fs.mkdirs( path[i] )) {

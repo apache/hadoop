@@ -27,7 +27,7 @@ public abstract class PriorityQueue {
   private int maxSize;
 
   /** Determines the ordering of objects in this priority queue.  Subclasses
-    must define this one method. */
+      must define this one method. */
   protected abstract boolean lessThan(Object a, Object b);
 
   /** Subclass constructors must call this. */
@@ -67,7 +67,7 @@ public abstract class PriorityQueue {
     }
     else
       return false;
-   }
+  }
 
   /** Returns the least element of the PriorityQueue in constant time. */
   public final Object top() {
@@ -78,7 +78,7 @@ public abstract class PriorityQueue {
   }
 
   /** Removes and returns the least element of the PriorityQueue in log(size)
-    time. */
+      time. */
   public final Object pop() {
     if (size > 0) {
       Object result = heap[1];			  // save first value

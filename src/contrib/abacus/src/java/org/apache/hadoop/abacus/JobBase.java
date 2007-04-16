@@ -137,13 +137,13 @@ public abstract class JobBase implements Mapper, Reducer {
     while (iter.hasNext()) {
       Entry e = (Entry) iter.next();
       sb.append(e.getKey().toString()).append("\t").append(e.getValue())
-          .append("\n");
+        .append("\n");
     }
     iter = this.doubleCounters.entrySet().iterator();
     while (iter.hasNext()) {
       Entry e = (Entry) iter.next();
       sb.append(e.getKey().toString()).append("\t").append(e.getValue())
-          .append("\n");
+        .append("\n");
     }
     return sb.toString();
   }

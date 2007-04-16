@@ -99,8 +99,8 @@ public class CopyFiles extends ToolBase {
      * @throws IOException
      */
     public abstract void setup(Configuration conf, JobConf jobConf, 
-        String[] srcPaths, String destPath, boolean ignoreReadFailures) 
-    throws IOException;
+                               String[] srcPaths, String destPath, boolean ignoreReadFailures) 
+      throws IOException;
     
     /**
      * Interface to cleanup *distcp* specific resources
@@ -111,7 +111,7 @@ public class CopyFiles extends ToolBase {
      * @throws IOException
      */
     public abstract void cleanup(Configuration conf, JobConf jobConf, 
-        String srcPath, String destPath) throws IOException;
+                                 String srcPath, String destPath) throws IOException;
     
     /**
      * Make a path relative with respect to a root path.
@@ -156,25 +156,25 @@ public class CopyFiles extends ToolBase {
      * @throws IOException
      */
     public int getMapCount(final int initialEstimate, final long totalBytes,
-        final JobClient client)
-    throws IOException {
-        int numMaps = initialEstimate;
-        if (numMaps > MAX_NUM_MAPS) {
-            numMaps = MAX_NUM_MAPS;
-        }
-        if (totalBytes != -1 &&
-            numMaps > (int)(totalBytes / MIN_BYTES_PER_MAP)) {
-          numMaps = (int) (totalBytes / MIN_BYTES_PER_MAP);
-        }
-        ClusterStatus cluster = client.getClusterStatus();
-        int tmpMaps = cluster.getTaskTrackers() * MAX_MAPS_PER_NODE;
-        if (numMaps > tmpMaps) {
-            numMaps = tmpMaps;
-        }
-        if (numMaps == 0) {
-            numMaps = 1;
-        }
-        return numMaps;
+                           final JobClient client)
+      throws IOException {
+      int numMaps = initialEstimate;
+      if (numMaps > MAX_NUM_MAPS) {
+        numMaps = MAX_NUM_MAPS;
+      }
+      if (totalBytes != -1 &&
+          numMaps > (int)(totalBytes / MIN_BYTES_PER_MAP)) {
+        numMaps = (int) (totalBytes / MIN_BYTES_PER_MAP);
+      }
+      ClusterStatus cluster = client.getClusterStatus();
+      int tmpMaps = cluster.getTaskTrackers() * MAX_MAPS_PER_NODE;
+      if (numMaps > tmpMaps) {
+        numMaps = tmpMaps;
+      }
+      if (numMaps == 0) {
+        numMaps = 1;
+      }
+      return numMaps;
     } 
   }
   
@@ -183,7 +183,7 @@ public class CopyFiles extends ToolBase {
    * @author Milind Bhandarkar
    */
   public static class FSCopyFilesMapper extends CopyFilesMapper 
-  implements Mapper 
+    implements Mapper 
   {
     private int sizeBuf = 4096;
     private FileSystem srcFileSys = null;
@@ -224,11 +224,11 @@ public class CopyFiles extends ToolBase {
           totalBytesCopied += bytesSinceLastReport;
           bytesSinceLastReport = 0L;
           reporter.setStatus("Copy "+ src + ": " + 
-              percentFormat.format(100.0 * totalBytesCopied / 
-                  totalBytes) +
-                  "% and " +
-                  StringUtils.humanReadableInt(totalBytesCopied) +
-          " bytes");
+                             percentFormat.format(100.0 * totalBytesCopied / 
+                                                  totalBytes) +
+                             "% and " +
+                             StringUtils.humanReadableInt(totalBytesCopied) +
+                             " bytes");
         }
       }
       
@@ -238,7 +238,7 @@ public class CopyFiles extends ToolBase {
       totalBytesCopied += bytesSinceLastReport;
       bytesSinceLastReport = 0L;
       reporter.setStatus("Finished. Bytes copied: " + 
-          StringUtils.humanReadableInt(totalBytesCopied));
+                         StringUtils.humanReadableInt(totalBytesCopied));
     }
     
     /**
@@ -250,9 +250,9 @@ public class CopyFiles extends ToolBase {
      * @param ignoreReadFailures : Ignore read failures?
      */
     public void setup(Configuration conf, JobConf jobConf, 
-        String[] srcPaths, String destPath, 
-        boolean ignoreReadFailures) 
-    throws IOException
+                      String[] srcPaths, String destPath, 
+                      boolean ignoreReadFailures) 
+      throws IOException
     {
       URI srcURI = toURI(srcPaths[0]);
       URI destURI = toURI(destPath);
@@ -298,7 +298,7 @@ public class CopyFiles extends ToolBase {
       
       Random r = new Random();
       Path jobDirectory = new Path(jobConf.getSystemDir(), "distcp_" 
-          + Integer.toString(Math.abs(r.nextInt()), 36));
+                                   + Integer.toString(Math.abs(r.nextInt()), 36));
       Path inDir = new Path(jobDirectory, "in");
       Path fakeOutDir = new Path(jobDirectory, "out");
       FileSystem fileSys = FileSystem.get(jobConf);
@@ -359,8 +359,8 @@ public class CopyFiles extends ToolBase {
     }
     
     public void cleanup(Configuration conf, JobConf jobConf, 
-        String srcPath, String destPath) 
-    throws IOException
+                        String srcPath, String destPath) 
+      throws IOException
     {
       //Clean up jobDirectory
       Path jobDirectory = new Path(jobConf.get("distcp.job.dir", "/"));
@@ -386,7 +386,7 @@ public class CopyFiles extends ToolBase {
         srcFileSys = FileSystem.get(new URI(srcfs), job);
         destFileSys = FileSystem.get(new URI(destfs), job);
       } catch (URISyntaxException e) {
-          throw new RuntimeException("Failed parse of src or dest URI.", e);
+        throw new RuntimeException("Failed parse of src or dest URI.", e);
       } catch (IOException ex) {
         throw new RuntimeException("Unable to get the named file system.", ex);
       }
@@ -402,16 +402,16 @@ public class CopyFiles extends ToolBase {
      * @param reporter
      */
     public void map(WritableComparable key,
-        Writable value,
-        OutputCollector out,
-        Reporter reporter) throws IOException {
+                    Writable value,
+                    OutputCollector out,
+                    Reporter reporter) throws IOException {
       String src = ((Text) key).toString();
       try {
         copy(src, reporter);
       } catch (IOException except) {
         if (ignoreReadFailures) {
           reporter.setStatus("Failed to copy " + src + " : " + 
-              StringUtils.stringifyException(except));
+                             StringUtils.stringifyException(except));
           try {
             destFileSys.delete(new Path(destPath, src));
           } catch (Throwable ex) {
@@ -430,7 +430,7 @@ public class CopyFiles extends ToolBase {
   }
   
   public static class HTTPCopyFilesMapper extends CopyFilesMapper 
-  implements Mapper 
+    implements Mapper 
   {
     private URI srcURI = null;
     private FileSystem destFileSys = null;
@@ -447,9 +447,9 @@ public class CopyFiles extends ToolBase {
      * @param ignoreReadFailures : Ignore read failures?
      */
     public void setup(Configuration conf, JobConf jobConf, 
-        String[] srcPaths, String destPath, 
-        boolean ignoreReadFailures) 
-    throws IOException
+                      String[] srcPaths, String destPath, 
+                      boolean ignoreReadFailures) 
+      throws IOException
     {
       //Destination
       URI destURI = toURI(destPath);
@@ -476,7 +476,7 @@ public class CopyFiles extends ToolBase {
       FileSystem fileSystem = FileSystem.get(conf);
       Random r = new Random();
       Path jobDirectory = new Path(jobConf.getSystemDir(), "distcp_" + 
-          Integer.toString(Math.abs(r.nextInt()), 36));
+                                   Integer.toString(Math.abs(r.nextInt()), 36));
       Path jobInputDir = new Path(jobDirectory, "in");
       if (!fileSystem.mkdirs(jobInputDir)) {
         throw new IOException("Mkdirs failed to create " + jobInputDir.toString());
@@ -498,8 +498,8 @@ public class CopyFiles extends ToolBase {
     }	
     
     public void cleanup(Configuration conf, JobConf jobConf, 
-        String srcPath, String destPath) 
-    throws IOException
+                        String srcPath, String destPath) 
+      throws IOException
     {
       //Clean up jobDirectory
       Path jobDirectory = new Path(jobConf.get("distcp.job.dir", "/"));
@@ -531,10 +531,10 @@ public class CopyFiles extends ToolBase {
     }
     
     public void map(WritableComparable key,
-        Writable val,
-        OutputCollector out,
-        Reporter reporter) throws IOException 
-        {
+                    Writable val,
+                    OutputCollector out,
+                    Reporter reporter) throws IOException 
+    {
       //The url of the file
       try {
         srcURI = new URI(((Text)key).toString());
@@ -555,8 +555,8 @@ public class CopyFiles extends ToolBase {
           new BufferedInputStream(connection.getInputStream());
         
         FSDataOutputStream os = destFileSys.create(destinationPath, true, 
-              bufferSize, (short)jobConf.getInt("dfs.replication", 3), 
-              jobConf.getLong("dfs.block.size", 67108864));
+                                                   bufferSize, (short)jobConf.getInt("dfs.replication", 3), 
+                                                   jobConf.getLong("dfs.block.size", 67108864));
         
         int readBytes = 0;
         while((readBytes = is.read(buffer, 0, bufferSize)) != -1) {
@@ -568,7 +568,7 @@ public class CopyFiles extends ToolBase {
         connection.disconnect();
         
         reporter.setStatus("Copied: " + srcURI.toString() + 
-            " to: " + destinationPath.toString());
+                           " to: " + destinationPath.toString());
         
       } catch(Exception e) {
         reporter.setStatus("Failed to copy from: " + (Text)key);
@@ -588,17 +588,17 @@ public class CopyFiles extends ToolBase {
   private static class CopyMapperFactory
   {
     public static CopyFilesMapper getMapper(Configuration conf, String protocol)
-    throws IOException
+      throws IOException
     {
       CopyFilesMapper mapper = null;
       if (protocol == null) {
-          // Use 'default' filesystem.
-          protocol = FileSystem.get(conf).getUri().getScheme();
+        // Use 'default' filesystem.
+        protocol = FileSystem.get(conf).getUri().getScheme();
       }
       protocol = protocol.toLowerCase();
       
       if(HDFS.equalsIgnoreCase(protocol) || "file".equalsIgnoreCase(protocol) ||
-          S3.equalsIgnoreCase(protocol)) {
+         S3.equalsIgnoreCase(protocol)) {
         mapper = new FSCopyFilesMapper();
       } else if("http".equalsIgnoreCase(protocol)) {
         mapper = new HTTPCopyFilesMapper();
@@ -619,11 +619,11 @@ public class CopyFiles extends ToolBase {
     if("file".equalsIgnoreCase(srcListURIScheme)) {
       fis = new BufferedReader(new FileReader(srcListURIPath));
     } else if (srcListURIScheme != null &&
-          HDFS.equalsIgnoreCase(srcListURIScheme)) {
+               HDFS.equalsIgnoreCase(srcListURIScheme)) {
       FileSystem fs = FileSystem.get(srcListURI, conf);
       fis = new BufferedReader(
-          new InputStreamReader(fs.open(new Path(srcListURIPath)))
-          );
+                               new InputStreamReader(fs.open(new Path(srcListURIPath)))
+                               );
     } else if("http".equalsIgnoreCase(srcListURIScheme)) {
       //Copy the file 
       URL url = srcListURI.toURL();
@@ -632,8 +632,8 @@ public class CopyFiles extends ToolBase {
       connection.connect();
       
       fis = new BufferedReader(
-          new InputStreamReader(connection.getInputStream())
-          );
+                               new InputStreamReader(connection.getInputStream())
+                               );
     } else {
       throw new IOException("Unsupported source list uri: " + srcListURIScheme);
     }
@@ -664,7 +664,7 @@ public class CopyFiles extends ToolBase {
    * @return
    */
   private static String[] parseInputFile(String protocol, String[] uris)
-  throws IOException
+    throws IOException
   {
     ArrayList<String> protocolURIs = new ArrayList<String>(uris.length);
     
@@ -679,13 +679,13 @@ public class CopyFiles extends ToolBase {
   }
   
   public static URI toURI(final String u) throws IOException {
-      URI result = null;
-      try {
-          result = new URI(u);
-      } catch (URISyntaxException ex) {
-        throw new IOException("Path does not parse as URI: " + u);
-      }
-      return result;
+    URI result = null;
+    try {
+      result = new URI(u);
+    } catch (URISyntaxException ex) {
+      throw new IOException("Path does not parse as URI: " + u);
+    }
+    return result;
   }
   
   /**
@@ -697,8 +697,8 @@ public class CopyFiles extends ToolBase {
    * @param ignoreReadFailures True if we are to ignore read failures.
    */
   public static void copy(Configuration conf, String srcPath, String destPath,
-      boolean srcAsList, boolean ignoreReadFailures) 
-  throws IOException
+                          boolean srcAsList, boolean ignoreReadFailures) 
+    throws IOException
   {
     //Job configuration
     JobConf jobConf = new JobConf(conf, CopyFiles.class);
@@ -816,8 +816,8 @@ public class CopyFiles extends ToolBase {
   
   public static void main(String[] args) throws Exception {
     int res = new CopyFiles().doMain(
-        new JobConf(new Configuration(), CopyFiles.class), 
-        args);
+                                     new JobConf(new Configuration(), CopyFiles.class), 
+                                     args);
     System.exit(res);
   }
 }

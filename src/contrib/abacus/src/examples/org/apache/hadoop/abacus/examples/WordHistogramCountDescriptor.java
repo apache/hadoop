@@ -39,21 +39,21 @@ public class WordHistogramCountDescriptor extends ValueAggregatorBaseDescriptor 
    * 
    * @return a list of the generated pairs.
    */
-    public ArrayList<Entry> generateKeyValPairs(Object key, Object val) {
-        String words[] = val.toString().split(" |\t");
-        ArrayList<Entry> retv = new ArrayList<Entry>();
-        for (int i = 0; i < words.length; i++) {
-            Text valCount = new Text(words[i] + "\t" + "1");
-            Entry en = generateEntry(VALUE_HISTOGRAM, "WORD_HISTOGRAM",
-                    valCount);
-            retv.add(en);
-        }
-        return retv;
+  public ArrayList<Entry> generateKeyValPairs(Object key, Object val) {
+    String words[] = val.toString().split(" |\t");
+    ArrayList<Entry> retv = new ArrayList<Entry>();
+    for (int i = 0; i < words.length; i++) {
+      Text valCount = new Text(words[i] + "\t" + "1");
+      Entry en = generateEntry(VALUE_HISTOGRAM, "WORD_HISTOGRAM",
+                               valCount);
+      retv.add(en);
     }
+    return retv;
+  }
 
-    public void configure(JobConf job) {
+  public void configure(JobConf job) {
 
-    }
+  }
 
 
 }

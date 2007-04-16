@@ -70,7 +70,7 @@ public class UTF8 implements WritableComparable {
   public void set(String string) {
     if (string.length() > 0xffff/3) {             // maybe too long
       LOG.warn("truncating long string: " + string.length()
-                  + " chars, starting with " + string.substring(0, 20));
+               + " chars, starting with " + string.substring(0, 20));
       string = string.substring(0, 0xffff/3);
     }
 
@@ -235,7 +235,7 @@ public class UTF8 implements WritableComparable {
   public static int writeString(DataOutput out, String s) throws IOException {
     if (s.length() > 0xffff/3) {         // maybe too long
       LOG.warn("truncating long string: " + s.length()
-                  + " chars, starting with " + s.substring(0, 20));
+               + " chars, starting with " + s.substring(0, 20));
       s = s.substring(0, 0xffff/3);
     }
 

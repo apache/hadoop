@@ -62,7 +62,7 @@ public class TestRestartDFS extends TestCase {
       cluster = new MiniDFSCluster(conf, 4, false, null);
       FileSystem fs = cluster.getFileSystem();
       assertTrue("Filesystem corrupted after restart.",
-            files.checkFiles(fs, "/srcdat"));
+                 files.checkFiles(fs, "/srcdat"));
       files.cleanup(fs, "/srcdat");
     } finally {
       if (cluster != null) { cluster.shutdown(); }

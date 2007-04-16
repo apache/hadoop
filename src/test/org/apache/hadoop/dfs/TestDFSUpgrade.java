@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.FileUtil;
 public class TestDFSUpgrade extends TestCase {
  
   private static final Log LOG = LogFactory.getLog(
-    "org.apache.hadoop.dfs.TestDFSUpgrade");
+                                                   "org.apache.hadoop.dfs.TestDFSUpgrade");
   private Configuration conf;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
@@ -48,8 +48,8 @@ public class TestDFSUpgrade extends TestCase {
   void log(String label, int numDirs) {
     LOG.info("============================================================");
     LOG.info("***TEST " + (testCounter++) + "*** " 
-      + label + ":"
-      + " numDirs="+numDirs);
+             + label + ":"
+             + " numDirs="+numDirs);
   }
   
   /**
@@ -60,30 +60,30 @@ public class TestDFSUpgrade extends TestCase {
    */
   void checkResult(NodeType nodeType, String[] baseDirs) throws IOException {
     switch (nodeType) {
-      case NAME_NODE:
-        for (int i = 0; i < baseDirs.length; i++) {
-          assertTrue(new File(baseDirs[i],"current").isDirectory());
-          assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
-          assertTrue(new File(baseDirs[i],"current/edits").isFile());
-          assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
-          assertTrue(new File(baseDirs[i],"current/fstime").isFile());
-        }
-        break;
-      case DATA_NODE:
-        for (int i = 0; i < baseDirs.length; i++) {
-          assertEquals(
-            UpgradeUtilities.checksumContents(
-              nodeType, new File(baseDirs[i],"current")),
-            UpgradeUtilities.checksumMasterContents(nodeType));
-        }
-        break;
+    case NAME_NODE:
+      for (int i = 0; i < baseDirs.length; i++) {
+        assertTrue(new File(baseDirs[i],"current").isDirectory());
+        assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
+        assertTrue(new File(baseDirs[i],"current/edits").isFile());
+        assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
+        assertTrue(new File(baseDirs[i],"current/fstime").isFile());
+      }
+      break;
+    case DATA_NODE:
+      for (int i = 0; i < baseDirs.length; i++) {
+        assertEquals(
+                     UpgradeUtilities.checksumContents(
+                                                       nodeType, new File(baseDirs[i],"current")),
+                     UpgradeUtilities.checksumMasterContents(nodeType));
+      }
+      break;
     }
     for (int i = 0; i < baseDirs.length; i++) {
       assertTrue(new File(baseDirs[i],"previous").isDirectory());
       assertEquals(
-        UpgradeUtilities.checksumContents(
-          nodeType, new File(baseDirs[i],"previous")),
-        UpgradeUtilities.checksumMasterContents(nodeType));
+                   UpgradeUtilities.checksumContents(
+                                                     nodeType, new File(baseDirs[i],"previous")),
+                   UpgradeUtilities.checksumMasterContents(nodeType));
     }
   }
  
@@ -166,9 +166,9 @@ public class TestDFSUpgrade extends TestCase {
       cluster = new MiniDFSCluster(conf,0,StartupOption.UPGRADE);
       baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       UpgradeUtilities.createVersionFile(DATA_NODE,baseDirs,
-        new StorageInfo(Integer.MIN_VALUE,
-                        UpgradeUtilities.getCurrentNamespaceID(cluster),
-                        UpgradeUtilities.getCurrentFsscTime(cluster)));
+                                         new StorageInfo(Integer.MIN_VALUE,
+                                                         UpgradeUtilities.getCurrentNamespaceID(cluster),
+                                                         UpgradeUtilities.getCurrentFsscTime(cluster)));
       startDataNodeShouldFail(StartupOption.REGULAR);
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -179,9 +179,9 @@ public class TestDFSUpgrade extends TestCase {
       cluster = new MiniDFSCluster(conf,0,StartupOption.UPGRADE);
       baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       UpgradeUtilities.createVersionFile(DATA_NODE,baseDirs,
-        new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(),
-                        UpgradeUtilities.getCurrentNamespaceID(cluster),
-                        Long.MAX_VALUE));
+                                         new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(),
+                                                         UpgradeUtilities.getCurrentNamespaceID(cluster),
+                                                         Long.MAX_VALUE));
       startDataNodeShouldFail(StartupOption.REGULAR);
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -214,9 +214,9 @@ public class TestDFSUpgrade extends TestCase {
       log("NameNode upgrade with future layout version in current",numDirs);
       baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
       UpgradeUtilities.createVersionFile(NAME_NODE,baseDirs,
-        new StorageInfo(Integer.MIN_VALUE,
-                        UpgradeUtilities.getCurrentNamespaceID(null),
-                        UpgradeUtilities.getCurrentFsscTime(null)));
+                                         new StorageInfo(Integer.MIN_VALUE,
+                                                         UpgradeUtilities.getCurrentNamespaceID(null),
+                                                         UpgradeUtilities.getCurrentFsscTime(null)));
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
     } // end numDir loop

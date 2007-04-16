@@ -35,12 +35,12 @@ import org.apache.hadoop.io.Text;
 public class TestMiniMRClasspath extends TestCase {
   
   
-   static String launchWordCount(String fileSys,
-                                       String jobTracker,
-                                       JobConf conf,
-                                       String input,
-                                       int numMaps,
-                                       int numReduces) throws IOException {
+  static String launchWordCount(String fileSys,
+                                String jobTracker,
+                                JobConf conf,
+                                String input,
+                                int numMaps,
+                                int numReduces) throws IOException {
     final Path inDir = new Path("/testing/wc/input");
     final Path outDir = new Path("/testing/wc/output");
     FileSystem fs = FileSystem.getNamed(fileSys, conf);
@@ -92,8 +92,8 @@ public class TestMiniMRClasspath extends TestCase {
     return result.toString();
   }
 
-   static String launchExternal(String fileSys, String jobTracker, JobConf conf,
-    String input, int numMaps, int numReduces)
+  static String launchExternal(String fileSys, String jobTracker, JobConf conf,
+                               String input, int numMaps, int numReduces)
     throws IOException {
 
     final Path inDir = new Path("/testing/ext/input");
@@ -134,7 +134,7 @@ public class TestMiniMRClasspath extends TestCase {
     Path[] fileList = fs.listPaths(outDir);
     for (int i = 0; i < fileList.length; ++i) {
       BufferedReader file = new BufferedReader(new InputStreamReader(
-        fs.open(fileList[i])));
+                                                                     fs.open(fileList[i])));
       String line = file.readLine();
       while (line != null) {
         result.append(line);
@@ -148,35 +148,35 @@ public class TestMiniMRClasspath extends TestCase {
   }
    
   public void testClassPath() throws IOException {
-      String namenode = null;
-      MiniDFSCluster dfs = null;
-      MiniMRCluster mr = null;
-      FileSystem fileSys = null;
-      try {
-          final int taskTrackers = 4;
-          final int jobTrackerPort = 60050;
+    String namenode = null;
+    MiniDFSCluster dfs = null;
+    MiniMRCluster mr = null;
+    FileSystem fileSys = null;
+    try {
+      final int taskTrackers = 4;
+      final int jobTrackerPort = 60050;
 
-          Configuration conf = new Configuration();
-          dfs = new MiniDFSCluster(conf, 1, true, null);
-          fileSys = dfs.getFileSystem();
-          namenode = fileSys.getName();
-          mr = new MiniMRCluster(taskTrackers, namenode, 3);
-          JobConf jobConf = new JobConf();
-          String result;
-          final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
-          result = launchWordCount(namenode, jobTrackerName, jobConf, 
-                                   "The quick brown fox\nhas many silly\n" + 
-                                   "red fox sox\n",
-                                   3, 1);
-          assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
-                       "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
+      Configuration conf = new Configuration();
+      dfs = new MiniDFSCluster(conf, 1, true, null);
+      fileSys = dfs.getFileSystem();
+      namenode = fileSys.getName();
+      mr = new MiniMRCluster(taskTrackers, namenode, 3);
+      JobConf jobConf = new JobConf();
+      String result;
+      final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
+      result = launchWordCount(namenode, jobTrackerName, jobConf, 
+                               "The quick brown fox\nhas many silly\n" + 
+                               "red fox sox\n",
+                               3, 1);
+      assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
+                   "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
           
-      } finally {
-          if (fileSys != null) { fileSys.close(); }
-          if (dfs != null) { dfs.shutdown(); }
-          if (mr != null) { mr.shutdown();
-          }
+    } finally {
+      if (fileSys != null) { fileSys.close(); }
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown();
       }
+    }
   }
   
   public void testExternalWritable()
@@ -201,8 +201,8 @@ public class TestMiniMRClasspath extends TestCase {
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       
       result = launchExternal(namenode, jobTrackerName, jobConf, 
-                               "Dennis was here!\nDennis again!",
-                               3, 1);
+                              "Dennis was here!\nDennis again!",
+                              3, 1);
       assertEquals("Dennis again!\t1\nDennis was here!\t1\n", result);
       
     } 

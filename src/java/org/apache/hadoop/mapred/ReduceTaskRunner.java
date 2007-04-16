@@ -274,7 +274,7 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
             size = copyOutput(loc);
           } catch (IOException e) {
             LOG.warn(reduceTask.getTaskId() + " copy failed: " +
-                        loc.getMapTaskId() + " from " + loc.getHost());
+                     loc.getMapTaskId() + " from " + loc.getHost());
             LOG.warn(StringUtils.stringifyException(e));
           } finally {
             finish(size);
@@ -309,8 +309,8 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
       Path tmpFilename = new Path(finalFilename + "-" + id);
       // this copies the map output file
       tmpFilename = loc.getFile(inMemFileSys, localFileSys, shuffleMetrics,
-                               tmpFilename, reduceTask.getPartition(),
-                               STALLED_COPY_TIMEOUT);
+                                tmpFilename, reduceTask.getPartition(),
+                                STALLED_COPY_TIMEOUT);
       if (!neededOutputs.contains(loc.getMapId())) {
         if (tmpFilename != null) {
           FileSystem fs = tmpFilename.getFileSystem(conf);
@@ -352,7 +352,7 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
                    " is " + inMemFileSys.getPercentUsed() + 
                    " full. Triggering merge");
           InMemFSMergeThread m = new InMemFSMergeThread(inMemFileSys,
-                                     (LocalFileSystem)localFileSys, sorter);
+                                                        (LocalFileSystem)localFileSys, sorter);
           m.setName("Thread for merging in memory files");
           m.setDaemon(true);
           mergeInProgress = true;
@@ -425,7 +425,7 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
     //create an instance of the sorter
     sorter =
       new SequenceFile.Sorter(inMemFileSys, conf.getOutputKeyComparator(), 
-          conf.getMapOutputValueClass(), conf);
+                              conf.getMapOutputValueClass(), conf);
     
     // hosts -> next contact time
     this.penaltyBox = new Hashtable();
@@ -437,7 +437,7 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
 
     MetricsContext metricsContext = MetricsUtil.getContext("mapred");
     this.shuffleMetrics = 
-        MetricsUtil.createRecord(metricsContext, "shuffleInput");
+      MetricsUtil.createRecord(metricsContext, "shuffleInput");
     this.shuffleMetrics.setTag("user", conf.getUser());
   }
 
@@ -452,7 +452,7 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
     
     final int      numOutputs = reduceTask.getNumMaps();
     Map<Integer, MapOutputLocation> knownOutputs = 
-                                    new HashMap<Integer, MapOutputLocation>();
+      new HashMap<Integer, MapOutputLocation>();
     int            numInFlight = 0, numCopied = 0;
     int            lowThreshold = numCopiers*2;
     long           bytesTransferred = 0;
@@ -488,229 +488,229 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
     pingTimer.setDaemon(true);
     pingTimer.start();
     try {
-    // loop until we get all required outputs or are killed
-    while (!killed && numCopied < numOutputs && mergeThrowable == null) {
+      // loop until we get all required outputs or are killed
+      while (!killed && numCopied < numOutputs && mergeThrowable == null) {
 
-      LOG.info(reduceTask.getTaskId() + " Need " + (numOutputs-numCopied) +
-               " map output(s)");
+        LOG.info(reduceTask.getTaskId() + " Need " + (numOutputs-numCopied) +
+                 " map output(s)");
 
-      if (!neededOutputs.isEmpty()) {
-        LOG.info(reduceTask.getTaskId() + " Need " + neededOutputs.size() +
-                 " map output location(s)");
-        try {
-          // Put the hash entries for the failed fetches. Entries here
-          // might be replaced by (mapId) hashkeys from new successful 
-          // Map executions, if the fetch failures were due to lost tasks.
-          // The replacements, if at all, will happen when we query the
-          // JobTracker and put the mapId hashkeys with new MapOutputLocations
-          // as values
-          knownOutputs.putAll(retryFetches);
-          // the call to queryJobTracker will modify fromEventId to a value
-          // that it should be for the next call to queryJobTracker
-          List <MapOutputLocation> locs = queryJobTracker(fromEventId, 
-                                                          jobClient);
+        if (!neededOutputs.isEmpty()) {
+          LOG.info(reduceTask.getTaskId() + " Need " + neededOutputs.size() +
+                   " map output location(s)");
+          try {
+            // Put the hash entries for the failed fetches. Entries here
+            // might be replaced by (mapId) hashkeys from new successful 
+            // Map executions, if the fetch failures were due to lost tasks.
+            // The replacements, if at all, will happen when we query the
+            // JobTracker and put the mapId hashkeys with new MapOutputLocations
+            // as values
+            knownOutputs.putAll(retryFetches);
+            // the call to queryJobTracker will modify fromEventId to a value
+            // that it should be for the next call to queryJobTracker
+            List <MapOutputLocation> locs = queryJobTracker(fromEventId, 
+                                                            jobClient);
           
-          // put discovered them on the known list
-          for (int i=0; i < locs.size(); i++) {
-            knownOutputs.put(new Integer(locs.get(i).getMapId()), locs.get(i));
+            // put discovered them on the known list
+            for (int i=0; i < locs.size(); i++) {
+              knownOutputs.put(new Integer(locs.get(i).getMapId()), locs.get(i));
+            }
+            LOG.info(reduceTask.getTaskId() +
+                     " Got " + locs.size() + 
+                     " new map outputs from jobtracker and " + retryFetches.size() +
+                     " map outputs from previous failures");
+            // clear the "failed" fetches hashmap
+            retryFetches.clear();
           }
-          LOG.info(reduceTask.getTaskId() +
-                " Got " + locs.size() + 
-                " new map outputs from jobtracker and " + retryFetches.size() +
-                " map outputs from previous failures");
-          // clear the "failed" fetches hashmap
-          retryFetches.clear();
+          catch (IOException ie) {
+            LOG.warn(reduceTask.getTaskId() +
+                     " Problem locating map outputs: " +
+                     StringUtils.stringifyException(ie));
+          }
         }
-        catch (IOException ie) {
-          LOG.warn(reduceTask.getTaskId() +
-                      " Problem locating map outputs: " +
-                      StringUtils.stringifyException(ie));
-        }
-      }
       
-      // now walk through the cache and schedule what we can
-      int numKnown = knownOutputs.size(), numScheduled = 0;
-      int numSlow = 0, numDups = 0;
+        // now walk through the cache and schedule what we can
+        int numKnown = knownOutputs.size(), numScheduled = 0;
+        int numSlow = 0, numDups = 0;
 
-      LOG.info(reduceTask.getTaskId() + " Got " + numKnown + 
-               " known map output location(s); scheduling...");
+        LOG.info(reduceTask.getTaskId() + " Got " + numKnown + 
+                 " known map output location(s); scheduling...");
 
-      synchronized (scheduledCopies) {
-        Iterator locIt = knownOutputs.values().iterator();
+        synchronized (scheduledCopies) {
+          Iterator locIt = knownOutputs.values().iterator();
 
-        currentTime = System.currentTimeMillis();
-        while (locIt.hasNext()) {
+          currentTime = System.currentTimeMillis();
+          while (locIt.hasNext()) {
 
-          MapOutputLocation loc = (MapOutputLocation)locIt.next();
-          Long penaltyEnd = (Long)penaltyBox.get(loc.getHost());
-          boolean penalized = false, duplicate = false;
+            MapOutputLocation loc = (MapOutputLocation)locIt.next();
+            Long penaltyEnd = (Long)penaltyBox.get(loc.getHost());
+            boolean penalized = false, duplicate = false;
  
-          if (penaltyEnd != null && currentTime < penaltyEnd.longValue()) {
-            penalized = true; numSlow++;
-          }
-          if (uniqueHosts.contains(loc.getHost())) {
-            duplicate = true; numDups++;
-          }
+            if (penaltyEnd != null && currentTime < penaltyEnd.longValue()) {
+              penalized = true; numSlow++;
+            }
+            if (uniqueHosts.contains(loc.getHost())) {
+              duplicate = true; numDups++;
+            }
  
-          if (!penalized && !duplicate) {
-            uniqueHosts.add(loc.getHost());
-            scheduledCopies.add(loc);
-            locIt.remove();  // remove from knownOutputs
-            numInFlight++; numScheduled++;
-          }
-        }
-        scheduledCopies.notifyAll();
-      }
-      LOG.info(reduceTask.getTaskId() + " Scheduled " + numScheduled +
-               " of " + numKnown + " known outputs (" + numSlow +
-               " slow hosts and " + numDups + " dup hosts)");
-
-      // if we have no copies in flight and we can't schedule anything
-      // new, just wait for a bit
-      try {
-        if (numInFlight == 0 && numScheduled == 0) {
-          Thread.sleep(5000);
-        }
-      } catch (InterruptedException e) { } // IGNORE
-
-      while (!killed && numInFlight > 0 && mergeThrowable == null) {
-        LOG.debug(reduceTask.getTaskId() + " numInFlight = " + numInFlight);
-        CopyResult cr = getCopyResult();
-        
-        if (cr != null) {
-          if (cr.getSuccess()) {  // a successful copy
-            numCopied++;
-            bytesTransferred += cr.getSize();
-          
-            long secsSinceStart = (System.currentTimeMillis()-startTime)/1000+1;
-            float mbs = ((float)bytesTransferred)/(1024*1024);
-            float transferRate = mbs/secsSinceStart;
-          
-            copyPhase.startNextPhase();
-            copyPhase.setStatus("copy (" + numCopied + " of " + numOutputs + 
-                                " at " +
-                                mbpsFormat.format(transferRate) +  " MB/s)");          
-          } else if (cr.isObsolete()) {
-            //ignore
-            LOG.info(reduceTask.getTaskId() + 
-                " Ignoring obsolete copy result for Map Task: " + 
-                cr.getLocation().getMapTaskId() + " from host: " + 
-                cr.getHost());
-          } else {
-            retryFetches.put(new Integer(cr.getMapId()), cr.getLocation());
-          
-            // wait a random amount of time for next contact
-            currentTime = System.currentTimeMillis();
-            long nextContact = currentTime + 60 * 1000 +
-                               backoff.nextInt(maxBackoff*1000);
-            penaltyBox.put(cr.getHost(), new Long(nextContact));          
-            LOG.warn(reduceTask.getTaskId() + " adding host " +
-                     cr.getHost() + " to penalty box, next contact in " +
-                     ((nextContact-currentTime)/1000) + " seconds");
-
-            // other outputs from the failed host may be present in the
-            // knownOutputs cache, purge them. This is important in case
-            // the failure is due to a lost tasktracker (causes many
-            // unnecessary backoffs). If not, we only take a small hit
-            // polling the jobtracker a few more times
-            Iterator locIt = knownOutputs.values().iterator();
-            while (locIt.hasNext()) {
-              MapOutputLocation loc = (MapOutputLocation)locIt.next();
-              if (cr.getHost().equals(loc.getHost())) {
-                retryFetches.put(new Integer(loc.getMapId()), loc);
-                locIt.remove();
-              }
+            if (!penalized && !duplicate) {
+              uniqueHosts.add(loc.getHost());
+              scheduledCopies.add(loc);
+              locIt.remove();  // remove from knownOutputs
+              numInFlight++; numScheduled++;
             }
           }
-          uniqueHosts.remove(cr.getHost());
-          numInFlight--;
+          scheduledCopies.notifyAll();
         }
+        LOG.info(reduceTask.getTaskId() + " Scheduled " + numScheduled +
+                 " of " + numKnown + " known outputs (" + numSlow +
+                 " slow hosts and " + numDups + " dup hosts)");
+
+        // if we have no copies in flight and we can't schedule anything
+        // new, just wait for a bit
+        try {
+          if (numInFlight == 0 && numScheduled == 0) {
+            Thread.sleep(5000);
+          }
+        } catch (InterruptedException e) { } // IGNORE
+
+        while (!killed && numInFlight > 0 && mergeThrowable == null) {
+          LOG.debug(reduceTask.getTaskId() + " numInFlight = " + numInFlight);
+          CopyResult cr = getCopyResult();
         
-        boolean busy = true;
-        // ensure we have enough to keep us busy
-        if (numInFlight < lowThreshold && (numOutputs-numCopied) > probe_sample_size) {
-          busy = false;
+          if (cr != null) {
+            if (cr.getSuccess()) {  // a successful copy
+              numCopied++;
+              bytesTransferred += cr.getSize();
+          
+              long secsSinceStart = (System.currentTimeMillis()-startTime)/1000+1;
+              float mbs = ((float)bytesTransferred)/(1024*1024);
+              float transferRate = mbs/secsSinceStart;
+          
+              copyPhase.startNextPhase();
+              copyPhase.setStatus("copy (" + numCopied + " of " + numOutputs + 
+                                  " at " +
+                                  mbpsFormat.format(transferRate) +  " MB/s)");          
+            } else if (cr.isObsolete()) {
+              //ignore
+              LOG.info(reduceTask.getTaskId() + 
+                       " Ignoring obsolete copy result for Map Task: " + 
+                       cr.getLocation().getMapTaskId() + " from host: " + 
+                       cr.getHost());
+            } else {
+              retryFetches.put(new Integer(cr.getMapId()), cr.getLocation());
+          
+              // wait a random amount of time for next contact
+              currentTime = System.currentTimeMillis();
+              long nextContact = currentTime + 60 * 1000 +
+                backoff.nextInt(maxBackoff*1000);
+              penaltyBox.put(cr.getHost(), new Long(nextContact));          
+              LOG.warn(reduceTask.getTaskId() + " adding host " +
+                       cr.getHost() + " to penalty box, next contact in " +
+                       ((nextContact-currentTime)/1000) + " seconds");
+
+              // other outputs from the failed host may be present in the
+              // knownOutputs cache, purge them. This is important in case
+              // the failure is due to a lost tasktracker (causes many
+              // unnecessary backoffs). If not, we only take a small hit
+              // polling the jobtracker a few more times
+              Iterator locIt = knownOutputs.values().iterator();
+              while (locIt.hasNext()) {
+                MapOutputLocation loc = (MapOutputLocation)locIt.next();
+                if (cr.getHost().equals(loc.getHost())) {
+                  retryFetches.put(new Integer(loc.getMapId()), loc);
+                  locIt.remove();
+                }
+              }
+            }
+            uniqueHosts.remove(cr.getHost());
+            numInFlight--;
+          }
+        
+          boolean busy = true;
+          // ensure we have enough to keep us busy
+          if (numInFlight < lowThreshold && (numOutputs-numCopied) > probe_sample_size) {
+            busy = false;
+          }
+          //Check whether we have more CopyResult to check. If there is none, and
+          //we are not busy enough, break
+          synchronized (copyResults) {
+            if (copyResults.size() == 0 && !busy) {
+              break;
+            }
+          }
         }
-        //Check whether we have more CopyResult to check. If there is none, and
-        //we are not busy enough, break
-        synchronized (copyResults) {
-          if (copyResults.size() == 0 && !busy) {
-            break;
+      
+      }
+
+      // all done, inform the copiers to exit
+      synchronized (copiers) {
+        synchronized (scheduledCopies) {
+          for (int i=0; i < copiers.length; i++) {
+            copiers[i].interrupt();
+            copiers[i] = null;
           }
         }
       }
-      
-    }
-
-    // all done, inform the copiers to exit
-    synchronized (copiers) {
-      synchronized (scheduledCopies) {
-        for (int i=0; i < copiers.length; i++) {
-          copiers[i].interrupt();
-          copiers[i] = null;
-        }
-      }
-    }
     
-    //Do a merge of in-memory files (if there are any)
-    if (!killed && mergeThrowable == null) {
-      try {
-        //wait for an ongoing merge (if it is in flight) to complete
-        while (mergeInProgress) {
-          Thread.sleep(200);
-        }
-        LOG.info(reduceTask.getTaskId() + 
-                 " Copying of all map outputs complete. " + 
-                 "Initiating the last merge on the remaining files in " + 
-                 inMemFileSys.getUri());
-        if (mergeThrowable != null) {
-          //this could happen if the merge that
-          //was in progress threw an exception
-          throw mergeThrowable;
-        }
-        //initiate merge
-        Path[] inMemClosedFiles = inMemFileSys.getFiles(MAP_OUTPUT_FILTER);
-        if (inMemClosedFiles.length == 0) {
-          LOG.info(reduceTask.getTaskId() + "Nothing to merge from " + 
-              inMemFileSys.getUri());
-          return numCopied == numOutputs;
-        }
-        //name this output file same as the name of the first file that is 
-        //there in the current list of inmem files (this is guaranteed to be
-        //absent on the disk currently. So we don't overwrite a prev. 
-        //created spill). Also we need to create the output file now since
-        //it is not guaranteed that this file will be present after merge
-        //is called (we delete empty sequence files as soon as we see them
-        //in the merge method)
-        SequenceFile.Writer writer = sorter.cloneFileAttributes(
-            inMemFileSys.makeQualified(inMemClosedFiles[0]), 
-            localFileSys.makeQualified(inMemClosedFiles[0]), null);
-        
-        RawKeyValueIterator rIter = null;
+      //Do a merge of in-memory files (if there are any)
+      if (!killed && mergeThrowable == null) {
         try {
-          rIter = sorter.merge(inMemClosedFiles, true, inMemClosedFiles.length, 
-                       new Path(reduceTask.getTaskId()));
-        } catch (Exception e) { 
-          //make sure that we delete the ondisk file that we created earlier
-          //when we invoked cloneFileAttributes
+          //wait for an ongoing merge (if it is in flight) to complete
+          while (mergeInProgress) {
+            Thread.sleep(200);
+          }
+          LOG.info(reduceTask.getTaskId() + 
+                   " Copying of all map outputs complete. " + 
+                   "Initiating the last merge on the remaining files in " + 
+                   inMemFileSys.getUri());
+          if (mergeThrowable != null) {
+            //this could happen if the merge that
+            //was in progress threw an exception
+            throw mergeThrowable;
+          }
+          //initiate merge
+          Path[] inMemClosedFiles = inMemFileSys.getFiles(MAP_OUTPUT_FILTER);
+          if (inMemClosedFiles.length == 0) {
+            LOG.info(reduceTask.getTaskId() + "Nothing to merge from " + 
+                     inMemFileSys.getUri());
+            return numCopied == numOutputs;
+          }
+          //name this output file same as the name of the first file that is 
+          //there in the current list of inmem files (this is guaranteed to be
+          //absent on the disk currently. So we don't overwrite a prev. 
+          //created spill). Also we need to create the output file now since
+          //it is not guaranteed that this file will be present after merge
+          //is called (we delete empty sequence files as soon as we see them
+          //in the merge method)
+          SequenceFile.Writer writer = sorter.cloneFileAttributes(
+                                                                  inMemFileSys.makeQualified(inMemClosedFiles[0]), 
+                                                                  localFileSys.makeQualified(inMemClosedFiles[0]), null);
+        
+          RawKeyValueIterator rIter = null;
+          try {
+            rIter = sorter.merge(inMemClosedFiles, true, inMemClosedFiles.length, 
+                                 new Path(reduceTask.getTaskId()));
+          } catch (Exception e) { 
+            //make sure that we delete the ondisk file that we created earlier
+            //when we invoked cloneFileAttributes
+            writer.close();
+            localFileSys.delete(inMemClosedFiles[0]);
+            throw new IOException (StringUtils.stringifyException(e));
+          }
+          sorter.writeFile(rIter, writer);
           writer.close();
-          localFileSys.delete(inMemClosedFiles[0]);
-          throw new IOException (StringUtils.stringifyException(e));
+          LOG.info(reduceTask.getTaskId() +
+                   " Merge of the " +inMemClosedFiles.length +
+                   " files in InMemoryFileSystem complete." +
+                   " Local file is " + inMemClosedFiles[0]);
+        } catch (Throwable t) {
+          LOG.warn(reduceTask.getTaskId() +
+                   " Final merge of the inmemory files threw an exception: " + 
+                   StringUtils.stringifyException(t));
+          return false;
         }
-        sorter.writeFile(rIter, writer);
-        writer.close();
-        LOG.info(reduceTask.getTaskId() +
-                 " Merge of the " +inMemClosedFiles.length +
-                 " files in InMemoryFileSystem complete." +
-                 " Local file is " + inMemClosedFiles[0]);
-      } catch (Throwable t) {
-        LOG.warn(reduceTask.getTaskId() +
-            " Final merge of the inmemory files threw an exception: " + 
-            StringUtils.stringifyException(t));
-        return false;
       }
-    }
-    return mergeThrowable == null && numCopied == numOutputs && !killed;
+      return mergeThrowable == null && numCopied == numOutputs && !killed;
     } finally {
       inMemFileSys.close();
       pingTimer.interrupt();
@@ -719,7 +719,7 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
   
   
   private CopyResult getCopyResult() {  
-   synchronized (copyResults) {
+    synchronized (copyResults) {
       while (!killed && copyResults.isEmpty()) {
         try {
           copyResults.wait();
@@ -741,8 +741,8 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
    * @throws IOException
    */  
   private List <MapOutputLocation> queryJobTracker(IntWritable fromEventId, 
-                                              InterTrackerProtocol jobClient)
-  throws IOException {
+                                                   InterTrackerProtocol jobClient)
+    throws IOException {
     
     long currentTime = System.currentTimeMillis();    
     long pollTime = lastPollTime + MIN_POLL_INTERVAL;
@@ -755,9 +755,9 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
     lastPollTime = currentTime;
 
     TaskCompletionEvent t[] = jobClient.getTaskCompletionEvents(
-                                      reduceTask.getJobId().toString(),
-                                      fromEventId.get(),
-                                      probe_sample_size);
+                                                                reduceTask.getJobId().toString(),
+                                                                fromEventId.get(),
+                                                                probe_sample_size);
     
     List <MapOutputLocation> mapOutputsList = new ArrayList();
     for (int i = 0; i < t.length; i++) {
@@ -799,7 +799,7 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
     private SequenceFile.Sorter sorter;
     
     public InMemFSMergeThread(InMemoryFileSystem inMemFileSys, 
-        LocalFileSystem localFileSys, SequenceFile.Sorter sorter) {
+                              LocalFileSystem localFileSys, SequenceFile.Sorter sorter) {
       this.inMemFileSys = inMemFileSys;
       this.localFileSys = localFileSys;
       this.sorter = sorter;
@@ -813,7 +813,7 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
         //in flight. So we make sure that we have some 'closed' map
         //output files to merge to get the benefit of in-memory merge
         if (inMemClosedFiles.length >= 
-          (int)(MAX_INMEM_FILESYS_USE/MAX_INMEM_FILESIZE_FRACTION)) {
+            (int)(MAX_INMEM_FILESYS_USE/MAX_INMEM_FILESIZE_FRACTION)) {
           //name this output file same as the name of the first file that is 
           //there in the current list of inmem files (this is guaranteed to be
           //absent on the disk currently. So we don't overwrite a prev. 
@@ -822,12 +822,12 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
           //is called (we delete empty sequence files as soon as we see them
           //in the merge method)
           SequenceFile.Writer writer = sorter.cloneFileAttributes(
-              inMemFileSys.makeQualified(inMemClosedFiles[0]), 
-              localFileSys.makeQualified(inMemClosedFiles[0]), null);
+                                                                  inMemFileSys.makeQualified(inMemClosedFiles[0]), 
+                                                                  localFileSys.makeQualified(inMemClosedFiles[0]), null);
           RawKeyValueIterator rIter;
           try {
             rIter = sorter.merge(inMemClosedFiles, true, 
-              inMemClosedFiles.length, new Path(reduceTask.getTaskId()));
+                                 inMemClosedFiles.length, new Path(reduceTask.getTaskId()));
           } catch (Exception e) { 
             //make sure that we delete the ondisk file that we created earlier
             //when we invoked cloneFileAttributes
@@ -844,12 +844,12 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
         }
         else {
           LOG.info(reduceTask.getTaskId() + " Nothing to merge from " + 
-              inMemFileSys.getUri());
+                   inMemFileSys.getUri());
         }
       } catch (Throwable t) {
         LOG.warn(reduceTask.getTaskId() +
-            " Intermediate Merge of the inmemory files threw an exception: " + 
-            StringUtils.stringifyException(t));
+                 " Intermediate Merge of the inmemory files threw an exception: " + 
+                 StringUtils.stringifyException(t));
         ReduceTaskRunner.this.mergeThrowable = t;
       }
       finally {
@@ -858,8 +858,8 @@ class ReduceTaskRunner extends TaskRunner implements MRConstants {
     }
   }
   final private static PathFilter MAP_OUTPUT_FILTER = new PathFilter() {
-    public boolean accept(Path file) {
-      return file.toString().endsWith(".out");
-    }     
-  };
+      public boolean accept(Path file) {
+        return file.toString().endsWith(".out");
+      }     
+    };
 }

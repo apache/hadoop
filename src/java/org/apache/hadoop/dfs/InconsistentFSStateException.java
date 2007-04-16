@@ -31,7 +31,7 @@ class InconsistentFSStateException extends IOException {
 
   public InconsistentFSStateException( File dir, String descr ) {
     super( "Directory " + getFilePath( dir )
-          + " is in an inconsistent state: " + descr );
+           + " is in an inconsistent state: " + descr );
   }
 
   public InconsistentFSStateException( File dir, String descr, Throwable ex ) {

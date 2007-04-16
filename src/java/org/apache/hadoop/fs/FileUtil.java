@@ -68,42 +68,42 @@ public class FileUtil {
                              FileSystem dstFS, Path dst, 
                              boolean deleteSource,
                              Configuration conf ) throws IOException {
-      dst = checkDest(src.getName(), dstFS, dst);
+    dst = checkDest(src.getName(), dstFS, dst);
 
-      if (srcFS.isDirectory(src)) {
-        if (!dstFS.mkdirs(dst)) {
-          return false;
-        }
-        Path contents[] = srcFS.listPaths(src);
-        for (int i = 0; i < contents.length; i++) {
-          copy(srcFS, contents[i], dstFS, new Path(dst, contents[i].getName()),
-               deleteSource, conf);
-        }
-      } else if (srcFS.isFile(src)) {
-        InputStream in = srcFS.open(src);
-        try {
-          OutputStream out = dstFS.create(dst);
-          copyContent(in, out, conf);
-        } finally {
-          in.close();
-        }
-      } else {
-        throw new IOException(src.toString() + ": No such file or directory");
+    if (srcFS.isDirectory(src)) {
+      if (!dstFS.mkdirs(dst)) {
+        return false;
       }
-      if (deleteSource) {
-        return srcFS.delete(src);
-      } else {
-        return true;
+      Path contents[] = srcFS.listPaths(src);
+      for (int i = 0; i < contents.length; i++) {
+        copy(srcFS, contents[i], dstFS, new Path(dst, contents[i].getName()),
+             deleteSource, conf);
       }
+    } else if (srcFS.isFile(src)) {
+      InputStream in = srcFS.open(src);
+      try {
+        OutputStream out = dstFS.create(dst);
+        copyContent(in, out, conf);
+      } finally {
+        in.close();
+      }
+    } else {
+      throw new IOException(src.toString() + ": No such file or directory");
+    }
+    if (deleteSource) {
+      return srcFS.delete(src);
+    } else {
+      return true;
+    }
   
   }
 
   /** Copy all files in a directory to one output file (merge). */
   public static boolean copyMerge(FileSystem srcFS, Path srcDir, 
-                             FileSystem dstFS, Path dstFile, 
-                             boolean deleteSource,
-                             Configuration conf, String addString) throws IOException {
-      dstFile = checkDest(srcDir.getName(), dstFS, dstFile);
+                                  FileSystem dstFS, Path dstFile, 
+                                  boolean deleteSource,
+                                  Configuration conf, String addString) throws IOException {
+    dstFile = checkDest(srcDir.getName(), dstFS, dstFile);
 
     if (!srcFS.isDirectory(srcDir))
       return false;
@@ -200,7 +200,7 @@ public class FileUtil {
   }
 
   private static void copyContent(InputStream in, OutputStream out,
-          Configuration conf) throws IOException {
+                                  Configuration conf) throws IOException {
     copyContent(in, out, conf, true);
   }
 
@@ -274,7 +274,7 @@ public class FileUtil {
     }
   }
     
-	/**
+  /**
    * Given a File input it will unzip the file in a the unzip directory
    * passed as the second parameter
    * @param inFile The zip file as input
@@ -363,10 +363,10 @@ public class FileUtil {
       try {
         if (process.waitFor() != 0) {
           String errMsg = new BufferedReader(new InputStreamReader(
-              process.getInputStream())).readLine();
+                                                                   process.getInputStream())).readLine();
           if( errMsg == null )  errMsg = "";
           String inpMsg = new BufferedReader(new InputStreamReader(
-              process.getErrorStream())).readLine();
+                                                                   process.getErrorStream())).readLine();
           if( inpMsg == null )  inpMsg = "";
           throw new IOException( errMsg + inpMsg );
         }
@@ -386,16 +386,16 @@ public class FileUtil {
    * @return value returned by the command
    */
   public static int symLink(String target, String linkname) throws IOException{
-   String cmd = "ln -s " + target + " " + linkname;
-   Process p = Runtime.getRuntime().exec( cmd, null );
-   int returnVal = -1;
-   try{
-     returnVal = p.waitFor();
-   } catch(InterruptedException e){
-     //do nothing as of yet
-   }
-   return returnVal;
- }
+    String cmd = "ln -s " + target + " " + linkname;
+    Process p = Runtime.getRuntime().exec( cmd, null );
+    int returnVal = -1;
+    try{
+      returnVal = p.waitFor();
+    } catch(InterruptedException e){
+      //do nothing as of yet
+    }
+    return returnVal;
+  }
   
   /**
    * Change the permissions on a filename.

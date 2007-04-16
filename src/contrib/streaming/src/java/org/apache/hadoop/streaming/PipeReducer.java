@@ -45,8 +45,8 @@ public class PipeReducer extends PipeMapRed implements Reducer {
     try {
       return URLDecoder.decode(str, "UTF-8");
     } catch (UnsupportedEncodingException e) {
-        System.err.println("stream.reduce.streamprocessor in jobconf not found");
-        return null;
+      System.err.println("stream.reduce.streamprocessor in jobconf not found");
+      return null;
     }
   }
 
@@ -61,7 +61,7 @@ public class PipeReducer extends PipeMapRed implements Reducer {
   }
 
   public void reduce(WritableComparable key, Iterator values, OutputCollector output,
-      Reporter reporter) throws IOException {
+                     Reporter reporter) throws IOException {
 
     // init
     if (doPipe_ && outThread_ == null) {

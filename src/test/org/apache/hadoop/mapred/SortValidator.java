@@ -57,7 +57,7 @@ public class SortValidator {
 
   static void printUsage() {
     System.err.println("sortvalidate [-m <maps>] [-r <reduces>] [-deep] " +
-    "-sortInput <sort-input-dir> -sortOutput <sort-output-dir>");
+                       "-sortInput <sort-input-dir> -sortOutput <sort-output-dir>");
     System.exit(1);
   }
 
@@ -73,7 +73,7 @@ public class SortValidator {
     
     // value == one for sort-input; value == two for sort-output
     return (inputFile.startsWith(inputPaths[0].toString()+"/")) ? 
-            sortInput : sortOutput;
+      sortInput : sortOutput;
   }
   
   static private byte[] pair(BytesWritable a, BytesWritable b) {
@@ -145,8 +145,8 @@ public class SortValidator {
             URI inputURI = new URI(job.get("map.input.file"));
             String inputFile = inputURI.getPath();
             partition = Integer.valueOf(
-                          inputFile.substring(inputFile.lastIndexOf("part")+5)
-                          ).intValue();
+                                        inputFile.substring(inputFile.lastIndexOf("part")+5)
+                                        ).intValue();
             noSortReducers = job.getInt("sortvalidate.sort.reduce.tasks", -1);
           } catch (Exception e) {
             System.err.println("Caught: " + e);
@@ -156,9 +156,9 @@ public class SortValidator {
       }
       
       public void map(WritableComparable key, 
-              Writable value,
-              OutputCollector output, 
-              Reporter reporter) throws IOException {
+                      Writable value,
+                      OutputCollector output, 
+                      Reporter reporter) throws IOException {
         BytesWritable bwKey = (BytesWritable)key;
         BytesWritable bwValue = (BytesWritable)value;
         
@@ -170,7 +170,7 @@ public class SortValidator {
           } else {
             if (prevKey.compareTo(bwKey) > 0) {
               throw new IOException("The 'map-reduce' framework wrongly classifed"
-                      + "(" + prevKey + ") > (" + bwKey + ")"); 
+                                    + "(" + prevKey + ") > (" + bwKey + ")"); 
             }
             prevKey = bwKey;
           }
@@ -180,24 +180,24 @@ public class SortValidator {
             partitioner.getPartition(bwKey, bwValue, noSortReducers);
           if (partition != keyPartition) {
             throw new IOException("Paritions do not match! - '" + partition + 
-                    "' v/s '" + keyPartition + "'");
+                                  "' v/s '" + keyPartition + "'");
           }
         }
 
         int keyValueChecksum = 
-            (WritableComparator.hashBytes(bwKey.get(), bwKey.getSize()) ^
-             WritableComparator.hashBytes(bwValue.get(), bwValue.getSize()));
+          (WritableComparator.hashBytes(bwKey.get(), bwKey.getSize()) ^
+           WritableComparator.hashBytes(bwValue.get(), bwValue.getSize()));
 
         // output (this.key, record-stats)
         output.collect(this.key, new RecordStatsWritable(
-                (bwKey.getSize()+bwValue.getSize()), 1, keyValueChecksum));
+                                                         (bwKey.getSize()+bwValue.getSize()), 1, keyValueChecksum));
       }
     }
     
     public static class Reduce extends MapReduceBase implements Reducer {
       public void reduce(WritableComparable key, Iterator values,
-              OutputCollector output, 
-              Reporter reporter) throws IOException {
+                         OutputCollector output, 
+                         Reporter reporter) throws IOException {
         long bytes = 0;
         long records = 0;
         int xor = 0;
@@ -213,14 +213,14 @@ public class SortValidator {
     }
     
     public static class NonSplitableSequenceFileInputFormat 
-    extends SequenceFileInputFormat {
+      extends SequenceFileInputFormat {
       protected boolean isSplitable(FileSystem fs, Path filename) {
         return false;
       }
     }
     
     static void checkRecords(Configuration defaults, 
-            Path sortInput, Path sortOutput) throws IOException {
+                             Path sortInput, Path sortOutput) throws IOException {
       FileSystem fs = FileSystem.get(defaults);
       JobConf jobConf = new JobConf(defaults, RecordStatsChecker.class);
       jobConf.setJobName("sortvalidate-recordstats-checker");
@@ -253,21 +253,21 @@ public class SortValidator {
       //job_conf.set("mapred.job.tracker", "local");
       
       System.out.println("\nSortValidator.RecordStatsChecker: Validate sort " +
-              "from " + jobConf.getInputPaths()[0] + ", " + 
-              jobConf.getInputPaths()[1] + " into " + jobConf.getOutputPath() + 
-              " with 1 reducer.");
+                         "from " + jobConf.getInputPaths()[0] + ", " + 
+                         jobConf.getInputPaths()[1] + " into " + jobConf.getOutputPath() + 
+                         " with 1 reducer.");
       Date startTime = new Date();
       System.out.println("Job started: " + startTime);
       JobClient.runJob(jobConf);
       Date end_time = new Date();
       System.out.println("Job ended: " + end_time);
       System.out.println("The job took " + 
-              (end_time.getTime() - startTime.getTime()) /1000 + " seconds.");
+                         (end_time.getTime() - startTime.getTime()) /1000 + " seconds.");
       
       // Check to ensure that the statistics of the 
       // framework's sort-input and sort-output match
       SequenceFile.Reader stats = new SequenceFile.Reader(fs, 
-              new Path(outputPath, "part-00000"), defaults);
+                                                          new Path(outputPath, "part-00000"), defaults);
       IntWritable k1 = new IntWritable();
       IntWritable k2 = new IntWritable();
       RecordStatsWritable v1 = new RecordStatsWritable();
@@ -280,10 +280,10 @@ public class SortValidator {
       }
 
       if ((v1.getBytes() != v2.getBytes()) || (v1.getRecords() != v2.getRecords()) || 
-              v1.getChecksum() != v2.getChecksum()) {
+          v1.getChecksum() != v2.getChecksum()) {
         throw new IOException("(" + 
-                v1.getBytes() + ", " + v1.getRecords() + ", " + v1.getChecksum() + ") v/s (" +
-                v2.getBytes() + ", " + v2.getRecords() + ", " + v2.getChecksum() + ")");
+                              v1.getBytes() + ", " + v1.getRecords() + ", " + v1.getChecksum() + ") v/s (" +
+                              v2.getBytes() + ", " + v2.getRecords() + ", " + v2.getChecksum() + ")");
       }
     }
 
@@ -307,9 +307,9 @@ public class SortValidator {
       }
       
       public void map(WritableComparable key, 
-              Writable value,
-              OutputCollector output, 
-              Reporter reporter) throws IOException {
+                      Writable value,
+                      OutputCollector output, 
+                      Reporter reporter) throws IOException {
         // newKey = (key, value)
         BytesWritable keyValue = 
           new BytesWritable(pair((BytesWritable)key, (BytesWritable)value));
@@ -321,8 +321,8 @@ public class SortValidator {
     
     public static class Reduce extends MapReduceBase implements Reducer {
       public void reduce(WritableComparable key, Iterator values,
-              OutputCollector output, 
-              Reporter reporter) throws IOException {
+                         OutputCollector output, 
+                         Reporter reporter) throws IOException {
         int ones = 0;
         int twos = 0;
         while (values.hasNext()) {
@@ -333,20 +333,20 @@ public class SortValidator {
             ++twos;
           } else {
             throw new IOException("Invalid 'value' of " + count.get() + 
-                    " for (key,value): " + key.toString());
+                                  " for (key,value): " + key.toString());
           }
         }
         
         // Check to ensure there are equal no. of ones and twos
         if (ones != twos) {
           throw new IOException("Illegal ('one', 'two'): (" + ones + ", " + twos +
-                  ") for (key, value): " + key.toString());
+                                ") for (key, value): " + key.toString());
         }
       }
     }
     
     static void checkRecords(Configuration defaults, int noMaps, int noReduces,
-            Path sortInput, Path sortOutput) throws IOException {
+                             Path sortInput, Path sortOutput) throws IOException {
       JobConf jobConf = new JobConf(defaults, RecordChecker.class);
       jobConf.setJobName("sortvalidate-record-checker");
       
@@ -363,12 +363,12 @@ public class SortValidator {
       ClusterStatus cluster = client.getClusterStatus();
       if (noMaps == -1) {
         noMaps = cluster.getTaskTrackers() * 
-                   jobConf.getInt("test.sortvalidate.maps_per_host", 10);
+          jobConf.getInt("test.sortvalidate.maps_per_host", 10);
       }
       if (noReduces == -1) {
         noReduces = cluster.getTaskTrackers() * 
-                      jobConf.getInt("test.sortvalidate.reduces_per_host", 
-                              cluster.getMaxTasks());
+          jobConf.getInt("test.sortvalidate.reduces_per_host", 
+                         cluster.getMaxTasks());
       }
       jobConf.setNumMapTasks(noMaps);
       jobConf.setNumReduceTasks(noReduces);
@@ -386,17 +386,17 @@ public class SortValidator {
       //job_conf.set("mapred.job.tracker", "local");
       
       System.out.println("\nSortValidator.RecordChecker: Running on " +
-              cluster.getTaskTrackers() +
-              " nodes to validate sort from " + jobConf.getInputPaths()[0] + ", " + 
-              jobConf.getInputPaths()[1] + " into " + jobConf.getOutputPath() + 
-              " with " + noReduces + " reduces.");
+                         cluster.getTaskTrackers() +
+                         " nodes to validate sort from " + jobConf.getInputPaths()[0] + ", " + 
+                         jobConf.getInputPaths()[1] + " into " + jobConf.getOutputPath() + 
+                         " with " + noReduces + " reduces.");
       Date startTime = new Date();
       System.out.println("Job started: " + startTime);
       JobClient.runJob(jobConf);
       Date end_time = new Date();
       System.out.println("Job ended: " + end_time);
       System.out.println("The job took " + 
-              (end_time.getTime() - startTime.getTime()) /1000 + " seconds.");
+                         (end_time.getTime() - startTime.getTime()) /1000 + " seconds.");
     }
   }
 
@@ -433,7 +433,7 @@ public class SortValidator {
         printUsage();
       } catch (ArrayIndexOutOfBoundsException except) {
         System.err.println("ERROR: Required parameter missing from " +
-                args[i-1]);
+                           args[i-1]);
         printUsage(); // exits
       }
     }
@@ -449,11 +449,11 @@ public class SortValidator {
     // Check if the same records are present in sort's inputs & outputs
     if (deepTest) {
       RecordChecker.checkRecords(defaults, noMaps, noReduces, sortInput, 
-            sortOutput);
+                                 sortOutput);
     }
     
     System.out.println("\nSUCCESS! Validated the MapReduce framework's 'sort'" +
-            " successfully.");
+                       " successfully.");
   }
   
 }

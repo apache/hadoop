@@ -73,7 +73,7 @@ public class TestLocalDFS extends TestCase {
       writeFile(fileSys, file1);
       readFile(fileSys, file1);
       cleanupFile(fileSys, new Path(new Path(subdir1, subdir2.toString()),
-                                     file1.toString()));
+                                    file1.toString()));
     } finally {
       fileSys.close();
       cluster.shutdown();

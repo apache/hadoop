@@ -73,8 +73,8 @@ public class Logalyzer {
     }
     
     public void map(WritableComparable key, Writable value,
-        OutputCollector output, Reporter reporter)
-    throws IOException {
+                    OutputCollector output, Reporter reporter)
+      throws IOException {
       String text = ((Text)value).toString();
       Matcher matcher = pattern.matcher(text);
       while (matcher.find()) {
@@ -114,7 +114,7 @@ public class Logalyzer {
     }
     
     public int compare(byte[] b1, int s1, int l1,
-        byte[] b2, int s2, int l2) {
+                       byte[] b2, int s2, int l2) {
       
       if(sortSpec == null) {
         return super.compare(b1, s1, l1, b2, s2, l2);
@@ -143,9 +143,9 @@ public class Logalyzer {
           
           //Compare columns
           int comparision = super.compareBytes(
-              c1.getBytes(), 0, c1.length(),
-              c2.getBytes(), 0, c2.length()
-          );
+                                               c1.getBytes(), 0, c1.length(),
+                                               c2.getBytes(), 0, c2.length()
+                                               );
           
           //They differ!
           if(comparision != 0) {
@@ -174,11 +174,11 @@ public class Logalyzer {
    * @throws IOException
    */
   public void	
-  doArchive(String logListURI, String archiveDirectory)
-  throws IOException
+    doArchive(String logListURI, String archiveDirectory)
+    throws IOException
   {
     String destURL = new String("hdfs://" + fsConfig.get("fs.default.name", "local") + 
-        archiveDirectory);
+                                archiveDirectory);
     CopyFiles.copy(fsConfig, logListURI, destURL, true, false);
   }
   
@@ -192,16 +192,16 @@ public class Logalyzer {
    * @throws IOException
    */
   public void
-  doAnalyze(String inputFilesDirectory, String outputDirectory,
-      String grepPattern, String sortColumns, String columnSeparator)
-  throws IOException
+    doAnalyze(String inputFilesDirectory, String outputDirectory,
+              String grepPattern, String sortColumns, String columnSeparator)
+    throws IOException
   {		
     Path grepInput = new Path(inputFilesDirectory);
     
     Path analysisOutput = null;
     if(outputDirectory.equals("")) {
       analysisOutput =  new Path(inputFilesDirectory, "logalyzer_" + 
-          Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
+                                 Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
     } else {
       analysisOutput = new Path(outputDirectory);
     }
@@ -237,9 +237,9 @@ public class Logalyzer {
     
     String version = "Logalyzer.0.0.1";
     String usage = "Usage: Logalyzer [-archive -logs <urlsFile>] " +
-    "-archiveDir <archiveDirectory> " +
-    "-grep <pattern> -sort <column1,column2,...> -separator <separator> " +
-    "-analysis <outputDirectory>";
+      "-archiveDir <archiveDirectory> " +
+      "-grep <pattern> -sort <column1,column2,...> -separator <separator> " +
+      "-analysis <outputDirectory>";
     
     System.out.println(version);
     if (args.length == 0) {

@@ -40,143 +40,143 @@ import org.apache.hadoop.mapred.JobConf;
  * @author Nigel Daley
  */
 public class NNBench {
-    // variable initialzed from command line arguments
-    private static long startTime = 0;
-    private static int numFiles = 0;
-    private static long bytesPerBlock = 1;
-    private static long blocksPerFile = 0;
-    private static long bytesPerFile = 1;
-    private static Path baseDir = null;
+  // variable initialzed from command line arguments
+  private static long startTime = 0;
+  private static int numFiles = 0;
+  private static long bytesPerBlock = 1;
+  private static long blocksPerFile = 0;
+  private static long bytesPerFile = 1;
+  private static Path baseDir = null;
     
-    // variables initialized in main()
-    private static FileSystem fileSys = null;
-    private static Path taskDir = null;
-    private static String uniqueId = null;
-    private static byte[] buffer;
+  // variables initialized in main()
+  private static FileSystem fileSys = null;
+  private static Path taskDir = null;
+  private static String uniqueId = null;
+  private static byte[] buffer;
     
-    /**
-     * Returns when the current number of seconds from the epoch equals
-     * the command line argument given by <code>-startTime</code>.
-     * This allows multiple instances of this program, running on clock
-     * synchronized nodes, to start at roughly the same time.
-     */
-    static void barrier() {
-      long sleepTime;
-      while ((sleepTime = startTime - System.currentTimeMillis()) > 0) {
-        try {
-          Thread.sleep(sleepTime);
-        } catch (InterruptedException ex) {
-        }
+  /**
+   * Returns when the current number of seconds from the epoch equals
+   * the command line argument given by <code>-startTime</code>.
+   * This allows multiple instances of this program, running on clock
+   * synchronized nodes, to start at roughly the same time.
+   */
+  static void barrier() {
+    long sleepTime;
+    while ((sleepTime = startTime - System.currentTimeMillis()) > 0) {
+      try {
+        Thread.sleep(sleepTime);
+      } catch (InterruptedException ex) {
       }
     }
+  }
     
-    /**
-     * Create and write to a given number of files.  Repeat each remote
-     * operation until is suceeds (does not throw an exception).
-     *
-     * @return the number of exceptions caught
-     */
-    static int createWrite() {
-      int exceptions = 0;
-      FSDataOutputStream out = null;
-      boolean success = false;
-      for (int index = 0; index < numFiles; index++) {
-        do { // create file until is succeeds
-          try {
-              out = fileSys.create(
-              new Path(taskDir, "" + index), false, 512, (short)1, bytesPerBlock);
-            success = true;
-          } catch (IOException ioe) { success=false; exceptions++; }
-        } while (!success);
-        long toBeWritten = bytesPerFile;
-        while (toBeWritten > 0) {
-          int nbytes = (int) Math.min(buffer.length, toBeWritten);
-          toBeWritten -= nbytes;
+  /**
+   * Create and write to a given number of files.  Repeat each remote
+   * operation until is suceeds (does not throw an exception).
+   *
+   * @return the number of exceptions caught
+   */
+  static int createWrite() {
+    int exceptions = 0;
+    FSDataOutputStream out = null;
+    boolean success = false;
+    for (int index = 0; index < numFiles; index++) {
+      do { // create file until is succeeds
+        try {
+          out = fileSys.create(
+                               new Path(taskDir, "" + index), false, 512, (short)1, bytesPerBlock);
+          success = true;
+        } catch (IOException ioe) { success=false; exceptions++; }
+      } while (!success);
+      long toBeWritten = bytesPerFile;
+      while (toBeWritten > 0) {
+        int nbytes = (int) Math.min(buffer.length, toBeWritten);
+        toBeWritten -= nbytes;
+        try { // only try once
+          out.write(buffer, 0, nbytes);
+        } catch (IOException ioe) {
+          exceptions++;
+        }
+      }
+      do { // close file until is succeeds
+        try {
+          out.close();
+          success = true;
+        } catch (IOException ioe) { success=false; exceptions++; }
+      } while (!success);
+    }
+    return exceptions;
+  }
+    
+  /**
+   * Open and read a given number of files.
+   *
+   * @return the number of exceptions caught
+   */
+  static int openRead() {
+    int exceptions = 0;
+    FSDataInputStream in = null;
+    for (int index = 0; index < numFiles; index++) {
+      try {
+        in = fileSys.open(new Path(taskDir, "" + index), 512);
+        long toBeRead = bytesPerFile;
+        while (toBeRead > 0) {
+          int nbytes = (int) Math.min(buffer.length, toBeRead);
+          toBeRead -= nbytes;
           try { // only try once
-            out.write(buffer, 0, nbytes);
+            in.read(buffer, 0, nbytes);
           } catch (IOException ioe) {
             exceptions++;
           }
         }
-        do { // close file until is succeeds
-          try {
-            out.close();
-            success = true;
-          } catch (IOException ioe) { success=false; exceptions++; }
-        } while (!success);
+        in.close();
+      } catch (IOException ioe) { 
+        exceptions++; 
       }
-      return exceptions;
     }
+    return exceptions;
+  }
     
-    /**
-     * Open and read a given number of files.
-     *
-     * @return the number of exceptions caught
-     */
-    static int openRead() {
-      int exceptions = 0;
-      FSDataInputStream in = null;
-      for (int index = 0; index < numFiles; index++) {
+  /**
+   * Rename a given number of files.  Repeat each remote
+   * operation until is suceeds (does not throw an exception).
+   *
+   * @return the number of exceptions caught
+   */
+  static int rename() {
+    int exceptions = 0;
+    boolean success = false;
+    for (int index = 0; index < numFiles; index++) {
+      do { // rename file until is succeeds
         try {
-          in = fileSys.open(new Path(taskDir, "" + index), 512);
-          long toBeRead = bytesPerFile;
-          while (toBeRead > 0) {
-            int nbytes = (int) Math.min(buffer.length, toBeRead);
-            toBeRead -= nbytes;
-            try { // only try once
-              in.read(buffer, 0, nbytes);
-            } catch (IOException ioe) {
-              exceptions++;
-            }
-          }
-          in.close();
-        } catch (IOException ioe) { 
-          exceptions++; 
-        }
-      }
-      return exceptions;
+          boolean result = fileSys.rename(
+                                          new Path(taskDir, "" + index), new Path(taskDir, "A" + index));
+          success = true;
+        } catch (IOException ioe) { success=false; exceptions++; }
+      } while (!success);
     }
+    return exceptions;
+  }
     
-    /**
-     * Rename a given number of files.  Repeat each remote
-     * operation until is suceeds (does not throw an exception).
-     *
-     * @return the number of exceptions caught
-     */
-    static int rename() {
-      int exceptions = 0;
-      boolean success = false;
-      for (int index = 0; index < numFiles; index++) {
-        do { // rename file until is succeeds
-          try {
-            boolean result = fileSys.rename(
-              new Path(taskDir, "" + index), new Path(taskDir, "A" + index));
-            success = true;
-          } catch (IOException ioe) { success=false; exceptions++; }
-        } while (!success);
-      }
-      return exceptions;
+  /**
+   * Delete a given number of files.  Repeat each remote
+   * operation until is suceeds (does not throw an exception).
+   *
+   * @return the number of exceptions caught
+   */
+  static int delete() {
+    int exceptions = 0;
+    boolean success = false;
+    for (int index = 0; index < numFiles; index++) {
+      do { // delete file until is succeeds
+        try {
+          boolean result = fileSys.delete(new Path(taskDir, "A" + index));
+          success = true;
+        } catch (IOException ioe) { success=false; exceptions++; }
+      } while (!success);
     }
-    
-    /**
-     * Delete a given number of files.  Repeat each remote
-     * operation until is suceeds (does not throw an exception).
-     *
-     * @return the number of exceptions caught
-     */
-    static int delete() {
-      int exceptions = 0;
-      boolean success = false;
-      for (int index = 0; index < numFiles; index++) {
-        do { // delete file until is succeeds
-          try {
-            boolean result = fileSys.delete(new Path(taskDir, "A" + index));
-            success = true;
-          } catch (IOException ioe) { success=false; exceptions++; }
-        } while (!success);
-      }
-      return exceptions;
-    }
+    return exceptions;
+  }
     
   /**
    * This launches a given namenode operation (<code>-operation</code>),
@@ -241,14 +241,14 @@ public class NNBench {
     System.out.println("   bytesPerBlock: " + bytesPerBlock);
     
     if (operation == null ||  // verify args
-      baseDir == null ||
-      numFiles < 1 ||
-      blocksPerFile < 1 ||
-      bytesPerBlock < 0) 
-    {
-      System.err.println(usage);
-      System.exit(-1);
-    }
+        baseDir == null ||
+        numFiles < 1 ||
+        blocksPerFile < 1 ||
+        bytesPerBlock < 0) 
+      {
+        System.err.println(usage);
+        System.exit(-1);
+      }
     
     JobConf jobConf = new JobConf(new Configuration(), NNBench.class);
     fileSys = FileSystem.get(jobConf);

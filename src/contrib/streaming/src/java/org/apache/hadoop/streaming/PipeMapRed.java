@@ -65,7 +65,7 @@ public abstract class PipeMapRed {
   abstract String getKeyColPropName();
 
   /** Write output as side-effect files rather than as map outputs.
-   This is useful to do "Map" tasks rather than "MapReduce" tasks. */
+      This is useful to do "Map" tasks rather than "MapReduce" tasks. */
   boolean getUseSideEffect() {
     return false;
   }
@@ -168,11 +168,11 @@ public abstract class PipeMapRed {
       }
       final Socket sock = new Socket(uri.getHost(), uri.getPort());
       OutputStream out = new FilterOutputStream(sock.getOutputStream()) {
-        public void close() throws IOException {
-          sock.close();
-          super.close();
-        }
-      };
+          public void close() throws IOException {
+            sock.close();
+            super.close();
+          }
+        };
       return out;
     } else {
       // a FSDataOutputStreamm, localFS or HDFS.
@@ -184,7 +184,7 @@ public abstract class PipeMapRed {
   String getSideEffectFileName() {
     FileSplit split = StreamUtil.getCurrentSplit(job_);
     return new String(split.getPath().getName() + "-" + split.getStart() + 
-            "-" + split.getLength());
+                      "-" + split.getLength());
   }
 
   public void configure(JobConf job) {
@@ -276,13 +276,13 @@ public abstract class PipeMapRed {
       // tasktracker's local working directory
       //
       if (!new File(argvSplit[0]).isAbsolute()) {
-          PathFinder finder = new PathFinder("PATH");
-          finder.prependPathComponent(jobCacheDir.toString());
-          File f = finder.getAbsolutePath(argvSplit[0]);
-          if (f != null) {
-              argvSplit[0] = f.getAbsolutePath();
-          }
-          f = null;
+        PathFinder finder = new PathFinder("PATH");
+        finder.prependPathComponent(jobCacheDir.toString());
+        File f = finder.getAbsolutePath(argvSplit[0]);
+        if (f != null) {
+          argvSplit[0] = f.getAbsolutePath();
+        }
+        f = null;
       }
       logprintln("PipeMapRed exec " + Arrays.asList(argvSplit));
       logprintln("sideEffectURI_=" + finalOutputURI);
@@ -293,11 +293,11 @@ public abstract class PipeMapRed {
       sim = Runtime.getRuntime().exec(argvSplit, childEnv.toArray());
 
       /* // This way required jdk1.5
-       Builder processBuilder = new ProcessBuilder(argvSplit);
-       Map<String, String> env = processBuilder.environment();
-       addEnvironment(env, job_.get("stream.addenvironment"));
-       sim = processBuilder.start();
-       */
+         Builder processBuilder = new ProcessBuilder(argvSplit);
+         Map<String, String> env = processBuilder.environment();
+         addEnvironment(env, job_.get("stream.addenvironment"));
+         sim = processBuilder.start();
+      */
 
       clientOut_ = new DataOutputStream(new BufferedOutputStream(sim.getOutputStream()));
       clientIn_ = new DataInputStream(new BufferedInputStream(sim.getInputStream()));
@@ -626,8 +626,8 @@ public abstract class PipeMapRed {
   String numRecInfo() {
     long elapsed = (System.currentTimeMillis() - startTime_) / 1000;
     return "R/W/S=" + numRecRead_ + "/" + numRecWritten_ + "/" + numRecSkipped_ + " in:"
-        + safeDiv(numRecRead_, elapsed) + " [rec/s]" + " out:" + safeDiv(numRecWritten_, elapsed)
-        + " [rec/s]";
+      + safeDiv(numRecRead_, elapsed) + " [rec/s]" + " out:" + safeDiv(numRecWritten_, elapsed)
+      + " [rec/s]";
   }
 
   String safeDiv(long n, long d) {

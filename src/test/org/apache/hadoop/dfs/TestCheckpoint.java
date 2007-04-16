@@ -37,10 +37,10 @@ public class TestCheckpoint extends TestCase {
   static final int numDatanodes = 1;
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
+    throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true,
-            fileSys.getConf().getInt("io.file.buffer.size", 4096),
-            (short)repl, (long)blockSize);
+                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+                                            (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -50,17 +50,17 @@ public class TestCheckpoint extends TestCase {
   
   
   private void checkFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
+    throws IOException {
     assertTrue(fileSys.exists(name));
     String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
     for (int idx = 0; idx < locations.length; idx++) {
       assertEquals("Number of replicas for block" + idx,
-          Math.min(numDatanodes, repl), locations[idx].length);
+                   Math.min(numDatanodes, repl), locations[idx].length);
     }
   }
   
   private void cleanupFile(FileSystem fileSys, Path name)
-  throws IOException {
+    throws IOException {
     assertTrue(fileSys.exists(name));
     fileSys.delete(name);
     assertTrue(!fileSys.exists(name));
@@ -70,7 +70,7 @@ public class TestCheckpoint extends TestCase {
    * put back the old namedir
    */
   private void resurrectNameDir(File namedir) 
-  throws IOException {
+    throws IOException {
     String parentdir = namedir.getParent();
     String name = namedir.getName();
     File oldname =  new File(parentdir, name + ".old");
@@ -83,7 +83,7 @@ public class TestCheckpoint extends TestCase {
    * remove one namedir
    */
   private void removeOneNameDir(File namedir) 
-  throws IOException {
+    throws IOException {
     String parentdir = namedir.getParent();
     String name = namedir.getName();
     File newname =  new File(parentdir, name + ".old");
@@ -96,7 +96,7 @@ public class TestCheckpoint extends TestCase {
    * Verify that namenode does not startup if one namedir is bad.
    */
   private void testNamedirError(Configuration conf, Collection<File> namedirs) 
-  throws IOException {
+    throws IOException {
     System.out.println("Starting testNamedirError");
     MiniDFSCluster cluster = null;
 
@@ -123,7 +123,7 @@ public class TestCheckpoint extends TestCase {
    * Simulate namenode crashing after rolling edit log.
    */
   private void testSecondaryNamenodeError1(Configuration conf)
-  throws IOException {
+    throws IOException {
     System.out.println("Starting testSecondaryNamenodeError 1");
     Path file1 = new Path("checkpointxx.dat");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, 
@@ -182,7 +182,7 @@ public class TestCheckpoint extends TestCase {
    * Simulate a namenode crash after uploading new image
    */
   private void testSecondaryNamenodeError2(Configuration conf)
-  throws IOException {
+    throws IOException {
     System.out.println("Starting testSecondaryNamenodeError 21");
     Path file1 = new Path("checkpointyy.dat");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, 
@@ -237,7 +237,7 @@ public class TestCheckpoint extends TestCase {
     }
   }
 
-   /**
+  /**
    * Tests checkpoint in DFS.
    */
   public void testCheckpoint() throws IOException {

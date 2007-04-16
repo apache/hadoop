@@ -31,92 +31,92 @@ import junit.framework.*;
  */
 public class FromCpp extends TestCase {
     
-    public FromCpp(String testName) {
-        super(testName);
-    }
+  public FromCpp(String testName) {
+    super(testName);
+  }
 
-    protected void setUp() throws Exception {
-    }
+  protected void setUp() throws Exception {
+  }
 
-    protected void tearDown() throws Exception {
-    }
+  protected void tearDown() throws Exception {
+  }
     
-    public void testBinary() {
-        File tmpfile;
-        try {
-            tmpfile = new File("/temp/hadooptmp.dat");
-            RecRecord1 r1 = new RecRecord1();
-            r1.setBoolVal(true);
-            r1.setByteVal((byte)0x66);
-            r1.setFloatVal(3.145F);
-            r1.setDoubleVal(1.5234);
-            r1.setIntVal(4567);
-            r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("random text");
-            r1.setBufferVal(new Buffer());
-            r1.setVectorVal(new ArrayList<String>());
-            r1.setMapVal(new TreeMap<String,String>());
-            FileInputStream istream = new FileInputStream(tmpfile);
-            BinaryRecordInput in = new BinaryRecordInput(istream);
-            RecRecord1 r2 = new RecRecord1();
-            r2.deserialize(in, "");
-            istream.close();
-            assertTrue(r1.equals(r2));
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } 
-    }
+  public void testBinary() {
+    File tmpfile;
+    try {
+      tmpfile = new File("/temp/hadooptmp.dat");
+      RecRecord1 r1 = new RecRecord1();
+      r1.setBoolVal(true);
+      r1.setByteVal((byte)0x66);
+      r1.setFloatVal(3.145F);
+      r1.setDoubleVal(1.5234);
+      r1.setIntVal(4567);
+      r1.setLongVal(0x5a5a5a5a5a5aL);
+      r1.setStringVal("random text");
+      r1.setBufferVal(new Buffer());
+      r1.setVectorVal(new ArrayList<String>());
+      r1.setMapVal(new TreeMap<String,String>());
+      FileInputStream istream = new FileInputStream(tmpfile);
+      BinaryRecordInput in = new BinaryRecordInput(istream);
+      RecRecord1 r2 = new RecRecord1();
+      r2.deserialize(in, "");
+      istream.close();
+      assertTrue(r1.equals(r2));
+    } catch (IOException ex) {
+      ex.printStackTrace();
+    } 
+  }
     
-    public void testCsv() {
-        File tmpfile;
-        try {
-            tmpfile = new File("/temp/hadooptmp.txt");
-            RecRecord1 r1 = new RecRecord1();
-            r1.setBoolVal(true);
-            r1.setByteVal((byte)0x66);
-            r1.setFloatVal(3.145F);
-            r1.setDoubleVal(1.5234);
-            r1.setIntVal(4567);
-            r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("random text");
-            r1.setBufferVal(new Buffer());
-            r1.setVectorVal(new ArrayList<String>());
-            r1.setMapVal(new TreeMap<String,String>());
-            FileInputStream istream = new FileInputStream(tmpfile);
-            CsvRecordInput in = new CsvRecordInput(istream);
-            RecRecord1 r2 = new RecRecord1();
-            r2.deserialize(in, "");
-            istream.close();
-            assertTrue(r1.equals(r2));
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } 
-    }
+  public void testCsv() {
+    File tmpfile;
+    try {
+      tmpfile = new File("/temp/hadooptmp.txt");
+      RecRecord1 r1 = new RecRecord1();
+      r1.setBoolVal(true);
+      r1.setByteVal((byte)0x66);
+      r1.setFloatVal(3.145F);
+      r1.setDoubleVal(1.5234);
+      r1.setIntVal(4567);
+      r1.setLongVal(0x5a5a5a5a5a5aL);
+      r1.setStringVal("random text");
+      r1.setBufferVal(new Buffer());
+      r1.setVectorVal(new ArrayList<String>());
+      r1.setMapVal(new TreeMap<String,String>());
+      FileInputStream istream = new FileInputStream(tmpfile);
+      CsvRecordInput in = new CsvRecordInput(istream);
+      RecRecord1 r2 = new RecRecord1();
+      r2.deserialize(in, "");
+      istream.close();
+      assertTrue(r1.equals(r2));
+    } catch (IOException ex) {
+      ex.printStackTrace();
+    } 
+  }
 
-    public void testXml() {
-        File tmpfile;
-        try {
-            tmpfile = new File("/temp/hadooptmp.xml");
-            RecRecord1 r1 = new RecRecord1();
-            r1.setBoolVal(true);
-            r1.setByteVal((byte)0x66);
-            r1.setFloatVal(3.145F);
-            r1.setDoubleVal(1.5234);
-            r1.setIntVal(4567);
-            r1.setLongVal(0x5a5a5a5a5a5aL);
-            r1.setStringVal("random text");
-            r1.setBufferVal(new Buffer());
-            r1.setVectorVal(new ArrayList<String>());
-            r1.setMapVal(new TreeMap<String,String>());
-            FileInputStream istream = new FileInputStream(tmpfile);
-            XmlRecordInput in = new XmlRecordInput(istream);
-            RecRecord1 r2 = new RecRecord1();
-            r2.deserialize(in, "");
-            istream.close();
-            assertTrue(r1.equals(r2));
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } 
-    }
+  public void testXml() {
+    File tmpfile;
+    try {
+      tmpfile = new File("/temp/hadooptmp.xml");
+      RecRecord1 r1 = new RecRecord1();
+      r1.setBoolVal(true);
+      r1.setByteVal((byte)0x66);
+      r1.setFloatVal(3.145F);
+      r1.setDoubleVal(1.5234);
+      r1.setIntVal(4567);
+      r1.setLongVal(0x5a5a5a5a5a5aL);
+      r1.setStringVal("random text");
+      r1.setBufferVal(new Buffer());
+      r1.setVectorVal(new ArrayList<String>());
+      r1.setMapVal(new TreeMap<String,String>());
+      FileInputStream istream = new FileInputStream(tmpfile);
+      XmlRecordInput in = new XmlRecordInput(istream);
+      RecRecord1 r2 = new RecRecord1();
+      r2.deserialize(in, "");
+      istream.close();
+      assertTrue(r1.equals(r2));
+    } catch (IOException ex) {
+      ex.printStackTrace();
+    } 
+  }
 
 }

@@ -49,7 +49,7 @@ public class TestDecommission extends TestCase {
   private enum NodeState {NORMAL, DECOMMISSION_INPROGRESS, DECOMMISSIONED; }
 
   private void writeConfigFile(FileSystem fs, Path name, ArrayList<String> nodes) 
-      throws IOException {
+    throws IOException {
 
     // delete if it already exists
     if (fs.exists(name)) {
@@ -69,11 +69,11 @@ public class TestDecommission extends TestCase {
   }
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
+    throws IOException {
     // create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, true, 
-            fileSys.getConf().getInt("io.file.buffer.size", 4096),
-            (short)repl, (long)blockSize);
+                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+                                            (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -83,11 +83,11 @@ public class TestDecommission extends TestCase {
   
   
   private void checkFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
+    throws IOException {
     String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
     for (int idx = 0; idx < locations.length; idx++) {
       assertEquals("Number of replicas for block" + idx,
-          Math.min(numDatanodes, repl), locations[idx].length);  
+                   Math.min(numDatanodes, repl), locations[idx].length);  
     }
   }
 
@@ -105,7 +105,7 @@ public class TestDecommission extends TestCase {
     assertTrue("Not HDFS:"+fileSys.getUri(), fileSys instanceof DistributedFileSystem);
         
     DFSClient.DFSDataInputStream dis = (DFSClient.DFSDataInputStream) 
-        ((DistributedFileSystem)fileSys).getRawFileSystem().open(name);
+      ((DistributedFileSystem)fileSys).getRawFileSystem().open(name);
     DatanodeInfo[][] dinfo = dis.getDataNodes();
 
     for (int blk = 0; blk < dinfo.length; blk++) { // for each block
@@ -119,9 +119,9 @@ public class TestDecommission extends TestCase {
         }
       }
       System.out.println("Block " + blk + " has " + hasdown +
-                           " decommissioned replica.");
+                         " decommissioned replica.");
       assertEquals("Number of replicas for block" + blk,
-            Math.min(numDatanodes, repl+hasdown), nodes.length);  
+                   Math.min(numDatanodes, repl+hasdown), nodes.length);  
     }
   }
   
@@ -145,7 +145,7 @@ public class TestDecommission extends TestCase {
   private String decommissionNode(DFSClient client, 
                                   FileSystem filesys,
                                   FileSystem localFileSys)
-      throws IOException {
+    throws IOException {
     DistributedFileSystem dfs = (DistributedFileSystem) filesys;
     DatanodeInfo[] info = client.datanodeReport();
 
@@ -252,7 +252,7 @@ public class TestDecommission extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
     cluster.waitActive();
     InetSocketAddress addr = new InetSocketAddress("localhost", 
-                                             cluster.getNameNodePort());
+                                                   cluster.getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport();
     assertEquals("Number of Datanodes ", numDatanodes, info.length);

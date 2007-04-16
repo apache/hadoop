@@ -52,7 +52,7 @@ public class TestFileCorruption extends TestCase {
       util.createFiles(fs, "/srcdat");
       // Now deliberately remove the blocks
       File data_dir = new File(System.getProperty("test.build.data"),
-          "dfs/data/data5/current");
+                               "dfs/data/data5/current");
       assertTrue("data directory does not exist", data_dir.exists());
       File[] blocks = data_dir.listFiles();
       assertTrue("Blocks do not exist in data-dir", (blocks != null) && (blocks.length > 0));
@@ -64,7 +64,7 @@ public class TestFileCorruption extends TestCase {
         assertTrue("Cannot remove file.", blocks[idx].delete());
       }
       assertTrue("Corrupted replicas not handled properly.",
-          util.checkFiles(fs, "/srcdat"));
+                 util.checkFiles(fs, "/srcdat"));
       util.cleanup(fs, "/srcdat");
     } finally {
       if (cluster != null) { cluster.shutdown(); }

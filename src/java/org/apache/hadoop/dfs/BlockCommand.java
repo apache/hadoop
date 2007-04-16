@@ -48,7 +48,7 @@ class DatanodeCommand implements Writable {
   
   public void readFields(DataInput in) throws IOException {
     this.action = (DatanodeProtocol.DataNodeAction)
-          WritableUtils.readEnum( in, DatanodeProtocol.DataNodeAction.class );
+      WritableUtils.readEnum( in, DatanodeProtocol.DataNodeAction.class );
   }
 }
 

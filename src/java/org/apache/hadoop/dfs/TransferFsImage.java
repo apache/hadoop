@@ -107,7 +107,7 @@ class TransferFsImage implements FSConstants {
    * Copies the contents of the local file into the output stream.
    */
   static void getFileServer(OutputStream outstream, File localfile) 
-                                                 throws IOException {
+    throws IOException {
     byte buf[] = new byte[BUFFER_SIZE];
     FileInputStream infile = null;
     try {
@@ -132,54 +132,54 @@ class TransferFsImage implements FSConstants {
    * Client-side Method to fetch file from a server
    * Copies the response from the URL to a list of local files.
    */
-   static void getFileClient(String fsName, String id, File[] localPath)
-                             throws IOException {
-     byte[] buf = new byte[BUFFER_SIZE];
-     StringBuffer str = new StringBuffer("http://"+fsName+"/getimage?");
-     str.append(id);
+  static void getFileClient(String fsName, String id, File[] localPath)
+    throws IOException {
+    byte[] buf = new byte[BUFFER_SIZE];
+    StringBuffer str = new StringBuffer("http://"+fsName+"/getimage?");
+    str.append(id);
 
-     //
-     // open connection to remote server
-     //
-     URL url = new URL(str.toString());
-     URLConnection connection = url.openConnection();
-     InputStream stream = connection.getInputStream();
-     FileOutputStream[] output = null;
-     if (localPath != null) {
-       output = new FileOutputStream[localPath.length];
-       for (int i = 0; i < output.length; i++) {
-         output[i] = new FileOutputStream(localPath[i]);
-       }
-     }
+    //
+    // open connection to remote server
+    //
+    URL url = new URL(str.toString());
+    URLConnection connection = url.openConnection();
+    InputStream stream = connection.getInputStream();
+    FileOutputStream[] output = null;
+    if (localPath != null) {
+      output = new FileOutputStream[localPath.length];
+      for (int i = 0; i < output.length; i++) {
+        output[i] = new FileOutputStream(localPath[i]);
+      }
+    }
 
-     try {
-       int num = 1;
-       while (num > 0) {
-         num = stream.read(buf);
-         if (num > 0 && localPath != null) {
-           for (int i = 0; i < output.length; i++) {
-             output[i].write(buf, 0, num);
-           }
-         }
-       }
-     } finally {
-       stream.close();
-       if (localPath != null) {
-         for (int i = 0; i < output.length; i++) {
-           output[i].close();
-         }
-       }
-     }
-   }
+    try {
+      int num = 1;
+      while (num > 0) {
+        num = stream.read(buf);
+        if (num > 0 && localPath != null) {
+          for (int i = 0; i < output.length; i++) {
+            output[i].write(buf, 0, num);
+          }
+        }
+      }
+    } finally {
+      stream.close();
+      if (localPath != null) {
+        for (int i = 0; i < output.length; i++) {
+          output[i].close();
+        }
+      }
+    }
+  }
 
   /**
    * Client-side Method to fetch file from a server
    * Copies the response from the URL to the local file.
    */
-   static void getFileClient(String fsName, String id, File localPath)
-                             throws IOException {
-     File[] filelist = new File[1];
-     filelist[0] = localPath;
-     getFileClient(fsName, id, filelist);
-   }
+  static void getFileClient(String fsName, String id, File localPath)
+    throws IOException {
+    File[] filelist = new File[1];
+    filelist[0] = localPath;
+    getFileClient(fsName, id, filelist);
+  }
 }

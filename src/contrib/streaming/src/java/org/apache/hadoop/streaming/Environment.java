@@ -41,8 +41,8 @@ public class Environment extends Properties {
     if (OS.indexOf("Windows") > -1) {
       command = "cmd /C set";
     } else if (lowerOs.indexOf("ix") > -1 || lowerOs.indexOf("linux") > -1
-        || lowerOs.indexOf("freebsd") > -1 || lowerOs.indexOf("sunos") > -1
-        || lowerOs.indexOf("solaris") > -1 || lowerOs.indexOf("hp-ux") > -1) {
+               || lowerOs.indexOf("freebsd") > -1 || lowerOs.indexOf("sunos") > -1
+               || lowerOs.indexOf("solaris") > -1 || lowerOs.indexOf("hp-ux") > -1) {
       command = "env";
     } else if (lowerOs.startsWith("mac os x")) {
       command = "env";

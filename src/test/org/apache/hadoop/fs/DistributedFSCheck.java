@@ -93,7 +93,7 @@ public class DistributedFSCheck extends TestCase {
     Path inputFile = new Path(MAP_INPUT_DIR, "in_file");
     SequenceFile.Writer writer =
       SequenceFile.createWriter(fs, fsConfig, inputFile, 
-          UTF8.class, LongWritable.class, CompressionType.NONE);
+                                UTF8.class, LongWritable.class, CompressionType.NONE);
     
     try {
       nrFiles = 0;
@@ -149,7 +149,7 @@ public class DistributedFSCheck extends TestCase {
       try {
         long blockSize = fs.getDefaultBlockSize();
         reporter.setStatus( "reading " + name + "@" + 
-            offset + "/" + blockSize );
+                            offset + "/" + blockSize );
         for(  int curSize = bufferSize; 
               curSize == bufferSize && actualSize < blockSize;
               actualSize += curSize) {

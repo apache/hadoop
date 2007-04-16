@@ -35,8 +35,8 @@ class IncorrectVersionException extends IOException {
                                     String ofWhat,
                                     int versionExpected ) {
     super( "Unexpected version " 
-        + (ofWhat==null ? "" : "of " + ofWhat) + ". Reported: "
-        + versionReported + ". Expecting = " + versionExpected + "." );
+           + (ofWhat==null ? "" : "of " + ofWhat) + ". Reported: "
+           + versionReported + ". Expecting = " + versionExpected + "." );
   }
 
 }

@@ -129,7 +129,7 @@ class PendingReplicationBlocks {
         return null;
       }
       Block[] blockList = timedOutItems.toArray(
-                            new Block[timedOutItems.size()]);
+                                                new Block[timedOutItems.size()]);
       timedOutItems.clear();
       return blockList;
     }

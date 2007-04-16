@@ -45,16 +45,16 @@ public class ValueAggregatorReducer extends ValueAggregatorJobBase {
    * @value the values to be aggregated
    */
   public void reduce(WritableComparable key, Iterator values,
-      OutputCollector output, Reporter reporter) throws IOException {
+                     OutputCollector output, Reporter reporter) throws IOException {
     addLongValue("groupCount", 1);
     String keyStr = key.toString();
     int pos = keyStr.indexOf(ValueAggregatorDescriptor.TYPE_SEPARATOR);
     String type = keyStr.substring(0, pos);
     keyStr = keyStr.substring(pos
-        + ValueAggregatorDescriptor.TYPE_SEPARATOR.length());
+                              + ValueAggregatorDescriptor.TYPE_SEPARATOR.length());
 
     ValueAggregator aggregator = ValueAggregatorBaseDescriptor
-        .generateValueAggregator(type);
+      .generateValueAggregator(type);
     while (values.hasNext()) {
       addLongValue("totalCount", 1);
       aggregator.addNextValue(values.next());
@@ -73,7 +73,7 @@ public class ValueAggregatorReducer extends ValueAggregatorJobBase {
    * Do nothing. Should not be called
    */
   public void map(WritableComparable arg0, Writable arg1, OutputCollector arg2,
-      Reporter arg3) throws IOException {
+                  Reporter arg3) throws IOException {
     throw new IOException ("should not be called\n");
   }
 }

@@ -62,16 +62,16 @@ public class TestWritable extends TestCase {
 
   /** Utility method for testing writables. */
   public static void testWritable(Writable before) throws Exception {
-      DataOutputBuffer dob = new DataOutputBuffer();
-      before.write(dob);
+    DataOutputBuffer dob = new DataOutputBuffer();
+    before.write(dob);
 
-      DataInputBuffer dib = new DataInputBuffer();
-      dib.reset(dob.getData(), dob.getLength());
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(dob.getData(), dob.getLength());
     
-      Writable after = (Writable)before.getClass().newInstance();
-      after.readFields(dib);
+    Writable after = (Writable)before.getClass().newInstance();
+    after.readFields(dib);
 
-      assertEquals(before, after);
+    assertEquals(before, after);
   }
 	
 }

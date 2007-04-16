@@ -42,7 +42,7 @@ public class JDouble extends JType {
       cb.append("{\n");
       cb.append("if ("+l+"<8) {\n");
       cb.append("throw new java.io.IOException(\"Double is exactly 8 bytes."+
-          " Provided buffer is smaller.\");\n");
+                " Provided buffer is smaller.\");\n");
       cb.append("}\n");
       cb.append(s+"+=8; "+l+"-=8;\n");
       cb.append("}\n");
@@ -52,7 +52,7 @@ public class JDouble extends JType {
       cb.append("{\n");
       cb.append("if (l1<8 || l2<8) {\n");
       cb.append("throw new java.io.IOException(\"Double is exactly 8 bytes."+
-          " Provided buffer is smaller.\");\n");
+                " Provided buffer is smaller.\");\n");
       cb.append("}\n");
       cb.append("double d1 = org.apache.hadoop.record.Utils.readDouble(b1, s1);\n");
       cb.append("double d2 = org.apache.hadoop.record.Utils.readDouble(b2, s2);\n");

@@ -68,7 +68,7 @@ abstract class Task implements Writable, Configurable {
   public Task() {}
 
   public Task(String jobId, String jobFile, String tipId, 
-      String taskId, int partition) {
+              String taskId, int partition) {
     this.jobFile = jobFile;
     this.taskId = taskId;
     this.jobId = jobId;
@@ -184,14 +184,14 @@ abstract class Task implements Writable, Configurable {
           }
         }
         public void progress() throws IOException {
-            reportProgress(umbilical);
+          reportProgress(umbilical);
         }
         public void incrCounter(Enum key, long amount) {
-            Counters counters = getCounters();
-            if (counters != null) {
-              counters.incrCounter(key, amount);
-            }
+          Counters counters = getCounters();
+          if (counters != null) {
+            counters.incrCounter(key, amount);
           }
+        }
       };
   }
 

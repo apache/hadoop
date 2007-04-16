@@ -41,7 +41,7 @@ public class BuiltInZlibInflater extends Inflater implements Decompressor {
   }
 
   public synchronized int decompress(byte[] b, int off, int len) 
-  throws IOException {
+    throws IOException {
     try {
       return super.inflate(b, off, len);
     } catch (DataFormatException dfe) {

@@ -87,9 +87,9 @@ public class StreamJob {
   // need these two at class level to extract values later from 
   // commons-cli command line
   private MultiPropertyOption jobconf = new MultiPropertyOption(
-      "-jobconf", "(n=v) Optional. Add or override a JobConf property.", 'D'); 
+                                                                "-jobconf", "(n=v) Optional. Add or override a JobConf property.", 'D'); 
   private MultiPropertyOption cmdenv = new MultiPropertyOption(
-      "-cmdenv", "(n=v) Pass env.var to streaming commands.", 'E');  
+                                                               "-cmdenv", "(n=v) Pass env.var to streaming commands.", 'E');  
   
   public StreamJob(String[] argv, boolean mayExit) {
     setupOptions();
@@ -199,7 +199,7 @@ public class StreamJob {
   void parseArgv(){
     CommandLine cmdLine = null ; 
     try{
-       cmdLine = parser.parse(argv_);
+      cmdLine = parser.parse(argv_);
     }catch(Exception oe){
       LOG.error(oe.getMessage());
       if (detailedUsage_) {
@@ -288,36 +288,36 @@ public class StreamJob {
   }
   
   private Option createOption(String name, String desc, 
-      String argName, int max, boolean required){
+                              String argName, int max, boolean required){
     Argument argument = argBuilder.
-                      withName(argName).
-                      withMinimum(1).
-                      withMaximum(max).
-                      create();
+      withName(argName).
+      withMinimum(1).
+      withMaximum(max).
+      create();
     return builder.
-              withLongName(name).
-              withArgument(argument).
-              withDescription(desc).
-              withRequired(required).
-              create();
+      withLongName(name).
+      withArgument(argument).
+      withDescription(desc).
+      withRequired(required).
+      create();
   }
   
   private Option createOption(String name, String desc, 
-      String argName, int max, boolean required, Validator validator){
+                              String argName, int max, boolean required, Validator validator){
     
     Argument argument = argBuilder.
-                              withName(argName).
-                              withMinimum(1).
-                              withMaximum(max).
-                              withValidator(validator).
-                              create() ;
+      withName(argName).
+      withMinimum(1).
+      withMaximum(max).
+      withValidator(validator).
+      create() ;
    
     return builder.
-              withLongName(name).
-              withArgument(argument).
-              withDescription(desc).
-              withRequired(required).
-              create();
+      withLongName(name).
+      withArgument(argument).
+      withDescription(desc).
+      withRequired(required).
+      create();
   }  
   
   private Option createBoolOption(String name, String desc){
@@ -327,82 +327,82 @@ public class StreamJob {
   private void setupOptions(){
 
     final Validator fileValidator = new Validator(){
-      public void validate(final List values) throws InvalidArgumentException {
-        // Note : This code doesnt belong here, it should be changed to 
-        // an can exec check in java 6
-        for (String file : (List<String>)values) {
-          File f = new File(file);  
-          if ( ! f.exists() ) {
-            throw new InvalidArgumentException("Argument : " + 
-                f.getAbsolutePath() + " doesn't exist."); 
+        public void validate(final List values) throws InvalidArgumentException {
+          // Note : This code doesnt belong here, it should be changed to 
+          // an can exec check in java 6
+          for (String file : (List<String>)values) {
+            File f = new File(file);  
+            if ( ! f.exists() ) {
+              throw new InvalidArgumentException("Argument : " + 
+                                                 f.getAbsolutePath() + " doesn't exist."); 
+            }
+            if ( ! f.isFile() ) {
+              throw new InvalidArgumentException("Argument : " + 
+                                                 f.getAbsolutePath() + " is not a file."); 
+            }
+            if ( ! f.canRead() ) {
+              throw new InvalidArgumentException("Argument : " + 
+                                                 f.getAbsolutePath() + " is not accessible"); 
+            }
           }
-          if ( ! f.isFile() ) {
-            throw new InvalidArgumentException("Argument : " + 
-                f.getAbsolutePath() + " is not a file."); 
-          }
-          if ( ! f.canRead() ) {
-            throw new InvalidArgumentException("Argument : " + 
-                f.getAbsolutePath() + " is not accessible"); 
-          }
-        }
-      }      
-    }; 
+        }      
+      }; 
 
     // Note: not extending CLI2's FileValidator, that overwrites 
     // the String arg into File and causes ClassCastException 
     // in inheritance tree. 
     final Validator execValidator = new Validator(){
-      public void validate(final List values) throws InvalidArgumentException {
-        // Note : This code doesnt belong here, it should be changed to 
-        // an can exec check in java 6
-        for (String file : (List<String>)values) {
-          try{
-            Runtime.getRuntime().exec("chmod 0777 " + (new File(file)).getAbsolutePath());
-          }catch(IOException ioe){
-            // ignore 
+        public void validate(final List values) throws InvalidArgumentException {
+          // Note : This code doesnt belong here, it should be changed to 
+          // an can exec check in java 6
+          for (String file : (List<String>)values) {
+            try{
+              Runtime.getRuntime().exec("chmod 0777 " + (new File(file)).getAbsolutePath());
+            }catch(IOException ioe){
+              // ignore 
+            }
           }
-        }
-        fileValidator.validate(values);
-    }      
-    }; 
+          fileValidator.validate(values);
+        }      
+      }; 
 
     Option input   = createOption("input", 
-        "DFS input file(s) for the Map step", 
-        "path", 
-        Integer.MAX_VALUE, 
-        true);  
+                                  "DFS input file(s) for the Map step", 
+                                  "path", 
+                                  Integer.MAX_VALUE, 
+                                  true);  
     
     Option output  = createOption("output", 
-        "DFS output directory for the Reduce step", 
-        "path", 1, true); 
+                                  "DFS output directory for the Reduce step", 
+                                  "path", 1, true); 
     Option mapper  = createOption("mapper", 
-        "The streaming command to run", "cmd", 1, false);
+                                  "The streaming command to run", "cmd", 1, false);
     Option combiner = createOption("combiner", 
-        "The streaming command to run", "cmd",1, false);
+                                   "The streaming command to run", "cmd",1, false);
     // reducer could be NONE 
     Option reducer = createOption("reducer", 
-        "The streaming command to run", "cmd", 1, false); 
+                                  "The streaming command to run", "cmd", 1, false); 
     Option file = createOption("file", 
-        "File/dir to be shipped in the Job jar file", 
-        "file", Integer.MAX_VALUE, false, execValidator); 
+                               "File/dir to be shipped in the Job jar file", 
+                               "file", Integer.MAX_VALUE, false, execValidator); 
     Option dfs = createOption("dfs", 
-        "Optional. Override DFS configuration", "<h:p>|local", 1, false); 
+                              "Optional. Override DFS configuration", "<h:p>|local", 1, false); 
     Option jt = createOption("jt", 
-        "Optional. Override JobTracker configuration", "<h:p>|local",1, false);
+                             "Optional. Override JobTracker configuration", "<h:p>|local",1, false);
     Option additionalconfspec = createOption("additionalconfspec", 
-        "Optional.", "spec",1, false );
+                                             "Optional.", "spec",1, false );
     Option inputformat = createOption("inputformat", 
-        "Optional.", "spec",1, false );
+                                      "Optional.", "spec",1, false );
     Option outputformat = createOption("outputformat", 
-        "Optional.", "spec",1, false );
+                                       "Optional.", "spec",1, false );
     Option partitioner = createOption("partitioner", 
-        "Optional.", "spec",1, false );
+                                      "Optional.", "spec",1, false );
     Option inputreader = createOption("inputreader", 
-        "Optional.", "spec",1, false );
+                                      "Optional.", "spec",1, false );
     Option cacheFile = createOption("cacheFile", 
-        "File name URI", "fileNameURI", 1, false);
+                                    "File name URI", "fileNameURI", 1, false);
     Option cacheArchive = createOption("cacheArchive", 
-        "File name URI", "fileNameURI",1, false);
+                                       "File name URI", "fileNameURI",1, false);
     
     // boolean properties
     
@@ -413,29 +413,29 @@ public class StreamJob {
     Option inputtagged = createBoolOption("inputtagged", "inputtagged"); 
     
     allOptions = new GroupBuilder().
-                          withOption(input).
-                          withOption(output).
-                          withOption(mapper).
-                          withOption(combiner).
-                          withOption(reducer).
-                          withOption(file).
-                          withOption(dfs).
-                          withOption(jt).
-                          withOption(additionalconfspec).
-                          withOption(inputformat).
-                          withOption(outputformat).
-                          withOption(partitioner).
-                          withOption(inputreader).
-                          withOption(jobconf).
-                          withOption(cmdenv).
-                          withOption(cacheFile).
-                          withOption(cacheArchive).
-                          withOption(verbose).
-                          withOption(info).
-                          withOption(debug).
-                          withOption(inputtagged).
-                          withOption(help).
-                          create();
+      withOption(input).
+      withOption(output).
+      withOption(mapper).
+      withOption(combiner).
+      withOption(reducer).
+      withOption(file).
+      withOption(dfs).
+      withOption(jt).
+      withOption(additionalconfspec).
+      withOption(inputformat).
+      withOption(outputformat).
+      withOption(partitioner).
+      withOption(inputreader).
+      withOption(jobconf).
+      withOption(cmdenv).
+      withOption(cacheFile).
+      withOption(cacheArchive).
+      withOption(verbose).
+      withOption(info).
+      withOption(debug).
+      withOption(inputtagged).
+      withOption(help).
+      create();
     parser.setGroup(allOptions);
     
   }
@@ -478,7 +478,7 @@ public class StreamJob {
     System.out.println("  the key part ends at first TAB, the rest of the line is the value");
     System.out.println("Custom Map input format: -inputreader package.MyRecordReader,n=v,n=v ");
     System.out
-        .println("  comma-separated name-values can be specified to configure the InputFormat");
+      .println("  comma-separated name-values can be specified to configure the InputFormat");
     System.out.println("  Ex: -inputreader 'StreamXmlRecordReader,begin=<doc>,end=</doc>'");
     System.out.println("Map output format, reduce input/output format:");
     System.out.println("  Format defined by what the mapper command outputs. Line-oriented");
@@ -495,9 +495,9 @@ public class StreamJob {
     System.out.println("To skip the sort/combine/shuffle/sort/reduce step:");
     System.out.println("  Use -reducer " + REDUCE_NONE);
     System.out
-        .println("  A Task's Map output then becomes a 'side-effect output' rather than a reduce input");
+      .println("  A Task's Map output then becomes a 'side-effect output' rather than a reduce input");
     System.out
-        .println("  This speeds up processing, This also feels more like \"in-place\" processing");
+      .println("  This speeds up processing, This also feels more like \"in-place\" processing");
     System.out.println("  because the input filename and the map input order are preserved");
     System.out.println("To specify a single side-effect output file");
     System.out.println("    -mapsideoutput [file:/C:/win|file:/unix/|socket://host:port]");//-output for side-effects will be soon deprecated
@@ -513,7 +513,7 @@ public class StreamJob {
     System.out.println("  -jobconf mapred.job.name='My Job' ");
     System.out.println("To specify that line-oriented input is in gzip format:");
     System.out
-        .println("(at this time ALL input files must be gzipped and this is not recognized based on file extension)");
+      .println("(at this time ALL input files must be gzipped and this is not recognized based on file extension)");
     System.out.println("   -jobconf stream.recordreader.compression=gzip ");
     System.out.println("To change the local temp directory:");
     System.out.println("  -jobconf dfs.data.dir=/tmp/dfs");
@@ -525,7 +525,7 @@ public class StreamJob {
     System.out.println("Use a custom hadoopStreaming build along a standard hadoop install:");
     System.out.println("  $HADOOP_HOME/bin/hadoop jar /path/my-hadoop-streaming.jar [...]\\");
     System.out
-        .println("    [...] -jobconf stream.shipped.hadoopstreaming=/path/my-hadoop-streaming.jar");
+      .println("    [...] -jobconf stream.shipped.hadoopstreaming=/path/my-hadoop-streaming.jar");
     System.out.println("For more details about jobconf parameters see:");
     System.out.println("  http://wiki.apache.org/lucene-hadoop/JobConfFile");
     System.out.println("To set an environement variable in a streaming command:");
@@ -533,7 +533,7 @@ public class StreamJob {
     System.out.println();
     System.out.println("Shortcut:");
     System.out
-        .println("   setenv HSTREAMING \"$HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/hadoop-streaming.jar\"");
+      .println("   setenv HSTREAMING \"$HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/hadoop-streaming.jar\"");
     System.out.println();
     System.out.println("Example: $HSTREAMING -mapper \"/usr/local/bin/perl5 filter.pl\"");
     System.out.println("           -file /local/filter.pl -input \"/logs/0604*/*\" [...]");
@@ -619,7 +619,7 @@ public class StreamJob {
     // tmpDir=null means OS default tmp dir
     File jobJar = File.createTempFile("streamjob", ".jar", tmpDir);
     System.out.println("packageJobJar: " + packageFiles_ + " " + unjarFiles + " " + jobJar
-        + " tmpDir=" + tmpDir);
+                       + " tmpDir=" + tmpDir);
     if (debug_ == 0) {
       jobJar.deleteOnExit();
     }
@@ -709,14 +709,14 @@ public class StreamJob {
               .compareToIgnoreCase("org.apache.hadoop.mapred.KeyValueTextInputFormat") == 0)) {
         fmt = KeyValueTextInputFormat.class;
       } else if ((inputFormatSpec_
-          .compareToIgnoreCase("SequenceFileInputFormat") == 0)
-          || (inputFormatSpec_
-              .compareToIgnoreCase("org.apache.hadoop.mapred.SequenceFileInputFormat") == 0)) {
+                  .compareToIgnoreCase("SequenceFileInputFormat") == 0)
+                 || (inputFormatSpec_
+                     .compareToIgnoreCase("org.apache.hadoop.mapred.SequenceFileInputFormat") == 0)) {
         fmt = SequenceFileInputFormat.class;
       } else if ((inputFormatSpec_
-          .compareToIgnoreCase("SequenceFileToLineInputFormat") == 0)
-          || (inputFormatSpec_
-              .compareToIgnoreCase("org.apache.hadoop.mapred.SequenceFileToLineInputFormat") == 0)) {
+                  .compareToIgnoreCase("SequenceFileToLineInputFormat") == 0)
+                 || (inputFormatSpec_
+                     .compareToIgnoreCase("org.apache.hadoop.mapred.SequenceFileToLineInputFormat") == 0)) {
         fmt = SequenceFileAsTextInputFormat.class;
       } else {
         c = StreamUtil.goodClassOrNull(inputFormatSpec_, defaultPackage);
@@ -955,7 +955,7 @@ public class StreamJob {
       String hp = getJobTrackerHostPort();
       LOG.info("To kill this job, run:");
       LOG.info(getHadoopClientHome() + "/bin/hadoop job  -Dmapred.job.tracker=" + hp + " -kill "
-          + jobId_);
+               + jobId_);
       //LOG.info("Job file: " + running_.getJobFile() );
       LOG.info("Tracking URL: " + StreamUtil.qualifyHost(running_.getTrackingURL()));
     }
@@ -991,7 +991,7 @@ public class StreamJob {
         running_ = jc_.getJob(jobId_);
         String report = null;
         report = " map " + Math.round(running_.mapProgress() * 100) + "%  reduce "
-            + Math.round(running_.reduceProgress() * 100) + "%";
+          + Math.round(running_.reduceProgress() * 100) + "%";
 
         if (!report.equals(lastReport)) {
           LOG.info(report);
@@ -1006,16 +1006,16 @@ public class StreamJob {
       LOG.info("Output: " + output_);
       error = false;
     } catch(FileNotFoundException fe){
-        LOG.error("Error launching job , bad input path : " + fe.getMessage());
-      }catch(InvalidJobConfException je){
-        LOG.error("Error launching job , Invalid job conf : " + je.getMessage());
-      }catch(FileAlreadyExistsException fae){
-        LOG.error("Error launching job , Output path already exists : " 
-            + fae.getMessage());
-      }catch( IOException ioe){
-        LOG.error("Error Launching job : " + ioe.getMessage());
-      }
-      finally {
+      LOG.error("Error launching job , bad input path : " + fe.getMessage());
+    }catch(InvalidJobConfException je){
+      LOG.error("Error launching job , Invalid job conf : " + je.getMessage());
+    }catch(FileAlreadyExistsException fae){
+      LOG.error("Error launching job , Output path already exists : " 
+                + fae.getMessage());
+    }catch( IOException ioe){
+      LOG.error("Error Launching job : " + ioe.getMessage());
+    }
+    finally {
       if (error && (running_ != null)) {
         LOG.info("killJob...");
         running_.killJob();
@@ -1031,25 +1031,25 @@ public class StreamJob {
     }
     
     MultiPropertyOption(final String optionString,
-        final String description,
-        final int id){
+                        final String description,
+                        final int id){
       super(optionString, description, id) ; 
       this.optionString = optionString;
     }
 
     public boolean canProcess(final WriteableCommandLine commandLine,
-        final String argument) {
-        boolean ret = (argument != null) && argument.startsWith(optionString);
+                              final String argument) {
+      boolean ret = (argument != null) && argument.startsWith(optionString);
         
-        return ret;
+      return ret;
     }    
     public void process(final WriteableCommandLine commandLine,
-        final ListIterator arguments) throws OptionException {
+                        final ListIterator arguments) throws OptionException {
       final String arg = (String) arguments.next();
 
       if (!canProcess(commandLine, arg)) {
-          throw new OptionException(this, 
-              ResourceConstants.UNEXPECTED_TOKEN, arg);
+        throw new OptionException(this, 
+                                  ResourceConstants.UNEXPECTED_TOKEN, arg);
       }
       
       ArrayList properties = new ArrayList(); 
@@ -1127,5 +1127,5 @@ public class StreamJob {
   protected RunningJob running_;
   protected String jobId_;
   protected static String LINK_URI = "You need to specify the uris as hdfs://host:port/#linkname," +
-      "Please specify a different link name for all of your caching URIs";
+    "Please specify a different link name for all of your caching URIs";
 }

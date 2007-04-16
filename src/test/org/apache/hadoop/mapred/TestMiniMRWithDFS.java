@@ -118,9 +118,9 @@ public class TestMiniMRWithDFS extends TestCase {
       LOG.debug("Tracker directory: " + localDir);
       File trackerDir = new File(localDir, "taskTracker");
       assertTrue("local dir " + localDir + " does not exist.", 
-                   localDir.isDirectory());
+                 localDir.isDirectory());
       assertTrue("task tracker dir " + trackerDir + " does not exist.", 
-                   trackerDir.isDirectory());
+                 trackerDir.isDirectory());
       String contents[] = localDir.list();
       String trackerContents[] = trackerDir.list();
       for(int j=0; j < contents.length; ++j) {
@@ -150,44 +150,44 @@ public class TestMiniMRWithDFS extends TestCase {
   }
   
   public void testWithDFS() throws IOException {
-      MiniDFSCluster dfs = null;
-      MiniMRCluster mr = null;
-      FileSystem fileSys = null;
-      try {
-          final int taskTrackers = 4;
+    MiniDFSCluster dfs = null;
+    MiniMRCluster mr = null;
+    FileSystem fileSys = null;
+    try {
+      final int taskTrackers = 4;
 
-          Configuration conf = new Configuration();
-          dfs = new MiniDFSCluster(conf, 4, true, null);
-          fileSys = dfs.getFileSystem();
-          mr = new MiniMRCluster(taskTrackers, fileSys.getName(), 1);
-          double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
-                                               mr.createJobConf());
-          double error = Math.abs(Math.PI - estimate);
-          assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
-          checkTaskDirectories(mr, new String[]{}, new String[]{});
+      Configuration conf = new Configuration();
+      dfs = new MiniDFSCluster(conf, 4, true, null);
+      fileSys = dfs.getFileSystem();
+      mr = new MiniMRCluster(taskTrackers, fileSys.getName(), 1);
+      double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
+                                           mr.createJobConf());
+      double error = Math.abs(Math.PI - estimate);
+      assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
+      checkTaskDirectories(mr, new String[]{}, new String[]{});
           
-          // Run a word count example
-          JobConf jobConf = mr.createJobConf();
-          // Keeping tasks that match this pattern
-          jobConf.setKeepTaskFilesPattern("task_[0-9]*_m_000001_.*");
-          String result;
-          result = launchWordCount(jobConf, 
-                                   "The quick brown fox\nhas many silly\n" + 
-                                   "red fox sox\n",
-                                   3, 1);
-          assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
-                       "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
-          checkTaskDirectories(mr, new String[]{"job_0002"}, new String[]{"task_0002_m_000001_0"});
-          // test with maps=0
-          jobConf = mr.createJobConf();
-          result = launchWordCount(jobConf, "owen is oom", 0, 1);
-          assertEquals("is\t1\noom\t1\nowen\t1\n", result);
-      } finally {
-          if (fileSys != null) { fileSys.close(); }
-          if (dfs != null) { dfs.shutdown(); }
-          if (mr != null) { mr.shutdown();
-          }
+      // Run a word count example
+      JobConf jobConf = mr.createJobConf();
+      // Keeping tasks that match this pattern
+      jobConf.setKeepTaskFilesPattern("task_[0-9]*_m_000001_.*");
+      String result;
+      result = launchWordCount(jobConf, 
+                               "The quick brown fox\nhas many silly\n" + 
+                               "red fox sox\n",
+                               3, 1);
+      assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
+                   "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
+      checkTaskDirectories(mr, new String[]{"job_0002"}, new String[]{"task_0002_m_000001_0"});
+      // test with maps=0
+      jobConf = mr.createJobConf();
+      result = launchWordCount(jobConf, "owen is oom", 0, 1);
+      assertEquals("is\t1\noom\t1\nowen\t1\n", result);
+    } finally {
+      if (fileSys != null) { fileSys.close(); }
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown();
       }
+    }
   }
   
 }

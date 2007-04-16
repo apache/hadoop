@@ -41,14 +41,14 @@ public class TestSetFile extends TestCase {
   public void testSetFile() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     try {
-        RandomDatum[] data = generate(10000);
-        writeTest(fs, data, FILE, CompressionType.NONE);
-        readTest(fs, data, FILE);
+      RandomDatum[] data = generate(10000);
+      writeTest(fs, data, FILE, CompressionType.NONE);
+      readTest(fs, data, FILE);
 
-        writeTest(fs, data, FILE, CompressionType.BLOCK);
-        readTest(fs, data, FILE);
+      writeTest(fs, data, FILE, CompressionType.BLOCK);
+      readTest(fs, data, FILE);
     } finally {
-        fs.close();
+      fs.close();
     }
   }
 

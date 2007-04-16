@@ -47,7 +47,7 @@ class RetryInvocationHandler implements InvocationHandler {
   }
 
   public Object invoke(Object proxy, Method method, Object[] args)
-      throws Throwable {
+    throws Throwable {
     RetryPolicy policy = methodNameToPolicyMap.get(method.getName());
     if (policy == null) {
       policy = defaultPolicy;
@@ -60,16 +60,16 @@ class RetryInvocationHandler implements InvocationHandler {
       } catch (Exception e) {
         if (!policy.shouldRetry(e, retries++)) {
           LOG.warn("Exception while invoking " + method.getName()
-              + " of " + implementation.getClass() + ". Not retrying."
-              + StringUtils.stringifyException(e));
+                   + " of " + implementation.getClass() + ". Not retrying."
+                   + StringUtils.stringifyException(e));
           if (!method.getReturnType().equals(Void.TYPE)) {
             throw e; // non-void methods can't fail without an exception
           }
           return null;
         }
         LOG.warn("Exception while invoking " + method.getName()
-            + " of " + implementation.getClass() + ". Retrying."
-            + StringUtils.stringifyException(e));
+                 + " of " + implementation.getClass() + ". Retrying."
+                 + StringUtils.stringifyException(e));
       }
     }
   }

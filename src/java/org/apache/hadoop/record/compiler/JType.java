@@ -43,8 +43,8 @@ abstract public class JType {
     private String wrapper;
     
     JavaType(String javaname,
-        String suffix,
-        String wrapper) {
+             String suffix,
+             String wrapper) {
       this.name = javaname;
       this.methodSuffix = suffix;
       this.wrapper = wrapper;
@@ -92,7 +92,7 @@ abstract public class JType {
     
     void genCompareTo(CodeBuffer cb, String fname, String other) {
       cb.append("ret = ("+fname+" == "+other+")? 0 :(("+fname+"<"+other+
-          ")?-1:1);\n");
+                ")?-1:1);\n");
     }
     
     abstract void genCompareBytes(CodeBuffer cb);

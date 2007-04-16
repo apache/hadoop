@@ -58,14 +58,14 @@ public class JString extends JCompType {
       cb.append("other."+fname+" = this."+fname+";\n");
     }
   }
-    /** Creates a new instance of JString */
-    public JString() {
-      setJavaType(new JavaString());
-      setCppType(new CppCompType(" ::std::string"));
-      setCType(new CCompType());
-    }
+  /** Creates a new instance of JString */
+  public JString() {
+    setJavaType(new JavaString());
+    setCppType(new CppCompType(" ::std::string"));
+    setCType(new CCompType());
+  }
     
-    String getSignature() {
-        return "s";
-    }
+  String getSignature() {
+    return "s";
+  }
 }

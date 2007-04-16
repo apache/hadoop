@@ -35,8 +35,8 @@ public class Utils {
   }
   
   public static final char[] hexchars = { '0', '1', '2', '3', '4', '5',
-  '6', '7', '8', '9', 'A', 'B',
-  'C', 'D', 'E', 'F' };
+                                          '6', '7', '8', '9', 'A', 'B',
+                                          'C', 'D', 'E', 'F' };
   /**
    *
    * @param s
@@ -53,8 +53,8 @@ public class Utils {
       } else if (ch == '%') {
         sb.append("%0025");
       } else if (ch < 0x20 ||
-          (ch > 0xD7FF && ch < 0xE000) ||
-          (ch > 0xFFFD)) {
+                 (ch > 0xD7FF && ch < 0xE000) ||
+                 (ch > 0xFFFD)) {
         sb.append("%");
         sb.append(hexchars[(ch & 0xF000) >> 12]);
         sb.append(hexchars[(ch & 0x0F00) >> 8]);
@@ -113,26 +113,26 @@ public class Utils {
     for (int i = 0; i < len; i++) {
       char c = s.charAt(i);
       switch(c) {
-        case '\0':
-          sb.append("%00");
-          break;
-        case '\n':
-          sb.append("%0A");
-          break;
-        case '\r':
-          sb.append("%0D");
-          break;
-        case ',':
-          sb.append("%2C");
-          break;
-        case '}':
-          sb.append("%7D");
-          break;
-        case '%':
-          sb.append("%25");
-          break;
-        default:
-          sb.append(c);
+      case '\0':
+        sb.append("%00");
+        break;
+      case '\n':
+        sb.append("%0A");
+        break;
+      case '\r':
+        sb.append("%0D");
+        break;
+      case ',':
+        sb.append("%2C");
+        break;
+      case '}':
+        sb.append("%7D");
+        break;
+      case '%':
+        sb.append("%25");
+        break;
+      default:
+        sb.append(c);
       }
     }
     return sb.toString();
@@ -194,7 +194,7 @@ public class Utils {
    * @return
    */
   static Buffer fromXMLBuffer(String s)
-  throws IOException {
+    throws IOException {
     if (s.length() == 0) { return new Buffer(); }
     int blen = s.length()/2;
     byte[] barr = new byte[blen];
@@ -225,7 +225,7 @@ public class Utils {
    * @return Deserialized Buffer
    */
   static Buffer fromCSVBuffer(String s)
-  throws IOException {
+    throws IOException {
     if (s.charAt(0) != '#') {
       throw new IOException("Error deserializing buffer.");
     }
@@ -255,7 +255,7 @@ public class Utils {
       return 4;
     }
     throw new IOException("Illegal Unicode Codepoint "+
-        Integer.toHexString(cpt)+" in string.");
+                          Integer.toHexString(cpt)+" in string.");
   }
   
   private static final int B10 =    Integer.parseInt("10000000", 2);
@@ -268,7 +268,7 @@ public class Utils {
   private static final int B11111 = Integer.parseInt("11111000", 2);
   
   private static int writeUtf8(int cpt, final byte[] bytes, final int offset)
-  throws IOException {
+    throws IOException {
     if (cpt >=0 && cpt <= 0x7F) {
       bytes[offset] = (byte) cpt;
       return 1;
@@ -299,11 +299,11 @@ public class Utils {
       return 4;
     }
     throw new IOException("Illegal Unicode Codepoint "+
-        Integer.toHexString(cpt)+" in string.");
+                          Integer.toHexString(cpt)+" in string.");
   }
   
   static void toBinaryString(final DataOutput out, final String str)
-  throws IOException {
+    throws IOException {
     final int strlen = str.length();
     byte[] bytes = new byte[strlen*4]; // Codepoints expand to 4 bytes max
     int utf8Len = 0;
@@ -319,16 +319,16 @@ public class Utils {
   
   static boolean isValidCodePoint(int cpt) {
     return !((cpt > 0x10FFFF) ||
-        (cpt >= 0xD800 && cpt <= 0xDFFF) ||
-        (cpt >= 0xFFFE && cpt <=0xFFFF));
+             (cpt >= 0xD800 && cpt <= 0xDFFF) ||
+             (cpt >= 0xFFFE && cpt <=0xFFFF));
   }
   
   private static int utf8ToCodePoint(int b1, int b2, int b3, int b4) {
     int cpt = 0;
     cpt = (((b1 & ~B11111) << 18) |
-        ((b2 & ~B11) << 12) |
-        ((b3 & ~B11) << 6) |
-        (b4 & ~B11));
+           ((b2 & ~B11) << 12) |
+           ((b3 & ~B11) << 6) |
+           (b4 & ~B11));
     return cpt;
   }
   
@@ -382,11 +382,11 @@ public class Utils {
         cpt = utf8ToCodePoint(b1, b2);
       } else {
         throw new IOException("Invalid UTF-8 byte "+Integer.toHexString(b1)+
-            " at offset "+(len-1)+" in length of "+utf8Len);
+                              " at offset "+(len-1)+" in length of "+utf8Len);
       }
       if (!isValidCodePoint(cpt)) {
         throw new IOException("Illegal Unicode Codepoint "+
-          Integer.toHexString(cpt)+" in stream.");
+                              Integer.toHexString(cpt)+" in stream.");
       }
       sb.appendCodePoint(cpt);
     }
@@ -485,7 +485,7 @@ public class Utils {
   
   /** Lexicographic order of binary data. */
   public static int compareBytes(byte[] b1, int s1, int l1,
-      byte[] b2, int s2, int l2) {
+                                 byte[] b2, int s2, int l2) {
     return WritableComparator.compareBytes(b1, s1, l1, b2, s2, l2);
   }
 }

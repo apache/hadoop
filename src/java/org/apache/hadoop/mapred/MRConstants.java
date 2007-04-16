@@ -23,28 +23,28 @@ package org.apache.hadoop.mapred;
  * @author Mike Cafarella
  *******************************/
 interface MRConstants {
-    //
-    // Timeouts, constants
-    //
-    public static final long HEARTBEAT_INTERVAL = 10 * 1000;
-    public static final long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
+  //
+  // Timeouts, constants
+  //
+  public static final long HEARTBEAT_INTERVAL = 10 * 1000;
+  public static final long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
 
-    //for the inmemory filesystem (to do in-memory merge)
-    /**
-     * Constant denoting when a merge of in memory files will be triggered 
-     */
-    public static final float MAX_INMEM_FILESYS_USE = 0.5f;
-    /**
-     * Constant denoting the max size (in terms of the fraction of the total 
-     * size of the filesys) of a map output file that we will try
-     * to keep in mem. Ideally, this should be a factor of MAX_INMEM_FILESYS_USE
-     */
-    public static final float MAX_INMEM_FILESIZE_FRACTION =
-      MAX_INMEM_FILESYS_USE/2;
+  //for the inmemory filesystem (to do in-memory merge)
+  /**
+   * Constant denoting when a merge of in memory files will be triggered 
+   */
+  public static final float MAX_INMEM_FILESYS_USE = 0.5f;
+  /**
+   * Constant denoting the max size (in terms of the fraction of the total 
+   * size of the filesys) of a map output file that we will try
+   * to keep in mem. Ideally, this should be a factor of MAX_INMEM_FILESYS_USE
+   */
+  public static final float MAX_INMEM_FILESIZE_FRACTION =
+    MAX_INMEM_FILESYS_USE/2;
     
-    //
-    // Result codes
-    //
-    public static int SUCCESS = 0;
-    public static int FILE_NOT_FOUND = -1;
+  //
+  // Result codes
+  //
+  public static int SUCCESS = 0;
+  public static int FILE_NOT_FOUND = -1;
 }

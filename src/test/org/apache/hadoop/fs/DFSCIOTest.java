@@ -126,8 +126,8 @@ public class DFSCIOTest extends TestCase {
       SequenceFile.Writer writer = null;
       try {
         writer = SequenceFile.createWriter(fs, fsConfig, controlFile,
-                                         UTF8.class, LongWritable.class,
-                                         CompressionType.NONE);
+                                           UTF8.class, LongWritable.class,
+                                           CompressionType.NONE);
         writer.append(new UTF8(name), new LongWritable(fileSize));
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());
@@ -194,47 +194,47 @@ public class DFSCIOTest extends TestCase {
                         String name, 
                         long totalSize 
                         ) throws IOException {
-    	  // create file
+      // create file
       totalSize *= MEGA;
       
       // create instance of local filesystem 
       FileSystem localFS = FileSystem.getLocal(fsConfig);
       
       try {
-    	  	// native runtime
-    	  	Runtime runTime = Runtime.getRuntime();
+        // native runtime
+        Runtime runTime = Runtime.getRuntime();
           
         // copy the dso and executable from dfs and chmod them
         synchronized (this) {
-        		localFS.delete(HDFS_TEST_DIR);
-        		if (!(localFS.mkdirs(HDFS_TEST_DIR))) {
-        			throw new IOException("Failed to create " +	HDFS_TEST_DIR + " on local filesystem");
-        		}
-        	}
+          localFS.delete(HDFS_TEST_DIR);
+          if (!(localFS.mkdirs(HDFS_TEST_DIR))) {
+            throw new IOException("Failed to create " +	HDFS_TEST_DIR + " on local filesystem");
+          }
+        }
         
         synchronized (this) {
           if (!localFS.exists(HDFS_SHLIB)) {
-        		FileUtil.copy(fs, HDFS_SHLIB, localFS, HDFS_SHLIB, false, fsConfig);
+            FileUtil.copy(fs, HDFS_SHLIB, localFS, HDFS_SHLIB, false, fsConfig);
 
-        		String chmodCmd = new String(CHMOD + " a+x " + HDFS_SHLIB);
-        		Process process = runTime.exec(chmodCmd);
-        		int exitStatus = process.waitFor();
+            String chmodCmd = new String(CHMOD + " a+x " + HDFS_SHLIB);
+            Process process = runTime.exec(chmodCmd);
+            int exitStatus = process.waitFor();
             if (exitStatus != 0) {
-        		  throw new IOException(chmodCmd + ": Failed with exitStatus: " + exitStatus);
+              throw new IOException(chmodCmd + ": Failed with exitStatus: " + exitStatus);
             }
           }
         } 
         
         synchronized (this) {
           if (!localFS.exists(HDFS_WRITE)) {
-        	  	FileUtil.copy(fs, HDFS_WRITE, localFS, HDFS_WRITE, false, fsConfig);
+            FileUtil.copy(fs, HDFS_WRITE, localFS, HDFS_WRITE, false, fsConfig);
 
-        	  	String chmodCmd = new String(CHMOD + " a+x " + HDFS_WRITE); 
+            String chmodCmd = new String(CHMOD + " a+x " + HDFS_WRITE); 
             Process process = runTime.exec(chmodCmd);
             int exitStatus = process.waitFor();
             if (exitStatus != 0) {
-            	  throw new IOException(chmodCmd + ": Failed with exitStatus: " + exitStatus);
-            	}
+              throw new IOException(chmodCmd + ": Failed with exitStatus: " + exitStatus);
+            }
           }
         }
     	  	  
@@ -247,7 +247,7 @@ public class DFSCIOTest extends TestCase {
           throw new IOException(writeCmd + ": Failed with exitStatus: " + exitStatus);
         }
       } catch (InterruptedException interruptedException) {
-    	  	reporter.setStatus(interruptedException.toString());
+        reporter.setStatus(interruptedException.toString());
       } finally {
         localFS.close();
       }
@@ -297,71 +297,71 @@ public class DFSCIOTest extends TestCase {
                         String name, 
                         long totalSize 
                         ) throws IOException {
-    	  totalSize *= MEGA;
+      totalSize *= MEGA;
       
       // create instance of local filesystem 
       FileSystem localFS = FileSystem.getLocal(fsConfig);
       
       try {
-  	  	// native runtime
-  	  	Runtime runTime = Runtime.getRuntime();
+        // native runtime
+        Runtime runTime = Runtime.getRuntime();
         
         // copy the dso and executable from dfs
         synchronized (this) {
-        		localFS.delete(HDFS_TEST_DIR);
-        		if (!(localFS.mkdirs(HDFS_TEST_DIR))) {
-        			throw new IOException("Failed to create " +	HDFS_TEST_DIR + " on local filesystem");
-        		}
-    		}
+          localFS.delete(HDFS_TEST_DIR);
+          if (!(localFS.mkdirs(HDFS_TEST_DIR))) {
+            throw new IOException("Failed to create " +	HDFS_TEST_DIR + " on local filesystem");
+          }
+        }
         
         synchronized (this) {
           if (!localFS.exists(HDFS_SHLIB)) {
-        		if (!FileUtil.copy(fs, HDFS_SHLIB, localFS, HDFS_SHLIB, false, fsConfig)) {
-        	    	  throw new IOException("Failed to copy " + HDFS_SHLIB + " to local filesystem");
-             }
+            if (!FileUtil.copy(fs, HDFS_SHLIB, localFS, HDFS_SHLIB, false, fsConfig)) {
+              throw new IOException("Failed to copy " + HDFS_SHLIB + " to local filesystem");
+            }
 
-             String chmodCmd = new String(CHMOD + " a+x " + HDFS_SHLIB);
-             Process process = runTime.exec(chmodCmd);
-             int exitStatus = process.waitFor();
-             if (exitStatus != 0) {
-             	throw new IOException( chmodCmd + ": Failed with exitStatus: " + exitStatus );
-             }
-           }
-         }
+            String chmodCmd = new String(CHMOD + " a+x " + HDFS_SHLIB);
+            Process process = runTime.exec(chmodCmd);
+            int exitStatus = process.waitFor();
+            if (exitStatus != 0) {
+              throw new IOException( chmodCmd + ": Failed with exitStatus: " + exitStatus );
+            }
+          }
+        }
         
-         synchronized (this) {
-           if (!localFS.exists(HDFS_READ)) {
-             if (!FileUtil.copy(fs, HDFS_READ, localFS, HDFS_READ, false, fsConfig)) {
-            	   throw new IOException("Failed to copy " + HDFS_READ + " to local filesystem");
-             }
+        synchronized (this) {
+          if (!localFS.exists(HDFS_READ)) {
+            if (!FileUtil.copy(fs, HDFS_READ, localFS, HDFS_READ, false, fsConfig)) {
+              throw new IOException("Failed to copy " + HDFS_READ + " to local filesystem");
+            }
 
-             String chmodCmd = new String(CHMOD + " a+x " + HDFS_READ); 
-             Process process = runTime.exec(chmodCmd);
-             int exitStatus = process.waitFor();
+            String chmodCmd = new String(CHMOD + " a+x " + HDFS_READ); 
+            Process process = runTime.exec(chmodCmd);
+            int exitStatus = process.waitFor();
              
-             if (exitStatus != 0) {
-            	   throw new IOException(chmodCmd + ": Failed with exitStatus: " + exitStatus);
-             }
-           }
-         }
+            if (exitStatus != 0) {
+              throw new IOException(chmodCmd + ": Failed with exitStatus: " + exitStatus);
+            }
+          }
+        }
     	  	  
-         // exec the C program
-    	  	 Path inFile = new Path(DATA_DIR, name);
-    	  	 String readCmd = new String(HDFS_READ + " " + inFile + " " + totalSize + " " + 
-    	  			 bufferSize); 
-    	  	 Process process = runTime.exec(readCmd, null, new File(HDFS_TEST_DIR.toString()));
-    	  	 int exitStatus = process.waitFor();
+        // exec the C program
+        Path inFile = new Path(DATA_DIR, name);
+        String readCmd = new String(HDFS_READ + " " + inFile + " " + totalSize + " " + 
+                                    bufferSize); 
+        Process process = runTime.exec(readCmd, null, new File(HDFS_TEST_DIR.toString()));
+        int exitStatus = process.waitFor();
         
-    	  	 if (exitStatus != 0) {
-    	  	   throw new IOException(HDFS_READ + ": Failed with exitStatus: " + exitStatus);
-    	  	 }
+        if (exitStatus != 0) {
+          throw new IOException(HDFS_READ + ": Failed with exitStatus: " + exitStatus);
+        }
       } catch (InterruptedException interruptedException) {
-    	  	reporter.setStatus(interruptedException.toString());
+        reporter.setStatus(interruptedException.toString());
       } finally {
         localFS.close();
       }
       return new Long(totalSize);
-    	}
+    }
   }
 
   private static void readTest(FileSystem fs) throws IOException {
@@ -433,18 +433,18 @@ public class DFSCIOTest extends TestCase {
       FileSystem fs = FileSystem.get(fsConfig);
       
       if (testType != TEST_TYPE_CLEANUP) {
-    	  	fs.delete(HDFS_TEST_DIR);
-    	  	if (!fs.mkdirs(HDFS_TEST_DIR)) {
-                    throw new IOException("Mkdirs failed to create " + 
-                                          HDFS_TEST_DIR.toString());
-                }
+        fs.delete(HDFS_TEST_DIR);
+        if (!fs.mkdirs(HDFS_TEST_DIR)) {
+          throw new IOException("Mkdirs failed to create " + 
+                                HDFS_TEST_DIR.toString());
+        }
 
-    	  	//Copy the executables over to the remote filesystem
-    	  	String hadoopHome = System.getenv("HADOOP_HOME");
-    	  	fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/libhdfs.so." + HDFS_LIB_VERSION),
-    	  			HDFS_SHLIB);
-    	  	fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/hdfs_read"), HDFS_READ);
-    	  	fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/hdfs_write"), HDFS_WRITE);
+        //Copy the executables over to the remote filesystem
+        String hadoopHome = System.getenv("HADOOP_HOME");
+        fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/libhdfs.so." + HDFS_LIB_VERSION),
+                             HDFS_SHLIB);
+        fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/hdfs_read"), HDFS_READ);
+        fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/hdfs_write"), HDFS_WRITE);
       }
 
       if( isSequential ) {
@@ -514,8 +514,8 @@ public class DFSCIOTest extends TestCase {
     double stdDev = Math.sqrt( Math.abs(sqrate / 1000 / tasks - med*med ));
     String resultLines[] = {
       "----- DFSCIOTest ----- : " + ((testType == TEST_TYPE_WRITE) ? "write" :
-                                    (testType == TEST_TYPE_READ) ? "read" : 
-                                    "unknown"),
+                                     (testType == TEST_TYPE_READ) ? "read" : 
+                                     "unknown"),
       "           Date & time: " + new Date(System.currentTimeMillis()),
       "       Number of files: " + tasks,
       "Total MBytes processed: " + size/MEGA,

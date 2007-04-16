@@ -110,8 +110,8 @@ public class MiniDFSCluster {
     conf.set("fs.default.name", "localhost:"+ Integer.toString(nameNodePort));
     conf.setInt("dfs.info.port", 0);
     if (manageDfsDirs) {
-    conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
-        new File(base_dir, "name2").getPath());
+      conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
+               new File(base_dir, "name2").getPath());
     }
     conf.setInt("dfs.replication", Math.min(3, numDataNodes));
     conf.setInt("dfs.safemode.extension", 0);
@@ -126,9 +126,9 @@ public class MiniDFSCluster {
     
     // Start the NameNode
     String[] args = (operation == null ||
-      operation == StartupOption.FORMAT ||
-      operation == StartupOption.REGULAR) ?
-        new String[] {} : new String[] {"-"+operation.toString()};
+                     operation == StartupOption.FORMAT ||
+                     operation == StartupOption.REGULAR) ?
+      new String[] {} : new String[] {"-"+operation.toString()};
     nameNode = NameNode.createNameNode(args, conf);
     
     // Start the DataNodes
@@ -172,12 +172,12 @@ public class MiniDFSCluster {
     InetSocketAddress nnAddr = nameNode.getNameNodeAddress(); 
     int nameNodePort = nnAddr.getPort(); 
     conf.set("fs.default.name", 
-      nnAddr.getHostName()+ ":" + Integer.toString(nameNodePort));
+             nnAddr.getHostName()+ ":" + Integer.toString(nameNodePort));
     
     String[] args = (operation == null ||
-      operation == StartupOption.FORMAT ||
-      operation == StartupOption.REGULAR) ?
-        new String[] {} : new String[] {"-"+operation.toString()};
+                     operation == StartupOption.FORMAT ||
+                     operation == StartupOption.REGULAR) ?
+      new String[] {} : new String[] {"-"+operation.toString()};
         
     for (int i = 0; i < numDataNodes; i++) {
       Configuration dnConf = new Configuration(conf);
@@ -188,7 +188,7 @@ public class MiniDFSCluster {
         dir2.mkdirs();
         if (!dir1.isDirectory() || !dir2.isDirectory()) { 
           throw new IOException("Mkdirs failed to create directory for DataNode "
-            + i + ": " + dir1 + " or " + dir2);
+                                + i + ": " + dir1 + " or " + dir2);
         }
         dnConf.set("dfs.data.dir", dir1.getPath() + "," + dir2.getPath()); 
       }
@@ -196,7 +196,7 @@ public class MiniDFSCluster {
         dnConf.set("dfs.datanode.rack", racks[i]);
       }
       System.out.println("Starting DataNode " + i + " with dfs.data.dir: " 
-        + dnConf.get("dfs.data.dir"));
+                         + dnConf.get("dfs.data.dir"));
       dataNodes.add(DataNode.createDataNode(args, dnConf));
     }
   }
@@ -211,7 +211,7 @@ public class MiniDFSCluster {
   public void finalizeCluster(Configuration conf) throws Exception {
     if (nameNode == null) {
       throw new IllegalStateException("Attempting to finalize "
-        + "Namenode but it is not running");
+                                      + "Namenode but it is not running");
     }
     new DFSAdmin().doMain(conf, new String[] {"-finalizeUpgrade"});
   }
@@ -311,7 +311,7 @@ public class MiniDFSCluster {
    */
   public void waitActive() throws IOException {
     InetSocketAddress addr = new InetSocketAddress("localhost",
-                                             getNameNodePort());
+                                                   getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
 
     //

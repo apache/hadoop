@@ -37,7 +37,7 @@ public class ValueAggregatorMapper extends ValueAggregatorJobBase {
    *  list to generate aggregation id/value pairs and emit them.
    */
   public void map(WritableComparable key, Writable value,
-      OutputCollector output, Reporter reporter) throws IOException {
+                  OutputCollector output, Reporter reporter) throws IOException {
 
     addLongValue("groupCount", 1);
     Iterator iter = this.aggregatorDescriptorList.iterator();
@@ -47,7 +47,7 @@ public class ValueAggregatorMapper extends ValueAggregatorJobBase {
       while (ens.hasNext()) {
         Entry en = ens.next();
         output.collect((WritableComparable) en.getKey(), (Writable) en
-            .getValue());
+                       .getValue());
         addLongValue("collectedCount", 1);
       }
     }
@@ -61,7 +61,7 @@ public class ValueAggregatorMapper extends ValueAggregatorJobBase {
    * Do nothing. Should not be called.
    */
   public void reduce(WritableComparable arg0, Iterator arg1,
-      OutputCollector arg2, Reporter arg3) throws IOException {
+                     OutputCollector arg2, Reporter arg3) throws IOException {
     throw new IOException ("should not be called\n");
   }
 }

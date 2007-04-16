@@ -73,7 +73,7 @@ public class Token {
    */
   public String toString()
   {
-     return image;
+    return image;
   }
 
   /**
@@ -90,10 +90,10 @@ public class Token {
    */
   public static final Token newToken(int ofKind)
   {
-     switch(ofKind)
-     {
-       default : return new Token();
-     }
+    switch(ofKind)
+      {
+      default : return new Token();
+      }
   }
 
 }

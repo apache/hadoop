@@ -77,7 +77,7 @@ class CompoundDirSpec {
     if (false == isInputSpec_) {
       if (msup > 1) {
         throw new IllegalStateException("A -output spec cannot use merged streams ('" + MERGE_SEP
-            + "' delimiter)");
+                                        + "' delimiter)");
       }
     }
     for (int m = 0; m < msup; m++) {
@@ -121,7 +121,7 @@ class CompoundDirSpec {
 
   void throwBadNumPrimaryInputSpecs() throws IllegalStateException {
     String msg = "A compound -input spec needs exactly one primary path prefixed with "
-        + PRIMARY_PREFIX;
+      + PRIMARY_PREFIX;
     msg += ":\n";
     msg += toTableString();
     throw new IllegalStateException(msg);
@@ -151,13 +151,13 @@ class CompoundDirSpec {
   }
   
   /*
-   Example input spec in table form:
-   <1 +[/input/part-00] 
-   <2  [/input/part-01] 
-   <3  [/input/part-02] 
-   Example output spec in table form:
-   +[/my.output] 
-   */
+    Example input spec in table form:
+    <1 +[/input/part-00] 
+    <2  [/input/part-01] 
+    <3  [/input/part-02] 
+    Example output spec in table form:
+    +[/my.output] 
+  */
   public String toTableString() {
     StringBuffer buf = new StringBuffer();
     int maxWid = 0;
@@ -204,9 +204,9 @@ class CompoundDirSpec {
   }
 
   /** 
-   @see #primaryRow 
-   @see #primaryCol
-   */
+      @see #primaryRow 
+      @see #primaryCol
+  */
   public String[][] getPaths() {
     return paths_;
   }

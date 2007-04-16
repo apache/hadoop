@@ -36,7 +36,7 @@ public class DFSTestUtil extends TestCase {
   
   private static Random gen = new Random();
   private static String[] dirNames = {
-      "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
+    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
   };
   private static Configuration conf = new Configuration();
   

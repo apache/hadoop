@@ -47,12 +47,12 @@ public class ValueAggregatorCombiner extends ValueAggregatorJobBase {
    * @param output to collect combined values
    */
   public void reduce(WritableComparable key, Iterator values,
-      OutputCollector output, Reporter reporter) throws IOException {
+                     OutputCollector output, Reporter reporter) throws IOException {
     String keyStr = key.toString();
     int pos = keyStr.indexOf(ValueAggregatorDescriptor.TYPE_SEPARATOR);
     String type = keyStr.substring(0, pos);
     ValueAggregator aggregator = ValueAggregatorBaseDescriptor
-        .generateValueAggregator(type);
+      .generateValueAggregator(type);
     if (aggregator == null) {
       LOG.info(key.toString());
     }
@@ -84,7 +84,7 @@ public class ValueAggregatorCombiner extends ValueAggregatorJobBase {
    *
    */
   public void map(WritableComparable arg0, Writable arg1, OutputCollector arg2,
-      Reporter arg3) throws IOException {
+                  Reporter arg3) throws IOException {
     throw new IOException ("should not be called\n");
   }
 }

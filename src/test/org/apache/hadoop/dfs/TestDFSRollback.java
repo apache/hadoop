@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.FileUtil;
 public class TestDFSRollback extends TestCase {
  
   private static final Log LOG = LogFactory.getLog(
-    "org.apache.hadoop.dfs.TestDFSRollback");
+                                                   "org.apache.hadoop.dfs.TestDFSRollback");
   private Configuration conf;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
@@ -48,8 +48,8 @@ public class TestDFSRollback extends TestCase {
   void log(String label, int numDirs) {
     LOG.info("============================================================");
     LOG.info("***TEST " + (testCounter++) + "*** " 
-      + label + ":"
-      + " numDirs="+numDirs);
+             + label + ":"
+             + " numDirs="+numDirs);
   }
   
   /**
@@ -58,23 +58,23 @@ public class TestDFSRollback extends TestCase {
    */
   void checkResult(NodeType nodeType, String[] baseDirs) throws IOException {
     switch (nodeType) {
-      case NAME_NODE:
-        for (int i = 0; i < baseDirs.length; i++) {
-          assertTrue(new File(baseDirs[i],"current").isDirectory());
-          assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
-          assertTrue(new File(baseDirs[i],"current/edits").isFile());
-          assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
-          assertTrue(new File(baseDirs[i],"current/fstime").isFile());
-        }
-        break;
-      case DATA_NODE:
-        for (int i = 0; i < baseDirs.length; i++) {
-          assertEquals(
-            UpgradeUtilities.checksumContents(
-              nodeType, new File(baseDirs[i],"current")),
-            UpgradeUtilities.checksumMasterContents(nodeType));
-        }
-        break;
+    case NAME_NODE:
+      for (int i = 0; i < baseDirs.length; i++) {
+        assertTrue(new File(baseDirs[i],"current").isDirectory());
+        assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
+        assertTrue(new File(baseDirs[i],"current/edits").isFile());
+        assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
+        assertTrue(new File(baseDirs[i],"current/fstime").isFile());
+      }
+      break;
+    case DATA_NODE:
+      for (int i = 0; i < baseDirs.length; i++) {
+        assertEquals(
+                     UpgradeUtilities.checksumContents(
+                                                       nodeType, new File(baseDirs[i],"current")),
+                     UpgradeUtilities.checksumMasterContents(nodeType));
+      }
+      break;
     }
     for (int i = 0; i < baseDirs.length; i++) {
       assertFalse(new File(baseDirs[i],"previous").isDirectory());
@@ -162,9 +162,9 @@ public class TestDFSRollback extends TestCase {
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
       UpgradeUtilities.createVersionFile(DATA_NODE,baseDirs,
-        new StorageInfo(Integer.MIN_VALUE,
-                        UpgradeUtilities.getCurrentNamespaceID(cluster),
-                        UpgradeUtilities.getCurrentFsscTime(cluster)));
+                                         new StorageInfo(Integer.MIN_VALUE,
+                                                         UpgradeUtilities.getCurrentNamespaceID(cluster),
+                                                         UpgradeUtilities.getCurrentFsscTime(cluster)));
       startDataNodeShouldFail(StartupOption.ROLLBACK);
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -177,9 +177,9 @@ public class TestDFSRollback extends TestCase {
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
       UpgradeUtilities.createVersionFile(DATA_NODE,baseDirs,
-        new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(),
-                        UpgradeUtilities.getCurrentNamespaceID(cluster),
-                        Long.MAX_VALUE));
+                                         new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(),
+                                                         UpgradeUtilities.getCurrentNamespaceID(cluster),
+                                                         Long.MAX_VALUE));
       startDataNodeShouldFail(StartupOption.ROLLBACK);
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -216,9 +216,9 @@ public class TestDFSRollback extends TestCase {
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
       baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "previous");
       UpgradeUtilities.createVersionFile(NAME_NODE,baseDirs,
-        new StorageInfo(1,
-                        UpgradeUtilities.getCurrentNamespaceID(null),
-                        UpgradeUtilities.getCurrentFsscTime(null)));
+                                         new StorageInfo(1,
+                                                         UpgradeUtilities.getCurrentNamespaceID(null),
+                                                         UpgradeUtilities.getCurrentFsscTime(null)));
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
     } // end numDir loop

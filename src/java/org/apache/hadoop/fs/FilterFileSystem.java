@@ -92,7 +92,7 @@ public class FilterFileSystem extends FileSystem {
    * The FileSystem will simply return an elt containing 'localhost'.
    */
   public String[][] getFileCacheHints(Path f, long start, long len)
-  throws IOException {
+    throws IOException {
     return fs.getFileCacheHints(f, start, len);
   }
 
@@ -120,7 +120,7 @@ public class FilterFileSystem extends FileSystem {
                                     short replication,
                                     long blockSize,
                                     Progressable progress
-                                   ) throws IOException {
+                                    ) throws IOException {
     return fs.create(f, overwrite, bufferSize, replication, blockSize, progress);
   }
 
@@ -217,7 +217,7 @@ public class FilterFileSystem extends FileSystem {
    * @deprecated FS does not support file locks anymore.
    */
   @Deprecated
-  public void lock(Path f, boolean shared) throws IOException {
+    public void lock(Path f, boolean shared) throws IOException {
     fs.lock(f, shared);
   }
 
@@ -227,7 +227,7 @@ public class FilterFileSystem extends FileSystem {
    * @deprecated FS does not support file locks anymore.     
    */
   @Deprecated
-  public void release(Path f) throws IOException {
+    public void release(Path f) throws IOException {
     fs.release(f);
   }
 
@@ -237,7 +237,7 @@ public class FilterFileSystem extends FileSystem {
    * delSrc indicates if the source should be removed
    */
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
-  throws IOException {
+    throws IOException {
     fs.copyFromLocalFile(delSrc, src, dst);
   }
   
@@ -247,7 +247,7 @@ public class FilterFileSystem extends FileSystem {
    * delSrc indicates if the src will be removed or not.
    */   
   public void copyToLocalFile(boolean delSrc, Path src, Path dst)
-  throws IOException {
+    throws IOException {
     fs.copyToLocalFile(delSrc, src, dst);
   }
   
@@ -258,7 +258,7 @@ public class FilterFileSystem extends FileSystem {
    * the FS is remote, we write into the tmp local area.
    */
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-  throws IOException {
+    throws IOException {
     return fs.startLocalOutput(fsOutputFile, tmpLocalFile);
   }
 
@@ -269,7 +269,7 @@ public class FilterFileSystem extends FileSystem {
    * fsOutputFile.
    */
   public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-  throws IOException {
+    throws IOException {
     fs.completeLocalOutput(fsOutputFile, tmpLocalFile);
   }
 
@@ -296,7 +296,7 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
-  public Configuration getConf() {
+    public Configuration getConf() {
     return fs.getConf();
   }
 }

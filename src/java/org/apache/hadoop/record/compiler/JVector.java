@@ -45,7 +45,7 @@ public class JVector extends JCompType {
     
     JavaVector(JType.JavaType t) {
       super("java.util.ArrayList<"+t.getWrapperType()+">",
-          "Vector", "java.util.ArrayList<"+t.getWrapperType()+">");
+            "Vector", "java.util.ArrayList<"+t.getWrapperType()+">");
       element = t;
     }
     
@@ -54,14 +54,14 @@ public class JVector extends JCompType {
       cb.append("int "+getId("len1")+" = "+fname+".size();\n");
       cb.append("int "+getId("len2")+" = "+other+".size();\n");
       cb.append("for(int "+getId("vidx")+" = 0; "+getId("vidx")+"<"+
-          getId("len1")+" && "+getId("vidx")+"<"+getId("len2")+"; "+
-          getId("vidx")+"++) {\n");
+                getId("len1")+" && "+getId("vidx")+"<"+getId("len2")+"; "+
+                getId("vidx")+"++) {\n");
       cb.append(element.getType()+" "+getId("e1")+
-          " = "+fname+
-          ".get("+getId("vidx")+");\n");
+                " = "+fname+
+                ".get("+getId("vidx")+");\n");
       cb.append(element.getType()+" "+getId("e2")+
-          " = "+other+
-          ".get("+getId("vidx")+");\n");
+                " = "+other+
+                ".get("+getId("vidx")+");\n");
       element.genCompareTo(cb, getId("e1"), getId("e2"));
       cb.append("if (ret != 0) { return ret; }\n");
       cb.append("}\n");
@@ -104,12 +104,12 @@ public class JVector extends JCompType {
       cb.append("{\n");
       incrLevel();
       cb.append("int "+getId("vi")+
-          " = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
+                " = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
       cb.append("int "+getId("vz")+
-          " = org.apache.hadoop.record.Utils.getVIntSize("+getId("vi")+");\n");
+                " = org.apache.hadoop.record.Utils.getVIntSize("+getId("vi")+");\n");
       cb.append(s+"+="+getId("vz")+"; "+l+"-="+getId("vz")+";\n");
       cb.append("for (int "+getId("vidx")+" = 0; "+getId("vidx")+
-          " < "+getId("vi")+"; "+getId("vidx")+"++)");
+                " < "+getId("vi")+"; "+getId("vidx")+"++)");
       element.genSlurpBytes(cb, b,s,l);
       decrLevel();
       cb.append("}\n");
@@ -119,21 +119,21 @@ public class JVector extends JCompType {
       cb.append("{\n");
       incrLevel();
       cb.append("int "+getId("vi1")+
-          " = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
+                " = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
       cb.append("int "+getId("vi2")+
-          " = org.apache.hadoop.record.Utils.readVInt(b2, s2);\n");
+                " = org.apache.hadoop.record.Utils.readVInt(b2, s2);\n");
       cb.append("int "+getId("vz1")+
-          " = org.apache.hadoop.record.Utils.getVIntSize("+getId("vi1")+");\n");
+                " = org.apache.hadoop.record.Utils.getVIntSize("+getId("vi1")+");\n");
       cb.append("int "+getId("vz2")+
-          " = org.apache.hadoop.record.Utils.getVIntSize("+getId("vi2")+");\n");
+                " = org.apache.hadoop.record.Utils.getVIntSize("+getId("vi2")+");\n");
       cb.append("s1+="+getId("vz1")+"; s2+="+getId("vz2")+
-          "; l1-="+getId("vz1")+"; l2-="+getId("vz2")+";\n");
+                "; l1-="+getId("vz1")+"; l2-="+getId("vz2")+";\n");
       cb.append("for (int "+getId("vidx")+" = 0; "+getId("vidx")+
-          " < "+getId("vi1")+" && "+getId("vidx")+" < "+getId("vi2")+
-          "; "+getId("vidx")+"++)");
+                " < "+getId("vi1")+" && "+getId("vidx")+" < "+getId("vi2")+
+                "; "+getId("vidx")+"++)");
       element.genCompareBytes(cb);
       cb.append("if ("+getId("vi1")+" != "+getId("vi2")+
-          ") { return ("+getId("vi1")+"<"+getId("vi2")+")?-1:0; }\n");
+                ") { return ("+getId("vi1")+"<"+getId("vi2")+")?-1:0; }\n");
       decrLevel();
       cb.append("}\n");
     }

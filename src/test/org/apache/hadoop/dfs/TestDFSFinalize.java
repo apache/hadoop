@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.Path;
 public class TestDFSFinalize extends TestCase {
  
   private static final Log LOG = LogFactory.getLog(
-    "org.apache.hadoop.dfs.TestDFSFinalize");
+                                                   "org.apache.hadoop.dfs.TestDFSFinalize");
   private Configuration conf;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
@@ -47,8 +47,8 @@ public class TestDFSFinalize extends TestCase {
   void log(String label, int numDirs) {
     LOG.info("============================================================");
     LOG.info("***TEST " + (testCounter++) + "*** " 
-      + label + ":"
-      + " numDirs="+numDirs);
+             + label + ":"
+             + " numDirs="+numDirs);
   }
   
   /**
@@ -69,9 +69,9 @@ public class TestDFSFinalize extends TestCase {
     }
     for (int i = 0; i < dataNodeDirs.length; i++) {
       assertEquals(
-        UpgradeUtilities.checksumContents(
-          DATA_NODE, new File(dataNodeDirs[i],"current")),
-        UpgradeUtilities.checksumMasterContents(DATA_NODE));
+                   UpgradeUtilities.checksumContents(
+                                                     DATA_NODE, new File(dataNodeDirs[i],"current")),
+                   UpgradeUtilities.checksumMasterContents(DATA_NODE));
     }
     for (int i = 0; i < nameNodeDirs.length; i++) {
       assertFalse(new File(nameNodeDirs[i],"previous").isDirectory());

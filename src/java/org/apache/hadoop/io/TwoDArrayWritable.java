@@ -36,16 +36,16 @@ public class TwoDArrayWritable implements Writable {
   }
 
   public Object toArray() {
-      int dimensions[] = {values.length, 0};
-      Object result = Array.newInstance(valueClass, dimensions);
-      for (int i = 0; i < values.length; i++) {
-          Object resultRow = Array.newInstance(valueClass, values[i].length);
-          Array.set(result, i, resultRow);
-          for (int j = 0; j < values[i].length; j++) {
-              Array.set(resultRow, j, values[i][j]);
-          }
+    int dimensions[] = {values.length, 0};
+    Object result = Array.newInstance(valueClass, dimensions);
+    for (int i = 0; i < values.length; i++) {
+      Object resultRow = Array.newInstance(valueClass, values[i].length);
+      Array.set(result, i, resultRow);
+      for (int j = 0; j < values[i].length; j++) {
+        Array.set(resultRow, j, values[i][j]);
       }
-      return result;
+    }
+    return result;
   }
 
   public void set(Writable[][] values) { this.values = values; }
@@ -56,35 +56,35 @@ public class TwoDArrayWritable implements Writable {
     // construct matrix
     values = new Writable[in.readInt()][];          
     for (int i = 0; i < values.length; i++) {
-        values[i] = new Writable[in.readInt()];
+      values[i] = new Writable[in.readInt()];
     }
 
     // construct values
     for (int i = 0; i < values.length; i++) {
-        for (int j = 0; j < values[i].length; j++) {
-            Writable value;                             // construct value
-            try {
-                value = (Writable)valueClass.newInstance();
-            } catch (InstantiationException e) {
-                throw new RuntimeException(e.toString());
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e.toString());
-            }
-            value.readFields(in);                       // read a value
-            values[i][j] = value;                       // store it in values
+      for (int j = 0; j < values[i].length; j++) {
+        Writable value;                             // construct value
+        try {
+          value = (Writable)valueClass.newInstance();
+        } catch (InstantiationException e) {
+          throw new RuntimeException(e.toString());
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e.toString());
         }
+        value.readFields(in);                       // read a value
+        values[i][j] = value;                       // store it in values
+      }
     }
   }
 
   public void write(DataOutput out) throws IOException {
     out.writeInt(values.length);                 // write values
     for (int i = 0; i < values.length; i++) {
-        out.writeInt(values[i].length);
+      out.writeInt(values[i].length);
     }
     for (int i = 0; i < values.length; i++) {
-        for (int j = 0; j < values[i].length; j++) {
-            values[i][j].write(out);
-        }
+      for (int j = 0; j < values[i].length; j++) {
+        values[i][j].write(out);
+      }
     }
   }
 }

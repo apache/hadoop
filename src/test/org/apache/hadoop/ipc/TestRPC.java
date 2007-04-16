@@ -147,7 +147,7 @@ public class TestRPC extends TestCase {
     Method echo =
       TestProtocol.class.getMethod("echo", new Class[] { String.class });
     String[] strings = (String[])RPC.call(echo, new String[][]{{"a"},{"b"}},
-                                         new InetSocketAddress[] {addr, addr}, conf);
+                                          new InetSocketAddress[] {addr, addr}, conf);
     assertTrue(Arrays.equals(strings, new String[]{"a","b"}));
 
     Method ping = TestProtocol.class.getMethod("ping", new Class[] {});

@@ -83,12 +83,12 @@ public class TestStreamedMerge extends TestCase {
     // keys are compared as Strings and ties are broken by stream index
     // For example (k1; stream 2) < (k1; stream 3)
     String expect = i18n(
-        unt(">1\tk1\tv1\n", tag) + 
-        unt(">2\tk1\tv2\n", tag) + 
-        unt(">3\tk1\tv3\n", tag) + 
-        unt(">2\tk2\tv4\n", tag) +
-        unt(">1\tk3\tv5\n", tag)
-    );
+                         unt(">1\tk1\tv1\n", tag) + 
+                         unt(">2\tk1\tv2\n", tag) + 
+                         unt(">3\tk1\tv3\n", tag) + 
+                         unt(">2\tk2\tv4\n", tag) +
+                         unt(">1\tk3\tv5\n", tag)
+                         );
     return expect;
   }
   
@@ -128,18 +128,18 @@ public class TestStreamedMerge extends TestCase {
 
   void callStreaming(String argSideOutput, boolean inputTagged) throws IOException {
     String[] testargs = new String[] {
-        //"-jobconf", "stream.debug=1",
-        "-verbose", 
-        "-jobconf", "stream.testmerge=1", 
-        "-input", "+/input/part-00 | /input/part-01 | /input/part-02", 
-        "-mapper", StreamUtil.localizeBin("/bin/cat"), 
-        "-reducer", "NONE", 
-        "-output", "/my.output",
-        "-mapsideoutput", argSideOutput, 
-        "-dfs", conf_.get("fs.default.name"), 
-        "-jt", "local",
-        "-jobconf", "stream.sideoutput.localfs=true", 
-        "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
+      //"-jobconf", "stream.debug=1",
+      "-verbose", 
+      "-jobconf", "stream.testmerge=1", 
+      "-input", "+/input/part-00 | /input/part-01 | /input/part-02", 
+      "-mapper", StreamUtil.localizeBin("/bin/cat"), 
+      "-reducer", "NONE", 
+      "-output", "/my.output",
+      "-mapsideoutput", argSideOutput, 
+      "-dfs", conf_.get("fs.default.name"), 
+      "-jt", "local",
+      "-jobconf", "stream.sideoutput.localfs=true", 
+      "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
     ArrayList argList = new ArrayList();
     argList.addAll(Arrays.asList(testargs));
@@ -156,23 +156,23 @@ public class TestStreamedMerge extends TestCase {
 
   SideEffectConsumer startSideEffectConsumer(StringBuffer outBuf) {
     SideEffectConsumer t = new SideEffectConsumer(outBuf) {
-      ServerSocket listen;
-      Socket client;
-      InputStream in;
+        ServerSocket listen;
+        Socket client;
+        InputStream in;
       
-      InputStream connectInputStream() throws IOException {
-        listen = new ServerSocket(SOC_PORT);
-        client = listen.accept();
-        in = client.getInputStream();
-        return in;
-      }
+        InputStream connectInputStream() throws IOException {
+          listen = new ServerSocket(SOC_PORT);
+          client = listen.accept();
+          in = client.getInputStream();
+          return in;
+        }
       
-      void close() throws IOException
-      {
-        listen.close();
-        System.out.println("@@@listen closed");
-      }
-    };
+        void close() throws IOException
+        {
+          listen.close();
+          System.out.println("@@@listen closed");
+        }
+      };
     t.start();
     return t;
   }
@@ -264,7 +264,7 @@ public class TestStreamedMerge extends TestCase {
       sideOutput = "socket://localhost:" + SOC_PORT + "/";
     } else {
       String userOut = StreamUtil.getBoundAntProperty(
-          "hadoop.test.localoutputfile", null);
+                                                      "hadoop.test.localoutputfile", null);
       if(userOut != null) {
         f = new File(userOut);
         // don't delete so they can mkfifo

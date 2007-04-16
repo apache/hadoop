@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.SequenceFileRecordReader;
 public class StreamSequenceRecordReader extends SequenceFileRecordReader {
 
   public StreamSequenceRecordReader(Configuration conf, FileSplit split)
-      throws IOException {
+    throws IOException {
     super(conf, split);
   }
 }

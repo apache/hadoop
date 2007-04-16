@@ -44,7 +44,7 @@ import java.util.ArrayList;
  */
 public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConstants {
   private static final Log LOG =
-      LogFactory.getLog("org.apache.hadoop.dfs.ClusterTestDFS");
+    LogFactory.getLog("org.apache.hadoop.dfs.ClusterTestDFS");
 
   private static Configuration conf = new Configuration();
 
@@ -89,10 +89,10 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     conf.setBoolean("test.dfs.same.host.targets.allowed", true);
   }
 
- /**
-  * Remove old files from temp area used by this test case and be sure
-  * base temp directory can be created.
-  */
+  /**
+   * Remove old files from temp area used by this test case and be sure
+   * base temp directory can be created.
+   */
   protected void prepareTempFileSpace() {
     if (baseDir.exists()) {
       try { // start from a blank state
@@ -103,8 +103,8 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     baseDir.mkdirs();
     if (!baseDir.isDirectory()) {
       throw new RuntimeException("Value of root directory property" 
-          + "test.dfs.data for dfs test is not a directory: "
-          + baseDirSpecified);
+                                 + "test.dfs.data for dfs test is not a directory: "
+                                 + baseDirSpecified);
     }
   }
 
@@ -115,8 +115,8 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
    * @throws Exception
    */
   public void testFsPseudoDistributed() throws Exception {
-	  // test on a small cluster with 3 data nodes
-	  testFsPseudoDistributed(3);
+    // test on a small cluster with 3 data nodes
+    testFsPseudoDistributed(3);
   }
   
   private void testFsPseudoDistributed( int datanodeNum ) throws Exception {
@@ -224,11 +224,11 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     byte[] buffer = new byte[BUFFER_SIZE];
     UTF8 testFileName = new UTF8(filename); // hardcode filename
     OutputStream nos;
-	nos = dfsClient.create(testFileName, false);
+    nos = dfsClient.create(testFileName, false);
     try {
       for (long nBytesWritten = 0L;
-                nBytesWritten < fileSize;
-                nBytesWritten += buffer.length) {
+           nBytesWritten < fileSize;
+           nBytesWritten += buffer.length) {
         if ((nBytesWritten + buffer.length) > fileSize) {
           int pb = (int) (fileSize - nBytesWritten);
           byte[] bufferPartial = new byte[pb];
@@ -250,95 +250,95 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
   }
 
   private void assertMkdirs( String fileName, boolean failed ) {
-	  assertHasLogged("NameNode.mkdirs: " +fileName, DIR_LOG_HEADER_LEN+1);
-	  assertHasLogged("NameSystem.mkdirs: "+fileName, DIR_LOG_HEADER_LEN);
-	  if( failed )
-		assertHasLogged("FSDirectory.mkdirs: "
-        			+"failed to create directory "+fileName, DIR_LOG_HEADER_LEN);
-	  else
-	    assertHasLogged( "FSDirectory.mkdirs: created directory "+fileName, DIR_LOG_HEADER_LEN);
+    assertHasLogged("NameNode.mkdirs: " +fileName, DIR_LOG_HEADER_LEN+1);
+    assertHasLogged("NameSystem.mkdirs: "+fileName, DIR_LOG_HEADER_LEN);
+    if( failed )
+      assertHasLogged("FSDirectory.mkdirs: "
+                      +"failed to create directory "+fileName, DIR_LOG_HEADER_LEN);
+    else
+      assertHasLogged( "FSDirectory.mkdirs: created directory "+fileName, DIR_LOG_HEADER_LEN);
   }
   
   private void assertCreate( String fileName, int filesize, boolean failed ) {
-	  assertHasLogged("NameNode.create: file "+fileName, DIR_LOG_HEADER_LEN+1);
-	  assertHasLogged("NameSystem.startFile: file "+fileName, DIR_LOG_HEADER_LEN);
-	  if( failed ) {
-		assertHasLogged("NameSystem.startFile: "
-            		  +"failed to create file " + fileName, DIR_LOG_HEADER_LEN);
-	  } else {
-	    assertHasLogged("NameSystem.allocateBlock: "+fileName, BLOCK_LOG_HEADER_LEN);
-	    int blockNum = (filesize/BLOCK_SIZE*BLOCK_SIZE==filesize)?
-		  filesize/BLOCK_SIZE : 1+filesize/BLOCK_SIZE;
-	    for( int i=1; i<blockNum; i++) {
-		  assertHasLogged("NameNode.addBlock: file "+fileName, BLOCK_LOG_HEADER_LEN+1);
-		  assertHasLogged("NameSystem.getAdditionalBlock: file "+fileName, BLOCK_LOG_HEADER_LEN);
-		  assertHasLogged("NameSystem.allocateBlock: "+fileName, BLOCK_LOG_HEADER_LEN);
-	    }
-	    assertHasLogged("NameNode.complete: "+fileName, DIR_LOG_HEADER_LEN+1);
-	    assertHasLogged("NameSystem.completeFile: "+fileName, DIR_LOG_HEADER_LEN);
-	    assertHasLogged("FSDirectory.addFile: "+fileName+" with "
-			  +blockNum+" blocks is added to the file system", DIR_LOG_HEADER_LEN);
-	    assertHasLogged("NameSystem.completeFile: "+fileName
-			  +" is removed from pendingCreates", DIR_LOG_HEADER_LEN);
-	  }
+    assertHasLogged("NameNode.create: file "+fileName, DIR_LOG_HEADER_LEN+1);
+    assertHasLogged("NameSystem.startFile: file "+fileName, DIR_LOG_HEADER_LEN);
+    if( failed ) {
+      assertHasLogged("NameSystem.startFile: "
+                      +"failed to create file " + fileName, DIR_LOG_HEADER_LEN);
+    } else {
+      assertHasLogged("NameSystem.allocateBlock: "+fileName, BLOCK_LOG_HEADER_LEN);
+      int blockNum = (filesize/BLOCK_SIZE*BLOCK_SIZE==filesize)?
+        filesize/BLOCK_SIZE : 1+filesize/BLOCK_SIZE;
+      for( int i=1; i<blockNum; i++) {
+        assertHasLogged("NameNode.addBlock: file "+fileName, BLOCK_LOG_HEADER_LEN+1);
+        assertHasLogged("NameSystem.getAdditionalBlock: file "+fileName, BLOCK_LOG_HEADER_LEN);
+        assertHasLogged("NameSystem.allocateBlock: "+fileName, BLOCK_LOG_HEADER_LEN);
+      }
+      assertHasLogged("NameNode.complete: "+fileName, DIR_LOG_HEADER_LEN+1);
+      assertHasLogged("NameSystem.completeFile: "+fileName, DIR_LOG_HEADER_LEN);
+      assertHasLogged("FSDirectory.addFile: "+fileName+" with "
+                      +blockNum+" blocks is added to the file system", DIR_LOG_HEADER_LEN);
+      assertHasLogged("NameSystem.completeFile: "+fileName
+                      +" is removed from pendingCreates", DIR_LOG_HEADER_LEN);
+    }
   }
   
   private void assertDelete( String fileName, boolean failed ) {
-	  assertHasLogged("NameNode.delete: "+fileName, DIR_LOG_HEADER_LEN+1);
-      assertHasLogged("NameSystem.delete: "+fileName, DIR_LOG_HEADER_LEN);
-      assertHasLogged("FSDirectory.delete: "+fileName, DIR_LOG_HEADER_LEN);
-      if( failed )
-        assertHasLogged("FSDirectory.unprotectedDelete: "
-            +"failed to remove "+fileName, DIR_LOG_HEADER_LEN );
-      else
-        assertHasLogged("FSDirectory.unprotectedDelete: "
-            +fileName+" is removed", DIR_LOG_HEADER_LEN);
+    assertHasLogged("NameNode.delete: "+fileName, DIR_LOG_HEADER_LEN+1);
+    assertHasLogged("NameSystem.delete: "+fileName, DIR_LOG_HEADER_LEN);
+    assertHasLogged("FSDirectory.delete: "+fileName, DIR_LOG_HEADER_LEN);
+    if( failed )
+      assertHasLogged("FSDirectory.unprotectedDelete: "
+                      +"failed to remove "+fileName, DIR_LOG_HEADER_LEN );
+    else
+      assertHasLogged("FSDirectory.unprotectedDelete: "
+                      +fileName+" is removed", DIR_LOG_HEADER_LEN);
   }
   
   private void assertRename( String src, String dst, boolean failed ) {
-	  assertHasLogged("NameNode.rename: "+src+" to "+dst, DIR_LOG_HEADER_LEN+1);
-	  assertHasLogged("NameSystem.renameTo: "+src+" to "+dst, DIR_LOG_HEADER_LEN );
-	  assertHasLogged("FSDirectory.renameTo: "+src+" to "+dst, DIR_LOG_HEADER_LEN );
-	  if( failed )
-		assertHasLogged("FSDirectory.unprotectedRenameTo: "
-                         +"failed to rename "+src+" to "+dst, DIR_LOG_HEADER_LEN);
-	  else
-	    assertHasLogged("FSDirectory.unprotectedRenameTo: "
-                       +src+" is renamed to "+dst, DIR_LOG_HEADER_LEN );
+    assertHasLogged("NameNode.rename: "+src+" to "+dst, DIR_LOG_HEADER_LEN+1);
+    assertHasLogged("NameSystem.renameTo: "+src+" to "+dst, DIR_LOG_HEADER_LEN );
+    assertHasLogged("FSDirectory.renameTo: "+src+" to "+dst, DIR_LOG_HEADER_LEN );
+    if( failed )
+      assertHasLogged("FSDirectory.unprotectedRenameTo: "
+                      +"failed to rename "+src+" to "+dst, DIR_LOG_HEADER_LEN);
+    else
+      assertHasLogged("FSDirectory.unprotectedRenameTo: "
+                      +src+" is renamed to "+dst, DIR_LOG_HEADER_LEN );
   }
   
   private void assertHasLogged( String target, int headerLen ) {
-	  String line;
-	  boolean notFound = true;
-	  try {
-	      while( notFound && (line=logfh.readLine()) != null ) {
-		      if(line.length()>headerLen && line.startsWith(target, headerLen))
-			      notFound = false;
-	      }
-	  } catch(java.io.IOException e) {
-		  throw new AssertionFailedError("error reading the log file");
-	  }
-	  if(notFound) {
-		  throw new AssertionFailedError(target+" not logged");
-	  }
+    String line;
+    boolean notFound = true;
+    try {
+      while( notFound && (line=logfh.readLine()) != null ) {
+        if(line.length()>headerLen && line.startsWith(target, headerLen))
+          notFound = false;
+      }
+    } catch(java.io.IOException e) {
+      throw new AssertionFailedError("error reading the log file");
+    }
+    if(notFound) {
+      throw new AssertionFailedError(target+" not logged");
+    }
   }
 
   //
   //     modify config for test
   //
   private void configureDFS() throws IOException {
-	// set given config param to override other config settings
-	conf.setInt("dfs.block.size", BLOCK_SIZE);
-	// verify that config changed
-	assertTrue(BLOCK_SIZE == conf.getInt("dfs.block.size", 2)); // 2 is an intentional obviously-wrong block size
-	// downsize for testing (just to save resources)
-	conf.setInt("dfs.namenode.handler.count", 3);
-	conf.setLong("dfs.blockreport.intervalMsec", 50*1000L);
-	conf.setLong("dfs.datanode.startupMsec", 15*1000L);
-	conf.setInt("dfs.replication", 2);
-	System.setProperty("hadoop.log.dir", baseDirSpecified+"/logs");
-	conf.setInt("hadoop.logfile.count", 1);
-	conf.setInt("hadoop.logfile.size", 1000000000);
+    // set given config param to override other config settings
+    conf.setInt("dfs.block.size", BLOCK_SIZE);
+    // verify that config changed
+    assertTrue(BLOCK_SIZE == conf.getInt("dfs.block.size", 2)); // 2 is an intentional obviously-wrong block size
+    // downsize for testing (just to save resources)
+    conf.setInt("dfs.namenode.handler.count", 3);
+    conf.setLong("dfs.blockreport.intervalMsec", 50*1000L);
+    conf.setLong("dfs.datanode.startupMsec", 15*1000L);
+    conf.setInt("dfs.replication", 2);
+    System.setProperty("hadoop.log.dir", baseDirSpecified+"/logs");
+    conf.setInt("hadoop.logfile.count", 1);
+    conf.setInt("hadoop.logfile.size", 1000000000);
   }
   
   private void startDFS( int dataNodeNum) throws IOException {
@@ -348,73 +348,73 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     conf.set("fs.default.name", nameNodeSocketAddr);
     
     String nameFSDir = baseDirSpecified + "/name";
-	conf.set("dfs.name.dir", nameFSDir);
+    conf.set("dfs.name.dir", nameFSDir);
 	
     NameNode.format(conf);
     
     nameNodeDaemon = new NameNode("localhost", nameNodePort, conf);
 
-     //
-      //        start DataNodes
-      //
-      for (int i = 0; i < dataNodeNum; i++) {
-        // uniquely config real fs path for data storage for this datanode
-        String dataDir[] = new String[1];
-        dataDir[0] = baseDirSpecified + "/datanode" + i;
-        conf.set("dfs.data.dir", dataDir[0]);
-        DataNode dn = DataNode.makeInstance(dataDir, conf);
-        if (dn != null) {
-          dataNodeDaemons.add(dn);
-          (new Thread(dn, "DataNode" + i + ": " + dataDir[0])).start();
-        }
+    //
+    //        start DataNodes
+    //
+    for (int i = 0; i < dataNodeNum; i++) {
+      // uniquely config real fs path for data storage for this datanode
+      String dataDir[] = new String[1];
+      dataDir[0] = baseDirSpecified + "/datanode" + i;
+      conf.set("dfs.data.dir", dataDir[0]);
+      DataNode dn = DataNode.makeInstance(dataDir, conf);
+      if (dn != null) {
+        dataNodeDaemons.add(dn);
+        (new Thread(dn, "DataNode" + i + ": " + dataDir[0])).start();
       }
+    }
 	         
-      assertTrue("incorrect datanodes for test to continue",
-            (dataNodeDaemons.size() == dataNodeNum));
-      //
-      //          wait for datanodes to report in
-      try {
-        awaitQuiescence();
-      } catch( InterruptedException e) {
-    	  e.printStackTrace();
-      }
+    assertTrue("incorrect datanodes for test to continue",
+               (dataNodeDaemons.size() == dataNodeNum));
+    //
+    //          wait for datanodes to report in
+    try {
+      awaitQuiescence();
+    } catch( InterruptedException e) {
+      e.printStackTrace();
+    }
       
-      //  act as if namenode is a remote process
-      dfsClient = new DFSClient(new InetSocketAddress("localhost", nameNodePort), conf);
+    //  act as if namenode is a remote process
+    dfsClient = new DFSClient(new InetSocketAddress("localhost", nameNodePort), conf);
   }
 
   private void shutdownDFS() {
-      // shutdown client
-      if (dfsClient != null) {
-        try {
-          msg("close down subthreads of DFSClient");
-          dfsClient.close();
-        } catch (Exception ignored) { }
-        msg("finished close down of DFSClient");
-      }
-
-      //
-      // shut down datanode daemons (this takes advantage of being same-process)
-      msg("begin shutdown of all datanode daemons" );
-
-      for (int i = 0; i < dataNodeDaemons.size(); i++) {
-        DataNode dataNode = (DataNode) dataNodeDaemons.get(i);
-        try {
-          dataNode.shutdown();
-        } catch (Exception e) {
-           msg("ignoring exception during (all) datanode shutdown, e=" + e);
-        }
-      }
-      msg("finished shutdown of all datanode daemons");
-      
-      // shutdown namenode
-      msg("begin shutdown of namenode daemon");
+    // shutdown client
+    if (dfsClient != null) {
       try {
-        nameNodeDaemon.stop();
+        msg("close down subthreads of DFSClient");
+        dfsClient.close();
+      } catch (Exception ignored) { }
+      msg("finished close down of DFSClient");
+    }
+
+    //
+    // shut down datanode daemons (this takes advantage of being same-process)
+    msg("begin shutdown of all datanode daemons" );
+
+    for (int i = 0; i < dataNodeDaemons.size(); i++) {
+      DataNode dataNode = (DataNode) dataNodeDaemons.get(i);
+      try {
+        dataNode.shutdown();
       } catch (Exception e) {
-        msg("ignoring namenode shutdown exception=" + e);
+        msg("ignoring exception during (all) datanode shutdown, e=" + e);
       }
-      msg("finished shutdown of namenode daemon");
+    }
+    msg("finished shutdown of all datanode daemons");
+      
+    // shutdown namenode
+    msg("begin shutdown of namenode daemon");
+    try {
+      nameNodeDaemon.stop();
+    } catch (Exception e) {
+      msg("ignoring namenode shutdown exception=" + e);
+    }
+    msg("finished shutdown of namenode daemon");
   }
   
   /** Wait for the DFS datanodes to become quiescent.

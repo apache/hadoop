@@ -91,7 +91,7 @@ public interface RecordOutput {
    * @throws IOException Indicates error in serialization
    */
   public void writeBuffer(Buffer buf, String tag)
-  throws IOException;
+    throws IOException;
   
   /**
    * Mark the start of a record to be serialized.

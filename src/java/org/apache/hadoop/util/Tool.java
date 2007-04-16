@@ -27,11 +27,11 @@ import org.apache.hadoop.conf.Configurable;
  *
  */
 public interface Tool extends Configurable {
-    /**
-     * execute the command with the given arguments
-     * @param args command specific arguments
-     * @return exit code
-     * @throws Exception
-     */
-    int run( String [] args ) throws Exception;
+  /**
+   * execute the command with the given arguments
+   * @param args command specific arguments
+   * @return exit code
+   * @throws Exception
+   */
+  int run( String [] args ) throws Exception;
 }

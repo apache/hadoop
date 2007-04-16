@@ -135,7 +135,7 @@ public class StringUtils {
     StringBuffer retString = new StringBuffer();
     for (int i = 0; i < bytes.length; ++i) {
       retString.append(Integer.toHexString(0x0100 + (bytes[i] & 0x00FF))
-          .substring(1));
+                       .substring(1));
     }
     return retString.toString();
   }
@@ -241,7 +241,7 @@ public class StringUtils {
    * @return formatted value. 
    */
   public static String getFormattedTimeWithDiff(DateFormat dateFormat, 
-      long finishTime, long startTime){
+                                                long finishTime, long startTime){
     StringBuffer buf = new StringBuffer();
     if( 0 != finishTime ) {
       buf.append(dateFormat.format(new Date(finishTime)));

@@ -217,7 +217,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
             LOG.info("Found checksum error: "+StringUtils.stringifyException(ce));
             long errPos = ce.getPos();
             boolean shouldRetry = fs.reportChecksumFailure(
-                file, datas, errPos, sums, errPos/bytesPerSum);
+                                                           file, datas, errPos, sums, errPos/bytesPerSum);
             if (!shouldRetry || retriesLeft == 0) {
               throw ce;
             }
@@ -226,14 +226,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
             datas.seek(oldPos);
             
             if (seekToNewSource(oldPos)) {
-                // Since at least one of the sources is different, 
-                // the read might succeed, so we'll retry.
-                retry = true;
+              // Since at least one of the sources is different, 
+              // the read might succeed, so we'll retry.
+              retry = true;
             } else {
-                // Neither the data stream nor the checksum stream are being read
-                // from different sources, meaning we'll still get a checksum error 
-                // if we try to do the read again.  We throw an exception instead.
-                throw ce;
+              // Neither the data stream nor the checksum stream are being read
+              // from different sources, meaning we'll still get a checksum error 
+              // if we try to do the read again.  We throw an exception instead.
+              throw ce;
             }
           }
         }
@@ -636,7 +636,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @return if retry is neccessary
    */
   public boolean reportChecksumFailure(Path f, FSDataInputStream in,
-                                             long inPos, FSDataInputStream sums, long sumsPos) {
+                                       long inPos, FSDataInputStream sums, long sumsPos) {
     return false;
   }
 }

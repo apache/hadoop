@@ -47,7 +47,7 @@ public class KeyValueLineRecordReader extends LineRecordReader {
   }
 
   public KeyValueLineRecordReader(Configuration job, FileSplit split)
-      throws IOException {
+    throws IOException {
     super(job, split);
     String sepStr = job.get("key.value.separator.in.input.line", "\t");
     this.separator = (byte) sepStr.charAt(0);
@@ -64,7 +64,7 @@ public class KeyValueLineRecordReader extends LineRecordReader {
 
   /** Read key/value pair in a line. */
   public synchronized boolean next(Writable key, Writable value)
-      throws IOException {
+    throws IOException {
     Text tKey = (Text) key;
     Text tValue = (Text) value;
     byte[] line = null;

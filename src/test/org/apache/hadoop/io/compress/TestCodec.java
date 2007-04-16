@@ -58,7 +58,7 @@ public class TestCodec extends TestCase {
   }
   
   private static void codecTest(int seed, int count, String codecClass) 
-  throws IOException {
+    throws IOException {
     
     // Create the codec
     Configuration conf = new Configuration();
@@ -102,7 +102,7 @@ public class TestCodec extends TestCase {
     // De-compress data
     DataInputBuffer deCompressedDataBuffer = new DataInputBuffer();
     deCompressedDataBuffer.reset(compressedDataBuffer.getData(), 0, 
-        compressedDataBuffer.getLength());
+                                 compressedDataBuffer.getLength());
     CompressionInputStream inflateFilter = 
       codec.createInputStream(deCompressedDataBuffer);
     DataInputStream inflateIn = 
@@ -134,18 +134,18 @@ public class TestCodec extends TestCase {
     }
 
     try {
-    for (int i=0; i < args.length; ++i) {       // parse command line
-      if (args[i] == null) {
-        continue;
-      } else if (args[i].equals("-count")) {
-        count = Integer.parseInt(args[++i]);
-      } else if (args[i].equals("-codec")) {
-        codecClass = args[++i];
+      for (int i=0; i < args.length; ++i) {       // parse command line
+        if (args[i] == null) {
+          continue;
+        } else if (args[i].equals("-count")) {
+          count = Integer.parseInt(args[++i]);
+        } else if (args[i].equals("-codec")) {
+          codecClass = args[++i];
+        }
       }
-    }
 
-    int seed = 0;
-    codecTest(seed, count, codecClass);
+      int seed = 0;
+      codecTest(seed, count, codecClass);
     } catch (Exception e) {
       System.err.println("Caught: " + e);
       e.printStackTrace();

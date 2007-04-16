@@ -82,7 +82,7 @@ public class SequenceFile {
   static public CompressionType getCompressionType(Configuration job) {
     String name = job.get("io.seqfile.compression.type");
     return name == null ? CompressionType.RECORD : 
-                          CompressionType.valueOf(name);
+      CompressionType.valueOf(name);
   }
   
   /**
@@ -106,9 +106,9 @@ public class SequenceFile {
    * @throws IOException
    */
   public static Writer 
-  createWriter(FileSystem fs, Configuration conf, Path name, 
-      Class keyClass, Class valClass) 
-  throws IOException {
+    createWriter(FileSystem fs, Configuration conf, Path name, 
+                 Class keyClass, Class valClass) 
+    throws IOException {
     return createWriter(fs,conf,name,keyClass,valClass,
                         getCompressionType(conf));
   }
@@ -125,19 +125,19 @@ public class SequenceFile {
    * @throws IOException
    */
   public static Writer 
-  createWriter(FileSystem fs, Configuration conf, Path name, 
-      Class keyClass, Class valClass, CompressionType compressionType) 
-  throws IOException {
+    createWriter(FileSystem fs, Configuration conf, Path name, 
+                 Class keyClass, Class valClass, CompressionType compressionType) 
+    throws IOException {
     Writer writer = null;
     
     if (compressionType == CompressionType.NONE) {
       writer = new Writer(fs, conf, name, keyClass, valClass, null, new Metadata());
     } else if (compressionType == CompressionType.RECORD) {
       writer = new RecordCompressWriter(fs, conf, name, keyClass, valClass, 
-          new DefaultCodec());
+                                        new DefaultCodec());
     } else if (compressionType == CompressionType.BLOCK){
       writer = new BlockCompressWriter(fs, conf, name, keyClass, valClass, 
-          new DefaultCodec());
+                                       new DefaultCodec());
     }
     
     return writer;
@@ -156,19 +156,19 @@ public class SequenceFile {
    * @throws IOException
    */
   public static Writer
-  createWriter(FileSystem fs, Configuration conf, Path name, 
-      Class keyClass, Class valClass, CompressionType compressionType,
-      Progressable progress) throws IOException {
+    createWriter(FileSystem fs, Configuration conf, Path name, 
+                 Class keyClass, Class valClass, CompressionType compressionType,
+                 Progressable progress) throws IOException {
     Writer writer = null;
     
     if (compressionType == CompressionType.NONE) {
       writer = new Writer(fs, conf, name, keyClass, valClass, progress, new Metadata()); 
     } else if (compressionType == CompressionType.RECORD) {
       writer = new RecordCompressWriter(fs, conf, name, 
-          keyClass, valClass, new DefaultCodec(), progress, new Metadata());
+                                        keyClass, valClass, new DefaultCodec(), progress, new Metadata());
     } else if (compressionType == CompressionType.BLOCK){
       writer = new BlockCompressWriter(fs, conf, name, 
-          keyClass, valClass, new DefaultCodec(), progress, new Metadata());
+                                       keyClass, valClass, new DefaultCodec(), progress, new Metadata());
     }
     
     return writer;
@@ -187,15 +187,15 @@ public class SequenceFile {
    * @throws IOException
    */
   public static Writer 
-  createWriter(FileSystem fs, Configuration conf, Path name, 
-      Class keyClass, Class valClass, 
-      CompressionType compressionType, CompressionCodec codec) 
-  throws IOException {
+    createWriter(FileSystem fs, Configuration conf, Path name, 
+                 Class keyClass, Class valClass, 
+                 CompressionType compressionType, CompressionCodec codec) 
+    throws IOException {
     if ((codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
         !ZlibFactory.isNativeZlibLoaded()) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
-          "GzipCodec without native-hadoop code!");
+                                         "GzipCodec without native-hadoop code!");
     }
     
     Writer writer = null;
@@ -204,10 +204,10 @@ public class SequenceFile {
       writer = new Writer(fs, conf, name, keyClass, valClass); 
     } else if (compressionType == CompressionType.RECORD) {
       writer = new RecordCompressWriter(fs, conf, name, keyClass, valClass, 
-          codec);
+                                        codec);
     } else if (compressionType == CompressionType.BLOCK){
       writer = new BlockCompressWriter(fs, conf, name, keyClass, valClass, 
-          codec);
+                                       codec);
     }
     
     return writer;
@@ -228,15 +228,15 @@ public class SequenceFile {
    * @throws IOException
    */
   public static Writer
-  createWriter(FileSystem fs, Configuration conf, Path name, 
-      Class keyClass, Class valClass, 
-      CompressionType compressionType, CompressionCodec codec,
-      Progressable progress, Metadata metadata) throws IOException {
+    createWriter(FileSystem fs, Configuration conf, Path name, 
+                 Class keyClass, Class valClass, 
+                 CompressionType compressionType, CompressionCodec codec,
+                 Progressable progress, Metadata metadata) throws IOException {
     if ((codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
         !ZlibFactory.isNativeZlibLoaded()) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
-          "GzipCodec without native-hadoop code!");
+                                         "GzipCodec without native-hadoop code!");
     }
     
     Writer writer = null;
@@ -245,10 +245,10 @@ public class SequenceFile {
       writer = new Writer(fs, conf, name, keyClass, valClass, progress, metadata);
     } else if (compressionType == CompressionType.RECORD) {
       writer = new RecordCompressWriter(fs, conf, name, 
-          keyClass, valClass, codec, progress, metadata);
+                                        keyClass, valClass, codec, progress, metadata);
     } else if (compressionType == CompressionType.BLOCK){
       writer = new BlockCompressWriter(fs, conf, name, 
-          keyClass, valClass, codec, progress, metadata);
+                                       keyClass, valClass, codec, progress, metadata);
     }
     
     return writer;
@@ -268,12 +268,12 @@ public class SequenceFile {
    * @throws IOException
    */
   public static Writer
-  createWriter(FileSystem fs, Configuration conf, Path name, 
-      Class keyClass, Class valClass, 
-      CompressionType compressionType, CompressionCodec codec,
-      Progressable progress) throws IOException {
+    createWriter(FileSystem fs, Configuration conf, Path name, 
+                 Class keyClass, Class valClass, 
+                 CompressionType compressionType, CompressionCodec codec,
+                 Progressable progress) throws IOException {
     Writer writer = createWriter(fs, conf, name, keyClass, valClass, 
-        compressionType, codec, progress, new Metadata());
+                                 compressionType, codec, progress, new Metadata());
     return writer;
   }
 
@@ -289,15 +289,15 @@ public class SequenceFile {
    * @throws IOException
    */
   private static Writer
-  createWriter(Configuration conf, FSDataOutputStream out, 
-      Class keyClass, Class valClass, boolean compress, boolean blockCompress,
-      CompressionCodec codec, Metadata metadata)
-  throws IOException {
+    createWriter(Configuration conf, FSDataOutputStream out, 
+                 Class keyClass, Class valClass, boolean compress, boolean blockCompress,
+                 CompressionCodec codec, Metadata metadata)
+    throws IOException {
     if ((codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
         !ZlibFactory.isNativeZlibLoaded()) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
-          "GzipCodec without native-hadoop code!");
+                                         "GzipCodec without native-hadoop code!");
     }
 
     Writer writer = null;
@@ -324,12 +324,12 @@ public class SequenceFile {
    * @throws IOException
    */
   private static Writer
-  createWriter(Configuration conf, FSDataOutputStream out, 
-      Class keyClass, Class valClass, boolean compress, boolean blockCompress,
-      CompressionCodec codec)
-  throws IOException {
+    createWriter(Configuration conf, FSDataOutputStream out, 
+                 Class keyClass, Class valClass, boolean compress, boolean blockCompress,
+                 CompressionCodec codec)
+    throws IOException {
     Writer writer = createWriter(conf, out, keyClass, valClass, compress, 
-        blockCompress, codec, new Metadata());
+                                 blockCompress, codec, new Metadata());
     return writer;
   }
 
@@ -347,15 +347,15 @@ public class SequenceFile {
    * @throws IOException
    */
   public static Writer
-  createWriter(Configuration conf, FSDataOutputStream out, 
-      Class keyClass, Class valClass, CompressionType compressionType,
-      CompressionCodec codec, Metadata metadata)
-  throws IOException {
+    createWriter(Configuration conf, FSDataOutputStream out, 
+                 Class keyClass, Class valClass, CompressionType compressionType,
+                 CompressionCodec codec, Metadata metadata)
+    throws IOException {
     if ((codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
         !ZlibFactory.isNativeZlibLoaded()) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
-          "GzipCodec without native-hadoop code!");
+                                         "GzipCodec without native-hadoop code!");
     }
 
     Writer writer = null;
@@ -383,12 +383,12 @@ public class SequenceFile {
    * @throws IOException
    */
   public static Writer
-  createWriter(Configuration conf, FSDataOutputStream out, 
-      Class keyClass, Class valClass, CompressionType compressionType,
-      CompressionCodec codec)
-  throws IOException {
+    createWriter(Configuration conf, FSDataOutputStream out, 
+                 Class keyClass, Class valClass, CompressionType compressionType,
+                 CompressionCodec codec)
+    throws IOException {
     Writer writer = createWriter(conf, out, keyClass, valClass, compressionType,
-        codec, new Metadata());
+                                 codec, new Metadata());
     return writer;
   }
   
@@ -401,14 +401,14 @@ public class SequenceFile {
      * @throws IOException
      */
     public void writeUncompressedBytes(DataOutputStream outStream)
-    throws IOException;
+      throws IOException;
 
     /** Write compressed bytes to outStream. 
      * Note: that it will NOT compress the bytes if they are not compressed.
      * @param outStream : Stream to write compressed bytes into.
      */
     public void writeCompressedBytes(DataOutputStream outStream) 
-    throws IllegalArgumentException, IOException;
+      throws IllegalArgumentException, IOException;
   }
   
   private static class UncompressedBytes implements ValueBytes {
@@ -433,14 +433,14 @@ public class SequenceFile {
     }
     
     public void writeUncompressedBytes(DataOutputStream outStream)
-    throws IOException {
+      throws IOException {
       outStream.write(data, 0, dataSize);
     }
 
     public void writeCompressedBytes(DataOutputStream outStream) 
-    throws IllegalArgumentException, IOException {
+      throws IllegalArgumentException, IOException {
       throw 
-      new IllegalArgumentException("UncompressedBytes cannot be compressed!");
+        new IllegalArgumentException("UncompressedBytes cannot be compressed!");
     }
 
   } // UncompressedBytes
@@ -471,7 +471,7 @@ public class SequenceFile {
     }
     
     public void writeUncompressedBytes(DataOutputStream outStream)
-    throws IOException {
+      throws IOException {
       if (decompressedStream == null) {
         rawData = new DataInputBuffer();
         decompressedStream = codec.createInputStream(rawData);
@@ -488,7 +488,7 @@ public class SequenceFile {
     }
 
     public void writeCompressedBytes(DataOutputStream outStream) 
-    throws IllegalArgumentException, IOException {
+      throws IllegalArgumentException, IOException {
       outStream.write(data, 0, dataSize);
     }
 
@@ -562,10 +562,10 @@ public class SequenceFile {
         Map.Entry<Text, Text> en1 = (Map.Entry<Text, Text>)iter1.next();
         Map.Entry<Text, Text> en2 = (Map.Entry<Text, Text>)iter2.next();
         if (!en1.getKey().equals(en2.getKey())) {
-           return false;
+          return false;
         }
         if (!en1.getValue().equals(en2.getValue())) {
-           return false;
+          return false;
         }
       }
       if (iter1.hasNext() || iter2.hasNext()) {
@@ -624,14 +624,14 @@ public class SequenceFile {
     
     /** Create the named file. */
     public Writer(FileSystem fs, Configuration conf, Path name, 
-        Class keyClass, Class valClass)
+                  Class keyClass, Class valClass)
       throws IOException {
       this(fs, conf, name, keyClass, valClass, null, new Metadata());
     }
     
     /** Create the named file with write-progress reporter. */
     public Writer(FileSystem fs, Configuration conf, Path name, 
-        Class keyClass, Class valClass, Progressable progress, Metadata metadata)
+                  Class keyClass, Class valClass, Progressable progress, Metadata metadata)
       throws IOException {
       init(name, conf, fs.create(name, progress), keyClass, valClass, false, null, metadata);
       initializeFileHeader();
@@ -641,8 +641,8 @@ public class SequenceFile {
     
     /** Write to an arbitrary stream using a specified buffer size. */
     private Writer(Configuration conf, FSDataOutputStream out, 
-        Class keyClass, Class valClass, Metadata metadata)
-    throws IOException {
+                   Class keyClass, Class valClass, Metadata metadata)
+      throws IOException {
       init(null, conf, out, keyClass, valClass, false, null, metadata);
       
       initializeFileHeader();
@@ -652,13 +652,13 @@ public class SequenceFile {
 
     /** Write the initial part of file header. */
     void initializeFileHeader() 
-    throws IOException{
+      throws IOException{
       out.write(VERSION);
     }
 
     /** Write the final part of file header. */
     void finalizeFileHeader() 
-    throws IOException{
+      throws IOException{
       out.write(sync);                       // write the sync bytes
       out.flush();                           // flush header
     }
@@ -668,7 +668,7 @@ public class SequenceFile {
     
     /** Write and flush the file header. */
     void writeFileHeader() 
-    throws IOException {
+      throws IOException {
       Text.writeString(out, keyClass.getName());
       Text.writeString(out, valClass.getName());
       
@@ -683,9 +683,9 @@ public class SequenceFile {
     
     /** Initialize. */
     void init(Path name, Configuration conf, FSDataOutputStream out,
-                      Class keyClass, Class valClass,
-                      boolean compress, CompressionCodec codec, Metadata metadata) 
-    throws IOException {
+              Class keyClass, Class valClass,
+              boolean compress, CompressionCodec codec, Metadata metadata) 
+      throws IOException {
       this.target = name;
       this.conf = conf;
       this.out = out;
@@ -741,10 +741,10 @@ public class SequenceFile {
       throws IOException {
       if (key.getClass() != keyClass)
         throw new IOException("wrong key class: "+key.getClass().getName()
-            +" is not "+keyClass);
+                              +" is not "+keyClass);
       if (val.getClass() != valClass)
         throw new IOException("wrong value class: "+val.getClass().getName()
-            +" is not "+valClass);
+                              +" is not "+valClass);
 
       buffer.reset();
 
@@ -772,8 +772,8 @@ public class SequenceFile {
     }
 
     public synchronized void appendRaw(
-        byte[] keyData, int keyOffset, int keyLength, ValueBytes val) 
-    throws IOException {
+                                       byte[] keyData, int keyOffset, int keyLength, ValueBytes val) 
+      throws IOException {
       if (keyLength == 0)
         throw new IOException("zero length keys not allowed: " + keyLength);
 
@@ -808,8 +808,8 @@ public class SequenceFile {
     
     /** Create the named file. */
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
-        Class keyClass, Class valClass, CompressionCodec codec) 
-    throws IOException {
+                                Class keyClass, Class valClass, CompressionCodec codec) 
+      throws IOException {
       super.init(name, conf, fs.create(name), keyClass, valClass, true, codec, new Metadata());
       
       initializeFileHeader();
@@ -819,11 +819,11 @@ public class SequenceFile {
     
     /** Create the named file with write-progress reporter. */
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
-        Class keyClass, Class valClass, CompressionCodec codec,
-        Progressable progress, Metadata metadata)
-    throws IOException {
+                                Class keyClass, Class valClass, CompressionCodec codec,
+                                Progressable progress, Metadata metadata)
+      throws IOException {
       super.init(name, conf, fs.create(name, progress), 
-          keyClass, valClass, true, codec, metadata);
+                 keyClass, valClass, true, codec, metadata);
       
       initializeFileHeader();
       writeFileHeader();
@@ -832,15 +832,15 @@ public class SequenceFile {
     
     /** Create the named file with write-progress reporter. */
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
-        Class keyClass, Class valClass, CompressionCodec codec,
-        Progressable progress)
-    throws IOException {
+                                Class keyClass, Class valClass, CompressionCodec codec,
+                                Progressable progress)
+      throws IOException {
       this(fs, conf, name, keyClass, valClass, codec, progress, new Metadata());
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */
     private RecordCompressWriter(Configuration conf, FSDataOutputStream out,
-                   Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
+                                 Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
       throws IOException {
       super.init(null, conf, out, keyClass, valClass, true, codec, metadata);
       
@@ -858,10 +858,10 @@ public class SequenceFile {
       throws IOException {
       if (key.getClass() != keyClass)
         throw new IOException("wrong key class: "+key.getClass().getName()
-            +" is not "+keyClass);
+                              +" is not "+keyClass);
       if (val.getClass() != valClass)
         throw new IOException("wrong value class: "+val.getClass().getName()
-            +" is not "+valClass);
+                              +" is not "+valClass);
 
       buffer.reset();
 
@@ -886,9 +886,9 @@ public class SequenceFile {
 
     /** Append a key/value pair. */
     public synchronized void appendRaw(
-        byte[] keyData, int keyOffset, int keyLength,
-        ValueBytes val
-        ) throws IOException {
+                                       byte[] keyData, int keyOffset, int keyLength,
+                                       ValueBytes val
+                                       ) throws IOException {
 
       if (keyLength == 0)
         throw new IOException("zero length keys not allowed");
@@ -924,8 +924,8 @@ public class SequenceFile {
     
     /** Create the named file. */
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
-        Class keyClass, Class valClass, CompressionCodec codec) 
-    throws IOException {
+                               Class keyClass, Class valClass, CompressionCodec codec) 
+      throws IOException {
       super.init(name, conf, fs.create(name), keyClass, valClass, true, codec, new Metadata());
       init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
       
@@ -936,11 +936,11 @@ public class SequenceFile {
     
     /** Create the named file with write-progress reporter. */
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
-        Class keyClass, Class valClass, CompressionCodec codec,
-        Progressable progress, Metadata metadata)
-    throws IOException {
+                               Class keyClass, Class valClass, CompressionCodec codec,
+                               Progressable progress, Metadata metadata)
+      throws IOException {
       super.init(name, conf, fs.create(name, progress), keyClass, valClass, 
-          true, codec, metadata);
+                 true, codec, metadata);
       init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
       
       initializeFileHeader();
@@ -950,15 +950,15 @@ public class SequenceFile {
     
     /** Create the named file with write-progress reporter. */
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
-        Class keyClass, Class valClass, CompressionCodec codec,
-        Progressable progress)
-    throws IOException {
+                               Class keyClass, Class valClass, CompressionCodec codec,
+                               Progressable progress)
+      throws IOException {
       this(fs, conf, name, keyClass, valClass, codec, progress, new Metadata());
     }
     
     /** Write to an arbitrary stream using a specified buffer size. */
     private BlockCompressWriter(Configuration conf, FSDataOutputStream out,
-                   Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
+                                Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
       throws IOException {
       super.init(null, conf, out, keyClass, valClass, true, codec, metadata);
       init(1000000);
@@ -978,12 +978,12 @@ public class SequenceFile {
     
     /** Workhorse to check and write out compressed data/lengths */
     private synchronized 
-    void writeBuffer(DataOutputBuffer uncompressedDataBuffer) 
-    throws IOException {
+      void writeBuffer(DataOutputBuffer uncompressedDataBuffer) 
+      throws IOException {
       deflateFilter.resetState();
       buffer.reset();
       deflateOut.write(uncompressedDataBuffer.getData(), 0, 
-          uncompressedDataBuffer.getLength());
+                       uncompressedDataBuffer.getLength());
       deflateOut.flush();
       deflateFilter.finish();
       
@@ -1070,9 +1070,9 @@ public class SequenceFile {
     
     /** Append a key/value pair. */
     public synchronized void appendRaw(
-        byte[] keyData, int keyOffset, int keyLength,
-        ValueBytes val
-        ) throws IOException {
+                                       byte[] keyData, int keyOffset, int keyLength,
+                                       ValueBytes val
+                                       ) throws IOException {
       
       if (keyLength == 0)
         throw new IOException("zero length keys not allowed");
@@ -1218,7 +1218,7 @@ public class SequenceFile {
           try {
             Class codecClass = conf.getClassByName(codecClassname);
             this.codec = (CompressionCodec)
-                 ReflectionUtils.newInstance(codecClass, conf);
+              ReflectionUtils.newInstance(codecClass, conf);
           } catch (ClassNotFoundException cnfe) {
             throw new IllegalArgumentException("Unknown codec: " + 
                                                codecClassname, cnfe);
@@ -1293,7 +1293,7 @@ public class SequenceFile {
     
     /** Read a compressed buffer */
     private synchronized void readBuffer(DataInputBuffer buffer, 
-        CompressionInputStream filter) throws IOException {
+                                         CompressionInputStream filter) throws IOException {
       // Read data into a temporary buffer
       DataOutputBuffer dataBuffer = new DataOutputBuffer();
       int dataBufferLength = WritableUtils.readVInt(in);
@@ -1378,7 +1378,7 @@ public class SequenceFile {
         if (skipValBytes > 0) {
           if (valIn.skipBytes(skipValBytes) != skipValBytes) {
             throw new IOException("Failed to seek to " + currentKey + 
-                "(th) value!");
+                                  "(th) value!");
           }
         }
       }
@@ -1390,7 +1390,7 @@ public class SequenceFile {
      * @throws IOException
      */
     public synchronized void getCurrentValue(Writable val) 
-    throws IOException {
+      throws IOException {
       if (val instanceof Configurable) {
         ((Configurable) val).setConf(this.conf);
       }
@@ -1404,8 +1404,8 @@ public class SequenceFile {
         if (valIn.read() > 0) {
           LOG.info("available bytes: " + valIn.available());
           throw new IOException(val+" read "+(valBuffer.getPosition()-keyLength)
-              + " bytes, should read " +
-              (valBuffer.getLength()-keyLength));
+                                + " bytes, should read " +
+                                (valBuffer.getLength()-keyLength));
         }
       } else {
         // Get the value
@@ -1428,7 +1428,7 @@ public class SequenceFile {
     public synchronized boolean next(Writable key) throws IOException {
       if (key.getClass() != keyClass)
         throw new IOException("wrong key class: "+key.getClass().getName()
-            +" is not "+keyClass);
+                              +" is not "+keyClass);
 
       if (!blockCompressed) {
         outBuf.reset();
@@ -1443,7 +1443,7 @@ public class SequenceFile {
         valBuffer.mark(0);
         if (valBuffer.getPosition() != keyLength)
           throw new IOException(key + " read " + valBuffer.getPosition()
-              + " bytes, should read " + keyLength);
+                                + " bytes, should read " + keyLength);
       } else {
         //Reset syncSeen
         syncSeen = false;
@@ -1489,7 +1489,7 @@ public class SequenceFile {
     }
     
     private synchronized int checkAndReadSync(int length) 
-    throws IOException {
+      throws IOException {
       if (version > 1 && sync != null &&
           length == SYNC_ESCAPE) {              // process a sync entry
         //LOG.info("sync@"+in.getPos());
@@ -1514,7 +1514,7 @@ public class SequenceFile {
       // Unsupported for block-compressed sequence files
       if (blockCompressed) {
         throw new IOException("Unsupported call for block-compressed" +
-            " SequenceFiles - use SequenceFile.Reader.next(DataOutputStream, ValueBytes)");
+                              " SequenceFiles - use SequenceFile.Reader.next(DataOutputStream, ValueBytes)");
       }
       if (in.getPos() >= end)
         return -1;
@@ -1548,7 +1548,7 @@ public class SequenceFile {
      * @throws IOException
      */
     public int nextRaw(DataOutputBuffer key, ValueBytes val) 
-    throws IOException {
+      throws IOException {
       if (!blockCompressed) {
         if (in.getPos() >= end) 
           return -1;
@@ -1607,7 +1607,7 @@ public class SequenceFile {
      * @throws IOException
      */
     public int nextRawKey(DataOutputBuffer key) 
-    throws IOException {
+      throws IOException {
       if (!blockCompressed) {
         if (in.getPos() >= end) 
           return -1;
@@ -1650,7 +1650,7 @@ public class SequenceFile {
      * @throws IOException
      */
     public int nextRawValue(ValueBytes val) 
-    throws IOException {
+      throws IOException {
       
       // Position stream to current value
       seekToCurrentValue();
@@ -1776,7 +1776,7 @@ public class SequenceFile {
 
     /** Sort and merge using an arbitrary {@link WritableComparator}. */
     public Sorter(FileSystem fs, WritableComparator comparator, Class valClass, 
-        Configuration conf) {
+                  Configuration conf) {
       this.fs = fs;
       this.comparator = comparator;
       this.keyClass = comparator.getKeyClass();
@@ -1827,7 +1827,7 @@ public class SequenceFile {
      * @return iterator the RawKeyValueIterator
      */
     public RawKeyValueIterator sortAndIterate(Path[] inFiles, Path tempDir, 
-                                    boolean deleteInput) throws IOException {
+                                              boolean deleteInput) throws IOException {
       Path outFile = new Path(tempDir + Path.SEPARATOR + "all.2");
       if (fs.exists(outFile)) {
         throw new IOException("already exists: " + outFile);
@@ -1915,15 +1915,15 @@ public class SequenceFile {
           int bytesProcessed = 0;
           rawKeys.reset();
           while (!atEof && 
-              bytesProcessed < memoryLimit && count < recordLimit) {
+                 bytesProcessed < memoryLimit && count < recordLimit) {
 
             // Read a record into buffer
             // Note: Attempt to re-use 'rawValue' as far as possible
             int keyOffset = rawKeys.getLength();       
             ValueBytes rawValue = 
               (count == keyOffsets.length || rawValues[count] == null) ? 
-                  in.createValueBytes() : 
-                  rawValues[count];
+              in.createValueBytes() : 
+              rawValues[count];
             int recordLength = in.nextRaw(rawKeys, rawValue);
             if (recordLength == -1) {
               in.close();
@@ -1959,7 +1959,7 @@ public class SequenceFile {
           rawBuffer = rawKeys.getData();
           sort(count);
           flush(count, bytesProcessed, isCompressed, isBlockCompressed, codec, 
-              segments==0 && atEof);
+                segments==0 && atEof);
           segments++;
         }
         return segments;
@@ -2002,8 +2002,8 @@ public class SequenceFile {
       }
 
       private void flush(int count, int bytesProcessed, boolean isCompressed, 
-          boolean isBlockCompressed, CompressionCodec codec, boolean done) 
-      throws IOException {
+                         boolean isBlockCompressed, CompressionCodec codec, boolean done) 
+        throws IOException {
         if (out == null) {
           outName = done ? outFile : outFile.suffix(".0");
           out = fs.create(outName);
@@ -2014,7 +2014,7 @@ public class SequenceFile {
 
         long segmentStart = out.getPos();
         Writer writer = createWriter(conf, out, keyClass, valClass, 
-            isCompressed, isBlockCompressed, codec);
+                                     isCompressed, isBlockCompressed, codec);
         
         if (!done) {
           writer.sync = null;                     // disable sync on temp files
@@ -2076,16 +2076,16 @@ public class SequenceFile {
       Progress getProgress();
     }    
     
-  /**
-   * Merges the list of segments of type <code>SegmentDescriptor</code>
-   * @param segments the list of SegmentDescriptors
+    /**
+     * Merges the list of segments of type <code>SegmentDescriptor</code>
+     * @param segments the list of SegmentDescriptors
      * @param tmpDir the directory to write temporary files into
-   * @return RawKeyValueIterator
-   * @throws IOException
-   */
+     * @return RawKeyValueIterator
+     * @throws IOException
+     */
     public RawKeyValueIterator merge(List <SegmentDescriptor> segments, 
                                      Path tmpDir) 
-    throws IOException {
+      throws IOException {
       MergeQueue mQueue = new MergeQueue(segments, tmpDir);
       return mQueue.merge();
     }
@@ -2102,7 +2102,7 @@ public class SequenceFile {
      */
     public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs,
                                      Path tmpDir) 
-    throws IOException {
+      throws IOException {
       return merge(inNames, deleteInputs, 
                    (inNames.length < factor) ? inNames.length : factor,
                    tmpDir);
@@ -2120,12 +2120,12 @@ public class SequenceFile {
      */
     public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs,
                                      int factor, Path tmpDir) 
-    throws IOException {
+      throws IOException {
       //get the segments from inNames
       ArrayList <SegmentDescriptor> a = new ArrayList <SegmentDescriptor>();
       for (int i = 0; i < inNames.length; i++) {
         SegmentDescriptor s = new SegmentDescriptor(0, 
-                              fs.getLength(inNames[i]), inNames[i]);
+                                                    fs.getLength(inNames[i]), inNames[i]);
         s.preserveInput(!deleteInputs);
         s.doSync();
         a.add(s);
@@ -2146,7 +2146,7 @@ public class SequenceFile {
      */
     public RawKeyValueIterator merge(Path [] inNames, Path tempDir, 
                                      boolean deleteInputs) 
-    throws IOException {
+      throws IOException {
       //outFile will basically be used as prefix for temp files for the
       //intermediate merge outputs           
       this.outFile = new Path(tempDir + Path.SEPARATOR + "merged");
@@ -2154,7 +2154,7 @@ public class SequenceFile {
       ArrayList <SegmentDescriptor> a = new ArrayList <SegmentDescriptor>();
       for (int i = 0; i < inNames.length; i++) {
         SegmentDescriptor s = new SegmentDescriptor(0, 
-                              fs.getLength(inNames[i]), inNames[i]);
+                                                    fs.getLength(inNames[i]), inNames[i]);
         s.preserveInput(!deleteInputs);
         s.doSync();
         a.add(s);
@@ -2177,8 +2177,8 @@ public class SequenceFile {
      * @deprecated call  #cloneFileAttributes(Path,Path,Progressable) instead
      */
     public Writer cloneFileAttributes(FileSystem ignoredFileSys,
-                  Path inputFile, Path outputFile, Progressable prog) 
-    throws IOException {
+                                      Path inputFile, Path outputFile, Progressable prog) 
+      throws IOException {
       return cloneFileAttributes(inputFile, outputFile, prog);
     }
 
@@ -2193,7 +2193,7 @@ public class SequenceFile {
      * @throws IOException
      */
     public Writer cloneFileAttributes(Path inputFile, Path outputFile, 
-                  Progressable prog) throws IOException {
+                                      Progressable prog) throws IOException {
       FileSystem srcFileSys = inputFile.getFileSystem(conf);
       Reader reader = new Reader(srcFileSys, inputFile, 4096, conf);
       boolean compress = reader.isCompressed();
@@ -2205,12 +2205,12 @@ public class SequenceFile {
       FSDataOutputStream out;
       if (prog != null)
         out = dstFileSys.create(outputFile, true, 
-            conf.getInt("io.file.buffer.size", 4096), prog);
+                                conf.getInt("io.file.buffer.size", 4096), prog);
       else
         out = dstFileSys.create(outputFile, true, 
-            conf.getInt("io.file.buffer.size", 4096));
+                                conf.getInt("io.file.buffer.size", 4096));
       Writer writer = createWriter(conf, out, keyClass, valClass, compress, 
-                          blockCompress, codec);
+                                   blockCompress, codec);
       return writer;
     }
 
@@ -2222,7 +2222,7 @@ public class SequenceFile {
      * @throws IOException
      */
     public void writeFile(RawKeyValueIterator records, Writer writer) 
-    throws IOException {
+      throws IOException {
       while(records.next()) {
         writer.appendRaw(records.getKey().getData(), 0, 
                          records.getKey().getLength(), records.getValue());
@@ -2251,7 +2251,7 @@ public class SequenceFile {
     private int mergePass(Path tmpDir) throws IOException {
       LOG.debug("running merge pass");
       Writer writer = cloneFileAttributes(
-              outFile.suffix(".0"), outFile, null);
+                                          outFile.suffix(".0"), outFile, null);
       RawKeyValueIterator r = merge(outFile.suffix(".0"), 
                                     outFile.suffix(".0.index"), tmpDir);
       writeFile(r, writer);
@@ -2268,7 +2268,7 @@ public class SequenceFile {
      * @throws IOException
      */
     private RawKeyValueIterator merge(Path inName, Path indexIn, Path tmpDir) 
-    throws IOException {
+      throws IOException {
       //get the segments from indexIn
       //we create a SegmentContainer so that we can track segments belonging to
       //inName and delete inName as soon as we see that we have looked at all
@@ -2281,7 +2281,7 @@ public class SequenceFile {
     
     /** This class implements the core of the merge logic */
     private class MergeQueue extends PriorityQueue 
-    implements RawKeyValueIterator {
+      implements RawKeyValueIterator {
       private boolean compress;
       private boolean blockCompress;
       private DataOutputBuffer rawKey = new DataOutputBuffer();
@@ -2300,7 +2300,7 @@ public class SequenceFile {
           compress = stream.in.isCompressed();
           blockCompress = stream.in.isBlockCompressed();
         } else if (compress != stream.in.isCompressed() || 
-            blockCompress != stream.in.isBlockCompressed()) {
+                   blockCompress != stream.in.isBlockCompressed()) {
           throw new IOException("All merged files must be compressed or not.");
         } 
         super.put(stream);
@@ -2323,8 +2323,8 @@ public class SequenceFile {
         SegmentDescriptor msa = (SegmentDescriptor)a;
         SegmentDescriptor msb = (SegmentDescriptor)b;
         return comparator.compare(msa.getKey().getData(), 0, 
-            msa.getKey().getLength(), msb.getKey().getData(), 0, 
-            msb.getKey().getLength()) < 0;
+                                  msa.getKey().getLength(), msb.getKey().getData(), 0, 
+                                  msb.getKey().getLength()) < 0;
       }
       public void close() throws IOException {
         SegmentDescriptor ms;                           // close inputs
@@ -2436,8 +2436,8 @@ public class SequenceFile {
                                                 tmpFilename.toString());
             LOG.info("writing intermediate results to " + outputFile);
             Writer writer = cloneFileAttributes(
-                      fs.makeQualified(segmentsToMerge.get(0).segmentPathName), 
-                      fs.makeQualified(outputFile), null);
+                                                fs.makeQualified(segmentsToMerge.get(0).segmentPathName), 
+                                                fs.makeQualified(outputFile), null);
             writer.sync = null; //disable sync for temp files
             writeFile(this, writer);
             writer.close();
@@ -2447,7 +2447,7 @@ public class SequenceFile {
             this.close();
             
             SegmentDescriptor tempSegment = 
-                 new SegmentDescriptor(0, fs.getLength(outputFile), outputFile);
+              new SegmentDescriptor(0, fs.getLength(outputFile), outputFile);
             //put the segment back in the TreeMap
             sortedSegmentSizes.put(tempSegment, null);
             numSegments = sortedSegmentSizes.size();
@@ -2476,7 +2476,7 @@ public class SequenceFile {
         if (numDescriptors > sortedSegmentSizes.size())
           numDescriptors = sortedSegmentSizes.size();
         SegmentDescriptor[] SegmentDescriptors = 
-                                   new SegmentDescriptor[numDescriptors];
+          new SegmentDescriptor[numDescriptors];
         Iterator iter = sortedSegmentSizes.keySet().iterator();
         int i = 0;
         while (i < numDescriptors) {
@@ -2507,7 +2507,7 @@ public class SequenceFile {
        * @param segmentPathName the path name of the file containing the segment
        */
       public SegmentDescriptor (long segmentOffset, long segmentLength, 
-              Path segmentPathName) {
+                                Path segmentPathName) {
         this.segmentOffset = segmentOffset;
         this.segmentLength = segmentLength;
         this.segmentPathName = segmentPathName;
@@ -2534,7 +2534,7 @@ public class SequenceFile {
           return (this.segmentOffset < that.segmentOffset ? -1 : 1);
         }
         return (this.segmentPathName.toString()).
-                compareTo(that.segmentPathName.toString());
+          compareTo(that.segmentPathName.toString());
       }
 
       /** Fills up the rawKey object with the key returned by the Reader
@@ -2543,25 +2543,25 @@ public class SequenceFile {
        */
       public boolean nextRawKey() throws IOException {
         if (in == null) {
-        int bufferSize = conf.getInt("io.file.buffer.size", 4096); 
-        if (fs.getUri().getScheme().startsWith("ramfs")) {
-          bufferSize = conf.getInt("io.bytes.per.checksum", 512);
-        }
-        Reader reader = new Reader(fs, segmentPathName, 
-            bufferSize, segmentOffset, 
-                segmentLength, conf);
+          int bufferSize = conf.getInt("io.file.buffer.size", 4096); 
+          if (fs.getUri().getScheme().startsWith("ramfs")) {
+            bufferSize = conf.getInt("io.bytes.per.checksum", 512);
+          }
+          Reader reader = new Reader(fs, segmentPathName, 
+                                     bufferSize, segmentOffset, 
+                                     segmentLength, conf);
         
-        //sometimes we ignore syncs especially for temp merge files
-        if (ignoreSync) reader.sync = null;
+          //sometimes we ignore syncs especially for temp merge files
+          if (ignoreSync) reader.sync = null;
 
-        if (reader.keyClass != keyClass)
-          throw new IOException("wrong key class: " + reader.getKeyClass() +
-                                " is not " + keyClass);
-        if (reader.valClass != valClass)
-          throw new IOException("wrong value class: "+reader.getValueClass()+
-                                " is not " + valClass);
-        this.in = reader;
-        rawKey = new DataOutputBuffer();
+          if (reader.keyClass != keyClass)
+            throw new IOException("wrong key class: " + reader.getKeyClass() +
+                                  " is not " + keyClass);
+          if (reader.valClass != valClass)
+            throw new IOException("wrong value class: "+reader.getValueClass()+
+                                  " is not " + valClass);
+          this.in = reader;
+          rawKey = new DataOutputBuffer();
         }
         rawKey.reset();
         int keyLength = 
@@ -2616,7 +2616,7 @@ public class SequenceFile {
        * @param parent the parent SegmentContainer that holds the segment
        */
       public LinkedSegmentsDescriptor (long segmentOffset, long segmentLength, 
-              Path segmentPathName, SegmentContainer parent) {
+                                       Path segmentPathName, SegmentContainer parent) {
         super(segmentOffset, segmentLength, segmentPathName);
         this.parentContainer = parent;
       }
@@ -2640,7 +2640,7 @@ public class SequenceFile {
       
       //the list of segments read from the file
       private ArrayList <SegmentDescriptor> segments = 
-                                   new ArrayList <SegmentDescriptor>();
+        new ArrayList <SegmentDescriptor>();
       /** This constructor is there primarily to serve the sort routine that 
        * generates a single output file with an associated index file */
       public SegmentContainer(Path inName, Path indexIn) throws IOException {
@@ -2652,7 +2652,7 @@ public class SequenceFile {
           long segmentLength = WritableUtils.readVLong(fsIndexIn);
           Path segmentName = inName;
           segments.add(new LinkedSegmentsDescriptor(segmentOffset, 
-                                 segmentLength, segmentName, this));
+                                                    segmentLength, segmentName, this));
         }
         fsIndexIn.close();
         fs.delete(indexIn);

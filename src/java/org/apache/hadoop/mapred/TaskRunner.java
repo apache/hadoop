@@ -50,16 +50,16 @@ abstract class TaskRunner extends Thread {
     this.conf = conf;
     this.taskStdOutLogWriter = 
       new TaskLog.Writer(t.getTaskId(), TaskLog.LogFilter.STDOUT, 
-              this.conf.getInt("mapred.userlog.num.splits", 4), 
-              this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024, 
-              this.conf.getBoolean("mapred.userlog.purgesplits", true),
-              this.conf.getInt("mapred.userlog.retain.hours", 12));
+                         this.conf.getInt("mapred.userlog.num.splits", 4), 
+                         this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024, 
+                         this.conf.getBoolean("mapred.userlog.purgesplits", true),
+                         this.conf.getInt("mapred.userlog.retain.hours", 12));
     this.taskStdErrLogWriter = 
       new TaskLog.Writer(t.getTaskId(), TaskLog.LogFilter.STDERR, 
-              this.conf.getInt("mapred.userlog.num.splits", 4), 
-              this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024, 
-              this.conf.getBoolean("mapred.userlog.purgesplits", true),
-              this.conf.getInt("mapred.userlog.retain.hours", 12));
+                         this.conf.getInt("mapred.userlog.num.splits", 4), 
+                         this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024, 
+                         this.conf.getBoolean("mapred.userlog.purgesplits", true),
+                         this.conf.getInt("mapred.userlog.retain.hours", 12));
   }
 
   public Task getTask() { return t; }
@@ -75,13 +75,13 @@ abstract class TaskRunner extends Thread {
   }
 
   /** Called when this task's output is no longer needed.
-  * This method is run in the parent process after the child exits.  It should
-  * not execute user code, only system code.
-  */
+   * This method is run in the parent process after the child exits.  It should
+   * not execute user code, only system code.
+   */
   public void close() throws IOException {}
 
   private String stringifyPathArray(Path[] p){
-	  if (p == null){
+    if (p == null){
       return null;
     }
     String str = p[0].toString();
@@ -106,7 +106,7 @@ abstract class TaskRunner extends Thread {
           Path[] p = new Path[archives.length];
           for (int i = 0; i < archives.length;i++){
             p[i] = DistributedCache.getLocalCache(archives[i], conf, 
-                conf.getLocalPath(TaskTracker.getCacheSubdir()), true, md5[i], new Path(workDir.getAbsolutePath()));
+                                                  conf.getLocalPath(TaskTracker.getCacheSubdir()), true, md5[i], new Path(workDir.getAbsolutePath()));
           }
           DistributedCache.setLocalArchives(conf, stringifyPathArray(p));
         }
@@ -114,8 +114,8 @@ abstract class TaskRunner extends Thread {
           String[] md5 = DistributedCache.getFileMd5(conf);
           Path[] p = new Path[files.length];
           for (int i = 0; i < files.length;i++){
-           p[i] = DistributedCache.getLocalCache(files[i], conf, conf.getLocalPath(TaskTracker
-              .getCacheSubdir()), false, md5[i], new Path(workDir.getAbsolutePath()));
+            p[i] = DistributedCache.getLocalCache(files[i], conf, conf.getLocalPath(TaskTracker
+                                                                                    .getCacheSubdir()), false, md5[i], new Path(workDir.getAbsolutePath()));
           }
           DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
         }
@@ -134,7 +134,7 @@ abstract class TaskRunner extends Thread {
       // workingdir for streaming
       try{
         DistributedCache.createAllSymlink(conf, jobCacheDir, 
-            workDir);
+                                          workDir);
       } catch(IOException ie){
         // Do not exit even if symlinks have not been created.
         LOG.warn(StringUtils.stringifyException(ie));
@@ -157,7 +157,7 @@ abstract class TaskRunner extends Thread {
 	  
       String jar = conf.getJar();
       if (jar != null) {       
-    	  // if jar exists, it into workDir
+        // if jar exists, it into workDir
         File[] libs = new File(jobCacheDir, "lib").listFiles();
         if (libs != null) {
           for (int i = 0; i < libs.length; i++) {
@@ -172,43 +172,43 @@ abstract class TaskRunner extends Thread {
        
       }
 
-  		// include the user specified classpath
+      // include the user specified classpath
   		
-  		//archive paths
-  		Path[] archiveClasspaths = DistributedCache.getArchiveClassPaths(conf);
-  		if (archiveClasspaths != null && archives != null) {
-  			Path[] localArchives = DistributedCache
-  					.getLocalCacheArchives(conf);
-  			if (localArchives != null){
-  				for (int i=0;i<archives.length;i++){
-  					for(int j=0;j<archiveClasspaths.length;j++){
-  						if(archives[i].getPath().equals(
-  								archiveClasspaths[j].toString())){
-  							classPath.append(sep);
-  							classPath.append(localArchives[i]
-  									.toString());
-  						}
-  					}
-  				}
-  			}
-  		}
-  		//file paths
-  		Path[] fileClasspaths = DistributedCache.getFileClassPaths(conf);
-  		if(fileClasspaths!=null && files != null) {
-  			Path[] localFiles = DistributedCache
-  					.getLocalCacheFiles(conf);
-  			if (localFiles != null) {
-  				for (int i = 0; i < files.length; i++) {
-  					for (int j = 0; j < fileClasspaths.length; j++) {
-  						if (files[i].getPath().equals(
-  								fileClasspaths[j].toString())) {
-  							classPath.append(sep);
-  							classPath.append(localFiles[i].toString());
-  						}
-  					}
-  				}
-  			}
-  		}
+      //archive paths
+      Path[] archiveClasspaths = DistributedCache.getArchiveClassPaths(conf);
+      if (archiveClasspaths != null && archives != null) {
+        Path[] localArchives = DistributedCache
+          .getLocalCacheArchives(conf);
+        if (localArchives != null){
+          for (int i=0;i<archives.length;i++){
+            for(int j=0;j<archiveClasspaths.length;j++){
+              if(archives[i].getPath().equals(
+                                              archiveClasspaths[j].toString())){
+                classPath.append(sep);
+                classPath.append(localArchives[i]
+                                 .toString());
+              }
+            }
+          }
+        }
+      }
+      //file paths
+      Path[] fileClasspaths = DistributedCache.getFileClassPaths(conf);
+      if(fileClasspaths!=null && files != null) {
+        Path[] localFiles = DistributedCache
+          .getLocalCacheFiles(conf);
+        if (localFiles != null) {
+          for (int i = 0; i < files.length; i++) {
+            for (int j = 0; j < fileClasspaths.length; j++) {
+              if (files[i].getPath().equals(
+                                            fileClasspaths[j].toString())) {
+                classPath.append(sep);
+                classPath.append(localFiles[i].toString());
+              }
+            }
+          }
+        }
+      }
 
       classPath.append(sep);
       classPath.append(workDir);
@@ -237,48 +237,48 @@ abstract class TaskRunner extends Thread {
       //
       //     <name>mapred.child.optional.jvm.args</name>
       //     <value>-verbose:gc -Xloggc:/tmp/@taskid@.gc \
-      //     -Dcom.sun.management.jmxremote.authenticate=false \
-      //     -Dcom.sun.management.jmxremote.ssl=false \
-      //     -Dcom.sun.management.jmxremote.port=@port@
-      //     </value>
-      //
-      String javaOpts = handleDeprecatedHeapSize(
-          conf.get("mapred.child.java.opts", "-Xmx200m"),
-          conf.get("mapred.child.heap.size"));
-      javaOpts = replaceAll(javaOpts, "@taskid@", t.getTaskId());
-      int port = conf.getInt("mapred.task.tracker.report.port", 50050) + 1;
-      javaOpts = replaceAll(javaOpts, "@port@", Integer.toString(port));
-      String [] javaOptsSplit = javaOpts.split(" ");
-      for (int i = 0; i < javaOptsSplit.length; i++) {
-         vargs.add(javaOptsSplit[i]);
-      }
+        //     -Dcom.sun.management.jmxremote.authenticate=false \
+        //     -Dcom.sun.management.jmxremote.ssl=false \
+        //     -Dcom.sun.management.jmxremote.port=@port@
+        //     </value>
+        //
+        String javaOpts = handleDeprecatedHeapSize(
+                                                   conf.get("mapred.child.java.opts", "-Xmx200m"),
+                                                   conf.get("mapred.child.heap.size"));
+        javaOpts = replaceAll(javaOpts, "@taskid@", t.getTaskId());
+        int port = conf.getInt("mapred.task.tracker.report.port", 50050) + 1;
+        javaOpts = replaceAll(javaOpts, "@port@", Integer.toString(port));
+        String [] javaOptsSplit = javaOpts.split(" ");
+        for (int i = 0; i < javaOptsSplit.length; i++) {
+          vargs.add(javaOptsSplit[i]);
+        }
 
-      // Add classpath.
-      vargs.add("-classpath");
-      vargs.add(classPath.toString());
+        // Add classpath.
+        vargs.add("-classpath");
+        vargs.add(classPath.toString());
 
-      // Setup the log4j prop
-      vargs.add("-Dhadoop.log.dir=" + System.getProperty("hadoop.log.dir"));
-      vargs.add("-Dhadoop.root.logger=INFO,TLA");
-      vargs.add("-Dhadoop.tasklog.taskid=" + t.getTaskId());
-      vargs.add("-Dhadoop.tasklog.noKeepSplits=" + conf.getInt("mapred.userlog.num.splits", 4)); 
-      vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + (conf.getInt("mapred.userlog.limit.kb", 100) * 1024));
-      vargs.add("-Dhadoop.tasklog.purgeLogSplits=" + conf.getBoolean("mapred.userlog.purgesplits", true));
-      vargs.add("-Dhadoop.tasklog.logsRetainHours=" + conf.getInt("mapred.userlog.retain.hours", 12)); 
+        // Setup the log4j prop
+        vargs.add("-Dhadoop.log.dir=" + System.getProperty("hadoop.log.dir"));
+        vargs.add("-Dhadoop.root.logger=INFO,TLA");
+        vargs.add("-Dhadoop.tasklog.taskid=" + t.getTaskId());
+        vargs.add("-Dhadoop.tasklog.noKeepSplits=" + conf.getInt("mapred.userlog.num.splits", 4)); 
+        vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + (conf.getInt("mapred.userlog.limit.kb", 100) * 1024));
+        vargs.add("-Dhadoop.tasklog.purgeLogSplits=" + conf.getBoolean("mapred.userlog.purgesplits", true));
+        vargs.add("-Dhadoop.tasklog.logsRetainHours=" + conf.getInt("mapred.userlog.retain.hours", 12)); 
 
-      // Add java.library.path; necessary for native-hadoop libraries
-      String libraryPath = System.getProperty("java.library.path");
-      if (libraryPath != null) {
+        // Add java.library.path; necessary for native-hadoop libraries
+        String libraryPath = System.getProperty("java.library.path");
+        if (libraryPath != null) {
           vargs.add("-Djava.library.path=" + libraryPath);
-      }
+        }
 
-      // Add main class and its arguments 
-      vargs.add(TaskTracker.Child.class.getName());  // main of Child
-      vargs.add(tracker.taskReportPort + "");        // pass umbilical port
-      vargs.add(t.getTaskId());                      // pass task identifier
+        // Add main class and its arguments 
+        vargs.add(TaskTracker.Child.class.getName());  // main of Child
+        vargs.add(tracker.taskReportPort + "");        // pass umbilical port
+        vargs.add(t.getTaskId());                      // pass task identifier
 
-      // Run java
-      runChild((String[])vargs.toArray(new String[0]), workDir);
+        // Run java
+        runChild((String[])vargs.toArray(new String[0]), workDir);
     } catch (FSError e) {
       LOG.fatal("FSError", e);
       try {
@@ -327,22 +327,22 @@ abstract class TaskRunner extends Thread {
    * interpolated if present.
    */
   private String handleDeprecatedHeapSize(String javaOpts,
-          final String heapSize) {
+                                          final String heapSize) {
     if (heapSize == null || heapSize.length() <= 0) {
-        return javaOpts;
+      return javaOpts;
     }
     final String MX = "-Xmx";
     int index = javaOpts.indexOf(MX);
     if (index < 0) {
-        javaOpts = javaOpts + " " + MX + heapSize;
+      javaOpts = javaOpts + " " + MX + heapSize;
     } else {
-        int end = javaOpts.indexOf(" ", index + MX.length());
-        javaOpts = javaOpts.substring(0, index + MX.length()) +
-            heapSize + ((end < 0)? "": javaOpts.substring(end));
+      int end = javaOpts.indexOf(" ", index + MX.length());
+      javaOpts = javaOpts.substring(0, index + MX.length()) +
+        heapSize + ((end < 0)? "": javaOpts.substring(end));
     }
     LOG.warn("mapred.child.heap.size is deprecated. Use " +
-        "mapred.child.java.opt instead. Meantime, mapred.child.heap.size " +
-        "is interpolated into mapred.child.java.opt: " + javaOpts);
+             "mapred.child.java.opt instead. Meantime, mapred.child.heap.size " +
+             "is interpolated into mapred.child.java.opt: " + javaOpts);
     return javaOpts;
   }
 
@@ -360,17 +360,17 @@ abstract class TaskRunner extends Thread {
    * found in <code>text<code>).
    */
   private static String replaceAll(String text, final String toFind,
-      final String replacement) {
+                                   final String replacement) {
     if (text ==  null || toFind ==  null || replacement ==  null) {
       throw new IllegalArgumentException("Text " + text + " or toFind " +
-        toFind + " or replacement " + replacement + " are null.");
+                                         toFind + " or replacement " + replacement + " are null.");
     }
     int offset = 0;
     for (int index = text.indexOf(toFind); index >= 0;
-          index = text.indexOf(toFind, offset)) {
+         index = text.indexOf(toFind, offset)) {
       offset = index + toFind.length();
       text = text.substring(0, index) + replacement +
-          text.substring(offset);
+        text.substring(offset);
         
     }
     return text;
@@ -412,10 +412,10 @@ abstract class TaskRunner extends Thread {
    * Kill the child process
    */
   public void kill() {
-      if (process != null) {
-          process.destroy();
-      }
-      killed = true;
+    if (process != null) {
+      process.destroy();
+    }
+    killed = true;
   }
 
   /**

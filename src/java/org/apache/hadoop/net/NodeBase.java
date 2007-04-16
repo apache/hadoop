@@ -75,7 +75,7 @@ public class NodeBase implements Node {
   private void set( String name, String location ) {
     if(name != null && name.contains(PATH_SEPARATOR_STR))
       throw new IllegalArgumentException(
-          "Network location name contains /: "+name);
+                                         "Network location name contains /: "+name);
     this.name = (name==null)?"":name;
     this.location = location;      
   }
@@ -102,8 +102,8 @@ public class NodeBase implements Node {
     
     if( path.charAt(0) != PATH_SEPARATOR ) {
       throw new IllegalArgumentException( 
-          "Network Location path does not start with "
-          +PATH_SEPARATOR_STR+ ": "+path);
+                                         "Network Location path does not start with "
+                                         +PATH_SEPARATOR_STR+ ": "+path);
     }
     
     int len = path.length();

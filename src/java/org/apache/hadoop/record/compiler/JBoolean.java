@@ -46,7 +46,7 @@ public class JBoolean extends JType {
       cb.append("{\n");
       cb.append("if ("+l+"<1) {\n");
       cb.append("throw new java.io.IOException(\"Boolean is exactly 1 byte."+
-          " Provided buffer is smaller.\");\n");
+                " Provided buffer is smaller.\");\n");
       cb.append("}\n");
       cb.append(s+"++; "+l+"--;\n");
       cb.append("}\n");
@@ -57,7 +57,7 @@ public class JBoolean extends JType {
       cb.append("{\n");
       cb.append("if (l1<1 || l2<1) {\n");
       cb.append("throw new java.io.IOException(\"Boolean is exactly 1 byte."+
-          " Provided buffer is smaller.\");\n");
+                " Provided buffer is smaller.\");\n");
       cb.append("}\n");
       cb.append("if (b1[s1] != b2[s2]) {\n");
       cb.append("return (b1[s1]<b2[s2])? -1 : 0;\n");

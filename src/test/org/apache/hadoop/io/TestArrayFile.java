@@ -33,11 +33,11 @@ public class TestArrayFile extends TestCase {
     System.getProperty("test.build.data",".") + "/test.array";
 
   public TestArrayFile(String name) { 
-      super(name); 
+    super(name); 
   }
 
   public void testArrayFile() throws Exception {
-      Configuration conf = new Configuration();
+    Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
     RandomDatum[] data = generate(10000);
     writeTest(fs, data, FILE);
@@ -116,40 +116,40 @@ public class TestArrayFile extends TestCase {
     Path fpath = null;
     FileSystem fs = null;
     try {
-        for (; i < args.length; i++) {       // parse command line
-            if (args[i] == null) {
-                continue;
-            } else if (args[i].equals("-count")) {
-                count = Integer.parseInt(args[++i]);
-            } else if (args[i].equals("-nocreate")) {
-                create = false;
-            } else if (args[i].equals("-nocheck")) {
-                check = false;
-            } else {                                       
-                // file is required parameter
-                file = args[i];
-                fpath=new Path(file);
-            }
+      for (; i < args.length; i++) {       // parse command line
+        if (args[i] == null) {
+          continue;
+        } else if (args[i].equals("-count")) {
+          count = Integer.parseInt(args[++i]);
+        } else if (args[i].equals("-nocreate")) {
+          create = false;
+        } else if (args[i].equals("-nocheck")) {
+          check = false;
+        } else {                                       
+          // file is required parameter
+          file = args[i];
+          fpath=new Path(file);
         }
+      }
         
-        fs = fpath.getFileSystem(conf);
+      fs = fpath.getFileSystem(conf);
         
-        LOG.info("count = " + count);
-        LOG.info("create = " + create);
-        LOG.info("check = " + check);
-        LOG.info("file = " + file);
+      LOG.info("count = " + count);
+      LOG.info("create = " + create);
+      LOG.info("check = " + check);
+      LOG.info("file = " + file);
 
-        RandomDatum[] data = generate(count);
+      RandomDatum[] data = generate(count);
 
-        if (create) {
-            writeTest(fs, data, file);
-        }
+      if (create) {
+        writeTest(fs, data, file);
+      }
 
-        if (check) {
-            readTest(fs, data, file, conf);
-        }
+      if (check) {
+        readTest(fs, data, file, conf);
+      }
     } finally {
-        fs.close();
+      fs.close();
     }
   }
 }

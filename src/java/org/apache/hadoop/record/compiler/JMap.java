@@ -44,8 +44,8 @@ public class JMap extends JCompType {
     
     JavaMap(JType.JavaType key, JType.JavaType value) {
       super("java.util.TreeMap<"+key.getWrapperType()+","+value.getWrapperType()+">",
-          "Map",
-          "java.util.TreeMap<"+key.getWrapperType()+","+value.getWrapperType()+">");
+            "Map",
+            "java.util.TreeMap<"+key.getWrapperType()+","+value.getWrapperType()+">");
       this.key = key;
       this.value = value;
     }
@@ -57,15 +57,15 @@ public class JMap extends JCompType {
       cb.append(setType+getId("set1")+" = "+fname+".keySet();\n");
       cb.append(setType+getId("set2")+" = "+other+".keySet();\n");
       cb.append(iterType+getId("miter1")+" = "+
-          getId("set1")+".iterator();\n");
+                getId("set1")+".iterator();\n");
       cb.append(iterType+getId("miter2")+" = "+
-          getId("set2")+".iterator();\n");
+                getId("set2")+".iterator();\n");
       cb.append("for(; "+getId("miter1")+".hasNext() && "+
-          getId("miter2")+".hasNext(); ) {\n");
+                getId("miter2")+".hasNext(); ) {\n");
       cb.append(key.getType()+" "+getId("k1")+
-          " = "+getId("miter1")+".next();\n");
+                " = "+getId("miter1")+".next();\n");
       cb.append(key.getType()+" "+getId("k2")+
-          " = "+getId("miter2")+".next();\n");
+                " = "+getId("miter2")+".next();\n");
       key.genCompareTo(cb, getId("k1"), getId("k2"));
       cb.append("if (ret != 0) { return ret; }\n");
       cb.append("}\n");
@@ -93,11 +93,11 @@ public class JMap extends JCompType {
     
     void genWriteMethod(CodeBuffer cb, String fname, String tag) {
       String setType = "java.util.Set<java.util.Map.Entry<"+
-          key.getWrapperType()+","+value.getWrapperType()+">> ";
+        key.getWrapperType()+","+value.getWrapperType()+">> ";
       String entryType = "java.util.Map.Entry<"+
-          key.getWrapperType()+","+value.getWrapperType()+"> ";
+        key.getWrapperType()+","+value.getWrapperType()+"> ";
       String iterType = "java.util.Iterator<java.util.Map.Entry<"+
-          key.getWrapperType()+","+value.getWrapperType()+">> ";
+        key.getWrapperType()+","+value.getWrapperType()+">> ";
       cb.append("{\n");
       incrLevel();
       cb.append("a.startMap("+fname+",\""+tag+"\");\n");
@@ -118,12 +118,12 @@ public class JMap extends JCompType {
       cb.append("{\n");
       incrLevel();
       cb.append("int "+getId("mi")+
-          " = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
+                " = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
       cb.append("int "+getId("mz")+
-          " = org.apache.hadoop.record.Utils.getVIntSize("+getId("mi")+");\n");
+                " = org.apache.hadoop.record.Utils.getVIntSize("+getId("mi")+");\n");
       cb.append(s+"+="+getId("mz")+"; "+l+"-="+getId("mz")+";\n");
       cb.append("for (int "+getId("midx")+" = 0; "+getId("midx")+
-          " < "+getId("mi")+"; "+getId("midx")+"++) {");
+                " < "+getId("mi")+"; "+getId("midx")+"++) {");
       key.genSlurpBytes(cb, b,s,l);
       value.genSlurpBytes(cb, b,s,l);
       cb.append("}\n");
@@ -135,24 +135,24 @@ public class JMap extends JCompType {
       cb.append("{\n");
       incrLevel();
       cb.append("int "+getId("mi1")+
-          " = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
+                " = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
       cb.append("int "+getId("mi2")+
-          " = org.apache.hadoop.record.Utils.readVInt(b2, s2);\n");
+                " = org.apache.hadoop.record.Utils.readVInt(b2, s2);\n");
       cb.append("int "+getId("mz1")+
-          " = org.apache.hadoop.record.Utils.getVIntSize("+getId("mi1")+");\n");
+                " = org.apache.hadoop.record.Utils.getVIntSize("+getId("mi1")+");\n");
       cb.append("int "+getId("mz2")+
-          " = org.apache.hadoop.record.Utils.getVIntSize("+getId("mi2")+");\n");
+                " = org.apache.hadoop.record.Utils.getVIntSize("+getId("mi2")+");\n");
       cb.append("s1+="+getId("mz1")+"; s2+="+getId("mz2")+
-          "; l1-="+getId("mz1")+"; l2-="+getId("mz2")+";\n");
+                "; l1-="+getId("mz1")+"; l2-="+getId("mz2")+";\n");
       cb.append("for (int "+getId("midx")+" = 0; "+getId("midx")+
-          " < "+getId("mi1")+" && "+getId("midx")+" < "+getId("mi2")+
-          "; "+getId("midx")+"++) {");
+                " < "+getId("mi1")+" && "+getId("midx")+" < "+getId("mi2")+
+                "; "+getId("midx")+"++) {");
       key.genCompareBytes(cb);
       value.genSlurpBytes(cb, "b1", "s1", "l1");
       value.genSlurpBytes(cb, "b2", "s2", "l2");
       cb.append("}\n");
       cb.append("if ("+getId("mi1")+" != "+getId("mi2")+
-          ") { return ("+getId("mi1")+"<"+getId("mi2")+")?-1:0; }\n");
+                ") { return ("+getId("mi1")+"<"+getId("mi2")+")?-1:0; }\n");
       decrLevel();
       cb.append("}\n");
     }
@@ -162,7 +162,7 @@ public class JMap extends JCompType {
   public JMap(JType t1, JType t2) {
     setJavaType(new JavaMap(t1.getJavaType(), t2.getJavaType()));
     setCppType(new CppCompType(" ::std::map<"+t1.getCppType().getType()+","+
-        t2.getCppType().getType()+">"));
+                               t2.getCppType().getType()+">"));
     setCType(new CType());
     keyType = t1;
     valueType = t2;

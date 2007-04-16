@@ -52,7 +52,7 @@ public class UpgradeUtilities {
 
   // Root scratch directory on local filesystem 
   private static File TEST_ROOT_DIR = new File(
-    System.getProperty("test.build.data","/tmp").toString().replace(' ', '+'));
+                                               System.getProperty("test.build.data","/tmp").toString().replace(' ', '+'));
   // The singleton master storage directory for Namenode
   private static File namenodeStorage = new File(TEST_ROOT_DIR, "namenodeMaster");
   // A checksum of the contents in namenodeStorage directory
@@ -120,14 +120,14 @@ public class UpgradeUtilities {
       FileUtil.fullyDelete(new File(datanodeStorage,"in_use.lock"));
     }
     namenodeStorageChecksum = checksumContents(
-      NAME_NODE, new File(namenodeStorage,"current"));
+                                               NAME_NODE, new File(namenodeStorage,"current"));
     datanodeStorageChecksum = checksumContents(
-      DATA_NODE, new File(datanodeStorage,"current"));
+                                               DATA_NODE, new File(datanodeStorage,"current"));
   }
   
   // Private helper method that writes a file to the given file system.
   private static void writeFile(FileSystem fs, Path path, byte[] buffer,
-    int bufferSize ) throws IOException 
+                                int bufferSize ) throws IOException 
   {
     OutputStream out;
     out = fs.create(path, true, bufferSize, (short) 1, 1024);
@@ -198,7 +198,7 @@ public class UpgradeUtilities {
   public static long checksumContents(NodeType nodeType, File dir) throws IOException {
     if (!dir.isDirectory()) {
       throw new IllegalArgumentException(
-        "Given argument is not a directory:" + dir);
+                                         "Given argument is not a directory:" + dir);
     }
     File[] list = dir.listFiles();
     CRC32 checksum = new CRC32();
@@ -206,10 +206,10 @@ public class UpgradeUtilities {
       if (list[i].isFile()) {
         // skip VERSION file for DataNodes
         if (nodeType == DATA_NODE &&
-          list[i].getName().equals("VERSION")) 
-        {
-          continue; 
-        }
+            list[i].getName().equals("VERSION")) 
+          {
+            continue; 
+          }
         FileInputStream fis = new FileInputStream(list[i]);
         byte[] buffer = new byte[1024];
         int bytesRead;
@@ -249,18 +249,18 @@ public class UpgradeUtilities {
       createEmptyDirs(new String[] {newDir.toString()});
       LocalFileSystem localFS = FileSystem.getLocal(new Configuration());
       switch (nodeType) {
-        case NAME_NODE:
-          localFS.copyToLocalFile(
-            new Path(namenodeStorage.toString(), "current"),
-            new Path(newDir.toString()),
-            false);
-          break;
-        case DATA_NODE:
-          localFS.copyToLocalFile(
-            new Path(datanodeStorage.toString(), "current"),
-            new Path(newDir.toString()),
-            false);
-          break;
+      case NAME_NODE:
+        localFS.copyToLocalFile(
+                                new Path(namenodeStorage.toString(), "current"),
+                                new Path(newDir.toString()),
+                                false);
+        break;
+      case DATA_NODE:
+        localFS.copyToLocalFile(
+                                new Path(datanodeStorage.toString(), "current"),
+                                new Path(newDir.toString()),
+                                false);
+        break;
       }
       retVal[i] = newDir;
     }
@@ -278,7 +278,7 @@ public class UpgradeUtilities {
    * @return the created version file
    */
   public static File[] createVersionFile(NodeType nodeType, File[] parent,
-    StorageInfo version) throws IOException 
+                                         StorageInfo version) throws IOException 
   {
     Storage storage = null;
     File[] versionFiles = new File[parent.length];
@@ -286,12 +286,12 @@ public class UpgradeUtilities {
       File versionFile = new File(parent[i], "VERSION");
       FileUtil.fullyDelete(versionFile);
       switch (nodeType) {
-        case NAME_NODE:
-          storage = new FSImage( version );
-          break;
-        case DATA_NODE:
-          storage = new DataStorage( version, "doNotCare" );
-          break;
+      case NAME_NODE:
+        storage = new FSImage( version );
+        break;
+      case DATA_NODE:
+        storage = new DataStorage( version, "doNotCare" );
+        break;
       }
       StorageDirectory sd = storage.new StorageDirectory(parent[i].getParentFile());
       sd.write(versionFile);
@@ -310,7 +310,7 @@ public class UpgradeUtilities {
   public static void corruptFile(File file) throws IOException {
     if (!file.isFile()) {
       throw new IllegalArgumentException(
-        "Given argument is not a file:" + file);
+                                         "Given argument is not a file:" + file);
     }
     RandomAccessFile raf = new RandomAccessFile(file,"rws");
     Random random = new Random();

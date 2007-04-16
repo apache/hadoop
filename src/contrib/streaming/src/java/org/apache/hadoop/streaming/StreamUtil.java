@@ -90,7 +90,7 @@ public class StreamUtil {
         int pos = codePath.lastIndexOf(relPath);
         if (pos == -1) {
           throw new IllegalArgumentException("invalid codePath: className=" + className
-              + " codePath=" + codePath);
+                                             + " codePath=" + codePath);
         }
         codePath = codePath.substring(0, pos);
       }

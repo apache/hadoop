@@ -97,7 +97,7 @@ public class TestPendingReplication extends TestCase {
       loop++;
     }
     System.out.println("Had to wait for " + loop +
-                      " seconds for the lot to timeout");
+                       " seconds for the lot to timeout");
 
     //
     // Verify that everything has timed out.

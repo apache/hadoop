@@ -37,7 +37,7 @@ public class SequenceFileAsTextRecordReader extends SequenceFileRecordReader {
   private Writable innerValue = super.createValue();
 
   public SequenceFileAsTextRecordReader(Configuration conf, FileSplit split)
-      throws IOException {
+    throws IOException {
     super(conf, split);
   }
 
@@ -51,7 +51,7 @@ public class SequenceFileAsTextRecordReader extends SequenceFileRecordReader {
 
   /** Read key/value pair in a line. */
   public synchronized boolean next(Writable key, Writable value)
-      throws IOException {
+    throws IOException {
     Text tKey = (Text) key;
     Text tValue = (Text) value;
     if (!super.next(innerKey, innerValue)) {

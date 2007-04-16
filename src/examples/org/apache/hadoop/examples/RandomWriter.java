@@ -135,16 +135,16 @@ public class RandomWriter {
       String filename = ((Text) key).toString();
       SequenceFile.Writer writer = 
         SequenceFile.createWriter(fileSys, jobConf, new Path(filename), 
-                                BytesWritable.class, BytesWritable.class,
-                                CompressionType.NONE, reporter);
+                                  BytesWritable.class, BytesWritable.class,
+                                  CompressionType.NONE, reporter);
       int itemCount = 0;
       while (numBytesToWrite > 0) {
         int keyLength = minKeySize + 
-           (keySizeRange != 0 ? random.nextInt(keySizeRange) : 0);
+          (keySizeRange != 0 ? random.nextInt(keySizeRange) : 0);
         randomKey.setSize(keyLength);
         randomizeBytes(randomKey.get(), 0, randomKey.getSize());
         int valueLength = minValueSize +
-           (valueSizeRange != 0 ? random.nextInt(valueSizeRange) : 0);
+          (valueSizeRange != 0 ? random.nextInt(valueSizeRange) : 0);
         randomValue.setSize(valueLength);
         randomizeBytes(randomValue.get(), 0, randomValue.getSize());
         writer.append(randomKey, randomValue);
@@ -158,7 +158,7 @@ public class RandomWriter {
       }
       reporter.setStatus("done with " + itemCount + " records.");
       writer.close();
-     }
+    }
     
     /**
      * Save the values out of the configuaration that we need to write
@@ -172,7 +172,7 @@ public class RandomWriter {
         throw new RuntimeException("Can't get default file system", e);
       }
       numBytesToWrite = job.getLong("test.randomwrite.bytes_per_map",
-                                       1*1024*1024*1024);
+                                    1*1024*1024*1024);
       minKeySize = job.getInt("test.randomwrite.min_key", 10);
       keySizeRange = 
         job.getInt("test.randomwrite.max_key", 1000) - minKeySize;
@@ -220,7 +220,7 @@ public class RandomWriter {
     JobClient client = new JobClient(job);
     ClusterStatus cluster = client.getClusterStatus();
     int numMaps = cluster.getTaskTrackers() * 
-         job.getInt("test.randomwriter.maps_per_host", 10);
+      job.getInt("test.randomwriter.maps_per_host", 10);
     job.setNumMapTasks(numMaps);
     System.out.println("Running " + numMaps + " maps.");
     job.setNumReduceTasks(1);

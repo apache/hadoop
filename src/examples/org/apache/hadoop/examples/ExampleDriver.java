@@ -26,22 +26,22 @@ import org.apache.hadoop.util.ProgramDriver;
  */
 public class ExampleDriver {
   
-    public static void main(String argv[]){
-        ProgramDriver pgd = new ProgramDriver();
-        try {
-	    pgd.addClass("wordcount", WordCount.class, 
-			 "A map/reduce program that counts the words in the input files.");
-	    pgd.addClass("grep", Grep.class, 
-			 "A map/reduce program that counts the matches of a regex in the input.");
-	    pgd.addClass("randomwriter", RandomWriter.class, 
-                        "A map/reduce program that writes 10GB of random data per node.");
-            pgd.addClass("sort", Sort.class, "A map/reduce program that sorts the data written by the random writer.");
-            pgd.addClass("pi", PiEstimator.class, "A map/reduce program that estimates Pi using monte-carlo method.");
-            pgd.driver(argv);
-	}
-	catch(Throwable e){
-	    e.printStackTrace();
-	}
+  public static void main(String argv[]){
+    ProgramDriver pgd = new ProgramDriver();
+    try {
+      pgd.addClass("wordcount", WordCount.class, 
+                   "A map/reduce program that counts the words in the input files.");
+      pgd.addClass("grep", Grep.class, 
+                   "A map/reduce program that counts the matches of a regex in the input.");
+      pgd.addClass("randomwriter", RandomWriter.class, 
+                   "A map/reduce program that writes 10GB of random data per node.");
+      pgd.addClass("sort", Sort.class, "A map/reduce program that sorts the data written by the random writer.");
+      pgd.addClass("pi", PiEstimator.class, "A map/reduce program that estimates Pi using monte-carlo method.");
+      pgd.driver(argv);
     }
+    catch(Throwable e){
+      e.printStackTrace();
+    }
+  }
 }
 	

@@ -155,19 +155,19 @@ class FSEditLog {
    * remain, then raise an exception that will possibly cause the
    * server to exit
    */
-   void processIOError(int index) throws IOException {
-     if (editStreams == null || editStreams.size() == 1) {
-       throw new IOException("Checkpoint directories inaccessible.");
-     }
-     assert(index < getNumStorageDirs());
-     assert(getNumStorageDirs() == editStreams.size());
+  void processIOError(int index) throws IOException {
+    if (editStreams == null || editStreams.size() == 1) {
+      throw new IOException("Checkpoint directories inaccessible.");
+    }
+    assert(index < getNumStorageDirs());
+    assert(getNumStorageDirs() == editStreams.size());
 
-     editStreams.remove( index );
-     //
-     // Invoke the ioerror routine of the fsimage
-     //
-     fsimage.processIOError(index);
-   }
+    editStreams.remove( index );
+    //
+    // Invoke the ioerror routine of the fsimage
+    //
+    fsimage.processIOError(index);
+  }
 
   /**
    * check if ANY edits.new log exists
@@ -194,8 +194,8 @@ class FSEditLog {
     
     if (edits != null) {
       DataInputStream in = new DataInputStream(
-          new BufferedInputStream(
-              new FileInputStream(edits)));
+                                               new BufferedInputStream(
+                                                                       new FileInputStream(edits)));
       // Read log file version. Could be missing. 
       in.mark( 4 );
       // If edits log is greater than 2G, available method will return negative
@@ -214,10 +214,10 @@ class FSEditLog {
           logVersion = in.readInt();
         if( logVersion < FSConstants.LAYOUT_VERSION ) // future version
           throw new IOException(
-              "Unexpected version of the file system log file: "
-              + logVersion
-              + ". Current version = " 
-              + FSConstants.LAYOUT_VERSION + "." );
+                                "Unexpected version of the file system log file: "
+                                + logVersion
+                                + ". Current version = " 
+                                + FSConstants.LAYOUT_VERSION + "." );
       }
       
       short replication = fsNamesys.getDefaultReplication();
@@ -245,10 +245,10 @@ class FSEditLog {
               writables = aw.get(); 
               if( writables.length != 2 )
                 throw new IOException("Incorrect data fortmat. " 
-                    + "Name & replication pair expected");
+                                      + "Name & replication pair expected");
               name = (UTF8) writables[0];
               replication = Short.parseShort(
-                  ((UTF8)writables[1]).toString());
+                                             ((UTF8)writables[1]).toString());
               replication = adjustReplication( replication );
             }
             // get blocks
@@ -268,8 +268,8 @@ class FSEditLog {
             repl.readFields(in);
             replication = adjustReplication( fromLogReplication(repl) );
             fsDir.unprotectedSetReplication(src.toString(), 
-                replication,
-                null);
+                                            replication,
+                                            null);
             break;
           } 
           case OP_RENAME: {
@@ -295,7 +295,7 @@ class FSEditLog {
           case OP_DATANODE_ADD: {
             if( logVersion > -3 )
               throw new IOException("Unexpected opcode " + opcode 
-                  + " for version " + logVersion );
+                                    + " for version " + logVersion );
             FSImage.DatanodeImage nodeimage = new FSImage.DatanodeImage();
             nodeimage.readFields(in);
             DatanodeDescriptor node = nodeimage.getDatanodeDescriptor();
@@ -305,7 +305,7 @@ class FSEditLog {
           case OP_DATANODE_REMOVE: {
             if( logVersion > -3 )
               throw new IOException("Unexpected opcode " + opcode 
-                  + " for version " + logVersion );
+                                    + " for version " + logVersion );
             DatanodeID nodeID = new DatanodeID();
             nodeID.readFields(in);
             DatanodeDescriptor node = fsNamesys.getDatanode( nodeID );
@@ -379,8 +379,8 @@ class FSEditLog {
    */
   void logCreateFile( FSDirectory.INode newNode ) {
     UTF8 nameReplicationPair[] = new UTF8[] { 
-                        new UTF8( newNode.computeName() ), 
-                        FSEditLog.toLogReplication( newNode.getReplication() )};
+      new UTF8( newNode.computeName() ), 
+      FSEditLog.toLogReplication( newNode.getReplication() )};
     logEdit(OP_ADD,
             new ArrayWritable( UTF8.class, nameReplicationPair ), 
             new ArrayWritable( Block.class, newNode.getBlocks() ));
@@ -524,6 +524,6 @@ class FSEditLog {
    * Return the name of the edit file
    */
   File getFsEditName() throws IOException {
-      return getEditFile( 0 );
+    return getEditFile( 0 );
   }
 }

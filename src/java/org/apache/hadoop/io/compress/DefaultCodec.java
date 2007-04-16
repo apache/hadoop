@@ -44,9 +44,9 @@ public class DefaultCodec implements Configurable, CompressionCodec {
    * @return a stream the user can write uncompressed data to
    */
   public CompressionOutputStream createOutputStream(OutputStream out) 
-  throws IOException {
+    throws IOException {
     return new CompressorStream(out, ZlibFactory.getZlibCompressor(), 
-        conf.getInt("io.file.buffer.size", 4*1024));
+                                conf.getInt("io.file.buffer.size", 4*1024));
   }
   
   /**
@@ -55,9 +55,9 @@ public class DefaultCodec implements Configurable, CompressionCodec {
    * @return a stream to read uncompressed bytes from
    */
   public CompressionInputStream createInputStream(InputStream in) 
-  throws IOException {
+    throws IOException {
     return new DecompressorStream(in, ZlibFactory.getZlibDecompressor(),
-        conf.getInt("io.file.buffer.size", 4*1024));
+                                  conf.getInt("io.file.buffer.size", 4*1024));
   }
   
   /**

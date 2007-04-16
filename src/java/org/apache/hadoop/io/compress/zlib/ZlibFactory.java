@@ -39,7 +39,7 @@ public class ZlibFactory {
   static {
     if (NativeCodeLoader.isNativeCodeLoaded()) {
       nativeZlibLoaded = ZlibCompressor.isNativeZlibLoaded() &&
-                          ZlibDecompressor.isNativeZlibLoaded();
+        ZlibDecompressor.isNativeZlibLoaded();
       
       if (nativeZlibLoaded) {
         LOG.info("Successfully loaded & initialized native-zlib library");
@@ -66,7 +66,7 @@ public class ZlibFactory {
    */
   public static Compressor getZlibCompressor() {
     return (nativeZlibLoaded) ? 
-        new ZlibCompressor() : new BuiltInZlibDeflater(); 
+      new ZlibCompressor() : new BuiltInZlibDeflater(); 
   }
 
   /**
@@ -76,7 +76,7 @@ public class ZlibFactory {
    */
   public static Decompressor getZlibDecompressor() {
     return (nativeZlibLoaded) ? 
-        new ZlibDecompressor() : new BuiltInZlibInflater(); 
+      new ZlibDecompressor() : new BuiltInZlibInflater(); 
   }
   
 }

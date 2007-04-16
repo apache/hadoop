@@ -90,8 +90,8 @@ public class RecordBench {
     Method init = null;
     try {
       init = RecordBench.class.getDeclaredMethod("init"+
-          toCamelCase(type) + "s",
-          new Class[] {Record[].class});
+                                                 toCamelCase(type) + "s",
+                                                 new Class[] {Record[].class});
     } catch (NoSuchMethodException ex) {
       throw new RuntimeException(ex);
     }
@@ -108,7 +108,7 @@ public class RecordBench {
   }
   
   private static void runBinaryBench(String type, int numRecords, Times times)
-  throws IOException {
+    throws IOException {
     Record[] records = makeArray(type, numRecords, times);
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     BinaryRecordOutput rout = new BinaryRecordOutput(bout);
@@ -154,7 +154,7 @@ public class RecordBench {
   }
   
   private static void runCsvBench(String type, int numRecords, Times times)
-  throws IOException {
+    throws IOException {
     Record[] records = makeArray(type, numRecords, times);
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     CsvRecordOutput rout = new CsvRecordOutput(bout);
@@ -182,7 +182,7 @@ public class RecordBench {
   }
   
   private static void runXmlBench(String type, int numRecords, Times times)
-  throws IOException {
+    throws IOException {
     Record[] records = makeArray(type, numRecords, times);
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     XmlRecordOutput rout = new XmlRecordOutput(bout);
@@ -214,34 +214,34 @@ public class RecordBench {
   }
 
   private static void printTimes(String type,
-      String format,
-      int numRecords,
-      Times times) {
+                                 String format,
+                                 int numRecords,
+                                 Times times) {
     System.out.println("Type: " + type + " Format: " + format +
-        " #Records: "+numRecords);
+                       " #Records: "+numRecords);
     if (times.init != 0) {
       System.out.println("Initialization Time (Per record) : "+
-          times.init/numRecords + " Nanoseconds");
+                         times.init/numRecords + " Nanoseconds");
     }
     
     if (times.serialize != 0) {
       System.out.println("Serialization Time (Per Record) : "+
-          times.serialize/numRecords + " Nanoseconds");
+                         times.serialize/numRecords + " Nanoseconds");
     }
     
     if (times.deserialize != 0) {
       System.out.println("Deserialization Time (Per Record) : "+
-          times.deserialize/numRecords + " Nanoseconds");
+                         times.deserialize/numRecords + " Nanoseconds");
     }
     
     if (times.write != 0) {
       System.out.println("Write Time (Per Record) : "+
-          times.write/numRecords + " Nanoseconds");
+                         times.write/numRecords + " Nanoseconds");
     }
     
     if (times.readFields != 0) {
       System.out.println("ReadFields Time (Per Record) : "+
-          times.readFields/numRecords + " Nanoseconds");
+                         times.readFields/numRecords + " Nanoseconds");
     }
     
     System.out.println();
@@ -257,7 +257,7 @@ public class RecordBench {
   
   private static void exitOnError() {
     String usage = "RecordBench {buffer|string|int}"+
-        " {binary|csv|xml} <numRecords>";
+      " {binary|csv|xml} <numRecords>";
     System.out.println(usage);
     System.exit(1);
   }
@@ -279,9 +279,9 @@ public class RecordBench {
     
     Method bench = null;
     try {
-    bench = RecordBench.class.getDeclaredMethod("run"+
-        toCamelCase(format) + "Bench",
-        new Class[] {String.class, Integer.TYPE, Times.class});
+      bench = RecordBench.class.getDeclaredMethod("run"+
+                                                  toCamelCase(format) + "Bench",
+                                                  new Class[] {String.class, Integer.TYPE, Times.class});
     } catch (NoSuchMethodException ex) {
       ex.printStackTrace();
       exitOnError();

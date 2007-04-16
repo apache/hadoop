@@ -34,7 +34,7 @@ import org.apache.hadoop.mapred.*;
 public class StreamInputFormat extends KeyValueTextInputFormat {
 
   public RecordReader getRecordReader(final InputSplit genericSplit,
-      JobConf job, Reporter reporter) throws IOException {
+                                      JobConf job, Reporter reporter) throws IOException {
     String c = job.get("stream.recordreader.class");
     if (c == null || c.indexOf("LineRecordReader") >= 0) {
       return super.getRecordReader(genericSplit, job, reporter);
@@ -62,7 +62,7 @@ public class StreamInputFormat extends KeyValueTextInputFormat {
     Constructor ctor;
     try {
       ctor = readerClass.getConstructor(new Class[] { FSDataInputStream.class,
-          FileSplit.class, Reporter.class, JobConf.class, FileSystem.class });
+                                                      FileSplit.class, Reporter.class, JobConf.class, FileSystem.class });
     } catch (NoSuchMethodException nsm) {
       throw new RuntimeException(nsm);
     }
@@ -70,7 +70,7 @@ public class StreamInputFormat extends KeyValueTextInputFormat {
     RecordReader reader;
     try {
       reader = (RecordReader) ctor.newInstance(new Object[] { in, split,
-          reporter, job, fs });
+                                                              reporter, job, fs });
     } catch (Exception nsm) {
       throw new RuntimeException(nsm);
     }

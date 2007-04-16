@@ -42,8 +42,8 @@ class JavaGenerator extends CodeGenerator {
    * @param destDir output directory
    */
   void genCode(String name, ArrayList<JFile> ilist,
-      ArrayList<JRecord> rlist, String destDir, ArrayList<String> options)
-      throws IOException {
+               ArrayList<JRecord> rlist, String destDir, ArrayList<String> options)
+    throws IOException {
     for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext(); ) {
       JRecord rec = iter.next();
       rec.genJavaCode(destDir, options);

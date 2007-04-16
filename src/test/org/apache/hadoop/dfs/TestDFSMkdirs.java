@@ -46,28 +46,28 @@ public class TestDFSMkdirs extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
-    	// First create a new directory with mkdirs
-    	Path myPath = new Path("/test/mkdirs");
-    	assertTrue(fileSys.mkdirs(myPath));
-    	assertTrue(fileSys.exists(myPath));
-    	assertTrue(fileSys.mkdirs(myPath));
+      // First create a new directory with mkdirs
+      Path myPath = new Path("/test/mkdirs");
+      assertTrue(fileSys.mkdirs(myPath));
+      assertTrue(fileSys.exists(myPath));
+      assertTrue(fileSys.mkdirs(myPath));
 
-    	// Second, create a file in that directory.
-    	Path myFile = new Path("/test/mkdirs/myFile");
-    	writeFile(fileSys, myFile);
+      // Second, create a file in that directory.
+      Path myFile = new Path("/test/mkdirs/myFile");
+      writeFile(fileSys, myFile);
    
-    	// Third, use mkdir to create a subdirectory off of that file,
-    	// and check that it fails.
-    	Path myIllegalPath = new Path("/test/mkdirs/myFile/subdir");
-        Boolean exist = true;
-        try {
-    	    fileSys.mkdirs(myIllegalPath);
-        } catch (IOException e) {
-            exist = false;
-        }
-    	assertFalse(exist);
-    	assertFalse(fileSys.exists(myIllegalPath));
-    	fileSys.delete(myFile);
+      // Third, use mkdir to create a subdirectory off of that file,
+      // and check that it fails.
+      Path myIllegalPath = new Path("/test/mkdirs/myFile/subdir");
+      Boolean exist = true;
+      try {
+        fileSys.mkdirs(myIllegalPath);
+      } catch (IOException e) {
+        exist = false;
+      }
+      assertFalse(exist);
+      assertFalse(fileSys.exists(myIllegalPath));
+      fileSys.delete(myFile);
     	
     } finally {
       fileSys.close();

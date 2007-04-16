@@ -75,18 +75,18 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   DatanodeInfo( DatanodeID nodeID ) {
-      super( nodeID );
-      this.capacity = 0L;
-      this.remaining = 0L;
-      this.lastUpdate = 0L;
-      this.xceiverCount = 0;
-      this.adminState = null;    
+    super( nodeID );
+    this.capacity = 0L;
+    this.remaining = 0L;
+    this.lastUpdate = 0L;
+    this.xceiverCount = 0;
+    this.adminState = null;    
   }
   
   DatanodeInfo( DatanodeID nodeID, String location, String hostName ) {
-      this(nodeID);
-      this.location = location;
-      this.hostName = hostName;
+    this(nodeID);
+    this.location = location;
+    this.hostName = hostName;
   }
   
   /** The raw capacity. */
@@ -130,7 +130,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
   
   public String getPath() {
-      return location+NodeBase.PATH_SEPARATOR_STR+name;
+    return location+NodeBase.PATH_SEPARATOR_STR+name;
   }
 
   
@@ -150,7 +150,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     long u = c - r;
     buffer.append("Name: "+name+"\n");
     if(!NetworkTopology.DEFAULT_RACK.equals(location)) {
-        buffer.append("Rack: "+location+"\n");
+      buffer.append("Rack: "+location+"\n");
     }
     if (isDecommissioned()) {
       buffer.append("State          : Decommissioned\n");
@@ -174,7 +174,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     long u = c - r;
     buffer.append(name);
     if(!NetworkTopology.DEFAULT_RACK.equals(location)) {
-        buffer.append(" "+location);
+      buffer.append(" "+location);
     }
     if (isDecommissioned()) {
       buffer.append(" DD");
@@ -209,51 +209,51 @@ public class DatanodeInfo extends DatanodeID implements Node {
   /**
    * Returns true if the node is in the process of being decommissioned
    */
-   boolean isDecommissionInProgress() {
-     if (adminState == AdminStates.DECOMMISSION_INPROGRESS) {
-       return true;
-     }
-     return false;
-   }
+  boolean isDecommissionInProgress() {
+    if (adminState == AdminStates.DECOMMISSION_INPROGRESS) {
+      return true;
+    }
+    return false;
+  }
 
   /**
    * Returns true if the node has been decommissioned.
    */
-   boolean isDecommissioned() {
-     if (adminState == AdminStates.DECOMMISSIONED) {
-       return true;
-     }
-     return false;
-   }
+  boolean isDecommissioned() {
+    if (adminState == AdminStates.DECOMMISSIONED) {
+      return true;
+    }
+    return false;
+  }
 
   /**
    * Sets the admin state to indicate that decommision is complete.
    */
-   void setDecommissioned() {
-     adminState = AdminStates.DECOMMISSIONED;
-   }
+  void setDecommissioned() {
+    adminState = AdminStates.DECOMMISSIONED;
+  }
 
-   /**
-    * Retrieves the admin state of this node.
-    */
-    AdminStates getAdminState() {
-      if (adminState == null) {
-        return AdminStates.NORMAL;
-      }
-      return adminState;
+  /**
+   * Retrieves the admin state of this node.
+   */
+  AdminStates getAdminState() {
+    if (adminState == null) {
+      return AdminStates.NORMAL;
     }
+    return adminState;
+  }
 
-   /**
-    * Sets the admin state of this node.
-    */
-    void setAdminState(AdminStates newState) {
-      if (newState == AdminStates.NORMAL) {
-        adminState = null;
-      }
-      else {
-        adminState = newState;
-      }
+  /**
+   * Sets the admin state of this node.
+   */
+  void setAdminState(AdminStates newState) {
+    if (newState == AdminStates.NORMAL) {
+      adminState = null;
     }
+    else {
+      adminState = newState;
+    }
+  }
 
   private int level; //which level of the tree the node resides
   private Node parent; //its parent
@@ -301,7 +301,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.xceiverCount = in.readInt();
     this.location = Text.readString( in );
     AdminStates newState = (AdminStates) WritableUtils.readEnum(in,
-                                         AdminStates.class);
+                                                                AdminStates.class);
     setAdminState(newState);
   }
 }

@@ -67,140 +67,140 @@ package org.apache.hadoop.metrics;
  */
 public interface MetricsRecord {
     
-    /**
-     * Returns the record name. 
-     *
-     * @return the record name
-     */
-    public abstract String getRecordName();
+  /**
+   * Returns the record name. 
+   *
+   * @return the record name
+   */
+  public abstract String getRecordName();
     
-    /**
-     * Sets the named tag to the specified value.
-     *
-     * @param tagName name of the tag
-     * @param tagValue new value of the tag
-     * @throws MetricsException if the tagName conflicts with the configuration
-     */
-    public abstract void setTag(String tagName, String tagValue);
+  /**
+   * Sets the named tag to the specified value.
+   *
+   * @param tagName name of the tag
+   * @param tagValue new value of the tag
+   * @throws MetricsException if the tagName conflicts with the configuration
+   */
+  public abstract void setTag(String tagName, String tagValue);
     
-    /**
-     * Sets the named tag to the specified value.
-     *
-     * @param tagName name of the tag
-     * @param tagValue new value of the tag
-     * @throws MetricsException if the tagName conflicts with the configuration
-     */
-    public abstract void setTag(String tagName, int tagValue);
+  /**
+   * Sets the named tag to the specified value.
+   *
+   * @param tagName name of the tag
+   * @param tagValue new value of the tag
+   * @throws MetricsException if the tagName conflicts with the configuration
+   */
+  public abstract void setTag(String tagName, int tagValue);
     
-    /**
-     * Sets the named tag to the specified value.
-     *
-     * @param tagName name of the tag
-     * @param tagValue new value of the tag
-     * @throws MetricsException if the tagName conflicts with the configuration
-     */
-    public abstract void setTag(String tagName, short tagValue);
+  /**
+   * Sets the named tag to the specified value.
+   *
+   * @param tagName name of the tag
+   * @param tagValue new value of the tag
+   * @throws MetricsException if the tagName conflicts with the configuration
+   */
+  public abstract void setTag(String tagName, short tagValue);
     
-    /**
-     * Sets the named tag to the specified value.
-     *
-     * @param tagName name of the tag
-     * @param tagValue new value of the tag
-     * @throws MetricsException if the tagName conflicts with the configuration
-     */
-    public abstract void setTag(String tagName, byte tagValue);
+  /**
+   * Sets the named tag to the specified value.
+   *
+   * @param tagName name of the tag
+   * @param tagValue new value of the tag
+   * @throws MetricsException if the tagName conflicts with the configuration
+   */
+  public abstract void setTag(String tagName, byte tagValue);
     
-    /**
-     * Sets the named metric to the specified value.
-     *
-     * @param metricName name of the metric
-     * @param metricValue new value of the metric
-     * @throws MetricsException if the metricName or the type of the metricValue 
-     * conflicts with the configuration
-     */
-    public abstract void setMetric(String metricName, int metricValue);
+  /**
+   * Sets the named metric to the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue new value of the metric
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void setMetric(String metricName, int metricValue);
     
-    /**
-     * Sets the named metric to the specified value.
-     *
-     * @param metricName name of the metric
-     * @param metricValue new value of the metric
-     * @throws MetricsException if the metricName or the type of the metricValue 
-     * conflicts with the configuration
-     */
-    public abstract void setMetric(String metricName, short metricValue);
+  /**
+   * Sets the named metric to the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue new value of the metric
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void setMetric(String metricName, short metricValue);
     
-    /**
-     * Sets the named metric to the specified value.
-     *
-     * @param metricName name of the metric
-     * @param metricValue new value of the metric
-     * @throws MetricsException if the metricName or the type of the metricValue 
-     * conflicts with the configuration
-     */
-    public abstract void setMetric(String metricName, byte metricValue);
+  /**
+   * Sets the named metric to the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue new value of the metric
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void setMetric(String metricName, byte metricValue);
     
-    /**
-     * Sets the named metric to the specified value.
-     *
-     * @param metricName name of the metric
-     * @param metricValue new value of the metric
-     * @throws MetricsException if the metricName or the type of the metricValue 
-     * conflicts with the configuration
-     */
-    public abstract void setMetric(String metricName, float metricValue);
+  /**
+   * Sets the named metric to the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue new value of the metric
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void setMetric(String metricName, float metricValue);
     
-    /**
-     * Increments the named metric by the specified value.
-     *
-     * @param metricName name of the metric
-     * @param metricValue incremental value
-     * @throws MetricsException if the metricName or the type of the metricValue 
-     * conflicts with the configuration
-     */
-    public abstract void incrMetric(String metricName, int metricValue);
+  /**
+   * Increments the named metric by the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue incremental value
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void incrMetric(String metricName, int metricValue);
     
-    /**
-     * Increments the named metric by the specified value.
-     *
-     * @param metricName name of the metric
-     * @param metricValue incremental value
-     * @throws MetricsException if the metricName or the type of the metricValue 
-     * conflicts with the configuration
-     */
-    public abstract void incrMetric(String metricName, short metricValue);
+  /**
+   * Increments the named metric by the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue incremental value
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void incrMetric(String metricName, short metricValue);
     
-    /**
-     * Increments the named metric by the specified value.
-     *
-     * @param metricName name of the metric
-     * @param metricValue incremental value
-     * @throws MetricsException if the metricName or the type of the metricValue 
-     * conflicts with the configuration
-     */
-    public abstract void incrMetric(String metricName, byte metricValue);
+  /**
+   * Increments the named metric by the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue incremental value
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void incrMetric(String metricName, byte metricValue);
     
-    /**
-     * Increments the named metric by the specified value.
-     *
-     * @param metricName name of the metric
-     * @param metricValue incremental value
-     * @throws MetricsException if the metricName or the type of the metricValue 
-     * conflicts with the configuration
-     */
-    public abstract void incrMetric(String metricName, float metricValue);
+  /**
+   * Increments the named metric by the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue incremental value
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void incrMetric(String metricName, float metricValue);
     
-    /**
-     * Updates the table of buffered data which is to be sent periodically.
-     * If the tag values match an existing row, that row is updated; 
-     * otherwise, a new row is added.
-     */
-    public abstract void update();
+  /**
+   * Updates the table of buffered data which is to be sent periodically.
+   * If the tag values match an existing row, that row is updated; 
+   * otherwise, a new row is added.
+   */
+  public abstract void update();
     
-    /**
-     * Removes, from the buffered data table, the row (if it exists) having tags 
-     * that equal the tags that have been set on this record. 
-     */
-    public abstract void remove();
+  /**
+   * Removes, from the buffered data table, the row (if it exists) having tags 
+   * that equal the tags that have been set on this record. 
+   */
+  public abstract void remove();
     
 }

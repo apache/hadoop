@@ -110,7 +110,7 @@ class TaskLog {
      * @param filter the {@link LogFilter} to apply on userlogs.
      */
     Writer(String taskId, LogFilter filter, 
-            int noKeepSplits, long totalLogSize, boolean purgeLogSplits, int logsRetainHours) {
+           int noKeepSplits, long totalLogSize, boolean purgeLogSplits, int logsRetainHours) {
       this.taskId = taskId;
       this.filter = filter;
       
@@ -164,10 +164,10 @@ class TaskLog {
         // Purge logs of tasks on this tasktracker if their  
         // mtime has exceeded "mapred.task.log.retain" hours
         long purgeTimeStamp = System.currentTimeMillis() - 
-                              (logsRetainHours*60*60*1000);
+          (logsRetainHours*60*60*1000);
         File[] oldTaskLogs = LOG_DIR.listFiles(
-                                new TaskLogsPurgeFilter(purgeTimeStamp)
-                              );
+                                               new TaskLogsPurgeFilter(purgeTimeStamp)
+                                               );
         if (oldTaskLogs != null) {
           for (int i=0; i < oldTaskLogs.length; ++i) {
             deleteDir(oldTaskLogs[i]);
@@ -182,8 +182,8 @@ class TaskLog {
         
         // Create the split index
         splitIndex = new BufferedOutputStream(
-            new FileOutputStream(new File(taskLogDir, SPLIT_INDEX_NAME))
-            );
+                                              new FileOutputStream(new File(taskLogDir, SPLIT_INDEX_NAME))
+                                              );
 
         out = createLogSplit(noSplits);
         initialized = true;
@@ -199,11 +199,11 @@ class TaskLog {
      * @throws IOException
      */
     public synchronized void write(byte[] b, int off, int len) 
-    throws IOException {
+      throws IOException {
       // Check if we need to rotate the log
       if (splitLength > splitFileSize) {
         LOG.debug("Total no. of bytes written to split#" + noSplits + 
-            " -> " + splitLength);
+                  " -> " + splitLength);
         logRotate();
       }
       
@@ -238,7 +238,7 @@ class TaskLog {
     }
 
     private synchronized OutputStream createLogSplit(int split) 
-    throws IOException {
+      throws IOException {
       currentSplit =  getLogSplit(split);
       LOG.debug("About to create the split: " + currentSplit);
       return new BufferedOutputStream(new FileOutputStream(currentSplit));
@@ -246,7 +246,7 @@ class TaskLog {
     
     private synchronized void writeIndexRecord() throws IOException {
       String indexRecord = new String(currentSplit + "|" + 
-          splitOffset + "|" + splitLength + "\n");
+                                      splitOffset + "|" + splitLength + "\n");
       splitIndex.write(indexRecord.getBytes());
       splitIndex.flush();
     }
@@ -273,7 +273,7 @@ class TaskLog {
           File purgeLogSplit = getLogSplit((noSplits-noKeepSplits));
           purgeLogSplit.delete();
           LOG.debug("Purged log-split #" + (noSplits-noKeepSplits) + " - " + 
-              purgeLogSplit);
+                    purgeLogSplit);
         }
       }
       
@@ -327,8 +327,8 @@ class TaskLog {
     
     private synchronized void init() throws IOException {
       this.splitIndex = new BufferedReader(new InputStreamReader(
-                          new FileInputStream(new File(taskLogDir, 
-                                  SPLIT_INDEX_NAME))));
+                                                                 new FileInputStream(new File(taskLogDir, 
+                                                                                              SPLIT_INDEX_NAME))));
 
       // Parse the split-index and store the offsets/lengths
       ArrayList<IndexRecord> records = new ArrayList<IndexRecord>();
@@ -337,16 +337,16 @@ class TaskLog {
         String[] fields = line.split("\\|");
         if (fields.length != 3) {
           throw new IOException("Malformed split-index with " + 
-              fields.length + " fields");
+                                fields.length + " fields");
         }
         
         IndexRecord record = new IndexRecord(
-                                fields[0], 
-                                Long.valueOf(fields[1]).longValue(), 
-                                Long.valueOf(fields[2]).longValue()
-                              );
+                                             fields[0], 
+                                             Long.valueOf(fields[1]).longValue(), 
+                                             Long.valueOf(fields[2]).longValue()
+                                             );
         LOG.debug("Split: <" + record.splitName + ", " + record.splitOffset + 
-            ", " + record.splitLength + ">");
+                  ", " + record.splitLength + ">");
         
         // Save 
         records.add(record);
@@ -398,7 +398,7 @@ class TaskLog {
         }
       }
       LOG.debug("Total log-size on disk: " + totalLogSize + 
-          "; actual log-size: " + logFileSize);
+                "; actual log-size: " + logFileSize);
 
       // Copy log data into buffer
       byte[] b = new byte[totalLogSize];
@@ -434,8 +434,8 @@ class TaskLog {
      * @throws IOException
      */
     public synchronized int tail(byte[] b, int off, int len, 
-        long tailSize, int tailWindow) 
-    throws IOException {
+                                 long tailSize, int tailWindow) 
+      throws IOException {
       if (!initialized) {
         init();
       }
@@ -448,7 +448,7 @@ class TaskLog {
       }
       
       return read(b, off, len, 
-          (long)(logFileSize-(tailSize*tailWindow)), tailSize);
+                  (long)(logFileSize-(tailSize*tailWindow)), tailSize);
     }
 
     /**
@@ -464,8 +464,8 @@ class TaskLog {
      * @throws IOException
      */
     public synchronized int read(byte[] b, int off, int len, 
-        long logOffset, long logLength) 
-    throws IOException {
+                                 long logOffset, long logLength) 
+      throws IOException {
       LOG.debug("TaskLog.Reader.read: logOffset: " + logOffset + " - logLength: " + logLength);
 
       // Sanity check
@@ -484,7 +484,7 @@ class TaskLog {
       boolean inRange = false;
       for (int i=0; i < indexRecords.length; ++i) {
         LOG.debug("offset: " + offset + " - (split, splitOffset) : (" + 
-            i + ", " + indexRecords[i].splitOffset + ")");
+                  i + ", " + indexRecords[i].splitOffset + ")");
         
         if (offset <= indexRecords[i].splitOffset) {
           if (!inRange) {
@@ -533,7 +533,7 @@ class TaskLog {
         long skipBytes = 
           in.skip(logOffset - indexRecords[startIndex].splitOffset);
         LOG.debug("Skipped " + skipBytes + " bytes from " + 
-            startIndex + " stream");
+                  startIndex + " stream");
       }
       int bytesRead = 0, totalBytesRead = 0;
       len = Math.min((int)logLength, len);
@@ -549,7 +549,7 @@ class TaskLog {
     }
 
     private synchronized InputStream getLogSplit(int split) 
-    throws IOException {
+      throws IOException {
       String splitName = indexRecords[split].splitName;
       LOG.debug("About to open the split: " + splitName);
       InputStream in = null;

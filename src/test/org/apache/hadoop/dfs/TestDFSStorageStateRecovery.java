@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.Path;
 public class TestDFSStorageStateRecovery extends TestCase {
  
   private static final Log LOG = LogFactory.getLog(
-    "org.apache.hadoop.dfs.TestDFSStorageStateRecovery");
+                                                   "org.apache.hadoop.dfs.TestDFSStorageStateRecovery");
   private Configuration conf;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
@@ -84,13 +84,13 @@ public class TestDFSStorageStateRecovery extends TestCase {
   void log(String label, int numDirs, int testCaseNum, boolean[] state) {
     LOG.info("============================================================");
     LOG.info("***TEST " + (testCounter++) + "*** " 
-      + label + ":"
-      + " numDirs="+numDirs
-      + " testCase="+testCaseNum
-      + " current="+state[0]
-      + " previous="+state[1]
-      + " previous.tmp="+state[2]
-      + " removed.tmp="+state[3]);
+             + label + ":"
+             + " numDirs="+numDirs
+             + " testCase="+testCaseNum
+             + " current="+state[0]
+             + " previous="+state[1]
+             + " previous.tmp="+state[2]
+             + " removed.tmp="+state[3]);
   }
   
   /**
@@ -111,8 +111,8 @@ public class TestDFSStorageStateRecovery extends TestCase {
    */
   String[] createStorageState(NodeType nodeType, boolean[] state) throws Exception {
     String[] baseDirs = (nodeType == NAME_NODE ?
-      conf.getStrings("dfs.name.dir") :
-      conf.getStrings("dfs.data.dir"));
+                         conf.getStrings("dfs.name.dir") :
+                         conf.getStrings("dfs.data.dir"));
     UpgradeUtilities.createEmptyDirs(baseDirs);
     if (state[0])  // current
       UpgradeUtilities.createStorageDirs(nodeType, baseDirs, "current");
@@ -134,38 +134,38 @@ public class TestDFSStorageStateRecovery extends TestCase {
    */
   void checkResult(NodeType nodeType, String[] baseDirs, 
                    boolean currentShouldExist, boolean previousShouldExist) 
-                     throws IOException
+    throws IOException
   {
     switch (nodeType) {
-      case NAME_NODE:
-        if (currentShouldExist) {
-          for (int i = 0; i < baseDirs.length; i++) {
-            assertTrue(new File(baseDirs[i],"current").isDirectory());
-            assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
-            assertTrue(new File(baseDirs[i],"current/edits").isFile());
-            assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
-            assertTrue(new File(baseDirs[i],"current/fstime").isFile());
-          }
+    case NAME_NODE:
+      if (currentShouldExist) {
+        for (int i = 0; i < baseDirs.length; i++) {
+          assertTrue(new File(baseDirs[i],"current").isDirectory());
+          assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
+          assertTrue(new File(baseDirs[i],"current/edits").isFile());
+          assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
+          assertTrue(new File(baseDirs[i],"current/fstime").isFile());
         }
-        break;
-      case DATA_NODE:
-        if (currentShouldExist) {
-          for (int i = 0; i < baseDirs.length; i++) {
-            assertEquals(
-              UpgradeUtilities.checksumContents(
-                nodeType, new File(baseDirs[i],"current")),
-              UpgradeUtilities.checksumMasterContents(nodeType));
-          }
+      }
+      break;
+    case DATA_NODE:
+      if (currentShouldExist) {
+        for (int i = 0; i < baseDirs.length; i++) {
+          assertEquals(
+                       UpgradeUtilities.checksumContents(
+                                                         nodeType, new File(baseDirs[i],"current")),
+                       UpgradeUtilities.checksumMasterContents(nodeType));
         }
-        break;
+      }
+      break;
     }
     if (previousShouldExist) {
       for (int i = 0; i < baseDirs.length; i++) {
         assertTrue(new File(baseDirs[i],"previous").isDirectory());
         assertEquals(
-          UpgradeUtilities.checksumContents(
-            nodeType, new File(baseDirs[i],"previous")),
-          UpgradeUtilities.checksumMasterContents(nodeType));
+                     UpgradeUtilities.checksumContents(
+                                                       nodeType, new File(baseDirs[i],"previous")),
+                     UpgradeUtilities.checksumMasterContents(nodeType));
       }
     }
   }

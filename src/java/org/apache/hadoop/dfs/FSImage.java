@@ -131,14 +131,14 @@ class FSImage extends Storage {
    */
   void recoverTransitionRead( Collection<File> dataDirs,
                               StartupOption startOpt
-                            ) throws IOException {
+                              ) throws IOException {
     assert startOpt != StartupOption.FORMAT : 
       "NameNode formatting should be performed before reading the image";
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
     this.storageDirs = new ArrayList<StorageDirectory>( dataDirs.size() );
     AbstractList<StorageState> dataDirStates = 
-                                new ArrayList<StorageState>( dataDirs.size() );
+      new ArrayList<StorageState>( dataDirs.size() );
     boolean isFormatted = false;
     for( Iterator<File> it = dataDirs.iterator(); it.hasNext(); ) {
       File dataDir = it.next();
@@ -151,7 +151,7 @@ class FSImage extends Storage {
         case NON_EXISTENT:
           // name-node fails if any of the configured storage dirs are missing
           throw new InconsistentFSStateException( sd.root,
-              "storage directory does not exist or is not accessible." );
+                                                  "storage directory does not exist or is not accessible." );
         case NOT_FORMATTED:
           break;
         case CONVERT:
@@ -179,16 +179,16 @@ class FSImage extends Storage {
 
     if( dataDirs.size() == 0 )  // none of the data dirs exist
       throw new IOException( 
-          "All specified directories are not accessible or do not exist." );
+                            "All specified directories are not accessible or do not exist." );
     if( ! isFormatted && startOpt != StartupOption.ROLLBACK )
       throw new IOException( "NameNode is not formatted." );
     if( startOpt != StartupOption.UPGRADE
         && layoutVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION
         && layoutVersion != FSConstants.LAYOUT_VERSION )
       throw new IOException( 
-          "\nFile system image contains an old layout version " + layoutVersion
-          + ".\nAn upgrade to version " + FSConstants.LAYOUT_VERSION
-          + " is required.\nPlease restart NameNode with -upgrade option." );
+                            "\nFile system image contains an old layout version " + layoutVersion
+                            + ".\nAn upgrade to version " + FSConstants.LAYOUT_VERSION
+                            + " is required.\nPlease restart NameNode with -upgrade option." );
 
     // 2. Format unformatted dirs.
     this.checkpointTime = 0L;
@@ -233,8 +233,8 @@ class FSImage extends Storage {
       StorageDirectory sd = getStorageDir( idx );
       if( sd.getPreviousDir().exists() )
         throw new InconsistentFSStateException( sd.root,
-          "previous fs state should not exist during upgrade. "
-            + "Finalize or rollback first." );
+                                                "previous fs state should not exist during upgrade. "
+                                                + "Finalize or rollback first." );
     }
 
     // load the latest image
@@ -249,10 +249,10 @@ class FSImage extends Storage {
     for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
       StorageDirectory sd = getStorageDir( idx );
       LOG.info( "Upgrading image directory " + sd.root 
-              + ".\n   old LV = " + oldLV
-              + "; old CTime = " + oldCTime
-              + ".\n   new LV = " + this.getLayoutVersion()
-              + "; new CTime = " + this.getCTime() );
+                + ".\n   old LV = " + oldLV
+                + "; old CTime = " + oldCTime
+                + ".\n   new LV = " + this.getLayoutVersion()
+                + "; new CTime = " + this.getCTime() );
       File curDir = sd.getCurrentDir();
       File prevDir = sd.getPreviousDir();
       File tmpDir = sd.getPreviousTmp();
@@ -288,7 +288,7 @@ class FSImage extends Storage {
       File prevDir = sd.getPreviousDir();
       if( ! prevDir.exists() ) {  // use current directory then
         LOG.info( "Storage directory " + sd.root
-                + " does not contain previous fs state." );
+                  + " does not contain previous fs state." );
         sd.read(); // read and verify consistency with other directories
         continue;
       }
@@ -298,7 +298,7 @@ class FSImage extends Storage {
     }
     if( ! canRollback )
       throw new IOException( "Cannot rollback. " 
-            + "None of the storage directories contain previous fs state." );
+                             + "None of the storage directories contain previous fs state." );
 
     // Now that we know all directories are going to be consistent
     // Do rollback for each directory containing previous state
@@ -309,8 +309,8 @@ class FSImage extends Storage {
         continue;
 
       LOG.info( "Rolling back storage directory " + sd.root 
-          + ".\n   new LV = " + prevState.getLayoutVersion()
-          + "; new CTime = " + prevState.getCTime() );
+                + ".\n   new LV = " + prevState.getLayoutVersion()
+                + "; new CTime = " + prevState.getCTime() );
       File tmpDir = sd.getRemovedTmp();
       assert ! tmpDir.exists() : "removed.tmp directory must not exist.";
       // rename current to tmp
@@ -332,9 +332,9 @@ class FSImage extends Storage {
     if( ! prevDir.exists() )
       return; // already discarded
     LOG.info( "Finalizing upgrade for storage directory " 
-            + sd.root 
-            + ".\n   cur LV = " + this.getLayoutVersion()
-            + "; cur CTime = " + this.getCTime() );
+              + sd.root 
+              + ".\n   cur LV = " + this.getLayoutVersion()
+              + "; cur CTime = " + this.getCTime() );
     assert sd.getCurrentDir().exists() : "Current directory must exist.";
     final File tmpDir = sd.getFinalizedTmp();
     // rename previous to tmp and remove
@@ -355,7 +355,7 @@ class FSImage extends Storage {
 
   protected void getFields( Properties props, 
                             StorageDirectory sd 
-                          ) throws IOException {
+                            ) throws IOException {
     super.getFields( props, sd );
     if( layoutVersion == 0 )
       throw new IOException("NameNode directory " 
@@ -389,7 +389,7 @@ class FSImage extends Storage {
    */
   protected void setFields( Properties props, 
                             StorageDirectory sd 
-                          ) throws IOException {
+                            ) throws IOException {
     super.setFields( props, sd );
     writeCheckpointTime( sd );
   }
@@ -406,7 +406,7 @@ class FSImage extends Storage {
     File timeFile = getImageFile( sd, NameNodeFile.TIME );
     if (timeFile.exists()) { timeFile.delete(); }
     DataOutputStream out = new DataOutputStream(
-          new FileOutputStream(timeFile));
+                                                new FileOutputStream(timeFile));
     try {
       out.writeLong( checkpointTime );
     } finally {
@@ -439,10 +439,10 @@ class FSImage extends Storage {
     // check consistency of the old storage
     if( ! oldImageDir.isDirectory() )
       throw new InconsistentFSStateException( sd.root,
-          oldImageDir + " is not a directory." );
+                                              oldImageDir + " is not a directory." );
     if( ! oldImageDir.canWrite() )
       throw new InconsistentFSStateException( sd.root,
-          oldImageDir + " is not writable." );
+                                              oldImageDir + " is not writable." );
     return true;
   }
   
@@ -454,8 +454,8 @@ class FSImage extends Storage {
     File oldImage = new File( oldImageDir, "fsimage" );
     
     LOG.info( "Old layout version directory " + oldImageDir
-            + " is found. New layout version is "
-            + FSConstants.LAYOUT_VERSION );
+              + " is found. New layout version is "
+              + FSConstants.LAYOUT_VERSION );
     LOG.info( "Trying to convert ..." );
 
     // we did not use locking for the pre upgrade layout, so we cannot prevent 
@@ -603,8 +603,8 @@ class FSImage extends Storage {
     boolean needToSave = true;
     int imgVersion = this.getLayoutVersion();
     DataInputStream in = new DataInputStream(
-                            new BufferedInputStream(
-                                new FileInputStream(curFile)));
+                                             new BufferedInputStream(
+                                                                     new FileInputStream(curFile)));
     try {
       /*
        * TODO we need to change format of the image file
@@ -685,8 +685,8 @@ class FSImage extends Storage {
     // Write out data
     //
     DataOutputStream out = new DataOutputStream(
-          new BufferedOutputStream(
-          new FileOutputStream(newFile)));
+                                                new BufferedOutputStream(
+                                                                         new FileOutputStream(newFile)));
     try {
       out.writeInt(FSConstants.LAYOUT_VERSION);
       out.writeInt(namespaceID);
@@ -745,7 +745,7 @@ class FSImage extends Storage {
       sd.unlock();
     }
     LOG.info( "Storage directory " + sd.root 
-        + " has been successfully formatted." );
+              + " has been successfully formatted." );
   }
 
   public void format() throws IOException {
@@ -780,7 +780,7 @@ class FSImage extends Storage {
       }
     }
     for(Iterator<INode> it = root.getChildIterator(); it != null &&
-                                                      it.hasNext(); ) {
+          it.hasNext(); ) {
       saveImage( fullName, it.next(), out );
     }
   }

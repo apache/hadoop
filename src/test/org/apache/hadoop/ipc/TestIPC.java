@@ -49,7 +49,7 @@ public class TestIPC extends TestCase {
     private boolean sleep;
 
     public TestServer(String bindAddress, int port, int handlerCount, boolean sleep) 
-    throws IOException {
+      throws IOException {
       super(bindAddress, port, LongWritable.class, handlerCount, conf);
       this.setTimeout(1000);
       this.sleep = sleep;
@@ -136,7 +136,7 @@ public class TestIPC extends TestCase {
   }
 
   public void testSerial(int handlerCount, boolean handlerSleep, 
-                          int clientCount, int callerCount, int callCount)
+                         int clientCount, int callerCount, int callCount)
     throws Exception {
     Server server = new TestServer(ADDRESS, PORT, handlerCount, handlerSleep);
     server.start();

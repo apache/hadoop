@@ -34,9 +34,9 @@ public class NullOutputFormat implements OutputFormat {
   public RecordWriter getRecordWriter(FileSystem ignored, JobConf job, 
                                       String name, Progressable progress) {
     return new RecordWriter(){
-      public void write(WritableComparable key, Writable value) { }
-      public void close(Reporter reporter) { }
-    };
+        public void write(WritableComparable key, Writable value) { }
+        public void close(Reporter reporter) { }
+      };
   }
   
   public void checkOutputSpecs(FileSystem ignored, JobConf job) { }

@@ -29,112 +29,112 @@ import org.apache.hadoop.io.*;
  **************************************************/
 class Block implements Writable, Comparable {
 
-    static {                                      // register a ctor
-      WritableFactories.setFactory
-        (Block.class,
-         new WritableFactory() {
-           public Writable newInstance() { return new Block(); }
-         });
-    }
+  static {                                      // register a ctor
+    WritableFactories.setFactory
+      (Block.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new Block(); }
+       });
+  }
 
-    /**
-     */
-    public static boolean isBlockFilename(File f) {
-        if (f.getName().startsWith("blk_")) {
-            return true;
-        } else {
-            return false;
-        }
+  /**
+   */
+  public static boolean isBlockFilename(File f) {
+    if (f.getName().startsWith("blk_")) {
+      return true;
+    } else {
+      return false;
     }
+  }
 
-    long blkid;
-    long len;
+  long blkid;
+  long len;
 
-    /**
-     */
-    public Block() {
-        this.blkid = 0;
-        this.len = 0;
-    }
+  /**
+   */
+  public Block() {
+    this.blkid = 0;
+    this.len = 0;
+  }
 
-    /**
-     */
-    public Block(long blkid, long len) {
-        this.blkid = blkid;
-        this.len = len;
-    }
+  /**
+   */
+  public Block(long blkid, long len) {
+    this.blkid = blkid;
+    this.len = len;
+  }
 
-    /**
-     * Find the blockid from the given filename
-     */
-    public Block(File f, long len) {
-        String name = f.getName();
-        name = name.substring("blk_".length());
-        this.blkid = Long.parseLong(name);
-        this.len = len;
-    }
+  /**
+   * Find the blockid from the given filename
+   */
+  public Block(File f, long len) {
+    String name = f.getName();
+    name = name.substring("blk_".length());
+    this.blkid = Long.parseLong(name);
+    this.len = len;
+  }
 
-    /**
-     */
-    public long getBlockId() {
-        return blkid;
-    }
+  /**
+   */
+  public long getBlockId() {
+    return blkid;
+  }
 
-    /**
-     */
-    public String getBlockName() {
-        return "blk_" + String.valueOf(blkid);
-    }
+  /**
+   */
+  public String getBlockName() {
+    return "blk_" + String.valueOf(blkid);
+  }
 
-    /**
-     */
-    public long getNumBytes() {
-        return len;
-    }
-    public void setNumBytes(long len) {
-        this.len = len;
-    }
+  /**
+   */
+  public long getNumBytes() {
+    return len;
+  }
+  public void setNumBytes(long len) {
+    this.len = len;
+  }
 
-    /**
-     */
-    public String toString() {
-        return getBlockName();
-    }
+  /**
+   */
+  public String toString() {
+    return getBlockName();
+  }
 
-    /////////////////////////////////////
-    // Writable
-    /////////////////////////////////////
-    public void write(DataOutput out) throws IOException {
-        out.writeLong(blkid);
-        out.writeLong(len);
-    }
+  /////////////////////////////////////
+  // Writable
+  /////////////////////////////////////
+  public void write(DataOutput out) throws IOException {
+    out.writeLong(blkid);
+    out.writeLong(len);
+  }
 
-    public void readFields(DataInput in) throws IOException {
-        this.blkid = in.readLong();
-        this.len = in.readLong();
-        if( len < 0 ) {
-          throw new IOException("Unexpected block size: " + len);
-        }
+  public void readFields(DataInput in) throws IOException {
+    this.blkid = in.readLong();
+    this.len = in.readLong();
+    if( len < 0 ) {
+      throw new IOException("Unexpected block size: " + len);
     }
+  }
 
-    /////////////////////////////////////
-    // Comparable
-    /////////////////////////////////////
-    public int compareTo(Object o) {
-        Block b = (Block) o;
-        if ( blkid < b.blkid ) {
-            return -1;
-        } else if ( blkid == b.blkid ) {
-            return 0;
-        } else {
-            return 1;
-        }
+  /////////////////////////////////////
+  // Comparable
+  /////////////////////////////////////
+  public int compareTo(Object o) {
+    Block b = (Block) o;
+    if ( blkid < b.blkid ) {
+      return -1;
+    } else if ( blkid == b.blkid ) {
+      return 0;
+    } else {
+      return 1;
     }
-    public boolean equals(Object o) {
-        return blkid == ((Block)o).blkid;
-    }
+  }
+  public boolean equals(Object o) {
+    return blkid == ((Block)o).blkid;
+  }
     
-    public int hashCode() {
-        return 37 * 17 + (int) (blkid^(blkid>>>32));
-    }
+  public int hashCode() {
+    return 37 * 17 + (int) (blkid^(blkid>>>32));
+  }
 }

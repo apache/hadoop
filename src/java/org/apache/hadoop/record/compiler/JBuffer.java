@@ -48,7 +48,7 @@ public class JBuffer extends JCompType {
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("int i = org.apache.hadoop.record.Utils.readVInt("+
-          b+", "+s+");\n");
+                b+", "+s+");\n");
       cb.append("int z = org.apache.hadoop.record.Utils.getVIntSize(i);\n");
       cb.append(s+" += z+i; "+l+" -= (z+i);\n");
       cb.append("}\n");

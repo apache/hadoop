@@ -63,7 +63,7 @@ public class DistributedCache {
    * @throws IOException
    */
   public static Path getLocalCache(URI cache, Configuration conf, Path baseDir,
-      boolean isArchive, String md5, Path currentWorkDir) throws IOException {
+                                   boolean isArchive, String md5, Path currentWorkDir) throws IOException {
     String cacheId = makeRelative(cache, conf);
     CacheStatus lcacheStatus;
     Path localizedPath;
@@ -105,7 +105,7 @@ public class DistributedCache {
    * @throws IOException
    */
   public static void releaseCache(URI cache, Configuration conf)
-      throws IOException {
+    throws IOException {
     String cacheId = makeRelative(cache, conf);
     synchronized (cachedArchives) {
       CacheStatus lcacheStatus = (CacheStatus) cachedArchives.get(cacheId);
@@ -143,7 +143,7 @@ public class DistributedCache {
    * on/absolute_path
    */
   private static String makeRelative(URI cache, Configuration conf)
-      throws IOException {
+    throws IOException {
     String fsname = cache.getScheme();
     String path;
     FileSystem dfs = FileSystem.get(conf);
@@ -162,7 +162,7 @@ public class DistributedCache {
 
   // the methoed which actually copies the caches locally and unjars/unzips them
   private static Path localizeCache(URI cache, CacheStatus cacheStatus,
-      Configuration conf, boolean isArchive, String md5, Path currentWorkDir) throws IOException {
+                                    Configuration conf, boolean isArchive, String md5, Path currentWorkDir) throws IOException {
     boolean b = true;
     boolean doSymlink = getSymlink(conf);
     FileSystem dfs = getFileSystem(cache, conf);
@@ -174,7 +174,7 @@ public class DistributedCache {
         if (doSymlink){
           if (!flink.exists())
             FileUtil.symLink(cacheStatus.localLoadPath.toString(), 
-                link);
+                             link);
         }
         return cacheStatus.localLoadPath;
       }
@@ -182,7 +182,7 @@ public class DistributedCache {
         if (doSymlink){
           if (!flink.exists())
             FileUtil.symLink(cacheFilePath(cacheStatus.localLoadPath).toString(), 
-              link);
+                             link);
         }
         return cacheFilePath(cacheStatus.localLoadPath);
       }
@@ -193,29 +193,29 @@ public class DistributedCache {
       // return null
       if (cacheStatus.refcount > 1 && (cacheStatus.currentStatus == true))
         throw new IOException("Cache " + cacheStatus.localLoadPath.toString()
-            + " is in use and cannot be refreshed");
+                              + " is in use and cannot be refreshed");
       byte[] checkSum = createMD5(cache, conf);
       FileSystem localFs = FileSystem.getLocal(conf);
       localFs.delete(cacheStatus.localLoadPath);
       Path parchive = new Path(cacheStatus.localLoadPath,
                                new Path(cacheStatus.localLoadPath.getName()));
       if (!localFs.mkdirs(cacheStatus.localLoadPath)) {
-          throw new IOException("Mkdirs failed to create directory " + 
-                                cacheStatus.localLoadPath.toString());
+        throw new IOException("Mkdirs failed to create directory " + 
+                              cacheStatus.localLoadPath.toString());
       }
       String cacheId = cache.getPath();
       dfs.copyToLocalFile(new Path(cacheId), parchive);
       dfs.copyToLocalFile(new Path(cacheId + "_md5"), new Path(parchive
-          .toString()
-          + "_md5"));
+                                                               .toString()
+                                                               + "_md5"));
       if (isArchive) {
         String tmpArchive = parchive.toString().toLowerCase();
         if (tmpArchive.endsWith(".jar")) {
           RunJar.unJar(new File(parchive.toString()), new File(parchive
-              .getParent().toString()));
+                                                               .getParent().toString()));
         } else if (tmpArchive.endsWith(".zip")) {
           FileUtil.unZip(new File(parchive.toString()), new File(parchive
-              .getParent().toString()));
+                                                                 .getParent().toString()));
 
         }
         // else will not do anyhting
@@ -231,7 +231,7 @@ public class DistributedCache {
       if (doSymlink){
         if (!flink.exists())
           FileUtil.symLink(cacheStatus.localLoadPath.toString(), 
-            link);
+                           link);
       }
       return cacheStatus.localLoadPath;
     }
@@ -239,7 +239,7 @@ public class DistributedCache {
       if (doSymlink){
         if (!flink.exists())
           FileUtil.symLink(cacheFilePath(cacheStatus.localLoadPath).toString(), 
-            link);
+                           link);
       }
       return cacheFilePath(cacheStatus.localLoadPath);
     }
@@ -247,7 +247,7 @@ public class DistributedCache {
 
   // Checks if the cache has already been localized and is fresh
   private static boolean ifExistsAndFresh(CacheStatus lcacheStatus, URI cache,
-      FileSystem dfs, String confMD5, Configuration conf) throws IOException {
+                                          FileSystem dfs, String confMD5, Configuration conf) throws IOException {
     // compute the md5 of the crc
     byte[] digest = null;
     byte[] fsDigest = createMD5(cache, conf);
@@ -259,7 +259,7 @@ public class DistributedCache {
       digest = lcacheStatus.md5;
       if (!MessageDigest.isEqual(confDigest, fsDigest)) {
         throw new IOException("Inconsistencty in data caching, "
-            + "Cache archives have been changed");
+                              + "Cache archives have been changed");
       } else {
         if (!MessageDigest.isEqual(confDigest, digest)) {
           // needs refreshing
@@ -283,19 +283,19 @@ public class DistributedCache {
    * @throws IOException
    */
   public static byte[] createMD5(URI cache, Configuration conf)
-      throws IOException {
+    throws IOException {
     byte[] b = new byte[CRC_BUFFER_SIZE];
     byte[] digest = null;
 
     FileSystem fileSystem = getFileSystem(cache, conf);
     if(!(fileSystem instanceof ChecksumFileSystem)) {
-        throw new IOException( "Not a checksummed file system: "
-                +fileSystem.getUri() );
+      throw new IOException( "Not a checksummed file system: "
+                             +fileSystem.getUri() );
     }
     String filename = cache.getPath();
     Path filePath = new Path(filename);
     Path md5File = new Path(filePath.getParent().toString() + Path.SEPARATOR
-        + filePath.getName() + "_md5");
+                            + filePath.getName() + "_md5");
     MessageDigest md5 = null;
     try {
       md5 = MessageDigest.getInstance("MD5");
@@ -305,13 +305,13 @@ public class DistributedCache {
     if (!fileSystem.exists(md5File)) {
       ChecksumFileSystem checksumFs;
       if(!(fileSystem instanceof ChecksumFileSystem)) {
-          throw new IOException(
-                  "Not a checksumed file system: "+fileSystem.getUri());
+        throw new IOException(
+                              "Not a checksumed file system: "+fileSystem.getUri());
       } else {
-          checksumFs = (ChecksumFileSystem)fileSystem;
+        checksumFs = (ChecksumFileSystem)fileSystem;
       }
       FSDataInputStream fsStream = checksumFs.getRawFileSystem().open(
-              checksumFs.getChecksumFile(filePath));
+                                                                      checksumFs.getChecksumFile(filePath));
       int read = fsStream.read(b);
       while (read != -1) {
         md5.update(b, 0, read);
@@ -343,18 +343,18 @@ public class DistributedCache {
    * @throws IOException
    */
   public static void createAllSymlink(Configuration conf, File jobCacheDir, File workDir)
-  throws IOException{
+    throws IOException{
     if ((!jobCacheDir.isDirectory()) || (!workDir.isDirectory())){
       return;
     }
     boolean createSymlink = getSymlink(conf);
-     if (createSymlink){
-       File[] list = jobCacheDir.listFiles();
-       for (int i=0; i < list.length; i++){
-         FileUtil.symLink(list[i].getAbsolutePath(),
-             new File(workDir, list[i].getName()).toString());
-       }
-     }  
+    if (createSymlink){
+      File[] list = jobCacheDir.listFiles();
+      for (int i=0; i < list.length; i++){
+        FileUtil.symLink(list[i].getAbsolutePath(),
+                         new File(workDir, list[i].getName()).toString());
+      }
+    }  
   }
   
   private static String getFileSysName(URI url) {
@@ -369,7 +369,7 @@ public class DistributedCache {
   }
 
   private static FileSystem getFileSystem(URI cache, Configuration conf)
-      throws IOException {
+    throws IOException {
     String fileSysName = getFileSysName(cache);
     if (fileSysName != null)
       return FileSystem.getNamed(fileSysName, conf);
@@ -425,9 +425,9 @@ public class DistributedCache {
    * @throws IOException
    */
   public static Path[] getLocalCacheArchives(Configuration conf)
-      throws IOException {
+    throws IOException {
     return StringUtils.stringToPath(conf
-        .getStrings("mapred.cache.localArchives"));
+                                    .getStrings("mapred.cache.localArchives"));
   }
 
   /**
@@ -437,7 +437,7 @@ public class DistributedCache {
    * @throws IOException
    */
   public static Path[] getLocalCacheFiles(Configuration conf)
-      throws IOException {
+    throws IOException {
     return StringUtils.stringToPath(conf.getStrings("mapred.cache.localFiles"));
   }
 
@@ -508,7 +508,7 @@ public class DistributedCache {
   public static void addCacheArchive(URI uri, Configuration conf) {
     String archives = conf.get("mapred.cache.archives");
     conf.set("mapred.cache.archives", archives == null ? uri.toString()
-        : archives + "," + uri.toString());
+             : archives + "," + uri.toString());
   }
   
   /**
@@ -519,81 +519,81 @@ public class DistributedCache {
   public static void addCacheFile(URI uri, Configuration conf) {
     String files = conf.get("mapred.cache.files");
     conf.set("mapred.cache.files", files == null ? uri.toString() : files + ","
-        + uri.toString());
+             + uri.toString());
   }
 
-	/**
-	 * Add an file path to the current set of classpath entries It adds the file
-	 * to cache as well.
-	 * 
-	 * @param file Path of the file to be added
-	 * @param conf Configuration that contains the classpath setting
-	 */
-	public static void addFileToClassPath(Path file, Configuration conf)
-			throws IOException {
-		String classpath = conf.get("mapred.job.classpath.files");
-		conf.set("mapred.job.classpath.files", classpath == null ? file.toString()
-				: classpath + System.getProperty("path.separator") + file.toString());
-		FileSystem fs = FileSystem.get(conf);
-		URI uri = fs.makeQualified(file).toUri();
+  /**
+   * Add an file path to the current set of classpath entries It adds the file
+   * to cache as well.
+   * 
+   * @param file Path of the file to be added
+   * @param conf Configuration that contains the classpath setting
+   */
+  public static void addFileToClassPath(Path file, Configuration conf)
+    throws IOException {
+    String classpath = conf.get("mapred.job.classpath.files");
+    conf.set("mapred.job.classpath.files", classpath == null ? file.toString()
+             : classpath + System.getProperty("path.separator") + file.toString());
+    FileSystem fs = FileSystem.get(conf);
+    URI uri = fs.makeQualified(file).toUri();
 
-		addCacheFile(uri, conf);
-	}
+    addCacheFile(uri, conf);
+  }
 
-	/**
-	 * Get the file entries in classpath as an array of Path
-	 * 
-	 * @param conf Configuration that contains the classpath setting
-	 */
-	public static Path[] getFileClassPaths(Configuration conf) {
-		String classpath = conf.get("mapred.job.classpath.files");
-		if (classpath == null)
-			return null;
-		ArrayList list = Collections.list(new StringTokenizer(classpath, System
-				.getProperty("path.separator")));
-		Path[] paths = new Path[list.size()];
-		for (int i = 0; i < list.size(); i++) {
-			paths[i] = new Path((String) list.get(i));
-		}
-		return paths;
-	}
+  /**
+   * Get the file entries in classpath as an array of Path
+   * 
+   * @param conf Configuration that contains the classpath setting
+   */
+  public static Path[] getFileClassPaths(Configuration conf) {
+    String classpath = conf.get("mapred.job.classpath.files");
+    if (classpath == null)
+      return null;
+    ArrayList list = Collections.list(new StringTokenizer(classpath, System
+                                                          .getProperty("path.separator")));
+    Path[] paths = new Path[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      paths[i] = new Path((String) list.get(i));
+    }
+    return paths;
+  }
 
-	/**
-	 * Add an archive path to the current set of classpath entries. It adds the
-	 * archive to cache as well.
-	 * 
-	 * @param archive Path of the archive to be added
-	 * @param conf Configuration that contains the classpath setting
-	 */
-	public static void addArchiveToClassPath(Path archive, Configuration conf)
-			throws IOException {
-		String classpath = conf.get("mapred.job.classpath.archives");
-		conf.set("mapred.job.classpath.archives", classpath == null ? archive
-				.toString() : classpath + System.getProperty("path.separator")
-				+ archive.toString());
-		FileSystem fs = FileSystem.get(conf);
-		URI uri = fs.makeQualified(archive).toUri();
+  /**
+   * Add an archive path to the current set of classpath entries. It adds the
+   * archive to cache as well.
+   * 
+   * @param archive Path of the archive to be added
+   * @param conf Configuration that contains the classpath setting
+   */
+  public static void addArchiveToClassPath(Path archive, Configuration conf)
+    throws IOException {
+    String classpath = conf.get("mapred.job.classpath.archives");
+    conf.set("mapred.job.classpath.archives", classpath == null ? archive
+             .toString() : classpath + System.getProperty("path.separator")
+             + archive.toString());
+    FileSystem fs = FileSystem.get(conf);
+    URI uri = fs.makeQualified(archive).toUri();
 
-		addCacheArchive(uri, conf);
-	}
+    addCacheArchive(uri, conf);
+  }
 
-	/**
-	 * Get the archive entries in classpath as an array of Path
-	 * 
-	 * @param conf Configuration that contains the classpath setting
-	 */
-	public static Path[] getArchiveClassPaths(Configuration conf) {
-		String classpath = conf.get("mapred.job.classpath.archives");
-		if (classpath == null)
-			return null;
-		ArrayList list = Collections.list(new StringTokenizer(classpath, System
-				.getProperty("path.separator")));
-		Path[] paths = new Path[list.size()];
-		for (int i = 0; i < list.size(); i++) {
-			paths[i] = new Path((String) list.get(i));
-		}
-		return paths;
-	}
+  /**
+   * Get the archive entries in classpath as an array of Path
+   * 
+   * @param conf Configuration that contains the classpath setting
+   */
+  public static Path[] getArchiveClassPaths(Configuration conf) {
+    String classpath = conf.get("mapred.job.classpath.archives");
+    if (classpath == null)
+      return null;
+    ArrayList list = Collections.list(new StringTokenizer(classpath, System
+                                                          .getProperty("path.separator")));
+    Path[] paths = new Path[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      paths[i] = new Path((String) list.get(i));
+    }
+    return paths;
+  }
 
   /**
    * This method allows you to create symlinks in the current working directory
@@ -655,7 +655,7 @@ public class DistributedCache {
               if (frag3 == null)
                 return false;
               if (frag2.equalsIgnoreCase(frag3))
-                  return false;
+                return false;
             }
           }
         }

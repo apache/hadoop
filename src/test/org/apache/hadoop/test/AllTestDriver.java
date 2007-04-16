@@ -60,7 +60,7 @@ public class AllTestDriver {
       pgd.addClass("DFSCIOTest", DFSCIOTest.class, "Distributed i/o benchmark of libhdfs.");
       pgd.addClass("DistributedFSCheck", DistributedFSCheck.class, "Distributed checkup of the file system consistency.");
       pgd.addClass("testmapredsort", SortValidator.class, 
-      "A map/reduce program that validates the map-reduce framework's sort.");
+                   "A map/reduce program that validates the map-reduce framework's sort.");
       pgd.driver(argv);
     } catch(Throwable e) {
       e.printStackTrace();

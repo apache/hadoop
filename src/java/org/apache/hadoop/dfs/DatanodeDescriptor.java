@@ -94,9 +94,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param xceiverCount # of data transfers at the data node
    */
   public DatanodeDescriptor( DatanodeID nodeID, 
-                      long capacity, 
-                      long remaining,
-                      int xceiverCount ) {
+                             long capacity, 
+                             long remaining,
+                             int xceiverCount ) {
     super( nodeID );
     updateHeartbeat(capacity, remaining, xceiverCount);
     initWorkLists();
@@ -111,11 +111,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param xceiverCount # of data transfers at the data node
    */
   public DatanodeDescriptor( DatanodeID nodeID,
-                              String networkLocation,
-                              String hostName,
-                              long capacity, 
-                              long remaining,
-                              int xceiverCount ) {
+                             String networkLocation,
+                             String hostName,
+                             long capacity, 
+                             long remaining,
+                             int xceiverCount ) {
     super( nodeID, networkLocation, hostName );
     updateHeartbeat( capacity, remaining, xceiverCount);
     initWorkLists();
@@ -133,11 +133,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    */
   void addBlock(Block b) {
-      blocks.put(b, b);
+    blocks.put(b, b);
   }
   
   void removeBlock(Block b) {
-      blocks.remove(b);
+    blocks.remove(b);
   }
 
   void resetBlocks() {
@@ -240,7 +240,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
       int numBlocks = 0;
       int i;
       for (i = 0; i < replicateTargetSets.size() && 
-           numTransfers < maxNumTransfers; i++) {
+             numTransfers < maxNumTransfers; i++) {
         numTransfers += replicateTargetSets.get(i).length;
       }
       numBlocks = i;

@@ -27,69 +27,69 @@ import java.io.IOException;
  */
 public interface MetricsContext {
     
-    /**
-     * Default period in seconds at which data is sent to the metrics system.
-     */
-    public static final int DEFAULT_PERIOD = 5;
+  /**
+   * Default period in seconds at which data is sent to the metrics system.
+   */
+  public static final int DEFAULT_PERIOD = 5;
     
-    /**
-     * Returns the context name.
-     *
-     * @return the context name
-     */
-    public abstract String getContextName();
+  /**
+   * Returns the context name.
+   *
+   * @return the context name
+   */
+  public abstract String getContextName();
     
-    /**
-     * Starts or restarts monitoring, the emitting of metrics records as they are 
-     * updated. 
-     */
-    public abstract void startMonitoring()
-        throws IOException;
+  /**
+   * Starts or restarts monitoring, the emitting of metrics records as they are 
+   * updated. 
+   */
+  public abstract void startMonitoring()
+    throws IOException;
 
-    /**
-     * Stops monitoring.  This does not free any data that the implementation
-     * may have buffered for sending at the next timer event. It
-     * is OK to call <code>startMonitoring()</code> again after calling 
-     * this.
-     * @see #close()
-     */
-    public abstract void stopMonitoring();
+  /**
+   * Stops monitoring.  This does not free any data that the implementation
+   * may have buffered for sending at the next timer event. It
+   * is OK to call <code>startMonitoring()</code> again after calling 
+   * this.
+   * @see #close()
+   */
+  public abstract void stopMonitoring();
     
-    /**
-     * Returns true if monitoring is currently in progress.
-     */
-    public abstract boolean isMonitoring();
+  /**
+   * Returns true if monitoring is currently in progress.
+   */
+  public abstract boolean isMonitoring();
     
-    /**
-     * Stops monitoring and also frees any buffered data, returning this 
-     * object to its initial state.  
-     */
-    public abstract void close();
+  /**
+   * Stops monitoring and also frees any buffered data, returning this 
+   * object to its initial state.  
+   */
+  public abstract void close();
     
-    /**
-     * Creates a new MetricsRecord instance with the given <code>recordName</code>.
-     * Throws an exception if the metrics implementation is configured with a fixed
-     * set of record names and <code>recordName</code> is not in that set.
-     *
-     * @param recordName the name of the record
-     * @throws MetricsException if recordName conflicts with configuration data
-     */
-    public abstract MetricsRecord createRecord(String recordName);
+  /**
+   * Creates a new MetricsRecord instance with the given <code>recordName</code>.
+   * Throws an exception if the metrics implementation is configured with a fixed
+   * set of record names and <code>recordName</code> is not in that set.
+   *
+   * @param recordName the name of the record
+   * @throws MetricsException if recordName conflicts with configuration data
+   */
+  public abstract MetricsRecord createRecord(String recordName);
     
-    /**
-     * Registers a callback to be called at regular time intervals, as 
-     * determined by the implementation-class specific configuration.
-     *
-     * @param updater object to be run periodically; it should updated
-     * some metrics records and then return
-     */
-    public abstract void registerUpdater(Updater updater);
+  /**
+   * Registers a callback to be called at regular time intervals, as 
+   * determined by the implementation-class specific configuration.
+   *
+   * @param updater object to be run periodically; it should updated
+   * some metrics records and then return
+   */
+  public abstract void registerUpdater(Updater updater);
 
-    /**
-     * Removes a callback, if it exists.
-     * 
-     * @param updater object to be removed from the callback list
-     */
-    public abstract void unregisterUpdater(Updater updater);
+  /**
+   * Removes a callback, if it exists.
+   * 
+   * @param updater object to be removed from the callback list
+   */
+  public abstract void unregisterUpdater(Updater updater);
     
 }

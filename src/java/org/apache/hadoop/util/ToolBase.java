@@ -82,111 +82,111 @@ import org.apache.hadoop.fs.Path;
  *
  */
 public abstract class ToolBase implements Tool {
-    private static final Log LOG = LogFactory.getLog(
-            "org.apache.hadoop.util.ToolBase");
-    public Configuration conf;
+  private static final Log LOG = LogFactory.getLog(
+                                                   "org.apache.hadoop.util.ToolBase");
+  public Configuration conf;
 
-    public void setConf(Configuration conf) {
-        this.conf = conf;
-    }
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
 
-    public Configuration getConf() {
-        return conf;
-    }
+  public Configuration getConf() {
+    return conf;
+  }
     
-    /*
-     * Specify properties of each generic option
-     */
-    static private Options buildGeneralOptions() {
-        Option fs = OptionBuilder.withArgName("local|namenode:port")
-                                 .hasArg()
-                                 .withDescription("specify a namenode")
-                                 .create("fs");
-        Option jt = OptionBuilder.withArgName("local|jobtracker:port")
-                                 .hasArg()
-                                 .withDescription("specify a job tracker")
-                                 .create("jt");
-        Option oconf = OptionBuilder.withArgName("configuration file")
-                .hasArg()
-                .withDescription("specify an application configuration file" )
-                .create("conf");
-        Option property = OptionBuilder.withArgName("property=value")
-                              .hasArgs()
-                              .withArgPattern("=", 1)
-                              .withDescription("use value for given property")
-                              .create('D');
-        Options opts = new Options();
-        opts.addOption(fs);
-        opts.addOption(jt);
-        opts.addOption(oconf);
-        opts.addOption(property);
+  /*
+   * Specify properties of each generic option
+   */
+  static private Options buildGeneralOptions() {
+    Option fs = OptionBuilder.withArgName("local|namenode:port")
+      .hasArg()
+      .withDescription("specify a namenode")
+      .create("fs");
+    Option jt = OptionBuilder.withArgName("local|jobtracker:port")
+      .hasArg()
+      .withDescription("specify a job tracker")
+      .create("jt");
+    Option oconf = OptionBuilder.withArgName("configuration file")
+      .hasArg()
+      .withDescription("specify an application configuration file" )
+      .create("conf");
+    Option property = OptionBuilder.withArgName("property=value")
+      .hasArgs()
+      .withArgPattern("=", 1)
+      .withDescription("use value for given property")
+      .create('D');
+    Options opts = new Options();
+    opts.addOption(fs);
+    opts.addOption(jt);
+    opts.addOption(oconf);
+    opts.addOption(property);
         
-        return opts;
-    }
+    return opts;
+  }
     
-    /*
-     * Modify configuration according user-specified generic options
-     * @param conf Configuration to be modified
-     * @param line User-specified generic options
-     */
-    static private void processGeneralOptions( Configuration conf,
-                                               CommandLine line ) {
-        if(line.hasOption("fs")) {
-            conf.set("fs.default.name", line.getOptionValue("fs"));
-        }
-        
-        if(line.hasOption("jt")) {
-            conf.set("mapred.job.tracker", line.getOptionValue("jt"));
-        }
-        if(line.hasOption("conf")) {
-            conf.addFinalResource(new Path(line.getOptionValue("conf")));
-        }
-        if(line.hasOption('D')) {
-            String[] property = line.getOptionValues('D');
-            for(int i=0; i<property.length-1; i=i+2) {
-                if(property[i]!=null)
-                    conf.set(property[i], property[i+1]);
-            }
-         }           
+  /*
+   * Modify configuration according user-specified generic options
+   * @param conf Configuration to be modified
+   * @param line User-specified generic options
+   */
+  static private void processGeneralOptions( Configuration conf,
+                                             CommandLine line ) {
+    if(line.hasOption("fs")) {
+      conf.set("fs.default.name", line.getOptionValue("fs"));
     }
+        
+    if(line.hasOption("jt")) {
+      conf.set("mapred.job.tracker", line.getOptionValue("jt"));
+    }
+    if(line.hasOption("conf")) {
+      conf.addFinalResource(new Path(line.getOptionValue("conf")));
+    }
+    if(line.hasOption('D')) {
+      String[] property = line.getOptionValues('D');
+      for(int i=0; i<property.length-1; i=i+2) {
+        if(property[i]!=null)
+          conf.set(property[i], property[i+1]);
+      }
+    }           
+  }
  
-    /**
-     * Parse the user-specified options, get the generic options, and modify
-     * configuration accordingly
-     * @param conf Configuration to be modified
-     * @param args User-specified arguments
-     * @return Commoand-specific arguments
-     */
-    static private String[] parseGeneralOptions( Configuration conf, 
-                 String[] args ) {
-        Options opts = buildGeneralOptions();
-        CommandLineParser parser = new GnuParser();
-        try {
-          CommandLine line = parser.parse( opts, args, true );
-          processGeneralOptions( conf, line );
-          return line.getArgs();
-        } catch(ParseException e) {
-          LOG.warn("options parsing failed: "+e.getMessage());
+  /**
+   * Parse the user-specified options, get the generic options, and modify
+   * configuration accordingly
+   * @param conf Configuration to be modified
+   * @param args User-specified arguments
+   * @return Commoand-specific arguments
+   */
+  static private String[] parseGeneralOptions( Configuration conf, 
+                                               String[] args ) {
+    Options opts = buildGeneralOptions();
+    CommandLineParser parser = new GnuParser();
+    try {
+      CommandLine line = parser.parse( opts, args, true );
+      processGeneralOptions( conf, line );
+      return line.getArgs();
+    } catch(ParseException e) {
+      LOG.warn("options parsing failed: "+e.getMessage());
 
-          HelpFormatter formatter = new HelpFormatter();
-          formatter.printHelp("general options are: ", opts);
-        }
-        return args;
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp("general options are: ", opts);
     }
+    return args;
+  }
 
-    /**
-     * Work as a main program: execute a command and handle exception if any
-     * @param conf Application default configuration
-     * @param args User-specified arguments
-     * @throws Exception
-     * @return exit code to be passed to a caller. General contract is that code
-     * equal zero signifies a normal return, negative values signify errors, and
-     * positive non-zero values can be used to return application-specific codes.
-     */
-    public final int doMain(Configuration conf, String[] args) throws Exception {
-        String [] commandOptions = parseGeneralOptions(conf, args);
-        setConf(conf);
-        return this.run(commandOptions);
-    }
+  /**
+   * Work as a main program: execute a command and handle exception if any
+   * @param conf Application default configuration
+   * @param args User-specified arguments
+   * @throws Exception
+   * @return exit code to be passed to a caller. General contract is that code
+   * equal zero signifies a normal return, negative values signify errors, and
+   * positive non-zero values can be used to return application-specific codes.
+   */
+  public final int doMain(Configuration conf, String[] args) throws Exception {
+    String [] commandOptions = parseGeneralOptions(conf, args);
+    setConf(conf);
+    return this.run(commandOptions);
+  }
 
 }

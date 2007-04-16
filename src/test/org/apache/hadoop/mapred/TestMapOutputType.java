@@ -98,7 +98,7 @@ public class TestMapOutputType extends TestCase
     }
     Path inFile = new Path(inDir, "part0");
     SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, inFile, 
-        Text.class, Text.class);
+                                                           Text.class, Text.class);
     writer.append(new Text("rec: 1"), new Text("Hello"));
     writer.close();
     
@@ -108,7 +108,7 @@ public class TestMapOutputType extends TestCase
   public void testKeyMismatch() throws Exception {
     configure();
     
-//  Set bad MapOutputKeyClass and MapOutputValueClass
+    //  Set bad MapOutputKeyClass and MapOutputValueClass
     conf.setMapOutputKeyClass(IntWritable.class);
     conf.setMapOutputValueClass(IntWritable.class);
     
@@ -125,7 +125,7 @@ public class TestMapOutputType extends TestCase
   public void testValueMismatch() throws Exception {
     configure();
   
-// Set good MapOutputKeyClass, bad MapOutputValueClass    
+    // Set good MapOutputKeyClass, bad MapOutputValueClass    
     conf.setMapOutputKeyClass(Text.class);
     conf.setMapOutputValueClass(IntWritable.class);
     
@@ -142,17 +142,17 @@ public class TestMapOutputType extends TestCase
   public void testNoMismatch() throws Exception{ 
     configure();
     
-//  Set good MapOutputKeyClass and MapOutputValueClass    
-     conf.setMapOutputKeyClass(Text.class);
-     conf.setMapOutputValueClass(Text.class);
+    //  Set good MapOutputKeyClass and MapOutputValueClass    
+    conf.setMapOutputKeyClass(Text.class);
+    conf.setMapOutputValueClass(Text.class);
      
-     RunningJob r_job = jc.submitJob(conf);
-     while (!r_job.isComplete()) {
-       Thread.sleep(1000);
-     }
+    RunningJob r_job = jc.submitJob(conf);
+    while (!r_job.isComplete()) {
+      Thread.sleep(1000);
+    }
      
-     if (!r_job.isSuccessful()) {
-       fail("Oops! The job broke due to an unexpected error");
-     }
-   }
+    if (!r_job.isSuccessful()) {
+      fail("Oops! The job broke due to an unexpected error");
+    }
+  }
 }

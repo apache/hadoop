@@ -100,7 +100,7 @@ public class UserDefinedValueAggregatorDescriptor implements
    */
   public String toString() {
     return "UserDefinedValueAggregatorDescriptor with class name:" + "\t"
-        + this.className;
+      + this.className;
   }
 
   /**

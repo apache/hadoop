@@ -28,78 +28,78 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * the current system status.
  */ 
 public interface JobSubmissionProtocol extends VersionedProtocol {
-    /*
-     *Changing the versionID to 2L since the getTaskCompletionEvents method has
-     *changed
-     */
-    public static final long versionID = 3L;
-    /**
-     * Submit a Job for execution.  Returns the latest profile for
-     * that job.
-     */
-    public JobStatus submitJob(String jobFile) throws IOException;
+  /*
+   *Changing the versionID to 2L since the getTaskCompletionEvents method has
+   *changed
+   */
+  public static final long versionID = 3L;
+  /**
+   * Submit a Job for execution.  Returns the latest profile for
+   * that job.
+   */
+  public JobStatus submitJob(String jobFile) throws IOException;
 
-    /**
-     * Get the current status of the cluster
-     * @return summary of the state of the cluster
-     */
-    public ClusterStatus getClusterStatus() throws IOException;
+  /**
+   * Get the current status of the cluster
+   * @return summary of the state of the cluster
+   */
+  public ClusterStatus getClusterStatus() throws IOException;
     
-    /**
-     * Kill the indicated job
-     */
-    public void killJob(String jobid) throws IOException;
+  /**
+   * Kill the indicated job
+   */
+  public void killJob(String jobid) throws IOException;
 
-    /**
-     * Grab a handle to a job that is already known to the JobTracker
-     */
-    public JobProfile getJobProfile(String jobid) throws IOException;
+  /**
+   * Grab a handle to a job that is already known to the JobTracker
+   */
+  public JobProfile getJobProfile(String jobid) throws IOException;
 
-    /**
-     * Grab a handle to a job that is already known to the JobTracker
-     */
-    public JobStatus getJobStatus(String jobid) throws IOException;
+  /**
+   * Grab a handle to a job that is already known to the JobTracker
+   */
+  public JobStatus getJobStatus(String jobid) throws IOException;
 
-    /**
-     * Grab the current job counters
-     */
-    public Counters getJobCounters(String jobid) throws IOException;
+  /**
+   * Grab the current job counters
+   */
+  public Counters getJobCounters(String jobid) throws IOException;
     
-    /**
-     * Grab a bunch of info on the map tasks that make up the job
-     */
-    public TaskReport[] getMapTaskReports(String jobid) throws IOException;
+  /**
+   * Grab a bunch of info on the map tasks that make up the job
+   */
+  public TaskReport[] getMapTaskReports(String jobid) throws IOException;
 
-    /**
-     * Grab a bunch of info on the reduce tasks that make up the job
-     */
-    public TaskReport[] getReduceTaskReports(String jobid) throws IOException;
+  /**
+   * Grab a bunch of info on the reduce tasks that make up the job
+   */
+  public TaskReport[] getReduceTaskReports(String jobid) throws IOException;
 
-    /**
-     * A MapReduce system always operates on a single filesystem.  This 
-     * function returns the fs name.  ('local' if the localfs; 'addr:port' 
-     * if dfs).  The client can then copy files into the right locations 
-     * prior to submitting the job.
-     */
-    public String getFilesystemName() throws IOException;
+  /**
+   * A MapReduce system always operates on a single filesystem.  This 
+   * function returns the fs name.  ('local' if the localfs; 'addr:port' 
+   * if dfs).  The client can then copy files into the right locations 
+   * prior to submitting the job.
+   */
+  public String getFilesystemName() throws IOException;
 
-    /** 
-     * Get the jobs that are not completed and not failed
-     * @return array of JobStatus for the running/to-be-run
-     * jobs.
-     */
-    public JobStatus[] jobsToComplete() throws IOException;
+  /** 
+   * Get the jobs that are not completed and not failed
+   * @return array of JobStatus for the running/to-be-run
+   * jobs.
+   */
+  public JobStatus[] jobsToComplete() throws IOException;
     
-    /**
-     * Get task completion events for the jobid, starting from fromEventId. 
-     * Returns empty aray if no events are available. 
-     * @param jobid job id 
-     * @param fromEventId event id to start from.
-     * @param maxEvents the max number of events we want to look at 
-     * @return array of task completion events. 
-     * @throws IOException
-     */
-    public TaskCompletionEvent[] getTaskCompletionEvents(
-              String jobid, int fromEventId, int maxEvents) throws IOException;
+  /**
+   * Get task completion events for the jobid, starting from fromEventId. 
+   * Returns empty aray if no events are available. 
+   * @param jobid job id 
+   * @param fromEventId event id to start from.
+   * @param maxEvents the max number of events we want to look at 
+   * @return array of task completion events. 
+   * @throws IOException
+   */
+  public TaskCompletionEvent[] getTaskCompletionEvents(
+                                                       String jobid, int fromEventId, int maxEvents) throws IOException;
     
 }

@@ -49,132 +49,132 @@ public class TestDFSShell extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
-            fs instanceof DistributedFileSystem);
+               fs instanceof DistributedFileSystem);
     DistributedFileSystem fileSys = (DistributedFileSystem)fs;
     FsShell shell = new FsShell();
     shell.setConf(conf);
 
     try {
-    	// First create a new directory with mkdirs
-    	Path myPath = new Path("/test/mkdirs");
-    	assertTrue(fileSys.mkdirs(myPath));
-    	assertTrue(fileSys.exists(myPath));
-    	assertTrue(fileSys.mkdirs(myPath));
+      // First create a new directory with mkdirs
+      Path myPath = new Path("/test/mkdirs");
+      assertTrue(fileSys.mkdirs(myPath));
+      assertTrue(fileSys.exists(myPath));
+      assertTrue(fileSys.mkdirs(myPath));
 
-    	// Second, create a file in that directory.
-    	Path myFile = new Path("/test/mkdirs/myFile");
-    	writeFile(fileSys, myFile);
-        assertTrue(fileSys.exists(myFile));
+      // Second, create a file in that directory.
+      Path myFile = new Path("/test/mkdirs/myFile");
+      writeFile(fileSys, myFile);
+      assertTrue(fileSys.exists(myFile));
 
-        // Verify that we can read the file
-        {
-          String[] args = new String[2];
-          args[0] = "-cat";
-          args[1] = "/test/mkdirs/myFile";
-          int val = -1;
-          try {
-            val = shell.run(args);
-            } catch (Exception e) {
-            System.err.println("Exception raised from DFSShell.run: " +
-                               StringUtils.stringifyException(e)); 
-          }
-          assertTrue(val == 0);
+      // Verify that we can read the file
+      {
+        String[] args = new String[2];
+        args[0] = "-cat";
+        args[1] = "/test/mkdirs/myFile";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run: " +
+                             StringUtils.stringifyException(e)); 
         }
+        assertTrue(val == 0);
+      }
 
-        // Verify that we can get with and without crc
-        {
-          File testFile = new File(TEST_ROOT_DIR, "myFile");
-          File checksumFile = new File(fileSys.getChecksumFile(
-              new Path(testFile.getAbsolutePath())).toString());
-          testFile.delete();
-          checksumFile.delete();
+      // Verify that we can get with and without crc
+      {
+        File testFile = new File(TEST_ROOT_DIR, "myFile");
+        File checksumFile = new File(fileSys.getChecksumFile(
+                                                             new Path(testFile.getAbsolutePath())).toString());
+        testFile.delete();
+        checksumFile.delete();
           
-          String[] args = new String[3];
-          args[0] = "-get";
-          args[1] = "/test/mkdirs";
-          args[2] = TEST_ROOT_DIR;
-          int val = -1;
-          try {
-            val = shell.run(args);
-            } catch (Exception e) {
-            System.err.println("Exception raised from DFSShell.run " +
-                               e.getLocalizedMessage()); 
-          }
-          assertTrue(val == 0);
-          assertTrue("Copying failed.", testFile.exists());
-          assertTrue("Checksum file " + checksumFile+" is copied.", !checksumFile.exists());
-          testFile.delete();
+        String[] args = new String[3];
+        args[0] = "-get";
+        args[1] = "/test/mkdirs";
+        args[2] = TEST_ROOT_DIR;
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage()); 
         }
-        {
-          File testFile = new File(TEST_ROOT_DIR, "myFile");
-          File checksumFile = new File(fileSys.getChecksumFile(
-              new Path(testFile.getAbsolutePath())).toString());
-          testFile.delete();
-          checksumFile.delete();
+        assertTrue(val == 0);
+        assertTrue("Copying failed.", testFile.exists());
+        assertTrue("Checksum file " + checksumFile+" is copied.", !checksumFile.exists());
+        testFile.delete();
+      }
+      {
+        File testFile = new File(TEST_ROOT_DIR, "myFile");
+        File checksumFile = new File(fileSys.getChecksumFile(
+                                                             new Path(testFile.getAbsolutePath())).toString());
+        testFile.delete();
+        checksumFile.delete();
           
-          String[] args = new String[4];
-          args[0] = "-get";
-          args[1] = "-crc";
-          args[2] = "/test/mkdirs";
-          args[3] = TEST_ROOT_DIR;
-          int val = -1;
-          try {
-            val = shell.run(args);
-            } catch (Exception e) {
-            System.err.println("Exception raised from DFSShell.run " +
-                               e.getLocalizedMessage()); 
-          }
-          assertTrue(val == 0);
+        String[] args = new String[4];
+        args[0] = "-get";
+        args[1] = "-crc";
+        args[2] = "/test/mkdirs";
+        args[3] = TEST_ROOT_DIR;
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage()); 
+        }
+        assertTrue(val == 0);
           
-          assertTrue("Copying data file failed.", testFile.exists());
-          assertTrue("Checksum file " + checksumFile+" not copied.", checksumFile.exists());
-          testFile.delete();
-          checksumFile.delete();
+        assertTrue("Copying data file failed.", testFile.exists());
+        assertTrue("Checksum file " + checksumFile+" not copied.", checksumFile.exists());
+        testFile.delete();
+        checksumFile.delete();
+      }
+      // Verify that we get an error while trying to read an nonexistent file
+      {
+        String[] args = new String[2];
+        args[0] = "-cat";
+        args[1] = "/test/mkdirs/myFile1";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage()); 
         }
-        // Verify that we get an error while trying to read an nonexistent file
-        {
-          String[] args = new String[2];
-          args[0] = "-cat";
-          args[1] = "/test/mkdirs/myFile1";
-          int val = -1;
-          try {
-            val = shell.run(args);
-          } catch (Exception e) {
-            System.err.println("Exception raised from DFSShell.run " +
-                               e.getLocalizedMessage()); 
-          }
-          assertTrue(val != 0);
-        }
+        assertTrue(val != 0);
+      }
 
-        // Verify that we get an error while trying to delete an nonexistent file
-        {
-          String[] args = new String[2];
-          args[0] = "-rm";
-          args[1] = "/test/mkdirs/myFile1";
-          int val = -1;
-          try {
-            val = shell.run(args);
-          } catch (Exception e) {
-            System.err.println("Exception raised from DFSShell.run " +
-                               e.getLocalizedMessage()); 
-          }
-          assertTrue(val != 0);
+      // Verify that we get an error while trying to delete an nonexistent file
+      {
+        String[] args = new String[2];
+        args[0] = "-rm";
+        args[1] = "/test/mkdirs/myFile1";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage()); 
         }
+        assertTrue(val != 0);
+      }
 
-        // Verify that we succeed in removing the file we created
-        {
-          String[] args = new String[2];
-          args[0] = "-rm";
-          args[1] = "/test/mkdirs/myFile";
-          int val = -1;
-          try {
-            val = shell.run(args);
-          } catch (Exception e) {
-            System.err.println("Exception raised from DFSShell.run " +
-                               e.getLocalizedMessage()); 
-          }
-          assertTrue(val == 0);
+      // Verify that we succeed in removing the file we created
+      {
+        String[] args = new String[2];
+        args[0] = "-rm";
+        args[1] = "/test/mkdirs/myFile";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage()); 
         }
+        assertTrue(val == 0);
+      }
         
     } finally {
       try {

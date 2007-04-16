@@ -29,80 +29,80 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class Rcc implements RccConstants {
-    private static String language = "java";
-    private static String destDir = ".";
-    private static ArrayList<String> recFiles = new ArrayList<String>();
-    private static ArrayList<String> cmdargs = new ArrayList<String>();
-    private static JFile curFile;
-    private static Hashtable<String,JRecord> recTab;
-    private static String curDir = ".";
-    private static String curFileName;
-    private static String curModuleName;
+  private static String language = "java";
+  private static String destDir = ".";
+  private static ArrayList<String> recFiles = new ArrayList<String>();
+  private static ArrayList<String> cmdargs = new ArrayList<String>();
+  private static JFile curFile;
+  private static Hashtable<String,JRecord> recTab;
+  private static String curDir = ".";
+  private static String curFileName;
+  private static String curModuleName;
 
-    public static void main(String[] args) {
-        System.exit(driver(args));
-    }
+  public static void main(String[] args) {
+    System.exit(driver(args));
+  }
 
-    public static void usage() {
-        System.err.println("Usage: rcc --language [java|c++] ddl-files");
-    }
+  public static void usage() {
+    System.err.println("Usage: rcc --language [java|c++] ddl-files");
+  }
 
-    public static int driver(String[] args) {
-        for (int i=0; i<args.length; i++) {
-            if ("-l".equalsIgnoreCase(args[i]) ||
-                "--language".equalsIgnoreCase(args[i])) {
-                language = args[i+1].toLowerCase();
-                i++;
-            } else if ("-d".equalsIgnoreCase(args[i]) ||
-                "--destdir".equalsIgnoreCase(args[i])) {
-                destDir = args[i+1];
-                i++;
-            } else if (args[i].startsWith("-")) {
-              String arg = args[i].substring(1);
-              if (arg.startsWith("-")) {
-                arg = arg.substring(1);
-              }
-              cmdargs.add(arg.toLowerCase());
-            } else {
-                recFiles.add(args[i]);
-            }
+  public static int driver(String[] args) {
+    for (int i=0; i<args.length; i++) {
+      if ("-l".equalsIgnoreCase(args[i]) ||
+          "--language".equalsIgnoreCase(args[i])) {
+        language = args[i+1].toLowerCase();
+        i++;
+      } else if ("-d".equalsIgnoreCase(args[i]) ||
+                 "--destdir".equalsIgnoreCase(args[i])) {
+        destDir = args[i+1];
+        i++;
+      } else if (args[i].startsWith("-")) {
+        String arg = args[i].substring(1);
+        if (arg.startsWith("-")) {
+          arg = arg.substring(1);
         }
-        if (recFiles.size() == 0) {
-            usage();
-            return 1;
-        }
-        for (int i=0; i<recFiles.size(); i++) {
-            curFileName = recFiles.get(i);
-            File file = new File(curFileName);
-            try {
-                FileReader reader = new FileReader(file);
-                Rcc parser = new Rcc(reader);
-                try {
-                    recTab = new Hashtable<String,JRecord>();
-                    curFile = parser.Input();
-                } catch (ParseException e) {
-                    System.err.println(e.toString());
-                    return 1;
-                }
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                }
-            } catch (FileNotFoundException e) {
-                System.err.println("File " + (String) recFiles.get(i) +
-                    " Not found.");
-                return 1;
-            }
-            try {
-                int retCode = curFile.genCode(language, destDir, cmdargs);
-                if (retCode != 0) { return retCode; }
-            } catch (IOException e) {
-                System.err.println(e.toString());
-                return 1;
-            }
-        }
-        return 0;
+        cmdargs.add(arg.toLowerCase());
+      } else {
+        recFiles.add(args[i]);
+      }
     }
+    if (recFiles.size() == 0) {
+      usage();
+      return 1;
+    }
+    for (int i=0; i<recFiles.size(); i++) {
+      curFileName = recFiles.get(i);
+      File file = new File(curFileName);
+      try {
+        FileReader reader = new FileReader(file);
+        Rcc parser = new Rcc(reader);
+        try {
+          recTab = new Hashtable<String,JRecord>();
+          curFile = parser.Input();
+        } catch (ParseException e) {
+          System.err.println(e.toString());
+          return 1;
+        }
+        try {
+          reader.close();
+        } catch (IOException e) {
+        }
+      } catch (FileNotFoundException e) {
+        System.err.println("File " + (String) recFiles.get(i) +
+                           " Not found.");
+        return 1;
+      }
+      try {
+        int retCode = curFile.genCode(language, destDir, cmdargs);
+        if (retCode != 0) { return retCode; }
+      } catch (IOException e) {
+        System.err.println(e.toString());
+        return 1;
+      }
+    }
+    return 0;
+  }
 
   final public JFile Input() throws ParseException {
     ArrayList<JFile> ilist = new ArrayList<JFile>();
@@ -114,11 +114,11 @@ public class Rcc implements RccConstants {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case INCLUDE_TKN:
         i = Include();
-          ilist.add(i);
+        ilist.add(i);
         break;
       case MODULE_TKN:
         l = Module();
-          rlist.addAll(l);
+        rlist.addAll(l);
         break;
       default:
         jj_la1[0] = jj_gen;
@@ -136,7 +136,7 @@ public class Rcc implements RccConstants {
       }
     }
     jj_consume_token(0);
-      {if (true) return new JFile(curFileName, ilist, rlist);}
+    {if (true) return new JFile(curFileName, ilist, rlist);}
     throw new Error("Missing return statement in function");
   }
 
@@ -145,35 +145,35 @@ public class Rcc implements RccConstants {
     Token t;
     jj_consume_token(INCLUDE_TKN);
     t = jj_consume_token(CSTRING_TKN);
-        JFile ret = null;
-        fname = t.image.replaceAll("^\"", "").replaceAll("\"$","");
-        File file = new File(curDir, fname);
-        String tmpDir = curDir;
-        String tmpFile = curFileName;
-        curDir = file.getParent();
-        curFileName = file.getName();
-        try {
-            FileReader reader = new FileReader(file);
-            Rcc parser = new Rcc(reader);
-            try {
-                ret = parser.Input();
-                System.out.println(fname + " Parsed Successfully");
-            } catch (ParseException e) {
-                System.out.println(e.toString());
-                System.exit(1);
-            }
-            try {
-                reader.close();
-            } catch (IOException e) {
-            }
-        } catch (FileNotFoundException e) {
-            System.out.println("File " + fname +
-                " Not found.");
-            System.exit(1);
-        }
-        curDir = tmpDir;
-        curFileName = tmpFile;
-        {if (true) return ret;}
+    JFile ret = null;
+    fname = t.image.replaceAll("^\"", "").replaceAll("\"$","");
+    File file = new File(curDir, fname);
+    String tmpDir = curDir;
+    String tmpFile = curFileName;
+    curDir = file.getParent();
+    curFileName = file.getName();
+    try {
+      FileReader reader = new FileReader(file);
+      Rcc parser = new Rcc(reader);
+      try {
+        ret = parser.Input();
+        System.out.println(fname + " Parsed Successfully");
+      } catch (ParseException e) {
+        System.out.println(e.toString());
+        System.exit(1);
+      }
+      try {
+        reader.close();
+      } catch (IOException e) {
+      }
+    } catch (FileNotFoundException e) {
+      System.out.println("File " + fname +
+                         " Not found.");
+      System.exit(1);
+    }
+    curDir = tmpDir;
+    curFileName = tmpFile;
+    {if (true) return ret;}
     throw new Error("Missing return statement in function");
   }
 
@@ -182,11 +182,11 @@ public class Rcc implements RccConstants {
     ArrayList<JRecord> rlist;
     jj_consume_token(MODULE_TKN);
     mName = ModuleName();
-      curModuleName = mName;
+    curModuleName = mName;
     jj_consume_token(LBRACE_TKN);
     rlist = RecordList();
     jj_consume_token(RBRACE_TKN);
-      {if (true) return rlist;}
+    {if (true) return rlist;}
     throw new Error("Missing return statement in function");
   }
 
@@ -194,7 +194,7 @@ public class Rcc implements RccConstants {
     String name = "";
     Token t;
     t = jj_consume_token(IDENT_TKN);
-      name += t.image;
+    name += t.image;
     label_2:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -207,9 +207,9 @@ public class Rcc implements RccConstants {
       }
       jj_consume_token(DOT_TKN);
       t = jj_consume_token(IDENT_TKN);
-          name += "." + t.image;
+      name += "." + t.image;
     }
-      {if (true) return name;}
+    {if (true) return name;}
     throw new Error("Missing return statement in function");
   }
 
@@ -219,7 +219,7 @@ public class Rcc implements RccConstants {
     label_3:
     while (true) {
       r = Record();
-          rlist.add(r);
+      rlist.add(r);
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case RECORD_TKN:
         ;
@@ -229,7 +229,7 @@ public class Rcc implements RccConstants {
         break label_3;
       }
     }
-      {if (true) return rlist;}
+    {if (true) return rlist;}
     throw new Error("Missing return statement in function");
   }
 
@@ -240,12 +240,12 @@ public class Rcc implements RccConstants {
     JField<JType> f;
     jj_consume_token(RECORD_TKN);
     t = jj_consume_token(IDENT_TKN);
-      rname = t.image;
+    rname = t.image;
     jj_consume_token(LBRACE_TKN);
     label_4:
     while (true) {
       f = Field();
-          flist.add(f);
+      flist.add(f);
       jj_consume_token(SEMICOLON_TKN);
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case BYTE_TKN:
@@ -267,10 +267,10 @@ public class Rcc implements RccConstants {
       }
     }
     jj_consume_token(RBRACE_TKN);
-        String fqn = curModuleName + "." + rname;
-        JRecord r = new JRecord(fqn, flist);
-        recTab.put(fqn, r);
-        {if (true) return r;}
+    String fqn = curModuleName + "." + rname;
+    JRecord r = new JRecord(fqn, flist);
+    recTab.put(fqn, r);
+    {if (true) return r;}
     throw new Error("Missing return statement in function");
   }
 
@@ -279,7 +279,7 @@ public class Rcc implements RccConstants {
     Token t;
     jt = Type();
     t = jj_consume_token(IDENT_TKN);
-      {if (true) return new JField<JType>(t.image, jt);}
+    {if (true) return new JField<JType>(t.image, jt);}
     throw new Error("Missing return statement in function");
   }
 
@@ -330,15 +330,15 @@ public class Rcc implements RccConstants {
       break;
     case IDENT_TKN:
       rname = ModuleName();
-        if (rname.indexOf('.', 0) < 0) {
-            rname = curModuleName + "." + rname;
-        }
-        JRecord r = recTab.get(rname);
-        if (r == null) {
-            System.out.println("Type " + rname + " not known. Exiting.");
-            System.exit(1);
-        }
-        {if (true) return r;}
+      if (rname.indexOf('.', 0) < 0) {
+        rname = curModuleName + "." + rname;
+      }
+      JRecord r = recTab.get(rname);
+      if (r == null) {
+        System.out.println("Type " + rname + " not known. Exiting.");
+        System.exit(1);
+      }
+      {if (true) return r;}
       break;
     default:
       jj_la1[5] = jj_gen;
@@ -357,7 +357,7 @@ public class Rcc implements RccConstants {
     jj_consume_token(COMMA_TKN);
     jt2 = Type();
     jj_consume_token(GT_TKN);
-      {if (true) return new JMap(jt1, jt2);}
+    {if (true) return new JMap(jt1, jt2);}
     throw new Error("Missing return statement in function");
   }
 
@@ -367,7 +367,7 @@ public class Rcc implements RccConstants {
     jj_consume_token(LT_TKN);
     jt = Type();
     jj_consume_token(GT_TKN);
-      {if (true) return new JVector(jt);}
+    {if (true) return new JVector(jt);}
     throw new Error("Missing return statement in function");
   }
 
@@ -380,18 +380,18 @@ public class Rcc implements RccConstants {
   static private int[] jj_la1_0;
   static private int[] jj_la1_1;
   static {
-      jj_la1_0();
-      jj_la1_1();
-   }
-   private static void jj_la1_0() {
-      jj_la1_0 = new int[] {0x2800,0x2800,0x40000000,0x1000,0xffc000,0xffc000,};
-   }
-   private static void jj_la1_1() {
-      jj_la1_1 = new int[] {0x0,0x0,0x0,0x0,0x1,0x1,};
-   }
+    jj_la1_0();
+    jj_la1_1();
+  }
+  private static void jj_la1_0() {
+    jj_la1_0 = new int[] {0x2800,0x2800,0x40000000,0x1000,0xffc000,0xffc000,};
+  }
+  private static void jj_la1_1() {
+    jj_la1_1 = new int[] {0x0,0x0,0x0,0x0,0x1,0x1,};
+  }
 
   public Rcc(java.io.InputStream stream) {
-     this(stream, null);
+    this(stream, null);
   }
   public Rcc(java.io.InputStream stream, String encoding) {
     try { jj_input_stream = new SimpleCharStream(stream, encoding, 1, 1); } catch(java.io.UnsupportedEncodingException e) { throw new RuntimeException(e); }
@@ -403,7 +403,7 @@ public class Rcc implements RccConstants {
   }
 
   public void ReInit(java.io.InputStream stream) {
-     ReInit(stream, null);
+    ReInit(stream, null);
   }
   public void ReInit(java.io.InputStream stream, String encoding) {
     try { jj_input_stream.ReInit(stream, encoding, 1, 1); } catch(java.io.UnsupportedEncodingException e) { throw new RuntimeException(e); }

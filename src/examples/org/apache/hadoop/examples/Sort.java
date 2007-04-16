@@ -67,9 +67,9 @@ public class Sort {
     JobClient client = new JobClient(jobConf);
     ClusterStatus cluster = client.getClusterStatus();
     int num_maps = cluster.getTaskTrackers() * 
-         jobConf.getInt("test.sort.maps_per_host", 10);
+      jobConf.getInt("test.sort.maps_per_host", 10);
     int num_reduces = cluster.getTaskTrackers() * 
-        jobConf.getInt("test.sort.reduces_per_host", cluster.getMaxTasks());
+      jobConf.getInt("test.sort.reduces_per_host", cluster.getMaxTasks());
     List<String> otherArgs = new ArrayList<String>();
     for(int i=0; i < args.length; ++i) {
       try {
@@ -96,7 +96,7 @@ public class Sort {
     // Make sure there are exactly 2 parameters left.
     if (otherArgs.size() != 2) {
       System.out.println("ERROR: Wrong number of parameters: " +
-          otherArgs.size() + " instead of 2.");
+                         otherArgs.size() + " instead of 2.");
       printUsage();
     }
     jobConf.setInputPath(new Path((String) otherArgs.get(0)));
@@ -106,17 +106,17 @@ public class Sort {
     //job_conf.set("mapred.job.tracker", "local");
     
     System.out.println("Running on " +
-        cluster.getTaskTrackers() +
-        " nodes to sort from " + 
-        jobConf.getInputPaths()[0] + " into " +
-        jobConf.getOutputPath() + " with " + num_reduces + " reduces.");
+                       cluster.getTaskTrackers() +
+                       " nodes to sort from " + 
+                       jobConf.getInputPaths()[0] + " into " +
+                       jobConf.getOutputPath() + " with " + num_reduces + " reduces.");
     Date startTime = new Date();
     System.out.println("Job started: " + startTime);
     JobClient.runJob(jobConf);
     Date end_time = new Date();
     System.out.println("Job ended: " + end_time);
     System.out.println("The job took " + 
-       (end_time.getTime() - startTime.getTime()) /1000 + " seconds.");
+                       (end_time.getTime() - startTime.getTime()) /1000 + " seconds.");
   }
   
 }

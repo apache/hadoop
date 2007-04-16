@@ -55,8 +55,8 @@ public class PipeCombiner extends PipeReducer {
     try {
       return URLDecoder.decode(str, "UTF-8");
     } catch (UnsupportedEncodingException e) {
-        System.err.println("stream.combine.streamprocessor in jobconf not found");
-        return null;
+      System.err.println("stream.combine.streamprocessor in jobconf not found");
+      return null;
     }
   }
 

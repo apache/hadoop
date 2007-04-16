@@ -88,7 +88,7 @@ public class MuxOutputFormat implements OutputFormat {
         int c = Integer.parseInt(s1);
         if (c < 1 || c > max) {
           String msg = "Output channel '" + s + "': must be an integer between 1 and " + max
-              + " followed by '" + CHANOUT + "' and TAB";
+            + " followed by '" + CHANOUT + "' and TAB";
           throw new IndexOutOfBoundsException(msg);
         }
         return c;

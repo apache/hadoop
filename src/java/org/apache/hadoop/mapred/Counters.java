@@ -144,7 +144,7 @@ public class Counters implements Writable {
       return groupCounters.size();
     }
     
-        /**
+    /**
      * Looks up key in the ResourceBundle and returns the corresponding value.
      * If the bundle or the key doesn't exist, returns the default value.
      */
@@ -167,7 +167,7 @@ public class Counters implements Writable {
   // Map from group name (enum class name) to map of int (enum ordinal) to
   // counter record (name-value pair).
   private Map<String,Map<Integer,CounterRec>> counters =
-          new TreeMap<String,Map<Integer,CounterRec>>();
+    new TreeMap<String,Map<Integer,CounterRec>>();
   
   /**
    * Returns the names of all counter classes.
@@ -287,11 +287,11 @@ public class Counters implements Writable {
    * Convenience method for computing the sum of two sets of counters.
    */
   public static Counters sum(Counters a, Counters b) {
-      Counters counters = new Counters();
-      counters.incrAllCounters(a);
-      counters.incrAllCounters(b);
-      return counters;
-    }
+    Counters counters = new Counters();
+    counters.incrAllCounters(a);
+    counters.incrAllCounters(b);
+    return counters;
+  }
   
   /**
    * Returns the total number of counters, by summing the number of counters
