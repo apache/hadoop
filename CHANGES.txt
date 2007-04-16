@@ -204,6 +204,8 @@ Trunk (unreleased changes)
 61. HADOOP-1214.  Replace streaming classes with new counterparts 
     from Hadoop core.  (Runping Qi via tomwhite)
 
+62. HADOOP-1250.  Move a chmod utility from streaming to FileUtil.
+    (omalley via cutting)
 
 Release 0.12.3 - 2007-04-06
 

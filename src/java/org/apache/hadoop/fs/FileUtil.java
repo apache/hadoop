@@ -396,4 +396,19 @@ public class FileUtil {
    }
    return returnVal;
  }
+  
+  /**
+   * Change the permissions on a filename.
+   * @param filename the name of the file to change
+   * @param perm the permission string
+   * @return the exit code from the command
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public static int chmod(String filename, String perm
+                          ) throws IOException, InterruptedException {
+    String cmd = "chmod " + perm + " " + filename;
+    Process p = Runtime.getRuntime().exec( cmd, null );
+    return p.waitFor();
+  }
 }
