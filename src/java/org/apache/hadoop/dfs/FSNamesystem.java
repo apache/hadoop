@@ -626,7 +626,7 @@ class FSNamesystem implements FSConstants {
                          blocksMap.nodeIterator( blocks[i] ); it.hasNext(); ) {
                         machineSets[i][ numNodes++ ] = it.next();
                     }
-                    clusterMap.pseudoSortByDistance( client, machineSets[i] );
+                    clusterMap.sortByDistance( client, machineSets[i] );
                 }
             }
 
@@ -3120,13 +3120,13 @@ class FSNamesystem implements FSConstants {
       throws NotEnoughReplicasException {
         DatanodeDescriptor result;
         do {
-          List<DatanodeDescriptor> selectedNodes = 
+          DatanodeDescriptor[] selectedNodes = 
             chooseRandom(1, nodes, excludedNodes);
-          if(selectedNodes.size() == 0 ) {
+          if(selectedNodes.length == 0 ) {
             throw new NotEnoughReplicasException( 
             "Not able to place enough replicas" );
           }
-          result = (DatanodeDescriptor)(selectedNodes.get(0));
+          result = (DatanodeDescriptor)(selectedNodes[0]);
         } while( !isGoodTarget( result, blocksize, maxNodesPerRack, results));
         results.add(result);
         return result;
@@ -3143,13 +3143,13 @@ class FSNamesystem implements FSConstants {
       throws NotEnoughReplicasException {
         boolean toContinue = true;
         do {
-          List<DatanodeDescriptor> selectedNodes = 
+          DatanodeDescriptor[] selectedNodes = 
             chooseRandom(numOfReplicas, nodes, excludedNodes);
-          if(selectedNodes.size() < numOfReplicas) {
+          if(selectedNodes.length < numOfReplicas) {
             toContinue = false;
           }
-          for(int i=0; i<selectedNodes.size(); i++) {
-            DatanodeDescriptor result = (DatanodeDescriptor)(selectedNodes.get(i));
+          for(int i=0; i<selectedNodes.length; i++) {
+            DatanodeDescriptor result = (DatanodeDescriptor)(selectedNodes[i]);
             if( isGoodTarget( result, blocksize, maxNodesPerRack, results)) {
               numOfReplicas--;
               results.add(result);
@@ -3166,7 +3166,7 @@ class FSNamesystem implements FSConstants {
       /* Randomly choose <i>numOfNodes</i> nodes from <i>scope</i>.
        * @return the choosen nodes
        */
-      private List<DatanodeDescriptor> chooseRandom(int numOfReplicas, 
+      private DatanodeDescriptor[] chooseRandom(int numOfReplicas, 
           String nodes,
           List<DatanodeDescriptor> excludedNodes) {
         List<DatanodeDescriptor> results = 
@@ -3183,7 +3183,8 @@ class FSNamesystem implements FSConstants {
             numOfReplicas--;
           }
         }
-        return results;    
+        return (DatanodeDescriptor[])results.toArray(
+            new DatanodeDescriptor[results.size()]);    
       }
       
       /* judge if a node is a good target.

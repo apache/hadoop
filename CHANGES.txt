@@ -210,9 +210,6 @@ Trunk (unreleased changes)
 63. HADOOP-1258.  Fix TestCheckpoint test case to wait for 
     MiniDFSCluster to be active.  (Nigel Daley via tomwhite)
 
-64. HADOOP-1155.  Improve NetworkTopology's algorithm for finding
-    nearby nodes, used by HDFS.  (Hairong Kuang via cutting)
-
 
 Release 0.12.3 - 2007-04-06
 

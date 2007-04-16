@@ -19,7 +19,6 @@ package org.apache.hadoop.net;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
@@ -301,7 +300,6 @@ public class NetworkTopology {
     
     InnerNode clusterMap = new InnerNode( InnerNode.ROOT ); // the root
     private int numOfRacks = 0;  // rack counter
-    private HashMap<String, Node> rackMap = new HashMap<String, Node>();
     
     public NetworkTopology() {
     }
@@ -324,7 +322,6 @@ public class NetworkTopology {
         if( clusterMap.add( node) ) {
             if( rack == null ) {
                 numOfRacks++;
-                rackMap.put(node.getNetworkLocation(), node.getParent());
             }
         }
         LOG.debug("NetworkTopology became:\n" + this.toString());
@@ -342,7 +339,6 @@ public class NetworkTopology {
             InnerNode rack = (InnerNode)getNode(node.getNetworkLocation());
             if(rack == null) {
                 numOfRacks--;
-                rackMap.remove(node.getNetworkLocation());
             }
         }
         LOG.debug("NetworkTopology became:\n" + this.toString());
@@ -373,12 +369,6 @@ public class NetworkTopology {
      */
     public synchronized Node getNode( String loc ) {
         loc = NodeBase.normalize(loc);
-        // optimize searching rack node by looking up the rackMap
-        Node node = rackMap.get(loc);
-        if( node != null ) {
-          return node;
-        }
-        // otherwise slower search
         if(!NodeBase.ROOT.equals(loc))
             loc = loc.substring(1);
         return clusterMap.getLoc( loc );
@@ -450,7 +440,11 @@ public class NetworkTopology {
         return false;
       }
       
-      return node1.getParent()==node2.getParent();
+        if( node1 == node2 || node1.equals(node2)) {
+            return true;
+        }
+        
+        return node1.getParent()==node2.getParent();
     }
     
     final private static Random r = new Random();
@@ -552,47 +546,24 @@ public class NetworkTopology {
         return tree.toString();
     }
 
-    /** Sort nodes array by their distances to <i>reader</i>
-     * It linearly scans the array, if a local node is found, swap it with
-     * the first element of the array.
-     * If a local rack node is found, swap it with the first element following
-     * the local node.
-     * It leaves the rest nodes untouched.
+    /* Set and used only inside sortByDistance. 
+     * This saves an allocation each time we sort.
      */
-    public synchronized void pseudoSortByDistance( 
-                  DatanodeDescriptor reader, DatanodeDescriptor[] nodes ) {
-      if (reader == null ) return; // no need to sort
-      
-      DatanodeDescriptor tempNode;
-      int tempIndex = 0;
-      int localRackNode = -1;
-      //scan the array to find the local node & local rack node
-      for(int i=0; i<nodes.length; i++) {
-        if(tempIndex == 0 && reader == nodes[i]) { //local node
-          //swap the local node and the node at position 0
-          if( i != 0 ) {
-            tempNode = nodes[tempIndex];
-            nodes[tempIndex] = nodes[i];
-            nodes[i] = tempNode;
-          }
-          tempIndex=1;
-          if(localRackNode != -1 ) {
-            if(localRackNode == 0) {
-              localRackNode = i;
-            }
-            break;
-          }
-        } else if(localRackNode == -1 && isOnSameRack(reader, nodes[i])) { //local rack
-          localRackNode = i;
-          if(tempIndex != 0 ) break;
+    private DatanodeDescriptor distFrom = null;
+    private final Comparator<DatanodeDescriptor> nodeDistanceComparator = 
+      new Comparator<DatanodeDescriptor>() {
+        public int compare(DatanodeDescriptor n1, DatanodeDescriptor n2) {
+          return getDistance(distFrom, n1) - getDistance(distFrom, n2);
         }
-      }
+    };
       
-      // swap the local rack node and the node at position tempIndex
-      if(localRackNode != -1 && localRackNode != tempIndex ) {
-        tempNode = nodes[tempIndex];
-        nodes[tempIndex] = nodes[localRackNode];
-        nodes[localRackNode] = tempNode;
+    /** Sorts nodes array by their distances to <i>reader</i>. */
+    public synchronized void sortByDistance( final DatanodeDescriptor reader,
+                                             DatanodeDescriptor[] nodes ) { 
+      if(reader != null && contains(reader)) {
+        distFrom = reader;
+        Arrays.sort( nodes, nodeDistanceComparator );
+        distFrom = null;
       }
     }
 }
