@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.streaming;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.zip.GZIPOutputStream;
@@ -29,6 +30,7 @@ public class TestGzipInput extends TestStreaming
 {
 
   public TestGzipInput() throws IOException {
+    INPUT_FILE = new File("input.txt.gz");
   }
   
   protected void createInput() throws IOException
@@ -38,6 +40,7 @@ public class TestGzipInput extends TestStreaming
     out.write(input.getBytes("UTF-8"));
     out.close();
   }
+
 
   protected String[] genArgs() {
     return new String[] {

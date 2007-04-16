@@ -32,7 +32,7 @@ public class SequenceFileRecordReader implements RecordReader {
   private long start;
   private long end;
   private boolean more = true;
-  private Configuration conf;
+  protected Configuration conf;
 
   public SequenceFileRecordReader(Configuration conf, FileSplit split)
     throws IOException {

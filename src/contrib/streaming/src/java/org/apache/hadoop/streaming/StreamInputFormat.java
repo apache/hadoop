@@ -20,85 +20,39 @@ package org.apache.hadoop.streaming;
 
 import java.io.*;
 import java.lang.reflect.*;
-import java.util.ArrayList;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.io.compress.GzipCodec;
 
 import org.apache.hadoop.mapred.*;
 
-/** An input format that performs globbing on DFS paths and
- * selects a RecordReader based on a JobConf property.
- * @author Michel Tourn
+/** An input format that selects a RecordReader based on a JobConf property.
+ *  This should be used only for non-standard record reader such as 
+ *  StreamXmlRecordReader. For all other standard 
+ *  record readers, the appropriate input format classes should be used.
  */
-public class StreamInputFormat extends TextInputFormat {
+public class StreamInputFormat extends KeyValueTextInputFormat {
 
-  // an InputFormat should be public with the synthetic public default constructor
-  // JobTracker's JobInProgress will instantiate with clazz.newInstance() (and a custom ClassLoader)
-
-  protected static final Log LOG = LogFactory.getLog(StreamInputFormat.class.getName());
-
-  static boolean isGzippedInput(JobConf job) {
-    String val = job.get(StreamBaseRecordReader.CONF_NS + "compression");
-    return "gzip".equals(val);
-  }
-
-  public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
-
-    if (isGzippedInput(job)) {
-      return getFullFileSplits(job);
-    } else {
-      return super.getSplits(job, numSplits);
+  public RecordReader getRecordReader(final InputSplit genericSplit,
+      JobConf job, Reporter reporter) throws IOException {
+    String c = job.get("stream.recordreader.class");
+    if (c == null || c.indexOf("LineRecordReader") >= 0) {
+      return super.getRecordReader(genericSplit, job, reporter);
     }
-  }
-  /** For the compressed-files case: override InputFormatBase to produce one split. */
-  FileSplit[] getFullFileSplits(JobConf job) throws IOException {
-    Path[] files = listPaths(job);
-    int numSplits = files.length;
-    ArrayList splits = new ArrayList(numSplits);
-    for (int i = 0; i < files.length; i++) {
-      Path file = files[i];
-      long splitSize = file.getFileSystem(job).getLength(file);
-      splits.add(new FileSplit(file, 0, splitSize, job));
-    }
-    return (FileSplit[]) splits.toArray(new FileSplit[splits.size()]);
-  }
 
-  public RecordReader getRecordReader(final InputSplit genericSplit, 
-                                      JobConf job,
-                                      Reporter reporter) throws IOException {
+    // handling non-standard record reader (likely StreamXmlRecordReader) 
     FileSplit split = (FileSplit) genericSplit;
     LOG.info("getRecordReader start.....split=" + split);
     reporter.setStatus(split.toString());
 
-    long start = split.getStart();
-    long length  = split.getLength();
-    
     // Open the file and seek to the start of the split
     FileSystem fs = split.getPath().getFileSystem(job);
     FSDataInputStream in = fs.open(split.getPath());
-    if (isGzippedInput(job)) {
-      length = Long.MAX_VALUE;
-    } else if (start != 0) {
-      in.seek(start-1);
-      LineRecordReader.readLine(in, null);
-      long oldStart = start;
-      start = in.getPos();
-      length -= (start - oldStart); 
-    }
-    // Ugly hack! 
-    split = new FileSplit(split.getPath(), start, length, job);
 
     // Factory dispatch based on available params..
     Class readerClass;
-    String c = job.get("stream.recordreader.class");
-    if (c == null) {
-      readerClass = StreamLineRecordReader.class;
-    } else {
+
+    {
       readerClass = StreamUtil.goodClassOrNull(c, null);
       if (readerClass == null) {
         throw new RuntimeException("Class not found: " + c);
@@ -107,27 +61,19 @@ public class StreamInputFormat extends TextInputFormat {
 
     Constructor ctor;
     try {
-      ctor = readerClass.getConstructor(new Class[] { FSDataInputStream.class, FileSplit.class,
-          Reporter.class, JobConf.class, FileSystem.class });
+      ctor = readerClass.getConstructor(new Class[] { FSDataInputStream.class,
+          FileSplit.class, Reporter.class, JobConf.class, FileSystem.class });
     } catch (NoSuchMethodException nsm) {
       throw new RuntimeException(nsm);
     }
 
     RecordReader reader;
     try {
-      reader = (RecordReader) ctor.newInstance(new Object[] { in, split, reporter, job,
-          fs });
+      reader = (RecordReader) ctor.newInstance(new Object[] { in, split,
+          reporter, job, fs });
     } catch (Exception nsm) {
       throw new RuntimeException(nsm);
     }
-
-    if (reader instanceof StreamSequenceRecordReader) {
-      // override k/v class types with types stored in SequenceFile
-      StreamSequenceRecordReader ss = (StreamSequenceRecordReader) reader;
-      job.setInputKeyClass(ss.rin_.getKeyClass());
-      job.setInputValueClass(ss.rin_.getValueClass());
-    }
-
     return reader;
   }
 

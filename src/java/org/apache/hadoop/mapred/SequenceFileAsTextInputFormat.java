@@ -16,23 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.streaming;
+package org.apache.hadoop.mapred;
 
-import java.io.*;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.FileSplit;
-import org.apache.hadoop.mapred.SequenceFileRecordReader;
+import java.io.IOException;
 
 /**
- * same as org.apache.hadoop.mapred.SequenceFileRecordReader
- * 
- * @deprecated
+ * This class is similar to SequenceFileInputFormat, except it generates SequenceFileAsTextRecordReader 
+ * which converts the input keys and values to their String forms by calling toString() method. 
+ *
  */
-public class StreamSequenceRecordReader extends SequenceFileRecordReader {
+public class SequenceFileAsTextInputFormat extends SequenceFileInputFormat {
 
-  public StreamSequenceRecordReader(Configuration conf, FileSplit split)
-      throws IOException {
-    super(conf, split);
+  public SequenceFileAsTextInputFormat() {
+    super();
+  }
+
+  public RecordReader getRecordReader(InputSplit split, JobConf job,
+      Reporter reporter) throws IOException {
+
+    reporter.setStatus(split.toString());
+
+    return new SequenceFileAsTextRecordReader(job, (FileSplit) split);
   }
 }

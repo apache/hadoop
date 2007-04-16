@@ -79,7 +79,6 @@ public class TestSymLink extends TestCase
         };
 
         fileSys.delete(new Path(OUTPUT_DIR));
-        fileSys.mkdirs(new Path(OUTPUT_DIR));
         
         DataOutputStream file = fileSys.create(new Path(INPUT_FILE));
         file.writeBytes(mapString);

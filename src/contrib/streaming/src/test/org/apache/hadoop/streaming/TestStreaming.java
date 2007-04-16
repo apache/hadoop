@@ -77,6 +77,11 @@ public class TestStreaming extends TestCase
   public void testCommandLine()
   {
     try {
+      try {
+         OUTPUT_DIR.getAbsoluteFile().delete();
+      } catch (Exception e) {
+      }
+
       createInput();
       boolean mayExit = false;
 
@@ -93,8 +98,10 @@ public class TestStreaming extends TestCase
     } catch(Exception e) {
       failTrace(e);
     } finally {
+      File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();
       INPUT_FILE.delete();
-      OUTPUT_DIR.delete();
+      outFileCRC.delete();
+      OUTPUT_DIR.getAbsoluteFile().delete();
     }
   }
 

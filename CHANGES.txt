@@ -201,6 +201,9 @@ Trunk (unreleased changes)
 60. HADOOP-1256.  Fix NameNode so that multiple DataNodeDescriptors
     can no longer be created on startup.  (Hairong Kuang via cutting)
 
+61. HADOOP-1214.  Replace streaming classes with new counterparts 
+    from Hadoop core.  (Runping Qi via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

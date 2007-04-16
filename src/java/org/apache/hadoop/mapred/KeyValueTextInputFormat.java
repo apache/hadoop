@@ -16,23 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.streaming;
+package org.apache.hadoop.mapred;
 
-import java.io.*;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.FileSplit;
-import org.apache.hadoop.mapred.SequenceFileRecordReader;
+import java.io.IOException;
 
 /**
- * same as org.apache.hadoop.mapred.SequenceFileRecordReader
- * 
- * @deprecated
+ * An {@link InputFormat} for plain text files. Files are broken into lines.
+ * Either linefeed or carriage-return are used to signal end of line. Each line
+ * is divided into key and value parts by a separator byte. If no such a byte
+ * exists, the key will be the entire line and value will be empty.
  */
-public class StreamSequenceRecordReader extends SequenceFileRecordReader {
+public class KeyValueTextInputFormat extends TextInputFormat {
 
-  public StreamSequenceRecordReader(Configuration conf, FileSplit split)
-      throws IOException {
-    super(conf, split);
+  public RecordReader getRecordReader(InputSplit genericSplit, JobConf job,
+      Reporter reporter) throws IOException {
+    reporter.setStatus(genericSplit.toString());
+    return new KeyValueLineRecordReader(job, (FileSplit) genericSplit);
   }
+
 }
