@@ -2008,7 +2008,12 @@ class FSNamesystem implements FSConstants {
     }
     
     void unprotectedAddDatanode( DatanodeDescriptor nodeDescr ) {
-      datanodeMap.put( nodeDescr.getStorageID(), nodeDescr );
+      /* To keep host2DataNodeMap consistent with datanodeMap,
+         remove  from host2DataNodeMap the datanodeDescriptor removed
+         from datanodeMap before adding nodeDescr to host2DataNodeMap.
+       */
+      host2DataNodeMap.remove(
+          datanodeMap.put(nodeDescr.getStorageID(), nodeDescr));
       host2DataNodeMap.add(nodeDescr);
       
       NameNode.stateChangeLog.debug(
@@ -2024,8 +2029,7 @@ class FSNamesystem implements FSConstants {
      */
     void wipeDatanode( DatanodeID nodeID ) throws IOException {
       String key = nodeID.getStorageID();
-      datanodeMap.remove(key);
-      host2DataNodeMap.remove(getDatanode( nodeID ));
+      host2DataNodeMap.remove(datanodeMap.remove(key));
       NameNode.stateChangeLog.debug(
           "BLOCK* NameSystem.wipeDatanode: "
           + nodeID.getName() + " storage " + key 

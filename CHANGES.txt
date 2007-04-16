@@ -198,6 +198,9 @@ Trunk (unreleased changes)
     NullPointerException in JobControl.  
     (Johan Oskarson via tomwhite)
 
+60. HADOOP-1256.  Fix NameNode so that multiple DataNodeDescriptors
+    can no longer be created on startup.  (Hairong Kuang via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
