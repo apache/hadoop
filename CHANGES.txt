@@ -216,6 +216,9 @@ Trunk (unreleased changes)
 65. HADOOP-1251.  Add a method to Reporter to get the map InputSplit.
     (omalley via cutting)
 
+66. HADOOP-1224.  Fix "Browse the filesystem" link to no longer point 
+    to dead datanodes.  (Enis Soztutar via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

@@ -3628,12 +3628,12 @@ class FSNamesystem implements FSConstants {
   private Host2NodesMap host2DataNodeMap = new Host2NodesMap();
        
   /** Stop at and return the datanode at index (used for content browsing)*/
-  private DatanodeInfo getDatanodeByIndex( int index ) {
+  private DatanodeDescriptor getDatanodeByIndex( int index ) {
     int i = 0;
-    for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext(); ) {
-      DatanodeInfo node = it.next();
-      if( i == index )
+    for (DatanodeDescriptor node : datanodeMap.values()) {
+      if (i == index) {
         return node;
+      }
       i++;
     }
     return null;
@@ -3644,9 +3644,13 @@ class FSNamesystem implements FSConstants {
     int index = 0;
     if (size != 0) {
       index = r.nextInt(size);
-      DatanodeInfo d = getDatanodeByIndex(index);
-      if (d != null) {
-        return d.getHost() + ":" + d.getInfoPort();
+      for(int i=0; i<size; i++) {
+        DatanodeDescriptor d = getDatanodeByIndex(index);
+        if (d != null && !d.isDecommissioned() && isDatanodeDead(d) &&
+            !d.isDecommissionInProgress()) {
+          return d.getHost() + ":" + d.getInfoPort();
+        }
+        index = (index + 1) % size;
       }
     }
     return null;
