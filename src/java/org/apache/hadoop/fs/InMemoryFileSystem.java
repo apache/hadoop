@@ -44,13 +44,15 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
     private Path staticWorkingDir;
   
     //pathToFileAttribs is the final place where a file is put after it is closed
-    private Map <String, FileAttributes> pathToFileAttribs = new HashMap();
+    private Map<String, FileAttributes> pathToFileAttribs =
+      new HashMap<String, FileAttributes>();
   
     //tempFileAttribs is a temp place which is updated while reserving memory for
     //files we are going to create. It is read in the createRaw method and the
     //temp key/value is discarded. If the file makes it to "close", then it
     //ends up being in the pathToFileAttribs map.
-    private Map <String, FileAttributes> tempFileAttribs = new HashMap();
+    private Map<String, FileAttributes> tempFileAttribs =
+      new HashMap<String, FileAttributes>();
   
     public RawInMemoryFileSystem() {
       setConf(new Configuration());

@@ -65,7 +65,7 @@ public class ObjectWritable implements Writable, Configurable {
     writeObject(out, instance, declaredClass, conf);
   }
 
-  private static final Map PRIMITIVE_NAMES = new HashMap();
+  private static final Map<String, Class<?>> PRIMITIVE_NAMES = new HashMap<String, Class<?>>();
   static {
     PRIMITIVE_NAMES.put("boolean", Boolean.TYPE);
     PRIMITIVE_NAMES.put("byte", Byte.TYPE);
@@ -79,7 +79,7 @@ public class ObjectWritable implements Writable, Configurable {
   }
 
   private static class NullInstance extends Configured implements Writable {
-    private Class declaredClass;
+    private Class<?> declaredClass;
     public NullInstance() { super(null); }
     public NullInstance(Class declaredClass, Configuration conf) {
       super(conf);
@@ -87,7 +87,7 @@ public class ObjectWritable implements Writable, Configurable {
     }
     public void readFields(DataInput in) throws IOException {
       String className = UTF8.readString(in);
-      declaredClass = (Class)PRIMITIVE_NAMES.get(className);
+      declaredClass = PRIMITIVE_NAMES.get(className);
       if (declaredClass == null) {
         try {
           declaredClass = getConf().getClassByName(className);
@@ -168,10 +168,11 @@ public class ObjectWritable implements Writable, Configurable {
     
   /** Read a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding. */
+  @SuppressWarnings("unchecked")
   public static Object readObject(DataInput in, ObjectWritable objectWritable, Configuration conf)
     throws IOException {
     String className = UTF8.readString(in);
-    Class declaredClass = (Class)PRIMITIVE_NAMES.get(className);
+    Class<?> declaredClass = PRIMITIVE_NAMES.get(className);
     if (declaredClass == null) {
       try {
         declaredClass = conf.getClassByName(className);
@@ -216,7 +217,7 @@ public class ObjectWritable implements Writable, Configurable {
     } else if (declaredClass == String.class) {        // String
       instance = UTF8.readString(in);
     } else if( declaredClass.isEnum() ) {         // enum
-      instance = Enum.valueOf( declaredClass, UTF8.readString(in) );
+      instance = Enum.valueOf( (Class<? extends Enum>) declaredClass, UTF8.readString(in) );
     } else {                                      // Writable
       Class instanceClass = null;
       try {

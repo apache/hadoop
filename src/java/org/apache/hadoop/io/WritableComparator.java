@@ -32,11 +32,12 @@ import java.util.*;
  */
 public class WritableComparator implements Comparator {
 
-  private static HashMap comparators = new HashMap(); // registry
+  private static HashMap<Class, WritableComparator> comparators =
+    new HashMap<Class, WritableComparator>(); // registry
 
   /** Get a comparator for a {@link WritableComparable} implementation. */
   public static synchronized WritableComparator get(Class c) {
-    WritableComparator comparator = (WritableComparator)comparators.get(c);
+    WritableComparator comparator = comparators.get(c);
     if (comparator == null)
       comparator = new WritableComparator(c);
     return comparator;
@@ -103,6 +104,7 @@ public class WritableComparator implements Comparator {
    *
    * <p> The default implementation uses the natural ordering, calling {@link
    * Comparable#compareTo(Object)}. */
+  @SuppressWarnings("unchecked")
   public int compare(WritableComparable a, WritableComparable b) {
     return a.compareTo(b);
   }

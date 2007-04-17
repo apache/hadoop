@@ -28,8 +28,10 @@ import org.apache.hadoop.conf.Configuration;
  * @author Doug Cutting
  */
 public class WritableName {
-  private static HashMap NAME_TO_CLASS = new HashMap();
-  private static HashMap CLASS_TO_NAME = new HashMap();
+  private static HashMap<String, Class> NAME_TO_CLASS =
+    new HashMap<String, Class>();
+  private static HashMap<Class, String> CLASS_TO_NAME =
+    new HashMap<Class, String>();
 
   static {                                        // define important types
     WritableName.setName(NullWritable.class, "null");
@@ -54,7 +56,7 @@ public class WritableName {
 
   /** Return the name for a class.  Default is {@link Class#getName()}. */
   public static synchronized String getName(Class writableClass) {
-    String name = (String)CLASS_TO_NAME.get(writableClass);
+    String name = CLASS_TO_NAME.get(writableClass);
     if (name != null)
       return name;
     return writableClass.getName();
@@ -64,7 +66,7 @@ public class WritableName {
   public static synchronized Class getClass(String name,
                                             Configuration conf
                                             ) throws IOException {
-    Class writableClass = (Class)NAME_TO_CLASS.get(name);
+    Class writableClass = NAME_TO_CLASS.get(name);
     if (writableClass != null)
       return writableClass;
     try {

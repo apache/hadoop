@@ -36,9 +36,11 @@ public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
   private Path workingDir =
     new Path(System.getProperty("user.dir"));
-  TreeMap sharedLockDataSet = new TreeMap();
-  TreeMap nonsharedLockDataSet = new TreeMap();
-  TreeMap lockObjSet = new TreeMap();
+  TreeMap<File, FileInputStream> sharedLockDataSet =
+    new TreeMap<File, FileInputStream>();
+  TreeMap<File, FileOutputStream> nonsharedLockDataSet =
+    new TreeMap<File, FileOutputStream>();
+  TreeMap<File, FileLock> lockObjSet = new TreeMap<File, FileLock>();
   // by default use copy/delete instead of rename
   boolean useCopyForRename = true;
   
@@ -308,9 +310,9 @@ public class RawLocalFileSystem extends FileSystem {
     FileInputStream sharedLockData;
     FileOutputStream nonsharedLockData;
     synchronized (this) {
-      lockObj = (FileLock) lockObjSet.remove(f);
-      sharedLockData = (FileInputStream) sharedLockDataSet.remove(f);
-      nonsharedLockData = (FileOutputStream) nonsharedLockDataSet.remove(f);
+      lockObj = lockObjSet.remove(f);
+      sharedLockData = sharedLockDataSet.remove(f);
+      nonsharedLockData = nonsharedLockDataSet.remove(f);
     }
     
     if (lockObj == null) {

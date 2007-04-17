@@ -530,9 +530,10 @@ public class SequenceFile {
     
     public void write(DataOutput out) throws IOException {
       out.writeInt(this.theMetadata.size());
-      Iterator iter = this.theMetadata.entrySet().iterator();
+      Iterator<Map.Entry<Text, Text>> iter =
+        this.theMetadata.entrySet().iterator();
       while (iter.hasNext()) {
-        Map.Entry<Text, Text> en = (Map.Entry<Text, Text>)iter.next();
+        Map.Entry<Text, Text> en = iter.next();
         en.getKey().write(out);
         en.getValue().write(out);
       }
@@ -556,11 +557,13 @@ public class SequenceFile {
       if (this.theMetadata.size() != other.theMetadata.size()) {
         return false;
       }
-      Iterator iter1 = this.theMetadata.entrySet().iterator();
-      Iterator iter2 = other.theMetadata.entrySet().iterator();
+      Iterator<Map.Entry<Text, Text>> iter1 =
+        this.theMetadata.entrySet().iterator();
+      Iterator<Map.Entry<Text, Text>> iter2 =
+        other.theMetadata.entrySet().iterator();
       while (iter1.hasNext() && iter2.hasNext()) {
-        Map.Entry<Text, Text> en1 = (Map.Entry<Text, Text>)iter1.next();
-        Map.Entry<Text, Text> en2 = (Map.Entry<Text, Text>)iter2.next();
+        Map.Entry<Text, Text> en1 = iter1.next();
+        Map.Entry<Text, Text> en2 = iter2.next();
         if (!en1.getKey().equals(en2.getKey())) {
           return false;
         }
@@ -577,9 +580,10 @@ public class SequenceFile {
     public String toString() {
       StringBuffer sb = new StringBuffer();
       sb.append("size: ").append(this.theMetadata.size()).append("\n");
-      Iterator iter = this.theMetadata.entrySet().iterator();
+      Iterator<Map.Entry<Text, Text>> iter =
+        this.theMetadata.entrySet().iterator();
       while (iter.hasNext()) {
-        Map.Entry<Text, Text> en = (Map.Entry<Text, Text>)iter.next();
+        Map.Entry<Text, Text> en = iter.next();
         sb.append("\t").append(en.getKey().toString()).append("\t").append(en.getValue().toString());
         sb.append("\n");
       }
@@ -2293,7 +2297,8 @@ public class SequenceFile {
       
       //a TreeMap used to store the segments sorted by size (segment offset and
       //segment path name is used to break ties between segments of same sizes)
-      private Map <SegmentDescriptor, Void> sortedSegmentSizes = new TreeMap();
+      private Map<SegmentDescriptor, Void> sortedSegmentSizes =
+        new TreeMap<SegmentDescriptor, Void>();
             
       public void put(SegmentDescriptor stream) throws IOException {
         if (size() == 0) {
@@ -2381,7 +2386,8 @@ public class SequenceFile {
         do {
           //get the factor for this pass of merge
           factor = getPassFactor(passNo, numSegments);
-          List <SegmentDescriptor> segmentsToMerge = new ArrayList();
+          List<SegmentDescriptor> segmentsToMerge =
+            new ArrayList<SegmentDescriptor>();
           int segmentsConsidered = 0;
           int numSegmentsToConsider = factor;
           while (true) {
