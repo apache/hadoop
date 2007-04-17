@@ -229,7 +229,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     }
 
     public TaskCompletionEvent[] getMapCompletionEvents(
-        String jobId, int fromEventId, int maxLocs) throws IOException {
+                                                        String jobId, int fromEventId, int maxLocs) throws IOException {
       return TaskCompletionEvent.EMPTY_ARRAY;
     }
     

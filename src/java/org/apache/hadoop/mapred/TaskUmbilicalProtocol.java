@@ -66,14 +66,14 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
   void fsError(String message) throws IOException;
 
   /** Called by a reduce task to get the map output locations for finished maps.
-  *
-  * @param taskId the reduce task id
-  * @param fromIndex the index starting from which the locations should be 
-  * fetched
-  * @param maxLocs the max number of locations to fetch
-  * @return an array of TaskCompletionEvent
-  */
+   *
+   * @param taskId the reduce task id
+   * @param fromIndex the index starting from which the locations should be 
+   * fetched
+   * @param maxLocs the max number of locations to fetch
+   * @return an array of TaskCompletionEvent
+   */
   TaskCompletionEvent[] getMapCompletionEvents(String jobId, 
-      int fromIndex, int maxLocs) throws IOException;
+                                               int fromIndex, int maxLocs) throws IOException;
 
 }

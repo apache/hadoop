@@ -147,15 +147,15 @@ public class TaskTracker
   private int maxCurrentTasks;
   private int failures;
   private int finishedCount[] = new int[1];
-    private MapEventsFetcherThread mapEventsFetcher;
-    /**
-     * the minimum interval between jobtracker polls
-     */
-    private static final long MIN_POLL_INTERVAL = 5000;
-    /**
-     * Number of maptask completion events locations to poll for at one time
-     */  
-    private int probe_sample_size = 50;
+  private MapEventsFetcherThread mapEventsFetcher;
+  /**
+   * the minimum interval between jobtracker polls
+   */
+  private static final long MIN_POLL_INTERVAL = 5000;
+  /**
+   * Number of maptask completion events locations to poll for at one time
+   */  
+  private int probe_sample_size = 50;
     
   private class TaskTrackerMetrics {
     private MetricsRecord metricsRecord = null;
@@ -240,7 +240,7 @@ public class TaskTracker
       synchronized (rJob) {
         rJob.tasks.add(tip);
       }
-        runningJobs.notify(); //notify the fetcher thread
+      runningJobs.notify(); //notify the fetcher thread
       return rJob;
     }
   }
@@ -306,9 +306,9 @@ public class TaskTracker
         
     this.minSpaceStart = this.fConf.getLong("mapred.local.dir.minspacestart", 0L);
     this.minSpaceKill = this.fConf.getLong("mapred.local.dir.minspacekill", 0L);
-        int numCopiers = this.fConf.getInt("mapred.reduce.parallel.copies", 5);
-        //tweak the probe sample size (make it a function of numCopiers)
-        probe_sample_size = Math.max(numCopiers*5, 50);
+    int numCopiers = this.fConf.getInt("mapred.reduce.parallel.copies", 5);
+    //tweak the probe sample size (make it a function of numCopiers)
+    probe_sample_size = Math.max(numCopiers*5, 50);
         
         
     this.myMetrics = new TaskTrackerMetrics();
@@ -350,165 +350,165 @@ public class TaskTracker
                        jobTrackAddr, this.fConf);
         
     this.running = true;
-        // start the thread that will fetch map task completion events
-        this.mapEventsFetcher = new MapEventsFetcherThread();
-        mapEventsFetcher.setDaemon(true);
-        mapEventsFetcher.setName(
-            "Map-events fetcher for all reduce tasks " + "on " + 
-            taskTrackerName);
-        mapEventsFetcher.start();
+    // start the thread that will fetch map task completion events
+    this.mapEventsFetcher = new MapEventsFetcherThread();
+    mapEventsFetcher.setDaemon(true);
+    mapEventsFetcher.setName(
+                             "Map-events fetcher for all reduce tasks " + "on " + 
+                             taskTrackerName);
+    mapEventsFetcher.start();
   }
     
-    private class MapEventsFetcherThread extends Thread {
+  private class MapEventsFetcherThread extends Thread {
 
-      private List <FetchStatus> reducesInShuffle() {
-        List <FetchStatus> fList = new ArrayList<FetchStatus>();
-        for (Map.Entry <String, RunningJob> item : runningJobs.entrySet()) {
-          RunningJob rjob = item.getValue();
-          String jobId = item.getKey();
-          FetchStatus f;
-          synchronized (rjob) {
-            f = rjob.getFetchStatus();
-            for (TaskInProgress tip : rjob.tasks) {
-              Task task = tip.getTask();
-              if (!task.isMapTask()) {
-                if (((ReduceTask)task).getPhase() == 
+    private List <FetchStatus> reducesInShuffle() {
+      List <FetchStatus> fList = new ArrayList<FetchStatus>();
+      for (Map.Entry <String, RunningJob> item : runningJobs.entrySet()) {
+        RunningJob rjob = item.getValue();
+        String jobId = item.getKey();
+        FetchStatus f;
+        synchronized (rjob) {
+          f = rjob.getFetchStatus();
+          for (TaskInProgress tip : rjob.tasks) {
+            Task task = tip.getTask();
+            if (!task.isMapTask()) {
+              if (((ReduceTask)task).getPhase() == 
                   TaskStatus.Phase.SHUFFLE) {
-                  if (rjob.getFetchStatus() == null) {
-                    //this is a new job; we start fetching its map events
-                    f = new FetchStatus(jobId, 
-                        ((ReduceTask)task).getNumMaps());
-                    rjob.setFetchStatus(f);
-                  }
-                  f = rjob.getFetchStatus();
-                  fList.add(f);
-                  break; //no need to check any more tasks belonging to this
+                if (rjob.getFetchStatus() == null) {
+                  //this is a new job; we start fetching its map events
+                  f = new FetchStatus(jobId, 
+                                      ((ReduceTask)task).getNumMaps());
+                  rjob.setFetchStatus(f);
                 }
+                f = rjob.getFetchStatus();
+                fList.add(f);
+                break; //no need to check any more tasks belonging to this
               }
             }
           }
         }
-        //at this point, we have information about for which of
-        //the running jobs do we need to query the jobtracker for map 
-        //outputs (actually map events).
-        return fList;
       }
+      //at this point, we have information about for which of
+      //the running jobs do we need to query the jobtracker for map 
+      //outputs (actually map events).
+      return fList;
+    }
       
-      public void run() {
-        LOG.info("Starting thread: " + getName());
+    public void run() {
+      LOG.info("Starting thread: " + getName());
         
-        while (true) {
-          try {
-            List <FetchStatus> fList = null;
-            synchronized (runningJobs) {
-              while (((fList = reducesInShuffle()).size()) == 0) {
-                try {
-                  runningJobs.wait();
-                } catch (InterruptedException e) {
-                  LOG.info("Shutting down: " + getName());
-                  return;
-                }
-              }
-            }
-            // now fetch all the map task events for all the reduce tasks
-            // possibly belonging to different jobs
-            for (FetchStatus f : fList) {
+      while (true) {
+        try {
+          List <FetchStatus> fList = null;
+          synchronized (runningJobs) {
+            while (((fList = reducesInShuffle()).size()) == 0) {
               try {
-                
-                f.fetchMapCompletionEvents();
-                
-                try {
-                  Thread.sleep(MIN_POLL_INTERVAL);
-                } catch (InterruptedException ie) {
-                  LOG.info("Shutting down: " + getName());
-                  return;
-                }
-              } catch (Exception e) {
-                LOG.warn(
-                    "Ignoring exception that fetch for map completion" +
-                    " events threw for " + f.jobId + " threw: " +
-                    StringUtils.stringifyException(e)); 
+                runningJobs.wait();
+              } catch (InterruptedException e) {
+                LOG.info("Shutting down: " + getName());
+                return;
               }
             }
-          } catch (Exception e) {
-            LOG.info("Ignoring exception "  + e.getMessage());
           }
+          // now fetch all the map task events for all the reduce tasks
+          // possibly belonging to different jobs
+          for (FetchStatus f : fList) {
+            try {
+                
+              f.fetchMapCompletionEvents();
+                
+              try {
+                Thread.sleep(MIN_POLL_INTERVAL);
+              } catch (InterruptedException ie) {
+                LOG.info("Shutting down: " + getName());
+                return;
+              }
+            } catch (Exception e) {
+              LOG.warn(
+                       "Ignoring exception that fetch for map completion" +
+                       " events threw for " + f.jobId + " threw: " +
+                       StringUtils.stringifyException(e)); 
+            }
+          }
+        } catch (Exception e) {
+          LOG.info("Ignoring exception "  + e.getMessage());
         }
-      } 
-    }
+      }
+    } 
+  }
 
-    private class FetchStatus {
-      /** The next event ID that we will start querying the JobTracker from*/
-      private IntWritable fromEventId;
-      /** This is the cache of map events for a given job */ 
-      private List<TaskCompletionEvent> allMapEvents;
-      /** This array will store indexes to "SUCCEEDED" map events from
-       * allMapEvents. The array is indexed by the mapId. 
-       * The reason why we store the indexes is to quickly reset SUCCEEDED 
-       * events to OBSOLETE. Thus ReduceTasks might also get to know about 
-       * OBSOLETE events and avoid fetching map outputs from the corresponding 
-       * locations.
-       */ 
-      private int indexToEventsCache[];
-      /** What jobid this fetchstatus object is for*/
-      private String jobId;
+  private class FetchStatus {
+    /** The next event ID that we will start querying the JobTracker from*/
+    private IntWritable fromEventId;
+    /** This is the cache of map events for a given job */ 
+    private List<TaskCompletionEvent> allMapEvents;
+    /** This array will store indexes to "SUCCEEDED" map events from
+     * allMapEvents. The array is indexed by the mapId. 
+     * The reason why we store the indexes is to quickly reset SUCCEEDED 
+     * events to OBSOLETE. Thus ReduceTasks might also get to know about 
+     * OBSOLETE events and avoid fetching map outputs from the corresponding 
+     * locations.
+     */ 
+    private int indexToEventsCache[];
+    /** What jobid this fetchstatus object is for*/
+    private String jobId;
      
-      public FetchStatus(String jobId, int numMaps) {
-        this.fromEventId = new IntWritable(0);
-        this.jobId = jobId;
-        this.allMapEvents = new ArrayList<TaskCompletionEvent>(numMaps);
-        this.indexToEventsCache = new int[numMaps];
-      }
+    public FetchStatus(String jobId, int numMaps) {
+      this.fromEventId = new IntWritable(0);
+      this.jobId = jobId;
+      this.allMapEvents = new ArrayList<TaskCompletionEvent>(numMaps);
+      this.indexToEventsCache = new int[numMaps];
+    }
       
-      public TaskCompletionEvent[] getMapEvents(int fromId, int max) {
+    public TaskCompletionEvent[] getMapEvents(int fromId, int max) {
         
-        TaskCompletionEvent[] mapEvents = 
-                              TaskCompletionEvent.EMPTY_ARRAY;
-        synchronized (allMapEvents) {
-          if (allMapEvents.size() > fromId) {
-            int actualMax = Math.min(max, (allMapEvents.size() - fromId));
-            List <TaskCompletionEvent> eventSublist = 
-              allMapEvents.subList(fromId, actualMax + fromId);
-            mapEvents = 
-              (TaskCompletionEvent[])eventSublist.toArray(mapEvents);
-          }
+      TaskCompletionEvent[] mapEvents = 
+        TaskCompletionEvent.EMPTY_ARRAY;
+      synchronized (allMapEvents) {
+        if (allMapEvents.size() > fromId) {
+          int actualMax = Math.min(max, (allMapEvents.size() - fromId));
+          List <TaskCompletionEvent> eventSublist = 
+            allMapEvents.subList(fromId, actualMax + fromId);
+          mapEvents = 
+            (TaskCompletionEvent[])eventSublist.toArray(mapEvents);
         }
-        return mapEvents;
       }
+      return mapEvents;
+    }
       
-      public void fetchMapCompletionEvents() throws IOException {
-        List <TaskCompletionEvent> recentMapEvents = 
-                              queryJobTracker(fromEventId, jobId, jobClient);
-        synchronized (allMapEvents) {
-          for (TaskCompletionEvent t : recentMapEvents) {
-            TaskCompletionEvent.Status status = t.getTaskStatus();
-            allMapEvents.add(t);
+    public void fetchMapCompletionEvents() throws IOException {
+      List <TaskCompletionEvent> recentMapEvents = 
+        queryJobTracker(fromEventId, jobId, jobClient);
+      synchronized (allMapEvents) {
+        for (TaskCompletionEvent t : recentMapEvents) {
+          TaskCompletionEvent.Status status = t.getTaskStatus();
+          allMapEvents.add(t);
             
-            if (status == TaskCompletionEvent.Status.SUCCEEDED) {
-              //store the index of the events cache for this success event.
-              indexToEventsCache[t.idWithinJob()] = allMapEvents.size();
-            }
-            else if (status == TaskCompletionEvent.Status.FAILED || 
-                status == TaskCompletionEvent.Status.OBSOLETE) {
-              int idx = indexToEventsCache[t.idWithinJob()];
-              //if this map task was declared a success earlier, we will have
-              //idx > 0
-              if (idx > 0) {
-                //Mark the event as OBSOLETE and reset the index to 0. Note 
-                //we access the 'idx - 1' entry. This is because while storing
-                //the idx in indexToEventsCache, we store the 'actual idx + 1'
-                //Helps us to eliminate the index array elements initialization
-                //to something like '-1'
-                TaskCompletionEvent obsoleteEvent = allMapEvents.get(idx - 1);
-                obsoleteEvent.setTaskStatus(
-                              TaskCompletionEvent.Status.OBSOLETE);
-                indexToEventsCache[t.idWithinJob()] = 0;
-              }
+          if (status == TaskCompletionEvent.Status.SUCCEEDED) {
+            //store the index of the events cache for this success event.
+            indexToEventsCache[t.idWithinJob()] = allMapEvents.size();
+          }
+          else if (status == TaskCompletionEvent.Status.FAILED || 
+                   status == TaskCompletionEvent.Status.OBSOLETE) {
+            int idx = indexToEventsCache[t.idWithinJob()];
+            //if this map task was declared a success earlier, we will have
+            //idx > 0
+            if (idx > 0) {
+              //Mark the event as OBSOLETE and reset the index to 0. Note 
+              //we access the 'idx - 1' entry. This is because while storing
+              //the idx in indexToEventsCache, we store the 'actual idx + 1'
+              //Helps us to eliminate the index array elements initialization
+              //to something like '-1'
+              TaskCompletionEvent obsoleteEvent = allMapEvents.get(idx - 1);
+              obsoleteEvent.setTaskStatus(
+                                          TaskCompletionEvent.Status.OBSOLETE);
+              indexToEventsCache[t.idWithinJob()] = 0;
             }
           }
         }
       }
     }
+  }
 
   // intialize the job directory
   private void localizeJob(TaskInProgress tip) throws IOException {
@@ -636,8 +636,8 @@ public class TaskTracker
     // Clear local storage
     this.mapOutputFile.cleanupStorage();
         
-        // Shutdown the fetcher thread
-        this.mapEventsFetcher.interrupt();
+    // Shutdown the fetcher thread
+    this.mapEventsFetcher.interrupt();
   }
 
   /**
@@ -681,34 +681,34 @@ public class TaskTracker
     return fs;
   }
     
-    /** Queries the job tracker for a set of outputs ready to be copied
-     * @param fromEventId the first event ID we want to start from, this is
-     * modified by the call to this method
-     * @param jobClient the job tracker
-     * @return a set of locations to copy outputs from
-     * @throws IOException
-     */  
-    private List<TaskCompletionEvent> queryJobTracker(IntWritable fromEventId,
-        String jobId,
-        InterTrackerProtocol jobClient)
-        throws IOException {
+  /** Queries the job tracker for a set of outputs ready to be copied
+   * @param fromEventId the first event ID we want to start from, this is
+   * modified by the call to this method
+   * @param jobClient the job tracker
+   * @return a set of locations to copy outputs from
+   * @throws IOException
+   */  
+  private List<TaskCompletionEvent> queryJobTracker(IntWritable fromEventId,
+                                                    String jobId,
+                                                    InterTrackerProtocol jobClient)
+    throws IOException {
 
-      TaskCompletionEvent t[] = jobClient.getTaskCompletionEvents(
-          jobId,
-          fromEventId.get(),
-          probe_sample_size);
-      //we are interested in map task completion events only. So store
-      //only those
-      List <TaskCompletionEvent> recentMapEvents = 
-                                 new ArrayList<TaskCompletionEvent>();
-      for (int i = 0; i < t.length; i++) {
-        if (t[i].isMap) {
-          recentMapEvents.add(t[i]);
-        }
+    TaskCompletionEvent t[] = jobClient.getTaskCompletionEvents(
+                                                                jobId,
+                                                                fromEventId.get(),
+                                                                probe_sample_size);
+    //we are interested in map task completion events only. So store
+    //only those
+    List <TaskCompletionEvent> recentMapEvents = 
+      new ArrayList<TaskCompletionEvent>();
+    for (int i = 0; i < t.length; i++) {
+      if (t[i].isMap) {
+        recentMapEvents.add(t[i]);
       }
-      fromEventId.set(fromEventId.get() + t.length);
-      return recentMapEvents;
     }
+    fromEventId.set(fromEventId.get() + t.length);
+    return recentMapEvents;
+  }
 
   /**
    * Main service loop.  Will stay in this loop forever.
@@ -1580,24 +1580,24 @@ public class TaskTracker
     running = false;
   }
 
-    public TaskCompletionEvent[] getMapCompletionEvents(
-      String jobId, int fromEventId, int maxLocs) throws IOException {
+  public TaskCompletionEvent[] getMapCompletionEvents(
+                                                      String jobId, int fromEventId, int maxLocs) throws IOException {
       
-      TaskCompletionEvent[]mapEvents = TaskCompletionEvent.EMPTY_ARRAY;
-      RunningJob rjob;
-      synchronized (runningJobs) {
-        rjob = runningJobs.get(jobId);          
-        if (rjob != null) {
-          synchronized (rjob) {
-            FetchStatus f = rjob.getFetchStatus();
-            if (f != null) {
-              mapEvents = f.getMapEvents(fromEventId, maxLocs);
-            }
+    TaskCompletionEvent[]mapEvents = TaskCompletionEvent.EMPTY_ARRAY;
+    RunningJob rjob;
+    synchronized (runningJobs) {
+      rjob = runningJobs.get(jobId);          
+      if (rjob != null) {
+        synchronized (rjob) {
+          FetchStatus f = rjob.getFetchStatus();
+          if (f != null) {
+            mapEvents = f.getMapEvents(fromEventId, maxLocs);
           }
         }
       }
-      return mapEvents;
     }
+    return mapEvents;
+  }
     
   /////////////////////////////////////////////////////
   //  Called by TaskTracker thread after task process ends
@@ -1644,7 +1644,7 @@ public class TaskTracker
     Set<TaskInProgress> tasks;
     boolean localized;
     boolean keepJobFiles;
-      FetchStatus f;
+    FetchStatus f;
     RunningJob(String jobid, Path jobFile) {
       this.jobid = jobid;
       localized = false;
@@ -1661,13 +1661,13 @@ public class TaskTracker
       return jobid;
     }
       
-      void setFetchStatus(FetchStatus f) {
-        this.f = f;
-      }
+    void setFetchStatus(FetchStatus f) {
+      this.f = f;
+    }
       
-      FetchStatus getFetchStatus() {
-        return f;
-      }
+    FetchStatus getFetchStatus() {
+      return f;
+    }
   }
 
   /** 

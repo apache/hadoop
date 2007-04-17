@@ -426,9 +426,9 @@ public class SecondaryNameNode implements FSConstants, Runnable {
    */
   public static class GetImageServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
-    public void doGet(HttpServletRequest request,
-                      HttpServletResponse response
-                      ) throws ServletException, IOException {
+      public void doGet(HttpServletRequest request,
+                        HttpServletResponse response
+                        ) throws ServletException, IOException {
       Map<String,String[]> pmap = request.getParameterMap();
       try {
         ServletContext context = getServletContext();
