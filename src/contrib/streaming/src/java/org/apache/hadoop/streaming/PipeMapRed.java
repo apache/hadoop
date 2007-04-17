@@ -515,6 +515,9 @@ public abstract class PipeMapRed {
         }
       } catch (IOException io) {
         io.printStackTrace(log_);
+        outerrThreadsThrowable = io;
+      } catch (Throwable th) {
+        outerrThreadsThrowable = th;
       }
       logprintln("MROutputThread done");
     }
@@ -551,6 +554,9 @@ public abstract class PipeMapRed {
         }
       } catch (IOException io) {
         logStackTrace(io);
+        outerrThreadsThrowable = io;
+      } catch (Throwable th) {
+        outerrThreadsThrowable = th;
       }
     }
     long lastStderrReport = 0;
@@ -718,6 +724,8 @@ public abstract class PipeMapRed {
   private String sideOutputURI_;
 
   private OutputStream sideEffectOut_;
+
+  protected volatile Throwable outerrThreadsThrowable;
 
   String LOGNAME;
   PrintStream log_;

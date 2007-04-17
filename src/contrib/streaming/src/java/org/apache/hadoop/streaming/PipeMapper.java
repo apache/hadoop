@@ -25,6 +25,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
@@ -68,6 +69,12 @@ public class PipeMapper extends PipeMapRed implements Mapper {
     // init
     if (outThread_ == null) {
       startOutputThreads(output, reporter);
+    }
+    if( outerrThreadsThrowable != null ) {
+      mapRedFinished();
+      throw new IOException ("MROutput/MRErrThread failed:"
+                             + StringUtils.stringifyException(
+                                          outerrThreadsThrowable));
     }
     try {
       // 1/4 Hadoop in

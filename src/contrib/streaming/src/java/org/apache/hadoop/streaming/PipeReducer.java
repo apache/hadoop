@@ -27,6 +27,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
@@ -73,6 +74,12 @@ public class PipeReducer extends PipeMapRed implements Reducer {
         numRecRead_++;
         maybeLogRecord();
         if (doPipe_) {
+          if( outerrThreadsThrowable != null ) {
+            mapRedFinished();
+            throw new IOException ("MROutput/MRErrThread failed:"
+                                   + StringUtils.stringifyException( 
+                                               outerrThreadsThrowable));
+          }
           write(key);
           clientOut_.write('\t');
           write(val);
