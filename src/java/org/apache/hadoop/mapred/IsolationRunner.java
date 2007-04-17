@@ -80,6 +80,10 @@ public class IsolationRunner {
       LOG.info("Task " + taskid + " has problem " + trace);
     }
     
+    public TaskCompletionEvent[] getMapCompletionEvents(String jobId, 
+        int fromEventId, int maxLocs) throws IOException {
+      return TaskCompletionEvent.EMPTY_ARRAY;
+    }
   }
   
   private static ClassLoader makeClassLoader(JobConf conf, 

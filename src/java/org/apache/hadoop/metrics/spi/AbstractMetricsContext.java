@@ -226,7 +226,8 @@ public abstract class AbstractMetricsContext implements MetricsContext {
    */
   private synchronized void startTimer() {
     if (timer == null) {
-      timer = new Timer();
+      timer = new Timer("Timer thread for monitoring " + getContextName(), 
+                         true);
       TimerTask task = new TimerTask() {
           public void run() {
             try {

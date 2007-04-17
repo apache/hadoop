@@ -29,7 +29,8 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * and parent is via this protocol. */ 
 interface TaskUmbilicalProtocol extends VersionedProtocol {
 
-  public static final long versionID = 1L;
+  /** Changed the version to 2, since we have a new method getMapOutputs */
+  public static final long versionID = 2L;
   
   /** Called when a child task process starts, to get its task.*/
   Task getTask(String taskid) throws IOException;
@@ -63,5 +64,16 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
 
   /** Report that the task encounted a local filesystem error.*/
   void fsError(String message) throws IOException;
+
+  /** Called by a reduce task to get the map output locations for finished maps.
+  *
+  * @param taskId the reduce task id
+  * @param fromIndex the index starting from which the locations should be 
+  * fetched
+  * @param maxLocs the max number of locations to fetch
+  * @return an array of TaskCompletionEvent
+  */
+  TaskCompletionEvent[] getMapCompletionEvents(String jobId, 
+      int fromIndex, int maxLocs) throws IOException;
 
 }

@@ -222,6 +222,9 @@ Trunk (unreleased changes)
 67. HADOOP-1154.  Fail a streaming task if the threads reading from or 
     writing to the streaming process fail.  (Koji Noguchi via tomwhite)
 
+68. HADOOP-968.  Move shuffle and sort to run in reduce's child JVM,
+    rather than in TaskTracker.  (Devaraj Das via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

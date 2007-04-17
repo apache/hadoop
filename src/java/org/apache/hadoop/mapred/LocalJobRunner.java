@@ -228,6 +228,11 @@ class LocalJobRunner implements JobSubmissionProtocol {
       LOG.fatal("FSError: "+ message);
     }
 
+    public TaskCompletionEvent[] getMapCompletionEvents(
+        String jobId, int fromEventId, int maxLocs) throws IOException {
+      return TaskCompletionEvent.EMPTY_ARRAY;
+    }
+    
   }
 
   public LocalJobRunner(Configuration conf) throws IOException {
