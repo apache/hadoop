@@ -95,7 +95,7 @@ public class HStoreKey implements WritableComparable {
   
   public boolean matchesRowCol(HStoreKey other) {
     if(this.row.compareTo(other.row) == 0 &&
-        this.column.compareTo(other.column) == 0) {
+       this.column.compareTo(other.column) == 0) {
       return true;
       
     } else {
@@ -105,7 +105,7 @@ public class HStoreKey implements WritableComparable {
   
   public boolean matchesWithoutColumn(HStoreKey other) {
     if((this.row.compareTo(other.row) == 0) &&
-        (this.timestamp >= other.getTimestamp())) {
+       (this.timestamp >= other.getTimestamp())) {
       return true;
       
     } else {

@@ -31,10 +31,10 @@ public class HMemcache {
   private static final Log LOG = LogFactory.getLog(HMemcache.class);
   
   TreeMap<HStoreKey, BytesWritable> memcache 
-      = new TreeMap<HStoreKey, BytesWritable>();
+    = new TreeMap<HStoreKey, BytesWritable>();
   
   Vector<TreeMap<HStoreKey, BytesWritable>> history 
-      = new Vector<TreeMap<HStoreKey, BytesWritable>>();
+    = new Vector<TreeMap<HStoreKey, BytesWritable>>();
   
   TreeMap<HStoreKey, BytesWritable> snapshot = null;
 
@@ -199,7 +199,7 @@ public class HMemcache {
   }
   
   void internalGetFull(TreeMap<HStoreKey, BytesWritable> map, HStoreKey key, 
-      TreeMap<Text, byte[]> results) {
+                       TreeMap<Text, byte[]> results) {
     
     SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(key);
     
@@ -208,7 +208,7 @@ public class HMemcache {
       Text itCol = itKey.getColumn();
 
       if(results.get(itCol) == null
-          && key.matchesWithoutColumn(itKey)) {
+         && key.matchesWithoutColumn(itKey)) {
         BytesWritable val = tailMap.get(itKey);
         results.put(itCol, val.get());
         
@@ -251,7 +251,7 @@ public class HMemcache {
    * Return a scanner over the keys in the HMemcache
    */
   public HScannerInterface getScanner(long timestamp, Text targetCols[], Text firstRow)
-      throws IOException {
+    throws IOException {
     
     return new HMemcacheScanner(timestamp, targetCols, firstRow);
   }
@@ -266,8 +266,8 @@ public class HMemcache {
     Iterator<HStoreKey> keyIterators[];
 
     @SuppressWarnings("unchecked")
-    public HMemcacheScanner(long timestamp, Text targetCols[], Text firstRow)
-        throws IOException {
+      public HMemcacheScanner(long timestamp, Text targetCols[], Text firstRow)
+      throws IOException {
       
       super(timestamp, targetCols);
       

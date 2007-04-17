@@ -61,7 +61,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   }
   
   public HStoreFile(Configuration conf, Path dir, Text regionName, 
-      Text colFamily, long fileId) {
+                    Text colFamily, long fileId) {
     
     this.conf = conf;
     this.dir = dir;
@@ -92,12 +92,12 @@ public class HStoreFile implements HConstants, WritableComparable {
   
   public Path getMapFilePath() {
     return new Path(HStoreFile.getMapDir(dir, regionName, colFamily), 
-        HSTORE_DATFILE_PREFIX + fileId);
+                    HSTORE_DATFILE_PREFIX + fileId);
   }
   
   public Path getInfoFilePath() {
     return new Path(HStoreFile.getInfoDir(dir, regionName, colFamily), 
-        HSTORE_INFOFILE_PREFIX + fileId);
+                    HSTORE_INFOFILE_PREFIX + fileId);
   }
 
   // Static methods to build partial paths to internal directories.  Useful for 
@@ -105,17 +105,17 @@ public class HStoreFile implements HConstants, WritableComparable {
   
   public static Path getMapDir(Path dir, Text regionName, Text colFamily) {
     return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName, 
-        new Path(colFamily.toString(), HSTORE_DATFILE_DIR)));
+                                  new Path(colFamily.toString(), HSTORE_DATFILE_DIR)));
   }
 
   public static Path getInfoDir(Path dir, Text regionName, Text colFamily) {
     return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName, 
-        new Path(colFamily.toString(), HSTORE_INFO_DIR)));
+                                  new Path(colFamily.toString(), HSTORE_INFO_DIR)));
   }
 
   public static Path getHStoreDir(Path dir, Text regionName, Text colFamily) {
     return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName, 
-        colFamily.toString()));
+                                  colFamily.toString()));
   }
 
   public static Path getHRegionDir(Path dir, Text regionName) {
@@ -127,7 +127,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * filesystem if the file already exists.
    */
   static HStoreFile obtainNewHStoreFile(Configuration conf, Path dir, 
-      Text regionName, Text colFamily, FileSystem fs) throws IOException {
+                                        Text regionName, Text colFamily, FileSystem fs) throws IOException {
     
     Path mapdir = HStoreFile.getMapDir(dir, regionName, colFamily);
     long fileId = Math.abs(rand.nextLong());
@@ -149,7 +149,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * If only one exists, we'll delete it.
    */
   static Vector<HStoreFile> loadHStoreFiles(Configuration conf, Path dir, 
-      Text regionName, Text colFamily, FileSystem fs) throws IOException {
+                                            Text regionName, Text colFamily, FileSystem fs) throws IOException {
     
     Vector<HStoreFile> results = new Vector<HStoreFile>();
     Path mapdir = HStoreFile.getMapDir(dir, regionName, colFamily);
@@ -200,18 +200,18 @@ public class HStoreFile implements HConstants, WritableComparable {
    * brand-new HRegions.
    */
   public void splitStoreFile(Text midKey, HStoreFile dstA, HStoreFile dstB,
-      FileSystem fs, Configuration conf) throws IOException {
+                             FileSystem fs, Configuration conf) throws IOException {
 
     // Copy the appropriate tuples to one MapFile or the other.
 
     MapFile.Reader in = new MapFile.Reader(fs, getMapFilePath().toString(), conf);
     try {
       MapFile.Writer outA = new MapFile.Writer(conf, fs, 
-          dstA.getMapFilePath().toString(), HStoreKey.class, BytesWritable.class);
+                                               dstA.getMapFilePath().toString(), HStoreKey.class, BytesWritable.class);
       
       try {
         MapFile.Writer outB = new MapFile.Writer(conf, fs, 
-            dstB.getMapFilePath().toString(), HStoreKey.class, BytesWritable.class);
+                                                 dstB.getMapFilePath().toString(), HStoreKey.class, BytesWritable.class);
         
         try {
           HStoreKey readkey = new HStoreKey();
@@ -252,12 +252,12 @@ public class HStoreFile implements HConstants, WritableComparable {
    * We are merging multiple regions into a single new one.
    */
   public void mergeStoreFiles(Vector<HStoreFile> srcFiles, FileSystem fs, 
-      Configuration conf) throws IOException {
+                              Configuration conf) throws IOException {
 
     // Copy all the source MapFile tuples into this HSF's MapFile
 
     MapFile.Writer out = new MapFile.Writer(conf, fs, getMapFilePath().toString(),
-        HStoreKey.class, BytesWritable.class);
+                                            HStoreKey.class, BytesWritable.class);
     
     try {
       for(Iterator<HStoreFile> it = srcFiles.iterator(); it.hasNext(); ) {
