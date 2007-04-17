@@ -24,13 +24,13 @@ public class TaskLogAppender extends AppenderSkeleton {
   public void activateOptions() {
     taskLogWriter = 
       new TaskLog.Writer(taskId, TaskLog.LogFilter.SYSLOG, 
-              noKeepSplits, totalLogFileSize, purgeLogSplits, logsRetainHours);
+                         noKeepSplits, totalLogFileSize, purgeLogSplits, logsRetainHours);
     try {
       taskLogWriter.init();
     } catch (IOException ioe) {
       taskLogWriter = null;
       errorHandler.error("Failed to initialize the task's logging " +
-              "infrastructure: " + StringUtils.stringifyException(ioe));
+                         "infrastructure: " + StringUtils.stringifyException(ioe));
     }
   }
   
@@ -42,7 +42,7 @@ public class TaskLogAppender extends AppenderSkeleton {
 
     if (this.layout == null) {
       errorHandler.error("No layout for appender " + name , 
-              null, ErrorCode.MISSING_LAYOUT );
+                         null, ErrorCode.MISSING_LAYOUT );
     }
     
     // Log the message to the task's log
@@ -51,8 +51,8 @@ public class TaskLogAppender extends AppenderSkeleton {
       taskLogWriter.write(logMessage.getBytes(), 0, logMessage.length());
     } catch (IOException ioe) {
       errorHandler.error("Failed to log: '" + logMessage + 
-              "' to the task's logging infrastructure with the exception: " + 
-              StringUtils.stringifyException(ioe));
+                         "' to the task's logging infrastructure with the exception: " + 
+                         StringUtils.stringifyException(ioe));
     }
   }
 
@@ -66,7 +66,7 @@ public class TaskLogAppender extends AppenderSkeleton {
         taskLogWriter.close();
       } catch (IOException ioe) {
         errorHandler.error("Failed to close the task's log with the exception: " 
-                + StringUtils.stringifyException(ioe));
+                           + StringUtils.stringifyException(ioe));
       }
     } else {
       errorHandler.error("Calling 'close' on uninitialize/closed logger");

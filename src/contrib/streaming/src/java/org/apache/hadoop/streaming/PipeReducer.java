@@ -78,7 +78,7 @@ public class PipeReducer extends PipeMapRed implements Reducer {
             mapRedFinished();
             throw new IOException ("MROutput/MRErrThread failed:"
                                    + StringUtils.stringifyException( 
-                                               outerrThreadsThrowable));
+                                                                    outerrThreadsThrowable));
           }
           write(key);
           clientOut_.write('\t');

@@ -28,7 +28,7 @@ import java.util.HashMap;
 abstract class CodeGenerator {
   
   private static HashMap<String, CodeGenerator> generators =
-      new HashMap<String, CodeGenerator>();
+    new HashMap<String, CodeGenerator>();
   
   static {
     register("c", new CGenerator());
@@ -45,8 +45,8 @@ abstract class CodeGenerator {
   }
   
   abstract void genCode(String file,
-      ArrayList<JFile> inclFiles,
-      ArrayList<JRecord> records,
-      String destDir,
-      ArrayList<String> options) throws IOException;
+                        ArrayList<JFile> inclFiles,
+                        ArrayList<JRecord> records,
+                        String destDir,
+                        ArrayList<String> options) throws IOException;
 }

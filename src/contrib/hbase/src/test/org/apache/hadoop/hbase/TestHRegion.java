@@ -103,7 +103,7 @@ public class TestHRegion extends TestCase {
         rootLogger.setLevel(Level.WARN);
         
         PatternLayout consoleLayout
-            = (PatternLayout)rootLogger.getAppender("console").getLayout();
+          = (PatternLayout)rootLogger.getAppender("console").getLayout();
         consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
       
         Logger.getLogger("org.apache.hadoop.hbase").setLevel(Environment.logLevel);
@@ -121,7 +121,7 @@ public class TestHRegion extends TestCase {
       desc.addFamily(new Text("contents"));
       desc.addFamily(new Text("anchor"));
       region = new HRegion(parentdir, log, fs, conf, 
-          new HRegionInfo(1, desc, null, null), null, oldlogfile);
+                           new HRegionInfo(1, desc, null, null), null, oldlogfile);
       
     } catch(IOException e) {
       failures = true;
@@ -160,27 +160,27 @@ public class TestHRegion extends TestCase {
         String bodystr = new String(bodydata).toString().trim();
         String teststr = CONTENTSTR + k;
         assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
-            + "), expected: '" + teststr + "' got: '" + bodystr + "'",
-            bodystr, teststr);
+                     + "), expected: '" + teststr + "' got: '" + bodystr + "'",
+                     bodystr, teststr);
         collabel = new Text(ANCHORNUM + k);
         bodydata = region.get(rowlabel, collabel);
         bodystr = new String(bodydata).toString().trim();
         teststr = ANCHORSTR + k;
         assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
-            + "), expected: '" + teststr + "' got: '" + bodystr + "'",
-            bodystr, teststr);
-/*
+                     + "), expected: '" + teststr + "' got: '" + bodystr + "'",
+                     bodystr, teststr);
+        /*
         // Check to make sure that null values are actually null
         for (int j = 0; j < Math.min(15, NUM_VALS); j++) {
-          if (k != j) {
-            collabel = new Text(ANCHORNUM + j);
-            byte results[] = region.get(rowlabel, collabel);
-            if (results != null) {
-              throw new IOException("Found incorrect value at [" + rowlabel + ", " + collabel + "] == " + new String(results).toString().trim());
-            }
-          }
+        if (k != j) {
+        collabel = new Text(ANCHORNUM + j);
+        byte results[] = region.get(rowlabel, collabel);
+        if (results != null) {
+        throw new IOException("Found incorrect value at [" + rowlabel + ", " + collabel + "] == " + new String(results).toString().trim());
         }
-*/
+        }
+        }
+        */
       }
     } catch(IOException e) {
       failures = true;
@@ -196,8 +196,8 @@ public class TestHRegion extends TestCase {
     }
 
     Text cols[] = new Text[] {
-        CONTENTS_FIRSTCOL,
-        ANCHOR_SECONDCOL
+      CONTENTS_FIRSTCOL,
+      ANCHOR_SECONDCOL
     };
 
     // Test the Scanner!!!
@@ -233,8 +233,8 @@ public class TestHRegion extends TestCase {
           for(int j = 0; j < cols.length; j++) {
             if(col.compareTo(cols[j]) == 0) {
               assertEquals("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
-                  + ", Value for " + col + " should be: " + k
-                  + ", but was fetched as: " + curval, k, curval);
+                           + ", Value for " + col + " should be: " + k
+                           + ", but was fetched as: " + curval, k, curval);
               numFetched++;
             }
           }
@@ -266,8 +266,8 @@ public class TestHRegion extends TestCase {
           for(int j = 0; j < cols.length; j++) {
             if(col.compareTo(cols[j]) == 0) {
               assertEquals("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
-                  + ", Value for " + col + " should be: " + k
-                  + ", but was fetched as: " + curval, k, curval);
+                           + ", Value for " + col + " should be: " + k
+                           + ", but was fetched as: " + curval, k, curval);
               numFetched++;
             }
           }
@@ -307,8 +307,8 @@ public class TestHRegion extends TestCase {
           for(int j = 0; j < cols.length; j++) {
             if(col.compareTo(cols[j]) == 0) {
               assertEquals("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
-                  + ", Value for " + col + " should be: " + k
-                  + ", but was fetched as: " + curval, k, curval);
+                           + ", Value for " + col + " should be: " + k
+                           + ", but was fetched as: " + curval, k, curval);
               numFetched++;
             }
           }
@@ -340,7 +340,7 @@ public class TestHRegion extends TestCase {
           for (int j = 0; j < cols.length; j++) {
             if (col.compareTo(cols[j]) == 0) {
               assertEquals("Value for " + col + " should be: " + k
-                  + ", but was fetched as: " + curval, curval, k);
+                           + ", but was fetched as: " + curval, curval, k);
               numFetched++;
             }
           }
@@ -370,7 +370,7 @@ public class TestHRegion extends TestCase {
           for (int j = 0; j < cols.length; j++) {
             if (col.compareTo(cols[j]) == 0) {
               assertEquals("Value for " + col + " should be: " + k
-                  + ", but was fetched as: " + curval, curval, k);
+                           + ", but was fetched as: " + curval, curval, k);
               numFetched++;
             }
           }
@@ -511,8 +511,8 @@ public class TestHRegion extends TestCase {
     // First verify the data written by testBasic()
 
     Text[] cols = new Text[] {
-        new Text(ANCHORNUM + "[0-9]+"),
-        new Text(CONTENTS_BASIC)
+      new Text(ANCHORNUM + "[0-9]+"),
+      new Text(CONTENTS_BASIC)
     };
     
     HScannerInterface s = region.getScanner(cols, new Text());
@@ -532,16 +532,16 @@ public class TestHRegion extends TestCase {
 
           if(col.compareTo(CONTENTS_BASIC) == 0) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
-                + ", Value for " + col + " should start with: " + CONTENTSTR
-                + ", but was fetched as: " + curval,
-                curval.startsWith(CONTENTSTR));
+                       + ", Value for " + col + " should start with: " + CONTENTSTR
+                       + ", but was fetched as: " + curval,
+                       curval.startsWith(CONTENTSTR));
             contentsFetched++;
             
           } else if(col.toString().startsWith(ANCHORNUM)) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
-                + ", Value for " + col + " should start with: " + ANCHORSTR
-                + ", but was fetched as: " + curval,
-                curval.startsWith(ANCHORSTR));
+                       + ", Value for " + col + " should start with: " + ANCHORSTR
+                       + ", but was fetched as: " + curval,
+                       curval.startsWith(ANCHORSTR));
             anchorFetched++;
             
           } else {
@@ -561,8 +561,8 @@ public class TestHRegion extends TestCase {
     // Verify testScan data
     
     cols = new Text[] {
-        CONTENTS_FIRSTCOL,
-        ANCHOR_SECONDCOL
+      CONTENTS_FIRSTCOL,
+      ANCHOR_SECONDCOL
     };
 
     s = region.getScanner(cols, new Text());
@@ -580,7 +580,7 @@ public class TestHRegion extends TestCase {
           for (int j = 0; j < cols.length; j++) {
             if (col.compareTo(cols[j]) == 0) {
               assertEquals("Value for " + col + " should be: " + k
-                  + ", but was fetched as: " + curval, curval, k);
+                           + ", but was fetched as: " + curval, curval, k);
               numFetched++;
             }
           }
@@ -625,7 +625,7 @@ public class TestHRegion extends TestCase {
     // Test a scanner which only specifies the column family name
     
     cols = new Text[] {
-        new Text("anchor:")
+      new Text("anchor:")
     };
     
     s = region.getScanner(cols, new Text());
@@ -672,5 +672,5 @@ public class TestHRegion extends TestCase {
     
     deleteFile(new File(System.getProperty("test.build.data"), "dfs"));
     
-    }
+  }
 }

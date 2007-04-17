@@ -38,7 +38,7 @@ public class HRegionInfo implements Writable {
   }
 
   public HRegionInfo(long regionId, HTableDescriptor tableDesc, Text startKey, 
-      Text endKey) throws IllegalArgumentException {
+                     Text endKey) throws IllegalArgumentException {
     
     this.regionId = regionId;
     
@@ -59,7 +59,7 @@ public class HRegionInfo implements Writable {
     }
     
     this.regionName = new Text(tableDesc.getName() + "_"
-        + (startKey == null ? "" : startKey.toString()) + "_" + regionId);
+                               + (startKey == null ? "" : startKey.toString()) + "_" + regionId);
   }
     
   //////////////////////////////////////////////////////////////////////////////

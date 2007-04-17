@@ -111,7 +111,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
             Text tableToUpdate
               = (oldRegion.find(META_TABLE_NAME.toString()) == 0)
-                ? ROOT_TABLE_NAME : META_TABLE_NAME;
+              ? ROOT_TABLE_NAME : META_TABLE_NAME;
 
             client.openTable(tableToUpdate);
             long lockid = client.startUpdate(oldRegion);
@@ -249,13 +249,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** Start a HRegionServer at the default location */
   public HRegionServer(Configuration conf) throws IOException {
     this(new Path(conf.get(HREGION_DIR, DEFAULT_HREGION_DIR)),
-        new HServerAddress(conf.get("hbase.regionserver.default.name")),
-        conf);
+         new HServerAddress(conf.get("hbase.regionserver.default.name")),
+         conf);
   }
   
   /** Start a HRegionServer at an indicated location */
   public HRegionServer(Path regionDir, HServerAddress address, Configuration conf) 
-      throws IOException {
+    throws IOException {
     
     // Basic setup
     
@@ -302,10 +302,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // Remote HMaster
 
       this.hbaseMaster = (HMasterRegionInterface)
-      RPC.waitForProxy(HMasterRegionInterface.class,
-          HMasterRegionInterface.versionId,
-          new HServerAddress(conf.get(MASTER_DEFAULT_NAME)).getInetSocketAddress(),
-          conf);
+        RPC.waitForProxy(HMasterRegionInterface.class,
+                         HMasterRegionInterface.versionId,
+                         new HServerAddress(conf.get(MASTER_DEFAULT_NAME)).getInetSocketAddress(),
+                         conf);
 
       // Threads
 
@@ -313,12 +313,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.splitCheckerThread.start();
       this.logRollerThread.start();
       this.leases = new Leases(conf.getLong("hbase.hregionserver.lease.period", 
-          3 * 60 * 1000), threadWakeFrequency);
+                                            3 * 60 * 1000), threadWakeFrequency);
       
       // Server
 
       this.server = RPC.getServer(this, address.getBindAddress().toString(), 
-          address.getPort(), conf.getInt("hbase.hregionserver.handler.count", 10), false, conf);
+                                  address.getPort(), conf.getInt("hbase.hregionserver.handler.count", 10), false, conf);
       this.server.start();
 
     } catch(IOException e) {
@@ -523,7 +523,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   private void closeRegion(HRegionInfo info, boolean reportWhenCompleted)
-      throws IOException {
+    throws IOException {
     
     locking.obtainWriteLock();
     try {
@@ -580,24 +580,24 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    *        
    *        For now, we do not do merging. Splits are driven by the HRegionServer.
    ****************************************************************************/
-/*
-  private void mergeRegions(Text regionNameA, Text regionNameB) throws IOException {
+  /*
+    private void mergeRegions(Text regionNameA, Text regionNameB) throws IOException {
     locking.obtainWriteLock();
     try {
-      HRegion srcA = regions.remove(regionNameA);
-      HRegion srcB = regions.remove(regionNameB);
-      HRegion newRegion = HRegion.closeAndMerge(srcA, srcB);
-      regions.put(newRegion.getRegionName(), newRegion);
+    HRegion srcA = regions.remove(regionNameA);
+    HRegion srcB = regions.remove(regionNameB);
+    HRegion newRegion = HRegion.closeAndMerge(srcA, srcB);
+    regions.put(newRegion.getRegionName(), newRegion);
 
-      reportClose(srcA);
-      reportClose(srcB);
-      reportOpen(newRegion);
+    reportClose(srcA);
+    reportClose(srcB);
+    reportOpen(newRegion);
       
     } finally {
-      locking.releaseWriteLock();
+    locking.releaseWriteLock();
     }
-  }
-*/
+    }
+  */
 
   //////////////////////////////////////////////////////////////////////////////
   // HRegionInterface
@@ -614,7 +614,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** Start a scanner for a given HRegion. */
   public HScannerInterface openScanner(Text regionName, Text[] cols, 
-      Text firstRow) throws IOException {
+                                       Text firstRow) throws IOException {
 
     HRegion r = getRegion(regionName);
     if(r == null) {
@@ -639,7 +639,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** Get multiple versions of the indicated row/col */
   public BytesWritable[] get(Text regionName, Text row, Text column, 
-      int numVersions) throws IOException {
+                             int numVersions) throws IOException {
     
     HRegion region = getRegion(regionName);
     if(region == null) {
@@ -661,7 +661,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** Get multiple timestamped versions of the indicated row/col */
   public BytesWritable[] get(Text regionName, Text row, Text column, 
-      long timestamp, int numVersions) throws IOException {
+                             long timestamp, int numVersions) throws IOException {
     
     HRegion region = getRegion(regionName);
     if(region == null) {
@@ -723,7 +723,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
   
   public long startUpdate(Text regionName, long clientid, Text row) 
-      throws IOException {
+    throws IOException {
     
     HRegion region = getRegion(regionName);
     if(region == null) {
@@ -732,15 +732,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     
     long lockid = region.startUpdate(row);
     leases.createLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)), 
-        new RegionListener(region, lockid));
+                       new Text(String.valueOf(lockid)), 
+                       new RegionListener(region, lockid));
     
     return lockid;
   }
 
   /** Add something to the HBase. */
   public void put(Text regionName, long clientid, long lockid, Text column, 
-      BytesWritable val) throws IOException {
+                  BytesWritable val) throws IOException {
     
     HRegion region = getRegion(regionName);
     if(region == null) {
@@ -748,14 +748,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     
     leases.renewLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+                      new Text(String.valueOf(lockid)));
     
     region.put(lockid, column, val.get());
   }
 
   /** Remove a cell from the HBase. */
   public void delete(Text regionName, long clientid, long lockid, Text column) 
-      throws IOException {
+    throws IOException {
     
     HRegion region = getRegion(regionName);
     if(region == null) {
@@ -763,14 +763,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     
     leases.renewLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+                      new Text(String.valueOf(lockid)));
     
     region.delete(lockid, column);
   }
 
   /** Abandon the transaction */
   public void abort(Text regionName, long clientid, long lockid) 
-      throws IOException {
+    throws IOException {
     
     HRegion region = getRegion(regionName);
     if(region == null) {
@@ -778,14 +778,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     
     leases.cancelLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+                       new Text(String.valueOf(lockid)));
     
     region.abort(lockid);
   }
 
   /** Confirm the transaction */
   public void commit(Text regionName, long clientid, long lockid) 
-      throws IOException {
+    throws IOException {
     
     HRegion region = getRegion(regionName);
     if(region == null) {
@@ -793,7 +793,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     
     leases.cancelLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+                       new Text(String.valueOf(lockid)));
     
     region.commit(lockid);
   }
@@ -801,7 +801,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** Don't let the client's lease expire just yet...  */
   public void renewLease(long lockid, long clientid) throws IOException {
     leases.renewLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+                      new Text(String.valueOf(lockid)));
   }
 
   /** Private utility method for safely obtaining an HRegion handle. */

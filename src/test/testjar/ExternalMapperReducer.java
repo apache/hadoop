@@ -26,7 +26,7 @@ public class ExternalMapperReducer
   }
 
   public void map(WritableComparable key, Writable value,
-    OutputCollector output, Reporter reporter)
+                  OutputCollector output, Reporter reporter)
     throws IOException {
     
     if (value instanceof Text) {
@@ -37,7 +37,7 @@ public class ExternalMapperReducer
   }
 
   public void reduce(WritableComparable key, Iterator values,
-    OutputCollector output, Reporter reporter)
+                     OutputCollector output, Reporter reporter)
     throws IOException {
     
     int count = 0;

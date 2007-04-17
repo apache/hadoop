@@ -22,7 +22,7 @@ public class TestRetryProxy extends TestCase {
   private UnreliableImplementation unreliableImpl;
   
   @Override
-  protected void setUp() throws Exception {
+    protected void setUp() throws Exception {
     unreliableImpl = new UnreliableImplementation();
   }
 
@@ -53,7 +53,7 @@ public class TestRetryProxy extends TestCase {
   
   public void testRetryForever() throws UnreliableException {
     UnreliableInterface unreliable = (UnreliableInterface)
-    RetryProxy.create(UnreliableInterface.class, unreliableImpl, RETRY_FOREVER);
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl, RETRY_FOREVER);
     unreliable.alwaysSucceeds();
     unreliable.failsOnceThenSucceeds();
     unreliable.failsTenTimesThenSucceeds();
@@ -61,8 +61,8 @@ public class TestRetryProxy extends TestCase {
   
   public void testRetryUpToMaximumCountWithFixedSleep() throws UnreliableException {
     UnreliableInterface unreliable = (UnreliableInterface)
-    RetryProxy.create(UnreliableInterface.class, unreliableImpl,
-        retryUpToMaximumCountWithFixedSleep(8, 1, TimeUnit.NANOSECONDS));
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl,
+                        retryUpToMaximumCountWithFixedSleep(8, 1, TimeUnit.NANOSECONDS));
     unreliable.alwaysSucceeds();
     unreliable.failsOnceThenSucceeds();
     try {
@@ -75,8 +75,8 @@ public class TestRetryProxy extends TestCase {
   
   public void testRetryUpToMaximumTimeWithFixedSleep() throws UnreliableException {
     UnreliableInterface unreliable = (UnreliableInterface)
-    RetryProxy.create(UnreliableInterface.class, unreliableImpl,
-        retryUpToMaximumTimeWithFixedSleep(80, 10, TimeUnit.NANOSECONDS));
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl,
+                        retryUpToMaximumTimeWithFixedSleep(80, 10, TimeUnit.NANOSECONDS));
     unreliable.alwaysSucceeds();
     unreliable.failsOnceThenSucceeds();
     try {
@@ -89,8 +89,8 @@ public class TestRetryProxy extends TestCase {
   
   public void testRetryUpToMaximumCountWithProportionalSleep() throws UnreliableException {
     UnreliableInterface unreliable = (UnreliableInterface)
-    RetryProxy.create(UnreliableInterface.class, unreliableImpl,
-        retryUpToMaximumCountWithProportionalSleep(8, 1, TimeUnit.NANOSECONDS));
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl,
+                        retryUpToMaximumCountWithProportionalSleep(8, 1, TimeUnit.NANOSECONDS));
     unreliable.alwaysSucceeds();
     unreliable.failsOnceThenSucceeds();
     try {
@@ -106,8 +106,8 @@ public class TestRetryProxy extends TestCase {
       Collections.<Class<? extends Exception>, RetryPolicy>singletonMap(FatalException.class, TRY_ONCE_THEN_FAIL);
     
     UnreliableInterface unreliable = (UnreliableInterface)
-    RetryProxy.create(UnreliableInterface.class, unreliableImpl,
-        retryByException(RETRY_FOREVER, exceptionToPolicyMap));
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl,
+                        retryByException(RETRY_FOREVER, exceptionToPolicyMap));
     unreliable.failsOnceThenSucceeds();
     try {
       unreliable.alwaysfailsWithFatalException();

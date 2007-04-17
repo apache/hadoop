@@ -48,38 +48,38 @@ class Jets3tFileSystemStore implements FileSystemStore {
       String secretAccessKey = null;
       String userInfo = uri.getUserInfo();
       if (userInfo != null) {
-          int index = userInfo.indexOf(':');
-          if (index != -1) {
-	          accessKey = userInfo.substring(0, index);
-	          secretAccessKey = userInfo.substring(index + 1);
-          } else {
-        	  accessKey = userInfo;
-          }
+        int index = userInfo.indexOf(':');
+        if (index != -1) {
+          accessKey = userInfo.substring(0, index);
+          secretAccessKey = userInfo.substring(index + 1);
+        } else {
+          accessKey = userInfo;
+        }
       }
       if (accessKey == null) {
-    	  accessKey = conf.get("fs.s3.awsAccessKeyId");
+        accessKey = conf.get("fs.s3.awsAccessKeyId");
       }
       if (secretAccessKey == null) {
-    	  secretAccessKey = conf.get("fs.s3.awsSecretAccessKey");
+        secretAccessKey = conf.get("fs.s3.awsSecretAccessKey");
       }
       if (accessKey == null && secretAccessKey == null) {
-    	  throw new IllegalArgumentException("AWS " +
-    	  		"Access Key ID and Secret Access Key " +
-    	  		"must be specified as the username " +
-    	  		"or password (respectively) of a s3 URL, " +
-    	  		"or by setting the " +
-	  		    "fs.s3.awsAccessKeyId or " +    	  		
-    	  		"fs.s3.awsSecretAccessKey properties (respectively).");
+        throw new IllegalArgumentException("AWS " +
+                                           "Access Key ID and Secret Access Key " +
+                                           "must be specified as the username " +
+                                           "or password (respectively) of a s3 URL, " +
+                                           "or by setting the " +
+                                           "fs.s3.awsAccessKeyId or " +    	  		
+                                           "fs.s3.awsSecretAccessKey properties (respectively).");
       } else if (accessKey == null) {
-    	  throw new IllegalArgumentException("AWS " +
-      	  		"Access Key ID must be specified " +
-      	  		"as the username of a s3 URL, or by setting the " +
-      	  		"fs.s3.awsAccessKeyId property.");
+        throw new IllegalArgumentException("AWS " +
+                                           "Access Key ID must be specified " +
+                                           "as the username of a s3 URL, or by setting the " +
+                                           "fs.s3.awsAccessKeyId property.");
       } else if (secretAccessKey == null) {
-    	  throw new IllegalArgumentException("AWS " +
-    	  		"Secret Access Key must be specified " +
-    	  		"as the password of a s3 URL, or by setting the " +
-    	  		"fs.s3.awsSecretAccessKey property.");    	  
+        throw new IllegalArgumentException("AWS " +
+                                           "Secret Access Key must be specified " +
+                                           "as the password of a s3 URL, or by setting the " +
+                                           "fs.s3.awsSecretAccessKey property.");    	  
       }
       AWSCredentials awsCredentials = new AWSCredentials(accessKey, secretAccessKey);
       this.s3Service = new RestS3Service(awsCredentials);
@@ -162,7 +162,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
   private InputStream get(String key, long byteRangeStart) throws IOException {
     try {
       S3Object object = s3Service.getObject(bucket, key, null, null, null,
-          null, byteRangeStart, null);
+                                            null, byteRangeStart, null);
       return object.getDataInputStream();
     } catch (S3ServiceException e) {
       if (e.getS3ErrorCode().equals("NoSuchKey")) {
@@ -180,7 +180,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
   }
 
   public File retrieveBlock(Block block, long byteRangeStart)
-      throws IOException {
+    throws IOException {
     File fileBlock = null;
     InputStream in = null;
     OutputStream out = null;

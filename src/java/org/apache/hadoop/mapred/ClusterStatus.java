@@ -20,7 +20,7 @@ public class ClusterStatus implements Writable {
        new WritableFactory() {
          public Writable newInstance() { return new ClusterStatus(); }
        });
-    }
+  }
 
   private int task_trackers;
   private int map_tasks;

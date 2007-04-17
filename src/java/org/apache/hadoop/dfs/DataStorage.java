@@ -65,7 +65,7 @@ class DataStorage extends Storage {
   void recoverTransitionRead( NamespaceInfo nsInfo,
                               Collection<File> dataDirs,
                               StartupOption startOpt
-                            ) throws IOException {
+                              ) throws IOException {
     assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
       "Data-node and name-node layout versions must be the same.";
     
@@ -112,7 +112,7 @@ class DataStorage extends Storage {
 
     if( dataDirs.size() == 0 )  // none of the data dirs exist
       throw new IOException( 
-          "All specified directories are not accessible or do not exist." );
+                            "All specified directories are not accessible or do not exist." );
 
     // 2. Do transitions
     // Each storage directory is treated individually.
@@ -141,21 +141,21 @@ class DataStorage extends Storage {
 
   protected void setFields( Properties props, 
                             StorageDirectory sd 
-                          ) throws IOException {
+                            ) throws IOException {
     super.setFields( props, sd );
     props.setProperty( "storageID", storageID );
   }
 
   protected void getFields( Properties props, 
                             StorageDirectory sd 
-                          ) throws IOException {
+                            ) throws IOException {
     super.getFields( props, sd );
     String ssid = props.getProperty( "storageID" );
     if( ssid == null ||
         ! ("".equals( storageID ) || "".equals( ssid ) ||
-            storageID.equals( ssid )))
+           storageID.equals( ssid )))
       throw new InconsistentFSStateException( sd.root,
-                  "has incompatible storage Id." );
+                                              "has incompatible storage Id." );
     if( "".equals( storageID ) ) // update id only if it was empty
       storageID = ssid;
   }
@@ -168,13 +168,13 @@ class DataStorage extends Storage {
     File oldDataDir = new File( sd.root, "data" );
     if( ! oldDataDir.exists() ) 
       throw new InconsistentFSStateException( sd.root,
-          "Old layout block directory " + oldDataDir + " is missing" ); 
+                                              "Old layout block directory " + oldDataDir + " is missing" ); 
     if( ! oldDataDir.isDirectory() )
       throw new InconsistentFSStateException( sd.root,
-          oldDataDir + " is not a directory." );
+                                              oldDataDir + " is not a directory." );
     if( ! oldDataDir.canWrite() )
       throw new InconsistentFSStateException( sd.root,
-          oldDataDir + " is not writable." );
+                                              oldDataDir + " is not writable." );
     return true;
   }
   
@@ -187,7 +187,7 @@ class DataStorage extends Storage {
    */
   private void convertLayout( StorageDirectory sd,
                               NamespaceInfo nsInfo 
-                            ) throws IOException {
+                              ) throws IOException {
     assert FSConstants.LAYOUT_VERSION < LAST_PRE_UPGRADE_LAYOUT_VERSION :
       "Bad current layout version: FSConstants.LAYOUT_VERSION should decrease";
     File oldF = new File( sd.root, "storage" );
@@ -195,8 +195,8 @@ class DataStorage extends Storage {
     assert oldF.exists() : "Old datanode layout \"storage\" file is missing";
     assert oldDataDir.exists() : "Old layout block directory \"data\" is missing";
     LOG.info( "Old layout version file " + oldF
-            + " is found. New layout version is "
-            + FSConstants.LAYOUT_VERSION );
+              + " is found. New layout version is "
+              + FSConstants.LAYOUT_VERSION );
     LOG.info( "Converting ..." );
     
     // Lock and Read old storage file
@@ -211,7 +211,7 @@ class DataStorage extends Storage {
       int odlVersion = oldFile.readInt();
       if( odlVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION )
         throw new IncorrectVersionException( odlVersion, "file " + oldF,
-                                              LAST_PRE_UPGRADE_LAYOUT_VERSION );
+                                             LAST_PRE_UPGRADE_LAYOUT_VERSION );
       String odlStorageID = org.apache.hadoop.io.UTF8.readString( oldFile );
   
       // check new storage
@@ -255,7 +255,7 @@ class DataStorage extends Storage {
   private void doTransition(  StorageDirectory sd, 
                               NamespaceInfo nsInfo, 
                               StartupOption startOpt
-                            ) throws IOException {
+                              ) throws IOException {
     if( startOpt == StartupOption.ROLLBACK )
       doRollback( sd, nsInfo ); // rollback if applicable
     sd.read();
@@ -263,9 +263,9 @@ class DataStorage extends Storage {
       "Future version is not allowed";
     if( getNamespaceID() != nsInfo.getNamespaceID() )
       throw new IOException( 
-          "Incompatible namespaceIDs in " + sd.root.getCanonicalPath()
-          + ": namenode namespaceID = " + nsInfo.getNamespaceID() 
-          + "; datanode namespaceID = " + getNamespaceID() );
+                            "Incompatible namespaceIDs in " + sd.root.getCanonicalPath()
+                            + ": namenode namespaceID = " + nsInfo.getNamespaceID() 
+                            + "; datanode namespaceID = " + getNamespaceID() );
     if( this.layoutVersion == FSConstants.LAYOUT_VERSION 
         && this.cTime == nsInfo.getCTime() )
       return; // regular startup
@@ -292,12 +292,12 @@ class DataStorage extends Storage {
    */
   void doUpgrade( StorageDirectory sd,
                   NamespaceInfo nsInfo
-                ) throws IOException {
+                  ) throws IOException {
     LOG.info( "Upgrading storage directory " + sd.root 
-            + ".\n   old LV = " + this.getLayoutVersion()
-            + "; old CTime = " + this.getCTime()
-            + ".\n   new LV = " + nsInfo.getLayoutVersion()
-            + "; new CTime = " + nsInfo.getCTime() );
+              + ".\n   old LV = " + this.getLayoutVersion()
+              + "; old CTime = " + this.getCTime()
+              + ".\n   new LV = " + nsInfo.getLayoutVersion()
+              + "; new CTime = " + nsInfo.getCTime() );
     File curDir = sd.getCurrentDir();
     File prevDir = sd.getPreviousDir();
     assert curDir.exists() : "Current directory must exist.";
@@ -323,7 +323,7 @@ class DataStorage extends Storage {
 
   void doRollback(  StorageDirectory sd,
                     NamespaceInfo nsInfo
-                  ) throws IOException {
+                    ) throws IOException {
     File prevDir = sd.getPreviousDir();
     // regular startup if previous dir does not exist
     if( ! prevDir.exists() )
@@ -335,15 +335,15 @@ class DataStorage extends Storage {
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
     if( ! ( prevInfo.getLayoutVersion() >= FSConstants.LAYOUT_VERSION
-        && prevInfo.getCTime() <= nsInfo.getCTime() ))  // cannot rollback
+            && prevInfo.getCTime() <= nsInfo.getCTime() ))  // cannot rollback
       throw new InconsistentFSStateException( prevSD.root,
-          "Cannot rollback to a newer state.\nDatanode previous state: LV = " 
-          + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime() 
-          + " is newer than the namespace state: LV = "
-          + nsInfo.getLayoutVersion() + " CTime = " + nsInfo.getCTime() );
+                                              "Cannot rollback to a newer state.\nDatanode previous state: LV = " 
+                                              + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime() 
+                                              + " is newer than the namespace state: LV = "
+                                              + nsInfo.getLayoutVersion() + " CTime = " + nsInfo.getCTime() );
     LOG.info( "Rolling back storage directory " + sd.root 
-        + ".\n   target LV = " + nsInfo.getLayoutVersion()
-        + "; target CTime = " + nsInfo.getCTime() );
+              + ".\n   target LV = " + nsInfo.getLayoutVersion()
+              + "; target CTime = " + nsInfo.getCTime() );
     File tmpDir = sd.getRemovedTmp();
     assert ! tmpDir.exists() : "removed.tmp directory must not exist.";
     // rename current to tmp
@@ -363,9 +363,9 @@ class DataStorage extends Storage {
       return; // already discarded
     final String dataDirPath = sd.root.getCanonicalPath();
     LOG.info( "Finalizing upgrade for storage directory " 
-            + dataDirPath 
-            + ".\n   cur LV = " + this.getLayoutVersion()
-            + "; cur CTime = " + this.getCTime() );
+              + dataDirPath 
+              + ".\n   cur LV = " + this.getLayoutVersion()
+              + "; cur CTime = " + this.getCTime() );
     assert sd.getCurrentDir().exists() : "Current directory must exist.";
     final File tmpDir = sd.getFinalizedTmp();
     // rename previous to tmp
@@ -373,16 +373,16 @@ class DataStorage extends Storage {
 
     // delete tmp dir in a separate thread
     new Daemon( new Runnable() {
-      public void run() {
-        try {
-          deleteDir( tmpDir );
-        } catch( IOException ex ) {
-          LOG.error( "Finalize upgrade for " + dataDirPath + " failed.", ex );
+        public void run() {
+          try {
+            deleteDir( tmpDir );
+          } catch( IOException ex ) {
+            LOG.error( "Finalize upgrade for " + dataDirPath + " failed.", ex );
+          }
+          LOG.info( "Finalize upgrade for " + dataDirPath + " is complete." );
         }
-        LOG.info( "Finalize upgrade for " + dataDirPath + " is complete." );
-      }
-      public String toString() { return "Finalize " + dataDirPath; }
-    }).start();
+        public String toString() { return "Finalize " + dataDirPath; }
+      }).start();
   }
   
   void finalizeUpgrade() throws IOException {
@@ -400,11 +400,11 @@ class DataStorage extends Storage {
     if( ! to.mkdir() )
       throw new IOException("Cannot create directory " + to );
     String[] blockNames = from.list( new java.io.FilenameFilter() {
-      public boolean accept(File dir, String name) {
-        return name.startsWith( BLOCK_SUBDIR_PREFIX ) 
+        public boolean accept(File dir, String name) {
+          return name.startsWith( BLOCK_SUBDIR_PREFIX ) 
             || name.startsWith( BLOCK_FILE_PREFIX );
-      }
-    });
+        }
+      });
     
     for( int i = 0; i < blockNames.length; i++ )
       linkBlocks( new File(from, blockNames[i]), new File(to, blockNames[i]) );

@@ -18,8 +18,8 @@ class UnregisteredDatanodeException extends IOException {
   public UnregisteredDatanodeException( DatanodeID nodeID, 
                                         DatanodeInfo storedNode ) {
     super("Data node " + nodeID.getName() 
-        + " is attempting to report storage ID "
-        + nodeID.getStorageID() + ". Node " 
-        + storedNode.getName() + " is expected to serve this storage.");
+          + " is attempting to report storage ID "
+          + nodeID.getStorageID() + ". Node " 
+          + storedNode.getName() + " is expected to serve this storage.");
   }
 }

@@ -88,7 +88,7 @@ public class HStore {
    * will be deleted (by whoever has instantiated the HStore).
    */
   public HStore(Path dir, Text regionName, Text colFamily, int maxVersions, 
-      FileSystem fs, Path reconstructionLog, Configuration conf) throws IOException {
+                FileSystem fs, Path reconstructionLog, Configuration conf) throws IOException {
     
     this.dir = dir;
     this.regionName = regionName;
@@ -174,7 +174,7 @@ public class HStore {
             continue;
           }
           reconstructedCache.put(new HStoreKey(key.getRow(), val.getColumn(), 
-              val.getTimestamp()), val.getVal());
+                                               val.getTimestamp()), val.getVal());
         }
         
       } finally {
@@ -252,13 +252,13 @@ public class HStore {
    * Return the entire list of HStoreFiles currently used by the HStore.
    */
   public Vector<HStoreFile> flushCache(TreeMap<HStoreKey, BytesWritable> inputCache,
-      long logCacheFlushId) throws IOException {
+                                       long logCacheFlushId) throws IOException {
     
     return flushCacheHelper(inputCache, logCacheFlushId, true);
   }
   
   Vector<HStoreFile> flushCacheHelper(TreeMap<HStoreKey, BytesWritable> inputCache,
-      long logCacheFlushId, boolean addToAvailableMaps) throws IOException {
+                                      long logCacheFlushId, boolean addToAvailableMaps) throws IOException {
     
     synchronized(flushLock) {
       LOG.debug("flushing HStore " + this.regionName + "/" + this.colFamily);
@@ -270,7 +270,7 @@ public class HStore {
       
       Path mapfile = flushedFile.getMapFilePath();
       MapFile.Writer out = new MapFile.Writer(conf, fs, mapfile.toString(), 
-          HStoreKey.class, BytesWritable.class);
+                                              HStoreKey.class, BytesWritable.class);
       
       try {
         for(Iterator<HStoreKey> it = inputCache.keySet().iterator(); it.hasNext(); ) {
@@ -392,8 +392,8 @@ public class HStore {
         // Step through them, writing to the brand-new TreeMap
 
         MapFile.Writer compactedOut = new MapFile.Writer(conf, fs, 
-            compactedOutputFile.getMapFilePath().toString(), HStoreKey.class, 
-            BytesWritable.class);
+                                                         compactedOutputFile.getMapFilePath().toString(), HStoreKey.class, 
+                                                         BytesWritable.class);
         
         try {
 
@@ -464,7 +464,7 @@ public class HStore {
 
             HStoreKey sk = keys[smallestKey];
             if(lastRow.equals(sk.getRow())
-                && lastColumn.equals(sk.getColumn())) {
+               && lastColumn.equals(sk.getColumn())) {
               
               timesSeen++;
               
@@ -478,7 +478,7 @@ public class HStore {
               // Then just skip them.
 
               if(sk.getRow().getLength() != 0
-                  && sk.getColumn().getLength() != 0) {
+                 && sk.getColumn().getLength() != 0) {
                 
                 // Only write out objects which have a non-zero length key and value
 
@@ -683,7 +683,7 @@ public class HStore {
       
       mapFiles.put(orderVal, finalCompactedFile);
       maps.put(orderVal, new MapFile.Reader(fs, 
-          finalCompactedFile.getMapFilePath().toString(), conf));
+                                            finalCompactedFile.getMapFilePath().toString(), conf));
       
     } finally {
       
@@ -721,7 +721,7 @@ public class HStore {
           do {
             Text readcol = readkey.getColumn();
             if(results.get(readcol) == null
-                && key.matchesWithoutColumn(readkey)) {
+               && key.matchesWithoutColumn(readkey)) {
               results.put(new Text(readcol), readval.get());
               readval = new BytesWritable();
               
@@ -850,7 +850,7 @@ public class HStore {
    * These should be closed after the user is done with them.
    */
   public HScannerInterface getScanner(long timestamp, Text targetCols[],
-      Text firstRow) throws IOException {
+                                      Text firstRow) throws IOException {
     
     return new HStoreScanner(timestamp, targetCols, firstRow);
   }

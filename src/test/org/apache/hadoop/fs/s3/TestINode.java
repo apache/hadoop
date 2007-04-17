@@ -23,7 +23,7 @@ public class TestINode extends TestCase {
     assertEquals("Length", 1, deserializedBlocks.length);
     assertEquals("Id", blocks[0].getId(), deserializedBlocks[0].getId());
     assertEquals("Length", blocks[0].getLength(), deserializedBlocks[0]
-        .getLength());
+                 .getLength());
 
   }
   

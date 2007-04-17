@@ -104,7 +104,7 @@ public class HMaster extends HGlobals
     
     public void run() {
       Text cols[] = {
-          ROOT_COLUMN_FAMILY
+        ROOT_COLUMN_FAMILY
       };
       Text firstRow = new Text();
   
@@ -156,7 +156,7 @@ public class HMaster extends HGlobals
             synchronized(serversToServerInfo) {
               storedInfo = serversToServerInfo.get(serverName);
               if(storedInfo == null
-                  || storedInfo.getStartCode() != startCode) {
+                 || storedInfo.getStartCode() != startCode) {
               
                 // The current assignment is no good; load the region.
   
@@ -216,7 +216,7 @@ public class HMaster extends HGlobals
    */
   private class MetaScanner implements Runnable {
     private final Text cols[] = {
-        META_COLUMN_FAMILY
+      META_COLUMN_FAMILY
     };
     private final Text firstRow = new Text();
     
@@ -262,7 +262,7 @@ public class HMaster extends HGlobals
           synchronized(serversToServerInfo) {
             storedInfo = serversToServerInfo.get(serverName);
             if(storedInfo == null
-                || storedInfo.getStartCode() != startCode) {
+               || storedInfo.getStartCode() != startCode) {
             
               // The current assignment is no good; load the region.
 
@@ -370,8 +370,8 @@ public class HMaster extends HGlobals
   /** Build the HMaster out of a raw configuration item. */
   public HMaster(Configuration conf) throws IOException {
     this(new Path(conf.get(HREGION_DIR, DEFAULT_HREGION_DIR)),
-        new HServerAddress(conf.get(MASTER_DEFAULT_NAME)),
-        conf);
+         new HServerAddress(conf.get(MASTER_DEFAULT_NAME)),
+         conf);
   }
 
   /** 
@@ -410,9 +410,9 @@ public class HMaster extends HGlobals
     this.maxRegionOpenTime = conf.getLong("hbase.hbasemaster.maxregionopen", 30 * 1000);
     this.msgQueue = new Vector<PendingOperation>();
     this.serverLeases = new Leases(conf.getLong("hbase.master.lease.period", 15 * 1000), 
-        conf.getLong("hbase.master.lease.thread.wakefrequency", 15 * 1000));
+                                   conf.getLong("hbase.master.lease.thread.wakefrequency", 15 * 1000));
     this.server = RPC.getServer(this, address.getBindAddress(),
-        address.getPort(), conf.getInt("hbase.hregionserver.handler.count", 10), false, conf);
+                                address.getPort(), conf.getInt("hbase.hregionserver.handler.count", 10), false, conf);
     this.client = new HClient(conf);
     
     this.metaRescanInterval
@@ -714,7 +714,7 @@ public class HMaster extends HGlobals
           
         default:
           throw new IOException("Impossible state during msg processing.  Instruction: "
-              + incomingMsgs[i].getMsg());
+                                + incomingMsgs[i].getMsg());
         }
       }
 
@@ -725,13 +725,13 @@ public class HMaster extends HGlobals
         // Open new regions as necessary
 
         int targetForServer = (int) Math.ceil(unassignedRegions.size()
-            / (1.0 * serversToServerInfo.size()));
+                                              / (1.0 * serversToServerInfo.size()));
 
         int counter = 0;
         long now = System.currentTimeMillis();
 
         for(Iterator<Text> it = unassignedRegions.keySet().iterator();
-        it.hasNext(); ) {
+            it.hasNext(); ) {
 
           Text curRegionName = it.next();
           HRegionInfo regionInfo = unassignedRegions.get(curRegionName);
@@ -790,7 +790,7 @@ public class HMaster extends HGlobals
 
   abstract class PendingOperation {
     protected final Text[] columns = {
-        META_COLUMN_FAMILY
+      META_COLUMN_FAMILY
     };
     protected final Text startRow = new Text();
     protected long clientId;
@@ -813,7 +813,7 @@ public class HMaster extends HGlobals
     }
     
     private void scanMetaRegion(HRegionInterface server, HScannerInterface scanner,
-        Text regionName) throws IOException {
+                                Text regionName) throws IOException {
 
       Vector<HStoreKey> toDoList = new Vector<HStoreKey>();
       TreeMap<Text, HRegionInfo> regions = new TreeMap<Text, HRegionInfo>();
@@ -899,7 +899,7 @@ public class HMaster extends HGlobals
       
       HRegionInterface server = client.getHRegionConnection(rootRegionLocation);
       HScannerInterface scanner = server.openScanner(rootRegionInfo.regionName,
-          columns, startRow);
+                                                     columns, startRow);
       
       scanMetaRegion(server, scanner, rootRegionInfo.regionName);
       for(Iterator<MetaRegion> i = knownMetaRegions.values().iterator();
@@ -1003,10 +1003,10 @@ public class HMaster extends HGlobals
       
       try {
         this.serverAddress = new BytesWritable(
-            info.getServerAddress().toString().getBytes(UTF8_ENCODING));
+                                               info.getServerAddress().toString().getBytes(UTF8_ENCODING));
         
         this.startCode = new BytesWritable(
-            String.valueOf(info.getStartCode()).getBytes(UTF8_ENCODING));
+                                           String.valueOf(info.getStartCode()).getBytes(UTF8_ENCODING));
         
       } catch(UnsupportedEncodingException e) {
       }
@@ -1100,7 +1100,7 @@ public class HMaster extends HGlobals
     long clientId = rand.nextLong();
     long lockid = server.startUpdate(metaRegionName, clientId, regionName);
     server.put(metaRegionName, clientId, lockid, META_COL_REGIONINFO, 
-        new BytesWritable(byteValue.toByteArray()));
+               new BytesWritable(byteValue.toByteArray()));
     server.commit(metaRegionName, clientId, lockid);
     
     // 4. Get it assigned to a server
@@ -1122,14 +1122,14 @@ public class HMaster extends HGlobals
    * @throws IOException
    */
   private HRegion createNewHRegion(HTableDescriptor desc, long regionId) 
-      throws IOException {
+    throws IOException {
     
     HRegionInfo info = new HRegionInfo(regionId, desc, null, null);
     Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
     fs.mkdirs(regionDir);
 
     return new HRegion(dir, new HLog(fs, new Path(regionDir, "log"), conf), fs,
-        conf, info, null, null);
+                       conf, info, null, null);
   }
   
   /**
@@ -1168,7 +1168,7 @@ public class HMaster extends HGlobals
   
   public void deleteTable(Text tableName) throws IOException {
     Text[] columns = {
-        META_COLUMN_FAMILY
+      META_COLUMN_FAMILY
     };
     
     // We can not access any meta region if they have not already been assigned

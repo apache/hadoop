@@ -9,8 +9,8 @@ import java.io.IOException;
  * @author Owen O'Malley
  */
 public interface Progressable {
-    /** callback for reporting progress. Used by DFSclient to report
-     * progress while writing a block of DFS file.
-     */
-    public void progress() throws IOException;
+  /** callback for reporting progress. Used by DFSclient to report
+   * progress while writing a block of DFS file.
+   */
+  public void progress() throws IOException;
 }

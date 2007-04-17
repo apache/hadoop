@@ -137,7 +137,7 @@ public class Leases {
           synchronized(sortedLeases) {
             Lease top;
             while((sortedLeases.size() > 0)
-                && ((top = sortedLeases.first()) != null)) {
+                  && ((top = sortedLeases.first()) != null)) {
               
               if(top.shouldExpire()) {
                 leases.remove(top.getLeaseId());

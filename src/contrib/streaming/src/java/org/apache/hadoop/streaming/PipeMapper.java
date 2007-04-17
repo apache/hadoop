@@ -74,7 +74,7 @@ public class PipeMapper extends PipeMapRed implements Mapper {
       mapRedFinished();
       throw new IOException ("MROutput/MRErrThread failed:"
                              + StringUtils.stringifyException(
-                                          outerrThreadsThrowable));
+                                                              outerrThreadsThrowable));
     }
     try {
       // 1/4 Hadoop in

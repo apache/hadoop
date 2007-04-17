@@ -44,7 +44,7 @@ public class HostsFileReader {
     excludes.clear();
     
     if (!includesFile.equals("")) {
-        readFileToSet(includesFile, includes);
+      readFileToSet(includesFile, includes);
     }
     if (!excludesFile.equals("")) {
       readFileToSet(excludesFile, excludes);

@@ -180,7 +180,7 @@ public abstract class HAbstractScanner implements HScannerInterface {
    * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.TreeMap)
    */
   public boolean next(HStoreKey key, TreeMap<Text, byte[]> results)
-      throws IOException {
+    throws IOException {
  
     // Find the next row label (and timestamp)
  
@@ -188,12 +188,12 @@ public abstract class HAbstractScanner implements HScannerInterface {
     long chosenTimestamp = -1;
     for(int i = 0; i < keys.length; i++) {
       while((keys[i] != null)
-          && (columnMatch(i))
-          && (keys[i].getTimestamp() <= this.timestamp)
-          && ((chosenRow == null)
-              || (keys[i].getRow().compareTo(chosenRow) < 0)
-              || ((keys[i].getRow().compareTo(chosenRow) == 0)
-                  && (keys[i].getTimestamp() > chosenTimestamp)))) {
+            && (columnMatch(i))
+            && (keys[i].getTimestamp() <= this.timestamp)
+            && ((chosenRow == null)
+                || (keys[i].getRow().compareTo(chosenRow) < 0)
+                || ((keys[i].getRow().compareTo(chosenRow) == 0)
+                    && (keys[i].getTimestamp() > chosenTimestamp)))) {
 
         chosenRow = new Text(keys[i].getRow());
         chosenTimestamp = keys[i].getTimestamp();
@@ -212,8 +212,8 @@ public abstract class HAbstractScanner implements HScannerInterface {
         // Fetch the data
         
         while((keys[i] != null)
-            && (keys[i].getRow().compareTo(chosenRow) == 0)
-            && (keys[i].getTimestamp() == chosenTimestamp)) {
+              && (keys[i].getRow().compareTo(chosenRow) == 0)
+              && (keys[i].getTimestamp() == chosenTimestamp)) {
 
           if(columnMatch(i)) {
             outbuf.reset();
@@ -235,9 +235,9 @@ public abstract class HAbstractScanner implements HScannerInterface {
         // a valid timestamp, so we're ready next time.
         
         while((keys[i] != null)
-            && ((keys[i].getRow().compareTo(chosenRow) <= 0)
-                || (keys[i].getTimestamp() > this.timestamp)
-                || (! columnMatch(i)))) {
+              && ((keys[i].getRow().compareTo(chosenRow) <= 0)
+                  || (keys[i].getTimestamp() > this.timestamp)
+                  || (! columnMatch(i)))) {
 
           getNext(i);
         }

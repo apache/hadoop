@@ -146,8 +146,8 @@ public class HClient extends HGlobals implements HConstants {
   private void locateRootRegion() throws IOException {
     if(master == null) {
       master = (HMasterInterface)RPC.getProxy(HMasterInterface.class, 
-                   HMasterInterface.versionID,
-                   masterLocation.getInetSocketAddress(), conf);
+                                              HMasterInterface.versionID,
+                                              masterLocation.getInetSocketAddress(), conf);
     }
     
     int tries = 0;
@@ -229,7 +229,7 @@ public class HClient extends HGlobals implements HConstants {
         String serverName = new String(serverBytes, UTF8_ENCODING);
           
         tableServers.put(regionInfo.startKey, 
-            new TableInfo(regionInfo, new HServerAddress(serverName)));
+                         new TableInfo(regionInfo, new HServerAddress(serverName)));
 
         results.clear();
       }
@@ -239,16 +239,16 @@ public class HClient extends HGlobals implements HConstants {
   }
 
   public synchronized HRegionInterface getHRegionConnection(HServerAddress regionServer)
-      throws IOException {
+    throws IOException {
 
-      // See if we already have a connection
+    // See if we already have a connection
 
     HRegionInterface server = servers.get(regionServer.toString());
     
     if(server == null) {                                // Get a connection
       
       server = (HRegionInterface)RPC.waitForProxy(HRegionInterface.class, 
-          HRegionInterface.versionID, regionServer.getInetSocketAddress(), conf);
+                                                  HRegionInterface.versionID, regionServer.getInetSocketAddress(), conf);
       
       servers.put(regionServer.toString(), server);
     }
@@ -325,14 +325,14 @@ public class HClient extends HGlobals implements HConstants {
   public byte[] get(Text row, Text column) throws IOException {
     TableInfo info = getTableInfo(row);
     return getHRegionConnection(info.serverAddress).get(
-        info.regionInfo.regionName, row, column).get();
+                                                        info.regionInfo.regionName, row, column).get();
   }
  
   /** Get the specified number of versions of the specified row and column */
   public byte[][] get(Text row, Text column, int numVersions) throws IOException {
     TableInfo info = getTableInfo(row);
     BytesWritable[] values = getHRegionConnection(info.serverAddress).get(
-        info.regionInfo.regionName, row, column, numVersions);
+                                                                          info.regionInfo.regionName, row, column, numVersions);
     
     ArrayList<byte[]> bytes = new ArrayList<byte[]>();
     for(int i = 0 ; i < values.length; i++) {
@@ -348,7 +348,7 @@ public class HClient extends HGlobals implements HConstants {
   public byte[][] get(Text row, Text column, long timestamp, int numVersions) throws IOException {
     TableInfo info = getTableInfo(row);
     BytesWritable[] values = getHRegionConnection(info.serverAddress).get(
-        info.regionInfo.regionName, row, column, timestamp, numVersions);
+                                                                          info.regionInfo.regionName, row, column, timestamp, numVersions);
     
     ArrayList<byte[]> bytes = new ArrayList<byte[]>();
     for(int i = 0 ; i < values.length; i++) {
@@ -361,7 +361,7 @@ public class HClient extends HGlobals implements HConstants {
   public LabelledData[] getRow(Text row) throws IOException {
     TableInfo info = getTableInfo(row);
     return getHRegionConnection(info.serverAddress).getRow(
-        info.regionInfo.regionName, row);
+                                                           info.regionInfo.regionName, row);
   }
 
   /** 
@@ -492,7 +492,7 @@ public class HClient extends HGlobals implements HConstants {
       try {
         server = getHRegionConnection(regions[currentRegion].serverAddress);
         scanner = server.openScanner(regions[currentRegion].regionInfo.regionName,
-            columns, startRow);
+                                     columns, startRow);
         
       } catch(IOException e) {
         close();

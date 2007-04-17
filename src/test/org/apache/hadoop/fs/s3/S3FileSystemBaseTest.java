@@ -21,7 +21,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
   abstract FileSystemStore getFileSystemStore() throws IOException;
 
   @Override
-  protected void setUp() throws IOException {
+    protected void setUp() throws IOException {
     Configuration conf = new Configuration();
     
     s3FileSystem = new S3FileSystem(getFileSystemStore());
@@ -34,7 +34,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
   }
 
   @Override
-  protected void tearDown() throws Exception {
+    protected void tearDown() throws Exception {
     s3FileSystem.purge();
     s3FileSystem.close();
   }
@@ -83,7 +83,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
 
   public void testListPathsRaw() throws Exception {
     Path[] testDirs = { new Path("/test/hadoop/a"), new Path("/test/hadoop/b"),
-        new Path("/test/hadoop/c/1"), };
+                        new Path("/test/hadoop/c/1"), };
     assertNull(s3FileSystem.listPaths(testDirs[0]));
 
     for (Path path : testDirs) {
@@ -136,8 +136,8 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     s3FileSystem.mkdirs(path.getParent());
 
     FSDataOutputStream out = s3FileSystem.create(path, false,
-            s3FileSystem.getConf().getInt("io.file.buffer.size", 4096), 
-            (short) 1, BLOCK_SIZE);
+                                                 s3FileSystem.getConf().getInt("io.file.buffer.size", 4096), 
+                                                 (short) 1, BLOCK_SIZE);
     out.write(data, 0, len);
     out.close();
 
@@ -175,16 +175,16 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     
     try {
       s3FileSystem.create(path, false,
-              s3FileSystem.getConf().getInt("io.file.buffer.size", 4096),
-              (short) 1, 128);
+                          s3FileSystem.getConf().getInt("io.file.buffer.size", 4096),
+                          (short) 1, 128);
       fail("Should throw IOException.");
     } catch (IOException e) {
       // Expected
     }
     
     FSDataOutputStream out = s3FileSystem.create(path, true,
-            s3FileSystem.getConf().getInt("io.file.buffer.size", 4096), 
-            (short) 1, BLOCK_SIZE);
+                                                 s3FileSystem.getConf().getInt("io.file.buffer.size", 4096), 
+                                                 (short) 1, BLOCK_SIZE);
     out.write(data, 0, BLOCK_SIZE / 2);
     out.close();
     
@@ -328,8 +328,8 @@ public abstract class S3FileSystemBaseTest extends TestCase {
 
   private void createEmptyFile(Path path) throws IOException {
     FSDataOutputStream out = s3FileSystem.create(path, false,
-            s3FileSystem.getConf().getInt("io.file.buffer.size", 4096),
-            (short) 1, BLOCK_SIZE);
+                                                 s3FileSystem.getConf().getInt("io.file.buffer.size", 4096),
+                                                 (short) 1, BLOCK_SIZE);
     out.write(data, 0, BLOCK_SIZE);
     out.close();
   }

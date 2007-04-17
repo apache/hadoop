@@ -98,7 +98,7 @@ public class DatanodeID implements WritableComparable {
 
   public boolean equals( Object to ) {
     return (name.equals(((DatanodeID)to).getName()) &&
-        storageID.equals(((DatanodeID)to).getStorageID()));
+            storageID.equals(((DatanodeID)to).getStorageID()));
   }
   
   public int hashCode() {
@@ -114,9 +114,9 @@ public class DatanodeID implements WritableComparable {
    * Note that this does not update storageID.
    */
   void updateRegInfo( DatanodeID nodeReg ) {
-      name = nodeReg.getName();
-      infoPort = nodeReg.getInfoPort();
-      // update any more fields added in future.
+    name = nodeReg.getName();
+    infoPort = nodeReg.getInfoPort();
+    // update any more fields added in future.
   }
     
   /** Comparable.

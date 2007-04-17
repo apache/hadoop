@@ -17,17 +17,17 @@ public class TestReplicationPolicy extends TestCase {
   private static NameNode namenode;
   private static FSNamesystem.ReplicationTargetChooser replicator;
   private static DatanodeDescriptor dataNodes[] = 
-         new DatanodeDescriptor[] {
-    new DatanodeDescriptor(new DatanodeID("h1:5020", "0", -1), "/d1/r1"),
-    new DatanodeDescriptor(new DatanodeID("h2:5020", "0", -1), "/d1/r1"),
-    new DatanodeDescriptor(new DatanodeID("h3:5020", "0", -1), "/d1/r2"),
-    new DatanodeDescriptor(new DatanodeID("h4:5020", "0", -1), "/d1/r2"),
-    new DatanodeDescriptor(new DatanodeID("h5:5020", "0", -1), "/d2/r3"),
-    new DatanodeDescriptor(new DatanodeID("h6:5020", "0", -1), "/d2/r3")
- };
+    new DatanodeDescriptor[] {
+      new DatanodeDescriptor(new DatanodeID("h1:5020", "0", -1), "/d1/r1"),
+      new DatanodeDescriptor(new DatanodeID("h2:5020", "0", -1), "/d1/r1"),
+      new DatanodeDescriptor(new DatanodeID("h3:5020", "0", -1), "/d1/r2"),
+      new DatanodeDescriptor(new DatanodeID("h4:5020", "0", -1), "/d1/r2"),
+      new DatanodeDescriptor(new DatanodeID("h5:5020", "0", -1), "/d2/r3"),
+      new DatanodeDescriptor(new DatanodeID("h6:5020", "0", -1), "/d2/r3")
+    };
    
-private final static DatanodeDescriptor NODE = 
-  new DatanodeDescriptor(new DatanodeID("h7:5020", "0", -1), "/d2/r4");
+  private final static DatanodeDescriptor NODE = 
+    new DatanodeDescriptor(new DatanodeID("h7:5020", "0", -1), "/d2/r4");
   
   static {
     try {
@@ -47,8 +47,8 @@ private final static DatanodeDescriptor NODE =
     }
     for( int i=0; i<NUM_OF_DATANODES; i++) {
       dataNodes[i].updateHeartbeat(
-          2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
-          2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0);
+                                   2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
+                                   2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0);
     }
   }
   
@@ -62,34 +62,34 @@ private final static DatanodeDescriptor NODE =
    */
   public void testChooseTarget1() throws Exception {
     dataNodes[0].updateHeartbeat(
-              2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
-              FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 4); // overloaded
+                                 2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
+                                 FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 4); // overloaded
 
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(
-        0, dataNodes[0], null, BLOCK_SIZE);
+                                      0, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     targets = replicator.chooseTarget(
-        1, dataNodes[0], null, BLOCK_SIZE);
+                                      1, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertEquals(targets[0], dataNodes[0]);
     
     targets = replicator.chooseTarget(
-        2, dataNodes[0], null, BLOCK_SIZE);
+                                      2, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertEquals(targets[0], dataNodes[0]);
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
     
     targets = replicator.chooseTarget(
-        3, dataNodes[0], null, BLOCK_SIZE);
+                                      3, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 3);
     assertEquals(targets[0], dataNodes[0]);
     assertTrue(cluster.isOnSameRack(targets[0], targets[1]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
     
     targets = replicator.chooseTarget(
-        4, dataNodes[0], null, BLOCK_SIZE);
+                                      4, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 4);
     assertEquals(targets[0], dataNodes[0]);
     assertTrue(cluster.isOnSameRack(targets[0], targets[1]));
@@ -97,8 +97,8 @@ private final static DatanodeDescriptor NODE =
     assertFalse(cluster.isOnSameRack(targets[0], targets[3]));
 
     dataNodes[0].updateHeartbeat(
-        2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
-        FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0); 
+                                 2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
+                                 FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0); 
   }
 
   /**
@@ -116,20 +116,20 @@ private final static DatanodeDescriptor NODE =
     excludedNodes = new ArrayList<DatanodeDescriptor>();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
-        0, dataNodes[0], excludedNodes, BLOCK_SIZE);
+                                      0, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     excludedNodes = new ArrayList<DatanodeDescriptor>();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
-        1, dataNodes[0], excludedNodes, BLOCK_SIZE);
+                                      1, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertEquals(targets[0], dataNodes[0]);
     
     excludedNodes = new ArrayList<DatanodeDescriptor>();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
-        2, dataNodes[0], excludedNodes, BLOCK_SIZE);
+                                      2, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertEquals(targets[0], dataNodes[0]);
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
@@ -137,7 +137,7 @@ private final static DatanodeDescriptor NODE =
     excludedNodes = new ArrayList<DatanodeDescriptor>();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
-        3, dataNodes[0], excludedNodes, BLOCK_SIZE);
+                                      3, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 3);
     assertEquals(targets[0], dataNodes[0]);
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
@@ -146,14 +146,14 @@ private final static DatanodeDescriptor NODE =
     excludedNodes = new ArrayList<DatanodeDescriptor>();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
-        4, dataNodes[0], excludedNodes, BLOCK_SIZE);
+                                      4, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 4);
     assertEquals(targets[0], dataNodes[0]);
     for(int i=1; i<4; i++) {
       assertFalse(cluster.isOnSameRack(targets[0], targets[i]));
     }
     assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
-        cluster.isOnSameRack(targets[2], targets[3]));
+               cluster.isOnSameRack(targets[2], targets[3]));
     assertFalse(cluster.isOnSameRack(targets[1], targets[3]));
   }
 
@@ -168,46 +168,46 @@ private final static DatanodeDescriptor NODE =
   public void testChooseTarget3() throws Exception {
     // make data node 0 to be not qualified to choose
     dataNodes[0].updateHeartbeat(
-        2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
-        (FSConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0); // no space
+                                 2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
+                                 (FSConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0); // no space
         
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(
-        0, dataNodes[0], null, BLOCK_SIZE);
+                                      0, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     targets = replicator.chooseTarget(
-        1, dataNodes[0], null, BLOCK_SIZE);
+                                      1, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertEquals(targets[0], dataNodes[1]);
     
     targets = replicator.chooseTarget(
-        2, dataNodes[0], null, BLOCK_SIZE);
+                                      2, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertEquals(targets[0], dataNodes[1]);
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
     
     targets = replicator.chooseTarget(
-        3, dataNodes[0], null, BLOCK_SIZE);
+                                      3, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 3);
     assertEquals(targets[0], dataNodes[1]);
     assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
     
     targets = replicator.chooseTarget(
-        4, dataNodes[0], null, BLOCK_SIZE);
+                                      4, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 4);
     assertEquals(targets[0], dataNodes[1]);
     for(int i=1; i<4; i++) {
       assertFalse(cluster.isOnSameRack(targets[0], targets[i]));
     }
     assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
-        cluster.isOnSameRack(targets[2], targets[3]));
+               cluster.isOnSameRack(targets[2], targets[3]));
     assertFalse(cluster.isOnSameRack(targets[1], targets[3]));
 
     dataNodes[0].updateHeartbeat(
-        2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
-        FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0); 
+                                 2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
+                                 FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0); 
   }
   
   /**
@@ -222,40 +222,40 @@ private final static DatanodeDescriptor NODE =
     // make data node 0 & 1 to be not qualified to choose: not enough disk space
     for(int i=0; i<2; i++) {
       dataNodes[i].updateHeartbeat(
-          2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
-          (FSConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0);
+                                   2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
+                                   (FSConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0);
     }
       
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(
-        0, dataNodes[0], null, BLOCK_SIZE);
+                                      0, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     targets = replicator.chooseTarget(
-        1, dataNodes[0], null, BLOCK_SIZE);
+                                      1, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertFalse(cluster.isOnSameRack(targets[0], dataNodes[0]));
     
     targets = replicator.chooseTarget(
-        2, dataNodes[0], null, BLOCK_SIZE);
+                                      2, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertFalse(cluster.isOnSameRack(targets[0], dataNodes[0]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
     
     targets = replicator.chooseTarget(
-        3, dataNodes[0], null, BLOCK_SIZE);
+                                      3, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 3);
     for(int i=0; i<3; i++) {
       assertFalse(cluster.isOnSameRack(targets[i], dataNodes[0]));
     }
     assertTrue(cluster.isOnSameRack(targets[0], targets[1]) ||
-        cluster.isOnSameRack(targets[1], targets[2]));
+               cluster.isOnSameRack(targets[1], targets[2]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
     
     for(int i=0; i<2; i++) {
       dataNodes[i].updateHeartbeat(
-          2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
-          FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0);
+                                   2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
+                                   FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0);
     }
   }
   /**
@@ -268,20 +268,20 @@ private final static DatanodeDescriptor NODE =
   public void testChooseTarget5() throws Exception {
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(
-        0, NODE, null, BLOCK_SIZE);
+                                      0, NODE, null, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     targets = replicator.chooseTarget(
-        1, NODE, null, BLOCK_SIZE);
+                                      1, NODE, null, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     
     targets = replicator.chooseTarget(
-        2, NODE, null, BLOCK_SIZE);
+                                      2, NODE, null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
     
     targets = replicator.chooseTarget(
-        3, NODE, null, BLOCK_SIZE);
+                                      3, NODE, null, BLOCK_SIZE);
     assertEquals(targets.length, 3);
     assertTrue(cluster.isOnSameRack(targets[0], targets[1]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[2]));    
@@ -300,22 +300,22 @@ private final static DatanodeDescriptor NODE =
     DatanodeDescriptor[] targets;
     
     targets = replicator.chooseTarget(
-        0, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      0, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     targets = replicator.chooseTarget(
-        1, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      1, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
     
     targets = replicator.chooseTarget(
-        2, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      2, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
     assertFalse(cluster.isOnSameRack(dataNodes[0], targets[1]));
     
     targets = replicator.chooseTarget(
-        3, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      3, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 3);
     assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
     assertFalse(cluster.isOnSameRack(dataNodes[0], targets[1]));
@@ -336,16 +336,16 @@ private final static DatanodeDescriptor NODE =
 
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(
-        0, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      0, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     targets = replicator.chooseTarget(
-        1, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      1, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
     
     targets = replicator.chooseTarget(
-        2, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      2, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
     assertFalse(cluster.isOnSameRack(dataNodes[0], targets[1]));
@@ -365,16 +365,16 @@ private final static DatanodeDescriptor NODE =
     
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(
-        0, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      0, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     targets = replicator.chooseTarget(
-        1, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      1, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
     
     targets = replicator.chooseTarget(
-        2, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
+                                      2, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
     assertFalse(cluster.isOnSameRack(dataNodes[0], targets[1]));

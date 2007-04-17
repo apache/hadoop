@@ -10,34 +10,34 @@ import java.io.IOException;
 
 public class DiskChecker {
 
-    public static class DiskErrorException extends IOException {
-      public DiskErrorException(String msg) {
-        super(msg);
-      }
+  public static class DiskErrorException extends IOException {
+    public DiskErrorException(String msg) {
+      super(msg);
     }
+  }
     
-    public static class DiskOutOfSpaceException extends IOException {
-        public DiskOutOfSpaceException(String msg) {
-          super(msg);
-        }
-      }
-      
-    public static void checkDir( File dir ) throws DiskErrorException {
-        if( !dir.exists() && !dir.mkdirs() )
-            throw new DiskErrorException( "can not create directory: " 
-                    + dir.toString() );
-        
-        if ( !dir.isDirectory() )
-            throw new DiskErrorException( "not a directory: " 
-                    + dir.toString() );
-            
-        if( !dir.canRead() )
-            throw new DiskErrorException( "directory is not readable: " 
-                    + dir.toString() );
-            
-        if( !dir.canWrite() )
-            throw new DiskErrorException( "directory is not writable: " 
-                    + dir.toString() );
+  public static class DiskOutOfSpaceException extends IOException {
+    public DiskOutOfSpaceException(String msg) {
+      super(msg);
     }
+  }
+      
+  public static void checkDir( File dir ) throws DiskErrorException {
+    if( !dir.exists() && !dir.mkdirs() )
+      throw new DiskErrorException( "can not create directory: " 
+                                    + dir.toString() );
+        
+    if ( !dir.isDirectory() )
+      throw new DiskErrorException( "not a directory: " 
+                                    + dir.toString() );
+            
+    if( !dir.canRead() )
+      throw new DiskErrorException( "directory is not readable: " 
+                                    + dir.toString() );
+            
+    if( !dir.canWrite() )
+      throw new DiskErrorException( "directory is not writable: " 
+                                    + dir.toString() );
+  }
 
 }

@@ -169,7 +169,7 @@ public class ObjectWritable implements Writable, Configurable {
   /** Read a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding. */
   @SuppressWarnings("unchecked")
-  public static Object readObject(DataInput in, ObjectWritable objectWritable, Configuration conf)
+    public static Object readObject(DataInput in, ObjectWritable objectWritable, Configuration conf)
     throws IOException {
     String className = UTF8.readString(in);
     Class<?> declaredClass = PRIMITIVE_NAMES.get(className);

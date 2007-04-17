@@ -8,7 +8,7 @@ import org.apache.hadoop.conf.Configuration;
 public class TestInMemoryS3FileSystem extends S3FileSystemBaseTest {
 
   @Override
-  public FileSystemStore getFileSystemStore() throws IOException {
+    public FileSystemStore getFileSystemStore() throws IOException {
     return new InMemoryFileSystemStore();
   }
   

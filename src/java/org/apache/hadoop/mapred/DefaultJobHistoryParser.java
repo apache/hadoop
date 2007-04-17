@@ -20,7 +20,7 @@ public class DefaultJobHistoryParser {
    * @throws IOException
    */
   public static Map<String, Map<String, JobHistory.JobInfo>> parseMasterIndex(File historyFile)
-      throws IOException {
+    throws IOException {
     MasterIndexParseListener parser = new MasterIndexParseListener();
     JobHistory.parseHistory(historyFile, parser);
 
@@ -34,16 +34,16 @@ public class DefaultJobHistoryParser {
    * @throws IOException
    */
   public static void parseJobTasks(File jobHistoryFile, JobHistory.JobInfo job)
-      throws IOException {
+    throws IOException {
     JobHistory.parseHistory(jobHistoryFile, 
-        new JobTasksParseListener(job));
+                            new JobTasksParseListener(job));
   }
-/**
- * Listener for Job's history log file, it populates JobHistory.JobInfo 
- * object with data from log file. 
- */
+  /**
+   * Listener for Job's history log file, it populates JobHistory.JobInfo 
+   * object with data from log file. 
+   */
   static class JobTasksParseListener
-      implements JobHistory.Listener {
+    implements JobHistory.Listener {
     JobHistory.JobInfo job;
 
     JobTasksParseListener(JobHistory.JobInfo job) {
@@ -61,7 +61,7 @@ public class DefaultJobHistoryParser {
     }
 
     private JobHistory.MapAttempt getMapAttempt(
-        String jobid, String jobTrackerId, String taskId, String taskAttemptId) {
+                                                String jobid, String jobTrackerId, String taskId, String taskAttemptId) {
 
       JobHistory.Task task = getTask(taskId);
       JobHistory.MapAttempt mapAttempt = 
@@ -75,7 +75,7 @@ public class DefaultJobHistoryParser {
     }
 
     private JobHistory.ReduceAttempt getReduceAttempt(
-        String jobid, String jobTrackerId, String taskId, String taskAttemptId) {
+                                                      String jobid, String jobTrackerId, String taskId, String taskAttemptId) {
 
       JobHistory.Task task = getTask(taskId);
       JobHistory.ReduceAttempt reduceAttempt = 
@@ -90,7 +90,7 @@ public class DefaultJobHistoryParser {
 
     // JobHistory.Listener implementation 
     public void handle(JobHistory.RecordTypes recType, Map<Keys, String> values)
-        throws IOException {
+      throws IOException {
       String jobTrackerId = values.get(JobHistory.Keys.JOBTRACKERID);
       String jobid = values.get(Keys.JOBID);
       
@@ -119,7 +119,7 @@ public class DefaultJobHistoryParser {
    * 
    */
   static class MasterIndexParseListener
-      implements JobHistory.Listener {
+    implements JobHistory.Listener {
     Map<String, Map<String, JobHistory.JobInfo>> jobTrackerToJobs = new TreeMap<String, Map<String, JobHistory.JobInfo>>();
 
     Map<String, JobHistory.JobInfo> activeJobs = null;
@@ -128,7 +128,7 @@ public class DefaultJobHistoryParser {
     // Implement JobHistory.Listener
 
     public void handle(JobHistory.RecordTypes recType, Map<Keys, String> values)
-        throws IOException {
+      throws IOException {
  
       if (recType.equals(JobHistory.RecordTypes.Jobtracker)) {
         activeJobs = new TreeMap<String, JobHistory.JobInfo>();

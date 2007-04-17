@@ -45,7 +45,7 @@ public class LineRecordReader implements RecordReader {
   private TextStuffer bridge = new TextStuffer();
 
   public LineRecordReader(Configuration job, FileSplit split)
-      throws IOException {
+    throws IOException {
     long start = split.getStart();
     long end = start + split.getLength();
     final Path file = split.getPath();
@@ -77,7 +77,7 @@ public class LineRecordReader implements RecordReader {
     this.start = offset;
     this.pos = offset;
     this.end = endOffset;    
-//    readLine(in, null); 
+    //    readLine(in, null); 
   }
   
   public WritableComparable createKey() {
@@ -111,7 +111,7 @@ public class LineRecordReader implements RecordReader {
   }
 
   public static long readLine(InputStream in, 
-      OutputStream out) throws IOException {
+                              OutputStream out) throws IOException {
     long bytes = 0;
     while (true) {
       

@@ -8,13 +8,13 @@ import junit.framework.TestCase;
 public class TestNetworkTopology extends TestCase {
   private final static NetworkTopology cluster = new NetworkTopology();
   private final static DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
-      new DatanodeDescriptor(new DatanodeID("h1:5020", "0", -1), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("h2:5020", "0", -1), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("h3:5020", "0", -1), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("h4:5020", "0", -1), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("h5:5020", "0", -1), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("h6:5020", "0", -1), "/d2/r3"),
-      new DatanodeDescriptor(new DatanodeID("h7:5020", "0", -1), "/d2/r3")
+    new DatanodeDescriptor(new DatanodeID("h1:5020", "0", -1), "/d1/r1"),
+    new DatanodeDescriptor(new DatanodeID("h2:5020", "0", -1), "/d1/r1"),
+    new DatanodeDescriptor(new DatanodeID("h3:5020", "0", -1), "/d1/r2"),
+    new DatanodeDescriptor(new DatanodeID("h4:5020", "0", -1), "/d1/r2"),
+    new DatanodeDescriptor(new DatanodeID("h5:5020", "0", -1), "/d1/r2"),
+    new DatanodeDescriptor(new DatanodeID("h6:5020", "0", -1), "/d2/r3"),
+    new DatanodeDescriptor(new DatanodeID("h7:5020", "0", -1), "/d2/r3")
   };
   private final static DatanodeDescriptor NODE = 
     new DatanodeDescriptor(new DatanodeID("h8:5020", "0", -1), "/d2/r4");

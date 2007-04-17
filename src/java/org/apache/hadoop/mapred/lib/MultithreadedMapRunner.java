@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class MultithreadedMapRunner implements MapRunnable {
   private static final Log LOG =
-      LogFactory.getLog(MultithreadedMapRunner.class.getName());
+    LogFactory.getLog(MultithreadedMapRunner.class.getName());
 
   private JobConf job;
   private Mapper mapper;
@@ -45,10 +45,10 @@ public class MultithreadedMapRunner implements MapRunnable {
 
   public void configure(JobConf job) {
     int numberOfThreads =
-        job.getInt("mapred.map.multithreadedrunner.threads", 10);
+      job.getInt("mapred.map.multithreadedrunner.threads", 10);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Configuring job " + job.getJobName() +
-          " to use " + numberOfThreads + " threads" );
+                " to use " + numberOfThreads + " threads" );
     }
 
     this.job = job;
@@ -75,7 +75,7 @@ public class MultithreadedMapRunner implements MapRunnable {
         // If threads are not available from the thread-pool this method
         // will block until there is a thread available.
         executorService.execute(
-            new MapperInvokeRunable(key, value, output, reporter));
+                                new MapperInvokeRunable(key, value, output, reporter));
 
         // Checking if a Mapper.map within a Runnable has generated an
         // IOException. If so we rethrow it to force an abort of the Map
@@ -92,7 +92,7 @@ public class MultithreadedMapRunner implements MapRunnable {
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Finished dispatching all Mappper.map calls, job "
-            + job.getJobName());
+                  + job.getJobName());
       }
 
       // Graceful shutdown of the Threadpool, it will let all scheduled
@@ -105,7 +105,7 @@ public class MultithreadedMapRunner implements MapRunnable {
         while (!executorService.awaitTermination(100, TimeUnit.MILLISECONDS)) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Awaiting all running Mappper.map calls to finish, job "
-                + job.getJobName());
+                      + job.getJobName());
           }
 
           // Checking if a Mapper.map within a Runnable has generated an
@@ -141,7 +141,7 @@ public class MultithreadedMapRunner implements MapRunnable {
       }
 
     } finally {
-        mapper.close();
+      mapper.close();
     }
   }
 
@@ -165,7 +165,7 @@ public class MultithreadedMapRunner implements MapRunnable {
      * @param reporter
      */
     public MapperInvokeRunable(WritableComparable key, Writable value,
-        OutputCollector output, Reporter reporter) {
+                               OutputCollector output, Reporter reporter) {
       this.key = key;
       this.value = value;
       this.output = output;
