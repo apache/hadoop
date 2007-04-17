@@ -111,7 +111,7 @@ public class DataNode implements FSConstants, Runnable {
   DatanodeRegistration dnRegistration = null;
   private String networkLoc;
   volatile boolean shouldRun = true;
-  Vector receivedBlockList = new Vector();
+  Vector<Block> receivedBlockList = new Vector<Block>();
   int xmitsInProgress = 0;
   Daemon dataXceiveServer = null;
   long blockReportInterval;
@@ -456,7 +456,7 @@ public class DataNode implements FSConstants, Runnable {
             //
             // Send newly-received blockids to namenode
             //
-            blockArray = (Block[]) receivedBlockList.toArray(new Block[receivedBlockList.size()]);
+            blockArray = receivedBlockList.toArray(new Block[receivedBlockList.size()]);
           }
         }
         if( blockArray != null ) {
@@ -799,7 +799,7 @@ public class DataNode implements FSConstants, Runnable {
         //
         // Track all the places we've successfully written the block
         //
-        Vector mirrors = new Vector();
+        Vector<DatanodeInfo> mirrors = new Vector<DatanodeInfo>();
             
         //
         // Open local disk out
@@ -998,7 +998,7 @@ public class DataNode implements FSConstants, Runnable {
         //
         reply.writeLong(WRITE_COMPLETE);
         mirrors.add(curTarget);
-        LocatedBlock newLB = new LocatedBlock(b, (DatanodeInfo[]) mirrors.toArray(new DatanodeInfo[mirrors.size()]));
+        LocatedBlock newLB = new LocatedBlock(b, mirrors.toArray(new DatanodeInfo[mirrors.size()]));
         newLB.write(reply);
       } finally {
         reply.close();

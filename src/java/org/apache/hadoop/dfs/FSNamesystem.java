@@ -412,12 +412,12 @@ class FSNamesystem implements FSConstants {
    */
   private class UnderReplicatedBlocks {
     private static final int LEVEL = 3;
-    TreeSet<Block>[] priorityQueues = new TreeSet[LEVEL];
+    List<TreeSet<Block>> priorityQueues = new ArrayList<TreeSet<Block>>();
         
     /* constructor */
     UnderReplicatedBlocks() {
       for(int i=0; i<LEVEL; i++) {
-        priorityQueues[i] = new TreeSet<Block>();
+        priorityQueues.add(new TreeSet<Block>());
       }
     }
         
@@ -425,7 +425,7 @@ class FSNamesystem implements FSConstants {
     synchronized int size() {
       int size = 0;
       for( int i=0; i<LEVEL; i++ ) {
-        size += priorityQueues[i].size();
+        size += priorityQueues.get(i).size();
       }
       return size;
     }
@@ -467,7 +467,7 @@ class FSNamesystem implements FSConstants {
         return false;
       }
       int priLevel = getPriority(block, curReplicas, expectedReplicas);
-      if( priorityQueues[priLevel].add(block) ) {
+      if( priorityQueues.get(priLevel).add(block) ) {
         NameNode.stateChangeLog.debug(
                                       "BLOCK* NameSystem.UnderReplicationBlock.add:"
                                       + block.getBlockName()
@@ -498,7 +498,7 @@ class FSNamesystem implements FSConstants {
     /* remove a block from a under replication queue given a priority*/
     private boolean remove(Block block, int priLevel ) {
       if( priLevel >= 0 && priLevel < LEVEL 
-          && priorityQueues[priLevel].remove(block) ) {
+          && priorityQueues.get(priLevel).remove(block) ) {
         NameNode.stateChangeLog.debug(
                                       "BLOCK* NameSystem.UnderReplicationBlock.remove: "
                                       + "Removing block " + block.getBlockName()
@@ -506,7 +506,7 @@ class FSNamesystem implements FSConstants {
         return true;
       } else {
         for(int i=0; i<LEVEL; i++) {
-          if( i!=priLevel && priorityQueues[i].remove(block) ) {
+          if( i!=priLevel && priorityQueues.get(i).remove(block) ) {
             NameNode.stateChangeLog.debug(
                                           "BLOCK* NameSystem.UnderReplicationBlock.remove: "
                                           + "Removing block " + block.getBlockName()
@@ -546,7 +546,7 @@ class FSNamesystem implements FSConstants {
         remove(block, oldPri);
       }
       if( curPri != LEVEL && oldPri != curPri 
-          && priorityQueues[curPri].add(block)) {
+          && priorityQueues.get(curPri).add(block)) {
         NameNode.stateChangeLog.debug(
                                       "BLOCK* NameSystem.UnderReplicationBlock.update:"
                                       + block.getBlockName()
@@ -561,33 +561,33 @@ class FSNamesystem implements FSConstants {
     synchronized Iterator<Block> iterator() {
       return new Iterator<Block>() {
         int level;
-        Iterator<Block>[] iterator = new Iterator[LEVEL];
+        List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
                 
         {
           level=0;
           for(int i=0; i<LEVEL; i++) {
-            iterator[i] = priorityQueues[i].iterator();
+            iterators.add(priorityQueues.get(i).iterator());
           }
         }
                 
         private void update() {
-          while( level< LEVEL-1 && !iterator[level].hasNext()  ) {
+          while( level< LEVEL-1 && !iterators.get(level).hasNext()  ) {
             level++;
           }
         }
                 
         public Block next() {
           update();
-          return iterator[level].next();
+          return iterators.get(level).next();
         }
                 
         public boolean hasNext() {
           update();
-          return iterator[level].hasNext();
+          return iterators.get(level).hasNext();
         }
                 
         public void remove() {
-          iterator[level].remove();
+          iterators.get(level).remove();
         }
       };
     }
@@ -2629,13 +2629,13 @@ class FSNamesystem implements FSConstants {
       StringBuffer blockList = new StringBuffer();
       for (int i = 0; i < sendBlock.size(); i++) {
         blockList.append(' ');
-        Block block = (Block) sendBlock.get(i);
+        Block block = sendBlock.get(i);
         blockList.append(block.getBlockName());
       }
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockToInvalidate: "
                                     +"ask "+nodeID.getName()+" to delete " + blockList );
     }
-    return (Block[]) sendBlock.toArray(new Block[sendBlock.size()]);
+    return sendBlock.toArray(new Block[sendBlock.size()]);
   }
 
   /*
@@ -4042,6 +4042,7 @@ class FSNamesystem implements FSConstants {
    * @author Milind Bhandarkar
    */
   public static class FsckServlet extends HttpServlet {
+    @SuppressWarnings("unchecked")
     public void doGet(HttpServletRequest request,
                       HttpServletResponse response
                       ) throws ServletException, IOException {
@@ -4069,6 +4070,7 @@ class FSNamesystem implements FSConstants {
    * @author Dhruba Borthakur
    */
   public static class GetImageServlet extends HttpServlet {
+    @SuppressWarnings("unchecked")
     public void doGet(HttpServletRequest request,
                       HttpServletResponse response
                       ) throws ServletException, IOException {

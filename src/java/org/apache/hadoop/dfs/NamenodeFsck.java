@@ -308,7 +308,7 @@ public class NamenodeFsck {
           OutputStream fos) throws Exception {
     int failures = 0;
     InetSocketAddress targetAddr = null;
-    TreeSet deadNodes = new TreeSet();
+    TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     Socket s = null;
     DataInputStream in = null;
     DataOutputStream out = null;
@@ -400,7 +400,7 @@ public class NamenodeFsck {
    */
       Random r = new Random();
   private DatanodeInfo bestNode(DFSClient dfs, DatanodeInfo[] nodes,
-      TreeSet deadNodes) throws IOException {
+      TreeSet<DatanodeInfo> deadNodes) throws IOException {
     if ((nodes == null) ||
             (nodes.length - deadNodes.size() < 1)) {
       throw new IOException("No live nodes contain current block");
@@ -463,7 +463,7 @@ public class NamenodeFsck {
    * @author Andrzej Bialecki
    */
   public class FsckResult {
-    private ArrayList missingIds = new ArrayList();
+    private ArrayList<String> missingIds = new ArrayList<String>();
     private long missingSize = 0L;
     private long corruptFiles = 0L;
     private long overReplicatedBlocks = 0L;
@@ -490,7 +490,7 @@ public class NamenodeFsck {
     }
     
     /** Return a list of missing block names (as list of Strings). */
-    public ArrayList getMissingIds() {
+    public ArrayList<String> getMissingIds() {
       return missingIds;
     }
     

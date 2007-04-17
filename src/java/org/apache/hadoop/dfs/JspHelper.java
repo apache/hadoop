@@ -48,7 +48,7 @@ public class JspHelper {
     }      
   }
   public DatanodeInfo bestNode(LocatedBlock blk) throws IOException {
-    TreeSet deadNodes = new TreeSet();
+    TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     DatanodeInfo chosenNode = null;
     int failures = 0;
     Socket s = null;

@@ -135,7 +135,7 @@ class FSDirectory implements FSConstants {
       } else if (parent == null && "/".equals(target)) {
         return this;
       } else {
-        Vector components = new Vector();
+        Vector<String> components = new Vector<String>();
         int start = 0;
         int slashid = 0;
         while (start < target.length() && (slashid = target.indexOf('/', start)) >= 0) {
@@ -151,8 +151,8 @@ class FSDirectory implements FSConstants {
 
     /**
      */
-    INode getNode(Vector components, int index) {
-      if (! name.equals((String) components.elementAt(index))) {
+    INode getNode(Vector<String> components, int index) {
+      if (! name.equals(components.elementAt(index))) {
         return null;
       }
       if (index == components.size()-1) {
@@ -160,7 +160,7 @@ class FSDirectory implements FSConstants {
       }
 
       // Check with children
-      INode child = this.getChild((String)components.elementAt(index+1));
+      INode child = this.getChild(components.elementAt(index+1));
       if (child == null) {
         return null;
       } else {
@@ -225,7 +225,7 @@ class FSDirectory implements FSConstants {
      * This operation is performed after a node is removed from the tree,
      * and we want to GC all the blocks at this node and below.
      */
-    void collectSubtreeBlocks(Vector v) {
+    void collectSubtreeBlocks(Vector<Block> v) {
       if (blocks != null) {
         for (int i = 0; i < blocks.length; i++) {
           v.add(blocks[i]);
@@ -296,7 +296,7 @@ class FSDirectory implements FSConstants {
         
     /**
      */
-    void listContents(Vector v) {
+    void listContents(Vector<INode> v) {
       if (parent != null && blocks != null) {
         v.add(this);
       }
@@ -310,7 +310,8 @@ class FSDirectory implements FSConstants {
 
   FSNamesystem namesystem = null;
   INode rootDir = new INode("");
-  TreeMap activeLocks = new TreeMap();
+  TreeMap<UTF8, TreeSet<UTF8>> activeLocks =
+    new TreeMap<UTF8, TreeSet<UTF8>>();
   FSImage fsImage;  
   boolean ready = false;
   // Metrics record
@@ -498,7 +499,7 @@ class FSDirectory implements FSConstants {
    */
   Block[] setReplication( String src, 
                           short replication,
-                          Vector oldReplication
+                          Vector<Integer> oldReplication
                           ) throws IOException {
     waitForReady();
     Block[] fileBlocks = unprotectedSetReplication(src, replication, oldReplication );
@@ -509,10 +510,10 @@ class FSDirectory implements FSConstants {
 
   Block[] unprotectedSetReplication(  String src, 
                                       short replication,
-                                      Vector oldReplication
+                                      Vector<Integer> oldReplication
                                       ) throws IOException {
     if( oldReplication == null )
-      oldReplication = new Vector();
+      oldReplication = new Vector<Integer>();
     oldReplication.setSize(1);
     oldReplication.set( 0, new Integer(-1) );
     Block[] fileBlocks = null;
@@ -583,13 +584,12 @@ class FSDirectory implements FSConstants {
         } else {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
                                         +src+" is removed" );
-          Vector v = new Vector();
+          Vector<Block> v = new Vector<Block>();
           targetNode.collectSubtreeBlocks(v);
-          for (Iterator it = v.iterator(); it.hasNext(); ) {
-            Block b = (Block) it.next();
+          for (Block b : v) {
             namesystem.blocksMap.removeINode(b);
           }
-          return (Block[]) v.toArray(new Block[v.size()]);
+          return v.toArray(new Block[v.size()]);
         }
       }
     }
@@ -598,9 +598,9 @@ class FSDirectory implements FSConstants {
   /**
    */
   public int obtainLock(UTF8 src, UTF8 holder, boolean exclusive) {
-    TreeSet holders = (TreeSet) activeLocks.get(src);
+    TreeSet<UTF8> holders = activeLocks.get(src);
     if (holders == null) {
-      holders = new TreeSet();
+      holders = new TreeSet<UTF8>();
       activeLocks.put(src, holders);
     }
     if (exclusive && holders.size() > 0) {
@@ -640,13 +640,13 @@ class FSDirectory implements FSConstants {
       if (targetNode == null) {
         return null;
       } else {
-        Vector contents = new Vector();
+        Vector<INode> contents = new Vector<INode>();
         targetNode.listContents(contents);
 
         DFSFileInfo listing[] = new DFSFileInfo[contents.size()];
         int i = 0;
-        for (Iterator it = contents.iterator(); it.hasNext(); i++) {
-          listing[i] = new DFSFileInfo( (INode) it.next() );
+        for (Iterator<INode> it = contents.iterator(); it.hasNext(); i++) {
+          listing[i] = new DFSFileInfo(it.next());
         }
         return listing;
       }
@@ -701,7 +701,7 @@ class FSDirectory implements FSConstants {
     src = normalizePath(new UTF8(src));
 
     // Use this to collect all the dirs we need to construct
-    Vector v = new Vector();
+    Vector<String> v = new Vector<String>();
 
     // The dir itself
     v.add(src);
@@ -717,7 +717,7 @@ class FSDirectory implements FSConstants {
     // the way
     int numElts = v.size();
     for (int i = numElts - 1; i >= 0; i--) {
-      String cur = (String) v.elementAt(i);
+      String cur = v.elementAt(i);
       try {
         INode inserted = unprotectedMkdir(cur);
         if (inserted != null) {

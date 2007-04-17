@@ -425,6 +425,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
    * @author Dhruba Borthakur
    */
   public static class GetImageServlet extends HttpServlet {
+    @SuppressWarnings("unchecked")
     public void doGet(HttpServletRequest request,
                       HttpServletResponse response
                       ) throws ServletException, IOException {

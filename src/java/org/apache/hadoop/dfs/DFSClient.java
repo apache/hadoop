@@ -59,7 +59,8 @@ class DFSClient implements FSConstants {
    * A map from name -> DFSOutputStream of files that are currently being
    * written by this client.
    */
-  private TreeMap pendingCreates = new TreeMap();
+  private TreeMap<String, OutputStream> pendingCreates =
+    new TreeMap<String, OutputStream>();
     
   /**
    * A class to track the list of DFS clients, so that they can be closed
@@ -67,16 +68,14 @@ class DFSClient implements FSConstants {
    * @author Owen O'Malley
    */
   private static class ClientFinalizer extends Thread {
-    private List clients = new ArrayList();
+    private List<DFSClient> clients = new ArrayList<DFSClient>();
 
     public synchronized void addClient(DFSClient client) {
       clients.add(client);
     }
 
     public synchronized void run() {
-      Iterator itr = clients.iterator();
-      while (itr.hasNext()) {
-        DFSClient client = (DFSClient) itr.next();
+      for (DFSClient client : clients) {
         if (client.running) {
           try {
             client.close();
@@ -529,13 +528,13 @@ class DFSClient implements FSConstants {
       Block oldBlocks[] = this.blocks;
 
       LocatedBlock results[] = namenode.open(src);            
-      Vector blockV = new Vector();
-      Vector nodeV = new Vector();
+      Vector<Block> blockV = new Vector<Block>();
+      Vector<DatanodeInfo[]> nodeV = new Vector<DatanodeInfo[]>();
       for (int i = 0; i < results.length; i++) {
         blockV.add(results[i].getBlock());
         nodeV.add(results[i].getLocations());
       }
-      Block newBlocks[] = (Block[]) blockV.toArray(new Block[blockV.size()]);
+      Block[] newBlocks = blockV.toArray(new Block[blockV.size()]);
 
       if (oldBlocks != null) {
         for (int i = 0; i < oldBlocks.length; i++) {
@@ -548,7 +547,7 @@ class DFSClient implements FSConstants {
         }
       }
       this.blocks = newBlocks;
-      this.nodes = (DatanodeInfo[][]) nodeV.toArray(new DatanodeInfo[nodeV.size()][]);
+      this.nodes = nodeV.toArray(new DatanodeInfo[nodeV.size()][]);
       this.currentNode = null;
     }
 
