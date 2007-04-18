@@ -496,7 +496,8 @@ class MapTask extends Task {
         Sorter sorter = new Sorter(localFs, keyClass, valClass, job);
         
         for (int parts = 0; parts < partitions; parts++){
-          List<SegmentDescriptor> segmentList = new ArrayList(numSpills);
+          List<SegmentDescriptor> segmentList =
+            new ArrayList<SegmentDescriptor>(numSpills);
           for(int i = 0; i < numSpills; i++) {
             FSDataInputStream indexIn = localFs.open(indexFileName[i]);
             indexIn.seek(parts * 16);

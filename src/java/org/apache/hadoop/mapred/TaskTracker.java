@@ -115,7 +115,7 @@ public class TaskTracker
     
   boolean shuttingDown = false;
     
-  Map<String, TaskInProgress> tasks = new HashMap();
+  Map<String, TaskInProgress> tasks = new HashMap<String, TaskInProgress>();
   /**
    * Map from taskId -> TaskInProgress.
    */
@@ -126,7 +126,7 @@ public class TaskTracker
   boolean justStarted = true;
     
   //dir -> DF
-  Map localDirsDf = new HashMap();
+  Map<String, DF> localDirsDf = new HashMap<String, DF>();
   long minSpaceStart = 0;
   //must have this much space free to start new tasks
   boolean acceptNewTasks = true;
@@ -186,7 +186,7 @@ public class TaskTracker
    * A list of tips that should be cleaned up.
    */
   private BlockingQueue<TaskTrackerAction> tasksToCleanup = 
-    new LinkedBlockingQueue();
+    new LinkedBlockingQueue<TaskTrackerAction>();
     
   /**
    * A daemon-thread that pulls tips off the list of things to cleanup.
@@ -231,7 +231,7 @@ public class TaskTracker
       if (!runningJobs.containsKey(jobId)) {
         rJob = new RunningJob(jobId, localJobFile);
         rJob.localized = false;
-        rJob.tasks = new HashSet();
+        rJob.tasks = new HashSet<TaskInProgress>();
         rJob.jobFile = localJobFile;
         runningJobs.put(jobId, rJob);
       } else {
@@ -297,8 +297,8 @@ public class TaskTracker
 
     // Clear out state tables
     this.tasks.clear();
-    this.runningTasks = new TreeMap();
-    this.runningJobs = new TreeMap();
+    this.runningTasks = new TreeMap<String, TaskInProgress>();
+    this.runningJobs = new TreeMap<String, RunningJob>();
     this.mapTotal = 0;
     this.reduceTotal = 0;
     this.acceptNewTasks = true;
@@ -611,10 +611,10 @@ public class TaskTracker
     // Kill running tasks.  Do this in a 2nd vector, called 'tasksToClose',
     // because calling jobHasFinished() may result in an edit to 'tasks'.
     //
-    TreeMap tasksToClose = new TreeMap();
+    TreeMap<String, TaskInProgress> tasksToClose =
+      new TreeMap<String, TaskInProgress>();
     tasksToClose.putAll(tasks);
-    for (Iterator it = tasksToClose.values().iterator(); it.hasNext(); ) {
-      TaskInProgress tip = (TaskInProgress) it.next();
+    for (TaskInProgress tip : tasksToClose.values()) {
       tip.jobHasFinished();
     }
 
@@ -1048,7 +1048,7 @@ public class TaskTracker
     for (int i = 0; i < localDirs.length; i++) {
       DF df = null;
       if (localDirsDf.containsKey(localDirs[i])) {
-        df = (DF) localDirsDf.get(localDirs[i]);
+        df = localDirsDf.get(localDirs[i]);
       } else {
         df = new DF(new File(localDirs[i]), fConf);
         localDirsDf.put(localDirs[i], df);
@@ -1648,7 +1648,7 @@ public class TaskTracker
     RunningJob(String jobid, Path jobFile) {
       this.jobid = jobid;
       localized = false;
-      tasks = new HashSet();
+      tasks = new HashSet<TaskInProgress>();
       this.jobFile = jobFile;
       keepJobFiles = false;
     }
@@ -1768,7 +1768,7 @@ public class TaskTracker
    * @return a copy of the list of TaskStatus objects
    */
   synchronized List<TaskStatus> getRunningTaskStatuses() {
-    List<TaskStatus> result = new ArrayList(runningTasks.size());
+    List<TaskStatus> result = new ArrayList<TaskStatus>(runningTasks.size());
     for(TaskInProgress tip: runningTasks.values()) {
       result.add(tip.createStatus());
     }
@@ -1780,7 +1780,7 @@ public class TaskTracker
    * @return
    */
   synchronized List<TaskStatus> getNonRunningTasks() {
-    List<TaskStatus> result = new ArrayList(tasks.size());
+    List<TaskStatus> result = new ArrayList<TaskStatus>(tasks.size());
     for(Map.Entry<String, TaskInProgress> task: tasks.entrySet()) {
       if (!runningTasks.containsKey(task.getKey())) {
         result.add(task.getValue().createStatus());

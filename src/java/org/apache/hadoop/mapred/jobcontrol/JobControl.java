@@ -48,11 +48,11 @@ public class JobControl implements Runnable{
 	
   private int runnerState;			// the thread state
 	
-  private Hashtable waitingJobs;
-  private Hashtable readyJobs;
-  private Hashtable runningJobs;
-  private Hashtable successfulJobs;
-  private Hashtable failedJobs;
+  private Hashtable<String, Job> waitingJobs;
+  private Hashtable<String, Job> readyJobs;
+  private Hashtable<String, Job> runningJobs;
+  private Hashtable<String, Job> successfulJobs;
+  private Hashtable<String, Job> failedJobs;
 	
   private long nextJobID;
   private String groupName;
@@ -62,23 +62,22 @@ public class JobControl implements Runnable{
    * @param groupName a name identifying this group
    */
   public JobControl(String groupName) {
-    this.waitingJobs = new Hashtable();
-    this.readyJobs = new Hashtable();
-    this.runningJobs = new Hashtable();
-    this.successfulJobs = new Hashtable();
-    this.failedJobs = new Hashtable();
+    this.waitingJobs = new Hashtable<String, Job>();
+    this.readyJobs = new Hashtable<String, Job>();
+    this.runningJobs = new Hashtable<String, Job>();
+    this.successfulJobs = new Hashtable<String, Job>();
+    this.failedJobs = new Hashtable<String, Job>();
     this.nextJobID = -1;
     this.groupName = groupName;
     this.runnerState = JobControl.READY;
 		
   }
 	
-  private static ArrayList toArrayList(Hashtable jobs) {
-    ArrayList retv = new ArrayList();
+  private static ArrayList<Job> toArrayList(Hashtable<String, Job> jobs) {
+    ArrayList<Job> retv = new ArrayList<Job>();
     synchronized (jobs) {
-      Iterator iter = jobs.values().iterator();
-      while (iter.hasNext()) {
-        retv.add(iter.next());
+      for (Job job : jobs.values()) {
+        retv.add(job);
       }
     }
 		
@@ -88,32 +87,32 @@ public class JobControl implements Runnable{
   /**
    * @return the jobs in the waiting state
    */
-  public ArrayList getWaitingJobs() {
+  public ArrayList<Job> getWaitingJobs() {
     return JobControl.toArrayList(this.waitingJobs);
   }
 	
   /**
    * @return the jobs in the running state
    */
-  public ArrayList getRunningJobs() {
+  public ArrayList<Job> getRunningJobs() {
     return JobControl.toArrayList(this.runningJobs);
   }
 	
   /**
    * @return the jobs in the ready state
    */
-  public ArrayList getReadyJobs() {
+  public ArrayList<Job> getReadyJobs() {
     return JobControl.toArrayList(this.readyJobs);
   }
 	
   /**
    * @return the jobs in the success state
    */
-  public ArrayList getSuccessfulJobs() {
+  public ArrayList<Job> getSuccessfulJobs() {
     return JobControl.toArrayList(this.successfulJobs);
   }
 	
-  public ArrayList getFailedJobs() {
+  public ArrayList<Job> getFailedJobs() {
     return JobControl.toArrayList(this.failedJobs);
   }
 	
@@ -122,19 +121,19 @@ public class JobControl implements Runnable{
     return this.groupName + this.nextJobID;
   }
 	
-  private static void addToQueue(Job aJob, Hashtable queue) {
+  private static void addToQueue(Job aJob, Hashtable<String, Job> queue) {
     synchronized(queue) {
       queue.put(aJob.getJobID(), aJob);
     }		
   }
 	
   private void addToQueue(Job aJob) {
-    Hashtable queue = getQueue(aJob.getState());
+    Hashtable<String, Job> queue = getQueue(aJob.getState());
     addToQueue(aJob, queue);	
   }
 	
-  private Hashtable getQueue(int state) {
-    Hashtable retv = null;
+  private Hashtable<String, Job> getQueue(int state) {
+    Hashtable<String, Job> retv = null;
     if (state == Job.WAITING) {
       retv = this.waitingJobs;
     } else if (state == Job.READY) {
@@ -208,13 +207,11 @@ public class JobControl implements Runnable{
 	
   synchronized private void checkRunningJobs() {
 		
-    Hashtable oldJobs = null;
+    Hashtable<String, Job> oldJobs = null;
     oldJobs = this.runningJobs;
-    this.runningJobs = new Hashtable();
+    this.runningJobs = new Hashtable<String, Job>();
 		
-    Iterator jobs = oldJobs.values().iterator();
-    while (jobs.hasNext()) {
-      Job nextJob = (Job)jobs.next();
+    for (Job nextJob : oldJobs.values()) {
       int state = nextJob.checkState();
       /*
         if (state != Job.RUNNING) {
@@ -227,13 +224,11 @@ public class JobControl implements Runnable{
   }
 	
   synchronized private void checkWaitingJobs() {
-    Hashtable oldJobs = null;
+    Hashtable<String, Job> oldJobs = null;
     oldJobs = this.waitingJobs;
-    this.waitingJobs = new Hashtable();
+    this.waitingJobs = new Hashtable<String, Job>();
 		
-    Iterator jobs = oldJobs.values().iterator();
-    while (jobs.hasNext()) {
-      Job nextJob = (Job)jobs.next();
+    for (Job nextJob : oldJobs.values()) {
       int state = nextJob.checkState();
       /*
         if (state != Job.WAITING) {
@@ -246,13 +241,11 @@ public class JobControl implements Runnable{
   }
 	
   synchronized private void startReadyJobs() {
-    Hashtable oldJobs = null;
+    Hashtable<String, Job> oldJobs = null;
     oldJobs = this.readyJobs;
-    this.readyJobs = new Hashtable();
+    this.readyJobs = new Hashtable<String, Job>();
 		
-    Iterator jobs = oldJobs.values().iterator();
-    while (jobs.hasNext()) {
-      Job nextJob = (Job)jobs.next();
+    for (Job nextJob : oldJobs.values()) {
       //System.out.println("Job to submit to Hadoop: " + nextJob.getJobName());
       nextJob.submit();
       //System.out.println("Hadoop ID: " + nextJob.getMapredJobID());

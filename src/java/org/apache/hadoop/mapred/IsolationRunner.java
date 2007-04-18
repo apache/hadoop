@@ -88,7 +88,7 @@ public class IsolationRunner {
   
   private static ClassLoader makeClassLoader(JobConf conf, 
                                              File workDir) throws IOException {
-    List cp = new ArrayList();
+    List<URL> cp = new ArrayList<URL>();
 
     String jar = conf.getJar();
     if (jar != null) {                      // if jar exists, it into workDir
@@ -101,7 +101,7 @@ public class IsolationRunner {
       cp.add(new URL("file:" + new File(workDir, "classes/").toString()));
       cp.add(new URL("file:" + workDir.toString() + "/"));
     }
-    return new URLClassLoader((URL[]) cp.toArray(new URL[cp.size()]));
+    return new URLClassLoader(cp.toArray(new URL[cp.size()]));
   }
   
   /**

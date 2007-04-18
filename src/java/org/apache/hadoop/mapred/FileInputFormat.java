@@ -81,7 +81,7 @@ public abstract class FileInputFormat implements InputFormat {
     if (dirs.length == 0) {
       throw new IOException("No input paths specified in job");
     }
-    List<Path> result = new ArrayList(); 
+    List<Path> result = new ArrayList<Path>(); 
     for (Path p: dirs) {
       FileSystem fs = p.getFileSystem(job); 
       Path[] matches =
@@ -100,7 +100,7 @@ public abstract class FileInputFormat implements InputFormat {
       throw new IOException("No input paths specified in input"); 
     }
     
-    List<IOException> result = new ArrayList();
+    List<IOException> result = new ArrayList<IOException>();
     int totalFiles = 0; 
     for (Path p: inputDirs) {
       FileSystem fs = p.getFileSystem(job);
@@ -161,7 +161,8 @@ public abstract class FileInputFormat implements InputFormat {
     long minSize = Math.max(job.getLong("mapred.min.split.size", 1),
                             minSplitSize);
 
-    ArrayList splits = new ArrayList(numSplits);  // generate splits
+    // generate splits
+    ArrayList<FileSplit> splits = new ArrayList<FileSplit>(numSplits);
     for (int i = 0; i < files.length; i++) {
       Path file = files[i];
       FileSystem fs = file.getFileSystem(job);
@@ -188,7 +189,7 @@ public abstract class FileInputFormat implements InputFormat {
       }
     }
     LOG.debug( "Total # of splits: " + splits.size() );
-    return (FileSplit[])splits.toArray(new FileSplit[splits.size()]);
+    return splits.toArray(new FileSplit[splits.size()]);
   }
 
   private static long computeSplitSize(long goalSize, long minSize,

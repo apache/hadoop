@@ -51,7 +51,7 @@ class TaskTrackerStatus implements Writable {
   /**
    */
   public TaskTrackerStatus() {
-    taskReports = new ArrayList();
+    taskReports = new ArrayList<TaskStatus>();
   }
 
   /**
@@ -63,7 +63,7 @@ class TaskTrackerStatus implements Writable {
     this.host = host;
     this.httpPort = httpPort;
 
-    this.taskReports = new ArrayList(taskReports);
+    this.taskReports = new ArrayList<TaskStatus>(taskReports);
     this.failures = failures;
   }
 

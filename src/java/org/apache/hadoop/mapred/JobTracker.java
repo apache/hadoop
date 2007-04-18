@@ -158,7 +158,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
      * but that have not yet been seen in a status report.
      * map: task-id (String) -> time-assigned (Long)
      */
-    private Map launchingTasks = new LinkedHashMap();
+    private Map<String, Long> launchingTasks =
+      new LinkedHashMap<String, Long>();
       
     public void run() {
       while (shouldRun) {
@@ -169,16 +170,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           LOG.debug("Starting launching task sweep");
           synchronized (JobTracker.this) {
             synchronized (launchingTasks) {
-              Iterator itr = launchingTasks.entrySet().iterator();
+              Iterator<Map.Entry<String, Long>> itr =
+                launchingTasks.entrySet().iterator();
               while (itr.hasNext()) {
-                Map.Entry pair = (Map.Entry) itr.next();
-                String taskId = (String) pair.getKey();
-                long age = now - ((Long) pair.getValue()).longValue();
+                Map.Entry<String, Long> pair = itr.next();
+                String taskId = pair.getKey();
+                long age = now - (pair.getValue()).longValue();
                 LOG.info(taskId + " is " + age + " ms debug.");
                 if (age > TASKTRACKER_EXPIRY_INTERVAL) {
                   LOG.info("Launching task " + taskId + " timed out.");
                   TaskInProgress tip = null;
-                  tip = (TaskInProgress) taskidToTIPMap.get(taskId);
+                  tip = taskidToTIPMap.get(taskId);
                   if (tip != null) {
                     JobInProgress job = tip.getJob();
                     String trackerName = getAssignedTracker(taskId);
@@ -269,7 +271,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                 long now = System.currentTimeMillis();
                 TaskTrackerStatus leastRecent = null;
                 while ((trackerExpiryQueue.size() > 0) &&
-                       ((leastRecent = (TaskTrackerStatus) trackerExpiryQueue.first()) != null) &&
+                       ((leastRecent = trackerExpiryQueue.first()) != null) &&
                        (now - leastRecent.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL)) {
                         
                   // Remove profile from head of queue
@@ -277,7 +279,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                   String trackerName = leastRecent.getTrackerName();
                         
                   // Figure out if last-seen time should be updated, or if tracker is dead
-                  TaskTrackerStatus newProfile = (TaskTrackerStatus) taskTrackers.get(leastRecent.getTrackerName());
+                  TaskTrackerStatus newProfile = taskTrackers.get(leastRecent.getTrackerName());
                   // Items might leave the taskTracker set through other means; the
                   // status stored in 'taskTrackers' might be null, which means the
                   // tracker has already been destroyed.
@@ -328,7 +330,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       while (shouldRun) {
         try {
           Thread.sleep(RETIRE_JOB_CHECK_INTERVAL);
-          List<JobInProgress> retiredJobs = new ArrayList();
+          List<JobInProgress> retiredJobs = new ArrayList<JobInProgress>();
           long retireBefore = System.currentTimeMillis() - 
             RETIRE_JOB_INTERVAL;
           synchronized (jobsByArrival) {
@@ -507,27 +509,31 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   //
 
   // All the known jobs.  (jobid->JobInProgress)
-  Map<String, JobInProgress> jobs = new TreeMap();
-  List<JobInProgress> jobsByArrival = new ArrayList();
+  Map<String, JobInProgress> jobs = new TreeMap<String, JobInProgress>();
+  List<JobInProgress> jobsByArrival = new ArrayList<JobInProgress>();
 
   // (user -> list of JobInProgress)
-  TreeMap<String, ArrayList<JobInProgress>> userToJobsMap = new TreeMap();
+  TreeMap<String, ArrayList<JobInProgress>> userToJobsMap =
+    new TreeMap<String, ArrayList<JobInProgress>>();
     
   // All the known TaskInProgress items, mapped to by taskids (taskid->TIP)
-  Map<String, TaskInProgress> taskidToTIPMap = new TreeMap();
+  Map<String, TaskInProgress> taskidToTIPMap =
+    new TreeMap<String, TaskInProgress>();
 
   // (taskid --> trackerID) 
-  TreeMap taskidToTrackerMap = new TreeMap();
+  TreeMap<String, String> taskidToTrackerMap = new TreeMap<String, String>();
 
   // (trackerID->TreeSet of taskids running at that tracker)
-  TreeMap trackerToTaskMap = new TreeMap();
+  TreeMap<String, Set<String>> trackerToTaskMap =
+    new TreeMap<String, Set<String>>();
 
   // (trackerID -> TreeSet of completed taskids running at that tracker)
-  TreeMap<String, Set<String>> trackerToMarkedTasksMap = new TreeMap();
+  TreeMap<String, Set<String>> trackerToMarkedTasksMap =
+    new TreeMap<String, Set<String>>();
 
   // (trackerID --> last sent HeartBeatResponse)
   Map<String, HeartbeatResponse> trackerToHeartbeatResponseMap = 
-    new TreeMap();
+    new TreeMap<String, HeartbeatResponse>();
     
   //
   // Watch and expire TaskTracker objects using these structures.
@@ -535,8 +541,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   //
   int totalMaps = 0;
   int totalReduces = 0;
-  private TreeMap taskTrackers = new TreeMap();
-  List<JobInProgress> jobInitQueue = new ArrayList();
+  private TreeMap<String, TaskTrackerStatus> taskTrackers =
+    new TreeMap<String, TaskTrackerStatus>();
+  List<JobInProgress> jobInitQueue = new ArrayList<JobInProgress>();
   ExpireTrackers expireTrackers = new ExpireTrackers();
   Thread expireTrackersThread = null;
   RetireJobs retireJobs = new RetireJobs();
@@ -556,19 +563,20 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * object has been updated in the taskTracker table, the latest status is 
    * reinserted.  Otherwise, we assume the tracker has expired.
    */
-  TreeSet trackerExpiryQueue = new TreeSet(new Comparator() {
-      public int compare(Object o1, Object o2) {
-        TaskTrackerStatus p1 = (TaskTrackerStatus) o1;
-        TaskTrackerStatus p2 = (TaskTrackerStatus) o2;
-        if (p1.getLastSeen() < p2.getLastSeen()) {
-          return -1;
-        } else if (p1.getLastSeen() > p2.getLastSeen()) {
-          return 1;
-        } else {
-          return (p1.getTrackerName().compareTo(p2.getTrackerName()));
+  TreeSet<TaskTrackerStatus> trackerExpiryQueue =
+    new TreeSet<TaskTrackerStatus>(
+      new Comparator<TaskTrackerStatus>() {
+        public int compare(TaskTrackerStatus p1, TaskTrackerStatus p2) {
+          if (p1.getLastSeen() < p2.getLastSeen()) {
+            return -1;
+          } else if (p1.getLastSeen() > p2.getLastSeen()) {
+            return 1;
+          } else {
+            return (p1.getTrackerName().compareTo(p2.getTrackerName()));
+          }
         }
       }
-    });
+    );
 
   // Used to provide an HTML view on Job, Task, and TaskTracker structures
   StatusHttpServer infoServer;
@@ -746,9 +754,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     taskidToTrackerMap.put(taskid, taskTracker);
 
     // tracker --> taskid
-    TreeSet taskset = (TreeSet) trackerToTaskMap.get(taskTracker);
+    Set<String> taskset = trackerToTaskMap.get(taskTracker);
     if (taskset == null) {
-      taskset = new TreeSet();
+      taskset = new TreeSet<String>();
       trackerToTaskMap.put(taskTracker, taskset);
     }
     taskset.add(taskid);
@@ -759,11 +767,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     
   void removeTaskEntry(String taskid) {
     // taskid --> tracker
-    String tracker = (String) taskidToTrackerMap.remove(taskid);
+    String tracker = taskidToTrackerMap.remove(taskid);
 
     // tracker --> taskid
     if (tracker != null) {
-      TreeSet trackerSet = (TreeSet) trackerToTaskMap.get(tracker);
+      Set<String> trackerSet = trackerToTaskMap.get(tracker);
       if (trackerSet != null) {
         trackerSet.remove(taskid);
       }
@@ -784,9 +792,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    */
   void markCompletedTaskAttempt(String taskTracker, String taskid) {
     // tracker --> taskid
-    TreeSet taskset = (TreeSet) trackerToMarkedTasksMap.get(taskTracker);
+    Set<String> taskset = trackerToMarkedTasksMap.get(taskTracker);
     if (taskset == null) {
-      taskset = new TreeSet();
+      taskset = new TreeSet<String>();
       trackerToMarkedTasksMap.put(taskTracker, taskset);
     }
     taskset.add(taskid);
@@ -828,8 +836,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    */
   private void removeMarkedTasks(String taskTracker) {
     // Purge all the 'marked' tasks which were running at taskTracker
-    TreeSet<String> markedTaskSet = 
-      (TreeSet<String>) trackerToMarkedTasksMap.get(taskTracker);
+    Set<String> markedTaskSet = 
+      trackerToMarkedTasksMap.get(taskTracker);
     if (markedTaskSet != null) {
       for (String taskid : markedTaskSet) {
         removeTaskEntry(taskid);
@@ -954,8 +962,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   public long getStartTime() {
     return startTime;
   }
-  public Vector runningJobs() {
-    Vector v = new Vector();
+  public Vector<JobInProgress> runningJobs() {
+    Vector<JobInProgress> v = new Vector<JobInProgress>();
     for (Iterator it = jobs.values().iterator(); it.hasNext(); ) {
       JobInProgress jip = (JobInProgress) it.next();
       JobStatus status = jip.getStatus();
@@ -974,8 +982,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       return (List<JobInProgress>) runningJobs();
     }
   }
-  public Vector failedJobs() {
-    Vector v = new Vector();
+  public Vector<JobInProgress> failedJobs() {
+    Vector<JobInProgress> v = new Vector<JobInProgress>();
     for (Iterator it = jobs.values().iterator(); it.hasNext(); ) {
       JobInProgress jip = (JobInProgress) it.next();
       JobStatus status = jip.getStatus();
@@ -985,8 +993,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
     return v;
   }
-  public Vector completedJobs() {
-    Vector v = new Vector();
+  public Vector<JobInProgress> completedJobs() {
+    Vector<JobInProgress> v = new Vector<JobInProgress>();
     for (Iterator it = jobs.values().iterator(); it.hasNext(); ) {
       JobInProgress jip = (JobInProgress) it.next();
       JobStatus status = jip.getStatus();
@@ -1003,7 +1011,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   }
   public TaskTrackerStatus getTaskTracker(String trackerID) {
     synchronized (taskTrackers) {
-      return (TaskTrackerStatus) taskTrackers.get(trackerID);
+      return taskTrackers.get(trackerID);
     }
   }
 
@@ -1075,7 +1083,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       
     // Initialize the response to be sent for the heartbeat
     HeartbeatResponse response = new HeartbeatResponse(newResponseId, null);
-    List<TaskTrackerAction> actions = new ArrayList();
+    List<TaskTrackerAction> actions = new ArrayList<TaskTrackerAction>();
       
     // Check for new tasks to be executed on the tasktracker
     if (acceptNewTasks) {
@@ -1140,8 +1148,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    */
   private boolean updateTaskTrackerStatus(String trackerName,
                                           TaskTrackerStatus status) {
-    TaskTrackerStatus oldStatus = 
-      (TaskTrackerStatus) taskTrackers.get(trackerName);
+    TaskTrackerStatus oldStatus = taskTrackers.get(trackerName);
     if (oldStatus != null) {
       totalMaps -= oldStatus.countMapTasks();
       totalReduces -= oldStatus.countReduceTasks();
@@ -1214,7 +1221,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 	
     synchronized (taskTrackers) {
       numTaskTrackers = taskTrackers.size();
-      tts = (TaskTrackerStatus) taskTrackers.get(taskTracker);
+      tts = taskTrackers.get(taskTracker);
     }
     if (tts == null) {
       LOG.warn("Unknown task tracker polling; ignoring: " + taskTracker);
@@ -1346,13 +1353,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * A tracker wants to know if any of its Tasks have been
    * closed (because the job completed, whether successfully or not)
    */
-  private synchronized List getTasksToKill(String taskTracker) {
-    Set<String> taskIds = (TreeSet) trackerToTaskMap.get(taskTracker);
+  private synchronized List<TaskTrackerAction> getTasksToKill(
+      String taskTracker) {
+    
+    Set<String> taskIds = trackerToTaskMap.get(taskTracker);
     if (taskIds != null) {
-      List<TaskTrackerAction> killList = new ArrayList();
-      Set<String> killJobIds = new TreeSet(); 
+      List<TaskTrackerAction> killList = new ArrayList<TaskTrackerAction>();
+      Set<String> killJobIds = new TreeSet<String>(); 
       for (String killTaskId : taskIds ) {
-        TaskInProgress tip = (TaskInProgress) taskidToTIPMap.get(killTaskId);
+        TaskInProgress tip = taskidToTIPMap.get(killTaskId);
         if (tip.shouldCloseForClosedJob(killTaskId)) {
           // 
           // This is how the JobTracker ends a task at the TaskTracker.
@@ -1447,12 +1456,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   }
     
   public synchronized void killJob(String jobid) {
-    JobInProgress job = (JobInProgress) jobs.get(jobid);
+    JobInProgress job = jobs.get(jobid);
     job.kill();
   }
 
   public synchronized JobProfile getJobProfile(String jobid) {
-    JobInProgress job = (JobInProgress) jobs.get(jobid);
+    JobInProgress job = jobs.get(jobid);
     if (job != null) {
       return job.getProfile();
     } else {
@@ -1460,7 +1469,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
   }
   public synchronized JobStatus getJobStatus(String jobid) {
-    JobInProgress job = (JobInProgress) jobs.get(jobid);
+    JobInProgress job = jobs.get(jobid);
     if (job != null) {
       return job.getStatus();
     } else {
@@ -1468,7 +1477,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
   }
   public synchronized Counters getJobCounters(String jobid) {
-    JobInProgress job = (JobInProgress) jobs.get(jobid);
+    JobInProgress job = jobs.get(jobid);
     if (job != null) {
       return job.getCounters();
     } else {
@@ -1476,31 +1485,33 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
   }
   public synchronized TaskReport[] getMapTaskReports(String jobid) {
-    JobInProgress job = (JobInProgress) jobs.get(jobid);
+    JobInProgress job = jobs.get(jobid);
     if (job == null) {
       return new TaskReport[0];
     } else {
-      Vector reports = new Vector();
-      Vector completeMapTasks = job.reportTasksInProgress(true, true);
+      Vector<TaskReport> reports = new Vector<TaskReport>();
+      Vector<TaskInProgress> completeMapTasks =
+        job.reportTasksInProgress(true, true);
       for (Iterator it = completeMapTasks.iterator(); it.hasNext(); ) {
         TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
-      Vector incompleteMapTasks = job.reportTasksInProgress(true, false);
+      Vector<TaskInProgress> incompleteMapTasks =
+        job.reportTasksInProgress(true, false);
       for (Iterator it = incompleteMapTasks.iterator(); it.hasNext(); ) {
         TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
-      return (TaskReport[]) reports.toArray(new TaskReport[reports.size()]);
+      return reports.toArray(new TaskReport[reports.size()]);
     }
   }
 
   public synchronized TaskReport[] getReduceTaskReports(String jobid) {
-    JobInProgress job = (JobInProgress) jobs.get(jobid);
+    JobInProgress job = jobs.get(jobid);
     if (job == null) {
       return new TaskReport[0];
     } else {
-      Vector reports = new Vector();
+      Vector<TaskReport> reports = new Vector<TaskReport>();
       Vector completeReduceTasks = job.reportTasksInProgress(false, true);
       for (Iterator it = completeReduceTasks.iterator(); it.hasNext(); ) {
         TaskInProgress tip = (TaskInProgress) it.next();
@@ -1511,7 +1522,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
-      return (TaskReport[]) reports.toArray(new TaskReport[reports.size()]);
+      return reports.toArray(new TaskReport[reports.size()]);
     }
   }
     
@@ -1523,7 +1534,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   public synchronized TaskCompletionEvent[] getTaskCompletionEvents(
                                                                     String jobid, int fromEventId, int maxEvents) throws IOException{
     TaskCompletionEvent[] events = TaskCompletionEvent.EMPTY_ARRAY;
-    JobInProgress job = (JobInProgress)this.jobs.get(jobid);
+    JobInProgress job = this.jobs.get(jobid);
     if (null != job) {
       events = job.getTaskCompletionEvents(fromEventId, maxEvents);
     }
@@ -1540,7 +1551,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   public synchronized List<String> getTaskDiagnostics(String jobId,
                                                       String tipId,
                                                       String taskId) {
-    JobInProgress job = (JobInProgress) jobs.get(jobId);
+    JobInProgress job = jobs.get(jobId);
     if (job == null) {
       throw new IllegalArgumentException("Job " + jobId + " not found.");
     }
@@ -1577,7 +1588,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * Returns specified TaskInProgress, or null.
    */
   private TaskInProgress getTip(String jobid, String tipid) {
-    JobInProgress job = (JobInProgress) jobs.get(jobid);
+    JobInProgress job = jobs.get(jobid);
     return (job == null ? null 
             : (TaskInProgress) job.getTaskInProgress(tipid));
   }
@@ -1588,11 +1599,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * @return The name of the task tracker
    */
   public synchronized String getAssignedTracker(String taskId) {
-    return (String) taskidToTrackerMap.get(taskId);
+    return taskidToTrackerMap.get(taskId);
   }
     
   public JobStatus[] jobsToComplete() {
-    Vector v = new Vector();
+    Vector<JobStatus> v = new Vector<JobStatus>();
     for (Iterator it = jobs.values().iterator(); it.hasNext(); ) {
       JobInProgress jip = (JobInProgress) it.next();
       JobStatus status = jip.getStatus();
@@ -1603,14 +1614,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         v.add(status);
       }
     }
-    return (JobStatus[]) v.toArray(new JobStatus[v.size()]);
+    return v.toArray(new JobStatus[v.size()]);
   } 
     
   ///////////////////////////////////////////////////////////////
   // JobTracker methods
   ///////////////////////////////////////////////////////////////
   public JobInProgress getJob(String jobid) {
-    return (JobInProgress) jobs.get(jobid);
+    return jobs.get(jobid);
   }
   /**
    * Grab random num for job id
@@ -1633,7 +1644,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     for (TaskStatus report : status.getTaskReports()) {
       report.setTaskTracker(status.getTrackerName());
       String taskId = report.getTaskId();
-      TaskInProgress tip = (TaskInProgress) taskidToTIPMap.get(taskId);
+      TaskInProgress tip = taskidToTIPMap.get(taskId);
       if (tip == null) {
         LOG.info("Serious problem.  While updating status, cannot find taskid " + report.getTaskId());
       } else {
@@ -1650,13 +1661,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    */
   void lostTaskTracker(String trackerName, String hostname) {
     LOG.info("Lost tracker '" + trackerName + "'");
-    TreeSet lostTasks = (TreeSet) trackerToTaskMap.get(trackerName);
+    Set<String> lostTasks = trackerToTaskMap.get(trackerName);
     trackerToTaskMap.remove(trackerName);
 
     if (lostTasks != null) {
       for (Iterator it = lostTasks.iterator(); it.hasNext(); ) {
         String taskId = (String) it.next();
-        TaskInProgress tip = (TaskInProgress) taskidToTIPMap.get(taskId);
+        TaskInProgress tip = taskidToTIPMap.get(taskId);
 
         // Completed reduce tasks never need to be failed, because 
         // their outputs go to dfs

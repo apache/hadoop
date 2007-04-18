@@ -89,18 +89,19 @@ class TaskInProgress {
     
   // Map from task Id -> TaskTracker Id, contains tasks that are
   // currently runnings
-  private TreeMap<String, String> activeTasks = new TreeMap();
+  private TreeMap<String, String> activeTasks = new TreeMap<String, String>();
   private JobConf conf;
   private boolean runSpeculative;
-  private Map<String,List<String>> taskDiagnosticData = new TreeMap();
+  private Map<String,List<String>> taskDiagnosticData =
+    new TreeMap<String,List<String>>();
   /**
    * Map from taskId -> TaskStatus
    */
   private TreeMap<String,TaskStatus> taskStatuses = 
     new TreeMap<String,TaskStatus>();
 
-  private TreeSet machinesWhereFailed = new TreeSet();
-  private TreeSet tasksReportedClosed = new TreeSet();
+  private TreeSet<String> machinesWhereFailed = new TreeSet<String>();
+  private TreeSet<String> tasksReportedClosed = new TreeSet<String>();
     
   private Counters counters = new Counters();
 
@@ -288,13 +289,13 @@ class TaskInProgress {
    * component task-threads that have ever been started.
    */
   synchronized TaskReport generateSingleReport() {
-    ArrayList diagnostics = new ArrayList();
-    for (Iterator i = taskDiagnosticData.values().iterator(); i.hasNext();) {
-      diagnostics.addAll((List)i.next());
+    ArrayList<String> diagnostics = new ArrayList<String>();
+    for (List<String> l : taskDiagnosticData.values()) {
+      diagnostics.addAll(l);
     }
     TaskReport report = new TaskReport
       (getTIPId(), (float)progress, state,
-       (String[])diagnostics.toArray(new String[diagnostics.size()]),
+       diagnostics.toArray(new String[diagnostics.size()]),
        execStartTime, execFinishTime, counters);
       
     return report ;
@@ -326,9 +327,9 @@ class TaskInProgress {
     boolean changed = true;
     if (diagInfo != null && diagInfo.length() > 0) {
       LOG.info("Error from "+taskid+": "+diagInfo);
-      List diagHistory = (List) taskDiagnosticData.get(taskid);
+      List<String> diagHistory = taskDiagnosticData.get(taskid);
       if (diagHistory == null) {
-        diagHistory = new ArrayList();
+        diagHistory = new ArrayList<String>();
         taskDiagnosticData.put(taskid, diagHistory);
       }
       diagHistory.add(diagInfo);

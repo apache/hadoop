@@ -266,7 +266,7 @@ class ReduceTask extends Task {
     // since we don't know how many map outputs got merged in memory, we have
     // to check whether a given map output exists, and if it does, add it in
     // the list of files to merge, otherwise not.
-    List <Path> mapFilesList = new ArrayList();
+    List<Path> mapFilesList = new ArrayList<Path>();
     for(int i=0; i < numMaps; i++) {
       Path f = mapOutputFile.getInputFile(i, getTaskId());
       if (lfs.exists(f))
@@ -423,12 +423,12 @@ class ReduceTask extends Task {
     /**
      * the list of map outputs currently being copied
      */
-    private List scheduledCopies;
+    private List<MapOutputLocation> scheduledCopies;
     
     /**
      *  the results of dispatched copy attempts
      */
-    private List copyResults;
+    private List<CopyResult> copyResults;
     
     /**
      *  the number of outputs to copy in parallel
@@ -446,12 +446,12 @@ class ReduceTask extends Task {
      * busy hosts from which copies are being backed off
      * Map of host -> next contact time
      */
-    private Map penaltyBox;
+    private Map<String, Long> penaltyBox;
     
     /**
      * the set of unique hosts from which we are copying
      */
-    private Set uniqueHosts;
+    private Set<String> uniqueHosts;
     
     /**
      * the last time we polled the job tracker
@@ -511,7 +511,8 @@ class ReduceTask extends Task {
     /**
      * a hashmap from mapId to MapOutputLocation for retrials
      */
-    private Map<Integer, MapOutputLocation> retryFetches = new HashMap();
+    private Map<Integer, MapOutputLocation> retryFetches =
+      new HashMap<Integer, MapOutputLocation>();
     
     /** 
      * a TreeSet for needed map outputs
@@ -632,7 +633,7 @@ class ReduceTask extends Task {
               while (scheduledCopies.isEmpty()) {
                 scheduledCopies.wait();
               }
-              loc = (MapOutputLocation)scheduledCopies.remove(0);
+              loc = scheduledCopies.remove(0);
             }
             
             try {
@@ -774,8 +775,8 @@ class ReduceTask extends Task {
       configureClasspath(conf);
       this.umbilical = umbilical;      
       this.reduceTask = ReduceTask.this;
-      this.scheduledCopies = new ArrayList(100);
-      this.copyResults = new ArrayList(100);    
+      this.scheduledCopies = new ArrayList<MapOutputLocation>(100);
+      this.copyResults = new ArrayList<CopyResult>(100);    
       this.numCopiers = conf.getInt("mapred.reduce.parallel.copies", 5);
       this.maxBackoff = conf.getInt("mapred.reduce.copy.backoff", 300);
       this.mergeThreshold = conf.getInt("mapred.inmem.merge.threshold", 1000);
@@ -793,10 +794,10 @@ class ReduceTask extends Task {
                                 conf.getMapOutputValueClass(), conf);
       
       // hosts -> next contact time
-      this.penaltyBox = new Hashtable();
+      this.penaltyBox = new Hashtable<String, Long>();
       
       // hostnames
-      this.uniqueHosts = new HashSet();
+      this.uniqueHosts = new HashSet<String>();
       
       this.lastPollTime = 0;
       
@@ -896,7 +897,7 @@ class ReduceTask extends Task {
             while (locIt.hasNext()) {
               
               MapOutputLocation loc = (MapOutputLocation)locIt.next();
-              Long penaltyEnd = (Long)penaltyBox.get(loc.getHost());
+              Long penaltyEnd = penaltyBox.get(loc.getHost());
               boolean penalized = false, duplicate = false;
               
               if (penaltyEnd != null && currentTime < penaltyEnd.longValue()) {
@@ -1086,7 +1087,7 @@ class ReduceTask extends Task {
         if (copyResults.isEmpty()) {
           return null;
         } else {
-          return (CopyResult) copyResults.remove(0);
+          return copyResults.remove(0);
         }
       }    
     }

@@ -334,11 +334,11 @@ public class JobClient extends ToolBase implements MRConstants  {
       job.getInputFormat().getSplits(job, job.getNumMapTasks());
     // sort the splits into order based on size, so that the biggest
     // go first
-    Arrays.sort(splits, new Comparator() {
-        public int compare(Object a, Object b) {
+    Arrays.sort(splits, new Comparator<InputSplit>() {
+        public int compare(InputSplit a, InputSplit b) {
           try {
-            long left = ((InputSplit) a).getLength();
-            long right = ((InputSplit) b).getLength();
+            long left = a.getLength();
+            long right = b.getLength();
             if (left == right) {
               return 0;
             } else if (left < right) {

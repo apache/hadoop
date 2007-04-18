@@ -64,7 +64,8 @@ class JobInProgress {
   int failedMapTasks = 0 ; 
   int failedReduceTasks = 0 ; 
   JobTracker jobtracker = null;
-  Map<String,List<TaskInProgress>> hostToMaps = new HashMap();
+  Map<String,List<TaskInProgress>> hostToMaps =
+    new HashMap<String,List<TaskInProgress>>();
   private int taskCompletionEventTracker = 0 ; 
   List<TaskCompletionEvent> taskCompletionEvents ;
     
@@ -120,7 +121,7 @@ class JobInProgress {
 
     this.numMapTasks = conf.getNumMapTasks();
     this.numReduceTasks = conf.getNumReduceTasks();
-    this.taskCompletionEvents = new ArrayList(
+    this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>(
                                               numMapTasks + numReduceTasks + 10);
         
     JobHistory.JobInfo.logSubmitted(jobid, conf.getJobName(), conf.getUser(), 
@@ -184,7 +185,7 @@ class JobInProgress {
       for(String host: splits[i].getLocations()) {
         List<TaskInProgress> hostMaps = hostToMaps.get(host);
         if (hostMaps == null) {
-          hostMaps = new ArrayList();
+          hostMaps = new ArrayList<TaskInProgress>();
           hostToMaps.put(host, hostMaps);
         }
         hostMaps.add(maps[i]);              
@@ -280,10 +281,12 @@ class JobInProgress {
   }
     
   /**
-   * Return a treeset of completed TaskInProgress objects
+   * Return a vector of completed TaskInProgress objects
    */
-  public Vector reportTasksInProgress(boolean shouldBeMap, boolean shouldBeComplete) {
-    Vector results = new Vector();
+  public Vector<TaskInProgress> reportTasksInProgress(boolean shouldBeMap,
+      boolean shouldBeComplete) {
+    
+    Vector<TaskInProgress> results = new Vector<TaskInProgress>();
     TaskInProgress tips[] = null;
     if (shouldBeMap) {
       tips = maps;

@@ -158,9 +158,11 @@ public class DefaultJobHistoryParser {
   
   // call this only for jobs that succeeded for better results. 
   static class BadNodesFilter implements JobHistory.Listener {
-    private Map<String, Set<String>> badNodesToNumFaiedTasks = new HashMap(); 
+    private Map<String, Set<String>> badNodesToNumFailedTasks =
+      new HashMap<String, Set<String>>();
+    
     Map<String, Set<String>> getValues(){
-      return badNodesToNumFaiedTasks; 
+      return badNodesToNumFailedTasks; 
     }
     public void handle(JobHistory.RecordTypes recType, Map<Keys, String> values)
       throws IOException {
@@ -171,11 +173,11 @@ public class DefaultJobHistoryParser {
         if( Values.FAILED.name().equals(values.get(Keys.TASK_STATUS) )  ){
           String hostName = values.get(Keys.HOSTNAME) ;
           String taskid = values.get(Keys.TASKID); 
-          Set tasks = badNodesToNumFaiedTasks.get(hostName); 
+          Set<String> tasks = badNodesToNumFailedTasks.get(hostName); 
           if( null == tasks  ){
-            tasks = new TreeSet(); 
+            tasks = new TreeSet<String>(); 
             tasks.add(taskid);
-            badNodesToNumFaiedTasks.put(hostName, tasks);
+            badNodesToNumFailedTasks.put(hostName, tasks);
           }else{
             tasks.add(taskid);
           }

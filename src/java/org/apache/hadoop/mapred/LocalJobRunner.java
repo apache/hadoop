@@ -37,7 +37,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     LogFactory.getLog("org.apache.hadoop.mapred.LocalJobRunner");
 
   private FileSystem fs;
-  private HashMap jobs = new HashMap();
+  private HashMap<String, Job> jobs = new HashMap<String, Job>();
   private Configuration conf;
   private int map_tasks = 0;
   private int reduce_tasks = 0;
@@ -56,7 +56,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private Random random = new Random();
 
     private JobStatus status;
-    private ArrayList mapIds = new ArrayList();
+    private ArrayList<String> mapIds = new ArrayList<String>();
     private MapOutputFile mapoutputFile;
     private JobProfile profile;
     private Path localFile;
@@ -132,7 +132,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
         // move map output to reduce input
         String reduceId = "reduce_" + newId();
         for (int i = 0; i < mapIds.size(); i++) {
-          String mapId = (String)mapIds.get(i);
+          String mapId = mapIds.get(i);
           Path mapOut = this.mapoutputFile.getOutputFile(mapId);
           Path reduceIn = this.mapoutputFile.getInputFile(i, reduceId);
           if (!localFs.mkdirs(reduceIn.getParent())) {
@@ -252,11 +252,11 @@ class LocalJobRunner implements JobSubmissionProtocol {
   }
 
   public void killJob(String id) {
-    ((Thread)jobs.get(id)).stop();
+    jobs.get(id).stop();
   }
 
   public JobProfile getJobProfile(String id) {
-    Job job = (Job)jobs.get(id);
+    Job job = jobs.get(id);
     return job.getProfile();
   }
 
@@ -268,12 +268,12 @@ class LocalJobRunner implements JobSubmissionProtocol {
   }
 
   public JobStatus getJobStatus(String id) {
-    Job job = (Job)jobs.get(id);
+    Job job = jobs.get(id);
     return job.status;
   }
   
   public Counters getJobCounters(String id) {
-    Job job = (Job)jobs.get(id);
+    Job job = jobs.get(id);
     return job.currentCounters;
   }
 
