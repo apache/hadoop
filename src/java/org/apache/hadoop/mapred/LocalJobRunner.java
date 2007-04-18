@@ -161,9 +161,13 @@ class LocalJobRunner implements JobSubmissionProtocol {
         
         this.status.setRunState(JobStatus.SUCCEEDED);
 
+        JobEndNotifier.localRunnerNotification(job, status);
+
       } catch (Throwable t) {
         this.status.setRunState(JobStatus.FAILED);
         LOG.warn(id, t);
+
+        JobEndNotifier.localRunnerNotification(job, status);
 
       } finally {
         try {

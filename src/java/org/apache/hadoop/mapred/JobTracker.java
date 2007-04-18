@@ -115,7 +115,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       } catch (InterruptedException e) {
       }
     }
-    if (runTracker) { tracker.offerService(); }
+    if (runTracker) {
+      JobEndNotifier.startNotifier();
+      tracker.offerService();
+    }
   }
 
   public static JobTracker getTracker() {
@@ -125,6 +128,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   public static void stopTracker() throws IOException {
     runTracker = false;
     if (tracker != null) {
+      JobEndNotifier.stopNotifier();
       tracker.close();
       tracker = null;
     }
@@ -873,7 +877,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   synchronized void finalizeJob(JobInProgress job) {
     // Mark the 'non-running' tasks for pruning
     markCompletedJob(job);
-      
+
+      JobEndNotifier.registerNotification(job.getJobConf(), job.getStatus());
+
     // Purge oldest jobs and keep at-most MAX_COMPLETE_USER_JOBS_IN_MEMORY jobs of a given user
     // in memory; information about the purged jobs is available via
     // JobHistory.

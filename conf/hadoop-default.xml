@@ -857,4 +857,33 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<!-- Job Notification Configuration -->
+
+<!--
+<property>
+ <name>job.end.notification.url</name>
+ <value>http://localhost:8080/jobstatus.php?jobId=$jobId&amp;jobStatus=$jobStatus</value>
+ <description>Indicates url which will be called on completion of job to inform
+              end status of job.
+              User can give at most 2 variables with URI : $jobId and $jobStatus.
+              If they are present in URI, then they will be replaced by their
+              respective values.
+</description>
+</property>
+-->
+
+<property>
+  <name>job.end.retry.attempt</name>
+  <value>0</value>
+  <description>Indicates how many times hadoop should attempt to contact the
+               notification URL </description>
+</property>
+
+<property>
+  <name>job.end.retry.interval</name>
+   <value>30000</value>
+   <description>Indicates time in milliseconds between notification URL retry
+                calls</description>
+</property>
+
 </configuration>

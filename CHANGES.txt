@@ -225,6 +225,12 @@ Trunk (unreleased changes)
 68. HADOOP-968.  Move shuffle and sort to run in reduce's child JVM,
     rather than in TaskTracker.  (Devaraj Das via cutting)
 
+69. HADOOP-1111.  Add support for client notification of job
+    completion. If the job configuration has a job.end.notification.url
+    property it will make a HTTP GET request to the specified URL.
+    The number of retries and the interval between retries is also
+    configurable. (Alejandro Abdelnur via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

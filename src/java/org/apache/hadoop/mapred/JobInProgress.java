@@ -198,9 +198,13 @@ class JobInProgress {
       this.finishTime = System.currentTimeMillis();
       this.status = new JobStatus(status.getJobId(), 1.0f, 1.0f, JobStatus.SUCCEEDED);
       tasksInited = true;
+
+      // Special case because the Job is not queued
+      JobEndNotifier.registerNotification(this.getJobConf(), this.getStatus());
+
       return;
     }
-        
+
     //
     // Create reduce tasks
     //
