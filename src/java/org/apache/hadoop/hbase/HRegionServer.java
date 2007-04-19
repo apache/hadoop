@@ -61,7 +61,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     
     public void run() {
-      while(! stopRequested) {
+      while(!stopRequested) {
         long startTime = System.currentTimeMillis();
 
         // Grab a list of regions to check
@@ -78,12 +78,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // Check to see if they need splitting
 
         Vector<SplitRegion> toSplit = new Vector<SplitRegion>();
-        for(Iterator<HRegion> it = checkSplit.iterator(); it.hasNext(); ) {
+        for(Iterator<HRegion> it = checkSplit.iterator(); it.hasNext();) {
           HRegion cur = it.next();
           Text midKey = new Text();
           
           try {
-            if(cur.needsSplit(midKey)) {
+            if (cur.needsSplit(midKey)) {
               toSplit.add(new SplitRegion(cur, midKey));
             }
             
@@ -92,7 +92,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           }
         }
 
-        for(Iterator<SplitRegion> it = toSplit.iterator(); it.hasNext(); ) {
+        for(Iterator<SplitRegion> it = toSplit.iterator(); it.hasNext();) {
           SplitRegion r = it.next();
           
           locking.obtainWriteLock();
@@ -161,7 +161,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private Thread cacheFlusherThread;
   private class Flusher implements Runnable {
     public void run() {
-      while(! stopRequested) {
+      while(!stopRequested) {
         long startTime = System.currentTimeMillis();
 
         // Grab a list of items to flush
@@ -177,7 +177,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
         // Flush them, if necessary
 
-        for(Iterator<HRegion> it = toFlush.iterator(); it.hasNext(); ) {
+        for(Iterator<HRegion> it = toFlush.iterator(); it.hasNext();) {
           HRegion cur = it.next();
           
           try {
@@ -212,12 +212,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private Thread logRollerThread;
   private class LogRoller implements Runnable {
     public void run() {
-      while(! stopRequested) {
+      while(!stopRequested) {
 
         // If the number of log entries is high enough, roll the log.  This is a
         // very fast operation, but should not be done too frequently.
 
-        if(log.getNumEntries() > maxLogEntries) {
+        if (log.getNumEntries() > maxLogEntries) {
           try {
             log.rollWriter();
             
@@ -334,7 +334,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * processing to cease.
    */
   public void stop() throws IOException {
-    if(! stopRequested) {
+    if (!stopRequested) {
       stopRequested = true;
  
       closeAllRegions();
@@ -375,7 +375,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * load/unload instructions.
    */
   public void run() {
-    while(! stopRequested) {
+    while(!stopRequested) {
       HServerInfo info = new HServerInfo(address, rand.nextLong());
       long lastMsg = 0;
       long waitTime;
@@ -398,8 +398,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       
       // Now ask the master what it wants us to do and tell it what we have done.
       
-      while(! stopRequested) {
-        if((System.currentTimeMillis() - lastMsg) >= msgInterval) {
+      while(!stopRequested) {
+        if ((System.currentTimeMillis() - lastMsg) >= msgInterval) {
 
           HMsg outboundArray[] = null;
           synchronized(outboundMsgs) {
@@ -413,7 +413,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
             // Process the HMaster's instruction stream
 
-            if(! processMessages(msgs)) {
+            if (!processMessages(msgs)) {
               break;
             }
 
@@ -529,10 +529,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       HRegion region = regions.remove(info.regionName);
       
-      if(region != null) {
+      if (region != null) {
         region.close();
         
-        if(reportWhenCompleted) {
+        if (reportWhenCompleted) {
           reportClose(region);
         }
       }
@@ -548,7 +548,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       HRegion region = regions.remove(info.regionName);
   
-      if(region != null) {
+      if (region != null) {
         region.closeAndDelete();
       }
   
@@ -561,7 +561,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private void closeAllRegions() throws IOException {
     locking.obtainWriteLock();
     try {
-      for(Iterator<HRegion> it = regions.values().iterator(); it.hasNext(); ) {
+      for(Iterator<HRegion> it = regions.values().iterator(); it.hasNext();) {
         HRegion region = it.next();
         region.close();
       }
@@ -606,7 +606,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** Obtain a table descriptor for the given region */
   public HRegionInfo getRegionInfo(Text regionName) {
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       return null;
     }
     return region.getRegionInfo();
@@ -617,7 +617,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                                        Text firstRow) throws IOException {
 
     HRegion r = getRegion(regionName);
-    if(r == null) {
+    if (r == null) {
       throw new IOException("Not serving region " + regionName);
     }
     return r.getScanner(cols, firstRow);
@@ -626,12 +626,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** Get the indicated row/column */
   public BytesWritable get(Text regionName, Text row, Text column) throws IOException {
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       throw new IOException("Not serving region " + regionName);
     }
     
     byte results[] = region.get(row, column);
-    if(results != null) {
+    if (results != null) {
       return new BytesWritable(results);
     }
     return null;
@@ -642,15 +642,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                              int numVersions) throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       throw new IOException("Not serving region " + regionName);
     }
     
     byte results[][] = region.get(row, column, numVersions);
-    if(results != null) {
+    if (results != null) {
       BytesWritable realResults[] = new BytesWritable[results.length];
       for(int i = 0; i < realResults.length; i++) {
-        if(results[i] != null) {
+        if (results[i] != null) {
           realResults[i] = new BytesWritable(results[i]);
         }
       }
@@ -664,15 +664,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                              long timestamp, int numVersions) throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       throw new IOException("Not serving region " + regionName);
     }
     
     byte results[][] = region.get(row, column, timestamp, numVersions);
-    if(results != null) {
+    if (results != null) {
       BytesWritable realResults[] = new BytesWritable[results.length];
       for(int i = 0; i < realResults.length; i++) {
-        if(results[i] != null) {
+        if (results[i] != null) {
           realResults[i] = new BytesWritable(results[i]);
         }
       }
@@ -684,14 +684,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** Get all the columns (along with their names) for a given row. */
   public LabelledData[] getRow(Text regionName, Text row) throws IOException {
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       throw new IOException("Not serving region " + regionName);
     }
     
     TreeMap<Text, byte[]> map = region.getFull(row);
     LabelledData result[] = new LabelledData[map.size()];
     int counter = 0;
-    for(Iterator<Text> it = map.keySet().iterator(); it.hasNext(); ) {
+    for(Iterator<Text> it = map.keySet().iterator(); it.hasNext();) {
       Text colname = it.next();
       byte val[] = map.get(colname);
       result[counter++] = new LabelledData(colname, val);
@@ -726,7 +726,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       throw new IOException("Not serving region " + regionName);
     }
     
@@ -743,7 +743,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   BytesWritable val) throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       throw new IOException("Not serving region " + regionName);
     }
     
@@ -758,7 +758,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       throw new IOException("Not serving region " + regionName);
     }
     
@@ -773,7 +773,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       throw new IOException("Not serving region " + regionName);
     }
     
@@ -788,7 +788,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
+    if (region == null) {
       throw new IOException("Not serving region " + regionName);
     }
     

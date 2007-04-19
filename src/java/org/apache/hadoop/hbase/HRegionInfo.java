@@ -42,19 +42,19 @@ public class HRegionInfo implements Writable {
     
     this.regionId = regionId;
     
-    if(tableDesc == null) {
+    if (tableDesc == null) {
       throw new IllegalArgumentException("tableDesc cannot be null");
     }
     
     this.tableDesc = tableDesc;
     
     this.startKey = new Text();
-    if(startKey != null) {
+    if (startKey != null) {
       this.startKey.set(startKey);
     }
     
     this.endKey = new Text();
-    if(endKey != null) {
+    if (endKey != null) {
       this.endKey.set(endKey);
     }
     

@@ -95,12 +95,12 @@ public class HClient extends HGlobals implements HConstants {
   }
 
   public synchronized void openTable(Text tableName) throws IOException {
-    if(closed) {
+    if (closed) {
       throw new IllegalStateException("client is not open");
     }
 
     tableServers = tablesToServers.get(tableName);
-    if(tableServers == null ) {                 // We don't know where the table is
+    if (tableServers == null) {                 // We don't know where the table is
       findTableInMeta(tableName);               // Load the information from meta
     }
   }
@@ -108,9 +108,9 @@ public class HClient extends HGlobals implements HConstants {
   private void findTableInMeta(Text tableName) throws IOException {
     TreeMap<Text, TableInfo> metaServers = tablesToServers.get(META_TABLE_NAME);
     
-    if(metaServers == null) {                   // Don't know where the meta is
+    if (metaServers == null) {                   // Don't know where the meta is
       loadMetaFromRoot(tableName);
-      if(tableName.equals(META_TABLE_NAME) || tableName.equals(ROOT_TABLE_NAME)) {
+      if (tableName.equals(META_TABLE_NAME) || tableName.equals(ROOT_TABLE_NAME)) {
         // All we really wanted was the meta or root table
         return;
       }
@@ -119,7 +119,7 @@ public class HClient extends HGlobals implements HConstants {
 
     tableServers = new TreeMap<Text, TableInfo>();
     for(Iterator<TableInfo> i = metaServers.tailMap(tableName).values().iterator();
-        i.hasNext(); ) {
+        i.hasNext();) {
       
       TableInfo t = i.next();
       
@@ -133,7 +133,7 @@ public class HClient extends HGlobals implements HConstants {
    */
   private void loadMetaFromRoot(Text tableName) throws IOException {
     locateRootRegion();
-    if(tableName.equals(ROOT_TABLE_NAME)) {   // All we really wanted was the root
+    if (tableName.equals(ROOT_TABLE_NAME)) {   // All we really wanted was the root
       return;
     }
     scanRoot();
@@ -144,7 +144,7 @@ public class HClient extends HGlobals implements HConstants {
    * could be.
    */
   private void locateRootRegion() throws IOException {
-    if(master == null) {
+    if (master == null) {
       master = (HMasterInterface)RPC.getProxy(HMasterInterface.class, 
                                               HMasterInterface.versionID,
                                               masterLocation.getInetSocketAddress(), conf);
@@ -157,7 +157,7 @@ public class HClient extends HGlobals implements HConstants {
       while(rootRegionLocation == null && localTimeouts < numTimeouts) {
         rootRegionLocation = master.findRootRegion();
 
-        if(rootRegionLocation == null) {
+        if (rootRegionLocation == null) {
           try {
             Thread.sleep(clientTimeout);
 
@@ -166,7 +166,7 @@ public class HClient extends HGlobals implements HConstants {
           localTimeouts++;
         }
       }
-      if(rootRegionLocation == null) {
+      if (rootRegionLocation == null) {
         throw new IOException("Timed out trying to locate root region");
       }
       
@@ -174,7 +174,7 @@ public class HClient extends HGlobals implements HConstants {
       
       HRegionInterface rootRegion = getHRegionConnection(rootRegionLocation);
 
-      if(rootRegion.getRegionInfo(rootRegionInfo.regionName) != null) {
+      if (rootRegion.getRegionInfo(rootRegionInfo.regionName) != null) {
         tableServers = new TreeMap<Text, TableInfo>();
         tableServers.put(startRow, new TableInfo(rootRegionInfo, rootRegionLocation));
         tablesToServers.put(ROOT_TABLE_NAME, tableServers);
@@ -184,7 +184,7 @@ public class HClient extends HGlobals implements HConstants {
       
     } while(rootRegionLocation == null && tries++ < numRetries);
     
-    if(rootRegionLocation == null) {
+    if (rootRegionLocation == null) {
       closed = true;
       throw new IOException("unable to locate root region server");
     }
@@ -220,7 +220,7 @@ public class HClient extends HGlobals implements HConstants {
         HRegionInfo regionInfo = new HRegionInfo();
         regionInfo.readFields(inbuf);
         
-        if(! regionInfo.tableDesc.getName().equals(tableName)) {
+        if (!regionInfo.tableDesc.getName().equals(tableName)) {
           // We're done
           break;
         }
@@ -245,7 +245,7 @@ public class HClient extends HGlobals implements HConstants {
 
     HRegionInterface server = servers.get(regionServer.toString());
     
-    if(server == null) {                                // Get a connection
+    if (server == null) {                                // Get a connection
       
       server = (HRegionInterface)RPC.waitForProxy(HRegionInterface.class, 
                                                   HRegionInterface.versionID, regionServer.getInetSocketAddress(), conf);
@@ -257,7 +257,7 @@ public class HClient extends HGlobals implements HConstants {
 
   /** Close the connection to the HRegionServer */
   public synchronized void close() throws IOException {
-    if(! closed) {
+    if (!closed) {
       RPC.stopClient();
       closed = true;
     }
@@ -274,13 +274,13 @@ public class HClient extends HGlobals implements HConstants {
     TreeSet<HTableDescriptor> uniqueTables = new TreeSet<HTableDescriptor>();
     
     TreeMap<Text, TableInfo> metaTables = tablesToServers.get(META_TABLE_NAME);
-    if(metaTables == null) {
+    if (metaTables == null) {
       // Meta is not loaded yet so go do that
       loadMetaFromRoot(META_TABLE_NAME);
       metaTables = tablesToServers.get(META_TABLE_NAME);
     }
 
-    for(Iterator<TableInfo>i = metaTables.values().iterator(); i.hasNext(); ) {
+    for(Iterator<TableInfo>i = metaTables.values().iterator(); i.hasNext();) {
       TableInfo t = i.next();
       HRegionInterface server = getHRegionConnection(t.serverAddress);
       HScannerInterface scanner = null;
@@ -297,7 +297,7 @@ public class HClient extends HGlobals implements HConstants {
 
           // Only examine the rows where the startKey is zero length
           
-          if(info.startKey.getLength() == 0) {
+          if (info.startKey.getLength() == 0) {
             uniqueTables.add(info.tableDesc);
           }
           results.clear();
@@ -311,7 +311,7 @@ public class HClient extends HGlobals implements HConstants {
   }
 
   private TableInfo getTableInfo(Text row) {
-    if(tableServers == null) {
+    if (tableServers == null) {
       throw new IllegalStateException("Must open table first");
     }
     
@@ -335,7 +335,7 @@ public class HClient extends HGlobals implements HConstants {
                                                                           info.regionInfo.regionName, row, column, numVersions);
     
     ArrayList<byte[]> bytes = new ArrayList<byte[]>();
-    for(int i = 0 ; i < values.length; i++) {
+    for(int i = 0; i < values.length; i++) {
       bytes.add(values[i].get());
     }
     return bytes.toArray(new byte[values.length][]);
@@ -351,7 +351,7 @@ public class HClient extends HGlobals implements HConstants {
                                                                           info.regionInfo.regionName, row, column, timestamp, numVersions);
     
     ArrayList<byte[]> bytes = new ArrayList<byte[]>();
-    for(int i = 0 ; i < values.length; i++) {
+    for(int i = 0; i < values.length; i++) {
       bytes.add(values[i].get());
     }
     return bytes.toArray(new byte[values.length][]);
@@ -369,7 +369,7 @@ public class HClient extends HGlobals implements HConstants {
    * Return the specified columns.
    */
   public HScannerInterface obtainScanner(Text[] columns, Text startRow) throws IOException {
-    if(tableServers == null) {
+    if (tableServers == null) {
       throw new IllegalStateException("Must open table first");
     }
     return new ClientScanner(columns, startRow);
@@ -481,11 +481,11 @@ public class HClient extends HGlobals implements HConstants {
      * Returns false if there are no more scanners.
      */
     private boolean nextScanner() throws IOException {
-      if(scanner != null) {
+      if (scanner != null) {
         scanner.close();
       }
       currentRegion += 1;
-      if(currentRegion == regions.length) {
+      if (currentRegion == regions.length) {
         close();
         return false;
       }
@@ -505,13 +505,13 @@ public class HClient extends HGlobals implements HConstants {
      * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.TreeMap)
      */
     public boolean next(HStoreKey key, TreeMap<Text, byte[]> results) throws IOException {
-      if(closed) {
+      if (closed) {
         return false;
       }
       boolean status = scanner.next(key, results);
-      if(! status) {
+      if (!status) {
         status = nextScanner();
-        if(status) {
+        if (status) {
           status = scanner.next(key, results);
         }
       }
@@ -522,7 +522,7 @@ public class HClient extends HGlobals implements HConstants {
      * @see org.apache.hadoop.hbase.HScannerInterface#close()
      */
     public void close() throws IOException {
-      if(scanner != null) {
+      if (scanner != null) {
         scanner.close();
       }
       server = null;

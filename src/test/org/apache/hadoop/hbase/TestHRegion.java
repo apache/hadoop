@@ -90,7 +90,7 @@ public class TestHRegion extends TestCase {
   
   public void testSetup() throws IOException {
     try {
-      if(System.getProperty("test.build.data") == null) {
+      if (System.getProperty("test.build.data") == null) {
         String dir = new File(new File("").getAbsolutePath(), "build/contrib/hbase/test").getAbsolutePath();
         System.out.println(dir);
         System.setProperty("test.build.data", dir);
@@ -98,7 +98,7 @@ public class TestHRegion extends TestCase {
       conf = new Configuration();
       
       Environment.getenv();
-      if(Environment.debugging) {
+      if (Environment.debugging) {
         Logger rootLogger = Logger.getRootLogger();
         rootLogger.setLevel(Level.WARN);
         
@@ -133,7 +133,7 @@ public class TestHRegion extends TestCase {
   // Test basic functionality. Writes to contents:basic and anchor:anchornum-*
 
   public void testBasic() throws IOException {
-    if(!initialized) {
+    if (!initialized) {
       throw new IllegalStateException();
     }
 
@@ -191,7 +191,7 @@ public class TestHRegion extends TestCase {
   // Test scanners. Writes contents:firstcol and anchor:secondcol
   
   public void testScan() throws IOException {
-    if(!initialized) {
+    if (!initialized) {
       throw new IllegalStateException();
     }
 
@@ -225,13 +225,13 @@ public class TestHRegion extends TestCase {
       TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext();) {
           Text col = it.next();
           byte val[] = curVals.get(col);
           int curval = Integer.parseInt(new String(val).trim());
 
           for(int j = 0; j < cols.length; j++) {
-            if(col.compareTo(cols[j]) == 0) {
+            if (col.compareTo(cols[j]) == 0) {
               assertEquals("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
                            + ", Value for " + col + " should be: " + k
                            + ", but was fetched as: " + curval, k, curval);
@@ -258,13 +258,13 @@ public class TestHRegion extends TestCase {
       TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext();) {
           Text col = it.next();
           byte val[] = curVals.get(col);
           int curval = Integer.parseInt(new String(val).trim());
 
           for(int j = 0; j < cols.length; j++) {
-            if(col.compareTo(cols[j]) == 0) {
+            if (col.compareTo(cols[j]) == 0) {
               assertEquals("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
                            + ", Value for " + col + " should be: " + k
                            + ", but was fetched as: " + curval, k, curval);
@@ -299,13 +299,13 @@ public class TestHRegion extends TestCase {
       TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext();) {
           Text col = it.next();
           byte val[] = curVals.get(col);
           int curval = Integer.parseInt(new String(val).trim());
 
           for(int j = 0; j < cols.length; j++) {
-            if(col.compareTo(cols[j]) == 0) {
+            if (col.compareTo(cols[j]) == 0) {
               assertEquals("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
                            + ", Value for " + col + " should be: " + k
                            + ", but was fetched as: " + curval, k, curval);
@@ -332,7 +332,7 @@ public class TestHRegion extends TestCase {
       TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext();) {
           Text col = it.next();
           byte val[] = curVals.get(col);
           int curval = Integer.parseInt(new String(val).trim());
@@ -362,7 +362,7 @@ public class TestHRegion extends TestCase {
       TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
       int k = 500;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext();) {
           Text col = it.next();
           byte val[] = curVals.get(col);
           int curval = Integer.parseInt(new String(val).trim());
@@ -390,10 +390,10 @@ public class TestHRegion extends TestCase {
   // Creates contents:body
   
   public void testBatchWrite() throws IOException {
-    if(!initialized || failures) {
+    if (!initialized || failures) {
       throw new IllegalStateException();
     }
-    if(! Environment.debugging) {
+    if (!Environment.debugging) {
       return;
     }
 
@@ -437,7 +437,7 @@ public class TestHRegion extends TestCase {
         }
       }
       long startCompact = System.currentTimeMillis();
-      if(region.compactStores()) {
+      if (region.compactStores()) {
         totalCompact = System.currentTimeMillis() - startCompact;
         System.out.println("Region compacted - elapsedTime: " + (totalCompact / 1000.0));
         
@@ -467,14 +467,14 @@ public class TestHRegion extends TestCase {
   // NOTE: This test depends on testBatchWrite succeeding
   
   public void testSplitAndMerge() throws IOException {
-    if(!initialized || failures) {
+    if (!initialized || failures) {
       throw new IllegalStateException();
     }
     
     try {
       Text midKey = new Text();
       
-      if(region.needsSplit(midKey)) {
+      if (region.needsSplit(midKey)) {
         System.out.println("Needs split");
       }
       
@@ -504,7 +504,7 @@ public class TestHRegion extends TestCase {
   // This test verifies that everything is still there after splitting and merging
   
   public void testRead() throws IOException {
-    if(!initialized || failures) {
+    if (!initialized || failures) {
       throw new IllegalStateException();
     }
 
@@ -525,19 +525,19 @@ public class TestHRegion extends TestCase {
       TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext();) {
           Text col = it.next();
           byte val[] = curVals.get(col);
           String curval = new String(val).trim();
 
-          if(col.compareTo(CONTENTS_BASIC) == 0) {
+          if (col.compareTo(CONTENTS_BASIC) == 0) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
                        + ", Value for " + col + " should start with: " + CONTENTSTR
                        + ", but was fetched as: " + curval,
                        curval.startsWith(CONTENTSTR));
             contentsFetched++;
             
-          } else if(col.toString().startsWith(ANCHORNUM)) {
+          } else if (col.toString().startsWith(ANCHORNUM)) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
                        + ", Value for " + col + " should start with: " + ANCHORSTR
                        + ", but was fetched as: " + curval,
@@ -572,7 +572,7 @@ public class TestHRegion extends TestCase {
       TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext();) {
           Text col = it.next();
           byte val[] = curVals.get(col);
           int curval = Integer.parseInt(new String(val).trim());
@@ -596,7 +596,7 @@ public class TestHRegion extends TestCase {
     
     // Verify testBatchWrite data
 
-    if(Environment.debugging) {
+    if (Environment.debugging) {
       s = region.getScanner(new Text[] { CONTENTS_BODY }, new Text());
       try {
         int numFetched = 0;
@@ -604,7 +604,7 @@ public class TestHRegion extends TestCase {
         TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
         int k = 0;
         while(s.next(curKey, curVals)) {
-          for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+          for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext();) {
             Text col = it.next();
             byte val[] = curVals.get(col);
 
@@ -635,7 +635,7 @@ public class TestHRegion extends TestCase {
       HStoreKey curKey = new HStoreKey();
       TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext();) {
           it.next();
           fetched++;
         }
@@ -650,7 +650,7 @@ public class TestHRegion extends TestCase {
 
   
   private static void deleteFile(File f) {
-    if(f.isDirectory()) {
+    if (f.isDirectory()) {
       File[] children = f.listFiles();
       for(int i = 0; i < children.length; i++) {
         deleteFile(children[i]);
@@ -660,7 +660,7 @@ public class TestHRegion extends TestCase {
   }
   
   public void testCleanup() throws IOException {
-    if(!initialized) {
+    if (!initialized) {
       throw new IllegalStateException();
     }
 

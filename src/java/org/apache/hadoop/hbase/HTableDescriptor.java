@@ -54,7 +54,7 @@ public class HTableDescriptor implements WritableComparable {
 
   /** Do we contain a given column? */
   public boolean hasFamily(Text family) {
-    if(families.contains(family)) {
+    if (families.contains(family)) {
       return true;
       
     } else {
@@ -75,7 +75,7 @@ public class HTableDescriptor implements WritableComparable {
     name.write(out);
     out.writeInt(maxVersions);
     out.writeInt(families.size());
-    for(Iterator<Text> it = families.iterator(); it.hasNext(); ) {
+    for(Iterator<Text> it = families.iterator(); it.hasNext();) {
       it.next().write(out);
     }
   }
@@ -99,21 +99,21 @@ public class HTableDescriptor implements WritableComparable {
   public int compareTo(Object o) {
     HTableDescriptor htd = (HTableDescriptor) o;
     int result = name.compareTo(htd.name);
-    if(result == 0) {
+    if (result == 0) {
       result = maxVersions - htd.maxVersions;
     }
     
-    if(result == 0) {
+    if (result == 0) {
       result = families.size() - htd.families.size();
     }
     
-    if(result == 0) {
+    if (result == 0) {
       Iterator<Text> it2 = htd.families.iterator();
-      for(Iterator<Text> it = families.iterator(); it.hasNext(); ) {
+      for(Iterator<Text> it = families.iterator(); it.hasNext();) {
         Text family1 = it.next();
         Text family2 = it2.next();
         result = family1.compareTo(family2);
-        if(result != 0) {
+        if (result != 0) {
           return result;
         }
       }
