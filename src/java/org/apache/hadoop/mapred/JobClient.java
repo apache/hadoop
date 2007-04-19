@@ -138,7 +138,7 @@ public class JobClient extends ToolBase implements MRConstants  {
      * Blocks until the job is finished
      */
     public synchronized void waitForCompletion() throws IOException {
-      while (! isComplete()) {
+      while (!isComplete()) {
         try {
           Thread.sleep(5000);
         } catch (InterruptedException ie) {
@@ -243,7 +243,7 @@ public class JobClient extends ToolBase implements MRConstants  {
    * Submit a job to the MR system
    */
   public RunningJob submitJob(String jobFile) throws FileNotFoundException, 
-                                                     InvalidJobConfException,IOException {
+                                                     InvalidJobConfException, IOException {
     // Load in the submitted job details
     JobConf job = new JobConf(jobFile);
     return submitJob(job);
@@ -307,7 +307,7 @@ public class JobClient extends ToolBase implements MRConstants  {
 
     if (originalJarPath != null) {           // copy jar to JobTracker's fs
       // use jar name if job is not named. 
-      if( "".equals(job.getJobName() )){
+      if ("".equals(job.getJobName())){
         job.setJobName(new Path(originalJarPath).getName());
       }
       job.setJar(submitJarFile.toString());
@@ -335,23 +335,23 @@ public class JobClient extends ToolBase implements MRConstants  {
     // sort the splits into order based on size, so that the biggest
     // go first
     Arrays.sort(splits, new Comparator<InputSplit>() {
-        public int compare(InputSplit a, InputSplit b) {
-          try {
-            long left = a.getLength();
-            long right = b.getLength();
-            if (left == right) {
-              return 0;
-            } else if (left < right) {
-              return 1;
-            } else {
-              return -1;
-            }
-          } catch (IOException ie) {
-            throw new RuntimeException("Problem getting input split size",
-                                       ie);
+      public int compare(InputSplit a, InputSplit b) {
+        try {
+          long left = a.getLength();
+          long right = b.getLength();
+          if (left == right) {
+            return 0;
+          } else if (left < right) {
+            return 1;
+          } else {
+            return -1;
           }
+        } catch (IOException ie) {
+          throw new RuntimeException("Problem getting input split size",
+                                     ie);
         }
-      });
+      }
+    });
     // write the splits to a file for the job tracker
     FSDataOutputStream out = fs.create(submitSplitFile);
     try {
@@ -543,7 +543,7 @@ public class JobClient extends ToolBase implements MRConstants  {
       running = jc.submitJob(job);
       String jobId = running.getJobID();
       LOG.info("Running job: " + jobId);
-      int eventCounter = 0 ; 
+      int eventCounter = 0; 
         
       while (true) {
         try {
@@ -563,26 +563,26 @@ public class JobClient extends ToolBase implements MRConstants  {
             lastReport = report;
           }
             
-          if( filter  != TaskStatusFilter.NONE){
+          if (filter  != TaskStatusFilter.NONE){
             TaskCompletionEvent[] events = 
               running.getTaskCompletionEvents(eventCounter); 
-            eventCounter += events.length ;
-            for(TaskCompletionEvent event : events ){
-              switch( filter ){
+            eventCounter += events.length;
+            for(TaskCompletionEvent event : events){
+              switch(filter){
               case SUCCEEDED:
-                if( event.getTaskStatus() == 
+                if (event.getTaskStatus() == 
                     TaskCompletionEvent.Status.SUCCEEDED){
                   LOG.info(event.toString());
                   displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
                 }
                 break; 
               case FAILED:
-                if( event.getTaskStatus() == 
+                if (event.getTaskStatus() == 
                     TaskCompletionEvent.Status.FAILED){
                   LOG.info(event.toString());
                   displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
                 }
-                break ; 
+                break; 
               case ALL:
                 LOG.info(event.toString());
                 displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
@@ -654,13 +654,13 @@ public class JobClient extends ToolBase implements MRConstants  {
   static Configuration getConfiguration(String jobTrackerSpec)
   {
     Configuration conf = new Configuration();
-    if(jobTrackerSpec != null) {        
-      if(jobTrackerSpec.indexOf(":") >= 0) {
+    if (jobTrackerSpec != null) {        
+      if (jobTrackerSpec.indexOf(":") >= 0) {
         conf.set("mapred.job.tracker", jobTrackerSpec);
       } else {
         String classpathFile = "hadoop-" + jobTrackerSpec + ".xml";
         URL validate = conf.getResource(classpathFile);
-        if(validate == null) {
+        if (validate == null) {
           throw new RuntimeException(classpathFile + " not found on CLASSPATH");
         }
         conf.addFinalResource(classpathFile);
@@ -675,8 +675,8 @@ public class JobClient extends ToolBase implements MRConstants  {
    * @param newValue task filter.
    */
   @Deprecated
-    public void setTaskOutputFilter(TaskStatusFilter newValue){
-    this.taskOutputFilter = newValue ;
+  public void setTaskOutputFilter(TaskStatusFilter newValue){
+    this.taskOutputFilter = newValue;
   }
     
   /**
@@ -704,7 +704,7 @@ public class JobClient extends ToolBase implements MRConstants  {
    * @return task filter. 
    */
   @Deprecated
-    public TaskStatusFilter getTaskOutputFilter(){
+  public TaskStatusFilter getTaskOutputFilter(){
     return this.taskOutputFilter; 
   }
     

@@ -65,7 +65,7 @@ public class Client {
     new Hashtable<InetSocketAddress, Connection>();
 
   private Class valueClass;                       // class of call values
-  private int timeout ;// timeout for calls
+  private int timeout;// timeout for calls
   private int counter;                            // counter for call ids
   private boolean running = true;                 // true while client runs
   private Configuration conf;
@@ -94,7 +94,7 @@ public class Client {
     /** Called by the connection thread when the call is complete and the
      * value or error string are available.  Notifies by default.  */
     public synchronized void callComplete() {
-        notify();                                 // notify caller
+      notify();                                 // notify caller
     }
 
     /** Update lastActivity with the current time. */
@@ -132,7 +132,7 @@ public class Client {
 
     public Connection(InetSocketAddress address) throws IOException {
       if (address.isUnresolved()) {
-         throw new UnknownHostException("unknown host: " + address.getHostName());
+        throw new UnknownHostException("unknown host: " + address.getHostName());
       }
       this.address = address;
       this.setName("IPC Client connection to " + address.toString());
@@ -183,7 +183,7 @@ public class Client {
                }
                return value;
              }
-          }));
+           }));
       this.out = new DataOutputStream
         (new BufferedOutputStream
          (new FilterOutputStream(socket.getOutputStream()) {
@@ -282,7 +282,7 @@ public class Client {
           decrementRef();
         }
       } catch (EOFException eof) {
-          // This is what happens when the remote side goes down
+        // This is what happens when the remote side goes down
       } catch (Exception e) {
         LOG.info(StringUtils.stringifyException(e));
       } finally {
@@ -408,11 +408,11 @@ public class Client {
           while (i.hasNext()) {
             Connection c = (Connection)i.next();
             if (c.isIdle()) { 
-            //We don't actually close the socket here (i.e., don't invoke
-            //the close() method). We leave that work to the response receiver
-            //thread. The reason for that is since we have taken a lock on the
-            //connections table object, we don't want to slow down the entire
-            //system if we happen to talk to a slow server.
+              //We don't actually close the socket here (i.e., don't invoke
+              //the close() method). We leave that work to the response receiver
+              //thread. The reason for that is since we have taken a lock on the
+              //connections table object, we don't want to slow down the entire
+              //system if we happen to talk to a slow server.
               i.remove();
               synchronized (c) {
                 c.setCloseConnection();
@@ -429,8 +429,8 @@ public class Client {
    * class. */
   public Client(Class valueClass, Configuration conf) {
     this.valueClass = valueClass;
-    this.timeout = conf.getInt("ipc.client.timeout",10000);
-    this.maxIdleTime = conf.getInt("ipc.client.connection.maxidletime",1000);
+    this.timeout = conf.getInt("ipc.client.timeout", 10000);
+    this.maxIdleTime = conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxRetries = conf.getInt("ipc.client.connect.max.retries", 10);
     this.conf = conf;
 
@@ -438,7 +438,7 @@ public class Client {
     t.setDaemon(true);
     t.setName(valueClass.getName() + " Connection Culler");
     LOG.debug(valueClass.getName() + 
-             "Connection culler maxidletime= " + maxIdleTime + "ms");
+              "Connection culler maxidletime= " + maxIdleTime + "ms");
     t.start();
   }
  

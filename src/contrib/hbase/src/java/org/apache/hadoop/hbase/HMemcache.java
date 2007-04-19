@@ -65,10 +65,10 @@ public class HMemcache {
 
     locking.obtainWriteLock();
     try {
-      if(snapshot != null) {
+      if (snapshot != null) {
         throw new IOException("Snapshot in progress!");
       }
-      if(memcache.size() == 0) {
+      if (memcache.size() == 0) {
         LOG.debug("memcache empty. Skipping snapshot");
         return retval;
       }
@@ -99,16 +99,16 @@ public class HMemcache {
     locking.obtainWriteLock();
 
     try {
-      if(snapshot == null) {
+      if (snapshot == null) {
         throw new IOException("Snapshot not present!");
       }
       LOG.debug("deleting snapshot");
       
       for(Iterator<TreeMap<HStoreKey, BytesWritable>> it = history.iterator(); 
-          it.hasNext(); ) {
+          it.hasNext();) {
         
         TreeMap<HStoreKey, BytesWritable> cur = it.next();
-        if(snapshot == cur) {
+        if (snapshot == cur) {
           it.remove();
           break;
         }
@@ -130,7 +130,7 @@ public class HMemcache {
   public void add(Text row, TreeMap<Text, byte[]> columns, long timestamp) {
     locking.obtainWriteLock();
     try {
-      for(Iterator<Text> it = columns.keySet().iterator(); it.hasNext(); ) {
+      for(Iterator<Text> it = columns.keySet().iterator(); it.hasNext();) {
         Text column = it.next();
         byte[] val = columns.get(column);
 
@@ -156,7 +156,7 @@ public class HMemcache {
       results.addAll(0, result);
 
       for(int i = history.size()-1; i >= 0; i--) {
-        if(numVersions > 0 && results.size() >= numVersions) {
+        if (numVersions > 0 && results.size() >= numVersions) {
           break;
         }
         
@@ -164,7 +164,7 @@ public class HMemcache {
         results.addAll(results.size(), result);
       }
       
-      if(results.size() == 0) {
+      if (results.size() == 0) {
         return null;
         
       } else {
@@ -203,16 +203,16 @@ public class HMemcache {
     
     SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(key);
     
-    for(Iterator<HStoreKey> it = tailMap.keySet().iterator(); it.hasNext(); ) {
+    for(Iterator<HStoreKey> it = tailMap.keySet().iterator(); it.hasNext();) {
       HStoreKey itKey = it.next();
       Text itCol = itKey.getColumn();
 
-      if(results.get(itCol) == null
-         && key.matchesWithoutColumn(itKey)) {
+      if (results.get(itCol) == null
+          && key.matchesWithoutColumn(itKey)) {
         BytesWritable val = tailMap.get(itKey);
         results.put(itCol, val.get());
         
-      } else if(key.getRow().compareTo(itKey.getRow()) > 0) {
+      } else if (key.getRow().compareTo(itKey.getRow()) > 0) {
         break;
       }
     }
@@ -232,15 +232,15 @@ public class HMemcache {
     HStoreKey curKey = new HStoreKey(key.getRow(), key.getColumn(), key.getTimestamp());
     SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(curKey);
 
-    for(Iterator<HStoreKey> it = tailMap.keySet().iterator(); it.hasNext(); ) {
+    for(Iterator<HStoreKey> it = tailMap.keySet().iterator(); it.hasNext();) {
       HStoreKey itKey = it.next();
       
-      if(itKey.matchesRowCol(curKey)) {
+      if (itKey.matchesRowCol(curKey)) {
         result.add(tailMap.get(itKey).get());
         curKey.setVersion(itKey.getTimestamp() - 1);
       }
       
-      if(numVersions > 0 && result.size() >= numVersions) {
+      if (numVersions > 0 && result.size() >= numVersions) {
         break;
       }
     }
@@ -266,7 +266,7 @@ public class HMemcache {
     Iterator<HStoreKey> keyIterators[];
 
     @SuppressWarnings("unchecked")
-      public HMemcacheScanner(long timestamp, Text targetCols[], Text firstRow)
+    public HMemcacheScanner(long timestamp, Text targetCols[], Text firstRow)
       throws IOException {
       
       super(timestamp, targetCols);
@@ -276,7 +276,7 @@ public class HMemcache {
         this.backingMaps = new TreeMap[history.size() + 1];
         int i = 0;
         for(Iterator<TreeMap<HStoreKey, BytesWritable>> it = history.iterator();
-            it.hasNext(); ) {
+            it.hasNext();) {
           
           backingMaps[i++] = it.next();
         }
@@ -290,7 +290,7 @@ public class HMemcache {
 
         HStoreKey firstKey = new HStoreKey(firstRow);
         for(i = 0; i < backingMaps.length; i++) {
-          if(firstRow.getLength() != 0) {
+          if (firstRow.getLength() != 0) {
             keyIterators[i] = backingMaps[i].tailMap(firstKey).keySet().iterator();
             
           } else {
@@ -298,10 +298,10 @@ public class HMemcache {
           }
           
           while(getNext(i)) {
-            if(! findFirstRow(i, firstRow)) {
+            if (!findFirstRow(i, firstRow)) {
               continue;
             }
-            if(columnMatch(i)) {
+            if (columnMatch(i)) {
               break;
             }
           }
@@ -331,7 +331,7 @@ public class HMemcache {
      * @return - true if there is more data available
      */
     boolean getNext(int i) {
-      if(! keyIterators[i].hasNext()) {
+      if (!keyIterators[i].hasNext()) {
         closeSubScanner(i);
         return false;
       }
@@ -350,10 +350,10 @@ public class HMemcache {
 
     /** Shut down map iterators, and release the lock */
     public void close() throws IOException {
-      if(! scannerClosed) {
+      if (!scannerClosed) {
         try {
           for(int i = 0; i < keys.length; i++) {
-            if(keyIterators[i] != null) {
+            if (keyIterators[i] != null) {
               closeSubScanner(i);
             }
           }

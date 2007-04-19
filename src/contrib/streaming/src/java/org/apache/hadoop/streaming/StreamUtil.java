@@ -494,10 +494,10 @@ public class StreamUtil {
   public static String getBoundAntProperty(String name, String defaultVal)
   {
     String val = System.getProperty(name);
-    if(val != null && val.indexOf("${") >= 0) {
+    if (val != null && val.indexOf("${") >= 0) {
       val = null;
     }
-    if(val == null) {
+    if (val == null) {
       val = defaultVal;
     }
     return val;

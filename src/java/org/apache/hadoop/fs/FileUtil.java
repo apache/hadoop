@@ -40,7 +40,7 @@ public class FileUtil {
     if (contents != null) {
       for (int i = 0; i < contents.length; i++) {
         if (contents[i].isFile()) {
-          if (! contents[i].delete()) {
+          if (!contents[i].delete()) {
             return false;
           }
         } else {
@@ -54,7 +54,7 @@ public class FileUtil {
           }
           // if not an empty directory or symlink let
           // fullydelete handle it.
-          if (! fullyDelete(contents[i])) {
+          if (!fullyDelete(contents[i])) {
             return false;
           }
         }
@@ -67,7 +67,7 @@ public class FileUtil {
   public static boolean copy(FileSystem srcFS, Path src, 
                              FileSystem dstFS, Path dst, 
                              boolean deleteSource,
-                             Configuration conf ) throws IOException {
+                             Configuration conf) throws IOException {
     dst = checkDest(src.getName(), dstFS, dst);
 
     if (srcFS.isDirectory(src)) {
@@ -117,7 +117,7 @@ public class FileUtil {
           InputStream in = srcFS.open(contents[i]);
           try {
             copyContent(in, out, conf, false);
-            if(addString!=null)
+            if (addString!=null)
               out.write(addString.getBytes("UTF-8"));
                 
           } finally {
@@ -141,7 +141,7 @@ public class FileUtil {
   public static boolean copy(File src,
                              FileSystem dstFS, Path dst,
                              boolean deleteSource,
-                             Configuration conf ) throws IOException {
+                             Configuration conf) throws IOException {
     dst = checkDest(src.getName(), dstFS, dst);
 
     if (src.isDirectory()) {
@@ -171,7 +171,7 @@ public class FileUtil {
   /** Copy FileSystem files to local files. */
   public static boolean copy(FileSystem srcFS, Path src, 
                              File dst, boolean deleteSource,
-                             Configuration conf ) throws IOException {
+                             Configuration conf) throws IOException {
 
     dst = checkDest(src.getName(), dst);
 
@@ -215,7 +215,7 @@ public class FileUtil {
         bytesRead = in.read(buf);
       }
     } finally {
-      if(close)
+      if (close)
         out.close();
     }
   }
@@ -284,7 +284,7 @@ public class FileUtil {
   public static void unZip(File inFile, File unzipDir) throws IOException {
     Enumeration entries;
     ZipFile zipFile = new ZipFile(inFile);
-    ;
+
     try {
       entries = zipFile.entries();
       while (entries.hasMoreElements()) {
@@ -334,44 +334,44 @@ public class FileUtil {
     private static String[] hardLinkCommand;
     
     static {
-      switch( getOSType() ) {
+      switch(getOSType()) {
       case OS_TYPE_WINXP:
-        hardLinkCommand = new String[] {"fsutil","hardlink","create",null,null};
+        hardLinkCommand = new String[] {"fsutil","hardlink","create", null, null};
         break;
       case OS_TYPE_UNIX:
       default:
-        hardLinkCommand = new String[] {"ln",null,null};
+        hardLinkCommand = new String[] {"ln", null, null};
       }
     }
 
     static OSType getOSType() {
       String osName = System.getProperty("os.name");
-      if( osName.indexOf( "Windows") >= 0 && 
-          (osName.indexOf( "XpP") >= 0 || osName.indexOf( "2003") >= 0 ) )
+      if (osName.indexOf("Windows") >= 0 && 
+          (osName.indexOf("XpP") >= 0 || osName.indexOf("2003") >= 0))
         return OSType.OS_TYPE_WINXP;
       else
         return OSType.OS_TYPE_UNIX;
     }
     
     public static void createHardLink(File target, 
-                                      File linkName ) throws IOException {
+                                      File linkName) throws IOException {
       int len = hardLinkCommand.length;
       hardLinkCommand[len-2] = target.getCanonicalPath();
       hardLinkCommand[len-1] = linkName.getCanonicalPath();
       // execute shell command
-      Process process = Runtime.getRuntime().exec( hardLinkCommand );
+      Process process = Runtime.getRuntime().exec(hardLinkCommand);
       try {
         if (process.waitFor() != 0) {
           String errMsg = new BufferedReader(new InputStreamReader(
                                                                    process.getInputStream())).readLine();
-          if( errMsg == null )  errMsg = "";
+          if (errMsg == null)  errMsg = "";
           String inpMsg = new BufferedReader(new InputStreamReader(
                                                                    process.getErrorStream())).readLine();
-          if( inpMsg == null )  inpMsg = "";
-          throw new IOException( errMsg + inpMsg );
+          if (inpMsg == null)  inpMsg = "";
+          throw new IOException(errMsg + inpMsg);
         }
       } catch (InterruptedException e) {
-        throw new IOException( StringUtils.stringifyException( e ));
+        throw new IOException(StringUtils.stringifyException(e));
       } finally {
         process.destroy();
       }
@@ -387,7 +387,7 @@ public class FileUtil {
    */
   public static int symLink(String target, String linkname) throws IOException{
     String cmd = "ln -s " + target + " " + linkname;
-    Process p = Runtime.getRuntime().exec( cmd, null );
+    Process p = Runtime.getRuntime().exec(cmd, null);
     int returnVal = -1;
     try{
       returnVal = p.waitFor();
@@ -408,7 +408,7 @@ public class FileUtil {
   public static int chmod(String filename, String perm
                           ) throws IOException, InterruptedException {
     String cmd = "chmod " + perm + " " + filename;
-    Process p = Runtime.getRuntime().exec( cmd, null );
+    Process p = Runtime.getRuntime().exec(cmd, null);
     return p.waitFor();
   }
 }

@@ -95,7 +95,7 @@ public class TestDFSShellGenericOptions extends TestCase {
     execute(args, namenode);        
   }
     
-  private void execute( String [] args, String namenode ) {
+  private void execute(String [] args, String namenode) {
     FsShell shell=new FsShell();
     FileSystem fs=null;
     try {
@@ -103,14 +103,14 @@ public class TestDFSShellGenericOptions extends TestCase {
       fs = new DistributedFileSystem(
                                      DataNode.createSocketAddr(namenode), 
                                      shell.getConf());
-      assertTrue( "Directory does not get created", 
-                  fs.isDirectory(new Path("/data")) );
+      assertTrue("Directory does not get created", 
+                 fs.isDirectory(new Path("/data")));
       fs.delete(new Path("/data"));
     } catch (Exception e) {
       System.err.println(e.getMessage());
       e.printStackTrace();
     } finally {
-      if( fs!=null ) {
+      if (fs!=null) {
         try {
           fs.close();
         } catch (IOException ignored) {

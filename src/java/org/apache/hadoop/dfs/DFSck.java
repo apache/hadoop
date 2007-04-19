@@ -108,7 +108,7 @@ public class DFSck extends ToolBase {
     URLConnection connection = path.openConnection();
     InputStream stream = connection.getInputStream();
     InputStreamReader input =
-        new InputStreamReader(stream, "UTF-8");
+      new InputStreamReader(stream, "UTF-8");
     try {
       int c = input.read();
       while (c != -1) {
@@ -122,7 +122,7 @@ public class DFSck extends ToolBase {
   }
 
   public static void main(String[] args) throws Exception {
-      int res = new DFSck().doMain(new Configuration(), args);
-      System.exit(res);
+    int res = new DFSck().doMain(new Configuration(), args);
+    System.exit(res);
   }
 }

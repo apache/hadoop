@@ -80,7 +80,7 @@ public class TestConfiguration extends TestCase {
       String gotVal = conf.get(p.name);
       String gotRawVal = (String)conf.getObject(p.name);
       assertEq(p.val, gotRawVal);
-      if(p.expectEval == UNSPEC) {
+      if (p.expectEval == UNSPEC) {
         // expansion is system-dependent (uses System properties)
         // can't do exact match so just check that all variables got expanded
         assertTrue(gotVal != null && -1 == gotVal.indexOf("${"));

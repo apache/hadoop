@@ -50,8 +50,8 @@ class FSDataset implements FSConstants {
       throws IOException {
       this.dir = dir;
       this.children = null;
-      if (! dir.exists()) {
-        if (! dir.mkdirs()) {
+      if (!dir.exists()) {
+        if (!dir.mkdirs()) {
           throw new IOException("Mkdirs failed to create " + 
                                 dir.toString());
         }
@@ -78,14 +78,14 @@ class FSDataset implements FSConstants {
       }
     }
         
-    public File addBlock( Block b, File src ) throws IOException {
+    public File addBlock(Block b, File src) throws IOException {
       //First try without creating subdirectories
-      File file = addBlock( b, src, false, false );          
-      return ( file != null ) ? file : addBlock( b, src, true, true );
+      File file = addBlock(b, src, false, false);          
+      return (file != null) ? file : addBlock(b, src, true, true);
     }
 
-    private File addBlock( Block b, File src, boolean createOk, 
-                           boolean resetIdx ) throws IOException {
+    private File addBlock(Block b, File src, boolean createOk, 
+                          boolean resetIdx) throws IOException {
       if (numBlocks < maxBlocksPerDir) {
         File dest = new File(dir, b.getBlockName());
         src.renameTo(dest);
@@ -93,17 +93,17 @@ class FSDataset implements FSConstants {
         return dest;
       }
             
-      if ( lastChildIdx < 0 && resetIdx ) {
+      if (lastChildIdx < 0 && resetIdx) {
         //reset so that all children will be checked
-        lastChildIdx = random.nextInt( children.length );              
+        lastChildIdx = random.nextInt(children.length);              
       }
             
-      if ( lastChildIdx >= 0 && children != null ) {
+      if (lastChildIdx >= 0 && children != null) {
         //Check if any child-tree has room for a block.
         for (int i=0; i < children.length; i++) {
-          int idx = ( lastChildIdx + i )%children.length;
-          File file = children[idx].addBlock( b, src, false, resetIdx );
-          if ( file != null ) {
+          int idx = (lastChildIdx + i)%children.length;
+          File file = children[idx].addBlock(b, src, false, resetIdx);
+          if (file != null) {
             lastChildIdx = idx;
             return file; 
           }
@@ -111,20 +111,20 @@ class FSDataset implements FSConstants {
         lastChildIdx = -1;
       }
             
-      if ( !createOk ) {
+      if (!createOk) {
         return null;
       }
             
-      if ( children == null || children.length == 0 ) {
+      if (children == null || children.length == 0) {
         children = new FSDir[maxBlocksPerDir];
         for (int idx = 0; idx < maxBlocksPerDir; idx++) {
-          children[idx] = new FSDir( new File(dir, DataStorage.BLOCK_SUBDIR_PREFIX+idx) );
+          children[idx] = new FSDir(new File(dir, DataStorage.BLOCK_SUBDIR_PREFIX+idx));
         }
       }
             
       //now pick a child randomly for creating a new set of subdirs.
-      lastChildIdx = random.nextInt( children.length );
-      return children[ lastChildIdx ].addBlock( b, src, true, false ); 
+      lastChildIdx = random.nextInt(children.length);
+      return children[ lastChildIdx ].addBlock(b, src, true, false); 
     }
 
     /**
@@ -194,13 +194,13 @@ class FSDataset implements FSConstants {
     void clearPath(File f) {
       String root = dir.getAbsolutePath();
       String dir = f.getAbsolutePath();
-      if ( dir.startsWith( root ) ) {
-        String[] dirNames = dir.substring( root.length() ).
-          split( File.separator + "subdir" );
-        if ( clearPath( f, dirNames, 1 ) )
+      if (dir.startsWith(root)) {
+        String[] dirNames = dir.substring(root.length()).
+          split(File.separator + "subdir");
+        if (clearPath(f, dirNames, 1))
           return;
       }
-      clearPath( f, null, -1 );
+      clearPath(f, null, -1);
     }
         
     /*
@@ -211,33 +211,33 @@ class FSDataset implements FSConstants {
      * children in common case. If directory structure changes 
      * in later versions, we need to revisit this.
      */
-    private boolean clearPath( File f, String[] dirNames, int idx ) {
-      if ( ( dirNames == null || idx == dirNames.length ) &&
-           dir.compareTo(f) == 0) {
+    private boolean clearPath(File f, String[] dirNames, int idx) {
+      if ((dirNames == null || idx == dirNames.length) &&
+          dir.compareTo(f) == 0) {
         numBlocks--;
         return true;
       }
           
-      if ( dirNames != null ) {
+      if (dirNames != null) {
         //guess the child index from the directory name
-        if ( idx > ( dirNames.length - 1 ) || children == null ) {
+        if (idx > (dirNames.length - 1) || children == null) {
           return false;
         }
         int childIdx; 
         try {
-          childIdx = Integer.parseInt( dirNames[idx] );
-        } catch ( NumberFormatException ignored ) {
+          childIdx = Integer.parseInt(dirNames[idx]);
+        } catch (NumberFormatException ignored) {
           // layout changed? we could print a warning.
           return false;
         }
-        return ( childIdx >= 0 && childIdx < children.length ) ?
-          children[childIdx].clearPath( f, dirNames, idx+1 ) : false;
+        return (childIdx >= 0 && childIdx < children.length) ?
+          children[childIdx].clearPath(f, dirNames, idx+1) : false;
       }
 
       //guesses failed. back to blind iteration.
-      if ( children != null ) {
+      if (children != null) {
         for(int i=0; i < children.length; i++) {
-          if ( children[i].clearPath( f, null, -1 ) ){
+          if (children[i].clearPath(f, null, -1)){
             return true;
           }
         }
@@ -262,12 +262,12 @@ class FSDataset implements FSConstants {
     private long reserved;
     private double usableDiskPct = USABLE_DISK_PCT_DEFAULT;
     
-    FSVolume( File currentDir, Configuration conf) throws IOException {
+    FSVolume(File currentDir, Configuration conf) throws IOException {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
       this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct",
                                          (float) USABLE_DISK_PCT_DEFAULT);
       File parent = currentDir.getParentFile();
-      this.dataDir = new FSDir( currentDir );
+      this.dataDir = new FSDir(currentDir);
       this.tmpDir = new File(parent, "tmp");
       if (tmpDir.exists()) {
         FileUtil.fullyDelete(tmpDir);
@@ -288,7 +288,7 @@ class FSDataset implements FSConstants {
       long capacity = usage.getCapacity();
       long freespace = Math.round(usage.getAvailableSkipRefresh() -
                                   capacity * (1 - usableDiskPct) - reserved); 
-      return ( freespace > 0 ) ? freespace : 0;
+      return (freespace > 0) ? freespace : 0;
     }
       
     String getMount() throws IOException {
@@ -309,7 +309,7 @@ class FSDataset implements FSConstants {
                                 b + ".  File " + f + " should be creatable, but is already present.");
         }
       } catch (IOException ie) {
-        System.out.println("Exception!  " + ie);
+        System.out.println("Exception! " + ie);
         throw ie;
       }
       return f;
@@ -430,7 +430,7 @@ class FSDataset implements FSConstants {
   /**
    * An FSDataset has a directory where it loads its data files.
    */
-  public FSDataset( DataStorage storage, Configuration conf) throws IOException {
+  public FSDataset(DataStorage storage, Configuration conf) throws IOException {
     this.maxBlocksPerDir = conf.getInt("dfs.datanode.numblocks", 64);
     FSVolume[] volArray = new FSVolume[storage.getNumStorageDirs()];
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
@@ -461,7 +461,7 @@ class FSDataset implements FSConstants {
    * Find the block's on-disk length
    */
   public long getLength(Block b) throws IOException {
-    if (! isValidBlock(b)) {
+    if (!isValidBlock(b)) {
       throw new IOException("Block " + b + " is not valid.");
     }
     File f = getFile(b);
@@ -472,7 +472,7 @@ class FSDataset implements FSConstants {
    * Get a stream of data from the indicated block.
    */
   public synchronized InputStream getBlockData(Block b) throws IOException {
-    if (! isValidBlock(b)) {
+    if (!isValidBlock(b)) {
       throw new IOException("Block " + b + " is not valid.");
     }
     // File should be opened with the lock.
@@ -495,7 +495,7 @@ class FSDataset implements FSConstants {
     // Serialize access to /tmp, and check if file already there.
     //
     File f = null;
-    synchronized ( this ) {
+    synchronized (this) {
       //
       // Is it already in the create process?
       //
@@ -514,7 +514,7 @@ class FSDataset implements FSConstants {
         }
       }
       FSVolume v = null;
-      synchronized ( volumes ) {
+      synchronized (volumes) {
         v = volumes.getNextVolume(blockSize);
         // create temporary file to hold block in the designated volume
         f = v.createTmpFile(b);
@@ -544,7 +544,7 @@ class FSDataset implements FSConstants {
    */
   public synchronized void finalizeBlock(Block b) throws IOException {
     File f = ongoingCreates.get(b);
-    if (f == null || ! f.exists()) {
+    if (f == null || !f.exists()) {
       throw new IOException("No temporary file " + f + " for block " + b);
     }
     long finalLen = f.length();
@@ -552,7 +552,7 @@ class FSDataset implements FSConstants {
     FSVolume v = volumeMap.get(b);
         
     File dest = null;
-    synchronized ( volumes ) {
+    synchronized (volumes) {
       dest = v.addBlock(b, f);
     }
     blockMap.put(b, dest);

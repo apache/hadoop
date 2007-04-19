@@ -12,7 +12,7 @@ import java.io.IOException;
  */
 class DisallowedDatanodeException extends IOException {
 
-  public DisallowedDatanodeException( DatanodeID nodeID ) {
-    super("Datanode denied communication with namenode: " + nodeID.getName() );
+  public DisallowedDatanodeException(DatanodeID nodeID) {
+    super("Datanode denied communication with namenode: " + nodeID.getName());
   }
 }

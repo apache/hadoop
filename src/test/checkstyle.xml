@@ -159,7 +159,7 @@
         <module name="ArrayTypeStyle"/>
         <module name="Indentation">
             <property name="basicOffset" value="2" />
-            <property name="caseIndent" value="2" />
+            <property name="caseIndent" value="0" />
         </module> 
         <module name="TodoComment"/>
         <module name="UpperEll"/>

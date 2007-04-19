@@ -100,7 +100,7 @@ public abstract class Server {
    */
   public static InetAddress getRemoteIp() {
     Call call = CurCall.get();
-    if ( call != null ) {
+    if (call != null) {
       return call.connection.socket.getInetAddress();
     }
     return null;
@@ -110,7 +110,7 @@ public abstract class Server {
    */
   public static String getRemoteAddress() {
     InetAddress addr = getRemoteIp();
-    return ( addr == null ) ? null : addr.getHostAddress();
+    return (addr == null) ? null : addr.getHostAddress();
   }
   
   private String bindAddress; 
@@ -137,9 +137,9 @@ public abstract class Server {
   private LinkedList<Call> callQueue = new LinkedList<Call>(); // queued calls
 
   private List<Connection> connectionList = 
-       Collections.synchronizedList(new LinkedList<Connection>());
-                                                       //maintain a list
-                                                       //of client connections
+    Collections.synchronizedList(new LinkedList<Connection>());
+  //maintain a list
+  //of client connections
   private Listener listener = null;
   private int numConnections = 0;
   private Handler[] handlers = null;
@@ -177,7 +177,7 @@ public abstract class Server {
     private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
     
     public Listener() throws IOException {
-      address = new InetSocketAddress(bindAddress,port);
+      address = new InetSocketAddress(bindAddress, port);
       // Create a new server socket and set to non blocking mode
       acceptChannel = ServerSocketChannel.open();
       acceptChannel.configureBlocking(false);
@@ -334,8 +334,8 @@ public abstract class Server {
       }
       if (LOG.isDebugEnabled())
         LOG.debug("Server connection from " + c.toString() +
-                "; # active connections: " + numConnections +
-                "; # queued calls: " + callQueue.size() );
+                  "; # active connections: " + numConnections +
+                  "; # queued calls: " + callQueue.size());
     }
 
     void doRead(SelectionKey key) {
@@ -361,8 +361,8 @@ public abstract class Server {
         try {
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": disconnecting client " + 
-                  c.getHostAddress() + ". Number of active connections: "+
-                  numConnections);
+                      c.getHostAddress() + ". Number of active connections: "+
+                      numConnections);
           c.close();
         } catch (Exception e) {}
         c = null;
@@ -381,7 +381,7 @@ public abstract class Server {
         try {
           acceptChannel.socket().close();
         } catch (IOException e) {
-            LOG.info(getName() + ":Exception in closing listener socket. " + e);
+          LOG.info(getName() + ":Exception in closing listener socket. " + e);
         }
       }
     }
@@ -405,7 +405,7 @@ public abstract class Server {
     private int remotePort;
 
     public Connection(SelectionKey key, SocketChannel channel, 
-    long lastContact) {
+                      long lastContact) {
       this.key = key;
       this.channel = channel;
       this.lastContact = lastContact;
@@ -414,7 +414,7 @@ public abstract class Server {
       this.socket = channel.socket();
       this.out = new DataOutputStream
         (new BufferedOutputStream(
-         this.channelOut = new SocketChannelOutputStream( channel )));
+          this.channelOut = new SocketChannelOutputStream(channel)));
       InetAddress addr = socket.getInetAddress();
       if (addr == null) {
         this.hostAddress = "*Unknown*";
@@ -441,22 +441,22 @@ public abstract class Server {
     }
 
     private boolean timedOut() {
-      if(System.currentTimeMillis() -  lastContact > maxIdleTime)
+      if (System.currentTimeMillis() -  lastContact > maxIdleTime)
         return true;
       return false;
     }
 
     private boolean timedOut(long currentTime) {
-        if(currentTime -  lastContact > maxIdleTime)
-          return true;
-        return false;
+      if (currentTime -  lastContact > maxIdleTime)
+        return true;
+      return false;
     }
 
     public int readAndProcess() throws IOException, InterruptedException {
       int count = -1;
       if (dataLengthBuffer.remaining() > 0) {
         count = channel.read(dataLengthBuffer);       
-        if ( count < 0 || dataLengthBuffer.remaining() > 0 ) 
+        if (count < 0 || dataLengthBuffer.remaining() > 0) 
           return count;        
         dataLengthBuffer.flip(); 
         // Is this a new style header?
@@ -491,7 +491,7 @@ public abstract class Server {
 
     private void processData() throws  IOException, InterruptedException {
       DataInputStream dis =
-          new DataInputStream(new ByteArrayInputStream( data.array() ));
+        new DataInputStream(new ByteArrayInputStream(data.array()));
       int id = dis.readInt();                    // try to read an id
         
       if (LOG.isDebugEnabled())
@@ -562,13 +562,13 @@ public abstract class Server {
           
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": has #" + call.id + " from " +
-                     call.connection);
+                      call.connection);
           
           String errorClass = null;
           String error = null;
           Writable value = null;
           
-          CurCall.set( call );
+          CurCall.set(call);
           try {
             value = call(call.param);             // make the call
           } catch (Throwable e) {
@@ -576,7 +576,7 @@ public abstract class Server {
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
-          CurCall.set( null );
+          CurCall.set(null);
             
           DataOutputStream out = call.connection.out;
           synchronized (out) {
@@ -614,13 +614,13 @@ public abstract class Server {
    * 
    */
   protected Server(String bindAddress, int port, Class paramClass, int handlerCount, Configuration conf) 
-  throws IOException {
+    throws IOException {
     this.bindAddress = bindAddress;
     this.conf = conf;
     this.port = port;
     this.paramClass = paramClass;
     this.handlerCount = handlerCount;
-    this.timeout = conf.getInt("ipc.client.timeout",10000);
+    this.timeout = conf.getInt("ipc.client.timeout", 10000);
     maxCallStartAge = (long) (timeout * MAX_CALL_QUEUE_TIME);
     maxQueueSize = handlerCount * MAX_QUEUE_SIZE_PER_HANDLER;
     this.maxIdleTime = conf.getInt("ipc.client.maxidletime", 120000);

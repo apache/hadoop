@@ -108,7 +108,7 @@ public class HMaster extends HGlobals
       };
       Text firstRow = new Text();
   
-      while((! closed)) {
+      while((!closed)) {
         int metaRegions = 0;
         while(rootRegionLocation == null) {
           try {
@@ -155,8 +155,8 @@ public class HMaster extends HGlobals
             HServerInfo storedInfo = null;
             synchronized(serversToServerInfo) {
               storedInfo = serversToServerInfo.get(serverName);
-              if(storedInfo == null
-                 || storedInfo.getStartCode() != startCode) {
+              if (storedInfo == null
+                  || storedInfo.getStartCode() != startCode) {
               
                 // The current assignment is no good; load the region.
   
@@ -261,8 +261,8 @@ public class HMaster extends HGlobals
           HServerInfo storedInfo = null;
           synchronized(serversToServerInfo) {
             storedInfo = serversToServerInfo.get(serverName);
-            if(storedInfo == null
-               || storedInfo.getStartCode() != startCode) {
+            if (storedInfo == null
+                || storedInfo.getStartCode() != startCode) {
             
               // The current assignment is no good; load the region.
 
@@ -285,16 +285,16 @@ public class HMaster extends HGlobals
     }
 
     public void run() {
-      while((! closed)) {
+      while((!closed)) {
         MetaRegion region = null;
         
         while(region == null) {
           synchronized(metaRegionsToScan) {
-            if(metaRegionsToScan.size() != 0) {
+            if (metaRegionsToScan.size() != 0) {
               region = metaRegionsToScan.remove(0);
             }
           }
-          if(region == null) {
+          if (region == null) {
             try {
               metaRegionsToScan.wait();
               
@@ -307,7 +307,7 @@ public class HMaster extends HGlobals
         
         synchronized(knownMetaRegions) {
           knownMetaRegions.put(region.startKey, region);
-          if(rootScanned && knownMetaRegions.size() == numMetaRegions) {
+          if (rootScanned && knownMetaRegions.size() == numMetaRegions) {
             allMetaRegionsScanned = true;
             allMetaRegionsScanned.notifyAll();
           }
@@ -319,7 +319,7 @@ public class HMaster extends HGlobals
           
           } catch(InterruptedException ex) {
           }
-          if(! allMetaRegionsScanned) {
+          if (!allMetaRegionsScanned) {
             break;                              // A region must have split
           }
           
@@ -328,7 +328,7 @@ public class HMaster extends HGlobals
           Vector<MetaRegion> v = new Vector<MetaRegion>();
           v.addAll(knownMetaRegions.values());
           
-          for(Iterator<MetaRegion> i = v.iterator(); i.hasNext(); ) {
+          for(Iterator<MetaRegion> i = v.iterator(); i.hasNext();) {
             scanRegion(i.next());
           }
         } while(true);
@@ -391,12 +391,12 @@ public class HMaster extends HGlobals
 
     // Make sure the root directory exists!
     
-    if(! fs.exists(dir)) {
+    if (!fs.exists(dir)) {
       fs.mkdirs(dir);
     }
 
     Path rootRegionDir = HStoreFile.getHRegionDir(dir, rootRegionInfo.regionName);
-    if(! fs.exists(rootRegionDir)) {
+    if (!fs.exists(rootRegionDir)) {
       
       // Bootstrap! Need to create the root region and the first meta region.
       //TODO is the root region self referential?
@@ -521,7 +521,7 @@ public class HMaster extends HGlobals
     synchronized(serversToServerInfo) {
       storedInfo = serversToServerInfo.get(server);
         
-      if(storedInfo != null) {
+      if (storedInfo != null) {
         serversToServerInfo.remove(server);
 
         synchronized(msgQueue) {
@@ -548,7 +548,7 @@ public class HMaster extends HGlobals
     synchronized(serversToServerInfo) {
       HServerInfo storedInfo = serversToServerInfo.get(server);
       
-      if(storedInfo == null) {
+      if (storedInfo == null) {
         
         // The HBaseMaster may have been restarted.
         // Tell the RegionServer to start over and call regionServerStartup()
@@ -557,7 +557,7 @@ public class HMaster extends HGlobals
         returnMsgs[0] = new HMsg(HMsg.MSG_CALL_SERVER_STARTUP);
         return returnMsgs;
         
-      } else if(storedInfo.getStartCode() != serverInfo.getStartCode()) {
+      } else if (storedInfo.getStartCode() != serverInfo.getStartCode()) {
         
         // This state is reachable if:
         //
@@ -597,9 +597,9 @@ public class HMaster extends HGlobals
     // Process the kill list
     
     TreeMap<Text, HRegionInfo> regionsToKill = killList.get(info.toString());
-    if(regionsToKill != null) {
+    if (regionsToKill != null) {
       for(Iterator<HRegionInfo> i = regionsToKill.values().iterator();
-          i.hasNext(); ) {
+          i.hasNext();) {
         
         returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE_AND_DELETE, i.next()));
       }
@@ -616,7 +616,7 @@ public class HMaster extends HGlobals
         case HMsg.MSG_REPORT_OPEN:
           HRegionInfo regionInfo = unassignedRegions.get(region.regionName);
 
-          if(regionInfo == null) {
+          if (regionInfo == null) {
 
             // This Region should not have been opened.
             // Ask the server to shut it down, but don't report it as closed.  
@@ -632,7 +632,7 @@ public class HMaster extends HGlobals
             unassignedRegions.remove(region.regionName);
             assignAttempts.remove(region.regionName);
 
-            if(region.regionName.compareTo(rootRegionInfo.regionName) == 0) {
+            if (region.regionName.compareTo(rootRegionInfo.regionName) == 0) {
 
               // Store the Root Region location (in memory)
 
@@ -643,7 +643,7 @@ public class HMaster extends HGlobals
               rootRegionLocation.notifyAll();
               break;
               
-            } else if(region.regionName.find(META_TABLE_NAME.toString()) == 0) {
+            } else if (region.regionName.find(META_TABLE_NAME.toString()) == 0) {
 
               // It's a meta region. Put it on the queue to be scanned.
               
@@ -668,7 +668,7 @@ public class HMaster extends HGlobals
           break;
 
         case HMsg.MSG_REPORT_CLOSE:
-          if(region.regionName.compareTo(rootRegionInfo.regionName) == 0) { // Root region
+          if (region.regionName.compareTo(rootRegionInfo.regionName) == 0) { // Root region
             rootRegionLocation = null;
             unassignedRegions.put(region.regionName, region);
             assignAttempts.put(region.regionName, 0L);
@@ -676,10 +676,10 @@ public class HMaster extends HGlobals
           } else {
             boolean reassignRegion = true;
             
-            if(regionsToKill.containsKey(region.regionName)) {
+            if (regionsToKill.containsKey(region.regionName)) {
               regionsToKill.remove(region.regionName);
               
-              if(regionsToKill.size() > 0) {
+              if (regionsToKill.size() > 0) {
                 killList.put(info.toString(), regionsToKill);
                 
               } else {
@@ -701,7 +701,7 @@ public class HMaster extends HGlobals
           break;
 
         case HMsg.MSG_NEW_REGION:
-          if(region.regionName.find(META_TABLE_NAME.toString()) == 0) {
+          if (region.regionName.find(META_TABLE_NAME.toString()) == 0) {
             // A meta region has split.
             
             allMetaRegionsScanned = false;
@@ -720,7 +720,7 @@ public class HMaster extends HGlobals
 
       // Figure out what the RegionServer ought to do, and write back.
 
-      if(unassignedRegions.size() > 0) {
+      if (unassignedRegions.size() > 0) {
 
         // Open new regions as necessary
 
@@ -731,20 +731,20 @@ public class HMaster extends HGlobals
         long now = System.currentTimeMillis();
 
         for(Iterator<Text> it = unassignedRegions.keySet().iterator();
-            it.hasNext(); ) {
+            it.hasNext();) {
 
           Text curRegionName = it.next();
           HRegionInfo regionInfo = unassignedRegions.get(curRegionName);
           long assignedTime = assignAttempts.get(curRegionName);
 
-          if(now - assignedTime > maxRegionOpenTime) {
+          if (now - assignedTime > maxRegionOpenTime) {
             returnMsgs.add(new HMsg(HMsg.MSG_REGION_OPEN, regionInfo));
 
             assignAttempts.put(curRegionName, now);
             counter++;
           }
 
-          if(counter >= targetForServer) {
+          if (counter >= targetForServer) {
             break;
           }
         }
@@ -762,7 +762,7 @@ public class HMaster extends HGlobals
     }
     
     public void run() {
-      while(! closed) {
+      while(!closed) {
         PendingOperation op = null;
         
         synchronized(msgQueue) {
@@ -827,7 +827,7 @@ public class HMaster extends HGlobals
           byte serverBytes[] = results.get(META_COL_SERVER);
           String serverName = new String(serverBytes, UTF8_ENCODING);
 
-          if(deadServer.compareTo(serverName) != 0) {
+          if (deadServer.compareTo(serverName) != 0) {
             // This isn't the server you're looking for - move along
             continue;
           }
@@ -835,7 +835,7 @@ public class HMaster extends HGlobals
           byte startCodeBytes[] = results.get(META_COL_STARTCODE);
           long startCode = Long.decode(new String(startCodeBytes, UTF8_ENCODING));
 
-          if(oldStartCode != startCode) {
+          if (oldStartCode != startCode) {
             // Close but no cigar
             continue;
           }
@@ -869,7 +869,7 @@ public class HMaster extends HGlobals
       // Put all the regions we found on the unassigned region list
 
       for(Iterator<Map.Entry<Text, HRegionInfo>> i = regions.entrySet().iterator();
-          i.hasNext(); ) {
+          i.hasNext();) {
 
         Map.Entry<Text, HRegionInfo> e = i.next();
         Text region = e.getKey();
@@ -903,7 +903,7 @@ public class HMaster extends HGlobals
       
       scanMetaRegion(server, scanner, rootRegionInfo.regionName);
       for(Iterator<MetaRegion> i = knownMetaRegions.values().iterator();
-          i.hasNext(); ) {
+          i.hasNext();) {
         
         MetaRegion r = i.next();
 
@@ -929,7 +929,7 @@ public class HMaster extends HGlobals
       // If the region closing down is a meta region then we need to update
       // the ROOT table
       
-      if(this.regionInfo.regionName.find(metaTableDesc.getName().toString()) == 0) {
+      if (this.regionInfo.regionName.find(metaTableDesc.getName().toString()) == 0) {
         this.rootRegion = true;
         
       } else {
@@ -954,7 +954,7 @@ public class HMaster extends HGlobals
 
       Text metaRegionName;
       HRegionInterface server;
-      if(rootRegion) {
+      if (rootRegion) {
         metaRegionName = rootRegionInfo.regionName;
         server = client.getHRegionConnection(rootRegionLocation);
         
@@ -969,7 +969,7 @@ public class HMaster extends HGlobals
       server.delete(metaRegionName, clientId, lockid, META_COL_STARTCODE);
       server.commit(metaRegionName, clientId, lockid);
       
-      if(reassignRegion) {
+      if (reassignRegion) {
         synchronized(unassignedRegions) {
           unassignedRegions.put(regionInfo.regionName, regionInfo);
           assignAttempts.put(regionInfo.regionName, 0L);
@@ -986,7 +986,7 @@ public class HMaster extends HGlobals
     BytesWritable startCode;
     
     public PendingOpenReport(HServerInfo info, Text regionName) {
-      if(regionName.find(metaTableDesc.getName().toString()) == 0) {
+      if (regionName.find(metaTableDesc.getName().toString()) == 0) {
         
         // The region which just came on-line is a META region.
         // We need to look in the ROOT region for its information.
@@ -1030,7 +1030,7 @@ public class HMaster extends HGlobals
 
       Text metaRegionName;
       HRegionInterface server;
-      if(rootRegion) {
+      if (rootRegion) {
         metaRegionName = rootRegionInfo.regionName;
         server = client.getHRegionConnection(rootRegionLocation);
         
@@ -1074,13 +1074,13 @@ public class HMaster extends HGlobals
 
 
     BytesWritable bytes = server.get(metaRegionName, desc.getName(), META_COL_REGIONINFO);
-    if(bytes != null && bytes.getSize() != 0) {
+    if (bytes != null && bytes.getSize() != 0) {
       byte[] infoBytes = bytes.get();
       DataInputBuffer inbuf = new DataInputBuffer();
       inbuf.reset(infoBytes, infoBytes.length);
       HRegionInfo info = new HRegionInfo();
       info.readFields(inbuf);
-      if(info.tableDesc.getName().compareTo(desc.getName()) == 0) {
+      if (info.tableDesc.getName().compareTo(desc.getName()) == 0) {
         throw new IOException("table already exists");
       }
     }
@@ -1183,7 +1183,7 @@ public class HMaster extends HGlobals
     }
 
     for(Iterator<MetaRegion> i = knownMetaRegions.tailMap(tableName).values().iterator();
-        i.hasNext(); ) {
+        i.hasNext();) {
 
       // Find all the regions that make up this table
       
@@ -1206,7 +1206,7 @@ public class HMaster extends HGlobals
           HRegionInfo info = new HRegionInfo();
           info.readFields(inbuf);
 
-          if(info.tableDesc.getName().compareTo(tableName) > 0) {
+          if (info.tableDesc.getName().compareTo(tableName) > 0) {
             break;                      // Beyond any more entries for this table
           }
 
@@ -1220,12 +1220,12 @@ public class HMaster extends HGlobals
 
           synchronized(serversToServerInfo) {
             HServerInfo s = serversToServerInfo.get(serverName);
-            if(s != null && s.getStartCode() == startCode) {
+            if (s != null && s.getStartCode() == startCode) {
               
               // It is being served. Tell the server to stop it and not report back
               
               TreeMap<Text, HRegionInfo> regionsToKill = killList.get(serverName);
-              if(regionsToKill == null) {
+              if (regionsToKill == null) {
                 regionsToKill = new TreeMap<Text, HRegionInfo>();
               }
               regionsToKill.put(info.regionName, info);
@@ -1233,7 +1233,7 @@ public class HMaster extends HGlobals
             }
           }
         }
-        for(Iterator<Text> row = rowsToDelete.iterator(); row.hasNext(); ) {
+        for(Iterator<Text> row = rowsToDelete.iterator(); row.hasNext();) {
           long lockid = server.startUpdate(m.regionName, clientId, row.next());
           server.delete(m.regionName, clientId, lockid, columns[0]);
           server.commit(m.regionName, clientId, lockid);

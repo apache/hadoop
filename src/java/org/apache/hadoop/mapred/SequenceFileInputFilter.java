@@ -74,7 +74,7 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
    * @param filterClass filter class
    */
   public static void setFilterClass(Configuration conf, Class filterClass) {
-    conf.set(FILTER_CLASS, filterClass.getName() );
+    conf.set(FILTER_CLASS, filterClass.getName());
   }
 
          
@@ -109,7 +109,7 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
      * @param conf where the regex is set
      * @param regex regex used as a filter
      */
-    public static void setPattern(Configuration conf, String regex )
+    public static void setPattern(Configuration conf, String regex)
       throws PatternSyntaxException {
       try {
         Pattern.compile(regex);
@@ -125,7 +125,7 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
      */
     public void setConf(Configuration conf) {
       String regex = conf.get(FILTER_REGEX);
-      if(regex==null)
+      if (regex==null)
         throw new RuntimeException(FILTER_REGEX + "not set");
       this.p = Pattern.compile(regex);
       this.conf = conf;
@@ -154,8 +154,8 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
      * @param conf configuration
      * @param frequency filtering frequencey
      */
-    public static void setFrequency(Configuration conf, int frequency ){
-      if(frequency<=0)
+    public static void setFrequency(Configuration conf, int frequency){
+      if (frequency<=0)
         throw new IllegalArgumentException(
                                            "Negative " + FILTER_FREQUENCY + ": "+frequency);
       conf.setInt(FILTER_FREQUENCY, frequency);
@@ -169,7 +169,7 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
      */
     public void setConf(Configuration conf) {
       this.frequency = conf.getInt("sequencefile.filter.frequency", 10);
-      if(this.frequency <=0 ) {
+      if (this.frequency <=0) {
         throw new RuntimeException(
                                    "Negative "+FILTER_FREQUENCY+": "+this.frequency);
       }
@@ -182,9 +182,9 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
      */
     public boolean accept(Writable key) {
       boolean accepted = false;
-      if(count == 0)
+      if (count == 0)
         accepted = true;
-      if( ++count == frequency ) {
+      if (++count == frequency) {
         count = 0;
       }
       return accepted;
@@ -215,8 +215,8 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
      * @param conf configuration
      * @param frequency filtering frequency
      */
-    public static void setFrequency(Configuration conf, int frequency ){
-      if(frequency<=0)
+    public static void setFrequency(Configuration conf, int frequency){
+      if (frequency<=0)
         throw new IllegalArgumentException(
                                            "Negative " + FILTER_FREQUENCY + ": "+frequency);
       conf.setInt(FILTER_FREQUENCY, frequency);
@@ -230,7 +230,7 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
      */
     public void setConf(Configuration conf) {
       this.frequency = conf.getInt(FILTER_FREQUENCY, 10);
-      if(this.frequency <=0 ) {
+      if (this.frequency <=0) {
         throw new RuntimeException(
                                    "Negative "+FILTER_FREQUENCY+": "+this.frequency);
       }
@@ -244,16 +244,16 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
     public boolean accept(Writable key) {
       try {
         long hashcode;
-        if( key instanceof Text) {
+        if (key instanceof Text) {
           hashcode = MD5Hashcode((Text)key);
-        } else if( key instanceof BytesWritable) {
+        } else if (key instanceof BytesWritable) {
           hashcode = MD5Hashcode((BytesWritable)key);
         } else {
           ByteBuffer bb;
           bb = Text.encode(key.toString());
-          hashcode = MD5Hashcode(bb.array(),0, bb.limit());
+          hashcode = MD5Hashcode(bb.array(), 0, bb.limit());
         }
-        if(hashcode/frequency*frequency==hashcode)
+        if (hashcode/frequency*frequency==hashcode)
           return true;
       } catch(Exception e) {
         LOG.warn(e);
@@ -270,7 +270,7 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
       return MD5Hashcode(key.get(), 0, key.getSize());
     }
     synchronized private long MD5Hashcode(byte[] bytes, 
-                                          int start, int length ) throws DigestException {
+                                          int start, int length) throws DigestException {
       DIGESTER.update(bytes, 0, length);
       DIGESTER.digest(digest, 0, MD5_LEN);
       long hashcode=0;
@@ -295,7 +295,7 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
     public synchronized boolean next(Writable key, Writable value)
       throws IOException {
       while (next(key)) {
-        if(filter.accept(key)) {
+        if (filter.accept(key)) {
           getCurrentValue(value);
           return true;
         }

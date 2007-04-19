@@ -197,7 +197,7 @@ public class BytesWritable implements WritableComparable {
                        byte[] b2, int s2, int l2) {
       int size1 = readInt(b1, s1);
       int size2 = readInt(b2, s2);
-      return compareBytes(b1,s1+4, size1, b2, s2+4, size2);
+      return compareBytes(b1, s1+4, size1, b2, s2+4, size2);
     }
   }
   

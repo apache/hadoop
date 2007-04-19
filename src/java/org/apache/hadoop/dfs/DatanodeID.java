@@ -24,7 +24,7 @@ public class DatanodeID implements WritableComparable {
    * DatanodeID default constructor
    */
   public DatanodeID() {
-    this( new String(), new String(), -1 );
+    this(new String(), new String(), -1);
   }
 
   /**
@@ -32,8 +32,8 @@ public class DatanodeID implements WritableComparable {
    * 
    * @param from
    */
-  public DatanodeID( DatanodeID from ) {
-    this( from.getName(), from.getStorageID(), from.getInfoPort() );
+  public DatanodeID(DatanodeID from) {
+    this(from.getName(), from.getStorageID(), from.getInfoPort());
   }
   
   /**
@@ -42,7 +42,7 @@ public class DatanodeID implements WritableComparable {
    * @param nodeName (hostname:portNumber) 
    * @param storageID data storage ID
    */
-  public DatanodeID( String nodeName, String storageID, int infoPort ) {
+  public DatanodeID(String nodeName, String storageID, int infoPort) {
     this.name = nodeName;
     this.storageID = storageID;
     this.infoPort = infoPort;
@@ -90,13 +90,13 @@ public class DatanodeID implements WritableComparable {
   
   public int getPort() {
     int colon = name.indexOf(":");
-    if ( colon < 0 ) {
+    if (colon < 0) {
       return 50010; // default port.
     }
     return Integer.parseInt(name.substring(colon+1));
   }
 
-  public boolean equals( Object to ) {
+  public boolean equals(Object to) {
     return (name.equals(((DatanodeID)to).getName()) &&
             storageID.equals(((DatanodeID)to).getStorageID()));
   }
@@ -113,7 +113,7 @@ public class DatanodeID implements WritableComparable {
    * Update fields when a new registration request comes in.
    * Note that this does not update storageID.
    */
-  void updateRegInfo( DatanodeID nodeReg ) {
+  void updateRegInfo(DatanodeID nodeReg) {
     name = nodeReg.getName();
     infoPort = nodeReg.getInfoPort();
     // update any more fields added in future.

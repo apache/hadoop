@@ -44,7 +44,7 @@ class BlockCompressorStream extends CompressorStream {
    *                            algorithm with given bufferSize
    */
   public BlockCompressorStream(OutputStream out, Compressor compressor, 
-      int bufferSize, int compressionOverhead) {
+                               int bufferSize, int compressionOverhead) {
     super(out, compressor, bufferSize);
     MAX_INPUT_SIZE = bufferSize - compressionOverhead;
   }
@@ -70,7 +70,7 @@ class BlockCompressorStream extends CompressorStream {
     if (b == null) {
       throw new NullPointerException();
     } else if ((off < 0) || (off > b.length) || (len < 0) ||
-            ((off + len) > b.length)) {
+               ((off + len) > b.length)) {
       throw new IndexOutOfBoundsException();
     } else if (len == 0) {
       return;

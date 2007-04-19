@@ -441,7 +441,7 @@ public class JRecord extends JCompType {
   
   void genCppCode(FileWriter hh, FileWriter cc, ArrayList<String> options)
     throws IOException {
-    ((CppRecord)getCppType()).genCode(hh,cc, options);
+    ((CppRecord)getCppType()).genCode(hh, cc, options);
   }
   
   void genJavaCode(String destDir, ArrayList<String> options)

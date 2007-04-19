@@ -565,18 +565,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    */
   TreeSet<TaskTrackerStatus> trackerExpiryQueue =
     new TreeSet<TaskTrackerStatus>(
-      new Comparator<TaskTrackerStatus>() {
-        public int compare(TaskTrackerStatus p1, TaskTrackerStatus p2) {
-          if (p1.getLastSeen() < p2.getLastSeen()) {
-            return -1;
-          } else if (p1.getLastSeen() > p2.getLastSeen()) {
-            return 1;
-          } else {
-            return (p1.getTrackerName().compareTo(p2.getTrackerName()));
-          }
-        }
-      }
-    );
+                                   new Comparator<TaskTrackerStatus>() {
+                                     public int compare(TaskTrackerStatus p1, TaskTrackerStatus p2) {
+                                       if (p1.getLastSeen() < p2.getLastSeen()) {
+                                         return -1;
+                                       } else if (p1.getLastSeen() > p2.getLastSeen()) {
+                                         return 1;
+                                       } else {
+                                         return (p1.getTrackerName().compareTo(p2.getTrackerName()));
+                                       }
+                                     }
+                                   }
+                                   );
 
   // Used to provide an HTML view on Job, Task, and TaskTracker structures
   StatusHttpServer infoServer;
@@ -628,10 +628,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     InetSocketAddress addr = getAddress(conf);
     this.localMachine = addr.getHostName();
     this.port = addr.getPort();
-    this.interTrackerServer = RPC.getServer(this,addr.getHostName(), addr.getPort(), 10, false, conf);
+    this.interTrackerServer = RPC.getServer(this, addr.getHostName(), addr.getPort(), 10, false, conf);
     this.interTrackerServer.start();
     Properties p = System.getProperties();
-    for (Iterator it = p.keySet().iterator(); it.hasNext(); ) {
+    for (Iterator it = p.keySet().iterator(); it.hasNext();) {
       String key = (String) it.next();
       String val = (String) p.getProperty(key);
       LOG.info("Property '" + key + "' is " + val);
@@ -886,7 +886,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // Mark the 'non-running' tasks for pruning
     markCompletedJob(job);
 
-      JobEndNotifier.registerNotification(job.getJobConf(), job.getStatus());
+    JobEndNotifier.registerNotification(job.getJobConf(), job.getStatus());
 
     // Purge oldest jobs and keep at-most MAX_COMPLETE_USER_JOBS_IN_MEMORY jobs of a given user
     // in memory; information about the purged jobs is available via
@@ -964,7 +964,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   }
   public Vector<JobInProgress> runningJobs() {
     Vector<JobInProgress> v = new Vector<JobInProgress>();
-    for (Iterator it = jobs.values().iterator(); it.hasNext(); ) {
+    for (Iterator it = jobs.values().iterator(); it.hasNext();) {
       JobInProgress jip = (JobInProgress) it.next();
       JobStatus status = jip.getStatus();
       if (status.getRunState() == JobStatus.RUNNING) {
@@ -984,7 +984,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   }
   public Vector<JobInProgress> failedJobs() {
     Vector<JobInProgress> v = new Vector<JobInProgress>();
-    for (Iterator it = jobs.values().iterator(); it.hasNext(); ) {
+    for (Iterator it = jobs.values().iterator(); it.hasNext();) {
       JobInProgress jip = (JobInProgress) it.next();
       JobStatus status = jip.getStatus();
       if (status.getRunState() == JobStatus.FAILED) {
@@ -995,7 +995,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   }
   public Vector<JobInProgress> completedJobs() {
     Vector<JobInProgress> v = new Vector<JobInProgress>();
-    for (Iterator it = jobs.values().iterator(); it.hasNext(); ) {
+    for (Iterator it = jobs.values().iterator(); it.hasNext();) {
       JobInProgress jip = (JobInProgress) it.next();
       JobStatus status = jip.getStatus();
       if (status.getRunState() == JobStatus.SUCCEEDED) {
@@ -1230,7 +1230,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     int totalCapacity = numTaskTrackers * maxCurrentTasks;
 
     synchronized(jobsByArrival){
-      for (Iterator it = jobsByArrival.iterator(); it.hasNext(); ) {
+      for (Iterator it = jobsByArrival.iterator(); it.hasNext();) {
         JobInProgress job = (JobInProgress) it.next();
         if (job.getStatus().getRunState() == JobStatus.RUNNING) {
           int totalMapTasks = job.desiredMaps();
@@ -1278,7 +1278,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       if (numMaps < maxMapLoad) {
 
         int totalNeededMaps = 0;
-        for (Iterator it = jobsByArrival.iterator(); it.hasNext(); ) {
+        for (Iterator it = jobsByArrival.iterator(); it.hasNext();) {
           JobInProgress job = (JobInProgress) it.next();
           if (job.getStatus().getRunState() != JobStatus.RUNNING) {
             continue;
@@ -1314,7 +1314,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       if (numReduces < maxReduceLoad) {
 
         int totalNeededReduces = 0;
-        for (Iterator it = jobsByArrival.iterator(); it.hasNext(); ) {
+        for (Iterator it = jobsByArrival.iterator(); it.hasNext();) {
           JobInProgress job = (JobInProgress) it.next();
           if (job.getStatus().getRunState() != JobStatus.RUNNING ||
               job.numReduceTasks == 0) {
@@ -1354,13 +1354,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * closed (because the job completed, whether successfully or not)
    */
   private synchronized List<TaskTrackerAction> getTasksToKill(
-      String taskTracker) {
+                                                              String taskTracker) {
     
     Set<String> taskIds = trackerToTaskMap.get(taskTracker);
     if (taskIds != null) {
       List<TaskTrackerAction> killList = new ArrayList<TaskTrackerAction>();
       Set<String> killJobIds = new TreeSet<String>(); 
-      for (String killTaskId : taskIds ) {
+      for (String killTaskId : taskIds) {
         TaskInProgress tip = taskidToTIPMap.get(killTaskId);
         if (tip.shouldCloseForClosedJob(killTaskId)) {
           // 
@@ -1492,13 +1492,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       Vector<TaskReport> reports = new Vector<TaskReport>();
       Vector<TaskInProgress> completeMapTasks =
         job.reportTasksInProgress(true, true);
-      for (Iterator it = completeMapTasks.iterator(); it.hasNext(); ) {
+      for (Iterator it = completeMapTasks.iterator(); it.hasNext();) {
         TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
       Vector<TaskInProgress> incompleteMapTasks =
         job.reportTasksInProgress(true, false);
-      for (Iterator it = incompleteMapTasks.iterator(); it.hasNext(); ) {
+      for (Iterator it = incompleteMapTasks.iterator(); it.hasNext();) {
         TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
@@ -1513,12 +1513,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     } else {
       Vector<TaskReport> reports = new Vector<TaskReport>();
       Vector completeReduceTasks = job.reportTasksInProgress(false, true);
-      for (Iterator it = completeReduceTasks.iterator(); it.hasNext(); ) {
+      for (Iterator it = completeReduceTasks.iterator(); it.hasNext();) {
         TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
       Vector incompleteReduceTasks = job.reportTasksInProgress(false, false);
-      for (Iterator it = incompleteReduceTasks.iterator(); it.hasNext(); ) {
+      for (Iterator it = incompleteReduceTasks.iterator(); it.hasNext();) {
         TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
@@ -1604,7 +1604,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     
   public JobStatus[] jobsToComplete() {
     Vector<JobStatus> v = new Vector<JobStatus>();
-    for (Iterator it = jobs.values().iterator(); it.hasNext(); ) {
+    for (Iterator it = jobs.values().iterator(); it.hasNext();) {
       JobInProgress jip = (JobInProgress) it.next();
       JobStatus status = jip.getStatus();
       if (status.getRunState() == JobStatus.RUNNING 
@@ -1665,7 +1665,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     trackerToTaskMap.remove(trackerName);
 
     if (lostTasks != null) {
-      for (Iterator it = lostTasks.iterator(); it.hasNext(); ) {
+      for (Iterator it = lostTasks.iterator(); it.hasNext();) {
         String taskId = (String) it.next();
         TaskInProgress tip = taskidToTIPMap.get(taskId);
 
@@ -1709,8 +1709,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     try {
       Configuration conf=new Configuration();
       startTracker(conf);
-    } catch ( Throwable e ) {
-      LOG.fatal( StringUtils.stringifyException( e ) );
+    } catch (Throwable e) {
+      LOG.fatal(StringUtils.stringifyException(e));
       System.exit(-1);
     }
   }

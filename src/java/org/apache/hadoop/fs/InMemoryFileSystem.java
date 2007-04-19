@@ -89,7 +89,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
      */
     public String[][] getFileCacheHints(Path f, long start, long len)
       throws IOException {
-      if (! exists(f)) {
+      if (!exists(f)) {
         return null;
       } else {
         return new String[][] {{"inmemory"}};
@@ -194,7 +194,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
                                      short replication, long blockSize, Progressable progress)
       throws IOException {
       synchronized (this) {
-        if (exists(f) && ! overwrite) {
+        if (exists(f) && !overwrite) {
           throw new IOException("File already exists:"+f);
         }
         FileAttributes fAttr =(FileAttributes) tempFileAttribs.remove(getPath(f));

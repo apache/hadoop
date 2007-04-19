@@ -39,12 +39,12 @@ public class JobHistory {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobHistory");
   private static final String DELIMITER = " ";
   private static final String KEY = "(\\w+)";
-  private static final String VALUE = "[[^\"]?]+" ; // anything but a " in ""
+  private static final String VALUE = "[[^\"]?]+"; // anything but a " in ""
   
   private static final Pattern pattern = Pattern.compile(KEY + "=" + "\"" + VALUE + "\"");
   
   public static final String JOBTRACKER_START_TIME = String.valueOf(System.currentTimeMillis()); 
-  private static final String LOG_DIR = System.getProperty("hadoop.log.dir") + File.separator + "history" ; 
+  private static final String LOG_DIR = System.getProperty("hadoop.log.dir") + File.separator + "history"; 
   public static final String MASTER_INDEX_LOG_FILE = "JobHistory.log"; 
   
   private static PrintWriter masterIndex = null;
@@ -60,7 +60,7 @@ public class JobHistory {
    * It acts as a global namespace for all keys. 
    */
   public static enum Keys { JOBTRACKERID,
-                            START_TIME, FINISH_TIME, JOBID, JOBNAME, USER, JOBCONF,SUBMIT_TIME, LAUNCH_TIME, 
+                            START_TIME, FINISH_TIME, JOBID, JOBNAME, USER, JOBCONF, SUBMIT_TIME, LAUNCH_TIME, 
                             TOTAL_MAPS, TOTAL_REDUCES, FAILED_MAPS, FAILED_REDUCES, FINISHED_MAPS, FINISHED_REDUCES,
                             JOB_STATUS, TASKID, HOSTNAME, TASK_TYPE, ERROR, TASK_ATTEMPT_ID, TASK_STATUS, 
                             COPY_PHASE, SORT_PHASE, REDUCE_PHASE, SHUFFLE_FINISHED, SORT_FINISHED 
@@ -77,29 +77,29 @@ public class JobHistory {
   private static Map<Keys,String> parseBuffer = new HashMap<Keys, String>(); 
 
   // init log files
-  static { init() ; } 
+  static { init(); } 
   
   /**
    * Initialize JobHistory files. 
    *
    */
   private static void init(){
-    if( !disableHistory ){
+    if (!disableHistory){
       try{
         File logDir = new File(LOG_DIR); 
-        if( ! logDir.exists() ){
-          if( ! logDir.mkdirs() ){
+        if (!logDir.exists()){
+          if (!logDir.mkdirs()){
             throw new IOException("Mkdirs failed to create " + logDir.toString());
           }
         }
         masterIndex = 
           new PrintWriter(
-                          new FileOutputStream(new File( LOG_DIR + File.separator + MASTER_INDEX_LOG_FILE), true )) ;
+                          new FileOutputStream(new File(LOG_DIR + File.separator + MASTER_INDEX_LOG_FILE), true));
         // add jobtracker id = tracker start time
         log(masterIndex, RecordTypes.Jobtracker, Keys.START_TIME, JOBTRACKER_START_TIME);  
       }catch(IOException e){
         LOG.error("Failed to initialize JobHistory log file", e); 
-        disableHistory = true ; 
+        disableHistory = true; 
       }
     }
   }
@@ -115,14 +115,14 @@ public class JobHistory {
    */
   public static void parseHistory(File path, Listener l) throws IOException{
     BufferedReader reader = new BufferedReader(new FileReader(path));
-    String line = null ; 
+    String line = null; 
     StringBuffer buf = new StringBuffer(); 
     while ((line = reader.readLine())!= null){
       buf.append(line); 
-      if( ! line.trim().endsWith("\"")){
-        continue ; 
+      if (!line.trim().endsWith("\"")){
+        continue; 
       }
-      parseLine(buf.toString(), l );
+      parseLine(buf.toString(), l);
       buf = new StringBuffer(); 
     }
   }
@@ -135,8 +135,8 @@ public class JobHistory {
   private static void parseLine(String line, Listener l)throws IOException{
     // extract the record type 
     int idx = line.indexOf(' '); 
-    String recType = line.substring(0, idx) ;
-    String data = line.substring(idx+1, line.length()) ;
+    String recType = line.substring(0, idx);
+    String data = line.substring(idx+1, line.length());
     
     Matcher matcher = pattern.matcher(data); 
 
@@ -174,9 +174,9 @@ public class JobHistory {
    */
 
   static void log(PrintWriter out, RecordTypes recordType, Enum[] keys, String[] values){
-    StringBuffer buf = new StringBuffer(recordType.name()) ; 
-    buf.append(DELIMITER) ; 
-    for( int i =0 ; i< keys.length ; i++ ){
+    StringBuffer buf = new StringBuffer(recordType.name()); 
+    buf.append(DELIMITER); 
+    for(int i =0; i< keys.length; i++){
       buf.append(keys[i]);
       buf.append("=\"");
       buf.append(values[i]);
@@ -221,7 +221,7 @@ public class JobHistory {
      */
     public String get(Keys k){
       String s = values.get(k); 
-      return s == null ? "" : s ; 
+      return s == null ? "" : s; 
     }
     /**
      * Convert value from history to int and return. 
@@ -230,7 +230,7 @@ public class JobHistory {
      */
     public int getInt(Keys k){
       String s = values.get(k); 
-      if( null != s ){
+      if (null != s){
         return Integer.parseInt(s);
       }
       return 0; 
@@ -242,7 +242,7 @@ public class JobHistory {
      */
     public long getLong(Keys k){
       String s = values.get(k); 
-      if( null != s ){
+      if (null != s){
         return Long.parseLong(s);
       }
       return 0; 
@@ -307,14 +307,14 @@ public class JobHistory {
     public static void logSubmitted(String jobId, String jobName, String user, 
                                     long submitTime, String jobConf){
       
-      if( ! disableHistory ){
+      if (!disableHistory){
         synchronized(MASTER_INDEX_LOG_FILE){
           JobHistory.log(masterIndex, RecordTypes.Job, 
                          new Enum[]{Keys.JOBID, Keys.JOBNAME, Keys.USER, Keys.SUBMIT_TIME, Keys.JOBCONF }, 
-                         new String[]{jobId, jobName, user, String.valueOf(submitTime),jobConf });
+                         new String[]{jobId, jobName, user, String.valueOf(submitTime), jobConf });
         }
         // setup the history log file for this job
-        String logFileName =  JOBTRACKER_START_TIME + "_" + jobId ; 
+        String logFileName =  JOBTRACKER_START_TIME + "_" + jobId; 
         File logFile = new File(LOG_DIR + File.separator + logFileName);
         
         try{
@@ -323,11 +323,11 @@ public class JobHistory {
           // add to writer as well 
           JobHistory.log(writer, RecordTypes.Job, 
                          new Enum[]{Keys.JOBID, Keys.JOBNAME, Keys.USER, Keys.SUBMIT_TIME, Keys.JOBCONF }, 
-                         new String[]{jobId, jobName, user, String.valueOf(submitTime) ,jobConf}); 
+                         new String[]{jobId, jobName, user, String.valueOf(submitTime) , jobConf}); 
              
         }catch(IOException e){
           LOG.error("Failed creating job history log file, disabling history", e);
-          disableHistory = true ; 
+          disableHistory = true; 
         }
       }
     }
@@ -339,21 +339,21 @@ public class JobHistory {
      * @param totalReduces total reduces. 
      */
     public static void logStarted(String jobId, long startTime, int totalMaps, int totalReduces){
-      if( ! disableHistory ){
+      if (!disableHistory){
         synchronized(MASTER_INDEX_LOG_FILE){
           JobHistory.log(masterIndex, RecordTypes.Job, 
                          new Enum[] {Keys.JOBID, Keys.LAUNCH_TIME, Keys.TOTAL_MAPS, Keys.TOTAL_REDUCES },
                          new String[] {jobId,  String.valueOf(startTime), 
-                                       String.valueOf(totalMaps), String.valueOf(totalReduces) } ) ; 
+                                       String.valueOf(totalMaps), String.valueOf(totalReduces) }); 
         }
         
-        String logFileName =  JOBTRACKER_START_TIME + "_" + jobId ; 
+        String logFileName =  JOBTRACKER_START_TIME + "_" + jobId; 
         PrintWriter writer = (PrintWriter)openJobs.get(logFileName); 
         
-        if( null != writer ){
+        if (null != writer){
           JobHistory.log(writer, RecordTypes.Job, 
-                         new Enum[] {Keys.JOBID, Keys.LAUNCH_TIME,Keys.TOTAL_MAPS, Keys.TOTAL_REDUCES },
-                         new String[] {jobId,  String.valueOf(startTime), String.valueOf(totalMaps), String.valueOf(totalReduces)} ) ; 
+                         new Enum[] {Keys.JOBID, Keys.LAUNCH_TIME, Keys.TOTAL_MAPS, Keys.TOTAL_REDUCES },
+                         new String[] {jobId,  String.valueOf(startTime), String.valueOf(totalMaps), String.valueOf(totalReduces)}); 
         }
       }
     }
@@ -368,28 +368,28 @@ public class JobHistory {
      */ 
     public static void logFinished(String jobId, long finishTime, int finishedMaps, int finishedReduces,
                                    int failedMaps, int failedReduces){
-      if( ! disableHistory ){
+      if (!disableHistory){
         synchronized(MASTER_INDEX_LOG_FILE){
           JobHistory.log(masterIndex, RecordTypes.Job,          
                          new Enum[] {Keys.JOBID, Keys.FINISH_TIME, Keys.JOB_STATUS, Keys.FINISHED_MAPS, Keys.FINISHED_REDUCES },
                          new String[] {jobId,  "" + finishTime, Values.SUCCESS.name(), 
-                                       String.valueOf(finishedMaps), String.valueOf(finishedReduces) } ) ;
+                                       String.valueOf(finishedMaps), String.valueOf(finishedReduces) });
         }
         
         // close job file for this job
-        String logFileName = JOBTRACKER_START_TIME + "_" + jobId ; 
+        String logFileName = JOBTRACKER_START_TIME + "_" + jobId; 
         PrintWriter writer = openJobs.get(logFileName); 
-        if( null != writer){
+        if (null != writer){
           JobHistory.log(writer, RecordTypes.Job,          
                          new Enum[] {Keys.JOBID, Keys.FINISH_TIME, Keys.JOB_STATUS, Keys.FINISHED_MAPS, Keys.FINISHED_REDUCES,
                                      Keys.FAILED_MAPS, Keys.FAILED_REDUCES},
                          new String[] {jobId,  "" + finishTime, Values.SUCCESS.name(), 
                                        String.valueOf(finishedMaps), String.valueOf(finishedReduces),
-                                       String.valueOf(failedMaps), String.valueOf(failedReduces)} ) ;
+                                       String.valueOf(failedMaps), String.valueOf(failedReduces)});
           writer.close();
           openJobs.remove(logFileName); 
         }
-        Thread historyCleaner  = new Thread( new HistoryCleaner() );
+        Thread historyCleaner  = new Thread(new HistoryCleaner());
         historyCleaner.start(); 
       }
     }
@@ -400,21 +400,21 @@ public class JobHistory {
      * @param finishedMaps no finished map tasks. 
      * @param finishedReduces no of finished reduce tasks. 
      */
-    public static void logFailed(String jobid, long timestamp, int finishedMaps,int finishedReduces){
-      if( ! disableHistory ){
+    public static void logFailed(String jobid, long timestamp, int finishedMaps, int finishedReduces){
+      if (!disableHistory){
         synchronized(MASTER_INDEX_LOG_FILE){
           JobHistory.log(masterIndex, RecordTypes.Job,
                          new Enum[] {Keys.JOBID, Keys.FINISH_TIME, Keys.JOB_STATUS, Keys.FINISHED_MAPS, Keys.FINISHED_REDUCES },
                          new String[] {jobid,  String.valueOf(timestamp), Values.FAILED.name(), String.valueOf(finishedMaps), 
-                                       String.valueOf(finishedReduces)} ) ; 
+                                       String.valueOf(finishedReduces)}); 
         }
-        String logFileName =  JOBTRACKER_START_TIME + "_" + jobid ; 
+        String logFileName =  JOBTRACKER_START_TIME + "_" + jobid; 
         PrintWriter writer = (PrintWriter)openJobs.get(logFileName); 
-        if( null != writer){
+        if (null != writer){
           JobHistory.log(writer, RecordTypes.Job,
-                         new Enum[] {Keys.JOBID, Keys.FINISH_TIME, Keys.JOB_STATUS,Keys.FINISHED_MAPS, Keys.FINISHED_REDUCES },
+                         new Enum[] {Keys.JOBID, Keys.FINISH_TIME, Keys.JOB_STATUS, Keys.FINISHED_MAPS, Keys.FINISHED_REDUCES },
                          new String[] {jobid,  String.valueOf(timestamp), Values.FAILED.name(), String.valueOf(finishedMaps), 
-                                       String.valueOf(finishedReduces)} ) ; 
+                                       String.valueOf(finishedReduces)}); 
           writer.close();
           openJobs.remove(logFileName); 
         }
@@ -438,11 +438,11 @@ public class JobHistory {
      */
     public static void logStarted(String jobId, String taskId, String taskType, 
                                   long startTime){
-      if( ! disableHistory ){
+      if (!disableHistory){
         PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId); 
-        if( null != writer ){
+        if (null != writer){
           JobHistory.log(writer, RecordTypes.Task, new Enum[]{Keys.TASKID, Keys.TASK_TYPE , Keys.START_TIME}, 
-                         new String[]{taskId, taskType, String.valueOf(startTime)}) ;
+                         new String[]{taskId, taskType, String.valueOf(startTime)});
         }
       }
     }
@@ -455,12 +455,12 @@ public class JobHistory {
      */
     public static void logFinished(String jobId, String taskId, String taskType, 
                                    long finishTime){
-      if( ! disableHistory ){
+      if (!disableHistory){
         PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId); 
-        if( null != writer ){
+        if (null != writer){
           JobHistory.log(writer, RecordTypes.Task, new Enum[]{Keys.TASKID, Keys.TASK_TYPE, 
                                                               Keys.TASK_STATUS, Keys.FINISH_TIME}, 
-                         new String[]{ taskId,taskType, Values.SUCCESS.name(), String.valueOf(finishTime)}) ;
+                         new String[]{ taskId, taskType, Values.SUCCESS.name(), String.valueOf(finishTime)});
         }
       }
     }
@@ -473,12 +473,12 @@ public class JobHistory {
      * @param error error message for failure. 
      */
     public static void logFailed(String jobId, String taskId, String taskType, long time, String error){
-      if( ! disableHistory ){
+      if (!disableHistory){
         PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId); 
-        if( null != writer ){
+        if (null != writer){
           JobHistory.log(writer, RecordTypes.Task, new Enum[]{Keys.TASKID, Keys.TASK_TYPE, 
                                                               Keys.TASK_STATUS, Keys.FINISH_TIME, Keys.ERROR}, 
-                         new String[]{ taskId,  taskType, Values.FAILED.name(), String.valueOf(time) , error}) ;
+                         new String[]{ taskId,  taskType, Values.FAILED.name(), String.valueOf(time) , error});
         }
       }
     }
@@ -508,15 +508,15 @@ public class JobHistory {
      * @param startTime start time of task attempt as reported by task tracker. 
      * @param hostName host name of the task attempt. 
      */
-    public static void logStarted(String jobId, String taskId,String taskAttemptId, long startTime, String hostName){
-      if( ! disableHistory ){
+    public static void logStarted(String jobId, String taskId, String taskAttemptId, long startTime, String hostName){
+      if (!disableHistory){
         PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
-        if( null != writer ){
-          JobHistory.log( writer, RecordTypes.MapAttempt, 
-                          new Enum[]{ Keys.TASK_TYPE, Keys.TASKID, 
-                                      Keys.TASK_ATTEMPT_ID, Keys.START_TIME, Keys.HOSTNAME},
-                          new String[]{Values.MAP.name(),  taskId, 
-                                       taskAttemptId, String.valueOf(startTime), hostName} ) ; 
+        if (null != writer){
+          JobHistory.log(writer, RecordTypes.MapAttempt, 
+                         new Enum[]{ Keys.TASK_TYPE, Keys.TASKID, 
+                                     Keys.TASK_ATTEMPT_ID, Keys.START_TIME, Keys.HOSTNAME},
+                         new String[]{Values.MAP.name(),  taskId, 
+                                      taskAttemptId, String.valueOf(startTime), hostName}); 
         }
       }
     }
@@ -529,14 +529,14 @@ public class JobHistory {
      * @param hostName host name 
      */
     public static void logFinished(String jobId, String taskId, String taskAttemptId, long finishTime, String hostName){
-      if( ! disableHistory ){
+      if (!disableHistory){
         PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
-        if( null != writer ){
+        if (null != writer){
           JobHistory.log(writer, RecordTypes.MapAttempt, 
                          new Enum[]{ Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
                                      Keys.FINISH_TIME, Keys.HOSTNAME},
                          new String[]{Values.MAP.name(), taskId, taskAttemptId, Values.SUCCESS.name(),  
-                                      String.valueOf(finishTime), hostName} ) ; 
+                                      String.valueOf(finishTime), hostName}); 
         }
       }
     }
@@ -551,14 +551,14 @@ public class JobHistory {
      */
     public static void logFailed(String jobId, String taskId, String taskAttemptId, 
                                  long timestamp, String hostName, String error){
-      if( ! disableHistory ){
+      if (!disableHistory){
         PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
-        if( null != writer ){
-          JobHistory.log( writer, RecordTypes.MapAttempt, 
-                          new Enum[]{Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
-                                     Keys.FINISH_TIME, Keys.HOSTNAME, Keys.ERROR},
-                          new String[]{ Values.MAP.name(), taskId, taskAttemptId, Values.FAILED.name(),
-                                        String.valueOf(timestamp), hostName, error} ) ; 
+        if (null != writer){
+          JobHistory.log(writer, RecordTypes.MapAttempt, 
+                         new Enum[]{Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
+                                    Keys.FINISH_TIME, Keys.HOSTNAME, Keys.ERROR},
+                         new String[]{ Values.MAP.name(), taskId, taskAttemptId, Values.FAILED.name(),
+                                       String.valueOf(timestamp), hostName, error}); 
         }
       }
     } 
@@ -578,14 +578,14 @@ public class JobHistory {
      */
     public static void logStarted(String jobId, String taskId, String taskAttemptId, 
                                   long startTime, String hostName){
-      if( ! disableHistory ){
+      if (!disableHistory){
         PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
-        if( null != writer ){
-          JobHistory.log( writer, RecordTypes.ReduceAttempt, 
-                          new Enum[]{  Keys.TASK_TYPE, Keys.TASKID, 
-                                       Keys.TASK_ATTEMPT_ID, Keys.START_TIME, Keys.HOSTNAME},
-                          new String[]{Values.REDUCE.name(),  taskId, 
-                                       taskAttemptId, String.valueOf(startTime), hostName} ) ; 
+        if (null != writer){
+          JobHistory.log(writer, RecordTypes.ReduceAttempt, 
+                         new Enum[]{  Keys.TASK_TYPE, Keys.TASKID, 
+                                      Keys.TASK_ATTEMPT_ID, Keys.START_TIME, Keys.HOSTNAME},
+                         new String[]{Values.REDUCE.name(),  taskId, 
+                                      taskAttemptId, String.valueOf(startTime), hostName}); 
         }
       }
     }
@@ -601,15 +601,15 @@ public class JobHistory {
      */
     public static void logFinished(String jobId, String taskId, String taskAttemptId, 
                                    long shuffleFinished, long sortFinished, long finishTime, String hostName){
-      if( ! disableHistory ){
+      if (!disableHistory){
         PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
-        if( null != writer ){
-          JobHistory.log( writer, RecordTypes.ReduceAttempt, 
-                          new Enum[]{ Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
-                                      Keys.SHUFFLE_FINISHED, Keys.SORT_FINISHED, Keys.FINISH_TIME, Keys.HOSTNAME},
-                          new String[]{Values.REDUCE.name(),  taskId, taskAttemptId, Values.SUCCESS.name(), 
-                                       String.valueOf(shuffleFinished), String.valueOf(sortFinished),
-                                       String.valueOf(finishTime), hostName} ) ; 
+        if (null != writer){
+          JobHistory.log(writer, RecordTypes.ReduceAttempt, 
+                         new Enum[]{ Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
+                                     Keys.SHUFFLE_FINISHED, Keys.SORT_FINISHED, Keys.FINISH_TIME, Keys.HOSTNAME},
+                         new String[]{Values.REDUCE.name(),  taskId, taskAttemptId, Values.SUCCESS.name(), 
+                                      String.valueOf(shuffleFinished), String.valueOf(sortFinished),
+                                      String.valueOf(finishTime), hostName}); 
         }
       }
     }
@@ -622,16 +622,16 @@ public class JobHistory {
      * @param hostName host name of the task attempt.  
      * @param error error message of the task. 
      */
-    public static void logFailed(String jobId, String taskId,String taskAttemptId, long timestamp, 
+    public static void logFailed(String jobId, String taskId, String taskAttemptId, long timestamp, 
                                  String hostName, String error){
-      if( ! disableHistory ){
+      if (!disableHistory){
         PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
-        if( null != writer ){
-          JobHistory.log( writer, RecordTypes.ReduceAttempt, 
-                          new Enum[]{  Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID,Keys.TASK_STATUS, 
-                                       Keys.FINISH_TIME, Keys.HOSTNAME, Keys.ERROR },
-                          new String[]{ Values.REDUCE.name(), taskId, taskAttemptId, Values.FAILED.name(), 
-                                        String.valueOf(timestamp), hostName, error } ) ; 
+        if (null != writer){
+          JobHistory.log(writer, RecordTypes.ReduceAttempt, 
+                         new Enum[]{  Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
+                                      Keys.FINISH_TIME, Keys.HOSTNAME, Keys.ERROR },
+                         new String[]{ Values.REDUCE.name(), taskId, taskAttemptId, Values.FAILED.name(), 
+                                       String.valueOf(timestamp), hostName, error }); 
         }
       }
     }
@@ -661,24 +661,24 @@ public class JobHistory {
   public static class HistoryCleaner implements Runnable{
     static final long ONE_DAY_IN_MS = 24 * 60 * 60 * 1000L;
     static final long THIRTY_DAYS_IN_MS = 30 * ONE_DAY_IN_MS;
-    private long now ; 
+    private long now; 
     private static boolean isRunning = false; 
-    private static long lastRan ; 
+    private static long lastRan; 
 
     /**
      * Cleans up history data. 
      */
     public void run(){
-      if( isRunning ){
-        return ; 
+      if (isRunning){
+        return; 
       }
-      now = System.currentTimeMillis() ;
+      now = System.currentTimeMillis();
       // clean history only once a day at max
-      if( lastRan ==0 || (now - lastRan) < ONE_DAY_IN_MS ){
-        return ; 
+      if (lastRan ==0 || (now - lastRan) < ONE_DAY_IN_MS){
+        return; 
       }
       lastRan = now;  
-      isRunning = true ; 
+      isRunning = true; 
       // update master Index first
       try{
         File logFile = new File(
@@ -693,12 +693,12 @@ public class JobHistory {
           // remove the jobtracker start timestamp as well. 
           for (String jobTrackerId : jobTrackersToJobs.keySet()){
             Map<String, JobHistory.JobInfo> jobs = jobTrackersToJobs.get(jobTrackerId);
-            for(Iterator iter = jobs.keySet().iterator(); iter.hasNext() ; iter.next()){
+            for(Iterator iter = jobs.keySet().iterator(); iter.hasNext(); iter.next()){
               JobHistory.JobInfo job = jobs.get(iter.next());
-              if( now - job.getLong(Keys.SUBMIT_TIME) > THIRTY_DAYS_IN_MS ) {
+              if (now - job.getLong(Keys.SUBMIT_TIME) > THIRTY_DAYS_IN_MS) {
                 iter.remove(); 
               }
-              if( jobs.size() == 0 ){
+              if (jobs.size() == 0){
                 iter.remove(); 
               }
             }
@@ -711,7 +711,7 @@ public class JobHistory {
             
             log(masterIndex, RecordTypes.Jobtracker, Keys.START_TIME, jobTrackerId);
 
-            for(String jobId : jobs.keySet() ){
+            for(String jobId : jobs.keySet()){
               JobHistory.JobInfo job = jobs.get(jobId);
               Map<Keys, String> values = job.getValues();
               
@@ -730,17 +730,17 @@ public class JobHistory {
       File[] oldFiles = new File(LOG_DIR).listFiles(new FileFilter(){
           public boolean accept(File file){
             // delete if older than 30 days
-            if( now - file.lastModified() > THIRTY_DAYS_IN_MS ){
-              return true ; 
+            if (now - file.lastModified() > THIRTY_DAYS_IN_MS){
+              return true; 
             }
             return false; 
           }
         });
-      for( File f : oldFiles){
+      for(File f : oldFiles){
         f.delete(); 
         LOG.info("Deleting old history file : " + f.getName());
       }
-      isRunning = false ; 
+      isRunning = false; 
     }
   }
 }

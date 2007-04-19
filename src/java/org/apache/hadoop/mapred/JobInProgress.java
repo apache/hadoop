@@ -61,13 +61,13 @@ class JobInProgress {
   int runningReduceTasks = 0;
   int finishedMapTasks = 0;
   int finishedReduceTasks = 0;
-  int failedMapTasks = 0 ; 
-  int failedReduceTasks = 0 ; 
+  int failedMapTasks = 0; 
+  int failedReduceTasks = 0; 
   JobTracker jobtracker = null;
   Map<String,List<TaskInProgress>> hostToMaps =
     new HashMap<String,List<TaskInProgress>>();
-  private int taskCompletionEventTracker = 0 ; 
-  List<TaskCompletionEvent> taskCompletionEvents ;
+  private int taskCompletionEventTracker = 0; 
+  List<TaskCompletionEvent> taskCompletionEvents;
     
   // The no. of tasktrackers where >= conf.getMaxTaskFailuresPerTracker()
   // tasks have failed
@@ -122,7 +122,7 @@ class JobInProgress {
     this.numMapTasks = conf.getNumMapTasks();
     this.numReduceTasks = conf.getNumReduceTasks();
     this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>(
-                                              numMapTasks + numReduceTasks + 10);
+                                                                   numMapTasks + numReduceTasks + 10);
         
     JobHistory.JobInfo.logSubmitted(jobid, conf.getJobName(), conf.getUser(), 
                                     System.currentTimeMillis(), jobFile); 
@@ -284,7 +284,7 @@ class JobInProgress {
    * Return a vector of completed TaskInProgress objects
    */
   public Vector<TaskInProgress> reportTasksInProgress(boolean shouldBeMap,
-      boolean shouldBeComplete) {
+                                                      boolean shouldBeComplete) {
     
     Vector<TaskInProgress> results = new Vector<TaskInProgress>();
     TaskInProgress tips[] = null;
@@ -317,7 +317,7 @@ class JobInProgress {
       TaskTrackerStatus ttStatus = 
         this.jobtracker.getTaskTracker(status.getTaskTracker());
       String httpTaskLogLocation = null; 
-      if( null != ttStatus ){
+      if (null != ttStatus){
         httpTaskLogLocation = "http://" + ttStatus.getHost() + ":" + 
           ttStatus.getHttpPort() + "/tasklog.jsp?plaintext=true&taskid=" +
           status.getTaskId() + "&all=true";
@@ -432,7 +432,7 @@ class JobInProgress {
    */
   public Task obtainNewMapTask(TaskTrackerStatus tts, int clusterSize
                                ) throws IOException {
-    if (! tasksInited) {
+    if (!tasksInited) {
       LOG.info("Cannot create task split for " + profile.getJobId());
       return null;
     }
@@ -460,7 +460,7 @@ class JobInProgress {
    */
   public Task obtainNewReduceTask(TaskTrackerStatus tts,
                                   int clusterSize) throws IOException {
-    if (! tasksInited) {
+    if (!tasksInited) {
       LOG.info("Cannot create task split for " + profile.getJobId());
       return null;
     }
@@ -620,7 +620,7 @@ class JobInProgress {
             return i;
           } else if (specTarget == -1 &&
                      task.hasSpeculativeTask(avgProgress) && 
-                     ! task.hasRunOnMachine(taskTracker)) {
+                     !task.hasRunOnMachine(taskTracker)) {
             specTarget = i;
           }
         }
@@ -664,7 +664,7 @@ class JobInProgress {
 
     // Update jobhistory 
     String taskTrackerName = status.getTaskTracker();
-    if(status.getIsMap()){
+    if (status.getIsMap()){
       JobHistory.MapAttempt.logStarted(profile.getJobId(), 
                                        tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
                                        taskTrackerName); 
@@ -704,7 +704,7 @@ class JobInProgress {
     //
     boolean allDone = true;
     for (int i = 0; i < maps.length; i++) {
-      if (! maps[i].isComplete()) {
+      if (!maps[i].isComplete()) {
         allDone = false;
         break;
       }
@@ -714,7 +714,7 @@ class JobInProgress {
         this.status.setMapProgress(1.0f);              
       }
       for (int i = 0; i < reduces.length; i++) {
-        if (! reduces[i].isComplete()) {
+        if (!reduces[i].isComplete()) {
           allDone = false;
           break;
         }
@@ -953,7 +953,7 @@ class JobInProgress {
   synchronized public TaskCompletionEvent[] getTaskCompletionEvents(
                                                                     int fromEventId, int maxEvents) {
     TaskCompletionEvent[] events = TaskCompletionEvent.EMPTY_ARRAY;
-    if( taskCompletionEvents.size() > fromEventId) {
+    if (taskCompletionEvents.size() > fromEventId) {
       int actualMax = Math.min(maxEvents, 
                                (taskCompletionEvents.size() - fromEventId));
       events = (TaskCompletionEvent[])taskCompletionEvents.subList(

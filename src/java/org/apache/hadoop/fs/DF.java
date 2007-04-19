@@ -42,19 +42,19 @@ public class DF {
   private int percentUsed;
   private String mount;
   
-  public DF(File path, Configuration conf ) throws IOException {
-    this( path, conf.getLong( "dfs.df.interval", DF.DF_INTERVAL_DEFAULT ));
+  public DF(File path, Configuration conf) throws IOException {
+    this(path, conf.getLong("dfs.df.interval", DF.DF_INTERVAL_DEFAULT));
   }
 
   public DF(File path, long dfInterval) throws IOException {
     this.dirPath = path.getCanonicalPath();
     this.dfInterval = dfInterval;
-    lastDF = ( dfInterval < 0 ) ? 0 : -dfInterval;
+    lastDF = (dfInterval < 0) ? 0 : -dfInterval;
     this.doDF();
   }
   
   private void doDF() throws IOException { 
-    if( lastDF + dfInterval > System.currentTimeMillis() )
+    if (lastDF + dfInterval > System.currentTimeMillis())
       return;
     Process process;
     process = Runtime.getRuntime().exec(getExecString());
@@ -138,10 +138,10 @@ public class DF {
   }
 
   private String[] getExecString() {
-    return new String[] {"df","-k",dirPath};
+    return new String[] {"df","-k", dirPath};
   }
   
-  private void parseExecResult( BufferedReader lines ) throws IOException {
+  private void parseExecResult(BufferedReader lines) throws IOException {
     lines.readLine();                         // skip headings
   
     StringTokenizer tokens =
@@ -161,7 +161,7 @@ public class DF {
 
   public static void main(String[] args) throws Exception {
     String path = ".";
-    if( args.length > 0 )
+    if (args.length > 0)
       path = args[0];
 
     System.out.println(new DF(new File(path), DF_INTERVAL_DEFAULT).toString());

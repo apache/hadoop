@@ -310,7 +310,7 @@ public class TestSequenceFile extends TestCase {
                                                int megabytes, int factor) {
     SequenceFile.Sorter sorter = 
       fast
-      ? new SequenceFile.Sorter(fs, new RandomDatum.Comparator(),RandomDatum.class, conf)
+      ? new SequenceFile.Sorter(fs, new RandomDatum.Comparator(), RandomDatum.class, conf)
       : new SequenceFile.Sorter(fs, RandomDatum.class, RandomDatum.class, conf);
     sorter.setMemory(megabytes * 1024*1024);
     sorter.setFactor(factor);

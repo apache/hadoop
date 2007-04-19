@@ -35,7 +35,7 @@ public class HServerAddress implements Writable {
   
   public HServerAddress(String hostAndPort) {
     int colonIndex = hostAndPort.indexOf(':');
-    if(colonIndex < 0) {
+    if (colonIndex < 0) {
       throw new IllegalArgumentException("Not a host:port pair: " + hostAndPort);
     }
     String host = hostAndPort.substring(0, colonIndex);
@@ -80,7 +80,7 @@ public class HServerAddress implements Writable {
     String bindAddress = in.readUTF();
     int port = in.readInt();
     
-    if(bindAddress == null || bindAddress.length() == 0) {
+    if (bindAddress == null || bindAddress.length() == 0) {
       address = null;
       stringValue = null;
       
@@ -91,7 +91,7 @@ public class HServerAddress implements Writable {
   }
 
   public void write(DataOutput out) throws IOException {
-    if(address == null) {
+    if (address == null) {
       out.writeUTF("");
       out.writeInt(0);
       

@@ -34,7 +34,7 @@ public class JspHelper {
   static Configuration conf = new Configuration();
 
   static int defaultChunkSizeToView = 
-    conf.getInt("dfs.default.chunk.view.size",32 * 1024);
+    conf.getInt("dfs.default.chunk.view.size", 32 * 1024);
   static Random rand = new Random();
 
   public JspHelper() {
@@ -140,9 +140,9 @@ public class JspHelper {
     in.close();
     out.print(new String(buf));
   }
-  public void DFSNodesStatus( ArrayList<DatanodeDescriptor> live,
-                              ArrayList<DatanodeDescriptor> dead ) {
-    if ( fsn != null )
+  public void DFSNodesStatus(ArrayList<DatanodeDescriptor> live,
+                             ArrayList<DatanodeDescriptor> dead) {
+    if (fsn != null)
       fsn.DFSNodesStatus(live, dead);
   }
   public void addTableHeader(JspWriter out) throws IOException {
@@ -161,7 +161,7 @@ public class JspHelper {
     out.print("<tr>");
       
     for (int i = 0; i < columns.length; i++) {
-      if( row/2*2 == row ) {//even
+      if (row/2*2 == row) {//even
         out.print("<td style=\"vertical-align: top;background-color:LightGrey;\"><B>"+columns[i]+"</B><br></td>");
       } else {
         out.print("<td style=\"vertical-align: top;background-color:LightBlue;\"><B>"+columns[i]+"</B><br></td>");
@@ -175,7 +175,7 @@ public class JspHelper {
   }
 
   public String getSafeModeText() {
-    if( ! fsn.isInSafeMode() )
+    if (!fsn.isInSafeMode())
       return "";
     return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
   }
@@ -197,29 +197,29 @@ public class JspHelper {
       int sortOrder = SORT_ORDER_ASC;
             
       public NodeComapare(String field, String order) {
-        if ( field.equals( "lastcontact" ) ) {
+        if (field.equals("lastcontact")) {
           sortField = FIELD_LAST_CONTACT;
-        } else if ( field.equals( "size" ) ) {
+        } else if (field.equals("size")) {
           sortField = FIELD_SIZE;
-        } else if ( field.equals( "blocks" ) ) {
+        } else if (field.equals("blocks")) {
           sortField = FIELD_BLOCKS;
-        } else if ( field.equals( "pcused" ) ) {
+        } else if (field.equals("pcused")) {
           sortField = FIELD_DISK_USED;
         } else {
           sortField = FIELD_NAME;
         }
                 
-        if ( order.equals("DSC") ) {
+        if (order.equals("DSC")) {
           sortOrder = SORT_ORDER_DSC;
         } else {
           sortOrder = SORT_ORDER_ASC;
         }
       }
 
-      public int compare( DatanodeDescriptor d1,
-                          DatanodeDescriptor d2 ) {
+      public int compare(DatanodeDescriptor d1,
+                         DatanodeDescriptor d2) {
         int ret = 0;
-        switch ( sortField ) {
+        switch (sortField) {
         case FIELD_LAST_CONTACT:
           ret = (int) (d2.getLastUpdate() - d1.getLastUpdate());
           break;
@@ -228,21 +228,21 @@ public class JspHelper {
           break;
         case FIELD_SIZE:
           long  dlong = d1.getCapacity() - d2.getCapacity();
-          ret = (dlong < 0) ? -1 : ( (dlong > 0) ? 1 : 0 );
+          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
           break;
         case FIELD_DISK_USED:
           double ddbl =((d2.getRemaining()*1.0/d2.getCapacity())-
                         (d1.getRemaining()*1.0/d1.getCapacity()));
-          ret = (ddbl < 0) ? -1 : ( (ddbl > 0) ? 1 : 0 );
+          ret = (ddbl < 0) ? -1 : ((ddbl > 0) ? 1 : 0);
           break;
         case FIELD_NAME: 
           ret = d1.getHostName().compareTo(d2.getHostName());
           break;
         }
-        return ( sortOrder == SORT_ORDER_DSC ) ? -ret : ret;
+        return (sortOrder == SORT_ORDER_DSC) ? -ret : ret;
       }
     }
         
-    Collections.sort( nodes, new NodeComapare( field, order ) );
+    Collections.sort(nodes, new NodeComapare(field, order));
   }
 }

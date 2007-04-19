@@ -44,7 +44,7 @@ public class FilterFileSystem extends FileSystem {
   
   protected FileSystem fs;
   
-  public FilterFileSystem( FileSystem fs) {
+  public FilterFileSystem(FileSystem fs) {
     this.fs = fs;
   }
 
@@ -114,13 +114,13 @@ public class FilterFileSystem extends FileSystem {
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file. 
    */
-  public FSDataOutputStream create( Path f, 
-                                    boolean overwrite,
-                                    int bufferSize,
-                                    short replication,
-                                    long blockSize,
-                                    Progressable progress
-                                    ) throws IOException {
+  public FSDataOutputStream create(Path f, 
+                                   boolean overwrite,
+                                   int bufferSize,
+                                   short replication,
+                                   long blockSize,
+                                   Progressable progress
+                                   ) throws IOException {
     return fs.create(f, overwrite, bufferSize, replication, blockSize, progress);
   }
 
@@ -217,7 +217,7 @@ public class FilterFileSystem extends FileSystem {
    * @deprecated FS does not support file locks anymore.
    */
   @Deprecated
-    public void lock(Path f, boolean shared) throws IOException {
+  public void lock(Path f, boolean shared) throws IOException {
     fs.lock(f, shared);
   }
 
@@ -227,7 +227,7 @@ public class FilterFileSystem extends FileSystem {
    * @deprecated FS does not support file locks anymore.     
    */
   @Deprecated
-    public void release(Path f) throws IOException {
+  public void release(Path f) throws IOException {
     fs.release(f);
   }
 
@@ -296,7 +296,7 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
-    public Configuration getConf() {
+  public Configuration getConf() {
     return fs.getConf();
   }
 }

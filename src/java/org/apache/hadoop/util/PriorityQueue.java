@@ -56,11 +56,11 @@ public abstract class PriorityQueue {
    * @return true if element is added, false otherwise.
    */
   public boolean insert(Object element){
-    if(size < maxSize){
+    if (size < maxSize){
       put(element);
       return true;
     }
-    else if(size > 0 && !lessThan(element, top())){
+    else if (size > 0 && !lessThan(element, top())){
       heap[1] = element;
       adjustTop();
       return true;

@@ -133,7 +133,7 @@ public class LzoDecompressor implements Decompressor {
       nativeLzoLoaded = true;
     } else {
       LOG.error("Cannot load " + LzoDecompressor.class.getName() + 
-              " without native-hadoop library!");
+                " without native-hadoop library!");
     }
   }
   
@@ -202,7 +202,7 @@ public class LzoDecompressor implements Decompressor {
     // Reinitialize lzo's input direct-buffer
     compressedDirectBuf.rewind();
     ((ByteBuffer)compressedDirectBuf).put(userBuf, userBufOff, 
-                                        compressedDirectBufLen);
+                                          compressedDirectBufLen);
     
     // Note how much data is being fed to lzo
     userBufOff += compressedDirectBufLen;
@@ -243,7 +243,7 @@ public class LzoDecompressor implements Decompressor {
   }
 
   public synchronized int decompress(byte[] b, int off, int len) 
-  throws IOException {
+    throws IOException {
     if (b == null) {
       throw new NullPointerException();
     }
@@ -255,7 +255,7 @@ public class LzoDecompressor implements Decompressor {
     
     // Check if there is uncompressed data
     n = uncompressedDirectBuf.remaining();
-    if(n > 0) {
+    if (n > 0) {
       n = Math.min(n, len);
       ((ByteBuffer)uncompressedDirectBuf).get(b, off, n);
       return n;

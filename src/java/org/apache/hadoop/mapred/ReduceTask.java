@@ -302,7 +302,7 @@ class ReduceTask extends Task {
     SequenceFile.Sorter.RawKeyValueIterator rIter;
  
     try {
-      setPhase(TaskStatus.Phase.SORT) ; 
+      setPhase(TaskStatus.Phase.SORT); 
       sortProgress.start();
 
       // sort the input file
@@ -323,15 +323,15 @@ class ReduceTask extends Task {
     // make output collector
     String finalName = getOutputName(getPartition());
     boolean runSpeculative = job.getSpeculativeExecution();
-    FileSystem fs = FileSystem.get(job) ;
+    FileSystem fs = FileSystem.get(job);
 
-    if( runSpeculative ){
+    if (runSpeculative){
       fs = new PhasedFileSystem (fs , 
                                  getJobId(), getTipId(), getTaskId());
     }
     
     final RecordWriter out = 
-      job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter) ;  
+      job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);  
     
     OutputCollector collector = new OutputCollector() {
         public void collect(WritableComparable key, Writable value)
@@ -361,17 +361,17 @@ class ReduceTask extends Task {
       out.close(reporter);
       //End of clean up.
       
-      if( runSpeculative ){
+      if (runSpeculative){
         ((PhasedFileSystem)fs).commit(); 
       }
-    } catch ( IOException ioe ) {
+    } catch (IOException ioe) {
       try {
         reducer.close();
-      } catch ( IOException ignored ) {}
+      } catch (IOException ignored) {}
         
       try {
         out.close(reporter);
-      } catch ( IOException ignored ) {}
+      } catch (IOException ignored) {}
       
       throw ioe;
     }

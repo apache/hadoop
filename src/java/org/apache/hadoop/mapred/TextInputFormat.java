@@ -39,7 +39,7 @@ public class TextInputFormat extends FileInputFormat implements JobConfigurable 
   }
 
   public RecordReader getRecordReader(InputSplit genericSplit, JobConf job,
-      Reporter reporter) throws IOException {
+                                      Reporter reporter) throws IOException {
     reporter.setStatus(genericSplit.toString());
     return new LineRecordReader(job, (FileSplit) genericSplit);
   }

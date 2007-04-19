@@ -39,7 +39,7 @@ public class TestLocalDFS extends TestCase {
   private void readFile(FileSystem fileSys, Path name) throws IOException {
     DataInputStream stm = fileSys.open(name);
     byte[] buffer = new byte[4];
-    int bytesRead = stm.read(buffer, 0 ,4);
+    int bytesRead = stm.read(buffer, 0 , 4);
     assertEquals("oom", new String(buffer, 0 , bytesRead));
     stm.close();
   }

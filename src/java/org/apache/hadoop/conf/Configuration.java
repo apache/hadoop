@@ -107,7 +107,7 @@ public class Configuration {
     this.finalResources = (ArrayList)other.finalResources.clone();
     if (other.properties != null)
       this.properties = (Properties)other.properties.clone();
-    if(other.overlay!=null)
+    if (other.overlay!=null)
       this.overlay = (Properties)other.overlay.clone();
   }
 
@@ -142,7 +142,7 @@ public class Configuration {
   }
 
   private synchronized void addResource(ArrayList<Object> resources,
-      Object resource) {
+                                        Object resource) {
     
     resources.add(resource);                      // add to resources
     properties = null;                            // trigger reload
@@ -172,23 +172,23 @@ public class Configuration {
   private static int MAX_SUBST = 20;
 
   private String substituteVars(String expr) {
-    if(expr == null) {
+    if (expr == null) {
       return null;
     }
     Matcher match = varPat.matcher("");
     String eval = expr;
     for(int s=0; s<MAX_SUBST; s++) {
       match.reset(eval);
-      if(! match.find()) {
+      if (!match.find()) {
         return eval;
       }
       String var = match.group();
       var = var.substring(2, var.length()-1); // remove ${ .. }
       String val = System.getProperty(var);
-      if(val == null) {
+      if (val == null) {
         val = (String)this.getObject(var);
       }
-      if(val == null) {
+      if (val == null) {
         return eval; // return literal ${var}: var is unbound
       }
       // substitute
@@ -211,7 +211,7 @@ public class Configuration {
   }
   
   private synchronized Properties getOverlay() {
-    if(overlay==null){
+    if (overlay==null){
       overlay=new Properties();
     }
     return overlay;
@@ -221,7 +221,7 @@ public class Configuration {
    * exists, then <code>defaultValue</code> is returned.
    */
   public String get(String name, String defaultValue) {
-     return substituteVars(getProps().getProperty(name, defaultValue));
+    return substituteVars(getProps().getProperty(name, defaultValue));
   }
     
   /** Returns the value of the <code>name</code> property as an integer.  If no
@@ -338,7 +338,7 @@ public class Configuration {
    * interface. 
    */
   public Class<?> getClass(String propertyName, Class<?> defaultValue,
-      Class<?> xface) {
+                           Class<?> xface) {
     
     try {
       Class<?> theClass = getClass(propertyName, defaultValue);
@@ -354,7 +354,7 @@ public class Configuration {
    * First checks that the class implements the named interface. 
    */
   public void setClass(String propertyName, Class<?> theClass,
-      Class<?> xface) {
+                       Class<?> xface) {
     
     if (!xface.isAssignableFrom(theClass))
       throw new RuntimeException(theClass+" not "+xface.getName());
@@ -380,7 +380,7 @@ public class Configuration {
       }
     }
     LOG.warn("Could not make " + path + 
-                " in local directories from " + dirsProp);
+             " in local directories from " + dirsProp);
     for(int i=0; i < dirs.length; i++) {
       int index = (hashCode+i & Integer.MAX_VALUE) % dirs.length;
       LOG.warn(dirsProp + "[" + index + "]=" + dirs[index]);
@@ -460,7 +460,7 @@ public class Configuration {
       loadResources(newProps, defaultResources, false, quietmode);
       loadResources(newProps, finalResources, true, true);
       properties = newProps;
-      if(overlay!=null)
+      if (overlay!=null)
         properties.putAll(overlay);
     }
     return properties;
@@ -575,7 +575,7 @@ public class Configuration {
         String name = (String)e.nextElement();
         Object object = properties.get(name);
         String value = null;
-        if(object instanceof String) {
+        if (object instanceof String) {
           value = (String) object;
         }else {
           continue;

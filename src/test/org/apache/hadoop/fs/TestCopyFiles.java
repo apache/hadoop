@@ -54,7 +54,7 @@ public class TestCopyFiles extends TestCase {
     
     MyFile() {
       int nLevels = gen.nextInt(MAX_LEVELS);
-      if(nLevels != 0) {
+      if (nLevels != 0) {
         int[] levels = new int[nLevels];
         for (int idx = 0; idx < nLevels; idx++) {
           levels[idx] = gen.nextInt(10);

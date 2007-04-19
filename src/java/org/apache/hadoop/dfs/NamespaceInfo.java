@@ -41,8 +41,8 @@ class NamespaceInfo extends StorageInfo implements Writable {
     buildVersion = null;
   }
   
-  public NamespaceInfo( int nsID, long cT ) {
-    super( FSConstants.LAYOUT_VERSION, nsID, cT );
+  public NamespaceInfo(int nsID, long cT) {
+    super(FSConstants.LAYOUT_VERSION, nsID, cT);
     buildVersion = Storage.getBuildVersion();
   }
   
@@ -60,14 +60,14 @@ class NamespaceInfo extends StorageInfo implements Writable {
   }
 
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString( out, getBuildVersion() );
-    out.writeInt( getLayoutVersion() );
-    out.writeInt( getNamespaceID() );
-    out.writeLong( getCTime() );
+    UTF8.writeString(out, getBuildVersion());
+    out.writeInt(getLayoutVersion());
+    out.writeInt(getNamespaceID());
+    out.writeLong(getCTime());
   }
 
   public void readFields(DataInput in) throws IOException {
-    buildVersion = UTF8.readString( in );
+    buildVersion = UTF8.readString(in);
     layoutVersion = in.readInt();
     namespaceID = in.readInt();
     cTime = in.readLong();

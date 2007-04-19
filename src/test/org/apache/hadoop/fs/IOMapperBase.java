@@ -33,7 +33,7 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Base mapper class for IO operations.
  * <p>
- * Two abstract method {@link #doIO(Reporter,String,long)} and 
+ * Two abstract method {@link #doIO(Reporter, String, long)} and 
  * {@link #collectStats(OutputCollector,String,long,Object)} should be
  * overloaded in derived classes to define the IO operation and the
  * statistics data to be collected by subsequent reducers.
@@ -51,7 +51,7 @@ public abstract class IOMapperBase extends Configured implements Mapper {
     try {
       fs = FileSystem.get(conf);
     } catch (Exception e) {
-      throw new RuntimeException( "Cannot create file system.", e );
+      throw new RuntimeException("Cannot create file system.", e);
     }
     bufferSize = conf.getInt("test.io.file.buffer.size", 4096);
     buffer = new byte[bufferSize];
@@ -79,9 +79,9 @@ public abstract class IOMapperBase extends Configured implements Mapper {
    *          {@link #collectStats(OutputCollector,String,long,Object)}
    * @throws IOException
    */
-  abstract Object doIO( Reporter reporter, 
-                        String name, 
-                        long value ) throws IOException;
+  abstract Object doIO(Reporter reporter, 
+                       String name, 
+                       long value) throws IOException;
 
   /**
    * Collect stat data to be combined by a subsequent reducer.
@@ -92,10 +92,10 @@ public abstract class IOMapperBase extends Configured implements Mapper {
    * @param doIOReturnValue value returned by {@link #doIO(Reporter,String,long)}
    * @throws IOException
    */
-  abstract void collectStats( OutputCollector output, 
-                              String name, 
-                              long execTime, 
-                              Object doIOReturnValue ) throws IOException;
+  abstract void collectStats(OutputCollector output, 
+                             String name, 
+                             long execTime, 
+                             Object doIOReturnValue) throws IOException;
   
   /**
    * Map file name and offset into statistical data.
@@ -120,10 +120,10 @@ public abstract class IOMapperBase extends Configured implements Mapper {
     reporter.setStatus("starting " + name + " ::host = " + hostName);
     
     long tStart = System.currentTimeMillis();
-    Object statValue = doIO( reporter, name, longValue );
+    Object statValue = doIO(reporter, name, longValue);
     long tEnd = System.currentTimeMillis();
     long execTime = tEnd - tStart;
-    collectStats( output, name, execTime, statValue );
+    collectStats(output, name, execTime, statValue);
     
     reporter.setStatus("finished " + name + " ::host = " + hostName);
   }

@@ -202,7 +202,7 @@ public class Text implements WritableComparable {
    * increased to match. The existing contents of the buffer
    * (if any) are deleted.
    */
-  private void setCapacity( int len ) {
+  private void setCapacity(int len) {
     if (bytes == null || bytes.length < len)
       bytes = new byte[len];      
   }
@@ -246,7 +246,7 @@ public class Text implements WritableComparable {
   /** Compare two Texts bytewise using standard UTF8 ordering. */
   public int compareTo(Object o) {
     Text that = (Text)o;
-    if(this == that)
+    if (this == that)
       return 0;
     else
       return WritableComparator.compareBytes(bytes, 0, length,

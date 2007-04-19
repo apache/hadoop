@@ -42,7 +42,7 @@ public class TaskLogAppender extends AppenderSkeleton {
 
     if (this.layout == null) {
       errorHandler.error("No layout for appender " + name , 
-                         null, ErrorCode.MISSING_LAYOUT );
+                         null, ErrorCode.MISSING_LAYOUT);
     }
     
     // Log the message to the task's log

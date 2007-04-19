@@ -22,7 +22,7 @@ public class TestRetryProxy extends TestCase {
   private UnreliableImplementation unreliableImpl;
   
   @Override
-    protected void setUp() throws Exception {
+  protected void setUp() throws Exception {
     unreliableImpl = new UnreliableImplementation();
   }
 

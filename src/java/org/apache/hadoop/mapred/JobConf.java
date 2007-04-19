@@ -266,18 +266,18 @@ public class JobConf extends Configuration {
 
   public InputFormat getInputFormat() {
     return (InputFormat)ReflectionUtils.newInstance(getClass("mapred.input.format.class",
-                                             TextInputFormat.class,
-                                             InputFormat.class),
-                                             this);
+                                                             TextInputFormat.class,
+                                                             InputFormat.class),
+                                                    this);
   }
   public void setInputFormat(Class theClass) {
     setClass("mapred.input.format.class", theClass, InputFormat.class);
   }
   public OutputFormat getOutputFormat() {
     return (OutputFormat)ReflectionUtils.newInstance(getClass("mapred.output.format.class",
-                                              TextOutputFormat.class,
-                                              OutputFormat.class),
-                                              this);
+                                                              TextOutputFormat.class,
+                                                              OutputFormat.class),
+                                                     this);
   }
   public void setOutputFormat(Class theClass) {
     setClass("mapred.output.format.class", theClass, OutputFormat.class);

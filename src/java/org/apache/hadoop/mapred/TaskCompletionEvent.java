@@ -14,11 +14,11 @@ import org.apache.hadoop.io.WritableUtils;
 public class TaskCompletionEvent implements Writable{
   static public enum Status {FAILED, SUCCEEDED, OBSOLETE};
     
-  private int eventId ; 
-  private String taskTrackerHttp ;
-  private String taskId ;
-  Status status ; 
-  boolean isMap = false ;
+  private int eventId; 
+  private String taskTrackerHttp;
+  private String taskId;
+  Status status; 
+  boolean isMap = false;
   private int idWithinJob;
   public static final TaskCompletionEvent[] EMPTY_ARRAY = 
     new TaskCompletionEvent[0];
@@ -43,12 +43,12 @@ public class TaskCompletionEvent implements Writable{
                              Status status, 
                              String taskTrackerHttp){
       
-    this.taskId = taskId ;
-    this.idWithinJob = idWithinJob ;
-    this.isMap = isMap ;
-    this.eventId = eventId ; 
-    this.status =status ; 
-    this.taskTrackerHttp = taskTrackerHttp ;
+    this.taskId = taskId;
+    this.idWithinJob = idWithinJob;
+    this.isMap = isMap;
+    this.eventId = eventId; 
+    this.status =status; 
+    this.taskTrackerHttp = taskTrackerHttp;
   }
   /**
    * Returns event Id. 
@@ -114,9 +114,9 @@ public class TaskCompletionEvent implements Writable{
   public String toString(){
     StringBuffer buf = new StringBuffer(); 
     buf.append("Task Id : "); 
-    buf.append( taskId ) ; 
+    buf.append(taskId); 
     buf.append(", Status : ");  
-    buf.append( status.name() ) ;
+    buf.append(status.name());
     return buf.toString();
   }
     
@@ -139,7 +139,7 @@ public class TaskCompletionEvent implements Writable{
   }
   
   public void readFields(DataInput in) throws IOException {
-    this.taskId = WritableUtils.readString(in) ; 
+    this.taskId = WritableUtils.readString(in); 
     this.idWithinJob = WritableUtils.readVInt(in);
     this.isMap = in.readBoolean();
     this.status = WritableUtils.readEnum(in, Status.class);

@@ -157,8 +157,8 @@ class MRSortResultIterator implements RawKeyValueIterator {
     //value[i] is stored in the following byte range:
     //startOffsets[i] + keyLengths[i] through valLengths[i]
     value.reset(keyValBuffer,
-       startOffsets[currStartOffsetIndex] + keyLengths[currStartOffsetIndex],
-       valLengths[currStartOffsetIndex]);
+                startOffsets[currStartOffsetIndex] + keyLengths[currStartOffsetIndex],
+                valLengths[currStartOffsetIndex]);
     return value;
   }
 
@@ -181,7 +181,7 @@ class MRSortResultIterator implements RawKeyValueIterator {
     int start;
     int dataSize;
     private void reset(DataOutputBuffer d, int start, int length) 
-    throws IOException {
+      throws IOException {
       data = d.getData();
       this.start = start;
       dataSize = length;
@@ -192,14 +192,14 @@ class MRSortResultIterator implements RawKeyValueIterator {
     }
             
     public void writeUncompressedBytes(DataOutputStream outStream)
-    throws IOException {
+      throws IOException {
       outStream.write(data, start, dataSize);
     }
 
     public void writeCompressedBytes(DataOutputStream outStream) 
-    throws IllegalArgumentException, IOException {
+      throws IllegalArgumentException, IOException {
       throw
-      new IllegalArgumentException("UncompressedBytes cannot be compressed!");
+        new IllegalArgumentException("UncompressedBytes cannot be compressed!");
     }
   
   } // InMemUncompressedBytes

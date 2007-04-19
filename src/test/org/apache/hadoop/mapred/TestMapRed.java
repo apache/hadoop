@@ -402,7 +402,7 @@ public class TestMapRed extends TestCase {
     fs.delete(randomOuts);
 
 
-    JobConf genJob = new JobConf(conf,TestMapRed.class);
+    JobConf genJob = new JobConf(conf, TestMapRed.class);
     genJob.setInputPath(randomIns);
     genJob.setInputFormat(SequenceFileInputFormat.class);
     genJob.setMapperClass(RandomGenMapper.class);
@@ -447,7 +447,7 @@ public class TestMapRed extends TestCase {
     int intermediateReduces = 10;
     Path intermediateOuts = new Path(testdir, "intermediateouts");
     fs.delete(intermediateOuts);
-    JobConf checkJob = new JobConf(conf,TestMapRed.class);
+    JobConf checkJob = new JobConf(conf, TestMapRed.class);
     checkJob.setInputPath(randomOuts);
     checkJob.setInputFormat(TextInputFormat.class);
     checkJob.setMapperClass(RandomCheckMapper.class);
@@ -470,7 +470,7 @@ public class TestMapRed extends TestCase {
     //
     Path finalOuts = new Path(testdir, "finalouts");        
     fs.delete(finalOuts);
-    JobConf mergeJob = new JobConf(conf,TestMapRed.class);
+    JobConf mergeJob = new JobConf(conf, TestMapRed.class);
     mergeJob.setInputPath(intermediateOuts);
     mergeJob.setInputFormat(SequenceFileInputFormat.class);
     mergeJob.setMapperClass(MergeMapper.class);
@@ -501,12 +501,12 @@ public class TestMapRed extends TestCase {
         if (dist[i] == 0) {
           continue;
         }
-        if (! in.next(key, val)) {
+        if (!in.next(key, val)) {
           System.err.println("Cannot read entry " + i);
           success = false;
           break;
         } else {
-          if ( !((key.get() == i ) && (val.get() == dist[i]))) {
+          if (!((key.get() == i) && (val.get() == dist[i]))) {
             System.err.println("Mismatch!  Pos=" + key.get() + ", i=" + i + ", val=" + val.get() + ", dist[i]=" + dist[i]);
             success = false;
           }

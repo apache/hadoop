@@ -21,7 +21,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
   abstract FileSystemStore getFileSystemStore() throws IOException;
 
   @Override
-    protected void setUp() throws IOException {
+  protected void setUp() throws IOException {
     Configuration conf = new Configuration();
     
     s3FileSystem = new S3FileSystem(getFileSystemStore());
@@ -34,7 +34,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
   }
 
   @Override
-    protected void tearDown() throws Exception {
+  protected void tearDown() throws Exception {
     s3FileSystem.purge();
     s3FileSystem.close();
   }

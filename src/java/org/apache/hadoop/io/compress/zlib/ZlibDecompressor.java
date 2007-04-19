@@ -147,7 +147,7 @@ public class ZlibDecompressor implements Decompressor {
     // Reinitialize zlib's input direct buffer
     compressedDirectBuf.rewind();
     ((ByteBuffer)compressedDirectBuf).put(userBuf, userBufOff, 
-                                        compressedDirectBufLen);
+                                          compressedDirectBufLen);
     
     // Note how much data is being fed to zlib
     userBufOff += compressedDirectBufLen;
@@ -195,7 +195,7 @@ public class ZlibDecompressor implements Decompressor {
   }
 
   public synchronized int decompress(byte[] b, int off, int len) 
-  throws IOException {
+    throws IOException {
     if (b == null) {
       throw new NullPointerException();
     }
@@ -207,7 +207,7 @@ public class ZlibDecompressor implements Decompressor {
     
     // Check if there is uncompressed data
     n = uncompressedDirectBuf.remaining();
-    if(n > 0) {
+    if (n > 0) {
       n = Math.min(n, len);
       ((ByteBuffer)uncompressedDirectBuf).get(b, off, n);
       return n;
@@ -278,7 +278,7 @@ public class ZlibDecompressor implements Decompressor {
   private native static void initIDs();
   private native static long init(int windowBits);
   private native static void setDictionary(long strm, byte[] b, int off,
-       int len);
+                                           int len);
   private native int inflateBytesDirect();
   private native static long getBytesRead(long strm);
   private native static long getBytesWritten(long strm);

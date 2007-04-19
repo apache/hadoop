@@ -81,7 +81,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   }
     
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.NameNode");
-  public static final Log stateChangeLog = LogFactory.getLog( "org.apache.hadoop.dfs.StateChange");
+  public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.dfs.StateChange");
 
   private FSNamesystem namesystem;
   private Server server;
@@ -96,7 +96,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
   public static void format(Configuration conf) throws IOException {
-    format( conf, false );
+    format(conf, false);
   }
 
   private class NameNodeMetrics implements Updater {
@@ -208,7 +208,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   public NameNode(Configuration conf) throws IOException {
     InetSocketAddress addr = 
       DataNode.createSocketAddr(conf.get("fs.default.name"));
-    init( addr.getHostName(), addr.getPort(), conf );
+    init(addr.getHostName(), addr.getPort(), conf);
   }
 
   /**
@@ -221,7 +221,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   public NameNode(String bindAddress, int port, 
                   Configuration conf
                   ) throws IOException {
-    init( bindAddress, port, conf );
+    init(bindAddress, port, conf);
   }
 
   /**
@@ -239,7 +239,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    * Stop all NameNode threads and wait for all to finish.
    */
   public void stop() {
-    if (! stopRequested) {
+    if (!stopRequested) {
       stopRequested = true;
       namesystem.close();
       emptier.interrupt();
@@ -255,7 +255,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    */
   public LocatedBlock[] open(String src) throws IOException {
     String clientMachine = Server.getRemoteAddress();
-    if ( clientMachine == null ) {
+    if (clientMachine == null) {
       clientMachine = "";
     }
     Object openResults[] = namesystem.open(clientMachine, new UTF8(src));
@@ -282,7 +282,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                              long blockSize
                              ) throws IOException {
     String clientMachine = Server.getRemoteAddress();
-    if ( clientMachine == null ) {
+    if (clientMachine == null) {
       clientMachine = "";
     }
     stateChangeLog.debug("*DIR* NameNode.create: file "
@@ -303,10 +303,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     return new LocatedBlock(b, targets);
   }
 
-  public boolean setReplication( String src, 
-                                 short replication
-                                 ) throws IOException {
-    return namesystem.setReplication( src, replication );
+  public boolean setReplication(String src, 
+                                short replication
+                                ) throws IOException {
+    return namesystem.setReplication(src, replication);
   }
     
   /**
@@ -328,8 +328,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    */
   public void abandonBlock(Block b, String src) throws IOException {
     stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
-                         +b.getBlockName()+" of file "+src );
-    if (! namesystem.abandonBlock(b, new UTF8(src))) {
+                         +b.getBlockName()+" of file "+src);
+    if (!namesystem.abandonBlock(b, new UTF8(src))) {
       throw new IOException("Cannot abandon block during write to " + src);
     }
   }
@@ -337,13 +337,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    */
   public void abandonFileInProgress(String src, 
                                     String holder) throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.abandonFileInProgress:" + src );
+    stateChangeLog.debug("*DIR* NameNode.abandonFileInProgress:" + src);
     namesystem.abandonFileInProgress(new UTF8(src), new UTF8(holder));
   }
   /**
    */
   public boolean complete(String src, String clientName) throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.complete: " + src + " for " + clientName );
+    stateChangeLog.debug("*DIR* NameNode.complete: " + src + " for " + clientName);
     int returnCode = namesystem.completeFile(new UTF8(src), new UTF8(clientName));
     if (returnCode == STILL_WAITING) {
       return false;
@@ -375,7 +375,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   /**
    */
   public String[][] getHints(String src, long start, long len) throws IOException {
-    return namesystem.getDatanodeHints( src, start, len );
+    return namesystem.getDatanodeHints(src, start, len);
   }
     
   public long getBlockSize(String filename) throws IOException {
@@ -385,7 +385,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   /**
    */
   public boolean rename(String src, String dst) throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst );
+    stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
     if (!checkPathLength(dst)) {
       throw new IOException("rename: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -400,7 +400,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   /**
    */
   public boolean delete(String src) throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.delete: " + src );
+    stateChangeLog.debug("*DIR* NameNode.delete: " + src);
     return namesystem.delete(new UTF8(src));
   }
 
@@ -431,12 +431,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   /**
    */
   public boolean mkdirs(String src) throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src );
+    stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src);
     if (!checkPathLength(src)) {
       throw new IOException("mkdirs: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    return namesystem.mkdirs( src );
+    return namesystem.mkdirs(src);
   }
 
   /** @deprecated */ @Deprecated
@@ -502,8 +502,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   /**
    * @inheritDoc
    */
-  public boolean setSafeMode( SafeModeAction action ) throws IOException {
-    switch( action ) {
+  public boolean setSafeMode(SafeModeAction action) throws IOException {
+    switch(action) {
     case SAFEMODE_LEAVE: // leave safe mode
       namesystem.leaveSafeMode();
       break;
@@ -567,11 +567,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   ////////////////////////////////////////////////////////////////
   /** 
    */
-  public DatanodeRegistration register( DatanodeRegistration nodeReg,
-                                        String networkLocation
-                                        ) throws IOException {
-    verifyVersion( nodeReg.getVersion() );
-    namesystem.registerDatanode( nodeReg, networkLocation );
+  public DatanodeRegistration register(DatanodeRegistration nodeReg,
+                                       String networkLocation
+                                       ) throws IOException {
+    verifyVersion(nodeReg.getVersion());
+    namesystem.registerDatanode(nodeReg, networkLocation);
       
     return nodeReg;
   }
@@ -581,25 +581,25 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    * Return a block-oriented command for the datanode to execute.
    * This will be either a transfer or a delete operation.
    */
-  public DatanodeCommand sendHeartbeat( DatanodeRegistration nodeReg,
-                                        long capacity, 
-                                        long remaining,
-                                        int xmitsInProgress,
-                                        int xceiverCount) throws IOException {
+  public DatanodeCommand sendHeartbeat(DatanodeRegistration nodeReg,
+                                       long capacity, 
+                                       long remaining,
+                                       int xmitsInProgress,
+                                       int xceiverCount) throws IOException {
     Object xferResults[] = new Object[2];
     xferResults[0] = xferResults[1] = null;
     Object deleteList[] = new Object[1];
     deleteList[0] = null; 
 
-    verifyRequest( nodeReg );
-    if( namesystem.gotHeartbeat( nodeReg, capacity, remaining, 
-                                 xceiverCount, 
-                                 xmitsInProgress,
-                                 xferResults,
-                                 deleteList)) {
+    verifyRequest(nodeReg);
+    if (namesystem.gotHeartbeat(nodeReg, capacity, remaining, 
+                                xceiverCount, 
+                                xmitsInProgress,
+                                xferResults,
+                                deleteList)) {
       // request block report from the datanode
       assert(xferResults[0] == null && deleteList[0] == null);
-      return new DatanodeCommand( DataNodeAction.DNA_REGISTER );
+      return new DatanodeCommand(DataNodeAction.DNA_REGISTER);
     }
         
     //
@@ -622,27 +622,27 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     return null;
   }
 
-  public DatanodeCommand blockReport( DatanodeRegistration nodeReg,
-                                      Block blocks[]) throws IOException {
-    verifyRequest( nodeReg );
+  public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
+                                     Block blocks[]) throws IOException {
+    verifyRequest(nodeReg);
     stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
-                         +"from "+nodeReg.getName()+" "+blocks.length+" blocks" );
+                         +"from "+nodeReg.getName()+" "+blocks.length+" blocks");
 
-    Block blocksToDelete[] = namesystem.processReport( nodeReg, blocks );
-    if( blocksToDelete != null && blocksToDelete.length > 0 )
-      return new BlockCommand( blocksToDelete );
-    if( getFSImage().isUpgradeFinalized() )
-      return new DatanodeCommand( DataNodeAction.DNA_FINALIZE );
+    Block blocksToDelete[] = namesystem.processReport(nodeReg, blocks);
+    if (blocksToDelete != null && blocksToDelete.length > 0)
+      return new BlockCommand(blocksToDelete);
+    if (getFSImage().isUpgradeFinalized())
+      return new DatanodeCommand(DataNodeAction.DNA_FINALIZE);
     return null;
   }
 
   public void blockReceived(DatanodeRegistration nodeReg, 
                             Block blocks[]) throws IOException {
-    verifyRequest( nodeReg );
+    verifyRequest(nodeReg);
     stateChangeLog.debug("*BLOCK* NameNode.blockReceived: "
-                         +"from "+nodeReg.getName()+" "+blocks.length+" blocks." );
+                         +"from "+nodeReg.getName()+" "+blocks.length+" blocks.");
     for (int i = 0; i < blocks.length; i++) {
-      namesystem.blockReceived( nodeReg, blocks[i] );
+      namesystem.blockReceived(nodeReg, blocks[i]);
     }
   }
 
@@ -653,12 +653,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                           String msg) throws IOException {
     // Log error message from datanode
     LOG.info("Report from " + nodeReg.getName() + ": " + msg);
-    if( errorCode == DatanodeProtocol.NOTIFY ) {
+    if (errorCode == DatanodeProtocol.NOTIFY) {
       return;
     }
-    verifyRequest( nodeReg );
-    if( errorCode == DatanodeProtocol.DISK_ERROR ) {
-      namesystem.removeDatanode( nodeReg );            
+    verifyRequest(nodeReg);
+    if (errorCode == DatanodeProtocol.DISK_ERROR) {
+      namesystem.removeDatanode(nodeReg);            
     }
   }
     
@@ -675,10 +675,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    * @param nodeReg data node registration
    * @throws IOException
    */
-  public void verifyRequest( DatanodeRegistration nodeReg ) throws IOException {
-    verifyVersion( nodeReg.getVersion() );
-    if( ! namesystem.getRegistrationID().equals( nodeReg.getRegistrationID() ))
-      throw new UnregisteredDatanodeException( nodeReg );
+  public void verifyRequest(DatanodeRegistration nodeReg) throws IOException {
+    verifyVersion(nodeReg.getVersion());
+    if (!namesystem.getRegistrationID().equals(nodeReg.getRegistrationID()))
+      throw new UnregisteredDatanodeException(nodeReg);
   }
     
   /**
@@ -687,9 +687,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    * @param version
    * @throws IOException
    */
-  public void verifyVersion( int version ) throws IOException {
-    if( version != LAYOUT_VERSION )
-      throw new IncorrectVersionException( version, "data node" );
+  public void verifyVersion(int version) throws IOException {
+    if (version != LAYOUT_VERSION)
+      throw new IncorrectVersionException(version, "data node");
   }
 
   /**
@@ -739,22 +739,22 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   private static boolean format(Configuration conf,
                                 boolean isConfirmationNeeded
                                 ) throws IOException {
-    Collection<File> dirsToFormat = FSNamesystem.getNamespaceDirs( conf );
-    for( Iterator<File> it = dirsToFormat.iterator(); it.hasNext(); ) {
+    Collection<File> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
+    for(Iterator<File> it = dirsToFormat.iterator(); it.hasNext();) {
       File curDir = it.next();
-      if( ! curDir.exists() )
+      if (!curDir.exists())
         continue;
-      if( isConfirmationNeeded ) {
+      if (isConfirmationNeeded) {
         System.err.print("Re-format filesystem in " + curDir +" ? (Y or N) ");
         if (!(System.in.read() == 'Y')) {
           System.err.println("Format aborted in "+ curDir);
           return true;
         }
-        while( System.in.read() != '\n' ); // discard the enter-key
+        while(System.in.read() != '\n'); // discard the enter-key
       }
     }
 
-    FSNamesystem nsys = new FSNamesystem(new FSImage( dirsToFormat ));
+    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat));
     nsys.dir.fsImage.format();
     return false;
   }
@@ -765,38 +765,38 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   }
 
   private static StartupOption parseArguments(String args[], 
-                                              Configuration conf ) {
+                                              Configuration conf) {
     int argsLen = (args == null) ? 0 : args.length;
     StartupOption startOpt = StartupOption.REGULAR;
-    for( int i=0; i < argsLen; i++ ) {
+    for(int i=0; i < argsLen; i++) {
       String cmd = args[i];
-      if( "-format".equalsIgnoreCase(cmd) ) {
+      if ("-format".equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.FORMAT;
-      } else if( "-regular".equalsIgnoreCase(cmd) ) {
+      } else if ("-regular".equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.REGULAR;
-      } else if( "-upgrade".equalsIgnoreCase(cmd) ) {
+      } else if ("-upgrade".equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE;
-      } else if( "-rollback".equalsIgnoreCase(cmd) ) {
+      } else if ("-rollback".equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;
       } else
         return null;
     }
-    conf.setObject( "dfs.namenode.startup", startOpt );
+    conf.setObject("dfs.namenode.startup", startOpt);
     return startOpt;
   }
 
-  static NameNode createNameNode( String argv[], 
-                                  Configuration conf ) throws IOException {
-    if( conf == null )
+  static NameNode createNameNode(String argv[], 
+                                 Configuration conf) throws IOException {
+    if (conf == null)
       conf = new Configuration();
-    StartupOption startOpt = parseArguments( argv, conf );
-    if( startOpt == null ) {
+    StartupOption startOpt = parseArguments(argv, conf);
+    if (startOpt == null) {
       printUsage();
       return null;
     }
       
-    if( startOpt == StartupOption.FORMAT ) {
-      boolean aborted = format( conf, true );
+    if (startOpt == StartupOption.FORMAT) {
+      boolean aborted = format(conf, true);
       System.exit(aborted ? 1 : 0);
     }
       
@@ -808,11 +808,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    */
   public static void main(String argv[]) throws Exception {
     try {
-      NameNode namenode = createNameNode( argv, null );
-      if( namenode != null )
+      NameNode namenode = createNameNode(argv, null);
+      if (namenode != null)
         namenode.join();
-    } catch ( Throwable e ) {
-      LOG.error( StringUtils.stringifyException( e ) );
+    } catch (Throwable e) {
+      LOG.error(StringUtils.stringifyException(e));
       System.exit(-1);
     }
   }

@@ -60,8 +60,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /** DatanodeDescriptor constructor
    * @param nodeID id of the data node
    */
-  public DatanodeDescriptor( DatanodeID nodeID ) {
-    this( nodeID, 0L, 0L, 0 );
+  public DatanodeDescriptor(DatanodeID nodeID) {
+    this(nodeID, 0L, 0L, 0);
   }
 
   /** DatanodeDescriptor constructor
@@ -69,9 +69,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param nodeID id of the data node
    * @param networkLocation location of the data node in network
    */
-  public DatanodeDescriptor( DatanodeID nodeID, 
-                             String networkLocation ) {
-    this( nodeID, networkLocation, null );
+  public DatanodeDescriptor(DatanodeID nodeID, 
+                            String networkLocation) {
+    this(nodeID, networkLocation, null);
   }
   
   /** DatanodeDescriptor constructor
@@ -80,10 +80,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param networkLocation location of the data node in network
    * @param hostName it could be different from host specified for DatanodeID
    */
-  public DatanodeDescriptor( DatanodeID nodeID, 
-                             String networkLocation,
-                             String hostName ) {
-    this( nodeID, networkLocation, hostName, 0L, 0L, 0 );
+  public DatanodeDescriptor(DatanodeID nodeID, 
+                            String networkLocation,
+                            String hostName) {
+    this(nodeID, networkLocation, hostName, 0L, 0L, 0);
   }
   
   /** DatanodeDescriptor constructor
@@ -93,11 +93,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param remaining remaing capacity of the data node
    * @param xceiverCount # of data transfers at the data node
    */
-  public DatanodeDescriptor( DatanodeID nodeID, 
-                             long capacity, 
-                             long remaining,
-                             int xceiverCount ) {
-    super( nodeID );
+  public DatanodeDescriptor(DatanodeID nodeID, 
+                            long capacity, 
+                            long remaining,
+                            int xceiverCount) {
+    super(nodeID);
     updateHeartbeat(capacity, remaining, xceiverCount);
     initWorkLists();
   }
@@ -110,14 +110,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param remaining remaing capacity of the data node
    * @param xceiverCount # of data transfers at the data node
    */
-  public DatanodeDescriptor( DatanodeID nodeID,
-                             String networkLocation,
-                             String hostName,
-                             long capacity, 
-                             long remaining,
-                             int xceiverCount ) {
-    super( nodeID, networkLocation, hostName );
-    updateHeartbeat( capacity, remaining, xceiverCount);
+  public DatanodeDescriptor(DatanodeID nodeID,
+                            String networkLocation,
+                            String hostName,
+                            long capacity, 
+                            long remaining,
+                            int xceiverCount) {
+    super(nodeID, networkLocation, hostName);
+    updateHeartbeat(capacity, remaining, xceiverCount);
     initWorkLists();
   }
 
@@ -169,7 +169,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
   
   Block getBlock(long blockId) {
-    return blocks.get( new Block(blockId, 0) );
+    return blocks.get(new Block(blockId, 0));
   }
   
   Block getBlock(Block b) {

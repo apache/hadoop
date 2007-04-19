@@ -119,16 +119,16 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     testFsPseudoDistributed(3);
   }
   
-  private void testFsPseudoDistributed( int datanodeNum ) throws Exception {
+  private void testFsPseudoDistributed(int datanodeNum) throws Exception {
     try {
       prepareTempFileSpace();
 
       configureDFS();
       startDFS(datanodeNum);
 
-      if( logfh == null )
+      if (logfh == null)
         try {
-          logfh = new BufferedReader( new FileReader( logFile ) );
+          logfh = new BufferedReader(new FileReader(logFile));
         } catch (FileNotFoundException e) {
           // TODO Auto-generated catch block
           throw new AssertionFailedError("Log file does not exist: "+logFile);
@@ -136,16 +136,16 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     
       // create a directory
       try {
-        assertTrue(dfsClient.mkdirs( new UTF8( "/data") ));
-        assertMkdirs( "/data", false );
-      } catch ( IOException ioe ) {
+        assertTrue(dfsClient.mkdirs(new UTF8("/data")));
+        assertMkdirs("/data", false);
+      } catch (IOException ioe) {
       	ioe.printStackTrace();
       }
        
       try {
-        assertTrue(dfsClient.mkdirs( new UTF8( "data") ));
-        assertMkdirs( "data", true );
-      } catch ( IOException ioe ) {
+        assertTrue(dfsClient.mkdirs(new UTF8("data")));
+        assertMkdirs("data", true);
+      } catch (IOException ioe) {
        	ioe.printStackTrace();
       }
       
@@ -153,41 +153,41 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
       // create a file with 1 data block
       try {
         createFile("/data/xx", 1);
-        assertCreate( "/data/xx", 1, false );
-      } catch( IOException ioe ) {
-    	assertCreate( "/data/xx", 1, true );
+        assertCreate("/data/xx", 1, false);
+      } catch(IOException ioe) {
+    	assertCreate("/data/xx", 1, true);
       }
     
       // create a file with 2 data blocks
       try {
         createFile("/data/yy", BLOCK_SIZE+1);
-        assertCreate( "/data/yy", BLOCK_SIZE+1, false );
-      } catch( IOException ioe ) {
-    	assertCreate( "/data/yy", BLOCK_SIZE+1, true );
+        assertCreate("/data/yy", BLOCK_SIZE+1, false);
+      } catch(IOException ioe) {
+    	assertCreate("/data/yy", BLOCK_SIZE+1, true);
       }
 
       // create an existing file
       try {
         createFile("/data/xx", 2);
-        assertCreate( "/data/xx", 2, false );
-      } catch( IOException ioe ) {
-      	assertCreate( "/data/xx", 2, true );
+        assertCreate("/data/xx", 2, false);
+      } catch(IOException ioe) {
+      	assertCreate("/data/xx", 2, true);
       }
     
       // delete the file
       try {
-        dfsClient.delete( new UTF8("/data/yy") );
+        dfsClient.delete(new UTF8("/data/yy"));
         assertDelete("/data/yy", false);
-      } catch( IOException ioe ) {
+      } catch(IOException ioe) {
         ioe.printStackTrace();
       }
 
     
       // rename the file
       try {
-        dfsClient.rename( new UTF8("/data/xx"), new UTF8("/data/yy") );
-        assertRename( "/data/xx", "/data/yy", false );
-      } catch( IOException ioe ) {
+        dfsClient.rename(new UTF8("/data/xx"), new UTF8("/data/yy"));
+        assertRename("/data/xx", "/data/yy", false);
+      } catch(IOException ioe) {
       	ioe.printStackTrace();
       }
 
@@ -199,9 +199,9 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
       }
       
       try {
-        dfsClient.rename( new UTF8("/data/xx"), new UTF8("/data/yy") );    
-        assertRename( "/data/xx", "/data/yy", true );
-      } catch( IOException ioe) {
+        dfsClient.rename(new UTF8("/data/xx"), new UTF8("/data/yy"));    
+        assertRename("/data/xx", "/data/yy", true);
+      } catch(IOException ioe) {
     	ioe.printStackTrace();
       }
         
@@ -217,7 +217,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     }
   }
 
-  private void createFile( String filename, long fileSize ) throws IOException { 
+  private void createFile(String filename, long fileSize) throws IOException { 
     //
     //           write filesize of data to file
     //
@@ -232,12 +232,12 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
         if ((nBytesWritten + buffer.length) > fileSize) {
           int pb = (int) (fileSize - nBytesWritten);
           byte[] bufferPartial = new byte[pb];
-          for( int i=0; i<pb; i++) {
+          for(int i=0; i<pb; i++) {
             bufferPartial[i]='a';
           }
           nos.write(buffer);
         } else {
-          for( int i=0; i<buffer.length;i++) {
+          for(int i=0; i<buffer.length;i++) {
             buffer[i]='a';
           }
           nos.write(buffer);
@@ -249,27 +249,27 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     }
   }
 
-  private void assertMkdirs( String fileName, boolean failed ) {
+  private void assertMkdirs(String fileName, boolean failed) {
     assertHasLogged("NameNode.mkdirs: " +fileName, DIR_LOG_HEADER_LEN+1);
     assertHasLogged("NameSystem.mkdirs: "+fileName, DIR_LOG_HEADER_LEN);
-    if( failed )
+    if (failed)
       assertHasLogged("FSDirectory.mkdirs: "
                       +"failed to create directory "+fileName, DIR_LOG_HEADER_LEN);
     else
-      assertHasLogged( "FSDirectory.mkdirs: created directory "+fileName, DIR_LOG_HEADER_LEN);
+      assertHasLogged("FSDirectory.mkdirs: created directory "+fileName, DIR_LOG_HEADER_LEN);
   }
   
-  private void assertCreate( String fileName, int filesize, boolean failed ) {
+  private void assertCreate(String fileName, int filesize, boolean failed) {
     assertHasLogged("NameNode.create: file "+fileName, DIR_LOG_HEADER_LEN+1);
     assertHasLogged("NameSystem.startFile: file "+fileName, DIR_LOG_HEADER_LEN);
-    if( failed ) {
+    if (failed) {
       assertHasLogged("NameSystem.startFile: "
                       +"failed to create file " + fileName, DIR_LOG_HEADER_LEN);
     } else {
       assertHasLogged("NameSystem.allocateBlock: "+fileName, BLOCK_LOG_HEADER_LEN);
       int blockNum = (filesize/BLOCK_SIZE*BLOCK_SIZE==filesize)?
         filesize/BLOCK_SIZE : 1+filesize/BLOCK_SIZE;
-      for( int i=1; i<blockNum; i++) {
+      for(int i=1; i<blockNum; i++) {
         assertHasLogged("NameNode.addBlock: file "+fileName, BLOCK_LOG_HEADER_LEN+1);
         assertHasLogged("NameSystem.getAdditionalBlock: file "+fileName, BLOCK_LOG_HEADER_LEN);
         assertHasLogged("NameSystem.allocateBlock: "+fileName, BLOCK_LOG_HEADER_LEN);
@@ -283,42 +283,42 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     }
   }
   
-  private void assertDelete( String fileName, boolean failed ) {
+  private void assertDelete(String fileName, boolean failed) {
     assertHasLogged("NameNode.delete: "+fileName, DIR_LOG_HEADER_LEN+1);
     assertHasLogged("NameSystem.delete: "+fileName, DIR_LOG_HEADER_LEN);
     assertHasLogged("FSDirectory.delete: "+fileName, DIR_LOG_HEADER_LEN);
-    if( failed )
+    if (failed)
       assertHasLogged("FSDirectory.unprotectedDelete: "
-                      +"failed to remove "+fileName, DIR_LOG_HEADER_LEN );
+                      +"failed to remove "+fileName, DIR_LOG_HEADER_LEN);
     else
       assertHasLogged("FSDirectory.unprotectedDelete: "
                       +fileName+" is removed", DIR_LOG_HEADER_LEN);
   }
   
-  private void assertRename( String src, String dst, boolean failed ) {
+  private void assertRename(String src, String dst, boolean failed) {
     assertHasLogged("NameNode.rename: "+src+" to "+dst, DIR_LOG_HEADER_LEN+1);
-    assertHasLogged("NameSystem.renameTo: "+src+" to "+dst, DIR_LOG_HEADER_LEN );
-    assertHasLogged("FSDirectory.renameTo: "+src+" to "+dst, DIR_LOG_HEADER_LEN );
-    if( failed )
+    assertHasLogged("NameSystem.renameTo: "+src+" to "+dst, DIR_LOG_HEADER_LEN);
+    assertHasLogged("FSDirectory.renameTo: "+src+" to "+dst, DIR_LOG_HEADER_LEN);
+    if (failed)
       assertHasLogged("FSDirectory.unprotectedRenameTo: "
                       +"failed to rename "+src+" to "+dst, DIR_LOG_HEADER_LEN);
     else
       assertHasLogged("FSDirectory.unprotectedRenameTo: "
-                      +src+" is renamed to "+dst, DIR_LOG_HEADER_LEN );
+                      +src+" is renamed to "+dst, DIR_LOG_HEADER_LEN);
   }
   
-  private void assertHasLogged( String target, int headerLen ) {
+  private void assertHasLogged(String target, int headerLen) {
     String line;
     boolean notFound = true;
     try {
-      while( notFound && (line=logfh.readLine()) != null ) {
-        if(line.length()>headerLen && line.startsWith(target, headerLen))
+      while(notFound && (line=logfh.readLine()) != null) {
+        if (line.length()>headerLen && line.startsWith(target, headerLen))
           notFound = false;
       }
     } catch(java.io.IOException e) {
       throw new AssertionFailedError("error reading the log file");
     }
-    if(notFound) {
+    if (notFound) {
       throw new AssertionFailedError(target+" not logged");
     }
   }
@@ -341,7 +341,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     conf.setInt("hadoop.logfile.size", 1000000000);
   }
   
-  private void startDFS( int dataNodeNum) throws IOException {
+  private void startDFS(int dataNodeNum) throws IOException {
     //
     //          start a NameNode
     String nameNodeSocketAddr = "localhost:" + nameNodePort;
@@ -375,7 +375,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     //          wait for datanodes to report in
     try {
       awaitQuiescence();
-    } catch( InterruptedException e) {
+    } catch(InterruptedException e) {
       e.printStackTrace();
     }
       
@@ -395,7 +395,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
 
     //
     // shut down datanode daemons (this takes advantage of being same-process)
-    msg("begin shutdown of all datanode daemons" );
+    msg("begin shutdown of all datanode daemons");
 
     for (int i = 0; i < dataNodeDaemons.size(); i++) {
       DataNode dataNode = (DataNode) dataNodeDaemons.get(i);

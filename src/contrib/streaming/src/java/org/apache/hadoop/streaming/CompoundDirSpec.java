@@ -219,7 +219,7 @@ class CompoundDirSpec {
   public static String expandGlobInputSpec(String inputSpec, JobConf job)
   {
     inputSpec = inputSpec.trim();
-    if(!inputSpec.startsWith(MERGEGLOB_PREFIX)) {
+    if (!inputSpec.startsWith(MERGEGLOB_PREFIX)) {
       return inputSpec;
     }
     inputSpec = inputSpec.substring(MERGEGLOB_PREFIX.length());

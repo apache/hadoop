@@ -122,7 +122,7 @@ public class CompressionCodecFactory {
         buf.append(itr.next().getName());
       }
     }
-    conf.set("io.compression.codecs",buf.toString());   
+    conf.set("io.compression.codecs", buf.toString());   
   }
   
   /**

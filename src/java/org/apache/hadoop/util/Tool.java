@@ -33,5 +33,5 @@ public interface Tool extends Configurable {
    * @return exit code
    * @throws Exception
    */
-  int run( String [] args ) throws Exception;
+  int run(String [] args) throws Exception;
 }

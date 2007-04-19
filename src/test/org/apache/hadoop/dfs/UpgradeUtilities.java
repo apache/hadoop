@@ -88,7 +88,7 @@ public class UpgradeUtilities {
       
       // format and start NameNode and start DataNode
       NameNode.format(config); 
-      cluster = new MiniDFSCluster(config,1,StartupOption.REGULAR);
+      cluster = new MiniDFSCluster(config, 1, StartupOption.REGULAR);
         
       NameNode namenode = cluster.getNameNode();
       namenodeStorageNamespaceID = namenode.versionRequest().getNamespaceID();
@@ -96,12 +96,12 @@ public class UpgradeUtilities {
       
       FileSystem fs = FileSystem.get(config);
       Path baseDir = new Path("/TestUpgrade");
-      fs.mkdirs( baseDir );
+      fs.mkdirs(baseDir);
       
       // write some files
       int bufferSize = 4096;
       byte[] buffer = new byte[bufferSize];
-      for( int i=0; i < bufferSize; i++ )
+      for(int i=0; i < bufferSize; i++)
         buffer[i] = (byte)('0' + i % 50);
       writeFile(fs, new Path(baseDir, "file1"), buffer, bufferSize);
       writeFile(fs, new Path(baseDir, "file2"), buffer, bufferSize);
@@ -127,11 +127,11 @@ public class UpgradeUtilities {
   
   // Private helper method that writes a file to the given file system.
   private static void writeFile(FileSystem fs, Path path, byte[] buffer,
-                                int bufferSize ) throws IOException 
+                                int bufferSize) throws IOException 
   {
     OutputStream out;
     out = fs.create(path, true, bufferSize, (short) 1, 1024);
-    out.write( buffer, 0, bufferSize );
+    out.write(buffer, 0, bufferSize);
     out.close();
   }
   
@@ -214,7 +214,7 @@ public class UpgradeUtilities {
         byte[] buffer = new byte[1024];
         int bytesRead;
         while ((bytesRead = fis.read(buffer)) != -1) {
-          checksum.update(buffer,0,bytesRead);
+          checksum.update(buffer, 0, bytesRead);
         }
         fis.close();
       }
@@ -287,10 +287,10 @@ public class UpgradeUtilities {
       FileUtil.fullyDelete(versionFile);
       switch (nodeType) {
       case NAME_NODE:
-        storage = new FSImage( version );
+        storage = new FSImage(version);
         break;
       case DATA_NODE:
-        storage = new DataStorage( version, "doNotCare" );
+        storage = new DataStorage(version, "doNotCare");
         break;
       }
       StorageDirectory sd = storage.new StorageDirectory(parent[i].getParentFile());

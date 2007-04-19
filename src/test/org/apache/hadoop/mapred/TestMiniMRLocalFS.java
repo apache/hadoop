@@ -196,8 +196,8 @@ public class TestMiniMRLocalFS extends TestCase {
     
     public InputSplit[] getSplits(JobConf job, 
                                   int numSplits) throws IOException {
-      return new MySplit[]{new MySplit(0,1), new MySplit(1,3),
-                           new MySplit(4,2)};
+      return new MySplit[]{new MySplit(0, 1), new MySplit(1, 3),
+                           new MySplit(4, 2)};
     }
 
     public RecordReader getRecordReader(InputSplit split,

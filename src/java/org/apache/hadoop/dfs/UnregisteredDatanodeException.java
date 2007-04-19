@@ -11,12 +11,12 @@ import java.io.IOException;
  */
 class UnregisteredDatanodeException extends IOException {
 
-  public UnregisteredDatanodeException( DatanodeID nodeID ) {
-    super("Unregistered data node: " + nodeID.getName() );
+  public UnregisteredDatanodeException(DatanodeID nodeID) {
+    super("Unregistered data node: " + nodeID.getName());
   }
 
-  public UnregisteredDatanodeException( DatanodeID nodeID, 
-                                        DatanodeInfo storedNode ) {
+  public UnregisteredDatanodeException(DatanodeID nodeID, 
+                                       DatanodeInfo storedNode) {
     super("Data node " + nodeID.getName() 
           + " is attempting to report storage ID "
           + nodeID.getStorageID() + ". Node " 

@@ -37,8 +37,8 @@ public final class WritableUtils  {
     byte[] outbuf = new byte[length];
     ByteArrayOutputStream bos =  new ByteArrayOutputStream();
     int len;
-    while((len=gzi.read(outbuf,0,outbuf.length)) != -1){
-      bos.write(outbuf,0,len);
+    while((len=gzi.read(outbuf, 0, outbuf.length)) != -1){
+      bos.write(outbuf, 0, len);
     }
     byte[] decompressed =  bos.toByteArray();
     bos.close();
@@ -55,12 +55,12 @@ public final class WritableUtils  {
     if (bytes != null) {
       ByteArrayOutputStream bos =  new ByteArrayOutputStream();
       GZIPOutputStream gzout = new GZIPOutputStream(bos);
-      gzout.write(bytes,0,bytes.length);
+      gzout.write(bytes, 0, bytes.length);
       gzout.close();
       byte[] buffer = bos.toByteArray();
       int len = buffer.length;
       out.writeInt(len);
-      out.write(buffer,0,len);
+      out.write(buffer, 0, len);
       /* debug only! Once we have confidence, can lose this. */
       return ((bytes.length != 0) ? (100*buffer.length)/bytes.length : 0);
     } else {
@@ -94,7 +94,7 @@ public final class WritableUtils  {
       byte[] buffer = s.getBytes("UTF-8");
       int len = buffer.length;
       out.writeInt(len);
-      out.write(buffer,0,len);
+      out.write(buffer, 0, len);
     } else {
       out.writeInt(-1);
     }
@@ -183,7 +183,7 @@ public final class WritableUtils  {
    */
   public static void displayByteArray(byte[] record){
     int i;
-    for(i=0;i < record.length -1 ; i++){
+    for(i=0;i < record.length -1; i++){
       if (i % 16 == 0) { System.out.println(); }
       System.out.print(Integer.toHexString(record[i]  >> 4 & 0x0F));
       System.out.print(Integer.toHexString(record[i] & 0x0F));

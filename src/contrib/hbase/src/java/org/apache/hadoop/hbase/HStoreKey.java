@@ -29,7 +29,7 @@ public class HStoreKey implements WritableComparable {
   public static Text extractFamily(Text col) throws IOException {
     String column = col.toString();
     int colpos = column.indexOf(":");
-    if(colpos < 0) {
+    if (colpos < 0) {
       throw new IllegalArgumentException("Illegal column name has no family indicator: " + column);
     }
     return new Text(column.substring(0, colpos));
@@ -94,8 +94,8 @@ public class HStoreKey implements WritableComparable {
   }
   
   public boolean matchesRowCol(HStoreKey other) {
-    if(this.row.compareTo(other.row) == 0 &&
-       this.column.compareTo(other.column) == 0) {
+    if (this.row.compareTo(other.row) == 0 &&
+        this.column.compareTo(other.column) == 0) {
       return true;
       
     } else {
@@ -104,8 +104,8 @@ public class HStoreKey implements WritableComparable {
   }
   
   public boolean matchesWithoutColumn(HStoreKey other) {
-    if((this.row.compareTo(other.row) == 0) &&
-       (this.timestamp >= other.getTimestamp())) {
+    if ((this.row.compareTo(other.row) == 0) &&
+        (this.timestamp >= other.getTimestamp())) {
       return true;
       
     } else {
@@ -124,14 +124,14 @@ public class HStoreKey implements WritableComparable {
   public int compareTo(Object o) {
     HStoreKey other = (HStoreKey) o;
     int result = this.row.compareTo(other.row);
-    if(result == 0) {
+    if (result == 0) {
       result = this.column.compareTo(other.column);
       
-      if(result == 0) {
-        if(this.timestamp < other.timestamp) {
+      if (result == 0) {
+        if (this.timestamp < other.timestamp) {
           result = 1;
           
-        } else if(this.timestamp > other.timestamp) {
+        } else if (this.timestamp > other.timestamp) {
           result = -1;
         }
       }

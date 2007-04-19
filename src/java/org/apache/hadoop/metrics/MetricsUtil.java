@@ -34,63 +34,63 @@ import org.apache.commons.logging.LogFactory;
  */
 public class MetricsUtil {
     
-    private static final Log LOG =
-        LogFactory.getLog("org.apache.hadoop.util.MetricsUtil");
+  private static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.util.MetricsUtil");
 
-    /**
-     * Don't allow creation of a new instance of Metrics
-     */
-    private MetricsUtil() {}
+  /**
+   * Don't allow creation of a new instance of Metrics
+   */
+  private MetricsUtil() {}
     
-    /**
-     * Utility method to return the named context.
-     * If the desired context cannot be created for any reason, the exception
-     * is logged, and a null context is returned.
-     */
-    public static MetricsContext getContext(String contextName) {
-        MetricsContext metricsContext;
-        try {
-            metricsContext = ContextFactory.getFactory().getContext(contextName);
-            if (!metricsContext.isMonitoring()) {
-                metricsContext.startMonitoring();
-            }
-        } catch (Exception ex) {
-            LOG.error("Unable to create metrics context " + contextName, ex);
-            metricsContext = ContextFactory.getNullContext(contextName);
-        }
-        return metricsContext;
+  /**
+   * Utility method to return the named context.
+   * If the desired context cannot be created for any reason, the exception
+   * is logged, and a null context is returned.
+   */
+  public static MetricsContext getContext(String contextName) {
+    MetricsContext metricsContext;
+    try {
+      metricsContext = ContextFactory.getFactory().getContext(contextName);
+      if (!metricsContext.isMonitoring()) {
+        metricsContext.startMonitoring();
+      }
+    } catch (Exception ex) {
+      LOG.error("Unable to create metrics context " + contextName, ex);
+      metricsContext = ContextFactory.getNullContext(contextName);
     }
+    return metricsContext;
+  }
 
-    /**
-     * Utility method to create and return new metrics record instance within the
-     * given context. This record is tagged with the host name.
-     *
-     * @param context the context
-     * @param recordName name of the record
-     * @return newly created metrics record
-     */
-    public static MetricsRecord createRecord(MetricsContext context, 
-                                             String recordName) 
-    {
-      MetricsRecord metricsRecord = context.createRecord(recordName);
-      metricsRecord.setTag("hostName", getHostName());
-      return metricsRecord;        
-    }
+  /**
+   * Utility method to create and return new metrics record instance within the
+   * given context. This record is tagged with the host name.
+   *
+   * @param context the context
+   * @param recordName name of the record
+   * @return newly created metrics record
+   */
+  public static MetricsRecord createRecord(MetricsContext context, 
+                                           String recordName) 
+  {
+    MetricsRecord metricsRecord = context.createRecord(recordName);
+    metricsRecord.setTag("hostName", getHostName());
+    return metricsRecord;        
+  }
     
-    /**
-     * Returns the host name.  If the host name is unobtainable, logs the
-     * exception and returns "unknown".
-     */
-    private static String getHostName() {
-        String hostName = null;
-        try {
-            hostName = InetAddress.getLocalHost().getHostName();
-        } 
-        catch (UnknownHostException ex) {
-            LOG.info("Unable to obtain hostName", ex);
-            hostName = "unknown";
-        }
-        return hostName;
+  /**
+   * Returns the host name.  If the host name is unobtainable, logs the
+   * exception and returns "unknown".
+   */
+  private static String getHostName() {
+    String hostName = null;
+    try {
+      hostName = InetAddress.getLocalHost().getHostName();
+    } 
+    catch (UnknownHostException ex) {
+      LOG.info("Unable to obtain hostName", ex);
+      hostName = "unknown";
     }
+    return hostName;
+  }
 
 }

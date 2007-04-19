@@ -1003,7 +1003,7 @@ public class TaskTracker
    */
   private TaskInProgress findTaskToKill() {
     TaskInProgress killMe = null;
-    for (Iterator it = runningTasks.values().iterator(); it.hasNext(); ) {
+    for (Iterator it = runningTasks.values().iterator(); it.hasNext();) {
       TaskInProgress tip = (TaskInProgress) it.next();
       if ((tip.getRunState() == TaskStatus.State.RUNNING) &&
           !tip.wasKilled) {
@@ -1116,7 +1116,7 @@ public class TaskTracker
         boolean staleState = false;
         try {
           // This while-loop attempts reconnects if we get network errors
-          while (running && ! staleState && !shuttingDown && !denied) {
+          while (running && !staleState && !shuttingDown && !denied) {
             try {
               State osState = offerService();
               if (osState == State.STALE) {
@@ -1170,7 +1170,7 @@ public class TaskTracker
     private JobConf localJobConf;
     private boolean keepFailedTaskFiles;
     private boolean alwaysKeepTaskFiles;
-    private TaskStatus taskStatus ; 
+    private TaskStatus taskStatus; 
     private boolean keepJobFiles;
     private long taskTimeout;
         
@@ -1285,12 +1285,12 @@ public class TaskTracker
       this.progress = p;
       this.runstate = TaskStatus.State.RUNNING;
       this.lastProgressReport = System.currentTimeMillis();
-      TaskStatus.Phase oldPhase = taskStatus.getPhase() ;
-      if( oldPhase != newPhase ){
+      TaskStatus.Phase oldPhase = taskStatus.getPhase();
+      if (oldPhase != newPhase){
         // sort phase started
-        if( newPhase == TaskStatus.Phase.SORT ){
+        if (newPhase == TaskStatus.Phase.SORT){
           this.taskStatus.setShuffleFinishTime(System.currentTimeMillis());
-        }else if( newPhase == TaskStatus.Phase.REDUCE){
+        }else if (newPhase == TaskStatus.Phase.REDUCE){
           this.taskStatus.setSortFinishTime(System.currentTimeMillis());
         }
         this.taskStatus.setPhase(newPhase);
@@ -1347,7 +1347,7 @@ public class TaskTracker
       // Wait until task reports as done.  If it hasn't reported in,
       // wait for a second and try again.
       //
-      while (! done && (System.currentTimeMillis() - start < WAIT_FOR_DONE)) {
+      while (!done && (System.currentTimeMillis() - start < WAIT_FOR_DONE)) {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException ie) {
@@ -1414,11 +1414,11 @@ public class TaskTracker
           String systemDir = task.getConf().get("mapred.system.dir");
           Path taskTempDir = new Path(systemDir + "/" + 
                                       task.getJobId() + "/" + task.getTipId() + "/" + task.getTaskId());
-          if( fs.exists(taskTempDir)){
-            fs.delete(taskTempDir) ;
+          if (fs.exists(taskTempDir)){
+            fs.delete(taskTempDir);
           }
         }catch(IOException e){
-          LOG.warn("Error in deleting reduce temporary output",e); 
+          LOG.warn("Error in deleting reduce temporary output", e); 
         }
       }
     }
@@ -1803,24 +1803,24 @@ public class TaskTracker
    * @throws DiskErrorException if all local directories are not writable
    * @author hairong
    */
-  private static void checkLocalDirs( String[] localDirs ) 
+  private static void checkLocalDirs(String[] localDirs) 
     throws DiskErrorException {
     boolean writable = false;
         
-    if( localDirs != null ) {
+    if (localDirs != null) {
       for (int i = 0; i < localDirs.length; i++) {
         try {
-          DiskChecker.checkDir( new File(localDirs[i]) );
+          DiskChecker.checkDir(new File(localDirs[i]));
           writable = true;
-        } catch( DiskErrorException e ) {
-          LOG.warn("Task Tracker local " + e.getMessage() );
+        } catch(DiskErrorException e) {
+          LOG.warn("Task Tracker local " + e.getMessage());
         }
       }
     }
 
-    if( !writable )
-      throw new DiskErrorException( 
-                                   "all local directories are not writable" );
+    if (!writable)
+      throw new DiskErrorException(
+                                   "all local directories are not writable");
   }
     
   /**
@@ -1845,9 +1845,9 @@ public class TaskTracker
       ReflectionUtils.setContentionTracing
         (conf.getBoolean("tasktracker.contention.tracking", false));
       new TaskTracker(conf).run();
-    } catch ( Throwable e ) {
-      LOG.error( "Can not start task tracker because "+
-                 StringUtils.stringifyException(e) );
+    } catch (Throwable e) {
+      LOG.error("Can not start task tracker because "+
+                StringUtils.stringifyException(e));
       System.exit(-1);
     }
   }

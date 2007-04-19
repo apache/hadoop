@@ -108,7 +108,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
         job.setNumReduceTasks(1);                 // force a single reduce task
         DataOutputBuffer buffer = new DataOutputBuffer();
         for (int i = 0; i < splits.length; i++) {
-          String mapId = "map_" + newId() ; 
+          String mapId = "map_" + newId(); 
           mapIds.add(mapId);
           buffer.reset();
           splits[i].write(buffer);
@@ -180,7 +180,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     }
     
     private String newId() {
-      return Integer.toString(Math.abs(random.nextInt()),36);
+      return Integer.toString(Math.abs(random.nextInt()), 36);
     }
 
     // TaskUmbilicalProtocol methods

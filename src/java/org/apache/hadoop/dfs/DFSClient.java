@@ -216,10 +216,10 @@ class DFSClient implements FSConstants {
    * @return output stream
    * @throws IOException
    */
-  public OutputStream create( UTF8 src, 
-                              boolean overwrite
-                              ) throws IOException {
-    return create( src, overwrite, defaultReplication, defaultBlockSize, null);
+  public OutputStream create(UTF8 src, 
+                             boolean overwrite
+                             ) throws IOException {
+    return create(src, overwrite, defaultReplication, defaultBlockSize, null);
   }
     
   /**
@@ -231,11 +231,11 @@ class DFSClient implements FSConstants {
    * @return output stream
    * @throws IOException
    */
-  public OutputStream create( UTF8 src, 
-                              boolean overwrite,
-                              Progressable progress
-                              ) throws IOException {
-    return create( src, overwrite, defaultReplication, defaultBlockSize, null);
+  public OutputStream create(UTF8 src, 
+                             boolean overwrite,
+                             Progressable progress
+                             ) throws IOException {
+    return create(src, overwrite, defaultReplication, defaultBlockSize, null);
   }
     
   /**
@@ -248,11 +248,11 @@ class DFSClient implements FSConstants {
    * @return output stream
    * @throws IOException
    */
-  public OutputStream create( UTF8 src, 
-                              boolean overwrite, 
-                              short replication,
-                              long blockSize
-                              ) throws IOException {
+  public OutputStream create(UTF8 src, 
+                             boolean overwrite, 
+                             short replication,
+                             long blockSize
+                             ) throws IOException {
     return create(src, overwrite, replication, blockSize, null);
   }
 
@@ -267,12 +267,12 @@ class DFSClient implements FSConstants {
    * @return output stream
    * @throws IOException
    */
-  public OutputStream create( UTF8 src, 
-                              boolean overwrite, 
-                              short replication,
-                              long blockSize,
-                              Progressable progress
-                              ) throws IOException {
+  public OutputStream create(UTF8 src, 
+                             boolean overwrite, 
+                             short replication,
+                             long blockSize,
+                             Progressable progress
+                             ) throws IOException {
     checkOpen();
     OutputStream result = new DFSOutputStream(src, overwrite, 
                                               replication, blockSize, progress);
@@ -360,8 +360,8 @@ class DFSClient implements FSConstants {
    * 
    * @see ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
    */
-  public boolean setSafeMode( SafeModeAction action ) throws IOException {
-    return namenode.setSafeMode( action );
+  public boolean setSafeMode(SafeModeAction action) throws IOException {
+    return namenode.setSafeMode(action);
   }
 
   /**
@@ -405,9 +405,9 @@ class DFSClient implements FSConstants {
   public void lock(UTF8 src, boolean exclusive) throws IOException {
     long start = System.currentTimeMillis();
     boolean hasLock = false;
-    while (! hasLock) {
+    while (!hasLock) {
       hasLock = namenode.obtainLock(src.toString(), clientName, exclusive);
-      if (! hasLock) {
+      if (!hasLock) {
         try {
           Thread.sleep(400);
           if (System.currentTimeMillis() - start > 5000) {
@@ -425,9 +425,9 @@ class DFSClient implements FSConstants {
    */
   public void release(UTF8 src) throws IOException {
     boolean hasReleased = false;
-    while (! hasReleased) {
+    while (!hasReleased) {
       hasReleased = namenode.releaseLock(src.toString(), clientName);
-      if (! hasReleased) {
+      if (!hasReleased) {
         LOG.info("Could not release.  Retrying...");
         try {
           Thread.sleep(2000);
@@ -464,7 +464,7 @@ class DFSClient implements FSConstants {
       while (running) {
         if (System.currentTimeMillis() - lastRenewed > (LEASE_SOFTLIMIT_PERIOD / 2)) {
           try {
-            if( pendingCreates.size() > 0 )
+            if (pendingCreates.size() > 0)
               namenode.renewLease(clientName);
             lastRenewed = System.currentTimeMillis();
           } catch (IOException ie) {
@@ -538,7 +538,7 @@ class DFSClient implements FSConstants {
 
       if (oldBlocks != null) {
         for (int i = 0; i < oldBlocks.length; i++) {
-          if (! oldBlocks[i].equals(newBlocks[i])) {
+          if (!oldBlocks[i].equals(newBlocks[i])) {
             throw new IOException("Blocklist for " + src + " has changed!");
           }
         }
@@ -912,7 +912,7 @@ class DFSClient implements FSConstants {
       deadNodes.add(currentNode);
       DatanodeInfo oldNode = currentNode;
       DatanodeInfo newNode = blockSeekTo(targetPos);
-      if ( !markedDead ) {
+      if (!markedDead) {
         /* remove it from deadNodes. blockSeekTo could have cleared 
          * deadNodes and added currentNode again. Thats ok. */
         deadNodes.remove(oldNode);
@@ -1037,7 +1037,7 @@ class DFSClient implements FSConstants {
      * filedescriptor that we don't own.
      */
     private void closeBackupStream() throws IOException {
-      if ( backupStream != null ) {
+      if (backupStream != null) {
         OutputStream stream = backupStream;
         backupStream = null;
         stream.close();
@@ -1047,7 +1047,7 @@ class DFSClient implements FSConstants {
      * twice could result in deleting a file that we should not.
      */
     private void deleteBackupFile() {
-      if ( backupFile != null ) {
+      if (backupFile != null) {
         File file = backupFile;
         backupFile = null;
         file.delete();
@@ -1081,8 +1081,8 @@ class DFSClient implements FSConstants {
         }
 
         block = lb.getBlock();
-        if ( block.getNumBytes() < bytesWrittenToBlock ) {
-          block.setNumBytes( bytesWrittenToBlock );
+        if (block.getNumBytes() < bytesWrittenToBlock) {
+          block.setNumBytes(bytesWrittenToBlock);
         }
         DatanodeInfo nodes[] = lb.getLocations();
 
@@ -1270,9 +1270,9 @@ class DFSClient implements FSConstants {
       int workingPos = Math.min(pos, maxPos);
             
       if (workingPos > 0) {
-        if ( backupStream == null ) {
-          throw new IOException( "Trying to write to backupStream " +
-                                 "but it already closed or not open");
+        if (backupStream == null) {
+          throw new IOException("Trying to write to backupStream " +
+                                "but it already closed or not open");
         }
         //
         // To the local block backup, write just the bytes
@@ -1417,7 +1417,7 @@ class DFSClient implements FSConstants {
 
         long localstart = System.currentTimeMillis();
         boolean fileComplete = false;
-        while (! fileComplete) {
+        while (!fileComplete) {
           fileComplete = namenode.complete(src.toString(), clientName.toString());
           if (!fileComplete) {
             try {

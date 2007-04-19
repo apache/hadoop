@@ -101,7 +101,7 @@ public class Logalyzer {
       
       //Initialize the specification for *comparision*
       String sortColumns = this.conf.get("mapred.reducer.sort", null);
-      if(sortColumns != null) {
+      if (sortColumns != null) {
         sortSpec = sortColumns.split(",");
       }
       
@@ -116,7 +116,7 @@ public class Logalyzer {
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       
-      if(sortSpec == null) {
+      if (sortSpec == null) {
         return super.compare(b1, s1, l1, b2, s2, l2);
       }
       
@@ -131,7 +131,7 @@ public class Logalyzer {
         String line2 = logline2.toString();
         String[] logColumns2 = line2.split(columnSeparator);
         
-        if(logColumns1 == null || logColumns2 == null) {
+        if (logColumns1 == null || logColumns2 == null) {
           return super.compare(b1, s1, l1, b2, s2, l2);
         }
         
@@ -148,7 +148,7 @@ public class Logalyzer {
                                                );
           
           //They differ!
-          if(comparision != 0) {
+          if (comparision != 0) {
             return comparision;
           }
         }
@@ -199,7 +199,7 @@ public class Logalyzer {
     Path grepInput = new Path(inputFilesDirectory);
     
     Path analysisOutput = null;
-    if(outputDirectory.equals("")) {
+    if (outputDirectory.equals("")) {
       analysisOutput =  new Path(inputFilesDirectory, "logalyzer_" + 
                                  Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
     } else {

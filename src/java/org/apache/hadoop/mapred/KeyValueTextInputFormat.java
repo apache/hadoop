@@ -29,7 +29,7 @@ import java.io.IOException;
 public class KeyValueTextInputFormat extends TextInputFormat {
 
   public RecordReader getRecordReader(InputSplit genericSplit, JobConf job,
-      Reporter reporter) throws IOException {
+                                      Reporter reporter) throws IOException {
     reporter.setStatus(genericSplit.toString());
     return new KeyValueLineRecordReader(job, (FileSplit) genericSplit);
   }

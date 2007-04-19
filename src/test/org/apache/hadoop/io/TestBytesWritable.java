@@ -32,7 +32,7 @@ public class TestBytesWritable extends TestCase {
     int orig_capacity = buf.getCapacity();
     buf.setSize(size*2);
     int new_capacity = buf.getCapacity();
-    System.arraycopy(buf.get(),0, buf.get(), size, size);
+    System.arraycopy(buf.get(), 0, buf.get(), size, size);
     assertTrue(new_capacity >= size * 2);
     assertEquals(size * 2, buf.getSize());
     assertTrue(new_capacity != orig_capacity);

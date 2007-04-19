@@ -193,19 +193,19 @@ public class DataNode implements FSConstants, Runnable {
    * Create the DataNode given a configuration and an array of dataDirs.
    * 'dataDirs' is where the blocks are stored.
    */
-  DataNode( Configuration conf, 
-            AbstractList<File> dataDirs ) throws IOException {
+  DataNode(Configuration conf, 
+           AbstractList<File> dataDirs) throws IOException {
     try {
-      startDataNode( conf, dataDirs );
+      startDataNode(conf, dataDirs);
     } catch (IOException ie) {
       shutdown();
       throw ie;
     }
   }
     
-  void startDataNode( Configuration conf, 
-                      AbstractList<File> dataDirs
-                      ) throws IOException {
+  void startDataNode(Configuration conf, 
+                     AbstractList<File> dataDirs
+                     ) throws IOException {
     // use configured nameserver & interface to get local hostname
     machineName = DNS.getDefaultHost(
                                      conf.get("dfs.datanode.dns.interface","default"),
@@ -223,14 +223,14 @@ public class DataNode implements FSConstants, Runnable {
     NamespaceInfo nsInfo = handshake();
 
     // read storage info, lock data dirs and transition fs state if necessary
-    StartupOption startOpt = (StartupOption)conf.get( "dfs.datanode.startup", 
-                                                      StartupOption.REGULAR );
+    StartupOption startOpt = (StartupOption)conf.get("dfs.datanode.startup", 
+                                                     StartupOption.REGULAR);
     assert startOpt != null : "Startup option must be set.";
     storage = new DataStorage();
-    storage.recoverTransitionRead( nsInfo, dataDirs, startOpt );
+    storage.recoverTransitionRead(nsInfo, dataDirs, startOpt);
       
     // initialize data node internal structure
-    this.data = new FSDataset( storage, conf );
+    this.data = new FSDataset(storage, conf);
       
     // find free port
     ServerSocket ss = null;
@@ -238,7 +238,7 @@ public class DataNode implements FSConstants, Runnable {
     String bindAddress = conf.get("dfs.datanode.bindAddress", "0.0.0.0");
     while (ss == null) {
       try {
-        ss = new ServerSocket(tmpPort,0,InetAddress.getByName(bindAddress));
+        ss = new ServerSocket(tmpPort, 0, InetAddress.getByName(bindAddress));
         LOG.info("Opened server at " + tmpPort);
       } catch (IOException ie) {
         LOG.info("Could not open server at " + tmpPort + ", trying new port");
@@ -246,10 +246,10 @@ public class DataNode implements FSConstants, Runnable {
       }
     }
     // construct registration
-    this.dnRegistration = new DatanodeRegistration( 
+    this.dnRegistration = new DatanodeRegistration(
                                                    machineName + ":" + tmpPort, 
                                                    -1,   // info port determined later
-                                                   storage );
+                                                   storage);
       
     this.dataXceiveServer = new Daemon(new DataXceiveServer(ss));
 
@@ -268,9 +268,9 @@ public class DataNode implements FSConstants, Runnable {
     this.infoServer.start();
     this.dnRegistration.infoPort = this.infoServer.getPort();
     // get network location
-    this.networkLoc = conf.get( "dfs.datanode.rack" );
-    if( networkLoc == null )  // exec network script or set the default rack
-      networkLoc = getNetworkLoc( conf );
+    this.networkLoc = conf.get("dfs.datanode.rack");
+    if (networkLoc == null)  // exec network script or set the default rack
+      networkLoc = getNetworkLoc(conf);
     // register datanode
     register();
     datanodeObject = this;
@@ -282,7 +282,7 @@ public class DataNode implements FSConstants, Runnable {
       try {
         nsInfo = namenode.versionRequest();
         break;
-      } catch( SocketTimeoutException e ) {  // namenode is busy
+      } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + getNameNodeAddr());
         try {
           Thread.sleep(1000);
@@ -291,18 +291,18 @@ public class DataNode implements FSConstants, Runnable {
     }
     String errorMsg = null;
     // verify build version
-    if( ! nsInfo.getBuildVersion().equals( Storage.getBuildVersion() )) {
+    if (!nsInfo.getBuildVersion().equals(Storage.getBuildVersion())) {
       errorMsg = "Incompatible build versions: namenode BV = " 
         + nsInfo.getBuildVersion() + "; datanode BV = "
         + Storage.getBuildVersion();
-      LOG.fatal( errorMsg );
+      LOG.fatal(errorMsg);
       try {
-        namenode.errorReport( dnRegistration,
-                              DatanodeProtocol.NOTIFY, errorMsg );
-      } catch( SocketTimeoutException e ) {  // namenode is busy
+        namenode.errorReport(dnRegistration,
+                             DatanodeProtocol.NOTIFY, errorMsg);
+      } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + getNameNodeAddr());
       }
-      throw new IOException( errorMsg );
+      throw new IOException(errorMsg);
     }
     assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
       "Data-node and name-node layout versions must be the same.";
@@ -340,21 +340,21 @@ public class DataNode implements FSConstants, Runnable {
    * @throws IOException
    */
   private void register() throws IOException {
-    while( shouldRun ) {
+    while(shouldRun) {
       try {
         // reset name to machineName. Mainly for web interface.
         dnRegistration.name = machineName + ":" + dnRegistration.getPort();
-        dnRegistration = namenode.register( dnRegistration, networkLoc );
+        dnRegistration = namenode.register(dnRegistration, networkLoc);
         break;
-      } catch( SocketTimeoutException e ) {  // namenode is busy
+      } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + getNameNodeAddr());
         try {
           Thread.sleep(1000);
         } catch (InterruptedException ie) {}
       }
     }
-    if( storage.getStorageID().equals("") ) {
-      storage.setStorageID( dnRegistration.getStorageID());
+    if (storage.getStorageID().equals("")) {
+      storage.setStorageID(dnRegistration.getStorageID());
       storage.writeAll();
     }
   }
@@ -390,12 +390,12 @@ public class DataNode implements FSConstants, Runnable {
     }
   }
 
-  void handleDiskError( String errMsgr ) {
-    LOG.warn( "DataNode is shutting down.\n" + errMsgr );
+  void handleDiskError(String errMsgr) {
+    LOG.warn("DataNode is shutting down.\n" + errMsgr);
     try {
       namenode.errorReport(
                            dnRegistration, DatanodeProtocol.DISK_ERROR, errMsgr);
-    } catch( IOException ignored) {              
+    } catch(IOException ignored) {              
     }
     shutdown();
   }
@@ -438,20 +438,20 @@ public class DataNode implements FSConstants, Runnable {
           // -- Total capacity
           // -- Bytes remaining
           //
-          DatanodeCommand cmd = namenode.sendHeartbeat( dnRegistration, 
-                                                        data.getCapacity(), 
-                                                        data.getRemaining(), 
-                                                        xmitsInProgress,
-                                                        xceiverCount.getValue());
+          DatanodeCommand cmd = namenode.sendHeartbeat(dnRegistration, 
+                                                       data.getCapacity(), 
+                                                       data.getRemaining(), 
+                                                       xmitsInProgress,
+                                                       xceiverCount.getValue());
           //LOG.info("Just sent heartbeat, with name " + localName);
           lastHeartbeat = now;
-          if( ! processCommand( cmd ) )
+          if (!processCommand(cmd))
             continue;
         }
             
         // check if there are newly received blocks
         Block [] blockArray=null;
-        synchronized( receivedBlockList ) {
+        synchronized(receivedBlockList) {
           if (receivedBlockList.size() > 0) {
             //
             // Send newly-received blockids to namenode
@@ -459,8 +459,8 @@ public class DataNode implements FSConstants, Runnable {
             blockArray = receivedBlockList.toArray(new Block[receivedBlockList.size()]);
           }
         }
-        if( blockArray != null ) {
-          namenode.blockReceived( dnRegistration, blockArray );
+        if (blockArray != null) {
+          namenode.blockReceived(dnRegistration, blockArray);
           synchronized (receivedBlockList) {
             for(Block b: blockArray) {
               receivedBlockList.remove(b);
@@ -475,9 +475,9 @@ public class DataNode implements FSConstants, Runnable {
           // Get back a list of local block(s) that are obsolete
           // and can be safely GC'ed.
           //
-          DatanodeCommand cmd = namenode.blockReport( dnRegistration,
-                                                      data.getBlockReport());
-          processCommand( cmd );
+          DatanodeCommand cmd = namenode.blockReport(dnRegistration,
+                                                     data.getBlockReport());
+          processCommand(cmd);
           lastBlockReport = now;
         }
             
@@ -486,7 +486,7 @@ public class DataNode implements FSConstants, Runnable {
         // or work arrives, and then iterate again.
         //
         long waitTime = heartBeatInterval - (System.currentTimeMillis() - lastHeartbeat);
-        synchronized( receivedBlockList ) {
+        synchronized(receivedBlockList) {
           if (waitTime > 0 && receivedBlockList.size() == 0) {
             try {
               receivedBlockList.wait(waitTime);
@@ -497,12 +497,12 @@ public class DataNode implements FSConstants, Runnable {
       } catch(DiskErrorException e) {
         handleDiskError(e.getLocalizedMessage());
         return;
-      } catch( RemoteException re ) {
+      } catch(RemoteException re) {
         String reClass = re.getClassName();
-        if( UnregisteredDatanodeException.class.getName().equals( reClass ) ||
-            DisallowedDatanodeException.class.getName().equals( reClass )) {
-          LOG.warn( "DataNode is shutting down: " + 
-                    StringUtils.stringifyException(re));
+        if (UnregisteredDatanodeException.class.getName().equals(reClass) ||
+            DisallowedDatanodeException.class.getName().equals(reClass)) {
+          LOG.warn("DataNode is shutting down: " + 
+                   StringUtils.stringifyException(re));
           shutdown();
           return;
         }
@@ -519,16 +519,16 @@ public class DataNode implements FSConstants, Runnable {
      * @return true if further processing may be required or false otherwise. 
      * @throws IOException
      */
-  private boolean processCommand( DatanodeCommand cmd ) throws IOException {
-    if( cmd == null )
+  private boolean processCommand(DatanodeCommand cmd) throws IOException {
+    if (cmd == null)
       return true;
-    switch( cmd.action ) {
+    switch(cmd.action) {
     case DNA_TRANSFER:
       //
       // Send a copy of a block to another datanode
       //
       BlockCommand bcmd = (BlockCommand)cmd;
-      transferBlocks( bcmd.getBlocks(), bcmd.getTargets() );
+      transferBlocks(bcmd.getBlocks(), bcmd.getTargets());
       break;
     case DNA_INVALIDATE:
       //
@@ -553,21 +553,21 @@ public class DataNode implements FSConstants, Runnable {
       storage.finalizeUpgrade();
       break;
     default:
-      LOG.warn( "Unknown DatanodeCommand action: " + cmd.action);
+      LOG.warn("Unknown DatanodeCommand action: " + cmd.action);
     }
     return true;
   }
     
-  private void transferBlocks(  Block blocks[], 
-                                DatanodeInfo xferTargets[][] 
-                                ) throws IOException {
+  private void transferBlocks( Block blocks[], 
+                               DatanodeInfo xferTargets[][] 
+                               ) throws IOException {
     for (int i = 0; i < blocks.length; i++) {
       if (!data.isValidBlock(blocks[i])) {
         String errStr = "Can't send invalid block " + blocks[i];
         LOG.info(errStr);
-        namenode.errorReport( dnRegistration, 
-                              DatanodeProtocol.INVALID_BLOCK, 
-                              errStr );
+        namenode.errorReport(dnRegistration, 
+                             DatanodeProtocol.INVALID_BLOCK, 
+                             errStr);
         break;
       }
       if (xferTargets[i].length > 0) {
@@ -689,7 +689,7 @@ public class DataNode implements FSConstants, Runnable {
         //
         // Write filelen of -1 if error
         //
-        if (! data.isValidBlock(b)) {
+        if (!data.isValidBlock(b)) {
           out.writeLong(-1);
         } else {
           //
@@ -1130,11 +1130,11 @@ public class DataNode implements FSConstants, Runnable {
   /** Start a single datanode daemon and wait for it to finish.
    *  If this thread is specifically interrupted, it will stop waiting.
    */
-  static DataNode createDataNode( String args[],
-                                  Configuration conf ) throws IOException {
-    if( conf == null )
+  static DataNode createDataNode(String args[],
+                                 Configuration conf) throws IOException {
+    if (conf == null)
       conf = new Configuration();
-    if( ! parseArguments( args, conf )) {
+    if (!parseArguments(args, conf)) {
       printUsage();
       return null;
     }
@@ -1160,21 +1160,21 @@ public class DataNode implements FSConstants, Runnable {
    * no directory from this directory list can be created.
    * @throws IOException
    */
-  static DataNode makeInstance( String[] dataDirs, Configuration conf )
+  static DataNode makeInstance(String[] dataDirs, Configuration conf)
     throws IOException {
     ArrayList<File> dirs = new ArrayList<File>();
     for (int i = 0; i < dataDirs.length; i++) {
       File data = new File(dataDirs[i]);
       try {
-        DiskChecker.checkDir( data );
+        DiskChecker.checkDir(data);
         dirs.add(data);
-      } catch( DiskErrorException e ) {
-        LOG.warn("Invalid directory in dfs.data.dir: " + e.getMessage() );
+      } catch(DiskErrorException e) {
+        LOG.warn("Invalid directory in dfs.data.dir: " + e.getMessage());
       }
     }
-    if( dirs.size() > 0 ) 
+    if (dirs.size() > 0) 
       return new DataNode(conf, dirs);
-    LOG.error("All directories in dfs.data.dir are invalid." );
+    LOG.error("All directories in dfs.data.dir are invalid.");
     return null;
   }
 
@@ -1199,45 +1199,45 @@ public class DataNode implements FSConstants, Runnable {
    * @return false if passed argements are incorrect
    */
   private static boolean parseArguments(String args[], 
-                                        Configuration conf ) {
+                                        Configuration conf) {
     int argsLen = (args == null) ? 0 : args.length;
     StartupOption startOpt = StartupOption.REGULAR;
     String networkLoc = null;
-    for( int i=0; i < argsLen; i++ ) {
+    for(int i=0; i < argsLen; i++) {
       String cmd = args[i];
-      if( "-r".equalsIgnoreCase(cmd) || "--rack".equalsIgnoreCase(cmd) ) {
-        if( i==args.length-1 )
+      if ("-r".equalsIgnoreCase(cmd) || "--rack".equalsIgnoreCase(cmd)) {
+        if (i==args.length-1)
           return false;
         networkLoc = args[++i];
-        if( networkLoc.startsWith("-") )
+        if (networkLoc.startsWith("-"))
           return false;
-      } else if( "-rollback".equalsIgnoreCase(cmd) ) {
+      } else if ("-rollback".equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;
-      } else if( "-regular".equalsIgnoreCase(cmd) ) {
+      } else if ("-regular".equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.REGULAR;
       } else
         return false;
     }
-    if( networkLoc != null )
-      conf.set( "dfs.datanode.rack", NodeBase.normalize( networkLoc ));
-    conf.setObject( "dfs.datanode.startup", startOpt );
+    if (networkLoc != null)
+      conf.set("dfs.datanode.rack", NodeBase.normalize(networkLoc));
+    conf.setObject("dfs.datanode.startup", startOpt);
     return true;
   }
 
   /* Get the network location by running a script configured in conf */
-  private static String getNetworkLoc( Configuration conf ) 
+  private static String getNetworkLoc(Configuration conf) 
     throws IOException {
-    String locScript = conf.get("dfs.network.script" );
-    if( locScript == null ) 
+    String locScript = conf.get("dfs.network.script");
+    if (locScript == null) 
       return NetworkTopology.DEFAULT_RACK;
 
-    LOG.info( "Starting to run script to get datanode network location");
-    Process p = Runtime.getRuntime().exec( locScript );
+    LOG.info("Starting to run script to get datanode network location");
+    Process p = Runtime.getRuntime().exec(locScript);
     StringBuffer networkLoc = new StringBuffer();
     final BufferedReader inR = new BufferedReader(
-                                                  new InputStreamReader(p.getInputStream() ) );
+                                                  new InputStreamReader(p.getInputStream()));
     final BufferedReader errR = new BufferedReader(
-                                                   new InputStreamReader( p.getErrorStream() ) );
+                                                   new InputStreamReader(p.getErrorStream()));
 
     // read & log any error messages from the running script
     Thread errThread = new Thread() {
@@ -1248,7 +1248,7 @@ public class DataNode implements FSConstants, Runnable {
               LOG.warn("Network script error: "+errLine);
               errLine = errR.readLine();
             }
-          } catch( IOException e) {
+          } catch(IOException e) {
                     
           }
         }
@@ -1258,32 +1258,32 @@ public class DataNode implements FSConstants, Runnable {
             
       // fetch output from the process
       String line = inR.readLine();
-      while( line != null ) {
-        networkLoc.append( line );
+      while(line != null) {
+        networkLoc.append(line);
         line = inR.readLine();
       }
       try {
         // wait for the process to finish
         int returnVal = p.waitFor();
         // check the exit code
-        if( returnVal != 0 ) {
+        if (returnVal != 0) {
           throw new IOException("Process exits with nonzero status: "+locScript);
         }
       } catch (InterruptedException e) {
-        throw new IOException( e.getMessage() );
+        throw new IOException(e.getMessage());
       } finally {
         try {
           // make sure that the error thread exits
           errThread.join();
         } catch (InterruptedException je) {
-          LOG.warn( StringUtils.stringifyException(je));
+          LOG.warn(StringUtils.stringifyException(je));
         }
       }
     } finally {
       // close in & error streams
       try {
         inR.close();
-      } catch ( IOException ine ) {
+      } catch (IOException ine) {
         throw ine;
       } finally {
         errR.close();
@@ -1297,11 +1297,11 @@ public class DataNode implements FSConstants, Runnable {
    */
   public static void main(String args[]) {
     try {
-      DataNode datanode = createDataNode( args, null );
-      if( datanode != null )
+      DataNode datanode = createDataNode(args, null);
+      if (datanode != null)
         datanode.join();
-    } catch ( Throwable e ) {
-      LOG.error( StringUtils.stringifyException( e ) );
+    } catch (Throwable e) {
+      LOG.error(StringUtils.stringifyException(e));
       System.exit(-1);
     }
   }

@@ -60,17 +60,17 @@ public abstract class HAbstractScanner implements HScannerInterface {
       String column = col.toString();
       try {
         int colpos = column.indexOf(":") + 1;
-        if(colpos == 0) {
+        if (colpos == 0) {
           throw new IllegalArgumentException("Column name has no family indicator.");
         }
 
         String columnkey = column.substring(colpos);
 
-        if(columnkey == null || columnkey.length() == 0) {
+        if (columnkey == null || columnkey.length() == 0) {
           this.matchType = MATCH_TYPE.FAMILY_ONLY;
           this.family = column.substring(0, colpos);
 
-        } else if(isRegexPattern.matcher(columnkey).matches()) {
+        } else if (isRegexPattern.matcher(columnkey).matches()) {
           this.matchType = MATCH_TYPE.REGEX;
           this.columnMatcher = Pattern.compile(column);
 
@@ -86,13 +86,13 @@ public abstract class HAbstractScanner implements HScannerInterface {
     // Matching method
     
     boolean matches(Text col) throws IOException {
-      if(this.matchType == MATCH_TYPE.SIMPLE) {
+      if (this.matchType == MATCH_TYPE.SIMPLE) {
         return col.equals(this.col);
         
-      } else if(this.matchType == MATCH_TYPE.FAMILY_ONLY) {
+      } else if (this.matchType == MATCH_TYPE.FAMILY_ONLY) {
         return col.toString().startsWith(this.family);
         
-      } else if(this.matchType == MATCH_TYPE.REGEX) {
+      } else if (this.matchType == MATCH_TYPE.REGEX) {
         return this.columnMatcher.matcher(col.toString()).matches();
         
       } else {
@@ -121,7 +121,7 @@ public abstract class HAbstractScanner implements HScannerInterface {
     for(int i = 0; i < targetCols.length; i++) {
       Text family = HStoreKey.extractFamily(targetCols[i]);
       Vector<ColumnMatcher> matchers = okCols.get(family);
-      if(matchers == null) {
+      if (matchers == null) {
         matchers = new Vector<ColumnMatcher>();
       }
       matchers.add(new ColumnMatcher(targetCols[i]));
@@ -144,11 +144,11 @@ public abstract class HAbstractScanner implements HScannerInterface {
     Text column = keys[i].getColumn();
     Text family = HStoreKey.extractFamily(column);
     Vector<ColumnMatcher> matchers = okCols.get(family);
-    if(matchers == null) {
+    if (matchers == null) {
       return false;
     }
     for(int m = 0; m < matchers.size(); m++) {
-      if(matchers.get(m).matches(column)) {
+      if (matchers.get(m).matches(column)) {
         return true;
       }
     }
@@ -203,7 +203,7 @@ public abstract class HAbstractScanner implements HScannerInterface {
     // Grab all the values that match this row/timestamp
 
     boolean insertedItem = false;
-    if(chosenRow != null) {
+    if (chosenRow != null) {
       key.setRow(chosenRow);
       key.setVersion(chosenTimestamp);
       key.setColumn(new Text(""));
@@ -215,7 +215,7 @@ public abstract class HAbstractScanner implements HScannerInterface {
               && (keys[i].getRow().compareTo(chosenRow) == 0)
               && (keys[i].getTimestamp() == chosenTimestamp)) {
 
-          if(columnMatch(i)) {
+          if (columnMatch(i)) {
             outbuf.reset();
             vals[i].write(outbuf);
             byte byteresults[] = outbuf.getData();
@@ -226,7 +226,7 @@ public abstract class HAbstractScanner implements HScannerInterface {
             insertedItem = true;
           }
 
-          if (! getNext(i)) {
+          if (!getNext(i)) {
             closeSubScanner(i);
           }
         }
@@ -237,7 +237,7 @@ public abstract class HAbstractScanner implements HScannerInterface {
         while((keys[i] != null)
               && ((keys[i].getRow().compareTo(chosenRow) <= 0)
                   || (keys[i].getTimestamp() > this.timestamp)
-                  || (! columnMatch(i)))) {
+                  || (!columnMatch(i)))) {
 
           getNext(i);
         }

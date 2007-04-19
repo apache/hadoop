@@ -22,22 +22,22 @@ public class DiskChecker {
     }
   }
       
-  public static void checkDir( File dir ) throws DiskErrorException {
-    if( !dir.exists() && !dir.mkdirs() )
-      throw new DiskErrorException( "can not create directory: " 
-                                    + dir.toString() );
+  public static void checkDir(File dir) throws DiskErrorException {
+    if (!dir.exists() && !dir.mkdirs())
+      throw new DiskErrorException("can not create directory: " 
+                                   + dir.toString());
         
-    if ( !dir.isDirectory() )
-      throw new DiskErrorException( "not a directory: " 
-                                    + dir.toString() );
+    if (!dir.isDirectory())
+      throw new DiskErrorException("not a directory: " 
+                                   + dir.toString());
             
-    if( !dir.canRead() )
-      throw new DiskErrorException( "directory is not readable: " 
-                                    + dir.toString() );
+    if (!dir.canRead())
+      throw new DiskErrorException("directory is not readable: " 
+                                   + dir.toString());
             
-    if( !dir.canWrite() )
-      throw new DiskErrorException( "directory is not writable: " 
-                                    + dir.toString() );
+    if (!dir.canWrite())
+      throw new DiskErrorException("directory is not writable: " 
+                                   + dir.toString());
   }
 
 }

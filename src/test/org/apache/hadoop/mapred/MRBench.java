@@ -150,7 +150,7 @@ public class MRBench {
     jobConf.setMapOutputKeyClass(UTF8.class);
     jobConf.setMapOutputValueClass(UTF8.class);
     
-    if ( null != jarFile ) {
+    if (null != jarFile) {
       jobConf.setJar(jarFile);
     }
     jobConf.setMapperClass(Map.class);

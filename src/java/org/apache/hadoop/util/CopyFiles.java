@@ -347,7 +347,7 @@ public class CopyFiles extends ToolBase {
       for(int idx=0; idx < numMaps; ++idx) {
         Path file = new Path(inDir, "part"+idx);
         SequenceFile.Writer writer = 
-          SequenceFile.createWriter(fileSys,conf,file,Text.class,Text.class);
+          SequenceFile.createWriter(fileSys, conf, file, Text.class, Text.class);
         for (int ipath = idx; ipath < finalPathList.size(); ipath += numMaps) {
           String path = finalPathList.get(ipath);
           writer.append(new Text(path), new Text(""));
@@ -366,7 +366,7 @@ public class CopyFiles extends ToolBase {
       Path jobDirectory = new Path(jobConf.get("distcp.job.dir", "/"));
       FileSystem fs = FileSystem.get(jobConf);
       
-      if(!jobDirectory.equals("/")) {
+      if (!jobDirectory.equals("/")) {
         fs.delete(jobDirectory);
       }
     }
@@ -505,7 +505,7 @@ public class CopyFiles extends ToolBase {
       Path jobDirectory = new Path(jobConf.get("distcp.job.dir", "/"));
       FileSystem fs = FileSystem.get(jobConf);
       
-      if(!jobDirectory.equals("/")) {
+      if (!jobDirectory.equals("/")) {
         fs.delete(jobDirectory);
       }
     }
@@ -520,7 +520,7 @@ public class CopyFiles extends ToolBase {
         destFileSys = 
           FileSystem.getNamed(job.get("copy.dest.fs", "local"), job);
         destPath = new Path(job.get("copy.dest.path", "/"));
-        if(!destFileSys.exists(destPath)) {
+        if (!destFileSys.exists(destPath)) {
           return;
         }
       } catch(IOException ioe) {
@@ -572,7 +572,7 @@ public class CopyFiles extends ToolBase {
         
       } catch(Exception e) {
         reporter.setStatus("Failed to copy from: " + (Text)key);
-        if(ignoreReadFailures) {
+        if (ignoreReadFailures) {
           return;
         } else {
           throw new IOException("Failed to copy from: " + (Text)key);
@@ -597,10 +597,10 @@ public class CopyFiles extends ToolBase {
       }
       protocol = protocol.toLowerCase();
       
-      if(HDFS.equalsIgnoreCase(protocol) || "file".equalsIgnoreCase(protocol) ||
-         S3.equalsIgnoreCase(protocol)) {
+      if (HDFS.equalsIgnoreCase(protocol) || "file".equalsIgnoreCase(protocol) ||
+          S3.equalsIgnoreCase(protocol)) {
         mapper = new FSCopyFilesMapper();
-      } else if("http".equalsIgnoreCase(protocol)) {
+      } else if ("http".equalsIgnoreCase(protocol)) {
         mapper = new HTTPCopyFilesMapper();
       }
       
@@ -616,7 +616,7 @@ public class CopyFiles extends ToolBase {
     String srcListURIScheme = srcListURI.getScheme();
     String srcListURIPath = srcListURI.getPath();
     
-    if("file".equalsIgnoreCase(srcListURIScheme)) {
+    if ("file".equalsIgnoreCase(srcListURIScheme)) {
       fis = new BufferedReader(new FileReader(srcListURIPath));
     } else if (srcListURIScheme != null &&
                HDFS.equalsIgnoreCase(srcListURIScheme)) {
@@ -624,7 +624,7 @@ public class CopyFiles extends ToolBase {
       fis = new BufferedReader(
                                new InputStreamReader(fs.open(new Path(srcListURIPath)))
                                );
-    } else if("http".equalsIgnoreCase(srcListURIScheme)) {
+    } else if ("http".equalsIgnoreCase(srcListURIScheme)) {
       //Copy the file 
       URL url = srcListURI.toURL();
       HttpURLConnection connection = (HttpURLConnection)url.openConnection();
@@ -641,7 +641,7 @@ public class CopyFiles extends ToolBase {
     try {
       String uri = null;
       while((uri = fis.readLine()) != null) {
-        if(!uri.startsWith("#")) {
+        if (!uri.startsWith("#")) {
           // Check source is parseable as URI by passing via getPathURI.
           toURI(uri);
           uris.add(uri);
@@ -670,7 +670,7 @@ public class CopyFiles extends ToolBase {
     
     for(int i=0; i < uris.length; ++i) {
       // uri must start w/ protocol 
-      if(uris[i].startsWith(protocol)) {
+      if (uris[i].startsWith(protocol)) {
         protocolURIs.add(uris[i]);
       }
     }
@@ -711,7 +711,7 @@ public class CopyFiles extends ToolBase {
     //Create the task-specific mapper 
     CopyFilesMapper mapper = null;
     String[] srcPaths = null;
-    if(srcAsList) {
+    if (srcAsList) {
       //Ugly?!
       
       //Source paths
@@ -719,7 +719,7 @@ public class CopyFiles extends ToolBase {
       
       // Protocol - 'hdfs://'
       String[] dfsUrls = parseInputFile(HDFS, srcPaths);
-      if(dfsUrls != null) {
+      if (dfsUrls != null) {
         for(int i=0; i < dfsUrls.length; ++i) {
           copy(conf, dfsUrls[i], destPath, false, ignoreReadFailures);
         }
@@ -727,7 +727,7 @@ public class CopyFiles extends ToolBase {
       
       // Protocol - 'file://'
       String[] localUrls = parseInputFile("file", srcPaths);
-      if(localUrls != null) {
+      if (localUrls != null) {
         for(int i=0; i < localUrls.length; ++i) {
           copy(conf, localUrls[i], destPath, false, ignoreReadFailures);
         }
@@ -735,13 +735,13 @@ public class CopyFiles extends ToolBase {
       
       // Protocol - 'http://'
       String[] httpUrls = parseInputFile("http", srcPaths);
-      if(httpUrls != null) {
+      if (httpUrls != null) {
         srcPaths = httpUrls;
         mapper = CopyMapperFactory.getMapper(conf, "http");
       } else {   
         // Protocol - 's3://'
         String[] s3Urls = parseInputFile(S3, srcPaths);
-        if(s3Urls != null) {
+        if (s3Urls != null) {
           srcPaths = s3Urls;
           mapper = CopyMapperFactory.getMapper(conf, S3);
         } else {   

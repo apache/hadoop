@@ -112,7 +112,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       this.file = file;
       Path sumFile = fs.getChecksumFile(file);
       try {
-        int sumBufferSize = fs.getSumBufferSize(fs.getBytesPerSum(),bufferSize);
+        int sumBufferSize = fs.getSumBufferSize(fs.getBytesPerSum(), bufferSize);
         sums = fs.getRawFileSystem().open(sumFile, sumBufferSize);
 
         byte[] version = new byte[CHECKSUM_VERSION.length];
@@ -133,14 +133,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     public void seek(long desired) throws IOException {
       // seek to a checksum boundary
       long checksumBoundary = desired/bytesPerSum*bytesPerSum;
-      if(checksumBoundary != getPos()) {
+      if (checksumBoundary != getPos()) {
         datas.seek(checksumBoundary);
-        if(sums != null) {
+        if (sums != null) {
           sums.seek(HEADER_LENGTH + 4*(checksumBoundary/bytesPerSum));
         }
       }
       
-      if(sums != null) {
+      if (sums != null) {
         sum.reset();
         inSum = 0;
       }
@@ -207,9 +207,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
               summed += toSum;
               
               inSum += toSum;
-              if (inSum == bytesPerSum ) {
+              if (inSum == bytesPerSum) {
                 verifySum(read-(summed-bytesPerSum));
-              } else if( read == summed && endOfFile ) {
+              } else if (read == summed && endOfFile) {
                 verifySum(read-read/bytesPerSum*bytesPerSum);
               }
             }
@@ -314,7 +314,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
 
     @Override
-      public boolean seekToNewSource(long targetPos) throws IOException {
+    public boolean seekToNewSource(long targetPos) throws IOException {
       return datas.seekToNewSource(targetPos) ||
         sums.seekToNewSource(targetPos/bytesPerSum);
     }
@@ -327,7 +327,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @param bufferSize the size of the buffer to be used.
    */
   @Override
-    public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+  public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     if (!exists(f)) {
       throw new FileNotFoundException(f.toString());
     }
@@ -405,7 +405,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     
     public void close() throws IOException {
       writeSum();
-      if(sums != null) {
+      if (sums != null) {
         sums.close();
       }
       out.close();
@@ -429,8 +429,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @param replication required block replication for the file. 
    */
   @Override
-    public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
-                                     short replication, long blockSize, Progressable progress)
+  public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
+                                   short replication, long blockSize, Progressable progress)
     throws IOException {
     if (exists(f) && !overwrite) {
       throw new IOException("File already exists:" + f);
@@ -497,7 +497,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       return fs.delete(f);
     } else {
       Path checkFile = getChecksumFile(f);
-      if(fs.exists(checkFile)) {
+      if (fs.exists(checkFile)) {
         fs.delete(checkFile);
       }
 
@@ -518,7 +518,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @exception IOException
    */
   @Override
-    public Path[] listPaths(Path[] files) throws IOException {
+  public Path[] listPaths(Path[] files) throws IOException {
     return fs.listPaths(files, DEFAULT_FILTER);
   }
 
@@ -533,17 +533,17 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   @Override
-    public boolean mkdirs(Path f) throws IOException {
+  public boolean mkdirs(Path f) throws IOException {
     return fs.mkdirs(f);
   }
 
   @Override
-    public void lock(Path f, boolean shared) throws IOException {
+  public void lock(Path f, boolean shared) throws IOException {
     if (fs.isDirectory(f)) {
       fs.lock(f, shared);
     } else {
       Path checkFile = getChecksumFile(f);
-      if(fs.exists(checkFile)) {
+      if (fs.exists(checkFile)) {
         fs.lock(checkFile, shared);
       }
       fs.lock(f, shared);
@@ -551,12 +551,12 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   @Override
-    public void release(Path f) throws IOException {
+  public void release(Path f) throws IOException {
     if (fs.isDirectory(f)) {
       fs.release(f);
     } else {
       Path checkFile = getChecksumFile(f);
-      if(fs.exists(checkFile)) {
+      if (fs.exists(checkFile)) {
         fs.release(getChecksumFile(f));
       }
       fs.release(f);
@@ -564,7 +564,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   @Override
-    public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+  public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     FileSystem localFs = getNamed("file:///", getConf());
     FileUtil.copy(localFs, src, this, dst, delSrc, getConf());
@@ -575,7 +575,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * Copy it from FS control to the local dst name.
    */
   @Override
-    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+  public void copyToLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     FileSystem localFs = getNamed("file:///", getConf());
     FileUtil.copy(this, src, localFs, dst, delSrc, getConf());
@@ -615,13 +615,13 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   @Override
-    public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
+  public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
     return tmpLocalFile;
   }
 
   @Override
-    public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
+  public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
     moveFromLocalFile(tmpLocalFile, fsOutputFile);
   }

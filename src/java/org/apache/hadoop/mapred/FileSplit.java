@@ -82,7 +82,7 @@ public class FileSplit implements InputSplit {
 
   public String[] getLocations() throws IOException {
     String[][] hints = file.getFileSystem(conf).
-                            getFileCacheHints(file, start, length);
+      getFileCacheHints(file, start, length);
     if (hints != null && hints.length > 0) {
       return hints[0];
     }

@@ -176,7 +176,7 @@ public class Path implements Comparable {
   public Path getParent() {
     String path = uri.getPath();
     int lastSlash = path.lastIndexOf('/');
-    int start = hasWindowsDrive(path,true) ? 3 : 0;
+    int start = hasWindowsDrive(path, true) ? 3 : 0;
     if ((path.length() == start) ||               // empty path
         (lastSlash == start && path.length() == start+1)) { // at root
       return null;
@@ -186,7 +186,7 @@ public class Path implements Comparable {
       parent = "";
     } else {
       int end = hasWindowsDrive(path, true) ? 3 : 0;
-      parent = path.substring(0,lastSlash==end?end+1:lastSlash);
+      parent = path.substring(0, lastSlash==end?end+1:lastSlash);
     }
     return new Path(uri.getScheme(), uri.getAuthority(), parent);
   }

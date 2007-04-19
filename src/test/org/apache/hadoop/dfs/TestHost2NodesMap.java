@@ -16,17 +16,17 @@ public class TestHost2NodesMap extends TestCase {
 
   static {
     for(DatanodeDescriptor node:dataNodes) {
-      map.add( node );
+      map.add(node);
     }
     map.add(NULL_NODE);
   }
   
   public void testContains() throws Exception {
     for(int i=0; i<dataNodes.length; i++) {
-      assertTrue( map.contains(dataNodes[i]) );
+      assertTrue(map.contains(dataNodes[i]));
     }
-    assertFalse( map.contains( NULL_NODE ) );
-    assertFalse( map.contains( NODE ) );
+    assertFalse(map.contains(NULL_NODE));
+    assertFalse(map.contains(NODE));
   }
 
   public void testGetDatanodeByHost() throws Exception {

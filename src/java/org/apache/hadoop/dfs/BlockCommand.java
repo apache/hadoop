@@ -24,10 +24,10 @@ class DatanodeCommand implements Writable {
   DatanodeProtocol.DataNodeAction action;
   
   public DatanodeCommand() {
-    this( DatanodeProtocol.DataNodeAction.DNA_UNKNOWN );
+    this(DatanodeProtocol.DataNodeAction.DNA_UNKNOWN);
   }
   
-  public DatanodeCommand( DatanodeProtocol.DataNodeAction action ) {
+  public DatanodeCommand(DatanodeProtocol.DataNodeAction action) {
     this.action = action;
   }
 
@@ -43,12 +43,12 @@ class DatanodeCommand implements Writable {
   }
 
   public void write(DataOutput out) throws IOException {
-    WritableUtils.writeEnum( out, action );
+    WritableUtils.writeEnum(out, action);
   }
   
   public void readFields(DataInput in) throws IOException {
     this.action = (DatanodeProtocol.DataNodeAction)
-      WritableUtils.readEnum( in, DatanodeProtocol.DataNodeAction.class );
+      WritableUtils.readEnum(in, DatanodeProtocol.DataNodeAction.class);
   }
 }
 
@@ -62,81 +62,81 @@ class DatanodeCommand implements Writable {
  * @author Mike Cafarella
  ****************************************************/
 class BlockCommand extends DatanodeCommand {
-    Block blocks[];
-    DatanodeInfo targets[][];
+  Block blocks[];
+  DatanodeInfo targets[][];
 
-    public BlockCommand() {}
+  public BlockCommand() {}
 
-    /**
-     * Create BlockCommand for transferring blocks to another datanode
-     * @param blocks    blocks to be transferred 
-     * @param targets   nodes to transfer
-     */
-    public BlockCommand(Block blocks[], DatanodeInfo targets[][]) {
-      super(  DatanodeProtocol.DataNodeAction.DNA_TRANSFER );
-      this.blocks = blocks;
-      this.targets = targets;
+  /**
+   * Create BlockCommand for transferring blocks to another datanode
+   * @param blocks    blocks to be transferred 
+   * @param targets   nodes to transfer
+   */
+  public BlockCommand(Block blocks[], DatanodeInfo targets[][]) {
+    super( DatanodeProtocol.DataNodeAction.DNA_TRANSFER);
+    this.blocks = blocks;
+    this.targets = targets;
+  }
+
+  /**
+   * Create BlockCommand for block invalidation
+   * @param blocks  blocks to invalidate
+   */
+  public BlockCommand(Block blocks[]) {
+    super(DatanodeProtocol.DataNodeAction.DNA_INVALIDATE);
+    this.blocks = blocks;
+    this.targets = new DatanodeInfo[0][];
+  }
+
+  public Block[] getBlocks() {
+    return blocks;
+  }
+
+  public DatanodeInfo[][] getTargets() {
+    return targets;
+  }
+
+  ///////////////////////////////////////////
+  // Writable
+  ///////////////////////////////////////////
+  static {                                      // register a ctor
+    WritableFactories.setFactory
+      (BlockCommand.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new BlockCommand(); }
+       });
+  }
+
+  public void write(DataOutput out) throws IOException {
+    super.write(out);
+    out.writeInt(blocks.length);
+    for (int i = 0; i < blocks.length; i++) {
+      blocks[i].write(out);
+    }
+    out.writeInt(targets.length);
+    for (int i = 0; i < targets.length; i++) {
+      out.writeInt(targets[i].length);
+      for (int j = 0; j < targets[i].length; j++) {
+        targets[i][j].write(out);
+      }
+    }
+  }
+
+  public void readFields(DataInput in) throws IOException {
+    super.readFields(in);
+    this.blocks = new Block[in.readInt()];
+    for (int i = 0; i < blocks.length; i++) {
+      blocks[i] = new Block();
+      blocks[i].readFields(in);
     }
 
-    /**
-     * Create BlockCommand for block invalidation
-     * @param blocks  blocks to invalidate
-     */
-    public BlockCommand(Block blocks[]) {
-      super( DatanodeProtocol.DataNodeAction.DNA_INVALIDATE );
-      this.blocks = blocks;
-      this.targets = new DatanodeInfo[0][];
+    this.targets = new DatanodeInfo[in.readInt()][];
+    for (int i = 0; i < targets.length; i++) {
+      this.targets[i] = new DatanodeInfo[in.readInt()];
+      for (int j = 0; j < targets[i].length; j++) {
+        targets[i][j] = new DatanodeInfo();
+        targets[i][j].readFields(in);
+      }
     }
-
-    public Block[] getBlocks() {
-        return blocks;
-    }
-
-    public DatanodeInfo[][] getTargets() {
-        return targets;
-    }
-
-    ///////////////////////////////////////////
-    // Writable
-    ///////////////////////////////////////////
-    static {                                      // register a ctor
-      WritableFactories.setFactory
-        (BlockCommand.class,
-         new WritableFactory() {
-           public Writable newInstance() { return new BlockCommand(); }
-         });
-    }
-
-    public void write(DataOutput out) throws IOException {
-        super.write( out );
-        out.writeInt(blocks.length);
-        for (int i = 0; i < blocks.length; i++) {
-            blocks[i].write(out);
-        }
-        out.writeInt(targets.length);
-        for (int i = 0; i < targets.length; i++) {
-            out.writeInt(targets[i].length);
-            for (int j = 0; j < targets[i].length; j++) {
-                targets[i][j].write(out);
-            }
-        }
-    }
-
-    public void readFields(DataInput in) throws IOException {
-        super.readFields( in );
-        this.blocks = new Block[in.readInt()];
-        for (int i = 0; i < blocks.length; i++) {
-            blocks[i] = new Block();
-            blocks[i].readFields(in);
-        }
-
-        this.targets = new DatanodeInfo[in.readInt()][];
-        for (int i = 0; i < targets.length; i++) {
-            this.targets[i] = new DatanodeInfo[in.readInt()];
-            for (int j = 0; j < targets[i].length; j++) {
-                targets[i][j] = new DatanodeInfo();
-                targets[i][j].readFields(in);
-            }
-        }
-    }
+  }
 }

@@ -109,7 +109,7 @@ public class SequenceFile {
     createWriter(FileSystem fs, Configuration conf, Path name, 
                  Class keyClass, Class valClass) 
     throws IOException {
-    return createWriter(fs,conf,name,keyClass,valClass,
+    return createWriter(fs, conf, name, keyClass, valClass,
                         getCompressionType(conf));
   }
   
@@ -679,7 +679,7 @@ public class SequenceFile {
       out.writeBoolean(this.isCompressed());
       out.writeBoolean(this.isBlockCompressed());
       
-      if(this.isCompressed()) {
+      if (this.isCompressed()) {
         Text.writeString(out, (codec.getClass()).getName());
       }
       this.metadata.write(out);
@@ -698,7 +698,7 @@ public class SequenceFile {
       this.compress = compress;
       this.codec = codec;
       this.metadata = metadata;
-      if(this.codec != null) {
+      if (this.codec != null) {
         ReflectionUtils.setConf(this.codec, this.conf);
         this.deflateFilter = this.codec.createOutputStream(buffer);
         this.deflateOut = 
@@ -2351,7 +2351,7 @@ public class SequenceFile {
         rawKey.reset();
         rawKey.write(ms.getKey().getData(), 0, ms.getKey().getLength());
         //load the raw value. Re-use the existing rawValue buffer
-        if(rawValue == null)
+        if (rawValue == null)
           rawValue = ms.in.createValueBytes();
         int valLength = ms.nextRawValue(rawValue);
 

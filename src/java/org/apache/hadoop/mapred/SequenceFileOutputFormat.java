@@ -38,7 +38,7 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
 
   public RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
                                       String name, Progressable progress)
-                                      throws IOException {
+    throws IOException {
 
     Path file = new Path(job.getOutputPath(), name);
     FileSystem fs = file.getFileSystem(job);
@@ -51,15 +51,15 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
       // find the right codec
       Class codecClass = getOutputCompressorClass(job, DefaultCodec.class);
       codec = (CompressionCodec) 
-                 ReflectionUtils.newInstance(codecClass, job);
+        ReflectionUtils.newInstance(codecClass, job);
     }
     final SequenceFile.Writer out = 
       SequenceFile.createWriter(fs, job, file,
-                              job.getOutputKeyClass(),
-                              job.getOutputValueClass(),
-                              compressionType,
-                              codec,
-                              progress);
+                                job.getOutputKeyClass(),
+                                job.getOutputValueClass(),
+                                compressionType,
+                                codec,
+                                progress);
 
     return new RecordWriter() {
 

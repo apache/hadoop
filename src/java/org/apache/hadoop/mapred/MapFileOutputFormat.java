@@ -36,7 +36,7 @@ public class MapFileOutputFormat extends OutputFormatBase {
 
   public RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
                                       String name, Progressable progress)
-                                      throws IOException {
+    throws IOException {
 
     Path file = new Path(job.getOutputPath(), name);
 

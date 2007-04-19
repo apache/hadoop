@@ -34,20 +34,20 @@ public class NodeBase implements Node {
   protected Node parent; //its parent
   
   /** Default constructor */
-  public NodeBase( ) {
+  public NodeBase() {
   }
   
   /** Construct a node from its path
    * @param path 
    *   a concatenation of this node's location, the path seperator, and its name 
    */
-  public NodeBase( String path ) {
+  public NodeBase(String path) {
     path = normalize(path);
-    int index = path.lastIndexOf( PATH_SEPARATOR );
-    if( index== -1 ) {
-      set( ROOT, path );
+    int index = path.lastIndexOf(PATH_SEPARATOR);
+    if (index== -1) {
+      set(ROOT, path);
     } else {
-      set( path.substring(index+1), path.substring(0, index) );
+      set(path.substring(index+1), path.substring(0, index));
     }
   }
   
@@ -55,7 +55,7 @@ public class NodeBase implements Node {
    * @param name this node's name 
    * @param location this node's location 
    */
-  public NodeBase( String name, String location ) {
+  public NodeBase(String name, String location) {
     set(name, normalize(location));
   }
   
@@ -65,15 +65,15 @@ public class NodeBase implements Node {
    * @param parent this node's parent node
    * @param level this node's level in the tree
    */
-  public NodeBase( String name, String location, Node parent, int level ) {
+  public NodeBase(String name, String location, Node parent, int level) {
     set(name, normalize(location));
     this.parent = parent;
     this.level = level;
   }
 
   /* set this node's name and location */
-  private void set( String name, String location ) {
-    if(name != null && name.contains(PATH_SEPARATOR_STR))
+  private void set(String name, String location) {
+    if (name != null && name.contains(PATH_SEPARATOR_STR))
       throw new IllegalArgumentException(
                                          "Network location name contains /: "+name);
     this.name = (name==null)?"":name;
@@ -98,16 +98,16 @@ public class NodeBase implements Node {
 
   /** Normalize a path */
   static public String normalize(String path) {
-    if( path == null || path.length() == 0 ) return ROOT;
+    if (path == null || path.length() == 0) return ROOT;
     
-    if( path.charAt(0) != PATH_SEPARATOR ) {
-      throw new IllegalArgumentException( 
+    if (path.charAt(0) != PATH_SEPARATOR) {
+      throw new IllegalArgumentException(
                                          "Network Location path does not start with "
                                          +PATH_SEPARATOR_STR+ ": "+path);
     }
     
     int len = path.length();
-    if(path.charAt(len-1) == PATH_SEPARATOR) {
+    if (path.charAt(len-1) == PATH_SEPARATOR) {
       return path.substring(0, len-1);
     }
     return path;

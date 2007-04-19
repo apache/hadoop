@@ -81,7 +81,7 @@ public class DFSCIOTest extends TestCase {
   private static Path HDFS_TEST_DIR = new Path("/tmp/DFSCIOTest");
   private static String HDFS_LIB_VERSION = System.getProperty("libhdfs.version", "1");
   private static String CHMOD = new String("chmod");
-  private static Path HDFS_SHLIB = new Path(HDFS_TEST_DIR + "/libhdfs.so." + HDFS_LIB_VERSION );
+  private static Path HDFS_SHLIB = new Path(HDFS_TEST_DIR + "/libhdfs.so." + HDFS_LIB_VERSION);
   private static Path HDFS_READ = new Path(HDFS_TEST_DIR + "/hdfs_read");
   private static Path HDFS_WRITE = new Path(HDFS_TEST_DIR + "/hdfs_write");
 
@@ -120,7 +120,7 @@ public class DFSCIOTest extends TestCase {
 
     fs.delete(CONTROL_DIR);
 
-    for( int i=0; i < nrFiles; i++ ) {
+    for(int i=0; i < nrFiles; i++) {
       String name = getFileName(i);
       Path controlFile = new Path(CONTROL_DIR, "in_file_" + name);
       SequenceFile.Writer writer = null;
@@ -132,7 +132,7 @@ public class DFSCIOTest extends TestCase {
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());
       } finally {
-    	if( writer != null )
+    	if (writer != null)
           writer.close();
     	writer = null;
       }
@@ -140,7 +140,7 @@ public class DFSCIOTest extends TestCase {
     LOG.info("created control files for: "+nrFiles+" files");
   }
 
-  private static String getFileName( int fIdx ) {
+  private static String getFileName(int fIdx) {
     return BASE_FILE_NAME + Integer.toString(fIdx);
   }
   
@@ -164,12 +164,12 @@ public class DFSCIOTest extends TestCase {
     void collectStats(OutputCollector output, 
                       String name,
                       long execTime, 
-                      Object objSize ) throws IOException {
+                      Object objSize) throws IOException {
       long totalSize = ((Long)objSize).longValue();
       float ioRateMbSec = (float)totalSize * 1000 / (execTime * MEGA);
-      LOG.info("Number of bytes processed = " + totalSize );
-      LOG.info("Exec time = " + execTime );
-      LOG.info("IO rate = " + ioRateMbSec );
+      LOG.info("Number of bytes processed = " + totalSize);
+      LOG.info("Exec time = " + execTime);
+      LOG.info("IO rate = " + ioRateMbSec);
       
       output.collect(new UTF8("l:tasks"), new UTF8(String.valueOf(1)));
       output.collect(new UTF8("l:size"), new UTF8(String.valueOf(totalSize)));
@@ -186,14 +186,14 @@ public class DFSCIOTest extends TestCase {
 
     public WriteMapper() { 
       super(); 
-      for( int i=0; i < bufferSize; i++ )
+      for(int i=0; i < bufferSize; i++)
         buffer[i] = (byte)('0' + i % 50);
     }
 
-    public Object doIO( Reporter reporter, 
-                        String name, 
-                        long totalSize 
-                        ) throws IOException {
+    public Object doIO(Reporter reporter, 
+                       String name, 
+                       long totalSize 
+                       ) throws IOException {
       // create file
       totalSize *= MEGA;
       
@@ -261,13 +261,13 @@ public class DFSCIOTest extends TestCase {
     fs.delete(DATA_DIR);
     fs.delete(WRITE_DIR);
     
-    runIOTest( WriteMapper.class, WRITE_DIR );
+    runIOTest(WriteMapper.class, WRITE_DIR);
   }
   
-  private static void runIOTest(  Class mapperClass, 
-                                  Path outputDir
-                                  ) throws IOException {
-    JobConf job = new JobConf( fsConfig, DFSCIOTest.class );
+  private static void runIOTest( Class mapperClass, 
+                                 Path outputDir
+                                 ) throws IOException {
+    JobConf job = new JobConf(fsConfig, DFSCIOTest.class);
 
     job.setInputPath(CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
@@ -293,10 +293,10 @@ public class DFSCIOTest extends TestCase {
       super(); 
     }
 
-    public Object doIO( Reporter reporter, 
-                        String name, 
-                        long totalSize 
-                        ) throws IOException {
+    public Object doIO(Reporter reporter, 
+                       String name, 
+                       long totalSize 
+                       ) throws IOException {
       totalSize *= MEGA;
       
       // create instance of local filesystem 
@@ -324,7 +324,7 @@ public class DFSCIOTest extends TestCase {
             Process process = runTime.exec(chmodCmd);
             int exitStatus = process.waitFor();
             if (exitStatus != 0) {
-              throw new IOException( chmodCmd + ": Failed with exitStatus: " + exitStatus );
+              throw new IOException(chmodCmd + ": Failed with exitStatus: " + exitStatus);
             }
           }
         }
@@ -366,7 +366,7 @@ public class DFSCIOTest extends TestCase {
 
   private static void readTest(FileSystem fs) throws IOException {
     fs.delete(READ_DIR);
-    runIOTest( ReadMapper.class, READ_DIR );
+    runIOTest(ReadMapper.class, READ_DIR);
   }
 
   private static void sequentialTest(
@@ -376,16 +376,16 @@ public class DFSCIOTest extends TestCase {
                                      int nrFiles
                                      ) throws Exception {
     IOStatMapper ioer = null;
-    if( testType == TEST_TYPE_READ )
+    if (testType == TEST_TYPE_READ)
       ioer = new ReadMapper();
-    else if( testType == TEST_TYPE_WRITE )
+    else if (testType == TEST_TYPE_WRITE)
       ioer = new WriteMapper();
     else
       return;
-    for( int i=0; i < nrFiles; i++)
+    for(int i=0; i < nrFiles; i++)
       ioer.doIO(Reporter.NULL,
                 BASE_FILE_NAME+Integer.toString(i), 
-                MEGA*fileSize );
+                MEGA*fileSize);
   }
 
   public static void main(String[] args) {
@@ -447,45 +447,45 @@ public class DFSCIOTest extends TestCase {
         fs.copyFromLocalFile(new Path(hadoopHome + "/libhdfs/hdfs_write"), HDFS_WRITE);
       }
 
-      if( isSequential ) {
+      if (isSequential) {
         long tStart = System.currentTimeMillis();
-        sequentialTest( fs, testType, fileSize, nrFiles );
+        sequentialTest(fs, testType, fileSize, nrFiles);
         long execTime = System.currentTimeMillis() - tStart;
         String resultLine = "Seq Test exec time sec: " + (float)execTime / 1000;
-        LOG.info( resultLine );
+        LOG.info(resultLine);
         return;
       }
-      if( testType == TEST_TYPE_CLEANUP ) {
-        cleanup( fs );
+      if (testType == TEST_TYPE_CLEANUP) {
+        cleanup(fs);
         return;
       }
       createControlFile(fs, fileSize, nrFiles);
       long tStart = System.currentTimeMillis();
-      if( testType == TEST_TYPE_WRITE )
+      if (testType == TEST_TYPE_WRITE)
         writeTest(fs);
-      if( testType == TEST_TYPE_READ )
+      if (testType == TEST_TYPE_READ)
         readTest(fs);
       long execTime = System.currentTimeMillis() - tStart;
     
-      analyzeResult( fs, testType, execTime, resFileName );
-    } catch( Exception e ) {
-      System.err.print( e.getLocalizedMessage());
+      analyzeResult(fs, testType, execTime, resFileName);
+    } catch(Exception e) {
+      System.err.print(e.getLocalizedMessage());
       System.exit(-1);
     }
   }
   
-  private static void analyzeResult(  FileSystem fs, 
-                                      int testType,
-                                      long execTime,
-                                      String resFileName
-                                      ) throws IOException {
+  private static void analyzeResult( FileSystem fs, 
+                                     int testType,
+                                     long execTime,
+                                     String resFileName
+                                     ) throws IOException {
     Path reduceFile;
-    if( testType == TEST_TYPE_WRITE )
-      reduceFile = new Path( WRITE_DIR, "part-00000" );
+    if (testType == TEST_TYPE_WRITE)
+      reduceFile = new Path(WRITE_DIR, "part-00000");
     else
-      reduceFile = new Path( READ_DIR, "part-00000" );
+      reduceFile = new Path(READ_DIR, "part-00000");
     DataInputStream in;
-    in = new DataInputStream(fs.open( reduceFile ));
+    in = new DataInputStream(fs.open(reduceFile));
   
     BufferedReader lines;
     lines = new BufferedReader(new InputStreamReader(in));
@@ -495,23 +495,23 @@ public class DFSCIOTest extends TestCase {
     float rate = 0;
     float sqrate = 0;
     String line;
-    while( (line = lines.readLine()) != null ) {
+    while((line = lines.readLine()) != null) {
       StringTokenizer tokens = new StringTokenizer(line, " \t\n\r\f%");
       String attr = tokens.nextToken(); 
-      if( attr.endsWith(":tasks") )
-        tasks = Long.parseLong( tokens.nextToken() );
-      else if( attr.endsWith(":size") )
-        size = Long.parseLong( tokens.	nextToken() );
-      else if( attr.endsWith(":time") )
-        time = Long.parseLong( tokens.nextToken() );
-      else if( attr.endsWith(":rate") )
-        rate = Float.parseFloat( tokens.nextToken() );
-      else if( attr.endsWith(":sqrate") )
-        sqrate = Float.parseFloat( tokens.nextToken() );
+      if (attr.endsWith(":tasks"))
+        tasks = Long.parseLong(tokens.nextToken());
+      else if (attr.endsWith(":size"))
+        size = Long.parseLong(tokens.	nextToken());
+      else if (attr.endsWith(":time"))
+        time = Long.parseLong(tokens.nextToken());
+      else if (attr.endsWith(":rate"))
+        rate = Float.parseFloat(tokens.nextToken());
+      else if (attr.endsWith(":sqrate"))
+        sqrate = Float.parseFloat(tokens.nextToken());
     }
     
     double med = rate / 1000 / tasks;
-    double stdDev = Math.sqrt( Math.abs(sqrate / 1000 / tasks - med*med ));
+    double stdDev = Math.sqrt(Math.abs(sqrate / 1000 / tasks - med*med));
     String resultLines[] = {
       "----- DFSCIOTest ----- : " + ((testType == TEST_TYPE_WRITE) ? "write" :
                                      (testType == TEST_TYPE_READ) ? "read" : 
@@ -525,17 +525,17 @@ public class DFSCIOTest extends TestCase {
       "    Test exec time sec: " + (float)execTime / 1000,
       "" };
 
-    PrintStream res = new PrintStream( 
-                                      new FileOutputStream( 
-                                                           new File(resFileName), true )); 
-    for( int i = 0; i < resultLines.length; i++ ) {
-      LOG.info( resultLines[i] );
-      res.println( resultLines[i] );
+    PrintStream res = new PrintStream(
+                                      new FileOutputStream(
+                                                           new File(resFileName), true)); 
+    for(int i = 0; i < resultLines.length; i++) {
+      LOG.info(resultLines[i]);
+      res.println(resultLines[i]);
     }
   }
 
-  private static void cleanup( FileSystem fs ) throws Exception {
-    LOG.info( "Cleaning up test files" );
+  private static void cleanup(FileSystem fs) throws Exception {
+    LOG.info("Cleaning up test files");
     fs.delete(new Path(TEST_ROOT_DIR));
     fs.delete(HDFS_TEST_DIR);
   }

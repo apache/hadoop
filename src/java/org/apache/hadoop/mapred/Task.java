@@ -56,9 +56,9 @@ abstract class Task implements Writable, Configurable {
   private String jobFile;                         // job configuration file
   private String taskId;                          // unique, includes job id
   private String jobId;                           // unique jobid
-  private String tipId ;
+  private String tipId;
   private int partition;                          // id within job
-  private TaskStatus.Phase phase ;                // current phase of the task 
+  private TaskStatus.Phase phase;                 // current phase of the task 
   
 
   ////////////////////////////////////////////
@@ -82,7 +82,7 @@ abstract class Task implements Writable, Configurable {
   public void setJobFile(String jobFile) { this.jobFile = jobFile; }
   public String getJobFile() { return jobFile; }
   public String getTaskId() { return taskId; }
-  public String getTipId(){ return tipId ; }
+  public String getTipId(){ return tipId; }
   public Counters getCounters() { return counters; }
   
   /**
@@ -105,14 +105,14 @@ abstract class Task implements Writable, Configurable {
    * @return
    */
   public TaskStatus.Phase getPhase(){
-    return this.phase ; 
+    return this.phase; 
   }
   /**
    * Set current phase of the task. 
    * @param p
    */
   protected void setPhase(TaskStatus.Phase p){
-    this.phase = p ; 
+    this.phase = p; 
   }
 
   ////////////////////////////////////////////
@@ -142,7 +142,7 @@ abstract class Task implements Writable, Configurable {
   public void localizeConfiguration(JobConf conf) throws IOException {
     conf.set("mapred.tip.id", tipId); 
     conf.set("mapred.task.id", taskId);
-    conf.setBoolean("mapred.task.is.map",isMapTask());
+    conf.setBoolean("mapred.task.is.map", isMapTask());
     conf.setInt("mapred.task.partition", partition);
     conf.set("mapred.job.id", jobId);
   }

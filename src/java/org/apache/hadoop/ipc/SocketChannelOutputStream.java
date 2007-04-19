@@ -85,7 +85,7 @@ class SocketChannelOutputStream extends OutputStream {
    */
   public void write(byte[] buf, int offset, int length) throws IOException
   {
-    flush = ByteBuffer.wrap(buf,offset,length);
+    flush = ByteBuffer.wrap(buf, offset, length);
     flushBuffer();
   }
 

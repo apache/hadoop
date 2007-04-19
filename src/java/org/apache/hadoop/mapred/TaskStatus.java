@@ -45,12 +45,12 @@ class TaskStatus implements Writable {
   private String stateString;
   private String taskTracker;
     
-  private long startTime ; 
-  private long finishTime ; 
+  private long startTime; 
+  private long finishTime; 
     
   // only for reduce tasks
-  private long shuffleFinishTime ; 
-  private long sortFinishTime ; 
+  private long shuffleFinishTime; 
+  private long sortFinishTime; 
     
   private Phase phase = Phase.STARTING; 
   private Counters counters;
@@ -68,7 +68,7 @@ class TaskStatus implements Writable {
     this.diagnosticInfo = diagnosticInfo;
     this.stateString = stateString;
     this.taskTracker = taskTracker;
-    this.phase = phase ;
+    this.phase = phase;
     this.counters = counters;
   }
     
@@ -101,11 +101,11 @@ class TaskStatus implements Writable {
    * @param finishTime finish time of task.
    */
   void setFinishTime(long finishTime) {
-    if( shuffleFinishTime == 0 ) {
-      this.shuffleFinishTime = finishTime ; 
+    if (shuffleFinishTime == 0) {
+      this.shuffleFinishTime = finishTime; 
     }
-    if( sortFinishTime == 0 ){
-      this.sortFinishTime = finishTime ;
+    if (sortFinishTime == 0){
+      this.sortFinishTime = finishTime;
     }
     this.finishTime = finishTime;
   }
@@ -147,8 +147,8 @@ class TaskStatus implements Writable {
    */
   void setSortFinishTime(long sortFinishTime) {
     this.sortFinishTime = sortFinishTime;
-    if( 0 == this.shuffleFinishTime){
-      this.shuffleFinishTime = sortFinishTime ;
+    if (0 == this.shuffleFinishTime){
+      this.shuffleFinishTime = sortFinishTime;
     }
   }
 
@@ -180,7 +180,7 @@ class TaskStatus implements Writable {
    * @param p
    */
   void setPhase(Phase p){
-    this.phase = p ; 
+    this.phase = p; 
   }
   /**
    * Get task's counters.
@@ -209,7 +209,7 @@ class TaskStatus implements Writable {
     WritableUtils.writeEnum(out, phase);
     out.writeLong(startTime);
     out.writeLong(finishTime);
-    if(! isMap){
+    if (!isMap){
       out.writeLong(shuffleFinishTime);
       out.writeLong(sortFinishTime);
     }
@@ -225,8 +225,8 @@ class TaskStatus implements Writable {
     this.stateString = UTF8.readString(in);
     this.phase = WritableUtils.readEnum(in, Phase.class); 
     this.startTime = in.readLong(); 
-    this.finishTime = in.readLong() ; 
-    if( ! this.isMap ){
+    this.finishTime = in.readLong(); 
+    if (!this.isMap){
       shuffleFinishTime = in.readLong(); 
       sortFinishTime = in.readLong(); 
     }

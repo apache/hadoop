@@ -64,7 +64,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       setConf(conf);
       String host = uri.getHost();
       int port = uri.getPort();
-      this.dfs = new DFSClient(new InetSocketAddress(host,port), conf);
+      this.dfs = new DFSClient(new InetSocketAddress(host, port), conf);
       this.uri = URI.create("hdfs://"+host+":"+port);
       this.localFs = getNamed("file:///", conf);
     }
@@ -122,7 +122,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     }
 
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-      if (! exists(f)) {
+      if (!exists(f)) {
         throw new FileNotFoundException(f.toString());
       }
 
@@ -132,7 +132,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     public FSDataOutputStream create(Path f, boolean overwrite,
                                      int bufferSize, short replication, long blockSize,
                                      Progressable progress) throws IOException {
-      if (exists(f) && ! overwrite) {
+      if (exists(f) && !overwrite) {
         throw new IOException("File already exists:"+f);
       }
       Path parent = f.getParent();
@@ -146,9 +146,9 @@ public class DistributedFileSystem extends ChecksumFileSystem {
                                     bufferSize);
     }
     
-    public boolean setReplication( Path src, 
-                                   short replication
-                                   ) throws IOException {
+    public boolean setReplication(Path src, 
+                                  short replication
+                                  ) throws IOException {
       return dfs.setReplication(getPath(src), replication);
     }
     
@@ -223,7 +223,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
 
     /** @deprecated */ @Deprecated
       public void lock(Path f, boolean shared) throws IOException {
-      dfs.lock(getPath(f), ! shared);
+      dfs.lock(getPath(f), !shared);
     }
 
     /** @deprecated */ @Deprecated
@@ -232,13 +232,13 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     }
 
     @Override
-      public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+    public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
       throws IOException {
       FileUtil.copy(localFs, src, this, dst, delSrc, getConf());
     }
 
     @Override
-      public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
       throws IOException {
       FileUtil.copy(this, src, localFs, dst, delSrc, getConf());
     }
@@ -290,9 +290,9 @@ public class DistributedFileSystem extends ChecksumFileSystem {
      *  
      * @see org.apache.hadoop.dfs.ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
      */
-    public boolean setSafeMode( FSConstants.SafeModeAction action ) 
+    public boolean setSafeMode(FSConstants.SafeModeAction action) 
       throws IOException {
-      return dfs.setSafeMode( action );
+      return dfs.setSafeMode(action);
     }
 
     /*
@@ -368,17 +368,17 @@ public class DistributedFileSystem extends ChecksumFileSystem {
   }
 
   public DistributedFileSystem() {
-    super( new RawDistributedFileSystem() );
+    super(new RawDistributedFileSystem());
   }
 
   /** @deprecated */
   public DistributedFileSystem(InetSocketAddress namenode,
                                Configuration conf) throws IOException {
-    super( new RawDistributedFileSystem(namenode, conf) );
+    super(new RawDistributedFileSystem(namenode, conf));
   }
 
   @Override
-    public long getContentLength(Path f) throws IOException {
+  public long getContentLength(Path f) throws IOException {
     return fs.getContentLength(f);
   }
 
@@ -404,9 +404,9 @@ public class DistributedFileSystem extends ChecksumFileSystem {
    *  
    * @see org.apache.hadoop.dfs.ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
    */
-  public boolean setSafeMode( FSConstants.SafeModeAction action ) 
+  public boolean setSafeMode(FSConstants.SafeModeAction action) 
     throws IOException {
-    return ((RawDistributedFileSystem)fs).setSafeMode( action );
+    return ((RawDistributedFileSystem)fs).setSafeMode(action);
   }
 
   /*

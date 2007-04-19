@@ -60,7 +60,7 @@ public class RawLocalFileSystem extends FileSystem {
    * Return null if otherwise.
    */
   public String[][] getFileCacheHints(Path f, long start, long len) throws IOException {
-    if (! exists(f)) {
+    if (!exists(f)) {
       return null;
     } else {
       String result[][] = new String[1][];
@@ -183,7 +183,7 @@ public class RawLocalFileSystem extends FileSystem {
   public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
                                    short replication, long blockSize, Progressable progress)
     throws IOException {
-    if (exists(f) && ! overwrite) {
+    if (exists(f) && !overwrite) {
       throw new IOException("File already exists:"+f);
     }
     Path parent = f.getParent();
@@ -201,9 +201,9 @@ public class RawLocalFileSystem extends FileSystem {
   }
   
   /** Set the replication of the given file */
-  public boolean setReplication( Path src,
-                                 short replication
-                                 ) throws IOException {
+  public boolean setReplication(Path src,
+                                short replication
+                                ) throws IOException {
     return true;
   }
   
@@ -236,9 +236,9 @@ public class RawLocalFileSystem extends FileSystem {
     File localf = pathToFile(f);
     Path[] results;
     
-    if(!localf.exists())
+    if (!localf.exists())
       return null;
-    else if(localf.isFile()) {
+    else if (localf.isFile()) {
       results = new Path[1];
       results[0] = f;
       return results;
@@ -270,12 +270,12 @@ public class RawLocalFileSystem extends FileSystem {
    * Set the working directory to the given directory.
    */
   @Override
-    public void setWorkingDirectory(Path newDir) {
+  public void setWorkingDirectory(Path newDir) {
     workingDir = newDir;
   }
   
   @Override
-    public Path getWorkingDirectory() {
+  public Path getWorkingDirectory() {
     return workingDir;
   }
   
@@ -337,13 +337,13 @@ public class RawLocalFileSystem extends FileSystem {
   }
   
   @Override
-    public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+  public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     FileUtil.copy(this, src, this, dst, delSrc, getConf());
   }
   
   @Override
-    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+  public void copyToLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     FileUtil.copy(this, src, this, dst, delSrc, getConf());
   }

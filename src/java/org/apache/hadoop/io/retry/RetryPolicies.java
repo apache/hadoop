@@ -88,7 +88,7 @@ public class RetryPolicies {
    * </p>
    */
   public static final RetryPolicy retryByException(RetryPolicy defaultPolicy,
-        Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap) {
+                                                   Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap) {
     return new ExceptionDependentRetry(defaultPolicy, exceptionToPolicyMap);
   }
   
@@ -169,7 +169,7 @@ public class RetryPolicies {
     Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap;
     
     public ExceptionDependentRetry(RetryPolicy defaultPolicy,
-        Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap) {
+                                   Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap) {
       this.defaultPolicy = defaultPolicy;
       this.exceptionToPolicyMap = exceptionToPolicyMap;
     }

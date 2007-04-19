@@ -29,19 +29,19 @@ import org.apache.hadoop.util.StringUtils;
  */
 class InconsistentFSStateException extends IOException {
 
-  public InconsistentFSStateException( File dir, String descr ) {
-    super( "Directory " + getFilePath( dir )
-           + " is in an inconsistent state: " + descr );
+  public InconsistentFSStateException(File dir, String descr) {
+    super("Directory " + getFilePath(dir)
+          + " is in an inconsistent state: " + descr);
   }
 
-  public InconsistentFSStateException( File dir, String descr, Throwable ex ) {
-    this( dir, descr + "\n" + StringUtils.stringifyException(ex) );
+  public InconsistentFSStateException(File dir, String descr, Throwable ex) {
+    this(dir, descr + "\n" + StringUtils.stringifyException(ex));
   }
   
-  private static String getFilePath( File dir ) {
+  private static String getFilePath(File dir) {
     try {
       return dir.getCanonicalPath();
-    } catch( IOException e ) {}
+    } catch(IOException e) {}
     return dir.getPath();
   }
 }

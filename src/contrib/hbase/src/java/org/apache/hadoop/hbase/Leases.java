@@ -77,7 +77,7 @@ public class Leases {
       synchronized(sortedLeases) {
         Lease lease = new Lease(holderId, resourceId, listener);
         Text leaseId = lease.getLeaseId();
-        if(leases.get(leaseId) != null) {
+        if (leases.get(leaseId) != null) {
           throw new IOException("Impossible state for createLease(): Lease for holderId " + holderId + " and resourceId " + resourceId + " is still held.");
         }
         leases.put(leaseId, lease);
@@ -92,7 +92,7 @@ public class Leases {
       synchronized(sortedLeases) {
         Text leaseId = createLeaseId(holderId, resourceId);
         Lease lease = leases.get(leaseId);
-        if(lease == null) {
+        if (lease == null) {
           
           // It's possible that someone tries to renew the lease, but 
           // it just expired a moment ago.  So fail.
@@ -113,7 +113,7 @@ public class Leases {
       synchronized(sortedLeases) {
         Text leaseId = createLeaseId(holderId, resourceId);
         Lease lease = leases.get(leaseId);
-        if(lease == null) {
+        if (lease == null) {
           
           // It's possible that someone tries to renew the lease, but 
           // it just expired a moment ago.  So fail.
@@ -139,7 +139,7 @@ public class Leases {
             while((sortedLeases.size() > 0)
                   && ((top = sortedLeases.first()) != null)) {
               
-              if(top.shouldExpire()) {
+              if (top.shouldExpire()) {
                 leases.remove(top.getLeaseId());
                 sortedLeases.remove(top);
 
@@ -205,10 +205,10 @@ public class Leases {
 
     public int compareTo(Object o) {
       Lease other = (Lease) o;
-      if(this.lastUpdate < other.lastUpdate) {
+      if (this.lastUpdate < other.lastUpdate) {
         return -1;
         
-      } else if(this.lastUpdate > other.lastUpdate) {
+      } else if (this.lastUpdate > other.lastUpdate) {
         return 1;
         
       } else {

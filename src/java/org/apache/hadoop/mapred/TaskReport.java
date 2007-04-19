@@ -31,7 +31,7 @@ public class TaskReport implements Writable {
   private float progress;
   private String state;
   private String[] diagnostics;
-  private long startTime ; 
+  private long startTime; 
   private long finishTime; 
   private Counters counters;
 
@@ -44,8 +44,8 @@ public class TaskReport implements Writable {
     this.progress = progress;
     this.state = state;
     this.diagnostics = diagnostics;
-    this.startTime = startTime ; 
-    this.finishTime = finishTime ;
+    this.startTime = startTime; 
+    this.finishTime = finishTime;
     this.counters = counters;
   }
     
@@ -108,7 +108,7 @@ public class TaskReport implements Writable {
     this.progress = in.readFloat();
     this.state = Text.readString(in);
     this.startTime = in.readLong(); 
-    this.finishTime = in.readLong() ;
+    this.finishTime = in.readLong();
     
     diagnostics = WritableUtils.readStringArray(in);
     counters = new Counters();

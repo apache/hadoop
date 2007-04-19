@@ -68,7 +68,7 @@ public class TrApp
   void expect(String evName, String evVal) throws IOException
   {
     String got = env.getProperty(evName);
-    if(! evVal.equals(got)) {
+    if (!evVal.equals(got)) {
       String msg = "FAIL evName=" + evName + " got=" + got + " expect=" + evVal;
       throw new IOException(msg);
     }
@@ -77,7 +77,7 @@ public class TrApp
   void expectDefined(String evName) throws IOException
   {
     String got = env.getProperty(evName);
-    if(got == null) {
+    if (got == null) {
       String msg = "FAIL evName=" + evName + " is undefined. Expect defined.";
       throw new IOException(msg);
     }
@@ -105,7 +105,7 @@ public class TrApp
 
   public static String CUnescape(String s)
   {
-    if(s.equals("\\n")) {
+    if (s.equals("\\n")) {
       return "\n";
     } else {
       return s;

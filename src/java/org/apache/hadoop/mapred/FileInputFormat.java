@@ -42,11 +42,11 @@ public abstract class FileInputFormat implements InputFormat {
 
   private long minSplitSize = 1;
   private static final PathFilter hiddenFileFilter = new PathFilter(){
-    public boolean accept( Path p ){
-      String name = p.getName(); 
-      return !name.startsWith("_") && !name.startsWith("."); 
-    }
-  }; 
+      public boolean accept(Path p){
+        String name = p.getName(); 
+        return !name.startsWith("_") && !name.startsWith("."); 
+      }
+    }; 
   protected void setMinSplitSize(long minSplitSize) {
     this.minSplitSize = minSplitSize;
   }
@@ -85,7 +85,7 @@ public abstract class FileInputFormat implements InputFormat {
     for (Path p: dirs) {
       FileSystem fs = p.getFileSystem(job); 
       Path[] matches =
-        fs.listPaths(fs.globPaths(p, hiddenFileFilter),hiddenFileFilter);
+        fs.listPaths(fs.globPaths(p, hiddenFileFilter), hiddenFileFilter);
       for (Path match: matches) {
         result.add(fs.makeQualified(match));
       }
@@ -111,7 +111,7 @@ public abstract class FileInputFormat implements InputFormat {
           FileSystem subFS = subPath.getFileSystem(job); 
           if (!subFS.exists(subPath)) {
             result.add(new IOException(
-                "Input path does not exist: " + subPath)); 
+                                       "Input path does not exist: " + subPath)); 
           } else {
             totalFiles++; 
           }
@@ -120,18 +120,18 @@ public abstract class FileInputFormat implements InputFormat {
         Path [] paths = fs.globPaths(p, hiddenFileFilter); 
         if (paths.length == 0) {
           result.add(
-            new IOException("Input Pattern " + p + " matches 0 files")); 
+                     new IOException("Input Pattern " + p + " matches 0 files")); 
         } else {
           // validate globbed paths 
           for (Path gPath : paths) {
             FileSystem gPathFS = gPath.getFileSystem(job); 
             if (!gPathFS.exists(gPath)) {
               result.add(
-                new FileNotFoundException(
-                    "Input path doesnt exist : " + gPath)); 
+                         new FileNotFoundException(
+                                                   "Input path doesnt exist : " + gPath)); 
             }
           }
-          totalFiles += paths.length ; 
+          totalFiles += paths.length; 
         }
       }
     }
@@ -188,7 +188,7 @@ public abstract class FileInputFormat implements InputFormat {
         }
       }
     }
-    LOG.debug( "Total # of splits: " + splits.size() );
+    LOG.debug("Total # of splits: " + splits.size());
     return splits.toArray(new FileSplit[splits.size()]);
   }
 

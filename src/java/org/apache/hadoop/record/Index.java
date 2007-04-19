@@ -34,6 +34,6 @@ package org.apache.hadoop.record;
  * @author Milind Bhandarkar
  */
 public interface Index {
-    boolean done();
-    void incr();
+  boolean done();
+  void incr();
 }

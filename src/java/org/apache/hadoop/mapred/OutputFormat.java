@@ -35,7 +35,7 @@ public interface OutputFormat {
    * @return a {@link RecordWriter}
    */
   RecordWriter getRecordWriter(FileSystem ignored, JobConf job, String name,
-          Progressable progress)
+                               Progressable progress)
     throws IOException;
 
   /** Check whether the output specification for a job is appropriate.  Called

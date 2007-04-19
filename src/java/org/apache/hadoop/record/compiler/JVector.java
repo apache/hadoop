@@ -110,7 +110,7 @@ public class JVector extends JCompType {
       cb.append(s+"+="+getId("vz")+"; "+l+"-="+getId("vz")+";\n");
       cb.append("for (int "+getId("vidx")+" = 0; "+getId("vidx")+
                 " < "+getId("vi")+"; "+getId("vidx")+"++)");
-      element.genSlurpBytes(cb, b,s,l);
+      element.genSlurpBytes(cb, b, s, l);
       decrLevel();
       cb.append("}\n");
     }

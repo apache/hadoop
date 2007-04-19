@@ -288,9 +288,9 @@ public class DistributedCache {
     byte[] digest = null;
 
     FileSystem fileSystem = getFileSystem(cache, conf);
-    if(!(fileSystem instanceof ChecksumFileSystem)) {
-      throw new IOException( "Not a checksummed file system: "
-                             +fileSystem.getUri() );
+    if (!(fileSystem instanceof ChecksumFileSystem)) {
+      throw new IOException("Not a checksummed file system: "
+                            +fileSystem.getUri());
     }
     String filename = cache.getPath();
     Path filePath = new Path(filename);
@@ -304,7 +304,7 @@ public class DistributedCache {
     }
     if (!fileSystem.exists(md5File)) {
       ChecksumFileSystem checksumFs;
-      if(!(fileSystem instanceof ChecksumFileSystem)) {
+      if (!(fileSystem instanceof ChecksumFileSystem)) {
         throw new IOException(
                               "Not a checksumed file system: "+fileSystem.getUri());
       } else {

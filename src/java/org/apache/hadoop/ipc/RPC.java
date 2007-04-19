@@ -144,7 +144,7 @@ public class RPC {
    * Stop all RPC client connections
    */
   public static synchronized void stopClient(){
-    if(CLIENT != null)
+    if (CLIENT != null)
       CLIENT.stop();
   }
 
@@ -224,9 +224,9 @@ public class RPC {
     while (true) {
       try {
         return getProxy(protocol, clientVersion, addr, conf);
-      } catch( ConnectException se ) {  // namenode has not been started
+      } catch(ConnectException se) {  // namenode has not been started
         LOG.info("Server at " + addr + " not available yet, Zzzzz...");
-      } catch( SocketTimeoutException te ) {  // namenode is busy
+      } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);
       }
       try {
@@ -241,9 +241,9 @@ public class RPC {
   public static VersionedProtocol getProxy(Class protocol, long clientVersion,
                                            InetSocketAddress addr, Configuration conf) throws IOException {
     VersionedProtocol proxy = (VersionedProtocol) Proxy.newProxyInstance(
-                                  protocol.getClassLoader(),
-                                  new Class[] { protocol },
-                                  new Invoker(addr, conf));
+                                                                         protocol.getClassLoader(),
+                                                                         new Class[] { protocol },
+                                                                         new Invoker(addr, conf));
     long serverVersion = proxy.getProtocolVersion(protocol.getName(), 
                                                   clientVersion);
     if (serverVersion == clientVersion) {
@@ -269,7 +269,7 @@ public class RPC {
     }
 
     Object[] values =
-      (Object[])Array.newInstance(method.getReturnType(),wrappedValues.length);
+      (Object[])Array.newInstance(method.getReturnType(), wrappedValues.length);
     for (int i = 0; i < values.length; i++)
       if (wrappedValues[i] != null)
         values[i] = ((ObjectWritable)wrappedValues[i]).get();
@@ -280,7 +280,7 @@ public class RPC {
   /** Construct a server for a protocol implementation instance listening on a
    * port and address. */
   public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf) 
-  throws IOException {
+    throws IOException {
     return getServer(instance, bindAddress, port, 1, false, conf);
   }
 
@@ -289,8 +289,8 @@ public class RPC {
   public static Server getServer(final Object instance, final String bindAddress, final int port,
                                  final int numHandlers,
                                  final boolean verbose, Configuration conf) 
-  throws IOException {
-    return new Server(instance, conf, bindAddress,port, numHandlers, verbose);
+    throws IOException {
+    return new Server(instance, conf, bindAddress, port, numHandlers, verbose);
   }
 
   /** An RPC Server. */
@@ -306,7 +306,7 @@ public class RPC {
      * @param port the port to listen for connections on
      */
     public Server(Object instance, Configuration conf, String bindAddress, int port) 
-    throws IOException {
+      throws IOException {
       this(instance, conf,  bindAddress, port, 1, false);
     }
 

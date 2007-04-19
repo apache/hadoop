@@ -115,7 +115,7 @@ public class JarBuilder {
     JarEntry entry = null;
     while (entries.hasMoreElements()) {
       entry = (JarEntry) entries.nextElement();
-      //if(entry.getName().startsWith("META-INF/")) continue; 
+      //if (entry.getName().startsWith("META-INF/")) continue; 
       InputStream in = src.getInputStream(entry);
       addNamedStream(dst, entry.getName(), in);
     }

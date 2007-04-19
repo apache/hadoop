@@ -72,11 +72,11 @@ import java.lang.reflect.InvocationTargetException;
  */
 public class ClusterTestDFS extends TestCase implements FSConstants {
   private static final Log LOG =
-      LogFactory.getLog("org.apache.hadoop.dfs.ClusterTestDFS");
+    LogFactory.getLog("org.apache.hadoop.dfs.ClusterTestDFS");
 
   private static Configuration conf = new Configuration();
   private static int BUFFER_SIZE =
-      conf.getInt("io.file.buffer.size", 4096);
+    conf.getInt("io.file.buffer.size", 4096);
 
   private static int testCycleNumber = 0;
 
@@ -99,7 +99,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
    * (array length should be prime).
    */
   private static final int[] FILE_SIZES =
-      {100000, 100001, 4095, 4096, 4097, 1000000, 1000001};
+  {100000, 100001, 4095, 4096, 4097, 1000000, 1000001};
 
   /** DFS file counts to permute over in multiple test cycles
    * (array length should be prime).
@@ -130,10 +130,10 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
     conf.setBoolean("test.dfs.same.host.targets.allowed", true);
   }
 
- /**
-  * Remove old files from temp area used by this test case and be sure
-  * base temp directory can be created.
-  */
+  /**
+   * Remove old files from temp area used by this test case and be sure
+   * base temp directory can be created.
+   */
   protected void prepareTempFileSpace() {
     if (baseDir.exists()) {
       try { // start from a blank slate
@@ -144,7 +144,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
     baseDir.mkdirs();
     if (!baseDir.isDirectory()) {
       throw new RuntimeException("Value of root directory property test.dfs.data for dfs test is not a directory: "
-          + baseDirSpecified);
+                                 + baseDirSpecified);
     }
   }
 
@@ -157,15 +157,15 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
    * @throws Exception
    */
   public void testFsPseudoDistributed()
-      throws Exception {
+    throws Exception {
     while (testCycleNumber < TEST_PERMUTATION_MAX &&
-        testCycleNumber < TEST_PERMUTATION_MAX_CEILING) {
-        int blockSize = BLOCK_SIZES[testCycleNumber % BLOCK_SIZES.length];
-        int numFiles = FILE_COUNTS[testCycleNumber % FILE_COUNTS.length];
-        int fileSize = FILE_SIZES[testCycleNumber % FILE_SIZES.length];
-        prepareTempFileSpace();
-        testFsPseudoDistributed(fileSize, numFiles, blockSize,
-            (testCycleNumber % 2) + 2);
+           testCycleNumber < TEST_PERMUTATION_MAX_CEILING) {
+      int blockSize = BLOCK_SIZES[testCycleNumber % BLOCK_SIZES.length];
+      int numFiles = FILE_COUNTS[testCycleNumber % FILE_COUNTS.length];
+      int fileSize = FILE_SIZES[testCycleNumber % FILE_SIZES.length];
+      prepareTempFileSpace();
+      testFsPseudoDistributed(fileSize, numFiles, blockSize,
+                              (testCycleNumber % 2) + 2);
     }
   }
 
@@ -181,7 +181,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
    */
   public void testFsPseudoDistributed(long nBytes, int numFiles,
                                       int blockSize, int initialDNcount)
-      throws Exception {
+    throws Exception {
     long startTime = System.currentTimeMillis();
     int bufferSize = Math.min(BUFFER_SIZE, blockSize);
     boolean checkDataDirsEmpty = false;
@@ -202,7 +202,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
     conf.setInt("dfs.namenode.handler.count", 3);
     if (false) { //  use MersenneTwister, if present
       conf.set("hadoop.random.class",
-                          "org.apache.hadoop.util.MersenneTwister");
+               "org.apache.hadoop.util.MersenneTwister");
     }
     conf.setLong("dfs.blockreport.intervalMsec", 50*1000L);
     conf.setLong("dfs.datanode.startupMsec", 15*1000L);
@@ -241,7 +241,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
       }
       try {
         assertTrue("insufficient datanodes for test to continue",
-            (listOfDataNodeDaemons.size() >= 2));
+                   (listOfDataNodeDaemons.size() >= 2));
 
         //
         //          wait for datanodes to report in
@@ -290,7 +290,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
         //
         //                     take one datanode down
         iDatanodeClosed =
-            currentTestCycleNumber % listOfDataNodeDaemons.size();
+          currentTestCycleNumber % listOfDataNodeDaemons.size();
         DataNode dn = (DataNode) listOfDataNodeDaemons.get(iDatanodeClosed);
         msg("shutdown datanode daemon " + iDatanodeClosed +
             " dn=" + dn.data);
@@ -434,7 +434,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
       if (randomDataGeneratorCtor == null) {
         // lazy init
         String rndDataGenClassname =
-            conf.get("hadoop.random.class", "java.util.Random");
+          conf.get("hadoop.random.class", "java.util.Random");
         Class clazz = Class.forName(rndDataGenClassname);
         randomDataGeneratorCtor = clazz.getConstructor(new Class[]{Long.TYPE});
       }

@@ -52,10 +52,10 @@ class DFSFileInfo implements Writable {
   /**
    * Create DFSFileInfo by file INode 
    */
-  public DFSFileInfo( FSDirectory.INode node ) {
+  public DFSFileInfo(FSDirectory.INode node) {
     this.path = new UTF8(node.computeName());
     this.isDir = node.isDir();
-    if( isDir ) {
+    if (isDir) {
       this.len = 0;
       this.contentsLen = node.computeContentsLength();
     } else 

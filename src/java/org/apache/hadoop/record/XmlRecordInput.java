@@ -96,7 +96,7 @@ public class XmlRecordInput implements RecordInput {
       throws SAXException {
       if (charsValid) {
         Value v = valList.get(valList.size()-1);
-        v.addChars(buf, offset,len);
+        v.addChars(buf, offset, len);
       }
     }
         

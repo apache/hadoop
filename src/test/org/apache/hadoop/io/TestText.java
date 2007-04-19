@@ -44,11 +44,11 @@ public class TestText extends TestCase {
     while (buffer.length()<length) {
       int codePoint = RANDOM.nextInt(Character.MAX_CODE_POINT);
       char tmpStr[] = new char[2];
-      if(Character.isDefined(codePoint)) {
+      if (Character.isDefined(codePoint)) {
         //unpaired surrogate
-        if(codePoint < Character.MIN_SUPPLEMENTARY_CODE_POINT &&
-           !Character.isHighSurrogate((char)codePoint) &&
-           !Character.isLowSurrogate((char)codePoint) ) {
+        if (codePoint < Character.MIN_SUPPLEMENTARY_CODE_POINT &&
+            !Character.isHighSurrogate((char)codePoint) &&
+            !Character.isLowSurrogate((char)codePoint)) {
           Character.toChars(codePoint, tmpStr, 0);
           buffer.append(tmpStr);
         }
@@ -74,7 +74,7 @@ public class TestText extends TestCase {
   public void testWritable() throws Exception {
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       String str;
-      if(i == 0 )
+      if (i == 0)
         str = getLongString();
       else
         str = getTestString();
@@ -91,7 +91,7 @@ public class TestText extends TestCase {
 
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       // generate a random string
-      if(i == 0 )
+      if (i == 0)
         before = getLongString();
       else
         before = getTestString();
@@ -119,7 +119,7 @@ public class TestText extends TestCase {
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       // generate a random string
       String before;          
-      if(i == 0 )
+      if (i == 0)
         before = getLongString();
       else
         before = getTestString();
@@ -146,7 +146,7 @@ public class TestText extends TestCase {
     DataOutputBuffer out2 = new DataOutputBuffer();
     DataOutputBuffer out3 = new DataOutputBuffer();
     Text.Comparator comparator = new Text.Comparator();
-    for (int i=0; i<NUM_ITERATIONS; i++ ) {
+    for (int i=0; i<NUM_ITERATIONS; i++) {
       // reset output buffer
       out1.reset();
       out2.reset();
@@ -155,7 +155,7 @@ public class TestText extends TestCase {
       // generate two random strings
       String str1 = getTestString();
       String str2 = getTestString();
-      if(i == 0 ) {
+      if (i == 0) {
         str1 = getLongString();
         str2 = getLongString();
       } else {
@@ -207,7 +207,7 @@ public class TestText extends TestCase {
     Text a=new Text("abc");
     Text b=new Text("a");
     b.set(a);
-    assertEquals("abc",b.toString());
+    assertEquals("abc", b.toString());
   }
 
   public static void main(String[] args)  throws Exception

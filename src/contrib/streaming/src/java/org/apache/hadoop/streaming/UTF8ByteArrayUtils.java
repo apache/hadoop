@@ -39,7 +39,7 @@ public class UTF8ByteArrayUtils {
    */
   public static int findTab(byte [] utf, int start, int length) {
     for(int i=start; i<(start+length); i++) {
-      if(utf[i]==(byte)'\t') {
+      if (utf[i]==(byte)'\t') {
         return i;
       }
     }
@@ -68,9 +68,9 @@ public class UTF8ByteArrayUtils {
    */
   public static void splitKeyVal(byte[] utf, int start, int length, 
                                  Text key, Text val, int splitPos) throws IOException {
-    if(splitPos<start || splitPos >= (start+length))
-      throw new IllegalArgumentException( "splitPos must be in the range " +
-                                          "[" + start + ", " + (start+length) + "]: " + splitPos);
+    if (splitPos<start || splitPos >= (start+length))
+      throw new IllegalArgumentException("splitPos must be in the range " +
+                                         "[" + start + ", " + (start+length) + "]: " + splitPos);
     int keyLen = (splitPos-start);
     byte [] keyBytes = new byte[keyLen];
     System.arraycopy(utf, start, keyBytes, 0, keyLen);
@@ -122,7 +122,7 @@ public class UTF8ByteArrayUtils {
       if (c == '\r') {
         in.mark(1);
         int c2 = in.read();
-        if(c2 == -1) {
+        if (c2 == -1) {
           isEOF = true;
           break;
         }
@@ -142,7 +142,7 @@ public class UTF8ByteArrayUtils {
       buf[offset++] = (byte) c;
     }
 
-    if(isEOF && offset==0) {
+    if (isEOF && offset==0) {
       return null;
     } else {
       lineBuffer = new byte[offset];

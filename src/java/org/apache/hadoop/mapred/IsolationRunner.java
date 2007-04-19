@@ -121,7 +121,7 @@ public class IsolationRunner {
     namer.setConf(conf);
     for(int i=0; i<numMaps; i++) {
       Path f = namer.getInputFile(i, taskId);
-      if(! fs.exists(f)) {
+      if (!fs.exists(f)) {
         LOG.info("Create missing input: " + f);
         SequenceFile.Writer out =
           SequenceFile.createWriter(fs, conf, f, keyClass, valueClass);

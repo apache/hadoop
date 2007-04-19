@@ -34,13 +34,13 @@ import org.apache.hadoop.util.Progressable;
  * {@link InterTrackerProtocol}. */ 
 class MapOutputLocation implements Writable, MRConstants {
 
-    static {                                      // register a ctor
-      WritableFactories.setFactory
-        (MapOutputLocation.class,
-         new WritableFactory() {
-           public Writable newInstance() { return new MapOutputLocation(); }
-         });
-    }
+  static {                                      // register a ctor
+    WritableFactories.setFactory
+      (MapOutputLocation.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new MapOutputLocation(); }
+       });
+  }
 
   private String mapTaskId;
   private int mapId;
@@ -93,7 +93,7 @@ class MapOutputLocation implements Writable, MRConstants {
 
   public String toString() {
     return "http://" + host + ":" + port + "/mapOutput?map=" + 
-            mapTaskId;
+      mapTaskId;
   }
   
   /**
@@ -134,7 +134,7 @@ class MapOutputLocation implements Writable, MRConstants {
           int len = input.read(buffer);
           while (len > 0) {
             totalBytes += len;
-            output.write(buffer, 0 ,len);
+            output.write(buffer, 0 , len);
             if (pingee != null) {
               pingee.progress();
             }
@@ -207,13 +207,13 @@ class MapOutputLocation implements Writable, MRConstants {
       int length = connection.getContentLength();
       int inMemFSSize = inMemFileSys.getFSSize();
       int checksumLength = (int)inMemFileSys.getChecksumFileLength(
-              localFilename, length);
+                                                                   localFilename, length);
         
       boolean createInMem = false; 
       if (inMemFSSize > 0)  
         createInMem = (((float)(length + checksumLength) / inMemFSSize <= 
-        MAX_INMEM_FILESIZE_FRACTION) && 
-        inMemFileSys.reserveSpaceWithCheckSum(localFilename, length));
+                        MAX_INMEM_FILESIZE_FRACTION) && 
+                       inMemFileSys.reserveSpaceWithCheckSum(localFilename, length));
       
       if (createInMem)
         fileSys = inMemFileSys;
@@ -232,7 +232,7 @@ class MapOutputLocation implements Writable, MRConstants {
             totalBytes += len;
             shuffleMetrics.incrMetric("shuffle_input_bytes", len);
             shuffleMetrics.update();
-            output.write(buffer, 0 ,len);
+            output.write(buffer, 0 , len);
             if (currentThread.isInterrupted()) {
               throw new InterruptedException();
             }

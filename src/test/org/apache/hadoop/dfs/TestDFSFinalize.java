@@ -90,16 +90,16 @@ public class TestDFSFinalize extends TestCase {
       String[] nameNodeDirs = conf.getStrings("dfs.name.dir");
       String[] dataNodeDirs = conf.getStrings("dfs.data.dir");
       
-      log("Finalize with existing previous dir",numDirs);
+      log("Finalize with existing previous dir", numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "previous");
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
-      cluster = new MiniDFSCluster(conf,1,StartupOption.REGULAR);
+      cluster = new MiniDFSCluster(conf, 1, StartupOption.REGULAR);
       cluster.finalizeCluster(conf);
       checkResult(nameNodeDirs, dataNodeDirs);
 
-      log("Finalize without existing previous dir",numDirs);
+      log("Finalize without existing previous dir", numDirs);
       cluster.finalizeCluster(conf);
       checkResult(nameNodeDirs, dataNodeDirs);
 

@@ -61,12 +61,12 @@ interface ClientProtocol extends VersionedProtocol {
    * create multi-block files must also use reportWrittenBlock()
    * and addBlock().
    */
-  public LocatedBlock create( String src, 
-                              String clientName, 
-                              boolean overwrite, 
-                              short replication,
-                              long blockSize
-                              ) throws IOException;
+  public LocatedBlock create(String src, 
+                             String clientName, 
+                             boolean overwrite, 
+                             short replication,
+                             long blockSize
+                             ) throws IOException;
 
   /**
    * Set replication for an existing file.
@@ -83,9 +83,9 @@ interface ClientProtocol extends VersionedProtocol {
    *         false if file does not exist or is a directory
    * @author shv
    */
-  public boolean setReplication( String src, 
-                                 short replication
-                                 ) throws IOException;
+  public boolean setReplication(String src, 
+                                short replication
+                                ) throws IOException;
 
   /**
    * If the client has not yet called reportWrittenBlock(), it can
@@ -261,7 +261,7 @@ interface ClientProtocol extends VersionedProtocol {
    * <p>
    * Safe mode is entered automatically at name node startup.
    * Safe mode can also be entered manually using
-   * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode( SafeModeAction.SAFEMODE_GET )}.
+   * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_GET)}.
    * <p>
    * At startup the name node accepts data node reports collecting
    * information about block locations.
@@ -277,11 +277,11 @@ interface ClientProtocol extends VersionedProtocol {
    * Then the name node leaves safe mode.
    * <p>
    * If safe mode is turned on manually using
-   * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode( SafeModeAction.SAFEMODE_ENTER )}
+   * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_ENTER)}
    * then the name node stays in safe mode until it is manually turned off
-   * using {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode( SafeModeAction.SAFEMODE_LEAVE )}.
+   * using {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_LEAVE)}.
    * Current state of the name node can be verified using
-   * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode( SafeModeAction.SAFEMODE_GET )}
+   * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_GET)}
    * <h4>Configuration parameters:</h4>
    * <tt>dfs.safemode.threshold.pct</tt> is the threshold parameter.<br>
    * <tt>dfs.safemode.extension</tt> is the safe mode extension parameter.<br>
@@ -304,7 +304,7 @@ interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    * @author Konstantin Shvachko
    */
-  public boolean setSafeMode( FSConstants.SafeModeAction action ) throws IOException;
+  public boolean setSafeMode(FSConstants.SafeModeAction action) throws IOException;
 
   /**
    * Tells the namenode to reread the hosts and exclude files. 

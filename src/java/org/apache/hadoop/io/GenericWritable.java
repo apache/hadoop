@@ -70,7 +70,7 @@ public abstract class GenericWritable implements Writable {
       }
     }
     throw new RuntimeException("The type of instance is: "
-                + instance.getClass() + ", which is NOT registered.");
+                               + instance.getClass() + ", which is NOT registered.");
   }
 
   /**

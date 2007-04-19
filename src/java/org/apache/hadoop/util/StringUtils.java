@@ -208,20 +208,20 @@ public class StringUtils {
    * @param startTime start time
    */
   public static String formatTimeDiff(long finishTime, long startTime){
-    StringBuffer buf = new StringBuffer() ;
+    StringBuffer buf = new StringBuffer();
     
-    long timeDiff = finishTime - startTime ; 
-    long hours = timeDiff / (60*60*1000) ;
-    long rem = (timeDiff % (60*60*1000)) ;
+    long timeDiff = finishTime - startTime; 
+    long hours = timeDiff / (60*60*1000);
+    long rem = (timeDiff % (60*60*1000));
     long minutes =  rem / (60*1000);
-    rem = rem % (60*1000) ;
-    long seconds = rem / 1000 ;
+    rem = rem % (60*1000);
+    long seconds = rem / 1000;
     
-    if( hours != 0 ){
+    if (hours != 0){
       buf.append(hours);
       buf.append("hrs, ");
     }
-    if( minutes != 0 ){
+    if (minutes != 0){
       buf.append(minutes);
       buf.append("mins, ");
     }
@@ -243,9 +243,9 @@ public class StringUtils {
   public static String getFormattedTimeWithDiff(DateFormat dateFormat, 
                                                 long finishTime, long startTime){
     StringBuffer buf = new StringBuffer();
-    if( 0 != finishTime ) {
+    if (0 != finishTime) {
       buf.append(dateFormat.format(new Date(finishTime)));
-      if( 0 != startTime ){
+      if (0 != startTime){
         buf.append(" (" + formatTimeDiff(finishTime , startTime) + ")");
       }
     }

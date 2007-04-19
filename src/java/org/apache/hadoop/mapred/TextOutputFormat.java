@@ -42,7 +42,7 @@ public class TextOutputFormat extends OutputFormatBase {
     }
     
     public synchronized void write(WritableComparable key, Writable value)
-        throws IOException {
+      throws IOException {
 
       if (key == null && value == null) {
         return;
@@ -78,7 +78,7 @@ public class TextOutputFormat extends OutputFormatBase {
       Class codecClass = getOutputCompressorClass(job, GzipCodec.class);
       // create the named codec
       CompressionCodec codec = (CompressionCodec)
-                               ReflectionUtils.newInstance(codecClass, job);
+        ReflectionUtils.newInstance(codecClass, job);
       // build the filename including the extension
       Path filename = new Path(dir, name + codec.getDefaultExtension());
       FSDataOutputStream fileOut = fs.create(filename, progress);

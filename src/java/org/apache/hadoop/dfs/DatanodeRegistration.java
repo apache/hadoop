@@ -31,7 +31,7 @@ class DatanodeRegistration extends DatanodeID implements Writable {
    * Default constructor.
    */
   public DatanodeRegistration() {
-    super( null, null, -1 );
+    super(null, null, -1);
     this.storageInfo = new StorageInfo();
   }
   
@@ -40,9 +40,9 @@ class DatanodeRegistration extends DatanodeID implements Writable {
    */
   public DatanodeRegistration(String nodeName, 
                               int infoPort,
-                              DataStorage storage ) {
-    super( nodeName, storage.getStorageID(), infoPort );
-    this.storageInfo = new StorageInfo( storage );
+                              DataStorage storage) {
+    super(nodeName, storage.getStorageID(), infoPort);
+    this.storageInfo = new StorageInfo(storage);
   }
 
   /**
@@ -54,7 +54,7 @@ class DatanodeRegistration extends DatanodeID implements Writable {
   /**
    */
   public String getRegistrationID() {
-    return Storage.getRegistrationID( storageInfo );
+    return Storage.getRegistrationID(storageInfo);
   }
 
   /////////////////////////////////////////////////
@@ -63,10 +63,10 @@ class DatanodeRegistration extends DatanodeID implements Writable {
   /**
    */
   public void write(DataOutput out) throws IOException {
-    super.write( out );
-    out.writeInt( storageInfo.getLayoutVersion() );
-    out.writeInt( storageInfo.getNamespaceID() );
-    out.writeLong( storageInfo.getCTime() );
+    super.write(out);
+    out.writeInt(storageInfo.getLayoutVersion());
+    out.writeInt(storageInfo.getNamespaceID());
+    out.writeLong(storageInfo.getCTime());
   }
 
   /**

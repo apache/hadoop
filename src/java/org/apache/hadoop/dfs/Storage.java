@@ -38,7 +38,7 @@ import org.apache.hadoop.util.VersionInfo;
 /**
  * Common class for storage information.
  * 
- * TODO namespaceID should be long and computed as hash( address + port )
+ * TODO namespaceID should be long and computed as hash(address + port)
  * @author Konstantin Shvachko
  */
 class StorageInfo {
@@ -47,16 +47,16 @@ class StorageInfo {
   long  cTime;          // creation timestamp
   
   StorageInfo () {
-    this( 0, 0, 0L );
+    this(0, 0, 0L);
   }
   
-  StorageInfo( int layoutV, int nsID, long cT ) {
+  StorageInfo(int layoutV, int nsID, long cT) {
     layoutVersion = layoutV;
     namespaceID = nsID;
     cTime = cT;
   }
   
-  StorageInfo( StorageInfo from ) {
+  StorageInfo(StorageInfo from) {
     layoutVersion = from.layoutVersion;
     namespaceID = from.namespaceID;
     cTime = from.cTime;
@@ -124,7 +124,7 @@ abstract class Storage extends StorageInfo {
     File              root; // root directory
     FileLock          lock; // storage lock
     
-    StorageDirectory( File dir ) {
+    StorageDirectory(File dir) {
       this.root = dir;
       this.lock = null;
     }
@@ -135,17 +135,17 @@ abstract class Storage extends StorageInfo {
      * @throws IOException if file cannot be read or contains inconsistent data
      */
     void read() throws IOException {
-      read( getVersionFile() );
+      read(getVersionFile());
     }
     
-    void read( File from ) throws IOException {
-      RandomAccessFile file = new RandomAccessFile( from, "rws" );
+    void read(File from) throws IOException {
+      RandomAccessFile file = new RandomAccessFile(from, "rws");
       try {
-        FileInputStream in = new FileInputStream( file.getFD() );
+        FileInputStream in = new FileInputStream(file.getFD());
         file.seek(0);
         Properties props = new Properties();
-        props.load( in );
-        getFields( props, this );
+        props.load(in);
+        getFields(props, this);
       } finally {
         file.close();
       }
@@ -157,17 +157,17 @@ abstract class Storage extends StorageInfo {
      * @throws IOException
      */
     void write() throws IOException {
-      write( getVersionFile() );
+      write(getVersionFile());
     }
 
-    void write( File to ) throws IOException {
+    void write(File to) throws IOException {
       Properties props = new Properties();
-      setFields( props, this );
-      RandomAccessFile file = new RandomAccessFile( to, "rws" );
+      setFields(props, this);
+      RandomAccessFile file = new RandomAccessFile(to, "rws");
       try {
         file.seek(0);
-        FileOutputStream out = new FileOutputStream( file.getFD() );
-        props.store( out, null );
+        FileOutputStream out = new FileOutputStream(file.getFD());
+        props.store(out, null);
       } finally {
         file.close();
       }
@@ -188,33 +188,33 @@ abstract class Storage extends StorageInfo {
      */
     void clearDirectory() throws IOException {
       File curDir = this.getCurrentDir();
-      if( curDir.exists() )
-        if( ! (FileUtil.fullyDelete( curDir )) )
-          throw new IOException("Cannot remove current directory: " + curDir );
-      if( ! curDir.mkdirs() )
-        throw new IOException( "Cannot create directory " + curDir );
+      if (curDir.exists())
+        if (!(FileUtil.fullyDelete(curDir)))
+          throw new IOException("Cannot remove current directory: " + curDir);
+      if (!curDir.mkdirs())
+        throw new IOException("Cannot create directory " + curDir);
     }
 
     File getCurrentDir() {
-      return new File( root, STORAGE_DIR_CURRENT );
+      return new File(root, STORAGE_DIR_CURRENT);
     }
     File getVersionFile() {
-      return new File( new File( root, STORAGE_DIR_CURRENT ), STORAGE_FILE_VERSION );
+      return new File(new File(root, STORAGE_DIR_CURRENT), STORAGE_FILE_VERSION);
     }
     File getPreviousVersionFile() {
-      return new File( new File( root, STORAGE_DIR_PREVIOUS ), STORAGE_FILE_VERSION );
+      return new File(new File(root, STORAGE_DIR_PREVIOUS), STORAGE_FILE_VERSION);
     }
     File getPreviousDir() {
-      return new File( root, STORAGE_DIR_PREVIOUS );
+      return new File(root, STORAGE_DIR_PREVIOUS);
     }
     File getPreviousTmp() {
-      return new File( root, STORAGE_TMP_PREVIOUS );
+      return new File(root, STORAGE_TMP_PREVIOUS);
     }
     File getRemovedTmp() {
-      return new File( root, STORAGE_TMP_REMOVED );
+      return new File(root, STORAGE_TMP_REMOVED);
     }
     File getFinalizedTmp() {
-      return new File( root, STORAGE_TMP_FINALIZED );
+      return new File(root, STORAGE_TMP_FINALIZED);
     }
 
     /**
@@ -226,40 +226,40 @@ abstract class Storage extends StorageInfo {
      * @throws {@link InconsistentFSStateException} if directory state is not 
      * consistent and cannot be recovered 
      */
-    StorageState analyzeStorage( StartupOption startOpt ) throws IOException {
+    StorageState analyzeStorage(StartupOption startOpt) throws IOException {
       assert root != null : "root is null";
       String rootPath = root.getCanonicalPath();
       try { // check that storage exists
-        if( ! root.exists() ) {
+        if (!root.exists()) {
           // storage directory does not exist
-          if( startOpt != StartupOption.FORMAT ) {
-            LOG.info( "Storage directory " + rootPath + " does not exist." );
+          if (startOpt != StartupOption.FORMAT) {
+            LOG.info("Storage directory " + rootPath + " does not exist.");
             return StorageState.NON_EXISTENT;
           }
-          LOG.info( rootPath + " does not exist. Creating ..." );
-          if( ! root.mkdirs() )
-            throw new IOException( "Cannot create directory " + rootPath );
+          LOG.info(rootPath + " does not exist. Creating ...");
+          if (!root.mkdirs())
+            throw new IOException("Cannot create directory " + rootPath);
         }
         // or is inaccessible
-        if( ! root.isDirectory() ) {
-          LOG.info( rootPath + "is not a directory." );
+        if (!root.isDirectory()) {
+          LOG.info(rootPath + "is not a directory.");
           return StorageState.NON_EXISTENT;
         }
-        if( ! root.canWrite() ) {
-          LOG.info( "Cannot access storage directory " + rootPath );
+        if (!root.canWrite()) {
+          LOG.info("Cannot access storage directory " + rootPath);
           return StorageState.NON_EXISTENT;
         }
-      } catch( SecurityException ex ) {
-        LOG.info( "Cannot access storage directory " + rootPath, ex );
+      } catch(SecurityException ex) {
+        LOG.info("Cannot access storage directory " + rootPath, ex);
         return StorageState.NON_EXISTENT;
       }
 
       this.lock(); // lock storage if it exists
 
-      if( startOpt == StartupOption.FORMAT )
+      if (startOpt == StartupOption.FORMAT)
         return StorageState.NOT_FORMATTED;
       // check whether a conversion is required
-      if( isConversionNeeded( this ) )
+      if (isConversionNeeded(this))
         return StorageState.CONVERT;
       // check whether current directory is valid
       File versionFile = getVersionFile();
@@ -271,48 +271,48 @@ abstract class Storage extends StorageInfo {
       boolean hasRemovedTmp = getRemovedTmp().exists();
       boolean hasFinalizedTmp = getFinalizedTmp().exists();
 
-      if( !(hasPreviousTmp || hasRemovedTmp || hasFinalizedTmp) ) {
+      if (!(hasPreviousTmp || hasRemovedTmp || hasFinalizedTmp)) {
         // no temp dirs - no recovery
-        if( hasCurrent )
+        if (hasCurrent)
           return StorageState.NORMAL;
-        if( hasPrevious )
-          throw new InconsistentFSStateException( root,
-                      "version file in current directory it is missing." );
+        if (hasPrevious)
+          throw new InconsistentFSStateException(root,
+                                                 "version file in current directory it is missing.");
         return StorageState.NOT_FORMATTED;
       }
 
-      if( (hasPreviousTmp?1:0)+(hasRemovedTmp?1:0)+(hasFinalizedTmp?1:0) > 1 )
+      if ((hasPreviousTmp?1:0)+(hasRemovedTmp?1:0)+(hasFinalizedTmp?1:0) > 1)
         // more than one temp dirs
-        throw new InconsistentFSStateException( root,
-                    "too many temporary directories." );
+        throw new InconsistentFSStateException(root,
+                                               "too many temporary directories.");
 
       // # of temp dirs == 1 should either recover or complete a transition
-      if( hasFinalizedTmp ) {
-        if( hasPrevious )
-          throw new InconsistentFSStateException( root,
-              STORAGE_DIR_PREVIOUS + " and " + STORAGE_TMP_FINALIZED
-              + "cannot exist together." );
+      if (hasFinalizedTmp) {
+        if (hasPrevious)
+          throw new InconsistentFSStateException(root,
+                                                 STORAGE_DIR_PREVIOUS + " and " + STORAGE_TMP_FINALIZED
+                                                 + "cannot exist together.");
         return StorageState.COMPLETE_FINALIZE;
       }
 
-      if( hasPreviousTmp ) {
-        if( hasPrevious )
-          throw new InconsistentFSStateException( root,
-              STORAGE_DIR_PREVIOUS + " and " + STORAGE_TMP_PREVIOUS
-              + " cannot exist together." );
-        if( hasCurrent )
+      if (hasPreviousTmp) {
+        if (hasPrevious)
+          throw new InconsistentFSStateException(root,
+                                                 STORAGE_DIR_PREVIOUS + " and " + STORAGE_TMP_PREVIOUS
+                                                 + " cannot exist together.");
+        if (hasCurrent)
           return StorageState.COMPLETE_UPGRADE;
         return StorageState.RECOVER_UPGRADE;
       }
       
       assert hasRemovedTmp : "hasRemovedTmp must be true";
-      if( !(hasCurrent ^ hasPrevious) )
-        throw new InconsistentFSStateException( root,
-            "one and only one directory " + STORAGE_DIR_CURRENT 
-            + " or " + STORAGE_DIR_PREVIOUS 
-            + " must be present when " + STORAGE_TMP_REMOVED
-            + " exists." );
-      if( hasCurrent )
+      if (!(hasCurrent ^ hasPrevious))
+        throw new InconsistentFSStateException(root,
+                                               "one and only one directory " + STORAGE_DIR_CURRENT 
+                                               + " or " + STORAGE_DIR_PREVIOUS 
+                                               + " must be present when " + STORAGE_TMP_REMOVED
+                                               + " exists.");
+      if (hasCurrent)
         return StorageState.COMPLETE_ROLLBACK;
       return StorageState.RECOVER_ROLLBACK;
     }
@@ -323,39 +323,39 @@ abstract class Storage extends StorageInfo {
      * @param curState specifies what/how the state should be recovered
      * @throws IOException
      */
-    void doRecover( StorageState curState ) throws IOException {
+    void doRecover(StorageState curState) throws IOException {
       File curDir = getCurrentDir();
       String rootPath = root.getCanonicalPath();
-      switch( curState ) {
-        case COMPLETE_UPGRADE:  // mv previous.tmp -> previous
-          LOG.info( "Completing previous upgrade for storage directory " 
-                    + rootPath + "." );
-          rename( getPreviousTmp(), getPreviousDir() );
-          return;
-        case RECOVER_UPGRADE:   // mv previous.tmp -> current
-          LOG.info( "Recovering storage directory " + rootPath
-                    + " from previous upgrade." );
-          if( curDir.exists() )
-            deleteDir( curDir );
-          rename( getPreviousTmp(), curDir );
-          return;
-        case COMPLETE_ROLLBACK: // rm removed.tmp
-          LOG.info( "Completing previous rollback for storage directory "
-                    + rootPath + "." );
-          deleteDir( getRemovedTmp() );
-          return;
-        case RECOVER_ROLLBACK:  // mv removed.tmp -> current
-          LOG.info( "Recovering storage directory " + rootPath
-                    + " from previous rollback." );
-          rename( getRemovedTmp(), curDir );
-          return;
-        case COMPLETE_FINALIZE: // rm finalized.tmp
-          LOG.info( "Completing previous finalize for storage directory "
-                    + rootPath + "." );
-          deleteDir( getFinalizedTmp() );
-          return;
-        default:
-          throw new IOException( "Unexpected FS state: " + curState );
+      switch(curState) {
+      case COMPLETE_UPGRADE:  // mv previous.tmp -> previous
+        LOG.info("Completing previous upgrade for storage directory " 
+                 + rootPath + ".");
+        rename(getPreviousTmp(), getPreviousDir());
+        return;
+      case RECOVER_UPGRADE:   // mv previous.tmp -> current
+        LOG.info("Recovering storage directory " + rootPath
+                 + " from previous upgrade.");
+        if (curDir.exists())
+          deleteDir(curDir);
+        rename(getPreviousTmp(), curDir);
+        return;
+      case COMPLETE_ROLLBACK: // rm removed.tmp
+        LOG.info("Completing previous rollback for storage directory "
+                 + rootPath + ".");
+        deleteDir(getRemovedTmp());
+        return;
+      case RECOVER_ROLLBACK:  // mv removed.tmp -> current
+        LOG.info("Recovering storage directory " + rootPath
+                 + " from previous rollback.");
+        rename(getRemovedTmp(), curDir);
+        return;
+      case COMPLETE_FINALIZE: // rm finalized.tmp
+        LOG.info("Completing previous finalize for storage directory "
+                 + rootPath + ".");
+        deleteDir(getFinalizedTmp());
+        return;
+      default:
+        throw new IOException("Unexpected FS state: " + curState);
       }
     }
 
@@ -365,22 +365,22 @@ abstract class Storage extends StorageInfo {
      * @throws IOException if locking fails
      */
     void lock() throws IOException {
-      File lockF = new File( root, STORAGE_FILE_LOCK );
+      File lockF = new File(root, STORAGE_FILE_LOCK);
       lockF.deleteOnExit();
-      RandomAccessFile file = new RandomAccessFile( lockF, "rws" );
+      RandomAccessFile file = new RandomAccessFile(lockF, "rws");
       try {
         this.lock = file.getChannel().tryLock();
-      } catch( IOException e ) {
-        LOG.info( StringUtils.stringifyException(e) );
+      } catch(IOException e) {
+        LOG.info(StringUtils.stringifyException(e));
         file.close();
         throw e;
       }
-      if( lock == null ) {
+      if (lock == null) {
         String msg = "Cannot lock storage " + this.root 
-                      + ". The directory is already locked.";
-        LOG.info( msg );
+          + ". The directory is already locked.";
+        LOG.info(msg);
         file.close();
-        throw new IOException( msg );
+        throw new IOException(msg);
       }
     }
 
@@ -390,7 +390,7 @@ abstract class Storage extends StorageInfo {
      * @throws IOException
      */
     void unlock() throws IOException {
-      if( this.lock == null )
+      if (this.lock == null)
         return;
       this.lock.release();
       lock.channel().close();
@@ -400,18 +400,18 @@ abstract class Storage extends StorageInfo {
   /**
    * Create empty storage info of the specified type
    */
-  Storage( NodeType type ) {
+  Storage(NodeType type) {
     super();
     this.storageType = type;
   }
   
-  Storage( NodeType type, int nsID, long cT ) {
-    super( FSConstants.LAYOUT_VERSION, nsID, cT );
+  Storage(NodeType type, int nsID, long cT) {
+    super(FSConstants.LAYOUT_VERSION, nsID, cT);
     this.storageType = type;
   }
   
-  Storage( NodeType type, StorageInfo storageInfo ) {
-    super( storageInfo );
+  Storage(NodeType type, StorageInfo storageInfo) {
+    super(storageInfo);
     this.storageType = type;
   }
   
@@ -419,15 +419,15 @@ abstract class Storage extends StorageInfo {
     return storageDirs.size();
   }
   
-  StorageDirectory getStorageDir( int idx ) {
-    return storageDirs.get( idx );
+  StorageDirectory getStorageDir(int idx) {
+    return storageDirs.get(idx);
   }
   
-  protected void addStorageDir( StorageDirectory sd ) {
-    storageDirs.add( sd );
+  protected void addStorageDir(StorageDirectory sd) {
+    storageDirs.add(sd);
   }
   
-  abstract boolean isConversionNeeded( StorageDirectory sd ) throws IOException;
+  abstract boolean isConversionNeeded(StorageDirectory sd) throws IOException;
   
   /**
    * Get common storage fields.
@@ -436,28 +436,28 @@ abstract class Storage extends StorageInfo {
    * @param props
    * @throws IOException
    */
-  protected void getFields( Properties props, 
-                            StorageDirectory sd 
-                          ) throws IOException {
+  protected void getFields(Properties props, 
+                           StorageDirectory sd 
+                           ) throws IOException {
     String sv, st, sid, sct;
-    sv = props.getProperty( "layoutVersion" );
-    st = props.getProperty( "storageType" );
-    sid = props.getProperty( "namespaceID" );
-    sct = props.getProperty( "cTime" );
-    if( sv == null || st == null || sid == null || sct == null )
-      throw new InconsistentFSStateException( sd.root,
-                    "file " + STORAGE_FILE_VERSION + " is invalid." );
-    int rv = Integer.parseInt( sv );
-    NodeType rt = NodeType.valueOf( st );
-    int rid = Integer.parseInt( sid );
-    long rct = Long.parseLong( sct );
-    if( ! storageType.equals( rt ) ||
-        ! (( namespaceID == 0 ) || ( rid == 0 ) || namespaceID == rid ))
-      throw new InconsistentFSStateException( sd.root,
-                  "is incompatible with others." );
-    if( rv < FSConstants.LAYOUT_VERSION ) // future version
-        throw new IncorrectVersionException(rv, "storage directory " 
-                                            + sd.root.getCanonicalPath() );
+    sv = props.getProperty("layoutVersion");
+    st = props.getProperty("storageType");
+    sid = props.getProperty("namespaceID");
+    sct = props.getProperty("cTime");
+    if (sv == null || st == null || sid == null || sct == null)
+      throw new InconsistentFSStateException(sd.root,
+                                             "file " + STORAGE_FILE_VERSION + " is invalid.");
+    int rv = Integer.parseInt(sv);
+    NodeType rt = NodeType.valueOf(st);
+    int rid = Integer.parseInt(sid);
+    long rct = Long.parseLong(sct);
+    if (!storageType.equals(rt) ||
+        !((namespaceID == 0) || (rid == 0) || namespaceID == rid))
+      throw new InconsistentFSStateException(sd.root,
+                                             "is incompatible with others.");
+    if (rv < FSConstants.LAYOUT_VERSION) // future version
+      throw new IncorrectVersionException(rv, "storage directory " 
+                                          + sd.root.getCanonicalPath());
     layoutVersion = rv;
     storageType = rt;
     namespaceID = rid;
@@ -471,24 +471,24 @@ abstract class Storage extends StorageInfo {
    * @param props
    * @throws IOException
    */
-  protected void setFields( Properties props, 
-                            StorageDirectory sd 
-                          ) throws IOException {
-    props.setProperty( "layoutVersion", String.valueOf( layoutVersion ));
-    props.setProperty( "storageType", storageType.toString() );
-    props.setProperty( "namespaceID", String.valueOf( namespaceID ));
-    props.setProperty( "cTime", String.valueOf( cTime ));
+  protected void setFields(Properties props, 
+                           StorageDirectory sd 
+                           ) throws IOException {
+    props.setProperty("layoutVersion", String.valueOf(layoutVersion));
+    props.setProperty("storageType", storageType.toString());
+    props.setProperty("namespaceID", String.valueOf(namespaceID));
+    props.setProperty("cTime", String.valueOf(cTime));
   }
 
-  static void rename( File from, File to ) throws IOException {
-    if( ! from.renameTo( to ))
-      throw new IOException( "Failed to rename " 
-          + from.getCanonicalPath() + " to " + to.getCanonicalPath() );
+  static void rename(File from, File to) throws IOException {
+    if (!from.renameTo(to))
+      throw new IOException("Failed to rename " 
+                            + from.getCanonicalPath() + " to " + to.getCanonicalPath());
   }
 
-  static void deleteDir( File dir ) throws IOException {
-    if( ! FileUtil.fullyDelete( dir ) )
-      throw new IOException( "Failed to delete " + dir.getCanonicalPath() );
+  static void deleteDir(File dir) throws IOException {
+    if (!FileUtil.fullyDelete(dir))
+      throw new IOException("Failed to delete " + dir.getCanonicalPath());
   }
   
   /**
@@ -516,9 +516,9 @@ abstract class Storage extends StorageInfo {
     return VersionInfo.getRevision();
   }
 
-  static String getRegistrationID( StorageInfo storage ) {
-    return "NS-" + Integer.toString( storage.getNamespaceID() )
-           + "-" + Integer.toString( storage.getLayoutVersion() )
-           + "-" + Long.toString( storage.getCTime() );
+  static String getRegistrationID(StorageInfo storage) {
+    return "NS-" + Integer.toString(storage.getNamespaceID())
+      + "-" + Integer.toString(storage.getLayoutVersion())
+      + "-" + Long.toString(storage.getCTime());
   }
 }

@@ -75,7 +75,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     // create servlet handler
     ServletHandler handler = new ServletHandler();
     handler.addServlet(servletClass.getName(), servletPath,
-      servletClass.getName());
+                       servletClass.getName());
 
     // bind servlet handler to context
     context.addHandler(handler);
@@ -104,14 +104,14 @@ public abstract class NotificationTestCase extends HadoopTestCase {
       throws ServletException, IOException {
       if (counter == 0) {
         stdPrintln((new Date()).toString() +
-          "Receiving First notification for [" + req.getQueryString() +
-          "], returning error");
+                   "Receiving First notification for [" + req.getQueryString() +
+                   "], returning error");
         res.sendError(HttpServletResponse.SC_BAD_REQUEST, "forcing error");
       }
       else {
         stdPrintln((new Date()).toString() +
-          "Receiving Second notification for [" + req.getQueryString() +
-          "], returning OK");
+                   "Receiving Second notification for [" + req.getQueryString() +
+                   "], returning OK");
         res.setStatus(HttpServletResponse.SC_OK);
       }
       counter++;
@@ -144,7 +144,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
 
   public void testMR() throws Exception {
     System.out.println(launchWordCount(this.createJobConf(),
-      "a b c d e f g h", 1, 1));
+                                       "a b c d e f g h", 1, 1));
     synchronized(Thread.currentThread()) {
       stdPrintln("Sleeping for 2 seconds to give time for retry");
       Thread.currentThread().sleep(2000);
@@ -153,9 +153,9 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   }
 
   private String launchWordCount(JobConf conf,
-    String input,
-    int numMaps,
-    int numReduces) throws IOException {
+                                 String input,
+                                 int numMaps,
+                                 int numReduces) throws IOException {
     Path inDir = new Path("testing/wc/input");
     Path outDir = new Path("testing/wc/output");
 

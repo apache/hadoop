@@ -121,7 +121,7 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem.globPaths 
    */
   void copyToLocal(String[]argv, int pos) throws IOException {
-    if(argv.length-pos<2 || (argv.length-pos==2 && argv[pos].equalsIgnoreCase("-crc"))) {
+    if (argv.length-pos<2 || (argv.length-pos==2 && argv[pos].equalsIgnoreCase("-crc"))) {
       System.err.println("Usage: -get [-crc] <src> <dst>");
       System.exit(-1);
     }
@@ -132,19 +132,19 @@ public class FsShell extends ToolBase {
     }
     String srcf = argv[pos++];
     String dstf = argv[pos++];
-    if( dstf.equals("-")) {
+    if (dstf.equals("-")) {
       if (copyCrc) {
         System.err.println("-crc option is not valid when destination is stdout.");
       }
       cat(srcf);
     } else {
-      Path [] srcs = fs.globPaths( new Path(srcf) );
-      if( srcs.length > 1 && !new File( dstf ).isDirectory()) {
-        throw new IOException( "When copying multiple files, " 
-                               + "destination should be a directory." );
+      Path [] srcs = fs.globPaths(new Path(srcf));
+      if (srcs.length > 1 && !new File(dstf).isDirectory()) {
+        throw new IOException("When copying multiple files, " 
+                              + "destination should be a directory.");
       }
-      Path dst = new Path( dstf );
-      for( int i=0; i<srcs.length; i++ ) {
+      Path dst = new Path(dstf);
+      for(int i=0; i<srcs.length; i++) {
         ((DistributedFileSystem)fs).copyToLocalFile(srcs[i], dst, copyCrc);
       }
     }
@@ -178,9 +178,9 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem.globPaths 
    */
   void copyMergeToLocal(String srcf, Path dst, boolean endline) throws IOException {
-    Path [] srcs = fs.globPaths( new Path( srcf ) );
-    for( int i=0; i<srcs.length; i++ ) {
-      if(endline) {
+    Path [] srcs = fs.globPaths(new Path(srcf));
+    for(int i=0; i<srcs.length; i++) {
+      if (endline) {
         FileUtil.copyMerge(fs, srcs[i], 
                            FileSystem.getLocal(conf), dst, false, conf, "\n");
       } else {
@@ -206,8 +206,8 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem.globPaths 
    */
   void cat(String srcf) throws IOException {
-    Path [] srcs = fs.globPaths( new Path( srcf ) );
-    for( int i=0; i<srcs.length; i++ ) {
+    Path [] srcs = fs.globPaths(new Path(srcf));
+    for(int i=0; i<srcs.length; i++) {
       printToStdout(srcs[i]);
     }
   }
@@ -219,7 +219,7 @@ public class FsShell extends ToolBase {
    * @throws IOException 
    */
   private void setReplication(String[] cmd, int pos) throws IOException {
-    if(cmd.length-pos<2 || (cmd.length-pos==2 && cmd[pos].equalsIgnoreCase("-R"))) {
+    if (cmd.length-pos<2 || (cmd.length-pos==2 && cmd[pos].equalsIgnoreCase("-R"))) {
       System.err.println("Usage: [-R] <repvalue> <path>");
       System.exit(-1);
     }
@@ -227,7 +227,7 @@ public class FsShell extends ToolBase {
     boolean recursive = false;
     short rep = 3;
       
-    if("-R".equalsIgnoreCase(cmd[pos])) {
+    if ("-R".equalsIgnoreCase(cmd[pos])) {
       recursive=true;
       pos++;
         
@@ -256,16 +256,16 @@ public class FsShell extends ToolBase {
    */
   public void setReplication(short newRep, String srcf, boolean recursive)
     throws IOException {
-    Path[] srcs = fs.globPaths( new Path(srcf) );
-    for( int i=0; i<srcs.length; i++ ) {
-      setReplication( newRep, srcs[i], recursive );
+    Path[] srcs = fs.globPaths(new Path(srcf));
+    for(int i=0; i<srcs.length; i++) {
+      setReplication(newRep, srcs[i], recursive);
     }
   }
     
   private void setReplication(short newRep, Path src, boolean recursive)
     throws IOException {
   	
-    if(!fs.isDirectory(src)) {
+    if (!fs.isDirectory(src)) {
       setFileReplication(src, newRep);
       return;
     }
@@ -277,9 +277,9 @@ public class FsShell extends ToolBase {
 
       for (int i = 0; i < items.length; i++) {
         Path cur = items[i];
-        if(!fs.isDirectory(cur)) {
+        if (!fs.isDirectory(cur)) {
           setFileReplication(cur, newRep);
-        } else if(recursive) {
+        } else if (recursive) {
           setReplication(newRep, cur, recursive);
         }
       }
@@ -295,7 +295,7 @@ public class FsShell extends ToolBase {
    */
   private void setFileReplication(Path file, short newRep) throws IOException {
     	
-    if(fs.setReplication(file, newRep)) {
+    if (fs.setReplication(file, newRep)) {
       System.out.println("Replication " + newRep + " set: " + file);
     } else {
       System.err.println("Could not set replication for: " + file);
@@ -311,7 +311,7 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   public void ls(String srcf, boolean recursive) throws IOException {
-    Path[] srcs = fs.globPaths( new Path(srcf) );
+    Path[] srcs = fs.globPaths(new Path(srcf));
     boolean printHeader = (srcs.length == 1) ? true: false;
     for(int i=0; i<srcs.length; i++) {
       ls(srcs[i], recursive, printHeader);
@@ -319,12 +319,12 @@ public class FsShell extends ToolBase {
   }
 
   /* list all files under the directory <i>src</i>*/
-  private void ls(Path src, boolean recursive, boolean printHeader ) throws IOException {
+  private void ls(Path src, boolean recursive, boolean printHeader) throws IOException {
     Path items[] = fs.listPaths(src);
     if (items == null) {
       throw new IOException("Could not get listing for " + src);
     } else {
-      if(!recursive && printHeader ) {
+      if (!recursive && printHeader) {
         System.out.println("Found " + items.length + " items");
       }
       for (int i = 0; i < items.length; i++) {
@@ -334,7 +334,7 @@ public class FsShell extends ToolBase {
                               "<dir>" : 
                               ("<r " + fs.getReplication(cur) 
                                + ">\t" + fs.getLength(cur))));
-        if(recursive && fs.isDirectory(cur)) {
+        if (recursive && fs.isDirectory(cur)) {
           ls(cur, recursive, printHeader);
         }
       }
@@ -348,7 +348,7 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   public void du(String src) throws IOException {
-    Path items[] = fs.listPaths( fs.globPaths( new Path(src) ) );
+    Path items[] = fs.listPaths(fs.globPaths(new Path(src)));
     if (items == null) {
       throw new IOException("Could not get listing for " + src);
     } else {
@@ -368,12 +368,12 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   public void dus(String src) throws IOException {
-    Path paths[] = fs.globPaths( new Path(src) );
-    if( paths==null && paths.length==0 ) {
-      throw new IOException( "dus: No match: " + src );
+    Path paths[] = fs.globPaths(new Path(src));
+    if (paths==null && paths.length==0) {
+      throw new IOException("dus: No match: " + src);
     }
     for(int i=0; i<paths.length; i++) {
-      Path items[] = fs.listPaths( paths[i] );
+      Path items[] = fs.listPaths(paths[i]);
       if (items != null) {
         long totalSize=0;
         for(int j=0; j<items.length; j++) {
@@ -407,13 +407,13 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   public void rename(String srcf, String dstf) throws IOException {
-    Path [] srcs = fs.globPaths( new Path(srcf) );
+    Path [] srcs = fs.globPaths(new Path(srcf));
     Path dst = new Path(dstf);
-    if( srcs.length > 1 && !fs.isDirectory(dst)) {
-      throw new IOException( "When moving multiple files, " 
-                             + "destination should be a directory." );
+    if (srcs.length > 1 && !fs.isDirectory(dst)) {
+      throw new IOException("When moving multiple files, " 
+                            + "destination should be a directory.");
     }
-    for( int i=0; i<srcs.length; i++ ) {
+    for(int i=0; i<srcs.length; i++) {
       if (fs.rename(srcs[i], dst)) {
         System.out.println("Renamed " + srcs[i] + " to " + dstf);
       } else {
@@ -442,8 +442,8 @@ public class FsShell extends ToolBase {
     if (argv.length > 3) {
       Path dst = new Path(dest);
       if (!fs.isDirectory(dst)) {
-        throw new IOException( "When moving multiple files, " 
-                               + "destination " + dest + " should be a directory." );
+        throw new IOException("When moving multiple files, " 
+                              + "destination " + dest + " should be a directory.");
       }
     }
     //
@@ -493,13 +493,13 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   public void copy(String srcf, String dstf, Configuration conf) throws IOException {
-    Path [] srcs = fs.globPaths( new Path(srcf) );
+    Path [] srcs = fs.globPaths(new Path(srcf));
     Path dst = new Path(dstf);
-    if( srcs.length > 1 && !fs.isDirectory(dst)) {
-      throw new IOException( "When copying multiple files, " 
-                             + "destination should be a directory." );
+    if (srcs.length > 1 && !fs.isDirectory(dst)) {
+      throw new IOException("When copying multiple files, " 
+                            + "destination should be a directory.");
     }
-    for( int i=0; i<srcs.length; i++ ) {
+    for(int i=0; i<srcs.length; i++) {
       FileUtil.copy(fs, srcs[i], fs, dst, false, conf);
     }
   }
@@ -524,8 +524,8 @@ public class FsShell extends ToolBase {
     if (argv.length > 3) {
       Path dst = new Path(dest);
       if (!fs.isDirectory(dst)) {
-        throw new IOException( "When copying multiple files, " 
-                               + "destination " + dest + " should be a directory." );
+        throw new IOException("When copying multiple files, " 
+                              + "destination " + dest + " should be a directory.");
       }
     }
     //
@@ -572,14 +572,14 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   public void delete(String srcf, boolean recursive) throws IOException {
-    Path [] srcs = fs.globPaths( new Path(srcf) );
-    for( int i=0; i<srcs.length; i++ ) {
+    Path [] srcs = fs.globPaths(new Path(srcf));
+    for(int i=0; i<srcs.length; i++) {
       delete(srcs[i], recursive);
     }
   }
     
   /* delete a file */
-  private void delete(Path src, boolean recursive ) throws IOException {
+  private void delete(Path src, boolean recursive) throws IOException {
     if (fs.isDirectory(src) && !recursive) {
       throw new IOException("Cannot remove directory \"" + src +
                             "\", use -rmr instead");
@@ -613,7 +613,7 @@ public class FsShell extends ToolBase {
     } else if (len < 1024 * 1024 * 1024) {
       val = (1.0 * len) / (1024 * 1024);
       ending = " MB";
-    } else if (len < 128L * 1024 * 1024 * 1024 ) {
+    } else if (len < 128L * 1024 * 1024 * 1024) {
       val = (1.0 * len) / (1024 * 1024 * 1024);
       ending = " GB";
     } else if (len < 1024L * 1024 * 1024 * 1024 * 1024) {
@@ -915,7 +915,7 @@ public class FsShell extends ToolBase {
       System.err.println("           [-fs <local | file system URI>]");
       System.err.println("           [-conf <configuration file>]");
       System.err.println("           [-D <[property=value>]");
-      System.err.println("           [-ls <path>]" );
+      System.err.println("           [-ls <path>]");
       System.err.println("           [-lsr <path>]");
       System.err.println("           [-du <path>]");
       System.err.println("           [-dus <path>]");
@@ -941,7 +941,7 @@ public class FsShell extends ToolBase {
   /**
    * run
    */
-  public int run( String argv[] ) throws Exception {
+  public int run(String argv[]) throws Exception {
 
     if (argv.length < 1) {
       printUsage(""); 
@@ -1001,7 +1001,7 @@ public class FsShell extends ToolBase {
       } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd)) {
         copyToLocal(argv, i);
       } else if ("-getmerge".equals(cmd)) {
-        if(argv.length>i+2)
+        if (argv.length>i+2)
           copyMergeToLocal(argv[i++], new Path(argv[i++]), Boolean.parseBoolean(argv[i++]));
         else
           copyMergeToLocal(argv[i++], new Path(argv[i++]));
@@ -1039,7 +1039,7 @@ public class FsShell extends ToolBase {
         } else {
           du("");
         }
-      } else if( "-dus".equals(cmd)) {
+      } else if ("-dus".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, conf, i);
         } else {
@@ -1072,7 +1072,7 @@ public class FsShell extends ToolBase {
         System.err.println(cmd.substring(1) + ": " + 
                            ex.getLocalizedMessage());  
       }
-    } catch (IOException e ) {
+    } catch (IOException e) {
       //
       // IO exception encountered locally.
       // 

@@ -10,8 +10,8 @@ import java.io.IOException;
  */
 public class SafeModeException extends IOException {
 
-  public SafeModeException( String text, FSNamesystem.SafeModeInfo mode  ) {
-    super( text + ". Name node is in safe mode.\n" + mode.getTurnOffTip());
+  public SafeModeException(String text, FSNamesystem.SafeModeInfo mode ) {
+    super(text + ". Name node is in safe mode.\n" + mode.getTurnOffTip());
   }
 
 }

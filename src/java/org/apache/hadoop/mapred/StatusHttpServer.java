@@ -72,7 +72,7 @@ public class StatusHttpServer {
 
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
     String logDir = System.getProperty("hadoop.log.dir");
-    if( logDir != null ) {
+    if (logDir != null) {
       HttpContext logContext = new HttpContext();
       logContext.setContextPath("/logs/*");
       logContext.setResourceBase(logDir);
@@ -101,7 +101,7 @@ public class StatusHttpServer {
    * @param value The value of the attribute
    */
   public void setAttribute(String name, Object value) {
-    webAppContext.setAttribute(name,value);
+    webAppContext.setAttribute(name, value);
   }
 
   /**
@@ -153,7 +153,7 @@ public class StatusHttpServer {
    */
   private static String getWebAppsPath() throws IOException {
     URL url = StatusHttpServer.class.getClassLoader().getResource("webapps");
-    if( url == null ) 
+    if (url == null) 
       throw new IOException("webapps not found in CLASSPATH"); 
     return url.toString();
   }

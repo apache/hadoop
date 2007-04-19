@@ -58,11 +58,11 @@ public class AccumulatingReducer extends MapReduceBase implements Reducer {
     TaskTracker.LOG.info("Starting AccumulatingReducer on " + hostName);
   }
   
-  public void reduce( WritableComparable key, 
-                      Iterator values,
-                      OutputCollector output, 
-                      Reporter reporter
-                      ) throws IOException {
+  public void reduce(WritableComparable key, 
+                     Iterator values,
+                     OutputCollector output, 
+                     Reporter reporter
+                     ) throws IOException {
     String field = ((UTF8) key).toString();
 
     reporter.setStatus("starting " + field + " ::host = " + hostName);

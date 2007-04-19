@@ -59,7 +59,7 @@ class FSImage extends Storage {
     EDITS_NEW ("edits.new");
     
     private String fileName = null;
-    private NameNodeFile( String name ) {this.fileName = name;}
+    private NameNodeFile(String name) {this.fileName = name;}
     String getName() {return fileName;}
   }
   
@@ -70,53 +70,53 @@ class FSImage extends Storage {
   /**
    */
   FSImage() {
-    super( NodeType.NAME_NODE );
-    this.editLog = new FSEditLog( this );
+    super(NodeType.NAME_NODE);
+    this.editLog = new FSEditLog(this);
   }
 
   /**
    */
-  FSImage( Collection<File> fsDirs ) throws IOException {
+  FSImage(Collection<File> fsDirs) throws IOException {
     this();
-    setStorageDirectories( fsDirs );
+    setStorageDirectories(fsDirs);
   }
 
-  FSImage( StorageInfo storageInfo ) {
-    super( NodeType.NAME_NODE, storageInfo );
+  FSImage(StorageInfo storageInfo) {
+    super(NodeType.NAME_NODE, storageInfo);
   }
 
   /**
    * Represents an Image (image and edit file).
    */
-  FSImage( File imageDir ) throws IOException {
+  FSImage(File imageDir) throws IOException {
     this();
     ArrayList<File> dirs = new ArrayList<File>(1);
-    dirs.add( imageDir );
-    setStorageDirectories( dirs );
+    dirs.add(imageDir);
+    setStorageDirectories(dirs);
   }
   
-  void setStorageDirectories( Collection<File> fsDirs ) throws IOException {
-    this.storageDirs = new ArrayList<StorageDirectory>( fsDirs.size() );
-    for( Iterator<File> it = fsDirs.iterator(); it.hasNext(); )
-      this.addStorageDir( new StorageDirectory( it.next() ));
+  void setStorageDirectories(Collection<File> fsDirs) throws IOException {
+    this.storageDirs = new ArrayList<StorageDirectory>(fsDirs.size());
+    for(Iterator<File> it = fsDirs.iterator(); it.hasNext();)
+      this.addStorageDir(new StorageDirectory(it.next()));
   }
 
   /**
    */
-  File getImageFile( int imageDirIdx, NameNodeFile type ) {
-    return getImageFile( getStorageDir( imageDirIdx ), type );
+  File getImageFile(int imageDirIdx, NameNodeFile type) {
+    return getImageFile(getStorageDir(imageDirIdx), type);
   }
   
-  static File getImageFile( StorageDirectory sd, NameNodeFile type ) {
-    return new File( sd.getCurrentDir(), type.getName() );
+  static File getImageFile(StorageDirectory sd, NameNodeFile type) {
+    return new File(sd.getCurrentDir(), type.getName());
   }
   
-  File getEditFile( int idx ) {
-    return getImageFile( idx, NameNodeFile.EDITS );
+  File getEditFile(int idx) {
+    return getImageFile(idx, NameNodeFile.EDITS);
   }
   
-  File getEditNewFile( int idx ) {
-    return getImageFile( idx, NameNodeFile.EDITS_NEW );
+  File getEditNewFile(int idx) {
+    return getImageFile(idx, NameNodeFile.EDITS_NEW);
   }
   
   /**
@@ -129,42 +129,42 @@ class FSImage extends Storage {
    * @param startOpt startup option
    * @throws IOException
    */
-  void recoverTransitionRead( Collection<File> dataDirs,
-                              StartupOption startOpt
-                              ) throws IOException {
+  void recoverTransitionRead(Collection<File> dataDirs,
+                             StartupOption startOpt
+                             ) throws IOException {
     assert startOpt != StartupOption.FORMAT : 
       "NameNode formatting should be performed before reading the image";
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
-    this.storageDirs = new ArrayList<StorageDirectory>( dataDirs.size() );
+    this.storageDirs = new ArrayList<StorageDirectory>(dataDirs.size());
     AbstractList<StorageState> dataDirStates = 
-      new ArrayList<StorageState>( dataDirs.size() );
+      new ArrayList<StorageState>(dataDirs.size());
     boolean isFormatted = false;
-    for( Iterator<File> it = dataDirs.iterator(); it.hasNext(); ) {
+    for(Iterator<File> it = dataDirs.iterator(); it.hasNext();) {
       File dataDir = it.next();
-      StorageDirectory sd = new StorageDirectory( dataDir );
+      StorageDirectory sd = new StorageDirectory(dataDir);
       StorageState curState;
       try {
-        curState = sd.analyzeStorage( startOpt );
+        curState = sd.analyzeStorage(startOpt);
         // sd is locked but not opened
-        switch( curState ) {
+        switch(curState) {
         case NON_EXISTENT:
           // name-node fails if any of the configured storage dirs are missing
-          throw new InconsistentFSStateException( sd.root,
-                                                  "storage directory does not exist or is not accessible." );
+          throw new InconsistentFSStateException(sd.root,
+                                                 "storage directory does not exist or is not accessible.");
         case NOT_FORMATTED:
           break;
         case CONVERT:
-          if( convertLayout( sd ) ) // need to reformat empty image
+          if (convertLayout(sd)) // need to reformat empty image
             curState = StorageState.NOT_FORMATTED;
           break;
         case NORMAL:
           break;
         default:  // recovery is possible
-          sd.doRecover( curState );      
+          sd.doRecover(curState);      
         }
-        if( curState != StorageState.NOT_FORMATTED 
-            && startOpt != StartupOption.ROLLBACK ) {
+        if (curState != StorageState.NOT_FORMATTED 
+            && startOpt != StartupOption.ROLLBACK) {
           sd.read(); // read and verify consistency with other directories
           isFormatted = true;
         }
@@ -173,34 +173,34 @@ class FSImage extends Storage {
         throw ioe;
       }
       // add to the storage list
-      addStorageDir( sd );
-      dataDirStates.add( curState );
+      addStorageDir(sd);
+      dataDirStates.add(curState);
     }
 
-    if( dataDirs.size() == 0 )  // none of the data dirs exist
-      throw new IOException( 
-                            "All specified directories are not accessible or do not exist." );
-    if( ! isFormatted && startOpt != StartupOption.ROLLBACK )
-      throw new IOException( "NameNode is not formatted." );
-    if( startOpt != StartupOption.UPGRADE
+    if (dataDirs.size() == 0)  // none of the data dirs exist
+      throw new IOException(
+                            "All specified directories are not accessible or do not exist.");
+    if (!isFormatted && startOpt != StartupOption.ROLLBACK)
+      throw new IOException("NameNode is not formatted.");
+    if (startOpt != StartupOption.UPGRADE
         && layoutVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION
-        && layoutVersion != FSConstants.LAYOUT_VERSION )
-      throw new IOException( 
+        && layoutVersion != FSConstants.LAYOUT_VERSION)
+      throw new IOException(
                             "\nFile system image contains an old layout version " + layoutVersion
                             + ".\nAn upgrade to version " + FSConstants.LAYOUT_VERSION
-                            + " is required.\nPlease restart NameNode with -upgrade option." );
+                            + " is required.\nPlease restart NameNode with -upgrade option.");
 
     // 2. Format unformatted dirs.
     this.checkpointTime = 0L;
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
-      StorageDirectory sd = getStorageDir( idx );
-      StorageState curState = dataDirStates.get( idx );
-      switch( curState ) {
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      StorageDirectory sd = getStorageDir(idx);
+      StorageState curState = dataDirStates.get(idx);
+      switch(curState) {
       case NON_EXISTENT:
         assert false : StorageState.NON_EXISTENT + " state cannot be here";
       case NOT_FORMATTED:
-        LOG.info( "Storage directory " + sd.root + " is not formatted." );
-        LOG.info( "Formatting ..." );
+        LOG.info("Storage directory " + sd.root + " is not formatted.");
+        LOG.info("Formatting ...");
         sd.clearDirectory(); // create empty currrent dir
         break;
       default:
@@ -209,7 +209,7 @@ class FSImage extends Storage {
     }
 
     // 3. Do transitions
-    switch( startOpt ) {
+    switch(startOpt) {
     case UPGRADE:
       doUpgrade();
       break;
@@ -217,7 +217,7 @@ class FSImage extends Storage {
       doRollback();
       // and now load that image
     case REGULAR:
-      if( loadFSImage() )
+      if (loadFSImage())
         saveFSImage();
       else
         editLog.open();
@@ -229,12 +229,12 @@ class FSImage extends Storage {
   private void doUpgrade() throws IOException {
     // Upgrade is allowed only if there are 
     // no previous fs states in any of the directories
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
-      StorageDirectory sd = getStorageDir( idx );
-      if( sd.getPreviousDir().exists() )
-        throw new InconsistentFSStateException( sd.root,
-                                                "previous fs state should not exist during upgrade. "
-                                                + "Finalize or rollback first." );
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      StorageDirectory sd = getStorageDir(idx);
+      if (sd.getPreviousDir().exists())
+        throw new InconsistentFSStateException(sd.root,
+                                               "previous fs state should not exist during upgrade. "
+                                               + "Finalize or rollback first.");
     }
 
     // load the latest image
@@ -246,32 +246,32 @@ class FSImage extends Storage {
     int oldLV = this.getLayoutVersion();
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     this.checkpointTime = FSNamesystem.now();
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
-      StorageDirectory sd = getStorageDir( idx );
-      LOG.info( "Upgrading image directory " + sd.root 
-                + ".\n   old LV = " + oldLV
-                + "; old CTime = " + oldCTime
-                + ".\n   new LV = " + this.getLayoutVersion()
-                + "; new CTime = " + this.getCTime() );
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      StorageDirectory sd = getStorageDir(idx);
+      LOG.info("Upgrading image directory " + sd.root 
+               + ".\n   old LV = " + oldLV
+               + "; old CTime = " + oldCTime
+               + ".\n   new LV = " + this.getLayoutVersion()
+               + "; new CTime = " + this.getCTime());
       File curDir = sd.getCurrentDir();
       File prevDir = sd.getPreviousDir();
       File tmpDir = sd.getPreviousTmp();
       assert curDir.exists() : "Current directory must exist.";
-      assert ! prevDir.exists() : "prvious directory must not exist.";
-      assert ! tmpDir.exists() : "prvious.tmp directory must not exist.";
+      assert !prevDir.exists() : "prvious directory must not exist.";
+      assert !tmpDir.exists() : "prvious.tmp directory must not exist.";
       // rename current to tmp
-      rename( curDir, tmpDir );
+      rename(curDir, tmpDir);
       // save new image
-      if( ! curDir.mkdir() )
-        throw new IOException("Cannot create directory " + curDir );
-      saveFSImage( getImageFile( sd, NameNodeFile.IMAGE ));
-      editLog.createEditLogFile( getImageFile( sd, NameNodeFile.EDITS ));
+      if (!curDir.mkdir())
+        throw new IOException("Cannot create directory " + curDir);
+      saveFSImage(getImageFile(sd, NameNodeFile.IMAGE));
+      editLog.createEditLogFile(getImageFile(sd, NameNodeFile.EDITS));
       // write version and time files
       sd.write();
       // rename tmp to previous
-      rename( tmpDir, prevDir );
+      rename(tmpDir, prevDir);
       isUpgradeFinalized = false;
-      LOG.info( "Upgrade of " + sd.root + " is complete." );
+      LOG.info("Upgrade of " + sd.root + " is complete.");
     }
     editLog.open();
   }
@@ -283,91 +283,91 @@ class FSImage extends Storage {
     boolean canRollback = false;
     FSImage prevState = new FSImage();
     prevState.layoutVersion = FSConstants.LAYOUT_VERSION;
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
-      StorageDirectory sd = getStorageDir( idx );
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      StorageDirectory sd = getStorageDir(idx);
       File prevDir = sd.getPreviousDir();
-      if( ! prevDir.exists() ) {  // use current directory then
-        LOG.info( "Storage directory " + sd.root
-                  + " does not contain previous fs state." );
+      if (!prevDir.exists()) {  // use current directory then
+        LOG.info("Storage directory " + sd.root
+                 + " does not contain previous fs state.");
         sd.read(); // read and verify consistency with other directories
         continue;
       }
-      StorageDirectory sdPrev = prevState.new StorageDirectory( sd.root );
-      sdPrev.read( sdPrev.getPreviousVersionFile() );  // read and verify consistency of the prev dir
+      StorageDirectory sdPrev = prevState.new StorageDirectory(sd.root);
+      sdPrev.read(sdPrev.getPreviousVersionFile());  // read and verify consistency of the prev dir
       canRollback = true;
     }
-    if( ! canRollback )
-      throw new IOException( "Cannot rollback. " 
-                             + "None of the storage directories contain previous fs state." );
+    if (!canRollback)
+      throw new IOException("Cannot rollback. " 
+                            + "None of the storage directories contain previous fs state.");
 
     // Now that we know all directories are going to be consistent
     // Do rollback for each directory containing previous state
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
-      StorageDirectory sd = getStorageDir( idx );
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      StorageDirectory sd = getStorageDir(idx);
       File prevDir = sd.getPreviousDir();
-      if( ! prevDir.exists() )
+      if (!prevDir.exists())
         continue;
 
-      LOG.info( "Rolling back storage directory " + sd.root 
-                + ".\n   new LV = " + prevState.getLayoutVersion()
-                + "; new CTime = " + prevState.getCTime() );
+      LOG.info("Rolling back storage directory " + sd.root 
+               + ".\n   new LV = " + prevState.getLayoutVersion()
+               + "; new CTime = " + prevState.getCTime());
       File tmpDir = sd.getRemovedTmp();
-      assert ! tmpDir.exists() : "removed.tmp directory must not exist.";
+      assert !tmpDir.exists() : "removed.tmp directory must not exist.";
       // rename current to tmp
       File curDir = sd.getCurrentDir();
       assert curDir.exists() : "Current directory must exist.";
-      rename( curDir, tmpDir );
+      rename(curDir, tmpDir);
       // rename previous to current
-      rename( prevDir, curDir );
+      rename(prevDir, curDir);
 
       // delete tmp dir
-      deleteDir( tmpDir );
-      LOG.info( "Rollback of " + sd.root + " is complete." );
+      deleteDir(tmpDir);
+      LOG.info("Rollback of " + sd.root + " is complete.");
     }
     isUpgradeFinalized = true;
   }
 
-  private void doFinalize( StorageDirectory sd ) throws IOException {
+  private void doFinalize(StorageDirectory sd) throws IOException {
     File prevDir = sd.getPreviousDir();
-    if( ! prevDir.exists() )
+    if (!prevDir.exists())
       return; // already discarded
-    LOG.info( "Finalizing upgrade for storage directory " 
-              + sd.root 
-              + ".\n   cur LV = " + this.getLayoutVersion()
-              + "; cur CTime = " + this.getCTime() );
+    LOG.info("Finalizing upgrade for storage directory " 
+             + sd.root 
+             + ".\n   cur LV = " + this.getLayoutVersion()
+             + "; cur CTime = " + this.getCTime());
     assert sd.getCurrentDir().exists() : "Current directory must exist.";
     final File tmpDir = sd.getFinalizedTmp();
     // rename previous to tmp and remove
-    rename( prevDir, tmpDir );
-    deleteDir( tmpDir );
+    rename(prevDir, tmpDir);
+    deleteDir(tmpDir);
     isUpgradeFinalized = true;
-    LOG.info( "Finalize upgrade for " + sd.root + " is complete." );
+    LOG.info("Finalize upgrade for " + sd.root + " is complete.");
   }
 
   void finalizeUpgrade() throws IOException {
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ )
-      doFinalize( getStorageDir( idx ));
+    for(int idx = 0; idx < getNumStorageDirs(); idx++)
+      doFinalize(getStorageDir(idx));
   }
 
   boolean isUpgradeFinalized() {
     return isUpgradeFinalized;
   }
 
-  protected void getFields( Properties props, 
-                            StorageDirectory sd 
-                            ) throws IOException {
-    super.getFields( props, sd );
-    if( layoutVersion == 0 )
+  protected void getFields(Properties props, 
+                           StorageDirectory sd 
+                           ) throws IOException {
+    super.getFields(props, sd);
+    if (layoutVersion == 0)
       throw new IOException("NameNode directory " 
-                            + sd.root + " is not formatted." );
-    this.checkpointTime = readCheckpointTime( sd );
+                            + sd.root + " is not formatted.");
+    this.checkpointTime = readCheckpointTime(sd);
   }
 
-  long readCheckpointTime( StorageDirectory sd ) throws IOException {
-    File timeFile = getImageFile( sd, NameNodeFile.TIME );
+  long readCheckpointTime(StorageDirectory sd) throws IOException {
+    File timeFile = getImageFile(sd, NameNodeFile.TIME);
     long timeStamp = 0L;
-    if( timeFile.exists() && timeFile.canRead() ) {
-      DataInputStream in = new DataInputStream( new FileInputStream(timeFile) );
+    if (timeFile.exists() && timeFile.canRead()) {
+      DataInputStream in = new DataInputStream(new FileInputStream(timeFile));
       try {
         timeStamp = in.readLong();
       } finally {
@@ -387,11 +387,11 @@ class FSImage extends Storage {
    * @param sd storage directory
    * @throws IOException
    */
-  protected void setFields( Properties props, 
-                            StorageDirectory sd 
-                            ) throws IOException {
-    super.setFields( props, sd );
-    writeCheckpointTime( sd );
+  protected void setFields(Properties props, 
+                           StorageDirectory sd 
+                           ) throws IOException {
+    super.setFields(props, sd);
+    writeCheckpointTime(sd);
   }
 
   /**
@@ -400,15 +400,15 @@ class FSImage extends Storage {
    * @param sd
    * @throws IOException
    */
-  void writeCheckpointTime( StorageDirectory sd ) throws IOException {
-    if( checkpointTime < 0L )
+  void writeCheckpointTime(StorageDirectory sd) throws IOException {
+    if (checkpointTime < 0L)
       return; // do not write negative time
-    File timeFile = getImageFile( sd, NameNodeFile.TIME );
+    File timeFile = getImageFile(sd, NameNodeFile.TIME);
     if (timeFile.exists()) { timeFile.delete(); }
     DataOutputStream out = new DataOutputStream(
                                                 new FileOutputStream(timeFile));
     try {
-      out.writeLong( checkpointTime );
+      out.writeLong(checkpointTime);
     } finally {
       out.close();
     }
@@ -422,41 +422,41 @@ class FSImage extends Storage {
    */
   void processIOError(int index) throws IOException {
     int nrDirs = getNumStorageDirs();
-    assert( index >= 0 && index < nrDirs );
-    if( nrDirs == 1 )
+    assert(index >= 0 && index < nrDirs);
+    if (nrDirs == 1)
       throw new IOException("Checkpoint directories inaccessible.");
-    storageDirs.remove( index );
+    storageDirs.remove(index);
   }
 
   FSEditLog getEditLog() {
     return editLog;
   }
 
-  boolean isConversionNeeded( StorageDirectory sd ) throws IOException {
-    File oldImageDir = new File( sd.root, "image" );
-    if( ! oldImageDir.exists() )
+  boolean isConversionNeeded(StorageDirectory sd) throws IOException {
+    File oldImageDir = new File(sd.root, "image");
+    if (!oldImageDir.exists())
       return false;
     // check consistency of the old storage
-    if( ! oldImageDir.isDirectory() )
-      throw new InconsistentFSStateException( sd.root,
-                                              oldImageDir + " is not a directory." );
-    if( ! oldImageDir.canWrite() )
-      throw new InconsistentFSStateException( sd.root,
-                                              oldImageDir + " is not writable." );
+    if (!oldImageDir.isDirectory())
+      throw new InconsistentFSStateException(sd.root,
+                                             oldImageDir + " is not a directory.");
+    if (!oldImageDir.canWrite())
+      throw new InconsistentFSStateException(sd.root,
+                                             oldImageDir + " is not writable.");
     return true;
   }
   
-  private boolean convertLayout( StorageDirectory sd ) throws IOException {
+  private boolean convertLayout(StorageDirectory sd) throws IOException {
     assert FSConstants.LAYOUT_VERSION < LAST_PRE_UPGRADE_LAYOUT_VERSION :
       "Bad current layout version: FSConstants.LAYOUT_VERSION should decrease";
-    File oldImageDir = new File( sd.root, "image" );
+    File oldImageDir = new File(sd.root, "image");
     assert oldImageDir.exists() : "Old image directory is missing";
-    File oldImage = new File( oldImageDir, "fsimage" );
+    File oldImage = new File(oldImageDir, "fsimage");
     
-    LOG.info( "Old layout version directory " + oldImageDir
-              + " is found. New layout version is "
-              + FSConstants.LAYOUT_VERSION );
-    LOG.info( "Trying to convert ..." );
+    LOG.info("Old layout version directory " + oldImageDir
+             + " is found. New layout version is "
+             + FSConstants.LAYOUT_VERSION);
+    LOG.info("Trying to convert ...");
 
     // we did not use locking for the pre upgrade layout, so we cannot prevent 
     // old name-nodes from running in the same directory as the new ones
@@ -464,35 +464,35 @@ class FSImage extends Storage {
     // check new storage
     File newImageDir = sd.getCurrentDir();
     File versionF = sd.getVersionFile();
-    if( versionF.exists() )
-      throw new IOException( "Version file already exists: " + versionF );
-    if( newImageDir.exists() ) // // somebody created current dir manually
-      deleteDir( newImageDir );
+    if (versionF.exists())
+      throw new IOException("Version file already exists: " + versionF);
+    if (newImageDir.exists()) // // somebody created current dir manually
+      deleteDir(newImageDir);
 
     // move old image files into new location
-    rename( oldImageDir, newImageDir );
-    File oldEdits1 = new File( sd.root, "edits" );
+    rename(oldImageDir, newImageDir);
+    File oldEdits1 = new File(sd.root, "edits");
     // move old edits into data
-    if( oldEdits1.exists() )
-      rename( oldEdits1, getImageFile( sd, NameNodeFile.EDITS ));
-    File oldEdits2 = new File( sd.root, "edits.new" );
-    if( oldEdits2.exists() )
-      rename( oldEdits2, getImageFile( sd, NameNodeFile.EDITS_NEW ));
+    if (oldEdits1.exists())
+      rename(oldEdits1, getImageFile(sd, NameNodeFile.EDITS));
+    File oldEdits2 = new File(sd.root, "edits.new");
+    if (oldEdits2.exists())
+      rename(oldEdits2, getImageFile(sd, NameNodeFile.EDITS_NEW));
 
     // Write new layout with 
     // setting layoutVersion = LAST_PRE_UPGRADE_LAYOUT_VERSION
     // means the actual version should be obtained from the image file
     this.layoutVersion = LAST_PRE_UPGRADE_LAYOUT_VERSION;
-    File newImageFile = getImageFile( sd, NameNodeFile.IMAGE );
+    File newImageFile = getImageFile(sd, NameNodeFile.IMAGE);
     boolean needReformat = false;
-    if( ! newImageFile.exists() ) {
+    if (!newImageFile.exists()) {
       // in pre upgrade versions image file was allowed not to exist
       // we treat it as non formatted then
-      LOG.info( "Old image file " + oldImage + " does not exist. " );
+      LOG.info("Old image file " + oldImage + " does not exist. ");
       needReformat = true;
     } else {
       sd.write();
-      LOG.info( "Conversion of " + oldImage + " is complete." );
+      LOG.info("Conversion of " + oldImage + " is complete.");
     }
     return needReformat;
   }
@@ -500,15 +500,15 @@ class FSImage extends Storage {
   //
   // Atomic move sequence, to recover from interrupted checkpoint
   //
-  void recoverInterruptedCheckpoint( StorageDirectory sd ) throws IOException {
-    File curFile = getImageFile( sd, NameNodeFile.IMAGE );
-    File ckptFile = getImageFile( sd, NameNodeFile.IMAGE_NEW );
+  void recoverInterruptedCheckpoint(StorageDirectory sd) throws IOException {
+    File curFile = getImageFile(sd, NameNodeFile.IMAGE);
+    File ckptFile = getImageFile(sd, NameNodeFile.IMAGE_NEW);
 
     //
     // If we were in the midst of a checkpoint
     //
     if (ckptFile.exists()) {
-      if (getImageFile( sd, NameNodeFile.EDITS_NEW ).exists()) {
+      if (getImageFile(sd, NameNodeFile.EDITS_NEW).exists()) {
         //
         // checkpointing migth have uploaded a new
         // merged image, but we discard it here because we are
@@ -552,23 +552,23 @@ class FSImage extends Storage {
     boolean needToSave = false;
     isUpgradeFinalized = true;
     for (int idx = 0; idx < getNumStorageDirs(); idx++) {
-      StorageDirectory sd = getStorageDir( idx );
-      recoverInterruptedCheckpoint( sd );
-      if( ! sd.getVersionFile().exists() ) {
+      StorageDirectory sd = getStorageDir(idx);
+      recoverInterruptedCheckpoint(sd);
+      if (!sd.getVersionFile().exists()) {
         needToSave |= true;
         continue; // some of them might have just been formatted
       }
-      assert getImageFile( sd, NameNodeFile.IMAGE ).exists() :
+      assert getImageFile(sd, NameNodeFile.IMAGE).exists() :
         "Image file must exist.";
-      checkpointTime = readCheckpointTime( sd );
-      if( latestCheckpointTime < checkpointTime ) {
+      checkpointTime = readCheckpointTime(sd);
+      if (latestCheckpointTime < checkpointTime) {
         latestCheckpointTime = checkpointTime;
         latestSD = sd;
       }
-      if( checkpointTime <= 0L )
+      if (checkpointTime <= 0L)
         needToSave |= true;
       // set finalized flag
-      isUpgradeFinalized &= ! sd.getPreviousDir().exists();
+      isUpgradeFinalized &= !sd.getPreviousDir().exists();
     }
     assert latestSD != null : "Latest storage directory was not determined.";
 
@@ -576,13 +576,13 @@ class FSImage extends Storage {
     // Load in bits
     //
     latestSD.read();
-    needToSave |= loadFSImage( getImageFile( latestSD, NameNodeFile.IMAGE ));
+    needToSave |= loadFSImage(getImageFile(latestSD, NameNodeFile.IMAGE));
 
     //
     // read in the editlog from the same directory from
     // which we read in the image
     //
-    needToSave |= ( loadFSEdits( latestSD ) > 0 );
+    needToSave |= (loadFSEdits(latestSD) > 0);
 
     return needToSave;
   }
@@ -592,7 +592,7 @@ class FSImage extends Storage {
    * filenames and blocks.  Return whether we should
    * "re-save" and consolidate the edit-logs
    */
-  boolean loadFSImage( File curFile ) throws IOException {
+  boolean loadFSImage(File curFile) throws IOException {
     assert this.getLayoutVersion() < 0 : "Negative layout version is expected.";
     assert curFile != null : "curFile is null";
 
@@ -613,13 +613,13 @@ class FSImage extends Storage {
       // read image version: first appeared in version -1
       imgVersion = in.readInt();
       // read namespaceID: first appeared in version -2
-      if( imgVersion <= -2 )
+      if (imgVersion <= -2)
         this.namespaceID = in.readInt();
       // read number of files
       int numFiles = 0;
       // version 0 does not store version #
       // starts directly with the number of files
-      if( imgVersion >= 0 ) {
+      if (imgVersion >= 0) {
         numFiles = imgVersion;
         imgVersion = 0;
       } else {
@@ -627,7 +627,7 @@ class FSImage extends Storage {
       }
       this.layoutVersion = imgVersion;
 
-      needToSave = ( imgVersion != FSConstants.LAYOUT_VERSION );
+      needToSave = (imgVersion != FSConstants.LAYOUT_VERSION);
 
       // read file info
       short replication = FSNamesystem.getFSNamesystem().getDefaultReplication();
@@ -635,9 +635,9 @@ class FSImage extends Storage {
         UTF8 name = new UTF8();
         name.readFields(in);
         // version 0 does not support per file replication
-        if( !(imgVersion >= 0) ) {
+        if (!(imgVersion >= 0)) {
           replication = in.readShort(); // other versions do
-          replication = FSEditLog.adjustReplication( replication );
+          replication = FSEditLog.adjustReplication(replication);
         }
         int numBlocks = in.readInt();
         Block blocks[] = null;
@@ -648,11 +648,11 @@ class FSImage extends Storage {
             blocks[j].readFields(in);
           }
         }
-        fsDir.unprotectedAddFile(name, blocks, replication );
+        fsDir.unprotectedAddFile(name, blocks, replication);
       }
       
       // load datanode info
-      this.loadDatanodes( imgVersion, in );
+      this.loadDatanodes(imgVersion, in);
     } finally {
       in.close();
     }
@@ -667,19 +667,19 @@ class FSImage extends Storage {
    * @return number of edits loaded
    * @throws IOException
    */
-  int loadFSEdits( StorageDirectory sd ) throws IOException {
+  int loadFSEdits(StorageDirectory sd) throws IOException {
     int numEdits = 0;
-    numEdits = editLog.loadFSEdits( getImageFile( sd, NameNodeFile.EDITS ));
-    File editsNew = getImageFile( sd, NameNodeFile.EDITS_NEW );
-    if( editsNew.exists() ) 
-      numEdits += editLog.loadFSEdits( editsNew );
+    numEdits = editLog.loadFSEdits(getImageFile(sd, NameNodeFile.EDITS));
+    File editsNew = getImageFile(sd, NameNodeFile.EDITS_NEW);
+    if (editsNew.exists()) 
+      numEdits += editLog.loadFSEdits(editsNew);
     return numEdits;
   }
 
   /**
    * Save the contents of the FS image to the file.
    */
-  void saveFSImage( File newFile  ) throws IOException {
+  void saveFSImage(File newFile ) throws IOException {
     FSDirectory fsDir = FSNamesystem.getFSNamesystem().dir;
     //
     // Write out data
@@ -691,8 +691,8 @@ class FSImage extends Storage {
       out.writeInt(FSConstants.LAYOUT_VERSION);
       out.writeInt(namespaceID);
       out.writeInt(fsDir.rootDir.numItemsInTree() - 1);
-      saveImage( "", fsDir.rootDir, out );
-      saveDatanodes( out );
+      saveImage("", fsDir.rootDir, out);
+      saveDatanodes(out);
     } finally {
       out.close();
     }
@@ -704,9 +704,9 @@ class FSImage extends Storage {
   void saveFSImage() throws IOException {
     editLog.createNewIfMissing();
     for (int idx = 0; idx < getNumStorageDirs(); idx++) {
-      StorageDirectory sd = getStorageDir( idx );
-      saveFSImage( getImageFile( sd, NameNodeFile.IMAGE_NEW ));
-      editLog.createEditLogFile( getImageFile( sd, NameNodeFile.EDITS ));
+      StorageDirectory sd = getStorageDir(idx);
+      saveFSImage(getImageFile(sd, NameNodeFile.IMAGE_NEW));
+      editLog.createEditLogFile(getImageFile(sd, NameNodeFile.EDITS));
     }
     rollFSImage();
   }
@@ -725,27 +725,27 @@ class FSImage extends Storage {
    */
   private int newNamespaceID() {
     Random r = new Random();
-    r.setSeed( FSNamesystem.now() );
+    r.setSeed(FSNamesystem.now());
     int newID = 0;
-    while( newID == 0)
-      newID = r.nextInt( 0x7FFFFFFF );  // use 31 bits only
+    while(newID == 0)
+      newID = r.nextInt(0x7FFFFFFF);  // use 31 bits only
     return newID;
   }
 
   /** Create new dfs name directory.  Caution: this destroys all files
    * in this filesystem. */
-  void format( StorageDirectory sd ) throws IOException {
+  void format(StorageDirectory sd) throws IOException {
     sd.clearDirectory(); // create currrent dir
     sd.lock();
     try {
-      saveFSImage( getImageFile( sd, NameNodeFile.IMAGE ));
-      editLog.createEditLogFile( getImageFile( sd, NameNodeFile.EDITS ));
+      saveFSImage(getImageFile(sd, NameNodeFile.IMAGE));
+      editLog.createEditLogFile(getImageFile(sd, NameNodeFile.EDITS));
       sd.write();
     } finally {
       sd.unlock();
     }
-    LOG.info( "Storage directory " + sd.root 
-              + " has been successfully formatted." );
+    LOG.info("Storage directory " + sd.root 
+             + " has been successfully formatted.");
   }
 
   public void format() throws IOException {
@@ -753,9 +753,9 @@ class FSImage extends Storage {
     this.namespaceID = newNamespaceID();
     this.cTime = 0L;
     this.checkpointTime = FSNamesystem.now();
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
-      StorageDirectory sd = getStorageDir( idx );
-      format( sd );
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      StorageDirectory sd = getStorageDir(idx);
+      format(sd);
     }
   }
 
@@ -764,24 +764,24 @@ class FSImage extends Storage {
    */
   private static void saveImage(String parentPrefix, 
                                 FSDirectory.INode root, 
-                                DataOutputStream out ) throws IOException {
+                                DataOutputStream out) throws IOException {
     String fullName = "";
-    if( root.getParent() != null) {
+    if (root.getParent() != null) {
       fullName = parentPrefix + "/" + root.getLocalName();
       new UTF8(fullName).write(out);
-      out.writeShort( root.getReplication() );
-      if( root.isDir() ) {
+      out.writeShort(root.getReplication());
+      if (root.isDir()) {
         out.writeInt(0);
       } else {
         int nrBlocks = root.getBlocks().length;
-        out.writeInt( nrBlocks );
+        out.writeInt(nrBlocks);
         for (int i = 0; i < nrBlocks; i++)
           root.getBlocks()[i].write(out);
       }
     }
     for(Iterator<INode> it = root.getChildIterator(); it != null &&
-          it.hasNext(); ) {
-      saveImage( fullName, it.next(), out );
+          it.hasNext();) {
+      saveImage(fullName, it.next(), out);
     }
   }
 
@@ -793,22 +793,22 @@ class FSImage extends Storage {
    * @param out output stream
    * @throws IOException
    */
-  void saveDatanodes( DataOutputStream out ) throws IOException {
+  void saveDatanodes(DataOutputStream out) throws IOException {
     Map datanodeMap = FSNamesystem.getFSNamesystem().datanodeMap;
     int size = datanodeMap.size();
-    out.writeInt( size );
-    for( Iterator it = datanodeMap.values().iterator(); it.hasNext(); ) {
+    out.writeInt(size);
+    for(Iterator it = datanodeMap.values().iterator(); it.hasNext();) {
       DatanodeImage nodeImage = new DatanodeImage((DatanodeDescriptor) it.next());
-      nodeImage.write( out );
+      nodeImage.write(out);
     }
   }
 
-  void loadDatanodes( int version, DataInputStream in ) throws IOException {
-    if( version > -3 ) // pre datanode image version
+  void loadDatanodes(int version, DataInputStream in) throws IOException {
+    if (version > -3) // pre datanode image version
       return;
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     int size = in.readInt();
-    for( int i = 0; i < size; i++ ) {
+    for(int i = 0; i < size; i++) {
       DatanodeImage nodeImage = new DatanodeImage();
       nodeImage.readFields(in);
       fsNamesys.unprotectedAddDatanode(nodeImage.getDatanodeDescriptor());
@@ -827,9 +827,9 @@ class FSImage extends Storage {
     if (!editLog.existsNew()) {
       throw new IOException("New Edits file does not exist");
     }
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
-      StorageDirectory sd = getStorageDir( idx );
-      File ckpt = getImageFile( sd, NameNodeFile.IMAGE_NEW );
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      StorageDirectory sd = getStorageDir(idx);
+      File ckpt = getImageFile(sd, NameNodeFile.IMAGE_NEW);
       if (!ckpt.exists()) {
         throw new IOException("Checkpoint file " + ckpt +
                               " does not exist");
@@ -840,10 +840,10 @@ class FSImage extends Storage {
     //
     // Renames new image
     //
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
-      StorageDirectory sd = getStorageDir( idx );
-      File ckpt = getImageFile( sd, NameNodeFile.IMAGE_NEW );
-      File curFile = getImageFile( sd, NameNodeFile.IMAGE );
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      StorageDirectory sd = getStorageDir(idx);
+      File ckpt = getImageFile(sd, NameNodeFile.IMAGE_NEW);
+      File curFile = getImageFile(sd, NameNodeFile.IMAGE);
       // renameTo fails on Windows if the destination file 
       // already exists.
       if (!ckpt.renameTo(curFile)) {
@@ -860,12 +860,12 @@ class FSImage extends Storage {
     //
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     this.checkpointTime = FSNamesystem.now();
-    for( int idx = 0; idx < getNumStorageDirs(); idx++ ) {
-      StorageDirectory sd = getStorageDir( idx );
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      StorageDirectory sd = getStorageDir(idx);
       try {
         sd.write();
       } catch (IOException e) {
-        LOG.error( "Cannot write file " + sd.root, e );
+        LOG.error("Cannot write file " + sd.root, e);
         editLog.processIOError(idx);
         idx--;
       }
@@ -881,7 +881,7 @@ class FSImage extends Storage {
    * Return the name of the image file.
    */
   File getFsImageName() {
-    return getImageFile( 0, NameNodeFile.IMAGE );
+    return getImageFile(0, NameNodeFile.IMAGE);
   }
 
   /**
@@ -890,8 +890,8 @@ class FSImage extends Storage {
    */
   File[] getFsImageNameCheckpoint() {
     File[] list = new File[getNumStorageDirs()];
-    for( int i = 0; i < getNumStorageDirs(); i++ ) {
-      list[i] = getImageFile( getStorageDir( i ), NameNodeFile.IMAGE_NEW );
+    for(int i = 0; i < getNumStorageDirs(); i++) {
+      list[i] = getImageFile(getStorageDir(i), NameNodeFile.IMAGE_NEW);
     }
     return list;
   }

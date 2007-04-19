@@ -153,7 +153,7 @@ public class LzoCompressor implements Compressor {
       nativeLzoLoaded = true;
     } else {
       LOG.error("Cannot load " + LzoCompressor.class.getName() + 
-              " without native-hadoop library!");
+                " without native-hadoop library!");
     }
   }
   
@@ -220,7 +220,7 @@ public class LzoCompressor implements Compressor {
     // Reinitialize lzo's input direct buffer
     uncompressedDirectBuf.rewind();
     ((ByteBuffer)uncompressedDirectBuf).put(userBuf, userBufOff,  
-                                          uncompressedDirectBufLen);
+                                            uncompressedDirectBufLen);
 
     // Note how much data is being fed to lzo
     userBufOff += uncompressedDirectBufLen;
@@ -261,7 +261,7 @@ public class LzoCompressor implements Compressor {
   }
 
   public synchronized int compress(byte[] b, int off, int len) 
-  throws IOException {
+    throws IOException {
     if (b == null) {
       throw new NullPointerException();
     }

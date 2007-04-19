@@ -63,7 +63,7 @@ public class MRCaching {
         // read the cached files (unzipped, unjarred and text)
         // and put it into a single file TEST_ROOT_DIR/test.txt
         String TEST_ROOT_DIR = jconf.get("test.build.data","/tmp");
-        Path file = new Path("file:///",TEST_ROOT_DIR);
+        Path file = new Path("file:///", TEST_ROOT_DIR);
         FileSystem fs = FileSystem.getLocal(conf);
         if (!fs.mkdirs(file)) {
           throw new IOException("Mkdirs failed to create " + file.toString());
@@ -130,7 +130,7 @@ public class MRCaching {
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/tmp"))
       .toString().replace(' ', '+');
     //if (TEST_ROOT_DIR.startsWith("C:")) TEST_ROOT_DIR = "/tmp";
-    conf.set("test.build.data",TEST_ROOT_DIR);
+    conf.set("test.build.data", TEST_ROOT_DIR);
     final Path inDir = new Path(indir);
     final Path outDir = new Path(outdir);
     FileSystem fs = FileSystem.get(conf);

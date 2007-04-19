@@ -75,8 +75,8 @@ class TaskInProgress {
   private double progress = 0;
   private String state = "";
   private long startTime = 0;
-  private long execStartTime = 0 ;
-  private long execFinishTime = 0 ;
+  private long execStartTime = 0;
+  private long execFinishTime = 0;
   private int completes = 0;
   private boolean failed = false;
   private boolean killed = false;
@@ -269,12 +269,12 @@ class TaskInProgress {
     // then true
     TaskStatus ts = (TaskStatus) taskStatuses.get(taskid);
     if ((ts != null) &&
-        (! tasksReportedClosed.contains(taskid)) &&
+        (!tasksReportedClosed.contains(taskid)) &&
         (job.getStatus().getRunState() != JobStatus.RUNNING)) {
       tasksReportedClosed.add(taskid);
       return true;
-    } else if( !isMapTask() && isComplete() && 
-               ! tasksReportedClosed.contains(taskid) ){
+    } else if (!isMapTask() && isComplete() && 
+               !tasksReportedClosed.contains(taskid)){
       tasksReportedClosed.add(taskid);
       return true; 
     }
@@ -298,7 +298,7 @@ class TaskInProgress {
        diagnostics.toArray(new String[diagnostics.size()]),
        execStartTime, execFinishTime, counters);
       
-    return report ;
+    return report;
   }
 
   /**
@@ -383,7 +383,7 @@ class TaskInProgress {
     if (status != null) {
       status.setRunState(TaskStatus.State.FAILED);
       // tasktracker went down and failed time was not reported. 
-      if( 0 == status.getFinishTime() ){
+      if (0 == status.getFinishTime()){
         status.setFinishTime(System.currentTimeMillis());
       }
     }
@@ -487,7 +487,7 @@ class TaskInProgress {
       double bestProgress = 0;
       String bestState = "";
       Counters bestCounters = new Counters();
-      for (Iterator it = taskStatuses.keySet().iterator(); it.hasNext(); ) {
+      for (Iterator it = taskStatuses.keySet().iterator(); it.hasNext();) {
         String taskid = (String) it.next();
         TaskStatus status = taskStatuses.get(taskid);
         if (status.getRunState() == TaskStatus.State.SUCCEEDED) {
@@ -533,7 +533,7 @@ class TaskInProgress {
     // in more depth eventually...
     //
       
-    if( activeTasks.size() <= MAX_TASK_EXECS &&
+    if (activeTasks.size() <= MAX_TASK_EXECS &&
         runSpeculative &&
         (averageProgress - progress >= SPECULATIVE_GAP) &&
         (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG) 
@@ -548,7 +548,7 @@ class TaskInProgress {
    */
   public Task getTaskToRun(String taskTracker) throws IOException {
     Task t = null;
-    if( 0 == execStartTime ){
+    if (0 == execStartTime){
       // assume task starts running now
       execStartTime = System.currentTimeMillis();
     }
@@ -597,7 +597,7 @@ class TaskInProgress {
    */
   public boolean hasRunOnMachine(String tracker){
     return this.activeTasks.values().contains(tracker) || 
-      hasFailedOnMachine(tracker) ;
+      hasFailedOnMachine(tracker);
   }
   /**
    * Get the number of machines where this task has failed.

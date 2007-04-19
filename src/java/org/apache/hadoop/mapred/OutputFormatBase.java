@@ -85,8 +85,8 @@ public abstract class OutputFormatBase implements OutputFormat {
     throws IOException;
 
   public void checkOutputSpecs(FileSystem ignored, JobConf job) 
-          throws FileAlreadyExistsException, 
-             InvalidJobConfException, IOException {
+    throws FileAlreadyExistsException, 
+           InvalidJobConfException, IOException {
     // Ensure that the output directory is set and not already there
     Path outDir = job.getOutputPath();
     if (outDir == null && job.getNumReduceTasks() != 0) {

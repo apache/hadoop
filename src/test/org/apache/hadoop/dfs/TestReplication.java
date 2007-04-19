@@ -76,7 +76,7 @@ public class TestReplication extends TestCase {
       isReplicationDone = true;
       for (int idx = 0; idx < locations.length; idx++) {
         DatanodeInfo[] datanodes = locations[idx].getLocations();
-        if(Math.min(numDatanodes, repl) != datanodes.length) {
+        if (Math.min(numDatanodes, repl) != datanodes.length) {
           isReplicationDone=false;
           LOG.warn("File has "+datanodes.length+" replicas, expecting "
                    +Math.min(numDatanodes, repl));
@@ -93,10 +93,10 @@ public class TestReplication extends TestCase {
     boolean isOnSameRack = true, isNotOnSameRack = true;
     for (int idx = 0; idx < locations.length; idx++) {
       DatanodeInfo[] datanodes = locations[idx].getLocations();
-      if(datanodes.length <= 1) break;
-      if(datanodes.length == 2) {
-        isNotOnSameRack = !( datanodes[0].getNetworkLocation().equals(
-                                                                      datanodes[1].getNetworkLocation() ) );
+      if (datanodes.length <= 1) break;
+      if (datanodes.length == 2) {
+        isNotOnSameRack = !(datanodes[0].getNetworkLocation().equals(
+                                                                     datanodes[1].getNetworkLocation()));
         break;
       }
       isOnSameRack = false;
@@ -104,16 +104,16 @@ public class TestReplication extends TestCase {
       for (int idy = 0; idy < datanodes.length-1; idy++) {
         LOG.info("datanode "+ idy + ": "+ datanodes[idy].getName());
         boolean onRack = datanodes[idy].getNetworkLocation().equals(
-                                                                    datanodes[idy+1].getNetworkLocation() );
-        if( onRack ) {
+                                                                    datanodes[idy+1].getNetworkLocation());
+        if (onRack) {
           isOnSameRack = true;
         }
-        if( !onRack ) {
+        if (!onRack) {
           isNotOnSameRack = true;                      
         }
-        if( isOnSameRack && isNotOnSameRack ) break;
+        if (isOnSameRack && isNotOnSameRack) break;
       }
-      if( !isOnSameRack || !isNotOnSameRack ) break;
+      if (!isOnSameRack || !isNotOnSameRack) break;
     }
     assertTrue(isOnSameRack);
     assertTrue(isNotOnSameRack);

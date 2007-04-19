@@ -74,12 +74,12 @@ public class FSDataOutputStream extends DataOutputStream {
   }
 
   public FSDataOutputStream(OutputStream out, int bufferSize)
-  throws IOException {
+    throws IOException {
     super(new Buffer(new PositionCache(out), bufferSize));
   }
   
   public FSDataOutputStream(OutputStream out, Configuration conf)
-  throws IOException {
+    throws IOException {
     this(out, conf.getInt("io.file.buffer.size", 4096));
   }
 

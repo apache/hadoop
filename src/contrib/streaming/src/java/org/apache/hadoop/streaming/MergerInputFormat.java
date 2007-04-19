@@ -82,7 +82,7 @@ public class MergerInputFormat extends InputFormatBase {
   /** Delegate to the primary InputFormat. 
       Force full-file splits since there's no index to sync secondaries.
       (and if there was, this index may need to be created for the first time
-      full file at a time...    )
+      full file at a time...   )
   */
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     return ((StreamInputFormat) primary_).getSplits(job, numSplits);
@@ -121,7 +121,7 @@ public class MergerInputFormat extends InputFormatBase {
   /*
     private FileSplit relatedSplit(FileSplit primarySplit, int i, CompoundDirSpec spec) throws IOException
     {
-    if(i == 0) {
+    if (i == 0) {
     return primarySplit;
     }
 
@@ -330,7 +330,7 @@ class MergeRecordStream {
   Writable v_;
 
   public MergeRecordStream(int index, RecordReader reader, WritableComparable k, Writable v)
-      throws IOException {
+    throws IOException {
     index_ = index;
     reader_ = reader;
     k_ = k;

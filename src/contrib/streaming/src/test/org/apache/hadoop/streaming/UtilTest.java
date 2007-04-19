@@ -34,7 +34,7 @@ class UtilTest {
 
   void checkUserDir() {
     // trunk/src/contrib/streaming --> trunk/build/contrib/streaming/test/data
-    if(! userDir_.equals(antTestDir_)) {
+    if (!userDir_.equals(antTestDir_)) {
       // because changes to user.dir are ignored by File static methods.
       throw new IllegalStateException("user.dir != test.build.data. The junit Ant task must be forked.");
     }
@@ -43,7 +43,7 @@ class UtilTest {
   void redirectIfAntJunit() throws IOException
   {
     boolean fromAntJunit = System.getProperty("test.build.data") != null;
-    if(fromAntJunit) {
+    if (fromAntJunit) {
       new File(antTestDir_).mkdirs();
       File outFile = new File(antTestDir_, testName_+".log");
       PrintStream out = new PrintStream(new FileOutputStream(outFile));

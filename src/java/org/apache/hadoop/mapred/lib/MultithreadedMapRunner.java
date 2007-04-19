@@ -48,7 +48,7 @@ public class MultithreadedMapRunner implements MapRunnable {
       job.getInt("mapred.map.multithreadedrunner.threads", 10);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Configuring job " + job.getJobName() +
-                " to use " + numberOfThreads + " threads" );
+                " to use " + numberOfThreads + " threads");
     }
 
     this.job = job;

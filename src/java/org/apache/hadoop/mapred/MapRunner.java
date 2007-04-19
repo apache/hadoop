@@ -48,7 +48,7 @@ public class MapRunner implements MapRunnable {
         mapper.map(key, value, output, reporter);
       }
     } finally {
-        mapper.close();
+      mapper.close();
     }
   }
 

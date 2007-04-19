@@ -186,35 +186,35 @@ public class TestDFSStorageStateRecovery extends TestCase {
         boolean curAfterRecover = testCase[5];
         boolean prevAfterRecover = testCase[6];
 
-        log("NAME_NODE recovery",numDirs,i,testCase);
+        log("NAME_NODE recovery", numDirs, i, testCase);
         baseDirs = createStorageState(NAME_NODE, testCase);
         if (shouldRecover) {
-          cluster = new MiniDFSCluster(conf,0,StartupOption.REGULAR);
+          cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
           checkResult(NAME_NODE, baseDirs, curAfterRecover, prevAfterRecover);
           cluster.shutdown();
         } else {
           try {
-            cluster = new MiniDFSCluster(conf,0,StartupOption.REGULAR);
+            cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
             throw new AssertionError("NameNode should have failed to start");
           } catch (Exception expected) {
             // expected
           }
         }
         
-        log("DATA_NODE recovery",numDirs,i,testCase);
-        createStorageState(NAME_NODE, new boolean[] {true,true,false,false});
-        cluster = new MiniDFSCluster(conf,0,StartupOption.REGULAR);
+        log("DATA_NODE recovery", numDirs, i, testCase);
+        createStorageState(NAME_NODE, new boolean[] {true, true, false, false});
+        cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
         baseDirs = createStorageState(DATA_NODE, testCase);
         if (!testCase[0] && !testCase[1] && !testCase[2] && !testCase[3]) {
           // DataNode will create and format current if no directories exist
-          cluster.startDataNodes(conf,1,false,StartupOption.REGULAR,null);
+          cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
         } else {
           if (shouldRecover) {
-            cluster.startDataNodes(conf,1,false,StartupOption.REGULAR,null);
+            cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
             checkResult(DATA_NODE, baseDirs, curAfterRecover, prevAfterRecover);
           } else {
             try {
-              cluster.startDataNodes(conf,1,false,StartupOption.REGULAR,null);
+              cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
               throw new AssertionError("DataNode should have failed to start");
             } catch (Exception expected) {
               // expected

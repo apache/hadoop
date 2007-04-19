@@ -195,7 +195,7 @@ public class MiniMRCluster {
    * Wait until the system is idle.
    */
   public void waitUntilIdle() {
-    for(Iterator itr= taskTrackerList.iterator(); itr.hasNext(); ) {
+    for(Iterator itr= taskTrackerList.iterator(); itr.hasNext();) {
       TaskTrackerRunner runner = (TaskTrackerRunner) itr.next();
       while (!runner.isDead && (!runner.isInitialized || !runner.tt.isIdle())) {
         if (!runner.isInitialized) {

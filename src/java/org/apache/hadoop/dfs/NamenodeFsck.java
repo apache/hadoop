@@ -95,9 +95,9 @@ public class NamenodeFsck {
    * @throws IOException
    */
   public NamenodeFsck(Configuration conf,
-      NameNode nn,
-      Map<String,String[]> pmap,
-      HttpServletResponse response) throws IOException {
+                      NameNode nn,
+                      Map<String,String[]> pmap,
+                      HttpServletResponse response) throws IOException {
     this.conf = conf;
     this.nn = nn;
     this.out = response.getWriter();
@@ -215,13 +215,13 @@ public class NamenodeFsck {
       }
       res.corruptFiles++;
       switch(fixing) {
-        case FIXING_NONE:
-          break;
-        case FIXING_MOVE:
-          lostFoundMove(file, blocks);
-          break;
-        case FIXING_DELETE:
-          nn.delete(file.getPath());
+      case FIXING_NONE:
+        break;
+      case FIXING_MOVE:
+        lostFoundMove(file, blocks);
+        break;
+      case FIXING_DELETE:
+        nn.delete(file.getPath());
       }
     }
     if (showFiles) {
@@ -237,9 +237,9 @@ public class NamenodeFsck {
   }
   
   private void lostFoundMove(DFSFileInfo file, LocatedBlock[] blocks)
-  throws IOException {
+    throws IOException {
     DFSClient dfs = new DFSClient(DataNode.createSocketAddr(
-        conf.get("fs.default.name", "local")), conf);
+                                                            conf.get("fs.default.name", "local")), conf);
     if (!lfInited) {
       lostFoundInit(dfs);
     }
@@ -304,8 +304,8 @@ public class NamenodeFsck {
    * bad. Both places should be refactored to provide a method to copy blocks
    * around.
    */
-      private void copyBlock(DFSClient dfs, LocatedBlock lblock,
-          OutputStream fos) throws Exception {
+  private void copyBlock(DFSClient dfs, LocatedBlock lblock,
+                         OutputStream fos) throws Exception {
     int failures = 0;
     InetSocketAddress targetAddr = null;
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
@@ -398,11 +398,11 @@ public class NamenodeFsck {
    * Pick the best node from which to stream the data.
    * That's the local one, if available.
    */
-      Random r = new Random();
+  Random r = new Random();
   private DatanodeInfo bestNode(DFSClient dfs, DatanodeInfo[] nodes,
-      TreeSet<DatanodeInfo> deadNodes) throws IOException {
+                                TreeSet<DatanodeInfo> deadNodes) throws IOException {
     if ((nodes == null) ||
-            (nodes.length - deadNodes.size() < 1)) {
+        (nodes.length - deadNodes.size() < 1)) {
       throw new IOException("No live nodes contain current block");
     }
     DatanodeInfo chosenNode = null;
@@ -433,12 +433,12 @@ public class NamenodeFsck {
         lfInitedOk = dfs.mkdirs(lfName);
         lostFound = lfName;
       } else        if (!dfs.isDirectory(lfName)) {
-          LOG.warn("Cannot use /lost+found : a regular file with this name exists.");
-          lfInitedOk = false;
-        }  else { // exists and isDirectory
-          lostFound = lfName;
-          lfInitedOk = true;
-        }
+        LOG.warn("Cannot use /lost+found : a regular file with this name exists.");
+        lfInitedOk = false;
+      }  else { // exists and isDirectory
+        lostFound = lfName;
+        lfInitedOk = true;
+      }
     }  catch (Exception e) {
       e.printStackTrace();
       lfInitedOk = false;
@@ -584,7 +584,7 @@ public class NamenodeFsck {
       res.append("\n Total size:\t" + totalSize + " B");
       res.append("\n Total blocks:\t" + totalBlocks);
       if (totalBlocks > 0) res.append(" (avg. block size "
-          + (totalSize / totalBlocks) + " B)");
+                                      + (totalSize / totalBlocks) + " B)");
       res.append("\n Total dirs:\t" + totalDirs);
       res.append("\n Total files:\t" + totalFiles);
       if (missingSize > 0) {

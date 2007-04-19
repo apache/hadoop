@@ -39,7 +39,7 @@ public class UniqApp
     String line;
     String prevLine = null;
     while ((line = in.readLine()) != null) {
-      if(! line.equals(prevLine)) {
+      if (!line.equals(prevLine)) {
         System.out.println(header + line);
       }
       prevLine = line;

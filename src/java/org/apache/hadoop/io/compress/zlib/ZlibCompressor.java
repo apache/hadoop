@@ -188,7 +188,7 @@ public class ZlibCompressor implements Compressor {
    * @param directBufferSize Size of the direct buffer to be used.
    */
   public ZlibCompressor(CompressionLevel level, CompressionStrategy strategy, 
-      CompressionHeader header, int directBufferSize) {
+                        CompressionHeader header, int directBufferSize) {
     this.level = level;
     this.strategy = strategy;
     this.windowBits = header;
@@ -209,9 +209,9 @@ public class ZlibCompressor implements Compressor {
    */
   public ZlibCompressor() {
     this(CompressionLevel.DEFAULT_COMPRESSION, 
-        CompressionStrategy.DEFAULT_STRATEGY, 
-        CompressionHeader.DEFAULT_HEADER, 
-        DEFAULT_DIRECT_BUFFER_SIZE);
+         CompressionStrategy.DEFAULT_STRATEGY, 
+         CompressionHeader.DEFAULT_HEADER, 
+         DEFAULT_DIRECT_BUFFER_SIZE);
   }
   
   public synchronized void setInput(byte[] b, int off, int len) {
@@ -242,7 +242,7 @@ public class ZlibCompressor implements Compressor {
     // Reinitialize zlib's input direct buffer
     uncompressedDirectBuf.rewind();
     ((ByteBuffer)uncompressedDirectBuf).put(userBuf, userBufOff,  
-                                          uncompressedDirectBufLen);
+                                            uncompressedDirectBufLen);
 
     // Note how much data is being fed to zlib
     userBufOff += uncompressedDirectBufLen;
@@ -289,7 +289,7 @@ public class ZlibCompressor implements Compressor {
   }
 
   public synchronized int compress(byte[] b, int off, int len) 
-  throws IOException {
+    throws IOException {
     if (b == null) {
       throw new NullPointerException();
     }
@@ -369,7 +369,7 @@ public class ZlibCompressor implements Compressor {
   private native static void initIDs();
   private native static long init(int level, int strategy, int windowBits);
   private native static void setDictionary(long strm, byte[] b, int off,
-       int len);
+                                           int len);
   private native int deflateBytesDirect();
   private native static long getBytesRead(long strm);
   private native static long getBytesWritten(long strm);

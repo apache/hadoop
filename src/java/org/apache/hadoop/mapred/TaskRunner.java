@@ -140,7 +140,7 @@ abstract class TaskRunner extends Thread {
         LOG.warn(StringUtils.stringifyException(ie));
       }
       
-      if (! prepare()) {
+      if (!prepare()) {
         return;
       }
 
@@ -182,8 +182,8 @@ abstract class TaskRunner extends Thread {
         if (localArchives != null){
           for (int i=0;i<archives.length;i++){
             for(int j=0;j<archiveClasspaths.length;j++){
-              if(archives[i].getPath().equals(
-                                              archiveClasspaths[j].toString())){
+              if (archives[i].getPath().equals(
+                                               archiveClasspaths[j].toString())){
                 classPath.append(sep);
                 classPath.append(localArchives[i]
                                  .toString());
@@ -194,7 +194,7 @@ abstract class TaskRunner extends Thread {
       }
       //file paths
       Path[] fileClasspaths = DistributedCache.getFileClassPaths(conf);
-      if(fileClasspaths!=null && files != null) {
+      if (fileClasspaths!=null && files != null) {
         Path[] localFiles = DistributedCache
           .getLocalCacheFiles(conf);
         if (localFiles != null) {

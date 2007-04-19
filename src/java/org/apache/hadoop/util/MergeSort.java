@@ -40,7 +40,7 @@ public class MergeSort {
     // Insertion sort on smallest arrays
     if (length < 7) {
       for (int i=low; i<high; i++) {
-        for (int j=i;j > low ; j--) {
+        for (int j=i;j > low; j--) {
           I.set(dest[j-1]);
           J.set(dest[j]);
           if (comparator.compare(I, J)>0)

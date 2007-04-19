@@ -169,19 +169,19 @@ public class TestDFSStartupVersions extends TestCase {
     StorageInfo[] versions = initializeVersions();
     UpgradeUtilities.createStorageDirs(
                                        NAME_NODE, conf.getStrings("dfs.name.dir"), "current");
-    cluster = new MiniDFSCluster(conf,0,StartupOption.REGULAR);
+    cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
     StorageInfo nameNodeVersion = new StorageInfo(
                                                   UpgradeUtilities.getCurrentLayoutVersion(),
                                                   UpgradeUtilities.getCurrentNamespaceID(cluster),
                                                   UpgradeUtilities.getCurrentFsscTime(cluster));
-    log("NameNode version info",NAME_NODE,null,nameNodeVersion);
+    log("NameNode version info", NAME_NODE, null, nameNodeVersion);
     for (int i = 0; i < versions.length; i++) {
       File[] storage = UpgradeUtilities.createStorageDirs(
                                                           DATA_NODE, conf.getStrings("dfs.data.dir"), "current");
-      log("DataNode version info",DATA_NODE,i,versions[i]);
+      log("DataNode version info", DATA_NODE, i, versions[i]);
       UpgradeUtilities.createVersionFile(DATA_NODE, storage, versions[i]);
       try {
-        cluster.startDataNodes(conf,1,false,StartupOption.REGULAR,null);
+        cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
       } catch (Exception ignore) {
         // Ignore.  The asserts below will check for problems.
         // ignore.printStackTrace();

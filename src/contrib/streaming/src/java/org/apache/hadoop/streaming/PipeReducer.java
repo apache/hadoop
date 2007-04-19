@@ -74,10 +74,10 @@ public class PipeReducer extends PipeMapRed implements Reducer {
         numRecRead_++;
         maybeLogRecord();
         if (doPipe_) {
-          if( outerrThreadsThrowable != null ) {
+          if (outerrThreadsThrowable != null) {
             mapRedFinished();
             throw new IOException ("MROutput/MRErrThread failed:"
-                                   + StringUtils.stringifyException( 
+                                   + StringUtils.stringifyException(
                                                                     outerrThreadsThrowable));
           }
           write(key);

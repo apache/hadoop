@@ -80,7 +80,7 @@ import org.apache.hadoop.mapred.RunningJob;
 public class ValueAggregatorJob {
 
   public static JobControl createValueAggregatorJobs(String args[])
-      throws IOException {
+    throws IOException {
     JobControl theControl = new JobControl("ValueAggregatorJobs");
     ArrayList dependingJobs = new ArrayList();
     JobConf aJobConf = createValueAggregatorJob(args);
@@ -98,7 +98,7 @@ public class ValueAggregatorJob {
    * @throws IOException
    */
   public static JobConf createValueAggregatorJob(String args[])
-      throws IOException {
+    throws IOException {
 
     if (args.length < 2) {
       System.out.println("usage: inputDirs outDir [numOfReducer [textinputformat|seq [specfile [jobName]]]]");

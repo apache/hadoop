@@ -344,7 +344,7 @@ public class Counters implements Writable {
         int index = in.readInt();
         String counterName = UTF8.readString(in);
         long value = in.readLong();
-        counters.put(index, new CounterRec(counterName,value));
+        counters.put(index, new CounterRec(counterName, value));
       }
     }
   }

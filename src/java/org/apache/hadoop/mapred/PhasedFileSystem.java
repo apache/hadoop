@@ -30,11 +30,11 @@ public class PhasedFileSystem extends FilterFileSystem {
   // Map from final file name to temporary file name
   private Map<Path, FileInfo> finalNameToFileInfo = new HashMap<Path, FileInfo>(); 
   
-  private String jobid ; 
-  private String tipid ; 
-  private String taskid ; 
+  private String jobid; 
+  private String tipid; 
+  private String taskid; 
   
-  private Path tempDir ; 
+  private Path tempDir; 
   /**
    * This Constructor is used to wrap a FileSystem object to a 
    * Phased FilsSystem.  
@@ -47,10 +47,10 @@ public class PhasedFileSystem extends FilterFileSystem {
                           String tipid, String taskid) {
     super(fs); 
     this.jobid = jobid; 
-    this.tipid = tipid ; 
-    this.taskid = taskid ; 
+    this.tipid = tipid; 
+    this.taskid = taskid; 
     
-    tempDir = new Path(fs.getConf().get("mapred.system.dir") ); 
+    tempDir = new Path(fs.getConf().get("mapred.system.dir")); 
     this.setConf(fs.getConf());
   }
   /**
@@ -63,15 +63,15 @@ public class PhasedFileSystem extends FilterFileSystem {
     super(fs); 
     this.jobid = conf.get("mapred.job.id"); 
     this.tipid = conf.get("mapred.tip.id"); 
-    this.taskid = conf.get("mapred.task.id") ; 
+    this.taskid = conf.get("mapred.task.id"); 
     
-    tempDir = new Path(fs.getConf().get("mapred.system.dir") );
+    tempDir = new Path(fs.getConf().get("mapred.system.dir"));
     this.setConf(fs.getConf());
   }
   
   private Path setupFile(Path finalFile, boolean overwrite) throws IOException{
-    if( finalNameToFileInfo.containsKey(finalFile) ){
-      if( !overwrite ){
+    if (finalNameToFileInfo.containsKey(finalFile)){
+      if (!overwrite){
         throw new IOException("Error, file already exists : " + 
                               finalFile.toString()); 
       }else{
@@ -82,8 +82,8 @@ public class PhasedFileSystem extends FilterFileSystem {
         }catch(IOException ioe){
           // ignore if already closed
         }
-        if( fs.exists(fInfo.getTempPath())){
-          fs.delete( fInfo.getTempPath() );
+        if (fs.exists(fInfo.getTempPath())){
+          fs.delete(fInfo.getTempPath());
         }
         finalNameToFileInfo.remove(finalFile); 
       }
@@ -96,20 +96,20 @@ public class PhasedFileSystem extends FilterFileSystem {
     
     finalNameToFileInfo.put(finalFile, fInfo);
     
-    return tempPath ; 
+    return tempPath; 
   }
   
   public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
-                                   short replication, long blockSize,Progressable progress)
+                                   short replication, long blockSize, Progressable progress)
     throws IOException {
-    if( fs.exists(f) && !overwrite ){
+    if (fs.exists(f) && !overwrite){
       throw new IOException("Error creating file - already exists : " + f); 
     }
     FSDataOutputStream stream = 
       fs.create(setupFile(f, overwrite), overwrite, bufferSize, replication, 
                 blockSize, progress);
     finalNameToFileInfo.get(f).setOpenFileStream(stream); 
-    return stream ; 
+    return stream; 
   }
   
   /**
@@ -125,8 +125,8 @@ public class PhasedFileSystem extends FilterFileSystem {
   // use extra method arg to avoid concurrentModificationException 
   // if committing using this method while iterating.  
   private void commit(Path fPath , boolean removeFromMap)throws IOException{
-    FileInfo fInfo = finalNameToFileInfo.get(fPath) ; 
-    if( null == fInfo ){
+    FileInfo fInfo = finalNameToFileInfo.get(fPath); 
+    if (null == fInfo){
       throw new IOException("Error committing file! File was not created " + 
                             "with PhasedFileSystem : " + fPath); 
     }
@@ -138,18 +138,18 @@ public class PhasedFileSystem extends FilterFileSystem {
     }
     Path tempPath = fInfo.getTempPath(); 
     // ignore .crc files 
-    if(! tempPath.toString().endsWith(".crc")){
-      if( !fs.exists(fPath) || fInfo.isOverwrite()){
-        if(!fs.exists(fPath.getParent())){
+    if (!tempPath.toString().endsWith(".crc")){
+      if (!fs.exists(fPath) || fInfo.isOverwrite()){
+        if (!fs.exists(fPath.getParent())){
           fs.mkdirs(fPath.getParent());
         }
         
-        if( fs.exists(fPath) && fInfo.isOverwrite()){
+        if (fs.exists(fPath) && fInfo.isOverwrite()){
           fs.delete(fPath); 
         }
         
         try {
-          if( !fs.rename(fInfo.getTempPath(), fPath) ){
+          if (!fs.rename(fInfo.getTempPath(), fPath)){
             // delete the temp file if rename failed
             fs.delete(fInfo.getTempPath());
           }
@@ -164,7 +164,7 @@ public class PhasedFileSystem extends FilterFileSystem {
         fs.delete(fInfo.getTempPath());
       }
       // done with the file
-      if( removeFromMap ){
+      if (removeFromMap){
         finalNameToFileInfo.remove(fPath);
       }
     }
@@ -178,7 +178,7 @@ public class PhasedFileSystem extends FilterFileSystem {
    * @throws IOException if any file fails to commit
    */
   public void commit() throws IOException {
-    for( Path fPath : finalNameToFileInfo.keySet()){
+    for(Path fPath : finalNameToFileInfo.keySet()){
       commit(fPath, false);  
     }
     // safe to clear map now
@@ -197,14 +197,14 @@ public class PhasedFileSystem extends FilterFileSystem {
   // if aborting using this method while iterating.  
   private void abort(Path p, boolean removeFromMap) throws IOException{
     FileInfo fInfo = finalNameToFileInfo.get(p); 
-    if( null != fInfo ){
+    if (null != fInfo){
       try{
         fInfo.getOpenFileStream().close();
       }catch(IOException ioe){
         // ignore if already closed
       }
       fs.delete(fInfo.getTempPath()); 
-      if( removeFromMap ){
+      if (removeFromMap){
         finalNameToFileInfo.remove(p);
       }
     }
@@ -217,7 +217,7 @@ public class PhasedFileSystem extends FilterFileSystem {
    * @throws IOException
    */
   public void abort() throws IOException {
-    for(Path fPath : finalNameToFileInfo.keySet() ){
+    for(Path fPath : finalNameToFileInfo.keySet()){
       abort(fPath, false); 
     }
     // safe to clean now
@@ -225,8 +225,8 @@ public class PhasedFileSystem extends FilterFileSystem {
   }
   
   @Override
-    public boolean setReplication(
-                                  Path src, short replication)
+  public boolean setReplication(
+                                Path src, short replication)
     throws IOException {
     // throw IOException for interface compatibility with 
     // base class. 
@@ -234,15 +234,15 @@ public class PhasedFileSystem extends FilterFileSystem {
   }
 
   @Override
-    public boolean rename(
-                          Path src, Path dst)
+  public boolean rename(
+                        Path src, Path dst)
     throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
   @Override
-    public boolean delete(
-                          Path f)
+  public boolean delete(
+                        Path f)
     throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }
@@ -264,54 +264,54 @@ public class PhasedFileSystem extends FilterFileSystem {
   }
 
   @Override
-    public void copyFromLocalFile(
-                                  boolean delSrc, Path src, Path dst)
-    throws IOException {
-    throw new UnsupportedOperationException("Operation not supported");  
-  }
-
-  @Override
-    public void copyToLocalFile(
+  public void copyFromLocalFile(
                                 boolean delSrc, Path src, Path dst)
     throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
   @Override
-    public Path startLocalOutput(
-                                 Path fsOutputFile, Path tmpLocalFile)
+  public void copyToLocalFile(
+                              boolean delSrc, Path src, Path dst)
     throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
   @Override
-    public void completeLocalOutput(
-                                    Path fsOutputFile, Path tmpLocalFile)
+  public Path startLocalOutput(
+                               Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
   @Override
-    public String[][] getFileCacheHints(
-                                        Path f, long start, long len)
+  public void completeLocalOutput(
+                                  Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
   @Override
-    public String getName() {
+  public String[][] getFileCacheHints(
+                                      Path f, long start, long len)
+    throws IOException {
+    throw new UnsupportedOperationException("Operation not supported");  
+  }
+
+  @Override
+  public String getName() {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
   private class FileInfo {
-    private Path tempPath ;
-    private Path finalPath ; 
-    private OutputStream openFileStream ; 
-    private boolean overwrite ;
+    private Path tempPath;
+    private Path finalPath; 
+    private OutputStream openFileStream; 
+    private boolean overwrite;
     
     FileInfo(Path tempPath, Path finalPath, boolean overwrite){
-      this.tempPath = tempPath ; 
-      this.finalPath = finalPath ; 
+      this.tempPath = tempPath; 
+      this.finalPath = finalPath; 
       this.overwrite = overwrite; 
     }
     public OutputStream getOpenFileStream() {

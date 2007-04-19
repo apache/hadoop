@@ -34,7 +34,7 @@ public class LocalFileSystem extends ChecksumFileSystem {
     super(new RawLocalFileSystem());
   }
     
-  public LocalFileSystem( FileSystem rawLocalFileSystem ) {
+  public LocalFileSystem(FileSystem rawLocalFileSystem) {
     super(rawLocalFileSystem);
   }
     
@@ -44,13 +44,13 @@ public class LocalFileSystem extends ChecksumFileSystem {
   }
 
   @Override
-    public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+  public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     FileUtil.copy(this, src, this, dst, delSrc, getConf());
   }
 
   @Override
-    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+  public void copyToLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     FileUtil.copy(this, src, this, dst, delSrc, getConf());
   }
@@ -88,7 +88,7 @@ public class LocalFileSystem extends ChecksumFileSystem {
         }
       }
       String suffix = "." + new Random().nextInt();
-      File badFile = new File(badDir,f.getName()+suffix);
+      File badFile = new File(badDir, f.getName()+suffix);
       LOG.warn("Moving bad file " + f + " to " + badFile);
       in.close();                               // close it first
       f.renameTo(badFile);                      // rename it

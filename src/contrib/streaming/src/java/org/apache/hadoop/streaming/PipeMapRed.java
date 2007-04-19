@@ -261,7 +261,7 @@ public abstract class PipeMapRed {
           finalOutputURI = new URI(sideEffectPathFinal_.toString()); // implicit dfs: 
         }
         // apply default scheme
-        if(finalOutputURI.getScheme() == null) {
+        if (finalOutputURI.getScheme() == null) {
           finalOutputURI = new URI("file", finalOutputURI.getSchemeSpecificPart(), null);
         }
         boolean allowSocket = useSingleSideOutputURI_;
@@ -579,7 +579,7 @@ public abstract class PipeMapRed {
           logprintln("closing " + finalOutputURI);
           if (sideEffectOut_ != null) sideEffectOut_.close();
           logprintln("closed  " + finalOutputURI);
-          if ( ! useSingleSideOutputURI_) {
+          if (!useSingleSideOutputURI_) {
             ((PhasedFileSystem)sideFs_).commit(); 
           }
         }

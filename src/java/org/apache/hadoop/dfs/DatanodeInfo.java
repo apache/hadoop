@@ -63,8 +63,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
     adminState = null;
   }
   
-  DatanodeInfo( DatanodeInfo from ) {
-    super( from );
+  DatanodeInfo(DatanodeInfo from) {
+    super(from);
     this.capacity = from.getCapacity();
     this.remaining = from.getRemaining();
     this.lastUpdate = from.getLastUpdate();
@@ -74,8 +74,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.hostName = from.hostName;
   }
 
-  DatanodeInfo( DatanodeID nodeID ) {
-    super( nodeID );
+  DatanodeInfo(DatanodeID nodeID) {
+    super(nodeID);
     this.capacity = 0L;
     this.remaining = 0L;
     this.lastUpdate = 0L;
@@ -83,7 +83,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.adminState = null;    
   }
   
-  DatanodeInfo( DatanodeID nodeID, String location, String hostName ) {
+  DatanodeInfo(DatanodeID nodeID, String location, String hostName) {
     this(nodeID);
     this.location = location;
     this.hostName = hostName;
@@ -135,10 +135,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
 
   
   public String getHostName() {
-    return ( hostName == null || hostName.length()==0 ) ? getHost() : hostName;
+    return (hostName == null || hostName.length()==0) ? getHost() : hostName;
   }
   
-  public void setHostName( String host ) {
+  public void setHostName(String host) {
     hostName = host;
   }
   
@@ -149,7 +149,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     long r = getRemaining();
     long u = c - r;
     buffer.append("Name: "+name+"\n");
-    if(!NetworkTopology.DEFAULT_RACK.equals(location)) {
+    if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append("Rack: "+location+"\n");
     }
     if (isDecommissioned()) {
@@ -161,7 +161,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     }
     buffer.append("Total raw bytes: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
     buffer.append("Used raw bytes: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
-    buffer.append("% used: "+FsShell.limitDecimal(((1.0*u)/c)*100,2)+"%"+"\n");
+    buffer.append("% used: "+FsShell.limitDecimal(((1.0*u)/c)*100, 2)+"%"+"\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
   }
@@ -173,7 +173,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     long r = getRemaining();
     long u = c - r;
     buffer.append(name);
-    if(!NetworkTopology.DEFAULT_RACK.equals(location)) {
+    if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append(" "+location);
     }
     if (isDecommissioned()) {
@@ -185,7 +185,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     }
     buffer.append(" " + c + "(" + FsShell.byteDesc(c)+")");
     buffer.append(" " + u + "(" + FsShell.byteDesc(u)+")");
-    buffer.append(" " + FsShell.limitDecimal(((1.0*u)/c)*100,2)+"%");
+    buffer.append(" " + FsShell.limitDecimal(((1.0*u)/c)*100, 2)+"%");
     buffer.append(" " + new Date(lastUpdate));
     return buffer.toString();
   }
@@ -260,13 +260,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
 
   /** Return this node's parent */
   public Node getParent() { return parent; }
-  public void setParent( Node parent ) {this.parent = parent;}
+  public void setParent(Node parent) {this.parent = parent;}
    
   /** Return this node's level in the tree.
    * E.g. the root of a tree returns 0 and its children return 1
    */
   public int getLevel() { return level; }
-  public void setLevel( int level) {this.level = level;}
+  public void setLevel(int level) {this.level = level;}
 
   /////////////////////////////////////////////////
   // Writable
@@ -282,12 +282,12 @@ public class DatanodeInfo extends DatanodeID implements Node {
   /**
    */
   public void write(DataOutput out) throws IOException {
-    super.write( out );
+    super.write(out);
     out.writeLong(capacity);
     out.writeLong(remaining);
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
-    Text.writeString( out, location );
+    Text.writeString(out, location);
     WritableUtils.writeEnum(out, getAdminState());
   }
 
@@ -299,7 +299,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.remaining = in.readLong();
     this.lastUpdate = in.readLong();
     this.xceiverCount = in.readInt();
-    this.location = Text.readString( in );
+    this.location = Text.readString(in);
     AdminStates newState = (AdminStates) WritableUtils.readEnum(in,
                                                                 AdminStates.class);
     setAdminState(newState);

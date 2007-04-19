@@ -38,7 +38,7 @@ public class FSDataInputStream extends DataInputStream
     // calls to it in order to cache the position.
     public int read(byte b[], int off, int len) throws IOException {
       int result;
-      if( (result = in.read(b, off, len)) > 0 )
+      if ((result = in.read(b, off, len)) > 0)
         position += result;
       return result;
     }
@@ -53,12 +53,12 @@ public class FSDataInputStream extends DataInputStream
     }
     
     public int read(long position, byte[] buffer, int offset, int length)
-    throws IOException {
+      throws IOException {
       return ((FSInputStream)in).read(position, buffer, offset, length);
     }
     
     public void readFully(long position, byte[] buffer, int offset, int length)
-    throws IOException {
+      throws IOException {
       ((FSInputStream)in).readFully(position, buffer, offset, length);
     }
   }
@@ -95,12 +95,12 @@ public class FSDataInputStream extends DataInputStream
     }
 
     public int read(long position, byte[] buffer, int offset, int length)
-    throws IOException {
+      throws IOException {
       return ((PositionCache)in).read(position, buffer, offset, length);
     }
     
     public void readFully(long position, byte[] buffer, int offset, int length)
-    throws IOException {
+      throws IOException {
       ((PositionCache)in).readFully(position, buffer, offset, length);
     }
   }
@@ -113,7 +113,7 @@ public class FSDataInputStream extends DataInputStream
   
   public FSDataInputStream(FSInputStream in, int bufferSize)
     throws IOException {
-    super( new Buffer(new PositionCache(in), bufferSize) );
+    super(new Buffer(new PositionCache(in), bufferSize));
     this.inStream = in;
   }
   
@@ -126,17 +126,17 @@ public class FSDataInputStream extends DataInputStream
   }
   
   public int read(long position, byte[] buffer, int offset, int length)
-  throws IOException {
+    throws IOException {
     return ((Buffer)in).read(position, buffer, offset, length);
   }
   
   public void readFully(long position, byte[] buffer, int offset, int length)
-  throws IOException {
+    throws IOException {
     ((Buffer)in).readFully(position, buffer, offset, length);
   }
   
   public void readFully(long position, byte[] buffer)
-  throws IOException {
+    throws IOException {
     ((Buffer)in).readFully(position, buffer, 0, buffer.length);
   }
   

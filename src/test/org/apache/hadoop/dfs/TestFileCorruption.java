@@ -84,7 +84,7 @@ public class TestFileCorruption extends TestCase {
     dos.writeBytes("corruption");
     dos.close();
     // Now attempt to read the file
-    DataInputStream dis = fs.open(file,512);
+    DataInputStream dis = fs.open(file, 512);
     try {
       System.out.println("A ChecksumException is expected to be logged.");
       dis.readByte();

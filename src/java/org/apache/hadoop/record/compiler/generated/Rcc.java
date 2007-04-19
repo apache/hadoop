@@ -384,10 +384,10 @@ public class Rcc implements RccConstants {
     jj_la1_1();
   }
   private static void jj_la1_0() {
-    jj_la1_0 = new int[] {0x2800,0x2800,0x40000000,0x1000,0xffc000,0xffc000,};
+    jj_la1_0 = new int[] {0x2800, 0x2800, 0x40000000, 0x1000, 0xffc000, 0xffc000,};
   }
   private static void jj_la1_1() {
-    jj_la1_1 = new int[] {0x0,0x0,0x0,0x0,0x1,0x1,};
+    jj_la1_1 = new int[] {0x0, 0x0, 0x0, 0x0, 0x1, 0x1,};
   }
 
   public Rcc(java.io.InputStream stream) {

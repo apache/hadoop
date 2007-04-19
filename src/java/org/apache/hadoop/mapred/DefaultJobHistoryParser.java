@@ -2,8 +2,8 @@ package org.apache.hadoop.mapred;
 
 import java.util.*;
 import java.io.*;
-import org.apache.hadoop.mapred.JobHistory.Keys ; 
-import org.apache.hadoop.mapred.JobHistory.Values; ;
+import org.apache.hadoop.mapred.JobHistory.Keys; 
+import org.apache.hadoop.mapred.JobHistory.Values;;
 
 /**
  * Default parser for job history files. It creates object model from 
@@ -123,7 +123,7 @@ public class DefaultJobHistoryParser {
     Map<String, Map<String, JobHistory.JobInfo>> jobTrackerToJobs = new TreeMap<String, Map<String, JobHistory.JobInfo>>();
 
     Map<String, JobHistory.JobInfo> activeJobs = null;
-    String currentTracker ; 
+    String currentTracker; 
     
     // Implement JobHistory.Listener
 
@@ -168,13 +168,13 @@ public class DefaultJobHistoryParser {
       throws IOException {
       
       if (recType.equals(JobHistory.RecordTypes.MapAttempt) || 
-          recType.equals(JobHistory.RecordTypes.ReduceAttempt) ) {
+          recType.equals(JobHistory.RecordTypes.ReduceAttempt)) {
         
-        if( Values.FAILED.name().equals(values.get(Keys.TASK_STATUS) )  ){
-          String hostName = values.get(Keys.HOSTNAME) ;
+        if (Values.FAILED.name().equals(values.get(Keys.TASK_STATUS)) ){
+          String hostName = values.get(Keys.HOSTNAME);
           String taskid = values.get(Keys.TASKID); 
           Set<String> tasks = badNodesToNumFailedTasks.get(hostName); 
-          if( null == tasks  ){
+          if (null == tasks ){
             tasks = new TreeSet<String>(); 
             tasks.add(taskid);
             badNodesToNumFailedTasks.put(hostName, tasks);

@@ -74,52 +74,52 @@ class S3OutputStream extends OutputStream {
   }
 
   @Override
-    public synchronized void write(int b) throws IOException {
-      if (closed) {
-        throw new IOException("Stream closed");
-      }
+  public synchronized void write(int b) throws IOException {
+    if (closed) {
+      throw new IOException("Stream closed");
+    }
 
-      if ((bytesWrittenToBlock + pos == blockSize) || (pos >= bufferSize)) {
+    if ((bytesWrittenToBlock + pos == blockSize) || (pos >= bufferSize)) {
+      flush();
+    }
+    outBuf[pos++] = (byte) b;
+    filePos++;
+  }
+
+  @Override
+  public synchronized void write(byte b[], int off, int len) throws IOException {
+    if (closed) {
+      throw new IOException("Stream closed");
+    }
+    while (len > 0) {
+      int remaining = bufferSize - pos;
+      int toWrite = Math.min(remaining, len);
+      System.arraycopy(b, off, outBuf, pos, toWrite);
+      pos += toWrite;
+      off += toWrite;
+      len -= toWrite;
+      filePos += toWrite;
+
+      if ((bytesWrittenToBlock + pos >= blockSize) || (pos == bufferSize)) {
         flush();
       }
-      outBuf[pos++] = (byte) b;
-      filePos++;
     }
+  }
 
   @Override
-    public synchronized void write(byte b[], int off, int len) throws IOException {
-      if (closed) {
-        throw new IOException("Stream closed");
-      }
-      while (len > 0) {
-        int remaining = bufferSize - pos;
-        int toWrite = Math.min(remaining, len);
-        System.arraycopy(b, off, outBuf, pos, toWrite);
-        pos += toWrite;
-        off += toWrite;
-        len -= toWrite;
-        filePos += toWrite;
-
-        if ((bytesWrittenToBlock + pos >= blockSize) || (pos == bufferSize)) {
-          flush();
-        }
-      }
+  public synchronized void flush() throws IOException {
+    if (closed) {
+      throw new IOException("Stream closed");
     }
 
-  @Override
-    public synchronized void flush() throws IOException {
-      if (closed) {
-        throw new IOException("Stream closed");
-      }
-
-      if (bytesWrittenToBlock + pos >= blockSize) {
-        flushData((int) blockSize - bytesWrittenToBlock);
-      }
-      if (bytesWrittenToBlock == blockSize) {
-        endBlock();
-      }
-      flushData(pos);
+    if (bytesWrittenToBlock + pos >= blockSize) {
+      flushData((int) blockSize - bytesWrittenToBlock);
     }
+    if (bytesWrittenToBlock == blockSize) {
+      endBlock();
+    }
+    flushData(pos);
+  }
 
   private synchronized void flushData(int maxPos) throws IOException {
     int workingPos = Math.min(pos, maxPos);
@@ -179,22 +179,22 @@ class S3OutputStream extends OutputStream {
   }
 
   @Override
-    public synchronized void close() throws IOException {
-      if (closed) {
-        throw new IOException("Stream closed");
-      }
-
-      flush();
-      if (filePos == 0 || bytesWrittenToBlock != 0) {
-        endBlock();
-      }
-
-      backupStream.close();
-      backupFile.delete();
-
-      super.close();
-
-      closed = true;
+  public synchronized void close() throws IOException {
+    if (closed) {
+      throw new IOException("Stream closed");
     }
+
+    flush();
+    if (filePos == 0 || bytesWrittenToBlock != 0) {
+      endBlock();
+    }
+
+    backupStream.close();
+    backupFile.delete();
+
+    super.close();
+
+    closed = true;
+  }
 
 }

@@ -41,7 +41,7 @@ class BlockDecompressorStream extends DecompressorStream {
    * @param bufferSize size of buffer
    */
   public BlockDecompressorStream(InputStream in, Decompressor decompressor, 
-      int bufferSize) {
+                                 int bufferSize) {
     super(in, decompressor, bufferSize);
   }
   
@@ -123,7 +123,7 @@ class BlockDecompressorStream extends DecompressorStream {
     int b3 = in.read();
     int b4 = in.read();
     if ((b1 | b2 | b3 | b4) < 0)
-        throw new EOFException();
+      throw new EOFException();
     return ((b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0));
   }
 }

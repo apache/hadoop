@@ -80,7 +80,7 @@ public class TestVersionedWritable extends TestCase {
     String compressableTestString = 
       "Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. " +
       "Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. " +
-      "Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. " ;
+      "Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. Blah. ";
 
     SimpleVersionedWritable containedObject = new SimpleVersionedWritable();
     String[] testStringArray = {"The", "Quick", "Brown", "Fox", "Jumped", "Over", "The", "Lazy", "Dog"};
@@ -88,11 +88,11 @@ public class TestVersionedWritable extends TestCase {
     public void write(DataOutput out) throws IOException {
       super.write(out);
       out.writeUTF(shortTestString); 
-      WritableUtils.writeString(out,longTestString); 
-      int comp = WritableUtils.writeCompressedString(out,compressableTestString); 
+      WritableUtils.writeString(out, longTestString); 
+      int comp = WritableUtils.writeCompressedString(out, compressableTestString); 
       System.out.println("Compression is " + comp + "%");
       containedObject.write(out); // Warning if this is a recursive call, you need a null value.
-      WritableUtils.writeStringArray(out,testStringArray); 
+      WritableUtils.writeStringArray(out, testStringArray); 
 
     }
 		

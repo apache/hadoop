@@ -287,7 +287,7 @@ public class TestRecordMR extends TestCase {
     fs.delete(randomOuts);
 
 
-    JobConf genJob = new JobConf(conf,TestRecordMR.class);
+    JobConf genJob = new JobConf(conf, TestRecordMR.class);
     genJob.setInputPath(randomIns);
     genJob.setInputKeyClass(RecInt.class);
     genJob.setInputValueClass(RecInt.class);
@@ -334,7 +334,7 @@ public class TestRecordMR extends TestCase {
     int intermediateReduces = 10;
     Path intermediateOuts = new Path(testdir, "intermediateouts");
     fs.delete(intermediateOuts);
-    JobConf checkJob = new JobConf(conf,TestRecordMR.class);
+    JobConf checkJob = new JobConf(conf, TestRecordMR.class);
     checkJob.setInputPath(randomOuts);
     checkJob.setInputKeyClass(RecInt.class);
     checkJob.setInputValueClass(RecString.class);
@@ -359,7 +359,7 @@ public class TestRecordMR extends TestCase {
     //
     Path finalOuts = new Path(testdir, "finalouts");        
     fs.delete(finalOuts);
-    JobConf mergeJob = new JobConf(conf,TestRecordMR.class);
+    JobConf mergeJob = new JobConf(conf, TestRecordMR.class);
     mergeJob.setInputPath(intermediateOuts);
     mergeJob.setInputKeyClass(RecInt.class);
     mergeJob.setInputValueClass(RecString.class);
@@ -392,12 +392,12 @@ public class TestRecordMR extends TestCase {
         if (dist[i] == 0) {
           continue;
         }
-        if (! in.next(key, val)) {
+        if (!in.next(key, val)) {
           System.err.println("Cannot read entry " + i);
           success = false;
           break;
         } else {
-          if ( !((key.getData() == i ) && (val.getData() == dist[i]))) {
+          if (!((key.getData() == i) && (val.getData() == dist[i]))) {
             System.err.println("Mismatch!  Pos=" + key.getData() + ", i=" + i + ", val=" + val.getData() + ", dist[i]=" + dist[i]);
             success = false;
           }

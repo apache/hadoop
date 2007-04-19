@@ -175,21 +175,21 @@ public class WritableComparator implements Comparator {
    * @return deserialized long
    */
   public static long readVLong(byte[] bytes, int start) throws IOException {
-      int len = bytes[start];
-      if (len >= -112) {
-          return len;
-      }
-      boolean isNegative = (len < -120);
-      len = isNegative ? -(len + 120) : -(len + 112);
-      if (start+1+len>bytes.length)
-          throw new IOException(
-                  "Not enough number of bytes for a zero-compressed integer");
-      long i = 0;
-      for (int idx = 0; idx < len; idx++) {
-          i = i << 8;
-          i = i | (bytes[start+1+idx] & 0xFF);
-      }
-      return (isNegative ? (i ^ -1L) : i);
+    int len = bytes[start];
+    if (len >= -112) {
+      return len;
+    }
+    boolean isNegative = (len < -120);
+    len = isNegative ? -(len + 120) : -(len + 112);
+    if (start+1+len>bytes.length)
+      throw new IOException(
+                            "Not enough number of bytes for a zero-compressed integer");
+    long i = 0;
+    for (int idx = 0; idx < len; idx++) {
+      i = i << 8;
+      i = i | (bytes[start+1+idx] & 0xFF);
+    }
+    return (isNegative ? (i ^ -1L) : i);
   }
   
   /**
@@ -200,6 +200,6 @@ public class WritableComparator implements Comparator {
    * @return deserialized integer
    */
   public static int readVInt(byte[] bytes, int start) throws IOException {
-      return (int) readVLong(bytes, start);
+    return (int) readVLong(bytes, start);
   }
 }

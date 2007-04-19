@@ -64,9 +64,9 @@ interface DatanodeProtocol extends VersionedProtocol {
    * new storageID if the datanode did not have one and
    * registration ID for further communication.
    */
-  public DatanodeRegistration register( DatanodeRegistration registration,
-                                        String networkLocation
-                                        ) throws IOException;
+  public DatanodeRegistration register(DatanodeRegistration registration,
+                                       String networkLocation
+                                       ) throws IOException;
   /**
    * sendHeartbeat() tells the NameNode that the DataNode is still
    * alive and well.  Includes some status info, too. 
@@ -74,10 +74,10 @@ interface DatanodeProtocol extends VersionedProtocol {
    * A DatanodeCommand tells the DataNode to invalidate local block(s), 
    * or to copy them to other DataNodes, etc.
    */
-  public DatanodeCommand sendHeartbeat( DatanodeRegistration registration,
-                                        long capacity, long remaining,
-                                        int xmitsInProgress,
-                                        int xceiverCount) throws IOException;
+  public DatanodeCommand sendHeartbeat(DatanodeRegistration registration,
+                                       long capacity, long remaining,
+                                       int xmitsInProgress,
+                                       int xceiverCount) throws IOException;
 
   /**
    * blockReport() tells the NameNode about all the locally-stored blocks.
@@ -86,8 +86,8 @@ interface DatanodeProtocol extends VersionedProtocol {
    * the locally-stored blocks.  It's invoked upon startup and then
    * infrequently afterwards.
    */
-  public DatanodeCommand blockReport( DatanodeRegistration registration,
-                                      Block blocks[]) throws IOException;
+  public DatanodeCommand blockReport(DatanodeRegistration registration,
+                                     Block blocks[]) throws IOException;
     
   /**
    * blockReceived() allows the DataNode to tell the NameNode about

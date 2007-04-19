@@ -217,7 +217,7 @@ public class TestStreamedMerge extends TestCase {
     String overrideFS = StreamUtil.getBoundAntProperty("fs.default.name", null);
     MiniDFSCluster cluster = null;
     try {
-      if(overrideFS == null) {
+      if (overrideFS == null) {
         cluster = new MiniDFSCluster(conf_, 1, true, null);
         fs_ = cluster.getFileSystem();
       } else {
@@ -265,7 +265,7 @@ public class TestStreamedMerge extends TestCase {
     } else {
       String userOut = StreamUtil.getBoundAntProperty(
                                                       "hadoop.test.localoutputfile", null);
-      if(userOut != null) {
+      if (userOut != null) {
         f = new File(userOut);
         // don't delete so they can mkfifo
         maybeFifoOutput_ = true;
@@ -275,7 +275,7 @@ public class TestStreamedMerge extends TestCase {
         maybeFifoOutput_ = false;
       }
       String s = new Path(f.getAbsolutePath()).toString();
-      if(! s.startsWith("/")) {
+      if (!s.startsWith("/")) {
         s = "/" + s; // Windows "file:/C:/"
       }
       sideOutput = "file:" + s;
@@ -292,7 +292,7 @@ public class TestStreamedMerge extends TestCase {
       }
       output = outputBuf.toString();
     } else {
-      if(maybeFifoOutput_) {
+      if (maybeFifoOutput_) {
         System.out.println("assertEquals will fail.");
         output = "potential FIFO: not retrieving to avoid blocking on open() "
           + f.getAbsoluteFile();

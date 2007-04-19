@@ -21,15 +21,15 @@ public class TestNetworkTopology extends TestCase {
   
   static {
     for(int i=0; i<dataNodes.length; i++) {
-      cluster.add( dataNodes[i] );
+      cluster.add(dataNodes[i]);
     }
   }
   
   public void testContains() {
     for(int i=0; i<dataNodes.length; i++) {
-      assertTrue( cluster.contains(dataNodes[i]));
+      assertTrue(cluster.contains(dataNodes[i]));
     }
-    assertFalse( cluster.contains( NODE ));
+    assertFalse(cluster.contains(NODE));
   }
   
   public void testNumOfChildren() throws Exception {
@@ -55,14 +55,14 @@ public class TestNetworkTopology extends TestCase {
 
   public void testRemove() throws Exception {
     for(int i=0; i<dataNodes.length; i++) {
-      cluster.remove( dataNodes[i] );
+      cluster.remove(dataNodes[i]);
     }
     for(int i=0; i<dataNodes.length; i++) {
-      assertFalse( cluster.contains( dataNodes[i] ) );
+      assertFalse(cluster.contains(dataNodes[i]));
     }
     assertEquals(0, cluster.getNumOfLeaves());
     for(int i=0; i<dataNodes.length; i++) {
-      cluster.add( dataNodes[i] );
+      cluster.add(dataNodes[i]);
     }
   }
 }

@@ -73,7 +73,7 @@ public class TestSequenceFileInputFilter extends TestCase {
     InputFormat format = new SequenceFileInputFilter();
     Text key = new Text();
     BytesWritable value = new BytesWritable();
-    if(numSplits==0) {
+    if (numSplits==0) {
       numSplits =
         random.nextInt(MAX_LENGTH/(SequenceFile.SYNC_INTERVAL/20))+1;
     }
@@ -138,7 +138,7 @@ public class TestSequenceFileInputFilter extends TestCase {
       int count = countRecords(1);
       LOG.info("Accepted "+count+" records");
       int expectedCount = length/1000;
-      if(expectedCount*1000!=length)
+      if (expectedCount*1000!=length)
         expectedCount++;
       assertEquals(count, expectedCount);
     }

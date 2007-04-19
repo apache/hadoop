@@ -42,10 +42,10 @@ public class TestReplicationPolicy extends TestCase {
     replicator = fsNamesystem.replicator;
     cluster = fsNamesystem.clusterMap;
     // construct network topology
-    for( int i=0; i<NUM_OF_DATANODES; i++) {
-      cluster.add( dataNodes[i] );
+    for(int i=0; i<NUM_OF_DATANODES; i++) {
+      cluster.add(dataNodes[i]);
     }
-    for( int i=0; i<NUM_OF_DATANODES; i++) {
+    for(int i=0; i<NUM_OF_DATANODES; i++) {
       dataNodes[i].updateHeartbeat(
                                    2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 
                                    2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0);

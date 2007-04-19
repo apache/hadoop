@@ -27,16 +27,16 @@ import java.io.IOException;
  */
 class IncorrectVersionException extends IOException {
 
-  public IncorrectVersionException( int versionReported, String ofWhat ) {
-    this( versionReported, ofWhat, FSConstants.LAYOUT_VERSION );
+  public IncorrectVersionException(int versionReported, String ofWhat) {
+    this(versionReported, ofWhat, FSConstants.LAYOUT_VERSION);
   }
   
-  public IncorrectVersionException( int versionReported,
-                                    String ofWhat,
-                                    int versionExpected ) {
-    super( "Unexpected version " 
-           + (ofWhat==null ? "" : "of " + ofWhat) + ". Reported: "
-           + versionReported + ". Expecting = " + versionExpected + "." );
+  public IncorrectVersionException(int versionReported,
+                                   String ofWhat,
+                                   int versionExpected) {
+    super("Unexpected version " 
+          + (ofWhat==null ? "" : "of " + ofWhat) + ". Reported: "
+          + versionReported + ". Expecting = " + versionExpected + ".");
   }
 
 }

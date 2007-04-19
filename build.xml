@@ -482,7 +482,7 @@
   	
   	<checkstyle config="${test.src.dir}/checkstyle.xml"
   		failOnViolation="false">
-      <fileset dir="${src.dir}" includes="**/*.java"/>
+      <fileset dir="${src.dir}" includes="**/*.java" excludes="**/generated/**"/>
       <formatter type="xml" toFile="${test.build.dir}/checkstyle-errors.xml"/>
   	</checkstyle>
   	

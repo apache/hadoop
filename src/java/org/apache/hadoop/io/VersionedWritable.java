@@ -45,7 +45,7 @@ public abstract class VersionedWritable implements Writable {
   public void readFields(DataInput in) throws IOException {
     byte version = in.readByte();                 // read version
     if (version != getVersion())
-      throw new VersionMismatchException(getVersion(),version);
+      throw new VersionMismatchException(getVersion(), version);
   }
 
     

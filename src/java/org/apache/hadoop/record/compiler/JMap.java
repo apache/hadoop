@@ -61,7 +61,7 @@ public class JMap extends JCompType {
       cb.append(iterType+getId("miter2")+" = "+
                 getId("set2")+".iterator();\n");
       cb.append("for(; "+getId("miter1")+".hasNext() && "+
-                getId("miter2")+".hasNext(); ) {\n");
+                getId("miter2")+".hasNext();) {\n");
       cb.append(key.getType()+" "+getId("k1")+
                 " = "+getId("miter1")+".next();\n");
       cb.append(key.getType()+" "+getId("k2")+
@@ -82,8 +82,8 @@ public class JMap extends JCompType {
       cb.append("org.apache.hadoop.record.Index "+getId("midx")+" = a.startMap(\""+tag+"\");\n");
       cb.append(fname+"=new "+getType()+"();\n");
       cb.append("for (; !"+getId("midx")+".done(); "+getId("midx")+".incr()) {\n");
-      key.genReadMethod(cb, getId("k"),getId("k"),true);
-      value.genReadMethod(cb, getId("v"),getId("v"),true);
+      key.genReadMethod(cb, getId("k"),getId("k"), true);
+      value.genReadMethod(cb, getId("v"), getId("v"), true);
       cb.append(fname+".put("+getId("k")+","+getId("v")+");\n");
       cb.append("}\n");
       cb.append("a.endMap(\""+tag+"\");\n");
@@ -102,12 +102,12 @@ public class JMap extends JCompType {
       incrLevel();
       cb.append("a.startMap("+fname+",\""+tag+"\");\n");
       cb.append(setType+getId("es")+" = "+fname+".entrySet();\n");
-      cb.append("for("+iterType+getId("midx")+" = "+getId("es")+".iterator(); "+getId("midx")+".hasNext(); ) {\n");
+      cb.append("for("+iterType+getId("midx")+" = "+getId("es")+".iterator(); "+getId("midx")+".hasNext();) {\n");
       cb.append(entryType+getId("me")+" = "+getId("midx")+".next();\n");
       cb.append(key.getType()+" "+getId("k")+" = "+getId("me")+".getKey();\n");
       cb.append(value.getType()+" "+getId("v")+" = "+getId("me")+".getValue();\n");
-      key.genWriteMethod(cb, getId("k"),getId("k"));
-      value.genWriteMethod(cb, getId("v"),getId("v"));
+      key.genWriteMethod(cb, getId("k"), getId("k"));
+      value.genWriteMethod(cb, getId("v"), getId("v"));
       cb.append("}\n");
       cb.append("a.endMap("+fname+",\""+tag+"\");\n");
       cb.append("}\n");
@@ -124,8 +124,8 @@ public class JMap extends JCompType {
       cb.append(s+"+="+getId("mz")+"; "+l+"-="+getId("mz")+";\n");
       cb.append("for (int "+getId("midx")+" = 0; "+getId("midx")+
                 " < "+getId("mi")+"; "+getId("midx")+"++) {");
-      key.genSlurpBytes(cb, b,s,l);
-      value.genSlurpBytes(cb, b,s,l);
+      key.genSlurpBytes(cb, b, s, l);
+      value.genSlurpBytes(cb, b, s, l);
       cb.append("}\n");
       decrLevel();
       cb.append("}\n");

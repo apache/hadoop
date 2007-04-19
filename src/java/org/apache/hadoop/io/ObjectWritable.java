@@ -147,8 +147,8 @@ public class ObjectWritable implements Writable, Configurable {
       } else {
         throw new IllegalArgumentException("Not a primitive: "+declaredClass);
       }
-    } else if (declaredClass.isEnum() ) {         // enum
-      UTF8.writeString( out, ((Enum)instance).name() );
+    } else if (declaredClass.isEnum()) {         // enum
+      UTF8.writeString(out, ((Enum)instance).name());
     } else if (Writable.class.isAssignableFrom(declaredClass)) { // Writable
       UTF8.writeString(out, instance.getClass().getName());
       ((Writable)instance).write(out);
@@ -169,7 +169,7 @@ public class ObjectWritable implements Writable, Configurable {
   /** Read a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding. */
   @SuppressWarnings("unchecked")
-    public static Object readObject(DataInput in, ObjectWritable objectWritable, Configuration conf)
+  public static Object readObject(DataInput in, ObjectWritable objectWritable, Configuration conf)
     throws IOException {
     String className = UTF8.readString(in);
     Class<?> declaredClass = PRIMITIVE_NAMES.get(className);
@@ -216,8 +216,8 @@ public class ObjectWritable implements Writable, Configurable {
       
     } else if (declaredClass == String.class) {        // String
       instance = UTF8.readString(in);
-    } else if( declaredClass.isEnum() ) {         // enum
-      instance = Enum.valueOf( (Class<? extends Enum>) declaredClass, UTF8.readString(in) );
+    } else if (declaredClass.isEnum()) {         // enum
+      instance = Enum.valueOf((Class<? extends Enum>) declaredClass, UTF8.readString(in));
     } else {                                      // Writable
       Class instanceClass = null;
       try {

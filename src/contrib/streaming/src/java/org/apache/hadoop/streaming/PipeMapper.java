@@ -70,7 +70,7 @@ public class PipeMapper extends PipeMapRed implements Mapper {
     if (outThread_ == null) {
       startOutputThreads(output, reporter);
     }
-    if( outerrThreadsThrowable != null ) {
+    if (outerrThreadsThrowable != null) {
       mapRedFinished();
       throw new IOException ("MROutput/MRErrThread failed:"
                              + StringUtils.stringifyException(

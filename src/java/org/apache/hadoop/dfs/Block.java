@@ -112,7 +112,7 @@ class Block implements Writable, Comparable {
   public void readFields(DataInput in) throws IOException {
     this.blkid = in.readLong();
     this.len = in.readLong();
-    if( len < 0 ) {
+    if (len < 0) {
       throw new IOException("Unexpected block size: " + len);
     }
   }
@@ -122,9 +122,9 @@ class Block implements Writable, Comparable {
   /////////////////////////////////////
   public int compareTo(Object o) {
     Block b = (Block) o;
-    if ( blkid < b.blkid ) {
+    if (blkid < b.blkid) {
       return -1;
-    } else if ( blkid == b.blkid ) {
+    } else if (blkid == b.blkid) {
       return 0;
     } else {
       return 1;

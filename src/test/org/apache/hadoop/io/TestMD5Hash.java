@@ -41,11 +41,11 @@ public class TestMD5Hash extends TestCase {
     MD5Hash md5Hash = getTestHash();
 
     MD5Hash md5Hash00
-      = new MD5Hash(new byte[] {0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0});
+      = new MD5Hash(new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
     MD5Hash md5HashFF
-      = new MD5Hash(new byte[] {-1,-1,-1,-1,-1,-1,-1,-1,
-                                -1,-1,-1,-1,-1,-1,-1,-1});
+      = new MD5Hash(new byte[] {-1, -1, -1, -1, -1, -1, -1, -1,
+                                -1, -1, -1, -1, -1, -1, -1, -1});
 
     // test i/o
     TestWritable.testWritable(md5Hash);

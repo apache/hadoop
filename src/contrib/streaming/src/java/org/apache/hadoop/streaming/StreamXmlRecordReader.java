@@ -101,7 +101,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     ((Text) key).set(record);
     ((Text) value).set("");
 
-    /*if(numNext < 5) {
+    /*if (numNext < 5) {
       System.out.println("@@@ " + numNext + ". true next k=|" + key.toString().replaceAll("[\\r\\n]", " ")
       + "|, len=" + buf.length() + " v=|" + value.toString().replaceAll("[\\r\\n]", " ") + "|");
       }*/

@@ -55,40 +55,40 @@ public abstract class HadoopTestCase extends TestCase {
     throws IOException {
     if (mrMode != LOCAL_MR && mrMode != CLUSTER_MR) {
       throw new IllegalArgumentException(
-        "Invalid MapRed mode, must be LOCAL_MR or CLUSTER_MR");
+                                         "Invalid MapRed mode, must be LOCAL_MR or CLUSTER_MR");
     }
     if (fsMode != LOCAL_FS && fsMode != DFS_FS) {
       throw new IllegalArgumentException(
-        "Invalid FileSystem mode, must be LOCAL_FS or DFS_FS");
+                                         "Invalid FileSystem mode, must be LOCAL_FS or DFS_FS");
     }
     if (taskTrackers < 1) {
       throw new IllegalArgumentException(
-        "Invalid taskTrackers value, must be greater than 0");
+                                         "Invalid taskTrackers value, must be greater than 0");
     }
     if (dataNodes < 1) {
       throw new IllegalArgumentException(
-        "Invalid dataNodes value, must be greater than 0");
+                                         "Invalid dataNodes value, must be greater than 0");
     }
     localMR = (mrMode == LOCAL_MR);
     localFS = (fsMode == LOCAL_FS);
-/*
-    JobConf conf = new JobConf();
-    fsRoot = conf.get("hadoop.tmp.dir");
+    /*
+      JobConf conf = new JobConf();
+      fsRoot = conf.get("hadoop.tmp.dir");
 
-    if (fsRoot == null) {
+      if (fsRoot == null) {
       throw new IllegalArgumentException(
-        "hadoop.tmp.dir is not defined");
-    }
-
-    fsRoot = fsRoot.replace(' ', '+') + "/fs";
-
-    File file = new File(fsRoot);
-    if (!file.exists()) {
-      if (!file.mkdirs()) {
-        throw new RuntimeException("Could not create FS base path: " + file);
+      "hadoop.tmp.dir is not defined");
       }
-    }
-*/
+
+      fsRoot = fsRoot.replace(' ', '+') + "/fs";
+
+      File file = new File(fsRoot);
+      if (!file.exists()) {
+      if (!file.mkdirs()) {
+      throw new RuntimeException("Could not create FS base path: " + file);
+      }
+      }
+    */
     this.taskTrackers = taskTrackers;
     this.dataNodes = dataNodes;
   }

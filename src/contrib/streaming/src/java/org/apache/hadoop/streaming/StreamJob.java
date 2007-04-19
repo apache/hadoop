@@ -82,7 +82,7 @@ public class StreamJob {
     new DefaultOptionBuilder("-","-", false);
   private ArgumentBuilder argBuilder = new ArgumentBuilder(); 
   private Parser parser = new Parser(); 
-  private Group allOptions ; 
+  private Group allOptions; 
   HelpFormatter helpFormatter = new HelpFormatter("  ", "  ", "  ", 900);
   // need these two at class level to extract values later from 
   // commons-cli command line
@@ -197,7 +197,7 @@ public class StreamJob {
   }
 
   void parseArgv(){
-    CommandLine cmdLine = null ; 
+    CommandLine cmdLine = null; 
     try{
       cmdLine = parser.parse(argv_);
     }catch(Exception oe){
@@ -209,10 +209,10 @@ public class StreamJob {
       }
     }
     
-    if( cmdLine != null ){
-      verbose_ =  cmdLine.hasOption("-verbose") ;
-      detailedUsage_ = cmdLine.hasOption("-info") ;
-      debug_ = cmdLine.hasOption("-debug")? debug_ + 1 : debug_ ;
+    if (cmdLine != null){
+      verbose_ =  cmdLine.hasOption("-verbose");
+      detailedUsage_ = cmdLine.hasOption("-info");
+      debug_ = cmdLine.hasOption("-debug")? debug_ + 1 : debug_;
       inputTagged_ = cmdLine.hasOption("-inputtagged"); 
       
       inputSpecs_.addAll(cmdLine.getValues("-input"));
@@ -230,12 +230,12 @@ public class StreamJob {
       configPath_.addAll(cmdLine.getValues("-config"));
       
       String fsName = (String)cmdLine.getValue("-dfs");
-      if( null != fsName ){
+      if (null != fsName){
         userJobConfProps_.put("fs.default.name", fsName);        
       }
       
       String jt = (String)cmdLine.getValue("mapred.job.tracker");
-      if( null != jt ){
+      if (null != jt){
         userJobConfProps_.put("fs.default.name", jt);        
       }
       
@@ -246,15 +246,15 @@ public class StreamJob {
       inReaderSpec_ = (String)cmdLine.getValue("-inputreader"); 
       
       List<String> car = cmdLine.getValues("-cacheArchive"); 
-      if( null != car ){
-        for( String s : car ){
+      if (null != car){
+        for(String s : car){
           cacheArchives = (cacheArchives == null)?s :cacheArchives + "," + s;  
         }
       }
 
       List<String> caf = cmdLine.getValues("-cacheFile"); 
-      if( null != caf ){
-        for( String s : caf ){
+      if (null != caf){
+        for(String s : caf){
           cacheFiles = (cacheFiles == null)?s :cacheFiles + "," + s;  
         }
       }
@@ -262,14 +262,14 @@ public class StreamJob {
       List<String> jobConfArgs = (List<String>)cmdLine.getValue(jobconf); 
       List<String> envArgs = (List<String>)cmdLine.getValue(cmdenv); 
       
-      if( null != jobConfArgs ){
-        for( String s : jobConfArgs){
+      if (null != jobConfArgs){
+        for(String s : jobConfArgs){
           String []parts = s.split("="); 
           userJobConfProps_.put(parts[0], parts[1]);
         }
       }
-      if( null != envArgs ){
-        for( String s : envArgs ){
+      if (null != envArgs){
+        for(String s : envArgs){
           if (addTaskEnvironment_.length() > 0) {
             addTaskEnvironment_ += " ";
           }
@@ -310,7 +310,7 @@ public class StreamJob {
       withMinimum(1).
       withMaximum(max).
       withValidator(validator).
-      create() ;
+      create();
    
     return builder.
       withLongName(name).
@@ -332,15 +332,15 @@ public class StreamJob {
           // an can exec check in java 6
           for (String file : (List<String>)values) {
             File f = new File(file);  
-            if ( ! f.exists() ) {
+            if (!f.exists()) {
               throw new InvalidArgumentException("Argument : " + 
                                                  f.getAbsolutePath() + " doesn't exist."); 
             }
-            if ( ! f.isFile() ) {
+            if (!f.isFile()) {
               throw new InvalidArgumentException("Argument : " + 
                                                  f.getAbsolutePath() + " is not a file."); 
             }
-            if ( ! f.canRead() ) {
+            if (!f.canRead()) {
               throw new InvalidArgumentException("Argument : " + 
                                                  f.getAbsolutePath() + " is not accessible"); 
             }
@@ -378,7 +378,7 @@ public class StreamJob {
     Option mapper  = createOption("mapper", 
                                   "The streaming command to run", "cmd", 1, false);
     Option combiner = createOption("combiner", 
-                                   "The streaming command to run", "cmd",1, false);
+                                   "The streaming command to run", "cmd", 1, false);
     // reducer could be NONE 
     Option reducer = createOption("reducer", 
                                   "The streaming command to run", "cmd", 1, false); 
@@ -388,21 +388,21 @@ public class StreamJob {
     Option dfs = createOption("dfs", 
                               "Optional. Override DFS configuration", "<h:p>|local", 1, false); 
     Option jt = createOption("jt", 
-                             "Optional. Override JobTracker configuration", "<h:p>|local",1, false);
+                             "Optional. Override JobTracker configuration", "<h:p>|local", 1, false);
     Option additionalconfspec = createOption("additionalconfspec", 
-                                             "Optional.", "spec",1, false );
+                                             "Optional.", "spec", 1, false);
     Option inputformat = createOption("inputformat", 
-                                      "Optional.", "spec",1, false );
+                                      "Optional.", "spec", 1, false);
     Option outputformat = createOption("outputformat", 
-                                       "Optional.", "spec",1, false );
+                                       "Optional.", "spec", 1, false);
     Option partitioner = createOption("partitioner", 
-                                      "Optional.", "spec",1, false );
+                                      "Optional.", "spec", 1, false);
     Option inputreader = createOption("inputreader", 
-                                      "Optional.", "spec",1, false );
+                                      "Optional.", "spec", 1, false);
     Option cacheFile = createOption("cacheFile", 
                                     "File name URI", "fileNameURI", 1, false);
     Option cacheArchive = createOption("cacheArchive", 
-                                       "File name URI", "fileNameURI",1, false);
+                                       "File name URI", "fileNameURI", 1, false);
     
     // boolean properties
     
@@ -844,7 +844,7 @@ public class StreamJob {
     if (cacheFiles != null)
       DistributedCache.setCacheFiles(fileURIs, jobConf_);
     
-    if(verbose_) {
+    if (verbose_) {
       listJobConfProperties();
     }
    
@@ -956,7 +956,7 @@ public class StreamJob {
       LOG.info("To kill this job, run:");
       LOG.info(getHadoopClientHome() + "/bin/hadoop job  -Dmapred.job.tracker=" + hp + " -kill "
                + jobId_);
-      //LOG.info("Job file: " + running_.getJobFile() );
+      //LOG.info("Job file: " + running_.getJobFile());
       LOG.info("Tracking URL: " + StreamUtil.qualifyHost(running_.getTrackingURL()));
     }
   }
@@ -1012,7 +1012,7 @@ public class StreamJob {
     }catch(FileAlreadyExistsException fae){
       LOG.error("Error launching job , Output path already exists : " 
                 + fae.getMessage());
-    }catch( IOException ioe){
+    }catch(IOException ioe){
       LOG.error("Error Launching job : " + ioe.getMessage());
     }
     finally {
@@ -1025,7 +1025,7 @@ public class StreamJob {
   }
   /** Support -jobconf x=y x1=y1 type options **/
   class MultiPropertyOption extends PropertyOption{
-    private String optionString ; 
+    private String optionString; 
     MultiPropertyOption(){
       super(); 
     }
@@ -1033,7 +1033,7 @@ public class StreamJob {
     MultiPropertyOption(final String optionString,
                         final String description,
                         final int id){
-      super(optionString, description, id) ; 
+      super(optionString, description, id); 
       this.optionString = optionString;
     }
 
@@ -1053,10 +1053,10 @@ public class StreamJob {
       }
       
       ArrayList properties = new ArrayList(); 
-      String next = "" ; 
-      while( arguments.hasNext()){
+      String next = ""; 
+      while(arguments.hasNext()){
         next = (String) arguments.next();
-        if( ! next.startsWith("-") ){
+        if (!next.startsWith("-")){
           properties.add(next);
         }else{
           arguments.previous();
@@ -1064,9 +1064,9 @@ public class StreamJob {
         }
       } 
 
-      // add to any existing values ( support specifying args multiple times)
-      List<String> oldVal = (List<String>)commandLine.getValue(this) ; 
-      if( oldVal == null ){
+      // add to any existing values (support specifying args multiple times)
+      List<String> oldVal = (List<String>)commandLine.getValue(this); 
+      if (oldVal == null){
         commandLine.addValue(this, properties);
       }else{
         oldVal.addAll(properties); 

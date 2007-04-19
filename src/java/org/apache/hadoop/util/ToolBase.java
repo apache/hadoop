@@ -108,7 +108,7 @@ public abstract class ToolBase implements Tool {
       .create("jt");
     Option oconf = OptionBuilder.withArgName("configuration file")
       .hasArg()
-      .withDescription("specify an application configuration file" )
+      .withDescription("specify an application configuration file")
       .create("conf");
     Option property = OptionBuilder.withArgName("property=value")
       .hasArgs()
@@ -129,22 +129,22 @@ public abstract class ToolBase implements Tool {
    * @param conf Configuration to be modified
    * @param line User-specified generic options
    */
-  static private void processGeneralOptions( Configuration conf,
-                                             CommandLine line ) {
-    if(line.hasOption("fs")) {
+  static private void processGeneralOptions(Configuration conf,
+                                            CommandLine line) {
+    if (line.hasOption("fs")) {
       conf.set("fs.default.name", line.getOptionValue("fs"));
     }
         
-    if(line.hasOption("jt")) {
+    if (line.hasOption("jt")) {
       conf.set("mapred.job.tracker", line.getOptionValue("jt"));
     }
-    if(line.hasOption("conf")) {
+    if (line.hasOption("conf")) {
       conf.addFinalResource(new Path(line.getOptionValue("conf")));
     }
-    if(line.hasOption('D')) {
+    if (line.hasOption('D')) {
       String[] property = line.getOptionValues('D');
       for(int i=0; i<property.length-1; i=i+2) {
-        if(property[i]!=null)
+        if (property[i]!=null)
           conf.set(property[i], property[i+1]);
       }
     }           
@@ -157,13 +157,13 @@ public abstract class ToolBase implements Tool {
    * @param args User-specified arguments
    * @return Commoand-specific arguments
    */
-  static private String[] parseGeneralOptions( Configuration conf, 
-                                               String[] args ) {
+  static private String[] parseGeneralOptions(Configuration conf, 
+                                              String[] args) {
     Options opts = buildGeneralOptions();
     CommandLineParser parser = new GnuParser();
     try {
-      CommandLine line = parser.parse( opts, args, true );
-      processGeneralOptions( conf, line );
+      CommandLine line = parser.parse(opts, args, true);
+      processGeneralOptions(conf, line);
       return line.getArgs();
     } catch(ParseException e) {
       LOG.warn("options parsing failed: "+e.getMessage());

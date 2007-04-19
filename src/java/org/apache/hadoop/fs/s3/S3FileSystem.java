@@ -64,21 +64,21 @@ public class S3FileSystem extends FileSystem {
     FileSystemStore store = new Jets3tFileSystemStore();
     
     RetryPolicy basePolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
-        conf.getInt("fs.s3.maxRetries", 4),
-        conf.getLong("fs.s3.sleepTimeSeconds", 10), TimeUnit.SECONDS);
+                                                                               conf.getInt("fs.s3.maxRetries", 4),
+                                                                               conf.getLong("fs.s3.sleepTimeSeconds", 10), TimeUnit.SECONDS);
     Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =
       new HashMap<Class<? extends Exception>, RetryPolicy>();
     exceptionToPolicyMap.put(IOException.class, basePolicy);
     exceptionToPolicyMap.put(S3Exception.class, basePolicy);
     
     RetryPolicy methodPolicy = RetryPolicies.retryByException(
-        RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
+                                                              RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
     Map<String,RetryPolicy> methodNameToPolicyMap = new HashMap<String,RetryPolicy>();
     methodNameToPolicyMap.put("storeBlock", methodPolicy);
     methodNameToPolicyMap.put("retrieveBlock", methodPolicy);
     
     return (FileSystemStore) RetryProxy.create(FileSystemStore.class,
-        store, methodNameToPolicyMap);
+                                               store, methodNameToPolicyMap);
   }
   
   @Override
@@ -116,7 +116,7 @@ public class S3FileSystem extends FileSystem {
       store.storeINode(absolutePath, INode.DIRECTORY_INODE);
     } else if (inode.isFile()) {
       throw new IOException(String.format(
-          "Can't make directory for path %s since it is a file.", absolutePath));
+                                          "Can't make directory for path %s since it is a file.", absolutePath));
     }
     Path parent = absolutePath.getParent();
     return (parent == null || mkdirs(parent));
@@ -167,8 +167,8 @@ public class S3FileSystem extends FileSystem {
 
   @Override
   public FSDataOutputStream create(Path file, boolean overwrite, int bufferSize,
-      short replication, long blockSize, Progressable progress)
-      throws IOException {
+                                   short replication, long blockSize, Progressable progress)
+    throws IOException {
 
     INode inode = store.retrieveINode(makeAbsolute(file));
     if (inode != null) {
@@ -185,16 +185,16 @@ public class S3FileSystem extends FileSystem {
         }
       }      
     }
-    return new FSDataOutputStream( 
-            new S3OutputStream(getConf(), store, makeAbsolute(file),
-                blockSize, progress), bufferSize );
+    return new FSDataOutputStream(
+                                  new S3OutputStream(getConf(), store, makeAbsolute(file),
+                                                     blockSize, progress), bufferSize);
   }
 
   @Override
   public FSDataInputStream open(Path path, int bufferSize) throws IOException {
     INode inode = checkFile(path);
-    return new FSDataInputStream( new S3InputStream(getConf(), store, inode),
-            bufferSize);
+    return new FSDataInputStream(new S3InputStream(getConf(), store, inode),
+                                 bufferSize);
   }
 
   @Override
@@ -262,7 +262,7 @@ public class S3FileSystem extends FileSystem {
         return false;
       }
       for (Path p : contents) {
-        if (! delete(p)) {
+        if (!delete(p)) {
           return false;
         }
       }
@@ -301,7 +301,7 @@ public class S3FileSystem extends FileSystem {
    */
   @Override
   public boolean setReplication(Path path, short replication)
-      throws IOException {
+    throws IOException {
     return true;
   }
 
@@ -328,7 +328,7 @@ public class S3FileSystem extends FileSystem {
    */
   @Override
   public String[][] getFileCacheHints(Path f, long start, long len)
-      throws IOException {
+    throws IOException {
     // TODO: Check this is the correct behavior
     if (!exists(f)) {
       return null;
@@ -337,14 +337,14 @@ public class S3FileSystem extends FileSystem {
   }
 
   /** @deprecated */ @Deprecated
-  @Override
-  public void lock(Path path, boolean shared) throws IOException {
+    @Override
+    public void lock(Path path, boolean shared) throws IOException {
     // TODO: Design and implement
   }
 
   /** @deprecated */ @Deprecated
-  @Override
-  public void release(Path path) throws IOException {
+    @Override
+    public void release(Path path) throws IOException {
     // TODO: Design and implement
   }
 
@@ -360,13 +360,13 @@ public class S3FileSystem extends FileSystem {
 
   @Override
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-      throws IOException {
+    throws IOException {
     return tmpLocalFile;
   }
 
   @Override
   public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-      throws IOException {
+    throws IOException {
     moveFromLocalFile(tmpLocalFile, fsOutputFile);
   }
 
