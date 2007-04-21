@@ -698,14 +698,17 @@ class ReduceTask extends Task {
             fs.delete(tmpFilename);
             return CopyResult.OBSOLETE;
           }
+          
+          bytes = fs.getLength(tmpFilename);
           // if we can't rename the file, something is broken (and IOException
           // will be thrown). 
           if (!fs.rename(tmpFilename, finalFilename)) {
             fs.delete(tmpFilename);
+            bytes = -1;
             throw new IOException("failure to rename map output " + 
                                   tmpFilename);
           }
-          bytes = fs.getLength(finalFilename);
+          
           LOG.info(reduceId + " done copying " + loc.getMapTaskId() +
                    " output from " + loc.getHost() + ".");
           //Create a thread to do merges. Synchronize access/update to 

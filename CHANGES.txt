@@ -234,6 +234,10 @@ Trunk (unreleased changes)
 70. HADOOP-1275.  Fix misspelled job notification property in
     hadoop-default.xml.  (Alejandro Abdelnur via tomwhite)
 
+71. HADOOP-1152.  Fix race condition in MapOutputCopier.copyOutput file
+    rename causing possible reduce task hang.
+    (Tahir Hashmi via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 
