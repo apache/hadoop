@@ -873,7 +873,7 @@ creations/deletions), or "all".</description>
 -->
 
 <property>
-  <name>job.end.retry.attempt</name>
+  <name>job.end.retry.attempts</name>
   <value>0</value>
   <description>Indicates how many times hadoop should attempt to contact the
                notification URL </description>
