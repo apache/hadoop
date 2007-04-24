@@ -48,7 +48,8 @@ public class TaskLogAppender extends AppenderSkeleton {
     // Log the message to the task's log
     String logMessage = this.layout.format(event);
     try {
-      taskLogWriter.write(logMessage.getBytes(), 0, logMessage.length());
+      byte[] logMessageData = logMessage.getBytes();
+      taskLogWriter.write(logMessageData, 0, logMessageData.length);
     } catch (IOException ioe) {
       errorHandler.error("Failed to log: '" + logMessage + 
                          "' to the task's logging infrastructure with the exception: " + 

@@ -242,6 +242,9 @@ Trunk (unreleased changes)
     not count a lost tasktracker against the job.  
     (Arun C Murthy via tomwhite)
 
+73. HADOOP-1271.  Fix StreamBaseRecordReader to be able to log record 
+    data that's not UTF-8.  (Arun C Murthy via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 
