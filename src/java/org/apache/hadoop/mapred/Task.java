@@ -21,10 +21,16 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progress;
@@ -58,8 +64,11 @@ abstract class Task implements Writable, Configurable {
   private String jobId;                           // unique jobid
   private String tipId;
   private int partition;                          // id within job
-  private TaskStatus.Phase phase;                 // current phase of the task 
+  private TaskStatus.Phase phase ;                // current phase of the task
+  private Path taskOutputPath;                    // task-specific output dir
   
+  protected JobConf conf;
+  protected MapOutputFile mapOutputFile = new MapOutputFile();
 
   ////////////////////////////////////////////
   // Constructors
@@ -125,6 +134,11 @@ abstract class Task implements Writable, Configurable {
     UTF8.writeString(out, taskId);
     UTF8.writeString(out, jobId);
     out.writeInt(partition);
+    if (taskOutputPath != null) {
+      Text.writeString(out, taskOutputPath.toString());
+    } else {
+      Text.writeString(out, new String(""));
+    }
   }
   public void readFields(DataInput in) throws IOException {
     jobFile = UTF8.readString(in);
@@ -132,10 +146,20 @@ abstract class Task implements Writable, Configurable {
     taskId = UTF8.readString(in);
     jobId = UTF8.readString(in);
     partition = in.readInt();
+    String outPath = Text.readString(in);
+    if (outPath.length() != 0) {
+      taskOutputPath = new Path(outPath);
+    } else {
+      taskOutputPath = null;
+    }
   }
 
   public String toString() { return taskId; }
 
+  private Path getTaskOutputPath(JobConf conf) {
+    return new Path(conf.getOutputPath(), new String("_" + taskId));
+  }
+  
   /**
    * Localize the given JobConf to be specific for this task.
    */
@@ -145,6 +169,12 @@ abstract class Task implements Writable, Configurable {
     conf.setBoolean("mapred.task.is.map", isMapTask());
     conf.setInt("mapred.task.partition", partition);
     conf.set("mapred.job.id", jobId);
+    
+    // The task-specific output path
+    if (conf.getOutputPath() != null) {
+      taskOutputPath = getTaskOutputPath(conf);
+      conf.setOutputPath(taskOutputPath);
+    }
   }
   
   /** Run this task as a part of the named job.  This method is executed in the
@@ -250,4 +280,88 @@ abstract class Task implements Writable, Configurable {
       }
     }
   }
+  
+  public void setConf(Configuration conf) {
+    if (conf instanceof JobConf) {
+      this.conf = (JobConf) conf;
+
+      if (taskId != null && taskOutputPath == null && 
+              this.conf.getOutputPath() != null) {
+        taskOutputPath = getTaskOutputPath(this.conf);
+      }
+    } else {
+      this.conf = new JobConf(conf);
+    }
+    this.mapOutputFile.setConf(this.conf);
+  }
+
+  public Configuration getConf() {
+    return this.conf;
+  }
+
+  /**
+   * Save the task's output on successful completion.
+   * 
+   * @throws IOException
+   */
+  void saveTaskOutput() throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+
+    if (taskOutputPath != null && fs.exists(taskOutputPath)) {
+      Path jobOutputPath = taskOutputPath.getParent();
+
+      // Move the task outputs to their final place
+      moveTaskOutputs(fs, jobOutputPath, taskOutputPath);
+
+      // Delete the temporary task-specific output directory
+      if (!fs.delete(taskOutputPath)) {
+        LOG.info("Failed to delete the temporary output directory of task: " + 
+                getTaskId() + " - " + taskOutputPath);
+      }
+      
+      LOG.info("Saved output of task '" + getTaskId() + "' to " + jobOutputPath);
+    }
+  }
+  
+  private Path getFinalPath(Path jobOutputDir, Path taskOutput) {
+    URI relativePath = taskOutputPath.toUri().relativize(taskOutput.toUri());
+    return new Path(jobOutputDir, relativePath.toString());
+  }
+  
+  private void moveTaskOutputs(FileSystem fs, Path jobOutputDir, Path taskOutput) 
+  throws IOException {
+    if (fs.isFile(taskOutput)) {
+      Path finalOutputPath = getFinalPath(jobOutputDir, taskOutput);
+      fs.mkdirs(finalOutputPath.getParent());
+      if (!fs.rename(taskOutput, finalOutputPath)) {
+        throw new IOException("Failed to save output of task: " + 
+                getTaskId());
+      }
+      LOG.debug("Moved " + taskOutput + " to " + finalOutputPath);
+    } else if(fs.isDirectory(taskOutput)) {
+      Path[] paths = fs.listPaths(taskOutput);
+      if (paths != null) {
+        for (Path path : paths) {
+          moveTaskOutputs(fs, jobOutputDir, path);
+        }
+      }
+    }
+  }
+  
+  /**
+   * Discard the task's output on failure.
+   * 
+   * @throws IOException
+   */
+  void discardTaskOutput() throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+
+    if (taskOutputPath != null && fs.exists(taskOutputPath)) {
+      // Delete the temporary task-specific output directory
+      FileUtil.fullyDelete(fs, taskOutputPath);
+      LOG.info("Discarded output of task '" + getTaskId() + "' - " 
+              + taskOutputPath);
+    }
+  }
+
 }

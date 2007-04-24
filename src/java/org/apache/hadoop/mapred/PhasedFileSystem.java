@@ -24,7 +24,10 @@ import org.apache.hadoop.util.Progressable;
  * Temporary files are written in  ("mapred.system.dir")/<jobid>/<taskid>
  * If one tasks opens a large number of files in succession then its 
  * better to commit(Path) individual files when done. Otherwise
- * commit() can be used to commit all open files at once. 
+ * commit() can be used to commit all open files at once.
+ * 
+ * @deprecated {@link PhasedFileSystem} is no longer used
+ *             during speculative execution of tasks.
  */
 public class PhasedFileSystem extends FilterFileSystem {
   // Map from final file name to temporary file name

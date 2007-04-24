@@ -83,6 +83,12 @@ public class SortValidator {
     return pairData;
   }
 
+  private static final PathFilter sortPathsFilter = new PathFilter() {
+    public boolean accept(Path path) {
+      return (path.getName().startsWith("part-"));
+    }
+  };
+  
   /**
    * A simple map-reduce job which checks consistency of the
    * MapReduce framework's sort by checking:
@@ -132,6 +138,7 @@ public class SortValidator {
       private Partitioner partitioner = null;
       private int partition = -1;
       private int noSortReducers = -1;
+      private long recordId = -1;
 
       public void configure(JobConf job) {
         // 'key' == sortInput for sort-input; key == sortOutput for sort-output
@@ -161,6 +168,7 @@ public class SortValidator {
                       Reporter reporter) throws IOException {
         BytesWritable bwKey = (BytesWritable)key;
         BytesWritable bwValue = (BytesWritable)value;
+        ++recordId;
         
         if (this.key == sortOutput) {
           // Check if keys are 'sorted' if this  
@@ -170,7 +178,8 @@ public class SortValidator {
           } else {
             if (prevKey.compareTo(bwKey) > 0) {
               throw new IOException("The 'map-reduce' framework wrongly classifed"
-                                    + "(" + prevKey + ") > (" + bwKey + ")"); 
+                                    + "(" + prevKey + ") > (" + bwKey + ") for record# " 
+                                    + recordId); 
             }
             prevKey = bwKey;
           }
@@ -179,8 +188,9 @@ public class SortValidator {
           int keyPartition = 
             partitioner.getPartition(bwKey, bwValue, noSortReducers);
           if (partition != keyPartition) {
-            throw new IOException("Paritions do not match! - '" + partition + 
-                                  "' v/s '" + keyPartition + "'");
+            throw new IOException("Partitions do not match for record# " + 
+                                  recordId + " ! - '" + partition + "' v/s '" + 
+                                  keyPartition + "'");
           }
         }
 
@@ -225,8 +235,10 @@ public class SortValidator {
       JobConf jobConf = new JobConf(defaults, RecordStatsChecker.class);
       jobConf.setJobName("sortvalidate-recordstats-checker");
 
-      int noSortReduceTasks = fs.listPaths(sortOutput).length;
+      int noSortReduceTasks = 
+        fs.listPaths(sortOutput, sortPathsFilter).length;
       jobConf.setInt("sortvalidate.sort.reduce.tasks", noSortReduceTasks);
+      int noSortInputpaths = fs.listPaths(sortInput).length;
 
       jobConf.setInputFormat(NonSplitableSequenceFileInputFormat.class);
       jobConf.setOutputFormat(SequenceFileOutputFormat.class);
@@ -253,8 +265,10 @@ public class SortValidator {
       //job_conf.set("mapred.job.tracker", "local");
       
       System.out.println("\nSortValidator.RecordStatsChecker: Validate sort " +
-                         "from " + jobConf.getInputPaths()[0] + ", " + 
-                         jobConf.getInputPaths()[1] + " into " + jobConf.getOutputPath() + 
+                         "from " + jobConf.getInputPaths()[0] + " (" + 
+                         noSortInputpaths + " files), " + 
+                         jobConf.getInputPaths()[1] + " (" + noSortReduceTasks + 
+                         " files) into " + jobConf.getOutputPath() + 
                          " with 1 reducer.");
       Date startTime = new Date();
       System.out.println("Job started: " + startTime);

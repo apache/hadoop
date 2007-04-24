@@ -63,6 +63,28 @@ public class FileUtil {
     return dir.delete();
   }
 
+  /**
+   * Recursively delete a directory.
+   * 
+   * @param fs {@link FileSystem} on which the path is present
+   * @param dir directory to recursively delete 
+   * @throws IOException
+   */
+  public static void fullyDelete(FileSystem fs, Path dir) 
+  throws IOException {
+    Path[] paths = fs.listPaths(dir);
+    if (paths != null) {
+      for (Path p : paths) {
+        if (fs.isFile(p))  {
+          fs.delete(p);
+        } else {
+          fullyDelete(fs, p);
+        }
+      }
+    }
+    fs.delete(dir);
+  }
+
   /** Copy files between FileSystems. */
   public static boolean copy(FileSystem srcFS, Path src, 
                              FileSystem dstFS, Path dst, 

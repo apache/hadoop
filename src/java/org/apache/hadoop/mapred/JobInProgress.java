@@ -38,6 +38,7 @@ import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.util.StringUtils;
 
 ///////////////////////////////////////////////////////
 // JobInProgress maintains all the info for keeping
@@ -333,8 +334,20 @@ class JobInProgress {
                                             TaskCompletionEvent.Status.SUCCEEDED,
                                             httpTaskLogLocation 
                                             );
+        try {
+          completedTask(tip, status, metrics);
+        } catch (IOException ioe) {
+          // Oops! Failed to copy the task's output to its final place;
+          // fail the task!
+          failedTask(tip, status.getTaskId(), 
+                     "Failed to copy reduce's output", 
+                     TaskStatus.Phase.REDUCE, TaskStatus.State.FAILED, 
+                     ttStatus.getHost(), status.getTaskTracker(), null);
+          LOG.info("Failed to copy the output of " + status.getTaskId() + 
+                   " with: " + StringUtils.stringifyException(ioe));
+          return;
+        }
         tip.setSuccessEventNumber(taskCompletionEventTracker);
-        completedTask(tip, status, metrics);
       } else if (state == TaskStatus.State.FAILED ||
                  state == TaskStatus.State.KILLED) {
         taskEvent = new TaskCompletionEvent(
@@ -641,7 +654,8 @@ class JobInProgress {
    */
   public synchronized void completedTask(TaskInProgress tip, 
                                          TaskStatus status,
-                                         JobTrackerMetrics metrics) {
+                                         JobTrackerMetrics metrics) 
+  throws IOException {
     String taskid = status.getTaskId();
         
     // Sanity check: is the TIP already complete?
@@ -650,7 +664,12 @@ class JobInProgress {
                " has completed task " + taskid);
           
       // Just mark this 'task' as complete
-      tip.completedTask(taskid);
+      try {
+        tip.alreadyCompletedTask(taskid);
+      } catch (IOException ioe) {
+        LOG.info("Failed to discard output of " + taskid + " : " + 
+                StringUtils.stringifyException(ioe));
+      }
           
       // Let the JobTracker cleanup this taskid if the job isn't running
       if (this.status.getRunState() != JobStatus.RUNNING) {
@@ -661,6 +680,9 @@ class JobInProgress {
 
     LOG.info("Task '" + taskid + "' has completed " + tip.getTIPId() + 
              " successfully.");          
+
+    // Mark the TIP as complete
+    tip.completed(taskid);
 
     // Update jobhistory 
     String taskTrackerName = status.getTaskTracker();
@@ -684,9 +706,6 @@ class JobInProgress {
       JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
                                   Values.REDUCE.name(), status.getFinishTime()); 
     }
-        
-    // Mark the TIP as complete
-    tip.completed(taskid);
         
     // Update the running/finished map/reduce counts
     if (tip.isMapTask()){

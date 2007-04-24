@@ -57,8 +57,6 @@ class MapTask extends Task {
 
   private BytesWritable split = new BytesWritable();
   private String splitClass;
-  private MapOutputFile mapOutputFile = new MapOutputFile();
-  private JobConf conf;
   private InputSplit instantiatedSplit = null;
 
   private static final Log LOG = LogFactory.getLog(MapTask.class.getName());
@@ -100,7 +98,6 @@ class MapTask extends Task {
     super.write(out);
     Text.writeString(out, splitClass);
     split.write(out);
-    
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -224,19 +221,6 @@ class MapTask extends Task {
     sortProgress.setName("Sort progress reporter for task "+getTaskId());
     sortProgress.setDaemon(true);
     return sortProgress;
-  }
-
-  public void setConf(Configuration conf) {
-    if (conf instanceof JobConf) {
-      this.conf = (JobConf) conf;
-    } else {
-      this.conf = new JobConf(conf);
-    }
-    this.mapOutputFile.setConf(this.conf);
-  }
-
-  public Configuration getConf() {
-    return this.conf;
   }
 
   class MapOutputBuffer implements OutputCollector {

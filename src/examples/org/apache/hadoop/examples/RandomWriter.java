@@ -79,7 +79,7 @@ public class RandomWriter {
       }
       public boolean next(Writable key, Writable value) {
         if (name != null) {
-          ((Text) key).set(name.toString());
+          ((Text) key).set(name.getName());
           name = null;
           return true;
         }
@@ -118,6 +118,7 @@ public class RandomWriter {
     private Random random = new Random();
     private BytesWritable randomKey = new BytesWritable();
     private BytesWritable randomValue = new BytesWritable();
+    private Path outputDir = null;
     
     private void randomizeBytes(byte[] data, int offset, int length) {
       for(int i=offset + length - 1; i >= offset; --i) {
@@ -134,7 +135,8 @@ public class RandomWriter {
                     Reporter reporter) throws IOException {
       String filename = ((Text) key).toString();
       SequenceFile.Writer writer = 
-        SequenceFile.createWriter(fileSys, jobConf, new Path(filename), 
+        SequenceFile.createWriter(fileSys, jobConf, 
+                                  new Path(outputDir, filename), 
                                   BytesWritable.class, BytesWritable.class,
                                   CompressionType.NONE, reporter);
       int itemCount = 0;
@@ -171,6 +173,8 @@ public class RandomWriter {
       } catch (IOException e) {
         throw new RuntimeException("Can't get default file system", e);
       }
+      outputDir = job.getOutputPath();
+      
       numBytesToWrite = job.getLong("test.randomwrite.bytes_per_map",
                                     1*1024*1024*1024);
       minKeySize = job.getInt("test.randomwrite.min_key", 10);
@@ -206,9 +210,6 @@ public class RandomWriter {
     job.setJobName("random-writer");
     job.setOutputPath(outDir);
     
-    // turn off speculative execution, because DFS doesn't handle
-    // multiple writers to the same file.
-    job.setSpeculativeExecution(false);
     job.setOutputKeyClass(BytesWritable.class);
     job.setOutputValueClass(BytesWritable.class);
     

@@ -248,6 +248,10 @@ Trunk (unreleased changes)
 74. HADOOP-1190.  Fix unchecked warnings in main Hadoop code.  
     (tomwhite)
 
+75. HADOOP-1127.  Fix AlreadyBeingCreatedException in namenode for 
+    jobs run with speculative execution.
+    (Arun C Murthy via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

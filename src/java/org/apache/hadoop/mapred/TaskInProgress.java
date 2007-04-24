@@ -30,6 +30,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.util.StringUtils;
 
 
 ////////////////////////////////////////////////////////
@@ -100,6 +101,10 @@ class TaskInProgress {
    */
   private TreeMap<String,TaskStatus> taskStatuses = 
     new TreeMap<String,TaskStatus>();
+
+  // Map from taskId -> Task
+  private Map<String, Task> tasks = new TreeMap<String, Task>();
+  boolean savedTaskOutput = false;
 
   private TreeSet<String> machinesWhereFailed = new TreeSet<String>();
   private TreeSet<String> tasksReportedClosed = new TreeSet<String>();
@@ -410,6 +415,15 @@ class TaskInProgress {
       this.completes--;
     }
 
+    // Discard task output
+    Task t = tasks.get(taskid);
+    try {
+      t.discardTaskOutput();
+    } catch (IOException ioe) {
+      LOG.info("Failed to discard output of task '" + taskid + "' with " + 
+              StringUtils.stringifyException(ioe));
+    }
+
     if (taskState == TaskStatus.State.FAILED) {
       numTaskFailures++;
     } else {
@@ -431,18 +445,46 @@ class TaskInProgress {
    * TaskInProgress to be completed and hence we might not want to 
    * manipulate the TaskInProgress to note that it is 'complete' just-as-yet.
    */
+  void alreadyCompletedTask(String taskid) throws IOException {
+    Task t = tasks.get(taskid);
+    try {
+      t.discardTaskOutput();
+    } catch (IOException ioe) {
+      LOG.info("Failed to discard output of task '" + taskid + "' with " + 
+              StringUtils.stringifyException(ioe));
+    }
+    completedTask(taskid);
+  }
+
   void completedTask(String taskid) {
-    LOG.info("Task '" + taskid + "' has completed.");
     TaskStatus status = taskStatuses.get(taskid);
     status.setRunState(TaskStatus.State.SUCCEEDED);
     activeTasks.remove(taskid);
+    LOG.info("Task '" + taskid + "' has completed.");
   }
     
   /**
    * Indicate that one of the taskids in this TaskInProgress
    * has successfully completed!
    */
-  public void completed(String taskid) {
+  public void completed(String taskid) throws IOException {
+    //
+    // Finalize the task's output
+    //
+    Task t = tasks.get(taskid);
+    if (!savedTaskOutput) {
+      t.saveTaskOutput();
+      savedTaskOutput = true;
+    } else {
+      try {
+        t.discardTaskOutput();
+      } catch (IOException ioe) {
+        LOG.info("Failed to discard 'already-saved' output of task: " + 
+                t.getTaskId() + " with: " + 
+                StringUtils.stringifyException(ioe));
+      }
+    }
+
     //
     // Record that this taskid is complete
     //
@@ -597,6 +639,7 @@ class TaskInProgress {
       t = new ReduceTask(jobId, jobFile, this.id, taskid, partition, numMaps);
     }
     t.setConf(conf);
+    tasks.put(taskid, t);
 
     activeTasks.put(taskid, taskTracker);
 

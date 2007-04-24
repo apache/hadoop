@@ -124,6 +124,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
           map_tasks += 1;
           myMetrics.launchMap();
           map.run(localConf, this);
+          map.saveTaskOutput();
           myMetrics.completeMap();
           map_tasks -= 1;
           updateCounters(map);
@@ -153,6 +154,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
           reduce_tasks += 1;
           myMetrics.launchReduce();
           reduce.run(localConf, this);
+          reduce.saveTaskOutput();
           myMetrics.completeReduce();
           reduce_tasks -= 1;
           updateCounters(reduce);

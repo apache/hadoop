@@ -89,8 +89,6 @@ class ReduceTask extends Task {
   private Progress copyPhase = getProgress().addPhase("copy");
   private Progress sortPhase  = getProgress().addPhase("sort");
   private Progress reducePhase = getProgress().addPhase("reduce");
-  private JobConf conf;
-  private MapOutputFile mapOutputFile = new MapOutputFile();
 
   public ReduceTask() {}
 
@@ -322,14 +320,8 @@ class ReduceTask extends Task {
     
     // make output collector
     String finalName = getOutputName(getPartition());
-    boolean runSpeculative = job.getSpeculativeExecution();
     FileSystem fs = FileSystem.get(job);
 
-    if (runSpeculative){
-      fs = new PhasedFileSystem (fs , 
-                                 getJobId(), getTipId(), getTaskId());
-    }
-    
     final RecordWriter out = 
       job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);  
     
@@ -360,10 +352,6 @@ class ReduceTask extends Task {
       reducer.close();
       out.close(reporter);
       //End of clean up.
-      
-      if (runSpeculative){
-        ((PhasedFileSystem)fs).commit(); 
-      }
     } catch (IOException ioe) {
       try {
         reducer.close();
@@ -392,19 +380,6 @@ class ReduceTask extends Task {
     return "part-" + NUMBER_FORMAT.format(partition);
   }
 
-  public void setConf(Configuration conf) {
-    if (conf instanceof JobConf) {
-      this.conf = (JobConf) conf;
-    } else {
-      this.conf = new JobConf(conf);
-    }
-    this.mapOutputFile.setConf(this.conf);
-  }
-
-  public Configuration getConf() {
-    return this.conf;
-  }
-  
   private class ReduceCopier implements MRConstants {
 
     /** Reference to the umbilical object */
