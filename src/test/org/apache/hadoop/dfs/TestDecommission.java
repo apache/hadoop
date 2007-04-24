@@ -164,7 +164,7 @@ public class TestDecommission extends TestCase {
     System.out.println("Decommissioning node: " + nodename);
 
     // write nodename into the exclude file.
-    ArrayList<String> nodes = (ArrayList<String>)decommissionedNodes.clone();
+    ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);
     nodes.add(nodename);
     writeConfigFile(localFileSys, excludeFile, nodes);
     dfs.refreshNodes();

@@ -285,7 +285,7 @@ public class DistributedFSCheck extends TestCase {
       }
     }
     
-    Vector resultLines = new Vector();
+    Vector<String> resultLines = new Vector<String>();
     resultLines.add( "----- DistributedFSCheck ----- : ");
     resultLines.add( "               Date & time: " + new Date(System.currentTimeMillis()));
     resultLines.add( "    Total number of blocks: " + blocks);
@@ -293,7 +293,7 @@ public class DistributedFSCheck extends TestCase {
     resultLines.add( "Number of corrupted blocks: " + nrBadBlocks);
     
     int nrBadFilesPos = resultLines.size();
-    TreeSet badFiles = new TreeSet();
+    TreeSet<String> badFiles = new TreeSet<String>();
     long nrBadFiles = 0;
     if (nrBadBlocks > 0) {
       resultLines.add("");
@@ -321,7 +321,7 @@ public class DistributedFSCheck extends TestCase {
                                       new FileOutputStream(
                                                            new File(resFileName), true)); 
     for(int i = 0; i < resultLines.size(); i++) {
-      String cur = (String)resultLines.get(i);
+      String cur = resultLines.get(i);
       LOG.info(cur);
       res.println(cur);
     }

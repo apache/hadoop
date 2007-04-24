@@ -160,30 +160,30 @@ public class TestJobControl extends junit.framework.TestCase {
     cleanData(fs, outdir_3);
     cleanData(fs, outdir_4);
 
-    ArrayList dependingJobs = null;
+    ArrayList<Job> dependingJobs = null;
 
-    ArrayList inPaths_1 = new ArrayList();
+    ArrayList<Path> inPaths_1 = new ArrayList<Path>();
     inPaths_1.add(indir);
     JobConf jobConf_1 = createCopyJob(inPaths_1, outdir_1);
     Job job_1 = new Job(jobConf_1, dependingJobs);
-    ArrayList inPaths_2 = new ArrayList();
+    ArrayList<Path> inPaths_2 = new ArrayList<Path>();
     inPaths_2.add(indir);
     JobConf jobConf_2 = createCopyJob(inPaths_2, outdir_2);
     Job job_2 = new Job(jobConf_2, dependingJobs);
 
-    ArrayList inPaths_3 = new ArrayList();
+    ArrayList<Path> inPaths_3 = new ArrayList<Path>();
     inPaths_3.add(outdir_1);
     inPaths_3.add(outdir_2);
     JobConf jobConf_3 = createCopyJob(inPaths_3, outdir_3);
-    dependingJobs = new ArrayList();
+    dependingJobs = new ArrayList<Job>();
     dependingJobs.add(job_1);
     dependingJobs.add(job_2);
     Job job_3 = new Job(jobConf_3, dependingJobs);
 
-    ArrayList inPaths_4 = new ArrayList();
+    ArrayList<Path> inPaths_4 = new ArrayList<Path>();
     inPaths_4.add(outdir_3);
     JobConf jobConf_4 = createCopyJob(inPaths_4, outdir_4);
-    dependingJobs = new ArrayList();
+    dependingJobs = new ArrayList<Job>();
     dependingJobs.add(job_3);
     Job job_4 = new Job(jobConf_4, dependingJobs);
 

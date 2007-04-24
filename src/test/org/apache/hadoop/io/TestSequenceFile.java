@@ -230,7 +230,8 @@ public class TestSequenceFile extends TestCase {
     throws IOException {
     LOG.info("sorting " + count + " records in memory for debug");
     RandomDatum.Generator generator = new RandomDatum.Generator(seed);
-    SortedMap map = new TreeMap();
+    SortedMap<RandomDatum, RandomDatum> map =
+      new TreeMap<RandomDatum, RandomDatum>();
     for (int i = 0; i < count; i++) {
       generator.next();
       RandomDatum key = generator.getKey();
@@ -241,13 +242,14 @@ public class TestSequenceFile extends TestCase {
     LOG.debug("checking order of " + count + " records");
     RandomDatum k = new RandomDatum();
     RandomDatum v = new RandomDatum();
-    Iterator iterator = map.entrySet().iterator();
+    Iterator<Map.Entry<RandomDatum, RandomDatum>> iterator =
+      map.entrySet().iterator();
     SequenceFile.Reader reader =
       new SequenceFile.Reader(fs, file.suffix(".sorted"), conf);
     for (int i = 0; i < count; i++) {
-      Map.Entry entry = (Map.Entry)iterator.next();
-      RandomDatum key = (RandomDatum)entry.getKey();
-      RandomDatum value = (RandomDatum)entry.getValue();
+      Map.Entry<RandomDatum, RandomDatum> entry = iterator.next();
+      RandomDatum key = entry.getKey();
+      RandomDatum value = entry.getValue();
 
       reader.next(k, v);
 

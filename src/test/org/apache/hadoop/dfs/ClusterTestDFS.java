@@ -226,7 +226,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
       //
       //        start some DataNodes
       //
-      ArrayList listOfDataNodeDaemons = new ArrayList();
+      ArrayList<DataNode> listOfDataNodeDaemons = new ArrayList<DataNode>();
       conf.set("fs.default.name", nameNodeSocketAddr);
       for (int i = 0; i < initialDNcount; i++) {
         // uniquely config real fs path for data storage for this datanode
@@ -253,7 +253,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
         //
         //           write nBytes of data using randomDataGenerator to numFiles
         //
-        ArrayList testfilesList = new ArrayList();
+        ArrayList<UTF8> testfilesList = new ArrayList<UTF8>();
         byte[] buffer = new byte[bufferSize];
         UTF8 testFileName = null;
         for (int iFileNumber = 0; iFileNumber < numFiles; iFileNumber++) {

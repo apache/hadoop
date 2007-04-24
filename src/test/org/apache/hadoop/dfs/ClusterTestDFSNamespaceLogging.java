@@ -66,7 +66,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
   /** DFS client, datanodes, and namenode
    */
   DFSClient dfsClient;
-  ArrayList dataNodeDaemons = new ArrayList();
+  ArrayList<DataNode> dataNodeDaemons = new ArrayList<DataNode>();
   NameNode nameNodeDaemon;
   
   /** Log header length
@@ -398,7 +398,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     msg("begin shutdown of all datanode daemons");
 
     for (int i = 0; i < dataNodeDaemons.size(); i++) {
-      DataNode dataNode = (DataNode) dataNodeDaemons.get(i);
+      DataNode dataNode = dataNodeDaemons.get(i);
       try {
         dataNode.shutdown();
       } catch (Exception e) {

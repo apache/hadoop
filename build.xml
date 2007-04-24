@@ -68,6 +68,7 @@
   <property name="javac.deprecation" value="off"/>
   <property name="javac.version" value="1.5"/>
   <property name="javac.args" value=""/>
+  <property name="javac.args.warnings" value="-Xlint:unchecked"/>
 
   <!-- the normal classpath -->
   <path id="classpath">
@@ -205,10 +206,27 @@
      webxml="${build.webapps}/datanode/WEB-INF/web.xml">
     </jsp-compile>
 
+    <!-- Compile Java files (excluding JSPs) checking warnings -->
     <javac 
      encoding="${build.encoding}" 
      srcdir="${src.dir};${build.src}"
      includes="org/apache/hadoop/**/*.java"
+     excludes="org/apache/hadoop/**/*_jsp.java"
+     destdir="${build.classes}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args} ${javac.args.warnings}" />
+      <classpath refid="classpath"/>
+    </javac>   
+  	
+    <!-- Compile JSPs without checking warnings -->
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${src.dir};${build.src}"
+     includes="org/apache/hadoop/**/*_jsp.java"
      destdir="${build.classes}"
      debug="${javac.debug}"
      optimize="${javac.optimize}"
@@ -217,7 +235,7 @@
      deprecation="${javac.deprecation}">
       <compilerarg line="${javac.args}" />
       <classpath refid="classpath"/>
-    </javac>    
+    </javac>
     
     <copy todir="${build.classes}">
       <fileset 
@@ -300,7 +318,7 @@
      target="${javac.version}"
      source="${javac.version}"
      deprecation="${javac.deprecation}">
-      <compilerarg line="${javac.args}" />
+      <compilerarg line="${javac.args} ${javac.args.warnings}" />
       <classpath refid="classpath"/>
     </javac>    
   </target>
@@ -394,7 +412,7 @@
      target="${javac.version}"
      source="${javac.version}"
      deprecation="${javac.deprecation}">
-      <compilerarg line="${javac.args}" />
+      <compilerarg line="${javac.args} ${javac.args.warnings}" />
       <classpath refid="test.classpath"/>
     </javac> 
     <javac
@@ -407,7 +425,7 @@
      target="${javac.version}"
      source="${javac.version}"
      deprecation="${javac.deprecation}">
-      <compilerarg line="${javac.args}" />
+      <compilerarg line="${javac.args} ${javac.args.warnings}" />
       <classpath refid="test.classpath"/>
     </javac>                                 
     <delete file="${test.build.testjar}/testjob.jar"/> 

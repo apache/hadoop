@@ -22,12 +22,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
-
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobConf;
 
 import junit.framework.TestCase;
+
+import org.apache.hadoop.fs.Path;
 
 
 public class TestConfiguration extends TestCase {
@@ -73,9 +71,7 @@ public class TestConfiguration extends TestCase {
     Path fileResource = new Path(CONFIG);
     conf.addDefaultResource(fileResource);
 
-    Iterator it = props.iterator();
-    while(it.hasNext()) {
-      Prop p = (Prop)it.next();
+    for (Prop p : props) {
       System.out.println("p=" + p.name);
       String gotVal = conf.get(p.name);
       String gotRawVal = (String)conf.getObject(p.name);
@@ -106,7 +102,7 @@ public class TestConfiguration extends TestCase {
   }
 
   final String UNSPEC = null;
-  ArrayList props = new ArrayList();
+  ArrayList<Prop> props = new ArrayList<Prop>();
 
   void declareProperty(String name, String val, String expectEval)
     throws IOException {

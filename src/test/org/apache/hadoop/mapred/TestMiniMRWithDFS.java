@@ -110,7 +110,7 @@ public class TestMiniMRWithDFS extends TestCase {
                                            String[] taskDirs) {
     mr.waitUntilIdle();
     int trackers = mr.getNumTaskTrackers();
-    List neededDirs = new ArrayList(Arrays.asList(taskDirs));
+    List<String> neededDirs = new ArrayList<String>(Arrays.asList(taskDirs));
     boolean[] found = new boolean[taskDirs.length];
     for(int i=0; i < trackers; ++i) {
       int numNotDel = 0;
