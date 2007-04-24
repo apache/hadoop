@@ -38,28 +38,28 @@ public class HRegionInfo implements Writable {
   }
 
   public HRegionInfo(long regionId, HTableDescriptor tableDesc, Text startKey, 
-                     Text endKey) throws IllegalArgumentException {
+      Text endKey) throws IllegalArgumentException {
     
     this.regionId = regionId;
     
-    if (tableDesc == null) {
+    if(tableDesc == null) {
       throw new IllegalArgumentException("tableDesc cannot be null");
     }
     
     this.tableDesc = tableDesc;
     
     this.startKey = new Text();
-    if (startKey != null) {
+    if(startKey != null) {
       this.startKey.set(startKey);
     }
     
     this.endKey = new Text();
-    if (endKey != null) {
+    if(endKey != null) {
       this.endKey.set(endKey);
     }
     
     this.regionName = new Text(tableDesc.getName() + "_"
-                               + (startKey == null ? "" : startKey.toString()) + "_" + regionId);
+        + (startKey == null ? "" : startKey.toString()) + "_" + regionId);
   }
     
   //////////////////////////////////////////////////////////////////////////////

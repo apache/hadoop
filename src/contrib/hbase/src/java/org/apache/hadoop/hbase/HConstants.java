@@ -24,7 +24,18 @@ public interface HConstants {
   
   // Configuration parameters
   
-  static final String MASTER_DEFAULT_NAME = "hbase.master.default.name";
+  // TODO: URL for hbase master, like hdfs URLs with host and port.
+  // Or, like jdbc URLs:
+  // jdbc:mysql://[host][,failoverhost...][:port]/[database]
+  // jdbc:mysql://[host][,failoverhost...][:port]/[database][?propertyName1][=propertyValue1][&propertyName2][=propertyValue2]...
+  
+  static final String MASTER_ADDRESS = "hbase.master";
+  // TODO: Support 'local': i.e. default of all running in single
+  // process.  Same for regionserver.
+  static final String DEFAULT_MASTER_ADDRESS = "localhost:60000";
+  static final String REGIONSERVER_ADDRESS = "hbase.regionserver";
+  static final String DEFAULT_REGIONSERVER_ADDRESS =
+    "localhost:60010";
   static final String HREGION_DIR = "hbase.regiondir";
   static final String DEFAULT_HREGION_DIR = "/hbase";
   static final String HREGIONDIR_PREFIX = "hregion_";
@@ -37,10 +48,10 @@ public interface HConstants {
   // Do we ever need to know all the information that we are storing?
   
   static final Text ROOT_TABLE_NAME = new Text("--ROOT--");
-  static final Text ROOT_COLUMN_FAMILY = new Text("info");
-  static final Text ROOT_COL_REGIONINFO = new Text(ROOT_COLUMN_FAMILY + ":" + "regioninfo");
-  static final Text ROOT_COL_SERVER = new Text(ROOT_COLUMN_FAMILY + ":" + "server");
-  static final Text ROOT_COL_STARTCODE = new Text(ROOT_COLUMN_FAMILY + ":" + "serverstartcode");
+  static final Text ROOT_COLUMN_FAMILY = new Text("info:");
+  static final Text ROOT_COL_REGIONINFO = new Text(ROOT_COLUMN_FAMILY + "regioninfo");
+  static final Text ROOT_COL_SERVER = new Text(ROOT_COLUMN_FAMILY + "server");
+  static final Text ROOT_COL_STARTCODE = new Text(ROOT_COLUMN_FAMILY + "serverstartcode");
 
   static final Text META_TABLE_NAME = new Text("--META--");
   static final Text META_COLUMN_FAMILY = new Text(ROOT_COLUMN_FAMILY);

@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>hbase.master</name>
+    <value>localhost:60000</value>
+    <description>The host and port that the HBase master runs at.
+        TODO: Support 'local' (All running in single context).
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver</name>
+    <value>localhost:60010</value>
+    <description>The host and port a HBase region server runs at.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regiondir</name>
+    <value>${hadoop.tmp.dir}/hbase</value>
+    <description>The directory shared by region servers.
+    </description>
+  </property>
+  <property>
+    <name>hbase.client.timeout.length</name>
+    <value>10000</value>
+    <description>Client timeout in milliseconds</description>
+  </property>
+  <property>
+    <name>hbase.client.timeout.number</name>
+    <value>5</value>
+    <description>Try this many timeouts before giving up.
+    </description>
+  </property>
+  <property>
+    <name>hbase.client.retries.number</name>
+    <value>2</value>
+    <description>Count of maximum retries fetching the root region from root
+        region server.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.meta.thread.rescanfrequency</name>
+    <value>60000</value>
+    <description>How long the HMaster sleeps (in milliseconds) between scans of
+    the META table.
+    </description>
+  </property>
+</configuration>

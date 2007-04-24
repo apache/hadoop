@@ -252,6 +252,9 @@ Trunk (unreleased changes)
     jobs run with speculative execution.
     (Arun C Murthy via tomwhite)
 
+76. HADOOP-1282.  Omnibus HBase patch.  Improved tests & configuration.
+    (Jim Kellerman via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

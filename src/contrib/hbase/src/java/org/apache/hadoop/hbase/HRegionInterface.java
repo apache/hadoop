@@ -15,7 +15,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 import java.io.*;
 
@@ -23,16 +25,12 @@ import java.io.*;
  * Clients interact with HRegionServers using
  * a handle to the HRegionInterface.
  ******************************************************************************/
-public interface HRegionInterface {
+public interface HRegionInterface extends VersionedProtocol {
   public static final long versionID = 1L; // initial version
 
   // Get metainfo about an HRegion
 
   public HRegionInfo getRegionInfo(Text regionName);
-
-  // Start a scanner for a given HRegion.
-
-  public HScannerInterface openScanner(Text regionName, Text[] columns, Text startRow) throws IOException;
 
   // GET methods for an HRegion.
 
@@ -58,4 +56,41 @@ public interface HRegionInterface {
   public void abort(Text regionName, long clientid, long lockid) throws IOException;
   public void commit(Text regionName, long clientid, long lockid) throws IOException;
   public void renewLease(long lockid, long clientid) throws IOException;
+
+  //////////////////////////////////////////////////////////////////////////////
+  // remote scanner interface
+  //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Opens a remote scanner.
+   * 
+   * @param clientId    - client identifier (so we can associate a scanner with a client)
+   * @param regionName  - name of region to scan
+   * @param columns     - columns to scan
+   * @param startRow    - starting row to scan
+   *
+   * @param scannerId   - scanner identifier used in other calls
+   * @throws IOException
+   */
+  public long openScanner(Text regionName, Text[] columns, Text startRow) throws IOException;
+
+  /**
+   * Get the next set of values
+   * 
+   * @param scannerId   - clientId passed to openScanner
+   * @param key         - the next HStoreKey
+   * @param columns     - an array of column names
+   * @param values      - an array of byte[] values (corresponds 1-1 with columns)
+   * @return            - true if a value was retrieved
+   * @throws IOException
+   */
+  public LabelledData[] next(long scannerId, HStoreKey key) throws IOException;
+  
+  /**
+   * Close a scanner
+   * 
+   * @param scannerId   - the scanner id returned by openScanner
+   * @throws IOException
+   */
+  public void close(long scannerId) throws IOException;
 }

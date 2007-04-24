@@ -101,12 +101,12 @@ public class HLog {
       newlog.close();
     }
     
-    if (fs.exists(srcDir)) {
+    if(fs.exists(srcDir)) {
       
-      if (!fs.delete(srcDir)) {
+      if(! fs.delete(srcDir)) {
         LOG.error("Cannot delete: " + srcDir);
         
-        if (!FileUtil.fullyDelete(new File(srcDir.toString()))) {
+        if(! FileUtil.fullyDelete(new File(srcDir.toString()))) {
           throw new IOException("Cannot delete: " + srcDir);
         }
       }
@@ -127,7 +127,7 @@ public class HLog {
     this.conf = conf;
     this.logSeqNum = 0;
 
-    if (fs.exists(dir)) {
+    if(fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
     fs.mkdirs(dir);
@@ -154,7 +154,7 @@ public class HLog {
 
       Vector<Path> toDeleteList = new Vector<Path>();
       synchronized(this) {
-        if (closed) {
+        if(closed) {
           throw new IOException("Cannot roll log; log is closed");
         }
 
@@ -174,10 +174,10 @@ public class HLog {
 
         // Close the current writer (if any), and grab a new one.
         
-        if (writer != null) {
+        if(writer != null) {
           writer.close();
           
-          if (filenum > 0) {
+          if(filenum > 0) {
             outputfiles.put(logSeqNum-1, computeFilename(filenum-1));
           }
         }
@@ -192,10 +192,10 @@ public class HLog {
         // over all the regions.
 
         long oldestOutstandingSeqNum = Long.MAX_VALUE;
-        for(Iterator<Long> it = regionToLastFlush.values().iterator(); it.hasNext();) {
+        for(Iterator<Long> it = regionToLastFlush.values().iterator(); it.hasNext(); ) {
           long curSeqNum = it.next().longValue();
           
-          if (curSeqNum < oldestOutstandingSeqNum) {
+          if(curSeqNum < oldestOutstandingSeqNum) {
             oldestOutstandingSeqNum = curSeqNum;
           }
         }
@@ -205,10 +205,10 @@ public class HLog {
 
         LOG.debug("removing old log files");
         
-        for(Iterator<Long> it = outputfiles.keySet().iterator(); it.hasNext();) {
+        for(Iterator<Long> it = outputfiles.keySet().iterator(); it.hasNext(); ) {
           long maxSeqNum = it.next().longValue();
           
-          if (maxSeqNum < oldestOutstandingSeqNum) {
+          if(maxSeqNum < oldestOutstandingSeqNum) {
             Path p = outputfiles.get(maxSeqNum);
             it.remove();
             toDeleteList.add(p);
@@ -221,7 +221,7 @@ public class HLog {
 
       // Actually delete them, if any!
 
-      for(Iterator<Path> it = toDeleteList.iterator(); it.hasNext();) {
+      for(Iterator<Path> it = toDeleteList.iterator(); it.hasNext(); ) {
         Path p = it.next();
         fs.delete(p);
       }
@@ -262,7 +262,7 @@ public class HLog {
    * We need to seize a lock on the writer so that writes are atomic.
    */
   public synchronized void append(Text regionName, Text tableName, Text row, TreeMap<Text, byte[]> columns, long timestamp) throws IOException {
-    if (closed) {
+    if(closed) {
       throw new IOException("Cannot append; log is closed");
     }
     
@@ -273,12 +273,12 @@ public class HLog {
     // that don't have any flush yet, the relevant operation is the
     // first one that's been added.
     
-    if (regionToLastFlush.get(regionName) == null) {
+    if(regionToLastFlush.get(regionName) == null) {
       regionToLastFlush.put(regionName, seqNum[0]);
     }
 
     int counter = 0;
-    for(Iterator<Text> it = columns.keySet().iterator(); it.hasNext();) {
+    for(Iterator<Text> it = columns.keySet().iterator(); it.hasNext(); ) {
       Text column = it.next();
       byte[] val = columns.get(column);
       HLogKey logKey = new HLogKey(regionName, tableName, row, seqNum[counter++]);
@@ -333,16 +333,16 @@ public class HLog {
 
   /** Complete the cache flush */
   public synchronized void completeCacheFlush(Text regionName, Text tableName, long logSeqId) throws IOException {
-    if (closed) {
+    if(closed) {
       return;
     }
     
-    if (!insideCacheFlush) {
+    if(! insideCacheFlush) {
       throw new IOException("Impossible situation: inside completeCacheFlush(), but 'insideCacheFlush' flag is false");
     }
     
     writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
-                  new HLogEdit(HLog.METACOLUMN, HStoreKey.COMPLETE_CACHEFLUSH, System.currentTimeMillis()));
+        new HLogEdit(HLog.METACOLUMN, HStoreKey.COMPLETE_CACHEFLUSH, System.currentTimeMillis()));
     numEntries++;
 
     // Remember the most-recent flush for each region.

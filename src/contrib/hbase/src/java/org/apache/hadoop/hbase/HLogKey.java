@@ -80,10 +80,10 @@ public class HLogKey implements WritableComparable {
     HLogKey other = (HLogKey) o;
     int result = this.regionName.compareTo(other.regionName);
     
-    if (result == 0) {
+    if(result == 0) {
       result = this.row.compareTo(other.row);
       
-      if (result == 0) {
+      if(result == 0) {
         
         if (this.logSeqNum < other.logSeqNum) {
           result = -1;
@@ -114,4 +114,3 @@ public class HLogKey implements WritableComparable {
     this.logSeqNum = in.readLong();
   }
 }
-

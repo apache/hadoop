@@ -29,27 +29,27 @@ public class Environment {
     String value = null;
     
     value = System.getenv("DEBUGGING");
-    if (value != null && value.equalsIgnoreCase("TRUE")) {
+    if(value != null && value.equalsIgnoreCase("TRUE")) {
       debugging = true;
     }
     
     value = System.getenv("LOGGING_LEVEL");
-    if (value != null && value.length() != 0) {
-      if (value.equalsIgnoreCase("ALL")) {
+    if(value != null && value.length() != 0) {
+      if(value.equalsIgnoreCase("ALL")) {
         logLevel = Level.ALL;
-      } else if (value.equalsIgnoreCase("DEBUG")) {
+      } else if(value.equalsIgnoreCase("DEBUG")) {
         logLevel = Level.DEBUG;
-      } else if (value.equalsIgnoreCase("ERROR")) {
+      } else if(value.equalsIgnoreCase("ERROR")) {
         logLevel = Level.ERROR;
-      } else if (value.equalsIgnoreCase("FATAL")) {
+      } else if(value.equalsIgnoreCase("FATAL")) {
         logLevel = Level.FATAL;
-      } else if (value.equalsIgnoreCase("INFO")) {
+      } else if(value.equalsIgnoreCase("INFO")) {
         logLevel = Level.INFO;
-      } else if (value.equalsIgnoreCase("OFF")) {
+      } else if(value.equalsIgnoreCase("OFF")) {
         logLevel = Level.OFF;
-      } else if (value.equalsIgnoreCase("TRACE")) {
+      } else if(value.equalsIgnoreCase("TRACE")) {
         logLevel = Level.TRACE;
-      } else if (value.equalsIgnoreCase("WARN")) {
+      } else if(value.equalsIgnoreCase("WARN")) {
         logLevel = Level.WARN;
       }
     }
