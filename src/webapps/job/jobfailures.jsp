@@ -15,11 +15,14 @@
   
   private void printFailedAttempts(JspWriter out,
                                    String jobId,
-                                   TaskInProgress tip) throws IOException {
+                                   TaskInProgress tip,
+                                   TaskStatus.State failState) throws IOException {
     TaskStatus[] statuses = tip.getTaskStatuses();
     String tipId = tip.getTIPId();
     for(int i=0; i < statuses.length; ++i) {
-      if (statuses[i].getRunState() == TaskStatus.State.FAILED) {
+      TaskStatus.State taskState = statuses[i].getRunState();
+      if ((failState == null && (taskState == TaskStatus.State.FAILED || 
+          taskState == TaskStatus.State.KILLED)) || taskState == failState) {
         String taskTrackerName = statuses[i].getTaskTracker();
         TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
         out.print("<tr><td>" + statuses[i].getTaskId() +
@@ -33,6 +36,7 @@
                     taskTracker.getHttpPort() + "\">" +  taskTracker.getHost() + 
                     "</a></td>");
         }
+        out.print("<td>" + taskState + "</td>");
         out.print("<td><pre>");
         List<String> failures = 
                      tracker.getTaskDiagnostics(jobId, tipId, 
@@ -72,12 +76,14 @@
              
   private void printFailures(JspWriter out, 
                              String jobId,
-                             String kind) throws IOException {
+                             String kind, 
+                             String cause) throws IOException {
     JobInProgress job = (JobInProgress) tracker.getJob(jobId);
     if (job == null) {
       out.print("<b>Job " + jobId + " not found.</b><br>\n");
       return;
     }
+    
     boolean includeMap = false;
     boolean includeReduce = false;
     if (kind == null) {
@@ -94,19 +100,35 @@
       out.print("<b>Kind " + kind + " not supported.</b><br>\n");
       return;
     }
+    
+    TaskStatus.State state = null;
+    try {
+      if (cause != null) {
+        state = TaskStatus.State.valueOf(cause.toUpperCase());
+        if (state != TaskStatus.State.FAILED && state != TaskStatus.State.KILLED) {
+          out.print("<b>Cause '" + cause + 
+              "' is not an 'unsuccessful' state.</b><br>\n");
+          return;
+        }
+      }
+    } catch (IllegalArgumentException e) {
+      out.print("<b>Cause " + cause + " not supported.</b><br>\n");
+      return;
+    }
+    	
     out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
-    out.print("<tr><th>Attempt</th><th>Task</th><th>Machine</th>" +
+    out.print("<tr><th>Attempt</th><th>Task</th><th>Machine</th><th>State</th>" +
               "<th>Error</th><th>Logs</th></tr>\n");
     if (includeMap) {
       TaskInProgress[] tips = job.getMapTasks();
       for(int i=0; i < tips.length; ++i) {
-        printFailedAttempts(out, jobId, tips[i]);
+        printFailedAttempts(out, jobId, tips[i], state);
       }
     }
     if (includeReduce) {
       TaskInProgress[] tips = job.getReduceTasks();
       for(int i=0; i < tips.length; ++i) {
-        printFailedAttempts(out, jobId, tips[i]);
+        printFailedAttempts(out, jobId, tips[i], state);
       }
     }
     out.print("</table>\n");
@@ -116,6 +138,7 @@
 <%
     String jobId = request.getParameter("jobid");
     String kind = request.getParameter("kind");
+    String cause = request.getParameter("cause");
 %>
 
 <html>
@@ -125,7 +148,7 @@
 failures on <a href="/jobtracker.jsp"><%=trackerName%></a></h1>
 
 <% 
-    printFailures(out, jobId, kind); 
+    printFailures(out, jobId, kind, cause); 
 %>
 
 <hr>

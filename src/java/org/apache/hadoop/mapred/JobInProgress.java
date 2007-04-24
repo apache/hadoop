@@ -782,7 +782,7 @@ class JobInProgress {
                           TaskStatus status, String trackerName,
                           boolean wasRunning, boolean wasComplete) {
     // Mark the taskid as a 'failure'
-    tip.failedSubTask(taskid, trackerName);
+    tip.incompleteSubTask(taskid, trackerName);
         
     boolean isRunning = tip.isRunning();
     boolean isComplete = tip.isComplete();
@@ -861,14 +861,14 @@ class JobInProgress {
    * @param reason The reason that the task failed
    * @param trackerName The task tracker the task failed on
    */
-  public void failedTask(TaskInProgress tip, String taskid, 
-                         String reason, TaskStatus.Phase phase, 
+  public void failedTask(TaskInProgress tip, String taskid, String reason, 
+                         TaskStatus.Phase phase, TaskStatus.State state, 
                          String hostname, String trackerName,
                          JobTrackerMetrics metrics) {
     TaskStatus status = new TaskStatus(taskid,
                                        tip.isMapTask(),
                                        0.0f,
-                                       TaskStatus.State.FAILED,
+                                       state,
                                        reason,
                                        reason,
                                        trackerName, phase,

@@ -194,6 +194,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                       job.failedTask(tip, taskId, "Error launching task", 
                                      tip.isMapTask()? TaskStatus.Phase.MAP:
                                      TaskStatus.Phase.STARTING,
+                                     TaskStatus.State.FAILED,
                                      trackerStatus.getHost(), trackerName,
                                      myMetrics);
                   }
@@ -1676,8 +1677,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           // if the job is done, we don't want to change anything
           if (job.getStatus().getRunState() == JobStatus.RUNNING) {
             job.failedTask(tip, taskId, "Lost task tracker", 
-                           TaskStatus.Phase.MAP, hostname, trackerName, 
-                           myMetrics);
+                           TaskStatus.Phase.MAP, TaskStatus.State.KILLED,
+                           hostname, trackerName, myMetrics);
           }
         } else if (!tip.isMapTask() && tip.isComplete()) {
           // Completed 'reduce' task, not failed;

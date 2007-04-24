@@ -26,7 +26,8 @@
     int runningTasks = 0;
     int finishedTasks = 0;
     int killedTasks = 0;
-    int failures = 0;
+    int failedTaskAttempts = 0;
+    int killedTaskAttempts = 0;
     for(int i=0; i < totalTasks; ++i) {
       TaskInProgress task = tasks[i];
       if (task.isComplete()) {
@@ -36,7 +37,8 @@
       } else if (task.wasKilled()) {
         killedTasks += 1;
       }
-      failures += task.numTaskFailures();
+      failedTaskAttempts += task.numTaskFailures();
+      killedTaskAttempts += task.numKilledTasks();
     }
     out.print("<tr><th><a href=\"/jobtasks.jsp?jobid=" + jobId + 
               "&type="+ kind + "&pagenum=1\">" + kind + 
@@ -52,9 +54,21 @@
               finishedTasks + 
               "</td><td align=\"right\">" +
               killedTasks +
-              "</td><td align=\"right\"><a href=\"/jobfailures.jsp?jobid=" + jobId +
-              "&kind=" + kind + "\">" +
-              failures + "</a></td></tr>\n");
+              "</td><td align=\"right\">" + 
+              ((failedTaskAttempts > 0) ? 
+                  new String("<a href=\"/jobfailures.jsp?jobid=" + jobId + 
+                      "&kind=" + kind + "&cause=failed\">" + failedTaskAttempts + 
+                      "</a>") : 
+                  "0"
+                  ) + 
+              " / " +
+              ((killedTaskAttempts > 0) ? 
+                  new String("<a href=\"/jobfailures.jsp?jobid=" + jobId + 
+                      "&kind=" + kind + "&cause=killed\">" + killedTaskAttempts + 
+                      "</a>") : 
+                  "0"
+                  ) + 
+              "</td></tr>\n");
   }
 %>       
 <%   
@@ -126,7 +140,7 @@
               "<th>Pending</th><th>Running</th><th>Complete</th>" +
               "<th>Killed</th>" +
               "<th><a href=\"/jobfailures.jsp?jobid=" + jobId + 
-              "\">Failures</a></th></tr>\n");
+              "\">Failed/Killed<br>Task Attempts</a></th></tr>\n");
     printTaskSummary(out, jobId, "map", status.mapProgress(), 
                      job.getMapTasks());
     printTaskSummary(out, jobId, "reduce", status.reduceProgress(),

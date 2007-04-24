@@ -72,6 +72,7 @@ class TaskInProgress {
   // Status of the TIP
   private int successEventNumber = -1;
   private int numTaskFailures = 0;
+  private int numKilledTasks = 0;
   private double progress = 0;
   private String state = "";
   private long startTime = 0;
@@ -246,6 +247,13 @@ class TaskInProgress {
   }
 
   /**
+   * Number of times the TaskInProgress has been killed by the framework.
+   */
+  public int numKilledTasks() {
+    return numKilledTasks;
+  }
+
+  /**
    * Get the overall progress (from 0 to 1.0) for this TIP
    */
   public double getProgress() {
@@ -374,25 +382,40 @@ class TaskInProgress {
    * Indicate that one of the taskids in this TaskInProgress
    * has failed.
    */
-  public void failedSubTask(String taskid, String trackerName) {
+  public void incompleteSubTask(String taskid, String trackerName) {
     //
     // Note the failure and its location
     //
     LOG.info("Task '" + taskid + "' has been lost.");
     TaskStatus status = taskStatuses.get(taskid);
+    TaskStatus.State taskState = TaskStatus.State.FAILED;
     if (status != null) {
-      status.setRunState(TaskStatus.State.FAILED);
+      taskState = status.getRunState();
+      if (taskState != TaskStatus.State.FAILED && 
+              taskState != TaskStatus.State.KILLED) {
+        LOG.info("Task '" + taskid + "' running on '" + trackerName + 
+                "' in state: '" + taskState + "' being failed!");
+        status.setRunState(TaskStatus.State.FAILED);
+        taskState = TaskStatus.State.FAILED;
+      }
+
       // tasktracker went down and failed time was not reported. 
       if (0 == status.getFinishTime()){
         status.setFinishTime(System.currentTimeMillis());
       }
     }
+
     this.activeTasks.remove(taskid);
     if (this.completes > 0 && this.isMapTask()) {
       this.completes--;
     }
 
-    numTaskFailures++;
+    if (taskState == TaskStatus.State.FAILED) {
+      numTaskFailures++;
+    } else {
+      numKilledTasks++;
+    }
+
     if (numTaskFailures >= MAX_TASK_FAILURES) {
       LOG.info("TaskInProgress " + getTIPId() + " has failed " + numTaskFailures + " times.");
       kill();
@@ -553,14 +576,15 @@ class TaskInProgress {
       execStartTime = System.currentTimeMillis();
     }
 
-    // Create the 'taskid'
+    // Create the 'taskid'; do not count the 'killed' tasks against the job!
     String taskid = null;
-    if (nextTaskId < (MAX_TASK_EXECS + MAX_TASK_FAILURES)) {
+    if (nextTaskId < (MAX_TASK_EXECS + MAX_TASK_FAILURES + numKilledTasks)) {
       taskid = new String("task_" + taskIdPrefix + "_" + nextTaskId);
       ++nextTaskId;
     } else {
-      LOG.warn("Exceeded limit of " + (MAX_TASK_EXECS + MAX_TASK_FAILURES) + 
-               " attempts for the tip '" + getTIPId() + "'");
+      LOG.warn("Exceeded limit of " + (MAX_TASK_EXECS + MAX_TASK_FAILURES) +
+              " (plus " + numKilledTasks + " killed)"  + 
+              " attempts for the tip '" + getTIPId() + "'");
       return null;
     }
         

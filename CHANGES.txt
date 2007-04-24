@@ -238,6 +238,10 @@ Trunk (unreleased changes)
     rename causing possible reduce task hang.
     (Tahir Hashmi via tomwhite)
 
+72. HADOOP-1050.  Distinguish between failed and killed tasks so as to 
+    not count a lost tasktracker against the job.  
+    (Arun C Murthy via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 
