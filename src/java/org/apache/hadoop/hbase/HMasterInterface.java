@@ -15,7 +15,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 import java.io.IOException;
 
@@ -23,7 +24,7 @@ import java.io.IOException;
  * Clients interact with the HMasterInterface to gain access to meta-level HBase
  * functionality, like finding an HRegionServer and creating/destroying tables.
  ******************************************************************************/
-public interface HMasterInterface {
+public interface HMasterInterface extends VersionedProtocol {
   public static final long versionID = 1L; // initial version
 
   //////////////////////////////////////////////////////////////////////////////

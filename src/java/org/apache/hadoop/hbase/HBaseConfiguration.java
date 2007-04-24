@@ -15,15 +15,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.conf.Configuration;
 
-/*******************************************************************************
- * HRegionServers interact with the HMasterRegionInterface to report on local 
- * goings-on and to obtain data-handling instructions from the HMaster.
- *********************************************/
-public interface HMasterRegionInterface extends VersionedProtocol {
-  public static final long versionID = 1L;
-  public void regionServerStartup(HServerInfo info) throws IOException;
-  public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[]) throws IOException;
+public class HBaseConfiguration extends Configuration {
+  public HBaseConfiguration() {
+    super();
+    addDefaultResource("hbase-default.xml");
+  }
 }

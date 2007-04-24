@@ -29,7 +29,7 @@ public class HStoreKey implements WritableComparable {
   public static Text extractFamily(Text col) throws IOException {
     String column = col.toString();
     int colpos = column.indexOf(":");
-    if (colpos < 0) {
+    if(colpos < 0) {
       throw new IllegalArgumentException("Illegal column name has no family indicator: " + column);
     }
     return new Text(column.substring(0, colpos));
@@ -93,8 +93,13 @@ public class HStoreKey implements WritableComparable {
     return timestamp;
   }
   
+  /**
+   * @param other Key to compare against. Compares row and column.
+   * @return True if same row and column.
+   * @see {@link #matchesWithoutColumn(HStoreKey)}
+   */ 
   public boolean matchesRowCol(HStoreKey other) {
-    if (this.row.compareTo(other.row) == 0 &&
+    if(this.row.compareTo(other.row) == 0 &&
         this.column.compareTo(other.column) == 0) {
       return true;
       
@@ -103,8 +108,15 @@ public class HStoreKey implements WritableComparable {
     }
   }
   
+  /**
+   * @param other Key to copmare against. Compares row and
+   * timestamp.
+   * @return True if same row and timestamp is greater than
+   * <code>other</code>
+   * @see {@link #matchesRowCol(HStoreKey)}
+   */
   public boolean matchesWithoutColumn(HStoreKey other) {
-    if ((this.row.compareTo(other.row) == 0) &&
+    if((this.row.compareTo(other.row) == 0) &&
         (this.timestamp >= other.getTimestamp())) {
       return true;
       
@@ -124,14 +136,14 @@ public class HStoreKey implements WritableComparable {
   public int compareTo(Object o) {
     HStoreKey other = (HStoreKey) o;
     int result = this.row.compareTo(other.row);
-    if (result == 0) {
+    if(result == 0) {
       result = this.column.compareTo(other.column);
       
-      if (result == 0) {
-        if (this.timestamp < other.timestamp) {
+      if(result == 0) {
+        if(this.timestamp < other.timestamp) {
           result = 1;
           
-        } else if (this.timestamp > other.timestamp) {
+        } else if(this.timestamp > other.timestamp) {
           result = -1;
         }
       }

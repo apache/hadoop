@@ -32,7 +32,7 @@ public class LabelledData implements Writable {
   }
 
   public LabelledData(Text label, byte[] data) {
-    this.label.set(label);
+    this.label = new Text(label);
     this.data = new BytesWritable(data);
   }
 
@@ -40,7 +40,7 @@ public class LabelledData implements Writable {
     return label;
   }
 
-  public BytesWritable getDat() {
+  public BytesWritable getData() {
     return data;
   }
 

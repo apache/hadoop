@@ -15,14 +15,26 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
+import java.util.Vector;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.fs.*;
-
-import java.io.*;
-import java.util.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.MapFile;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 
 /*******************************************************************************
  * HStore maintains a bunch of data files.  It is responsible for maintaining 
@@ -53,7 +65,7 @@ public class HStore {
   Integer compactLock = new Integer(0);
   Integer flushLock = new Integer(0);
 
-  HLocking locking = new HLocking();
+  ReadWriteLock locker = new ReentrantReadWriteLock();
 
   TreeMap<Long, MapFile.Reader> maps = new TreeMap<Long, MapFile.Reader>();
   TreeMap<Long, HStoreFile> mapFiles = new TreeMap<Long, HStoreFile>();
@@ -88,7 +100,7 @@ public class HStore {
    * will be deleted (by whoever has instantiated the HStore).
    */
   public HStore(Path dir, Text regionName, Text colFamily, int maxVersions, 
-                FileSystem fs, Path reconstructionLog, Configuration conf) throws IOException {
+      FileSystem fs, Path reconstructionLog, Configuration conf) throws IOException {
     
     this.dir = dir;
     this.regionName = regionName;
@@ -110,7 +122,7 @@ public class HStore {
 
     this.compactdir = new Path(dir, COMPACTION_DIR);
     Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, colFamily);
-    if (fs.exists(curCompactStore)) {
+    if(fs.exists(curCompactStore)) {
       processReadyCompaction();
       fs.delete(curCompactStore);
     }
@@ -123,7 +135,7 @@ public class HStore {
     Vector<HStoreFile> hstoreFiles 
       = HStoreFile.loadHStoreFiles(conf, dir, regionName, colFamily, fs);
     
-    for(Iterator<HStoreFile> it = hstoreFiles.iterator(); it.hasNext();) {
+    for(Iterator<HStoreFile> it = hstoreFiles.iterator(); it.hasNext(); ) {
       HStoreFile hsf = it.next();
       mapFiles.put(hsf.loadInfo(fs), hsf);
     }
@@ -138,11 +150,11 @@ public class HStore {
     // contain any updates also contained in the log.
 
     long maxSeqID = -1;
-    for(Iterator<HStoreFile> it = hstoreFiles.iterator(); it.hasNext();) {
+    for(Iterator<HStoreFile> it = hstoreFiles.iterator(); it.hasNext(); ) {
       HStoreFile hsf = it.next();
       long seqid = hsf.loadInfo(fs);
-      if (seqid > 0) {
-        if (seqid > maxSeqID) {
+      if(seqid > 0) {
+        if(seqid > maxSeqID) {
           maxSeqID = seqid;
         }
       }
@@ -157,7 +169,7 @@ public class HStore {
 
     LOG.debug("reading reconstructionLog");
     
-    if (reconstructionLog != null && fs.exists(reconstructionLog)) {
+    if(reconstructionLog != null && fs.exists(reconstructionLog)) {
       long maxSeqIdInLog = -1;
       TreeMap<HStoreKey, BytesWritable> reconstructedCache 
         = new TreeMap<HStoreKey, BytesWritable>();
@@ -170,18 +182,18 @@ public class HStore {
         HLogEdit val = new HLogEdit();
         while(login.next(key, val)) {
           maxSeqIdInLog = Math.max(maxSeqIdInLog, key.getLogSeqNum());
-          if (key.getLogSeqNum() <= maxSeqID) {
+          if(key.getLogSeqNum() <= maxSeqID) {
             continue;
           }
           reconstructedCache.put(new HStoreKey(key.getRow(), val.getColumn(), 
-                                               val.getTimestamp()), val.getVal());
+              val.getTimestamp()), val.getVal());
         }
         
       } finally {
         login.close();
       }
 
-      if (reconstructedCache.size() > 0) {
+      if(reconstructedCache.size() > 0) {
         
         // We create a "virtual flush" at maxSeqIdInLog+1.
         
@@ -195,7 +207,7 @@ public class HStore {
     // should be "timeless"; that is, it should not have an associated seq-ID, 
     // because all log messages have been reflected in the TreeMaps at this point.
     
-    if (mapFiles.size() >= 1) {
+    if(mapFiles.size() >= 1) {
       compactHelper(true);
     }
 
@@ -204,7 +216,7 @@ public class HStore {
 
     LOG.debug("starting map readers");
     
-    for(Iterator<Long> it = mapFiles.keySet().iterator(); it.hasNext();) {
+    for(Iterator<Long> it = mapFiles.keySet().iterator(); it.hasNext(); ) {
       Long key = it.next().longValue();
       HStoreFile hsf = mapFiles.get(key);
 
@@ -218,11 +230,11 @@ public class HStore {
 
   /** Turn off all the MapFile readers */
   public void close() throws IOException {
-    locking.obtainWriteLock();
+    this.locker.writeLock().lock();
     LOG.info("closing HStore for " + this.regionName + "/" + this.colFamily);
     
     try {
-      for(Iterator<MapFile.Reader> it = maps.values().iterator(); it.hasNext();) {
+      for(Iterator<MapFile.Reader> it = maps.values().iterator(); it.hasNext(); ) {
         MapFile.Reader map = it.next();
         map.close();
       }
@@ -232,7 +244,7 @@ public class HStore {
       LOG.info("HStore closed for " + this.regionName + "/" + this.colFamily);
       
     } finally {
-      locking.releaseWriteLock();
+      this.locker.writeLock().unlock();
     }
   }
 
@@ -252,13 +264,13 @@ public class HStore {
    * Return the entire list of HStoreFiles currently used by the HStore.
    */
   public Vector<HStoreFile> flushCache(TreeMap<HStoreKey, BytesWritable> inputCache,
-                                       long logCacheFlushId) throws IOException {
+      long logCacheFlushId) throws IOException {
     
     return flushCacheHelper(inputCache, logCacheFlushId, true);
   }
   
   Vector<HStoreFile> flushCacheHelper(TreeMap<HStoreKey, BytesWritable> inputCache,
-                                      long logCacheFlushId, boolean addToAvailableMaps) throws IOException {
+      long logCacheFlushId, boolean addToAvailableMaps) throws IOException {
     
     synchronized(flushLock) {
       LOG.debug("flushing HStore " + this.regionName + "/" + this.colFamily);
@@ -270,12 +282,12 @@ public class HStore {
       
       Path mapfile = flushedFile.getMapFilePath();
       MapFile.Writer out = new MapFile.Writer(conf, fs, mapfile.toString(), 
-                                              HStoreKey.class, BytesWritable.class);
+          HStoreKey.class, BytesWritable.class);
       
       try {
-        for(Iterator<HStoreKey> it = inputCache.keySet().iterator(); it.hasNext();) {
+        for(Iterator<HStoreKey> it = inputCache.keySet().iterator(); it.hasNext(); ) {
           HStoreKey curkey = it.next();
-          if (this.colFamily.equals(HStoreKey.extractFamily(curkey.getColumn()))) {
+          if(this.colFamily.equals(HStoreKey.extractFamily(curkey.getColumn()))) {
             BytesWritable val = inputCache.get(curkey);
             out.append(curkey, val);
           }
@@ -294,8 +306,8 @@ public class HStore {
 
       // C. Finally, make the new MapFile available.
 
-      if (addToAvailableMaps) {
-        locking.obtainWriteLock();
+      if(addToAvailableMaps) {
+        this.locker.writeLock().lock();
         
         try {
           maps.put(logCacheFlushId, new MapFile.Reader(fs, mapfile.toString(), conf));
@@ -303,7 +315,7 @@ public class HStore {
           LOG.debug("HStore available for " + this.regionName + "/" + this.colFamily);
         
         } finally {
-          locking.releaseWriteLock();
+          this.locker.writeLock().unlock();
         }
       }
       return getAllMapFiles();
@@ -312,7 +324,7 @@ public class HStore {
 
   public Vector<HStoreFile> getAllMapFiles() {
     Vector<HStoreFile> flushedFiles = new Vector<HStoreFile>();
-    for(Iterator<HStoreFile> it = mapFiles.values().iterator(); it.hasNext();) {
+    for(Iterator<HStoreFile> it = mapFiles.values().iterator(); it.hasNext(); ) {
       HStoreFile hsf = it.next();
       flushedFiles.add(hsf);
     }
@@ -355,22 +367,22 @@ public class HStore {
         // Grab a list of files to compact.
         
         Vector<HStoreFile> toCompactFiles = null;
-        locking.obtainWriteLock();
+        this.locker.writeLock().lock();
         try {
           toCompactFiles = new Vector<HStoreFile>(mapFiles.values());
           
         } finally {
-          locking.releaseWriteLock();
+          this.locker.writeLock().unlock();
         }
 
         // Compute the max-sequenceID seen in any of the to-be-compacted TreeMaps
 
         long maxSeenSeqID = -1;
-        for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext();) {
+        for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext(); ) {
           HStoreFile hsf = it.next();
           long seqid = hsf.loadInfo(fs);
-          if (seqid > 0) {
-            if (seqid > maxSeenSeqID) {
+          if(seqid > 0) {
+            if(seqid > maxSeenSeqID) {
               maxSeenSeqID = seqid;
             }
           }
@@ -380,11 +392,11 @@ public class HStore {
         HStoreFile compactedOutputFile 
           = new HStoreFile(conf, compactdir, regionName, colFamily, -1);
         
-        if (toCompactFiles.size() == 1) {
+        if(toCompactFiles.size() == 1) {
           LOG.debug("nothing to compact for " + this.regionName + "/" + this.colFamily);
           
           HStoreFile hsf = toCompactFiles.elementAt(0);
-          if (hsf.loadInfo(fs) == -1) {
+          if(hsf.loadInfo(fs) == -1) {
             return;
           }
         }
@@ -392,8 +404,8 @@ public class HStore {
         // Step through them, writing to the brand-new TreeMap
 
         MapFile.Writer compactedOut = new MapFile.Writer(conf, fs, 
-                                                         compactedOutputFile.getMapFilePath().toString(), HStoreKey.class, 
-                                                         BytesWritable.class);
+            compactedOutputFile.getMapFilePath().toString(), HStoreKey.class, 
+            BytesWritable.class);
         
         try {
 
@@ -414,7 +426,7 @@ public class HStore {
           BytesWritable[] vals = new BytesWritable[toCompactFiles.size()];
           boolean[] done = new boolean[toCompactFiles.size()];
           int pos = 0;
-          for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext();) {
+          for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext(); ) {
             HStoreFile hsf = it.next();
             readers[pos] = new MapFile.Reader(fs, hsf.getMapFilePath().toString(), conf);
             keys[pos] = new HStoreKey();
@@ -431,8 +443,8 @@ public class HStore {
           int numDone = 0;
           for(int i = 0; i < readers.length; i++) {
             readers[i].reset();
-            done[i] = !readers[i].next(keys[i], vals[i]);
-            if (done[i]) {
+            done[i] = ! readers[i].next(keys[i], vals[i]);
+            if(done[i]) {
               numDone++;
             }
           }
@@ -446,15 +458,15 @@ public class HStore {
 
             int smallestKey = -1;
             for(int i = 0; i < readers.length; i++) {
-              if (done[i]) {
+              if(done[i]) {
                 continue;
               }
               
-              if (smallestKey < 0) {
+              if(smallestKey < 0) {
                 smallestKey = i;
               
               } else {
-                if (keys[i].compareTo(keys[smallestKey]) < 0) {
+                if(keys[i].compareTo(keys[smallestKey]) < 0) {
                   smallestKey = i;
                 }
               }
@@ -463,7 +475,7 @@ public class HStore {
             // Reflect the current key/val in the output
 
             HStoreKey sk = keys[smallestKey];
-            if (lastRow.equals(sk.getRow())
+            if(lastRow.equals(sk.getRow())
                 && lastColumn.equals(sk.getColumn())) {
               
               timesSeen++;
@@ -472,12 +484,12 @@ public class HStore {
               timesSeen = 1;
             }
             
-            if (timesSeen <= maxVersions) {
+            if(timesSeen <= maxVersions) {
 
               // Keep old versions until we have maxVersions worth.
               // Then just skip them.
 
-              if (sk.getRow().getLength() != 0
+              if(sk.getRow().getLength() != 0
                   && sk.getColumn().getLength() != 0) {
                 
                 // Only write out objects which have a non-zero length key and value
@@ -499,7 +511,7 @@ public class HStore {
             // Advance the smallest key.  If that reader's all finished, then 
             // mark it as done.
 
-            if (!readers[smallestKey].next(keys[smallestKey], vals[smallestKey])) {
+            if(! readers[smallestKey].next(keys[smallestKey], vals[smallestKey])) {
               done[smallestKey] = true;
               readers[smallestKey].close();
               numDone++;
@@ -516,7 +528,7 @@ public class HStore {
 
         // Now, write out an HSTORE_LOGINFOFILE for the brand-new TreeMap.
 
-        if ((!deleteSequenceInfo) && maxSeenSeqID >= 0) {
+        if((! deleteSequenceInfo) && maxSeenSeqID >= 0) {
           compactedOutputFile.writeInfo(fs, maxSeenSeqID);
           
         } else {
@@ -529,7 +541,7 @@ public class HStore {
         DataOutputStream out = new DataOutputStream(fs.create(filesToReplace));
         try {
           out.writeInt(toCompactFiles.size());
-          for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext();) {
+          for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext(); ) {
             HStoreFile hsf = it.next();
             hsf.write(out);
           }
@@ -583,11 +595,11 @@ public class HStore {
 
     // 1. Acquiring the write-lock
 
-    locking.obtainWriteLock();
+    this.locker.writeLock().lock();
     Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, colFamily);
     try {
       Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
-      if (!fs.exists(doneFile)) {
+      if(! fs.exists(doneFile)) {
         
         // The last execution didn't finish the compaction, so there's nothing 
         // we can do.  We'll just have to redo it. Abandon it and return.
@@ -622,18 +634,18 @@ public class HStore {
       // 3. Unload all the replaced MapFiles.
       
       Iterator<HStoreFile> it2 = mapFiles.values().iterator();
-      for(Iterator<MapFile.Reader> it = maps.values().iterator(); it.hasNext();) {
+      for(Iterator<MapFile.Reader> it = maps.values().iterator(); it.hasNext(); ) {
         MapFile.Reader curReader = it.next();
         HStoreFile curMapFile = it2.next();
-        if (toCompactFiles.contains(curMapFile)) {
+        if(toCompactFiles.contains(curMapFile)) {
           curReader.close();
           it.remove();
         }
       }
       
-      for(Iterator<HStoreFile> it = mapFiles.values().iterator(); it.hasNext();) {
+      for(Iterator<HStoreFile> it = mapFiles.values().iterator(); it.hasNext(); ) {
         HStoreFile curMapFile = it.next();
-        if (toCompactFiles.contains(curMapFile)) {
+        if(toCompactFiles.contains(curMapFile)) {
           it.remove();
         }
       }
@@ -645,7 +657,7 @@ public class HStore {
 
       // 4. Delete all the old files, no longer needed
       
-      for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext();) {
+      for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext(); ) {
         HStoreFile hsf = it.next();
         fs.delete(hsf.getMapFilePath());
         fs.delete(hsf.getInfoFilePath());
@@ -683,13 +695,13 @@ public class HStore {
       
       mapFiles.put(orderVal, finalCompactedFile);
       maps.put(orderVal, new MapFile.Reader(fs, 
-                                            finalCompactedFile.getMapFilePath().toString(), conf));
+          finalCompactedFile.getMapFilePath().toString(), conf));
       
     } finally {
       
       // 7. Releasing the write-lock
       
-      locking.releaseWriteLock();
+      this.locker.writeLock().unlock();
     }
   }
 
@@ -705,7 +717,7 @@ public class HStore {
    * The returned object should map column names to byte arrays (byte[]).
    */
   public void getFull(HStoreKey key, TreeMap<Text, byte[]> results) throws IOException {
-    locking.obtainReadLock();
+    this.locker.readLock().lock();
     try {
       MapFile.Reader[] maparray 
         = maps.values().toArray(new MapFile.Reader[maps.size()]);
@@ -720,12 +732,12 @@ public class HStore {
           
           do {
             Text readcol = readkey.getColumn();
-            if (results.get(readcol) == null
+            if(results.get(readcol) == null
                 && key.matchesWithoutColumn(readkey)) {
               results.put(new Text(readcol), readval.get());
               readval = new BytesWritable();
               
-            } else if (key.getRow().compareTo(readkey.getRow()) > 0) {
+            } else if(key.getRow().compareTo(readkey.getRow()) > 0) {
               break;
             }
             
@@ -734,7 +746,7 @@ public class HStore {
       }
       
     } finally {
-      locking.releaseReadLock();
+      this.locker.readLock().unlock();
     }
   }
 
@@ -745,12 +757,12 @@ public class HStore {
    * If 'numVersions' is negative, the method returns all available versions.
    */
   public byte[][] get(HStoreKey key, int numVersions) throws IOException {
-    if (numVersions == 0) {
+    if(numVersions == 0) {
       throw new IllegalArgumentException("Must request at least one value.");
     }
     
     Vector<byte[]> results = new Vector<byte[]>();
-    locking.obtainReadLock();
+    this.locker.readLock().lock();
     try {
       MapFile.Reader[] maparray 
         = maps.values().toArray(new MapFile.Reader[maps.size()]);
@@ -763,12 +775,12 @@ public class HStore {
           map.reset();
           HStoreKey readkey = (HStoreKey)map.getClosest(key, readval);
           
-          if (readkey.matchesRowCol(key)) {
+          if(readkey.matchesRowCol(key)) {
             results.add(readval.get());
             readval = new BytesWritable();
 
             while(map.next(readkey, readval) && readkey.matchesRowCol(key)) {
-              if (numVersions > 0 && (results.size() >= numVersions)) {
+              if(numVersions > 0 && (results.size() >= numVersions)) {
                 break;
                 
               } else {
@@ -778,12 +790,12 @@ public class HStore {
             }
           }
         }
-        if (results.size() >= numVersions) {
+        if(results.size() >= numVersions) {
           break;
         }
       }
 
-      if (results.size() == 0) {
+      if(results.size() == 0) {
         return null;
         
       } else {
@@ -791,7 +803,7 @@ public class HStore {
       }
       
     } finally {
-      locking.releaseReadLock();
+      this.locker.readLock().unlock();
     }
   }
 
@@ -804,18 +816,23 @@ public class HStore {
    */
   public long getLargestFileSize(Text midKey) throws IOException {
     long maxSize = 0L;
+    if (this.mapFiles.size() <= 0) {
+      return maxSize;
+    }
+    
+    
     long mapIndex = 0L;
 
     // Iterate through all the MapFiles
     
     for(Iterator<Map.Entry<Long, HStoreFile>> it = mapFiles.entrySet().iterator();
-        it.hasNext();) {
+        it.hasNext(); ) {
       
       Map.Entry<Long, HStoreFile> e = it.next();
       HStoreFile curHSF = e.getValue();
       long size = fs.getLength(new Path(curHSF.getMapFilePath(), MapFile.DATA_FILE_NAME));
       
-      if (size > maxSize) {              // This is the largest one so far
+      if(size > maxSize) {              // This is the largest one so far
         maxSize = size;
         mapIndex = e.getKey();
       }
@@ -850,7 +867,7 @@ public class HStore {
    * These should be closed after the user is done with them.
    */
   public HScannerInterface getScanner(long timestamp, Text targetCols[],
-                                      Text firstRow) throws IOException {
+      Text firstRow) throws IOException {
     
     return new HStoreScanner(timestamp, targetCols, firstRow);
   }
@@ -867,11 +884,11 @@ public class HStore {
     public HStoreScanner(long timestamp, Text targetCols[], Text firstRow) throws IOException {
       super(timestamp, targetCols);
 
-      locking.obtainReadLock();
+      locker.readLock().lock();
       try {
         this.readers = new MapFile.Reader[mapFiles.size()];
         int i = 0;
-        for(Iterator<HStoreFile> it = mapFiles.values().iterator(); it.hasNext();) {
+        for(Iterator<HStoreFile> it = mapFiles.values().iterator(); it.hasNext(); ) {
           HStoreFile curHSF = it.next();
           readers[i++] = new MapFile.Reader(fs, curHSF.getMapFilePath().toString(), conf);
         }
@@ -885,14 +902,14 @@ public class HStore {
           keys[i] = new HStoreKey();
           vals[i] = new BytesWritable();
 
-          if (firstRow.getLength() != 0) {
-            if (findFirstRow(i, firstRow)) {
+          if(firstRow.getLength() != 0) {
+            if(findFirstRow(i, firstRow)) {
               continue;
             }
           }
           
           while(getNext(i)) {
-            if (columnMatch(i)) {
+            if(columnMatch(i)) {
               break;
             }
           }
@@ -915,7 +932,7 @@ public class HStore {
       HStoreKey firstKey
         = (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow), vals[i]);
       
-      if (firstKey == null) {
+      if(firstKey == null) {
         
         // Didn't find it. Close the scanner and return TRUE
         
@@ -935,7 +952,7 @@ public class HStore {
      * @return - true if there is more data available
      */
     boolean getNext(int i) throws IOException {
-      if (!readers[i].next(keys[i], vals[i])) {
+      if(! readers[i].next(keys[i], vals[i])) {
         closeSubScanner(i);
         return false;
       }
@@ -945,7 +962,7 @@ public class HStore {
     /** Close down the indicated reader. */
     void closeSubScanner(int i) throws IOException {
       try {
-        if (readers[i] != null) {
+        if(readers[i] != null) {
           readers[i].close();
         }
         
@@ -958,16 +975,16 @@ public class HStore {
 
     /** Shut it down! */
     public void close() throws IOException {
-      if (!scannerClosed) {
+      if(! scannerClosed) {
         try {
           for(int i = 0; i < readers.length; i++) {
-            if (readers[i] != null) {
+            if(readers[i] != null) {
               readers[i].close();
             }
           }
           
         } finally {
-          locking.releaseReadLock();
+          locker.readLock().unlock();
           scannerClosed = true;
         }
       }

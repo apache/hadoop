@@ -67,13 +67,13 @@ public class HMsg implements Writable {
   // Writable
   //////////////////////////////////////////////////////////////////////////////
 
-  public void write(DataOutput out) throws IOException {
-    out.writeByte(msg);
-    info.write(out);
-  }
+   public void write(DataOutput out) throws IOException {
+     out.writeByte(msg);
+     info.write(out);
+   }
 
-  public void readFields(DataInput in) throws IOException {
-    this.msg = in.readByte();
-    this.info.readFields(in);
-  }
+   public void readFields(DataInput in) throws IOException {
+     this.msg = in.readByte();
+     this.info.readFields(in);
+   }
 }

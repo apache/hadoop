@@ -68,4 +68,3 @@ public class HLogEdit implements Writable {
     this.timestamp = in.readLong();
   }
 }
-
