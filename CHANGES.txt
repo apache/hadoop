@@ -259,6 +259,10 @@ Trunk (unreleased changes)
     of the checksum file when a checksum error is detected.  
     (Hairong Kuang via tomwhite)
 
+78. HADOOP-1279.  Fix JobTracker to maintain list of recently
+    completed jobs by order of completion, not submission.
+    (Arun C Murthy via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
