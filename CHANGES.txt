@@ -263,6 +263,10 @@ Trunk (unreleased changes)
     completed jobs by order of completion, not submission.
     (Arun C Murthy via cutting)
 
+79. HADOOP-1284.  In contrib/streaming, permit flexible specification
+    of field delimiter and fields for partitioning and sorting.
+    (Runping Qi via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

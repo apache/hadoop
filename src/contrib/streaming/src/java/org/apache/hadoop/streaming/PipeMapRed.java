@@ -64,6 +64,10 @@ public abstract class PipeMapRed {
    */
   abstract String getKeyColPropName();
 
+  abstract char getFieldSeparator();
+  
+  abstract int getNumOfKeyFields();
+  
   /** Write output as side-effect files rather than as map outputs.
       This is useful to do "Map" tasks rather than "MapReduce" tasks. */
   boolean getUseSideEffect() {
@@ -208,7 +212,13 @@ public abstract class PipeMapRed {
       } else {
         sideFs_ = fs_;
       }
-
+      String mapOutputFieldSeparator = job_.get("stream.map.output.field.separator", "\t");
+      String reduceOutputFieldSeparator = job_.get("stream.reduce.output.field.separator", "\t");
+      this.mapOutputFieldSeparator = mapOutputFieldSeparator.charAt(0);
+      this.reduceOutFieldSeparator = reduceOutputFieldSeparator.charAt(0);
+      this.numOfMapOutputKeyFields = job_.getInt("stream.num.map.output.key.fields", 1);
+      this.numOfReduceOutputKeyFields = job_.getInt("stream.num.reduce.output.key.fields", 1);
+      
       if (debug_) {
         System.out.println("kind   :" + this.getClass());
         System.out.println("split  :" + StreamUtil.getCurrentSplit(job_));
@@ -466,8 +476,12 @@ public abstract class PipeMapRed {
   void splitKeyVal(byte[] line, Text key, Text val) throws IOException {
     int pos = -1;
     if (keyCols_ != ALL_COLS) {
-      pos = UTF8ByteArrayUtils.findTab(line);
+      pos = UTF8ByteArrayUtils.findNthByte(line, (byte)this.getFieldSeparator(), this.getNumOfKeyFields());
     }
+    LOG.info("FieldSeparator: " + this.getFieldSeparator());
+    LOG.info("NumOfKeyFields: " + this.getNumOfKeyFields());
+    LOG.info("Line: " + new String (line));
+    LOG.info("Pos: " + pos);
     try {
       if (pos == -1) {
         key.set(line);
@@ -730,4 +744,10 @@ public abstract class PipeMapRed {
   String LOGNAME;
   PrintStream log_;
 
+  protected char mapOutputFieldSeparator = '\t';
+  protected char reduceOutFieldSeparator = '\t';
+  protected int numOfMapOutputKeyFields = 1;
+  protected int numOfMapOutputPartitionFields = 1;
+  protected int numOfReduceOutputKeyFields = 1;
+  
 }

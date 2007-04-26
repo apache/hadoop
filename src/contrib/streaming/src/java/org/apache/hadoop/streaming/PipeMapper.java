@@ -116,4 +116,14 @@ public class PipeMapper extends PipeMapRed implements Mapper {
     mapRedFinished();
   }
 
+  @Override
+  char getFieldSeparator() {
+    return super.mapOutputFieldSeparator;
+  }
+
+  @Override
+  int getNumOfKeyFields() {
+    return super.numOfMapOutputKeyFields;
+  }
+
 }

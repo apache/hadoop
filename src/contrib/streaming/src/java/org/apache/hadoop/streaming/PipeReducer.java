@@ -102,4 +102,14 @@ public class PipeReducer extends PipeMapRed implements Reducer {
     mapRedFinished();
   }
 
+  @Override
+  char getFieldSeparator() {
+    return super.reduceOutFieldSeparator;
+  }
+
+  @Override
+  int getNumOfKeyFields() {
+    return super.numOfReduceOutputKeyFields;
+  }
+
 }
