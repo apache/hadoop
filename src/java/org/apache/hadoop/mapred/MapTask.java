@@ -115,8 +115,14 @@ class MapTask extends Task {
 
     final Reporter reporter = getReporter(umbilical);
 
-    MapOutputBuffer collector = new MapOutputBuffer(umbilical, job, reporter);
-    
+    int numReduceTasks = conf.getNumReduceTasks();
+    LOG.info("numReduceTasks: " + numReduceTasks);
+    MapOutputCollector collector = null;
+    if (numReduceTasks > 0) {
+      collector = new MapOutputBuffer(umbilical, job, reporter);
+    } else { 
+      collector = new DirectMapOutputCollector(umbilical, job, reporter);
+    }
     // reinstantiate the split
     try {
       instantiatedSplit = (InputSplit) 
@@ -177,15 +183,8 @@ class MapTask extends Task {
 
     try {
       sortProgress.start();
-      runner.run(in, collector, reporter);      // run the map
-      //check whether the length of the key/value buffer is 0. If not, then
-      //we need to spill that to disk. Note that we reset the key/val buffer
-      //upon each spill (so a length > 0 means that we have not spilled yet)
-      if (((MapOutputBuffer)collector).keyValBuffer.getLength() > 0) {
-        ((MapOutputBuffer)collector).sortAndSpillToDisk();
-      }
-      //merge the partitions from the spilled files and create one output
-      collector.mergeParts();
+      runner.run(in, collector, reporter);      
+      collector.flush();
     } finally {
       //close
       in.close();                               // close input
@@ -222,8 +221,55 @@ class MapTask extends Task {
     sortProgress.setDaemon(true);
     return sortProgress;
   }
+  
+  interface MapOutputCollector extends OutputCollector {
 
-  class MapOutputBuffer implements OutputCollector {
+    public void close() throws IOException;
+    
+    public void flush() throws IOException;
+        
+  }
+
+  class DirectMapOutputCollector implements MapOutputCollector {
+
+    private RecordWriter out = null;
+
+    private Reporter reporter = null;
+
+    private JobConf job;
+
+    private TaskUmbilicalProtocol umbilical;
+
+    public DirectMapOutputCollector(TaskUmbilicalProtocol umbilical,
+        JobConf job, Reporter reporter) throws IOException {
+      this.umbilical = umbilical;
+      this.job = job;
+      this.reporter = reporter;
+      String finalName = getTipId();
+      FileSystem fs = FileSystem.get(this.job);
+
+      out = job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);
+    }
+
+    public void close() throws IOException {
+      if (this.out != null) {
+        out.close(this.reporter);
+      }
+
+    }
+
+    public void flush() throws IOException {
+      // TODO Auto-generated method stub
+      
+    }
+
+    public void collect(WritableComparable key, Writable value) throws IOException {
+      this.out.write(key, value);
+    }
+    
+  }
+  
+  class MapOutputBuffer implements MapOutputCollector {
 
     private final int partitions;
     private Partitioner partitioner;
@@ -432,7 +478,7 @@ class MapTask extends Task {
       }
     }
     
-    public void mergeParts() throws IOException {
+    private void mergeParts() throws IOException {
       Path finalOutputFile = mapOutputFile.getOutputFile(getTaskId());
       Path finalIndexFile = mapOutputFile.getOutputIndexFile(getTaskId());
       
@@ -538,6 +584,16 @@ class MapTask extends Task {
         reporter.incrCounter(COMBINE_INPUT_RECORDS, 1);
         return super.next();
       }
+    }
+
+    public void flush() throws IOException {
+      //check whether the length of the key/value buffer is 0. If not, then
+      //we need to spill that to disk. Note that we reset the key/val buffer
+      //upon each spill (so a length > 0 means that we have not spilled yet)
+      if (keyValBuffer.getLength() > 0) {
+        sortAndSpillToDisk();
+      }
+      mergeParts();
     }
   }
 }

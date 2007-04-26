@@ -241,7 +241,8 @@ public class StreamJob {
       
       additionalConfSpec_ = (String)cmdLine.getValue("-additionalconfspec"); 
       inputFormatSpec_ = (String)cmdLine.getValue("-inputformat"); 
-      outputFormatSpec_ = (String)cmdLine.getValue("-outputformat"); 
+      outputFormatSpec_ = (String)cmdLine.getValue("-outputformat");
+      numReduceTasksSpec_ = (String)cmdLine.getValue("-numReduceTasks"); 
       partitionerSpec_ = (String)cmdLine.getValue("-partitioner");
       inReaderSpec_ = (String)cmdLine.getValue("-inputreader"); 
       
@@ -397,6 +398,8 @@ public class StreamJob {
                                        "Optional.", "spec", 1, false);
     Option partitioner = createOption("partitioner", 
                                       "Optional.", "spec", 1, false);
+    Option numReduceTasks = createOption("numReduceTasks", 
+        "Optional.", "spec",1, false );
     Option inputreader = createOption("inputreader", 
                                       "Optional.", "spec", 1, false);
     Option cacheFile = createOption("cacheFile", 
@@ -425,6 +428,7 @@ public class StreamJob {
       withOption(inputformat).
       withOption(outputformat).
       withOption(partitioner).
+      withOption(numReduceTasks).
       withOption(inputreader).
       withOption(jobconf).
       withOption(cmdenv).
@@ -462,6 +466,7 @@ public class StreamJob {
       System.out.println("  -inputformat KeyValueTextInputFormat(default)|SequenceFileInputFormat|XmlTextInputFormat  Optional.");
       System.out.println("  -outputformat specfile  Optional.");
       System.out.println("  -partitioner specfile  Optional.");
+      System.out.println("  -numReduceTasks specfile  Optional.");
       System.out.println("  -inputreader <spec>  Optional.");
       System.out.println("  -jobconf  <n>=<v>    Optional. Add or override a JobConf property");
       System.out.println("  -cmdenv   <n>=<v>    Optional. Pass env.var to streaming commands");
@@ -823,6 +828,11 @@ public class StreamJob {
       } 
     }
     
+    if (numReduceTasksSpec_!= null) {
+      int numReduceTasks = Integer.parseInt(numReduceTasksSpec_);
+      jobConf_.setNumReduceTasks(numReduceTasks);
+    }
+    
     // last, allow user to override anything
     // (although typically used with properties we didn't touch)
 
@@ -1113,6 +1123,7 @@ public class StreamJob {
   protected String inputFormatSpec_;
   protected String outputFormatSpec_;
   protected String partitionerSpec_;
+  protected String numReduceTasksSpec_;
   protected String additionalConfSpec_;
 
   protected boolean testMerge_;

@@ -277,6 +277,11 @@ Trunk (unreleased changes)
     do not exist no longer causes block reports to be re-sent every
     second.  (Dhruba Borthakur via cutting)
 
+83. HADOOP-1216.  Change MapReduce so that, when numReduceTasks is
+    zero, map outputs are written directly as final output, skipping
+    shuffle, sort and reduce.  Use this to implement reduce=NONE
+    option in contrib/streaming.  (Runping Qi via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

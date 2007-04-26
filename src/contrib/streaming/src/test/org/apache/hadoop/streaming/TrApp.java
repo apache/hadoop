@@ -50,7 +50,6 @@ public class TrApp
     expect("mapred_output_value_class", "org.apache.hadoop.io.Text");
 
     expect("mapred_task_is_map", "true");
-    expect("mapred_reduce_tasks", "1");
     expectDefined("mapred_task_id");
 
     expectDefined("map_input_file");
