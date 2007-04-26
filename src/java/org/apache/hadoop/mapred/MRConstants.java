@@ -47,4 +47,9 @@ interface MRConstants {
   //
   public static int SUCCESS = 0;
   public static int FILE_NOT_FOUND = -1;
+  
+  /**
+   * The custom http header used for the map output length.
+   */
+  public static final String MAP_OUTPUT_LENGTH = "Map-Output-Length";
 }

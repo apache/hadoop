@@ -39,8 +39,8 @@ import org.apache.hadoop.util.Progressable;
 public class InMemoryFileSystem extends ChecksumFileSystem {
   private static class RawInMemoryFileSystem extends FileSystem {
     private URI uri;
-    private int fsSize;
-    private volatile int totalUsed;
+    private long fsSize;
+    private volatile long totalUsed;
     private Path staticWorkingDir;
   
     //pathToFileAttribs is the final place where a file is put after it is closed
@@ -341,15 +341,15 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
     }
   
     /** Some APIs exclusively for InMemoryFileSystem */
-  
+
     /** Register a path with its size. */
-    public boolean reserveSpace(Path f, int size) {
+    public boolean reserveSpace(Path f, long size) {
       synchronized (this) {
         if (!canFitInMemory(size))
           return false;
         FileAttributes fileAttr;
         try {
-          fileAttr = new FileAttributes(size);
+          fileAttr = new FileAttributes((int)size);
         } catch (OutOfMemoryError o) {
           return false;
         }
@@ -393,7 +393,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       return getFiles(filter).length;
     }
 
-    public int getFSSize() {
+    public long getFSSize() {
       return fsSize;
     }
   
@@ -403,9 +403,15 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       else return 0.1f;
     }
  
-    private boolean canFitInMemory(int size) {
-      if (size + totalUsed < fsSize)
+    /**
+     * @TODO: Fix for Java6?
+     * As of Java5 it is safe to assume that if the file can fit 
+     * in-memory then its file-size is less than Integer.MAX_VALUE.
+     */ 
+    private boolean canFitInMemory(long size) {
+      if ((size <= Integer.MAX_VALUE) && ((size + totalUsed) < fsSize)) {
         return true;
+      }
       return false;
     }
   
@@ -457,17 +463,15 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
    * for both the main file and the checksum file and return true, or return
    * false.
    */
-  public boolean reserveSpaceWithCheckSum(Path f, int size) {
-    // get the size of the checksum file (we know it is going to be 'int'
-    // since this is an inmem fs with file sizes that will fit in 4 bytes)
+  public boolean reserveSpaceWithCheckSum(Path f, long size) {
     long checksumSize = getChecksumFileLength(f, size);
     RawInMemoryFileSystem mfs = (RawInMemoryFileSystem)getRawFileSystem();
     synchronized(mfs) {
-      return mfs.reserveSpace(f, size) && 
-        mfs.reserveSpace(getChecksumFile(f),
-                         (int)getChecksumFileLength(f, size));
+      return (mfs.reserveSpace(f, size) && 
+              mfs.reserveSpace(getChecksumFile(f), checksumSize)); 
     }
   }
+
   public Path[] getFiles(PathFilter filter) {
     return ((RawInMemoryFileSystem)getRawFileSystem()).getFiles(filter);
   }
@@ -476,7 +480,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
     return ((RawInMemoryFileSystem)getRawFileSystem()).getNumFiles(filter);
   }
 
-  public int getFSSize() {
+  public long getFSSize() {
     return ((RawInMemoryFileSystem)getRawFileSystem()).getFSSize();
   }
     

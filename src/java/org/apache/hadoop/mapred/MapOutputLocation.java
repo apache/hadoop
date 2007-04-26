@@ -204,22 +204,20 @@ class MapOutputLocation implements Writable, MRConstants {
       //1. The size of the file should be less than 25% of the total inmem fs
       //2. There is space available in the inmem fs
       
-      int length = connection.getContentLength();
-      int inMemFSSize = inMemFileSys.getFSSize();
-      int checksumLength = (int)inMemFileSys.getChecksumFileLength(
-                                                                   localFilename, length);
-        
+      long length = Long.parseLong(connection.getHeaderField(MAP_OUTPUT_LENGTH));
+      long inMemFSSize = inMemFileSys.getFSSize();
+      long checksumLength = (int)inMemFileSys.getChecksumFileLength(
+                                                  localFilename, length);
+      
       boolean createInMem = false; 
       if (inMemFSSize > 0)  
         createInMem = (((float)(length + checksumLength) / inMemFSSize <= 
                         MAX_INMEM_FILESIZE_FRACTION) && 
                        inMemFileSys.reserveSpaceWithCheckSum(localFilename, length));
-      
-      if (createInMem)
+      if (createInMem) {
         fileSys = inMemFileSys;
-      else
-        fileSys = localFileSys;
-
+      }
+      
       output = fileSys.create(localFilename);
       try {  
         try {
@@ -244,11 +242,11 @@ class MapOutputLocation implements Writable, MRConstants {
       } finally {
         input.close();
       }
-      good = ((int) totalBytes) == connection.getContentLength();
+      good = (totalBytes == length);
       if (!good) {
         throw new IOException("Incomplete map output received for " + path +
-                              " (" + totalBytes + " instead of " + 
-                              connection.getContentLength() + ")");
+                              " (" + totalBytes + " instead of " + length + ")"
+                              );
       }
     } finally {
       if (!good) {

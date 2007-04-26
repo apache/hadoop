@@ -1904,9 +1904,16 @@ public class TaskTracker
         indexIn.close();
         indexIn = null;
           
-        //set the content-length header
-        response.setContentLength((int) partLength);
+        //set the custom "Map-Output-Length" http header to 
+        //the actual number of bytes being transferred
+        response.setHeader(MAP_OUTPUT_LENGTH, Long.toString(partLength));
 
+        //use 'chunked' transfer-encoding for transferring data
+        response.setHeader("Transfer-Encoding", "chunked"); 
+
+        //use the same buffersize as used for reading the data from disk
+        response.setBufferSize(MAX_BYTES_TO_READ);
+        
         /**
          * Read the data from the sigle map-output file and
          * send it to the reducer.
