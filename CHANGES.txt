@@ -267,8 +267,11 @@ Trunk (unreleased changes)
     of field delimiter and fields for partitioning and sorting.
     (Runping Qi via cutting)
 
-80. HADOOP-1176.  Fix a bug where reduce would hang when a task
-    created more than 2GB of output for it.  (Arun C Murthy via cutting)
+80. HADOOP-1176.  Fix a bug where reduce would hang when a map had
+    more than 2GB of output for it.  (Arun C Murthy via cutting)
+
+81. HADOOP-1293.  Fix contrib/streaming to print more than the first
+    twenty lines of standard error.  (Koji Noguchi via cutting)
 
 
 Release 0.12.3 - 2007-04-06

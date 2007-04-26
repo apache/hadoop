@@ -553,17 +553,13 @@ public abstract class PipeMapRed {
     public void run() {
       byte[] line;
       try {
-        long num = 0;
         while ((line = UTF8ByteArrayUtils.readLine((InputStream) clientErr_)) != null) {
-          num++;
           String lineStr = new String(line, "UTF-8");
-          logprintln(lineStr);
+          System.err.println(lineStr);
           long now = System.currentTimeMillis(); 
-          if (num < 20 || (now-lastStderrReport > reporterErrDelay_)) {
+          if (now-lastStderrReport > reporterErrDelay_) {
             lastStderrReport = now;
-            String hline = "MRErr: " + lineStr;
-            System.err.println(hline);
-            reporter.setStatus(hline);
+            reporter.progress();
           }
         }
       } catch (IOException io) {
