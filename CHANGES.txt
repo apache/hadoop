@@ -273,6 +273,10 @@ Trunk (unreleased changes)
 81. HADOOP-1293.  Fix contrib/streaming to print more than the first
     twenty lines of standard error.  (Koji Noguchi via cutting)
 
+82. HADOOP-1297.  Fix datanode so that requests to remove blocks that
+    do not exist no longer causes block reports to be re-sent every
+    second.  (Dhruba Borthakur via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

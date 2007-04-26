@@ -477,8 +477,8 @@ public class DataNode implements FSConstants, Runnable {
           //
           DatanodeCommand cmd = namenode.blockReport(dnRegistration,
                                                      data.getBlockReport());
-          processCommand(cmd);
           lastBlockReport = now;
+          processCommand(cmd);
         }
             
         //

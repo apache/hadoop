@@ -587,36 +587,57 @@ class FSDataset implements FSConstants {
    * just get rid of it.
    */
   public void invalidate(Block invalidBlks[]) throws IOException {
+    boolean error = false;
     for (int i = 0; i < invalidBlks.length; i++) {
-      File f;
+      File f = null;
       synchronized (this) {
         f = getFile(invalidBlks[i]);
-        if (f == null) {
-          throw new IOException("Unexpected error trying to delete block "
-                                + invalidBlks[i] + 
-                                ". Block not found in blockMap.");
-        }
         FSVolume v = volumeMap.get(invalidBlks[i]);
+        if (f == null) {
+          DataNode.LOG.warn("Unexpected error trying to delete block "
+                            + invalidBlks[i] + 
+                            ". Block not found in blockMap." +
+                            ((v == null) ? " " : " Block found in volumeMap."));
+          error = true;
+          continue;
+        }
         if (v == null) {
-          throw new IOException("Unexpected error trying to delete block "
-                                + invalidBlks[i] + 
-                                ". No volume for this block.");
+          DataNode.LOG.warn("Unexpected error trying to delete block "
+                            + invalidBlks[i] + 
+                            ". No volume for this block." +
+                            " Block found in blockMap. " + f + ".");
+          error = true;
+          continue;
         }
         File parent = f.getParentFile();
         if (parent == null) {
-          throw new IOException("Unexpected error trying to delete block "
-                                + invalidBlks[i] + 
-                                ". Parent not found for file " + f + ".");
+          DataNode.LOG.warn("Unexpected error trying to delete block "
+                            + invalidBlks[i] + 
+                            ". Parent not found for file " + f + ".");
+          error = true;
+          continue;
         }
         v.clearPath(parent);
         blockMap.remove(invalidBlks[i]);
         volumeMap.remove(invalidBlks[i]);
       }
       if (!f.delete()) {
-        throw new IOException("Unexpected error trying to delete block "
-                              + invalidBlks[i] + " at file " + f);
+        DataNode.LOG.warn("Unexpected error trying to delete block "
+                          + invalidBlks[i] + " at file " + f);
+        error = true;
+        continue;
       }
-      DataNode.LOG.info("Deleting block " + invalidBlks[i]);
+      DataNode.LOG.info("Deleting block " + invalidBlks[i] + " file " + f);
+      if (f.exists()) {
+        //
+        // This is a temporary check especially for hadoop-1220. 
+        // This will go away in the future.
+        //
+        DataNode.LOG.info("File " + f + " was deleted but still exists!");
+      }
+    }
+    if (error) {
+      throw new IOException("Error in deleting blocks.");
     }
   }
 
