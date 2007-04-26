@@ -255,6 +255,10 @@ Trunk (unreleased changes)
 76. HADOOP-1282.  Omnibus HBase patch.  Improved tests & configuration.
     (Jim Kellerman via cutting)
 
+77. HADOOP-1262.  Make dfs client try to read from a different replica 
+    of the checksum file when a checksum error is detected.  
+    (Hairong Kuang via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

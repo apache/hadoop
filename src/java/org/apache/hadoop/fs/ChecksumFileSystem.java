@@ -315,8 +315,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
 
     @Override
     public boolean seekToNewSource(long targetPos) throws IOException {
-      return datas.seekToNewSource(targetPos) ||
-        sums.seekToNewSource(targetPos/bytesPerSum);
+      boolean newDataSource = datas.seekToNewSource(targetPos);
+      return sums.seekToNewSource(targetPos/bytesPerSum) || newDataSource;
     }
 
   }
