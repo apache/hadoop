@@ -288,6 +288,9 @@ Trunk (unreleased changes)
 85. HADOOP-1299.  Fix so that RPC will restart after RPC.stopClient()
     has been called.  (Michael Stack via cutting)
 
+86. HADOOP-1278.  Improve blacklisting of TaskTrackers by JobTracker,
+    to reduce false positives.  (Arun C Murthy via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

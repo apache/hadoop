@@ -70,6 +70,12 @@ class JobInProgress {
   private int taskCompletionEventTracker = 0; 
   List<TaskCompletionEvent> taskCompletionEvents;
     
+  // The maximum percentage of trackers in cluster added to the 'blacklist'.
+  private static final double CLUSTER_BLACKLIST_PERCENT = 0.25;
+  
+  // No. of tasktrackers in the cluster
+  private volatile int clusterSize = 0;
+  
   // The no. of tasktrackers where >= conf.getMaxTaskFailuresPerTracker()
   // tasks have failed
   private volatile int flakyTaskTrackers = 0;
@@ -341,7 +347,10 @@ class JobInProgress {
           // fail the task!
           failedTask(tip, status.getTaskId(), 
                      "Failed to copy reduce's output", 
-                     TaskStatus.Phase.REDUCE, TaskStatus.State.FAILED, 
+                     (tip.isMapTask() ? 
+                         TaskStatus.Phase.MAP : 
+                         TaskStatus.Phase.REDUCE), 
+                     TaskStatus.State.FAILED, 
                      ttStatus.getHost(), status.getTaskTracker(), null);
           LOG.info("Failed to copy the output of " + status.getTaskId() + 
                    " with: " + StringUtils.stringifyException(ioe));
@@ -504,19 +513,28 @@ class JobInProgress {
     return trackerHostName;
   }
     
-  private void addTrackerTaskFailure(String trackerName) {
-    String trackerHostName = convertTrackerNameToHostName(trackerName);
-      
-    Integer trackerFailures = trackerToFailuresMap.get(trackerHostName);
-    if (trackerFailures == null) {
-      trackerFailures = new Integer(0);
-    }
-    trackerToFailuresMap.put(trackerHostName, ++trackerFailures);
-      
-    // Check if this tasktracker has turned 'flaky'
-    if (trackerFailures.intValue() == conf.getMaxTaskFailuresPerTracker()) {
-      ++flakyTaskTrackers;
-      LOG.info("TaskTracker at '" + trackerHostName + "' turned 'flaky'");
+  /**
+   * Note that a task has failed on a given tracker and add the tracker  
+   * to the blacklist iff too many trackers in the cluster i.e. 
+   * (clusterSize * CLUSTER_BLACKLIST_PERCENT) haven't turned 'flaky' already.
+   * 
+   * @param trackerName task-tracker on which a task failed
+   */
+  void addTrackerTaskFailure(String trackerName) {
+    if (flakyTaskTrackers < (clusterSize * CLUSTER_BLACKLIST_PERCENT)) { 
+      String trackerHostName = convertTrackerNameToHostName(trackerName);
+
+      Integer trackerFailures = trackerToFailuresMap.get(trackerHostName);
+      if (trackerFailures == null) {
+        trackerFailures = new Integer(0);
+      }
+      trackerToFailuresMap.put(trackerHostName, ++trackerFailures);
+
+      // Check if this tasktracker has turned 'flaky'
+      if (trackerFailures.intValue() == conf.getMaxTaskFailuresPerTracker()) {
+        ++flakyTaskTrackers;
+        LOG.info("TaskTracker at '" + trackerHostName + "' turned 'flaky'");
+      }
     }
   }
     
@@ -567,21 +585,22 @@ class JobInProgress {
     String taskTracker = tts.getTrackerName();
 
     //
+    // Update the last-known clusterSize
+    //
+    this.clusterSize = clusterSize;
+
+    //
     // Check if too many tasks of this job have failed on this
     // tasktracker prior to assigning it a new one.
     //
     int taskTrackerFailedTasks = getTrackerTaskFailures(taskTracker);
     if (taskTrackerFailedTasks >= conf.getMaxTaskFailuresPerTracker()) {
-      String flakyTracker = convertTrackerNameToHostName(taskTracker); 
-      if (flakyTaskTrackers < clusterSize) {
+      if (LOG.isDebugEnabled()) {
+        String flakyTracker = convertTrackerNameToHostName(taskTracker); 
         LOG.debug("Ignoring the black-listed tasktracker: '" + flakyTracker 
-                  + "' for assigning a new task");
-        return -1;
-      } else {
-        LOG.warn("Trying to assign a new task for black-listed tracker " + 
-                 flakyTracker + " since all task-trackers in the cluster are " +
-                 "'flaky' !");
+                + "' for assigning a new task");
       }
+      return -1;
     }
         
     //
@@ -849,9 +868,11 @@ class JobInProgress {
     }
             
     //
-    // Note down that a task has failed on this tasktracker
+    // Note down that a task has failed on this tasktracker 
     //
-    addTrackerTaskFailure(trackerName);
+    if (status.getRunState() == TaskStatus.State.FAILED) { 
+      addTrackerTaskFailure(trackerName);
+    }
         
     //
     // Let the JobTracker know that this task has failed

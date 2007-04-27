@@ -24,6 +24,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1671,8 +1672,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     trackerToTaskMap.remove(trackerName);
 
     if (lostTasks != null) {
-      for (Iterator it = lostTasks.iterator(); it.hasNext();) {
-        String taskId = (String) it.next();
+      // List of jobs which had any of their tasks fail on this tracker
+      Set<JobInProgress> jobsWithFailures = new HashSet<JobInProgress>(); 
+      for (String taskId : lostTasks) {
         TaskInProgress tip = taskidToTIPMap.get(taskId);
 
         // Completed reduce tasks never need to be failed, because 
@@ -1682,8 +1684,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           // if the job is done, we don't want to change anything
           if (job.getStatus().getRunState() == JobStatus.RUNNING) {
             job.failedTask(tip, taskId, "Lost task tracker", 
-                           TaskStatus.Phase.MAP, TaskStatus.State.KILLED,
+                           (tip.isMapTask() ? 
+                               TaskStatus.Phase.MAP : 
+                               TaskStatus.Phase.REDUCE), 
+                           TaskStatus.State.KILLED,
                            hostname, trackerName, myMetrics);
+            jobsWithFailures.add(job);
           }
         } else if (!tip.isMapTask() && tip.isComplete()) {
           // Completed 'reduce' task, not failed;
@@ -1691,7 +1697,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           markCompletedTaskAttempt(trackerName, taskId);
         }
       }
-            
+      
+      // Penalize this tracker for each of the jobs which   
+      // had any tasks running on it when it was 'lost' 
+      for (JobInProgress job : jobsWithFailures) {
+        job.addTrackerTaskFailure(trackerName);
+      }
+      
       // Purge 'marked' tasks, needs to be done  
       // here to prevent hanging references!
       removeMarkedTasks(trackerName);
