@@ -144,8 +144,10 @@ public class RPC {
    * Stop all RPC client connections
    */
   public static synchronized void stopClient(){
-    if (CLIENT != null)
+    if (CLIENT != null) {
       CLIENT.stop();
+      CLIENT = null;
+    }
   }
 
   private static class Invoker implements InvocationHandler {

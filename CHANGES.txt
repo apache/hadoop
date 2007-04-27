@@ -285,6 +285,9 @@ Trunk (unreleased changes)
 84. HADOOP-1294.  Fix unchecked warnings in main Hadoop code under 
     Java 6.  (tomwhite)
 
+85. HADOOP-1299.  Fix so that RPC will restart after RPC.stopClient()
+    has been called.  (Michael Stack via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
