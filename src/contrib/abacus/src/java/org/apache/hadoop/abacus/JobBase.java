@@ -30,6 +30,8 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reducer;
 
 /**
+ * * @deprecated
+ * 
  * A common base implementing some statics collecting mechanisms that are
  * commonly used in a typical map/reduce job.
  * 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.util.ArrayList;
 import java.util.Map.Entry;
@@ -24,8 +24,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 
 /** 
- * @deprecated
- * 
  * This class implements the common functionalities of 
  * the subclasses of ValueAggregatorDescriptor class.
  *
@@ -39,6 +37,15 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
   static public final String DOUBLE_VALUE_SUM = "DoubleValueSum";
 
   static public final String VALUE_HISTOGRAM = "ValueHistogram";
+  
+  static public final String LONG_VALUE_MAX = "LongValueMax";
+  
+  static public final String LONG_VALUE_MIN = "LongValueMin";
+  
+  static public final String STRING_VALUE_MAX = "StringValueMax";
+  
+  static public final String STRING_VALUE_MIN = "StringValueMin";
+  
 
   public String inputFile = null;
 
@@ -86,12 +93,20 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
    */
   static public ValueAggregator generateValueAggregator(String type) {
     ValueAggregator retv = null;
-    if (type.compareToIgnoreCase(UNIQ_VALUE_COUNT) == 0) {
-      retv = new UniqValueCount();
-    } else if (type.compareToIgnoreCase(LONG_VALUE_SUM) == 0) {
+    if (type.compareToIgnoreCase(LONG_VALUE_SUM) == 0) {
       retv = new LongValueSum();
+    } if (type.compareToIgnoreCase(LONG_VALUE_MAX) == 0) {
+      retv = new LongValueMax();
+    } else if (type.compareToIgnoreCase(LONG_VALUE_MIN) == 0) {
+      retv = new LongValueMin();
+    } else if (type.compareToIgnoreCase(STRING_VALUE_MAX) == 0) {
+      retv = new StringValueMax();
+    } else if (type.compareToIgnoreCase(STRING_VALUE_MIN) == 0) {
+      retv = new StringValueMin();
     } else if (type.compareToIgnoreCase(DOUBLE_VALUE_SUM) == 0) {
       retv = new DoubleValueSum();
+    } else if (type.compareToIgnoreCase(UNIQ_VALUE_COUNT) == 0) {
+      retv = new UniqValueCount();
     } else if (type.compareToIgnoreCase(VALUE_HISTOGRAM) == 0) {
       retv = new ValueHistogram();
     }

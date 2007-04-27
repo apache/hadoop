@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.util.ArrayList;
 
 /**
- * @deprecated
- * 
  * This interface defines the minimal protocol for value aggregators.
  * 
  */

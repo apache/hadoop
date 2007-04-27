@@ -16,39 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.mapred.JobConf;
-
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.Reducer;
 
 /**
- * @deprecated
- * 
  * This abstract class implements some common functionalities of the
  * the generic mapper, reducer and combiner classes of Abacus.
  *
  */
-public abstract class ValueAggregatorJobBase extends JobBase {
- 
-  protected ArrayList aggregatorDescriptorList = null;
-        
+public abstract class ValueAggregatorJobBase implements Mapper, Reducer {
+
+  protected ArrayList<ValueAggregatorDescriptor> aggregatorDescriptorList = null;
+
   public void configure(JobConf job) {
-    super.configure(job);
-        
-    setLongValue("totalCount", 0);
-    setLongValue("errorCount", 0);
-    setLongValue("collectedCount", 0);
-    setLongValue("groupCount", 0);
-        
     this.initializeMySpec(job);
     this.logSpec();
   }
 
   private static ValueAggregatorDescriptor getValueAggregatorDescriptor(
-                                                                        String spec, JobConf job) {
+      String spec, JobConf job) {
     if (spec == null)
       return null;
     String[] segments = spec.split(",", -1);
@@ -56,14 +48,14 @@ public abstract class ValueAggregatorJobBase extends JobBase {
     if (type.compareToIgnoreCase("UserDefined") == 0) {
       String className = segments[1];
       return new UserDefinedValueAggregatorDescriptor(className, job);
-    } 
+    }
     return null;
   }
 
-  private static ArrayList getAggregatorDescriptors(JobConf job) {
+  private static ArrayList<ValueAggregatorDescriptor> getAggregatorDescriptors(JobConf job) {
     String advn = "aggregator.descriptor";
     int num = job.getInt(advn + ".num", 0);
-    ArrayList retv = new ArrayList(num);
+    ArrayList<ValueAggregatorDescriptor> retv = new ArrayList<ValueAggregatorDescriptor>(num);
     for (int i = 0; i < num; i++) {
       String spec = job.get(advn + "." + i);
       ValueAggregatorDescriptor ad = getValueAggregatorDescriptor(spec, job);
@@ -73,15 +65,16 @@ public abstract class ValueAggregatorJobBase extends JobBase {
     }
     return retv;
   }
-    
+
   private void initializeMySpec(JobConf job) {
     this.aggregatorDescriptorList = getAggregatorDescriptors(job);
     if (this.aggregatorDescriptorList.size() == 0) {
-      this.aggregatorDescriptorList.add(new UserDefinedValueAggregatorDescriptor(
-                                                                                 ValueAggregatorBaseDescriptor.class.getCanonicalName(), job));
+      this.aggregatorDescriptorList
+          .add(new UserDefinedValueAggregatorDescriptor(
+              ValueAggregatorBaseDescriptor.class.getCanonicalName(), job));
     }
   }
-    
+
   protected void logSpec() {
     StringBuffer sb = new StringBuffer();
     sb.append("\n");
@@ -92,11 +85,9 @@ public abstract class ValueAggregatorJobBase extends JobBase {
       for (int i = 0; i < aggregatorDescriptorList.size(); i++) {
         sb.append(" ").append(aggregatorDescriptorList.get(i).toString());
       }
-    }      
-    LOG.info(sb.toString());
+    }
   }
 
   public void close() throws IOException {
-    report();
   }
 }

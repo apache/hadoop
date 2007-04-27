@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -27,8 +27,6 @@ import java.util.Arrays;
 import org.apache.hadoop.io.Text;
 
 /**
- * @deprecated
- * 
  * This class implements a value aggregator that computes the 
  * histogram of a sequence of strings.
  * 
@@ -50,9 +48,13 @@ public class ValueHistogram implements ValueAggregator {
   public void addNextValue(Object val) {
     String valCountStr = val.toString();
     int pos = valCountStr.lastIndexOf("\t");
-    String valStr = valCountStr.substring(0, pos);
-    String countStr = valCountStr.substring(pos + 1);
-
+    String valStr = valCountStr;
+    String countStr = "1";
+    if (pos >= 0) {
+      valCountStr.substring(0, pos);
+      countStr = valCountStr.substring(pos + 1);
+    }
+    
     Long count = (Long) this.items.get(valStr);
     long inc = Long.parseLong(countStr);
 
@@ -87,7 +89,6 @@ public class ValueHistogram implements ValueAggregator {
     }
     Arrays.sort(counts);
     sb.append(counts.length);
-    StringBuffer sbVal = new StringBuffer();
     i = 0;
     long acc = 0;
     while (i < counts.length) {
@@ -156,7 +157,7 @@ public class ValueHistogram implements ValueAggregator {
       Entry en = (Entry) iter.next();
       Object val = en.getKey();
       Long count = (Long) en.getValue();
-      retv.add(new Text(val.toString() + "\t" + count.longValue()));
+      retv.add(val.toString() + "\t" + count.longValue());
     }
     return retv;
   }

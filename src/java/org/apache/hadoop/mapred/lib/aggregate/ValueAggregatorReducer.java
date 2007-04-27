@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -28,9 +28,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
- * @deprecated
- * 
  * This class implements the generic reducer of Abacus.
+ * 
  * 
  */
 public class ValueAggregatorReducer extends ValueAggregatorJobBase {
@@ -46,7 +45,6 @@ public class ValueAggregatorReducer extends ValueAggregatorJobBase {
    */
   public void reduce(WritableComparable key, Iterator values,
                      OutputCollector output, Reporter reporter) throws IOException {
-    addLongValue("groupCount", 1);
     String keyStr = key.toString();
     int pos = keyStr.indexOf(ValueAggregatorDescriptor.TYPE_SEPARATOR);
     String type = keyStr.substring(0, pos);
@@ -56,17 +54,12 @@ public class ValueAggregatorReducer extends ValueAggregatorJobBase {
     ValueAggregator aggregator = ValueAggregatorBaseDescriptor
       .generateValueAggregator(type);
     while (values.hasNext()) {
-      addLongValue("totalCount", 1);
       aggregator.addNextValue(values.next());
     }
 
     String val = aggregator.getReport();
     key = new Text(keyStr);
     output.collect(key, new Text(val));
-    addLongValue("collectedCount", 1);
-    if (getLongValue("collectedCount").longValue() % 10000 == 0) {
-      report();
-    }
   }
 
   /**

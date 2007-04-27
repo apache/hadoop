@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.util.ArrayList;
 import java.util.Map.Entry;
@@ -25,8 +25,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 
 /**
- * @deprecated
- * 
  * This interface defines the contract a value aggregator descriptor must
  * support. Such a descriptor can be configured with a JobConf object. Its main
  * function is to generate a list of aggregation-id/value pairs. An aggregation

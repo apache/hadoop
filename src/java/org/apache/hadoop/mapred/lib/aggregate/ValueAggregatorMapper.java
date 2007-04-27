@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -28,8 +28,6 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
- * @deprecated
- * 
  * This class implements the generic mapper of Abacus.
  */
 public class ValueAggregatorMapper extends ValueAggregatorJobBase {
@@ -41,7 +39,6 @@ public class ValueAggregatorMapper extends ValueAggregatorJobBase {
   public void map(WritableComparable key, Writable value,
                   OutputCollector output, Reporter reporter) throws IOException {
 
-    addLongValue("groupCount", 1);
     Iterator iter = this.aggregatorDescriptorList.iterator();
     while (iter.hasNext()) {
       ValueAggregatorDescriptor ad = (ValueAggregatorDescriptor) iter.next();
@@ -50,12 +47,7 @@ public class ValueAggregatorMapper extends ValueAggregatorJobBase {
         Entry en = ens.next();
         output.collect((WritableComparable) en.getKey(), (Writable) en
                        .getValue());
-        addLongValue("collectedCount", 1);
       }
-    }
-
-    if (getLongValue("groupCount").longValue() % 10000 == 0) {
-      report();
     }
   }
 

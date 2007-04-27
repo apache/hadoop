@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -25,8 +25,6 @@ import java.util.Map.Entry;
 import org.apache.hadoop.mapred.JobConf;
 
 /**
- * @deprecated
- * 
  * This class implements a wrapper for a user defined value aggregator descriptor.
  * It servs two functions: One is to create an object of ValueAggregatorDescriptor from the
  * name of a user defined class that may be dynamically loaded. The other is to

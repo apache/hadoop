@@ -291,6 +291,9 @@ Trunk (unreleased changes)
 86. HADOOP-1278.  Improve blacklisting of TaskTrackers by JobTracker,
     to reduce false positives.  (Arun C Murthy via cutting)
 
+87. HADOOP-1290.  Move contrib/abacus into mapred/lib/aggregate.
+    (Runping Qi via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

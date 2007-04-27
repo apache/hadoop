@@ -16,27 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.util.ArrayList;
 
-
 /**
- * @deprecated
- * 
- * This class implements a value aggregator that sums up a sequence of double
- * values.
+ * This class implements a value aggregator that maintain the smallest of 
+ * a sequence of strings.
  * 
  */
-public class DoubleValueSum implements ValueAggregator {
+public class StringValueMin implements ValueAggregator {
 
-  double sum = 0;
-
+  String minVal = null;
+    
   /**
-   * The default constructor
-   * 
+   *  the default constructor
+   *
    */
-  public DoubleValueSum() {
+  public StringValueMin() {
     reset();
   }
 
@@ -44,43 +41,36 @@ public class DoubleValueSum implements ValueAggregator {
    * add a value to the aggregator
    * 
    * @param val
-   *          an object whose string representation represents a double value.
+   *          a string.
    * 
    */
   public void addNextValue(Object val) {
-    this.sum += Double.parseDouble(val.toString());
+    String newVal = val.toString();
+    if (this.minVal == null || this.minVal.compareTo(newVal) > 0) {
+      this.minVal = newVal;
+    }
   }
-
+    
+    
   /**
-   * add a value to the aggregator
-   * 
-   * @param val
-   *          a double value.
-   * 
+   * @return the aggregated value
    */
-  public void addNextValue(double val) {
-    this.sum += val;
+  public String getVal() {
+    return this.minVal;
   }
-
+    
   /**
    * @return the string representation of the aggregated value
    */
   public String getReport() {
-    return "" + sum;
-  }
-
-  /**
-   * @return the aggregated value
-   */
-  public double getSum() {
-    return this.sum;
+    return minVal;
   }
 
   /**
    * reset the aggregator
    */
   public void reset() {
-    sum = 0;
+    minVal = null;
   }
 
   /**
@@ -88,10 +78,9 @@ public class DoubleValueSum implements ValueAggregator {
    *         representation of the aggregated value. The return value is
    *         expected to be used by the a combiner.
    */
-  public ArrayList getCombinerOutput() {
-    ArrayList retv = new ArrayList(1);
-    retv.add(getReport());
+  public ArrayList<String> getCombinerOutput() {
+    ArrayList<String> retv = new ArrayList<String>(1);
+    retv.add(minVal);
     return retv;
   }
-
 }

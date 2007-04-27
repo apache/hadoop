@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -24,53 +24,61 @@ import java.util.Iterator;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
- * @deprecated
- * 
- * This class implements the generic reducer of Abacus.
- * 
+ * This class implements the generic combiner of Abacus.
  */
-public class ValueAggregatorReducer extends ValueAggregatorJobBase {
+public class ValueAggregatorCombiner extends ValueAggregatorJobBase {
 
   /**
-   * @param key
-   *          the key is expected to be a Text object, whose prefix indicates
-   *          the type of aggregation to aggregate the values. In effect, data
-   *          driven computing is achieved. It is assumed that each aggregator's
-   *          getReport method emits appropriate output for the aggregator. This
-   *          may be further customiized.
-   * @value the values to be aggregated
+   * Combiner does not need to configure.
+   */
+  public void configure(JobConf job) {
+
+  }
+
+  /** Combines values for a given key.  
+   * @param key the key is expected to be a Text object, whose prefix indicates
+   * the type of aggregation to aggregate the values. 
+   * @param values the values to combine
+   * @param output to collect combined values
    */
   public void reduce(WritableComparable key, Iterator values,
                      OutputCollector output, Reporter reporter) throws IOException {
-    addLongValue("groupCount", 1);
     String keyStr = key.toString();
     int pos = keyStr.indexOf(ValueAggregatorDescriptor.TYPE_SEPARATOR);
     String type = keyStr.substring(0, pos);
-    keyStr = keyStr.substring(pos
-                              + ValueAggregatorDescriptor.TYPE_SEPARATOR.length());
-
     ValueAggregator aggregator = ValueAggregatorBaseDescriptor
       .generateValueAggregator(type);
     while (values.hasNext()) {
-      addLongValue("totalCount", 1);
       aggregator.addNextValue(values.next());
     }
+    Iterator outputs = aggregator.getCombinerOutput().iterator();
 
-    String val = aggregator.getReport();
-    key = new Text(keyStr);
-    output.collect(key, new Text(val));
-    addLongValue("collectedCount", 1);
-    if (getLongValue("collectedCount").longValue() % 10000 == 0) {
-      report();
+    while (outputs.hasNext()) {
+      Object v = outputs.next();
+      if (v instanceof Text) {
+        output.collect(key, (Text)v);
+      } else {
+        output.collect(key, new Text(v.toString()));
+      }
     }
   }
 
-  /**
-   * Do nothing. Should not be called
+  /** 
+   * Do nothing. 
+   *
+   */
+  public void close() throws IOException {
+
+  }
+
+  /** 
+   * Do nothing. Should not be called. 
+   *
    */
   public void map(WritableComparable arg0, Writable arg1, OutputCollector arg2,
                   Reporter arg3) throws IOException {

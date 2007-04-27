@@ -21,6 +21,8 @@ package org.apache.hadoop.abacus;
 import java.util.ArrayList;
 
 /**
+ * * @deprecated
+ * 
  * This class implements a value aggregator that sums up 
  * a sequence of long values.
  * 

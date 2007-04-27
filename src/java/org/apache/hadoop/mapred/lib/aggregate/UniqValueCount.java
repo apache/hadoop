@@ -16,82 +16,76 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.util.ArrayList;
-
+import java.util.Iterator;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
- * @deprecated
- * 
- * This class implements a value aggregator that sums up a sequence of double
- * values.
+ * This class implements a value aggregator that dedupes a sequence of objects.
  * 
  */
-public class DoubleValueSum implements ValueAggregator {
+public class UniqValueCount implements ValueAggregator {
 
-  double sum = 0;
+  TreeMap uniqItems = null;
 
   /**
-   * The default constructor
+   * the default constructor
    * 
    */
-  public DoubleValueSum() {
-    reset();
+  public UniqValueCount() {
+    uniqItems = new TreeMap();
   }
 
   /**
    * add a value to the aggregator
    * 
    * @param val
-   *          an object whose string representation represents a double value.
+   *          an object.
    * 
    */
   public void addNextValue(Object val) {
-    this.sum += Double.parseDouble(val.toString());
+    uniqItems.put(val, "1");
+
   }
 
   /**
-   * add a value to the aggregator
-   * 
-   * @param val
-   *          a double value.
-   * 
-   */
-  public void addNextValue(double val) {
-    this.sum += val;
-  }
-
-  /**
-   * @return the string representation of the aggregated value
+   * @return return the number of unique objects aggregated
    */
   public String getReport() {
-    return "" + sum;
+    return "" + uniqItems.size();
   }
 
   /**
-   * @return the aggregated value
+   * 
+   * @return the set of the unique objects
    */
-  public double getSum() {
-    return this.sum;
+  public Set getUniqueItems() {
+    return uniqItems.keySet();
   }
 
   /**
    * reset the aggregator
    */
   public void reset() {
-    sum = 0;
+    uniqItems = new TreeMap();
   }
 
   /**
-   * @return return an array of one element. The element is a string
-   *         representation of the aggregated value. The return value is
+   * @return return an array of the unique objects. The return value is
    *         expected to be used by the a combiner.
    */
   public ArrayList getCombinerOutput() {
-    ArrayList retv = new ArrayList(1);
-    retv.add(getReport());
+    Object key = null;
+    Iterator iter = uniqItems.keySet().iterator();
+    ArrayList retv = new ArrayList();
+
+    while (iter.hasNext()) {
+      key = iter.next();
+      retv.add(key);
+    }
     return retv;
   }
-
 }

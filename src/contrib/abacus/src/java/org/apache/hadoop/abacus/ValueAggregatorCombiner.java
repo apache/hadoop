@@ -29,6 +29,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
+ * @deprecated
+ * 
  * This class implements the generic combiner of Abacus.
  */
 public class ValueAggregatorCombiner extends ValueAggregatorJobBase {

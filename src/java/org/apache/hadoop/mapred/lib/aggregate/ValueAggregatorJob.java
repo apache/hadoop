@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,9 +34,6 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.RunningJob;
 
 /**
- * 
- * @deprecated
- * 
  * This is the main class for creating a map/reduce job using Abacus framework.
  * The Abacus is a specialization of map/reduce framework, specilizing for
  * performing various simple aggregations.
@@ -156,9 +153,6 @@ public class ValueAggregatorJob {
     theJob.setCombinerClass(ValueAggregatorCombiner.class);
     theJob.setNumMapTasks(1);
     theJob.setNumReduceTasks(numOfReducers);
-    theJob.set("mapred.sds.data.serialization.format", "csv");
-    theJob.set("mapred.child.java.opts", "-Xmx1024m");
-    // aggregator.setKeepFailedTaskFiles(true);
     return theJob;
   }
 

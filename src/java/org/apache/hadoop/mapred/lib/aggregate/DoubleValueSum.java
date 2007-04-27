@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.abacus;
+package org.apache.hadoop.mapred.lib.aggregate;
 
 import java.util.ArrayList;
 
 
 /**
- * @deprecated
- * 
  * This class implements a value aggregator that sums up a sequence of double
  * values.
  * 
@@ -88,9 +86,9 @@ public class DoubleValueSum implements ValueAggregator {
    *         representation of the aggregated value. The return value is
    *         expected to be used by the a combiner.
    */
-  public ArrayList getCombinerOutput() {
-    ArrayList retv = new ArrayList(1);
-    retv.add(getReport());
+  public ArrayList<String> getCombinerOutput() {
+    ArrayList<String> retv = new ArrayList<String>(1);
+    retv.add("" + sum);
     return retv;
   }
 

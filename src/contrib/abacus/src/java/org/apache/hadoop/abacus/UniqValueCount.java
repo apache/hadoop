@@ -24,6 +24,8 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
+ * * @deprecated
+ * 
  * This class implements a value aggregator that dedupes a sequence of objects.
  * 
  */
