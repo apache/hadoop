@@ -66,7 +66,7 @@ public class ReflectionUtils {
    * @param conf Configuration
    * @return a new object
    */
-  public static Object newInstance(Class theClass, Configuration conf) {
+  public static Object newInstance(Class<?> theClass, Configuration conf) {
     Object result;
     try {
       Constructor meth = CONSTRUCTOR_CACHE.get(theClass);

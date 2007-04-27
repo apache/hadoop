@@ -296,7 +296,7 @@ public class RPC {
   /** An RPC Server. */
   public static class Server extends org.apache.hadoop.ipc.Server {
     private Object instance;
-    private Class implementation;
+    private Class<?> implementation;
     private boolean verbose;
 
     /** Construct an RPC server.

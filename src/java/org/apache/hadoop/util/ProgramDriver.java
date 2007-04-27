@@ -42,7 +42,7 @@ public class ProgramDriver {
      
   static private class ProgramDescription {
 	
-    static final Class[] paramTypes = new Class[] {String[].class};
+    static final Class<?>[] paramTypes = new Class<?>[] {String[].class};
 	
     /**
      * Create a description of an example program.
@@ -51,7 +51,7 @@ public class ProgramDriver {
      * @throws SecurityException if we can't use reflection
      * @throws NoSuchMethodException if the class doesn't have a main method
      */
-    public ProgramDescription(Class mainClass, 
+    public ProgramDescription(Class<?> mainClass, 
                               String description)
       throws SecurityException, NoSuchMethodException {
       this.main = mainClass.getMethod("main", paramTypes);

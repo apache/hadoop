@@ -435,8 +435,8 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
         // lazy init
         String rndDataGenClassname =
           conf.get("hadoop.random.class", "java.util.Random");
-        Class clazz = Class.forName(rndDataGenClassname);
-        randomDataGeneratorCtor = clazz.getConstructor(new Class[]{Long.TYPE});
+        Class<?> clazz = Class.forName(rndDataGenClassname);
+        randomDataGeneratorCtor = clazz.getConstructor(Long.TYPE);
       }
 
       if (randomDataGeneratorCtor != null) {

@@ -282,6 +282,9 @@ Trunk (unreleased changes)
     shuffle, sort and reduce.  Use this to implement reduce=NONE
     option in contrib/streaming.  (Runping Qi via cutting)
 
+84. HADOOP-1294.  Fix unchecked warnings in main Hadoop code under 
+    Java 6.  (tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 
