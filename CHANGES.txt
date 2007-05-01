@@ -297,6 +297,9 @@ Trunk (unreleased changes)
 88. HADOOP-1272.  Extract inner classes from FSNamesystem into separate 
     classes.  (Dhruba Borthakur via tomwhite)
 
+89. HADOOP-1247.  Add support to contrib/streaming for aggregate
+    package, formerly called Abacus.  (Runping Qi via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
