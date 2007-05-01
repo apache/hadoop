@@ -15,7 +15,7 @@ public class TestReplicationPolicy extends TestCase {
   private static final Configuration CONF = new Configuration();
   private static final NetworkTopology cluster;
   private static NameNode namenode;
-  private static FSNamesystem.ReplicationTargetChooser replicator;
+  private static ReplicationTargetChooser replicator;
   private static DatanodeDescriptor dataNodes[] = 
     new DatanodeDescriptor[] {
       new DatanodeDescriptor(new DatanodeID("h1:5020", "0", -1), "/d1/r1"),

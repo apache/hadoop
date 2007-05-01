@@ -3,7 +3,7 @@ package org.apache.hadoop.dfs;
 import junit.framework.TestCase;
 
 public class TestHost2NodesMap extends TestCase {
-  static private FSNamesystem.Host2NodesMap map = new FSNamesystem.Host2NodesMap();
+  static private Host2NodesMap map = new Host2NodesMap();
   private final static DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
     new DatanodeDescriptor(new DatanodeID("h1:5020", "0", -1), "/d1/r1"),
     new DatanodeDescriptor(new DatanodeID("h2:5020", "0", -1), "/d1/r1"),
