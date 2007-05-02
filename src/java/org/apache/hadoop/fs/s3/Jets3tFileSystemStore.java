@@ -9,10 +9,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -27,8 +26,26 @@ import org.jets3t.service.model.S3Object;
 import org.jets3t.service.security.AWSCredentials;
 
 class Jets3tFileSystemStore implements FileSystemStore {
+  
+  private static final String FILE_SYSTEM_NAME = "fs";
+  private static final String FILE_SYSTEM_VALUE = "Hadoop";
 
-  private static final String PATH_DELIMITER = urlEncode(Path.SEPARATOR);
+  private static final String FILE_SYSTEM_TYPE_NAME = "fs-type";
+  private static final String FILE_SYSTEM_TYPE_VALUE = "block";
+
+  private static final String FILE_SYSTEM_VERSION_NAME = "fs-version";
+  private static final String FILE_SYSTEM_VERSION_VALUE = "1";
+  
+  private static final Map<String, String> METADATA =
+    new HashMap<String, String>();
+  
+  static {
+    METADATA.put(FILE_SYSTEM_NAME, FILE_SYSTEM_VALUE);
+    METADATA.put(FILE_SYSTEM_TYPE_NAME, FILE_SYSTEM_TYPE_VALUE);
+    METADATA.put(FILE_SYSTEM_VERSION_NAME, FILE_SYSTEM_VERSION_VALUE);
+  }
+
+  private static final String PATH_DELIMITER = Path.SEPARATOR;
   private static final String BLOCK_PREFIX = "block_";
 
   private Configuration conf;
@@ -94,7 +111,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
     createBucket(bucket.getName());
     
     this.bufferSize = conf.getInt("io.file.buffer.size", 4096);
-  }  
+  }
 
   private void createBucket(String bucketName) throws IOException {
     try {
@@ -105,6 +122,10 @@ class Jets3tFileSystemStore implements FileSystemStore {
       }
       throw new S3Exception(e);
     }
+  }
+  
+  public String getVersion() throws IOException {
+    return FILE_SYSTEM_VERSION_VALUE;
   }
 
   private void delete(String key) throws IOException {
@@ -127,7 +148,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
   }
 
   public boolean inodeExists(Path path) throws IOException {
-    InputStream in = get(pathToKey(path));
+    InputStream in = get(pathToKey(path), true);
     if (in == null) {
       return false;
     }
@@ -136,7 +157,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
   }
   
   public boolean blockExists(long blockId) throws IOException {
-    InputStream in = get(blockToKey(blockId));
+    InputStream in = get(blockToKey(blockId), false);
     if (in == null) {
       return false;
     }
@@ -144,9 +165,14 @@ class Jets3tFileSystemStore implements FileSystemStore {
     return true;
   }
 
-  private InputStream get(String key) throws IOException {
+  private InputStream get(String key, boolean checkMetadata)
+      throws IOException {
+    
     try {
       S3Object object = s3Service.getObject(bucket, key);
+      if (checkMetadata) {
+        checkMetadata(object);
+      }
       return object.getDataInputStream();
     } catch (S3ServiceException e) {
       if (e.getS3ErrorCode().equals("NoSuchKey")) {
@@ -175,8 +201,26 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
   }
 
+  private void checkMetadata(S3Object object) throws S3FileSystemException,
+      S3ServiceException {
+    
+    String name = (String) object.getMetadata(FILE_SYSTEM_NAME);
+    if (!FILE_SYSTEM_VALUE.equals(name)) {
+      throw new S3FileSystemException("Not a Hadoop S3 file.");
+    }
+    String type = (String) object.getMetadata(FILE_SYSTEM_TYPE_NAME);
+    if (!FILE_SYSTEM_TYPE_VALUE.equals(type)) {
+      throw new S3FileSystemException("Not a block file.");
+    }
+    String dataVersion = (String) object.getMetadata(FILE_SYSTEM_VERSION_NAME);
+    if (!FILE_SYSTEM_VERSION_VALUE.equals(dataVersion)) {
+      throw new VersionMismatchException(FILE_SYSTEM_VERSION_VALUE,
+          dataVersion);
+    }
+  }
+
   public INode retrieveINode(Path path) throws IOException {
-    return INode.deserialize(get(pathToKey(path)));
+    return INode.deserialize(get(pathToKey(path), true));
   }
 
   public File retrieveBlock(Block block, long byteRangeStart)
@@ -224,7 +268,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
       if (!prefix.endsWith(PATH_DELIMITER)) {
         prefix += PATH_DELIMITER;
       }
-      S3Object[] objects = s3Service.listObjects(bucket, prefix, PATH_DELIMITER, 0);
+      S3Object[] objects = s3Service.listObjects(bucket, prefix, PATH_DELIMITER);
       Set<Path> prefixes = new TreeSet<Path>();
       for (int i = 0; i < objects.length; i++) {
         prefixes.add(keyToPath(objects[i].getKey()));
@@ -260,12 +304,17 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }    
   }
 
-  private void put(String key, InputStream in, long length) throws IOException {
+  private void put(String key, InputStream in, long length, boolean storeMetadata)
+      throws IOException {
+    
     try {
       S3Object object = new S3Object(key);
       object.setDataInputStream(in);
       object.setContentType("binary/octet-stream");
       object.setContentLength(length);
+      if (storeMetadata) {
+        object.addAllMetadata(METADATA);
+      }
       s3Service.putObject(bucket, object);
     } catch (S3ServiceException e) {
       if (e.getCause() instanceof IOException) {
@@ -276,14 +325,14 @@ class Jets3tFileSystemStore implements FileSystemStore {
   }
 
   public void storeINode(Path path, INode inode) throws IOException {
-    put(pathToKey(path), inode.serialize(), inode.getSerializedLength());
+    put(pathToKey(path), inode.serialize(), inode.getSerializedLength(), true);
   }
 
   public void storeBlock(Block block, File file) throws IOException {
     BufferedInputStream in = null;
     try {
       in = new BufferedInputStream(new FileInputStream(file));
-      put(blockToKey(block), in, block.getLength());
+      put(blockToKey(block), in, block.getLength(), false);
     } finally {
       closeQuietly(in);
     }    
@@ -303,35 +352,13 @@ class Jets3tFileSystemStore implements FileSystemStore {
     if (!path.isAbsolute()) {
       throw new IllegalArgumentException("Path must be absolute: " + path);
     }
-    return urlEncode(path.toUri().getPath());
+    return path.toUri().getPath();
   }
 
   private Path keyToPath(String key) {
-    return new Path(urlDecode(key));
+    return new Path(key);
   }
   
-  private static String urlEncode(String s) {
-    try {
-      return URLEncoder.encode(s, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      // Should never happen since every implementation of the Java Platform
-      // is required to support UTF-8.
-      // See http://java.sun.com/j2se/1.5.0/docs/api/java/nio/charset/Charset.html
-      throw new IllegalStateException(e);
-    }
-  }
-  
-  private static String urlDecode(String s) {
-    try {
-      return URLDecoder.decode(s, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      // Should never happen since every implementation of the Java Platform
-      // is required to support UTF-8.
-      // See http://java.sun.com/j2se/1.5.0/docs/api/java/nio/charset/Charset.html
-      throw new IllegalStateException(e);
-    }
-  }
-
   private String blockToKey(long blockId) {
     return BLOCK_PREFIX + blockId;
   }

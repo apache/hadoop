@@ -300,6 +300,12 @@ Trunk (unreleased changes)
 89. HADOOP-1247.  Add support to contrib/streaming for aggregate
     package, formerly called Abacus.  (Runping Qi via cutting)
 
+90. HADOOP-1061.  Fix bug in listing files in the S3 filesystem.
+    NOTE: this change is not backwards compatible!  You should use the 
+    MigrationTool supplied to migrate existing S3 filesystem data to 
+    the new format.  Please backup your data first before upgrading 
+    (using 'hadoop distcp' for example).  (tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

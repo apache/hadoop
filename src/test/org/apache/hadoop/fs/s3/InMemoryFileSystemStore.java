@@ -33,6 +33,10 @@ class InMemoryFileSystemStore implements FileSystemStore {
   public void initialize(URI uri, Configuration conf) {
     this.conf = conf;
   }
+  
+  public String getVersion() throws IOException {
+    return "0";
+  }
 
   public void deleteINode(Path path) throws IOException {
     inodes.remove(path);

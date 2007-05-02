@@ -14,6 +14,7 @@ import org.apache.hadoop.fs.Path;
 public interface FileSystemStore {
   
   void initialize(URI uri, Configuration conf) throws IOException;
+  String getVersion() throws IOException;
 
   void storeINode(Path path, INode inode) throws IOException;
   void storeBlock(Block block, File file) throws IOException;
