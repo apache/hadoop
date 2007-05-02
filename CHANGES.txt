@@ -312,6 +312,10 @@ Trunk (unreleased changes)
 92. HADOOP-1308.  Use generics to restrict types when classes are
     passed as parameters to JobConf methods. (Michael Bieniosek via cutting)
 
+93. HADOOP-1312.  Fix a ConcurrentModificationException in NameNode
+    that killed the heartbeat monitoring thread.
+    (Dhruba Borthakur via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

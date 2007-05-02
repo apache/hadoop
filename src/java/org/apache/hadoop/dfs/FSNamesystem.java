@@ -1253,29 +1253,33 @@ class FSNamesystem implements FSConstants {
    ******************************************************/
   class LeaseMonitor implements Runnable {
     public void run() {
-      while (fsRunning) {
-        synchronized (FSNamesystem.this) {
-          synchronized (leases) {
-            Lease top;
-            while ((sortedLeases.size() > 0) &&
-                   ((top = sortedLeases.first()) != null)) {
-              if (top.expiredHardLimit()) {
-                top.releaseLocks();
-                leases.remove(top.holder);
-                LOG.info("Removing lease " + top + ", leases remaining: " + sortedLeases.size());
-                if (!sortedLeases.remove(top)) {
-                  LOG.info("Unknown failure trying to remove " + top + " from lease set.");
+      try {
+        while (fsRunning) {
+          synchronized (FSNamesystem.this) {
+            synchronized (leases) {
+              Lease top;
+              while ((sortedLeases.size() > 0) &&
+                     ((top = sortedLeases.first()) != null)) {
+                if (top.expiredHardLimit()) {
+                  top.releaseLocks();
+                  leases.remove(top.holder);
+                  LOG.info("Removing lease " + top + ", leases remaining: " + sortedLeases.size());
+                  if (!sortedLeases.remove(top)) {
+                    LOG.info("Unknown failure trying to remove " + top + " from lease set.");
+                  }
+                } else {
+                  break;
                 }
-              } else {
-                break;
               }
             }
           }
+          try {
+            Thread.sleep(2000);
+          } catch (InterruptedException ie) {
+          }
         }
-        try {
-          Thread.sleep(2000);
-        } catch (InterruptedException ie) {
-        }
+      } catch (Exception e) {
+        FSNamesystem.LOG.error(StringUtils.stringifyException(e));
       }
     }
   }
@@ -1636,7 +1640,11 @@ class FSNamesystem implements FSConstants {
      */
     public void run() {
       while (fsRunning) {
-        heartbeatCheck();
+        try {
+          heartbeatCheck();
+        } catch (Exception e) {
+          FSNamesystem.LOG.error(StringUtils.stringifyException(e));
+        }
         try {
           Thread.sleep(heartbeatRecheckInterval);
         } catch (InterruptedException ie) {
@@ -1809,10 +1817,12 @@ class FSNamesystem implements FSConstants {
    * @author hairong
    */
   private void removeDatanode(DatanodeDescriptor nodeInfo) {
-    if (nodeInfo.isAlive) {
-      updateStats(nodeInfo, false);
-      heartbeats.remove(nodeInfo);
-      nodeInfo.isAlive = false;
+    synchronized (heartbeats) {
+      if (nodeInfo.isAlive) {
+        updateStats(nodeInfo, false);
+        heartbeats.remove(nodeInfo);
+        nodeInfo.isAlive = false;
+      }
     }
 
     for (Iterator<Block> it = nodeInfo.getBlockIterator(); it.hasNext();) {
