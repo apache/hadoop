@@ -337,14 +337,16 @@ public class Configuration {
    * An error is thrown if the returned class does not implement the named
    * interface. 
    */
-  public Class<?> getClass(String propertyName, Class<?> defaultValue,
-                           Class<?> xface) {
-    
+  public <U> Class<? extends U> getClass(String propertyName, Class<? extends U> defaultValue,
+      Class<U> xface) {
     try {
       Class<?> theClass = getClass(propertyName, defaultValue);
       if (theClass != null && !xface.isAssignableFrom(theClass))
         throw new RuntimeException(theClass+" not "+xface.getName());
-      return theClass;
+      else if (theClass != null)
+        return theClass.asSubclass(xface);
+      else
+        return null;
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

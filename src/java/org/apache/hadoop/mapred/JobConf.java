@@ -270,7 +270,7 @@ public class JobConf extends Configuration {
                                                              InputFormat.class),
                                                     this);
   }
-  public void setInputFormat(Class theClass) {
+  public void setInputFormat(Class<? extends InputFormat> theClass) {
     setClass("mapred.input.format.class", theClass, InputFormat.class);
   }
   public OutputFormat getOutputFormat() {
@@ -279,7 +279,7 @@ public class JobConf extends Configuration {
                                                               OutputFormat.class),
                                                      this);
   }
-  public void setOutputFormat(Class theClass) {
+  public void setOutputFormat(Class<? extends OutputFormat> theClass) {
     setClass("mapred.output.format.class", theClass, OutputFormat.class);
   }
 
@@ -343,7 +343,7 @@ public class JobConf extends Configuration {
    * @param codecClass the CompressionCodec class that will compress the 
    *                   map outputs
    */
-  public void setMapOutputCompressorClass(Class codecClass) {
+  public void setMapOutputCompressorClass(Class<? extends CompressionCodec> codecClass) {
     setCompressMapOutput(true);
     setClass("mapred.output.compression.codec", codecClass, 
              CompressionCodec.class);
@@ -356,13 +356,13 @@ public class JobConf extends Configuration {
    *   map outputs
    * @throws IllegalArgumentException if the class was specified, but not found
    */
-  public Class getMapOutputCompressorClass(Class defaultValue) {
+  public Class<? extends CompressionCodec> getMapOutputCompressorClass(Class<? extends CompressionCodec> defaultValue) {
     String name = get("mapred.output.compression.codec");
     if (name == null) {
       return defaultValue;
     } else {
       try {
-        return getClassByName(name);
+        return getClassByName(name).asSubclass(CompressionCodec.class);
       } catch (ClassNotFoundException e) {
         throw new IllegalArgumentException("Compression codec " + name + 
                                            " was not found.", e);
@@ -377,8 +377,8 @@ public class JobConf extends Configuration {
    * 
    * @return map output key class
    */
-  public Class getMapOutputKeyClass() {
-    Class retv = getClass("mapred.mapoutput.key.class", null,
+  public Class<? extends WritableComparable> getMapOutputKeyClass() {
+    Class<? extends WritableComparable> retv = getClass("mapred.mapoutput.key.class", null,
 			  WritableComparable.class);
     if (retv == null) {
       retv = getOutputKeyClass();
@@ -391,7 +391,7 @@ public class JobConf extends Configuration {
    * specify the map output key class to be different than the final output
    * value class
    */
-  public void setMapOutputKeyClass(Class theClass) {
+  public void setMapOutputKeyClass(Class<? extends WritableComparable> theClass) {
     setClass("mapred.mapoutput.key.class", theClass,
              WritableComparable.class);
   }
@@ -403,8 +403,8 @@ public class JobConf extends Configuration {
    * 
    * @return map output value class
    */
-  public Class getMapOutputValueClass() {
-    Class retv = getClass("mapred.mapoutput.value.class", null,
+  public Class<? extends Writable> getMapOutputValueClass() {
+    Class<? extends Writable> retv = getClass("mapred.mapoutput.value.class", null,
 			  Writable.class);
     if (retv == null) {
       retv = getOutputValueClass();
@@ -417,16 +417,16 @@ public class JobConf extends Configuration {
    * specify the map output value class to be different than the final output
    * value class
    */
-  public void setMapOutputValueClass(Class theClass) {
+  public void setMapOutputValueClass(Class<? extends Writable> theClass) {
     setClass("mapred.mapoutput.value.class", theClass, Writable.class);
   }
   
-  public Class getOutputKeyClass() {
+  public Class<? extends WritableComparable> getOutputKeyClass() {
     return getClass("mapred.output.key.class",
                     LongWritable.class, WritableComparable.class);
   }
   
-  public void setOutputKeyClass(Class theClass) {
+  public void setOutputKeyClass(Class<? extends WritableComparable> theClass) {
     setClass("mapred.output.key.class", theClass, WritableComparable.class);
   }
 
@@ -438,54 +438,54 @@ public class JobConf extends Configuration {
     return WritableComparator.get(getMapOutputKeyClass());
   }
 
-  public void setOutputKeyComparatorClass(Class theClass) {
+  public void setOutputKeyComparatorClass(Class<? extends WritableComparator> theClass) {
     setClass("mapred.output.key.comparator.class",
              theClass, WritableComparator.class);
   }
 
-  public Class getOutputValueClass() {
+  public Class<? extends Writable> getOutputValueClass() {
     return getClass("mapred.output.value.class", Text.class, Writable.class);
   }
-  public void setOutputValueClass(Class theClass) {
+  public void setOutputValueClass(Class<? extends Writable> theClass) {
     setClass("mapred.output.value.class", theClass, Writable.class);
   }
 
 
-  public Class getMapperClass() {
+  public Class<? extends Mapper> getMapperClass() {
     return getClass("mapred.mapper.class", IdentityMapper.class, Mapper.class);
   }
-  public void setMapperClass(Class theClass) {
+  public void setMapperClass(Class<? extends Mapper> theClass) {
     setClass("mapred.mapper.class", theClass, Mapper.class);
   }
 
-  public Class getMapRunnerClass() {
+  public Class<? extends MapRunnable> getMapRunnerClass() {
     return getClass("mapred.map.runner.class",
                     MapRunner.class, MapRunnable.class);
   }
-  public void setMapRunnerClass(Class theClass) {
+  public void setMapRunnerClass(Class<? extends MapRunnable> theClass) {
     setClass("mapred.map.runner.class", theClass, MapRunnable.class);
   }
 
-  public Class getPartitionerClass() {
+  public Class<? extends Partitioner> getPartitionerClass() {
     return getClass("mapred.partitioner.class",
                     HashPartitioner.class, Partitioner.class);
   }
-  public void setPartitionerClass(Class theClass) {
+  public void setPartitionerClass(Class<? extends Partitioner> theClass) {
     setClass("mapred.partitioner.class", theClass, Partitioner.class);
   }
 
-  public Class getReducerClass() {
+  public Class<? extends Reducer> getReducerClass() {
     return getClass("mapred.reducer.class",
                     IdentityReducer.class, Reducer.class);
   }
-  public void setReducerClass(Class theClass) {
+  public void setReducerClass(Class<? extends Reducer> theClass) {
     setClass("mapred.reducer.class", theClass, Reducer.class);
   }
 
-  public Class getCombinerClass() {
+  public Class<? extends Reducer> getCombinerClass() {
     return getClass("mapred.combiner.class", null, Reducer.class);
   }
-  public void setCombinerClass(Class theClass) {
+  public void setCombinerClass(Class<? extends Reducer> theClass) {
     setClass("mapred.combiner.class", theClass, Reducer.class);
   }
   
