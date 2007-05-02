@@ -510,7 +510,41 @@ public class JobConf extends Configuration {
 
   public int getNumReduceTasks() { return getInt("mapred.reduce.tasks", 1); }
   public void setNumReduceTasks(int n) { setInt("mapred.reduce.tasks", n); }
+  
+  /** Get the configured number of maximum attempts that will be made to run a
+   *  map task, as specified by the <code>mapred.map.max.attempts</code>
+   *  property. If this property is not already set, the default is 4 attempts
+   * @return the max number of attempts
+   */
+  public int getMaxMapAttempts() {
+    return getInt("mapred.map.max.attempts", 4);
+  }
+  /** Expert: Set the number of maximum attempts that will be made to run a
+   *  map task
+   * @param n the number of attempts
+   *
+   */
+  public void setMaxMapAttempts(int n) {
+    setInt("mapred.map.max.attempts", n);
+  }
 
+  /** Get the configured number of maximum attempts  that will be made to run a
+   *  reduce task, as specified by the <code>mapred.reduce.max.attempts</code>
+   *  property. If this property is not already set, the default is 4 attempts
+   * @return the max number of attempts
+   */
+  public int getMaxReduceAttempts() {
+    return getInt("mapred.reduce.max.attempts", 4);
+  }
+  /** Expert: Set the number of maximum attempts that will be made to run a
+   *  reduce task
+   * @param n the number of attempts
+   *
+   */
+  public void setMaxReduceAttempts(int n) {
+    setInt("mapred.reduce.max.attempts", n);
+  }
+  
   /**
    * Get the user-specified job name. This is only used to identify the 
    * job to the user.

@@ -544,6 +544,24 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.map.max.attempts</name>
+  <value>4</value>
+  <description>Expert: The maximum number of attempts per map task.
+  In other words, framework will try to execute a map task these many number
+  of times before giving up on it.
+  </description>
+</property>
+
+<property>
+  <name>mapred.reduce.max.attempts</name>
+  <value>4</value>
+  <description>Expert: The maximum number of attempts per reduce task.
+  In other words, framework will try to execute a reduce task these many number
+  of times before giving up on it.
+  </description>
+</property>
+
+<property>
   <name>mapred.reduce.parallel.copies</name>
   <value>5</value>
   <description>The default number of parallel transfers run by reduce

@@ -49,7 +49,7 @@ import org.apache.hadoop.util.StringUtils;
 ////////////////////////////////////////////////////////
 class TaskInProgress {
   static final int MAX_TASK_EXECS = 1;
-  static final int MAX_TASK_FAILURES = 4;    
+  int maxTaskAttempts = 4;    
   static final double SPECULATIVE_GAP = 0.2;
   static final long SPECULATIVE_LAG = 60 * 1000;
   private static NumberFormat idFormat = NumberFormat.getInstance();
@@ -125,6 +125,7 @@ class TaskInProgress {
     this.job = job;
     this.conf = conf;
     this.partition = partition;
+    setMaxTaskAttempts();
     init(uniqueString);
   }
         
@@ -141,7 +142,18 @@ class TaskInProgress {
     this.jobtracker = jobtracker;
     this.job = job;
     this.conf = conf;
+    setMaxTaskAttempts();
     init(uniqueString);
+  }
+  /**
+   * Set the max number of attempts before we declare a TIP as "failed"
+   */
+  private void setMaxTaskAttempts() {
+    if (isMapTask()) {
+      this.maxTaskAttempts = conf.getMaxMapAttempts();
+    } else {
+      this.maxTaskAttempts = conf.getMaxReduceAttempts();
+    }
   }
 
   /**
@@ -430,7 +442,7 @@ class TaskInProgress {
       numKilledTasks++;
     }
 
-    if (numTaskFailures >= MAX_TASK_FAILURES) {
+    if (numTaskFailures >= maxTaskAttempts) {
       LOG.info("TaskInProgress " + getTIPId() + " has failed " + numTaskFailures + " times.");
       kill();
     }
@@ -620,11 +632,11 @@ class TaskInProgress {
 
     // Create the 'taskid'; do not count the 'killed' tasks against the job!
     String taskid = null;
-    if (nextTaskId < (MAX_TASK_EXECS + MAX_TASK_FAILURES + numKilledTasks)) {
+    if (nextTaskId < (MAX_TASK_EXECS + maxTaskAttempts + numKilledTasks)) {
       taskid = new String("task_" + taskIdPrefix + "_" + nextTaskId);
       ++nextTaskId;
     } else {
-      LOG.warn("Exceeded limit of " + (MAX_TASK_EXECS + MAX_TASK_FAILURES) +
+      LOG.warn("Exceeded limit of " + (MAX_TASK_EXECS + maxTaskAttempts) +
               " (plus " + numKilledTasks + " killed)"  + 
               " attempts for the tip '" + getTIPId() + "'");
       return null;

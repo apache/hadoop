@@ -306,6 +306,9 @@ Trunk (unreleased changes)
     the new format.  Please backup your data first before upgrading 
     (using 'hadoop distcp' for example).  (tomwhite)
 
+91. HADOOP-1304.  Make configurable the maximum number of task
+    attempts before a job fails.  (Devaraj Das via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
