@@ -594,7 +594,8 @@ class JobInProgress {
     // tasktracker prior to assigning it a new one.
     //
     int taskTrackerFailedTasks = getTrackerTaskFailures(taskTracker);
-    if (taskTrackerFailedTasks >= conf.getMaxTaskFailuresPerTracker()) {
+    if ((flakyTaskTrackers < (clusterSize * CLUSTER_BLACKLIST_PERCENT)) && 
+        taskTrackerFailedTasks >= conf.getMaxTaskFailuresPerTracker()) {
       if (LOG.isDebugEnabled()) {
         String flakyTracker = convertTrackerNameToHostName(taskTracker); 
         LOG.debug("Ignoring the black-listed tasktracker: '" + flakyTracker 

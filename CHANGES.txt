@@ -322,6 +322,9 @@ Trunk (unreleased changes)
 95. HADOOP-485.  Allow a different comparator for grouping keys in
     calls to reduce.  (Tahir Hashmi via cutting)
 
+96. HADOOP-1322.  Fix TaskTracker blacklisting to work correctly in
+    one- and two-node clusters.  (Arun C Murthy via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
