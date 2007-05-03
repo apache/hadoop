@@ -12,7 +12,7 @@ import org.apache.hadoop.io.WritableUtils;
  *
  */
 public class TaskCompletionEvent implements Writable{
-  static public enum Status {FAILED, SUCCEEDED, OBSOLETE};
+  static public enum Status {FAILED, SUCCEEDED, OBSOLETE, TIPFAILED};
     
   private int eventId; 
   private String taskTrackerHttp;

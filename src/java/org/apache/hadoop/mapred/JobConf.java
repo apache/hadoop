@@ -613,6 +613,50 @@ public class JobConf extends Configuration {
   public int getMaxTaskFailuresPerTracker() {
     return getInt("mapred.max.tracker.failures", 4); 
   }
+
+  /**
+   * Get the maximum percentage of map tasks that can fail without 
+   * the job being aborted.
+   * 
+   * @return the maximum percentage of map tasks that can fail without
+   *         the job being aborted
+   */
+  public int getMaxMapTaskFailuresPercent() {
+    return getInt("mapred.max.map.failures.percent", 0);
+  }
+
+  /**
+   * Set the maximum percentage of map tasks that can fail without the job
+   * being aborted.
+   * 
+   * @param percent the maximum percentage of map tasks that can fail without 
+   *                the job being aborted
+   */
+  public void setMaxMapTaskFailuresPercent(int percent) {
+    setInt("mapred.max.map.failures.percent", percent);
+  }
+  
+  /**
+   * Get the maximum percentage of reduce tasks that can fail without 
+   * the job being aborted.
+   * 
+   * @return the maximum percentage of reduce tasks that can fail without
+   *         the job being aborted
+   */
+  public int getMaxReduceTaskFailuresPercent() {
+    return getInt("mapred.max.reduce.failures.percent", 0);
+  }
+  
+  /**
+   * Set the maximum percentage of reduce tasks that can fail without the job
+   * being aborted.
+   * 
+   * @param percent the maximum percentage of reduce tasks that can fail without 
+   *                the job being aborted
+   */
+  public void setMaxReduceTaskFailuresPercent(int percent) {
+    setInt("mapred.max.reduce.failures.percent", percent);
+  }
   
   /** Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing

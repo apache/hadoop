@@ -822,43 +822,39 @@ class ReduceTask extends Task {
       copyProgress.start();
       try {
         // loop until we get all required outputs
-        while (numCopied < numOutputs && mergeThrowable == null) {
+        while (!neededOutputs.isEmpty() && mergeThrowable == null) {
           
-          LOG.info(reduceTask.getTaskId() + " Need " + (numOutputs-numCopied) +
-                   " map output(s)");
+          LOG.info(reduceTask.getTaskId() + " Need " + neededOutputs.size() +
+          " map output(s)");
           
-          if (!neededOutputs.isEmpty()) {
-            LOG.info(reduceTask.getTaskId() + " Need " + neededOutputs.size() +
-                     " map output location(s)");
-            try {
-              // Put the hash entries for the failed fetches. Entries here
-              // might be replaced by (mapId) hashkeys from new successful 
-              // Map executions, if the fetch failures were due to lost tasks.
-              // The replacements, if at all, will happen when we query the
-              // tasktracker and put the mapId hashkeys with new 
-              // MapOutputLocations as values
-              knownOutputs.putAll(retryFetches);
-              // The call getSuccessMapEvents will modify fromEventId to a val
-              // that it should be for the next call to getSuccessMapEvents
-              List <MapOutputLocation> locs = getSuccessMapEvents(fromEventId);
-              
-              // put discovered them on the known list
-              for (int i=0; i < locs.size(); i++) {
-                knownOutputs.put(new Integer(locs.get(i).getMapId()), 
-                                 locs.get(i));
-              }
-              LOG.info(reduceTask.getTaskId() +
-                       " Got " + locs.size() + 
-                       " new map outputs from tasktracker and " + retryFetches.size()
-                       + " map outputs from previous failures");
-              // clear the "failed" fetches hashmap
-              retryFetches.clear();
+          try {
+            // Put the hash entries for the failed fetches. Entries here
+            // might be replaced by (mapId) hashkeys from new successful 
+            // Map executions, if the fetch failures were due to lost tasks.
+            // The replacements, if at all, will happen when we query the
+            // tasktracker and put the mapId hashkeys with new 
+            // MapOutputLocations as values
+            knownOutputs.putAll(retryFetches);
+            // The call getsMapCompletionEvents will modify fromEventId to a val
+            // that it should be for the next call to getSuccessMapEvents
+            List <MapOutputLocation> locs = getMapCompletionEvents(fromEventId);
+
+            // put discovered them on the known list
+            for (int i=0; i < locs.size(); i++) {
+              knownOutputs.put(new Integer(locs.get(i).getMapId()), 
+                      locs.get(i));
             }
-            catch (IOException ie) {
-              LOG.warn(reduceTask.getTaskId() +
-                       " Problem locating map outputs: " +
-                       StringUtils.stringifyException(ie));
-            }
+            LOG.info(reduceTask.getTaskId() +
+                    " Got " + locs.size() + 
+                    " new map outputs from tasktracker and " + retryFetches.size()
+                    + " map outputs from previous failures");
+            // clear the "failed" fetches hashmap
+            retryFetches.clear();
+          }
+          catch (IOException ie) {
+            LOG.warn(reduceTask.getTaskId() +
+                    " Problem locating map outputs: " +
+                    StringUtils.stringifyException(ie));
           }
           
           // now walk through the cache and schedule what we can
@@ -1009,7 +1005,7 @@ class ReduceTask extends Task {
             if (inMemClosedFiles.length == 0) {
               LOG.info(reduceTask.getTaskId() + "Nothing to merge from " + 
                        inMemFileSys.getUri());
-              return numCopied == numOutputs;
+              return neededOutputs.isEmpty();
             }
             //name this output file same as the name of the first file that is 
             //there in the current list of inmem files (this is guaranteed to be
@@ -1047,7 +1043,7 @@ class ReduceTask extends Task {
             return false;
           }
         }
-        return mergeThrowable == null && numCopied == numOutputs;
+        return mergeThrowable == null && neededOutputs.isEmpty();
       } finally {
         inMemFileSys.close();
         copyProgress.interrupt();
@@ -1077,7 +1073,7 @@ class ReduceTask extends Task {
      * @return a set of locations to copy outputs from
      * @throws IOException
      */  
-    private List <MapOutputLocation> getSuccessMapEvents(IntWritable fromEventId)
+    private List <MapOutputLocation> getMapCompletionEvents(IntWritable fromEventId)
       throws IOException {
       
       long currentTime = System.currentTimeMillis();    
@@ -1097,14 +1093,17 @@ class ReduceTask extends Task {
       
       List <MapOutputLocation> mapOutputsList = 
         new ArrayList<MapOutputLocation>();
-      for (int i = 0; i < t.length; i++) {
-        if (t[i].getTaskStatus() == TaskCompletionEvent.Status.SUCCEEDED) {
-          URI u = URI.create(t[i].getTaskTrackerHttp());
+      for (TaskCompletionEvent event : t) {
+        if (event.getTaskStatus() == TaskCompletionEvent.Status.SUCCEEDED) {
+          URI u = URI.create(event.getTaskTrackerHttp());
           String host = u.getHost();
           int port = u.getPort();
-          String taskId = t[i].getTaskId();
-          int mId = t[i].idWithinJob();
+          String taskId = event.getTaskId();
+          int mId = event.idWithinJob();
           mapOutputsList.add(new MapOutputLocation(taskId, mId, host, port));
+        } else if (event.getTaskStatus() == TaskCompletionEvent.Status.TIPFAILED) {
+          neededOutputs.remove(event.idWithinJob());
+          LOG.info("Ignoring output of failed map: '" + event.getTaskId() + "'");
         }
       }
     

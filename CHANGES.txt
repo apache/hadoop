@@ -325,6 +325,10 @@ Trunk (unreleased changes)
 96. HADOOP-1322.  Fix TaskTracker blacklisting to work correctly in
     one- and two-node clusters.  (Arun C Murthy via cutting)
 
+97. HADOOP-1144.  Permit one to specify a maximum percentage of tasks
+    that can fail before a job is aborted.  The default is zero.
+    (Arun C Murthy via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

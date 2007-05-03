@@ -160,7 +160,7 @@
     <%
     Counters mapCounters = job.getMapCounters();
     Counters reduceCounters = job.getReduceCounters();
-    Counters totalCounters = Counters.sum(mapCounters,reduceCounters);
+    Counters totalCounters = job.getCounters();
     
     for (String groupName : totalCounters.getGroupNames()) {
       Counters.Group totalGroup = totalCounters.getGroup(groupName);
