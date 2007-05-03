@@ -41,7 +41,7 @@ public class TrApp
     // test that some JobConf properties are exposed as expected     
     // Note the dots translated to underscore: 
     // property names have been escaped in PipeMapRed.safeEnvVarName()
-    expect("mapred_input_format_class", "org.apache.hadoop.mapred.KeyValueTextInputFormat");
+    expect("mapred_input_format_class", "org.apache.hadoop.mapred.TextInputFormat");
     expect("mapred_job_tracker", "local");
     //expect("mapred_local_dir", "build/test/mapred/local");
     expectDefined("mapred_local_dir");

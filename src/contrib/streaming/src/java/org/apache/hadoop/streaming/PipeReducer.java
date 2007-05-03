@@ -57,10 +57,6 @@ public class PipeReducer extends PipeMapRed implements Reducer {
     return (argv != null) && !StreamJob.REDUCE_NONE.equals(argv);
   }
 
-  String getKeyColPropName() {
-    return "reduceKeyCols";
-  }
-
   public void reduce(WritableComparable key, Iterator values, OutputCollector output,
                      Reporter reporter) throws IOException {
 

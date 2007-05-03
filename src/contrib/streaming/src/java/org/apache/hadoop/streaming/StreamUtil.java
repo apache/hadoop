@@ -453,20 +453,6 @@ public class StreamUtil {
     return res;
   }
 
-  static boolean getUseMapSideEffect(JobConf job) {
-    String reduce = job.get("stream.reduce.streamprocessor");
-    if (reduce == null) {
-      return false;
-    }
-    try {
-      reduce = URLDecoder.decode(reduce, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      System.err.println("stream.reduce.streamprocessor in jobconf not found");
-      return false;
-    }
-    return StreamJob.REDUCE_NONE.equals(reduce);
-  }
-
   public static void touch(File file) throws IOException {
     file = file.getAbsoluteFile();
     FileOutputStream out = new FileOutputStream(file);

@@ -19,10 +19,8 @@
 package org.apache.hadoop.streaming;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PushbackInputStream;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.LineRecordReader;

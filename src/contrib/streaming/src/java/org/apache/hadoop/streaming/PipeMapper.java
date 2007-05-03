@@ -25,8 +25,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.util.StringUtils;
 
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 
@@ -36,6 +38,8 @@ import org.apache.hadoop.io.Writable;
  */
 public class PipeMapper extends PipeMapRed implements Mapper {
 
+  private boolean ignoreKey = false;
+  
   String getPipeCommand(JobConf job) {
     String str = job.get("stream.map.streamprocessor");
     if (str == null) {
@@ -50,16 +54,14 @@ public class PipeMapper extends PipeMapRed implements Mapper {
     }
   }
 
-  String getKeyColPropName() {
-    return "mapKeyCols";
-  }
-
-  boolean getUseSideEffect() {
-    return StreamUtil.getUseMapSideEffect(job_);
-  }
-
   boolean getDoPipe() {
     return true;
+  }
+  
+  public void configure(JobConf job) {
+    super.configure(job);
+    String inputFormatClassName = job.getClass("mapred.input.format.class", TextInputFormat.class).getCanonicalName();
+    this.ignoreKey = inputFormatClassName.equals(TextInputFormat.class.getCanonicalName());
   }
 
   // Do NOT declare default constructor
@@ -86,7 +88,7 @@ public class PipeMapper extends PipeMapRed implements Mapper {
 
       // 2/4 Hadoop to Tool
       if (numExceptions_ == 0) {
-        if (optUseKey_) {
+        if (!this.ignoreKey) {
           write(key);
           clientOut_.write('\t');
         }

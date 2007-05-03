@@ -19,8 +19,6 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
-import java.net.Socket;
-import java.net.URI;
 import java.nio.charset.CharacterCodingException;
 import java.io.IOException;
 import java.util.Date;
@@ -29,14 +27,11 @@ import java.util.Iterator;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Properties;
-import java.util.regex.*;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.PhasedFileSystem;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.util.StringUtils;
@@ -45,7 +40,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 
 /** Shared functionality for PipeMapper, PipeReducer.
@@ -60,59 +54,11 @@ public abstract class PipeMapRed {
    */
   abstract String getPipeCommand(JobConf job);
 
-  /*
-   */
-  abstract String getKeyColPropName();
-
   abstract char getFieldSeparator();
   
   abstract int getNumOfKeyFields();
-  
-  /** Write output as side-effect files rather than as map outputs.
-      This is useful to do "Map" tasks rather than "MapReduce" tasks. */
-  boolean getUseSideEffect() {
-    return false;
-  }
 
   abstract boolean getDoPipe();
-
-  /**
-   * @returns how many TABS before the end of the key part
-   * usually: 1 or "ALL"
-   * used for tool output of both Map and Reduce
-   * configured via tool's argv: splitKeyVal=ALL or 1..
-   * although it is interpreted here, not by tool
-   */
-  int getKeyColsFromPipeCommand(String cmd) {
-    String key = getKeyColPropName();
-    Pattern kcPat = Pattern.compile(".*" + key + "=([^\\s]*).*");
-    Matcher match = kcPat.matcher(cmd);
-    String kc;
-    if (!match.matches()) {
-      kc = null;
-    } else {
-      kc = match.group(1);
-    }
-
-    int cols;
-    if (kc == null) {
-      // default value is 1 and the Stream applications could instead
-      // add/remove the \t separator on lines to get the same effect as value 0, 1, ALL
-      cols = 1;
-    } else if (kc.equals("ALL")) {
-      cols = ALL_COLS;
-    } else {
-      try {
-        cols = Integer.parseInt(kc);
-      } catch (NumberFormatException nf) {
-        cols = Integer.MAX_VALUE;
-      }
-    }
-
-    System.out.println("getKeyColsFromPipeCommand:" + key + " parse:" + cols + " from cmd=" + cmd);
-
-    return cols;
-  }
 
   final static int OUTSIDE = 1;
   final static int SINGLEQ = 2;
@@ -164,54 +110,15 @@ public abstract class PipeMapRed {
     return (String[]) argList.toArray(new String[0]);
   }
 
-  OutputStream getURIOutputStream(URI uri, boolean allowSocket) throws IOException {
-    final String SOCKET = "socket";
-    if (uri.getScheme().equals(SOCKET)) {
-      if (!allowSocket) {
-        throw new IOException(SOCKET + " not allowed on outputstream " + uri);
-      }
-      final Socket sock = new Socket(uri.getHost(), uri.getPort());
-      OutputStream out = new FilterOutputStream(sock.getOutputStream()) {
-          public void close() throws IOException {
-            sock.close();
-            super.close();
-          }
-        };
-      return out;
-    } else {
-      // a FSDataOutputStreamm, localFS or HDFS.
-      // localFS file may be set up as a FIFO.
-      return sideFs_.create(new Path(uri.getSchemeSpecificPart()));
-    }
-  }
-
-  String getSideEffectFileName() {
-    FileSplit split = StreamUtil.getCurrentSplit(job_);
-    return new String(split.getPath().getName() + "-" + split.getStart() + 
-                      "-" + split.getLength());
-  }
-
   public void configure(JobConf job) {
     try {
       String argv = getPipeCommand(job);
-
-      keyCols_ = getKeyColsFromPipeCommand(argv);
-
-      debug_ = (job.get("stream.debug") != null);
-      if (debug_) {
-        System.out.println("PipeMapRed: stream.debug=true");
-      }
 
       joinDelay_ = job.getLong("stream.joindelay.milli", 0);
 
       job_ = job;
       fs_ = FileSystem.get(job_);
-      if (job_.getBoolean("stream.sideoutput.localfs", false)) {
-        //sideFs_ = new LocalFileSystem(job_);
-        sideFs_ = FileSystem.getLocal(job_);
-      } else {
-        sideFs_ = fs_;
-      }
+
       String mapOutputFieldSeparator = job_.get("stream.map.output.field.separator", "\t");
       String reduceOutputFieldSeparator = job_.get("stream.reduce.output.field.separator", "\t");
       this.mapOutputFieldSeparator = mapOutputFieldSeparator.charAt(0);
@@ -219,22 +126,12 @@ public abstract class PipeMapRed {
       this.numOfMapOutputKeyFields = job_.getInt("stream.num.map.output.key.fields", 1);
       this.numOfReduceOutputKeyFields = job_.getInt("stream.num.reduce.output.key.fields", 1);
       
-      if (debug_) {
-        System.out.println("kind   :" + this.getClass());
-        System.out.println("split  :" + StreamUtil.getCurrentSplit(job_));
-        System.out.println("fs     :" + fs_.toString());
-        System.out.println("sideFs :" + sideFs_.toString());
-      }
 
       doPipe_ = getDoPipe();
       if (!doPipe_) return;
 
       setStreamJobDetails(job);
-      setStreamProperties();
-
-      if (debugFailEarly_) {
-        throw new RuntimeException("debugFailEarly_");
-      }
+      
       String[] argvSplit = splitArgs(argv);
       String prog = argvSplit[0];
       File currentDir = new File(".").getAbsoluteFile();
@@ -243,39 +140,6 @@ public abstract class PipeMapRed {
         // we don't own it. Hope it is executable
       } else {
         FileUtil.chmod(new File(jobCacheDir, prog).toString(), "a+x");
-      }
-
-      if (job_.getInputValueClass().equals(BytesWritable.class)) {
-        // TODO expose as separate config:
-        // job or semistandard inputformat property
-        optUseKey_ = false;
-      }
-
-      optSideEffect_ = getUseSideEffect();
-
-      if (optSideEffect_) {
-        // during work: use a completely unique filename to avoid HDFS namespace conflicts
-        // after work: rename to a filename that depends only on the workload (the FileSplit)
-        //   it's a friendly name and in case of reexecution it will clobber. 
-        // reexecution can be due to: other job, failed task and speculative task
-        // See StreamJob.setOutputSpec(): if reducerNone_ aka optSideEffect then: 
-        // client has renamed outputPath and saved the argv's original output path as:
-        if (useSingleSideOutputURI_) {
-          finalOutputURI = new URI(sideOutputURI_);
-          sideEffectPathFinal_ = null; // in-place, no renaming to final
-        } else {
-          sideFs_ = new PhasedFileSystem(sideFs_, job);
-          String sideOutputPath = job_.get("stream.sideoutput.dir"); // was: job_.getOutputPath() 
-          String fileName = getSideEffectFileName(); // see HADOOP-444 for rationale
-          sideEffectPathFinal_ = new Path(sideOutputPath, fileName);
-          finalOutputURI = new URI(sideEffectPathFinal_.toString()); // implicit dfs: 
-        }
-        // apply default scheme
-        if (finalOutputURI.getScheme() == null) {
-          finalOutputURI = new URI("file", finalOutputURI.getSchemeSpecificPart(), null);
-        }
-        boolean allowSocket = useSingleSideOutputURI_;
-        sideEffectOut_ = getURIOutputStream(finalOutputURI, allowSocket);
       }
 
       // 
@@ -295,8 +159,6 @@ public abstract class PipeMapRed {
         f = null;
       }
       logprintln("PipeMapRed exec " + Arrays.asList(argvSplit));
-      logprintln("sideEffectURI_=" + finalOutputURI);
-
       Environment childEnv = (Environment) StreamUtil.env().clone();
       addJobConfToEnvironment(job_, childEnv);
       addEnvironment(childEnv, job_.get("stream.addenvironment"));
@@ -327,34 +189,6 @@ public abstract class PipeMapRed {
       logprintln("JobConf set minRecWrittenToEnableSkip_ =" + minRecWrittenToEnableSkip_);
     }
     taskId_ = StreamUtil.getTaskInfo(job_);
-    debugFailEarly_ = isDebugFail("early");
-    debugFailDuring_ = isDebugFail("during");
-    debugFailLate_ = isDebugFail("late");
-
-    sideOutputURI_ = job_.get("stream.sideoutput.uri");
-    useSingleSideOutputURI_ = (sideOutputURI_ != null);
-  }
-
-  boolean isDebugFail(String kind) {
-    String execidlist = job_.get("stream.debugfail.reexec." + kind);
-    if (execidlist == null) {
-      return false;
-    }
-    String[] e = execidlist.split(",");
-    for (int i = 0; i < e.length; i++) {
-      int ei = Integer.parseInt(e[i]);
-      if (taskId_.execid == ei) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  void setStreamProperties() {
-    String s = System.getProperty("stream.port");
-    if (s != null) {
-      reportPortPlusOne_ = Integer.parseInt(s);
-    }
   }
 
   void logStackTrace(Exception e) {
@@ -442,7 +276,6 @@ public abstract class PipeMapRed {
     if (log_ != null) {
       StreamUtil.exec("/bin/rm " + LOGNAME, log_);
     }
-    // TODO socket-based aggregator (in JobTrackerInfoServer)
   }
 
   void startOutputThreads(OutputCollector output, Reporter reporter) {
@@ -474,14 +307,7 @@ public abstract class PipeMapRed {
    * @throws IOException
    */
   void splitKeyVal(byte[] line, Text key, Text val) throws IOException {
-    int pos = -1;
-    if (keyCols_ != ALL_COLS) {
-      pos = UTF8ByteArrayUtils.findNthByte(line, (byte)this.getFieldSeparator(), this.getNumOfKeyFields());
-    }
-    LOG.info("FieldSeparator: " + this.getFieldSeparator());
-    LOG.info("NumOfKeyFields: " + this.getNumOfKeyFields());
-    LOG.info("Line: " + new String (line));
-    LOG.info("Pos: " + pos);
+    int pos = UTF8ByteArrayUtils.findNthByte(line, (byte)this.getFieldSeparator(), this.getNumOfKeyFields());
     try {
       if (pos == -1) {
         key.set(line);
@@ -508,15 +334,10 @@ public abstract class PipeMapRed {
         Text val = new Text();
         // 3/4 Tool to Hadoop
         while ((answer = UTF8ByteArrayUtils.readLine((InputStream) clientIn_)) != null) {
-          // 4/4 Hadoop out
-          if (optSideEffect_) {
-            sideEffectOut_.write(answer);
-            sideEffectOut_.write('\n');
-            sideEffectOut_.flush();
-          } else {
-            splitKeyVal(answer, key, val);
-            output.collect(key, val);
-          }
+          
+          splitKeyVal(answer, key, val);
+          output.collect(key, val);
+          
           numRecWritten_++;
           long now = System.currentTimeMillis();
           if (now-lastStdoutReport > reporterOutDelay_) {
@@ -584,18 +405,6 @@ public abstract class PipeMapRed {
       } catch (IOException io) {
       }
       waitOutputThreads();
-      try {
-        if (optSideEffect_) {
-          logprintln("closing " + finalOutputURI);
-          if (sideEffectOut_ != null) sideEffectOut_.close();
-          logprintln("closed  " + finalOutputURI);
-          if (!useSingleSideOutputURI_) {
-            ((PhasedFileSystem)sideFs_).commit(); 
-          }
-        }
-      } catch (IOException io) {
-        io.printStackTrace();
-      }
       if (sim != null) sim.destroy();
     } catch (RuntimeException e) {
       logStackTrace(e);
@@ -692,18 +501,11 @@ public abstract class PipeMapRed {
   
   long minRecWrittenToEnableSkip_ = Long.MAX_VALUE;
 
-  int keyCols_;
-  final static int ALL_COLS = Integer.MAX_VALUE;
-
   long reporterOutDelay_ = 10*1000L; 
   long reporterErrDelay_ = 10*1000L; 
   long joinDelay_;
   JobConf job_;
   FileSystem fs_;
-  FileSystem sideFs_;
-
-  // generic MapRed parameters passed on by hadoopStreaming
-  int reportPortPlusOne_;
 
   boolean doPipe_;
   boolean debug_;
@@ -723,17 +525,6 @@ public abstract class PipeMapRed {
   String mapredKey_;
   int numExceptions_;
   StreamUtil.TaskId taskId_;
-
-  boolean optUseKey_ = true;
-
-  private boolean optSideEffect_;
-  private URI finalOutputURI;
-  private Path sideEffectPathFinal_;
-
-  private boolean useSingleSideOutputURI_;
-  private String sideOutputURI_;
-
-  private OutputStream sideEffectOut_;
 
   protected volatile Throwable outerrThreadsThrowable;
 

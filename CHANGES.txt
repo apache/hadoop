@@ -316,6 +316,9 @@ Trunk (unreleased changes)
     that killed the heartbeat monitoring thread.
     (Dhruba Borthakur via cutting)
 
+94. HADOOP-1315.  Clean up contrib/streaming, switching it to use core
+    classes more and removing unused code.  (Runping Qi via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
