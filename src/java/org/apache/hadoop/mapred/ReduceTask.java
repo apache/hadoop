@@ -295,8 +295,8 @@ class ReduceTask extends Task {
 
     Path tempDir = job.getLocalPath(getTaskId()); 
 
-    WritableComparator comparator = job.getOutputKeyComparator();
-   
+    WritableComparator comparator = job.getOutputValueGroupingComparator();
+    
     SequenceFile.Sorter.RawKeyValueIterator rIter;
  
     try {

@@ -319,6 +319,9 @@ Trunk (unreleased changes)
 94. HADOOP-1315.  Clean up contrib/streaming, switching it to use core
     classes more and removing unused code.  (Runping Qi via cutting)
 
+95. HADOOP-485.  Allow a different comparator for grouping keys in
+    calls to reduce.  (Tahir Hashmi via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

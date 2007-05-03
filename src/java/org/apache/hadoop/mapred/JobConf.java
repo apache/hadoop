@@ -443,6 +443,40 @@ public class JobConf extends Configuration {
              theClass, WritableComparator.class);
   }
 
+  /** Get the user defined comparator for grouping values.
+   * 
+   * This call is used to get the comparator for grouping values by key.
+   * @see #setOutputValueGroupingComparator(Class) for details.
+   *  
+   * @return Comparator set by the user for grouping values.
+   */
+  public WritableComparator getOutputValueGroupingComparator() {
+    Class theClass = getClass("mapred.output.value.groupfn.class", null,
+                              WritableComparator.class);
+    if (theClass == null) {
+      return getOutputKeyComparator();
+    }
+    
+    return (WritableComparator)ReflectionUtils.newInstance(theClass, this);
+  }
+
+  /** Set the user defined comparator for grouping values.
+   * 
+   * For key-value pairs (K1,V1) and (K2,V2), the values are passed
+   * in a single call to the map function if K1 and K2 compare as equal.
+   * 
+   * This comparator should be provided if the equivalence rules for keys
+   * for sorting the intermediates are different from those for grouping 
+   * values.
+   * 
+   * @param theClass The Comparator class to be used for grouping. It should
+   * extend WritableComparator.
+   */
+  public void setOutputValueGroupingComparator(Class theClass) {
+    setClass("mapred.output.value.groupfn.class",
+             theClass, WritableComparator.class);
+  }
+
   public Class<? extends Writable> getOutputValueClass() {
     return getClass("mapred.output.value.class", Text.class, Writable.class);
   }
