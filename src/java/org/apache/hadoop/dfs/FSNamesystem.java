@@ -2859,7 +2859,7 @@ class FSNamesystem implements FSConstants {
       index = r.nextInt(size);
       for(int i=0; i<size; i++) {
         DatanodeDescriptor d = getDatanodeByIndex(index);
-        if (d != null && !d.isDecommissioned() && isDatanodeDead(d) &&
+        if (d != null && !d.isDecommissioned() && !isDatanodeDead(d) &&
             !d.isDecommissionInProgress()) {
           return d.getHost() + ":" + d.getInfoPort();
         }
