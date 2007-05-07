@@ -215,14 +215,8 @@ public class TestMapRed extends TestCase {
   }
 
   private static class MyMap implements Mapper {
-    private JobConf conf;
-    private boolean compress;
-    private String taskId;
       
     public void configure(JobConf conf) {
-      this.conf = conf;
-      compress = conf.getBoolean("mapred.compress.map.output", false);
-      taskId = conf.get("mapred.task.id");
     }
       
     public void map(WritableComparable key, Writable value,
@@ -307,7 +301,9 @@ public class TestMapRed extends TestCase {
       f.writeBytes("Hadoop is fun\n");
       f.writeBytes("Is this done, yet?\n");
       f.close();
-      JobClient.runJob(conf);
+      RunningJob rj = JobClient.runJob(conf);
+      assertTrue("job was complete", rj.isComplete());
+      assertTrue("job was successful", rj.isSuccessful());
       Path output = new Path(outDir,
                              ReduceTask.getOutputName(0));
       assertTrue("reduce output exists " + output, fs.exists(output));

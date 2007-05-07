@@ -524,7 +524,7 @@ public class JobClient extends ToolBase implements MRConstants  {
     
   /** Utility that submits a job, then polls for progress until the job is
    * complete. */
-  public static void runJob(JobConf job) throws IOException {
+  public static RunningJob runJob(JobConf job) throws IOException {
     JobClient jc = new JobClient(job);
     boolean error = true;
     RunningJob running = null;
@@ -612,7 +612,7 @@ public class JobClient extends ToolBase implements MRConstants  {
       }
       jc.close();
     }
-      
+    return running;
   }
 
   private static void displayTaskLogs(String taskId, String baseUrl)
