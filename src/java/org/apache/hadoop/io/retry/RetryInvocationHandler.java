@@ -67,7 +67,7 @@ class RetryInvocationHandler implements InvocationHandler {
           }
           return null;
         }
-        LOG.warn("Exception while invoking " + method.getName()
+        LOG.info("Exception while invoking " + method.getName()
                  + " of " + implementation.getClass() + ". Retrying."
                  + StringUtils.stringifyException(e));
       }
@@ -76,6 +76,9 @@ class RetryInvocationHandler implements InvocationHandler {
 
   private Object invokeMethod(Method method, Object[] args) throws Throwable {
     try {
+      if (!method.isAccessible()) {
+        method.setAccessible(true);
+      }
       return method.invoke(implementation, args);
     } catch (InvocationTargetException e) {
       throw e.getCause();

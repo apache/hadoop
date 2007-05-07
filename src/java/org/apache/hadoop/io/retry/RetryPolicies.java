@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.retry;
 
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -82,6 +83,10 @@ public class RetryPolicies {
     return new RetryUpToMaximumCountWithProportionalSleep(maxRetries, sleepTime, timeUnit);
   }
   
+  public static final RetryPolicy exponentialBackoffRetry(
+      int maxRetries, long sleepTime, TimeUnit timeUnit) {
+    return new ExponentialBackoffRetry(maxRetries, sleepTime, timeUnit);
+  }
   /**
    * <p>
    * Set a default policy with some explicit handlers for specific exceptions.
@@ -121,7 +126,7 @@ public class RetryPolicies {
     }
 
     public boolean shouldRetry(Exception e, int retries) throws Exception {
-      if (retries > maxRetries) {
+      if (retries >= maxRetries) {
         throw e;
       }
       try {
@@ -184,5 +189,16 @@ public class RetryPolicies {
     
   }
   
-  
+  static class ExponentialBackoffRetry extends RetryLimited {
+    private Random r = new Random();
+    public ExponentialBackoffRetry(
+        int maxRetries, long sleepTime, TimeUnit timeUnit) {
+      super(maxRetries, sleepTime, timeUnit);
+    }
+    
+    @Override
+    protected long calculateSleepTime(int retries) {
+      return sleepTime*r.nextInt(1<<(retries+1));
+    }
+  }
 }

@@ -332,6 +332,10 @@ Trunk (unreleased changes)
 98. HADOOP-1184.  Fix HDFS decomissioning to complete when the only
     copy of a block is on a decommissioned node. (Dhruba Borthakur via cutting)
 
+99. HADOOP-1263.  Change DFSClient to retry certain namenode calls
+    with a random, exponentially increasing backoff time, to avoid
+    overloading the namenode on, e.g., job start.  (Hairong Kuang via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
