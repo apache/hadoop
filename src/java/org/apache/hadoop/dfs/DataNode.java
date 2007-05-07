@@ -389,8 +389,29 @@ public class DataNode implements FSConstants, Runnable {
       }
     }
   }
-
-  void handleDiskError(String errMsgr) {
+  
+  
+  /* Check if there is no space in disk or the disk is read-only
+   *  when IOException occurs. 
+   * If so, handle the error */
+  private void checkDiskError( IOException e ) throws IOException {
+    if (e.getMessage().startsWith("No space left on device")) {
+      throw new DiskOutOfSpaceException("No space left on device");
+    } else {
+      checkDiskError();
+    }
+  }
+  
+  /* Check if there is no disk space and if so, handle the error*/
+  private void checkDiskError( ) throws IOException {
+    try {
+      data.checkDataDir();
+    } catch(DiskErrorException de) {
+      handleDiskError(de.getMessage());
+    }
+  }
+  
+  private void handleDiskError(String errMsgr) {
     LOG.warn("DataNode is shutting down.\n" + errMsgr);
     try {
       namenode.errorReport(
@@ -494,9 +515,6 @@ public class DataNode implements FSConstants, Runnable {
             }
           }
         } // synchronized
-      } catch(DiskErrorException e) {
-        handleDiskError(e.getLocalizedMessage());
-        return;
       } catch(RemoteException re) {
         String reClass = re.getClassName();
         if (UnregisteredDatanodeException.class.getName().equals(reClass) ||
@@ -536,7 +554,12 @@ public class DataNode implements FSConstants, Runnable {
       // safely garbage-collected.
       //
       Block toDelete[] = ((BlockCommand)cmd).getBlocks();
-      data.invalidate(toDelete);
+      try {
+        data.invalidate(toDelete);
+      } catch(IOException e) {
+        checkDiskError();
+        throw e;
+      }
       myMetrics.removedBlocks(toDelete.length);
       break;
     case DNA_SHUTDOWN:
@@ -804,7 +827,14 @@ public class DataNode implements FSConstants, Runnable {
         //
         // Open local disk out
         //
-        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(data.writeToBlock(b)));
+        OutputStream o;
+        try {
+          o = data.writeToBlock(b);
+        } catch( IOException e ) {
+          checkDiskError( e );
+          throw e;
+        }
+        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(o));
         InetSocketAddress mirrorTarget = null;
         String mirrorNode = null;
         try {
@@ -893,12 +923,8 @@ public class DataNode implements FSConstants, Runnable {
                   out.write(buf, 0, bytesRead);
                   myMetrics.wroteBytes(bytesRead);
                 } catch (IOException iex) {
-                  if (iex.getMessage().startsWith("No space left on device")) {
-                    throw new DiskOutOfSpaceException("No space left on device");
-                  } else {
-                    shutdown();
-                    throw iex;
-                  }
+                  checkDiskError(iex);
+                  throw iex;
                 }
                 len -= bytesRead;
               }
@@ -972,7 +998,7 @@ public class DataNode implements FSConstants, Runnable {
           try {
             out.close();
           } catch (IOException iex) {
-            shutdown();
+            checkDiskError(iex);
             throw iex;
           }
         }
