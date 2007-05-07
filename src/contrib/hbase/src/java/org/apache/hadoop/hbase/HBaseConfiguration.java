@@ -21,5 +21,6 @@ public class HBaseConfiguration extends Configuration {
   public HBaseConfiguration() {
     super();
     addDefaultResource("hbase-default.xml");
+    addDefaultResource("hbase-site.xml");
   }
 }

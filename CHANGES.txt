@@ -336,6 +336,9 @@ Trunk (unreleased changes)
     with a random, exponentially increasing backoff time, to avoid
     overloading the namenode on, e.g., job start.  (Hairong Kuang via cutting)
 
+100. HADOOP-1325.  First complete, functioning version of HBase.
+    (Jim Kellerman via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

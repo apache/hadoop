@@ -42,7 +42,43 @@
     <name>hbase.master.meta.thread.rescanfrequency</name>
     <value>60000</value>
     <description>How long the HMaster sleeps (in milliseconds) between scans of
-    the META table.
+    the root and meta tables.
     </description>
   </property>
+  <property>
+    <name>hbase.master.lease.period</name>
+    <value>30000</value>
+    <description>HMaster server lease period in milliseconds. Default is
+    30 seconds.</description>
+  </property>
+  <property>
+    <name>hbase.server.thread.wakefrequency</name>
+    <value>10000</value>
+    <description>Time to sleep in between searches for work (in milliseconds).
+    Used as sleep interval by service threads such as META scanner and log roller.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.lease.period</name>
+    <value>30000</value>
+    <description>HRegion server lease period in milliseconds. Default is
+    30 seconds.</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.handler.count</name>
+    <value>10</value>
+    <description>Count of RPC Server instances spun up on RegionServers
+    Same property is used by the HMaster for count of master handlers.
+    Default is 10.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.msginterval</name>
+    <value>15000</value>
+    <description>Interval between messages from the RegionServer to HMaster
+    in milliseconds.  Default is 15. Set this value low if you want unit
+    tests to be responsive.
+    </description>
+  </property>
+
 </configuration>

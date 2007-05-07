@@ -30,7 +30,7 @@ import org.apache.hadoop.io.Text;
  * Abstract base class that implements the HScannerInterface.
  * Used by the concrete HMemcacheScanner and HStoreScanners
  ******************************************************************************/
-public abstract class HAbstractScanner implements HScannerInterface {
+public abstract class HAbstractScanner implements HInternalScannerInterface {
 
   // Pattern to determine if a column key is a regex
 
@@ -51,6 +51,7 @@ public abstract class HAbstractScanner implements HScannerInterface {
   // 3. Simple match: compare column family + column key literally
   
   private class ColumnMatcher {
+    private boolean wildCardmatch;
     private MATCH_TYPE matchType;
     private String family;
     private Pattern columnMatcher;
@@ -69,14 +70,17 @@ public abstract class HAbstractScanner implements HScannerInterface {
         if(columnkey == null || columnkey.length() == 0) {
           this.matchType = MATCH_TYPE.FAMILY_ONLY;
           this.family = column.substring(0, colpos);
+          this.wildCardmatch = true;
 
         } else if(isRegexPattern.matcher(columnkey).matches()) {
           this.matchType = MATCH_TYPE.REGEX;
           this.columnMatcher = Pattern.compile(column);
+          this.wildCardmatch = true;
 
         } else {
           this.matchType = MATCH_TYPE.SIMPLE;
           this.col = col;
+          this.wildCardmatch = false;
         }
       } catch(Exception e) {
         throw new IOException("Column: " + column + ": " + e.getMessage());
@@ -99,8 +103,12 @@ public abstract class HAbstractScanner implements HScannerInterface {
         throw new IOException("Invalid match type: " + this.matchType);
       }
     }
+    
+    boolean isWildCardMatch() {
+      return this.wildCardmatch;
+    }
   }
-  
+
   protected TreeMap<Text, Vector<ColumnMatcher>> okCols;        // Holds matchers for each column family 
   
   protected boolean scannerClosed = false;                      // True when scanning is done
@@ -109,14 +117,17 @@ public abstract class HAbstractScanner implements HScannerInterface {
   protected BytesWritable vals[];                               // Values that correspond to those keys
   
   protected long timestamp;                                     // The timestamp to match entries against
+  private boolean wildcardMatch;
+  private boolean multipleMatchers;
   
   protected DataOutputBuffer outbuf = new DataOutputBuffer();
   protected DataInputBuffer inbuf = new DataInputBuffer();
 
   /** Constructor for abstract base class */
   HAbstractScanner(long timestamp, Text[] targetCols) throws IOException {
-    
     this.timestamp = timestamp;
+    this.wildcardMatch = false;
+    this.multipleMatchers = false;
     this.okCols = new TreeMap<Text, Vector<ColumnMatcher>>();
     for(int i = 0; i < targetCols.length; i++) {
       Text family = HStoreKey.extractFamily(targetCols[i]);
@@ -124,7 +135,14 @@ public abstract class HAbstractScanner implements HScannerInterface {
       if(matchers == null) {
         matchers = new Vector<ColumnMatcher>();
       }
-      matchers.add(new ColumnMatcher(targetCols[i]));
+      ColumnMatcher matcher = new ColumnMatcher(targetCols[i]);
+      if(matcher.isWildCardMatch()) {
+        this.wildcardMatch = true;
+      }
+      matchers.add(matcher);
+      if(matchers.size() > 1) {
+        this.multipleMatchers = true;
+      }
       okCols.put(family, matchers);
     }
   }
@@ -170,6 +188,19 @@ public abstract class HAbstractScanner implements HScannerInterface {
   /** Mechanism used to shut down the whole scan */
   public abstract void close() throws IOException;
 
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.hbase.HInternalScannerInterface#isWildcardScanner()
+   */
+  public boolean isWildcardScanner() {
+    return this.wildcardMatch;
+  }
+  
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.hbase.HInternalScannerInterface#isMultipleMatchScanner()
+   */
+  public boolean isMultipleMatchScanner() {
+    return this.multipleMatchers;
+  }
   /**
    * Get the next set of values for this scanner.
    * 
@@ -179,7 +210,7 @@ public abstract class HAbstractScanner implements HScannerInterface {
    * 
    * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.TreeMap)
    */
-  public boolean next(HStoreKey key, TreeMap<Text, byte[]> results)
+  public boolean next(HStoreKey key, TreeMap<Text, BytesWritable> results)
       throws IOException {
  
     // Find the next row label (and timestamp)
@@ -187,7 +218,7 @@ public abstract class HAbstractScanner implements HScannerInterface {
     Text chosenRow = null;
     long chosenTimestamp = -1;
     for(int i = 0; i < keys.length; i++) {
-      while((keys[i] != null)
+      if((keys[i] != null)
           && (columnMatch(i))
           && (keys[i].getTimestamp() <= this.timestamp)
           && ((chosenRow == null)
@@ -210,23 +241,31 @@ public abstract class HAbstractScanner implements HScannerInterface {
 
       for(int i = 0; i < keys.length; i++) {
         // Fetch the data
-        
-        while((keys[i] != null)
-            && (keys[i].getRow().compareTo(chosenRow) == 0)
-            && (keys[i].getTimestamp() == chosenTimestamp)) {
 
-          if(columnMatch(i)) {
-            outbuf.reset();
-            vals[i].write(outbuf);
-            byte byteresults[] = outbuf.getData();
-            inbuf.reset(byteresults, outbuf.getLength());
-            BytesWritable tmpval = new BytesWritable();
-            tmpval.readFields(inbuf);
-            results.put(new Text(keys[i].getColumn()), tmpval.get());
-            insertedItem = true;
+        while((keys[i] != null)
+            && (keys[i].getRow().compareTo(chosenRow) == 0)) {
+
+          // If we are doing a wild card match or there are multiple matchers
+          // per column, we need to scan all the older versions of this row
+          // to pick up the rest of the family members
+          
+          if(!wildcardMatch
+              && !multipleMatchers
+              && (keys[i].getTimestamp() != chosenTimestamp)) {
+            break;
           }
 
-          if (! getNext(i)) {
+          if(columnMatch(i)) {
+              
+            // We only want the first result for any specific family member
+            
+            if(!results.containsKey(keys[i].getColumn())) {
+              results.put(new Text(keys[i].getColumn()), vals[i]);
+              insertedItem = true;
+            }
+          }
+
+          if(!getNext(i)) {
             closeSubScanner(i);
           }
         }

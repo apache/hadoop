@@ -22,22 +22,38 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.log4j.Logger;
 
 /**
  * This class creates a single process HBase cluster for junit testing.
  * One thread is created for each server.
  */
 public class MiniHBaseCluster implements HConstants {
+  private static final Logger LOG =
+    Logger.getLogger(MiniHBaseCluster.class.getName());
   private Configuration conf;
   private MiniDFSCluster cluster;
   private FileSystem fs;
   private Path parentdir;
-  private HMasterRunner master;
-  private Thread masterThread;
+  private HMasterRunner masterRunner;
+  private Thread masterRunnerThread;
   private HRegionServerRunner[] regionServers;
   private Thread[] regionThreads;
   
   public MiniHBaseCluster(Configuration conf, int nRegionNodes) {
+    this(conf, nRegionNodes, true);
+  }
+  
+  /**
+   * Constructor.
+   * @param conf
+   * @param nRegionNodes
+   * @param miniHdfsFilesystem If true, set the hbase mini
+   * cluster atop a mini hdfs cluster.  Otherwise, use the
+   * filesystem configured in <code>conf</code>.
+   */
+  public MiniHBaseCluster(Configuration conf, int nRegionNodes,
+      final boolean miniHdfsFilesystem) {
     this.conf = conf;
 
     try {
@@ -47,21 +63,20 @@ public class MiniHBaseCluster implements HConstants {
               "build/contrib/hbase/test");
 
           String dir = testDir.getAbsolutePath();
-          System.out.println(dir);
+          LOG.info("Setting test.build.data to " + dir);
           System.setProperty("test.build.data", dir);
         }
 
-        // To run using configured filesystem, comment out this
-        // line below that starts up the MiniDFSCluster.
-        this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
+        if (miniHdfsFilesystem) {
+          this.cluster =
+            new MiniDFSCluster(this.conf, 2, true, (String[])null);
+        }
         this.fs = FileSystem.get(conf);
-        this.parentdir =
-          new Path(conf.get(HREGION_DIR, DEFAULT_HREGION_DIR));
+        this.parentdir = new Path(conf.get(HREGION_DIR, DEFAULT_HREGION_DIR));
         fs.mkdirs(parentdir);
 
       } catch(Throwable e) {
-        System.err.println("Mini DFS cluster failed to start");
-        e.printStackTrace();
+        LOG.error("Failed setup of FileSystem", e);
         throw e;
       }
 
@@ -70,28 +85,27 @@ public class MiniHBaseCluster implements HConstants {
       }
       
       // Create the master
-
-      this.master = new HMasterRunner();
-      this.masterThread = new Thread(master, "HMaster");
+      this.masterRunner = new HMasterRunner();
+      this.masterRunnerThread = new Thread(masterRunner, "masterRunner");
 
       // Start up the master
-
-      masterThread.start();
-      while(! master.isCrashed() && ! master.isInitialized()) {
+      LOG.info("Starting HMaster");
+      masterRunnerThread.start();
+      while(! masterRunner.isCrashed() && ! masterRunner.isInitialized()) {
         try {
-          System.err.println("Waiting for HMaster to initialize...");
+          LOG.info("...waiting for HMaster to initialize...");
           Thread.sleep(1000);
-
         } catch(InterruptedException e) {
         }
-        if(master.isCrashed()) {
+        if(masterRunner.isCrashed()) {
           throw new RuntimeException("HMaster crashed");
         }
       }
-
+      LOG.info("HMaster started.");
+      
       // Set the master's port for the HRegionServers
-
-      this.conf.set(MASTER_ADDRESS, master.getHMasterAddress().toString());
+      String address = masterRunner.getHMasterAddress().toString();
+      this.conf.set(MASTER_ADDRESS, address);
 
       // Start the HRegionServers
 
@@ -99,28 +113,26 @@ public class MiniHBaseCluster implements HConstants {
         this.conf.set(REGIONSERVER_ADDRESS, "localhost:0");
       }
       
+      LOG.info("Starting HRegionServers");
       startRegionServers(this.conf, nRegionNodes);
+      LOG.info("HRegionServers running");
 
       // Wait for things to get started
 
-      while(! master.isCrashed() && ! master.isUp()) {
+      while(! masterRunner.isCrashed() && ! masterRunner.isUp()) {
         try {
-          System.err.println("Waiting for Mini HBase cluster to start...");
+          LOG.info("Waiting for Mini HBase cluster to start...");
           Thread.sleep(1000);
-
         } catch(InterruptedException e) {
         }
-        if(master.isCrashed()) {
+        if(masterRunner.isCrashed()) {
           throw new RuntimeException("HMaster crashed");
         }
       }
       
     } catch(Throwable e) {
-
       // Delete all DFS files
-
       deleteFile(new File(System.getProperty("test.build.data"), "dfs"));
-
       throw new RuntimeException("Mini HBase cluster did not start");
     }
   }
@@ -141,39 +153,35 @@ public class MiniHBaseCluster implements HConstants {
    * supplied port is not necessarily the actual port used.
    */
   public HServerAddress getHMasterAddress() {
-    return master.getHMasterAddress();
+    return masterRunner.getHMasterAddress();
   }
   
   /** Shut down the HBase cluster */
   public void shutdown() {
-    System.out.println("Shutting down the HBase Cluster");
+    LOG.info("Shutting down the HBase Cluster");
     for(int i = 0; i < regionServers.length; i++) {
       regionServers[i].shutdown();
     }
-    master.shutdown();
-    
+    masterRunner.shutdown();
     for(int i = 0; i < regionServers.length; i++) {
       try {
         regionThreads[i].join();
-        
-      } catch(InterruptedException e) {
+      } catch (InterruptedException e) {
+        e.printStackTrace();
       }
     }
     try {
-      masterThread.join();
-      
-    } catch(InterruptedException e) {
+      masterRunnerThread.join();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
     }
-    
-    System.out.println("Shutting down Mini DFS cluster");
     if (cluster != null) {
+      LOG.info("Shutting down Mini DFS cluster");
       cluster.shutdown();
     }
     
     // Delete all DFS files
-
     deleteFile(new File(System.getProperty("test.build.data"), "dfs"));
-
   }
   
   private void deleteFile(File f) {
@@ -188,12 +196,14 @@ public class MiniHBaseCluster implements HConstants {
   
   private class HMasterRunner implements Runnable {
     private HMaster master = null;
+    private Thread masterThread = null;
     private volatile boolean isInitialized = false;
     private boolean isCrashed = false;
     private boolean isRunning = true;
+    private long threadSleepTime = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     
     public HServerAddress getHMasterAddress() {
-      return master.getMasterAddress();
+      return this.master.getMasterAddress();
     }
     
     public synchronized boolean isInitialized() {
@@ -218,33 +228,46 @@ public class MiniHBaseCluster implements HConstants {
       try {
         synchronized(this) {
           if(isRunning) {
-            master = new HMaster(conf);
+            this.master = new HMaster(conf);
+            masterThread = new Thread(this.master);
+            masterThread.start();
           }
           isInitialized = true;
         }
       } catch(Throwable e) {
         shutdown();
-        System.err.println("HMaster crashed:");
-        e.printStackTrace();
+        LOG.error("HMaster crashed:", e);
         synchronized(this) {
           isCrashed = true;
         }
       }
+
+      while(this.master != null && this.master.isMasterRunning()) {
+        try {
+          Thread.sleep(threadSleepTime);
+          
+        } catch(InterruptedException e) {
+        }
+      }
+      synchronized(this) {
+        isCrashed = true;
+      }
+      shutdown();
     }
     
     /** Shut down the HMaster and wait for it to finish */
     public synchronized void shutdown() {
       isRunning = false;
-      if(master != null) {
+      if (this.master != null) {
         try {
-          master.stop();
-          
+          this.master.shutdown();
         } catch(IOException e) {
-          System.err.println("Master crashed during stop");
-          e.printStackTrace();
-          
+          LOG.error("Master crashed during stop", e);
         } finally {
-          master.join();
+          try {
+            masterThread.join();
+          } catch(InterruptedException e) {
+          }
           master = null;
         }
       }
@@ -272,8 +295,7 @@ public class MiniHBaseCluster implements HConstants {
         
       } catch(Throwable e) {
         shutdown();
-        System.err.println("HRegionServer crashed:");
-        e.printStackTrace();
+        LOG.error("HRegionServer crashed:", e);
       }
     }
     
@@ -285,9 +307,7 @@ public class MiniHBaseCluster implements HConstants {
           server.stop();
           
         } catch(IOException e) {
-          System.err.println("HRegionServer crashed during stop");
-          e.printStackTrace();
-          
+          LOG.error("HRegionServer crashed during stop", e);
         } finally {
           server.join();
           server = null;

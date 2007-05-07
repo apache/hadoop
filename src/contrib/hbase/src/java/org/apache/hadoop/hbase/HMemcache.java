@@ -75,11 +75,15 @@ public class HMemcache {
         throw new IOException("Snapshot in progress!");
       }
       if(memcache.size() == 0) {
-        LOG.debug("memcache empty. Skipping snapshot");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("memcache empty. Skipping snapshot");
+        }
         return retval;
       }
 
-      LOG.debug("starting memcache snapshot");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("starting memcache snapshot");
+      }
       
       retval.memcacheSnapshot = memcache;
       this.snapshot = memcache;
@@ -87,7 +91,9 @@ public class HMemcache {
       memcache = new TreeMap<HStoreKey, BytesWritable>();
       retval.sequenceId = log.startCacheFlush();
       
-      LOG.debug("memcache snapshot complete");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("memcache snapshot complete");
+      }
       
       return retval;
       
@@ -108,7 +114,9 @@ public class HMemcache {
       if(snapshot == null) {
         throw new IOException("Snapshot not present!");
       }
-      LOG.debug("deleting snapshot");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("deleting snapshot");
+      }
       
       for(Iterator<TreeMap<HStoreKey, BytesWritable>> it = history.iterator(); 
           it.hasNext(); ) {
@@ -121,7 +129,9 @@ public class HMemcache {
       }
       this.snapshot = null;
       
-      LOG.debug("snapshot deleted");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("snapshot deleted");
+      }
       
     } finally {
       this.locker.writeLock().unlock();
@@ -133,15 +143,15 @@ public class HMemcache {
    *
    * Operation uses a write lock.
    */
-  public void add(Text row, TreeMap<Text, byte[]> columns, long timestamp) {
+  public void add(Text row, TreeMap<Text, BytesWritable> columns, long timestamp) {
     this.locker.writeLock().lock();
     try {
       for(Iterator<Text> it = columns.keySet().iterator(); it.hasNext(); ) {
         Text column = it.next();
-        byte[] val = columns.get(column);
+        BytesWritable val = columns.get(column);
 
         HStoreKey key = new HStoreKey(row, column, timestamp);
-        memcache.put(key, new BytesWritable(val));
+        memcache.put(key, val);
       }
       
     } finally {
@@ -154,11 +164,11 @@ public class HMemcache {
    *
    * We only need a readlock here.
    */
-  public byte[][] get(HStoreKey key, int numVersions) {
-    Vector<byte[]> results = new Vector<byte[]>();
+  public BytesWritable[] get(HStoreKey key, int numVersions) {
+    Vector<BytesWritable> results = new Vector<BytesWritable>();
     this.locker.readLock().lock();
     try {
-      Vector<byte[]> result = get(memcache, key, numVersions-results.size());
+      Vector<BytesWritable> result = get(memcache, key, numVersions-results.size());
       results.addAll(0, result);
 
       for(int i = history.size()-1; i >= 0; i--) {
@@ -174,22 +184,22 @@ public class HMemcache {
         return null;
         
       } else {
-        return (byte[][]) results.toArray(new byte[results.size()][]);
+        return results.toArray(new BytesWritable[results.size()]);
       }
       
     } finally {
       this.locker.readLock().unlock();
     }
   }
-
+  
   /**
    * Return all the available columns for the given key.  The key indicates a 
    * row and timestamp, but not a column name.
    *
    * The returned object should map column names to byte arrays (byte[]).
    */
-  public TreeMap<Text, byte[]> getFull(HStoreKey key) throws IOException {
-    TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+  public TreeMap<Text, BytesWritable> getFull(HStoreKey key) throws IOException {
+    TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
     this.locker.readLock().lock();
     try {
       internalGetFull(memcache, key, results);
@@ -205,7 +215,7 @@ public class HMemcache {
   }
   
   void internalGetFull(TreeMap<HStoreKey, BytesWritable> map, HStoreKey key, 
-      TreeMap<Text, byte[]> results) {
+      TreeMap<Text, BytesWritable> results) {
     
     SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(key);
     
@@ -216,7 +226,7 @@ public class HMemcache {
       if(results.get(itCol) == null
           && key.matchesWithoutColumn(itKey)) {
         BytesWritable val = tailMap.get(itKey);
-        results.put(itCol, val.get());
+        results.put(itCol, val);
         
       } else if(key.getRow().compareTo(itKey.getRow()) > 0) {
         break;
@@ -233,8 +243,8 @@ public class HMemcache {
    * TODO - This is kinda slow.  We need a data structure that allows for 
    * proximity-searches, not just precise-matches.
    */    
-  Vector<byte[]> get(TreeMap<HStoreKey, BytesWritable> map, HStoreKey key, int numVersions) {
-    Vector<byte[]> result = new Vector<byte[]>();
+  Vector<BytesWritable> get(TreeMap<HStoreKey, BytesWritable> map, HStoreKey key, int numVersions) {
+    Vector<BytesWritable> result = new Vector<BytesWritable>();
     HStoreKey curKey = new HStoreKey(key.getRow(), key.getColumn(), key.getTimestamp());
     SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(curKey);
 
@@ -242,7 +252,7 @@ public class HMemcache {
       HStoreKey itKey = it.next();
       
       if(itKey.matchesRowCol(curKey)) {
-        result.add(tailMap.get(itKey).get());
+        result.add(tailMap.get(itKey));
         curKey.setVersion(itKey.getTimestamp() - 1);
       }
       
@@ -256,7 +266,7 @@ public class HMemcache {
   /**
    * Return a scanner over the keys in the HMemcache
    */
-  public HScannerInterface getScanner(long timestamp, Text targetCols[], Text firstRow)
+  public HInternalScannerInterface getScanner(long timestamp, Text targetCols[], Text firstRow)
       throws IOException {
     
     return new HMemcacheScanner(timestamp, targetCols, firstRow);
@@ -280,13 +290,14 @@ public class HMemcache {
       locker.readLock().lock();
       try {
         this.backingMaps = new TreeMap[history.size() + 1];
-        int i = 0;
-        for(Iterator<TreeMap<HStoreKey, BytesWritable>> it = history.iterator();
-            it.hasNext(); ) {
-          
-          backingMaps[i++] = it.next();
+        
+        //NOTE: Since we iterate through the backing maps from 0 to n, we need
+        //      to put the memcache first, the newest history second, ..., etc.
+        
+        backingMaps[0] = memcache;
+        for(int i = history.size() - 1; i > 0; i--) {
+          backingMaps[i] = history.elementAt(i);
         }
-        backingMaps[backingMaps.length - 1] = memcache;
 
         this.keyIterators = new Iterator[backingMaps.length];
         this.keys = new HStoreKey[backingMaps.length];
@@ -295,7 +306,7 @@ public class HMemcache {
         // Generate list of iterators
 
         HStoreKey firstKey = new HStoreKey(firstRow);
-        for(i = 0; i < backingMaps.length; i++) {
+        for(int i = 0; i < backingMaps.length; i++) {
           if(firstRow.getLength() != 0) {
             keyIterators[i] = backingMaps[i].tailMap(firstKey).keySet().iterator();
             
@@ -327,7 +338,8 @@ public class HMemcache {
      * @return          - true if this is the first row
      */
     boolean findFirstRow(int i, Text firstRow) {
-      return ((firstRow.getLength() == 0) || (keys[i].getRow().equals(firstRow)));
+      return ((firstRow.getLength() == 0)
+          || (keys[i].getRow().toString().startsWith(firstRow.toString())));
     }
     
     /**

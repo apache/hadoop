@@ -23,9 +23,6 @@ import java.io.*;
  * A Key for a stored row
  ******************************************************************************/
 public class HStoreKey implements WritableComparable {
-  public static final byte[] DELETE_BYTES = "HSTOREKEY::DELETEVAL".getBytes();
-  public static final byte[] COMPLETE_CACHEFLUSH = "HSTOREKEY::CACHEFLUSH".getBytes();
-
   public static Text extractFamily(Text col) throws IOException {
     String column = col.toString();
     int colpos = column.indexOf(":");
@@ -97,32 +94,42 @@ public class HStoreKey implements WritableComparable {
    * @param other Key to compare against. Compares row and column.
    * @return True if same row and column.
    * @see {@link #matchesWithoutColumn(HStoreKey)}
+   * @see {@link #matchesRowFamily(HStoreKey)}
    */ 
   public boolean matchesRowCol(HStoreKey other) {
-    if(this.row.compareTo(other.row) == 0 &&
-        this.column.compareTo(other.column) == 0) {
-      return true;
-      
-    } else {
-      return false;
-    }
+    return this.row.compareTo(other.row) == 0
+      && this.column.compareTo(other.column) == 0;
   }
   
   /**
-   * @param other Key to copmare against. Compares row and
-   * timestamp.
-   * @return True if same row and timestamp is greater than
-   * <code>other</code>
+   * @param other Key to copmare against. Compares row and timestamp.
+   * 
+   * @return True if same row and timestamp is greater than <code>other</code>
    * @see {@link #matchesRowCol(HStoreKey)}
+   * @see {@link #matchesRowFamily(HStoreKey)}
    */
   public boolean matchesWithoutColumn(HStoreKey other) {
-    if((this.row.compareTo(other.row) == 0) &&
-        (this.timestamp >= other.getTimestamp())) {
-      return true;
+    return this.row.compareTo(other.row) == 0
+      && this.timestamp >= other.getTimestamp();
+  }
+  
+  /**
+   * @param other Key to compare against. Compares row and column family
+   * 
+   * @return true if same row and column family
+   * @see {@link #matchesRowCol(HStoreKey)}
+   * @see {@link #matchesWithoutColumn(HStoreKey)}
+   */
+  public boolean matchesRowFamily(HStoreKey other) {
+    boolean status = false;
+    try {
+      status = this.row.compareTo(other.row) == 0
+        && extractFamily(this.column).compareTo(
+            extractFamily(other.getColumn())) == 0;
       
-    } else {
-      return false;
+    } catch(IOException e) {
     }
+    return status;
   }
   
   public String toString() {

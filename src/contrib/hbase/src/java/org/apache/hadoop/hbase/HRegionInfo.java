@@ -15,13 +15,20 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
+/**
+ * HRegion information.
+ * Contains HRegion id, start and end keys, a reference to this
+ * HRegions' table descriptor, etc.
+ */
 public class HRegionInfo implements Writable {
   public long regionId;
   public HTableDescriptor tableDesc;
@@ -36,9 +43,20 @@ public class HRegionInfo implements Writable {
     this.endKey = new Text();
     this.regionName = new Text();
   }
+  
+  public HRegionInfo(final byte [] serializedBytes) {
+    this();
+    try {
+      readFields(new DataInputStream(
+        new ByteArrayInputStream(serializedBytes)));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
-  public HRegionInfo(long regionId, HTableDescriptor tableDesc, Text startKey, 
-      Text endKey) throws IllegalArgumentException {
+  public HRegionInfo(long regionId, HTableDescriptor tableDesc,
+      Text startKey, Text endKey)
+  throws IllegalArgumentException {
     
     this.regionId = regionId;
     
@@ -58,8 +76,16 @@ public class HRegionInfo implements Writable {
       this.endKey.set(endKey);
     }
     
-    this.regionName = new Text(tableDesc.getName() + "_"
-        + (startKey == null ? "" : startKey.toString()) + "_" + regionId);
+    this.regionName = new Text(tableDesc.getName() + "_" +
+      (startKey == null ? "" : startKey.toString()) + "_" +
+      regionId);
+  }
+  
+  @Override
+  public String toString() {
+    return "regionname: " + this.regionName.toString() + ", startKey: <" +
+      this.startKey.toString() + ">, tableDesc: {" +
+      this.tableDesc.toString() + "}";
   }
     
   //////////////////////////////////////////////////////////////////////////////
