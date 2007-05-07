@@ -69,7 +69,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param columns     - columns to scan
    * @param startRow    - starting row to scan
    *
-   * @param scannerId   - scanner identifier used in other calls
+   * @return scannerId  - scanner identifier used in other calls
    * @throws IOException
    */
   public long openScanner(Text regionName, Text[] columns, Text startRow) throws IOException;

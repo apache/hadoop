@@ -31,9 +31,9 @@ public class LabelledData implements Writable {
     this.data = new BytesWritable();
   }
 
-  public LabelledData(Text label, byte[] data) {
+  public LabelledData(Text label, BytesWritable data) {
     this.label = new Text(label);
-    this.data = new BytesWritable(data);
+    this.data = data;
   }
 
   public Text getLabel() {

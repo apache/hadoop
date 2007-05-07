@@ -15,26 +15,68 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import java.io.*;
-import java.util.*;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
 
-/*******************************************************************************
- * HTableDescriptor contains various facts about an HTable, like its columns, 
- * column families, etc.
- ******************************************************************************/
+/**
+ * HTableDescriptor contains various facts about an HTable, like
+ * column families, maximum number of column versions, etc.
+ */
 public class HTableDescriptor implements WritableComparable {
   Text name;
   int maxVersions;
   TreeSet<Text> families = new TreeSet<Text>();
+  
+  /**
+   * Legal table names can only contain 'word characters':
+   * i.e. <code>[a-zA-Z_0-9]</code>.
+   * 
+   * Lets be restrictive until a reason to be otherwise.
+   */
+  private static final Pattern LEGAL_TABLE_NAME =
+    Pattern.compile("[\\w-]+");
+  
+  /**
+   * Legal family names can only contain 'word characters' and
+   * end in a colon.
+   */
+  private static final Pattern LEGAL_FAMILY_NAME =
+    Pattern.compile("\\w+:");
 
   public HTableDescriptor() {
     this.name = new Text();
     this.families.clear();
   }
 
+  /**
+   * Constructor.
+   * @param name Table name.
+   * @param maxVersions Number of versions of a column to keep.
+   * @throws IllegalArgumentException if passed a table name
+   * that is made of other than 'word' characters: i.e.
+   * <code>[a-zA-Z_0-9]
+   */
   public HTableDescriptor(String name, int maxVersions) {
+    Matcher m = LEGAL_TABLE_NAME.matcher(name);
+    if (m == null || !m.matches()) {
+      throw new IllegalArgumentException("Table names can only " +
+          "contain 'word characters': i.e. [a-zA-Z_0-9");
+    }
+    if (maxVersions <= 0) {
+      // TODO: Allow maxVersion of 0 to be the way you say
+      // "Keep all versions".  Until there is support, consider
+      // 0 -- or < 0 -- a configuration error.
+      throw new IllegalArgumentException("Maximum versions " +
+        "must be positive");
+    }
     this.name = new Text(name);
     this.maxVersions = maxVersions;
   }
@@ -47,19 +89,28 @@ public class HTableDescriptor implements WritableComparable {
     return maxVersions;
   }
 
-  /** Add a column */
+  /**
+   * Add a column family.
+   * @param family Column family name to add.  Column family names
+   * must end in a <code>:</code>
+   * @throws IllegalArgumentException if passed a table name
+   * that is made of other than 'word' characters: i.e.
+   * <code>[a-zA-Z_0-9]
+   */
   public void addFamily(Text family) {
+    String familyStr = family.toString();
+    Matcher m = LEGAL_FAMILY_NAME.matcher(familyStr);
+    if (m == null || !m.matches()) {
+      throw new IllegalArgumentException("Family names can " +
+          "only contain 'word characters' and must end with a " +
+          "':'");
+    }
     families.add(family);
   }
 
   /** Do we contain a given column? */
   public boolean hasFamily(Text family) {
-    if(families.contains(family)) {
-      return true;
-      
-    } else {
-      return false;
-    }
+    return families.contains(family);
   }
 
   /** All the column families in this table. */
@@ -67,6 +118,12 @@ public class HTableDescriptor implements WritableComparable {
     return families;
   }
 
+  @Override
+  public String toString() {
+    return "name: " + this.name.toString() +
+      ", maxVersions: " + this.maxVersions + ", families: " + this.families;
+  }
+  
   //////////////////////////////////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////////////////////////////////

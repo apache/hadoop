@@ -49,6 +49,11 @@ public class HServerInfo implements Writable {
   public long getStartCode() {
     return startCode;
   }
+  
+  @Override
+  public String toString() {
+    return "address: " + this.serverAddress + ", startcode: " + this.startCode;
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Writable

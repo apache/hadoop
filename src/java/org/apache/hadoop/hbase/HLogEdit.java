@@ -34,9 +34,9 @@ public class HLogEdit implements Writable {
   public HLogEdit() {
   }
 
-  public HLogEdit(Text column, byte[] bval, long timestamp) {
+  public HLogEdit(Text column, BytesWritable bval, long timestamp) {
     this.column.set(column);
-    this.val = new BytesWritable(bval);
+    this.val = bval;
     this.timestamp = timestamp;
   }
 
@@ -52,6 +52,12 @@ public class HLogEdit implements Writable {
     return this.timestamp;
   }
 
+  @Override
+  public String toString() {
+    return getColumn().toString() + " " + this.getTimestamp() + " " +
+      new String(getVal().get()).trim();
+  }
+  
   //////////////////////////////////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////////////////////////////////

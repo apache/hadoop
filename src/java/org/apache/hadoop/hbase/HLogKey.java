@@ -66,6 +66,12 @@ public class HLogKey implements WritableComparable {
   public long getLogSeqNum() {
     return logSeqNum;
   }
+  
+  @Override
+  public String toString() {
+    return getTablename().toString() + " " + getRegionName().toString() + " " +
+      getRow().toString() + " " + getLogSeqNum();
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Comparable

@@ -16,6 +16,8 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.TreeMap;
 
 import junit.framework.TestCase;
@@ -26,11 +28,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HMemcache.Snapshot;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.log4j.Logger;
 
 public class TestHMemcache extends TestCase {
-  private final Logger LOG =
-    Logger.getLogger(this.getClass().getName());
   
   private HMemcache hmemcache;
 
@@ -77,10 +76,10 @@ public class TestHMemcache extends TestCase {
    */
   private void addRows(final HMemcache hmc) {
     for (int i = 0; i < ROW_COUNT; i++) {
-      TreeMap<Text, byte[]> columns = new TreeMap<Text, byte[]>();
+      TreeMap<Text, BytesWritable> columns = new TreeMap<Text, BytesWritable>();
       for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
         Text k = getColumnName(i, ii);
-        columns.put(k, k.toString().getBytes());
+        columns.put(k, new BytesWritable(k.toString().getBytes()));
       }
       hmc.add(getRowName(i), columns, System.currentTimeMillis());
     }
@@ -139,7 +138,7 @@ public class TestHMemcache extends TestCase {
   }
   
   private void isExpectedRow(final int rowIndex,
-      TreeMap<Text, byte[]> row) {
+      TreeMap<Text, BytesWritable> row) {
     int i = 0;
     for (Text colname: row.keySet()) {
       String expectedColname =
@@ -150,8 +149,10 @@ public class TestHMemcache extends TestCase {
       // 100 bytes in size at least. This is the default size
       // for BytesWriteable.  For comparison, comvert bytes to
       // String and trim to remove trailing null bytes.
-      String colvalueStr =
-        new String(row.get(colname)).trim();
+      BytesWritable value = row.get(colname);
+      byte[] bytes = new byte[value.getSize()];
+      System.arraycopy(value.get(), 0, bytes, 0, bytes.length);
+      String colvalueStr = new String(bytes).trim();
       assertEquals("Content", colnameStr, colvalueStr);
     }
   }
@@ -160,7 +161,7 @@ public class TestHMemcache extends TestCase {
     addRows(this.hmemcache);
     for (int i = 0; i < ROW_COUNT; i++) {
       HStoreKey hsk = new HStoreKey(getRowName(i));
-      TreeMap<Text, byte[]> all = this.hmemcache.getFull(hsk);
+      TreeMap<Text, BytesWritable> all = this.hmemcache.getFull(hsk);
       isExpectedRow(i, all);
     }
   }
@@ -174,16 +175,22 @@ public class TestHMemcache extends TestCase {
         cols[(ii + (i * COLUMNS_COUNT))] = getColumnName(i, ii);
       }
     }
-    HScannerInterface scanner =
+    HInternalScannerInterface scanner =
       this.hmemcache.getScanner(timestamp, cols, new Text());
     HStoreKey key = new HStoreKey();
-    TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+    TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
     for (int i = 0; scanner.next(key, results); i++) {
       assertTrue("Row name",
           key.toString().startsWith(getRowName(i).toString()));
       assertEquals("Count of columns", COLUMNS_COUNT,
           results.size());
-      isExpectedRow(i, results);
+      TreeMap<Text, BytesWritable> row = new TreeMap<Text, BytesWritable>();
+      for(Iterator<Map.Entry<Text, BytesWritable>> it = results.entrySet().iterator();
+          it.hasNext(); ) {
+        Map.Entry<Text, BytesWritable> e = it.next();
+        row.put(e.getKey(), e.getValue());
+      }
+      isExpectedRow(i, row);
       // Clear out set.  Otherwise row results accumulate.
       results.clear();
     }

@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 import org.apache.log4j.Appender;
@@ -167,8 +168,11 @@ public class TestHRegion extends TestCase {
       
       for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
         long writeid = region.startUpdate(new Text("row_" + k));
-        region.put(writeid, CONTENTS_BASIC, (CONTENTSTR + k).getBytes());
-        region.put(writeid, new Text(ANCHORNUM + k), (ANCHORSTR + k).getBytes());
+        region.put(writeid, CONTENTS_BASIC,
+            new BytesWritable((CONTENTSTR + k).getBytes()));
+        
+        region.put(writeid, new Text(ANCHORNUM + k),
+            new BytesWritable((ANCHORSTR + k).getBytes()));
         region.commit(writeid);
       }
       System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
@@ -191,16 +195,20 @@ public class TestHRegion extends TestCase {
       for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
         Text rowlabel = new Text("row_" + k);
 
-        byte bodydata[] = region.get(rowlabel, CONTENTS_BASIC);
+        BytesWritable bodydata = region.get(rowlabel, CONTENTS_BASIC);
         assertNotNull(bodydata);
-        String bodystr = new String(bodydata).toString().trim();
+        byte[] bytes = new byte[bodydata.getSize()];
+        System.arraycopy(bodydata.get(), 0, bytes, 0, bytes.length);
+        String bodystr = new String(bytes).toString().trim();
         String teststr = CONTENTSTR + k;
         assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
             + "), expected: '" + teststr + "' got: '" + bodystr + "'",
             bodystr, teststr);
         collabel = new Text(ANCHORNUM + k);
         bodydata = region.get(rowlabel, collabel);
-        bodystr = new String(bodydata).toString().trim();
+        bytes = new byte[bodydata.getSize()];
+        System.arraycopy(bodydata.get(), 0, bytes, 0, bytes.length);
+        bodystr = new String(bytes).toString().trim();
         teststr = ANCHORSTR + k;
         assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
             + "), expected: '" + teststr + "' got: '" + bodystr + "'",
@@ -224,7 +232,7 @@ public class TestHRegion extends TestCase {
     // Try put with bad lockid.
     boolean exceptionThrown = false;
     try {
-      region.put(-1, CONTENTS_BASIC, "bad input".getBytes());
+      region.put(-1, CONTENTS_BASIC, new BytesWritable("bad input".getBytes()));
     } catch (LockException e) {
       exceptionThrown = true;
     }
@@ -237,7 +245,7 @@ public class TestHRegion extends TestCase {
       lockid = region.startUpdate(new Text("Some old key"));
       String unregisteredColName = "FamilyGroup:FamilyLabel";
       region.put(lockid, new Text(unregisteredColName),
-          unregisteredColName.getBytes());
+          new BytesWritable(unregisteredColName.getBytes()));
     } catch (IOException e) {
       exceptionThrown = true;
     } finally {
@@ -333,8 +341,8 @@ public class TestHRegion extends TestCase {
       String kLabel = String.format("%1$03d", k);
 
       long lockid = region.startUpdate(new Text("row_vals1_" + kLabel));
-      region.put(lockid, cols[0], vals1[k].getBytes());
-      region.put(lockid, cols[1], vals1[k].getBytes());
+      region.put(lockid, cols[0], new BytesWritable(vals1[k].getBytes()));
+      region.put(lockid, cols[1], new BytesWritable(vals1[k].getBytes()));
       region.commit(lockid);
       numInserted += 2;
     }
@@ -346,17 +354,19 @@ public class TestHRegion extends TestCase {
     
     startTime = System.currentTimeMillis();
 
-    HScannerInterface s = region.getScanner(cols, new Text());
+    HInternalScannerInterface s = region.getScanner(cols, new Text());
     int numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
+      TreeMap<Text, BytesWritable> curVals = new TreeMap<Text, BytesWritable>();
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
-          byte val[] = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          BytesWritable val = curVals.get(col);
+          byte[] bytes = new byte[val.getSize()];
+          System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
+          int curval = Integer.parseInt(new String(bytes).trim());
 
           for(int j = 0; j < cols.length; j++) {
             if(col.compareTo(cols[j]) == 0) {
@@ -396,13 +406,15 @@ public class TestHRegion extends TestCase {
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
+      TreeMap<Text, BytesWritable> curVals = new TreeMap<Text, BytesWritable>();
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
-          byte val[] = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          BytesWritable val = curVals.get(col);
+          byte[] bytes = new byte[val.getSize()];
+          System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
+          int curval = Integer.parseInt(new String(bytes).trim());
 
           for(int j = 0; j < cols.length; j++) {
             if(col.compareTo(cols[j]) == 0) {
@@ -433,8 +445,8 @@ public class TestHRegion extends TestCase {
       String kLabel = String.format("%1$03d", k);
       
       long lockid = region.startUpdate(new Text("row_vals1_" + kLabel));
-      region.put(lockid, cols[0], vals1[k].getBytes());
-      region.put(lockid, cols[1], vals1[k].getBytes());
+      region.put(lockid, cols[0], new BytesWritable(vals1[k].getBytes()));
+      region.put(lockid, cols[1], new BytesWritable(vals1[k].getBytes()));
       region.commit(lockid);
       numInserted += 2;
     }
@@ -450,13 +462,15 @@ public class TestHRegion extends TestCase {
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
+      TreeMap<Text, BytesWritable> curVals = new TreeMap<Text, BytesWritable>();
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
-          byte val[] = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          BytesWritable val = curVals.get(col);
+          byte[] bytes = new byte[val.getSize()];
+          System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
+          int curval = Integer.parseInt(new String(bytes).trim());
 
           for(int j = 0; j < cols.length; j++) {
             if(col.compareTo(cols[j]) == 0) {
@@ -496,13 +510,15 @@ public class TestHRegion extends TestCase {
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
+      TreeMap<Text, BytesWritable> curVals = new TreeMap<Text, BytesWritable>();
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
-          byte val[] = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          BytesWritable val = curVals.get(col);
+          byte[] bytes = new byte[val.getSize()];
+          System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
+          int curval = Integer.parseInt(new String(bytes).trim());
 
           for (int j = 0; j < cols.length; j++) {
             if (col.compareTo(cols[j]) == 0) {
@@ -532,13 +548,15 @@ public class TestHRegion extends TestCase {
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
+      TreeMap<Text, BytesWritable> curVals = new TreeMap<Text, BytesWritable>();
       int k = 500;
       while(s.next(curKey, curVals)) {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
-          byte val[] = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          BytesWritable val = curVals.get(col);
+          byte[] bytes = new byte[val.getSize()];
+          System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
+          int curval = Integer.parseInt(new String(bytes).trim());
 
           for (int j = 0; j < cols.length; j++) {
             if (col.compareTo(cols[j]) == 0) {
@@ -592,7 +610,7 @@ public class TestHRegion extends TestCase {
 
         // Write to the HRegion
         long writeid = region.startUpdate(new Text("row_" + k));
-        region.put(writeid, CONTENTS_BODY, buf1.toString().getBytes());
+        region.put(writeid, CONTENTS_BODY, new BytesWritable(buf1.toString().getBytes()));
         region.commit(writeid);
         if (k > 0 && k % (N_ROWS / 100) == 0) {
           System.out.println("Flushing write #" + k);
@@ -707,20 +725,22 @@ public class TestHRegion extends TestCase {
     
     long startTime = System.currentTimeMillis();
     
-    HScannerInterface s = region.getScanner(cols, new Text());
+    HInternalScannerInterface s = region.getScanner(cols, new Text());
 
     try {
 
       int contentsFetched = 0;
       int anchorFetched = 0;
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
+      TreeMap<Text, BytesWritable> curVals = new TreeMap<Text, BytesWritable>();
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
-          byte val[] = curVals.get(col);
-          String curval = new String(val).trim();
+          BytesWritable val = curVals.get(col);
+          byte[] bytes = new byte[val.getSize()];
+          System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
+          String curval = new String(bytes).trim();
 
           if(col.compareTo(CONTENTS_BASIC) == 0) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
@@ -767,13 +787,15 @@ public class TestHRegion extends TestCase {
     try {
       int numFetched = 0;
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
+      TreeMap<Text, BytesWritable> curVals = new TreeMap<Text, BytesWritable>();
       int k = 0;
       while(s.next(curKey, curVals)) {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
-          byte val[] = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          BytesWritable val = curVals.get(col);
+          byte[] bytes = new byte[val.getSize()];
+          System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
+          int curval = Integer.parseInt(new String(bytes).trim());
 
           for (int j = 0; j < cols.length; j++) {
             if (col.compareTo(cols[j]) == 0) {
@@ -805,12 +827,12 @@ public class TestHRegion extends TestCase {
       try {
         int numFetched = 0;
         HStoreKey curKey = new HStoreKey();
-        TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
+        TreeMap<Text, BytesWritable> curVals = new TreeMap<Text, BytesWritable>();
         int k = 0;
         while(s.next(curKey, curVals)) {
           for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
             Text col = it.next();
-            byte val[] = curVals.get(col);
+            BytesWritable val = curVals.get(col);
 
             assertTrue(col.compareTo(CONTENTS_BODY) == 0);
             assertNotNull(val);
@@ -843,7 +865,7 @@ public class TestHRegion extends TestCase {
     try {
       int fetched = 0;
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
+      TreeMap<Text, BytesWritable> curVals = new TreeMap<Text, BytesWritable>();
       while(s.next(curKey, curVals)) {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           it.next();

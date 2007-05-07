@@ -20,10 +20,11 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 
 import java.io.IOException;
 
-/*******************************************************************************
- * Clients interact with the HMasterInterface to gain access to meta-level HBase
- * functionality, like finding an HRegionServer and creating/destroying tables.
- ******************************************************************************/
+/**
+ * Clients interact with the HMasterInterface to gain access to meta-level
+ * HBase functionality, like finding an HRegionServer and creating/destroying
+ * tables.
+ */
 public interface HMasterInterface extends VersionedProtocol {
   public static final long versionID = 1L; // initial version
 
@@ -33,6 +34,11 @@ public interface HMasterInterface extends VersionedProtocol {
 
   public void createTable(HTableDescriptor desc) throws IOException;
   public void deleteTable(Text tableName) throws IOException;
+  
+  /**
+   * Shutdown an HBase cluster.
+   */
+  public void shutdown() throws IOException;
 
   //////////////////////////////////////////////////////////////////////////////
   // These are the method calls of last resort when trying to find an HRegion

@@ -18,40 +18,49 @@ package org.apache.hadoop.hbase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.SequenceFile.Reader;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 
 import java.io.*;
 import java.util.*;
 
-/*******************************************************************************
+/**
  * HLog stores all the edits to the HStore.
  * 
  * It performs logfile-rolling, so external callers are not aware that the 
  * underlying file is being rolled.
  *
- * A single HLog is used by several HRegions simultaneously.
+ * <p>A single HLog is used by several HRegions simultaneously.
  * 
- * Each one is identified by a unique long int.  HRegions do not need to declare
- * themselves before using the HLog; they simply include their HRegion-id in the
- * append() or completeCacheFlush() calls.
+ * <p>Each HRegion is identified by a unique long int. HRegions do not need to
+ * declare themselves before using the HLog; they simply include their
+ * HRegion-id in the {@link #append(Text, Text, Text, TreeMap, long)} or 
+ * {@link #completeCacheFlush(Text, Text, long)} calls.
  *
- * An HLog consists of multiple on-disk files, which have a chronological order.
+ * <p>An HLog consists of multiple on-disk files, which have a chronological
+ * order. As data is flushed to other (better) on-disk structures, the log
+ * becomes obsolete.  We can destroy all the log messages for a given
+ * HRegion-id up to the most-recent CACHEFLUSH message from that HRegion.
  *
- * As data is flushed to other (better) on-disk structures, the log becomes 
- * obsolete.  We can destroy all the log messages for a given HRegion-id up to 
- * the most-recent CACHEFLUSH message from that HRegion.
- *
- * It's only practical to delete entire files.  Thus, we delete an entire 
+ * <p>It's only practical to delete entire files.  Thus, we delete an entire 
  * on-disk file F when all of the messages in F have a log-sequence-id that's 
  * older (smaller) than the most-recent CACHEFLUSH message for every HRegion 
  * that has a message in F.
- ******************************************************************************/
-public class HLog {
+ * 
+ * <p>TODO: Vuk Ercegovac also pointed out that keeping HBase HRegion edit logs
+ * in HDFS is currently flawed. HBase writes edits to logs and to a memcache.
+ * The 'atomic' write to the log is meant to serve as insurance against
+ * abnormal RegionServer exit: on startup, the log is rerun to reconstruct an
+ * HRegion's last wholesome state. But files in HDFS do not 'exist' until they
+ * are cleanly closed -- something that will not happen if RegionServer exits
+ * without running its 'close'.
+ */
+public class HLog implements HConstants {
   private static final Log LOG = LogFactory.getLog(HLog.class);
   
   static final String HLOG_DATFILE = "hlog.dat.";
-  static final Text METACOLUMN = new Text("METACOLUMN");
+  static final Text METACOLUMN = new Text("METACOLUMN:");
   static final Text METAROW = new Text("METAROW");
 
   FileSystem fs;
@@ -66,28 +75,40 @@ public class HLog {
   long oldestOutstandingSeqNum = -1;
 
   boolean closed = false;
-  long logSeqNum = 0;
+  transient long logSeqNum = 0;
   long filenum = 0;
-  int numEntries = 0;
+  transient int numEntries = 0;
 
   Integer rollLock = new Integer(0);
 
   /**
    * Bundle up a bunch of log files (which are no longer being written to),
    * into a new file.  Delete the old log files when ready.
+   * @param srcDir Directory of log files to bundle:
+   * e.g. <code>${REGIONDIR}/log_HOST_PORT</code>
+   * @param dstFile Destination file:
+   * e.g. <code>${REGIONDIR}/oldlogfile_HOST_PORT</code>
+   * @param fs FileSystem
+   * @param conf HBaseConfiguration
+   * @throws IOException
    */
-  public static void consolidateOldLog(Path srcDir, Path dstFile, FileSystem fs, Configuration conf) throws IOException {
-    LOG.debug("consolidating log files");
+  public static void consolidateOldLog(Path srcDir, Path dstFile,
+      FileSystem fs, Configuration conf)
+  throws IOException {
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("consolidating log files");
+    }
     
     Path logfiles[] = fs.listPaths(srcDir);
-    SequenceFile.Writer newlog = SequenceFile.createWriter(fs, conf, dstFile, HLogKey.class, HLogEdit.class);
+    SequenceFile.Writer newlog = SequenceFile.createWriter(fs, conf, dstFile,
+        HLogKey.class, HLogEdit.class);
     try {
       for(int i = 0; i < logfiles.length; i++) {
-        SequenceFile.Reader in = new SequenceFile.Reader(fs, logfiles[i], conf);
+        SequenceFile.Reader in =
+          new SequenceFile.Reader(fs, logfiles[i], conf);
         try {
           HLogKey key = new HLogKey();
           HLogEdit val = new HLogEdit();
-          
           while(in.next(key, val)) {
             newlog.append(key, val);
           }
@@ -111,11 +132,13 @@ public class HLog {
         }
       }
     }
-    LOG.debug("log file consolidation completed");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("log file consolidation completed");
+    }
   }
 
   /**
-   * Create an edit log at the given location.
+   * Create an edit log at the given <code>dir</code> location.
    *
    * You should never have to load an existing log.  If there is a log
    * at startup, it should have already been processed and deleted by 
@@ -125,19 +148,16 @@ public class HLog {
     this.fs = fs;
     this.dir = dir;
     this.conf = conf;
-    this.logSeqNum = 0;
 
-    if(fs.exists(dir)) {
+    if (fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
     fs.mkdirs(dir);
-
     rollWriter();
   }
 
   /**
-   * Roll the log writer.  That is, start writing log messages to
-   * a new file.
+   * Roll the log writer.  That is, start writing log messages to a new file.
    *
    * The 'rollLock' prevents us from entering rollWriter() more than
    * once at a time.
@@ -170,7 +190,9 @@ public class HLog {
           }
         }
         
-        LOG.debug("closing current log writer and getting a new one");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("closing current log writer and getting a new one");
+        }
 
         // Close the current writer (if any), and grab a new one.
         
@@ -178,14 +200,16 @@ public class HLog {
           writer.close();
           
           if(filenum > 0) {
-            outputfiles.put(logSeqNum-1, computeFilename(filenum-1));
+            outputfiles.put(logSeqNum - 1, computeFilename(filenum - 1));
           }
         }
         
         Path newPath = computeFilename(filenum++);
         this.writer = SequenceFile.createWriter(fs, conf, newPath, HLogKey.class, HLogEdit.class);
 
-        LOG.debug("new log writer created");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("new log writer created");
+        }
         
         // Can we delete any of the old log files?
         // First, compute the oldest relevant log operation 
@@ -203,7 +227,9 @@ public class HLog {
         // Next, remove all files with a final ID that's older
         // than the oldest pending region-operation.
 
-        LOG.debug("removing old log files");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("removing old log files");
+        }
         
         for(Iterator<Long> it = outputfiles.keySet().iterator(); it.hasNext(); ) {
           long maxSeqNum = it.next().longValue();
@@ -226,7 +252,9 @@ public class HLog {
         fs.delete(p);
       }
 
-      LOG.debug("old log files deleted");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("old log files deleted");
+      }
       
       this.numEntries = 0;
     }
@@ -247,21 +275,29 @@ public class HLog {
   }
 
   /**
-   * Append a set of edits to the log.
-   * Log edits are keyed by regionName, rowname, and log-sequence-id.
+   * Append a set of edits to the log. Log edits are keyed by regionName,
+   * rowname, and log-sequence-id.
    *
    * Later, if we sort by these keys, we obtain all the relevant edits for
-   * a given key-range of the HRegion.  Any edits that do not have a matching
-   * COMPLETE_CACHEFLUSH message can be discarded.
+   * a given key-range of the HRegion (TODO).  Any edits that do not have a
+   * matching {@link HConstants#COMPLETE_CACHEFLUSH} message can be discarded.
    *
-   * Logs cannot be restarted once closed, or once the HLog process dies.
+   * <p>Logs cannot be restarted once closed, or once the HLog process dies.
    * Each time the HLog starts, it must create a new log.  This means that
    * other systems should process the log appropriately upon each startup
    * (and prior to initializing HLog).
    *
    * We need to seize a lock on the writer so that writes are atomic.
+   * @param regionName
+   * @param tableName
+   * @param row
+   * @param columns
+   * @param timestamp
+   * @throws IOException
    */
-  public synchronized void append(Text regionName, Text tableName, Text row, TreeMap<Text, byte[]> columns, long timestamp) throws IOException {
+  public synchronized void append(Text regionName, Text tableName, Text row,
+      TreeMap<Text, BytesWritable> columns, long timestamp)
+  throws IOException {
     if(closed) {
       throw new IOException("Cannot append; log is closed");
     }
@@ -272,19 +308,16 @@ public class HLog {
     // most recent flush for every regionName.  However, for regions
     // that don't have any flush yet, the relevant operation is the
     // first one that's been added.
-    
-    if(regionToLastFlush.get(regionName) == null) {
+    if (regionToLastFlush.get(regionName) == null) {
       regionToLastFlush.put(regionName, seqNum[0]);
     }
 
     int counter = 0;
-    for(Iterator<Text> it = columns.keySet().iterator(); it.hasNext(); ) {
-      Text column = it.next();
-      byte[] val = columns.get(column);
-      HLogKey logKey = new HLogKey(regionName, tableName, row, seqNum[counter++]);
-      HLogEdit logEdit = new HLogEdit(column, val, timestamp);
+    for (Text column: columns.keySet()) {
+      HLogKey logKey =
+        new HLogKey(regionName, tableName, row, seqNum[counter++]);
+      HLogEdit logEdit = new HLogEdit(column, columns.get(column), timestamp);
       writer.append(logKey, logEdit);
-
       numEntries++;
     }
   }
@@ -317,40 +350,76 @@ public class HLog {
    * Set a flag so that we do not roll the log between the start
    * and complete of a cache-flush.  Otherwise the log-seq-id for
    * the flush will not appear in the correct logfile.
+   * @return sequence ID to pass {@link #completeCacheFlush(Text, Text, long)}
+   * @see {@link #completeCacheFlush(Text, Text, long)}
    */
   public synchronized long startCacheFlush() {
-    while(insideCacheFlush) {
+    while (insideCacheFlush) {
       try {
         wait();
       } catch (InterruptedException ie) {
       }
     }
-    
     insideCacheFlush = true;
     notifyAll();
     return obtainSeqNum();
   }
 
   /** Complete the cache flush */
-  public synchronized void completeCacheFlush(Text regionName, Text tableName, long logSeqId) throws IOException {
+  public synchronized void completeCacheFlush(final Text regionName,
+    final Text tableName, final long logSeqId)
+  throws IOException {
     if(closed) {
       return;
     }
     
     if(! insideCacheFlush) {
-      throw new IOException("Impossible situation: inside completeCacheFlush(), but 'insideCacheFlush' flag is false");
+      throw new IOException("Impossible situation: inside " +
+        "completeCacheFlush(), but 'insideCacheFlush' flag is false");
     }
     
     writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
-        new HLogEdit(HLog.METACOLUMN, HStoreKey.COMPLETE_CACHEFLUSH, System.currentTimeMillis()));
+      new HLogEdit(HLog.METACOLUMN, COMPLETE_CACHEFLUSH,
+        System.currentTimeMillis()));
     numEntries++;
 
     // Remember the most-recent flush for each region.
     // This is used to delete obsolete log files.
-    
     regionToLastFlush.put(regionName, logSeqId);
 
     insideCacheFlush = false;
     notifyAll();
+  }
+
+  /**
+   * Pass a log file and it will dump out a text version on
+   * <code>stdout</code>.
+   * @param args
+   * @throws IOException
+   */
+  public static void main(String[] args) throws IOException {
+    if (args.length < 1) {
+      System.err.println("Usage: java org.apache.hbase.HLog <logfile>");
+      System.exit(-1);
+    }
+    Configuration conf = new HBaseConfiguration();
+    FileSystem fs = FileSystem.get(conf);
+    Path logfile = new Path(args[0]);
+    if (!fs.exists(logfile)) {
+      throw new FileNotFoundException(args[0] + " does not exist");
+    }
+    if (!fs.isFile(logfile)) {
+      throw new IOException(args[0] + " is not a file");
+    }
+    Reader log = new SequenceFile.Reader(fs, logfile, conf);
+    try {
+      HLogKey key = new HLogKey();
+      HLogEdit val = new HLogEdit();
+      while(log.next(key, val)) {
+        System.out.println(key.toString() + " " + val.toString());
+      }
+    } finally {
+      log.close();
+    }
   }
 }

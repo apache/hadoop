@@ -15,9 +15,9 @@
  */
 package org.apache.hadoop.hbase;
 
-/*******************************************************************************
+/**
  * Global values used for finding and scanning the root and meta tables.
- ******************************************************************************/
+ */
 public class HGlobals implements HConstants {
   
   static HTableDescriptor rootTableDesc = null;
@@ -26,13 +26,11 @@ public class HGlobals implements HConstants {
 
   static {
     rootTableDesc = new HTableDescriptor(ROOT_TABLE_NAME.toString(), 1);
-    rootTableDesc.addFamily(ROOT_COLUMN_FAMILY);
+    rootTableDesc.addFamily(COLUMN_FAMILY);
     
     rootRegionInfo = new HRegionInfo(0L, rootTableDesc, null, null);
     
     metaTableDesc = new HTableDescriptor(META_TABLE_NAME.toString(), 1);
-    metaTableDesc.addFamily(META_COLUMN_FAMILY);
+    metaTableDesc.addFamily(COLUMN_FAMILY);
   }
-  
-
 }

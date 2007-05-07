@@ -50,6 +50,7 @@ public class Leases {
 
     this.leaseMonitor = new LeaseMonitor();
     this.leaseMonitorThread = new Thread(leaseMonitor);
+    this.leaseMonitorThread.setName("Lease.monitor");
     leaseMonitorThread.start();
   }
 
@@ -60,6 +61,7 @@ public class Leases {
   public void close() {
     this.running = false;
     try {
+      this.leaseMonitorThread.interrupt();
       this.leaseMonitorThread.join();
     } catch (InterruptedException iex) {
     }

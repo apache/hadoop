@@ -92,7 +92,7 @@ public class HServerAddress implements Writable {
       
     } else {
       address = new InetSocketAddress(bindAddress, port);
-      stringValue = bindAddress + "_" + port;
+      stringValue = bindAddress + ":" + port;
     }
   }
 
