@@ -36,15 +36,14 @@ public class TestDecommission extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int fileSize = 16384;
-  static final int numIterations = 2;
-  static final int numDatanodes = numIterations + 3;
+  static final int numDatanodes = 6;
 
 
   Random myrand = new Random();
   Path hostsFile;
   Path excludeFile;
 
-  ArrayList<String> decommissionedNodes = new ArrayList<String>(numIterations);
+  ArrayList<String> decommissionedNodes = new ArrayList<String>(numDatanodes);
 
   private enum NodeState {NORMAL, DECOMMISSION_INPROGRESS, DECOMMISSIONED; }
 
@@ -88,6 +87,19 @@ public class TestDecommission extends TestCase {
     for (int idx = 0; idx < locations.length; idx++) {
       assertEquals("Number of replicas for block" + idx,
                    Math.min(numDatanodes, repl), locations[idx].length);  
+    }
+  }
+
+  private void printFileLocations(FileSystem fileSys, Path name)
+  throws IOException {
+    String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
+    for (int idx = 0; idx < locations.length; idx++) {
+      String[] loc = locations[idx];
+      System.out.print("Block[" + idx + "] : ");
+      for (int j = 0; j < loc.length; j++) {
+        System.out.print(loc[j] + " ");
+      }
+      System.out.println("");
     }
   }
 
@@ -223,7 +235,7 @@ public class TestDecommission extends TestCase {
     boolean done = checkNodeState(filesys, node, state);
     while (!done) {
       System.out.println("Waiting for node " + node +
-                         " to change state...");
+                         " to change state to " + state);
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
@@ -260,24 +272,21 @@ public class TestDecommission extends TestCase {
     DistributedFileSystem dfs = (DistributedFileSystem) fileSys;
 
     try {
-      for (int iteration = 0; iteration < numIterations; iteration++) {
+      for (int iteration = 0; iteration < numDatanodes - 1; iteration++) {
+        int replicas = numDatanodes - iteration - 1;
         //
         // Decommission one node. Verify that node is decommissioned.
-        // Verify that replication factor of file has increased from 3
-        // to 4. This means one replica is on decommissioned node.
         // 
-        Path file1 = new Path("smallblocktest.dat");
-        writeFile(fileSys, file1, 3);
-        checkFile(fileSys, file1, 3);
-
-        String downnode  = decommissionNode(client, fileSys, localFileSys);
-        waitNodeState(fileSys, downnode, NodeState.DECOMMISSION_INPROGRESS);
-        commissionNode(fileSys, localFileSys, downnode);
-        waitNodeState(fileSys, downnode, NodeState.NORMAL);
-        downnode  = decommissionNode(client, fileSys, localFileSys);
+        Path file1 = new Path("decommission.dat");
+        writeFile(fileSys, file1, replicas);
+        System.out.println("Created file decommission.dat with " +
+                           replicas + " replicas.");
+        checkFile(fileSys, file1, replicas);
+        printFileLocations(fileSys, file1);
+        String downnode = decommissionNode(client, fileSys, localFileSys);
         decommissionedNodes.add(downnode);
         waitNodeState(fileSys, downnode, NodeState.DECOMMISSIONED);
-        checkFile(fileSys, file1, 3, downnode);
+        checkFile(fileSys, file1, replicas, downnode);
         cleanupFile(fileSys, file1);
         cleanupFile(localFileSys, dir);
       }

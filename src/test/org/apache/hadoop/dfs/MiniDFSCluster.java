@@ -115,6 +115,7 @@ public class MiniDFSCluster {
     }
     conf.setInt("dfs.replication", Math.min(3, numDataNodes));
     conf.setInt("dfs.safemode.extension", 0);
+    conf.setInt("dfs.namenode.decommission.interval", 3 * 1000); // 3 second
     
     // Format and clean out DataNode directories
     if (format) {

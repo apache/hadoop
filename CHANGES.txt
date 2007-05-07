@@ -329,6 +329,9 @@ Trunk (unreleased changes)
     that can fail before a job is aborted.  The default is zero.
     (Arun C Murthy via cutting)
 
+98. HADOOP-1184.  Fix HDFS decomissioning to complete when the only
+    copy of a block is on a decommissioned node. (Dhruba Borthakur via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

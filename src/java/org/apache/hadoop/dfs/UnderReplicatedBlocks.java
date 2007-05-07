@@ -57,8 +57,17 @@ class UnderReplicatedBlocks {
    * @param expectedReplicas expected number of replicas of the block
    */
   private int getPriority(Block block, 
-                          int curReplicas, int expectedReplicas) {
-    if (curReplicas<=0 || curReplicas>=expectedReplicas) {
+                          int curReplicas, 
+                          int decommissionedReplicas,
+                          int expectedReplicas) {
+    if (curReplicas<0 || curReplicas>=expectedReplicas) {
+      return LEVEL; // no need to replicate
+    } else if(curReplicas==0) {
+      // If there are zero non-decommissioned replica but there are
+      // some decommissioned replicas, then assign them highest priority
+      if (decommissionedReplicas > 0) {
+        return 0;
+      }
       return LEVEL; // no need to replicate
     } else if(curReplicas==1) {
       return 0; // highest priority
@@ -75,12 +84,16 @@ class UnderReplicatedBlocks {
    * @param expectedReplicas expected number of replicas of the block
    */
   synchronized boolean add(
-                           Block block, int curReplicas, int expectedReplicas) {
-    if(curReplicas<=0 || expectedReplicas <= curReplicas) {
+                           Block block,
+                           int curReplicas, 
+                           int decomissionedReplicas,
+                           int expectedReplicas) {
+    if(curReplicas<0 || expectedReplicas <= curReplicas) {
       return false;
     }
-    int priLevel = getPriority(block, curReplicas, expectedReplicas);
-    if(priorityQueues.get(priLevel).add(block)) {
+    int priLevel = getPriority(block, curReplicas, decomissionedReplicas,
+                               expectedReplicas);
+    if(priLevel != LEVEL && priorityQueues.get(priLevel).add(block)) {
       NameNode.stateChangeLog.debug(
                                     "BLOCK* NameSystem.UnderReplicationBlock.add:"
                                     + block.getBlockName()
@@ -95,8 +108,12 @@ class UnderReplicatedBlocks {
 
   /* remove a block from a under replication queue */
   synchronized boolean remove(Block block, 
-                              int oldReplicas, int oldExpectedReplicas) {
-    int priLevel = getPriority(block, oldReplicas, oldExpectedReplicas);
+                              int oldReplicas, 
+                              int decommissionedReplicas,
+                              int oldExpectedReplicas) {
+    int priLevel = getPriority(block, oldReplicas, 
+                               decommissionedReplicas,
+                               oldExpectedReplicas);
     return remove(block, priLevel);
   }
       
@@ -124,12 +141,14 @@ class UnderReplicatedBlocks {
   }
       
   /* update the priority level of a block */
-  synchronized void update(Block block, int curReplicas, int curExpectedReplicas,
+  synchronized void update(Block block, int curReplicas, 
+                           int decommissionedReplicas,
+                           int curExpectedReplicas,
                            int curReplicasDelta, int expectedReplicasDelta) {
     int oldReplicas = curReplicas-curReplicasDelta;
     int oldExpectedReplicas = curExpectedReplicas-expectedReplicasDelta;
-    int curPri = getPriority(block, curReplicas, curExpectedReplicas);
-    int oldPri = getPriority(block, oldReplicas, oldExpectedReplicas);
+    int curPri = getPriority(block, curReplicas, decommissionedReplicas, curExpectedReplicas);
+    int oldPri = getPriority(block, oldReplicas, decommissionedReplicas, oldExpectedReplicas);
     NameNode.stateChangeLog.debug("UnderReplicationBlocks.update " + 
                                   block +
                                   " curReplicas " + curReplicas +

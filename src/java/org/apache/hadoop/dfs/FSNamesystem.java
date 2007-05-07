@@ -186,6 +186,8 @@ class FSNamesystem implements FSConstants {
   private long heartbeatExpireInterval;
   //replicationRecheckInterval is how often namenode checks for new replication work
   private long replicationRecheckInterval;
+  //decommissionRecheckInterval is how often namenode checks if a node has finished decommission
+  private long decommissionRecheckInterval;
   static int replIndex = 0; // last datanode used for replication work
   static int REPL_WORK_PER_ITERATION = 32; // max percent datanodes per iteration
 
@@ -240,6 +242,9 @@ class FSNamesystem implements FSConstants {
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
       10 * heartbeatInterval;
     this.replicationRecheckInterval = 3 * 1000; //  3 second
+    this.decommissionRecheckInterval = conf.getInt(
+                                                   "dfs.namenode.decommission.interval",
+                                                   5 * 60 * 1000);
 
     this.localMachine = hostname;
     this.port = port;
@@ -407,10 +412,13 @@ class FSNamesystem implements FSConstants {
   /* updates a block in under replication queue */
   synchronized void updateNeededReplications(Block block,
                         int curReplicasDelta, int expectedReplicasDelta) {
-    int curReplicas = countContainingNodes( block );
+    NumberReplicas repl = countNodes(block);
     int curExpectedReplicas = getReplication(block);
-    neededReplications.update(block, curReplicas, curExpectedReplicas,
-                                     curReplicasDelta, expectedReplicasDelta);
+    neededReplications.update(block, 
+                              repl.liveReplicas(), 
+                              repl.decommissionedReplicas(),
+                              curExpectedReplicas,
+                              curReplicasDelta, expectedReplicasDelta);
   }
 
   /////////////////////////////////////////////////////////
@@ -863,10 +871,12 @@ class FSNamesystem implements FSConstants {
     int numExpectedReplicas = pendingFile.getReplication();
     for (int i = 0; i < nrBlocks; i++) {
       // filter out containingNodes that are marked for decommission.
-      int numCurrentReplica = countContainingNodes(pendingBlocks[i]);
-      if (numCurrentReplica < numExpectedReplicas) {
-        neededReplications.add(
-                               pendingBlocks[i], numCurrentReplica, numExpectedReplicas);
+      NumberReplicas number = countNodes(pendingBlocks[i]);
+      if (number.liveReplicas() < numExpectedReplicas) {
+        neededReplications.add(pendingBlocks[i], 
+                               number.liveReplicas(), 
+                               number.decommissionedReplicas,
+                               numExpectedReplicas);
       }
     }
     return COMPLETE_SUCCESS;
@@ -976,9 +986,8 @@ class FSNamesystem implements FSConstants {
 
     // Check how many copies we have of the block.  If we have at least one
     // copy on a live node, then we can delete it. 
-    int count = countContainingNodes(blk);
-    if ((count > 1) || ((count == 1) && (dn.isDecommissionInProgress() || 
-                                         dn.isDecommissioned()))) {
+    int count = countNodes(blk).liveReplicas();
+    if (count > 1) {
       addToInvalidates(blk, dn);
       removeStoredBlock(blk, getDatanode(dn));
       NameNode.stateChangeLog.info("BLOCK* NameSystem.invalidateBlocks: "
@@ -1737,14 +1746,7 @@ class FSNamesystem implements FSConstants {
           break;
         }
         foundwork++;
-      } else {
-        //
-        // See if the decommissioned node has finished moving all
-        // its datablocks to another replica. This is a loose
-        // heuristic to determine when a decommission is really over.
-        //
-        checkDecommissionState(node);
-      }
+      } 
     }
   }
 
@@ -1757,8 +1759,10 @@ class FSNamesystem implements FSConstants {
     if (timedOutItems != null) {
       synchronized (this) {
         for (int i = 0; i < timedOutItems.length; i++) {
+          NumberReplicas num = countNodes(timedOutItems[i]);
           neededReplications.add(timedOutItems[i], 
-                                 countContainingNodes(timedOutItems[i]),
+                                 num.liveReplicas(),
+                                 num.decommissionedReplicas(),
                                  getReplication(timedOutItems[i]));
         }
       }
@@ -2076,7 +2080,8 @@ class FSNamesystem implements FSConstants {
       return block;
         
     // filter out containingNodes that are marked for decommission.
-    int numCurrentReplica = countContainingNodes(block)
+    NumberReplicas num = countNodes(block);
+    int numCurrentReplica = num.liveReplicas()
       + pendingReplications.getNumReplicas(block);
         
     // check whether safe replication is reached for the block
@@ -2086,7 +2091,8 @@ class FSNamesystem implements FSConstants {
     // handle underReplication/overReplication
     short fileReplication = fileINode.getReplication();
     if (numCurrentReplica >= fileReplication) {
-      neededReplications.remove(block, numCurrentReplica, fileReplication);
+      neededReplications.remove(block, numCurrentReplica, 
+                                num.decommissionedReplicas, fileReplication);
     } else {
       updateNeededReplications(block, curReplicaDelta, 0);
     }
@@ -2342,46 +2348,6 @@ class FSNamesystem implements FSConstants {
     node.stopDecommission();
   }
 
-  /**
-   * Return true if all specified nodes are decommissioned.
-   * Otherwise return false.
-   */
-  public synchronized boolean checkDecommissioned (String[] nodes) 
-    throws IOException {
-    String badnodes = "";
-    boolean isError = false;
-
-    synchronized (datanodeMap) {
-      for (int i = 0; i < nodes.length; i++) {
-        boolean found = false;
-        for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
-             it.hasNext();) {
-          DatanodeDescriptor node = it.next();
-
-          //
-          // If this is a node that we are interested in, check its admin state.
-          //
-          if (node.getName().equals(nodes[i]) || 
-              node.getHost().equals(nodes[i])) {
-            found = true;
-            boolean isDecommissioned = checkDecommissionStateInternal(node);
-            if (!isDecommissioned) {
-              return false;
-            }
-          }
-        }
-        if (!found) {
-          badnodes += nodes[i] + " ";
-          isError = true;
-        }
-      }
-    }
-    if (isError) {
-      throw new IOException("Nodes " + badnodes + " not found");
-    }
-    return true;
-  }
-
   /** 
    */
   public DatanodeInfo getDataNodeInfo(String name) {
@@ -2472,38 +2438,74 @@ class FSNamesystem implements FSConstants {
     return sendBlock.toArray(new Block[sendBlock.size()]);
   }
 
-  /*
-   * Counts the number of nodes in the given list. Skips over nodes
-   * that are marked for decommission.
+
+  /**
+   * A immutable object that stores the number of live replicas and
+   * the number of decommissined Replicas.
    */
-  private int countContainingNodes(Iterator<DatanodeDescriptor> nodeIter) {
+  static class NumberReplicas {
+    private int liveReplicas;
+    private int decommissionedReplicas;
+
+    NumberReplicas(int live, int decommissioned) {
+      liveReplicas = live;
+      decommissionedReplicas = decommissioned;
+    }
+
+    int liveReplicas() {
+      return liveReplicas;
+    }
+    int decommissionedReplicas() {
+      return decommissionedReplicas;
+    }
+  } 
+
+  /*
+   * Counts the number of nodes in the given list into active and
+   * decommissioned counters.
+   */
+  private NumberReplicas countNodes(Iterator<DatanodeDescriptor> nodeIter) {
     int count = 0;
-    while (nodeIter.hasNext()) {
+    int live = 0;
+    while ( nodeIter.hasNext() ) {
       DatanodeDescriptor node = nodeIter.next();
-      if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
+      if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         count++;
       }
+      else {
+        live++;
+      }
     }
-    return count;
-  }
-    
-  /** wrapper for countContainingNodes(Iterator). */
-  private int countContainingNodes(Block b) {
-    return countContainingNodes(blocksMap.nodeIterator(b));
+    return new NumberReplicas(live, count);
   }
 
-  /** Reeturns a newly allocated list exluding the decommisioned nodes. */
-  ArrayList<DatanodeDescriptor> containingNodeList(Block b) {
-    ArrayList<DatanodeDescriptor> nonCommissionedNodeList = 
+  /** return the number of nodes that are live and decommissioned. */
+  private NumberReplicas countNodes(Block b) {
+    return countNodes(blocksMap.nodeIterator(b));
+  }
+
+  /** Returns a newly allocated list of all nodes. Returns a count of
+  * live and decommissioned nodes. */
+  ArrayList<DatanodeDescriptor> containingNodeList(Block b, NumberReplicas[] numReplicas) {
+    ArrayList<DatanodeDescriptor> nodeList = 
       new ArrayList<DatanodeDescriptor>();
+    int count = 0;
+    int live = 0;
     for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(b);
         it.hasNext();) {
       DatanodeDescriptor node = it.next();
       if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
-        nonCommissionedNodeList.add(node);
+        live++;
       }
+      else {
+        count++;
+      }
+      nodeList.add(node);
     }
-    return nonCommissionedNodeList;
+    if (numReplicas != null) {
+      numReplicas[0] = new NumberReplicas(live, count);
+    }
+    return nodeList;
   }
   /*
    * Return true if there are any blocks on this node that have not
@@ -2511,15 +2513,34 @@ class FSNamesystem implements FSConstants {
    */
   private boolean isReplicationInProgress(DatanodeDescriptor srcNode) {
     Block decommissionBlocks[] = srcNode.getBlocks();
+    boolean status = false;
     for (int i = 0; i < decommissionBlocks.length; i++) {
       Block block = decommissionBlocks[i];
       FSDirectory.INode fileINode = blocksMap.getINode(block);
-      if (fileINode != null &&
-          fileINode.getReplication() > countContainingNodes(block)) {
-        return true;
+
+      if (fileINode != null) {
+        NumberReplicas num = countNodes(block);
+        int curReplicas = num.liveReplicas();
+        int curExpectedReplicas = getReplication(block);
+        if (curExpectedReplicas > curReplicas) {
+          status = true;
+          if (!neededReplications.contains(block) &&
+            pendingReplications.getNumReplicas(block) == 0) {
+            //
+            // These blocks have been reported from the datanode
+            // after the startDecommission method has been executed. These
+            // blocks were in flight when the decommission was started.
+            //
+            neededReplications.update(block, 
+                                      curReplicas,
+                                      num.decommissionedReplicas(),
+                                      curExpectedReplicas,
+                                      -1, 0);
+          }
+        }
       }
     }
-    return false;
+    return status;
   }
 
   /**
@@ -2528,7 +2549,7 @@ class FSNamesystem implements FSConstants {
    */
   private boolean checkDecommissionStateInternal(DatanodeDescriptor node) {
     //
-    // Check to see if there are all blocks in this decommisioned
+    // Check to see if all blocks in this decommisioned
     // node has reached their target replication factor.
     //
     if (node.isDecommissionInProgress()) {
@@ -2541,18 +2562,6 @@ class FSNamesystem implements FSConstants {
       return true;
     }
     return false;
-  }
-
-  /**
-   * Change, if appropriate, the admin state of a datanode to 
-   * decommission completed.
-   */
-  public synchronized void checkDecommissionState(DatanodeID nodeReg) {
-    DatanodeDescriptor node = datanodeMap.get(nodeReg.getStorageID());
-    if (node == null) {
-      return;
-    }
-    checkDecommissionStateInternal(node);
   }
 
   /**
@@ -2582,9 +2591,10 @@ class FSNamesystem implements FSConstants {
         // replicate them.
         //
         List<Block> replicateBlocks = new ArrayList<Block>();
-        List<Integer> numCurrentReplicas = new ArrayList<Integer>();
+        List<NumberReplicas> numCurrentReplicas = new ArrayList<NumberReplicas>();
         List<DatanodeDescriptor[]> replicateTargetSets;
         replicateTargetSets = new ArrayList<DatanodeDescriptor[]>();
+        NumberReplicas[] allReplicas = new NumberReplicas[1];
         for (Iterator<Block> it = neededReplications.iterator(); it.hasNext();) {
           if (needed <= 0) {
             break;
@@ -2596,7 +2606,7 @@ class FSNamesystem implements FSConstants {
             it.remove();
           } else {
             List<DatanodeDescriptor> containingNodes = 
-              containingNodeList(block);
+              containingNodeList(block, allReplicas);
             Collection<Block> excessBlocks = excessReplicateMap.get(
                                                                     srcNode.getStorageID());
 
@@ -2604,8 +2614,10 @@ class FSNamesystem implements FSConstants {
             // not be scheduled for removal on that node
             if (containingNodes.contains(srcNode)
                 && (excessBlocks == null || !excessBlocks.contains(block))) {
-              int numCurrentReplica = containingNodes.size() + 
+              int numCurrentReplica = allReplicas[0].liveReplicas() +
                 pendingReplications.getNumReplicas(block);
+              NumberReplicas repl = new NumberReplicas(numCurrentReplica,
+                                        allReplicas[0].decommissionedReplicas()); 
               if (numCurrentReplica >= fileINode.getReplication()) {
                 it.remove();
               } else {
@@ -2617,7 +2629,7 @@ class FSNamesystem implements FSConstants {
                 if (targets.length > 0) {
                   // Build items to return
                   replicateBlocks.add(block);
-                  numCurrentReplicas.add(new Integer(numCurrentReplica));
+                  numCurrentReplicas.add(repl);
                   replicateTargetSets.add(targets);
                   needed -= targets.length;
                 }
@@ -2638,11 +2650,14 @@ class FSNamesystem implements FSConstants {
             Block block = it.next();
             DatanodeDescriptor targets[] = 
               (DatanodeDescriptor[]) replicateTargetSets.get(i);
-            int numCurrentReplica = numCurrentReplicas.get(i).intValue();
+            int numCurrentReplica = numCurrentReplicas.get(i).liveReplicas();
             int numExpectedReplica = blocksMap.getINode(block).getReplication(); 
             if (numCurrentReplica + targets.length >= numExpectedReplica) {
               neededReplications.remove(
-                                        block, numCurrentReplica, numExpectedReplica);
+                                        block, 
+                                        numCurrentReplica, 
+                                        numCurrentReplicas.get(i).decommissionedReplicas(),
+                                        numExpectedReplica);
               pendingReplications.add(block, targets.length);
               NameNode.stateChangeLog.debug(
                                             "BLOCK* NameSystem.pendingTransfer: "
@@ -2797,7 +2812,7 @@ class FSNamesystem implements FSConstants {
           FSNamesystem.LOG.info(StringUtils.stringifyException(e));
         }
         try {
-          Thread.sleep(1000 * 60 * 5);
+          Thread.sleep(decommissionRecheckInterval);
         } catch (InterruptedException ie) {
         }
       }
@@ -3165,7 +3180,7 @@ class FSNamesystem implements FSConstants {
   void decrementSafeBlockCount(Block b) {
     if (safeMode == null) // mostly true
       return;
-    safeMode.decrementSafeBlockCount((short)countContainingNodes(b));
+    safeMode.decrementSafeBlockCount((short)countNodes(b).liveReplicas());
   }
 
   /**
