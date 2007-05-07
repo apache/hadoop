@@ -345,6 +345,9 @@ Trunk (unreleased changes)
 102. HADOOP-1326.  Change JobClient#RunJob() to return the job.
     (omalley via cutting)
 
+103. HADOOP-1270.  Randomize the fetch of map outputs, speeding the
+     shuffle.  (Arun C Murthy via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
