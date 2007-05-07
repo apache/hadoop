@@ -356,6 +356,10 @@ Trunk (unreleased changes)
      More care is also taken to not allocate files on full or offline
      drives.  (Devaraj Das via cutting)
 
+106. HADOOP-1324.  Change so that an FSError kills only the task that
+     generates it rather than the entire task tracker.
+     (Arun C Murthy via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

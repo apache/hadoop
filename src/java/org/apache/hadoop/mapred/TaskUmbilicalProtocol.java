@@ -63,7 +63,7 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
   void done(String taskid) throws IOException;
 
   /** Report that the task encounted a local filesystem error.*/
-  void fsError(String message) throws IOException;
+  void fsError(String taskId, String message) throws IOException;
 
   /** Called by a reduce task to get the map output locations for finished maps.
    *

@@ -236,8 +236,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
       }
     }
 
-    public synchronized void fsError(String message) throws IOException {
-      LOG.fatal("FSError: "+ message);
+    public synchronized void fsError(String taskId, String message) 
+    throws IOException {
+      LOG.fatal("FSError: "+ message + "from task: " + taskId);
     }
 
     public TaskCompletionEvent[] getMapCompletionEvents(

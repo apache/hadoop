@@ -47,8 +47,8 @@ public class IsolationRunner {
       LOG.info("Task " + taskid + " reporting done.");
     }
 
-    public void fsError(String message) throws IOException {
-      LOG.info("Task reporting file system error: " + message);
+    public void fsError(String taskId, String message) throws IOException {
+      LOG.info("Task " + taskId + " reporting file system error: " + message);
     }
 
     public Task getTask(String taskid) throws IOException {

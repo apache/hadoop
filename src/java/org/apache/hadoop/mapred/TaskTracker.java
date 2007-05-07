@@ -1577,11 +1577,15 @@ public class TaskTracker
     }
   }
 
-  /** A child task had a local filesystem error.  Exit, so that no future
-   * jobs are accepted. */
-  public synchronized void fsError(String message) throws IOException {
-    LOG.fatal("FSError, exiting: "+ message);
-    running = false;
+  /** 
+   * A child task had a local filesystem error. Kill the task.
+   */  
+  public synchronized void fsError(String taskId, String message) 
+  throws IOException {
+    LOG.fatal("Task: " + taskId + " - Killed due to FSError: " + message);
+    TaskInProgress tip = runningTasks.get(taskId);
+    tip.reportDiagnosticInfo("FSError: " + message);
+    purgeTask(tip);
   }
 
   public TaskCompletionEvent[] getMapCompletionEvents(
@@ -1705,7 +1709,7 @@ public class TaskTracker
         task.run(job, umbilical);             // run the task
       } catch (FSError e) {
         LOG.fatal("FSError from child", e);
-        umbilical.fsError(e.getMessage());
+        umbilical.fsError(taskid, e.getMessage());
       } catch (Throwable throwable) {
         LOG.warn("Error running child", throwable);
         // Report back any failures, for diagnostic purposes
