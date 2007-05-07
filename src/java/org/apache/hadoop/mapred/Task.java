@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
@@ -69,6 +70,7 @@ abstract class Task implements Writable, Configurable {
   
   protected JobConf conf;
   protected MapOutputFile mapOutputFile = new MapOutputFile();
+  protected LocalDirAllocator lDirAlloc;
 
   ////////////////////////////////////////////
   // Constructors
@@ -293,6 +295,7 @@ abstract class Task implements Writable, Configurable {
       this.conf = new JobConf(conf);
     }
     this.mapOutputFile.setConf(this.conf);
+    this.lDirAlloc = new LocalDirAllocator("mapred.local.dir");
   }
 
   public Configuration getConf() {

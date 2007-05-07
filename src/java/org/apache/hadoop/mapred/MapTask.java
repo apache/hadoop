@@ -58,6 +58,7 @@ class MapTask extends Task {
   private BytesWritable split = new BytesWritable();
   private String splitClass;
   private InputSplit instantiatedSplit = null;
+  private final static int APPROX_HEADER_LENGTH = 150;
 
   private static final Log LOG = LogFactory.getLog(MapTask.class.getName());
 
@@ -391,11 +392,16 @@ class MapTask extends Task {
     //sort, combine and spill to disk
     private void sortAndSpillToDisk() throws IOException {
       synchronized (this) {
-        Path filename = mapOutputFile.getSpillFile(getTaskId(), numSpills);
+        //approximate the length of the output file to be the length of the
+        //buffer + header lengths for the partitions
+        long size = keyValBuffer.getLength() + 
+                    partitions * APPROX_HEADER_LENGTH;
+        Path filename = mapOutputFile.getSpillFileForWrite(getTaskId(), 
+                                      numSpills, size);
         //we just create the FSDataOutputStream object here.
         out = localFs.create(filename);
-        Path indexFilename = mapOutputFile.getSpillIndexFile(getTaskId(), 
-                                                             numSpills);
+        Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(
+                             getTaskId(), numSpills, partitions * 16);
         indexOut = localFs.create(indexFilename);
         LOG.debug("opened "+
                   mapOutputFile.getSpillFile(getTaskId(), numSpills).getName());
@@ -479,14 +485,31 @@ class MapTask extends Task {
     }
     
     private void mergeParts() throws IOException {
-      Path finalOutputFile = mapOutputFile.getOutputFile(getTaskId());
-      Path finalIndexFile = mapOutputFile.getOutputIndexFile(getTaskId());
+      // get the approximate size of the final output/index files
+      long finalOutFileSize = 0;
+      long finalIndexFileSize = 0;
+      Path [] filename = new Path[numSpills];
+      Path [] indexFileName = new Path[numSpills];
+      
+      for(int i = 0; i < numSpills; i++) {
+        filename[i] = mapOutputFile.getSpillFile(getTaskId(), i);
+        indexFileName[i] = mapOutputFile.getSpillIndexFile(getTaskId(), i);
+        finalOutFileSize += localFs.getLength(filename[i]);
+      }
+      //make correction in the length to include the sequence file header
+      //lengths for each partition
+      finalOutFileSize += partitions * APPROX_HEADER_LENGTH;
+      
+      finalIndexFileSize = partitions * 16;
+      
+      Path finalOutputFile = mapOutputFile.getOutputFileForWrite(getTaskId(), 
+                             finalOutFileSize);
+      Path finalIndexFile = mapOutputFile.getOutputIndexFileForWrite(
+                            getTaskId(), finalIndexFileSize);
       
       if (numSpills == 1) { //the spill is the final output
-        Path spillPath = mapOutputFile.getSpillFile(getTaskId(), 0);
-        Path spillIndexPath = mapOutputFile.getSpillIndexFile(getTaskId(), 0);
-        localFs.rename(spillPath, finalOutputFile);
-        localFs.rename(spillIndexPath, finalIndexFile);
+        localFs.rename(filename[0], finalOutputFile);
+        localFs.rename(indexFileName[0], finalIndexFile);
         return;
       }
       
@@ -513,14 +536,6 @@ class MapTask extends Task {
         return;
       }
       {
-        Path [] filename = new Path[numSpills];
-        Path [] indexFileName = new Path[numSpills];
-        
-        for(int i = 0; i < numSpills; i++) {
-          filename[i] = mapOutputFile.getSpillFile(getTaskId(), i);
-          indexFileName[i] = mapOutputFile.getSpillIndexFile(getTaskId(), i);
-        }
-        
         //create a sorter object as we need access to the SegmentDescriptor
         //class and merge methods
         Sorter sorter = new Sorter(localFs, keyClass, valClass, job);

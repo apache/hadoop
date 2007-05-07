@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.conf.*;
 
 /**
@@ -29,49 +30,108 @@ import org.apache.hadoop.conf.*;
 class MapOutputFile {
 
   private JobConf conf;
+  private LocalDirAllocator lDirAlloc = 
+                            new LocalDirAllocator("mapred.local.dir");
   
-  /** Create a local map output file name.
+  /** Return the path to local map output file created earlier
    * @param mapTaskId a map task id
    */
   public Path getOutputFile(String mapTaskId)
     throws IOException {
-    return conf.getLocalPath(mapTaskId+"/file.out");
+    return lDirAlloc.getLocalPathToRead(mapTaskId+"/file.out", conf);
   }
 
-  /** Create a local map output index file name.
+  /** Create a local map output file name.
+   * @param mapTaskId a map task id
+   * @param size the size of the file
+   */
+  public Path getOutputFileForWrite(String mapTaskId, long size)
+    throws IOException {
+    return lDirAlloc.getLocalPathForWrite(mapTaskId+"/file.out", size, conf);
+  }
+
+  /** Return the path to a local map output index file created earlier
    * @param mapTaskId a map task id
    */
   public Path getOutputIndexFile(String mapTaskId)
     throws IOException {
-    return conf.getLocalPath(mapTaskId+"/file.out.index");
+    return lDirAlloc.getLocalPathToRead(mapTaskId + "/file.out.index", conf);
   }
 
-  /** Create a local map spill file name.
+  /** Create a local map output index file name.
+   * @param mapTaskId a map task id
+   * @param size the size of the file
+   */
+  public Path getOutputIndexFileForWrite(String mapTaskId, long size)
+    throws IOException {
+    return lDirAlloc.getLocalPathForWrite(mapTaskId + "/file.out.index", 
+                                          size, conf);
+  }
+
+  /** Return a local map spill file created earlier.
    * @param mapTaskId a map task id
    * @param spillNumber the number
    */
   public Path getSpillFile(String mapTaskId, int spillNumber)
     throws IOException {
-    return conf.getLocalPath(mapTaskId+"/spill" +spillNumber+".out");
+    return lDirAlloc.getLocalPathToRead(mapTaskId+"/spill" +spillNumber+".out",
+                                        conf);
   }
 
-  /** Create a local map spill index file name.
+  /** Create a local map spill file name.
+   * @param mapTaskId a map task id
+   * @param spillNumber the number
+   * @param size the size of the file
+   */
+  public Path getSpillFileForWrite(String mapTaskId, int spillNumber, 
+         long size) throws IOException {
+    return lDirAlloc.getLocalPathForWrite(mapTaskId+
+                                                  "/spill" +spillNumber+".out",
+                                                  size, conf);
+  }
+
+  /** Return a local map spill index file created earlier
    * @param mapTaskId a map task id
    * @param spillNumber the number
    */
   public Path getSpillIndexFile(String mapTaskId, int spillNumber)
     throws IOException {
-    return conf.getLocalPath(mapTaskId+"/spill" +spillNumber+".out.index");
+    return lDirAlloc.getLocalPathToRead(
+        mapTaskId+"/spill" +spillNumber+".out.index", conf);
   }
 
-  /** Create a local reduce input file name.
+  /** Create a local map spill index file name.
+   * @param mapTaskId a map task id
+   * @param spillNumber the number
+   * @param size the size of the file
+   */
+  public Path getSpillIndexFileForWrite(String mapTaskId, int spillNumber,
+         long size) throws IOException {
+    return lDirAlloc.getLocalPathForWrite(
+        mapTaskId+"/spill" +spillNumber+".out.index", size, conf);
+  }
+
+  /** Return a local reduce input file created earlier
    * @param mapTaskId a map task id
    * @param reduceTaskId a reduce task id
    */
   public Path getInputFile(int mapId, String reduceTaskId)
     throws IOException {
     // TODO *oom* should use a format here
-    return conf.getLocalPath(reduceTaskId+"/map_"+mapId+".out");
+    return lDirAlloc.getLocalPathToRead(reduceTaskId + "/map_"+mapId+".out",
+                                        conf);
+  }
+
+  /** Create a local reduce input file name.
+   * @param mapTaskId a map task id
+   * @param reduceTaskId a reduce task id
+   * @param size the size of the file
+   */
+  public Path getInputFileForWrite(int mapId, String reduceTaskId, long size)
+    throws IOException {
+    // TODO *oom* should use a format here
+    return lDirAlloc.getLocalPathForWrite(reduceTaskId + "/map_"+mapId+".out",
+                                          size, conf);
   }
 
   /** Removes all of the files related to a task. */

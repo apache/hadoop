@@ -140,7 +140,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
           for (int i = 0; i < mapIds.size(); i++) {
             String mapId = mapIds.get(i);
             Path mapOut = this.mapoutputFile.getOutputFile(mapId);
-            Path reduceIn = this.mapoutputFile.getInputFile(i, reduceId);
+            Path reduceIn = this.mapoutputFile.getInputFileForWrite(i,reduceId,
+                localFs.getLength(mapOut));
             if (!localFs.mkdirs(reduceIn.getParent())) {
               throw new IOException("Mkdirs failed to create "
                   + reduceIn.getParent().toString());

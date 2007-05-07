@@ -43,7 +43,12 @@ abstract class TaskRunner extends Thread {
 
   private TaskLog.Writer taskStdOutLogWriter;
   private TaskLog.Writer taskStdErrLogWriter;
-  
+
+  /** 
+   * for cleaning up old map outputs
+   */
+  protected MapOutputFile mapOutputFile;
+
   public TaskRunner(Task t, TaskTracker tracker, JobConf conf) {
     this.t = t;
     this.tracker = tracker;
@@ -60,6 +65,8 @@ abstract class TaskRunner extends Thread {
                          this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024, 
                          this.conf.getBoolean("mapred.userlog.purgesplits", true),
                          this.conf.getInt("mapred.userlog.retain.hours", 12));
+    this.mapOutputFile = new MapOutputFile();
+    this.mapOutputFile.setConf(conf);
   }
 
   public Task getTask() { return t; }

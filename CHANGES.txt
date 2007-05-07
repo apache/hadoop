@@ -351,6 +351,11 @@ Trunk (unreleased changes)
 104. HADOOP-1200.  Restore disk checking lost in HADOOP-1170.
      (Hairong Kuang via cutting)
 
+105. HADOOP-1252.  Changed MapReduce's allocation of local files to
+     use round-robin among available devices, rather than a hashcode.
+     More care is also taken to not allocate files on full or offline
+     drives.  (Devaraj Das via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

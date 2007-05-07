@@ -40,6 +40,10 @@ import org.apache.hadoop.util.StringUtils;
 public abstract class ChecksumFileSystem extends FilterFileSystem {
   private static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};
 
+  public static double getApproxChkSumLength(long size) {
+    return FSOutputSummer.CHKSUM_AS_FRACTION * size;
+  }
+  
   public ChecksumFileSystem(FileSystem fs) {
     super(fs);
   }
@@ -343,6 +347,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     private Checksum sum = new CRC32();
     private int inSum;
     private int bytesPerSum;
+    private static final float CHKSUM_AS_FRACTION = 0.01f;
     
     public FSOutputSummer(ChecksumFileSystem fs, 
                           Path file, 

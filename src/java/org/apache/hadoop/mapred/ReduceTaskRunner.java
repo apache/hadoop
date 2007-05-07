@@ -17,23 +17,15 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.conf.*;
-
 import java.io.*;
 
 /** Runs a reduce task. */
 class ReduceTaskRunner extends TaskRunner {
-  /** 
-   * for cleaning up old map outputs
-   */
-  private MapOutputFile mapOutputFile;
   
   public ReduceTaskRunner(Task task, TaskTracker tracker, 
                           JobConf conf) throws IOException {
     
     super(task, tracker, conf);
-    this.mapOutputFile = new MapOutputFile();
-    this.mapOutputFile.setConf(conf);
   }
 
   /** Assemble all of the map output files */
@@ -43,7 +35,7 @@ class ReduceTaskRunner extends TaskRunner {
     }
     
     // cleanup from failures
-    this.mapOutputFile.removeAll(getTask().getTaskId());
+    mapOutputFile.removeAll(getTask().getTaskId());
     return true;
   }
   
@@ -52,6 +44,6 @@ class ReduceTaskRunner extends TaskRunner {
   public void close() throws IOException {
     LOG.info(getTask()+" done; removing files.");
     getTask().getProgress().setStatus("closed");
-    this.mapOutputFile.removeAll(getTask().getTaskId());
+    mapOutputFile.removeAll(getTask().getTaskId());
   }
 }

@@ -26,9 +26,11 @@ import java.net.*;
 import org.apache.hadoop.fs.InMemoryFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.conf.*;
 
 /** The location of a map output file, as passed to a reduce task via the
  * {@link InterTrackerProtocol}. */ 
@@ -174,7 +176,10 @@ class MapOutputLocation implements Writable, MRConstants {
    * We use the file system so that we generate checksum files on the data.
    * @param inMemFileSys the inmemory filesystem to write the file to
    * @param localFileSys the local filesystem to write the file to
+   * @param shuffleMetrics the metrics context
    * @param localFilename the filename to write the data into
+   * @param lDirAlloc the LocalDirAllocator object
+   * @param conf the Configuration object
    * @param reduce the reduce id to get for
    * @param timeout number of ms for connection and read timeout
    * @return the path of the file that got created
@@ -184,7 +189,8 @@ class MapOutputLocation implements Writable, MRConstants {
                       FileSystem localFileSys,
                       MetricsRecord shuffleMetrics,
                       Path localFilename, 
-                      int reduce,
+                      LocalDirAllocator lDirAlloc,
+                      Configuration conf, int reduce,
                       int timeout) throws IOException, InterruptedException {
     boolean good = false;
     long totalBytes = 0;
@@ -216,6 +222,11 @@ class MapOutputLocation implements Writable, MRConstants {
                        inMemFileSys.reserveSpaceWithCheckSum(localFilename, length));
       if (createInMem) {
         fileSys = inMemFileSys;
+      }
+      else {
+        //now hit the localFS to find out a suitable location for the output
+        localFilename = lDirAlloc.getLocalPathForWrite(
+            localFilename.toUri().getPath(), length + checksumLength, conf);
       }
       
       output = fileSys.create(localFilename);

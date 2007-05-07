@@ -17,18 +17,13 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.conf.*;
-
 import java.io.*;
 
 /** Runs a map task. */
 class MapTaskRunner extends TaskRunner {
-  private MapOutputFile mapOutputFile;
 
   public MapTaskRunner(Task task, TaskTracker tracker, JobConf conf) {
     super(task, tracker, conf);
-    this.mapOutputFile = new MapOutputFile();
-    this.mapOutputFile.setConf(conf);
   }
   
   /** Delete any temporary files from previous failed attempts. */
@@ -37,13 +32,13 @@ class MapTaskRunner extends TaskRunner {
       return false;
     }
     
-    this.mapOutputFile.removeAll(getTask().getTaskId());
+    mapOutputFile.removeAll(getTask().getTaskId());
     return true;
   }
 
   /** Delete all of the temporary map output files. */
   public void close() throws IOException {
     LOG.info(getTask()+" done; removing files.");
-    this.mapOutputFile.removeAll(getTask().getTaskId());
+    mapOutputFile.removeAll(getTask().getTaskId());
   }
 }

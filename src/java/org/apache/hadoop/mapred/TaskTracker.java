@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -88,6 +89,7 @@ public class TaskTracker
 
   private boolean running = true;
 
+  private LocalDirAllocator localDirAllocator;
   String taskTrackerName;
   String localHostname;
   InetSocketAddress jobTrackAddr;
@@ -657,10 +659,12 @@ public class TaskTracker
     // let the jsp pages get to the task tracker, config, and other relevant
     // objects
     FileSystem local = FileSystem.getLocal(conf);
+    this.localDirAllocator = new LocalDirAllocator("mapred.local.dir");
     server.setAttribute("task.tracker", this);
     server.setAttribute("local.file.system", local);
     server.setAttribute("conf", conf);
     server.setAttribute("log", LOG);
+    server.setAttribute("localDirAllocator", localDirAllocator);
     server.addServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
     server.start();
     this.httpPort = server.getPort();
@@ -1872,15 +1876,19 @@ public class TaskTracker
       byte[] buffer = new byte[MAX_BYTES_TO_READ];
       OutputStream outStream = response.getOutputStream();
       JobConf conf = (JobConf) context.getAttribute("conf");
+      LocalDirAllocator lDirAlloc = 
+        (LocalDirAllocator)context.getAttribute("localDirAllocator");
       FileSystem fileSys = 
         (FileSystem) context.getAttribute("local.file.system");
 
       // Index file
-      Path indexFileName = conf.getLocalPath(mapId+"/file.out.index");
+      Path indexFileName = lDirAlloc.getLocalPathToRead(
+                                            mapId+"/file.out.index", conf);
       FSDataInputStream indexIn = null;
          
       // Map-output file
-      Path mapOutputFileName = conf.getLocalPath(mapId+"/file.out"); 
+      Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
+                                            mapId+"/file.out", conf);
       FSDataInputStream mapOutputIn = null;
         
       // true iff IOException was caused by attempt to access input

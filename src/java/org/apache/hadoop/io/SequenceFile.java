@@ -2383,6 +2383,7 @@ public class SequenceFile {
         int numSegments = sortedSegmentSizes.size();
         int origFactor = factor;
         int passNo = 1;
+        LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
         do {
           //get the factor for this pass of merge
           factor = getPassFactor(passNo, numSegments);
@@ -2435,11 +2436,19 @@ public class SequenceFile {
             return this;
           } else {
             //we want to spread the creation of temp files on multiple disks if 
-            //available
+            //available under the space constraints
+            long approxOutputSize = 0; 
+            for (SegmentDescriptor s : segmentsToMerge) {
+              approxOutputSize += s.segmentLength + 
+                                  ChecksumFileSystem.getApproxChkSumLength(
+                                  s.segmentLength);
+            }
             Path tmpFilename = 
               new Path(tmpDir, "intermediate").suffix("." + passNo);
-            Path outputFile = conf.getLocalPath("mapred.local.dir", 
-                                                tmpFilename.toString());
+
+            Path outputFile =  lDirAlloc.getLocalPathForWrite(
+                                                tmpFilename.toString(),
+                                                approxOutputSize, conf);
             LOG.info("writing intermediate results to " + outputFile);
             Writer writer = cloneFileAttributes(
                                                 fs.makeQualified(segmentsToMerge.get(0).segmentPathName), 
