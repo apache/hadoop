@@ -58,6 +58,7 @@ import org.apache.hadoop.util.StringUtils;
  * @author Mike Cafarella
  *******************************************************/
 public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmissionProtocol {
+  static long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
   static long RETIRE_JOB_INTERVAL;
   static long RETIRE_JOB_CHECK_INTERVAL;
   static float TASK_ALLOC_EPSILON;
@@ -606,6 +607,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     //
     // Grab some static constants
     //
+    TASKTRACKER_EXPIRY_INTERVAL = 
+      conf.getLong("mapred.tasktracker.expiry.interval", 10 * 60 * 1000);
     maxCurrentTasks = conf.getInt("mapred.tasktracker.tasks.maximum", 2);
     RETIRE_JOB_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.interval", 24 * 60 * 60 * 1000);
     RETIRE_JOB_CHECK_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.check", 60 * 1000);

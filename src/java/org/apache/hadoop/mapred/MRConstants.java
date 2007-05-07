@@ -27,7 +27,6 @@ interface MRConstants {
   // Timeouts, constants
   //
   public static final long HEARTBEAT_INTERVAL = 10 * 1000;
-  public static final long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
 
   //for the inmemory filesystem (to do in-memory merge)
   /**

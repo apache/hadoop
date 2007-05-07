@@ -339,6 +339,9 @@ Trunk (unreleased changes)
 100. HADOOP-1325.  First complete, functioning version of HBase.
     (Jim Kellerman via cutting)
 
+101. HADOOP-1276.  Make tasktracker expiry interval configurable.
+    (Arun C Murthy via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

@@ -526,6 +526,14 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.tasktracker.expiry.interval</name>
+  <value>600000</value>
+  <description>Expert: The time-interval, in miliseconds, after which
+  a tasktracker is declared 'lost' if it doesn't send heartbeats.
+  </description>
+</property>
+
+<property>
   <name>mapred.map.tasks</name>
   <value>2</value>
   <description>The default number of map tasks per job.  Typically set
