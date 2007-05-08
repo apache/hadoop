@@ -3,6 +3,12 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
+  1. HADOOP-1197.  In Configuration, deprecate getObject() and add
+     getRaw(), which skips variable expansion. (omalley via cutting)
+
+
+Branch 0.13 (unreleased changes)
+
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
     (Hairong Kuang via cutting)
 

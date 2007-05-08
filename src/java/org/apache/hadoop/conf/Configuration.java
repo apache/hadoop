@@ -151,16 +151,20 @@ public class Configuration {
   /**
    * Returns the value of the <code>name</code> property, or null if no such
    * property exists.
+   * @deprecated A side map of Configuration to Object should be used instead.
    */
   public Object getObject(String name) { return getProps().get(name);}
 
-  /** Sets the value of the <code>name</code> property. */
+  /** Sets the value of the <code>name</code> property. 
+   * @deprecated
+   */
   public void setObject(String name, Object value) {
     getProps().put(name, value);
   }
 
   /** Returns the value of the <code>name</code> property.  If no such property
    * exists, then <code>defaultValue</code> is returned.
+   * @deprecated A side map of Configuration to Object should be used instead.
    */
   public Object get(String name, Object defaultValue) {
     Object res = getObject(name);
@@ -186,7 +190,7 @@ public class Configuration {
       var = var.substring(2, var.length()-1); // remove ${ .. }
       String val = System.getProperty(var);
       if (val == null) {
-        val = (String)this.getObject(var);
+        val = getRaw(var);
       }
       if (val == null) {
         return eval; // return literal ${var}: var is unbound
@@ -202,6 +206,16 @@ public class Configuration {
    * such property exists. */
   public String get(String name) {
     return substituteVars(getProps().getProperty(name));
+  }
+
+  /**
+   * Get the value of the <code>name</code> property, without doing variable
+   * expansion.
+   * @param name the property name
+   * @return the result or null if no such property exists
+   */
+  public String getRaw(String name) {
+    return getProps().getProperty(name);
   }
 
   /** Sets the value of the <code>name</code> property. */

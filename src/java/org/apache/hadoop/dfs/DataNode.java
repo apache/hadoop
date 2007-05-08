@@ -223,8 +223,7 @@ public class DataNode implements FSConstants, Runnable {
     NamespaceInfo nsInfo = handshake();
 
     // read storage info, lock data dirs and transition fs state if necessary
-    StartupOption startOpt = (StartupOption)conf.get("dfs.datanode.startup", 
-                                                     StartupOption.REGULAR);
+    StartupOption startOpt = getStartupOption(conf);
     assert startOpt != null : "Startup option must be set.";
     storage = new DataStorage();
     storage.recoverTransitionRead(nsInfo, dataDirs, startOpt);
@@ -1246,8 +1245,17 @@ public class DataNode implements FSConstants, Runnable {
     }
     if (networkLoc != null)
       conf.set("dfs.datanode.rack", NodeBase.normalize(networkLoc));
-    conf.setObject("dfs.datanode.startup", startOpt);
+    setStartupOption(conf, startOpt);
     return true;
+  }
+
+  private static void setStartupOption(Configuration conf, StartupOption opt) {
+    conf.set("dfs.datanode.startup", opt);
+  }
+
+  static StartupOption getStartupOption(Configuration conf) {
+    return StartupOption.valueOf(conf.get("dfs.datanode.startup",
+                                          StartupOption.REGULAR.toString()));
   }
 
   /* Get the network location by running a script configured in conf */

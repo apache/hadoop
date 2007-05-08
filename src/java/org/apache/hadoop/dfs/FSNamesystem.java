@@ -249,8 +249,7 @@ class FSNamesystem implements FSConstants {
     this.localMachine = hostname;
     this.port = port;
     this.dir = new FSDirectory(this);
-    StartupOption startOpt = (StartupOption)conf.get(
-                                                     "dfs.namenode.startup", StartupOption.REGULAR);
+    StartupOption startOpt = NameNode.getStartupOption(conf);
     this.dir.loadFSImage(getNamespaceDirs(conf), startOpt);
     this.safeMode = new SafeModeInfo(conf);
     setBlockTotal();

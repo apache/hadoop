@@ -781,8 +781,17 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       } else
         return null;
     }
-    conf.setObject("dfs.namenode.startup", startOpt);
+    setStartupOption(conf, startOpt);
     return startOpt;
+  }
+
+  private static void setStartupOption(Configuration conf, StartupOption opt) {
+    conf.set("dfs.namenode.startup", opt.toString());
+  }
+
+  static StartupOption getStartupOption(Configuration conf) {
+    return StartupOption.valueOf(conf.get("dfs.namenode.startup",
+                                          StartupOption.REGULAR.toString()));
   }
 
   static NameNode createNameNode(String argv[], 

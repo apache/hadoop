@@ -74,7 +74,7 @@ public class TestConfiguration extends TestCase {
     for (Prop p : props) {
       System.out.println("p=" + p.name);
       String gotVal = conf.get(p.name);
-      String gotRawVal = (String)conf.getObject(p.name);
+      String gotRawVal = conf.getRaw(p.name);
       assertEq(p.val, gotRawVal);
       if (p.expectEval == UNSPEC) {
         // expansion is system-dependent (uses System properties)
