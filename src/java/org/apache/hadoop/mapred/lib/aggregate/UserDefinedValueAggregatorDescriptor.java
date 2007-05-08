@@ -48,7 +48,7 @@ public class UserDefinedValueAggregatorDescriptor implements
     Object retv = null;
     try {
       ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-      Class theFilterClass = Class.forName(className, true, classLoader);
+      Class<?> theFilterClass = Class.forName(className, true, classLoader);
       Constructor meth = theFilterClass.getDeclaredConstructor(argArray);
       meth.setAccessible(true);
       retv = meth.newInstance();

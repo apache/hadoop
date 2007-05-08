@@ -29,14 +29,14 @@ import java.util.TreeMap;
  */
 public class UniqValueCount implements ValueAggregator {
 
-  TreeMap uniqItems = null;
+  TreeMap<Object, Object> uniqItems = null;
 
   /**
    * the default constructor
    * 
    */
   public UniqValueCount() {
-    uniqItems = new TreeMap();
+    uniqItems = new TreeMap<Object, Object>();
   }
 
   /**
@@ -70,7 +70,7 @@ public class UniqValueCount implements ValueAggregator {
    * reset the aggregator
    */
   public void reset() {
-    uniqItems = new TreeMap();
+    uniqItems = new TreeMap<Object, Object>();
   }
 
   /**
@@ -80,7 +80,7 @@ public class UniqValueCount implements ValueAggregator {
   public ArrayList getCombinerOutput() {
     Object key = null;
     Iterator iter = uniqItems.keySet().iterator();
-    ArrayList retv = new ArrayList();
+    ArrayList<Object> retv = new ArrayList<Object>();
 
     while (iter.hasNext()) {
       key = iter.next();

@@ -33,10 +33,10 @@ import org.apache.hadoop.io.Text;
  */
 public class ValueHistogram implements ValueAggregator {
 
-  TreeMap items = null;
+  TreeMap<Object, Object> items = null;
 
   public ValueHistogram() {
-    items = new TreeMap();
+    items = new TreeMap<Object, Object>();
   }
 
   /**
@@ -150,7 +150,7 @@ public class ValueHistogram implements ValueAggregator {
    *  The return value is expected to be used by the reducer.
    */
   public ArrayList getCombinerOutput() {
-    ArrayList retv = new ArrayList();
+    ArrayList<String> retv = new ArrayList<String>();
     Iterator iter = items.entrySet().iterator();
 
     while (iter.hasNext()) {
@@ -174,7 +174,7 @@ public class ValueHistogram implements ValueAggregator {
    * reset the aggregator
    */
   public void reset() {
-    items = new TreeMap();
+    items = new TreeMap<Object, Object>();
   }
 
 }

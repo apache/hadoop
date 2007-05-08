@@ -264,7 +264,7 @@ public class DFSCIOTest extends TestCase {
     runIOTest(WriteMapper.class, WRITE_DIR);
   }
   
-  private static void runIOTest( Class mapperClass, 
+  private static void runIOTest( Class<? extends Mapper> mapperClass, 
                                  Path outputDir
                                  ) throws IOException {
     JobConf job = new JobConf(fsConfig, DFSCIOTest.class);

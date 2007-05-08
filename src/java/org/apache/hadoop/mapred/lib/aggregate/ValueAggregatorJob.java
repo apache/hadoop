@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
@@ -111,7 +112,8 @@ public class ValueAggregatorJob {
       numOfReducers = Integer.parseInt(args[2]);
     }
 
-    Class theInputFormat = SequenceFileInputFormat.class;
+    Class<? extends InputFormat> theInputFormat =
+      SequenceFileInputFormat.class;
     if (args.length > 3 && args[3].compareToIgnoreCase("textinputformat") == 0) {
       theInputFormat = TextInputFormat.class;
     }
