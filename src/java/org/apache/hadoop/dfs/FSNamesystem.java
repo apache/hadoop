@@ -1494,10 +1494,12 @@ class FSNamesystem implements FSConstants {
         
       // also treat the registration message as a heartbeat
       synchronized(heartbeats) {
-        heartbeats.add(nodeS);
-        //update its timestamp
-        nodeS.updateHeartbeat(0L, 0L, 0);
-        nodeS.isAlive = true;
+        if( !heartbeats.contains(nodeS)) {
+          heartbeats.add(nodeS);
+          //update its timestamp
+          nodeS.updateHeartbeat(0L, 0L, 0);
+          nodeS.isAlive = true;
+        }
       }
       return;
     } 

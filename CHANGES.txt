@@ -362,6 +362,9 @@ Trunk (unreleased changes)
 
 107. HADOOP-1310.  Fix unchecked warnings in aggregate code.  (tomwhite)
 
+108. HADOOP-1255.  Fix a bug where the namenode falls into an infinite
+     loop trying to remove a dead node.  (Hairong Kuang via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
