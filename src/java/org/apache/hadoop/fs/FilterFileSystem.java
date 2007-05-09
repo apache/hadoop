@@ -299,4 +299,10 @@ public class FilterFileSystem extends FileSystem {
   public Configuration getConf() {
     return fs.getConf();
   }
+  
+  @Override
+  public void close() throws IOException {
+    super.close();
+    fs.close();
+  }
 }

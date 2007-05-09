@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Branch 0.13 (unreleased changes)
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
     (Hairong Kuang via cutting)
@@ -364,6 +364,10 @@ Trunk (unreleased changes)
 
 108. HADOOP-1255.  Fix a bug where the namenode falls into an infinite
      loop trying to remove a dead node.  (Hairong Kuang via cutting)
+
+109. HADOOP-1160.  Fix DistributedFileSystem.close() to close the
+     underlying FileSystem, correctly aborting files being written.
+     (Hairong Kuang via cutting)
 
 
 Release 0.12.3 - 2007-04-06
