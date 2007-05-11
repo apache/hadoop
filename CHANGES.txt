@@ -378,6 +378,9 @@ Branch 0.13 (unreleased changes)
      underlying FileSystem, correctly aborting files being written.
      (Hairong Kuang via cutting)
 
+110. HADOOP-1341.  Fix intermittent failures in HBase unit tests
+     caused by deadlock.  (Jim Kellerman via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

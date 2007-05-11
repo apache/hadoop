@@ -44,12 +44,6 @@ public class TestGet extends TestCase {
   private static final Text ROW_KEY = new Text(HGlobals.rootRegionInfo.regionName);
 
   
-  private void dumpRegion(HRegion r) throws IOException {
-    for(Iterator<HStore> i = r.stores.values().iterator(); i.hasNext(); ) {
-      i.next().dumpMaps();
-    }
-  }
-  
   private void verifyGet(HRegion r) throws IOException {
     // This should return a value because there is only one family member
     
@@ -180,7 +174,6 @@ public class TestGet extends TestCase {
       
       // Read it back
       
-      dumpRegion(r);
       verifyGet(r);
       
       // Update one family member and add a new one
@@ -211,7 +204,6 @@ public class TestGet extends TestCase {
 
       // Read it back
       
-      dumpRegion(r);
       verifyGet(r);
 
       // Close region once and for all
