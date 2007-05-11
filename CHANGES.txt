@@ -9,6 +9,8 @@ Trunk (unreleased changes)
   2. HADOOP-1343.  In Configuration, deprecate set(String,Object) and
      implement Iterable. (omalley via cutting)
 
+  3. HADOOP-1344.  Add RunningJob#getJobName(). (Michael Bieniosek via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

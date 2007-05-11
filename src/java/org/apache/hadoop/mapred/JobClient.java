@@ -84,6 +84,13 @@ public class JobClient extends ToolBase implements MRConstants  {
     public String getJobID() {
       return profile.getJobId();
     }
+    
+    /**
+     * The user-specified job name
+     */
+    public String getJobName() {
+      return profile.getJobName();
+    }
 
     /**
      * The name of the job file

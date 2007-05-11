@@ -31,6 +31,11 @@ public interface RunningJob {
    * Returns an identifier for the job
    */
   public String getJobID();
+  
+  /**
+   * Returns the name of the job
+   */
+  public String getJobName();
 
   /**
    * Returns the path of the submitted job.
