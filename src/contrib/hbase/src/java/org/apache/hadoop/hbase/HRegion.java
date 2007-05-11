@@ -270,6 +270,7 @@ public class HRegion implements HConstants {
   int commitsSinceFlush = 0;
 
   int maxUnflushedEntries = 0;
+  int compactionThreshold = 0;
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -336,7 +337,13 @@ public class HRegion implements HConstants {
       fs.delete(merges);
     }
 
+    // By default, we flush the cache after 10,000 commits
+    
     this.maxUnflushedEntries = conf.getInt("hbase.hregion.maxunflushed", 10000);
+    
+    // By default, we compact the region if an HStore has more than 10 map files
+    
+    this.compactionThreshold = conf.getInt("hbase.hregion.compactionThreshold", 10);
 
     // HRegion is ready to go!
     this.writestate.writesOngoing = false;
@@ -568,10 +575,8 @@ public class HRegion implements HConstants {
    * 
    * @param midKey      - (return value) midKey of the largest MapFile
    * @return            - true if the region should be split
-   * 
-   * @throws IOException
    */
-  public boolean needsSplit(Text midKey) throws IOException {
+  public boolean needsSplit(Text midKey) {
     Text key = new Text();
     long maxSize = 0;
 
@@ -587,6 +592,20 @@ public class HRegion implements HConstants {
     return (maxSize > (DESIRED_MAX_FILE_SIZE + (DESIRED_MAX_FILE_SIZE / 2)));
   }
 
+  /**
+   * @return true if the region should be compacted.
+   */
+  public boolean needsCompaction() {
+    boolean needsCompaction = false;
+    for(Iterator<HStore> i = stores.values().iterator(); i.hasNext(); ) {
+      if(i.next().getNMaps() > compactionThreshold) {
+        needsCompaction = true;
+        break;
+      }
+    }
+    return needsCompaction;
+  }
+  
   /**
    * Compact all the stores.  This should be called periodically to make sure 
    * the stores are kept manageable.  
@@ -643,6 +662,9 @@ public class HRegion implements HConstants {
    */
   public void optionallyFlush() throws IOException {
     if(commitsSinceFlush > maxUnflushedEntries) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Flushing cache. Number of commits is: " + commitsSinceFlush);
+      }
       flushcache(false);
     }
   }

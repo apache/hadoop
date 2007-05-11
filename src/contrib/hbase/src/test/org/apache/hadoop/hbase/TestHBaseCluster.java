@@ -85,29 +85,30 @@ public class TestHBaseCluster extends TestCase {
       conf = new HBaseConfiguration();
       
       Environment.getenv();
+      Logger rootLogger = Logger.getRootLogger();
       if(Environment.debugging) {
-        Logger rootLogger = Logger.getRootLogger();
         rootLogger.setLevel(Level.WARN);
-
-        ConsoleAppender consoleAppender = null;
-        for(Enumeration<Appender> e = (Enumeration<Appender>)rootLogger.getAllAppenders();
-            e.hasMoreElements();) {
-        
-          Appender a = e.nextElement();
-          if(a instanceof ConsoleAppender) {
-            consoleAppender = (ConsoleAppender)a;
-            break;
-          }
-        }
-        if(consoleAppender != null) {
-          Layout layout = consoleAppender.getLayout();
-          if(layout instanceof PatternLayout) {
-            PatternLayout consoleLayout = (PatternLayout)layout;
-            consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
-          }
-        }
-        Logger.getLogger("org.apache.hadoop.hbase").setLevel(Environment.logLevel);
       }
+
+      ConsoleAppender consoleAppender = null;
+      for(Enumeration<Appender> e = (Enumeration<Appender>)rootLogger.getAllAppenders();
+      e.hasMoreElements();) {
+
+        Appender a = e.nextElement();
+        if(a instanceof ConsoleAppender) {
+          consoleAppender = (ConsoleAppender)a;
+          break;
+        }
+      }
+      if(consoleAppender != null) {
+        Layout layout = consoleAppender.getLayout();
+        if(layout instanceof PatternLayout) {
+          PatternLayout consoleLayout = (PatternLayout)layout;
+          consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
+        }
+      }
+      Logger.getLogger("org.apache.hadoop.hbase").setLevel(Environment.logLevel);
+
       cluster = new MiniHBaseCluster(conf, 1);
       client = new HClient(conf);
 
