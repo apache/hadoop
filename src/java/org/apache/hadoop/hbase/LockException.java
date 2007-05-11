@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 public class LockException extends IOException {
+  private static final long serialVersionUID = 1L << 13 - 1L;
   public LockException() {
     super();
   }

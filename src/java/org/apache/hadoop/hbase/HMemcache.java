@@ -22,8 +22,6 @@ import org.apache.commons.logging.LogFactory;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /*******************************************************************************
  * The HMemcache holds in-memory modifications to the HRegion.  This is really a
@@ -40,7 +38,7 @@ public class HMemcache {
   
   TreeMap<HStoreKey, BytesWritable> snapshot = null;
 
-  ReadWriteLock locker = new ReentrantReadWriteLock();
+  HLocking lock = new HLocking();
 
   public HMemcache() {
   }
@@ -69,7 +67,7 @@ public class HMemcache {
   public Snapshot snapshotMemcacheForLog(HLog log) throws IOException {
     Snapshot retval = new Snapshot();
 
-    this.locker.writeLock().lock();
+    this.lock.obtainWriteLock();
     try {
       if(snapshot != null) {
         throw new IOException("Snapshot in progress!");
@@ -98,7 +96,7 @@ public class HMemcache {
       return retval;
       
     } finally {
-      this.locker.writeLock().unlock();
+      this.lock.releaseWriteLock();
     }
   }
 
@@ -108,7 +106,7 @@ public class HMemcache {
    * Modifying the structure means we need to obtain a writelock.
    */
   public void deleteSnapshot() throws IOException {
-    this.locker.writeLock().lock();
+    this.lock.obtainWriteLock();
 
     try {
       if(snapshot == null) {
@@ -134,7 +132,7 @@ public class HMemcache {
       }
       
     } finally {
-      this.locker.writeLock().unlock();
+      this.lock.releaseWriteLock();
     }
   }
 
@@ -144,7 +142,7 @@ public class HMemcache {
    * Operation uses a write lock.
    */
   public void add(Text row, TreeMap<Text, BytesWritable> columns, long timestamp) {
-    this.locker.writeLock().lock();
+    this.lock.obtainWriteLock();
     try {
       for(Iterator<Text> it = columns.keySet().iterator(); it.hasNext(); ) {
         Text column = it.next();
@@ -155,7 +153,7 @@ public class HMemcache {
       }
       
     } finally {
-      this.locker.writeLock().unlock();
+      this.lock.releaseWriteLock();
     }
   }
 
@@ -166,7 +164,7 @@ public class HMemcache {
    */
   public BytesWritable[] get(HStoreKey key, int numVersions) {
     Vector<BytesWritable> results = new Vector<BytesWritable>();
-    this.locker.readLock().lock();
+    this.lock.obtainReadLock();
     try {
       Vector<BytesWritable> result = get(memcache, key, numVersions-results.size());
       results.addAll(0, result);
@@ -188,7 +186,7 @@ public class HMemcache {
       }
       
     } finally {
-      this.locker.readLock().unlock();
+      this.lock.releaseReadLock();
     }
   }
   
@@ -200,7 +198,7 @@ public class HMemcache {
    */
   public TreeMap<Text, BytesWritable> getFull(HStoreKey key) throws IOException {
     TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
-    this.locker.readLock().lock();
+    this.lock.obtainReadLock();
     try {
       internalGetFull(memcache, key, results);
       for(int i = history.size()-1; i >= 0; i--) {
@@ -210,7 +208,7 @@ public class HMemcache {
       return results;
       
     } finally {
-      this.locker.readLock().unlock();
+      this.lock.releaseReadLock();
     }
   }
   
@@ -287,7 +285,7 @@ public class HMemcache {
       
       super(timestamp, targetCols);
       
-      locker.readLock().lock();
+      lock.obtainReadLock();
       try {
         this.backingMaps = new TreeMap[history.size() + 1];
         
@@ -377,7 +375,7 @@ public class HMemcache {
           }
           
         } finally {
-          locker.readLock().unlock();
+          lock.releaseReadLock();
           scannerClosed = true;
         }
       }

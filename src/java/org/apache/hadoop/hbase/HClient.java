@@ -104,24 +104,61 @@ public class HClient implements HConstants {
   /**
    * Check client is open.
    */
-  private synchronized void checkOpen() {
+  private void checkOpen() {
     if (this.closed) {
       throw new IllegalStateException("client is not open");
     }
   }
   
-  private synchronized void checkMaster() throws IOException {
+  /**
+   * Find the address of the master and connect to it
+   */
+  private void checkMaster() {
     if (this.master != null) {
       return;
     }
-    HServerAddress masterLocation =
-      new HServerAddress(this.conf.get(MASTER_ADDRESS));
-    this.master = (HMasterInterface)RPC.getProxy(HMasterInterface.class, 
-      HMasterInterface.versionID, masterLocation.getInetSocketAddress(), this.conf);
+    for(int tries = 0; this.master == null && tries < numRetries; tries++) {
+      HServerAddress masterLocation =
+        new HServerAddress(this.conf.get(MASTER_ADDRESS));
+      
+      try {
+        HMasterInterface tryMaster =
+          (HMasterInterface)RPC.getProxy(HMasterInterface.class, 
+              HMasterInterface.versionID, masterLocation.getInetSocketAddress(),
+              this.conf);
+        
+        if(tryMaster.isMasterRunning()) {
+          this.master = tryMaster;
+          break;
+        }
+      } catch(IOException e) {
+        if(tries == numRetries - 1) {
+          // This was our last chance - don't bother sleeping
+          break;
+        }
+      }
+      
+      // We either cannot connect to the master or it is not running.
+      // Sleep and retry
+      
+      try {
+        Thread.sleep(this.clientTimeout);
+        
+      } catch(InterruptedException e) {
+      }
+    }
+    if(this.master == null) {
+      throw new IllegalStateException("Master is not running");
+    }
   }
 
-  public synchronized void createTable(HTableDescriptor desc)
-  throws IOException {
+  public synchronized void createTable(HTableDescriptor desc) throws IOException {
+    if(desc.getName().equals(ROOT_TABLE_NAME)
+        || desc.getName().equals(META_TABLE_NAME)) {
+      
+      throw new IllegalArgumentException(desc.getName().toString()
+          + " is a reserved table name");
+    }
     checkOpen();
     checkMaster();
     locateRootRegion();

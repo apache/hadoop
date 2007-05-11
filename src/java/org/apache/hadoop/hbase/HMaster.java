@@ -258,16 +258,18 @@ public class HMaster implements HConstants, HMasterInterface,
           if (waitForRootRegionOrClose()) {
             continue;
           }
-          rootScanned = false;
-          // Make a MetaRegion instance for ROOT region to pass scanRegion.
-          MetaRegion mr = new MetaRegion();
-          mr.regionName = HGlobals.rootRegionInfo.regionName;
-          mr.server = HMaster.this.rootRegionLocation;
-          mr.startKey = null;
-          if (scanRegion(mr)) {
-            numMetaRegions += 1;
+          synchronized(rootScannerLock) { // Don't interrupt us while we're working
+            rootScanned = false;
+            // Make a MetaRegion instance for ROOT region to pass scanRegion.
+            MetaRegion mr = new MetaRegion();
+            mr.regionName = HGlobals.rootRegionInfo.regionName;
+            mr.server = HMaster.this.rootRegionLocation;
+            mr.startKey = null;
+            if (scanRegion(mr)) {
+              numMetaRegions += 1;
+            }
+            rootScanned = true;
           }
-          rootScanned = true;
           try {
             if (LOG.isDebugEnabled()) {
               LOG.debug("RootScanner going to sleep");
@@ -291,6 +293,7 @@ public class HMaster implements HConstants, HMasterInterface,
   
   private RootScanner rootScanner;
   private Thread rootScannerThread;
+  private Integer rootScannerLock = new Integer(0);
   
   private class MetaRegion {
     public HServerAddress server;
@@ -347,14 +350,16 @@ public class HMaster implements HConstants, HMasterInterface,
           continue;
         }
         try {
-          scanRegion(region);
-          knownMetaRegions.put(region.startKey, region);
-          if (rootScanned && knownMetaRegions.size() == numMetaRegions) {
-            if(LOG.isDebugEnabled()) {
-              LOG.debug("all meta regions scanned");
+          synchronized(metaScannerLock) { // Don't interrupt us while we're working
+            scanRegion(region);
+            knownMetaRegions.put(region.startKey, region);
+            if (rootScanned && knownMetaRegions.size() == numMetaRegions) {
+              if(LOG.isDebugEnabled()) {
+                LOG.debug("all meta regions scanned");
+              }
+              allMetaRegionsScanned = true;
+              metaRegionsScanned();
             }
-            allMetaRegionsScanned = true;
-            metaRegionsScanned();
           }
 
           do {
@@ -375,10 +380,13 @@ public class HMaster implements HConstants, HMasterInterface,
             }
 
             // Rescan the known meta regions every so often
-            Vector<MetaRegion> v = new Vector<MetaRegion>();
-            v.addAll(knownMetaRegions.values());
-            for(Iterator<MetaRegion> i = v.iterator(); i.hasNext(); ) {
-              scanRegion(i.next());
+
+            synchronized(metaScannerLock) { // Don't interrupt us while we're working
+              Vector<MetaRegion> v = new Vector<MetaRegion>();
+              v.addAll(knownMetaRegions.values());
+              for(Iterator<MetaRegion> i = v.iterator(); i.hasNext(); ) {
+                scanRegion(i.next());
+              }
             }
           } while(true);
 
@@ -417,6 +425,7 @@ public class HMaster implements HConstants, HMasterInterface,
 
   private MetaScanner metaScanner;
   private Thread metaScannerThread;
+  private Integer metaScannerLock = new Integer(0);
   
   // The 'unassignedRegions' table maps from a region name to a HRegionInfo record,
   // which includes the region's table, its id, and its start/end keys.
@@ -598,9 +607,13 @@ public class HMaster implements HConstants, HMasterInterface,
      */
 
     // Wake other threads so they notice the close
-    
-    rootScannerThread.interrupt();
-    metaScannerThread.interrupt();
+
+    synchronized(rootScannerLock) {
+      rootScannerThread.interrupt();
+    }
+    synchronized(metaScannerLock) {
+      metaScannerThread.interrupt();
+    }
     server.stop();                              // Stop server
     serverLeases.close();                       // Turn off the lease monitor
     try {
