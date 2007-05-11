@@ -93,8 +93,9 @@ public class TestAggregates extends TestCase {
     job.setReducerClass(ValueAggregatorReducer.class);
     job.setCombinerClass(ValueAggregatorCombiner.class);
 
-    job.set("aggregator.descriptor.num", 1);
-    job.set("aggregator.descriptor.0", "UserDefined,org.apache.hadoop.mapred.lib.aggregate.AggregatorTests");
+    job.setInt("aggregator.descriptor.num", 1);
+    job.set("aggregator.descriptor.0", 
+          "UserDefined,org.apache.hadoop.mapred.lib.aggregate.AggregatorTests");
 
     JobClient.runJob(job);
 

@@ -1250,7 +1250,7 @@ public class DataNode implements FSConstants, Runnable {
   }
 
   private static void setStartupOption(Configuration conf, StartupOption opt) {
-    conf.set("dfs.datanode.startup", opt);
+    conf.set("dfs.datanode.startup", opt.toString());
   }
 
   static StartupOption getStartupOption(Configuration conf) {

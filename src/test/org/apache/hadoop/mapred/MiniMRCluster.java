@@ -222,7 +222,7 @@ public class MiniMRCluster {
     JobConf result = new JobConf();
     result.set("fs.default.name", namenode);
     result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
-    result.set("mapred.job.tracker.info.port", jobTrackerInfoPort);
+    result.setInt("mapred.job.tracker.info.port", jobTrackerInfoPort);
     // for debugging have all task output sent to the test output
     JobClient.setTaskOutputFilter(result, JobClient.TaskStatusFilter.ALL);
     return result;

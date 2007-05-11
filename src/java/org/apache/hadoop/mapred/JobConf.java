@@ -20,12 +20,12 @@ package org.apache.hadoop.mapred;
 
 
 import java.io.IOException;
-import java.io.File;
 
 import java.util.StringTokenizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.Map;
 
 import java.net.URL;
 import java.net.URLDecoder;
@@ -153,7 +153,7 @@ public class JobConf extends Configuration {
 
   public void setInputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
-    set("mapred.input.dir", dir);
+    set("mapred.input.dir", dir.toString());
   }
 
   public void addInputPath(Path dir) {
@@ -261,7 +261,7 @@ public class JobConf extends Configuration {
 
   public void setOutputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
-    set("mapred.output.dir", dir);
+    set("mapred.output.dir", dir.toString());
   }
 
   public InputFormat getInputFormat() {

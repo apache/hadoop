@@ -6,6 +6,9 @@ Trunk (unreleased changes)
   1. HADOOP-1197.  In Configuration, deprecate getObject() and add
      getRaw(), which skips variable expansion. (omalley via cutting)
 
+  2. HADOOP-1343.  In Configuration, deprecate set(String,Object) and
+     implement Iterable. (omalley via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

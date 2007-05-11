@@ -69,7 +69,7 @@ import org.apache.hadoop.fs.Path;
  * <tt>${basedir}</tt> is resolved to another property in this Configuration.
  * Then <tt>${user.name}</tt> is resolved to a System property.
  */
-public class Configuration {
+public class Configuration implements Iterable<Map.Entry<String,String>> {
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.conf.Configuration");
 
@@ -218,10 +218,19 @@ public class Configuration {
     return getProps().getProperty(name);
   }
 
-  /** Sets the value of the <code>name</code> property. */
+  /** Sets the value of the <code>name</code> property. 
+   * @deprecated
+   */
   public void set(String name, Object value) {
     getOverlay().setProperty(name, value.toString());
     getProps().setProperty(name, value.toString());
+  }
+  
+  /** Sets the value of the <code>name</code> property. 
+   */
+  public void set(String name, String value) {
+    getOverlay().setProperty(name, value);
+    getProps().setProperty(name, value);
   }
   
   private synchronized Properties getOverlay() {
@@ -482,9 +491,30 @@ public class Configuration {
     return properties;
   }
 
-  /** @return Iterator&lt; Map.Entry&lt;String,String> >  */
+  /** @return Iterator&lt; Map.Entry&lt;String,String> >  
+   * @deprecated use <code>iterator()</code> instead 
+   */
   public Iterator entries() {
-    return getProps().entrySet().iterator();
+    return iterator();
+  }
+
+  /**
+   * Go through the list of String key-value pairs in the configuration.
+   * @return an iterator over the entries
+   */
+  public Iterator<Map.Entry<String, String>> iterator() {
+    // Get a copy of just the string to string pairs. After the old object
+    // methods that allow non-strings to be put into configurations are removed,
+    // we could replace properties with a Map<String,String> and get rid of this
+    // code.
+    Map<String,String> result = new HashMap<String,String>();
+    for(Map.Entry<Object,Object> item: getProps().entrySet()) {
+      if (item.getKey() instanceof String && 
+          item.getValue() instanceof String) {
+        result.put((String) item.getKey(), (String) item.getValue());
+      }
+    }
+    return result.entrySet().iterator();
   }
 
   private void loadResources(Properties props,

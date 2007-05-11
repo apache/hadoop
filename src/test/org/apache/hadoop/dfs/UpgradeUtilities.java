@@ -151,7 +151,7 @@ public class UpgradeUtilities {
     Configuration conf = new Configuration();
     conf.set("dfs.name.dir", nameNodeDirs.toString());
     conf.set("dfs.data.dir", dataNodeDirs.toString());
-    conf.set("dfs.blockreport.intervalMsec", 10000);
+    conf.setInt("dfs.blockreport.intervalMsec", 10000);
     return conf;
   }
   
