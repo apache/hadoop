@@ -134,13 +134,17 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
     }
 
+    private long getChecksumFilePos( long dataPos ) {
+      return HEADER_LENGTH + 4*(dataPos/bytesPerSum);
+    }
+    
     public void seek(long desired) throws IOException {
       // seek to a checksum boundary
       long checksumBoundary = desired/bytesPerSum*bytesPerSum;
       if (checksumBoundary != getPos()) {
         datas.seek(checksumBoundary);
         if (sums != null) {
-          sums.seek(HEADER_LENGTH + 4*(checksumBoundary/bytesPerSum));
+          sums.seek(getChecksumFilePos(checksumBoundary));
         }
       }
       
@@ -226,13 +230,11 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
               throw ce;
             }
             
-            sums.seek(oldSumsPos);
-            datas.seek(oldPos);
-            
             if (seekToNewSource(oldPos)) {
               // Since at least one of the sources is different, 
               // the read might succeed, so we'll retry.
               retry = true;
+              seek(oldPos); //make sure Checksum sum's value gets restored
             } else {
               // Neither the data stream nor the checksum stream are being read
               // from different sources, meaning we'll still get a checksum error 
@@ -320,7 +322,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     @Override
     public boolean seekToNewSource(long targetPos) throws IOException {
       boolean newDataSource = datas.seekToNewSource(targetPos);
-      return sums.seekToNewSource(targetPos/bytesPerSum) || newDataSource;
+      return sums.seekToNewSource(getChecksumFilePos(targetPos)) || newDataSource;
     }
 
   }
