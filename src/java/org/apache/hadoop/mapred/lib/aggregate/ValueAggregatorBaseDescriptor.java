@@ -46,7 +46,8 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
   
   static public final String STRING_VALUE_MIN = "StringValueMin";
   
-
+  private static long maxNumItems = Long.MAX_VALUE;
+  
   public String inputFile = null;
 
   private static class MyEntry implements Entry {
@@ -106,7 +107,7 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
     } else if (type.compareToIgnoreCase(DOUBLE_VALUE_SUM) == 0) {
       retv = new DoubleValueSum();
     } else if (type.compareToIgnoreCase(UNIQ_VALUE_COUNT) == 0) {
-      retv = new UniqValueCount();
+      retv = new UniqValueCount(maxNumItems);
     } else if (type.compareToIgnoreCase(VALUE_HISTOGRAM) == 0) {
       retv = new ValueHistogram();
     }
@@ -153,5 +154,6 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
    */
   public void configure(JobConf job) {
     this.inputFile = job.get("map.input.file");
+    maxNumItems = job.getLong("aggregate.max.num.unique.values", Long.MAX_VALUE);
   }
 }

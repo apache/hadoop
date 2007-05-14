@@ -11,6 +11,9 @@ Trunk (unreleased changes)
 
   3. HADOOP-1344.  Add RunningJob#getJobName(). (Michael Bieniosek via cutting)
 
+  4. HADOOP-1342.  In aggregators, permit one to limit the number of
+     unique values per key.  (Runping Qi via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

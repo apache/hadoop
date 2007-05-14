@@ -69,7 +69,7 @@ public class TestAggregates extends TestCase {
     }
     expectedOutput.append("value_as_string_max\t9\n");
     expectedOutput.append("value_as_string_min\t1\n");
-    expectedOutput.append("uniq_count\t19\n");
+    expectedOutput.append("uniq_count\t15\n");
 
 
     fileOut.write(inputData.toString().getBytes("utf-8"));
@@ -96,6 +96,7 @@ public class TestAggregates extends TestCase {
     job.setInt("aggregator.descriptor.num", 1);
     job.set("aggregator.descriptor.0", 
           "UserDefined,org.apache.hadoop.mapred.lib.aggregate.AggregatorTests");
+    job.setLong("aggregate.max.num.unique.values", 14);
 
     JobClient.runJob(job);
 

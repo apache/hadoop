@@ -29,16 +29,48 @@ import java.util.TreeMap;
  */
 public class UniqValueCount implements ValueAggregator {
 
-  TreeMap<Object, Object> uniqItems = null;
+  private TreeMap<Object, Object> uniqItems = null;
+
+  private long numItems = 0;
+  
+  private long maxNumItems = Long.MAX_VALUE;
 
   /**
    * the default constructor
    * 
    */
   public UniqValueCount() {
+    this(Long.MAX_VALUE);
+  }
+  
+  /**
+   * constructor
+   * @param maxNum the limit in the number of unique values to keep.
+   *  
+   */
+  public UniqValueCount(long maxNum) {
     uniqItems = new TreeMap<Object, Object>();
+    this.numItems = 0;
+    maxNumItems = Long.MAX_VALUE;
+    if (maxNum > 0 ) {
+      this.maxNumItems = maxNum;
+    }
   }
 
+  /**
+   * Set the limit on the number of unique values
+   * @param n the desired limit on the number of unique values
+   * @return the new limit on the number of unique values
+   */
+  public long setMaxItems(long n) {
+    if (n >= numItems) {
+      this.maxNumItems = n;
+    } else if (this.maxNumItems >= this.numItems) {
+      this.maxNumItems = this.numItems;
+    }
+    return this.maxNumItems;
+  }
+  
   /**
    * add a value to the aggregator
    * 
@@ -47,8 +79,10 @@ public class UniqValueCount implements ValueAggregator {
    * 
    */
   public void addNextValue(Object val) {
-    uniqItems.put(val, "1");
-
+    if (this.numItems <= this.maxNumItems) {
+      uniqItems.put(val, "1");
+      this.numItems = this.uniqItems.size();
+    }
   }
 
   /**
