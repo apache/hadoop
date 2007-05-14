@@ -386,6 +386,9 @@ Branch 0.13 (unreleased changes)
 110. HADOOP-1341.  Fix intermittent failures in HBase unit tests
      caused by deadlock.  (Jim Kellerman via cutting)
 
+111. HADOOP-1350.  Fix shuffle performance problem caused by forcing
+     chunked encoding of map outputs.  (Devaraj Das via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
