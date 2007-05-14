@@ -1920,9 +1920,6 @@ public class TaskTracker
         //the actual number of bytes being transferred
         response.setHeader(MAP_OUTPUT_LENGTH, Long.toString(partLength));
 
-        //use 'chunked' transfer-encoding for transferring data
-        response.setHeader("Transfer-Encoding", "chunked"); 
-
         //use the same buffersize as used for reading the data from disk
         response.setBufferSize(MAX_BYTES_TO_READ);
         
@@ -1942,6 +1939,7 @@ public class TaskTracker
         while (len > 0) {
           try {
             outStream.write(buffer, 0, len);
+            outStream.flush();
           } catch (IOException ie) {
             isInputException = false;
             throw ie;
