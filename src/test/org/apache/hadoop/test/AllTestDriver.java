@@ -22,6 +22,7 @@ import org.apache.hadoop.util.ProgramDriver;
 import org.apache.hadoop.mapred.MRBench;
 import org.apache.hadoop.mapred.SortValidator;
 import org.apache.hadoop.mapred.TestMapRed;
+import org.apache.hadoop.mapred.BigMapOutput;
 import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
 import org.apache.hadoop.dfs.ClusterTestDFS;
@@ -61,6 +62,9 @@ public class AllTestDriver {
       pgd.addClass("DistributedFSCheck", DistributedFSCheck.class, "Distributed checkup of the file system consistency.");
       pgd.addClass("testmapredsort", SortValidator.class, 
                    "A map/reduce program that validates the map-reduce framework's sort.");
+      pgd.addClass("testbigmapoutput", BigMapOutput.class, 
+                   "A map/reduce program that works on a very big " + 
+                   "non-splittable file and does identity map/reduce");
       pgd.driver(argv);
     } catch(Throwable e) {
       e.printStackTrace();
