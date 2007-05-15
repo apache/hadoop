@@ -395,6 +395,9 @@ Branch 0.13 (unreleased changes)
 113. HADOOP-1205.  Improve synchronization around HDFS block map.
      (Hairong Kuang via cutting)
 
+114. HADOOP-1353.  Fix a potential NullPointerException in namenode.
+     (Dhruba Borthakur via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

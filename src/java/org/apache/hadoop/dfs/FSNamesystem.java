@@ -1812,7 +1812,7 @@ class FSNamesystem implements FSConstants {
       removeDatanode(nodeInfo);
     } else {
       NameNode.stateChangeLog.warn("BLOCK* NameSystem.removeDatanode: "
-                                   + nodeInfo.getName() + " does not exist");
+                                   + nodeID.getName() + " does not exist");
     }
   }
   
