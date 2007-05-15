@@ -369,7 +369,7 @@ public class FsShell extends ToolBase {
    */
   public void dus(String src) throws IOException {
     Path paths[] = fs.globPaths(new Path(src));
-    if (paths==null && paths.length==0) {
+    if (paths==null || paths.length==0) {
       throw new IOException("dus: No match: " + src);
     }
     for(int i=0; i<paths.length; i++) {

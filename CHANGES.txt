@@ -398,6 +398,9 @@ Branch 0.13 (unreleased changes)
 114. HADOOP-1353.  Fix a potential NullPointerException in namenode.
      (Dhruba Borthakur via cutting)
 
+115. HADOOP-1354.  Fix a potential NullPointerException in FsShell.
+     (Hairong Kuang via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
