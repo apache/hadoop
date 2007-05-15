@@ -926,10 +926,11 @@ class DFSClient implements FSConstants {
         //
         int diff = (int)(targetPos - pos);
         if (diff <= TCP_WINDOW_SIZE) {
-          blockStream.skipBytes(diff);
-          pos += diff;
-          assert(pos == targetPos);
-          done = true;
+          int adiff = blockStream.skipBytes(diff);
+          pos += adiff;
+          if (pos == targetPos) {
+            done = true;
+          }
         }
       }
       if (!done) {

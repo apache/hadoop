@@ -434,7 +434,7 @@ class FSNamesystem implements FSConstants {
    * The client should choose one of the machines from the machineArray
    * at random.
    */
-  public Object[] open(String clientMachine, UTF8 src) {
+  synchronized public Object[] open(String clientMachine, UTF8 src) {
     Object results[] = null;
     Block blocks[] = dir.getFile(src);
     if (blocks != null) {
@@ -1813,7 +1813,7 @@ class FSNamesystem implements FSConstants {
       removeDatanode(nodeInfo);
     } else {
       NameNode.stateChangeLog.warn("BLOCK* NameSystem.removeDatanode: "
-                                   + nodeInfo.getName() + " does not exist");
+                                   + nodeID.getName() + " does not exist");
     }
   }
   
