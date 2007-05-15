@@ -401,6 +401,9 @@ Branch 0.13 (unreleased changes)
 115. HADOOP-1354.  Fix a potential NullPointerException in FsShell.
      (Hairong Kuang via cutting)
 
+116. HADOOP-1358.  Fix a potential bug when DFSClient calls skipBytes.
+     (Hairong Kuang via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
