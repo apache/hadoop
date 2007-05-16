@@ -1,0 +1,97 @@
+<html>
+<body>
+
+We need a way to convert a large body of C++ code to use Hadoop DFS
+and map/reduce. The primary approach will be to split the C++ code
+into a separate process that does the application specific code. In
+many ways, the approach will be similar to Hadoop streaming, but using
+Writable serialization to convert the types into bytes that are sent
+to the process via a socket.
+
+<p>
+
+A new class org.apache.hadoop.mapred.pipes.Submitter will have a
+public static method to submit a job as a JobConf and a main method
+that takes an application and optional configuration file, input
+directories, and output directory. The cli for the new main will look
+like:
+
+<pre>
+bin/hadoop pipes \
+  [-conf <i>path</i>] \
+  [-input <i>inputDir</i>] \
+  [-output <i>outputDir</i>] \
+  [-jar <i>applicationJarFile</i>] \
+  [-inputformat <i>class</i>] \
+  [-map <i>class</i>] \
+  [-partitioner <i>class</i>] \
+  [-reduce <i>class</i>] \
+  [-writer <i>class</i>] \
+  [-program <i>program url</i>]
+</pre>
+
+<p>
+
+The application program will link against a thin C++ wrapper library that
+will handle the communication with the rest of the Hadoop
+system.  A goal of the interface is to be "swigable" so that
+interfaces can be generated for python and other scripting
+languages. All of the C++ functions and classes are in the HadoopPipes
+namespace. The job may consist of any combination of Java and C++ RecordReaders,
+Mappers, Paritioner, Combiner, Reducer, and RecordWriter.
+
+<p>
+
+Hadoop will be given a generic Java class for handling the mapper and reducer
+(PipesMapRunner and PipesReducer). They will fork off the application
+program and communicate with it over a socket. The communication will
+be handled by the C++ wrapper library and the PipesMapRunner and
+PipesReducer.
+
+<p>
+
+The application program will pass in a factory object that can create
+the various objects needed by the framework to the runTask
+function. The framework will create the Mapper or Reducer as
+appropriate and call the map or reduce method to invoke the
+application's code. The JobConf will be available to the application.
+
+<p>
+
+The Mapper and Reducer objects get all of their inputs, outputs, and
+context via context objects. The advantage of using the context
+objects is that their interface can be extended with additional
+methods without breaking clients. Although this interface is different
+from the current Java interface, the plan is to migrate the Java
+interface in this direction.
+
+<p>
+
+Although the Java implementation is typed, the C++ interfaces of keys
+and values is just a byte buffer. Since STL strings provide precisely
+the right functionality and are standard, they will be used. The
+decision to not use stronger types was to simplify the interface.
+
+<p>
+
+The application can also define combiner functions. The combiner will
+be run locally by the framework in the application process to avoid
+the round trip to the Java process and back. Because the compare
+function is not available in C++, the combiner will use memcmp to
+sort the inputs to the combiner. This is not as general as the Java
+equivalent, which uses the user's comparator, but should cover the
+majority of the use cases. As the map function outputs key/value
+pairs, they will be buffered. When the buffer is full, it will be
+sorted and passed to the combiner. The output of the combiner will be
+sent to the Java process.
+
+<p>
+
+The application can also set a partition function to control which key
+is given to a particular reduce. If a partition function is not
+defined, the Java one will be used. The partition function will be
+called by the C++ framework before the key/value pair is sent back to
+Java.
+
+</body>
+</html>

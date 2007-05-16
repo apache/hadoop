@@ -24,6 +24,9 @@ Trunk (unreleased changes)
   7. HADOOP-1357.  Fix CopyFiles to correctly avoid removing "/".
      (Arun C Murthy via cutting)
 
+  8. HADOOP-234.  Add pipes facility, which permits writing MapReduce
+     programs in C++.
+
 
 Branch 0.13 (unreleased changes)
 

@@ -22,7 +22,11 @@
   <property name="docs.dir" value="${basedir}/docs"/>
   <property name="contrib.dir" value="${basedir}/src/contrib"/>
   <property name="docs.src" value="${basedir}/src/web"/>
-  <property name="libhdfs.src" value="${basedir}/src/c++/libhdfs"/>
+  <property name="c++.src" value="${basedir}/src/c++"/>
+  <property name="c++.utils.src" value="${c++.src}/utils"/>
+  <property name="c++.pipes.src" value="${c++.src}/pipes"/>
+  <property name="c++.examples.pipes.src" value="${examples.dir}/pipes"/>
+  <property name="libhdfs.src" value="${c++.src}/libhdfs"/>
 
   <property name="build.dir" value="${basedir}/build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
@@ -30,11 +34,20 @@
   <property name="build.webapps" value="${build.dir}/webapps"/>
   <property name="build.examples" value="${build.dir}/examples"/>
   <property name="build.libhdfs" value="${build.dir}/libhdfs"/>
-  <property name="build.platform" value="${os.name}-${os.arch}-${sun.arch.data.model}"/>
+  <property name="build.platform" 
+            value="${os.name}-${os.arch}-${sun.arch.data.model}"/>
   <property name="build.native" value="${build.dir}/native/${build.platform}"/>
+  <property name="build.c++" value="${build.dir}/c++-build/${build.platform}"/>
+  <property name="build.c++.utils" value="${build.c++}/utils"/>
+  <property name="build.c++.pipes" value="${build.c++}/pipes"/>
+  <property name="build.c++.examples.pipes" 
+            value="${build.c++}/examples/pipes"/>
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
+  <property name="install.c++" value="${build.dir}/c++/${build.platform}"/>
+  <property name="install.c++.examples" 
+            value="${build.dir}/c++-examples/${build.platform}"/>
 
   <property name="test.src.dir" value="${basedir}/src/test"/>
   <property name="test.build.dir" value="${build.dir}/test"/>
@@ -109,6 +122,7 @@
     <mkdir dir="${build.webapps}/dfs/WEB-INF"/>
     <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
+    <mkdir dir="${build.dir}/c++"/>
  
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
@@ -295,7 +309,8 @@
 
   </target>
 
-  <target name="compile-core" depends="compile-core-classes,compile-core-native">
+  <target name="compile-core" 
+          depends="compile-core-classes,compile-core-native,compile-c++">
   </target>
 
   <target name="compile-contrib" depends="compile-core">
@@ -307,7 +322,8 @@
   <target name="compile" depends="compile-core, compile-contrib">
   </target>
 
-  <target name="compile-examples" depends="compile-core">
+  <target name="compile-examples" 
+          depends="compile-core,compile-c++-examples">
     <javac 
      encoding="${build.encoding}" 
      srcdir="${examples.dir}"
@@ -464,6 +480,11 @@
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
       <sysproperty key="java.library.path"
        value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
+      <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
+      <!-- set compile.c++ in the child jvm only if it is set -->
+      <syspropertyset dynamic="no">
+         <propertyref name="compile.c++"/>
+      </syspropertyset>
       <classpath refid="${test.classpath.id}"/>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${test.build.dir}" unless="testcase">
@@ -639,6 +660,10 @@
       <fileset dir="src" excludes="**/*.template"/>
     </copy>
   	
+    <copy todir="${dist.dir}/c++" includeEmptyDirs="false">
+      <fileset dir="${build.dir}/c++"/>
+    </copy>
+
     <copy todir="${dist.dir}/" file="build.xml"/>
 
     <chmod perm="ugo+x" type="file">
@@ -754,4 +779,94 @@
   	</exec>
   </target>
 		
+  <target name="create-c++-configure" depends="init" if="compile.c++">
+    <exec executable="autoreconf" dir="${c++.utils.src}" searchpath="yes" 
+          failonerror="yes">
+       <arg value="-if"/>
+    </exec>
+    <exec executable="autoreconf" dir="${c++.pipes.src}" searchpath="yes" 
+          failonerror="yes">
+       <arg value="-if"/>
+    </exec>
+    <exec executable="autoreconf" dir="${c++.examples.pipes.src}" 
+          searchpath="yes" failonerror="yes">
+       <arg value="-if"/>
+    </exec>
+  </target>
+
+  <target name="check-c++-makefiles" depends="init" if="compile.c++">
+    <condition property="need.c++.utils.makefile">
+       <not> <available file="${build.c++.utils}/Makefile"/> </not>
+    </condition>
+    <condition property="need.c++.pipes.makefile">
+       <not> <available file="${build.c++.pipes}/Makefile"/> </not>
+    </condition>
+    <condition property="need.c++.examples.pipes.makefile">
+       <not> <available file="${build.c++.examples.pipes}/Makefile"/> </not>
+    </condition>
+  </target>
+
+  <target name="create-c++-utils-makefile" depends="check-c++-makefiles" 
+                                           if="need.c++.utils.makefile">
+    <mkdir dir="${build.c++.utils}"/>
+    <exec executable="${c++.utils.src}/configure" dir="${build.c++.utils}"
+          failonerror="yes">
+      <arg value="--prefix=${install.c++}"/>
+    </exec>
+  </target>
+
+  <target name="compile-c++-utils" depends="create-c++-utils-makefile"
+                                   if="compile.c++">
+    <exec executable="make" dir="${build.c++.utils}" searchpath="yes" 
+          failonerror="yes">
+      <arg  value="install"/>
+    </exec>
+  </target>
+
+  <target name="create-c++-pipes-makefile" depends="check-c++-makefiles" 
+                                           if="need.c++.pipes.makefile">
+    <mkdir dir="${build.c++.pipes}"/>
+    <exec executable="${c++.pipes.src}/configure" dir="${build.c++.pipes}"
+          failonerror="yes">
+      <arg value="--prefix=${install.c++}"/>
+    </exec>
+  </target>
+
+  <target name="compile-c++-pipes" 
+          depends="create-c++-pipes-makefile,compile-c++-utils"
+          if="compile.c++">
+    <exec executable="make" dir="${build.c++.pipes}" searchpath="yes" 
+          failonerror="yes">
+      <arg value="install"/>
+    </exec>
+  </target>
+
+  <target name="compile-c++" 
+          depends="compile-c++-pipes"/>
+
+  <target name="create-c++-examples-pipes-makefile" 
+          depends="check-c++-makefiles" 
+          if="need.c++.examples.pipes.makefile">
+    <mkdir dir="${build.c++.examples.pipes}"/>
+    <exec executable="${c++.examples.pipes.src}/configure" 
+          dir="${build.c++.examples.pipes}"
+          failonerror="yes">
+      <arg value="--prefix=${install.c++.examples}"/>
+      <arg value="--with-hadoop-utils=${install.c++}"/>
+      <arg value="--with-hadoop-pipes=${install.c++}"/>
+    </exec>
+  </target>
+
+  <target name="compile-c++-examples-pipes" 
+          depends="create-c++-examples-pipes-makefile,compile-c++-pipes"
+          if="compile.c++">
+    <exec executable="make" dir="${build.c++.examples.pipes}" searchpath="yes" 
+          failonerror="yes">
+      <arg  value="install"/>
+    </exec>
+  </target>
+
+  <target name="compile-c++-examples" 
+          depends="compile-c++-examples-pipes"/>
+
 </project>

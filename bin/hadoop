@@ -40,6 +40,7 @@ if [ $# = 0 ]; then
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  fs                   run a generic filesystem user client"
   echo "  jobtracker           run the MapReduce job Tracker node" 
+  echo "  pipes                run a Pipes job"
   echo "  tasktracker          run a MapReduce task Tracker node" 
   echo "  job                  manipulate MapReduce jobs" 
   echo "  version              print the version"
@@ -181,6 +182,8 @@ elif [ "$COMMAND" = "tasktracker" ] ; then
   CLASS=org.apache.hadoop.mapred.TaskTracker
 elif [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
+elif [ "$COMMAND" = "pipes" ] ; then
+  CLASS=org.apache.hadoop.mapred.pipes.Submitter
 elif [ "$COMMAND" = "version" ] ; then
   CLASS=org.apache.hadoop.util.VersionInfo
 elif [ "$COMMAND" = "jar" ] ; then
