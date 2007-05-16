@@ -1,20 +1,19 @@
 <html>
 <body>
 
-We need a way to convert a large body of C++ code to use Hadoop DFS
-and map/reduce. The primary approach will be to split the C++ code
-into a separate process that does the application specific code. In
-many ways, the approach will be similar to Hadoop streaming, but using
-Writable serialization to convert the types into bytes that are sent
-to the process via a socket.
+Hadoop Pipes allows C++ code to use Hadoop DFS and map/reduce. The
+primary approach is to split the C++ code into a separate process that
+does the application specific code. In many ways, the approach will be
+similar to Hadoop streaming, but using Writable serialization to
+convert the types into bytes that are sent to the process via a
+socket.
 
 <p>
 
-A new class org.apache.hadoop.mapred.pipes.Submitter will have a
-public static method to submit a job as a JobConf and a main method
-that takes an application and optional configuration file, input
-directories, and output directory. The cli for the new main will look
-like:
+The class org.apache.hadoop.mapred.pipes.Submitter has a public static
+method to submit a job as a JobConf and a main method that takes an
+application and optional configuration file, input directories, and
+output directory. The cli for the main looks like:
 
 <pre>
 bin/hadoop pipes \
@@ -32,29 +31,29 @@ bin/hadoop pipes \
 
 <p>
 
-The application program will link against a thin C++ wrapper library that
-will handle the communication with the rest of the Hadoop
-system.  A goal of the interface is to be "swigable" so that
-interfaces can be generated for python and other scripting
-languages. All of the C++ functions and classes are in the HadoopPipes
-namespace. The job may consist of any combination of Java and C++ RecordReaders,
-Mappers, Paritioner, Combiner, Reducer, and RecordWriter.
+The application programs link against a thin C++ wrapper library that
+handles the communication with the rest of the Hadoop system.  The C++
+interface is "swigable" so that interfaces can be generated for python
+and other scripting languages. All of the C++ functions and classes
+are in the HadoopPipes namespace. The job may consist of any
+combination of Java and C++ RecordReaders, Mappers, Paritioner,
+Combiner, Reducer, and RecordWriter.
 
 <p>
 
-Hadoop will be given a generic Java class for handling the mapper and reducer
-(PipesMapRunner and PipesReducer). They will fork off the application
-program and communicate with it over a socket. The communication will
-be handled by the C++ wrapper library and the PipesMapRunner and
-PipesReducer.
+Hadoop Pipes has a generic Java class for handling the mapper and
+reducer (PipesMapRunner and PipesReducer). They fork off the
+application program and communicate with it over a socket. The
+communication is handled by the C++ wrapper library and the
+PipesMapRunner and PipesReducer.
 
 <p>
 
-The application program will pass in a factory object that can create
+The application program passes in a factory object that can create
 the various objects needed by the framework to the runTask
-function. The framework will create the Mapper or Reducer as
-appropriate and call the map or reduce method to invoke the
-application's code. The JobConf will be available to the application.
+function. The framework creates the Mapper or Reducer as
+appropriate and calls the map or reduce method to invoke the
+application's code. The JobConf is available to the application.
 
 <p>
 
