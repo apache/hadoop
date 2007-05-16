@@ -320,7 +320,8 @@ public class DistributedCache {
       fsStream.close();
       digest = md5.digest();
 
-      FSDataOutputStream out = fileSystem.create(md5File);
+      short replication = fileSystem.getReplication(filePath);
+      FSDataOutputStream out = fileSystem.create(md5File, replication);
       out.write(digest);
       out.close();
     } else {

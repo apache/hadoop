@@ -14,6 +14,10 @@ Trunk (unreleased changes)
   4. HADOOP-1342.  In aggregators, permit one to limit the number of
      unique values per key.  (Runping Qi via cutting)
 
+  5. HADOOP-1340.  Set the replication factor of the MD5 file in the filecache
+     to be the same as the replication factor of the original file.
+     (Dhruba Borthakur via tomwhite.)
+
 
 Branch 0.13 (unreleased changes)
 
