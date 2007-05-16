@@ -18,6 +18,9 @@ Trunk (unreleased changes)
      to be the same as the replication factor of the original file.
      (Dhruba Borthakur via tomwhite.)
 
+  6. HADOOP-1355.  Fix null pointer dereference in 
+     TaskLogAppender.append(LoggingEvent).  (Arun C Murthy via tomwhite.)
+
 
 Branch 0.13 (unreleased changes)
 
