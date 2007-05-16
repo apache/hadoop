@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -366,8 +367,8 @@ public class CopyFiles extends ToolBase {
       Path jobDirectory = new Path(jobConf.get("distcp.job.dir", "/"));
       FileSystem fs = FileSystem.get(jobConf);
       
-      if (!jobDirectory.equals("/")) {
-        fs.delete(jobDirectory);
+      if (!jobDirectory.equals(new Path("/"))) {
+        FileUtil.fullyDelete(fs, jobDirectory);
       }
     }
     
@@ -505,8 +506,8 @@ public class CopyFiles extends ToolBase {
       Path jobDirectory = new Path(jobConf.get("distcp.job.dir", "/"));
       FileSystem fs = FileSystem.get(jobConf);
       
-      if (!jobDirectory.equals("/")) {
-        fs.delete(jobDirectory);
+      if (!jobDirectory.equals(new Path("/"))) {
+        FileUtil.fullyDelete(fs, jobDirectory);
       }
     }
     

@@ -21,6 +21,9 @@ Trunk (unreleased changes)
   6. HADOOP-1355.  Fix null pointer dereference in 
      TaskLogAppender.append(LoggingEvent).  (Arun C Murthy via tomwhite.)
 
+  7. HADOOP-1357.  Fix CopyFiles to correctly avoid removing "/".
+     (Arun C Murthy via cutting)
+
 
 Branch 0.13 (unreleased changes)
 
