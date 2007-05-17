@@ -106,6 +106,8 @@ public class TestAggregates extends TestCase {
     boolean success = true;
     Path outPath = new Path(OUTPUT_DIR, "part-00000");
     String outdata = TestMiniMRWithDFS.readOutput(outPath,job);
+    System.out.println("full out data:");
+    System.out.println(outdata.toString());
     outdata = outdata.substring(0, expectedOutput.toString().length());
 
     assertEquals(expectedOutput.toString(),outdata);
