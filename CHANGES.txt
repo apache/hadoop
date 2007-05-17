@@ -428,6 +428,9 @@ Branch 0.13 (unreleased changes)
 120. HADOOP-1369.  Fix inconsistent synchronization in TaskTracker.
      (omalley via cutting)
 
+121. HADOOP-1361.  Fix various calls to skipBytes() to check return
+     value. (Hairong Kuang via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

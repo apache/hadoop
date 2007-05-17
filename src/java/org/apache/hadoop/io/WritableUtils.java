@@ -48,7 +48,9 @@ public final class WritableUtils  {
 
   public static void skipCompressedByteArray(DataInput in) throws IOException {
     int length = in.readInt();
-    if (length != -1) in.skipBytes(length);
+    if (length != -1) {
+      skipFully(in, length);
+    }
   }
 
   public static int  writeCompressedByteArray(DataOutput out, byte[] bytes) throws IOException {
@@ -381,5 +383,24 @@ public final class WritableUtils  {
   public static void writeEnum(DataOutput out,  Enum enumVal) 
     throws IOException{
     Text.writeString(out, enumVal.name()); 
+  }
+  /**
+   * Skip <i>len</i> number of bytes in input stream<i>in</i>
+   * @param in input stream
+   * @param len number of bytes to skip
+   * @throws IOException when skipped less number of bytes
+   */
+  public static void skipFully(DataInput in, int len) throws IOException {
+    int total = 0;
+    int cur = 0;
+
+    while ((total<len) && ((cur = (int) in.skipBytes(len-total)) > 0)) {
+        total += cur;
+    }
+
+    if (total<len) {
+      throw new IOException("Not able to skip " + len + " bytes, possibly " +
+                            "due to end of input.");
+    }
   }
 }
