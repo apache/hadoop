@@ -230,7 +230,7 @@ public class Text implements WritableComparable {
   /** Skips over one Text in the input. */
   public static void skip(DataInput in) throws IOException {
     int length = WritableUtils.readVInt(in);
-    in.skipBytes(length);
+    WritableUtils.skipFully(in, length);
   }
 
   /** serialize

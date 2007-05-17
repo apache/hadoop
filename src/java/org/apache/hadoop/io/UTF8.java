@@ -110,7 +110,7 @@ public class UTF8 implements WritableComparable {
   /** Skips over one UTF8 in the input. */
   public static void skip(DataInput in) throws IOException {
     int length = in.readUnsignedShort();
-    in.skipBytes(length);
+    WritableUtils.skipFully(in, length);
   }
 
   public void write(DataOutput out) throws IOException {
