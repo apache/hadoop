@@ -51,7 +51,7 @@ public class ValueHistogram implements ValueAggregator {
     String valStr = valCountStr;
     String countStr = "1";
     if (pos >= 0) {
-      valCountStr.substring(0, pos);
+      valStr = valCountStr.substring(0, pos);
       countStr = valCountStr.substring(pos + 1);
     }
     

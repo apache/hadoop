@@ -417,6 +417,8 @@ Branch 0.13 (unreleased changes)
 116. HADOOP-1358.  Fix a potential bug when DFSClient calls skipBytes.
      (Hairong Kuang via cutting)
 
+117. HADOOP-1356.  Fix a bug in ValueHistogram.  (Runping Qi via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
