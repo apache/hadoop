@@ -144,7 +144,7 @@ public class JobClient extends ToolBase implements MRConstants  {
     /**
      * Blocks until the job is finished
      */
-    public synchronized void waitForCompletion() throws IOException {
+    public void waitForCompletion() throws IOException {
       while (!isComplete()) {
         try {
           Thread.sleep(5000);

@@ -419,6 +419,9 @@ Branch 0.13 (unreleased changes)
 
 117. HADOOP-1356.  Fix a bug in ValueHistogram.  (Runping Qi via cutting)
 
+118. HADOOP-1363.  Fix locking bug in JobClient#waitForCompletion().
+     (omalley via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
