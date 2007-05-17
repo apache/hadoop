@@ -24,7 +24,6 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,8 +36,6 @@ import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
-import java.util.Collections;
-import java.util.Collection;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -803,17 +800,17 @@ public class TaskTracker
     // else resend the previous status information.
     //
     if (status == null) {
-      List<TaskStatus> taskReports = 
-        new ArrayList<TaskStatus>(runningTasks.size());
       synchronized (this) {
+        List<TaskStatus> taskReports = 
+          new ArrayList<TaskStatus>(runningTasks.size());
         for (TaskInProgress tip: runningTasks.values()) {
           taskReports.add(tip.createStatus());
         }
+        status = 
+          new TaskTrackerStatus(taskTrackerName, localHostname, 
+                                httpPort, taskReports, 
+                                failures); 
       }
-      status = 
-        new TaskTrackerStatus(taskTrackerName, localHostname, 
-                              httpPort, taskReports, 
-                              failures); 
     } else {
       LOG.info("Resending 'status' to '" + jobTrackAddr.getHostName() +
                "' with reponseId '" + heartbeatResponseId);
@@ -822,14 +819,15 @@ public class TaskTracker
     //
     // Check if we should ask for a new Task
     //
-    boolean askForNewTask = false; 
-    if ((mapTotal < maxCurrentTasks || reduceTotal < maxCurrentTasks) &&
-        acceptNewTasks) {
+    boolean askForNewTask;
+    synchronized (this) {
+      askForNewTask = (mapTotal < maxCurrentTasks || 
+                       reduceTotal < maxCurrentTasks) &&
+                      acceptNewTasks; 
+    }
+    if (askForNewTask) {
       checkLocalDirs(fConf.getLocalDirs());
-        
-      if (enoughFreeSpace(minSpaceStart)) {
-        askForNewTask = true;
-      }
+      askForNewTask = enoughFreeSpace(minSpaceStart);
     }
       
     //
@@ -1453,7 +1451,7 @@ public class TaskTracker
     /**
      * The map output has been lost.
      */
-    public synchronized void mapOutputLost(String failure
+    private synchronized void mapOutputLost(String failure
                                            ) throws IOException {
       if (runstate == TaskStatus.State.SUCCEEDED) {
         LOG.info("Reporting output lost:"+task.getTaskId());
