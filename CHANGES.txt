@@ -422,6 +422,9 @@ Branch 0.13 (unreleased changes)
 118. HADOOP-1363.  Fix locking bug in JobClient#waitForCompletion().
      (omalley via cutting)
 
+119. HADOOP-1368.  Fix inconsistent synchronization in JobInProgress.
+     (omalley via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

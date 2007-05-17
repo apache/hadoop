@@ -30,8 +30,6 @@ import org.apache.hadoop.io.WritableFactory;
  * Describes the current status of a job.  This is
  * not intended to be a comprehensive piece of data.
  * For that, look at JobProfile.
- *
- * @author Mike Cafarella
  **************************************************/
 public class JobStatus implements Writable {
 
@@ -83,39 +81,38 @@ public class JobStatus implements Writable {
   /**
    * @return Percentage of progress in maps 
    */
-  public float mapProgress() { return mapProgress; }
+  public synchronized float mapProgress() { return mapProgress; }
     
   /**
    * Sets the map progress of this job
    * @param p The value of map progress to set to
    */
-  void setMapProgress(float p) { 
+  synchronized void setMapProgress(float p) { 
     this.mapProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
-    
   }
     
   /**
    * @return Percentage of progress in reduce 
    */
-  public float reduceProgress() { return reduceProgress; }
+  public synchronized float reduceProgress() { return reduceProgress; }
     
   /**
    * Sets the reduce progress of this Job
    * @param p The value of reduce progress to set to
    */
-  void setReduceProgress(float p) { 
+  synchronized void setReduceProgress(float p) { 
     this.reduceProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
   }
     
   /**
    * @return running state of the job
    */
-  public int getRunState() { return runState; }
+  public synchronized int getRunState() { return runState; }
     
   /**
    * Change the current run state of the job.
    */
-  public void setRunState(int state) {
+  public synchronized void setRunState(int state) {
     this.runState = state;
   }
 
@@ -123,22 +120,22 @@ public class JobStatus implements Writable {
    * Set the start time of the job
    * @param startTime The startTime of the job
    */
-  void setStartTime(long startTime) { this.startTime = startTime;};
+  synchronized void setStartTime(long startTime) { this.startTime = startTime;}
     
   /**
    * @return start time of the job
    */
-  public long getStartTime() { return startTime;};
+  synchronized public long getStartTime() { return startTime;}
 
   /**
    * @param user The username of the job
    */
-  void setUsername(String userName) { this.user = userName;};
+  synchronized void setUsername(String userName) { this.user = userName;}
 
   /**
    * @return the username of the job
    */
-  public String getUsername() { return this.user;};
+  public synchronized String getUsername() { return this.user;}
     
   ///////////////////////////////////////
   // Writable

@@ -220,7 +220,9 @@ class JobInProgress {
       // Finished time need to be setted here to prevent this job to be retired
       // from the job tracker jobs at the next retire iteration.
       this.finishTime = System.currentTimeMillis();
-      this.status = new JobStatus(status.getJobId(), 1.0f, 1.0f, JobStatus.SUCCEEDED);
+      status.setMapProgress(1.0f);
+      status.setReduceProgress(1.0f);
+      status.setRunState(JobStatus.SUCCEEDED);
       tasksInited = true;
 
       // Special case because the Job is not queued
@@ -263,7 +265,7 @@ class JobInProgress {
   public int desiredMaps() {
     return numMapTasks;
   }
-  public int finishedMaps() {
+  public synchronized int finishedMaps() {
     return finishedMapTasks;
   }
   public int desiredReduces() {
@@ -275,7 +277,7 @@ class JobInProgress {
   public synchronized int runningReduces() {
     return runningReduceTasks;
   }
-  public int finishedReduces() {
+  public synchronized int finishedReduces() {
     return finishedReduceTasks;
   }
  
@@ -485,8 +487,9 @@ class JobInProgress {
   /**
    * Return a MapTask, if appropriate, to run on the given tasktracker
    */
-  public Task obtainNewMapTask(TaskTrackerStatus tts, int clusterSize
-                               ) throws IOException {
+  public synchronized Task obtainNewMapTask(TaskTrackerStatus tts, 
+                                            int clusterSize
+                                           ) throws IOException {
     if (!tasksInited) {
       LOG.info("Cannot create task split for " + profile.getJobId());
       return null;
@@ -513,8 +516,9 @@ class JobInProgress {
    * We don't have cache-sensitivity for reduce tasks, as they
    *  work on temporary MapRed files.  
    */
-  public Task obtainNewReduceTask(TaskTrackerStatus tts,
-                                  int clusterSize) throws IOException {
+  public synchronized Task obtainNewReduceTask(TaskTrackerStatus tts,
+                                               int clusterSize
+                                              ) throws IOException {
     if (!tasksInited) {
       LOG.info("Cannot create task split for " + profile.getJobId());
       return null;
