@@ -27,6 +27,9 @@ Trunk (unreleased changes)
   8. HADOOP-234.  Add pipes facility, which permits writing MapReduce
      programs in C++.
 
+  9. HADOOP-1359.  Fix a potential NullPointerException in HDFS.
+     (Hairong Kuang via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

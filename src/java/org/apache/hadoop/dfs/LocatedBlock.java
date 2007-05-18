@@ -51,7 +51,11 @@ class LocatedBlock implements Writable {
    */
   public LocatedBlock(Block b, DatanodeInfo[] locs) {
     this.b = b;
-    this.locs = locs;
+    if (locs==null) {
+      this.locs = new DatanodeInfo[0];
+    } else {
+      this.locs = locs;
+    }
   }
 
   /**

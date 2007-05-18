@@ -188,7 +188,7 @@ public class NamenodeFsck {
                     locs.length + " replica(s).");
       }
       report.append(i + ". " + id + " len=" + block.getNumBytes());
-      if (locs == null || locs.length == 0) {
+      if ( locs.length == 0) {
         report.append(" MISSING!");
         res.addMissing(block.getBlockName(), block.getNumBytes());
         missing++;
