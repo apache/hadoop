@@ -1,0 +1,6 @@
+HBase Change Log
+
+
+Trunk (unreleased changes)
+
+  1. HADOOP-1384. HBase omnibus patch. (jimk, Vuk Ercegovac, and Michael Stack)
