@@ -1551,7 +1551,7 @@ public class SequenceFile {
      * @return Returns the total record length
      * @throws IOException
      */
-    public int nextRaw(DataOutputBuffer key, ValueBytes val) 
+    public synchronized int nextRaw(DataOutputBuffer key, ValueBytes val) 
       throws IOException {
       if (!blockCompressed) {
         if (in.getPos() >= end) 
@@ -1653,7 +1653,7 @@ public class SequenceFile {
      * @return Returns the value length
      * @throws IOException
      */
-    public int nextRawValue(ValueBytes val) 
+    public synchronized int nextRawValue(ValueBytes val) 
       throws IOException {
       
       // Position stream to current value

@@ -30,6 +30,9 @@ Trunk (unreleased changes)
   9. HADOOP-1359.  Fix a potential NullPointerException in HDFS.
      (Hairong Kuang via cutting)
 
+ 10. HADOOP-1364.  Fix inconsistent synchronization in SequenceFile.
+     (omalley via cutting)
+
 
 Branch 0.13 (unreleased changes)
 
