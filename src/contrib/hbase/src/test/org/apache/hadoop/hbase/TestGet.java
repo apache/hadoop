@@ -17,29 +17,17 @@ package org.apache.hadoop.hbase;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.TreeMap;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
-import org.apache.log4j.Appender;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Layout;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-
-import junit.framework.TestCase;
-
-public class TestGet extends TestCase {
+public class TestGet extends HBaseTestCase {
   private static final Text CONTENTS = new Text("contents:");
   private static final Text ROW_KEY = new Text(HGlobals.rootRegionInfo.regionName);
 
@@ -71,7 +59,6 @@ public class TestGet extends TestCase {
     }
   }
   
-  @SuppressWarnings("unchecked")
   public void testGet() throws IOException {
     MiniDFSCluster cluster = null;
 
@@ -79,37 +66,6 @@ public class TestGet extends TestCase {
       
       // Initialization
       
-      if(System.getProperty("test.build.data") == null) {
-        String dir = new File(new File("").getAbsolutePath(), "build/contrib/hbase/test").getAbsolutePath();
-        System.out.println(dir);
-        System.setProperty("test.build.data", dir);
-      }
-      Configuration conf = new HBaseConfiguration();
-    
-      Environment.getenv();
-      if(Environment.debugging) {
-        Logger rootLogger = Logger.getRootLogger();
-        rootLogger.setLevel(Level.WARN);
-
-        ConsoleAppender consoleAppender = null;
-        for(Enumeration<Appender> e = (Enumeration<Appender>)rootLogger.getAllAppenders();
-            e.hasMoreElements();) {
-        
-          Appender a = e.nextElement();
-          if(a instanceof ConsoleAppender) {
-            consoleAppender = (ConsoleAppender)a;
-            break;
-          }
-        }
-        if(consoleAppender != null) {
-          Layout layout = consoleAppender.getLayout();
-          if(layout instanceof PatternLayout) {
-            PatternLayout consoleLayout = (PatternLayout)layout;
-            consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
-          }
-        }
-        Logger.getLogger("org.apache.hadoop.hbase").setLevel(Environment.logLevel);
-      }
       cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
       FileSystem fs = cluster.getFileSystem();
       Path dir = new Path("/hbase");

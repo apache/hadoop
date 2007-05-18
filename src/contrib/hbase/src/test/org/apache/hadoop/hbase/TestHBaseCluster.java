@@ -15,45 +15,52 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import junit.framework.TestCase;
-import junit.framework.Test;
-import junit.framework.TestSuite;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
-
-import org.apache.log4j.Appender;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Layout;
-import org.apache.log4j.Logger;
-import org.apache.log4j.Level;
-import org.apache.log4j.PatternLayout;
 
 /**
  * Test HBase Master and Region servers, client API 
  */
-public class TestHBaseCluster extends TestCase {
+public class TestHBaseCluster extends HBaseClusterTestCase {
+
+  private HTableDescriptor desc;
+  private HClient client;
 
   /** constructor */
-  public TestHBaseCluster(String name) {
-    super(name);
+  public TestHBaseCluster() {
+    super(true);
+    this.desc = null;
+    this.client = null;
   }
 
-  /** Test suite so that all tests get run */
-  public static Test suite() {
-    TestSuite suite = new TestSuite();
-    suite.addTest(new TestHBaseCluster("testSetup"));
-    suite.addTest(new TestHBaseCluster("testBasic"));
-    suite.addTest(new TestHBaseCluster("testScanner"));
-    suite.addTest(new TestHBaseCluster("testCleanup"));
-    return suite;
+  /**
+   * Since all the "tests" depend on the results of the previous test, they are
+   * not Junit tests that can stand alone. Consequently we have a single Junit
+   * test that runs the "sub-tests" as private methods.
+   */
+  public void testHBaseCluster() {
+    try {
+      setup();
+      basic();
+      scanner();
+      listTables();
+      cleanup();
+      
+    } catch(IOException e) {
+      e.printStackTrace();
+      fail();
+    }
+  }
+
+  public void tearDown() throws Exception {
+    super.tearDown();
+    if(client != null) {
+      client.close();
+    }
   }
 
   private static final int FIRST_ROW = 1;
@@ -65,126 +72,61 @@ public class TestHBaseCluster extends TestCase {
   private static final String ANCHORNUM = "anchor:anchornum-";
   private static final String ANCHORSTR = "anchorstr";
 
-  private static Configuration conf = null;
-  private static boolean failures = false;
-  private static boolean initialized = false;
-  private static MiniHBaseCluster cluster = null;
-  private static HTableDescriptor desc = null;
-  private static HClient client = null;
-
-  // Set up environment, start mini cluster, etc.
-  
-  @SuppressWarnings("unchecked")
-  public void testSetup() throws Exception {
-    try {
-      if(System.getProperty("test.build.data") == null) {
-        String dir = new File(new File("").getAbsolutePath(), "build/contrib/hbase/test").getAbsolutePath();
-        System.out.println(dir);
-        System.setProperty("test.build.data", dir);
-      }
-      conf = new HBaseConfiguration();
-      
-      Environment.getenv();
-      Logger rootLogger = Logger.getRootLogger();
-      if(Environment.debugging) {
-        rootLogger.setLevel(Level.WARN);
-      }
-
-      ConsoleAppender consoleAppender = null;
-      for(Enumeration<Appender> e = (Enumeration<Appender>)rootLogger.getAllAppenders();
-      e.hasMoreElements();) {
-
-        Appender a = e.nextElement();
-        if(a instanceof ConsoleAppender) {
-          consoleAppender = (ConsoleAppender)a;
-          break;
-        }
-      }
-      if(consoleAppender != null) {
-        Layout layout = consoleAppender.getLayout();
-        if(layout instanceof PatternLayout) {
-          PatternLayout consoleLayout = (PatternLayout)layout;
-          consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
-        }
-      }
-      Logger.getLogger("org.apache.hadoop.hbase").setLevel(Environment.logLevel);
-
-      cluster = new MiniHBaseCluster(conf, 1);
-      client = new HClient(conf);
-
-      desc = new HTableDescriptor("test", 3);
-      desc.addFamily(new Text(CONTENTS));
-      desc.addFamily(new Text(ANCHOR));
-      client.createTable(desc);
-      
-    } catch(Exception e) {
-      failures = true;
-      throw e;
-    }
-    initialized = true;
+  private void setup() throws IOException {
+    client = new HClient(conf);
+    desc = new HTableDescriptor("test", 3);
+    desc.addFamily(new Text(CONTENTS));
+    desc.addFamily(new Text(ANCHOR));
+    client.createTable(desc);
   }
       
   // Test basic functionality. Writes to contents:basic and anchor:anchornum-*
 
-  public void testBasic() throws IOException {
-    if(!initialized) {
-      throw new IllegalStateException();
+  private void basic() throws IOException {
+    long startTime = System.currentTimeMillis();
+
+    client.openTable(desc.getName());
+
+    // Write out a bunch of values
+
+    for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
+      long writeid = client.startUpdate(new Text("row_" + k));
+      client.put(writeid, CONTENTS_BASIC, (CONTENTSTR + k).getBytes());
+      client.put(writeid, new Text(ANCHORNUM + k), (ANCHORSTR + k).getBytes());
+      client.commit(writeid);
+    }
+    System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
+        + ((System.currentTimeMillis() - startTime) / 1000.0));
+
+    // Read them back in
+
+    startTime = System.currentTimeMillis();
+
+    Text collabel = null;
+    for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
+      Text rowlabel = new Text("row_" + k);
+
+      byte bodydata[] = client.get(rowlabel, CONTENTS_BASIC);
+      assertNotNull(bodydata);
+      String bodystr = new String(bodydata).toString().trim();
+      String teststr = CONTENTSTR + k;
+      assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
+          + "), expected: '" + teststr + "' got: '" + bodystr + "'",
+          bodystr, teststr);
+      collabel = new Text(ANCHORNUM + k);
+      bodydata = client.get(rowlabel, collabel);
+      bodystr = new String(bodydata).toString().trim();
+      teststr = ANCHORSTR + k;
+      assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
+          + "), expected: '" + teststr + "' got: '" + bodystr + "'",
+          bodystr, teststr);
     }
 
-    try {
-      long startTime = System.currentTimeMillis();
-      
-      client.openTable(desc.getName());
-      
-      // Write out a bunch of values
-      
-      for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-        long writeid = client.startUpdate(new Text("row_" + k));
-        client.put(writeid, CONTENTS_BASIC, (CONTENTSTR + k).getBytes());
-        client.put(writeid, new Text(ANCHORNUM + k), (ANCHORSTR + k).getBytes());
-        client.commit(writeid);
-      }
-      System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
-          + ((System.currentTimeMillis() - startTime) / 1000.0));
-
-      // Read them back in
-
-      startTime = System.currentTimeMillis();
-      
-      Text collabel = null;
-      for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-        Text rowlabel = new Text("row_" + k);
-
-        byte bodydata[] = client.get(rowlabel, CONTENTS_BASIC);
-        assertNotNull(bodydata);
-        String bodystr = new String(bodydata).toString().trim();
-        String teststr = CONTENTSTR + k;
-        assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
-            + "), expected: '" + teststr + "' got: '" + bodystr + "'",
-            bodystr, teststr);
-        collabel = new Text(ANCHORNUM + k);
-        bodydata = client.get(rowlabel, collabel);
-        bodystr = new String(bodydata).toString().trim();
-        teststr = ANCHORSTR + k;
-        assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
-            + "), expected: '" + teststr + "' got: '" + bodystr + "'",
-            bodystr, teststr);
-      }
-      
-      System.out.println("Read " + NUM_VALS + " rows. Elapsed time: "
-          + ((System.currentTimeMillis() - startTime) / 1000.0));
-
-    } catch(IOException e) {
-      failures = true;
-      throw e;
-    }
+    System.out.println("Read " + NUM_VALS + " rows. Elapsed time: "
+        + ((System.currentTimeMillis() - startTime) / 1000.0));
   }
   
-  public void testScanner() throws IOException {
-    if(!initialized || failures) {
-      throw new IllegalStateException();
-    }
-
+  private void scanner() throws IOException {
     Text[] cols = new Text[] {
         new Text(ANCHORNUM + "[0-9]+"),
         new Text(CONTENTS_BASIC)
@@ -234,57 +176,31 @@ public class TestHBaseCluster extends TestCase {
           + " rows. Elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
 
-    } catch(IOException e) {
-      failures = true;
-      throw e;
-      
     } finally {
       s.close();
     }
   }
 
-  public void testListTables() throws IOException {
-    if(!initialized || failures) {
-      throw new IllegalStateException();
-    }
-    
+  private void listTables() throws IOException {
+    HTableDescriptor[] tables = client.listTables();
+    assertEquals(1, tables.length);
+    assertEquals(desc.getName(), tables[0].getName());
+    TreeSet<Text> families = tables[0].families();
+    assertEquals(2, families.size());
+    assertTrue(families.contains(new Text(CONTENTS)));
+    assertTrue(families.contains(new Text(ANCHOR)));
+  }
+  
+  private void cleanup() throws IOException {
+
+    // Delete the table we created
+
+    client.deleteTable(desc.getName());
     try {
-      HTableDescriptor[] tables = client.listTables();
-      assertEquals(1, tables.length);
-      assertEquals(desc.getName(), tables[0].getName());
-      TreeSet<Text> families = tables[0].families();
-      assertEquals(2, families.size());
-      assertTrue(families.contains(new Text(CONTENTS)));
-      assertTrue(families.contains(new Text(ANCHOR)));
-      
-    } catch(IOException e) {
-      failures = true;
-      throw e;
+      Thread.sleep(30000);                    // Wait for table to be deleted
+
+    } catch(InterruptedException e) {
     }
   }
   
-  public void testCleanup() throws IOException {
-    if(!initialized) {
-      throw new IllegalStateException();
-    }
-    
-    try {
-      if(!failures) {
-        // Delete the table we created
-
-        client.deleteTable(desc.getName());
-        try {
-          Thread.sleep(60000);                  // Wait for table to be deleted
-          
-        } catch(InterruptedException e) {
-        }
-      }
-      
-    } finally {
-      // Shut down the cluster
-    
-      cluster.shutdown();
-      client.close();
-    }
-  }
 }

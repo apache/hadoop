@@ -164,7 +164,7 @@ public class HMaster implements HConstants, HMasterInterface,
           HRegionInfo info = getRegionInfo(COL_REGIONINFO, results, inbuf);
           String serverName = getServerName(COL_SERVER, results);
           long startCode = getStartCode(COL_STARTCODE, results);
-          
+
           if(LOG.isDebugEnabled()) {
             LOG.debug("row: " + info.toString() + ", server: " + serverName
                 + ", startCode: " + startCode);
@@ -177,11 +177,11 @@ public class HMaster implements HConstants, HMasterInterface,
         }
       } finally {
         try {
-        if (scannerId != -1L) {
-          server.close(scannerId);
-        }
+          if (scannerId != -1L) {
+            server.close(scannerId);
+          }
         } catch (IOException e) {
-            e.printStackTrace();
+          e.printStackTrace();
         }
         scannerId = -1L;
       }
@@ -581,13 +581,13 @@ public class HMaster implements HConstants, HMasterInterface,
     // Main processing loop
     for(PendingOperation op = null; !closed; ) {
       synchronized(msgQueue) {
-        while(msgQueue.size() == 0 && serversToServerInfo.size() != 0) {
+        while(msgQueue.size() == 0 && !closed) {
           try {
             msgQueue.wait(threadWakeFrequency);
           } catch(InterruptedException iex) {
           }
         }
-        if(msgQueue.size() == 0 || closed) {
+        if(closed) {
           continue;
         }
         op = msgQueue.remove(msgQueue.size()-1);
@@ -616,14 +616,6 @@ public class HMaster implements HConstants, HMasterInterface,
     }
     server.stop();                              // Stop server
     serverLeases.close();                       // Turn off the lease monitor
-    try {
-      fs.close();
-      client.close();                           // Shut down the client
-    } catch(IOException iex) {
-      // Print if ever there is an interrupt (Just for kicks. Remove if it
-      // ever happens).
-      iex.printStackTrace();
-    }
     
     // Join up with all threads
     
@@ -652,6 +644,7 @@ public class HMaster implements HConstants, HMasterInterface,
       // ever happens).
       iex.printStackTrace();
     }
+    
     if(LOG.isDebugEnabled()) {
       LOG.debug("HMaster main thread exiting");
     }
@@ -774,19 +767,9 @@ public class HMaster implements HConstants, HMasterInterface,
   HMsg[] processMsgs(HServerInfo info, HMsg incomingMsgs[]) throws IOException {
     Vector<HMsg> returnMsgs = new Vector<HMsg>();
     
-    // Process the kill list
-    
     TreeMap<Text, HRegionInfo> regionsToKill =
       killList.remove(info.getServerAddress().toString());
     
-    if(regionsToKill != null) {
-      for(Iterator<HRegionInfo> i = regionsToKill.values().iterator();
-          i.hasNext(); ) {
-        
-        returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE_AND_DELETE, i.next()));
-      }
-    }
-
     // Get reports on what the RegionServer did.
     
     for(int i = 0; i < incomingMsgs.length; i++) {
@@ -872,18 +855,11 @@ public class HMaster implements HConstants, HMasterInterface,
         } else {
           boolean reassignRegion = true;
 
-          synchronized(regionsToKill) {
-            if(regionsToKill.containsKey(region.regionName)) {
-              regionsToKill.remove(region.regionName);
-
-              if(regionsToKill.size() > 0) {
-                killList.put(info.toString(), regionsToKill);
-
-              } else {
-                killList.remove(info.toString());
-              }
-              reassignRegion = false;
-            }
+          if(regionsToKill.containsKey(region.regionName)) {
+            regionsToKill.remove(region.regionName);
+            unassignedRegions.remove(region.regionName);
+            assignAttempts.remove(region.regionName);
+            reassignRegion = false;
           }
 
           synchronized(msgQueue) {
@@ -902,19 +878,30 @@ public class HMaster implements HConstants, HMasterInterface,
         if(LOG.isDebugEnabled()) {
           LOG.debug("new region " + region.regionName);
         }
+        
+        // A region has split and the old server is serving the two new regions.
 
         if(region.regionName.find(META_TABLE_NAME.toString()) == 0) {
           // A meta region has split.
 
           allMetaRegionsScanned = false;
         }
-        unassignedRegions.put(region.regionName, region);
-        assignAttempts.put(region.regionName, 0L);
+        
         break;
 
       default:
         throw new IOException("Impossible state during msg processing.  Instruction: "
             + incomingMsgs[i].getMsg());
+      }
+    }
+
+    // Process the kill list
+    
+    if(regionsToKill != null) {
+      for(Iterator<HRegionInfo> i = regionsToKill.values().iterator();
+          i.hasNext(); ) {
+        
+        returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE_AND_DELETE, i.next()));
       }
     }
 
@@ -1460,108 +1447,167 @@ public class HMaster implements HConstants, HMasterInterface,
     } else {
       firstMetaRegion = knownMetaRegions.headMap(tableName).lastKey();
     }
-    for(Iterator<MetaRegion> it =
-      knownMetaRegions.tailMap(firstMetaRegion).values().iterator();
-        it.hasNext(); ) {
 
-      // Find all the regions that make up this table
-      
-      MetaRegion m = it.next();
-      HRegionInterface server = client.getHRegionConnection(m.server);
-      Vector<Text> rowsToDelete = new Vector<Text>();
+    synchronized(metaScannerLock) {     // Prevent meta scanner from running
+      for(Iterator<MetaRegion> it =
+          knownMetaRegions.tailMap(firstMetaRegion).values().iterator();
+          it.hasNext(); ) {
 
-      long scannerId = -1L;
-      try {
-        scannerId = server.openScanner(m.regionName, METACOLUMNS, tableName);
-        
-        
-        DataInputBuffer inbuf = new DataInputBuffer();
-        byte[] bytes;
-        while(true) {
-          LabelledData[] values = null;
-          HStoreKey key = new HStoreKey();
-          values = server.next(scannerId, key);
-          if(values == null || values.length == 0) {
-            break;
-          }
-          TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-          for(int i = 0; i < values.length; i++) {
-            bytes = new byte[values[i].getData().getSize()];
-            System.arraycopy(values[i].getData().get(), 0, bytes, 0, bytes.length);
-            results.put(values[i].getLabel(), bytes);
-          }
-          bytes = results.get(COL_REGIONINFO);
-          if(bytes == null || bytes.length == 0) {
-            break;
-          }
-          inbuf.reset(bytes, bytes.length);
-          HRegionInfo info = new HRegionInfo();
-          info.readFields(inbuf);
+        // Find all the regions that make up this table
 
-          if(info.tableDesc.getName().compareTo(tableName) > 0) {
-            break;                      // Beyond any more entries for this table
-          }
-          
-          rowsToDelete.add(info.regionName);
+        MetaRegion m = it.next();
+        HRegionInterface server = client.getHRegionConnection(m.server);
 
-          // Is it being served?
-          
-          bytes = results.get(COL_SERVER);
-          if(bytes != null && bytes.length != 0) {
-            String serverName = new String(bytes, UTF8_ENCODING);
-            
-            bytes = results.get(COL_STARTCODE);
+        // Rows in the meta table we will need to delete
+
+        Vector<Text> rowsToDelete = new Vector<Text>();
+
+        // Regions that are being served. We will get the HRegionServers
+        // to delete them for us, but we don't tell them that until after
+        // we are done scanning to prevent lock contention
+
+        TreeMap<String, TreeMap<Text, HRegionInfo>> localKillList =
+          new TreeMap<String, TreeMap<Text, HRegionInfo>>();
+
+        // Regions that are not being served. We will have to delete
+        // them ourselves
+
+        TreeSet<Text> unservedRegions = new TreeSet<Text>();
+
+        long scannerId = -1L;
+        try {
+          scannerId = server.openScanner(m.regionName, METACOLUMNS, tableName);
+
+
+          DataInputBuffer inbuf = new DataInputBuffer();
+          byte[] bytes;
+          while(true) {
+            LabelledData[] values = null;
+            HStoreKey key = new HStoreKey();
+            values = server.next(scannerId, key);
+            if(values == null || values.length == 0) {
+              break;
+            }
+            TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+            for(int i = 0; i < values.length; i++) {
+              bytes = new byte[values[i].getData().getSize()];
+              System.arraycopy(values[i].getData().get(), 0, bytes, 0, bytes.length);
+              results.put(values[i].getLabel(), bytes);
+            }
+            bytes = results.get(COL_REGIONINFO);
+            if(bytes == null || bytes.length == 0) {
+              break;
+            }
+            inbuf.reset(bytes, bytes.length);
+            HRegionInfo info = new HRegionInfo();
+            info.readFields(inbuf);
+
+            if(info.tableDesc.getName().compareTo(tableName) > 0) {
+              break;                      // Beyond any more entries for this table
+            }
+
+            rowsToDelete.add(info.regionName);
+
+            // Is it being served?
+
+            bytes = results.get(COL_SERVER);
             if(bytes != null && bytes.length != 0) {
-              long startCode = Long.valueOf(new String(bytes, UTF8_ENCODING));
+              String serverName = new String(bytes, UTF8_ENCODING);
 
-              HServerInfo s = serversToServerInfo.get(serverName);
-              if(s != null && s.getStartCode() == startCode) {
+              bytes = results.get(COL_STARTCODE);
+              if(bytes != null && bytes.length != 0) {
+                long startCode = Long.valueOf(new String(bytes, UTF8_ENCODING));
 
-                // It is being served.
-                // Tell the server to stop it and not report back.
+                HServerInfo s = serversToServerInfo.get(serverName);
+                if(s != null && s.getStartCode() == startCode) {
 
-                TreeMap<Text, HRegionInfo> regionsToKill =
-                  killList.get(serverName);
-                
-                if(regionsToKill == null) {
-                  regionsToKill = new TreeMap<Text, HRegionInfo>();
+                  // It is being served.
+                  // Tell the server to stop it and not report back.
+
+                  TreeMap<Text, HRegionInfo> regionsToKill =
+                    localKillList.get(serverName);
+
+                  if(regionsToKill == null) {
+                    regionsToKill = new TreeMap<Text, HRegionInfo>();
+                  }
+                  regionsToKill.put(info.regionName, info);
+                  localKillList.put(serverName, regionsToKill);
+                  continue;
                 }
-                regionsToKill.put(info.regionName, info);
-                killList.put(serverName, regionsToKill);
               }
             }
+            
+            // Region is not currently being served.
+            // Prevent it from getting assigned and add it to the list of
+            // regions we need to delete here.
+            
+            unassignedRegions.remove(info.regionName);
+            assignAttempts.remove(info.regionName);
+            unservedRegions.add(info.regionName);
+          }
+          
+        } catch(IOException e) {
+          e.printStackTrace();
+
+        } finally {
+          if(scannerId != -1L) {
+            try {
+              server.close(scannerId);
+
+            } catch(IOException e) {
+              e.printStackTrace();
+
+            }
+          }
+          scannerId = -1L;
+        }
+
+        // Wipe the existence of the regions out of the meta table
+        
+        for(Iterator<Text> row = rowsToDelete.iterator(); row.hasNext(); ) {
+          Text rowName = row.next();
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("deleting columns in row: " + rowName);
+          }
+          long lockid = -1L;
+          long clientId = rand.nextLong();
+          try {
+            lockid = server.startUpdate(m.regionName, clientId, rowName);
+            server.delete(m.regionName, clientId, lockid, COL_REGIONINFO);
+            server.delete(m.regionName, clientId, lockid, COL_SERVER);
+            server.delete(m.regionName, clientId, lockid, COL_STARTCODE);
+            server.commit(m.regionName, clientId, lockid);
+            lockid = -1L;
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("deleted columns in row: " + rowName);
+            }
+
+          } catch(Exception e) {
+            if(lockid != -1L) {
+              server.abort(m.regionName, clientId, lockid);
+            }
+            LOG.error("columns deletion failed in row: " + rowName);
+            LOG.error(e);
           }
         }
-      } catch(IOException e) {
-        e.printStackTrace();
         
-      } finally {
-        if(scannerId != -1L) {
+        // Notify region servers that some regions need to be closed and deleted
+        
+        if(localKillList.size() != 0) {
+          killList.putAll(localKillList);
+        }
+
+        // Delete any regions that are not being served
+        
+        for(Iterator<Text> i = unservedRegions.iterator(); i.hasNext(); ) {
+          Text regionName = i.next();
           try {
-            server.close(scannerId);
+            HRegion.deleteRegion(fs, dir, regionName);
             
           } catch(IOException e) {
-            e.printStackTrace();
-            
+            LOG.error("failed to delete region " + regionName);
+            LOG.error(e);
           }
-        }
-        scannerId = -1L;
-      }
-      for(Iterator<Text> row = rowsToDelete.iterator(); row.hasNext(); ) {
-        Text rowName = row.next();
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("deleting columns in row: " + rowName);
-        }
-        try {
-          long clientId = rand.nextLong();
-          long lockid = server.startUpdate(m.regionName, clientId, rowName);
-          server.delete(m.regionName, clientId, lockid, COL_REGIONINFO);
-          server.delete(m.regionName, clientId, lockid, COL_SERVER);
-          server.delete(m.regionName, clientId, lockid, COL_STARTCODE);
-          server.commit(m.regionName, clientId, lockid);
-          
-        } catch(Exception e) {
-          e.printStackTrace();
         }
       }
     }

@@ -183,10 +183,10 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   abstract boolean getNext(int i) throws IOException;
   
   /** Mechanism used by concrete implementation to shut down a particular scanner */
-  abstract void closeSubScanner(int i) throws IOException;
+  abstract void closeSubScanner(int i);
   
   /** Mechanism used to shut down the whole scan */
-  public abstract void close() throws IOException;
+  public abstract void close();
 
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.HInternalScannerInterface#isWildcardScanner()

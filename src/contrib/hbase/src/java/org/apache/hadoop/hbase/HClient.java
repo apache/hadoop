@@ -288,17 +288,35 @@ public class HClient implements HConstants {
         throw new IOException("Timed out trying to locate root region");
       }
       
-      // Verify that this server still serves the root region
-      
       HRegionInterface rootRegion = getHRegionConnection(rootRegionLocation);
 
-      if(rootRegion.getRegionInfo(HGlobals.rootRegionInfo.regionName) != null) {
+      try {
+        rootRegion.getRegionInfo(HGlobals.rootRegionInfo.regionName);
         this.tableServers = new TreeMap<Text, TableInfo>();
         this.tableServers.put(EMPTY_START_ROW,
             new TableInfo(HGlobals.rootRegionInfo, rootRegionLocation));
         
         this.tablesToServers.put(ROOT_TABLE_NAME, this.tableServers);
         break;
+        
+      } catch(NotServingRegionException e) {
+        if(tries == numRetries - 1) {
+          // Don't bother sleeping. We've run out of retries.
+          break;
+        }
+        
+        // Sleep and retry finding root region.
+
+        try {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Root region location changed. Sleeping.");
+          }
+          Thread.sleep(this.clientTimeout);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Wake. Retry finding root region.");
+          }
+        } catch(InterruptedException iex) {
+        }
       }
       rootRegionLocation = null;
     }
@@ -453,7 +471,7 @@ public class HClient implements HConstants {
    * Right now, it only exists as part of the META table's region info.
    */
   public synchronized HTableDescriptor[] listTables()
-  throws IOException {
+      throws IOException {
     TreeSet<HTableDescriptor> uniqueTables = new TreeSet<HTableDescriptor>();
     
     TreeMap<Text, TableInfo> metaTables =
@@ -523,24 +541,84 @@ public class HClient implements HConstants {
     return this.tableServers.get(serverKey);
   }
   
+  private synchronized void findRegion(TableInfo info) throws IOException {
+    
+    // Wipe out everything we know about this table
+    
+    this.tablesToServers.remove(info.regionInfo.tableDesc.getName());
+    this.tableServers.clear();
+    
+    // Reload information for the whole table
+    
+    findTableInMeta(info.regionInfo.tableDesc.getName());
+    
+    if(this.tableServers.get(info.regionInfo.startKey) == null ) {
+      throw new IOException("region " + info.regionInfo.regionName + " does not exist");
+    }
+  }
+  
   /** Get a single value for the specified row and column */
   public byte[] get(Text row, Text column) throws IOException {
-    TableInfo info = getTableInfo(row);
-    return getHRegionConnection(info.serverAddress).get(
-        info.regionInfo.regionName, row, column).get();
+    TableInfo info = null;
+    BytesWritable value = null;
+
+    for(int tries = 0; tries < numRetries && info == null; tries++) {
+      info = getTableInfo(row);
+      
+      try {
+        value = getHRegionConnection(info.serverAddress).get(
+            info.regionInfo.regionName, row, column);
+        
+      } catch(NotServingRegionException e) {
+        if(tries == numRetries - 1) {
+          // No more tries
+          throw e;
+        }
+        findRegion(info);
+        info = null;
+      }
+    }
+
+    if(value != null) {
+      byte[] bytes = new byte[value.getSize()];
+      System.arraycopy(value.get(), 0, bytes, 0, bytes.length);
+      return bytes;
+    }
+    return null;
   }
  
   /** Get the specified number of versions of the specified row and column */
   public byte[][] get(Text row, Text column, int numVersions) throws IOException {
-    TableInfo info = getTableInfo(row);
-    BytesWritable[] values = getHRegionConnection(info.serverAddress).get(
-        info.regionInfo.regionName, row, column, numVersions);
-    
-    ArrayList<byte[]> bytes = new ArrayList<byte[]>();
-    for(int i = 0 ; i < values.length; i++) {
-      bytes.add(values[i].get());
+    TableInfo info = null;
+    BytesWritable[] values = null;
+
+    for(int tries = 0; tries < numRetries && info == null; tries++) {
+      info = getTableInfo(row);
+      
+      try {
+        values = getHRegionConnection(info.serverAddress).get(
+            info.regionInfo.regionName, row, column, numVersions);
+        
+      } catch(NotServingRegionException e) {
+        if(tries == numRetries - 1) {
+          // No more tries
+          throw e;
+        }
+        findRegion(info);
+        info = null;
+      }
     }
-    return bytes.toArray(new byte[values.length][]);
+
+    if(values != null) {
+      ArrayList<byte[]> bytes = new ArrayList<byte[]>();
+      for(int i = 0 ; i < values.length; i++) {
+        byte[] value = new byte[values[i].getSize()];
+        System.arraycopy(values[i].get(), 0, value, 0, value.length);
+        bytes.add(value);
+      }
+      return bytes.toArray(new byte[values.length][]);
+    }
+    return null;
   }
   
   /** 
@@ -548,22 +626,61 @@ public class HClient implements HConstants {
    * the specified timestamp.
    */
   public byte[][] get(Text row, Text column, long timestamp, int numVersions) throws IOException {
-    TableInfo info = getTableInfo(row);
-    BytesWritable[] values = getHRegionConnection(info.serverAddress).get(
-        info.regionInfo.regionName, row, column, timestamp, numVersions);
-    
-    ArrayList<byte[]> bytes = new ArrayList<byte[]>();
-    for(int i = 0 ; i < values.length; i++) {
-      bytes.add(values[i].get());
-    }
-    return bytes.toArray(new byte[values.length][]);
-  }
+    TableInfo info = null;
+    BytesWritable[] values = null;
 
+    for(int tries = 0; tries < numRetries && info == null; tries++) {
+      info = getTableInfo(row);
+      
+      try {
+        values = getHRegionConnection(info.serverAddress).get(
+            info.regionInfo.regionName, row, column, timestamp, numVersions);
+    
+      } catch(NotServingRegionException e) {
+        if(tries == numRetries - 1) {
+          // No more tries
+          throw e;
+        }
+        findRegion(info);
+        info = null;
+      }
+    }
+
+    if(values != null) {
+      ArrayList<byte[]> bytes = new ArrayList<byte[]>();
+      for(int i = 0 ; i < values.length; i++) {
+        byte[] value = new byte[values[i].getSize()];
+        System.arraycopy(values[i].get(), 0, value, 0, value.length);
+        bytes.add(value);
+      }
+      return bytes.toArray(new byte[values.length][]);
+    }
+    return null;
+  }
+    
   /** Get all the data for the specified row */
   public LabelledData[] getRow(Text row) throws IOException {
-    TableInfo info = getTableInfo(row);
-    return getHRegionConnection(info.serverAddress).getRow(
-        info.regionInfo.regionName, row);
+    TableInfo info = null;
+    LabelledData[] value = null;
+    
+    for(int tries = 0; tries < numRetries && info == null; tries++) {
+      info = getTableInfo(row);
+      
+      try {
+        value = getHRegionConnection(info.serverAddress).getRow(
+            info.regionInfo.regionName, row);
+        
+      } catch(NotServingRegionException e) {
+        if(tries == numRetries - 1) {
+          // No more tries
+          throw e;
+        }
+        findRegion(info);
+        info = null;
+      }
+    }
+    
+    return value;
   }
 
   /** 
@@ -579,19 +696,34 @@ public class HClient implements HConstants {
 
   /** Start an atomic row insertion or update */
   public long startUpdate(Text row) throws IOException {
-    TableInfo info = getTableInfo(row);
-    long lockid;
-    try {
-      this.currentServer = getHRegionConnection(info.serverAddress);
-      this.currentRegion = info.regionInfo.regionName;
-      this.clientid = rand.nextLong();
-      lockid = currentServer.startUpdate(this.currentRegion, this.clientid, row);
+    TableInfo info = null;
+    long lockid = -1L;
+    
+    for(int tries = 0; tries < numRetries && info == null; tries++) {
+      info = getTableInfo(row);
       
-    } catch(IOException e) {
-      this.currentServer = null;
-      this.currentRegion = null;
-      throw e;
+      try {
+        this.currentServer = getHRegionConnection(info.serverAddress);
+        this.currentRegion = info.regionInfo.regionName;
+        this.clientid = rand.nextLong();
+        lockid = currentServer.startUpdate(this.currentRegion, this.clientid, row);
+
+      } catch(NotServingRegionException e) {
+        if(tries == numRetries - 1) {
+          // No more tries
+          throw e;
+        }
+        findRegion(info);
+        info = null;
+
+      } catch(IOException e) {
+        this.currentServer = null;
+        this.currentRegion = null;
+        throw e;
+      }
+      
     }
+    
     return lockid;
   }
   
@@ -666,24 +798,27 @@ public class HClient implements HConstants {
     private HRegionInterface server;
     private long scannerId;
     
+    private void loadRegions() {
+      Text firstServer = null;
+      if(this.startRow == null || this.startRow.getLength() == 0) {
+        firstServer = tableServers.firstKey();
+
+      } else if(tableServers.containsKey(startRow)) {
+        firstServer = startRow;
+
+      } else {
+        firstServer = tableServers.headMap(startRow).lastKey();
+      }
+      Collection<TableInfo> info = tableServers.tailMap(firstServer).values();
+      this.regions = info.toArray(new TableInfo[info.size()]);
+    }
+    
     public ClientScanner(Text[] columns, Text startRow) throws IOException {
       this.columns = columns;
       this.startRow = startRow;
       this.closed = false;
       
-      Text firstServer = null;
-      if(this.startRow == null || this.startRow.getLength() == 0) {
-        firstServer = tableServers.firstKey();
-        
-      } else if(tableServers.containsKey(startRow)) {
-        firstServer = startRow;
-        
-      } else {
-        firstServer = tableServers.headMap(startRow).lastKey();
-      }
-      Collection<TableInfo> info = tableServers.tailMap(firstServer).values();
-      
-      this.regions = info.toArray(new TableInfo[info.size()]);
+      loadRegions();
       this.currentRegion = -1;
       this.server = null;
       this.scannerId = -1L;
@@ -706,10 +841,26 @@ public class HClient implements HConstants {
       }
       try {
         this.server = getHRegionConnection(this.regions[currentRegion].serverAddress);
-        this.scannerId = this.server.openScanner(
-            this.regions[currentRegion].regionInfo.regionName, this.columns,
-            this.startRow);
         
+        for(int tries = 0; tries < numRetries; tries++) {
+          TableInfo info = this.regions[currentRegion];
+          
+          try {
+            this.scannerId = this.server.openScanner(info.regionInfo.regionName,
+                this.columns, currentRegion == 0 ? this.startRow : EMPTY_START_ROW);
+            
+            break;
+        
+          } catch(NotServingRegionException e) {
+            if(tries == numRetries - 1) {
+              // No more tries
+              throw e;
+            }
+            findRegion(info);
+            loadRegions();
+          }
+        }
+
       } catch(IOException e) {
         close();
         throw e;
@@ -743,6 +894,7 @@ public class HClient implements HConstants {
     public void close() throws IOException {
       if(this.scannerId != -1L) {
         this.server.close(this.scannerId);
+        this.scannerId = -1L;
       }
       this.server = null;
       this.closed = true;

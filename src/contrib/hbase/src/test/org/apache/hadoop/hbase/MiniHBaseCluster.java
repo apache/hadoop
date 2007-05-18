@@ -35,9 +35,9 @@ public class MiniHBaseCluster implements HConstants {
   private MiniDFSCluster cluster;
   private FileSystem fs;
   private Path parentdir;
-  private HMasterRunner masterRunner;
-  private Thread masterRunnerThread;
-  private HRegionServerRunner[] regionServers;
+  private HMaster master;
+  private Thread masterThread;
+  private HRegionServer[] regionServers;
   private Thread[] regionThreads;
   
   public MiniHBaseCluster(Configuration conf, int nRegionNodes) {
@@ -58,13 +58,13 @@ public class MiniHBaseCluster implements HConstants {
 
     try {
       try {
-        if(System.getProperty("test.build.data") == null) {
+        if(System.getProperty(StaticTestEnvironment.TEST_DIRECTORY_KEY) == null) {
           File testDir = new File(new File("").getAbsolutePath(),
               "build/contrib/hbase/test");
 
           String dir = testDir.getAbsolutePath();
           LOG.info("Setting test.build.data to " + dir);
-          System.setProperty("test.build.data", dir);
+          System.setProperty(StaticTestEnvironment.TEST_DIRECTORY_KEY, dir);
         }
 
         if (miniHdfsFilesystem) {
@@ -85,26 +85,15 @@ public class MiniHBaseCluster implements HConstants {
       }
       
       // Create the master
-      this.masterRunner = new HMasterRunner();
-      this.masterRunnerThread = new Thread(masterRunner, "masterRunner");
+      this.master = new HMaster(conf);
+      this.masterThread = new Thread(this.master, "HMaster");
 
       // Start up the master
       LOG.info("Starting HMaster");
-      masterRunnerThread.start();
-      while(! masterRunner.isCrashed() && ! masterRunner.isInitialized()) {
-        try {
-          LOG.info("...waiting for HMaster to initialize...");
-          Thread.sleep(1000);
-        } catch(InterruptedException e) {
-        }
-        if(masterRunner.isCrashed()) {
-          throw new RuntimeException("HMaster crashed");
-        }
-      }
-      LOG.info("HMaster started.");
+      masterThread.start();
       
       // Set the master's port for the HRegionServers
-      String address = masterRunner.getHMasterAddress().toString();
+      String address = master.getMasterAddress().toString();
       this.conf.set(MASTER_ADDRESS, address);
 
       // Start the HRegionServers
@@ -115,34 +104,20 @@ public class MiniHBaseCluster implements HConstants {
       
       LOG.info("Starting HRegionServers");
       startRegionServers(this.conf, nRegionNodes);
-      LOG.info("HRegionServers running");
-
-      // Wait for things to get started
-
-      while(! masterRunner.isCrashed() && ! masterRunner.isUp()) {
-        try {
-          LOG.info("Waiting for Mini HBase cluster to start...");
-          Thread.sleep(1000);
-        } catch(InterruptedException e) {
-        }
-        if(masterRunner.isCrashed()) {
-          throw new RuntimeException("HMaster crashed");
-        }
-      }
       
     } catch(Throwable e) {
-      // Delete all DFS files
-      deleteFile(new File(System.getProperty("test.build.data"), "dfs"));
-      throw new RuntimeException("Mini HBase cluster did not start");
+      e.printStackTrace();
+      shutdown();
     }
   }
   
-  private void startRegionServers(Configuration conf, int nRegionNodes) {
-    this.regionServers = new HRegionServerRunner[nRegionNodes];
+  private void startRegionServers(Configuration conf, int nRegionNodes)
+      throws IOException {
+    this.regionServers = new HRegionServer[nRegionNodes];
     this.regionThreads = new Thread[nRegionNodes];
     
     for(int i = 0; i < nRegionNodes; i++) {
-      regionServers[i] = new HRegionServerRunner(conf);
+      regionServers[i] = new HRegionServer(conf);
       regionThreads[i] = new Thread(regionServers[i], "HRegionServer-" + i);
       regionThreads[i].start();
     }
@@ -153,35 +128,48 @@ public class MiniHBaseCluster implements HConstants {
    * supplied port is not necessarily the actual port used.
    */
   public HServerAddress getHMasterAddress() {
-    return masterRunner.getHMasterAddress();
+    return master.getMasterAddress();
   }
   
   /** Shut down the HBase cluster */
   public void shutdown() {
     LOG.info("Shutting down the HBase Cluster");
     for(int i = 0; i < regionServers.length; i++) {
-      regionServers[i].shutdown();
-    }
-    masterRunner.shutdown();
-    for(int i = 0; i < regionServers.length; i++) {
       try {
-        regionThreads[i].join();
-      } catch (InterruptedException e) {
+        regionServers[i].stop();
+        
+      } catch(IOException e) {
         e.printStackTrace();
       }
     }
     try {
-      masterRunnerThread.join();
-    } catch (InterruptedException e) {
+      master.shutdown();
+      
+    } catch(IOException e) {
       e.printStackTrace();
     }
-    if (cluster != null) {
+    for(int i = 0; i < regionServers.length; i++) {
+      try {
+        regionThreads[i].join();
+        
+      } catch(InterruptedException e) {
+      }
+    }
+    try {
+      masterThread.join();
+      
+    } catch(InterruptedException e) {
+    }
+    LOG.info("HBase Cluster shutdown complete");
+
+    if(cluster != null) {
       LOG.info("Shutting down Mini DFS cluster");
       cluster.shutdown();
     }
     
     // Delete all DFS files
-    deleteFile(new File(System.getProperty("test.build.data"), "dfs"));
+    deleteFile(new File(System.getProperty(
+        StaticTestEnvironment.TEST_DIRECTORY_KEY), "dfs"));
   }
   
   private void deleteFile(File f) {
@@ -192,127 +180,5 @@ public class MiniHBaseCluster implements HConstants {
       }
     }
     f.delete();
-  }
-  
-  private class HMasterRunner implements Runnable {
-    private HMaster master = null;
-    private Thread masterThread = null;
-    private volatile boolean isInitialized = false;
-    private boolean isCrashed = false;
-    private boolean isRunning = true;
-    private long threadSleepTime = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
-    
-    public HServerAddress getHMasterAddress() {
-      return this.master.getMasterAddress();
-    }
-    
-    public synchronized boolean isInitialized() {
-      return isInitialized;
-    }
-    
-    public synchronized boolean isCrashed() {
-      return isCrashed;
-    }
-    
-    public boolean isUp() {
-      if(master == null) {
-        return false;
-      }
-      synchronized(this) {
-        return isInitialized;
-      }
-    }
-    
-    /** Create the HMaster and run it */
-    public void run() {
-      try {
-        synchronized(this) {
-          if(isRunning) {
-            this.master = new HMaster(conf);
-            masterThread = new Thread(this.master);
-            masterThread.start();
-          }
-          isInitialized = true;
-        }
-      } catch(Throwable e) {
-        shutdown();
-        LOG.error("HMaster crashed:", e);
-        synchronized(this) {
-          isCrashed = true;
-        }
-      }
-
-      while(this.master != null && this.master.isMasterRunning()) {
-        try {
-          Thread.sleep(threadSleepTime);
-          
-        } catch(InterruptedException e) {
-        }
-      }
-      synchronized(this) {
-        isCrashed = true;
-      }
-      shutdown();
-    }
-    
-    /** Shut down the HMaster and wait for it to finish */
-    public synchronized void shutdown() {
-      isRunning = false;
-      if (this.master != null) {
-        try {
-          this.master.shutdown();
-        } catch(IOException e) {
-          LOG.error("Master crashed during stop", e);
-        } finally {
-          try {
-            masterThread.join();
-          } catch(InterruptedException e) {
-          }
-          master = null;
-        }
-      }
-    }
-  }
-  
-  private class HRegionServerRunner implements Runnable {
-    private HRegionServer server = null;
-    private boolean isRunning = true;
-    private Configuration conf;
-    
-    public HRegionServerRunner(Configuration conf) {
-      this.conf = conf;
-    }
-    
-    /** Start up the HRegionServer */
-    public void run() {
-      try {
-        synchronized(this) {
-          if(isRunning) {
-            server = new HRegionServer(conf);
-          }
-        }
-        server.run();
-        
-      } catch(Throwable e) {
-        shutdown();
-        LOG.error("HRegionServer crashed:", e);
-      }
-    }
-    
-    /** Shut down the HRegionServer */
-    public synchronized void shutdown() {
-      isRunning = false;
-      if(server != null) {
-        try {
-          server.stop();
-          
-        } catch(IOException e) {
-          LOG.error("HRegionServer crashed during stop", e);
-        } finally {
-          server.join();
-          server = null;
-        }
-      }
-    }
   }
 }

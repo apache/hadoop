@@ -296,7 +296,7 @@ public class HMemcache {
         for(int i = history.size() - 1; i > 0; i--) {
           backingMaps[i] = history.elementAt(i);
         }
-
+      
         this.keyIterators = new Iterator[backingMaps.length];
         this.keys = new HStoreKey[backingMaps.length];
         this.vals = new BytesWritable[backingMaps.length];
@@ -322,8 +322,10 @@ public class HMemcache {
           }
         }
         
-      } catch(Exception ex) {
+      } catch(IOException ex) {
+        LOG.error(ex);
         close();
+        throw ex;
       }
     }
 
@@ -365,7 +367,7 @@ public class HMemcache {
     }
 
     /** Shut down map iterators, and release the lock */
-    public void close() throws IOException {
+    public void close() {
       if(! scannerClosed) {
         try {
           for(int i = 0; i < keys.length; i++) {

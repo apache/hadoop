@@ -30,7 +30,7 @@ public interface HRegionInterface extends VersionedProtocol {
 
   // Get metainfo about an HRegion
 
-  public HRegionInfo getRegionInfo(Text regionName);
+  public HRegionInfo getRegionInfo(Text regionName) throws NotServingRegionException;
 
   // GET methods for an HRegion.
 

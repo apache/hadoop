@@ -270,8 +270,14 @@ public class HLog implements HConstants {
 
   /** Shut down the log. */
   public synchronized void close() throws IOException {
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("closing log writer");
+    }
     this.writer.close();
     this.closed = true;
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("log writer closed");
+    }
   }
 
   /**

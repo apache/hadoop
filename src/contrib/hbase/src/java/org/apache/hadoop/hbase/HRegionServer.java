@@ -46,7 +46,7 @@ public class HRegionServer
   
   private volatile boolean stopRequested;
   private Path regionDir;
-  private HServerAddress address;
+  private HServerInfo info;
   private Configuration conf;
   private Random rand;
   private TreeMap<Text, HRegion> regions;               // region name -> HRegion
@@ -64,24 +64,26 @@ public class HRegionServer
   private Thread splitOrCompactCheckerThread;
   private Integer splitOrCompactLock = new Integer(0);
   
-  private class SplitOrCompactChecker implements Runnable {
+  private class SplitOrCompactChecker implements Runnable, RegionUnavailableListener {
     private HClient client = new HClient(conf);
   
-    private class SplitRegion {
-      public HRegion region;
-      public Text midKey;
-      
-      SplitRegion(HRegion region, Text midKey) {
-        this.region = region;
-        this.midKey = midKey;
-      }
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.RegionUnavailableListener#regionIsUnavailable(org.apache.hadoop.io.Text)
+     */
+    public void regionIsUnavailable(Text regionName) {
+      lock.obtainWriteLock();
+      regions.remove(regionName);
+      lock.releaseWriteLock();
     }
-    
+
+    /* (non-Javadoc)
+     * @see java.lang.Runnable#run()
+     */
     public void run() {
       while(! stopRequested) {
         long startTime = System.currentTimeMillis();
 
-        synchronized(splitOrCompactLock) {
+        synchronized(splitOrCompactLock) { // Don't interrupt us while we're working
 
           // Grab a list of regions to check
 
@@ -93,85 +95,81 @@ public class HRegionServer
             lock.releaseReadLock();
           }
 
-          // Check to see if they need splitting or compacting
-
-          Vector<SplitRegion> toSplit = new Vector<SplitRegion>();
-          Vector<HRegion> toCompact = new Vector<HRegion>();
-          for(Iterator<HRegion> it = regionsToCheck.iterator(); it.hasNext(); ) {
-            HRegion cur = it.next();
-            Text midKey = new Text();
-
-            if(cur.needsCompaction()) {
-              toCompact.add(cur);
-
-            } else if(cur.needsSplit(midKey)) {
-              toSplit.add(new SplitRegion(cur, midKey));
-            }
-          }
-
           try {
-            for(Iterator<HRegion>it = toCompact.iterator(); it.hasNext(); ) {
-              it.next().compactStores();
-            }
-
-            for(Iterator<SplitRegion> it = toSplit.iterator(); it.hasNext(); ) {
-              SplitRegion r = it.next();
-
-              lock.obtainWriteLock();
-              regions.remove(r.region.getRegionName());
-              lock.releaseWriteLock();
-
-              HRegion[] newRegions = null;
-              Text oldRegion = r.region.getRegionName();
-
-              LOG.info("splitting region: " + oldRegion);
-
-              newRegions = r.region.closeAndSplit(r.midKey);
-
-              // When a region is split, the META table needs to updated if we're
-              // splitting a 'normal' region, and the ROOT table needs to be
-              // updated if we are splitting a META region.
-
-              Text tableToUpdate =
-                (oldRegion.find(META_TABLE_NAME.toString()) == 0) ?
-                    ROOT_TABLE_NAME : META_TABLE_NAME;
-
-              if(LOG.isDebugEnabled()) {
-                LOG.debug("region split complete. updating meta");
+            for(Iterator<HRegion>it = regionsToCheck.iterator(); it.hasNext(); ) {
+              HRegion cur = it.next();
+              
+              if(cur.isClosed()) {
+                continue;                               // Skip if closed
               }
+              
+              if(cur.needsCompaction()) {
+                
+                // The best time to split a region is right after it has been compacted
+                
+                if(cur.compactStores()) {
+                  Text midKey = new Text();
+                  if(cur.needsSplit(midKey)) {
+                    Text oldRegion = cur.getRegionName();
 
-              client.openTable(tableToUpdate);
-              long lockid = client.startUpdate(oldRegion);
-              client.delete(lockid, COL_REGIONINFO);
-              client.delete(lockid, COL_SERVER);
-              client.delete(lockid, COL_STARTCODE);
-              client.commit(lockid);
+                    LOG.info("splitting region: " + oldRegion);
 
-              for(int i = 0; i < newRegions.length; i++) {
-                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                DataOutputStream out = new DataOutputStream(bytes);
-                newRegions[i].getRegionInfo().write(out);
+                    HRegion[] newRegions = cur.closeAndSplit(midKey, this);
 
-                lockid = client.startUpdate(newRegions[i].getRegionName());
-                client.put(lockid, COL_REGIONINFO, bytes.toByteArray());
-                client.commit(lockid);
+                    // When a region is split, the META table needs to updated if we're
+                    // splitting a 'normal' region, and the ROOT table needs to be
+                    // updated if we are splitting a META region.
+
+                    if(LOG.isDebugEnabled()) {
+                      LOG.debug("region split complete. updating meta");
+                    }
+
+                    Text tableToUpdate =
+                      (oldRegion.find(META_TABLE_NAME.toString()) == 0) ?
+                          ROOT_TABLE_NAME : META_TABLE_NAME;
+
+                    client.openTable(tableToUpdate);
+                    long lockid = client.startUpdate(oldRegion);
+                    client.delete(lockid, COL_REGIONINFO);
+                    client.delete(lockid, COL_SERVER);
+                    client.delete(lockid, COL_STARTCODE);
+                    client.commit(lockid);
+
+                    for(int i = 0; i < newRegions.length; i++) {
+                      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                      DataOutputStream out = new DataOutputStream(bytes);
+                      newRegions[i].getRegionInfo().write(out);
+
+                      lockid = client.startUpdate(newRegions[i].getRegionName());
+                      client.put(lockid, COL_REGIONINFO, bytes.toByteArray());
+                      client.put(lockid, COL_SERVER, 
+                          info.getServerAddress().toString().getBytes(UTF8_ENCODING));
+                      client.put(lockid, COL_STARTCODE, 
+                          String.valueOf(info.getStartCode()).getBytes(UTF8_ENCODING));
+                      client.commit(lockid);
+                    }
+                    
+                    // Now tell the master about the new regions
+
+                    if(LOG.isDebugEnabled()) {
+                      LOG.debug("reporting region split to master");
+                    }
+
+                    reportSplit(newRegions[0].getRegionInfo(), newRegions[1].getRegionInfo());
+
+                    LOG.info("region split successful. old region=" + oldRegion
+                        + ", new regions: " + newRegions[0].getRegionName() + ", "
+                        + newRegions[1].getRegionName());
+
+                    // Finally, start serving the new regions
+                    
+                    lock.obtainWriteLock();
+                    regions.put(newRegions[0].getRegionName(), newRegions[0]);
+                    regions.put(newRegions[1].getRegionName(), newRegions[1]);
+                    lock.releaseWriteLock();
+                  }
+                }
               }
-
-              // Now tell the master about the new regions
-
-              if(LOG.isDebugEnabled()) {
-                LOG.debug("reporting region split to master");
-              }
-
-              reportSplit(newRegions[0].getRegionInfo(), newRegions[1].getRegionInfo());
-
-              LOG.info("region split successful. old region=" + oldRegion
-                  + ", new regions: " + newRegions[0].getRegionName() + ", "
-                  + newRegions[1].getRegionName());
-
-              newRegions[0].close();
-              newRegions[1].close();
-
             }
           } catch(IOException e) {
             //TODO: What happens if this fails? Are we toast?
@@ -228,6 +226,10 @@ public class HRegionServer
 
           for(Iterator<HRegion> it = toFlush.iterator(); it.hasNext(); ) {
             HRegion cur = it.next();
+            
+            if(cur.isClosed()) {                // Skip if closed
+              continue;
+            }
 
             try {
               cur.optionallyFlush();
@@ -330,8 +332,7 @@ public class HRegionServer
   
   /** Start a HRegionServer at an indicated location */
   public HRegionServer(Path regionDir, HServerAddress address,
-      Configuration conf) 
-  throws IOException {
+      Configuration conf) throws IOException {
     
     // Basic setup
     this.stopRequested = false;
@@ -369,19 +370,25 @@ public class HRegionServer
 
     try {
       // Server to handle client requests
+      
       this.server = RPC.getServer(this, address.getBindAddress().toString(), 
         address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
         false, conf);
 
-      this.address = new HServerAddress(server.getListenerAddress());
+      this.info = new HServerInfo(new HServerAddress(server.getListenerAddress()),
+          this.rand.nextLong());
 
       // Local file paths
+      
       String serverName =
-        this.address.getBindAddress() + "_" + this.address.getPort();
+        this.info.getServerAddress().getBindAddress() + "_"
+        + this.info.getServerAddress().getPort();
+      
       Path newlogdir = new Path(regionDir, "log" + "_" + serverName);
       this.oldlogfile = new Path(regionDir, "oldlogfile" + "_" + serverName);
 
       // Logging
+      
       this.fs = FileSystem.get(conf);
       HLog.consolidateOldLog(newlogdir, oldlogfile, fs, conf);
       // TODO: Now we have a consolidated log for all regions, sort and
@@ -393,13 +400,14 @@ public class HRegionServer
       this.logRollerThread = new Thread(logRoller, "HRegionServer.logRoller");
 
       // Remote HMaster
-      this.hbaseMaster = (HMasterRegionInterface)RPC.
-        waitForProxy(HMasterRegionInterface.class,
-        HMasterRegionInterface.versionID,
-        new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
-        conf);
+      
+      this.hbaseMaster = (HMasterRegionInterface)RPC.waitForProxy(
+          HMasterRegionInterface.class, HMasterRegionInterface.versionID,
+          new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
+          conf);
 
       // Threads
+      
       this.workerThread.start();
       this.cacheFlusherThread.start();
       this.splitOrCompactCheckerThread.start();
@@ -452,7 +460,7 @@ public class HRegionServer
       this.server.join();
     } catch(InterruptedException iex) {
     }
-    LOG.info("HRegionServer stopped at: " + address.toString());
+    LOG.info("HRegionServer stopped at: " + info.getServerAddress().toString());
   }
   
   /**
@@ -462,7 +470,6 @@ public class HRegionServer
    */
   public void run() {
     while(! stopRequested) {
-      HServerInfo info = new HServerInfo(address, rand.nextLong());
       long lastMsg = 0;
       long waitTime;
 
@@ -557,7 +564,7 @@ public class HRegionServer
             }
 
           } catch(IOException e) {
-            e.printStackTrace();
+            LOG.error(e);
           }
         }
 
@@ -580,7 +587,7 @@ public class HRegionServer
       }
     }
     try {
-      LOG.info("stopping server at: " + address.toString());
+      LOG.info("stopping server at: " + info.getServerAddress().toString());
 
       // Send interrupts to wake up threads if sleeping so they notice shutdown.
 
@@ -761,57 +768,67 @@ public class HRegionServer
       throws IOException {
     
     this.lock.obtainWriteLock();
+    HRegion region = null;
     try {
-      HRegion region = regions.remove(info.regionName);
-      
-      if(region != null) {
-        region.close();
-        
-        if(reportWhenCompleted) {
-          reportClose(region);
-        }
-      }
-      
+      region = regions.remove(info.regionName);
     } finally {
       this.lock.releaseWriteLock();
+    }
+      
+    if(region != null) {
+      region.close();
+
+      if(reportWhenCompleted) {
+        reportClose(region);
+      }
     }
   }
 
   private void closeAndDeleteRegion(HRegionInfo info) throws IOException {
-
     this.lock.obtainWriteLock();
+    HRegion region = null;
     try {
-      HRegion region = regions.remove(info.regionName);
-  
-      if(region != null) {
-        region.closeAndDelete();
-      }
+      region = regions.remove(info.regionName);
   
     } finally {
       this.lock.releaseWriteLock();
+    }
+    if(region != null) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("deleting region " + info.regionName);
+      }
+      
+      region.closeAndDelete();
+      
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("region " + info.regionName + " deleted");
+      }
     }
   }
 
   /** Called either when the master tells us to restart or from stop() */
   private void closeAllRegions() {
+    Vector<HRegion> regionsToClose = new Vector<HRegion>();
     this.lock.obtainWriteLock();
     try {
-      for(Iterator<HRegion> it = regions.values().iterator(); it.hasNext(); ) {
-        HRegion region = it.next();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("closing region " + region.getRegionName());
-        }
-        try {
-          region.close();
-          
-        } catch(IOException e) {
-          e.printStackTrace();
-        }
-      }
+      regionsToClose.addAll(regions.values());
       regions.clear();
       
     } finally {
       this.lock.releaseWriteLock();
+    }
+    for(Iterator<HRegion> it = regionsToClose.iterator(); it.hasNext(); ) {
+      HRegion region = it.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("closing region " + region.getRegionName());
+      }
+      try {
+        region.close();
+        LOG.debug("region closed " + region.getRegionName());
+        
+      } catch(IOException e) {
+        LOG.error("error closing region " + region.getRegionName(), e);
+      }
     }
   }
 
@@ -847,20 +864,14 @@ public class HRegionServer
   //////////////////////////////////////////////////////////////////////////////
 
   /** Obtain a table descriptor for the given region */
-  public HRegionInfo getRegionInfo(Text regionName) {
+  public HRegionInfo getRegionInfo(Text regionName) throws NotServingRegionException {
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      return null;
-    }
     return region.getRegionInfo();
   }
 
   /** Get the indicated row/column */
   public BytesWritable get(Text regionName, Text row, Text column) throws IOException {
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("get " + row.toString() + ", " + column.toString());
@@ -877,9 +888,6 @@ public class HRegionServer
       int numVersions) throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
     
     BytesWritable[] results = region.get(row, column, numVersions);
     if(results != null) {
@@ -893,9 +901,6 @@ public class HRegionServer
       long timestamp, int numVersions) throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
     
     BytesWritable[] results = region.get(row, column, timestamp, numVersions);
     if(results != null) {
@@ -907,9 +912,6 @@ public class HRegionServer
   /** Get all the columns (along with their names) for a given row. */
   public LabelledData[] getRow(Text regionName, Text row) throws IOException {
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
     
     TreeMap<Text, BytesWritable> map = region.getFull(row);
     LabelledData result[] = new LabelledData[map.size()];
@@ -949,9 +951,6 @@ public class HRegionServer
       throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
     
     long lockid = region.startUpdate(row);
     leases.createLease(new Text(String.valueOf(clientid)), 
@@ -966,9 +965,6 @@ public class HRegionServer
       BytesWritable val) throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
     
     leases.renewLease(new Text(String.valueOf(clientid)), 
         new Text(String.valueOf(lockid)));
@@ -981,9 +977,6 @@ public class HRegionServer
       throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
     
     leases.renewLease(new Text(String.valueOf(clientid)), 
         new Text(String.valueOf(lockid)));
@@ -996,9 +989,6 @@ public class HRegionServer
       throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
     
     leases.cancelLease(new Text(String.valueOf(clientid)), 
         new Text(String.valueOf(lockid)));
@@ -1011,9 +1001,6 @@ public class HRegionServer
       throws IOException {
     
     HRegion region = getRegion(regionName);
-    if(region == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
     
     leases.cancelLease(new Text(String.valueOf(clientid)), 
         new Text(String.valueOf(lockid)));
@@ -1028,14 +1015,20 @@ public class HRegionServer
   }
 
   /** Private utility method for safely obtaining an HRegion handle. */
-  private HRegion getRegion(Text regionName) {
+  private HRegion getRegion(Text regionName) throws NotServingRegionException {
     this.lock.obtainReadLock();
+    HRegion region = null;
     try {
-      return regions.get(regionName);
+      region = regions.get(regionName);
       
     } finally {
       this.lock.releaseReadLock();
     }
+
+    if(region == null) {
+      throw new NotServingRegionException(regionName.toString());
+    }
+    return region;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -1051,14 +1044,12 @@ public class HRegionServer
     }
     
     public void leaseExpired() {
-      HInternalScannerInterface s = scanners.remove(scannerName);
+      HInternalScannerInterface s = null;
+      synchronized(scanners) {
+        s = scanners.remove(scannerName);
+      }
       if(s != null) {
-        try {
-          s.close();
-          
-        } catch(IOException e) {
-          e.printStackTrace();
-        }
+        s.close();
       }
     }
   }
@@ -1068,16 +1059,14 @@ public class HRegionServer
       throws IOException {
 
     HRegion r = getRegion(regionName);
-    if(r == null) {
-      throw new IOException("Not serving region " + regionName);
-    }
-
     long scannerId = -1L;
     try {
       HInternalScannerInterface s = r.getScanner(cols, firstRow);
       scannerId = rand.nextLong();
       Text scannerName = new Text(String.valueOf(scannerId));
-      scanners.put(scannerName, s);
+      synchronized(scanners) {
+        scanners.put(scannerName, s);
+      }
       leases.createLease(scannerName, scannerName, new ScannerListener(scannerName));
     
     } catch(IOException e) {
@@ -1121,16 +1110,14 @@ public class HRegionServer
   
   public void close(long scannerId) throws IOException {
     Text scannerName = new Text(String.valueOf(scannerId));
-    HInternalScannerInterface s = scanners.remove(scannerName);
+    HInternalScannerInterface s = null;
+    synchronized(scanners) {
+      s = scanners.remove(scannerName);
+    }
     if(s == null) {
       throw new IOException("unknown scanner");
     }
-    try {
-      s.close();
-        
-    } catch(IOException ex) {
-      ex.printStackTrace();
-    }
+    s.close();
     leases.cancelLease(scannerName, scannerName);
   }
 
