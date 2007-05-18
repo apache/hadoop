@@ -342,8 +342,14 @@ public class HStore {
     }
   }
 
-  public synchronized Vector<HStoreFile> getAllMapFiles() {
-    return new Vector<HStoreFile>(mapFiles.values());
+  public Vector<HStoreFile> getAllMapFiles() {
+    this.lock.obtainReadLock();
+    try {
+      return new Vector<HStoreFile>(mapFiles.values());
+      
+    } finally {
+      this.lock.releaseReadLock();
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -938,7 +944,9 @@ public class HStore {
   class HStoreScanner extends HAbstractScanner {
     private MapFile.Reader[] readers;
     
-    public HStoreScanner(long timestamp, Text[] targetCols, Text firstRow) throws IOException {
+    public HStoreScanner(long timestamp, Text[] targetCols, Text firstRow)
+        throws IOException {
+      
       super(timestamp, targetCols);
 
       lock.obtainReadLock();
@@ -976,6 +984,7 @@ public class HStore {
         }
         
       } catch (Exception ex) {
+        LOG.error(ex);
         close();
       }
     }
@@ -1021,10 +1030,15 @@ public class HStore {
     }
     
     /** Close down the indicated reader. */
-    void closeSubScanner(int i) throws IOException {
+    void closeSubScanner(int i) {
       try {
         if(readers[i] != null) {
-          readers[i].close();
+          try {
+            readers[i].close();
+            
+          } catch(IOException e) {
+            LOG.error(e);
+          }
         }
         
       } finally {
@@ -1035,12 +1049,17 @@ public class HStore {
     }
 
     /** Shut it down! */
-    public void close() throws IOException {
+    public void close() {
       if(! scannerClosed) {
         try {
           for(int i = 0; i < readers.length; i++) {
             if(readers[i] != null) {
-              readers[i].close();
+              try {
+                readers[i].close();
+                
+              } catch(IOException e) {
+                LOG.error(e);
+              }
             }
           }
           

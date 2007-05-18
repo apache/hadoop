@@ -15,6 +15,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
@@ -36,6 +38,8 @@ import java.util.*;
  * You should close() the instance if you want to clean up the thread properly.
  ******************************************************************************/
 public class Leases {
+  private static final Log LOG = LogFactory.getLog(Leases.class);
+
   long leasePeriod;
   long leaseCheckFrequency;
   LeaseMonitor leaseMonitor;
@@ -47,7 +51,7 @@ public class Leases {
   /** Indicate the length of the lease, in milliseconds */
   public Leases(long leasePeriod, long leaseCheckFrequency) {
     this.leasePeriod = leasePeriod;
-
+    this.leaseCheckFrequency = leaseCheckFrequency;
     this.leaseMonitor = new LeaseMonitor();
     this.leaseMonitorThread = new Thread(leaseMonitor);
     this.leaseMonitorThread.setName("Lease.monitor");
@@ -59,6 +63,9 @@ public class Leases {
    * without any cancellation calls.
    */
   public void close() {
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("closing leases");
+    }
     this.running = false;
     try {
       this.leaseMonitorThread.interrupt();
@@ -70,6 +77,9 @@ public class Leases {
         leases.clear();
         sortedLeases.clear();
       }
+    }
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("leases closed");
     }
   }
 

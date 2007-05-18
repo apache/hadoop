@@ -34,7 +34,7 @@ import org.apache.hadoop.io.Text;
 public interface HInternalScannerInterface {
   
   public boolean next(HStoreKey key, TreeMap<Text, BytesWritable> results) throws IOException;
-  public void close() throws IOException;
+  public void close();
   /** Returns true if the scanner is matching a column family or regex */
   public boolean isWildcardScanner();
   

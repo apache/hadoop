@@ -15,31 +15,20 @@
  */
 package org.apache.hadoop.hbase;
 
-import junit.framework.TestCase;
-import junit.framework.Test;
-import junit.framework.TestSuite;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
-import org.apache.log4j.Appender;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Layout;
 import org.apache.log4j.Logger;
-import org.apache.log4j.Level;
-import org.apache.log4j.PatternLayout;
 
 /**
  * Basic stand-alone testing of HRegion.
@@ -47,27 +36,35 @@ import org.apache.log4j.PatternLayout;
  * A lot of the meta information for an HRegion now lives inside other
  * HRegions or in the HBaseMaster, so only basic testing is possible.
  */
-public class TestHRegion extends TestCase {
+public class TestHRegion extends HBaseTestCase implements RegionUnavailableListener {
   private Logger LOG = Logger.getLogger(this.getClass().getName());
   
   /** Constructor */
-  public TestHRegion(String name) {
-    super(name);
+  public TestHRegion() {
+    super();
   }
   
-  /** Test suite so that all tests get run */
-  public static Test suite() {
-    TestSuite suite = new TestSuite();
-    suite.addTest(new TestHRegion("testSetup"));
-    suite.addTest(new TestHRegion("testLocks"));
-    suite.addTest(new TestHRegion("testBadPuts"));
-    suite.addTest(new TestHRegion("testBasic"));
-    suite.addTest(new TestHRegion("testScan"));
-    suite.addTest(new TestHRegion("testBatchWrite"));
-    suite.addTest(new TestHRegion("testSplitAndMerge"));
-    suite.addTest(new TestHRegion("testRead"));
-    suite.addTest(new TestHRegion("testCleanup"));
-    return suite;
+  /**
+   * Since all the "tests" depend on the results of the previous test, they are
+   * not Junit tests that can stand alone. Consequently we have a single Junit
+   * test that runs the "sub-tests" as private methods.
+   */
+  public void testHRegion() {
+    try {
+      setup();
+      locks();
+      badPuts();
+      basic();
+      scan();
+      batchWrite();
+      splitAndMerge();
+      read();
+      cleanup();
+      
+    } catch(Exception e) {
+      e.printStackTrace();
+      fail();
+    }
   }
   
   
@@ -82,9 +79,6 @@ public class TestHRegion extends TestCase {
   private static final Text CONTENTS_FIRSTCOL = new Text("contents:firstcol");
   private static final Text ANCHOR_SECONDCOL = new Text("anchor:secondcol");
   
-  private static boolean initialized = false;
-  private static boolean failures = false;
-  private static Configuration conf = null;
   private static MiniDFSCluster cluster = null;
   private static FileSystem fs = null;
   private static Path parentdir = null;
@@ -96,138 +90,86 @@ public class TestHRegion extends TestCase {
   
   private static int numInserted = 0;
 
-  // Set up environment, start mini cluster, etc.
+  // Create directories, start mini cluster, etc.
   
-  @SuppressWarnings("unchecked")
-  public void testSetup() throws IOException {
-    try {
-      if(System.getProperty("test.build.data") == null) {
-        String dir = new File(new File("").getAbsolutePath(), "build/contrib/hbase/test").getAbsolutePath();
-        System.out.println(dir);
-        System.setProperty("test.build.data", dir);
-      }
-      conf = new HBaseConfiguration();
-      
-      Environment.getenv();
-      if(Environment.debugging) {
-        Logger rootLogger = Logger.getRootLogger();
-        rootLogger.setLevel(Level.WARN);
+  private void setup() throws IOException {
 
-        ConsoleAppender consoleAppender = null;
-        for(Enumeration<Appender> e = (Enumeration<Appender>)rootLogger.getAllAppenders();
-            e.hasMoreElements();) {
-        
-          Appender a = e.nextElement();
-          if(a instanceof ConsoleAppender) {
-            consoleAppender = (ConsoleAppender)a;
-            break;
-          }
-        }
-        if(consoleAppender != null) {
-          Layout layout = consoleAppender.getLayout();
-          if(layout instanceof PatternLayout) {
-            PatternLayout consoleLayout = (PatternLayout)layout;
-            consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
-          }
-        }
-        Logger.getLogger("org.apache.hadoop.hbase").setLevel(Environment.logLevel);
-      }
-      
-      cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-      fs = cluster.getFileSystem();
-      parentdir = new Path("/hbase");
-      fs.mkdirs(parentdir);
-      newlogdir = new Path(parentdir, "log");
-      oldlogfile = new Path(parentdir, "oldlogfile");
+    cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    fs = cluster.getFileSystem();
+    parentdir = new Path("/hbase");
+    fs.mkdirs(parentdir);
+    newlogdir = new Path(parentdir, "log");
+    oldlogfile = new Path(parentdir, "oldlogfile");
 
-      log = new HLog(fs, newlogdir, conf);
-      desc = new HTableDescriptor("test", 3);
-      desc.addFamily(new Text("contents:"));
-      desc.addFamily(new Text("anchor:"));
-      region = new HRegion(parentdir, log, fs, conf, 
-          new HRegionInfo(1, desc, null, null), null, oldlogfile);
-      
-    } catch(IOException e) {
-      failures = true;
-      throw e;
-    }
-    initialized = true;
+    log = new HLog(fs, newlogdir, conf);
+    desc = new HTableDescriptor("test", 3);
+    desc.addFamily(new Text("contents:"));
+    desc.addFamily(new Text("anchor:"));
+    region = new HRegion(parentdir, log, fs, conf, 
+        new HRegionInfo(1, desc, null, null), null, oldlogfile);
   }
 
   // Test basic functionality. Writes to contents:basic and anchor:anchornum-*
 
-  public void testBasic() throws IOException {
-    if(!initialized) {
-      throw new IllegalStateException();
+  private void basic() throws IOException {
+    long startTime = System.currentTimeMillis();
+
+    // Write out a bunch of values
+
+    for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
+      long writeid = region.startUpdate(new Text("row_" + k));
+      region.put(writeid, CONTENTS_BASIC,
+          new BytesWritable((CONTENTSTR + k).getBytes()));
+
+      region.put(writeid, new Text(ANCHORNUM + k),
+          new BytesWritable((ANCHORSTR + k).getBytes()));
+      region.commit(writeid);
+    }
+    System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
+        + ((System.currentTimeMillis() - startTime) / 1000.0));
+
+    // Flush cache
+
+    startTime = System.currentTimeMillis();
+
+    region.flushcache(false);
+
+    System.out.println("Cache flush elapsed time: "
+        + ((System.currentTimeMillis() - startTime) / 1000.0));
+
+    // Read them back in
+
+    startTime = System.currentTimeMillis();
+
+    Text collabel = null;
+    for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
+      Text rowlabel = new Text("row_" + k);
+
+      BytesWritable bodydata = region.get(rowlabel, CONTENTS_BASIC);
+      assertNotNull(bodydata);
+      byte[] bytes = new byte[bodydata.getSize()];
+      System.arraycopy(bodydata.get(), 0, bytes, 0, bytes.length);
+      String bodystr = new String(bytes).toString().trim();
+      String teststr = CONTENTSTR + k;
+      assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
+          + "), expected: '" + teststr + "' got: '" + bodystr + "'",
+          bodystr, teststr);
+      collabel = new Text(ANCHORNUM + k);
+      bodydata = region.get(rowlabel, collabel);
+      bytes = new byte[bodydata.getSize()];
+      System.arraycopy(bodydata.get(), 0, bytes, 0, bytes.length);
+      bodystr = new String(bytes).toString().trim();
+      teststr = ANCHORSTR + k;
+      assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
+          + "), expected: '" + teststr + "' got: '" + bodystr + "'",
+          bodystr, teststr);
     }
 
-    try {
-      long startTime = System.currentTimeMillis();
-      
-      // Write out a bunch of values
-      
-      for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-        long writeid = region.startUpdate(new Text("row_" + k));
-        region.put(writeid, CONTENTS_BASIC,
-            new BytesWritable((CONTENTSTR + k).getBytes()));
-        
-        region.put(writeid, new Text(ANCHORNUM + k),
-            new BytesWritable((ANCHORSTR + k).getBytes()));
-        region.commit(writeid);
-      }
-      System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
-          + ((System.currentTimeMillis() - startTime) / 1000.0));
-
-      // Flush cache
-      
-      startTime = System.currentTimeMillis();
-      
-      region.flushcache(false);
-      
-      System.out.println("Cache flush elapsed time: "
-          + ((System.currentTimeMillis() - startTime) / 1000.0));
-
-      // Read them back in
-
-      startTime = System.currentTimeMillis();
-      
-      Text collabel = null;
-      for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-        Text rowlabel = new Text("row_" + k);
-
-        BytesWritable bodydata = region.get(rowlabel, CONTENTS_BASIC);
-        assertNotNull(bodydata);
-        byte[] bytes = new byte[bodydata.getSize()];
-        System.arraycopy(bodydata.get(), 0, bytes, 0, bytes.length);
-        String bodystr = new String(bytes).toString().trim();
-        String teststr = CONTENTSTR + k;
-        assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
-            + "), expected: '" + teststr + "' got: '" + bodystr + "'",
-            bodystr, teststr);
-        collabel = new Text(ANCHORNUM + k);
-        bodydata = region.get(rowlabel, collabel);
-        bytes = new byte[bodydata.getSize()];
-        System.arraycopy(bodydata.get(), 0, bytes, 0, bytes.length);
-        bodystr = new String(bytes).toString().trim();
-        teststr = ANCHORSTR + k;
-        assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
-            + "), expected: '" + teststr + "' got: '" + bodystr + "'",
-            bodystr, teststr);
-      }
-      
-      System.out.println("Read " + NUM_VALS + " rows. Elapsed time: "
-          + ((System.currentTimeMillis() - startTime) / 1000.0));
-
-    } catch(IOException e) {
-      failures = true;
-      throw e;
-    }
+    System.out.println("Read " + NUM_VALS + " rows. Elapsed time: "
+        + ((System.currentTimeMillis() - startTime) / 1000.0));
   }
   
-  public void testBadPuts() throws IOException {
-    if(!initialized) {
-      throw new IllegalStateException();
-    }  
+  private void badPuts() throws IOException {
     
     // Try put with bad lockid.
     boolean exceptionThrown = false;
@@ -259,7 +201,7 @@ public class TestHRegion extends TestCase {
   /**
    * Test getting and releasing locks.
    */
-  public void testLocks() {
+  private void locks() {
     final int threadCount = 10;
     final int lockCount = 10;
     
@@ -317,11 +259,7 @@ public class TestHRegion extends TestCase {
 
   // Test scanners. Writes contents:firstcol and anchor:secondcol
   
-  public void testScan() throws IOException {
-    if(!initialized) {
-      throw new IllegalStateException();
-    }
-
+  private void scan() throws IOException {
     Text cols[] = new Text[] {
         CONTENTS_FIRSTCOL,
         ANCHOR_SECONDCOL
@@ -583,138 +521,126 @@ public class TestHRegion extends TestCase {
   // long time to run.
   // Creates contents:body
   
-  public void testBatchWrite() throws IOException {
-    if(!initialized || failures) {
-      throw new IllegalStateException();
-    }
-    if(! Environment.debugging) {
+  private void batchWrite() throws IOException {
+    if(! StaticTestEnvironment.debugging) {
       return;
     }
 
-    try {
-      long totalFlush = 0;
-      long totalCompact = 0;
-      long totalLog = 0;
-      long startTime = System.currentTimeMillis();
+    long totalFlush = 0;
+    long totalCompact = 0;
+    long totalLog = 0;
+    long startTime = System.currentTimeMillis();
 
-      // 1M writes
+    // 1M writes
 
-      int valsize = 1000;
-      for (int k = FIRST_ROW; k <= N_ROWS; k++) {
-        // Come up with a random 1000-byte string
-        String randstr1 = "" + System.currentTimeMillis();
-        StringBuffer buf1 = new StringBuffer("val_" + k + "__");
-        while (buf1.length() < valsize) {
-          buf1.append(randstr1);
-        }
+    int valsize = 1000;
+    for (int k = FIRST_ROW; k <= N_ROWS; k++) {
+      // Come up with a random 1000-byte string
+      String randstr1 = "" + System.currentTimeMillis();
+      StringBuffer buf1 = new StringBuffer("val_" + k + "__");
+      while (buf1.length() < valsize) {
+        buf1.append(randstr1);
+      }
 
-        // Write to the HRegion
-        long writeid = region.startUpdate(new Text("row_" + k));
-        region.put(writeid, CONTENTS_BODY, new BytesWritable(buf1.toString().getBytes()));
-        region.commit(writeid);
-        if (k > 0 && k % (N_ROWS / 100) == 0) {
-          System.out.println("Flushing write #" + k);
+      // Write to the HRegion
+      long writeid = region.startUpdate(new Text("row_" + k));
+      region.put(writeid, CONTENTS_BODY, new BytesWritable(buf1.toString().getBytes()));
+      region.commit(writeid);
+      if (k > 0 && k % (N_ROWS / 100) == 0) {
+        System.out.println("Flushing write #" + k);
 
-          long flushStart = System.currentTimeMillis();
-          region.flushcache(false);
-          long flushEnd = System.currentTimeMillis();
-          totalFlush += (flushEnd - flushStart);
+        long flushStart = System.currentTimeMillis();
+        region.flushcache(false);
+        long flushEnd = System.currentTimeMillis();
+        totalFlush += (flushEnd - flushStart);
 
-          if (k % (N_ROWS / 10) == 0) {
-            System.out.print("Rolling log...");
-            long logStart = System.currentTimeMillis();
-            log.rollWriter();
-            long logEnd = System.currentTimeMillis();
-            totalLog += (logEnd - logStart);
-            System.out.println("  elapsed time: " + ((logEnd - logStart) / 1000.0));
-          }
+        if (k % (N_ROWS / 10) == 0) {
+          System.out.print("Rolling log...");
+          long logStart = System.currentTimeMillis();
+          log.rollWriter();
+          long logEnd = System.currentTimeMillis();
+          totalLog += (logEnd - logStart);
+          System.out.println("  elapsed time: " + ((logEnd - logStart) / 1000.0));
         }
       }
-      long startCompact = System.currentTimeMillis();
-      if(region.compactStores()) {
-        totalCompact = System.currentTimeMillis() - startCompact;
-        System.out.println("Region compacted - elapsedTime: " + (totalCompact / 1000.0));
-        
-      } else {
-        System.out.println("No compaction required.");
-      }
-      long endTime = System.currentTimeMillis();
-
-      long totalElapsed = (endTime - startTime);
-      System.out.println();
-      System.out.println("Batch-write complete.");
-      System.out.println("Wrote " + N_ROWS + " rows, each of ~" + valsize + " bytes");
-      System.out.println("Total flush-time: " + (totalFlush / 1000.0));
-      System.out.println("Total compact-time: " + (totalCompact / 1000.0));
-      System.out.println("Total log-time: " + (totalLog / 1000.0));
-      System.out.println("Total time elapsed: " + (totalElapsed / 1000.0));
-      System.out.println("Total time, rows/second: " + (N_ROWS / (totalElapsed / 1000.0)));
-      System.out.println("Adjusted time (not including flush, compact, or log): " + ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0));
-      System.out.println("Adjusted time, rows/second: " + (N_ROWS / ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0)));
-      System.out.println();
-      
-    } catch(IOException e) {
-      failures = true;
-      throw e;
     }
+    long startCompact = System.currentTimeMillis();
+    if(region.compactStores()) {
+      totalCompact = System.currentTimeMillis() - startCompact;
+      System.out.println("Region compacted - elapsedTime: " + (totalCompact / 1000.0));
+
+    } else {
+      System.out.println("No compaction required.");
+    }
+    long endTime = System.currentTimeMillis();
+
+    long totalElapsed = (endTime - startTime);
+    System.out.println();
+    System.out.println("Batch-write complete.");
+    System.out.println("Wrote " + N_ROWS + " rows, each of ~" + valsize + " bytes");
+    System.out.println("Total flush-time: " + (totalFlush / 1000.0));
+    System.out.println("Total compact-time: " + (totalCompact / 1000.0));
+    System.out.println("Total log-time: " + (totalLog / 1000.0));
+    System.out.println("Total time elapsed: " + (totalElapsed / 1000.0));
+    System.out.println("Total time, rows/second: " + (N_ROWS / (totalElapsed / 1000.0)));
+    System.out.println("Adjusted time (not including flush, compact, or log): " + ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0));
+    System.out.println("Adjusted time, rows/second: " + (N_ROWS / ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0)));
+    System.out.println();
+
   }
 
   // NOTE: This test depends on testBatchWrite succeeding
   
-  public void testSplitAndMerge() throws IOException {
-    if(!initialized || failures) {
-      throw new IllegalStateException();
+  private void splitAndMerge() throws IOException {
+    Text midKey = new Text();
+
+    if(region.needsSplit(midKey)) {
+      System.out.println("Needs split");
     }
+
+    // Split it anyway
+
+    Text midkey = new Text("row_"
+        + (StaticTestEnvironment.debugging ? (N_ROWS / 2) : (NUM_VALS/2)));
     
-    try {
-      Text midKey = new Text();
-      
-      if(region.needsSplit(midKey)) {
-        System.out.println("Needs split");
-      }
-      
-      // Split it anyway
+    Path oldRegionPath = region.getRegionDir();
 
-      Text midkey = new Text("row_" + (Environment.debugging ? (N_ROWS / 2) : (NUM_VALS/2)));
-      Path oldRegionPath = region.getRegionDir();
-      
-      long startTime = System.currentTimeMillis();
-      
-      HRegion subregions[] = region.closeAndSplit(midkey);
-      
-      System.out.println("Split region elapsed time: "
-          + ((System.currentTimeMillis() - startTime) / 1000.0));
-      
-      assertEquals("Number of subregions", subregions.length, 2);
+    long startTime = System.currentTimeMillis();
 
-      // Now merge it back together
+    HRegion subregions[] = region.closeAndSplit(midkey, this);
 
-      Path oldRegion1 = subregions[0].getRegionDir();
-      Path oldRegion2 = subregions[1].getRegionDir();
-      
-      startTime = System.currentTimeMillis();
-      
-      region = HRegion.closeAndMerge(subregions[0], subregions[1]);
+    System.out.println("Split region elapsed time: "
+        + ((System.currentTimeMillis() - startTime) / 1000.0));
 
-      System.out.println("Merge regions elapsed time: "
-          + ((System.currentTimeMillis() - startTime) / 1000.0));
-      
-      fs.delete(oldRegionPath);
-      fs.delete(oldRegion1);
-      fs.delete(oldRegion2);
-      
-    } catch(IOException e) {
-      failures = true;
-      throw e;
-    }
+    assertEquals("Number of subregions", subregions.length, 2);
+
+    // Now merge it back together
+
+    Path oldRegion1 = subregions[0].getRegionDir();
+    Path oldRegion2 = subregions[1].getRegionDir();
+
+    startTime = System.currentTimeMillis();
+
+    region = HRegion.closeAndMerge(subregions[0], subregions[1]);
+
+    System.out.println("Merge regions elapsed time: "
+        + ((System.currentTimeMillis() - startTime) / 1000.0));
+
+    fs.delete(oldRegionPath);
+    fs.delete(oldRegion1);
+    fs.delete(oldRegion2);
   }
 
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.hbase.RegionUnavailableListener#regionIsUnavailable(org.apache.hadoop.io.Text)
+   */
+  public void regionIsUnavailable(Text regionName) {
+    // We don't use this here. It is only for the HRegionServer
+  }
+  
   // This test verifies that everything is still there after splitting and merging
   
-  public void testRead() throws IOException {
-    if(!initialized || failures) {
-      throw new IllegalStateException();
-    }
+  private void read() throws IOException {
 
     // First verify the data written by testBasic()
 
@@ -820,9 +746,8 @@ public class TestHRegion extends TestCase {
     
     // Verify testBatchWrite data
 
-    if(Environment.debugging) {
+    if(StaticTestEnvironment.debugging) {
       startTime = System.currentTimeMillis();
-      
       s = region.getScanner(new Text[] { CONTENTS_BODY }, new Text());
       try {
         int numFetched = 0;
@@ -883,7 +808,6 @@ public class TestHRegion extends TestCase {
       s.close();
     }
   }
-
   
   private static void deleteFile(File f) {
     if(f.isDirectory()) {
@@ -895,18 +819,14 @@ public class TestHRegion extends TestCase {
     f.delete();
   }
   
-  public void testCleanup() throws IOException {
-    if(!initialized) {
-      throw new IllegalStateException();
-    }
+  private void cleanup() throws IOException {
 
     // Shut down the mini cluster
-    
+
     cluster.shutdown();
-    
+
     // Delete all the DFS files
-    
+
     deleteFile(new File(System.getProperty("test.build.data"), "dfs"));
-    
-    }
+  }
 }

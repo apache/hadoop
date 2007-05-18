@@ -15,6 +15,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /*******************************************************************************
  * HLocking is a set of lock primitives that does not rely on a
  * particular thread holding the monitor for an object. This is
@@ -33,12 +35,12 @@ public class HLocking {
   // If lockers > 0, locked for read
   // If lockers == -1 locked for write
   
-  private int lockers;
-
+  private AtomicInteger lockers;
+  
   /** Constructor */
   public HLocking() {
     this.mutex = new Integer(0);
-    this.lockers = 0;
+    this.lockers = new AtomicInteger(0);
   }
 
   /**
@@ -46,13 +48,13 @@ public class HLocking {
    */
   public void obtainReadLock() {
     synchronized(mutex) {
-      while(lockers < 0) {
+      while(lockers.get() < 0) {
         try {
           mutex.wait();
         } catch(InterruptedException ie) {
         }
       }
-      lockers++;
+      lockers.incrementAndGet();
       mutex.notifyAll();
     }
   }
@@ -62,8 +64,7 @@ public class HLocking {
    */
   public void releaseReadLock() {
     synchronized(mutex) {
-      lockers--;
-      if(lockers < 0) {
+      if(lockers.decrementAndGet() < 0) {
         throw new IllegalStateException("lockers: " + lockers);
       }
       mutex.notifyAll();
@@ -75,13 +76,12 @@ public class HLocking {
    */
   public void obtainWriteLock() {
     synchronized(mutex) {
-      while(lockers != 0) {
+      while(!lockers.compareAndSet(0, -1)) {
         try {
           mutex.wait();
         } catch (InterruptedException ie) {
         }
       }
-      lockers = -1;
       mutex.notifyAll();
     }
   }
@@ -91,10 +91,9 @@ public class HLocking {
    */
   public void releaseWriteLock() {
     synchronized(mutex) {
-      if(lockers != -1) {
+      if(!lockers.compareAndSet(-1, 0)) {
         throw new IllegalStateException("lockers: " + lockers);
       }
-      lockers = 0;
       mutex.notifyAll();
     }
   }
