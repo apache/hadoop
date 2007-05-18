@@ -33,6 +33,9 @@ Trunk (unreleased changes)
  10. HADOOP-1364.  Fix inconsistent synchronization in SequenceFile.
      (omalley via cutting)
 
+ 11. HADOOP-1379.  Add findbugs target to build.xml.
+     (Nigel Daley via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

@@ -1,0 +1,5 @@
+<FindBugsFilter>
+     <Match>
+       <Package name="org.apache.hadoop.record.compiler.generated" />
+     </Match>
+</FindBugsFilter>

@@ -496,10 +496,7 @@
         <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
-
-
     <fail if="tests.failed">Tests failed!</fail>
-
   </target>   
 
   <target name="test-contrib" depends="compile-core, compile-core-test">
@@ -507,7 +504,24 @@
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
+	  
+  <target name="test" depends="test-core, test-contrib">
+  </target>
+
+  <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
+  <target name="test-cluster">
+    <antcall target="test">
+      <param name="test.include" value="*"/>
+      <param name="test.classpath.id" value="test.cluster.classpath"/>
+    </antcall>
+  </target>
+
+  <target name="nightly" depends="test, tar">
+  </target>
 	
+  <!-- ================================================================== -->
+  <!-- Run optional third-party tool targets                              --> 
+  <!-- ================================================================== -->
   <target name="checkstyle" depends="check-for-checkstyle" if="checkstyle.present">
  	<taskdef resource="checkstyletask.properties">
       <classpath>
@@ -516,7 +530,7 @@
         </fileset>
       </classpath>
     </taskdef>
-  	
+  
 	<mkdir dir="${test.build.dir}"/>
   	
   	<checkstyle config="${test.src.dir}/checkstyle.xml"
@@ -539,21 +553,44 @@
       </classpath>    	
     </available>  	
   </target>
+
+  <property name="findbugs.home" value=""/>
+  <target name="findbugs" depends="check-for-findbugs, tar" if="findbugs.present">
+    <property name="findbugs.out.dir" value="${test.build.dir}/findbugs"/>
+    <property name="findbugs.exclude.file" value="${test.src.dir}/findbugsExcludeFile.xml"/>
+    <property name="findbugs.report.htmlfile" value="${findbugs.out.dir}/hadoop-findbugs-report.html"/>
+    <property name="findbugs.report.xmlfile" value="${findbugs.out.dir}/hadoop-findbugs-report.xml"/>
+    <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask" 
+    	classpath="${findbugs.home}/lib/findbugs-ant.jar" />
   
-  <target name="test" depends="test-core, test-contrib">
+	<mkdir dir="${findbugs.out.dir}"/>
+	
+    <findbugs home="${findbugs.home}" output="xml:withMessages" 
+    	outputFile="${findbugs.report.xmlfile}" effort="max" 
+    	excludeFilter="${findbugs.exclude.file}" jvmargs="-Xmx512M">
+      <auxClasspath>
+        <fileset dir="${lib.dir}">
+          <include name="**/*.jar"/>
+        </fileset>
+      </auxClasspath>
+      <sourcePath path="${src.dir}" />
+      <sourcePath path="${examples.dir}" />
+      <sourcePath path="${basedir}/src/contrib/streaming/src/java" />
+      <class location="${basedir}/build/hadoop-${version}-core.jar" />
+      <class location="${basedir}/build/hadoop-${version}-examples.jar" />
+      <class location="${basedir}/build/hadoop-streaming.jar" />
+    </findbugs>
+  	
+  	<xslt style="${findbugs.home}/src/xsl/default.xsl"
+        in="${findbugs.report.xmlfile}"
+        out="${findbugs.report.htmlfile}"/>
   </target>
 
-  <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
-  <target name="test-cluster">
-    <antcall target="test">
-      <param name="test.include" value="*"/>
-      <param name="test.classpath.id" value="test.cluster.classpath"/>
-    </antcall>
+  <target name="check-for-findbugs">
+    <available property="findbugs.present" 
+    	file="${findbugs.home}/lib/findbugs.jar" />
   </target>
-
-  <target name="nightly" depends="test, tar">
-  </target>
-
+	
   <!-- ================================================================== -->
   <!-- Documentation                                                      -->
   <!-- ================================================================== -->
