@@ -434,6 +434,9 @@ Branch 0.13 (unreleased changes)
 121. HADOOP-1361.  Fix various calls to skipBytes() to check return
      value. (Hairong Kuang via cutting)
 
+122. HADOOP-1388.  Fix a potential NullPointerException in web ui.
+     (Devaraj Das via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
