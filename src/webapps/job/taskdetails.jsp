@@ -29,7 +29,7 @@
 <h2>All Task Attempts</h2>
 <center>
 <%
-	if( ts.length == 0 ) {
+	if( ts == null || ts.length == 0) {
 %>
 		<h3>No Task Attempts found</h3>
 <%
