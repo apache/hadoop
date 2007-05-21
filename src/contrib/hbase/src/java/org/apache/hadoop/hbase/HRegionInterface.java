@@ -64,7 +64,6 @@ public interface HRegionInterface extends VersionedProtocol {
   /**
    * Opens a remote scanner.
    * 
-   * @param clientId    - client identifier (so we can associate a scanner with a client)
    * @param regionName  - name of region to scan
    * @param columns     - columns to scan
    * @param startRow    - starting row to scan
@@ -79,8 +78,6 @@ public interface HRegionInterface extends VersionedProtocol {
    * 
    * @param scannerId   - clientId passed to openScanner
    * @param key         - the next HStoreKey
-   * @param columns     - an array of column names
-   * @param values      - an array of byte[] values (corresponds 1-1 with columns)
    * @return            - true if a value was retrieved
    * @throws IOException
    */

@@ -93,8 +93,8 @@ public class HStoreKey implements WritableComparable {
   /**
    * @param other Key to compare against. Compares row and column.
    * @return True if same row and column.
-   * @see {@link #matchesWithoutColumn(HStoreKey)}
-   * @see {@link #matchesRowFamily(HStoreKey)}
+   * @see #matchesWithoutColumn(HStoreKey)
+   * @see #matchesRowFamily(HStoreKey)
    */ 
   public boolean matchesRowCol(HStoreKey other) {
     return this.row.compareTo(other.row) == 0
@@ -105,8 +105,8 @@ public class HStoreKey implements WritableComparable {
    * @param other Key to copmare against. Compares row and timestamp.
    * 
    * @return True if same row and timestamp is greater than <code>other</code>
-   * @see {@link #matchesRowCol(HStoreKey)}
-   * @see {@link #matchesRowFamily(HStoreKey)}
+   * @see #matchesRowCol(HStoreKey)
+   * @see #matchesRowFamily(HStoreKey)
    */
   public boolean matchesWithoutColumn(HStoreKey other) {
     return this.row.compareTo(other.row) == 0
@@ -117,8 +117,8 @@ public class HStoreKey implements WritableComparable {
    * @param other Key to compare against. Compares row and column family
    * 
    * @return true if same row and column family
-   * @see {@link #matchesRowCol(HStoreKey)}
-   * @see {@link #matchesWithoutColumn(HStoreKey)}
+   * @see #matchesRowCol(HStoreKey)
+   * @see #matchesWithoutColumn(HStoreKey)
    */
   public boolean matchesRowFamily(HStoreKey other) {
     boolean status = false;
