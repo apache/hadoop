@@ -1015,13 +1015,13 @@ public class FsShell extends ToolBase {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, conf, i);
         } else {
-          ls("", false);
+          ls(Path.CUR_DIR, false);
         } 
       } else if ("-lsr".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, conf, i);
         } else {
-          ls("", true);
+          ls(Path.CUR_DIR, true);
         } 
       } else if ("-mv".equals(cmd)) {
         exitCode = rename(argv, conf);

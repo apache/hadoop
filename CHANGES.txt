@@ -457,6 +457,11 @@ Branch 0.13 (unreleased changes)
 123. HADOOP-1385.  Fix MD5Hash#hashCode() to generally hash to more
      than 256 values.  (omalley via cutting)
 
+124. HADOOP-1386.  Fix Path to not permit the empty string as a
+     path, as this has lead to accidental file deletion.  Instead
+     force applications to use "." to name the default directory.
+     (Hairong Kuang via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs;
 
-import java.util.*;
 import java.net.*;
 import java.io.*;
 
@@ -33,6 +32,8 @@ public class Path implements Comparable {
   /** The directory separator, a slash. */
   public static final String SEPARATOR = "/";
   public static final char SEPARATOR_CHAR = '/';
+  
+  public static final String CUR_DIR = ".";
   
   static final boolean WINDOWS
     = System.getProperty("os.name").startsWith("Windows");
@@ -71,9 +72,23 @@ public class Path implements Comparable {
                normalizePath(resolved.getPath()));
   }
 
+  private void checkPathArg( String path ) {
+    // disallow construction of a Path from an empty string
+    if ( path == null ) {
+      throw new IllegalArgumentException(
+          "Can not create a Path from a null string");
+    }
+    if( path.length() == 0 ) {
+       throw new IllegalArgumentException(
+           "Can not create a Path from an empty string");
+    }   
+  }
+  
   /** Construct a path from a String.  Path strings are URIs, but with
    * unescaped elements and some additional normalization. */
   public Path(String pathString) {
+    checkPathArg( pathString );
+    
     // We can't use 'new URI(String)' directly, since it assumes things are
     // escaped, which we don't require of Paths. 
     
@@ -113,6 +128,7 @@ public class Path implements Comparable {
 
   /** Construct a Path from components. */
   public Path(String scheme, String authority, String path) {
+    checkPathArg( path );
     initialize(scheme, authority, path);
   }
 
@@ -183,7 +199,7 @@ public class Path implements Comparable {
     }
     String parent;
     if (lastSlash==-1) {
-      parent = "";
+      parent = CUR_DIR;
     } else {
       int end = hasWindowsDrive(path, true) ? 3 : 0;
       parent = path.substring(0, lastSlash==end?end+1:lastSlash);
