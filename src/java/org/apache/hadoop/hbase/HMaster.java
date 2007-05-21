@@ -655,11 +655,18 @@ public class HMaster implements HConstants, HMasterInterface,
    * things down in an orderly fashion.
    */
   public void shutdown() throws IOException {
-    closed = true;
-    synchronized(msgQueue) {
-      msgQueue.clear();                         // Empty the queue
-      msgQueue.notifyAll();                     // Wake main thread
-    }
+    TimerTask tt = new TimerTask() {
+      @Override
+      public void run() {
+        closed = true;
+        synchronized(msgQueue) {
+          msgQueue.clear();                         // Empty the queue
+          msgQueue.notifyAll();                     // Wake main thread
+        }
+      }
+    };
+    Timer t = new Timer("Shutdown");
+    t.schedule(tt, 10);
   }
 
   //////////////////////////////////////////////////////////////////////////////
