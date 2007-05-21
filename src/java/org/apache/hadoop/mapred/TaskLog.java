@@ -82,7 +82,6 @@ class TaskLog {
    */
   static class Writer {
     private String taskId;
-    private JobConf conf;
     private LogFilter filter;
 
     private final File taskLogDir;
@@ -245,8 +244,8 @@ class TaskLog {
     }
     
     private synchronized void writeIndexRecord() throws IOException {
-      String indexRecord = new String(currentSplit + "|" + 
-                                      splitOffset + "|" + splitLength + "\n");
+      String indexRecord = currentSplit + "|" + splitOffset + "|" + 
+                               splitLength + "\n";
       splitIndex.write(indexRecord.getBytes());
       splitIndex.flush();
     }

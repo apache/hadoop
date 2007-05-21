@@ -839,7 +839,7 @@ class ReduceTask extends Task {
       probe_sample_size = Math.max(numCopiers*5, 50);
       
       for (int i = 0; i < numOutputs; i++) {
-        neededOutputs.add(new Integer(i));
+        neededOutputs.add(i);
         copyPhase.addPhase();       // add sub-phase per file
       }
       
@@ -975,7 +975,7 @@ class ReduceTask extends Task {
                 currentTime = System.currentTimeMillis();
                 long nextContact = currentTime + 60 * 1000 +
                   backoff.nextInt(maxBackoff*1000);
-                penaltyBox.put(cr.getHost(), new Long(nextContact));          
+                penaltyBox.put(cr.getHost(), nextContact);          
                 LOG.warn(reduceTask.getTaskId() + " adding host " +
                          cr.getHost() + " to penalty box, next contact in " +
                          ((nextContact-currentTime)/1000) + " seconds");
@@ -1131,7 +1131,7 @@ class ReduceTask extends Task {
       lastPollTime = currentTime;
       
       TaskCompletionEvent t[] = umbilical.getMapCompletionEvents(
-                                                                 reduceTask.getJobId().toString(),
+                                                                 reduceTask.getJobId(),
                                                                  fromEventId.get(),
                                                                  probe_sample_size);
       

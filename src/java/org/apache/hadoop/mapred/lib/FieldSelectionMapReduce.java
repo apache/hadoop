@@ -208,7 +208,7 @@ public class FieldSelectionMapReduce implements Mapper, Reducer {
         int startPos = Integer.parseInt(start);
         int endPos = Integer.parseInt(end);
         for (j = startPos; j <= endPos; j++) {
-          fieldList.add(new Integer(j));
+          fieldList.add(j);
         }
       }
     }

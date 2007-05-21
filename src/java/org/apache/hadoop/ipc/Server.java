@@ -440,12 +440,6 @@ public abstract class Server {
       return lastContact;
     }
 
-    private boolean timedOut() {
-      if (System.currentTimeMillis() -  lastContact > maxIdleTime)
-        return true;
-      return false;
-    }
-
     private boolean timedOut(long currentTime) {
       if (currentTime -  lastContact > maxIdleTime)
         return true;

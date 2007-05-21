@@ -26,8 +26,10 @@
 		  return ; 
 		}
 
-		for(String trackerStartTime : jobTrackerToJobs.keySet() ){ 
-		  Map<String, JobInfo> jobs = (Map<String, JobInfo>)jobTrackerToJobs.get(trackerStartTime) ; 
+    for (Map.Entry<String, Map<String, JobInfo>> entry : 
+            jobTrackerToJobs.entrySet()) {
+      String trackerStartTime = entry.getKey();
+      Map<String, JobInfo> jobs = entry.getValue();
 %>
 <h2>JobTracker started at : <%=new Date(Long.parseLong(trackerStartTime)) %></h2>
 <hr/>

@@ -82,18 +82,18 @@
 	}
 	Comparator<JobHistory.Task> cMap = new Comparator<JobHistory.Task>(){
 	  public int compare(JobHistory.Task t1, JobHistory.Task t2){
-	    Long l1 = new Long(t1.getLong(Keys.FINISH_TIME) - t1.getLong(Keys.START_TIME)); 
-	    Long l2 = new Long(t2.getLong(Keys.FINISH_TIME) - t2.getLong(Keys.START_TIME)) ;
-	    return l2.compareTo(l1); 
+	    long l1 = t1.getLong(Keys.FINISH_TIME) - t1.getLong(Keys.START_TIME); 
+	    long l2 = t2.getLong(Keys.FINISH_TIME) - t2.getLong(Keys.START_TIME);
+      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
 	  }
 	}; 
 	Comparator<JobHistory.Task> cShuffle = new Comparator<JobHistory.Task>(){
 	  public int compare(JobHistory.Task t1, JobHistory.Task t2){
-	    Long l1 = new Long(t1.getLong(Keys.SHUFFLE_FINISHED) - 
-	                       t1.getLong(Keys.START_TIME)); 
-	    Long l2 = new Long(t2.getLong(Keys.SHUFFLE_FINISHED) - 
-	                       t2.getLong(Keys.START_TIME)) ;
-	    return l2.compareTo(l1); 
+	    long l1 = t1.getLong(Keys.SHUFFLE_FINISHED) - 
+	                       t1.getLong(Keys.START_TIME); 
+	    long l2 = t2.getLong(Keys.SHUFFLE_FINISHED) - 
+	                       t2.getLong(Keys.START_TIME);
+      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
 	  }
 	}; 
 	Arrays.sort(mapTasks, cMap);
@@ -128,9 +128,9 @@
     Comparator<JobHistory.Task> cFinishMapRed = 
       new Comparator<JobHistory.Task>() {
       public int compare(JobHistory.Task t1, JobHistory.Task t2){
-        Long l1 = new Long(t1.getLong(Keys.FINISH_TIME)); 
-        Long l2 = new Long(t2.getLong(Keys.FINISH_TIME));
-        return l2.compareTo(l1); 
+        long l1 = t1.getLong(Keys.FINISH_TIME); 
+        long l2 = t2.getLong(Keys.FINISH_TIME);
+        return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
       }
     };
     Arrays.sort(mapTasks, cFinishMapRed);
@@ -175,9 +175,9 @@ finished at (relative to the Job launch time):
     Comparator<JobHistory.Task> cFinishShuffle = 
       new Comparator<JobHistory.Task>() {
       public int compare(JobHistory.Task t1, JobHistory.Task t2){
-        Long l1 = new Long(t1.getLong(Keys.SHUFFLE_FINISHED)); 
-        Long l2 = new Long(t2.getLong(Keys.SHUFFLE_FINISHED));
-        return l2.compareTo(l1); 
+        long l1 = t1.getLong(Keys.SHUFFLE_FINISHED); 
+        long l2 = t2.getLong(Keys.SHUFFLE_FINISHED);
+        return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
       }
     };
     Arrays.sort(reduceTasks, cFinishShuffle);
@@ -195,11 +195,11 @@ finished at (relative to the Job launch time):
 <%
 	Comparator<JobHistory.Task> cReduce = new Comparator<JobHistory.Task>(){
 	  public int compare(JobHistory.Task t1, JobHistory.Task t2){
-	    Long l1 = new Long(t1.getLong(Keys.FINISH_TIME) - 
-	                       t1.getLong(Keys.SHUFFLE_FINISHED)); 
-	    Long l2 = new Long(t2.getLong(Keys.FINISH_TIME) - 
-	                       t2.getLong(Keys.SHUFFLE_FINISHED));
-	    return l2.compareTo(l1); 
+	    long l1 = t1.getLong(Keys.FINISH_TIME) - 
+	                       t1.getLong(Keys.SHUFFLE_FINISHED); 
+	    long l2 = t2.getLong(Keys.FINISH_TIME) - 
+	                       t2.getLong(Keys.SHUFFLE_FINISHED);
+      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
 	  }
 	}; 
 	Arrays.sort(reduceTasks, cReduce); 

@@ -188,19 +188,19 @@ public class ObjectWritable implements Writable, Configurable {
       if (declaredClass == Boolean.TYPE) {             // boolean
         instance = Boolean.valueOf(in.readBoolean());
       } else if (declaredClass == Character.TYPE) {    // char
-        instance = new Character(in.readChar());
+        instance = Character.valueOf(in.readChar());
       } else if (declaredClass == Byte.TYPE) {         // byte
-        instance = new Byte(in.readByte());
+        instance = Byte.valueOf(in.readByte());
       } else if (declaredClass == Short.TYPE) {        // short
-        instance = new Short(in.readShort());
+        instance = Short.valueOf(in.readShort());
       } else if (declaredClass == Integer.TYPE) {      // int
-        instance = new Integer(in.readInt());
+        instance = Integer.valueOf(in.readInt());
       } else if (declaredClass == Long.TYPE) {         // long
-        instance = new Long(in.readLong());
+        instance = Long.valueOf(in.readLong());
       } else if (declaredClass == Float.TYPE) {        // float
-        instance = new Float(in.readFloat());
+        instance = Float.valueOf(in.readFloat());
       } else if (declaredClass == Double.TYPE) {       // double
-        instance = new Double(in.readDouble());
+        instance = Double.valueOf(in.readDouble());
       } else if (declaredClass == Void.TYPE) {         // void
         instance = null;
       } else {

@@ -690,9 +690,9 @@ public class JobHistory {
           
           // find job that started more than one month back and remove them
           // for jobtracker instances which dont have a job in past one month 
-          // remove the jobtracker start timestamp as well. 
-          for (String jobTrackerId : jobTrackersToJobs.keySet()){
-            Map<String, JobHistory.JobInfo> jobs = jobTrackersToJobs.get(jobTrackerId);
+          // remove the jobtracker start timestamp as well.
+          for (Map<String, JobHistory.JobInfo> jobs : 
+                  jobTrackersToJobs.values()) {
             for(Iterator iter = jobs.keySet().iterator(); iter.hasNext(); iter.next()){
               JobHistory.JobInfo job = jobs.get(iter.next());
               if (now - job.getLong(Keys.SUBMIT_TIME) > THIRTY_DAYS_IN_MS) {
@@ -705,14 +705,16 @@ public class JobHistory {
           }
           masterIndex.close(); 
           masterIndex = new PrintWriter(logFile);
-          // delete old history and write back to a new file 
-          for (String jobTrackerId : jobTrackersToJobs.keySet()){
-            Map<String, JobHistory.JobInfo> jobs = jobTrackersToJobs.get(jobTrackerId);
+          // delete old history and write back to a new file
+          for (Map.Entry<String, Map<String, JobHistory.JobInfo>> entry :
+                  jobTrackersToJobs.entrySet()) {
+            String jobTrackerId = entry.getKey();
+            Map<String, JobHistory.JobInfo> jobs = entry.getValue();
+
             
             log(masterIndex, RecordTypes.Jobtracker, Keys.START_TIME, jobTrackerId);
 
-            for(String jobId : jobs.keySet()){
-              JobHistory.JobInfo job = jobs.get(jobId);
+            for(JobHistory.JobInfo job : jobs.values()){
               Map<Keys, String> values = job.getValues();
               
               log(masterIndex, RecordTypes.Job, 

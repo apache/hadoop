@@ -139,7 +139,7 @@ abstract class Task implements Writable, Configurable {
     if (taskOutputPath != null) {
       Text.writeString(out, taskOutputPath.toString());
     } else {
-      Text.writeString(out, new String(""));
+      Text.writeString(out, "");
     }
   }
   public void readFields(DataInput in) throws IOException {
@@ -159,7 +159,7 @@ abstract class Task implements Writable, Configurable {
   public String toString() { return taskId; }
 
   private Path getTaskOutputPath(JobConf conf) {
-    return new Path(conf.getOutputPath(), new String("_" + taskId));
+    return new Path(conf.getOutputPath(), ("_" + taskId));
   }
   
   /**

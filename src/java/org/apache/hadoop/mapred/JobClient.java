@@ -286,27 +286,25 @@ public class JobClient extends ToolBase implements MRConstants  {
     if ((tarchives != null) || (tfiles != null)) {
       // prepare these archives for md5 checksums
       if (tarchives != null) {
-        String md5Archives = StringUtils.byteToHexString(DistributedCache
-                                                         .createMD5(tarchives[0], job));
+        StringBuffer md5Archives = 
+          new StringBuffer(StringUtils.byteToHexString(DistributedCache.createMD5(tarchives[0], job)));
         for (int i = 1; i < tarchives.length; i++) {
-          md5Archives = md5Archives
-            + ","
-            + StringUtils.byteToHexString(DistributedCache
-                                          .createMD5(tarchives[i], job));
+          md5Archives.append(",");
+          md5Archives.append(StringUtils.byteToHexString(DistributedCache
+                                          .createMD5(tarchives[i], job)));
         }
-        DistributedCache.setArchiveMd5(job, md5Archives);
+        DistributedCache.setArchiveMd5(job, md5Archives.toString());
         //job.set("mapred.cache.archivemd5", md5Archives);
       }
       if (tfiles != null) {
-        String md5Files = StringUtils.byteToHexString(DistributedCache
-                                                      .createMD5(tfiles[0], job));
+        StringBuffer md5Files = 
+          new StringBuffer(StringUtils.byteToHexString(DistributedCache.createMD5(tfiles[0], job)));
         for (int i = 1; i < tfiles.length; i++) {
-          md5Files = md5Files
-            + ","
-            + StringUtils.byteToHexString(DistributedCache
-                                          .createMD5(tfiles[i], job));
+            md5Files.append(",");
+            md5Files.append(StringUtils.byteToHexString(DistributedCache
+                                          .createMD5(tfiles[i], job)));
         }
-        DistributedCache.setFileMd5(job, md5Files);
+        DistributedCache.setFileMd5(job, md5Files.toString());
         //"mapred.cache.filemd5", md5Files);
       }
     }

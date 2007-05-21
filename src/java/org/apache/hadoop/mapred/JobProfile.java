@@ -95,7 +95,7 @@ public class JobProfile implements Writable {
    */
   public URL getURL() {
     try {
-      return new URL(url.toString());
+      return new URL(url);
     } catch (IOException ie) {
       return null;
     }

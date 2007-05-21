@@ -28,11 +28,9 @@ class CompressorStream extends CompressionOutputStream {
   Compressor compressor;
   byte[] buffer;
   boolean closed = false;
-  OutputStream rawOut;
   
   public CompressorStream(OutputStream out, Compressor compressor, int bufferSize) {
     super(out);
-    rawOut = out;
 
     if (out == null || compressor == null) {
       throw new NullPointerException();

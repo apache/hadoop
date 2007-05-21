@@ -159,12 +159,12 @@ public class StringUtils {
    * @param uris
    */
   public static String uriToString(URI[] uris){
-    String ret = null;
-    ret = uris[0].toString();
+    StringBuffer ret = new StringBuffer(uris[0].toString());
     for(int i = 1; i < uris.length;i++){
-      ret = ret + "," + uris[i].toString();
+      ret.append(",");
+      ret.append(uris[i].toString());
     }
-    return ret;
+    return ret.toString();
   }
   
   /**

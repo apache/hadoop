@@ -262,7 +262,7 @@ public class Client {
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + " got value #" + id);
 
-          Call call = (Call)calls.remove(new Integer(id));
+          Call call = (Call)calls.remove(id);
           boolean isError = in.readBoolean();     // read if error
           if (isError) {
             call.setResult(null, WritableUtils.readString(in),
@@ -308,7 +308,7 @@ public class Client {
     public void sendParam(Call call) throws IOException {
       boolean error = true;
       try {
-        calls.put(new Integer(call.id), call);
+        calls.put(call.id, call);
         synchronized (out) {
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + " sending #" + call.id);

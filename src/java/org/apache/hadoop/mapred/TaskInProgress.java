@@ -633,7 +633,7 @@ class TaskInProgress {
     // Create the 'taskid'; do not count the 'killed' tasks against the job!
     String taskid = null;
     if (nextTaskId < (MAX_TASK_EXECS + maxTaskAttempts + numKilledTasks)) {
-      taskid = new String("task_" + taskIdPrefix + "_" + nextTaskId);
+      taskid = "task_" + taskIdPrefix + "_" + nextTaskId;
       ++nextTaskId;
     } else {
       LOG.warn("Exceeded limit of " + (MAX_TASK_EXECS + maxTaskAttempts) +

@@ -1864,7 +1864,7 @@ public class TaskTracker
    * @author Owen O'Malley
    */
   public static class MapOutputServlet extends HttpServlet {
-    private final int MAX_BYTES_TO_READ = 64 * 1024;
+    private static final int MAX_BYTES_TO_READ = 64 * 1024;
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
                       ) throws ServletException, IOException {

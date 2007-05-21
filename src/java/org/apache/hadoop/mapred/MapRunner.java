@@ -26,11 +26,9 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /** Default {@link MapRunnable} implementation.*/
 public class MapRunner implements MapRunnable {
-  private JobConf job;
   private Mapper mapper;
 
   public void configure(JobConf job) {
-    this.job = job;
     this.mapper = (Mapper)ReflectionUtils.newInstance(job.getMapperClass(),
                                                       job);
   }

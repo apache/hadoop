@@ -222,7 +222,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     public void addNewTask(String taskName) {
       synchronized (launchingTasks) {
         launchingTasks.put(taskName, 
-                           new Long(System.currentTimeMillis()));
+                           System.currentTimeMillis());
       }
     }
       
@@ -495,7 +495,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   String localMachine;
   long startTime;
   int totalSubmissions = 0;
-  Random r = new Random();
 
   private int maxCurrentTasks;
   private HostsFileReader hostsReader;
@@ -667,7 +666,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // The rpc/web-server ports can be ephemeral ports... 
     // ... ensure we have the correct info
     this.port = interTrackerServer.getListenerAddress().getPort();
-    this.conf.set("mapred.job.tracker", new String(this.localMachine + ":" + this.port));
+    this.conf.set("mapred.job.tracker", (this.localMachine + ":" + this.port));
     LOG.info("JobTracker up at: " + this.port);
     this.infoPort = this.infoServer.getPort();
     this.conf.setInt("mapred.job.tracker.info.port", this.infoPort); 

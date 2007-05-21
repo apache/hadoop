@@ -59,9 +59,9 @@ public class ValueHistogram implements ValueAggregator {
     long inc = Long.parseLong(countStr);
 
     if (count == null) {
-      count = new Long(inc);
+      count = inc;
     } else {
-      count = new Long(count.longValue() + inc);
+      count = count.longValue() + inc;
     }
     items.put(valStr, count);
   }

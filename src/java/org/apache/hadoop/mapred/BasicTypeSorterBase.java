@@ -50,7 +50,7 @@ abstract class BasicTypeSorterBase implements BufferSorter {
   //12 => 4 for keyoffsets, 4 for keylengths, 4 for valueLengths, and
   //4 for indices into startOffsets array in the
   //pointers array (ignored the partpointers list itself)
-  private final int BUFFERED_KEY_VAL_OVERHEAD = 16;
+  static private final int BUFFERED_KEY_VAL_OVERHEAD = 16;
 
   //Implementation of methods of the SorterBase interface
   //
@@ -176,7 +176,7 @@ class MRSortResultIterator implements RawKeyValueIterator {
   
   //An implementation of the ValueBytes interface for the in-memory value
   //buffers. 
-  private class InMemUncompressedBytes implements ValueBytes {
+  private static class InMemUncompressedBytes implements ValueBytes {
     private byte[] data;
     int start;
     int dataSize;

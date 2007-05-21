@@ -596,7 +596,6 @@ public class SequenceFile {
     Configuration conf;
     FSDataOutputStream out;
     DataOutputBuffer buffer = new DataOutputBuffer();
-    Path target = null;
 
     Class keyClass;
     Class valClass;
@@ -690,7 +689,6 @@ public class SequenceFile {
               Class keyClass, Class valClass,
               boolean compress, CompressionCodec codec, Metadata metadata) 
       throws IOException {
-      this.target = name;
       this.conf = conf;
       this.out = out;
       this.keyClass = keyClass;

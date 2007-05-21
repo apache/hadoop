@@ -91,11 +91,12 @@ abstract class TaskRunner extends Thread {
     if (p == null){
       return null;
     }
-    String str = p[0].toString();
+    StringBuffer str = new StringBuffer(p[0].toString());
     for (int i = 1; i < p.length; i++){
-      str = str + "," + p[i].toString();
+      str.append(",");
+      str.append(p[i].toString());
     }
-    return str;
+    return str.toString();
   }
   
   public final void run() {

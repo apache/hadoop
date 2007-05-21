@@ -122,8 +122,9 @@
 <table border="1">
 <tr><td>Hostname</td><td>Failed Tasks</td></tr>
  <%	  
-	for( String node : badNodes.keySet() ) {
-	  Set<String> failedTasks = badNodes.get(node); 
+  for (Map.Entry<String, Set<String>> entry : badNodes.entrySet()) {
+    String node = entry.getKey();
+    Set<String> failedTasks = entry.getValue();
 %>
 	<tr>
 		<td><%=node %></td>

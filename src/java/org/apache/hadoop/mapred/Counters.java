@@ -321,12 +321,14 @@ public class Counters implements Writable {
   
   public synchronized void write(DataOutput out) throws IOException {
     out.writeInt(counters.size());
-    for (String groupName : counters.keySet()) {
+    for (Map.Entry<String, Map<Integer, CounterRec>> e1 : counters.entrySet()) {
+      String groupName = e1.getKey();
+      Map<Integer, CounterRec> map = e1.getValue();
       UTF8.writeString(out, groupName);
-      Map<Integer,CounterRec> map = counters.get(groupName);
       out.writeInt(map.size());
-      for (Integer ordinal : map.keySet()) {
-        CounterRec counter = map.get(ordinal);
+      for (Map.Entry<Integer, CounterRec> e2 : map.entrySet()) {
+        Integer ordinal = e2.getKey();
+        CounterRec counter = e2.getValue();
         out.writeInt(ordinal);
         UTF8.writeString(out, counter.name);
         out.writeLong(counter.value);

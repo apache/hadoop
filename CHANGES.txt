@@ -42,6 +42,9 @@ Trunk (unreleased changes)
  13. HADOOP-1393.  Remove a potential unexpected negative number from
      uses of random number generator. (omalley via cutting)
 
+ 14. HADOOP-1387.  A number of "performance" code-cleanups suggested
+     by findbugs.  (Arun C Murthy via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

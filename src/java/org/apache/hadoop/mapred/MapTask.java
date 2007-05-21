@@ -239,11 +239,8 @@ class MapTask extends Task {
 
     private JobConf job;
 
-    private TaskUmbilicalProtocol umbilical;
-
     public DirectMapOutputCollector(TaskUmbilicalProtocol umbilical,
         JobConf job, Reporter reporter) throws IOException {
-      this.umbilical = umbilical;
       this.job = job;
       this.reporter = reporter;
       String finalName = getTipId();
@@ -274,7 +271,6 @@ class MapTask extends Task {
 
     private final int partitions;
     private Partitioner partitioner;
-    private TaskUmbilicalProtocol umbilical;
     private JobConf job;
     private Reporter reporter;
 
@@ -304,7 +300,6 @@ class MapTask extends Task {
       maxBufferSize = job.getInt("io.sort.mb", 100) * 1024 * 1024;
       keyValBuffer = new DataOutputBuffer();
 
-      this.umbilical = umbilical;
       this.job = job;
       this.reporter = reporter;
       this.comparator = job.getOutputKeyComparator();

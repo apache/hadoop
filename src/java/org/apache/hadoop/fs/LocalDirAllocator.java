@@ -148,7 +148,7 @@ public class LocalDirAllocator {
     }
   }
     
-  private class AllocatorPerContext {
+  private static class AllocatorPerContext {
 
     private final Log LOG =
       LogFactory.getLog("org.apache.hadoop.fs.AllocatorPerContext");

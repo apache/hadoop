@@ -56,16 +56,16 @@
               killedTasks +
               "</td><td align=\"right\">" + 
               ((failedTaskAttempts > 0) ? 
-                  new String("<a href=\"/jobfailures.jsp?jobid=" + jobId + 
-                      "&kind=" + kind + "&cause=failed\">" + failedTaskAttempts + 
-                      "</a>") : 
+                  ("<a href=\"/jobfailures.jsp?jobid=" + jobId + 
+                   "&kind=" + kind + "&cause=failed\">" + failedTaskAttempts + 
+                   "</a>") : 
                   "0"
                   ) + 
               " / " +
               ((killedTaskAttempts > 0) ? 
-                  new String("<a href=\"/jobfailures.jsp?jobid=" + jobId + 
-                      "&kind=" + kind + "&cause=killed\">" + killedTaskAttempts + 
-                      "</a>") : 
+                  ("<a href=\"/jobfailures.jsp?jobid=" + jobId + 
+                   "&kind=" + kind + "&cause=killed\">" + killedTaskAttempts + 
+                   "</a>") : 
                   "0"
                   ) + 
               "</td></tr>\n");

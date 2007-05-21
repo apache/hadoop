@@ -105,8 +105,6 @@ class JobInProgress {
   }
   private Counters jobCounters = new Counters();
   
-  private Counters mapCounters = new Counters();
-  private Counters reduceCounters = new Counters();
   private MetricsRecord jobMetrics;
   
   /**
@@ -563,7 +561,7 @@ class JobInProgress {
 
       Integer trackerFailures = trackerToFailuresMap.get(trackerHostName);
       if (trackerFailures == null) {
-        trackerFailures = new Integer(0);
+        trackerFailures = 0;
       }
       trackerToFailuresMap.put(trackerHostName, ++trackerFailures);
 

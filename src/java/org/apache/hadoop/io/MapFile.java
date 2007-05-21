@@ -193,8 +193,6 @@ public class MapFile {
     private int seekIndex = -1;
     private long firstPosition;
 
-    private WritableComparable getKey;
-
     // the data, on disk
     private SequenceFile.Reader data;
     private SequenceFile.Reader index;
@@ -234,8 +232,6 @@ public class MapFile {
         this.comparator = WritableComparator.get(data.getKeyClass());
       else
         this.comparator = comparator;
-
-      this.getKey = this.comparator.newKey();
 
       // open the index
       this.index = new SequenceFile.Reader(fs, indexFile, conf);
