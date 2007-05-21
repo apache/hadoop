@@ -54,7 +54,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    */
   public HStoreFile(Configuration conf) {
     this.conf = conf;
-    this.dir = new Path("");
+    this.dir = new Path(Path.CUR_DIR);
     this.regionName = new Text();
     this.colFamily = new Text();
     this.fileId = 0;

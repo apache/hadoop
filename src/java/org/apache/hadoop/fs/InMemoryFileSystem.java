@@ -68,7 +68,11 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       int size = Integer.parseInt(conf.get("fs.inmemory.size.mb", "100"));
       this.fsSize = size * 1024 * 1024;
       this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
-      this.staticWorkingDir = new Path(this.uri.getPath());
+      String path = this.uri.getPath();
+      if (path.length() == 0) {
+        path = Path.CUR_DIR;
+      }
+      this.staticWorkingDir = new Path(path);
       LOG.info("Initialized InMemoryFileSystem: " + uri.toString() + 
                " of size (in bytes): " + fsSize);
     }
