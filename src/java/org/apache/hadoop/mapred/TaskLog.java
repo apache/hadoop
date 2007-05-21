@@ -367,7 +367,7 @@ class TaskLog {
      *         purged data.
      * @throws IOException
      */
-    public long getTotalLogSize() throws IOException {
+    public synchronized long getTotalLogSize() throws IOException {
       if (!initialized) {
         init();
       }
@@ -381,7 +381,7 @@ class TaskLog {
      * @return Returns a <code>byte[]</code> containing the data in user-log.
      * @throws IOException
      */
-    public byte[] fetchAll() throws IOException {
+    public synchronized byte[] fetchAll() throws IOException {
       if (!initialized) {
         init();
       }

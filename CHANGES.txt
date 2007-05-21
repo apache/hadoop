@@ -36,6 +36,9 @@ Trunk (unreleased changes)
  11. HADOOP-1379.  Add findbugs target to build.xml.
      (Nigel Daley via cutting)
 
+ 12. HADOOP-1364.  Fix various inconsistent synchronization issues.
+     (Devaraj Das via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

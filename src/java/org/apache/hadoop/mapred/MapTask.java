@@ -329,7 +329,7 @@ class MapTask extends Task {
                                                                 job.getClass("map.sort.class", MergeSorter.class,
                                                                              BufferSorter.class), job);
     }
-    public void startPartition(int partNumber) throws IOException {
+    private void startPartition(int partNumber) throws IOException {
       //We create the sort output as multiple sequence files within a spilled
       //file. So we create a writer for each partition. 
       segmentStart = out.getPos();

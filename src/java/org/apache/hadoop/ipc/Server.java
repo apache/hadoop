@@ -286,12 +286,12 @@ public abstract class Server {
       }
       LOG.info("Stopping " + this.getName());
 
-      try {
-        acceptChannel.close();
-        selector.close();
-      } catch (IOException e) { }
-
       synchronized (this) {
+        try {
+          acceptChannel.close();
+          selector.close();
+        } catch (IOException e) { }
+
         selector= null;
         acceptChannel= null;
         connectionList = null;

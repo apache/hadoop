@@ -689,7 +689,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   /** Make this class quiet. Error and informational
    *  messages might not be logged.
    */
-  public void setQuietMode(boolean value) {
+  public synchronized void setQuietMode(boolean value) {
     quietmode = value;
   }
 
