@@ -45,6 +45,8 @@ Trunk (unreleased changes)
  14. HADOOP-1387.  A number of "performance" code-cleanups suggested
      by findbugs.  (Arun C Murthy via cutting)
 
+ 15. HADOOP-1401.  Add contrib/hbase javadoc to tree.  (stack via cutting)
+
 
 Branch 0.13 (unreleased changes)
 
