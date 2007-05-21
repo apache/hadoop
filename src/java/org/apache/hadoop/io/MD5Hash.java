@@ -116,6 +116,17 @@ public class MD5Hash implements WritableComparable {
     return value;
   }
 
+  /**
+   * Return a 32-bit digest of the MD5.
+   * @return the first 4 bytes of the md5
+   */
+  public int quarterDigest() {
+    int value = 0;
+    for (int i = 0; i < 4; i++)
+      value |= ((digest[i] & 0xff) << (8*(3-i)));
+    return value;    
+  }
+
   /** Returns true iff <code>o</code> is an MD5Hash whose digest contains the
    * same values.  */
   public boolean equals(Object o) {
@@ -125,13 +136,11 @@ public class MD5Hash implements WritableComparable {
     return Arrays.equals(this.digest, other.digest);
   }
 
-  /** Returns a hash code value for this object.*/
+  /** Returns a hash code value for this object.
+   * Only uses the first 4 bytes, since md5s are evenly distributed.
+   */
   public int hashCode() {
-    return                                        // xor four ints
-      (digest[ 0] | (digest[ 1]<<8) | (digest[ 2]<<16) | (digest[ 3]<<24)) ^
-      (digest[ 4] | (digest[ 5]<<8) | (digest[ 6]<<16) | (digest[ 7]<<24)) ^
-      (digest[ 8] | (digest[ 9]<<8) | (digest[10]<<16) | (digest[11]<<24)) ^
-      (digest[12] | (digest[13]<<8) | (digest[14]<<16) | (digest[15]<<24));
+    return quarterDigest();
   }
 
 

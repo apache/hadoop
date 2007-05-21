@@ -46,6 +46,16 @@ public class TestMD5Hash extends TestCase {
     MD5Hash md5HashFF
       = new MD5Hash(new byte[] {-1, -1, -1, -1, -1, -1, -1, -1,
                                 -1, -1, -1, -1, -1, -1, -1, -1});
+    
+    MD5Hash orderedHash = new MD5Hash(new byte[]{1,2,3,4,5,6,7,8,9,10,11,12,
+                                                 13,14,15,16});
+    MD5Hash backwardHash = new MD5Hash(new byte[]{-1,-2,-3,-4,-5,-6,-7,-8,
+                                                  -9,-10,-11,-12, -13, -14,
+                                                  -15,-16});
+    MD5Hash closeHash1 = new MD5Hash(new byte[]{-1,0,0,0,0,0,0,0,
+                                                0,0,0,0,0,0,0,0});
+    MD5Hash closeHash2 = new MD5Hash(new byte[]{-1,1,0,0,0,0,0,0,
+                                                0,0,0,0,0,0,0,0});
 
     // test i/o
     TestWritable.testWritable(md5Hash);
@@ -67,6 +77,13 @@ public class TestMD5Hash extends TestCase {
     assertEquals(md5Hash00, new MD5Hash(md5Hash00.toString()));
     assertEquals(md5HashFF, new MD5Hash(md5HashFF.toString()));
 
+    assertEquals(0x01020304, orderedHash.quarterDigest());
+    assertEquals(0xfffefdfc, backwardHash.quarterDigest());
+    
+    assertEquals(0x0102030405060708L, orderedHash.halfDigest());
+    assertEquals(0xfffefdfcfbfaf9f8L, backwardHash.halfDigest());
+    assertTrue("hash collision", 
+               closeHash1.hashCode() != closeHash2.hashCode());
   }
 	
 }
