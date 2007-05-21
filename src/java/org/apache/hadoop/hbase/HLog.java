@@ -357,7 +357,7 @@ public class HLog implements HConstants {
    * and complete of a cache-flush.  Otherwise the log-seq-id for
    * the flush will not appear in the correct logfile.
    * @return sequence ID to pass {@link #completeCacheFlush(Text, Text, long)}
-   * @see {@link #completeCacheFlush(Text, Text, long)}
+   * @see #completeCacheFlush(Text, Text, long)
    */
   public synchronized long startCacheFlush() {
     while (insideCacheFlush) {
