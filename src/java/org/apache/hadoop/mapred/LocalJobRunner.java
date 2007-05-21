@@ -188,7 +188,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     }
     
     private String newId() {
-      return Integer.toString(Math.abs(random.nextInt()), 36);
+      return Integer.toString(random.nextInt(Integer.MAX_VALUE), 36);
     }
 
     // TaskUmbilicalProtocol methods

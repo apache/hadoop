@@ -39,6 +39,9 @@ Trunk (unreleased changes)
  12. HADOOP-1364.  Fix various inconsistent synchronization issues.
      (Devaraj Das via cutting)
 
+ 13. HADOOP-1393.  Remove a potential unexpected negative number from
+     uses of random number generator. (omalley via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

@@ -271,7 +271,9 @@ public class JobClient extends ToolBase implements MRConstants  {
     //
 
     // Create a number of filenames in the JobTracker's fs namespace
-    Path submitJobDir = new Path(job.getSystemDir(), "submit_" + Integer.toString(Math.abs(r.nextInt()), 36));
+    Path submitJobDir = new Path(job.getSystemDir(), "submit_" + 
+                                 Integer.toString(r.nextInt(Integer.MAX_VALUE), 
+                                                  36));
     Path submitJobFile = new Path(submitJobDir, "job.xml");
     Path submitJarFile = new Path(submitJobDir, "job.jar");
     Path submitSplitFile = new Path(submitJobDir, "job.split");
