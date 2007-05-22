@@ -10,3 +10,5 @@ Trunk (unreleased changes)
      java.util.concurrent.locks.ReentrantLock (Michael Stack)
   5. HADOOP-1403. HBase reliability - make master and region server more fault
      tolerant.
+  6. HADOOP-1418. HBase miscellaneous: unit test for HClient, client to do
+     'Performance Evaluation', etc.
