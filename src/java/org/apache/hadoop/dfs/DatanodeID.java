@@ -24,7 +24,7 @@ public class DatanodeID implements WritableComparable {
    * DatanodeID default constructor
    */
   public DatanodeID() {
-    this(new String(), new String(), -1);
+    this("", "", -1);
   }
 
   /**

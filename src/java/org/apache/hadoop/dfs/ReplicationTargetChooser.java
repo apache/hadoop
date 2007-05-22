@@ -46,7 +46,7 @@ class ReplicationTargetChooser {
     this.logr = logr;
   }
     
-  private class NotEnoughReplicasException extends Exception {
+  private static class NotEnoughReplicasException extends Exception {
     NotEnoughReplicasException(String msg) {
       super(msg);
     }

@@ -126,7 +126,7 @@ public class DataNode implements FSConstants, Runnable {
   private static Thread dataNodeThread = null;
   String machineName;
 
-  private class DataNodeMetrics implements Updater {
+  private static class DataNodeMetrics implements Updater {
     private final MetricsRecord metricsRecord;
     private int bytesWritten = 0;
     private int bytesRead = 0;

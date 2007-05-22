@@ -29,7 +29,7 @@ class BlocksMap {
   /**
    * Internal class for block metadata.
    */
-  class BlockInfo {
+  static class BlockInfo {
     private FSDirectory.INode              inode;
       
     /** nodes could contain some null entries at the end, so 
@@ -40,7 +40,7 @@ class BlocksMap {
     private Block                          block; //block that was inserted.   
   }
       
-  private class NodeIterator implements Iterator<DatanodeDescriptor> {
+  private static class NodeIterator implements Iterator<DatanodeDescriptor> {
     NodeIterator(DatanodeDescriptor[] nodes) {
       arr = nodes;
     }

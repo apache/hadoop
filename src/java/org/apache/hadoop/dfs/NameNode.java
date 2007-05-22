@@ -99,7 +99,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     format(conf, false);
   }
 
-  private class NameNodeMetrics implements Updater {
+  private static class NameNodeMetrics implements Updater {
     private final MetricsRecord metricsRecord;
     private int numFilesCreated = 0;
     private int numFilesOpened = 0;
@@ -166,7 +166,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.nameNodeAddress = this.server.getListenerAddress(); 
-    conf.set("fs.default.name", new String(nameNodeAddress.getHostName() + ":" + nameNodeAddress.getPort()));
+    conf.set("fs.default.name", nameNodeAddress.getHostName() + ":" + nameNodeAddress.getPort());
     LOG.info("Namenode up at: " + this.nameNodeAddress);
 
     try {

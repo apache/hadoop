@@ -345,7 +345,7 @@ class FSDataset implements FSConstants {
     }
   }
     
-  class FSVolumeSet {
+  static class FSVolumeSet {
     FSVolume[] volumes = null;
     int curVolume = 0;
       

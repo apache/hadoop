@@ -19,20 +19,10 @@ package org.apache.hadoop.dfs;
 
 import java.io.*;
 import java.net.*;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Random;
-import java.util.TreeSet;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.UTF8;
-
 
 /**
  * This class provides fetching a specified file from the NameNode.
@@ -40,7 +30,6 @@ import org.apache.hadoop.io.UTF8;
  */
 class TransferFsImage implements FSConstants {
   
-  private HttpServletResponse response;
   private boolean isGetImage;
   private boolean isGetEdit;
   private boolean isPutImage;

@@ -1240,7 +1240,7 @@ class DFSClient implements FSConstants {
     }
 
     private LocatedBlock locateNewBlock() throws IOException {     
-      return namenode.create(src.toString(), clientName.toString(),
+      return namenode.create(src.toString(), clientName,
           overwrite, replication, blockSize);
     }
         
@@ -1252,8 +1252,7 @@ class DFSClient implements FSConstants {
         long localstart = System.currentTimeMillis();
         while (true) {
           try {
-            return namenode.addBlock(src.toString(), 
-                                     clientName.toString());
+            return namenode.addBlock(src.toString(), clientName);
           } catch (RemoteException e) {
             if (--retries == 0 || 
                 !NotReplicatedYetException.class.getName().
@@ -1502,7 +1501,7 @@ class DFSClient implements FSConstants {
         long localstart = System.currentTimeMillis();
         boolean fileComplete = false;
         while (!fileComplete) {
-          fileComplete = namenode.complete(src.toString(), clientName.toString());
+          fileComplete = namenode.complete(src.toString(), clientName);
           if (!fileComplete) {
             try {
               Thread.sleep(400);

@@ -461,7 +461,7 @@ class FSDirectory implements FSConstants {
       if (isDir(dst)) {
         dstStr += "/" + new File(srcStr).getName();
       }
-      if (rootDir.getNode(dstStr.toString()) != null) {
+      if (rootDir.getNode(dstStr) != null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                                      +"failed to rename "+src+" to "+dstStr+ " because destination exists");
         return false;
@@ -499,7 +499,7 @@ class FSDirectory implements FSConstants {
    */
   Block[] setReplication(String src, 
                          short replication,
-                         Vector<Integer> oldReplication
+                         int[] oldReplication
                          ) throws IOException {
     waitForReady();
     Block[] fileBlocks = unprotectedSetReplication(src, replication, oldReplication);
@@ -510,12 +510,11 @@ class FSDirectory implements FSConstants {
 
   Block[] unprotectedSetReplication( String src, 
                                      short replication,
-                                     Vector<Integer> oldReplication
+                                     int[] oldReplication
                                      ) throws IOException {
     if (oldReplication == null)
-      oldReplication = new Vector<Integer>();
-    oldReplication.setSize(1);
-    oldReplication.set(0, new Integer(-1));
+      oldReplication = new int[1];
+    oldReplication[0] = -1;
     Block[] fileBlocks = null;
     synchronized(rootDir) {
       INode fileNode = rootDir.getNode(src);
@@ -523,7 +522,7 @@ class FSDirectory implements FSConstants {
         return null;
       if (fileNode.isDir())
         return null;
-      oldReplication.set(0, new Integer(fileNode.blockReplication));
+      oldReplication[0] = fileNode.blockReplication;
       fileNode.blockReplication = replication;
       fileBlocks = fileNode.blocks;
     }

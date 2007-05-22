@@ -142,7 +142,7 @@ class PendingReplicationBlocks {
    * block. It also records the number of replication
    * requests that are in progress.
    */
-  class PendingBlockInfo {
+  static class PendingBlockInfo {
     private long timeStamp;
     private int numReplicasInProgress;
 

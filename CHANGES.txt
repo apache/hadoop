@@ -54,6 +54,9 @@ Trunk (unreleased changes)
  17. HADOOP-1406.  Plug a leak in MapReduce's use of metrics.
      (David Bowen via cutting)
 
+ 14. HADOOP-1394.  Implement "performance" code-cleanups in HDFS
+     suggested by findbugs.  (Raghu Angadi via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

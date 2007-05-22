@@ -510,12 +510,12 @@ class FSNamesystem implements FSConstants {
       throw new SafeModeException("Cannot set replication for " + src, safeMode);
     verifyReplication(src, replication, null);
 
-    Vector<Integer> oldReplication = new Vector<Integer>();
+    int[] oldReplication = new int[1];
     Block[] fileBlocks;
     fileBlocks = dir.setReplication(src, replication, oldReplication);
     if (fileBlocks == null)  // file not found or is a directory
       return false;
-    int oldRepl = oldReplication.elementAt(0).intValue();
+    int oldRepl = oldReplication[0];
     if (oldRepl == replication) // the same replication
       return true;
 

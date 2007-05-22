@@ -270,7 +270,7 @@ public class NamenodeFsck {
           continue;
         }
         if (fos == null) {
-          fos = dfs.create(new UTF8(target.toString() + "/" + chain), true);
+          fos = dfs.create(new UTF8(target + "/" + chain), true);
           if (fos != null) chain++;
         }
         if (fos == null) {
@@ -464,7 +464,7 @@ public class NamenodeFsck {
    *
    * @author Andrzej Bialecki
    */
-  public class FsckResult {
+  public static class FsckResult {
     private ArrayList<String> missingIds = new ArrayList<String>();
     private long missingSize = 0L;
     private long corruptFiles = 0L;
