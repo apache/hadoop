@@ -945,8 +945,8 @@ class JobInProgress {
       //
       boolean killJob = 
         tip.isMapTask() ? 
-            (((++failedMapTIPs*100)/numMapTasks) > mapFailuresPercent) :
-            (((++failedReduceTIPs*100)/numReduceTasks) > reduceFailuresPercent);
+            ((++failedMapTIPs*100) > (mapFailuresPercent*numMapTasks)) :
+            ((++failedReduceTIPs*100) > (reduceFailuresPercent*numReduceTasks));
       
       if (killJob) {
         LOG.info("Aborting job " + profile.getJobId());
