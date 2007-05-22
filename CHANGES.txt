@@ -57,6 +57,9 @@ Trunk (unreleased changes)
  18. HADOOP-1394.  Implement "performance" code-cleanups in HDFS
      suggested by findbugs.  (Raghu Angadi via cutting)
 
+ 19. HADOOP-1413.  Add example program that uses Knuth's dancing links
+     algorithm to solve pentomino problems.  (omalley via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

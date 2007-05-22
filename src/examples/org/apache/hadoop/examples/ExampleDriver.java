@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.examples;
 import org.apache.hadoop.util.ProgramDriver;
+import org.apache.hadoop.examples.dancing.*;
 
 /**
  * A description of an example program based on its class and a 
@@ -37,6 +38,9 @@ public class ExampleDriver {
                    "A map/reduce program that writes 10GB of random data per node.");
       pgd.addClass("sort", Sort.class, "A map/reduce program that sorts the data written by the random writer.");
       pgd.addClass("pi", PiEstimator.class, "A map/reduce program that estimates Pi using monte-carlo method.");
+      pgd.addClass("pentomino", DistributedPentomino.class,
+      "A map/reduce tile laying program to find solutions to pentomino problems.");
+      pgd.addClass("sudoku", Sudoku.class, "A sudoku solver.");
       pgd.driver(argv);
     }
     catch(Throwable e){
