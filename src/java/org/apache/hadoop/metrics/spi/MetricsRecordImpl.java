@@ -103,6 +103,13 @@ public class MetricsRecordImpl implements MetricsRecord {
   }
     
   /**
+   * Removes any tag of the specified name.
+   */
+  public void removeTag(String tagName) {
+    tagTable.remove(tagName);
+  }
+  
+  /**
    * Sets the named metric to the specified value.
    *
    * @param metricName name of the metric

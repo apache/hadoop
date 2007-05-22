@@ -111,6 +111,13 @@ public interface MetricsRecord {
   public abstract void setTag(String tagName, byte tagValue);
     
   /**
+   * Removes any tag of the specified name.
+   *
+   * @param tagName name of a tag
+   */
+  public abstract void removeTag(String tagName);
+  
+  /**
    * Sets the named metric to the specified value.
    *
    * @param metricName name of the metric
@@ -198,8 +205,11 @@ public interface MetricsRecord {
   public abstract void update();
     
   /**
-   * Removes, from the buffered data table, the row (if it exists) having tags 
-   * that equal the tags that have been set on this record. 
+   * Removes, from the buffered data table, all rows having tags 
+   * that equal the tags that have been set on this record. For example,
+   * if there are no tags on this record, all rows for this record name
+   * would be removed.  Or, if there is a single tag on this record, then
+   * just rows containing a tag with the same name and value would be removed.
    */
   public abstract void remove();
     

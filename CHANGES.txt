@@ -51,6 +51,9 @@ Trunk (unreleased changes)
      number of block locations per request from the namenode.
      (Konstantin Shvachko via cutting)
 
+ 17. HADOOP-1406.  Plug a leak in MapReduce's use of metrics.
+     (David Bowen via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

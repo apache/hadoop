@@ -152,6 +152,7 @@ class JobInProgress {
     this.jobMetrics = metricsContext.createRecord("job");
     this.jobMetrics.setTag("user", conf.getUser());
     this.jobMetrics.setTag("jobName", conf.getJobName());
+    this.jobMetrics.setTag("jobId", jobid);
   }
 
   /**
@@ -172,6 +173,21 @@ class JobInProgress {
       }
     }
   }
+  
+  
+  /**
+   * Called when the job is complete
+   */
+  public void cleanUpMetrics() {
+    // Deletes all metric data for this job (in internal table in metrics package).
+    // This frees up RAM and possibly saves network bandwidth, since otherwise
+    // the metrics package implementation might continue to send these job metrics
+    // after the job has finished.
+    jobMetrics.removeTag("group");
+    jobMetrics.removeTag("counter");
+    jobMetrics.remove();
+  }
+  
     
   /**
    * Construct the splits, etc.  This is invoked from an async
@@ -1035,6 +1051,8 @@ class JobInProgress {
     } catch (IOException e) {
       LOG.warn("Error cleaning up "+profile.getJobId()+": "+e);
     }
+    
+    cleanUpMetrics();
   }
 
   /**

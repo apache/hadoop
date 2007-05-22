@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
@@ -65,7 +66,21 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     TagMap(TagMap orig) {
       super(orig);
     }
+    /**
+     * Returns true if this tagmap contains every tag in other.
+     */
+    public boolean containsAll(TagMap other) {
+      for (Map.Entry<String,Object> entry : other.entrySet()) {
+        Object value = get(entry.getKey());
+        if (value == null || !value.equals(entry.getValue())) {
+          // either key does not exist here, or the value is different
+          return false;
+        }
+      }
+      return true;
+    }
   }
+  
   static class MetricMap extends TreeMap<String,Number> {
     private static final long serialVersionUID = -7495051861141631609L;
   }
@@ -367,9 +382,10 @@ public abstract class AbstractMetricsContext implements MetricsContext {
   }
     
   /**
-   * Called by MetricsRecordImpl.remove().  Removes any matching row in
+   * Called by MetricsRecordImpl.remove().  Removes all matching rows in
    * the internal table of metric data.  A row matches if it has the same
-   * tag names and tag values.
+   * tag names and values as record, but it may also have additional
+   * tags.
    */    
   protected void remove(MetricsRecordImpl record) {
     String recordName = record.getRecordName();
@@ -377,7 +393,13 @@ public abstract class AbstractMetricsContext implements MetricsContext {
         
     RecordMap recordMap = getRecordMap(recordName);
     synchronized (recordMap) {
-      recordMap.remove(tagTable);
+      Iterator<TagMap> it = recordMap.keySet().iterator();
+      while (it.hasNext()) {
+        TagMap rowTags = it.next();
+        if (rowTags.containsAll(tagTable)) {
+          it.remove();
+        }
+      }
     }
   }
     
