@@ -8,3 +8,5 @@ Trunk (unreleased changes)
   3. HADOOP-1404. HBase command-line shutdown failing (Michael Stack)
   4. HADOOP-1397. Replace custom hbase locking with 
      java.util.concurrent.locks.ReentrantLock (Michael Stack)
+  5. HADOOP-1403. HBase reliability - make master and region server more fault
+     tolerant.
