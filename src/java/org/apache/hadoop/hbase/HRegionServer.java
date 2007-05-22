@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /*******************************************************************************
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -50,7 +51,7 @@ public class HRegionServer
   private Configuration conf;
   private Random rand;
   private TreeMap<Text, HRegion> regions;               // region name -> HRegion
-  private HLocking lock;
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private Vector<HMsg> outboundMsgs;
 
   private long threadWakeFrequency;
@@ -71,9 +72,12 @@ public class HRegionServer
      * @see org.apache.hadoop.hbase.RegionUnavailableListener#regionIsUnavailable(org.apache.hadoop.io.Text)
      */
     public void regionIsUnavailable(Text regionName) {
-      lock.obtainWriteLock();
-      regions.remove(regionName);
-      lock.releaseWriteLock();
+      lock.writeLock().lock();
+      try {
+        regions.remove(regionName);
+      } finally {
+        lock.writeLock().unlock();
+      }
     }
 
     /* (non-Javadoc)
@@ -88,11 +92,11 @@ public class HRegionServer
           // Grab a list of regions to check
 
           Vector<HRegion> regionsToCheck = new Vector<HRegion>();
-          lock.obtainReadLock();
+          lock.readLock().lock();
           try {
             regionsToCheck.addAll(regions.values());
           } finally {
-            lock.releaseReadLock();
+            lock.readLock().unlock();
           }
 
           try {
@@ -163,10 +167,13 @@ public class HRegionServer
 
                     // Finally, start serving the new regions
                     
-                    lock.obtainWriteLock();
-                    regions.put(newRegions[0].getRegionName(), newRegions[0]);
-                    regions.put(newRegions[1].getRegionName(), newRegions[1]);
-                    lock.releaseWriteLock();
+                    lock.writeLock().lock();
+                    try {
+                      regions.put(newRegions[0].getRegionName(), newRegions[0]);
+                      regions.put(newRegions[1].getRegionName(), newRegions[1]);
+                    } finally {
+                      lock.writeLock().unlock();
+                    }
                   }
                 }
               }
@@ -214,12 +221,11 @@ public class HRegionServer
           // Grab a list of items to flush
 
           Vector<HRegion> toFlush = new Vector<HRegion>();
-          lock.obtainReadLock();
+          lock.readLock().lock();
           try {
             toFlush.addAll(regions.values());
-
           } finally {
-            lock.releaseReadLock();
+            lock.readLock().unlock();
           }
 
           // Flush them, if necessary
@@ -340,7 +346,6 @@ public class HRegionServer
     this.conf = conf;
     this.rand = new Random();
     this.regions = new TreeMap<Text, HRegion>();
-    this.lock = new HLocking();
     this.outboundMsgs = new Vector<HMsg>();
     this.scanners =
       Collections.synchronizedMap(new TreeMap<Text, HInternalScannerInterface>());
@@ -752,27 +757,26 @@ public class HRegionServer
   }
   
   private void openRegion(HRegionInfo regionInfo) throws IOException {
-    this.lock.obtainWriteLock();
+    this.lock.writeLock().lock();
     try {
       HRegion region =
         new HRegion(regionDir, log, fs, conf, regionInfo, null, oldlogfile);
       regions.put(region.getRegionName(), region);
-      reportOpen(region);
-      
+      reportOpen(region); 
     } finally {
-      this.lock.releaseWriteLock();
+      this.lock.writeLock().unlock();
     }
   }
 
   private void closeRegion(HRegionInfo info, boolean reportWhenCompleted)
       throws IOException {
     
-    this.lock.obtainWriteLock();
+    this.lock.writeLock().lock();
     HRegion region = null;
     try {
       region = regions.remove(info.regionName);
     } finally {
-      this.lock.releaseWriteLock();
+      this.lock.writeLock().unlock();
     }
       
     if(region != null) {
@@ -785,13 +789,12 @@ public class HRegionServer
   }
 
   private void closeAndDeleteRegion(HRegionInfo info) throws IOException {
-    this.lock.obtainWriteLock();
+    this.lock.writeLock().lock();
     HRegion region = null;
     try {
       region = regions.remove(info.regionName);
-  
     } finally {
-      this.lock.releaseWriteLock();
+      this.lock.writeLock().unlock();
     }
     if(region != null) {
       if(LOG.isDebugEnabled()) {
@@ -809,13 +812,12 @@ public class HRegionServer
   /** Called either when the master tells us to restart or from stop() */
   private void closeAllRegions() {
     Vector<HRegion> regionsToClose = new Vector<HRegion>();
-    this.lock.obtainWriteLock();
+    this.lock.writeLock().lock();
     try {
       regionsToClose.addAll(regions.values());
       regions.clear();
-      
     } finally {
-      this.lock.releaseWriteLock();
+      this.lock.writeLock().unlock();
     }
     for(Iterator<HRegion> it = regionsToClose.iterator(); it.hasNext(); ) {
       HRegion region = it.next();
@@ -842,7 +844,7 @@ public class HRegionServer
    ****************************************************************************/
 /*
   private void mergeRegions(Text regionNameA, Text regionNameB) throws IOException {
-    locking.obtainWriteLock();
+    locking.writeLock().lock();
     try {
       HRegion srcA = regions.remove(regionNameA);
       HRegion srcB = regions.remove(regionNameB);
@@ -854,7 +856,7 @@ public class HRegionServer
       reportOpen(newRegion);
       
     } finally {
-      locking.releaseWriteLock();
+      locking.writeLock().unlock();
     }
   }
 */
@@ -1016,13 +1018,12 @@ public class HRegionServer
 
   /** Private utility method for safely obtaining an HRegion handle. */
   private HRegion getRegion(Text regionName) throws NotServingRegionException {
-    this.lock.obtainReadLock();
+    this.lock.readLock().lock();
     HRegion region = null;
     try {
       region = regions.get(regionName);
-      
     } finally {
-      this.lock.releaseReadLock();
+      this.lock.readLock().unlock();
     }
 
     if(region == null) {
