@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.Vector;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,7 +64,7 @@ public class HStore {
   Integer compactLock = new Integer(0);
   Integer flushLock = new Integer(0);
 
-  HLocking lock = new HLocking();
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   TreeMap<Long, MapFile.Reader> maps = new TreeMap<Long, MapFile.Reader>();
   TreeMap<Long, HStoreFile> mapFiles = new TreeMap<Long, HStoreFile>();
@@ -238,7 +239,7 @@ public class HStore {
 
   /** Turn off all the MapFile readers */
   public void close() throws IOException {
-    this.lock.obtainWriteLock();
+    this.lock.writeLock().lock();
     LOG.info("closing HStore for " + this.regionName + "/" + this.colFamily);
     
     try {
@@ -252,7 +253,7 @@ public class HStore {
       LOG.info("HStore closed for " + this.regionName + "/" + this.colFamily);
       
     } finally {
-      this.lock.releaseWriteLock();
+      this.lock.writeLock().unlock();
     }
   }
 
@@ -324,7 +325,7 @@ public class HStore {
       // C. Finally, make the new MapFile available.
 
       if(addToAvailableMaps) {
-        this.lock.obtainWriteLock();
+        this.lock.writeLock().lock();
         
         try {
           maps.put(logCacheFlushId, new MapFile.Reader(fs, mapfile.toString(), conf));
@@ -335,7 +336,7 @@ public class HStore {
           }
         
         } finally {
-          this.lock.releaseWriteLock();
+          this.lock.writeLock().unlock();
         }
       }
       return getAllMapFiles();
@@ -343,12 +344,12 @@ public class HStore {
   }
 
   public Vector<HStoreFile> getAllMapFiles() {
-    this.lock.obtainReadLock();
+    this.lock.readLock().lock();
     try {
       return new Vector<HStoreFile>(mapFiles.values());
       
     } finally {
-      this.lock.releaseReadLock();
+      this.lock.readLock().unlock();
     }
   }
 
@@ -390,12 +391,12 @@ public class HStore {
         // Grab a list of files to compact.
         
         Vector<HStoreFile> toCompactFiles = null;
-        this.lock.obtainWriteLock();
+        this.lock.writeLock().lock();
         try {
           toCompactFiles = new Vector<HStoreFile>(mapFiles.values());
           
         } finally {
-          this.lock.releaseWriteLock();
+          this.lock.writeLock().unlock();
         }
 
         // Compute the max-sequenceID seen in any of the to-be-compacted TreeMaps
@@ -630,7 +631,7 @@ public class HStore {
 
     // 1. Acquiring the write-lock
 
-    this.lock.obtainWriteLock();
+    this.lock.writeLock().lock();
     Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, colFamily);
     try {
       Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
@@ -748,7 +749,7 @@ public class HStore {
       
       // 7. Releasing the write-lock
       
-      this.lock.releaseWriteLock();
+      this.lock.writeLock().unlock();
     }
   }
 
@@ -764,7 +765,7 @@ public class HStore {
    * The returned object should map column names to byte arrays (byte[]).
    */
   public void getFull(HStoreKey key, TreeMap<Text, BytesWritable> results) throws IOException {
-    this.lock.obtainReadLock();
+    this.lock.readLock().lock();
     try {
       MapFile.Reader[] maparray 
         = maps.values().toArray(new MapFile.Reader[maps.size()]);
@@ -793,7 +794,7 @@ public class HStore {
       }
       
     } finally {
-      this.lock.releaseReadLock();
+      this.lock.readLock().unlock();
     }
   }
 
@@ -809,7 +810,7 @@ public class HStore {
     }
     
     Vector<BytesWritable> results = new Vector<BytesWritable>();
-    this.lock.obtainReadLock();
+    this.lock.readLock().lock();
     try {
       MapFile.Reader[] maparray 
         = maps.values().toArray(new MapFile.Reader[maps.size()]);
@@ -850,7 +851,7 @@ public class HStore {
       }
       
     } finally {
-      this.lock.releaseReadLock();
+      this.lock.readLock().unlock();
     }
   }
   
@@ -866,7 +867,7 @@ public class HStore {
       return maxSize;
     }
     
-    this.lock.obtainReadLock();
+    this.lock.readLock().lock();
     try {
       long mapIndex = 0L;
 
@@ -893,7 +894,7 @@ public class HStore {
       LOG.warn(e);
 
     } finally {
-      this.lock.releaseReadLock();
+      this.lock.readLock().unlock();
     }
     return maxSize;
   }
@@ -902,12 +903,12 @@ public class HStore {
    * @return    Returns the number of map files currently in use
    */
   public int getNMaps() {
-    this.lock.obtainReadLock();
+    this.lock.readLock().lock();
     try {
       return maps.size();
       
     } finally {
-      this.lock.releaseReadLock();
+      this.lock.readLock().unlock();
     }
   }
   
@@ -949,7 +950,7 @@ public class HStore {
       
       super(timestamp, targetCols);
 
-      lock.obtainReadLock();
+      lock.readLock().lock();
       try {
         this.readers = new MapFile.Reader[mapFiles.size()];
         
@@ -1064,7 +1065,7 @@ public class HStore {
           }
           
         } finally {
-          lock.releaseReadLock();
+          lock.readLock().unlock();
           scannerClosed = true;
         }
       }
