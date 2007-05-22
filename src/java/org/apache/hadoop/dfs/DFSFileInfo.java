@@ -24,7 +24,10 @@ import java.io.*;
 
 /******************************************************
  * DFSFileInfo tracks info about remote files, including
- * name, size, etc.  
+ * name, size, etc.
+ * 
+ * Includes partial information about its blocks.
+ * Block locations are sorted by the distance to the current client.
  * 
  * @author Mike Cafarella
  ******************************************************/
@@ -37,13 +40,12 @@ class DFSFileInfo implements Writable {
        });
   }
 
-  UTF8 path;
+  Path path;
   long len;
-  long contentsLen;
   boolean isDir;
   short blockReplication;
   long blockSize;
-
+  
   /**
    */
   public DFSFileInfo() {
@@ -53,13 +55,9 @@ class DFSFileInfo implements Writable {
    * Create DFSFileInfo by file INode 
    */
   public DFSFileInfo(FSDirectory.INode node) {
-    this.path = new UTF8(node.computeName());
+    this.path = new Path(node.computeName());
     this.isDir = node.isDir();
-    if (isDir) {
-      this.len = 0;
-      this.contentsLen = node.computeContentsLength();
-    } else 
-      this.len = this.contentsLen = node.computeFileLength();
+    this.len = isDir ? node.computeContentsLength() : node.computeFileLength();
     this.blockReplication = node.getReplication();
     blockSize = node.getBlockSize();
   }
@@ -73,13 +71,13 @@ class DFSFileInfo implements Writable {
   /**
    */
   public String getName() {
-    return new Path(path.toString()).getName();
+    return path.getName();
   }
-
+  
   /**
    */
   public String getParent() {
-    return new Path(path.toString()).getParent().toString();
+    return path.getParent().toString();
   }
 
   /**
@@ -89,9 +87,11 @@ class DFSFileInfo implements Writable {
   }
 
   /**
+   * @deprecated use {@link #getLen()} instead
    */
   public long getContentsLen() {
-    return contentsLen;
+    assert isDir() : "Must be a directory";
+    return len;
   }
 
   /**
@@ -118,22 +118,19 @@ class DFSFileInfo implements Writable {
   // Writable
   //////////////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    path.write(out);
+    Text.writeString(out, getPath());
     out.writeLong(len);
-    out.writeLong(contentsLen);
     out.writeBoolean(isDir);
     out.writeShort(blockReplication);
     out.writeLong(blockSize);
   }
-
+  
   public void readFields(DataInput in) throws IOException {
-    this.path = new UTF8();
-    this.path.readFields(in);
+    String strPath = Text.readString(in);
+    this.path = new Path(strPath);
     this.len = in.readLong();
-    this.contentsLen = in.readLong();
     this.isDir = in.readBoolean();
     this.blockReplication = in.readShort();
     blockSize = in.readLong();
   }
 }
-

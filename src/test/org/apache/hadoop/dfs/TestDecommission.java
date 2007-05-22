@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import junit.framework.TestCase;
 import java.io.*;
+import java.util.Collection;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -118,11 +119,11 @@ public class TestDecommission extends TestCase {
         
     DFSClient.DFSDataInputStream dis = (DFSClient.DFSDataInputStream) 
       ((DistributedFileSystem)fileSys).getRawFileSystem().open(name);
-    DatanodeInfo[][] dinfo = dis.getDataNodes();
+    Collection<LocatedBlock> dinfo = dis.getAllBlocks();
 
-    for (int blk = 0; blk < dinfo.length; blk++) { // for each block
+    for (LocatedBlock blk : dinfo) { // for each block
       int hasdown = 0;
-      DatanodeInfo[] nodes = dinfo[blk];
+      DatanodeInfo[] nodes = blk.getLocations();
       for (int j = 0; j < nodes.length; j++) {     // for each replica
         if (nodes[j].getName().equals(downnode)) {
           hasdown++;

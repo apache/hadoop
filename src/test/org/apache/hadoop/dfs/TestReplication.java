@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.net.DNS;
 
 /**
  * This class tests the replication of a DFS file.
@@ -69,13 +68,13 @@ public class TestReplication extends TestCase {
                                                             DataNode.createSocketAddr(conf.get("fs.default.name")), 
                                                             conf);
       
-    LocatedBlock[] locations;
+    LocatedBlocks locations;
     boolean isReplicationDone;
     do {
-      locations = namenode.open(name.toString());
+      locations = namenode.getBlockLocations(name.toString(),0,Long.MAX_VALUE);
       isReplicationDone = true;
-      for (int idx = 0; idx < locations.length; idx++) {
-        DatanodeInfo[] datanodes = locations[idx].getLocations();
+      for (LocatedBlock blk : locations.getLocatedBlocks()) {
+        DatanodeInfo[] datanodes = blk.getLocations();
         if (Math.min(numDatanodes, repl) != datanodes.length) {
           isReplicationDone=false;
           LOG.warn("File has "+datanodes.length+" replicas, expecting "
@@ -91,8 +90,8 @@ public class TestReplication extends TestCase {
     } while(!isReplicationDone);
       
     boolean isOnSameRack = true, isNotOnSameRack = true;
-    for (int idx = 0; idx < locations.length; idx++) {
-      DatanodeInfo[] datanodes = locations[idx].getLocations();
+    for (LocatedBlock blk : locations.getLocatedBlocks()) {
+      DatanodeInfo[] datanodes = blk.getLocations();
       if (datanodes.length <= 1) break;
       if (datanodes.length == 2) {
         isNotOnSameRack = !(datanodes[0].getNetworkLocation().equals(

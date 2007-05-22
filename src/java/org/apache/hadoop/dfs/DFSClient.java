@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit;
  ********************************************************/
 class DFSClient implements FSConstants {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.DFSClient");
-  static int MAX_BLOCK_ACQUIRE_FAILURES = 3;
+  static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   private static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
   ClientProtocol namenode;
@@ -224,12 +224,36 @@ class DFSClient implements FSConstants {
   }
     
   /**
-   * Get hints about the location of the indicated block(s).  The
-   * array returned is as long as there are blocks in the indicated
-   * range.  Each block may have one or more locations.
+   * Get hints about the location of the indicated block(s).
+   * 
+   * getHints() returns a list of hostnames that store data for
+   * a specific file region.  It returns a set of hostnames for 
+   * every block within the indicated region.
+   *
+   * This function is very useful when writing code that considers
+   * data-placement when performing operations.  For example, the
+   * MapReduce system tries to schedule tasks on the same machines
+   * as the data-block the task processes. 
    */
-  public String[][] getHints(UTF8 src, long start, long len) throws IOException {
-    return namenode.getHints(src.toString(), start, len);
+  public String[][] getHints(String src, long start, long length) 
+    throws IOException {
+    LocatedBlocks blocks = namenode.getBlockLocations(src, start, length);
+    if (blocks == null) {
+      return new String[0][];
+    }
+    int nrBlocks = blocks.locatedBlockCount();
+    String[][] hints = new String[nrBlocks][];
+    int idx = 0;
+    for (LocatedBlock blk : blocks.getLocatedBlocks()) {
+      assert idx < nrBlocks : "Incorrect index";
+      DatanodeInfo[] locations = blk.getLocations();
+      hints[idx] = new String[locations.length];
+      for (int hCnt = 0; hCnt < locations.length; hCnt++) {
+        hints[idx][hCnt] = locations[hCnt].getHostName();
+      }
+      idx++;
+    }
+    return hints;
   }
 
   /**
@@ -413,10 +437,10 @@ class DFSClient implements FSConstants {
 
   /**
    * Dumps DFS data structures into specified file.
-   * See {@link ClientProtocol#metaSave()} 
+   * See {@link ClientProtocol#metaSave(String)} 
    * for more details.
    * 
-   * @see ClientProtocol#metaSave()
+   * @see ClientProtocol#metaSave(String)
    */
   public void metaSave(String pathname) throws IOException {
     namenode.metaSave(pathname);
@@ -526,23 +550,22 @@ class DFSClient implements FSConstants {
       this.addr = addr;
     }
   }
-        
+
   /****************************************************************
    * DFSInputStream provides bytes from a named file.  It handles 
    * negotiation of the namenode and various datanodes as necessary.
    ****************************************************************/
   class DFSInputStream extends FSInputStream {
     private Socket s = null;
-    boolean closed = false;
+    private boolean closed = false;
 
     private String src;
+    private long prefetchSize = 10 * defaultBlockSize;
     private DataInputStream blockStream;
-    private Block blocks[] = null;
-    private DatanodeInfo nodes[][] = null;
+    private LocatedBlocks locatedBlocks = null;
     private DatanodeInfo currentNode = null;
     private Block currentBlock = null;
     private long pos = 0;
-    private long filelen = 0;
     private long blockEnd = -1;
     private TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
         
@@ -550,41 +573,32 @@ class DFSClient implements FSConstants {
      */
     public DFSInputStream(String src) throws IOException {
       this.src = src;
+      prefetchSize = conf.getLong("dfs.read.prefetch.size", prefetchSize);
       openInfo();
       this.blockStream = null;
-      for (int i = 0; i < blocks.length; i++) {
-        this.filelen += blocks[i].getNumBytes();
-      }
     }
 
     /**
      * Grab the open-file info from namenode
      */
     synchronized void openInfo() throws IOException {
-      Block oldBlocks[] = this.blocks;
+      LocatedBlocks newInfo = namenode.open(src, 0, prefetchSize);
 
-      LocatedBlock results[] = namenode.open(src);            
-      Vector<Block> blockV = new Vector<Block>();
-      Vector<DatanodeInfo[]> nodeV = new Vector<DatanodeInfo[]>();
-      for (int i = 0; i < results.length; i++) {
-        blockV.add(results[i].getBlock());
-        nodeV.add(results[i].getLocations());
-      }
-      Block[] newBlocks = blockV.toArray(new Block[blockV.size()]);
-
-      if (oldBlocks != null) {
-        for (int i = 0; i < oldBlocks.length; i++) {
-          if (!oldBlocks[i].equals(newBlocks[i])) {
+      if (locatedBlocks != null) {
+        Iterator<LocatedBlock> oldIter = locatedBlocks.getLocatedBlocks().iterator();
+        Iterator<LocatedBlock> newIter = newInfo.getLocatedBlocks().iterator();
+        while (oldIter.hasNext() && newIter.hasNext()) {
+          if (! oldIter.next().getBlock().equals(newIter.next().getBlock())) {
             throw new IOException("Blocklist for " + src + " has changed!");
           }
         }
-        if (oldBlocks.length != newBlocks.length) {
-          throw new IOException("Blocklist for " + src + " now has different length");
-        }
       }
-      this.blocks = newBlocks;
-      this.nodes = nodeV.toArray(new DatanodeInfo[nodeV.size()][]);
+      this.locatedBlocks = newInfo;
       this.currentNode = null;
+    }
+    
+    public long getFileLength() {
+      return (locatedBlocks == null) ? 0 : locatedBlocks.getFileLength();
     }
 
     /**
@@ -601,13 +615,79 @@ class DFSClient implements FSConstants {
       return currentBlock;
     }
 
+    /**
+     * Return collection of blocks that has already been located.
+     */
+    synchronized List<LocatedBlock> getAllBlocks() throws IOException {
+      return getBlockRange(0, this.getFileLength());
+    }
 
     /**
-     * Used by the automatic tests to detemine blocks locations of a
-     * file
+     * Get block at the specified position.
+     * Fetch it from the namenode if not cached.
+     * 
+     * @param offset
+     * @return
+     * @throws IOException
      */
-    synchronized DatanodeInfo[][] getDataNodes() {
-      return nodes;
+    private LocatedBlock getBlockAt(long offset) throws IOException {
+      assert (locatedBlocks != null) : "locatedBlocks is null";
+      // search cached blocks first
+      int targetBlockIdx = locatedBlocks.findBlock(offset);
+      if (targetBlockIdx < 0) { // block is not cached
+        targetBlockIdx = LocatedBlocks.getInsertIndex(targetBlockIdx);
+        // fetch more blocks
+        LocatedBlocks newBlocks;
+        newBlocks = namenode.getBlockLocations(src, offset, prefetchSize);
+        assert (newBlocks != null) : "Could not find target position " + offset;
+        locatedBlocks.insertRange(targetBlockIdx, newBlocks.getLocatedBlocks());
+      }
+      LocatedBlock blk = locatedBlocks.get(targetBlockIdx);
+      // update current position
+      this.pos = offset;
+      this.blockEnd = blk.getStartOffset() + blk.getBlockSize() - 1;
+      this.currentBlock = blk.getBlock();
+      return blk;
+    }
+
+    /**
+     * Get blocks in the specified range.
+     * Fetch them from the namenode if not cached.
+     * 
+     * @param offset
+     * @param length
+     * @return
+     * @throws IOException
+     */
+    private List<LocatedBlock> getBlockRange(long offset, long length) 
+                                                        throws IOException {
+      assert (locatedBlocks != null) : "locatedBlocks is null";
+      List<LocatedBlock> blockRange = new ArrayList<LocatedBlock>();
+      // search cached blocks first
+      int blockIdx = locatedBlocks.findBlock(offset);
+      if (blockIdx < 0) { // block is not cached
+        blockIdx = LocatedBlocks.getInsertIndex(blockIdx);
+      }
+      long remaining = length;
+      long curOff = offset;
+      while(remaining > 0) {
+        LocatedBlock blk = null;
+        if(blockIdx < locatedBlocks.locatedBlockCount())
+          blk = locatedBlocks.get(blockIdx);
+        if (blk == null || curOff < blk.getStartOffset()) {
+          LocatedBlocks newBlocks;
+          newBlocks = namenode.getBlockLocations(src, curOff, remaining);
+          locatedBlocks.insertRange(blockIdx, newBlocks.getLocatedBlocks());
+          continue;
+        }
+        assert curOff >= blk.getStartOffset() : "Block not found";
+        blockRange.add(blk);
+        long bytesRead = blk.getStartOffset() + blk.getBlockSize() - curOff;
+        remaining -= bytesRead;
+        curOff += bytesRead;
+        blockIdx++;
+      }
+      return blockRange;
     }
 
     /**
@@ -615,7 +695,7 @@ class DFSClient implements FSConstants {
      * We get block ID and the IDs of the destinations at startup, from the namenode.
      */
     private synchronized DatanodeInfo blockSeekTo(long target) throws IOException {
-      if (target >= filelen) {
+      if (target >= getFileLength()) {
         throw new IOException("Attempted to read past end of file");
       }
 
@@ -627,24 +707,9 @@ class DFSClient implements FSConstants {
       //
       // Compute desired block
       //
-      int targetBlock = -1;
-      long targetBlockStart = 0;
-      long targetBlockEnd = 0;
-      for (int i = 0; i < blocks.length; i++) {
-        long blocklen = blocks[i].getNumBytes();
-        targetBlockEnd = targetBlockStart + blocklen - 1;
-
-        if (target >= targetBlockStart && target <= targetBlockEnd) {
-          targetBlock = i;
-          break;
-        } else {
-          targetBlockStart = targetBlockEnd + 1;                    
-        }
-      }
-      if (targetBlock < 0) {
-        throw new IOException("Impossible situation: could not find target position " + target);
-      }
-      long offsetIntoBlock = target - targetBlockStart;
+      LocatedBlock targetBlock = getBlockAt(target);
+      assert (target==this.pos) : "Wrong postion " + pos + " expect " + target;
+      long offsetIntoBlock = target - targetBlock.getStartOffset();
 
       //
       // Connect to best DataNode for desired Block, with potential offset
@@ -663,9 +728,10 @@ class DFSClient implements FSConstants {
           //
           // Xmit header info to datanode
           //
+          Block block = targetBlock.getBlock();
           DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
           out.write(OP_READSKIP_BLOCK);
-          blocks[targetBlock].write(out);
+          block.write(out);
           out.writeLong(offsetIntoBlock);
           out.flush();
 
@@ -675,16 +741,13 @@ class DFSClient implements FSConstants {
           DataInputStream in = new DataInputStream(new BufferedInputStream(s.getInputStream()));
           long curBlockSize = in.readLong();
           long amtSkipped = in.readLong();
-          if (curBlockSize != blocks[targetBlock].len) {
-            throw new IOException("Recorded block size is " + blocks[targetBlock].len + ", but datanode reports size of " + curBlockSize);
+          if (curBlockSize != block.getNumBytes()) {
+            throw new IOException("Recorded block size is " + block.getNumBytes() + ", but datanode reports size of " + curBlockSize);
           }
           if (amtSkipped != offsetIntoBlock) {
             throw new IOException("Asked for offset of " + offsetIntoBlock + ", but only received offset of " + amtSkipped);
           }
 
-          this.pos = target;
-          this.blockEnd = targetBlockEnd;
-          this.currentBlock = blocks[targetBlock];
           this.blockStream = in;
           return chosenNode;
         } catch (IOException ex) {
@@ -731,7 +794,7 @@ class DFSClient implements FSConstants {
         throw new IOException("Stream closed");
       }
       int result = -1;
-      if (pos < filelen) {
+      if (pos < getFileLength()) {
         if (pos > blockEnd) {
           currentNode = blockSeekTo(pos);
         }
@@ -751,7 +814,7 @@ class DFSClient implements FSConstants {
       if (closed) {
         throw new IOException("Stream closed");
       }
-      if (pos < filelen) {
+      if (pos < getFileLength()) {
         int retries = 2;
         while (retries > 0) {
           try {
@@ -780,24 +843,25 @@ class DFSClient implements FSConstants {
     }
 
         
-    private DNAddrPair chooseDataNode(int blockId)
+    private DNAddrPair chooseDataNode(LocatedBlock block)
       throws IOException {
       int failures = 0;
       while (true) {
+        DatanodeInfo[] nodes = block.getLocations();
         try {
-          DatanodeInfo chosenNode = bestNode(nodes[blockId], deadNodes);
+          DatanodeInfo chosenNode = bestNode(nodes, deadNodes);
           InetSocketAddress targetAddr = DataNode.createSocketAddr(chosenNode.getName());
           return new DNAddrPair(chosenNode, targetAddr);
         } catch (IOException ie) {
-          String blockInfo =
-            blocks[blockId]+" file="+src;
+          String blockInfo = block.getBlock() + " file=" + src;
           if (failures >= MAX_BLOCK_ACQUIRE_FAILURES) {
             throw new IOException("Could not obtain block: " + blockInfo);
           }
-          if (nodes[blockId] == null || nodes[blockId].length == 0) {
+          
+          if (nodes == null || nodes.length == 0) {
             LOG.info("No node available for block: " + blockInfo);
           }
-          LOG.info("Could not obtain block " + blockId + " from any node:  " + ie);
+          LOG.info("Could not obtain block " + block.getBlock() + " from any node:  " + ie);
           try {
             Thread.sleep(3000);
           } catch (InterruptedException iex) {
@@ -810,14 +874,14 @@ class DFSClient implements FSConstants {
       }
     } 
         
-    private void fetchBlockByteRange(int blockId, long start,
+    private void fetchBlockByteRange(LocatedBlock block, long start,
                                      long end, byte[] buf, int offset) throws IOException {
       //
       // Connect to best DataNode for desired Block, with potential offset
       //
       Socket dn = null;
       while (dn == null) {
-        DNAddrPair retval = chooseDataNode(blockId);
+        DNAddrPair retval = chooseDataNode(block);
         DatanodeInfo chosenNode = retval.info;
         InetSocketAddress targetAddr = retval.addr;
             
@@ -831,7 +895,7 @@ class DFSClient implements FSConstants {
           //
           DataOutputStream out = new DataOutputStream(new BufferedOutputStream(dn.getOutputStream()));
           out.write(OP_READ_RANGE_BLOCK);
-          blocks[blockId].write(out);
+          block.getBlock().write(out);
           out.writeLong(start);
           out.writeLong(end);
           out.flush();
@@ -843,9 +907,10 @@ class DFSClient implements FSConstants {
           long curBlockSize = in.readLong();
           long actualStart = in.readLong();
           long actualEnd = in.readLong();
-          if (curBlockSize != blocks[blockId].len) {
+          if (curBlockSize != block.getBlockSize()) {
             throw new IOException("Recorded block size is " +
-                                  blocks[blockId].len + ", but datanode reports size of " +
+                                  block.getBlockSize() + 
+                                  ", but datanode reports size of " +
                                   curBlockSize);
           }
           if ((actualStart != start) || (actualEnd != end)) {
@@ -854,6 +919,9 @@ class DFSClient implements FSConstants {
                                   "-" + actualEnd);
           }
           int nread = in.read(buf, offset, (int)(end - start + 1));
+          assert nread == (int)(end - start + 1) : 
+            "Incorrect number of bytes read " + nread
+            + ". Expacted " + (int)(end - start + 1);
         } catch (IOException ex) {
           // Put chosen node into dead list, continue
           LOG.debug("Failed to connect to " + targetAddr + ":" 
@@ -869,44 +937,47 @@ class DFSClient implements FSConstants {
         }
       }
     }
-        
-    public int read(long position, byte[] buf, int off, int len)
+
+    /**
+     * Read bytes starting from the specified position.
+     * 
+     * @param position start read from this position
+     * @param buffer read buffer
+     * @param offset offset into buffer
+     * @param length number of bytes to read
+     * 
+     * @return actual number of bytes read
+     */
+    public int read(long position, byte[] buffer, int offset, int length)
       throws IOException {
       // sanity checks
       checkOpen();
       if (closed) {
         throw new IOException("Stream closed");
       }
+      long filelen = getFileLength();
       if ((position < 0) || (position > filelen)) {
         return -1;
       }
-      int realLen = len;
-      if ((position + len) > filelen) {
+      int realLen = length;
+      if ((position + length) > filelen) {
         realLen = (int)(filelen - position);
       }
+      
       // determine the block and byte range within the block
       // corresponding to position and realLen
-      int targetBlock = -1;
-      long targetStart = 0;
-      long targetEnd = 0;
-      for (int idx = 0; idx < blocks.length; idx++) {
-        long blocklen = blocks[idx].getNumBytes();
-        targetEnd = targetStart + blocklen - 1;
-        if (position >= targetStart && position <= targetEnd) {
-          targetBlock = idx;
-          targetStart = position - targetStart;
-          targetEnd = Math.min(blocklen, targetStart + realLen) - 1;
-          realLen = (int)(targetEnd - targetStart + 1);
-          break;
-        }
-        targetStart += blocklen;
+      List<LocatedBlock> blockRange = getBlockRange(position, realLen);
+      int remaining = realLen;
+      for (LocatedBlock blk : blockRange) {
+        long targetStart = position - blk.getStartOffset();
+        long bytesToRead = Math.min(remaining, blk.getBlockSize() - targetStart);
+        fetchBlockByteRange(blk, targetStart, 
+                            targetStart + bytesToRead - 1, buffer, offset);
+        remaining -= bytesToRead;
+        position += bytesToRead;
+        offset += bytesToRead;
       }
-      if (targetBlock < 0) {
-        throw new IOException(
-                              "Impossible situation: could not find target position "+
-                              position);
-      }
-      fetchBlockByteRange(targetBlock, targetStart, targetEnd, buf, off);
+      assert remaining == 0 : "Wrong number of bytes read.";
       return realLen;
     }
         
@@ -914,7 +985,7 @@ class DFSClient implements FSConstants {
      * Seek to a new arbitrary location
      */
     public synchronized void seek(long targetPos) throws IOException {
-      if (targetPos > filelen) {
+      if (targetPos > getFileLength()) {
         throw new IOException("Cannot seek after EOF");
       }
       boolean done = false;
@@ -974,7 +1045,7 @@ class DFSClient implements FSConstants {
       if (closed) {
         throw new IOException("Stream closed");
       }
-      return (int) (filelen - pos);
+      return (int) (getFileLength() - pos);
     }
 
     /**
@@ -1015,11 +1086,10 @@ class DFSClient implements FSConstants {
     }
 
     /**
-     * Used by the automatic tests to detemine blocks locations of a
-     * file
+     * Return collection of blocks that has already been located.
      */
-    synchronized DatanodeInfo[][] getDataNodes() {
-      return ((DFSInputStream)inStream).getDataNodes();
+    synchronized List<LocatedBlock> getAllBlocks() throws IOException {
+      return ((DFSInputStream)inStream).getAllBlocks();
     }
 
   }

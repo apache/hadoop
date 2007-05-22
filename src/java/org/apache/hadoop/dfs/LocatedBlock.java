@@ -37,20 +37,27 @@ class LocatedBlock implements Writable {
        });
   }
 
-  Block b;
-  DatanodeInfo locs[];
+  private Block b;
+  private long offset;  // offset of the first byte of the block in the file
+  private DatanodeInfo[] locs;
 
   /**
    */
   public LocatedBlock() {
-    this.b = new Block();
-    this.locs = new DatanodeInfo[0];
+    this(new Block(), new DatanodeInfo[0], 0L);
   }
 
   /**
    */
   public LocatedBlock(Block b, DatanodeInfo[] locs) {
+    this(b, locs, -1); // startOffset is unknown
+  }
+
+  /**
+   */
+  public LocatedBlock(Block b, DatanodeInfo[] locs, long startOffset) {
     this.b = b;
+    this.offset = startOffset;
     if (locs==null) {
       this.locs = new DatanodeInfo[0];
     } else {
@@ -69,11 +76,24 @@ class LocatedBlock implements Writable {
   DatanodeInfo[] getLocations() {
     return locs;
   }
+  
+  long getStartOffset() {
+    return offset;
+  }
+  
+  long getBlockSize() {
+    return b.getNumBytes();
+  }
+
+  void setStartOffset(long value) {
+    this.offset = value;
+  }
 
   ///////////////////////////////////////////
   // Writable
   ///////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
+    out.writeLong(offset);
     b.write(out);
     out.writeInt(locs.length);
     for (int i = 0; i < locs.length; i++) {
@@ -82,6 +102,7 @@ class LocatedBlock implements Writable {
   }
 
   public void readFields(DataInput in) throws IOException {
+    offset = in.readLong();
     this.b = new Block();
     b.readFields(in);
     int count = in.readInt();

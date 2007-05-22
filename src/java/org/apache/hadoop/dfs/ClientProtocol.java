@@ -29,24 +29,56 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
-  /*
-   * 11: metasave() added and reportWrittenBlock() removed.
+  /**
+   * Compared to the previous version the following changes have been introduced:
+   * 12: open() prototype changed; 
+   *     getBlockLocations() added; 
+   *     DFSFileInfo format changed;
+   *     getHints() removed.
    */
-  public static final long versionID = 11L;  
+  public static final long versionID = 12L;
   
   ///////////////////////////////////////
   // File contents
   ///////////////////////////////////////
   /**
-   * Open an existing file, at the given name.  Returns block 
-   * and DataNode info.  DataNodes for each block are sorted by
+   * Open an existing file and get block locations within the specified range. 
+   * Return {@link LocatedBlocks} which contains
+   * file length, blocks and their locations.
+   * DataNode locations for each block are sorted by
    * the distance to the client's address.
+   * 
    * The client will then have to contact
-   * each indicated DataNode to obtain the actual data.  There
+   * one of the indicated DataNodes to obtain the actual data.  There
    * is no need to call close() or any other function after
    * calling open().
+   * 
+   * @param src file name
+   * @param offset range start offset
+   * @param length range length
+   * @return file length and array of blocks with their locations
+   * @throws IOException
    */
-  public LocatedBlock[] open(String src) throws IOException;
+  public LocatedBlocks open(String src, 
+                            long offset,
+                            long length) throws IOException;
+  
+  /**
+   * Get locations of the blocks of the specified file within the specified range.
+   * DataNode locations for each block are sorted by
+   * the proximity to the client.
+   * 
+   * @see #open(String, long, long)
+   * 
+   * @param src file name
+   * @param offset range start offset
+   * @param length range length
+   * @return file length and array of blocks with their locations
+   * @throws IOException
+   */
+  public LocatedBlocks  getBlockLocations(String src,
+                                          long offset,
+                                          long length) throws IOException;
 
   /**
    * Create a new file.  Get back block and datanode info,
@@ -181,17 +213,6 @@ interface ClientProtocol extends VersionedProtocol {
   // System issues and management
   ///////////////////////////////////////
   /**
-   * getHints() returns a list of hostnames that store data for
-   * a specific file region.  It returns a set of hostnames for 
-   * every block within the indicated region.
-   *
-   * This function is very useful when writing code that considers
-   * data-placement when performing operations.  For example, the
-   * MapReduce system tries to schedule tasks on the same machines
-   * as the data-block the task processes. 
-   */
-  public String[][] getHints(String src, long start, long len) throws IOException;
-  /**
    * obtainLock() is used for lock managemnet.  It returns true if
    * the lock has been seized correctly.  It returns false if the
    * lock could not be obtained, and the client should try again.
@@ -308,7 +329,6 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Tells the namenode to reread the hosts and exclude files. 
-   * @return True if the call was successful, false otherwise.
    * @throws IOException
    */
   public void refreshNodes() throws IOException;
@@ -325,7 +345,6 @@ interface ClientProtocol extends VersionedProtocol {
    * Closes the current edit log and opens a new one. The 
    * call fails if there are already two or more edits log files or
    * if the file system is in SafeMode.
-   * @return True if the call was successful, false otherwise.
    * @throws IOException
    */
   public void rollEditLog() throws IOException;
@@ -334,7 +353,6 @@ interface ClientProtocol extends VersionedProtocol {
    * Rolls the fsImage log. It removes the old fsImage, copies the
    * new image to fsImage, removes the old edits and renames edits.new 
    * to edits. The call fails if any of the four files are missing.
-   * @return True if the call was successful, false otherwise.
    * @throws IOException
    */
   public void rollFsImage() throws IOException;

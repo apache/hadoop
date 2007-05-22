@@ -27,6 +27,7 @@ import java.util.StringTokenizer;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.conf.*;
@@ -361,7 +362,7 @@ public class TestDFSIO extends TestCase {
     
       analyzeResult(fs, testType, execTime, resFileName);
     } catch(Exception e) {
-      System.err.print(e.getLocalizedMessage());
+      System.err.print(StringUtils.stringifyException(e));
       System.exit(-1);
     }
   }

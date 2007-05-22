@@ -84,4 +84,12 @@ class FileUnderConstruction {
     }
     return ((ArrayList<Block>)blocks).get(blocks.size() - 2);
   }
+  
+  long computeFileLength() {
+    long total = 0;
+    for (Block blk : blocks) {
+      total += blk.getNumBytes();
+    }
+    return total;
+  }
 }

@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.dfs;
 
-import javax.swing.filechooser.FileSystemView;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -40,7 +38,7 @@ public class TestPread extends TestCase {
     // create and write a file that contains three blocks of data
     DataOutputStream stm = fileSys.create(name, true, 4096, (short)1,
                                           (long)blockSize);
-    byte[] buffer = new byte[(int)(3*blockSize)];
+    byte[] buffer = new byte[(int)(12*blockSize)];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
     stm.write(buffer);
@@ -49,7 +47,7 @@ public class TestPread extends TestCase {
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      this.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
+      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
                         expected[from+idx]+" actual "+actual[idx],
                         actual[idx], expected[from+idx]);
       actual[idx] = 0;
@@ -67,7 +65,7 @@ public class TestPread extends TestCase {
   }
   private void pReadFile(FileSystem fileSys, Path name) throws IOException {
     FSDataInputStream stm = fileSys.open(name);
-    byte[] expected = new byte[(int)(3*blockSize)];
+    byte[] expected = new byte[(int)(12*blockSize)];
     Random rand = new Random(seed);
     rand.nextBytes(expected);
     // do a sanity check. Read first 4K bytes
@@ -91,18 +89,35 @@ public class TestPread extends TestCase {
     actual = new byte[(int)(blockSize+4096)];
     stm.readFully(blockSize - 2048, actual);
     checkAndEraseData(actual, (int)(blockSize-2048), expected, "Pread Test 4");
+    // now see if we can cross two block boundaries that are not cached
+    // read blockSize + 4K bytes from 10*blockSize - 2K offset
+    actual = new byte[(int)(blockSize+4096)];
+    stm.readFully(10*blockSize - 2048, actual);
+    checkAndEraseData(actual, (int)(10*blockSize-2048), expected, "Pread Test 5");
     // now check that even after all these preads, we can still read
     // bytes 8K-12K
     actual = new byte[4096];
     stm.readFully(actual);
-    checkAndEraseData(actual, 8192, expected, "Pread Test 5");
-    // all done
+    checkAndEraseData(actual, 8192, expected, "Pread Test 6");
+    // done
+    stm.close();
+    // check block location caching
+    stm = fileSys.open(name);
+    stm.readFully(1, actual, 0, 4096);
+    stm.readFully(4*blockSize, actual, 0, 4096);
+    stm.readFully(7*blockSize, actual, 0, 4096);
+    actual = new byte[3*4096];
+    stm.readFully(0*blockSize, actual, 0, 3*4096);
+    checkAndEraseData(actual, 0, expected, "Pread Test 7");
+    actual = new byte[8*4096];
+    stm.readFully(3*blockSize, actual, 0, 8*4096);
+    checkAndEraseData(actual, 3*blockSize, expected, "Pread Test 8");
     stm.close();
   }
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
-    fileSys.delete(name);
+    assertTrue(fileSys.delete(name));
     assertTrue(!fileSys.exists(name));
   }
   
@@ -111,6 +126,8 @@ public class TestPread extends TestCase {
    */
   public void testPreadDFS() throws IOException {
     Configuration conf = new Configuration();
+    conf.setLong("dfs.block.size", 4096);
+    conf.setLong("dfs.read.prefetch.size", 4096);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
@@ -138,5 +155,9 @@ public class TestPread extends TestCase {
     } finally {
       fileSys.close();
     }
+  }
+
+  public static void main(String[] args) throws Exception {
+    new TestPread().testPreadDFS();
   }
 }

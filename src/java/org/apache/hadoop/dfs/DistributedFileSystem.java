@@ -106,7 +106,14 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       workingDir = makeAbsolute(dir);
     }
     
+    /**
+     * @deprecated use {@link #getPathName(Path)} instead.
+     */
     private UTF8 getPath(Path file) {
+      return new UTF8(getPathName(file));
+    }
+
+    private String getPathName(Path file) {
       checkPath(file);
       String result = makeAbsolute(file).toUri().getPath();
       if (!FSNamesystem.isValidName(result)) {
@@ -114,11 +121,11 @@ public class DistributedFileSystem extends ChecksumFileSystem {
                                            file +
                                            " is not a valid DFS filename.");
       }
-      return new UTF8(result);
+      return result;
     }
 
     public String[][] getFileCacheHints(Path f, long start, long len) throws IOException {
-      return dfs.getHints(getPath(f), start, len);
+      return dfs.getHints(getPathName(f), start, len);
     }
 
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
@@ -192,7 +199,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       }
 
       DFSFileInfo info[] = dfs.listPaths(getPath(f));
-      return (info == null) ? 0 : info[0].getContentsLen();
+      return (info == null) ? 0 : info[0].getLen();
     }
 
     public short getReplication(Path f) throws IOException {

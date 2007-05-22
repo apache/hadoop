@@ -25,7 +25,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.zip.CRC32;
 import org.apache.hadoop.conf.Configuration;
@@ -191,8 +190,8 @@ public class UpgradeUtilities {
    *    the Datanode is started.
    * @param dir must be a directory. Subdirectories are ignored.
    *
-   * @throw IllegalArgumentException if specified directory is not a directory
-   * @throw IOException if an IOException occurs while reading the files
+   * @throws IllegalArgumentException if specified directory is not a directory
+   * @throws IOException if an IOException occurs while reading the files
    * @return the computed checksum value
    */
   public static long checksumContents(NodeType nodeType, File dir) throws IOException {
@@ -304,8 +303,8 @@ public class UpgradeUtilities {
    * Corrupt the specified file.  Some random bytes within the file
    * will be changed to some random values.
    *
-   * @throw IllegalArgumentException if the given file is not a file
-   * @throw IOException if an IOException occurs while reading or writing the file
+   * @throws IllegalArgumentException if the given file is not a file
+   * @throws IOException if an IOException occurs while reading or writing the file
    */
   public static void corruptFile(File file) throws IOException {
     if (!file.isFile()) {

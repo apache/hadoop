@@ -33,12 +33,15 @@
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
     UTF8 target = new UTF8(dir);
     if( !dfs.isDirectory(target) ) { // a file
-      LocatedBlock[] blocks = dfs.namenode.open(dir);
-      DatanodeInfo [] locations = blocks[0].getLocations();
+      List<LocatedBlock> blocks = 
+        dfs.namenode.getBlockLocations(dir, 0, 1).getLocatedBlocks();
+      
+      LocatedBlock firstBlock = blocks.get(0);
+      DatanodeInfo [] locations = firstBlock.getLocations();
       if (locations.length == 0) {
         out.print("Empty file");
       } else {
-        DatanodeInfo chosenNode = jspHelper.bestNode(blocks[0]);
+        DatanodeInfo chosenNode = jspHelper.bestNode(firstBlock);
         String fqdn = InetAddress.getByName(chosenNode.getHost()).
                                   getCanonicalHostName();
         String datanodeAddr = chosenNode.getName();
@@ -49,8 +52,8 @@
         String redirectLocation = "http://"+fqdn+":" +
                              chosenNode.getInfoPort() + 
                              "/browseBlock.jsp?blockId=" +
-                             blocks[0].getBlock().getBlockId() +
-                             "&blockSize=" + blocks[0].getBlock().getNumBytes() +
+                             firstBlock.getBlock().getBlockId() +
+                             "&blockSize=" + firstBlock.getBlock().getNumBytes() +
                              "&filename=" + URLEncoder.encode(dir, "UTF-8") + 
                              "&datanodePort=" + datanodePort + 
                              "&namenodeInfoPort=" + namenodeInfoPort;
@@ -87,9 +90,9 @@
       //Get the location of the first block of the file
       if (files[i].getPath().endsWith(".crc")) continue;
       if (!files[i].isDir()) {
-        LocatedBlock[] blocks = dfs.namenode.open(files[i].getPath());
-
-        DatanodeInfo [] locations = blocks[0].getLocations();
+        List<LocatedBlock> blocks = 
+          dfs.namenode.getBlockLocations(files[i].getPath(), 0, 1).getLocatedBlocks();
+        DatanodeInfo [] locations = blocks.get(0).getLocations();
         if (locations.length == 0) {
           cols[0] = files[i].getName();
         } else {

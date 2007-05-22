@@ -49,7 +49,7 @@ class FSDirectory implements FSConstants {
     private String name;
     private INode parent;
     private TreeMap<String, INode> children = null;
-    private Block blocks[];
+    private Block blocks[] = null;
     private short blockReplication;
 
     /**
@@ -654,17 +654,27 @@ class FSDirectory implements FSConstants {
   }
 
   /**
-   * Get the blocks associated with the file
+   * Get the blocks associated with the file.
    */
-  public Block[] getFile(UTF8 src) {
+  Block[] getFileBlocks(String src) {
     waitForReady();
     synchronized (rootDir) {
-      INode targetNode = rootDir.getNode(src.toString());
+      INode targetNode = rootDir.getNode(src);
       if (targetNode == null) {
         return null;
       } else {
         return targetNode.blocks;
       }
+    }
+  }
+
+  /**
+   * Get {@link INode} associated with the file.
+   */
+  INode getFileINode(String src) {
+    waitForReady();
+    synchronized (rootDir) {
+      return rootDir.getNode(src);
     }
   }
 

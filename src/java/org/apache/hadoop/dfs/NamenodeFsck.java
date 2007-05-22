@@ -36,7 +36,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.net.DNS;
 
 
 /**
@@ -152,11 +151,12 @@ public class NamenodeFsck {
       return;
     }
     res.totalFiles++;
-    res.totalSize += file.getLen();
-    LocatedBlock[] blocks = nn.open(file.getPath());
-    res.totalBlocks += blocks.length;
+    long fileLen = file.getLen();
+    res.totalSize += fileLen;
+    LocatedBlocks blocks = nn.getBlockLocations(file.getPath(), 0, fileLen);
+    res.totalBlocks += blocks.locatedBlockCount();
     if (showFiles) {
-      out.print(file.getPath() + " " + file.getLen() + ", " + blocks.length + " block(s): ");
+      out.print(file.getPath() + " " + fileLen + ", " + res.totalBlocks + " block(s): ");
     }  else {
       out.print('.');
       out.flush();
@@ -166,10 +166,11 @@ public class NamenodeFsck {
     long missize = 0;
     int under = 0;
     StringBuffer report = new StringBuffer();
-    for (int i = 0; i < blocks.length; i++) {
-      Block block = blocks[i].getBlock();
+    int i = 0;
+    for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
+      Block block = lBlk.getBlock();
       long id = block.getBlockId();
-      DatanodeInfo[] locs = blocks[i].getLocations();
+      DatanodeInfo[] locs = lBlk.getLocations();
       short targetFileReplication = file.getReplication();
       if (locs.length > targetFileReplication) {
         res.overReplicatedBlocks += (locs.length - targetFileReplication);
@@ -206,6 +207,7 @@ public class NamenodeFsck {
         }
       }
       report.append('\n');
+      i++;
     }
     if (missing > 0) {
       if (!showFiles) {
@@ -236,7 +238,7 @@ public class NamenodeFsck {
     }
   }
   
-  private void lostFoundMove(DFSFileInfo file, LocatedBlock[] blocks)
+  private void lostFoundMove(DFSFileInfo file, LocatedBlocks blocks)
     throws IOException {
     DFSClient dfs = new DFSClient(DataNode.createSocketAddr(
                                                             conf.get("fs.default.name", "local")), conf);
@@ -256,8 +258,8 @@ public class NamenodeFsck {
       // create chains
       int chain = 0;
       OutputStream fos = null;
-      for (int i = 0; i < blocks.length; i++) {
-        LocatedBlock lblock = blocks[i];
+      for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
+        LocatedBlock lblock = lBlk;
         DatanodeInfo[] locs = lblock.getLocations();
         if (locs == null || locs.length == 0) {
           if (fos != null) {

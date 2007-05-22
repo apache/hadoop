@@ -55,13 +55,14 @@
     //fetch the block from the datanode that has the last block for this file
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, 
                                          jspHelper.conf);
-    LocatedBlock blocks[] = dfs.namenode.open(filename); 
-    if (blocks == null || blocks.length == 0) {
+    List<LocatedBlock> blocks = 
+      dfs.namenode.getBlockLocations(filename, 0, Long.MAX_VALUE).getLocatedBlocks();
+    if (blocks == null || blocks.size() == 0) {
       out.print("No datanodes contain blocks of file "+filename);
       dfs.close();
       return;
     }
-    LocatedBlock lastBlk = blocks[blocks.length - 1];
+    LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
     long blockSize = lastBlk.getBlock().getNumBytes();
     long blockId = lastBlk.getBlock().getBlockId();
     DatanodeInfo chosenNode;

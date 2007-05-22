@@ -47,6 +47,10 @@ Trunk (unreleased changes)
 
  15. HADOOP-1401.  Add contrib/hbase javadoc to tree.  (stack via cutting)
 
+ 16. HADOOP-894.  Change HDFS so that the client only retrieves a limited
+     number of block locations per request from the namenode.
+     (Konstantin Shvachko via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

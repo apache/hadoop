@@ -24,13 +24,11 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.Server;
 
 import java.io.*;
 import java.util.*;
-import java.lang.UnsupportedOperationException;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -426,41 +424,69 @@ class FSNamesystem implements FSConstants {
   //
   /////////////////////////////////////////////////////////
   /**
-   * The client wants to open the given filename.  Return a
-   * list of (block,machineArray) pairs.  The sequence of unique blocks
-   * in the list indicates all the blocks that make up the filename.
-   *
-   * The client should choose one of the machines from the machineArray
-   * at random.
+   * Get block locations within the specified range.
+   * 
+   * @see ClientProtocol#open(String, long, long)
+   * @see ClientProtocol#getBlockLocations(String, long, long)
    */
-  synchronized public Object[] open(String clientMachine, UTF8 src) {
-    Object results[] = null;
-    Block blocks[] = dir.getFile(src);
-    if (blocks != null) {
-      results = new Object[2];
-      DatanodeDescriptor machineSets[][] = new DatanodeDescriptor[blocks.length][];
-      DatanodeDescriptor client = 
-        host2DataNodeMap.getDatanodeByHost(clientMachine);
-
-      for (int i = 0; i < blocks.length; i++) {
-        int numNodes = blocksMap.numNodes(blocks[i]);
-        if (numNodes <= 0) {
-          machineSets[i] = new DatanodeDescriptor[0];
-        } else {
-          machineSets[i] = new DatanodeDescriptor[ numNodes ];
-          numNodes = 0;
-          for(Iterator<DatanodeDescriptor> it = 
-                blocksMap.nodeIterator(blocks[i]); it.hasNext();) {
-            machineSets[i][ numNodes++ ] = it.next();
-          }
-          clusterMap.sortByDistance(client, machineSets[i]);
-        }
-      }
-
-      results[0] = blocks;
-      results[1] = machineSets;
+  synchronized LocatedBlocks  getBlockLocations(String clientMachine,
+                                                String src, 
+                                                long offset, 
+                                                long length) {
+    return  getBlockLocations(clientMachine, 
+                              dir.getFileINode(src), 
+                              offset, length, Integer.MAX_VALUE);
+  }
+  
+  private LocatedBlocks getBlockLocations(String clientMachine,
+                                          FSDirectory.INode inode, 
+                                          long offset, 
+                                          long length,
+                                          int nrBlocksToReturn) {
+    if(inode == null || inode.isDir()) {
+      return null;
     }
-    return results;
+    Block[] blocks = inode.getBlocks();
+    if (blocks == null) {
+      return null;
+    }
+    List<LocatedBlock> results;
+    results = new ArrayList<LocatedBlock>(blocks.length);
+
+    int curBlk = 0;
+    long curPos = 0, blkSize = 0;
+    for (curBlk = 0; curBlk < blocks.length; curBlk++) {
+      blkSize = blocks[curBlk].getNumBytes();
+      if (curPos + blkSize > offset) {
+        break;
+      }
+      curPos += blkSize;
+    }
+    
+    long endOff = offset + length;
+    
+    DatanodeDescriptor client;
+    client = host2DataNodeMap.getDatanodeByHost(clientMachine);
+    do {
+      // get block locations
+      int numNodes = blocksMap.numNodes(blocks[curBlk]);
+      DatanodeDescriptor[] machineSet = new DatanodeDescriptor[numNodes];
+      if (numNodes > 0) {
+        numNodes = 0;
+        for(Iterator<DatanodeDescriptor> it = 
+            blocksMap.nodeIterator(blocks[curBlk]); it.hasNext();) {
+          machineSet[numNodes++] = it.next();
+        }
+        clusterMap.sortByDistance(client, machineSet);
+      }
+      results.add(new LocatedBlock(blocks[curBlk], machineSet, curPos));
+      curPos += blocks[curBlk].getNumBytes();
+      curBlk++;
+    } while (curPos < endOff 
+          && curBlk < blocks.length 
+          && results.size() < nrBlocksToReturn);
+    
+    return new LocatedBlocks(inode, results);
   }
 
   /**
@@ -545,13 +571,13 @@ class FSNamesystem implements FSConstants {
    * @throws IOException if the filename is invalid
    *         {@link FSDirectory#isValidToCreate(UTF8)}.
    */
-  public synchronized Object[] startFile(UTF8 src, 
-                                         UTF8 holder, 
-                                         UTF8 clientMachine, 
-                                         boolean overwrite,
-                                         short replication,
-                                         long blockSize
-                                         ) throws IOException {
+  public synchronized LocatedBlock startFile(UTF8 src, 
+                                             UTF8 holder, 
+                                             UTF8 clientMachine, 
+                                             boolean overwrite,
+                                             short replication,
+                                             long blockSize
+                                             ) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: file "
                                   +src+" for "+holder+" at "+clientMachine);
     if (isInSafeMode())
@@ -670,11 +696,8 @@ class FSNamesystem implements FSConstants {
         lease.startedCreate(src);
       }
 
-      // Create next block
-      Object results[] = new Object[2];
-      results[0] = allocateBlock(src);
-      results[1] = targets;
-      return results;
+      // Create first block
+      return new LocatedBlock(allocateBlock(src), targets, 0L);
     } catch (IOException ie) {
       NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: "
                                    +ie.getMessage());
@@ -693,9 +716,9 @@ class FSNamesystem implements FSConstants {
    * are replicated.  Will return an empty 2-elt array if we want the
    * client to "try again later".
    */
-  public synchronized Object[] getAdditionalBlock(UTF8 src, 
-                                                  UTF8 clientName
-                                                  ) throws IOException {
+  public synchronized LocatedBlock getAdditionalBlock(UTF8 src, 
+                                                      UTF8 clientName
+                                                      ) throws IOException {
     NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: file "
                                   +src+" for "+clientName);
     if (isInSafeMode())
@@ -732,7 +755,9 @@ class FSNamesystem implements FSConstants {
     }
         
     // Create next block
-    return new Object[]{allocateBlock(src), targets};
+    return new LocatedBlock(allocateBlock(src), 
+                            targets, 
+                            pendingFile.computeFileLength());
   }
 
   /**
@@ -803,10 +828,10 @@ class FSNamesystem implements FSConstants {
       throw new SafeModeException("Cannot complete file " + src, safeMode);
     FileUnderConstruction pendingFile = pendingCreates.get(src);
 
-    if (dir.getFile(src) != null || pendingFile == null) {
+    if (dir.getFileBlocks(src.toString()) != null || pendingFile == null) {
       NameNode.stateChangeLog.warn("DIR* NameSystem.completeFile: "
                                    + "failed to complete " + src
-                                   + " because dir.getFile()==" + dir.getFile(src) 
+                                    + " because dir.getFile()==" + dir.getFileBlocks(src.toString()) 
                                    + " and " + pendingFile);
       return OPERATION_FAILED;
     } else if (!checkFileProgress(pendingFile, true)) {
@@ -1054,7 +1079,7 @@ class FSNamesystem implements FSConstants {
    * Return whether the given filename exists
    */
   public boolean exists(UTF8 src) {
-    if (dir.getFile(src) != null || dir.isDir(src)) {
+    if (dir.getFileBlocks(src.toString()) != null || dir.isDir(src)) {
       return true;
     } else {
       return false;
@@ -1109,65 +1134,6 @@ class FSNamesystem implements FSConstants {
       throw new IOException("Invalid directory name: " + src);
     }
     return success;
-  }
-
-  /**
-   * Figure out a few hosts that are likely to contain the
-   * block(s) referred to by the given (filename, start, len) tuple.
-   */
-  public String[][] getDatanodeHints(String src, long start, long len) {
-    if (start < 0 || len < 0) {
-      return new String[0][];
-    }
-
-    int startBlock = -1;
-    int endBlock = -1;
-    Block blocks[] = dir.getFile(new UTF8(src));
-
-    if (blocks == null) {                     // no blocks
-      return new String[0][];
-    }
-
-    //
-    // First, figure out where the range falls in
-    // the blocklist.
-    //
-    long startpos = start;
-    long endpos = start + len;
-    for (int i = 0; i < blocks.length; i++) {
-      if (startpos >= 0) {
-        startpos -= blocks[i].getNumBytes();
-        if (startpos <= 0) {
-          startBlock = i;
-        }
-      }
-      if (endpos >= 0) {
-        endpos -= blocks[i].getNumBytes();
-        if (endpos <= 0) {
-          endBlock = i;
-          break;
-        }
-      }
-    }
-
-    //
-    // Next, create an array of hosts where each block can
-    // be found
-    //
-    if (startBlock < 0 || endBlock < 0) {
-      return new String[0][];
-    } else {
-      String hosts[][] = new String[(endBlock - startBlock) + 1][];
-      for (int i = startBlock; i <= endBlock; i++) {
-        Collection<String> v = new ArrayList<String>();
-        for (Iterator<DatanodeDescriptor> it = 
-               blocksMap.nodeIterator(blocks[i]); it.hasNext();) {
-          v.add(it.next().getHostName());
-        }
-        hosts[i-startBlock] = v.toArray(new String[v.size()]);
-      }
-      return hosts;
-    }
   }
 
   /************************************************************
@@ -2884,7 +2850,7 @@ class FSNamesystem implements FSConstants {
    * <em>safe blocks</em>, those that have at least the minimal number of
    * replicas, and calculates the ratio of safe blocks to the total number
    * of blocks in the system, which is the size of
-   * {@link blocksMap}. When the ratio reaches the
+   * {@link FSNamesystem#blocksMap}. When the ratio reaches the
    * {@link #threshold} it starts the {@link SafeModeMonitor} daemon in order
    * to monitor whether the safe mode extension is passed. Then it leaves safe
    * mode and destroys itself.

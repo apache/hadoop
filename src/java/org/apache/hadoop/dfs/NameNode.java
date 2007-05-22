@@ -253,24 +253,32 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     
   /**
    */
-  public LocatedBlock[] open(String src) throws IOException {
+  public LocatedBlocks open(String src,
+                            long offset,
+                            long length) throws IOException {
+    LocatedBlocks result = getBlockLocations(src, offset, length);
+    if (result == null) {
+      throw new IOException("Cannot open filename " + src);
+    }
+    myMetrics.openFile();
+    return result;
+  }
+
+  /**
+   */
+  public LocatedBlocks   getBlockLocations(String src, 
+                                          long offset, 
+                                          long length) throws IOException {
+    return namesystem.getBlockLocations(getClientMachine(), 
+                                        src, offset, length);
+  }
+  
+  private static String getClientMachine() {
     String clientMachine = Server.getRemoteAddress();
     if (clientMachine == null) {
       clientMachine = "";
     }
-    Object openResults[] = namesystem.open(clientMachine, new UTF8(src));
-    if (openResults == null) {
-      throw new IOException("Cannot open filename " + src);
-    } else {
-      myMetrics.openFile();
-      Block blocks[] = (Block[]) openResults[0];
-      DatanodeInfo sets[][] = (DatanodeInfo[][]) openResults[1];
-      LocatedBlock results[] = new LocatedBlock[blocks.length];
-      for (int i = 0; i < blocks.length; i++) {
-        results[i] = new LocatedBlock(blocks[i], sets[i]);
-      }
-      return results;
-    }
+    return clientMachine;
   }
 
   /**
@@ -281,26 +289,21 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                              short replication,
                              long blockSize
                              ) throws IOException {
-    String clientMachine = Server.getRemoteAddress();
-    if (clientMachine == null) {
-      clientMachine = "";
-    }
+    String clientMachine = getClientMachine();
     stateChangeLog.debug("*DIR* NameNode.create: file "
                          +src+" for "+clientName+" at "+clientMachine);
     if (!checkPathLength(src)) {
       throw new IOException("create: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    Object results[] = namesystem.startFile(new UTF8(src), 
-                                            new UTF8(clientName), 
-                                            new UTF8(clientMachine), 
-                                            overwrite,
-                                            replication,
-                                            blockSize);
+    LocatedBlock result =  namesystem.startFile(new UTF8(src), 
+                                                new UTF8(clientName), 
+                                                new UTF8(clientMachine), 
+                                                overwrite,
+                                                replication,
+                                                blockSize);
     myMetrics.createFile();
-    Block b = (Block) results[0];
-    DatanodeInfo targets[] = (DatanodeInfo[]) results[1];
-    return new LocatedBlock(b, targets);
+    return result;
   }
 
   public boolean setReplication(String src, 
@@ -317,10 +320,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                          +src+" for "+clientName);
     UTF8 src8 = new UTF8(src);
     UTF8 client8 = new UTF8(clientName);
-    Object[] results = namesystem.getAdditionalBlock(src8, client8);
-    Block b = (Block) results[0];
-    DatanodeInfo targets[] = (DatanodeInfo[]) results[1];
-    return new LocatedBlock(b, targets);            
+    return namesystem.getAdditionalBlock(src8, client8);
   }
 
   /**
@@ -372,12 +372,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
   }
 
-  /**
-   */
-  public String[][] getHints(String src, long start, long len) throws IOException {
-    return namesystem.getDatanodeHints(src, start, len);
-  }
-    
   public long getBlockSize(String filename) throws IOException {
     return namesystem.getBlockSize(filename);
   }

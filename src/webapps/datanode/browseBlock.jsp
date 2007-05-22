@@ -68,7 +68,8 @@
     blockSize = Long.parseLong(blockSizeStr);
 
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
-    LocatedBlock[] blocks = dfs.namenode.open(filename);
+    List<LocatedBlock> blocks = 
+      dfs.namenode.getBlockLocations(filename, 0, Long.MAX_VALUE).getLocatedBlocks();
     //Add the various links for looking at the file contents
     //URL for downloading the full file
     String downloadUrl = "http://" + req.getServerName() + ":" +
@@ -79,7 +80,7 @@
     
     DatanodeInfo chosenNode;
     //URL for TAIL 
-    LocatedBlock lastBlk = blocks[blocks.length - 1];
+    LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
     long blockId = lastBlk.getBlock().getBlockId();
     try {
       chosenNode = jspHelper.bestNode(lastBlk);
@@ -119,16 +120,16 @@
     out.print("</form>");
     out.print("<hr>"); 
     out.print("<a name=\"blockDetails\"></a>");
-    out.print("<B>Total number of blocks: "+blocks.length+"</B><br>");
+    out.print("<B>Total number of blocks: "+blocks.size()+"</B><br>");
     //generate a table and dump the info
     out.println("\n<table>");
-    for (int i = 0; i < blocks.length; i++) {
+    for (LocatedBlock cur : blocks) {
       out.print("<tr>");
-      blockId = blocks[i].getBlock().getBlockId();
-      blockSize = blocks[i].getBlock().getNumBytes();
+      blockId = cur.getBlock().getBlockId();
+      blockSize = cur.getBlock().getNumBytes();
       String blk = "blk_" + Long.toString(blockId);
-      out.print("<td>"+blk+":</td>");
-      DatanodeInfo[] locs = blocks[i].getLocations();
+      out.print("<td>"+cur+":</td>");
+      DatanodeInfo[] locs = cur.getLocations();
       for(int j=0; j<locs.length; j++) {
         String datanodeAddr = locs[j].getName();
         datanodePort = Integer.parseInt(datanodeAddr.substring(
@@ -230,11 +231,12 @@
     //determine data for the next link
     if (startOffset + chunkSizeToView >= blockSize) {
       //we have to go to the next block from this point onwards
-      LocatedBlock[] blocks = dfs.namenode.open(filename);
-      for (int i = 0; i < blocks.length; i++) {
-        if (blocks[i].getBlock().getBlockId() == blockId) {
-          if (i != blocks.length - 1) {
-            LocatedBlock nextBlock = blocks[i+1];
+      List<LocatedBlock> blocks = 
+        dfs.namenode.getBlockLocations(filename, 0, Long.MAX_VALUE).getLocatedBlocks();
+      for (int i = 0; i < blocks.size(); i++) {
+        if (blocks.get(i).getBlock().getBlockId() == blockId) {
+          if (i != blocks.size() - 1) {
+            LocatedBlock nextBlock = blocks.get(i+1);
             nextBlockIdStr = Long.toString(nextBlock.getBlock().getBlockId());
             nextStartOffset = 0;
             nextBlockSize = nextBlock.getBlock().getNumBytes();
@@ -277,11 +279,12 @@
     int prevPort = req.getServerPort();
     int prevDatanodePort = datanodePort;
     if (startOffset == 0) {
-      LocatedBlock [] blocks = dfs.namenode.open(filename);
-      for (int i = 0; i < blocks.length; i++) {
-        if (blocks[i].getBlock().getBlockId() == blockId) {
+      List<LocatedBlock> blocks = 
+        dfs.namenode.getBlockLocations(filename, 0, Long.MAX_VALUE).getLocatedBlocks();
+      for (int i = 0; i < blocks.size(); i++) {
+        if (blocks.get(i).getBlock().getBlockId() == blockId) {
           if (i != 0) {
-            LocatedBlock prevBlock = blocks[i-1];
+            LocatedBlock prevBlock = blocks.get(i-1);
             prevBlockIdStr = Long.toString(prevBlock.getBlock().getBlockId());
             prevStartOffset = prevBlock.getBlock().getNumBytes() - chunkSizeToView;
             if (prevStartOffset < 0)

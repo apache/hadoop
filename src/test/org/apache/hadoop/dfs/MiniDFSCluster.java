@@ -48,7 +48,7 @@ public class MiniDFSCluster {
    * @param conf the base configuration to use in starting the servers.  This
    *          will be modified as necessary.
    * @param numDataNodes Number of DataNodes to start; may be zero
-   * @param operation the operation with which to start the servers.  If null
+   * @param nameNodeOperation the operation with which to start the servers.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
    */
   public MiniDFSCluster(Configuration conf,
@@ -207,7 +207,7 @@ public class MiniDFSCluster {
    * When this method return, the NameNode should be finalized, but
    * DataNodes may not be since that occurs asynchronously.
    *
-   * @throw IllegalStateException if the Namenode is not running.
+   * @throws IllegalStateException if the Namenode is not running.
    */
   public void finalizeCluster(Configuration conf) throws Exception {
     if (nameNode == null) {
