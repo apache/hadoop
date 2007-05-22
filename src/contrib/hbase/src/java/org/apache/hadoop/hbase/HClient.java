@@ -32,9 +32,9 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 
-/*******************************************************************************
+/**
  * HClient manages a connection to a single HRegionServer.
- ******************************************************************************/
+ */
 public class HClient implements HConstants {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   
@@ -44,7 +44,6 @@ public class HClient implements HConstants {
   
   private static final Text EMPTY_START_ROW = new Text();
   
-  private boolean closed;
   private long clientTimeout;
   private int numTimeouts;
   private int numRetries;
@@ -82,7 +81,6 @@ public class HClient implements HConstants {
 
   /** Creates a new HClient */
   public HClient(Configuration conf) {
-    this.closed = false;
     this.conf = conf;
 
     this.clientTimeout = conf.getLong("hbase.client.timeout.length", 30 * 1000);
@@ -102,15 +100,6 @@ public class HClient implements HConstants {
   }
   
   /**
-   * Check client is open.
-   */
-  private void checkOpen() {
-    if (this.closed) {
-      throw new IllegalStateException("client is not open");
-    }
-  }
-  
-  /**
    * Find the address of the master and connect to it
    */
   private void checkMaster() {
@@ -119,7 +108,8 @@ public class HClient implements HConstants {
     }
     for(int tries = 0; this.master == null && tries < numRetries; tries++) {
       HServerAddress masterLocation =
-        new HServerAddress(this.conf.get(MASTER_ADDRESS));
+        new HServerAddress(this.conf.get(MASTER_ADDRESS,
+          DEFAULT_MASTER_ADDRESS));
       
       try {
         HMasterInterface tryMaster =
@@ -159,21 +149,18 @@ public class HClient implements HConstants {
       throw new IllegalArgumentException(desc.getName().toString()
           + " is a reserved table name");
     }
-    checkOpen();
     checkMaster();
     locateRootRegion();
     this.master.createTable(desc);
   }
 
   public synchronized void deleteTable(Text tableName) throws IOException {
-    checkOpen();
     checkMaster();
     locateRootRegion();
     this.master.deleteTable(tableName);
   }
   
   public synchronized void shutdown() throws IOException {
-    checkOpen();
     checkMaster();
     this.master.shutdown();
   }
@@ -182,7 +169,6 @@ public class HClient implements HConstants {
     if(tableName == null || tableName.getLength() == 0) {
       throw new IllegalArgumentException("table name cannot be null or zero length");
     }
-    checkOpen();
     this.tableServers = tablesToServers.get(tableName);
     if(this.tableServers == null ) {            // We don't know where the table is
       findTableInMeta(tableName);               // Load the information from meta
@@ -322,7 +308,6 @@ public class HClient implements HConstants {
     }
     
     if (rootRegionLocation == null) {
-      this.closed = true;
       throw new IOException("unable to locate root region server");
     }
   }
@@ -453,14 +438,6 @@ public class HClient implements HConstants {
       this.servers.put(regionServer.toString(), server);
     }
     return server;
-  }
-
-  /** Close the connection */
-  public synchronized void close() throws IOException {
-    if(! this.closed) {
-      RPC.stopClient();
-      this.closed = true;
-    }
   }
 
   /**
@@ -927,7 +904,7 @@ public class HClient implements HConstants {
         " createTable webcrawl contents: anchors: 10");
   }
   
-  int doCommandLine(final String args[]) {
+  public int doCommandLine(final String args[]) {
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).    
     int errCode = -1;

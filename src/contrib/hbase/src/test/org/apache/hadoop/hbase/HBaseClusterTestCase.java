@@ -24,11 +24,11 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   final boolean miniHdfs;
   
   protected HBaseClusterTestCase() {
-    this(false);
+    this(true);
   }
 
   protected HBaseClusterTestCase(String name) {
-    this(name, false);
+    this(name, true);
   }
   
   protected HBaseClusterTestCase(final boolean miniHdfs) {

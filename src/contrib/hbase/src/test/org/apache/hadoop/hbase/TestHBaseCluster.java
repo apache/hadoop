@@ -58,9 +58,6 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
 
   public void tearDown() throws Exception {
     super.tearDown();
-    if(client != null) {
-      client.close();
-    }
   }
 
   private static final int FIRST_ROW = 1;
