@@ -57,6 +57,7 @@ public class HRegionServer
   private long threadWakeFrequency;
   private int maxLogEntries;
   private long msgInterval;
+  private int numRetries;
   
   // Check to see if regions should be split
   
@@ -102,15 +103,15 @@ public class HRegionServer
           try {
             for(Iterator<HRegion>it = regionsToCheck.iterator(); it.hasNext(); ) {
               HRegion cur = it.next();
-              
+
               if(cur.isClosed()) {
                 continue;                               // Skip if closed
               }
-              
+
               if(cur.needsCompaction()) {
-                
+
                 // The best time to split a region is right after it has been compacted
-                
+
                 if(cur.compactStores()) {
                   Text midKey = new Text();
                   if(cur.needsSplit(midKey)) {
@@ -132,47 +133,58 @@ public class HRegionServer
                       (oldRegion.find(META_TABLE_NAME.toString()) == 0) ?
                           ROOT_TABLE_NAME : META_TABLE_NAME;
 
-                    client.openTable(tableToUpdate);
-                    long lockid = client.startUpdate(oldRegion);
-                    client.delete(lockid, COL_REGIONINFO);
-                    client.delete(lockid, COL_SERVER);
-                    client.delete(lockid, COL_STARTCODE);
-                    client.commit(lockid);
+                    for(int tries = 0; tries < numRetries; tries++) {
+                      try {
+                        client.openTable(tableToUpdate);
+                        long lockid = client.startUpdate(oldRegion);
+                        client.delete(lockid, COL_REGIONINFO);
+                        client.delete(lockid, COL_SERVER);
+                        client.delete(lockid, COL_STARTCODE);
+                        client.commit(lockid);
 
-                    for(int i = 0; i < newRegions.length; i++) {
-                      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                      DataOutputStream out = new DataOutputStream(bytes);
-                      newRegions[i].getRegionInfo().write(out);
+                        for(int i = 0; i < newRegions.length; i++) {
+                          ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                          DataOutputStream out = new DataOutputStream(bytes);
+                          newRegions[i].getRegionInfo().write(out);
 
-                      lockid = client.startUpdate(newRegions[i].getRegionName());
-                      client.put(lockid, COL_REGIONINFO, bytes.toByteArray());
-                      client.put(lockid, COL_SERVER, 
-                          info.getServerAddress().toString().getBytes(UTF8_ENCODING));
-                      client.put(lockid, COL_STARTCODE, 
-                          String.valueOf(info.getStartCode()).getBytes(UTF8_ENCODING));
-                      client.commit(lockid);
-                    }
-                    
-                    // Now tell the master about the new regions
+                          lockid = client.startUpdate(newRegions[i].getRegionName());
+                          client.put(lockid, COL_REGIONINFO, bytes.toByteArray());
+                          client.put(lockid, COL_SERVER, 
+                              info.getServerAddress().toString().getBytes(UTF8_ENCODING));
+                          client.put(lockid, COL_STARTCODE, 
+                              String.valueOf(info.getStartCode()).getBytes(UTF8_ENCODING));
+                          client.commit(lockid);
+                        }
 
-                    if(LOG.isDebugEnabled()) {
-                      LOG.debug("reporting region split to master");
-                    }
+                        // Now tell the master about the new regions
 
-                    reportSplit(newRegions[0].getRegionInfo(), newRegions[1].getRegionInfo());
+                        if(LOG.isDebugEnabled()) {
+                          LOG.debug("reporting region split to master");
+                        }
 
-                    LOG.info("region split successful. old region=" + oldRegion
-                        + ", new regions: " + newRegions[0].getRegionName() + ", "
-                        + newRegions[1].getRegionName());
+                        reportSplit(newRegions[0].getRegionInfo(), newRegions[1].getRegionInfo());
 
-                    // Finally, start serving the new regions
-                    
-                    lock.writeLock().lock();
-                    try {
-                      regions.put(newRegions[0].getRegionName(), newRegions[0]);
-                      regions.put(newRegions[1].getRegionName(), newRegions[1]);
-                    } finally {
-                      lock.writeLock().unlock();
+                        LOG.info("region split successful. old region=" + oldRegion
+                            + ", new regions: " + newRegions[0].getRegionName() + ", "
+                            + newRegions[1].getRegionName());
+
+                        // Finally, start serving the new regions
+
+                        lock.writeLock().lock();
+                        try {
+                          regions.put(newRegions[0].getRegionName(), newRegions[0]);
+                          regions.put(newRegions[1].getRegionName(), newRegions[1]);
+                        } finally {
+                          lock.writeLock().unlock();
+                        }
+
+                      } catch(NotServingRegionException e) {
+                        if(tries == numRetries - 1) {
+                          throw e;
+                        }
+                        continue;
+                      }
+                      break;
                     }
                   }
                 }
@@ -183,7 +195,7 @@ public class HRegionServer
             LOG.error(e);
           }
         }
-        
+
         // Sleep
         long waitTime = stopRequested ? 0
             : splitOrCompactCheckFrequency - (System.currentTimeMillis() - startTime);
@@ -241,7 +253,7 @@ public class HRegionServer
               cur.optionallyFlush();
 
             } catch(IOException iex) {
-              iex.printStackTrace();
+              LOG.error(iex);
             }
           }
         }
@@ -503,9 +515,6 @@ public class HRegionServer
             } catch(InterruptedException iex) {
             }
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Wake");
-          }
         }
         continue;
       }
@@ -617,7 +626,7 @@ public class HRegionServer
       join();
       
     } catch(IOException e) {
-      e.printStackTrace();
+      LOG.error(e);
     }
     if(LOG.isDebugEnabled()) {
       LOG.debug("main thread exiting");
@@ -747,7 +756,7 @@ public class HRegionServer
             throw new IOException("Impossible state during msg processing.  Instruction: " + msg);
           }
         } catch(IOException e) {
-          e.printStackTrace();
+          LOG.error(e);
         }
       }
       if(LOG.isDebugEnabled()) {
@@ -944,7 +953,7 @@ public class HRegionServer
         localRegion.abort(localLockId);
         
       } catch(IOException iex) {
-        iex.printStackTrace();
+        LOG.error(iex);
       }
     }
   }
@@ -1071,7 +1080,7 @@ public class HRegionServer
       leases.createLease(scannerName, scannerName, new ScannerListener(scannerName));
     
     } catch(IOException e) {
-      e.printStackTrace();
+      LOG.error(e);
       throw e;
     }
     return scannerId;
