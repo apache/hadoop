@@ -159,7 +159,13 @@ abstract class Task implements Writable, Configurable {
   public String toString() { return taskId; }
 
   private Path getTaskOutputPath(JobConf conf) {
-    return new Path(conf.getOutputPath(), ("_" + taskId));
+    Path p = new Path(conf.getOutputPath(), ("_" + taskId));
+    try {
+      return p.makeQualified(FileSystem.get(conf));
+    } catch (IOException ie) {
+      LOG.warn(StringUtils.stringifyException(ie));
+      return p;
+    }
   }
   
   /**

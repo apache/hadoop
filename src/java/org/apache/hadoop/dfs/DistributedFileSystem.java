@@ -218,7 +218,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       } else {
         Path results[] = new DfsPath[info.length];
         for (int i = 0; i < info.length; i++) {
-          results[i] = new DfsPath(info[i]);
+          results[i] = new DfsPath(info[i], this);
         }
         return results;
       }

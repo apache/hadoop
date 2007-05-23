@@ -181,32 +181,7 @@ public abstract class FileSystem extends Configured {
   /** Make sure that a path specifies a FileSystem. */
   public Path makeQualified(Path path) {
     checkPath(path);
-
-    if (!path.isAbsolute())
-      path = new Path(getWorkingDirectory(), path);
-
-    URI pathUri = path.toUri();
-    URI fsUri = getUri();
-      
-    String scheme = pathUri.getScheme();
-    String authority = pathUri.getAuthority();
-
-    if (scheme != null &&
-        (authority != null || fsUri.getAuthority() == null))
-      return path;
-
-    if (scheme == null) {
-      scheme = fsUri.getScheme();
-    }
-
-    if (authority == null) {
-      authority = fsUri.getAuthority();
-      if (authority == null) {
-        authority = "";
-      }
-    }
-
-    return new Path(scheme+":"+"//"+authority + pathUri.getPath());
+    return path.makeQualified(this);
   }
     
   ///////////////////////////////////////////////////////////////

@@ -329,7 +329,7 @@ public class FsShell extends ToolBase {
       }
       for (int i = 0; i < items.length; i++) {
         Path cur = items[i];
-        System.out.println(cur + "\t" 
+        System.out.println(cur.toUri().getPath() + "\t" 
                            + (fs.isDirectory(cur) ? 
                               "<dir>" : 
                               ("<r " + fs.getReplication(cur) 

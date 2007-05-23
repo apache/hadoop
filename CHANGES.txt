@@ -60,6 +60,9 @@ Trunk (unreleased changes)
  19. HADOOP-1413.  Add example program that uses Knuth's dancing links
      algorithm to solve pentomino problems.  (omalley via cutting)
 
+ 20. HADOOP-1226.  Change HDFS so that paths it returns are always
+     fully qualified.  (Dhruba Borthakur via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

@@ -264,5 +264,35 @@ public class Path implements Comparable {
     }
     return depth;
   }
-  
+
+  /** Returns a qualified path object. */
+  public Path makeQualified(FileSystem fs) {
+    Path path = this;
+    if (!isAbsolute()) {
+      path = new Path(fs.getWorkingDirectory(), this);
+    }
+
+    URI pathUri = path.toUri();
+    URI fsUri = fs.getUri();
+      
+    String scheme = pathUri.getScheme();
+    String authority = pathUri.getAuthority();
+
+    if (scheme != null &&
+        (authority != null || fsUri.getAuthority() == null))
+      return path;
+
+    if (scheme == null) {
+      scheme = fsUri.getScheme();
+    }
+
+    if (authority == null) {
+      authority = fsUri.getAuthority();
+      if (authority == null) {
+        authority = "";
+      }
+    }
+
+    return new Path(scheme+":"+"//"+authority + pathUri.getPath());
+  }
 }

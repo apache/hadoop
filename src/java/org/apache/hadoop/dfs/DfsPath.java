@@ -18,7 +18,7 @@
 package org.apache.hadoop.dfs;
 
 import org.apache.hadoop.fs.Path;
-
+import org.apache.hadoop.fs.FileSystem;
 
 /** 
  * DfsPath is a Path that's been annotated with some extra information.
@@ -28,8 +28,11 @@ import org.apache.hadoop.fs.Path;
 class DfsPath extends Path {
   DFSFileInfo info;
 
-  public DfsPath(DFSFileInfo info) {
-    super(info.getPath());
+  /**
+   * DfsPaths are fully qualified with scheme and authority.
+   */
+  public DfsPath(DFSFileInfo info, FileSystem fs) {
+    super((new Path(info.getPath())).makeQualified(fs).toString());
     this.info = info;
   }
 
