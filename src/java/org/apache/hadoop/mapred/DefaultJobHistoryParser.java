@@ -3,7 +3,7 @@ package org.apache.hadoop.mapred;
 import java.util.*;
 import java.io.*;
 import org.apache.hadoop.mapred.JobHistory.Keys; 
-import org.apache.hadoop.mapred.JobHistory.Values;;
+import org.apache.hadoop.mapred.JobHistory.Values;
 
 /**
  * Default parser for job history files. It creates object model from 
@@ -12,14 +12,27 @@ import org.apache.hadoop.mapred.JobHistory.Values;;
  */
 public class DefaultJobHistoryParser {
 
+  // This class is required to work around the Java compiler's lack of
+  // run-time information on generic classes. In particular, we need to be able
+  // to cast to this type without generating compiler warnings, which is only
+  // possible if it is a non-generic class.
+
   /**
-   * Parses a master index file and returns a Map of 
-   * (jobTrakerId - Map (job Id - JobHistory.JobInfo)). 
+   * Contents of a job history file. Maps: 
+   * <xmp>jobTrackerId -> <jobId, JobHistory.JobInfo>*</xmp>
+   */
+  public static class MasterIndex 
+    extends TreeMap<String, Map<String, JobHistory.JobInfo>> {
+    
+  }
+
+  /**
+   * Parses a master index file and returns a {@link MasterIndex}.
    * @param historyFile master index history file. 
-   * @return a map of values, as described as described earlier.  
+   * @return a {@link MasterIndex}.  
    * @throws IOException
    */
-  public static Map<String, Map<String, JobHistory.JobInfo>> parseMasterIndex(File historyFile)
+  public static MasterIndex parseMasterIndex(File historyFile)
     throws IOException {
     MasterIndexParseListener parser = new MasterIndexParseListener();
     JobHistory.parseHistory(historyFile, parser);
@@ -120,7 +133,7 @@ public class DefaultJobHistoryParser {
    */
   static class MasterIndexParseListener
     implements JobHistory.Listener {
-    Map<String, Map<String, JobHistory.JobInfo>> jobTrackerToJobs = new TreeMap<String, Map<String, JobHistory.JobInfo>>();
+    MasterIndex jobTrackerToJobs = new MasterIndex();
 
     Map<String, JobHistory.JobInfo> activeJobs = null;
     String currentTracker; 
@@ -150,7 +163,7 @@ public class DefaultJobHistoryParser {
      * Return map of parsed values. 
      * @return
      */ 
-    Map<String, Map<String, JobHistory.JobInfo>> getValues() {
+    MasterIndex getValues() {
       return jobTrackerToJobs;
     }
   }

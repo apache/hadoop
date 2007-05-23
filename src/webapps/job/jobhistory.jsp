@@ -5,7 +5,8 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
   import="javax.servlet.jsp.*"
-  import="java.text.SimpleDateFormat"  
+  import="java.text.SimpleDateFormat"
+  import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.mapred.JobHistory.*"
 %>
 <jsp:include page="loadhistory.jsp">
@@ -18,8 +19,9 @@
 
 <html><body>
 <%
-		Map<String, Map<String, JobInfo>> jobTrackerToJobs = 
-		  (Map<String, Map<String, JobInfo>>)request.getSession().getAttribute("jobHistory"); 
+		DefaultJobHistoryParser.MasterIndex jobTrackerToJobs = 
+		  (DefaultJobHistoryParser.MasterIndex)request.getSession().
+		  getAttribute("jobHistory"); 
 		
 		if( null == jobTrackerToJobs ){
 		  out.println("NULL !!!"); 

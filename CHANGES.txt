@@ -66,6 +66,9 @@ Trunk (unreleased changes)
  21. HADOOP-800.  Improvements to HDFS web-based file browser.
      (Enis Soztutar via cutting)
 
+ 22. HADOOP-1408.  Fix a compiler warning by adding a class to replace
+     a generic.  (omalley via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

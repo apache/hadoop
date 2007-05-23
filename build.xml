@@ -225,7 +225,6 @@
      encoding="${build.encoding}" 
      srcdir="${src.dir};${build.src}"
      includes="org/apache/hadoop/**/*.java"
-     excludes="org/apache/hadoop/**/*_jsp.java"
      destdir="${build.classes}"
      debug="${javac.debug}"
      optimize="${javac.optimize}"
@@ -236,21 +235,6 @@
       <classpath refid="classpath"/>
     </javac>   
   	
-    <!-- Compile JSPs without checking warnings -->
-    <javac 
-     encoding="${build.encoding}" 
-     srcdir="${src.dir};${build.src}"
-     includes="org/apache/hadoop/**/*_jsp.java"
-     destdir="${build.classes}"
-     debug="${javac.debug}"
-     optimize="${javac.optimize}"
-     target="${javac.version}"
-     source="${javac.version}"
-     deprecation="${javac.deprecation}">
-      <compilerarg line="${javac.args}" />
-      <classpath refid="classpath"/>
-    </javac>
-    
     <copy todir="${build.classes}">
       <fileset 
         dir="${src.dir}" 
