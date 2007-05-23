@@ -72,14 +72,13 @@ public class HLog implements HConstants {
   boolean insideCacheFlush = false;
 
   TreeMap<Text, Long> regionToLastFlush = new TreeMap<Text, Long>();
-  long oldestOutstandingSeqNum = -1;
 
   boolean closed = false;
   transient long logSeqNum = 0;
   long filenum = 0;
   transient int numEntries = 0;
 
-  Integer rollLock = new Integer(0);
+  Integer rollLock = 0;
 
   /**
    * Bundle up a bunch of log files (which are no longer being written to),
@@ -319,10 +318,10 @@ public class HLog implements HConstants {
     }
 
     int counter = 0;
-    for (Text column: columns.keySet()) {
+    for (Map.Entry<Text, BytesWritable> es: columns.entrySet()) {
       HLogKey logKey =
         new HLogKey(regionName, tableName, row, seqNum[counter++]);
-      HLogEdit logEdit = new HLogEdit(column, columns.get(column), timestamp);
+      HLogEdit logEdit = new HLogEdit(es.getKey(), es.getValue(), timestamp);
       writer.append(logKey, logEdit);
       numEntries++;
     }

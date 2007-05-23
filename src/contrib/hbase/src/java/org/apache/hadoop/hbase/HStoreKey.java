@@ -15,6 +15,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
@@ -23,6 +25,8 @@ import java.io.*;
  * A Key for a stored row
  ******************************************************************************/
 public class HStoreKey implements WritableComparable {
+  private final Log LOG = LogFactory.getLog(this.getClass().getName());
+  
   public static Text extractFamily(Text col) throws IOException {
     String column = col.toString();
     int colpos = column.indexOf(":");
@@ -128,12 +132,26 @@ public class HStoreKey implements WritableComparable {
             extractFamily(other.getColumn())) == 0;
       
     } catch(IOException e) {
+      LOG.error(e);
     }
     return status;
   }
   
   public String toString() {
     return row.toString() + "/" + column.toString() + "/" + timestamp;
+  }
+  
+  @Override
+  public boolean equals(Object obj) {
+    return compareTo(obj) == 0;
+  }
+  
+  @Override
+  public int hashCode() {
+    int result = this.row.hashCode();
+    result ^= this.column.hashCode();
+    result ^= Long.valueOf(this.timestamp).hashCode();
+    return result;
   }
 
   //////////////////////////////////////////////////////////////////////////////

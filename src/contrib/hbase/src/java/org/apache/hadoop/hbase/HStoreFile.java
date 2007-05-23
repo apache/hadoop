@@ -326,6 +326,19 @@ public class HStoreFile implements HConstants, WritableComparable {
       out.close();
     }
   }
+  
+  public boolean equals(Object o) {
+    return this.compareTo(o) == 0;
+  }
+  
+  @Override
+  public int hashCode() {
+    int result = this.dir.hashCode();
+    result ^= this.regionName.hashCode();
+    result ^= this.colFamily.hashCode();
+    result ^= Long.valueOf(this.fileId).hashCode();
+    return result;
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Writable
@@ -368,11 +381,4 @@ public class HStoreFile implements HConstants, WritableComparable {
     }
     return result;
   }
-
-  
-  public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
-  }
 }
-
-

@@ -50,7 +50,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   // 2. Match on the column family + column key regex
   // 3. Simple match: compare column family + column key literally
   
-  private class ColumnMatcher {
+  private static class ColumnMatcher {
     private boolean wildCardmatch;
     private MATCH_TYPE matchType;
     private String family;

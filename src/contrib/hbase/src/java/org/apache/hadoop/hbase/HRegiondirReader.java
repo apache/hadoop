@@ -19,6 +19,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -181,12 +182,14 @@ public class HRegiondirReader {
     // Every line starts with row name followed by column name
     // followed by cell content.
     while(scanner.next(key, results)) {
-      for (Text colname: results.keySet()) {
+      for (Map.Entry<Text, BytesWritable> es: results.entrySet()) {
+    	Text colname = es.getKey();
+    	BytesWritable colvalue = es.getValue();
         Object value = null;
-        byte[] bytes = new byte[results.get(colname).getSize()];
+        byte[] bytes = new byte[colvalue.getSize()];
         if (colname.toString().equals("info:regioninfo")) {
           // Then bytes are instance of an HRegionInfo.
-          System.arraycopy(results.get(colname).get(), 0, bytes, 0, bytes.length);
+          System.arraycopy(colvalue, 0, bytes, 0, bytes.length);
           value = new HRegionInfo(bytes);
         } else {
           value = new String(bytes, HConstants.UTF8_ENCODING);

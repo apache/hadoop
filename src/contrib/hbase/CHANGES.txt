@@ -12,3 +12,5 @@ Trunk (unreleased changes)
      tolerant.
   6. HADOOP-1418. HBase miscellaneous: unit test for HClient, client to do
      'Performance Evaluation', etc.
+  7. HADOOP-1420, HADOOP-1423. Findbugs changes, remove reference to removed 
+     class HLocking.

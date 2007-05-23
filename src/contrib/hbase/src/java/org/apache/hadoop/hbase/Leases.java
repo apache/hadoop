@@ -71,6 +71,7 @@ public class Leases {
       this.leaseMonitorThread.interrupt();
       this.leaseMonitorThread.join();
     } catch (InterruptedException iex) {
+      // Ignore
     }
     synchronized(leases) {
       synchronized(sortedLeases) {
@@ -166,6 +167,7 @@ public class Leases {
         try {
           Thread.sleep(leaseCheckFrequency);
         } catch (InterruptedException ie) {
+          // Ignore
         }
       }
     }
@@ -209,6 +211,18 @@ public class Leases {
     
     public void expired() {
       listener.leaseExpired();
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+      return compareTo(obj) == 0;
+    }
+    
+    @Override
+    public int hashCode() {
+      int result = this.getLeaseId().hashCode();
+      result ^= Long.valueOf(this.lastUpdate).hashCode();
+      return result;
     }
     
     //////////////////////////////////////////////////////////////////////////////

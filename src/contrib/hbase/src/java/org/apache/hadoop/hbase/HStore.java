@@ -61,8 +61,8 @@ public class HStore {
   Path compactdir;
   Path loginfodir;
 
-  Integer compactLock = new Integer(0);
-  Integer flushLock = new Integer(0);
+  Integer compactLock = 0;
+  Integer flushLock = 0;
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -225,13 +225,10 @@ public class HStore {
     if(LOG.isDebugEnabled()) {
       LOG.debug("starting map readers");
     }
-    for(Iterator<Long> it = mapFiles.keySet().iterator(); it.hasNext(); ) {
-      Long key = it.next().longValue();
-      HStoreFile hsf = mapFiles.get(key);
-
+    for(Map.Entry<Long, HStoreFile> e: mapFiles.entrySet()) {
       // TODO - is this really necessary?  Don't I do this inside compact()?
-      maps.put(key,
-        new MapFile.Reader(fs, hsf.getMapFilePath().toString(), conf));
+      maps.put(e.getKey(),
+        new MapFile.Reader(fs, e.getValue().getMapFilePath().toString(), conf));
     }
     
     LOG.info("HStore online for " + this.regionName + "/" + this.colFamily);
@@ -239,19 +236,16 @@ public class HStore {
 
   /** Turn off all the MapFile readers */
   public void close() throws IOException {
-    this.lock.writeLock().lock();
     LOG.info("closing HStore for " + this.regionName + "/" + this.colFamily);
-    
+    this.lock.writeLock().lock();
     try {
-      for(Iterator<MapFile.Reader> it = maps.values().iterator(); it.hasNext(); ) {
-        MapFile.Reader map = it.next();
+      for (MapFile.Reader map: maps.values()) {
         map.close();
       }
       maps.clear();
       mapFiles.clear();
       
       LOG.info("HStore closed for " + this.regionName + "/" + this.colFamily);
-      
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -300,10 +294,10 @@ public class HStore {
           HStoreKey.class, BytesWritable.class);
       
       try {
-        for (HStoreKey curkey: inputCache.keySet()) {
-          if(this.colFamily.equals(HStoreKey.extractFamily(curkey.getColumn()))) {
-            BytesWritable val = inputCache.get(curkey);
-            out.append(curkey, val);
+        for (Map.Entry<HStoreKey, BytesWritable> es: inputCache.entrySet()) {
+          HStoreKey curkey = es.getKey();
+          if (this.colFamily.equals(HStoreKey.extractFamily(curkey.getColumn()))) {
+            out.append(curkey, es.getValue());
           }
         }
         if(LOG.isDebugEnabled()) {
@@ -631,8 +625,9 @@ public class HStore {
 
     // 1. Acquiring the write-lock
 
-    this.lock.writeLock().lock();
+
     Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, colFamily);
+    this.lock.writeLock().lock();
     try {
       Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
       if(! fs.exists(doneFile)) {
@@ -918,10 +913,10 @@ public class HStore {
 
   /** Generate a random unique filename suffix */
   String obtainFileLabel(Path prefix) throws IOException {
-    String testsuffix = String.valueOf(Math.abs(rand.nextInt()));
+    String testsuffix = String.valueOf(rand.nextInt(Integer.MAX_VALUE));
     Path testpath = new Path(prefix.toString() + testsuffix);
     while(fs.exists(testpath)) {
-      testsuffix = String.valueOf(Math.abs(rand.nextInt()));
+      testsuffix = String.valueOf(rand.nextInt(Integer.MAX_VALUE));
       testpath = new Path(prefix.toString() + testsuffix);
     }
     return testsuffix;

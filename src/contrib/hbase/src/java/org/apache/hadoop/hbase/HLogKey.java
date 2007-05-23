@@ -72,6 +72,19 @@ public class HLogKey implements WritableComparable {
     return getTablename().toString() + " " + getRegionName().toString() + " " +
       getRow().toString() + " " + getLogSeqNum();
   }
+  
+  @Override
+  public boolean equals(Object obj) {
+    return compareTo(obj) == 0;
+  }
+  
+  @Override
+  public int hashCode() {
+    int result = this.regionName.hashCode();
+    result ^= this.row.hashCode(); 
+    result ^= Long.valueOf(this.logSeqNum).hashCode();
+    return result;
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Comparable

@@ -18,7 +18,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.TreeMap;
@@ -50,7 +49,7 @@ public class HClient implements HConstants {
   private HMasterInterface master;
   private final Configuration conf;
   
-  private class TableInfo {
+  private static class TableInfo {
     public HRegionInfo regionInfo;
     public HServerAddress serverAddress;
 
@@ -133,7 +132,6 @@ public class HClient implements HConstants {
       
       try {
         Thread.sleep(this.clientTimeout);
-        
       } catch(InterruptedException e) {
       }
     }
@@ -179,9 +177,9 @@ public class HClient implements HConstants {
     TreeMap<Text, TableInfo> metaServers =
       this.tablesToServers.get(META_TABLE_NAME);
     
-    if(metaServers == null) {                   // Don't know where the meta is
+    if (metaServers == null) {                // Don't know where the meta is
       loadMetaFromRoot(tableName);
-      if(tableName.equals(META_TABLE_NAME) || tableName.equals(ROOT_TABLE_NAME)) {
+      if (tableName.equals(META_TABLE_NAME) || tableName.equals(ROOT_TABLE_NAME)) {
         // All we really wanted was the meta or root table
         return;
       }
@@ -192,32 +190,19 @@ public class HClient implements HConstants {
     for(int tries = 0;
         this.tableServers.size() == 0 && tries < this.numRetries;
         tries++) {
-      
-      Text firstMetaRegion = null;
-      if(metaServers.containsKey(tableName)) {
-        firstMetaRegion = tableName;
-        
-      } else {
-        firstMetaRegion = metaServers.headMap(tableName).lastKey();
-      }
-      for(Iterator<TableInfo> i
-          = metaServers.tailMap(firstMetaRegion).values().iterator();
-          i.hasNext(); ) {
-      
-        TableInfo t = i.next();
-      
+      Text firstMetaRegion = (metaServers.containsKey(tableName))?
+        tableName: metaServers.headMap(tableName).lastKey();
+      for(TableInfo t: metaServers.tailMap(firstMetaRegion).values()) {
         scanOneMetaRegion(t, tableName);
       }
-      if(this.tableServers.size() == 0) {
+      if (this.tableServers.size() == 0) {
         // Table not assigned. Sleep and try again
-
-        if(LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
           LOG.debug("Sleeping. Table " + tableName
               + " not currently being served.");
         }
         try {
           Thread.sleep(this.clientTimeout);
-          
         } catch(InterruptedException e) {
         }
         if(LOG.isDebugEnabled()) {
@@ -225,7 +210,7 @@ public class HClient implements HConstants {
         }
       }
     }
-    if(this.tableServers.size() == 0) {
+    if (this.tableServers.size() == 0) {
       throw new IOException("failed to scan " + META_TABLE_NAME + " after "
           + this.numRetries + " retries");
     }
@@ -976,7 +961,9 @@ public class HClient implements HConstants {
         printUsage();
         break;
       }
-    } catch (Exception e) {
+    } catch (IOException e) {
+      e.printStackTrace();
+    } catch (RuntimeException e) {
       e.printStackTrace();
     }
     

@@ -124,6 +124,24 @@ public class HTableDescriptor implements WritableComparable {
       ", maxVersions: " + this.maxVersions + ", families: " + this.families;
   }
   
+  @Override
+  public boolean equals(Object obj) {
+    return compareTo(obj) == 0;
+  }
+  
+  @Override
+  public int hashCode() {
+    // TODO: Cache.
+    int result = this.name.hashCode();
+    result ^= Integer.valueOf(this.maxVersions).hashCode();
+    if (this.families != null && this.families.size() > 0) {
+      for (Text family: this.families) {
+        result ^= family.hashCode();
+      }
+    }
+    return result;
+  }
+  
   //////////////////////////////////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////////////////////////////////
