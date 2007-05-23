@@ -171,12 +171,11 @@ public class HRegion implements HConstants {
       LOG.debug("merging stores");
     }
     
-    for(Iterator<Text> it = filesToMerge.keySet().iterator(); it.hasNext(); ) {
-      Text colFamily = it.next();
-      Vector<HStoreFile> srcFiles = filesToMerge.get(colFamily);
+    for (Map.Entry<Text, Vector<HStoreFile>> es: filesToMerge.entrySet()) {
+      Text colFamily = es.getKey();
+      Vector<HStoreFile> srcFiles = es.getValue();
       HStoreFile dst = new HStoreFile(conf, merges, newRegionInfo.regionName, 
           colFamily, Math.abs(rand.nextLong()));
-      
       dst.mergeStoreFiles(srcFiles, fs, conf);
       alreadyMerged.addAll(srcFiles);
     }
@@ -226,12 +225,11 @@ public class HRegion implements HConstants {
       LOG.debug("merging changes since start of merge");
     }
     
-    for(Iterator<Text> it = filesToMerge.keySet().iterator(); it.hasNext(); ) {
-      Text colFamily = it.next();
-      Vector<HStoreFile> srcFiles = filesToMerge.get(colFamily);
-      HStoreFile dst = new HStoreFile(conf, merges, newRegionInfo.regionName,
-          colFamily, Math.abs(rand.nextLong()));
-      
+    for (Map.Entry<Text, Vector<HStoreFile>> es : filesToMerge.entrySet()) {
+      Text colFamily = es.getKey();
+      Vector<HStoreFile> srcFiles = es.getValue();
+      HStoreFile dst = new HStoreFile(conf, merges,
+        newRegionInfo.regionName, colFamily, Math.abs(rand.nextLong()));
       dst.mergeStoreFiles(srcFiles, fs, conf);
     }
 
@@ -268,7 +266,7 @@ public class HRegion implements HConstants {
   HRegionInfo regionInfo;
   Path regiondir;
 
-  class WriteState {
+  static class WriteState {
     public volatile boolean writesOngoing;
     public volatile boolean writesEnabled;
     public volatile boolean closed;
@@ -1248,7 +1246,7 @@ public class HRegion implements HConstants {
   /*******************************************************************************
    * HScanner is an iterator through a bunch of rows in an HRegion.
    ******************************************************************************/
-  private class HScanner implements HInternalScannerInterface {
+  private static class HScanner implements HInternalScannerInterface {
     private HInternalScannerInterface[] scanners;
     private TreeMap<Text, BytesWritable>[] resultSets;
     private HStoreKey[] keys;

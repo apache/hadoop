@@ -35,8 +35,8 @@ public class HServerAddress implements Writable {
   
   public HServerAddress(InetSocketAddress address) {
     this.address = address;
-    this.stringValue = new String(address.getAddress().getHostAddress()
-        + ":" + address.getPort());
+    this.stringValue = address.getAddress().getHostAddress() + ":" +
+      address.getPort();
   }
   
   public HServerAddress(String hostAndPort) {
@@ -47,19 +47,19 @@ public class HServerAddress implements Writable {
     String host = hostAndPort.substring(0, colonIndex);
     int port = Integer.valueOf(hostAndPort.substring(colonIndex + 1));
     this.address = new InetSocketAddress(host, port);
-    this.stringValue = new String(hostAndPort);
+    this.stringValue = hostAndPort;
   }
   
   public HServerAddress(String bindAddress, int port) {
     this.address = new InetSocketAddress(bindAddress, port);
-    this.stringValue = new String(bindAddress + ":" + port);
+    this.stringValue = bindAddress + ":" + port;
   }
   
   public HServerAddress(HServerAddress other) {
     String bindAddress = other.getBindAddress();
     int port = other.getPort();
     address = new InetSocketAddress(bindAddress, port);
-    stringValue = new String(bindAddress + ":" + port);
+    stringValue = bindAddress + ":" + port;
   }
   
   public String getBindAddress() {

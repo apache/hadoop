@@ -22,6 +22,7 @@ import org.apache.commons.logging.LogFactory;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /*******************************************************************************
  * The HMemcache holds in-memory modifications to the HRegion.  This is really a
@@ -38,9 +39,10 @@ public class HMemcache {
   
   TreeMap<HStoreKey, BytesWritable> snapshot = null;
 
-  HLocking lock = new HLocking();
+  ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   public HMemcache() {
+    super();
   }
 
   public static class Snapshot {
@@ -48,6 +50,7 @@ public class HMemcache {
     public long sequenceId = 0;
     
     public Snapshot() {
+      super();
     }
   }
   
@@ -67,7 +70,7 @@ public class HMemcache {
   public Snapshot snapshotMemcacheForLog(HLog log) throws IOException {
     Snapshot retval = new Snapshot();
 
-    this.lock.obtainWriteLock();
+    this.lock.writeLock().lock();
     try {
       if(snapshot != null) {
         throw new IOException("Snapshot in progress!");
@@ -96,7 +99,7 @@ public class HMemcache {
       return retval;
       
     } finally {
-      this.lock.releaseWriteLock();
+      this.lock.writeLock().unlock();
     }
   }
 
@@ -106,7 +109,7 @@ public class HMemcache {
    * Modifying the structure means we need to obtain a writelock.
    */
   public void deleteSnapshot() throws IOException {
-    this.lock.obtainWriteLock();
+    this.lock.writeLock().lock();
 
     try {
       if(snapshot == null) {
@@ -132,7 +135,7 @@ public class HMemcache {
       }
       
     } finally {
-      this.lock.releaseWriteLock();
+      this.lock.writeLock().unlock();
     }
   }
 
@@ -142,18 +145,14 @@ public class HMemcache {
    * Operation uses a write lock.
    */
   public void add(Text row, TreeMap<Text, BytesWritable> columns, long timestamp) {
-    this.lock.obtainWriteLock();
+    this.lock.writeLock().lock();
     try {
-      for(Iterator<Text> it = columns.keySet().iterator(); it.hasNext(); ) {
-        Text column = it.next();
-        BytesWritable val = columns.get(column);
-
-        HStoreKey key = new HStoreKey(row, column, timestamp);
-        memcache.put(key, val);
+      for (Map.Entry<Text, BytesWritable> es: columns.entrySet()) {
+        HStoreKey key = new HStoreKey(row, es.getKey(), timestamp);
+        memcache.put(key, es.getValue());
       }
-      
     } finally {
-      this.lock.releaseWriteLock();
+      this.lock.writeLock().unlock();
     }
   }
 
@@ -164,7 +163,7 @@ public class HMemcache {
    */
   public BytesWritable[] get(HStoreKey key, int numVersions) {
     Vector<BytesWritable> results = new Vector<BytesWritable>();
-    this.lock.obtainReadLock();
+    this.lock.readLock().lock();
     try {
       Vector<BytesWritable> result = get(memcache, key, numVersions-results.size());
       results.addAll(0, result);
@@ -178,15 +177,10 @@ public class HMemcache {
         results.addAll(results.size(), result);
       }
       
-      if(results.size() == 0) {
-        return null;
-        
-      } else {
-        return results.toArray(new BytesWritable[results.size()]);
-      }
-      
+      return (results.size() == 0)?
+        null: results.toArray(new BytesWritable[results.size()]);
     } finally {
-      this.lock.releaseReadLock();
+      this.lock.readLock().unlock();
     }
   }
   
@@ -196,9 +190,9 @@ public class HMemcache {
    *
    * The returned object should map column names to byte arrays (byte[]).
    */
-  public TreeMap<Text, BytesWritable> getFull(HStoreKey key) throws IOException {
+  public TreeMap<Text, BytesWritable> getFull(HStoreKey key) {
     TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
-    this.lock.obtainReadLock();
+    this.lock.readLock().lock();
     try {
       internalGetFull(memcache, key, results);
       for(int i = history.size()-1; i >= 0; i--) {
@@ -208,25 +202,22 @@ public class HMemcache {
       return results;
       
     } finally {
-      this.lock.releaseReadLock();
+      this.lock.readLock().unlock();
     }
   }
   
   void internalGetFull(TreeMap<HStoreKey, BytesWritable> map, HStoreKey key, 
       TreeMap<Text, BytesWritable> results) {
-    
     SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(key);
-    
-    for(Iterator<HStoreKey> it = tailMap.keySet().iterator(); it.hasNext(); ) {
-      HStoreKey itKey = it.next();
+    for (Map.Entry<HStoreKey, BytesWritable> es: tailMap.entrySet()) {
+      HStoreKey itKey = es.getKey();
       Text itCol = itKey.getColumn();
-
-      if(results.get(itCol) == null
+      if (results.get(itCol) == null
           && key.matchesWithoutColumn(itKey)) {
         BytesWritable val = tailMap.get(itKey);
         results.put(itCol, val);
         
-      } else if(key.getRow().compareTo(itKey.getRow()) > 0) {
+      } else if (key.getRow().compareTo(itKey.getRow()) > 0) {
         break;
       }
     }
@@ -246,15 +237,14 @@ public class HMemcache {
     HStoreKey curKey = new HStoreKey(key.getRow(), key.getColumn(), key.getTimestamp());
     SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(curKey);
 
-    for(Iterator<HStoreKey> it = tailMap.keySet().iterator(); it.hasNext(); ) {
-      HStoreKey itKey = it.next();
-      
-      if(itKey.matchesRowCol(curKey)) {
+    for (Map.Entry<HStoreKey, BytesWritable> es: tailMap.entrySet()) {
+      HStoreKey itKey = es.getKey();
+      if (itKey.matchesRowCol(curKey)) {
         result.add(tailMap.get(itKey));
         curKey.setVersion(itKey.getTimestamp() - 1);
       }
       
-      if(numVersions > 0 && result.size() >= numVersions) {
+      if (numVersions > 0 && result.size() >= numVersions) {
         break;
       }
     }
@@ -285,7 +275,7 @@ public class HMemcache {
       
       super(timestamp, targetCols);
       
-      lock.obtainReadLock();
+      lock.readLock().lock();
       try {
         this.backingMaps = new TreeMap[history.size() + 1];
         
@@ -377,7 +367,7 @@ public class HMemcache {
           }
           
         } finally {
-          lock.releaseReadLock();
+          lock.readLock().unlock();
           scannerClosed = true;
         }
       }

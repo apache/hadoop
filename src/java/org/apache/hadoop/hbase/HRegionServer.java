@@ -64,7 +64,7 @@ public class HRegionServer
   private long splitOrCompactCheckFrequency;
   private SplitOrCompactChecker splitOrCompactChecker;
   private Thread splitOrCompactCheckerThread;
-  private Integer splitOrCompactLock = new Integer(0);
+  private Integer splitOrCompactLock = 0;
   
   private class SplitOrCompactChecker implements Runnable, RegionUnavailableListener {
     private HClient client = new HClient(conf);
@@ -222,7 +222,7 @@ public class HRegionServer
   
   private Flusher cacheFlusher;
   private Thread cacheFlusherThread;
-  private Integer cacheFlusherLock = new Integer(0);
+  private Integer cacheFlusherLock = 0;
   private class Flusher implements Runnable {
     public void run() {
       while(! stopRequested) {
@@ -291,7 +291,7 @@ public class HRegionServer
   private HLog log;
   private LogRoller logRoller;
   private Thread logRollerThread;
-  private Integer logRollerLock = new Integer(0);
+  private Integer logRollerLock = 0;
   private class LogRoller implements Runnable {
     public void run() {
       while(! stopRequested) {
@@ -388,7 +388,7 @@ public class HRegionServer
     try {
       // Server to handle client requests
       
-      this.server = RPC.getServer(this, address.getBindAddress().toString(), 
+      this.server = RPC.getServer(this, address.getBindAddress(), 
         address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
         false, conf);
 
@@ -509,10 +509,11 @@ public class HRegionServer
           if (LOG.isDebugEnabled()) {
             LOG.debug("Sleep");
           }
-          synchronized(this) {
+          synchronized (this) {
             try {
-              Thread.sleep(waitTime);
-            } catch(InterruptedException iex) {
+              wait(waitTime);
+            } catch (InterruptedException e1) {
+              // Go back up to the while test if stop has been requested.
             }
           }
         }
@@ -588,10 +589,11 @@ public class HRegionServer
           if (LOG.isDebugEnabled()) {
             LOG.debug("Sleep");
           }
-          synchronized(this) {
+          synchronized (this) {
             try {
-              Thread.sleep(waitTime);
+              wait(waitTime);
             } catch(InterruptedException iex) {
+              // On interrupt we go around to the while test of stopRequested
             }
           }
           if (LOG.isDebugEnabled()) {
@@ -927,10 +929,8 @@ public class HRegionServer
     TreeMap<Text, BytesWritable> map = region.getFull(row);
     LabelledData result[] = new LabelledData[map.size()];
     int counter = 0;
-    for(Iterator<Text> it = map.keySet().iterator(); it.hasNext(); ) {
-      Text colname = it.next();
-      BytesWritable val = map.get(colname);
-      result[counter++] = new LabelledData(colname, val);
+    for (Map.Entry<Text, BytesWritable> es: map.entrySet()) {
+      result[counter++] = new LabelledData(es.getKey(), es.getValue());
     }
     return result;
   }
@@ -939,7 +939,7 @@ public class HRegionServer
    * Start an update to the HBase.  This also creates a lease associated with
    * the caller.
    */
-  private class RegionListener extends LeaseListener {
+  private static class RegionListener extends LeaseListener {
     private HRegion localRegion;
     private long localLockId;
     

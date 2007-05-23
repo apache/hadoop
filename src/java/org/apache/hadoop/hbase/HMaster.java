@@ -294,9 +294,9 @@ public class HMaster implements HConstants, HMasterInterface,
   
   private RootScanner rootScanner;
   private Thread rootScannerThread;
-  private Integer rootScannerLock = new Integer(0);
+  private Integer rootScannerLock = 0;
   
-  private class MetaRegion {
+  private static class MetaRegion {
     public HServerAddress server;
     public Text regionName;
     public Text startKey;
@@ -426,7 +426,7 @@ public class HMaster implements HConstants, HMasterInterface,
 
   private MetaScanner metaScanner;
   private Thread metaScannerThread;
-  private Integer metaScannerLock = new Integer(0);
+  private Integer metaScannerLock = 0;
   
   // The 'unassignedRegions' table maps from a region name to a HRegionInfo record,
   // which includes the region's table, its id, and its start/end keys.
@@ -1136,7 +1136,6 @@ public class HMaster implements HConstants, HMasterInterface,
             
           }
         }
-        scannerId = -1L;
       }
 
       // Remove server from root/meta entries
@@ -1739,7 +1738,7 @@ public class HMaster implements HConstants, HMasterInterface,
     private String server;
     
     public ServerExpirer(String server) {
-      this.server = new String(server);
+      this.server = server;
     }
     
     public void leaseExpired() {
