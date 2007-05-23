@@ -94,6 +94,7 @@
     String tailUrl = "http://" + fqdn + ":" +
                      chosenNode.getInfoPort() + 
                  "/tail.jsp?filename=" + URLEncoder.encode(filename, "UTF-8") +
+                 "&namenodeInfoPort=" + namenodeInfoPort +
                  "&chunkSizeToView=" + chunkSizeToView +
                  "&referrer=" + 
           URLEncoder.encode(req.getRequestURL() + "?" + req.getQueryString(),
@@ -209,12 +210,16 @@
       return;
     }
     datanodePort = Integer.parseInt(datanodePortStr);
-
-    out.print("<h2>File: " + filename + "</h2>");
+    out.print("<h3>File: ");
+    JspHelper.printPathWithLinks(filename, out, namenodeInfoPort);
+    out.print("</h3><hr>");
+    String parent = new File(filename).getParent();
+    JspHelper.printGotoForm(out, namenodeInfoPort, parent);
+    out.print("<hr>");
     out.print("<a href=\"http://" + req.getServerName() + ":" + 
               req.getServerPort() + 
               "/browseDirectory.jsp?dir=" + 
-              URLEncoder.encode(new File(filename).getParent(), "UTF-8") +
+              URLEncoder.encode(parent, "UTF-8") +
               "&namenodeInfoPort=" + namenodeInfoPort + 
               "\"><i>Go back to dir listing</i></a><br>");
     out.print("<a href=\"#viewOptions\">Advanced view/download options</a><br>");
@@ -324,7 +329,7 @@
       out.print("<a href=\"" + prevUrl + "\">View Prev chunk</a>&nbsp;&nbsp;");
     }
     out.print("<hr>");
-    out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" READONLY>");
+    out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
     try {
     jspHelper.streamBlockInAscii(
             new InetSocketAddress(req.getServerName(), datanodePort), blockId, 
@@ -338,10 +343,10 @@
 
 %>
 <html>
-
-<title>Hadoop DFS File Viewer</title>
-
-<body>
+<head>
+<%JspHelper.createTitle(out, request, request.getParameter("filename")); %>
+</head>
+<body onload="document.goto.dir.focus()">
 <% 
    generateFileChunks(out,request);
 %>

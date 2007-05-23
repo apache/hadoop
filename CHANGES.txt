@@ -63,6 +63,9 @@ Trunk (unreleased changes)
  20. HADOOP-1226.  Change HDFS so that paths it returns are always
      fully qualified.  (Dhruba Borthakur via cutting)
 
+ 21. HADOOP-800.  Improvements to HDFS web-based file browser.
+     (Enis Soztutar via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

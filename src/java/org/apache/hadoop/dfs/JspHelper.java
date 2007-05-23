@@ -25,6 +25,7 @@ import java.io.*;
 import java.util.*;
 import java.net.*;
 import org.apache.hadoop.dfs.*;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 
@@ -245,4 +246,50 @@ public class JspHelper {
         
     Collections.sort(nodes, new NodeComapare(field, order));
   }
+
+  public static void printPathWithLinks(String dir, JspWriter out, int namenodeInfoPort ) throws IOException {
+    try {
+      String[] parts = dir.split(Path.SEPARATOR);
+      StringBuilder tempPath = new StringBuilder(dir.length());
+      out.print("<a href=\"browseDirectory.jsp" + "?dir="+ Path.SEPARATOR
+          + "&namenodeInfoPort=" + namenodeInfoPort
+          + "\">" + Path.SEPARATOR + "</a>");
+      tempPath.append(Path.SEPARATOR);
+      for (int i = 0; i < parts.length-1; i++) {
+        if (!parts[i].equals("")) {
+          tempPath.append(parts[i]);
+          out.print("<a href=\"browseDirectory.jsp" + "?dir="
+              + tempPath.toString() + "&namenodeInfoPort=" + namenodeInfoPort);
+          out.print("\">" + parts[i] + "</a>" + Path.SEPARATOR);
+          tempPath.append(Path.SEPARATOR);
+        }
+      }
+      if(parts.length > 0) {
+        out.print(parts[parts.length-1]);
+      }
+    }
+    catch (UnsupportedEncodingException ex) {
+      ex.printStackTrace();
+    }
+  }
+
+  public static void printGotoForm(JspWriter out, int namenodeInfoPort, String file) throws IOException {
+    out.print("<form action=\"browseDirectory.jsp\" method=\"get\" name=\"goto\">");
+    out.print("Goto : ");
+    out.print("<input name=\"dir\" type=\"text\" width=\"50\" id\"dir\" value=\""+ file+"\">");
+    out.print("<input name=\"go\" type=\"submit\" value=\"go\">");
+    out.print("<input name=\"namenodeInfoPort\" type=\"hidden\" "
+        + "value=\"" + namenodeInfoPort  + "\">");
+    out.print("</form>");
+  }
+  
+  public static void createTitle(JspWriter out, 
+      HttpServletRequest req, String  file) throws IOException{
+    if(file == null) file = "";
+    int start = Math.max(0,file.length() - 100);
+    if(start != 0)
+      file = "..." + file.substring(start, file.length());
+    out.print("<title>HDFS:" + file + "</title>");
+  }
+
 }

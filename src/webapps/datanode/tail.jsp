@@ -33,21 +33,33 @@
       return;
     }
 
+    String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
+    int namenodeInfoPort = -1;
+    if (namenodeInfoPortStr != null)
+      namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
+    
     String chunkSizeToViewStr = req.getParameter("chunkSizeToView");
     if (chunkSizeToViewStr != null && Integer.parseInt(chunkSizeToViewStr) > 0)
       chunkSizeToView = Integer.parseInt(chunkSizeToViewStr);
     else chunkSizeToView = jspHelper.defaultChunkSizeToView;
 
-    if (!noLink)
-      out.print("<h2><a href=\"" + referrer + "\">" + filename + "</a></h2>");
-    else
-      out.print("<h2>" + filename + "</h2>");
+    if (!noLink) {
+      out.print("<h3>Tail of File: ");
+      JspHelper.printPathWithLinks(filename, out, namenodeInfoPort);
+	    out.print("</h3><hr>");
+      out.print("<a href=\"" + referrer + "\">Go Back to File View</a><hr>");
+    }
+    else {
+      out.print("<h3>" + filename + "</h3>");
+    }
     out.print("<b>Chunk Size to view (in bytes, upto file's DFS blocksize): </b>");
     out.print("<input type=\"text\" name=\"chunkSizeToView\" value=" +
               chunkSizeToView + " size=10 maxlength=10>");
     out.print("&nbsp;&nbsp;<input type=\"submit\" name=\"submit\" value=\"Refresh\"><hr>");
     out.print("<input type=\"hidden\" name=\"filename\" value=\"" + filename +
               "\">");
+    out.print("<input type=\"hidden\" name=\"namenodeInfoPort\" value=\"" + namenodeInfoPort +
+    "\">");
     if (!noLink)
       out.print("<input type=\"hidden\" name=\"referrer\" value=\"" + 
                 referrer+ "\">");
@@ -79,7 +91,7 @@
       startOffset = blockSize - chunkSizeToView;
     else startOffset = 0;
 
-    out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" READONLY>");
+    out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
     jspHelper.streamBlockInAscii(addr, blockId, blockSize, startOffset, chunkSizeToView, out);
     out.print("</textarea>");
     dfs.close();
@@ -90,11 +102,11 @@
 
 
 <html>
-<meta http-equiv="refresh" content=60>
-<title>Hadoop DFS File Viewer</title>
-
+<head>
+<%JspHelper.createTitle(out, request, request.getParameter("filename")); %>
+</head>
 <body>
-<form action="/tail.jsp" method=GET>
+<form action="/tail.jsp" method="GET">
 <% 
    generateFileChunks(out,request);
 %>
