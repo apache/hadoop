@@ -14,3 +14,5 @@ Trunk (unreleased changes)
      'Performance Evaluation', etc.
   7. HADOOP-1420, HADOOP-1423. Findbugs changes, remove reference to removed 
      class HLocking.
+  8. HADOOP-1424. TestHBaseCluster fails with IllegalMonitorStateException. Fix
+     regression introduced by HADOOP-1397.

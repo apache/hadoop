@@ -15,14 +15,17 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.*;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import java.io.*;
-import java.util.*;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.Text;
 
 /*******************************************************************************
  * The HMemcache holds in-memory modifications to the HRegion.  This is really a
@@ -39,7 +42,7 @@ public class HMemcache {
   
   TreeMap<HStoreKey, BytesWritable> snapshot = null;
 
-  ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final HLocking lock = new HLocking();
 
   public HMemcache() {
     super();
@@ -70,7 +73,7 @@ public class HMemcache {
   public Snapshot snapshotMemcacheForLog(HLog log) throws IOException {
     Snapshot retval = new Snapshot();
 
-    this.lock.writeLock().lock();
+    this.lock.obtainWriteLock();
     try {
       if(snapshot != null) {
         throw new IOException("Snapshot in progress!");
@@ -99,7 +102,7 @@ public class HMemcache {
       return retval;
       
     } finally {
-      this.lock.writeLock().unlock();
+      this.lock.releaseWriteLock();
     }
   }
 
@@ -109,7 +112,7 @@ public class HMemcache {
    * Modifying the structure means we need to obtain a writelock.
    */
   public void deleteSnapshot() throws IOException {
-    this.lock.writeLock().lock();
+    this.lock.obtainWriteLock();
 
     try {
       if(snapshot == null) {
@@ -135,7 +138,7 @@ public class HMemcache {
       }
       
     } finally {
-      this.lock.writeLock().unlock();
+      this.lock.releaseWriteLock();
     }
   }
 
@@ -145,14 +148,14 @@ public class HMemcache {
    * Operation uses a write lock.
    */
   public void add(Text row, TreeMap<Text, BytesWritable> columns, long timestamp) {
-    this.lock.writeLock().lock();
+    this.lock.obtainWriteLock();
     try {
       for (Map.Entry<Text, BytesWritable> es: columns.entrySet()) {
         HStoreKey key = new HStoreKey(row, es.getKey(), timestamp);
         memcache.put(key, es.getValue());
       }
     } finally {
-      this.lock.writeLock().unlock();
+      this.lock.releaseWriteLock();
     }
   }
 
@@ -163,7 +166,7 @@ public class HMemcache {
    */
   public BytesWritable[] get(HStoreKey key, int numVersions) {
     Vector<BytesWritable> results = new Vector<BytesWritable>();
-    this.lock.readLock().lock();
+    this.lock.obtainReadLock();
     try {
       Vector<BytesWritable> result = get(memcache, key, numVersions-results.size());
       results.addAll(0, result);
@@ -180,7 +183,7 @@ public class HMemcache {
       return (results.size() == 0)?
         null: results.toArray(new BytesWritable[results.size()]);
     } finally {
-      this.lock.readLock().unlock();
+      this.lock.releaseReadLock();
     }
   }
   
@@ -192,7 +195,7 @@ public class HMemcache {
    */
   public TreeMap<Text, BytesWritable> getFull(HStoreKey key) {
     TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
-    this.lock.readLock().lock();
+    this.lock.obtainReadLock();
     try {
       internalGetFull(memcache, key, results);
       for(int i = history.size()-1; i >= 0; i--) {
@@ -202,7 +205,7 @@ public class HMemcache {
       return results;
       
     } finally {
-      this.lock.readLock().unlock();
+      this.lock.releaseReadLock();
     }
   }
   
@@ -275,7 +278,7 @@ public class HMemcache {
       
       super(timestamp, targetCols);
       
-      lock.readLock().lock();
+      lock.obtainReadLock();
       try {
         this.backingMaps = new TreeMap[history.size() + 1];
         
@@ -367,7 +370,7 @@ public class HMemcache {
           }
           
         } finally {
-          lock.readLock().unlock();
+          lock.releaseReadLock();
           scannerClosed = true;
         }
       }

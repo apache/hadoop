@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.*;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns
@@ -283,7 +282,7 @@ public class HRegion implements HConstants {
 
   int maxUnflushedEntries = 0;
   int compactionThreshold = 0;
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final HLocking lock = new HLocking();
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -398,7 +397,7 @@ public class HRegion implements HConstants {
    * time-sensitive thread.
    */
   public Vector<HStoreFile> close() throws IOException {
-    lock.writeLock().lock();
+    lock.obtainWriteLock();
     try {
       boolean shouldClose = false;
       synchronized(writestate) {
@@ -438,7 +437,7 @@ public class HRegion implements HConstants {
         }
       }
     } finally {
-      lock.writeLock().unlock();
+      lock.releaseWriteLock();
     }
   }
 
@@ -614,7 +613,7 @@ public class HRegion implements HConstants {
    * @return            - true if the region should be split
    */
   public boolean needsSplit(Text midKey) {
-    lock.readLock().lock();
+    lock.obtainReadLock();
 
     try {
       Text key = new Text();
@@ -632,7 +631,7 @@ public class HRegion implements HConstants {
       return (maxSize > (DESIRED_MAX_FILE_SIZE + (DESIRED_MAX_FILE_SIZE / 2)));
       
     } finally {
-      lock.readLock().unlock();
+      lock.releaseReadLock();
     }
   }
 
@@ -641,7 +640,7 @@ public class HRegion implements HConstants {
    */
   public boolean needsCompaction() {
     boolean needsCompaction = false;
-    lock.readLock().lock();
+    lock.obtainReadLock();
     try {
       for(Iterator<HStore> i = stores.values().iterator(); i.hasNext(); ) {
         if(i.next().getNMaps() > compactionThreshold) {
@@ -650,7 +649,7 @@ public class HRegion implements HConstants {
         }
       }
     } finally {
-      lock.readLock().unlock();
+      lock.releaseReadLock();
     }
     return needsCompaction;
   }
@@ -670,7 +669,7 @@ public class HRegion implements HConstants {
    */
   public boolean compactStores() throws IOException {
     boolean shouldCompact = false;
-    lock.readLock().lock();
+    lock.obtainReadLock();
     try {
       synchronized(writestate) {
         if((! writestate.writesOngoing)
@@ -683,32 +682,30 @@ public class HRegion implements HConstants {
         }
       }
     } finally {
-      lock.readLock().unlock();
+      lock.releaseReadLock();
     }
 
     if(! shouldCompact) {
       LOG.info("not compacting region " + this.regionInfo.regionName);
-      return false;
-      
-    } else {
-      lock.writeLock().lock();
-      try {
-        LOG.info("starting compaction on region " + this.regionInfo.regionName);
-        for(Iterator<HStore> it = stores.values().iterator(); it.hasNext(); ) {
-          HStore store = it.next();
-          store.compact();
-        }
-        LOG.info("compaction completed on region " + this.regionInfo.regionName);
-        return true;
-        
-      } finally {
-        synchronized(writestate) {
-          writestate.writesOngoing = false;
-          recentCommits = 0;
-          writestate.notifyAll();
-        }
-        lock.writeLock().unlock();
+      return false; 
+    }
+    lock.obtainWriteLock();
+    try {
+      LOG.info("starting compaction on region " + this.regionInfo.regionName);
+      for (Iterator<HStore> it = stores.values().iterator(); it.hasNext();) {
+        HStore store = it.next();
+        store.compact();
       }
+      LOG.info("compaction completed on region " + this.regionInfo.regionName);
+      return true;
+
+    } finally {
+      synchronized (writestate) {
+        writestate.writesOngoing = false;
+        recentCommits = 0;
+        writestate.notifyAll();
+      }
+      lock.releaseWriteLock();
     }
   }
 
@@ -928,7 +925,7 @@ public class HRegion implements HConstants {
 
   private BytesWritable[] get(HStoreKey key, int numVersions) throws IOException {
 
-    lock.readLock().lock();
+    lock.obtainReadLock();
     try {
       // Check the memcache
 
@@ -948,7 +945,7 @@ public class HRegion implements HConstants {
       return targetStore.get(key, numVersions);
       
     } finally {
-      lock.readLock().unlock();
+      lock.releaseReadLock();
     }
   }
 
@@ -965,7 +962,7 @@ public class HRegion implements HConstants {
   public TreeMap<Text, BytesWritable> getFull(Text row) throws IOException {
     HStoreKey key = new HStoreKey(row, System.currentTimeMillis());
 
-    lock.readLock().lock();
+    lock.obtainReadLock();
     try {
       TreeMap<Text, BytesWritable> memResult = memcache.getFull(key);
       for(Iterator<Text> it = stores.keySet().iterator(); it.hasNext(); ) {
@@ -976,7 +973,7 @@ public class HRegion implements HConstants {
       return memResult;
       
     } finally {
-      lock.readLock().unlock();
+      lock.releaseReadLock();
     }
   }
 
@@ -985,7 +982,7 @@ public class HRegion implements HConstants {
    * columns.  This Iterator must be closed by the caller.
    */
   public HInternalScannerInterface getScanner(Text[] cols, Text firstRow) throws IOException {
-    lock.readLock().lock();
+    lock.obtainReadLock();
     try {
       TreeSet<Text> families = new TreeSet<Text>();
       for(int i = 0; i < cols.length; i++) {
@@ -1001,7 +998,7 @@ public class HRegion implements HConstants {
       return new HScanner(cols, firstRow, memcache, storelist);
       
     } finally {
-      lock.readLock().unlock();
+      lock.releaseReadLock();
     }
   }
 
@@ -1024,11 +1021,11 @@ public class HRegion implements HConstants {
     // We obtain a per-row lock, so other clients will
     // block while one client performs an update.
 
-    lock.readLock().lock();
+    lock.obtainReadLock();
     try {
       return obtainLock(row);
     } finally {
-      lock.readLock().unlock();
+      lock.releaseReadLock();
     }
   }
 
