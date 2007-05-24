@@ -92,6 +92,9 @@ CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 if [ -d "$HADOOP_HOME/build/contrib/hbase/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/contrib/hbase/classes
 fi
+if [ -d "$HADOOP_HOME/build/contrib/hbase/test" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/contrib/hbase/test
+fi
 if [ -d "$HADOOP_HOME/build/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/classes
 fi
