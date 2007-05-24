@@ -488,6 +488,9 @@ Branch 0.13 (unreleased changes)
      meant failed tasks didn't cause the job to fail.
      (Arun C Murthy via tomwhite)
 
+126. HADOOP-1427.  Fix a typo that caused GzipCodec to incorrectly use
+     a very small input buffer.  (Espen Amble Kolstad via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

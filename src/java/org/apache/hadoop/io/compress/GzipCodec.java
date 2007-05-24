@@ -172,7 +172,7 @@ public class GzipCodec extends DefaultCodec {
     if (ZlibFactory.isNativeZlibLoaded()) {
       Decompressor decompressor =
         new ZlibDecompressor(ZlibDecompressor.CompressionHeader.AUTODETECT_GZIP_ZLIB,
-                             64*1-24);
+                             64*1024);
 
       compInStream = new DecompressorStream(in, decompressor,
                                             conf.getInt("io.file.buffer.size", 4*1024)); 
