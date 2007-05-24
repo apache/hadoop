@@ -17,3 +17,4 @@ Trunk (unreleased changes)
   8. HADOOP-1424. TestHBaseCluster fails with IllegalMonitorStateException. Fix
      regression introduced by HADOOP-1397.
   9. HADOOP-1426. Make hbase scripts executable + add test classes to CLASSPATH.
+ 10. HADOOP-1430. HBase shutdown leaves regionservers up.
