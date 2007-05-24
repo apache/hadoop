@@ -142,12 +142,7 @@ public class MiniHBaseCluster implements HConstants {
         e.printStackTrace();
       }
     }
-    try {
-      master.shutdown();
-      
-    } catch(IOException e) {
-      e.printStackTrace();
-    }
+    master.shutdown();
     for(int i = 0; i < regionServers.length; i++) {
       try {
         regionThreads[i].join();
