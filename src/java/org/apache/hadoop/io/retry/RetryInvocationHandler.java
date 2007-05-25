@@ -59,7 +59,7 @@ class RetryInvocationHandler implements InvocationHandler {
         return invokeMethod(method, args);
       } catch (Exception e) {
         if (!policy.shouldRetry(e, retries++)) {
-          LOG.warn("Exception while invoking " + method.getName()
+          LOG.info("Exception while invoking " + method.getName()
                    + " of " + implementation.getClass() + ". Not retrying."
                    + StringUtils.stringifyException(e));
           if (!method.getReturnType().equals(Void.TYPE)) {
@@ -67,7 +67,7 @@ class RetryInvocationHandler implements InvocationHandler {
           }
           return null;
         }
-        LOG.info("Exception while invoking " + method.getName()
+        LOG.debug("Exception while invoking " + method.getName()
                  + " of " + implementation.getClass() + ". Retrying."
                  + StringUtils.stringifyException(e));
       }

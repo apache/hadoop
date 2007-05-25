@@ -4,6 +4,7 @@ import static org.apache.hadoop.io.retry.RetryPolicies.RETRY_FOREVER;
 import static org.apache.hadoop.io.retry.RetryPolicies.TRY_ONCE_DONT_FAIL;
 import static org.apache.hadoop.io.retry.RetryPolicies.TRY_ONCE_THEN_FAIL;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryByException;
+import static org.apache.hadoop.io.retry.RetryPolicies.retryByRemoteException;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithFixedSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithProportionalSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumTimeWithFixedSleep;
@@ -17,6 +18,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.io.retry.UnreliableInterface.FatalException;
 import org.apache.hadoop.io.retry.UnreliableInterface.UnreliableException;
+import org.apache.hadoop.ipc.RemoteException;
 
 public class TestRetryProxy extends TestCase {
   
@@ -125,11 +127,26 @@ public class TestRetryProxy extends TestCase {
                         retryByException(RETRY_FOREVER, exceptionToPolicyMap));
     unreliable.failsOnceThenSucceeds();
     try {
-      unreliable.alwaysfailsWithFatalException();
+      unreliable.alwaysFailsWithFatalException();
       fail("Should fail");
     } catch (FatalException e) {
       // expected
     }
   }
+  
+  public void testRetryByRemoteException() throws UnreliableException {
+    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
+      Collections.<Class<? extends Exception>, RetryPolicy>singletonMap(FatalException.class, TRY_ONCE_THEN_FAIL);
+    
+    UnreliableInterface unreliable = (UnreliableInterface)
+      RetryProxy.create(UnreliableInterface.class, unreliableImpl,
+                        retryByRemoteException(RETRY_FOREVER, exceptionToPolicyMap));
+    try {
+      unreliable.alwaysFailsWithRemoteFatalException();
+      fail("Should fail");
+    } catch (RemoteException e) {
+      // expected
+    }
+  }  
   
 }
