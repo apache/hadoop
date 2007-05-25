@@ -495,6 +495,10 @@ Branch 0.13 (unreleased changes)
      to indicate the default directory, per HADOOP-1386.
      (Hairong Kuang via cutting)
 
+128. HADOOP-1411.  Make task retry framework handle 
+     AlreadyBeingCreatedException when wrapped as a RemoteException.
+     (Hairong Kuang via tomwhite)
+
 
 Release 0.12.3 - 2007-04-06
 

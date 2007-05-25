@@ -1,5 +1,7 @@
 package org.apache.hadoop.io.retry;
 
+import org.apache.hadoop.ipc.RemoteException;
+
 public interface UnreliableInterface {
   
   public static class UnreliableException extends Exception {
@@ -12,7 +14,8 @@ public interface UnreliableInterface {
   
   void alwaysSucceeds() throws UnreliableException;
   
-  void alwaysfailsWithFatalException() throws FatalException;
+  void alwaysFailsWithFatalException() throws FatalException;
+  void alwaysFailsWithRemoteFatalException() throws RemoteException;
 
   void failsOnceThenSucceeds() throws UnreliableException;
   boolean failsOnceThenSucceedsWithReturnValue() throws UnreliableException;

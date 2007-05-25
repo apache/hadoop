@@ -1,5 +1,7 @@
 package org.apache.hadoop.io.retry;
 
+import org.apache.hadoop.ipc.RemoteException;
+
 public class UnreliableImplementation implements UnreliableInterface {
 
   private int failsOnceInvocationCount,
@@ -10,8 +12,12 @@ public class UnreliableImplementation implements UnreliableInterface {
     // do nothing
   }
   
-  public void alwaysfailsWithFatalException() throws FatalException {
+  public void alwaysFailsWithFatalException() throws FatalException {
     throw new FatalException();
+  }
+  
+  public void alwaysFailsWithRemoteFatalException() throws RemoteException {
+    throw new RemoteException(FatalException.class.getName(), "Oops");
   }
 
   public void failsOnceThenSucceeds() throws UnreliableException {

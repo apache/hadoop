@@ -106,11 +106,16 @@ class DFSClient implements FSConstants {
     RetryPolicy createPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
         5, LEASE_SOFTLIMIT_PERIOD, TimeUnit.MILLISECONDS);
     
+    Map<Class<? extends Exception>,RetryPolicy> remoteExceptionToPolicyMap =
+      new HashMap<Class<? extends Exception>, RetryPolicy>();
+    remoteExceptionToPolicyMap.put(AlreadyBeingCreatedException.class, createPolicy);
+
     Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =
       new HashMap<Class<? extends Exception>, RetryPolicy>();
+    exceptionToPolicyMap.put(RemoteException.class, 
+        RetryPolicies.retryByRemoteException(
+            RetryPolicies.TRY_ONCE_THEN_FAIL, remoteExceptionToPolicyMap));
     exceptionToPolicyMap.put(SocketTimeoutException.class, timeoutPolicy);
-    exceptionToPolicyMap.put(AlreadyBeingCreatedException.class, createPolicy);
-
     RetryPolicy methodPolicy = RetryPolicies.retryByException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
     Map<String,RetryPolicy> methodNameToPolicyMap = new HashMap<String,RetryPolicy>();
