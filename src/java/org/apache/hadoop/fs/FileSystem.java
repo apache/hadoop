@@ -558,7 +558,7 @@ public abstract class FileSystem extends Configured {
       parents[0] = new Path(Path.SEPARATOR);
       level = 1;
     } else {
-      parents[0] = new Path("");
+      parents[0] = new Path(Path.CUR_DIR);
     }
       
     Path[] results = globPathsLevel(parents, components, level, filter);
