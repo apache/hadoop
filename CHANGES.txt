@@ -69,6 +69,9 @@ Trunk (unreleased changes)
  22. HADOOP-1408.  Fix a compiler warning by adding a class to replace
      a generic.  (omalley via cutting)
 
+ 23. HADOOP-1376.  Modify RandomWriter example so that it can generate
+     data for the Terasort benchmark.  (Devaraj Das via cutting)
+
 
 Branch 0.13 (unreleased changes)
 

@@ -34,8 +34,33 @@ import org.apache.hadoop.mapred.lib.NullOutputFormat;
  * This program uses map/reduce to just run a distributed job where there is
  * no interaction between the tasks and each task write a large unsorted
  * random binary sequence file of BytesWritable.
- * 
- * @author Owen O'Malley
+ * In order for this program to generate data for terasort with 10-byte keys
+ * and 90-byte values, have the following config:
+ * <xmp>
+ * <?xml version="1.0"?>
+ * <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+ * <configuration>
+ *   <property>
+ *     <name>test.randomwrite.min_key</name>
+ *     <value>10</value>
+ *   </property>
+ *   <property>
+ *     <name>test.randomwrite.max_key</name>
+ *     <value>10</value>
+ *   </property>
+ *   <property>
+ *     <name>test.randomwrite.min_value</name>
+ *     <value>90</value>
+ *   </property>
+ *   <property>
+ *     <name>test.randomwrite.max_value</name>
+ *     <value>90</value>
+ *   </property>
+ *   <property>
+ *     <name>test.randomwrite.total_bytes</name>
+ *     <value>1099511627776</value>
+ *   </property>
+ * </configuration></xmp>
  */
 public class RandomWriter {
   
@@ -220,8 +245,21 @@ public class RandomWriter {
     
     JobClient client = new JobClient(job);
     ClusterStatus cluster = client.getClusterStatus();
-    int numMaps = cluster.getTaskTrackers() * 
-      job.getInt("test.randomwriter.maps_per_host", 10);
+    int numMapsPerHost = job.getInt("test.randomwriter.maps_per_host", 10);
+    long numBytesToWritePerMap = job.getLong("test.randomwrite.bytes_per_map",
+                                             1*1024*1024*1024);
+    if (numBytesToWritePerMap == 0) {
+      System.err.println("Cannot have test.randomwrite.bytes_per_map set to 0");
+      System.exit(-1);
+    }
+    long totalBytesToWrite = job.getLong("test.randomwrite.total_bytes", 
+         numMapsPerHost*numBytesToWritePerMap*cluster.getTaskTrackers());
+    int numMaps = (int) (totalBytesToWrite / numBytesToWritePerMap);
+    if (numMaps == 0 && totalBytesToWrite > 0) {
+      numMaps = 1;
+      job.setLong("test.randomwrite.bytes_per_map", totalBytesToWrite);
+    }
+    
     job.setNumMapTasks(numMaps);
     System.out.println("Running " + numMaps + " maps.");
     job.setNumReduceTasks(1);
