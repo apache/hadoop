@@ -593,7 +593,10 @@ public abstract class Server {
               call.connection.close();
             }
           }
-
+        } catch (InterruptedException e) {
+          if (running) {                          // unexpected -- log it
+            LOG.info(getName() + " caught: " + e, e);
+          }
         } catch (Exception e) {
           LOG.info(getName() + " caught: " + e, e);
         }
