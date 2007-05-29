@@ -71,9 +71,9 @@ public class TestGet extends HBaseTestCase {
       Path dir = new Path("/hbase");
       fs.mkdirs(dir);
       
-      HTableDescriptor desc = new HTableDescriptor("test", 1);
-      desc.addFamily(CONTENTS);
-      desc.addFamily(HConstants.COLUMN_FAMILY);
+      HTableDescriptor desc = new HTableDescriptor("test");
+      desc.addFamily(new HColumnDescriptor(CONTENTS.toString()));
+      desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
       
       HRegionInfo info = new HRegionInfo(0L, desc, null, null);
       Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);

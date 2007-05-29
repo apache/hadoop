@@ -15,15 +15,24 @@ public class TestToString extends TestCase {
   }
   
   public void testHRegionInfo() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor("hank", 10);
-    htd.addFamily(new Text("hankfamily:"));
-    htd.addFamily(new Text("hankotherfamily:"));
-    assertEquals("Table descriptor", htd.toString(),
-     "name: hank, maxVersions: 10, families: [hankfamily:, hankotherfamily:]");
+    HTableDescriptor htd = new HTableDescriptor("hank");
+    htd.addFamily(new HColumnDescriptor("hankfamily:"));
+    htd.addFamily(new HColumnDescriptor(new Text("hankotherfamily:"), 10,
+        HColumnDescriptor.CompressionType.BLOCK, true, 1000, false));
+    assertEquals("Table descriptor", "name: hank, families: "
+        + "{hankfamily:=(hankfamily:, max versions: 3, compression: none, "
+        + "in memory: false, max value length: 2147483647, bloom filter:false), "
+        + "hankotherfamily:=(hankotherfamily:, max versions: 10, "
+        + "compression: block, in memory: true, max value length: 1000, "
+        + "bloom filter:false)}", htd.toString());
     HRegionInfo hri = new HRegionInfo(-1, htd, new Text(), new Text("10"));
     assertEquals("HRegionInfo", 
-        "regionname: hank__-1, startKey: <>, tableDesc: {name: hank, " +
-        "maxVersions: 10, families: [hankfamily:, hankotherfamily:]}",
+        "regionname: hank__-1, startKey: <>, tableDesc: {" + "name: hank, "
+        + "families: {hankfamily:=(hankfamily:, max versions: 3, "
+        + "compression: none, in memory: false, max value length: 2147483647, "
+        + "bloom filter:false), hankotherfamily:=(hankotherfamily:, "
+        + "max versions: 10, compression: block, in memory: true, max value "
+        + "length: 1000, bloom filter:false)}}",
         hri.toString());
   }
 }

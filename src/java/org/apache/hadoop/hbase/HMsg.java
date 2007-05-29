@@ -30,12 +30,12 @@ public class HMsg implements Writable {
   public static final byte MSG_CALL_SERVER_STARTUP = 4;
   public static final byte MSG_REGIONSERVER_STOP = 5;
   public static final byte MSG_REGION_CLOSE_WITHOUT_REPORT = 6;
-  public static final byte MSG_REGION_CLOSE_AND_DELETE = 7;
 
   public static final byte MSG_REPORT_OPEN = 100;
   public static final byte MSG_REPORT_CLOSE = 101;
   public static final byte MSG_REGION_SPLIT = 102;
   public static final byte MSG_NEW_REGION = 103;
+  public static final byte MSG_REPORT_EXITING = 104;
 
   byte msg;
   HRegionInfo info;

@@ -15,11 +15,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.lang.Class;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -30,6 +32,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * HClient manages a connection to a single HRegionServer.
@@ -39,6 +42,10 @@ public class HClient implements HConstants {
   
   private static final Text[] META_COLUMNS = {
     COLUMN_FAMILY
+  };
+  
+  private static final Text[] REGIONINFO = {
+    COL_REGIONINFO
   };
   
   private static final Text EMPTY_START_ROW = new Text();
@@ -61,11 +68,11 @@ public class HClient implements HConstants {
   
   // Map tableName -> (Map startRow -> (HRegionInfo, HServerAddress)
   
-  private TreeMap<Text, TreeMap<Text, TableInfo>> tablesToServers;
+  private TreeMap<Text, SortedMap<Text, TableInfo>> tablesToServers;
   
   // For the "current" table: Map startRow -> (HRegionInfo, HServerAddress)
   
-  private TreeMap<Text, TableInfo> tableServers;
+  private SortedMap<Text, TableInfo> tableServers;
   
   // Known region HServerAddress.toString() -> HRegionInterface
   
@@ -87,21 +94,44 @@ public class HClient implements HConstants {
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     
     this.master = null;
-    this.tablesToServers = new TreeMap<Text, TreeMap<Text, TableInfo>>();
+    this.tablesToServers = new TreeMap<Text, SortedMap<Text, TableInfo>>();
     this.tableServers = null;
     this.servers = new TreeMap<String, HRegionInterface>();
     
     // For row mutation operations
-    
+
     this.currentRegion = null;
     this.currentServer = null;
     this.rand = new Random();
   }
   
-  /**
-   * Find the address of the master and connect to it
-   */
-  private void checkMaster() {
+  private void handleRemoteException(RemoteException e) throws IOException {
+    String msg = e.getMessage();
+    if(e.getClassName().equals("org.apache.hadoop.hbase.InvalidColumnNameException")) {
+      throw new InvalidColumnNameException(msg);
+      
+    } else if(e.getClassName().equals("org.apache.hadoop.hbase.LockException")) {
+      throw new LockException(msg);
+      
+    } else if(e.getClassName().equals("org.apache.hadoop.hbase.MasterNotRunningException")) {
+      throw new MasterNotRunningException(msg);
+      
+    } else if(e.getClassName().equals("org.apache.hadoop.hbase.NoServerForRegionException")) {
+      throw new NoServerForRegionException(msg);
+      
+    } else if(e.getClassName().equals("org.apache.hadoop.hbase.NotServingRegionException")) {
+      throw new NotServingRegionException(msg);
+      
+    } else if(e.getClassName().equals("org.apache.hadoop.hbase.TableNotDisabledException")) {
+      throw new TableNotDisabledException(msg);
+      
+    } else {
+      throw e;
+    }
+  }
+  
+  /* Find the address of the master and connect to it */
+  private void checkMaster() throws IOException {
     if (this.master != null) {
       return;
     }
@@ -136,103 +166,406 @@ public class HClient implements HConstants {
       }
     }
     if(this.master == null) {
-      throw new IllegalStateException("Master is not running");
+      throw new MasterNotRunningException();
     }
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Administrative methods
+  //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Creates a new table
+   * 
+   * @param desc - table descriptor for table
+   * 
+   * @throws IllegalArgumentException - if the table name is reserved
+   * @throws MasterNotRunningException - if master is not running
+   * @throws NoServerForRegionException - if root region is not being served
+   * @throws IOException
+   */
   public synchronized void createTable(HTableDescriptor desc) throws IOException {
-    if(desc.getName().equals(ROOT_TABLE_NAME)
-        || desc.getName().equals(META_TABLE_NAME)) {
-      
-      throw new IllegalArgumentException(desc.getName().toString()
-          + " is a reserved table name");
-    }
+    checkReservedTableName(desc.getName());
     checkMaster();
-    locateRootRegion();
-    this.master.createTable(desc);
+    try {
+      this.master.createTable(desc);
+      
+    } catch(RemoteException e) {
+      handleRemoteException(e);
+    }
+
+    // Save the current table
+    
+    SortedMap<Text, TableInfo> oldServers = this.tableServers;
+
+    try {
+      // Wait for new table to come on-line
+
+      findServersForTable(desc.getName());
+      
+    } finally {
+      if(oldServers != null && oldServers.size() != 0) {
+        // Restore old current table if there was one
+      
+        this.tableServers = oldServers;
+      }
+    }
   }
 
   public synchronized void deleteTable(Text tableName) throws IOException {
+    checkReservedTableName(tableName);
     checkMaster();
-    locateRootRegion();
-    this.master.deleteTable(tableName);
+    TableInfo firstMetaServer = getFirstMetaServerForTable(tableName);
+
+    try {
+      this.master.deleteTable(tableName);
+      
+    } catch(RemoteException e) {
+      handleRemoteException(e);
+    }
+
+    // Wait until first region is deleted
+    
+    HRegionInterface server = getHRegionConnection(firstMetaServer.serverAddress);
+
+    DataInputBuffer inbuf = new DataInputBuffer();
+    HStoreKey key = new HStoreKey();
+    HRegionInfo info = new HRegionInfo();
+    for(int tries = 0; tries < numRetries; tries++) {
+      long scannerId = -1L;
+      try {
+        scannerId = server.openScanner(firstMetaServer.regionInfo.regionName,
+            REGIONINFO, tableName);
+        LabelledData[] values = server.next(scannerId, key);
+        if(values == null || values.length == 0) {
+          break;
+        }
+        boolean found = false;
+        for(int j = 0; j < values.length; j++) {
+          if(values[j].getLabel().equals(COL_REGIONINFO)) {
+            byte[] bytes = new byte[values[j].getData().getSize()];
+            System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
+            inbuf.reset(bytes, bytes.length);
+            info.readFields(inbuf);
+            if(info.tableDesc.getName().equals(tableName)) {
+              found = true;
+            }
+          }
+        }
+        if(!found) {
+          break;
+        }
+        
+      } finally {
+        if(scannerId != -1L) {
+          try {
+            server.close(scannerId);
+            
+          } catch(Exception e) {
+            LOG.warn(e);
+          }
+        }
+      }
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Sleep. Waiting for first region to be deleted from " + tableName);
+      }
+      try {
+        Thread.sleep(clientTimeout);
+        
+      } catch(InterruptedException e) {
+      }
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Wake. Waiting for first region to be deleted from " + tableName);
+      }
+    }
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("table deleted " + tableName);
+    }
+  }
+
+  public synchronized void addColumn(Text tableName, HColumnDescriptor column) throws IOException {
+    checkReservedTableName(tableName);
+    checkMaster();
+    try {
+      this.master.addColumn(tableName, column);
+      
+    } catch(RemoteException e) {
+      handleRemoteException(e);
+    }
+  }
+
+  public synchronized void deleteColumn(Text tableName, Text columnName) throws IOException {
+    checkReservedTableName(tableName);
+    checkMaster();
+    try {
+      this.master.deleteColumn(tableName, columnName);
+      
+    } catch(RemoteException e) {
+      handleRemoteException(e);
+    }
+  }
+  
+  public synchronized void mergeRegions(Text regionName1, Text regionName2) throws IOException {
+    
+  }
+  
+  public synchronized void enableTable(Text tableName) throws IOException {
+    checkReservedTableName(tableName);
+    checkMaster();
+    TableInfo firstMetaServer = getFirstMetaServerForTable(tableName);
+    
+    try {
+      this.master.enableTable(tableName);
+      
+    } catch(RemoteException e) {
+      handleRemoteException(e);
+    }
+
+    // Wait until first region is enabled
+    
+    HRegionInterface server = getHRegionConnection(firstMetaServer.serverAddress);
+
+    DataInputBuffer inbuf = new DataInputBuffer();
+    HStoreKey key = new HStoreKey();
+    HRegionInfo info = new HRegionInfo();
+    for(int tries = 0; tries < numRetries; tries++) {
+      int valuesfound = 0;
+      long scannerId = -1L;
+      try {
+        scannerId = server.openScanner(firstMetaServer.regionInfo.regionName,
+            REGIONINFO, tableName);
+        LabelledData[] values = server.next(scannerId, key);
+        if(values == null || values.length == 0) {
+          if(valuesfound == 0) {
+            throw new NoSuchElementException("table " + tableName + " not found");
+          }
+        }
+        valuesfound += 1;
+        boolean isenabled = false;
+        for(int j = 0; j < values.length; j++) {
+          if(values[j].getLabel().equals(COL_REGIONINFO)) {
+            byte[] bytes = new byte[values[j].getData().getSize()];
+            System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
+            inbuf.reset(bytes, bytes.length);
+            info.readFields(inbuf);
+            isenabled = !info.offLine;
+          }
+        }
+        if(isenabled) {
+          break;
+        }
+        
+      } finally {
+        if(scannerId != -1L) {
+          try {
+            server.close(scannerId);
+            
+          } catch(Exception e) {
+            LOG.warn(e);
+          }
+        }
+      }
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Sleep. Waiting for first region to be enabled from " + tableName);
+      }
+      try {
+        Thread.sleep(clientTimeout);
+        
+      } catch(InterruptedException e) {
+      }
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Wake. Waiting for first region to be enabled from " + tableName);
+      }
+    }
+  }
+
+  public synchronized void disableTable(Text tableName) throws IOException {
+    checkReservedTableName(tableName);
+    checkMaster();
+    TableInfo firstMetaServer = getFirstMetaServerForTable(tableName);
+
+    try {
+      this.master.disableTable(tableName);
+      
+    } catch(RemoteException e) {
+      handleRemoteException(e);
+    }
+
+    // Wait until first region is disabled
+    
+    HRegionInterface server = getHRegionConnection(firstMetaServer.serverAddress);
+
+    DataInputBuffer inbuf = new DataInputBuffer();
+    HStoreKey key = new HStoreKey();
+    HRegionInfo info = new HRegionInfo();
+    for(int tries = 0; tries < numRetries; tries++) {
+      int valuesfound = 0;
+      long scannerId = -1L;
+      try {
+        scannerId = server.openScanner(firstMetaServer.regionInfo.regionName,
+            REGIONINFO, tableName);
+        LabelledData[] values = server.next(scannerId, key);
+        if(values == null || values.length == 0) {
+          if(valuesfound == 0) {
+            throw new NoSuchElementException("table " + tableName + " not found");
+          }
+        }
+        valuesfound += 1;
+        boolean disabled = false;
+        for(int j = 0; j < values.length; j++) {
+          if(values[j].getLabel().equals(COL_REGIONINFO)) {
+            byte[] bytes = new byte[values[j].getData().getSize()];
+            System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
+            inbuf.reset(bytes, bytes.length);
+            info.readFields(inbuf);
+            disabled = info.offLine;
+          }
+        }
+        if(disabled) {
+          break;
+        }
+        
+      } finally {
+        if(scannerId != -1L) {
+          try {
+            server.close(scannerId);
+            
+          } catch(Exception e) {
+            LOG.warn(e);
+          }
+        }
+      }
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Sleep. Waiting for first region to be disabled from " + tableName);
+      }
+      try {
+        Thread.sleep(clientTimeout);
+        
+      } catch(InterruptedException e) {
+      }
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Wake. Waiting for first region to be disabled from " + tableName);
+      }
+    }
   }
   
   public synchronized void shutdown() throws IOException {
     checkMaster();
     this.master.shutdown();
   }
+
+  /*
+   * Verifies that the specified table name is not a reserved name
+   * @param tableName - the table name to be checked
+   * @throws IllegalArgumentException - if the table name is reserved
+   */
+  private void checkReservedTableName(Text tableName) {
+    if(tableName.equals(ROOT_TABLE_NAME)
+        || tableName.equals(META_TABLE_NAME)) {
+      
+      throw new IllegalArgumentException(tableName + " is a reserved table name");
+    }
+  }
   
+  private TableInfo getFirstMetaServerForTable(Text tableName) throws IOException {
+    SortedMap<Text, TableInfo> metaservers = findMetaServersForTable(tableName);
+    return metaservers.get(metaservers.firstKey());
+  }
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // Client API
+  //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Loads information so that a table can be manipulated.
+   * 
+   * @param tableName - the table to be located
+   * @throws IOException - if the table can not be located after retrying
+   */
   public synchronized void openTable(Text tableName) throws IOException {
     if(tableName == null || tableName.getLength() == 0) {
       throw new IllegalArgumentException("table name cannot be null or zero length");
     }
     this.tableServers = tablesToServers.get(tableName);
-    if(this.tableServers == null ) {            // We don't know where the table is
-      findTableInMeta(tableName);               // Load the information from meta
+    if(this.tableServers == null ) {
+      // We don't know where the table is.
+      // Load the information from meta.
+      this.tableServers = findServersForTable(tableName);
     }
   }
 
-  private void findTableInMeta(Text tableName) throws IOException {
-    TreeMap<Text, TableInfo> metaServers =
+  /*
+   * Locates a table by searching the META region
+   * 
+   * @param tableName - name of table to find servers for
+   * @return - map of first row to table info for all regions in the table
+   * @throws IOException
+   */
+  private SortedMap<Text, TableInfo> findServersForTable(Text tableName)
+      throws IOException {
+
+    SortedMap<Text, TableInfo> servers = null;
+    if(tableName.equals(ROOT_TABLE_NAME)) {
+      servers = locateRootRegion();
+
+    } else if(tableName.equals(META_TABLE_NAME)) {
+      servers = loadMetaFromRoot();
+      
+    } else {
+      servers = new TreeMap<Text, TableInfo>();
+      for(TableInfo t: findMetaServersForTable(tableName).values()) {
+        servers.putAll(scanOneMetaRegion(t, tableName));
+      }
+      this.tablesToServers.put(tableName, servers);
+    }
+    return servers;
+  }
+
+  /*
+   * Finds the meta servers that contain information about the specified table
+   * @param tableName - the name of the table to get information about
+   * @return - returns a SortedMap of the meta servers
+   * @throws IOException
+   */
+  private SortedMap<Text, TableInfo> findMetaServersForTable(Text tableName)
+      throws IOException {
+    
+    SortedMap<Text, TableInfo> metaServers = 
       this.tablesToServers.get(META_TABLE_NAME);
     
-    if (metaServers == null) {                // Don't know where the meta is
-      loadMetaFromRoot(tableName);
-      if (tableName.equals(META_TABLE_NAME) || tableName.equals(ROOT_TABLE_NAME)) {
-        // All we really wanted was the meta or root table
-        return;
-      }
-      metaServers = this.tablesToServers.get(META_TABLE_NAME);
+    if(metaServers == null) {                 // Don't know where the meta is
+      metaServers = loadMetaFromRoot();
     }
+    Text firstMetaRegion = (metaServers.containsKey(tableName)) ?
+        tableName : metaServers.headMap(tableName).lastKey();
 
-    this.tableServers = new TreeMap<Text, TableInfo>();
-    for(int tries = 0;
-        this.tableServers.size() == 0 && tries < this.numRetries;
-        tries++) {
-      Text firstMetaRegion = (metaServers.containsKey(tableName))?
-        tableName: metaServers.headMap(tableName).lastKey();
-      for(TableInfo t: metaServers.tailMap(firstMetaRegion).values()) {
-        scanOneMetaRegion(t, tableName);
-      }
-      if (this.tableServers.size() == 0) {
-        // Table not assigned. Sleep and try again
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Sleeping. Table " + tableName
-              + " not currently being served.");
-        }
-        try {
-          Thread.sleep(this.clientTimeout);
-        } catch(InterruptedException e) {
-        }
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Wake. Retry finding table " + tableName);
-        }
-      }
-    }
-    if (this.tableServers.size() == 0) {
-      throw new IOException("failed to scan " + META_TABLE_NAME + " after "
-          + this.numRetries + " retries");
-    }
-    this.tablesToServers.put(tableName, this.tableServers);
+    return metaServers.tailMap(firstMetaRegion);
   }
 
   /*
    * Load the meta table from the root table.
+   * 
+   * @return map of first row to TableInfo for all meta regions
+   * @throws IOException
    */
-  private void loadMetaFromRoot(Text tableName) throws IOException {
-    locateRootRegion();
-    if(tableName.equals(ROOT_TABLE_NAME)) {   // All we really wanted was the root
-      return;
+  private TreeMap<Text, TableInfo> loadMetaFromRoot() throws IOException {
+    SortedMap<Text, TableInfo> rootRegion =
+      this.tablesToServers.get(ROOT_TABLE_NAME);
+    
+    if(rootRegion == null) {
+      rootRegion = locateRootRegion();
     }
-    scanRoot();
+    return scanRoot(rootRegion.get(rootRegion.firstKey()));
   }
   
   /*
-   * Repeatedly try to find the root region by asking the HMaster for where it
-   * could be.
+   * Repeatedly try to find the root region by asking the master for where it is
+   * 
+   * @return TreeMap<Text, TableInfo> for root regin if found
+   * @throws NoServerForRegionException - if the root region can not be located after retrying
+   * @throws IOException 
    */
-  private void locateRootRegion() throws IOException {
+  private TreeMap<Text, TableInfo> locateRootRegion() throws IOException {
     checkMaster();
     
     HServerAddress rootRegionLocation = null;
@@ -256,18 +589,14 @@ public class HClient implements HConstants {
         }
       }
       if(rootRegionLocation == null) {
-        throw new IOException("Timed out trying to locate root region");
+        throw new NoServerForRegionException(
+            "Timed out trying to locate root region");
       }
       
       HRegionInterface rootRegion = getHRegionConnection(rootRegionLocation);
 
       try {
         rootRegion.getRegionInfo(HGlobals.rootRegionInfo.regionName);
-        this.tableServers = new TreeMap<Text, TableInfo>();
-        this.tableServers.put(EMPTY_START_ROW,
-            new TableInfo(HGlobals.rootRegionInfo, rootRegionLocation));
-        
-        this.tablesToServers.put(ROOT_TABLE_NAME, this.tableServers);
         break;
         
       } catch(NotServingRegionException e) {
@@ -293,120 +622,149 @@ public class HClient implements HConstants {
     }
     
     if (rootRegionLocation == null) {
-      throw new IOException("unable to locate root region server");
+      throw new NoServerForRegionException(
+          "unable to locate root region server");
     }
+    
+    TreeMap<Text, TableInfo> rootServer = new TreeMap<Text, TableInfo>();
+    rootServer.put(EMPTY_START_ROW,
+        new TableInfo(HGlobals.rootRegionInfo, rootRegionLocation));
+    
+    this.tablesToServers.put(ROOT_TABLE_NAME, rootServer);
+    return rootServer;
   }
 
-  /*
+  /* 
    * Scans the root region to find all the meta regions
+   * @return - TreeMap of meta region servers
+   * @throws IOException
    */
-  private void scanRoot() throws IOException {
-    this.tableServers = new TreeMap<Text, TableInfo>();
-    TableInfo t = this.tablesToServers.get(ROOT_TABLE_NAME).get(EMPTY_START_ROW);
-    for(int tries = 0;
-        scanOneMetaRegion(t, META_TABLE_NAME) == 0 && tries < this.numRetries;
-        tries++) {
-      
-      // The table is not yet being served. Sleep and retry.
-      
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Sleeping. Table " + META_TABLE_NAME
-            + " not currently being served.");
-      }
-      try {
-        Thread.sleep(this.clientTimeout);
-        
-      } catch(InterruptedException e) {
-      }
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Wake. Retry finding table " + META_TABLE_NAME);
-      }
-    }
-    if(this.tableServers.size() == 0) {
-      throw new IOException("failed to scan " + ROOT_TABLE_NAME + " after "
-          + this.numRetries + " retries");
-    }
-    this.tablesToServers.put(META_TABLE_NAME, this.tableServers);
+  private TreeMap<Text, TableInfo> scanRoot(TableInfo rootRegion)
+      throws IOException {
+    
+    TreeMap<Text, TableInfo> metaservers =
+      scanOneMetaRegion(rootRegion, META_TABLE_NAME);
+    this.tablesToServers.put(META_TABLE_NAME, metaservers);
+    return metaservers;
   }
 
   /*
    * Scans a single meta region
-   * @param t the table we're going to scan
+   * @param t the meta region we're going to scan
    * @param tableName the name of the table we're looking for
-   * @return returns the number of servers that are serving the table
+   * @return returns a map of startingRow to TableInfo
+   * @throws NoSuchElementException - if table does not exist
+   * @throws IllegalStateException - if table is offline
+   * @throws NoServerForRegionException - if table can not be found after retrying
+   * @throws IOException 
    */
-  private int scanOneMetaRegion(TableInfo t, Text tableName)
+  private TreeMap<Text, TableInfo> scanOneMetaRegion(TableInfo t, Text tableName)
       throws IOException {
     
     HRegionInterface server = getHRegionConnection(t.serverAddress);
-    int servers = 0;
-    long scannerId = -1L;
-    try {
-      scannerId =
-        server.openScanner(t.regionInfo.regionName, META_COLUMNS, tableName);
-      
-      DataInputBuffer inbuf = new DataInputBuffer();
-      while(true) {
-        HRegionInfo regionInfo = null;
-        String serverAddress = null;
-        HStoreKey key = new HStoreKey();
-        LabelledData[] values = server.next(scannerId, key);
-        if(values.length == 0) {
-          if(servers == 0) {
-            // If we didn't find any servers then the table does not exist
-            
-            throw new NoSuchElementException("table '" + tableName
-                + "' does not exist");
+    TreeMap<Text, TableInfo> servers = new TreeMap<Text, TableInfo>();
+    for(int tries = 0; servers.size() == 0 && tries < this.numRetries;
+        tries++) {
+  
+      long scannerId = -1L;
+      try {
+        scannerId =
+          server.openScanner(t.regionInfo.regionName, META_COLUMNS, tableName);
+
+        DataInputBuffer inbuf = new DataInputBuffer();
+        while(true) {
+          HRegionInfo regionInfo = null;
+          String serverAddress = null;
+          HStoreKey key = new HStoreKey();
+          LabelledData[] values = server.next(scannerId, key);
+          if(values.length == 0) {
+            if(servers.size() == 0) {
+              // If we didn't find any servers then the table does not exist
+
+              throw new NoSuchElementException("table '" + tableName
+                  + "' does not exist");
+            }
+
+            // We found at least one server for the table and now we're done.
+
+            break;
           }
-          
-          // We found at least one server for the table and now we're done.
-          
-          break;
-        }
 
-        byte[] bytes = null;
-        TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-        for(int i = 0; i < values.length; i++) {
-          bytes = new byte[values[i].getData().getSize()];
-          System.arraycopy(values[i].getData().get(), 0, bytes, 0, bytes.length);
-          results.put(values[i].getLabel(), bytes);
-        }
-        regionInfo = new HRegionInfo();
-        bytes = results.get(COL_REGIONINFO);
-        inbuf.reset(bytes, bytes.length);
-        regionInfo.readFields(inbuf);
-
-        if(!regionInfo.tableDesc.getName().equals(tableName)) {
-          // We're done
-          break;
-        }
-
-        bytes = results.get(COL_SERVER);
-        if(bytes == null || bytes.length == 0) {
-          // We need to rescan because the table we want is unassigned.
-          
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("no server address for " + regionInfo.toString());
+          byte[] bytes = null;
+          TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+          for(int i = 0; i < values.length; i++) {
+            bytes = new byte[values[i].getData().getSize()];
+            System.arraycopy(values[i].getData().get(), 0, bytes, 0, bytes.length);
+            results.put(values[i].getLabel(), bytes);
           }
-          servers = 0;
-          this.tableServers.clear();
-          break;
-        }
-        servers += 1;
-        serverAddress = new String(bytes, UTF8_ENCODING);
+          regionInfo = new HRegionInfo();
+          bytes = results.get(COL_REGIONINFO);
+          inbuf.reset(bytes, bytes.length);
+          regionInfo.readFields(inbuf);
 
-        this.tableServers.put(regionInfo.startKey, 
-            new TableInfo(regionInfo, new HServerAddress(serverAddress)));
+          if(!regionInfo.tableDesc.getName().equals(tableName)) {
+            // We're done
+            break;
+          }
+
+          if(regionInfo.offLine) {
+            throw new IllegalStateException("table offline: " + tableName);
+          }
+
+          bytes = results.get(COL_SERVER);
+          if(bytes == null || bytes.length == 0) {
+            // We need to rescan because the table we want is unassigned.
+
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("no server address for " + regionInfo.toString());
+            }
+            servers.clear();
+            break;
+          }
+          serverAddress = new String(bytes, UTF8_ENCODING);
+
+          servers.put(regionInfo.startKey, 
+              new TableInfo(regionInfo, new HServerAddress(serverAddress)));
+        }
+      } finally {
+        if(scannerId != -1L) {
+          try {
+            server.close(scannerId);
+
+          } catch(Exception e) {
+            LOG.warn(e);
+          }
+        }
       }
-      return servers;
-      
-    } finally {
-      if(scannerId != -1L) {
-        server.close(scannerId);
+        
+      if(servers.size() == 0 && tries == this.numRetries - 1) {
+        throw new NoServerForRegionException("failed to find server for "
+            + tableName + " after " + this.numRetries + " retries");
+      }
+
+      // The table is not yet being served. Sleep and retry.
+
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Sleeping. Table " + tableName
+            + " not currently being served.");
+      }
+      try {
+        Thread.sleep(this.clientTimeout);
+
+      } catch(InterruptedException e) {
+      }
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Wake. Retry finding table " + tableName);
       }
     }
+    return servers;
   }
 
+  /* 
+   * Establishes a connection to the region server at the specified address
+   * @param regionServer - the server to connect to
+   * @throws IOException
+   */
   synchronized HRegionInterface getHRegionConnection(HServerAddress regionServer)
       throws IOException {
 
@@ -436,13 +794,12 @@ public class HClient implements HConstants {
       throws IOException {
     TreeSet<HTableDescriptor> uniqueTables = new TreeSet<HTableDescriptor>();
     
-    TreeMap<Text, TableInfo> metaTables =
+    SortedMap<Text, TableInfo> metaTables =
       this.tablesToServers.get(META_TABLE_NAME);
     
     if(metaTables == null) {
       // Meta is not loaded yet so go do that
-      loadMetaFromRoot(META_TABLE_NAME);
-      metaTables = tablesToServers.get(META_TABLE_NAME);
+      metaTables = loadMetaFromRoot();
     }
 
     for (TableInfo t: metaTables.values()) {
@@ -512,10 +869,11 @@ public class HClient implements HConstants {
     
     // Reload information for the whole table
     
-    findTableInMeta(info.regionInfo.tableDesc.getName());
+    this.tableServers = findServersForTable(info.regionInfo.tableDesc.getName());
     
     if(this.tableServers.get(info.regionInfo.startKey) == null ) {
-      throw new IOException("region " + info.regionInfo.regionName + " does not exist");
+      throw new IOException("region " + info.regionInfo.regionName
+          + " does not exist");
     }
   }
   
@@ -879,8 +1237,7 @@ public class HClient implements HConstants {
     System.err.println("              address is read from configuration.");
     System.err.println("Commands:");
     System.err.println(" shutdown     Shutdown the HBase cluster.");
-    System.err.println(" createTable  Takes table name, column families, " +
-      "and maximum versions.");
+    System.err.println(" createTable  Takes table name, column families,... ");
     System.err.println(" deleteTable  Takes a table name.");
     System.err.println(" iistTables   List all tables.");
     System.err.println("Example Usage:");
@@ -928,16 +1285,14 @@ public class HClient implements HConstants {
         }
         
         if (cmd.equals("createTable")) {
-          if (i + 3 > args.length) {
+          if (i + 2 > args.length) {
             throw new IllegalArgumentException("Must supply a table name " +
-              ", at least one column family and maximum number of versions");
+              "and at least one column family");
           }
-          int maxVersions = (Integer.parseInt(args[args.length - 1]));
-          HTableDescriptor desc =
-            new HTableDescriptor(args[i + 1], maxVersions);
+          HTableDescriptor desc = new HTableDescriptor(args[i + 1]);
           boolean addedFamily = false;
           for (int ii = i + 2; ii < (args.length - 1); ii++) {
-            desc.addFamily(new Text(args[ii]));
+            desc.addFamily(new HColumnDescriptor(args[ii]));
             addedFamily = true;
           }
           if (!addedFamily) {

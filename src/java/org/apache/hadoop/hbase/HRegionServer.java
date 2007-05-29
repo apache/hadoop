@@ -603,6 +603,13 @@ public class HRegionServer
       }
     }
     try {
+      HMsg[] exitMsg = { new HMsg(HMsg.MSG_REPORT_EXITING) };
+      hbaseMaster.regionServerReport(info, exitMsg);
+      
+    } catch(IOException e) {
+      LOG.warn(e);
+    }
+    try {
       LOG.info("stopping server at: " + info.getServerAddress().toString());
 
       // Send interrupts to wake up threads if sleeping so they notice shutdown.
@@ -747,13 +754,6 @@ public class HRegionServer
             closeRegion(msg.getRegionInfo(), false);
             break;
 
-          case HMsg.MSG_REGION_CLOSE_AND_DELETE:
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("MSG_REGION_CLOSE_AND_DELETE");
-            }
-            closeAndDeleteRegion(msg.getRegionInfo());
-            break;
-
           default:
             throw new IOException("Impossible state during msg processing.  Instruction: " + msg);
           }
@@ -795,27 +795,6 @@ public class HRegionServer
 
       if(reportWhenCompleted) {
         reportClose(region);
-      }
-    }
-  }
-
-  private void closeAndDeleteRegion(HRegionInfo info) throws IOException {
-    this.lock.writeLock().lock();
-    HRegion region = null;
-    try {
-      region = regions.remove(info.regionName);
-    } finally {
-      this.lock.writeLock().unlock();
-    }
-    if(region != null) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("deleting region " + info.regionName);
-      }
-      
-      region.closeAndDelete();
-      
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("region " + info.regionName + " deleted");
       }
     }
   }

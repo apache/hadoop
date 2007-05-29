@@ -101,10 +101,10 @@ public class HRegiondirReader {
   private HTableDescriptor getTableDescriptor(final FileSystem fs,
       final Path d, final String tableName)
   throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName, 1);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     Text [] families = getFamilies(fs, d);
     for (Text f: families) {
-      desc.addFamily(f);
+      desc.addFamily(new HColumnDescriptor(f.toString()));
     }
     return desc;
   }
@@ -163,7 +163,7 @@ public class HRegiondirReader {
   private void dump(final HRegionInfo info) throws IOException {
     HRegion r = new HRegion(this.parentdir, null,
         FileSystem.get(this.conf), conf, info, null, null);
-    Text [] families = info.tableDesc.families().toArray(new Text [] {});
+    Text [] families = info.tableDesc.families().keySet().toArray(new Text [] {});
     HInternalScannerInterface scanner = r.getScanner(families, new Text());
     HStoreKey key = new HStoreKey();
     TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
@@ -183,8 +183,8 @@ public class HRegiondirReader {
     // followed by cell content.
     while(scanner.next(key, results)) {
       for (Map.Entry<Text, BytesWritable> es: results.entrySet()) {
-    	Text colname = es.getKey();
-    	BytesWritable colvalue = es.getValue();
+      Text colname = es.getKey();
+      BytesWritable colvalue = es.getValue();
         Object value = null;
         byte[] bytes = new byte[colvalue.getSize()];
         if (colname.toString().equals("info:regioninfo")) {
