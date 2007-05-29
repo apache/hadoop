@@ -19,7 +19,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.TreeSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,101 +29,73 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * HTableDescriptor contains various facts about an HTable, like
- * column families, maximum number of column versions, etc.
+ * HTableDescriptor contains the name of an HTable, and its
+ * column families.
  */
 public class HTableDescriptor implements WritableComparable {
   Text name;
-  int maxVersions;
-  TreeSet<Text> families = new TreeSet<Text>();
+  TreeMap<Text, HColumnDescriptor> families;
   
   /**
    * Legal table names can only contain 'word characters':
    * i.e. <code>[a-zA-Z_0-9]</code>.
    * 
-   * Lets be restrictive until a reason to be otherwise.
+   * Let's be restrictive until a reason to be otherwise.
    */
   private static final Pattern LEGAL_TABLE_NAME =
     Pattern.compile("[\\w-]+");
   
-  /**
-   * Legal family names can only contain 'word characters' and
-   * end in a colon.
-   */
-  private static final Pattern LEGAL_FAMILY_NAME =
-    Pattern.compile("\\w+:");
-
   public HTableDescriptor() {
     this.name = new Text();
-    this.families.clear();
+    this.families = new TreeMap<Text, HColumnDescriptor>();
   }
 
   /**
    * Constructor.
    * @param name Table name.
-   * @param maxVersions Number of versions of a column to keep.
    * @throws IllegalArgumentException if passed a table name
    * that is made of other than 'word' characters: i.e.
    * <code>[a-zA-Z_0-9]
    */
-  public HTableDescriptor(String name, int maxVersions) {
+  public HTableDescriptor(String name) {
     Matcher m = LEGAL_TABLE_NAME.matcher(name);
     if (m == null || !m.matches()) {
-      throw new IllegalArgumentException("Table names can only " +
-          "contain 'word characters': i.e. [a-zA-Z_0-9");
-    }
-    if (maxVersions <= 0) {
-      // TODO: Allow maxVersion of 0 to be the way you say
-      // "Keep all versions".  Until there is support, consider
-      // 0 -- or < 0 -- a configuration error.
-      throw new IllegalArgumentException("Maximum versions " +
-        "must be positive");
+      throw new IllegalArgumentException(
+          "Table names can only contain 'word characters': i.e. [a-zA-Z_0-9");
     }
     this.name = new Text(name);
-    this.maxVersions = maxVersions;
+    this.families = new TreeMap<Text, HColumnDescriptor>();
   }
 
   public Text getName() {
     return name;
   }
 
-  public int getMaxVersions() {
-    return maxVersions;
-  }
-
   /**
    * Add a column family.
-   * @param family Column family name to add.  Column family names
-   * must end in a <code>:</code>
-   * @throws IllegalArgumentException if passed a table name
-   * that is made of other than 'word' characters: i.e.
-   * <code>[a-zA-Z_0-9]
+   * @param family HColumnDescriptor of familyto add.
    */
-  public void addFamily(Text family) {
-    String familyStr = family.toString();
-    Matcher m = LEGAL_FAMILY_NAME.matcher(familyStr);
-    if (m == null || !m.matches()) {
-      throw new IllegalArgumentException("Family names can " +
-          "only contain 'word characters' and must end with a " +
-          "':'");
-    }
-    families.add(family);
+  public void addFamily(HColumnDescriptor family) {
+    families.put(family.getName(), family);
   }
 
   /** Do we contain a given column? */
   public boolean hasFamily(Text family) {
-    return families.contains(family);
+    return families.containsKey(family);
   }
 
-  /** All the column families in this table. */
-  public TreeSet<Text> families() {
+  /** All the column families in this table.
+   * 
+   *  TODO: What is this used for? Seems Dangerous to let people play with our
+   *  private members.
+   */
+  public TreeMap<Text, HColumnDescriptor> families() {
     return families;
   }
 
   @Override
   public String toString() {
-    return "name: " + this.name.toString() +
-      ", maxVersions: " + this.maxVersions + ", families: " + this.families;
+    return "name: " + this.name.toString() + ", families: " + this.families;
   }
   
   @Override
@@ -133,10 +107,9 @@ public class HTableDescriptor implements WritableComparable {
   public int hashCode() {
     // TODO: Cache.
     int result = this.name.hashCode();
-    result ^= Integer.valueOf(this.maxVersions).hashCode();
     if (this.families != null && this.families.size() > 0) {
-      for (Text family: this.families) {
-        result ^= family.hashCode();
+      for (Map.Entry<Text,HColumnDescriptor> e: this.families.entrySet()) {
+        result ^= e.hashCode();
       }
     }
     return result;
@@ -148,22 +121,21 @@ public class HTableDescriptor implements WritableComparable {
 
   public void write(DataOutput out) throws IOException {
     name.write(out);
-    out.writeInt(maxVersions);
     out.writeInt(families.size());
-    for(Iterator<Text> it = families.iterator(); it.hasNext(); ) {
+    for(Iterator<HColumnDescriptor> it = families.values().iterator();
+        it.hasNext(); ) {
       it.next().write(out);
     }
   }
 
   public void readFields(DataInput in) throws IOException {
     this.name.readFields(in);
-    this.maxVersions = in.readInt();
     int numCols = in.readInt();
     families.clear();
     for(int i = 0; i < numCols; i++) {
-      Text t = new Text();
-      t.readFields(in);
-      families.add(t);
+      HColumnDescriptor c = new HColumnDescriptor();
+      c.readFields(in);
+      families.put(c.getName(), c);
     }
   }
 
@@ -172,24 +144,24 @@ public class HTableDescriptor implements WritableComparable {
   //////////////////////////////////////////////////////////////////////////////
 
   public int compareTo(Object o) {
-    HTableDescriptor htd = (HTableDescriptor) o;
-    int result = name.compareTo(htd.name);
+    HTableDescriptor other = (HTableDescriptor) o;
+    int result = name.compareTo(other.name);
+    
     if(result == 0) {
-      result = maxVersions - htd.maxVersions;
+      result = families.size() - other.families.size();
+    }
+    
+    if(result == 0 && families.size() != other.families.size()) {
+      result = Integer.valueOf(families.size()).compareTo(
+          Integer.valueOf(other.families.size()));
     }
     
     if(result == 0) {
-      result = families.size() - htd.families.size();
-    }
-    
-    if(result == 0) {
-      Iterator<Text> it2 = htd.families.iterator();
-      for(Iterator<Text> it = families.iterator(); it.hasNext(); ) {
-        Text family1 = it.next();
-        Text family2 = it2.next();
-        result = family1.compareTo(family2);
+      for(Iterator<HColumnDescriptor> it = families.values().iterator(),
+          it2 = other.families.values().iterator(); it.hasNext(); ) {
+        result = it.next().compareTo(it2.next());
         if(result != 0) {
-          return result;
+          break;
         }
       }
     }

@@ -52,8 +52,9 @@ public class HStore {
 
   Path dir;
   Text regionName;
-  Text colFamily;
-  int maxVersions;
+  HColumnDescriptor family;
+  Text familyName;
+  SequenceFile.CompressionType compression;
   FileSystem fs;
   Configuration conf;
   Path mapdir;
@@ -98,23 +99,37 @@ public class HStore {
    * <p>It's assumed that after this constructor returns, the reconstructionLog
    * file will be deleted (by whoever has instantiated the HStore).
    */
-  public HStore(Path dir, Text regionName, Text colFamily, int maxVersions, 
+  public HStore(Path dir, Text regionName, HColumnDescriptor family, 
       FileSystem fs, Path reconstructionLog, Configuration conf)
   throws IOException {  
     this.dir = dir;
     this.regionName = regionName;
-    this.colFamily = colFamily;
-    this.maxVersions = maxVersions;
+    this.family = family;
+    this.familyName = HStoreKey.extractFamily(this.family.getName());
+    this.compression = SequenceFile.CompressionType.NONE;
+    
+    if(family.getCompression() != HColumnDescriptor.CompressionType.NONE) {
+      if(family.getCompression() == HColumnDescriptor.CompressionType.BLOCK) {
+        this.compression = SequenceFile.CompressionType.BLOCK;
+        
+      } else if(family.getCompression() == HColumnDescriptor.CompressionType.RECORD) {
+        this.compression = SequenceFile.CompressionType.RECORD;
+        
+      } else {
+        assert(false);
+      }
+    }
+    
     this.fs = fs;
     this.conf = conf;
 
-    this.mapdir = HStoreFile.getMapDir(dir, regionName, colFamily);
+    this.mapdir = HStoreFile.getMapDir(dir, regionName, familyName);
     fs.mkdirs(mapdir);
-    this.loginfodir = HStoreFile.getInfoDir(dir, regionName, colFamily);
+    this.loginfodir = HStoreFile.getInfoDir(dir, regionName, familyName);
     fs.mkdirs(loginfodir);
 
     if(LOG.isDebugEnabled()) {
-      LOG.debug("starting HStore for " + regionName + "/"+ colFamily);
+      LOG.debug("starting HStore for " + regionName + "/"+ familyName);
     }
     
     // Either restart or get rid of any leftover compaction work.  Either way, 
@@ -123,7 +138,7 @@ public class HStore {
 
     this.compactdir = new Path(dir, COMPACTION_DIR);
     Path curCompactStore =
-      HStoreFile.getHStoreDir(compactdir, regionName, colFamily);
+      HStoreFile.getHStoreDir(compactdir, regionName, familyName);
     if(fs.exists(curCompactStore)) {
       processReadyCompaction();
       fs.delete(curCompactStore);
@@ -134,7 +149,7 @@ public class HStore {
     // corresponding one in 'loginfodir'. Without a corresponding log info
     // file, the entry in 'mapdir' must be deleted.
     Vector<HStoreFile> hstoreFiles 
-      = HStoreFile.loadHStoreFiles(conf, dir, regionName, colFamily, fs);
+      = HStoreFile.loadHStoreFiles(conf, dir, regionName, familyName, fs);
     for(Iterator<HStoreFile> it = hstoreFiles.iterator(); it.hasNext(); ) {
       HStoreFile hsf = it.next();
       mapFiles.put(hsf.loadInfo(fs), hsf);
@@ -187,7 +202,7 @@ public class HStore {
           Text column = val.getColumn();
           if (!key.getRegionName().equals(this.regionName) ||
               column.equals(HLog.METACOLUMN) ||
-              HStoreKey.extractFamily(column).equals(this.colFamily)) {
+              HStoreKey.extractFamily(column).equals(this.familyName)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Passing on edit " + key.getRegionName() + ", "
                   + key.getRegionName() + ", " + column.toString() + ": "
@@ -230,12 +245,12 @@ public class HStore {
         new MapFile.Reader(fs, e.getValue().getMapFilePath().toString(), conf));
     }
     
-    LOG.info("HStore online for " + this.regionName + "/" + this.colFamily);
+    LOG.info("HStore online for " + this.regionName + "/" + this.familyName);
   }
 
   /** Turn off all the MapFile readers */
   public void close() throws IOException {
-    LOG.info("closing HStore for " + this.regionName + "/" + this.colFamily);
+    LOG.info("closing HStore for " + this.regionName + "/" + this.familyName);
     this.lock.obtainWriteLock();
     try {
       for (MapFile.Reader map: maps.values()) {
@@ -244,7 +259,7 @@ public class HStore {
       maps.clear();
       mapFiles.clear();
       
-      LOG.info("HStore closed for " + this.regionName + "/" + this.colFamily);
+      LOG.info("HStore closed for " + this.regionName + "/" + this.familyName);
     } finally {
       this.lock.releaseWriteLock();
     }
@@ -276,13 +291,13 @@ public class HStore {
     
     synchronized(flushLock) {
       if(LOG.isDebugEnabled()) {
-        LOG.debug("flushing HStore " + this.regionName + "/" + this.colFamily);
+        LOG.debug("flushing HStore " + this.regionName + "/" + this.familyName);
       }
       
       // A. Write the TreeMap out to the disk
 
       HStoreFile flushedFile 
-        = HStoreFile.obtainNewHStoreFile(conf, dir, regionName, colFamily, fs);
+        = HStoreFile.obtainNewHStoreFile(conf, dir, regionName, familyName, fs);
       
       Path mapfile = flushedFile.getMapFilePath();
       if(LOG.isDebugEnabled()) {
@@ -290,17 +305,17 @@ public class HStore {
       }
       
       MapFile.Writer out = new MapFile.Writer(conf, fs, mapfile.toString(), 
-          HStoreKey.class, BytesWritable.class);
+          HStoreKey.class, BytesWritable.class, compression);
       
       try {
         for (Map.Entry<HStoreKey, BytesWritable> es: inputCache.entrySet()) {
           HStoreKey curkey = es.getKey();
-          if (this.colFamily.equals(HStoreKey.extractFamily(curkey.getColumn()))) {
+          if (this.familyName.equals(HStoreKey.extractFamily(curkey.getColumn()))) {
             out.append(curkey, es.getValue());
           }
         }
         if(LOG.isDebugEnabled()) {
-          LOG.debug("HStore " + this.regionName + "/" + this.colFamily + " flushed");
+          LOG.debug("HStore " + this.regionName + "/" + this.familyName + " flushed");
         }
         
       } finally {
@@ -325,7 +340,7 @@ public class HStore {
           mapFiles.put(logCacheFlushId, flushedFile);
           if(LOG.isDebugEnabled()) {
             LOG.debug("HStore available for " + this.regionName + "/"
-                + this.colFamily + " flush id=" + logCacheFlushId);
+                + this.familyName + " flush id=" + logCacheFlushId);
           }
         
         } finally {
@@ -373,10 +388,10 @@ public class HStore {
   void compactHelper(boolean deleteSequenceInfo) throws IOException {
     synchronized(compactLock) {
       if(LOG.isDebugEnabled()) {
-        LOG.debug("started compaction of " + this.regionName + "/" + this.colFamily);
+        LOG.debug("started compaction of " + this.regionName + "/" + this.familyName);
       }
       
-      Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, colFamily);
+      Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, familyName);
       fs.mkdirs(curCompactStore);
       
       try {
@@ -409,11 +424,11 @@ public class HStore {
         }
         
         HStoreFile compactedOutputFile 
-          = new HStoreFile(conf, compactdir, regionName, colFamily, -1);
+          = new HStoreFile(conf, compactdir, regionName, familyName, -1);
         
         if(toCompactFiles.size() == 1) {
           if(LOG.isDebugEnabled()) {
-            LOG.debug("nothing to compact for " + this.regionName + "/" + this.colFamily);
+            LOG.debug("nothing to compact for " + this.regionName + "/" + this.familyName);
           }
           
           HStoreFile hsf = toCompactFiles.elementAt(0);
@@ -426,7 +441,7 @@ public class HStore {
 
         MapFile.Writer compactedOut = new MapFile.Writer(conf, fs, 
             compactedOutputFile.getMapFilePath().toString(), HStoreKey.class, 
-            BytesWritable.class);
+            BytesWritable.class, compression);
         
         try {
 
@@ -507,7 +522,7 @@ public class HStore {
               timesSeen = 1;
             }
             
-            if(timesSeen <= maxVersions) {
+            if(timesSeen <= family.getMaxVersions()) {
 
               // Keep old versions until we have maxVersions worth.
               // Then just skip them.
@@ -592,7 +607,7 @@ public class HStore {
         processReadyCompaction();
         
         if(LOG.isDebugEnabled()) {
-          LOG.debug("compaction complete for " + this.regionName + "/" + this.colFamily);
+          LOG.debug("compaction complete for " + this.regionName + "/" + this.familyName);
         }
 
       } finally {
@@ -625,7 +640,7 @@ public class HStore {
     // 1. Acquiring the write-lock
 
 
-    Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, colFamily);
+    Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, familyName);
     this.lock.obtainWriteLock();
     try {
       Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
@@ -714,10 +729,10 @@ public class HStore {
       }
       
       HStoreFile compactedFile 
-        = new HStoreFile(conf, compactdir, regionName, colFamily, -1);
+        = new HStoreFile(conf, compactdir, regionName, familyName, -1);
       
       HStoreFile finalCompactedFile 
-        = HStoreFile.obtainNewHStoreFile(conf, dir, regionName, colFamily, fs);
+        = HStoreFile.obtainNewHStoreFile(conf, dir, regionName, familyName, fs);
       
       fs.rename(compactedFile.getMapFilePath(), finalCompactedFile.getMapFilePath());
       

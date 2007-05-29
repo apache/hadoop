@@ -17,8 +17,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.hadoop.io.Text;
 
@@ -71,9 +71,9 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
 
   private void setup() throws IOException {
     client = new HClient(conf);
-    desc = new HTableDescriptor("test", 3);
-    desc.addFamily(new Text(CONTENTS));
-    desc.addFamily(new Text(ANCHOR));
+    desc = new HTableDescriptor("test");
+    desc.addFamily(new HColumnDescriptor(CONTENTS.toString()));
+    desc.addFamily(new HColumnDescriptor(ANCHOR.toString()));
     client.createTable(desc);
   }
       
@@ -182,7 +182,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     HTableDescriptor[] tables = client.listTables();
     assertEquals(1, tables.length);
     assertEquals(desc.getName(), tables[0].getName());
-    TreeSet<Text> families = tables[0].families();
+    Set<Text> families = tables[0].families().keySet();
     assertEquals(2, families.size());
     assertTrue(families.contains(new Text(CONTENTS)));
     assertTrue(families.contains(new Text(ANCHOR)));
@@ -193,11 +193,5 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     // Delete the table we created
 
     client.deleteTable(desc.getName());
-    try {
-      Thread.sleep(30000);                    // Wait for table to be deleted
-
-    } catch(InterruptedException e) {
-    }
   }
-  
 }

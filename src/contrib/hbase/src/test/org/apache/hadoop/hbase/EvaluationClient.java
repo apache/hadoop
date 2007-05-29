@@ -53,8 +53,8 @@ public class EvaluationClient implements HConstants {
   private static HTableDescriptor tableDescriptor;
   
   static {
-    tableDescriptor = new HTableDescriptor("TestTable", 1);
-    tableDescriptor.addFamily(COLUMN_FAMILY);
+    tableDescriptor = new HTableDescriptor("TestTable");
+    tableDescriptor.addFamily(new HColumnDescriptor(COLUMN_FAMILY.toString()));
   }
   
   private static enum Test {RANDOM_READ,

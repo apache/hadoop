@@ -333,12 +333,12 @@ public class HRegion implements HConstants {
     }
 
     // Load in all the HStores.
-    for(Iterator<Text> it = this.regionInfo.tableDesc.families().iterator();
-        it.hasNext(); ) { 
-      Text colFamily = HStoreKey.extractFamily(it.next());
+    for(Map.Entry<Text, HColumnDescriptor> e :
+        this.regionInfo.tableDesc.families().entrySet()) {
+      
+      Text colFamily = HStoreKey.extractFamily(e.getKey());
       stores.put(colFamily, new HStore(dir, this.regionInfo.regionName,
-          colFamily, this.regionInfo.tableDesc.getMaxVersions(), fs,
-          oldLogFile, conf));
+          e.getValue(), fs, oldLogFile, conf));
     }
 
     // Get rid of any splits or merges that were lost in-progress
@@ -376,14 +376,6 @@ public class HRegion implements HConstants {
       closed = writestate.closed;
     }
     return closed;
-  }
-  
-  /** Closes and deletes this HRegion. Called when doing a table deletion, for example */
-  public void closeAndDelete() throws IOException {
-    LOG.info("deleting region: " + regionInfo.regionName);
-    close();
-    deleteRegion(fs, dir, regionInfo.regionName);
-    LOG.info("region deleted: " + regionInfo.regionName);
   }
   
   /**

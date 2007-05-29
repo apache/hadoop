@@ -35,6 +35,7 @@ public class HRegionInfo implements Writable {
   public Text startKey;
   public Text endKey;
   public Text regionName;
+  public boolean offLine;
   
   public HRegionInfo() {
     this.regionId = 0;
@@ -42,16 +43,12 @@ public class HRegionInfo implements Writable {
     this.startKey = new Text();
     this.endKey = new Text();
     this.regionName = new Text();
+    this.offLine = false;
   }
   
-  public HRegionInfo(final byte [] serializedBytes) {
+  public HRegionInfo(final byte [] serializedBytes) throws IOException {
     this();
-    try {
-      readFields(new DataInputStream(
-        new ByteArrayInputStream(serializedBytes)));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    readFields(new DataInputStream(new ByteArrayInputStream(serializedBytes)));
   }
 
   public HRegionInfo(long regionId, HTableDescriptor tableDesc,
@@ -79,6 +76,8 @@ public class HRegionInfo implements Writable {
     this.regionName = new Text(tableDesc.getName() + "_" +
       (startKey == null ? "" : startKey.toString()) + "_" +
       regionId);
+    
+    this.offLine = false;
   }
   
   @Override
@@ -98,6 +97,7 @@ public class HRegionInfo implements Writable {
     startKey.write(out);
     endKey.write(out);
     regionName.write(out);
+    out.writeBoolean(offLine);
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -106,5 +106,6 @@ public class HRegionInfo implements Writable {
     this.startKey.readFields(in);
     this.endKey.readFields(in);
     this.regionName.readFields(in);
+    this.offLine = in.readBoolean();
   }
 }

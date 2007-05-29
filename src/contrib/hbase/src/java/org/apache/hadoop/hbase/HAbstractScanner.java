@@ -62,7 +62,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
       try {
         int colpos = column.indexOf(":") + 1;
         if(colpos == 0) {
-          throw new IllegalArgumentException("Column name has no family indicator.");
+          throw new InvalidColumnNameException("Column name has no family indicator.");
         }
 
         String columnkey = column.substring(colpos);

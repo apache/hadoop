@@ -50,8 +50,8 @@ public class TestTable extends HBaseClusterTestCase {
       fail();
     }
 
-    HTableDescriptor desc = new HTableDescriptor("test", 1);
-    desc.addFamily(HConstants.COLUMN_FAMILY);
+    HTableDescriptor desc = new HTableDescriptor("test");
+    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
 
     try {
       client.createTable(desc);
@@ -73,5 +73,5 @@ public class TestTable extends HBaseClusterTestCase {
       e.printStackTrace();
       fail();
     }
-}
+  }
 }
