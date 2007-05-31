@@ -11,7 +11,6 @@ import java.util.Properties;
 
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.dfs.FSConstants.NodeType;
-import org.apache.hadoop.dfs.FSImage.NameNodeFile;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.fs.FileUtil.HardLink;
 
@@ -164,6 +163,21 @@ class DataStorage extends Storage {
     File oldF = new File(sd.root, "storage");
     if (!oldF.exists())
       return false;
+    // check the layout version inside the storage file
+    // Lock and Read old storage file
+    RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
+    if (oldFile == null)
+      throw new IOException("Cannot read file: " + oldF);
+    FileLock oldLock = oldFile.getChannel().tryLock();
+    try {
+      oldFile.seek(0);
+      int odlVersion = oldFile.readInt();
+      if (odlVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION)
+        return false;
+    } finally {
+      oldLock.release();
+      oldFile.close();
+    }
     // check consistency of the old storage
     File oldDataDir = new File(sd.root, "data");
     if (!oldDataDir.exists()) 
@@ -206,13 +220,14 @@ class DataStorage extends Storage {
     FileLock oldLock = oldFile.getChannel().tryLock();
     if (oldLock == null)
       throw new IOException("Cannot lock file: " + oldF);
+    String odlStorageID = "";
     try {
       oldFile.seek(0);
       int odlVersion = oldFile.readInt();
       if (odlVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION)
         throw new IncorrectVersionException(odlVersion, "file " + oldF,
                                             LAST_PRE_UPGRADE_LAYOUT_VERSION);
-      String odlStorageID = org.apache.hadoop.io.UTF8.readString(oldFile);
+      odlStorageID = org.apache.hadoop.io.UTF8.readString(oldFile);
   
       // check new storage
       File newDataDir = sd.getCurrentDir();
@@ -221,14 +236,8 @@ class DataStorage extends Storage {
         throw new IOException("Version file already exists: " + versionF);
       if (newDataDir.exists()) // somebody created current dir manually
         deleteDir(newDataDir);
-      // Write new layout
+      // move "data" to "current"
       rename(oldDataDir, newDataDir);
-  
-      this.layoutVersion = FSConstants.LAYOUT_VERSION;
-      this.namespaceID = nsInfo.getNamespaceID();
-      this.cTime = 0;
-      this.storageID = odlStorageID;
-      sd.write();
       // close and unlock old file
     } finally {
       oldLock.release();
@@ -236,6 +245,13 @@ class DataStorage extends Storage {
     }
     // move old storage file into current dir
     rename(oldF, new File(sd.getCurrentDir(), "storage"));
+
+    // Write new version file
+    this.layoutVersion = FSConstants.LAYOUT_VERSION;
+    this.namespaceID = nsInfo.getNamespaceID();
+    this.cTime = 0;
+    this.storageID = odlStorageID;
+    sd.write();
     LOG.info("Conversion of " + oldF + " is complete.");
   }
 
@@ -408,5 +424,23 @@ class DataStorage extends Storage {
     
     for(int i = 0; i < blockNames.length; i++)
       linkBlocks(new File(from, blockNames[i]), new File(to, blockNames[i]));
+  }
+
+  protected void corruptPreUpgradeStorage(File rootDir) throws IOException {
+    File oldF = new File(rootDir, "storage");
+    if (oldF.exists())
+      return;
+    // recreate old storage file to let pre-upgrade versions fail
+    if (!oldF.createNewFile())
+      throw new IOException("Cannot create file " + oldF);
+    RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
+    if (oldFile == null)
+      throw new IOException("Cannot read file: " + oldF);
+    // write new version into old storage file
+    try {
+      writeCorruptedData(oldFile);
+    } finally {
+      oldFile.close();
+    }
   }
 }

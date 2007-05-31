@@ -157,6 +157,7 @@ abstract class Storage extends StorageInfo {
      * @throws IOException
      */
     void write() throws IOException {
+      corruptPreUpgradeStorage(root);
       write(getVersionFile());
     }
 
@@ -520,5 +521,21 @@ abstract class Storage extends StorageInfo {
     return "NS-" + Integer.toString(storage.getNamespaceID())
       + "-" + Integer.toString(storage.getLayoutVersion())
       + "-" + Long.toString(storage.getCTime());
+  }
+
+  // Pre-upgrade version compatibility
+  protected abstract void corruptPreUpgradeStorage(File rootDir) throws IOException;
+
+  protected void writeCorruptedData(RandomAccessFile file) throws IOException {
+    final String messageForPreUpgradeVersion =
+      "\nThis file is INTENTIONALLY CORRUPTED so that versions\n"
+      + "of Hadoop prior to 0.13 (which are incompatible\n"
+      + "with this directory layout) will fail to start.\n";
+  
+    file.seek(0);
+    file.writeInt(FSConstants.LAYOUT_VERSION);
+    org.apache.hadoop.io.UTF8.writeString(file, "");
+    file.writeBytes(messageForPreUpgradeVersion);
+    file.getFD().sync();
   }
 }
