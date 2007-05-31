@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -435,7 +436,21 @@ class FSImage extends Storage {
   boolean isConversionNeeded(StorageDirectory sd) throws IOException {
     File oldImageDir = new File(sd.root, "image");
     if (!oldImageDir.exists())
-      return false;
+      throw new InconsistentFSStateException(sd.root,
+          oldImageDir + " does not exist.");
+    // check the layout version inside the image file
+    File oldF = new File(oldImageDir, "fsimage");
+    RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
+    if (oldFile == null)
+      throw new IOException("Cannot read file: " + oldF);
+    try {
+      oldFile.seek(0);
+      int odlVersion = oldFile.readInt();
+      if (odlVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION)
+        return false;
+    } finally {
+      oldFile.close();
+    }
     // check consistency of the old storage
     if (!oldImageDir.isDirectory())
       throw new InconsistentFSStateException(sd.root,
@@ -492,8 +507,8 @@ class FSImage extends Storage {
       needReformat = true;
     } else {
       sd.write();
-      LOG.info("Conversion of " + oldImage + " is complete.");
     }
+    LOG.info("Conversion of " + oldImage + " is complete.");
     return needReformat;
   }
 
@@ -958,6 +973,27 @@ class FSImage extends Storage {
       node.setRemaining(remaining);
       node.setLastUpdate(lastUpdate);
       node.setXceiverCount(xceiverCount);
+    }
+  }
+
+  protected void corruptPreUpgradeStorage(File rootDir) throws IOException {
+    File oldImageDir = new File(rootDir, "image");
+    if (!oldImageDir.exists())
+      if (!oldImageDir.mkdir())
+        throw new IOException("Cannot create directory " + oldImageDir);
+    File oldImage = new File(oldImageDir, "fsimage");
+    if (!oldImage.exists())
+      // recreate old image file to let pre-upgrade versions fail
+      if (!oldImage.createNewFile())
+        throw new IOException("Cannot create file " + oldImage);
+    RandomAccessFile oldFile = new RandomAccessFile(oldImage, "rws");
+    if (oldFile == null)
+      throw new IOException("Cannot read file: " + oldImage);
+    // write new version into old image file
+    try {
+      writeCorruptedData(oldFile);
+    } finally {
+      oldFile.close();
     }
   }
 }

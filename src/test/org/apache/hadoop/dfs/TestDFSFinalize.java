@@ -23,11 +23,9 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.FSConstants.NodeType;
 import static org.apache.hadoop.dfs.FSConstants.NodeType.NAME_NODE;
 import static org.apache.hadoop.dfs.FSConstants.NodeType.DATA_NODE;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
-import org.apache.hadoop.fs.Path;
 
 /**
  * This test ensures the appropriate response from the system when 
@@ -82,7 +80,6 @@ public class TestDFSFinalize extends TestCase {
    * This test attempts to finalize the NameNode and DataNode.
    */
   public void testFinalize() throws Exception {
-    File[] baseDirs;
     UpgradeUtilities.initialize();
     
     for (int numDirs = 1; numDirs <= 2; numDirs++) {

@@ -249,16 +249,26 @@ public class UpgradeUtilities {
       LocalFileSystem localFS = FileSystem.getLocal(new Configuration());
       switch (nodeType) {
       case NAME_NODE:
-        localFS.copyToLocalFile(
-                                new Path(namenodeStorage.toString(), "current"),
+        localFS.copyToLocalFile(new Path(namenodeStorage.toString(), "current"),
                                 new Path(newDir.toString()),
                                 false);
+        Path newImgDir = new Path(newDir.getParent(), "image");
+        if (!localFS.exists(newImgDir))
+          localFS.copyToLocalFile(
+              new Path(namenodeStorage.toString(), "image"),
+              newImgDir,
+              false);
         break;
       case DATA_NODE:
-        localFS.copyToLocalFile(
-                                new Path(datanodeStorage.toString(), "current"),
+        localFS.copyToLocalFile(new Path(datanodeStorage.toString(), "current"),
                                 new Path(newDir.toString()),
                                 false);
+        Path newStorageFile = new Path(newDir.getParent(), "storage");
+        if (!localFS.exists(newStorageFile))
+          localFS.copyToLocalFile(
+              new Path(datanodeStorage.toString(), "storage"),
+              newStorageFile,
+              false);
         break;
       }
       retVal[i] = newDir;

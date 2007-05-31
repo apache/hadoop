@@ -505,6 +505,9 @@ Branch 0.13 (unreleased changes)
      AlreadyBeingCreatedException when wrapped as a RemoteException.
      (Hairong Kuang via tomwhite)
 
+129. HADOOP-1242.  Improve handling of DFS upgrades.
+     (Konstantin Shvachko via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
