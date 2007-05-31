@@ -508,6 +508,9 @@ Branch 0.13 (unreleased changes)
 129. HADOOP-1242.  Improve handling of DFS upgrades.
      (Konstantin Shvachko via cutting)
 
+130. HADOOP-1332.  Fix so that TaskTracker exits reliably during unit
+     tests on Windows.  (omalley via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
