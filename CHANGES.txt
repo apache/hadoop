@@ -515,6 +515,10 @@ Branch 0.13 (unreleased changes)
      only while sorting, so that stuck maps are correctly terminated.
      (Devaraj Das and Arun C Murthy via cutting)
 
+132. HADOOP-1452.  Change TaskTracker.MapOutputServlet.doGet.totalRead
+     to a long, permitting map outputs to exceed 2^31 bytes.
+     (omalley via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
