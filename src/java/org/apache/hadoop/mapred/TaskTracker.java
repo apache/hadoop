@@ -1930,7 +1930,7 @@ public class TaskTracker
         //seek to the correct offset for the reduce
         mapOutputIn.seek(startOffset);
           
-        int totalRead = 0;
+        long totalRead = 0;
         int len = mapOutputIn.read(buffer, 0,
                                    partLength < MAX_BYTES_TO_READ 
                                    ? (int)partLength : MAX_BYTES_TO_READ);
