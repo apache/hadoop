@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -78,7 +79,7 @@ class ReduceTask extends Task {
   
   private static final Log LOG = LogFactory.getLog(ReduceTask.class.getName());
   private int numMaps;
-  private boolean sortComplete;
+  AtomicBoolean sortComplete = new AtomicBoolean(false);
   private ReduceCopier reduceCopier;
 
   { 
@@ -283,7 +284,7 @@ class ReduceTask extends Task {
     // spawn a thread to give sort progress heartbeats
     Thread sortProgress = new Thread() {
         public void run() {
-          while (!sortComplete) {
+          while (!sortComplete.get()) {
             try {
               reportProgress(umbilical);
               Thread.sleep(PROGRESS_INTERVAL);
@@ -298,6 +299,7 @@ class ReduceTask extends Task {
           }
         }
       };
+    sortProgress.setDaemon(true);
     sortProgress.setName("Sort progress reporter for task "+getTaskId());
 
     Path tempDir = new Path(getTaskId()); 
@@ -317,7 +319,7 @@ class ReduceTask extends Task {
                            !conf.getKeepFailedTaskFiles()); // sort
 
     } finally {
-      sortComplete = true;
+      sortComplete.set(true);
     }
 
     sortPhase.complete();                         // sort is complete

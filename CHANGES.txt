@@ -511,6 +511,10 @@ Branch 0.13 (unreleased changes)
 130. HADOOP-1332.  Fix so that TaskTracker exits reliably during unit
      tests on Windows.  (omalley via cutting)
 
+131. HADOOP-1431.  Fix so that sort progress reporting during map runs
+     only while sorting, so that stuck maps are correctly terminated.
+     (Devaraj Das and Arun C Murthy via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 
