@@ -22,20 +22,20 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * HRegion information.
  * Contains HRegion id, start and end keys, a reference to this
  * HRegions' table descriptor, etc.
  */
-public class HRegionInfo implements Writable {
+public class HRegionInfo implements WritableComparable {
+  public Text regionName;
   public long regionId;
-  public HTableDescriptor tableDesc;
   public Text startKey;
   public Text endKey;
-  public Text regionName;
   public boolean offLine;
+  public HTableDescriptor tableDesc;
   
   public HRegionInfo() {
     this.regionId = 0;
@@ -87,6 +87,22 @@ public class HRegionInfo implements Writable {
       this.tableDesc.toString() + "}";
   }
     
+  @Override
+  public boolean equals(Object o) {
+    return this.compareTo(o) == 0;
+  }
+  
+  @Override
+  public int hashCode() {
+    int result = this.regionName.hashCode();
+    result ^= Long.valueOf(this.regionId).hashCode();
+    result ^= this.startKey.hashCode();
+    result ^= this.endKey.hashCode();
+    result ^= Boolean.valueOf(this.offLine).hashCode();
+    result ^= this.tableDesc.hashCode();
+    return result;
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////////////////////////////////
@@ -107,5 +123,14 @@ public class HRegionInfo implements Writable {
     this.endKey.readFields(in);
     this.regionName.readFields(in);
     this.offLine = in.readBoolean();
+  }
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // Comparable
+  //////////////////////////////////////////////////////////////////////////////
+  
+  public int compareTo(Object o) {
+    HRegionInfo other = (HRegionInfo)o;
+    return regionName.compareTo(other.regionName);
   }
 }

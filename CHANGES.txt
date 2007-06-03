@@ -20,3 +20,5 @@ Trunk (unreleased changes)
  10. HADOOP-1430. HBase shutdown leaves regionservers up.
  11. HADOOP-1392. Part1: includes create/delete table; enable/disable table;
      add/remove column.
+ 12. HADOOP-1392. Part2: includes table compaction by merging adjacent regions
+     that have shrunk in size.

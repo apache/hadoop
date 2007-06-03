@@ -44,8 +44,6 @@ public interface HMasterInterface extends VersionedProtocol {
   public void addColumn(Text tableName, HColumnDescriptor column) throws IOException;
   public void deleteColumn(Text tableName, Text columnName) throws IOException;
   
-  public void mergeRegions(Text regionName1, Text regionName2) throws IOException;
-  
   public void enableTable(Text tableName) throws IOException;
   public void disableTable(Text tableName) throws IOException;
   

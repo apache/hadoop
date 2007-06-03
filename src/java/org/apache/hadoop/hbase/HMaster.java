@@ -576,13 +576,17 @@ public class HMaster implements HConstants, HMasterInterface,
     if(! fs.exists(rootRegionDir)) {
       LOG.info("bootstrap: creating ROOT and first META regions");
       try {
-        HRegion root = createNewHRegion(HGlobals.rootTableDesc, 0L);
-        HRegion meta = createNewHRegion(HGlobals.metaTableDesc, 1L);
+        HRegion root = HRegion.createNewHRegion(fs, dir, conf, 
+            HGlobals.rootTableDesc, 0L, null, null);
+        HRegion meta = HRegion.createNewHRegion(fs, dir, conf,
+            HGlobals.metaTableDesc, 1L, null, null);
       
-        addTableToMeta(root, meta);
+        HRegion.addRegionToMeta(root, meta);
         
         root.close();
+        root.getLog().close();
         meta.close();
+        meta.getLog().close();
         
       } catch(IOException e) {
         LOG.error(e);
@@ -1621,7 +1625,8 @@ public class HMaster implements HConstants, HMasterInterface,
 
         // 2. Create the HRegion
 
-        HRegion r = createNewHRegion(desc, newRegion.regionId);
+        HRegion r = HRegion.createNewHRegion(fs, dir, conf, desc,
+            newRegion.regionId, null, null);
 
         // 3. Insert into meta
 
@@ -1659,53 +1664,6 @@ public class HMaster implements HConstants, HMasterInterface,
     }
   }
 
-  /**
-   * Internal method to create a new HRegion. Used by createTable and by the
-   * bootstrap code in the HMaster constructor
-   * 
-   * @param desc        - table descriptor
-   * @param regionId    - region id
-   * @return            - new HRegion
-   * 
-   * @throws IOException
-   */
-  private HRegion createNewHRegion(HTableDescriptor desc, long regionId) 
-      throws IOException {
-    
-    HRegionInfo info = new HRegionInfo(regionId, desc, null, null);
-    Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
-    fs.mkdirs(regionDir);
-
-    return new HRegion(dir,
-      new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf),
-      fs, conf, info, null, null);
-  }
-  
-  /**
-   * Inserts a new table's meta information into the meta table. Used by
-   * the HMaster bootstrap code.
-   * 
-   * @param meta                - HRegion to be updated
-   * @param table               - HRegion of new table
-   * 
-   * @throws IOException
-   */
-  private void addTableToMeta(HRegion meta, HRegion table) throws IOException {
-    
-    // The row key is the region name
-    
-    long writeid = meta.startUpdate(table.getRegionName());
-    
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    DataOutputStream s = new DataOutputStream(bytes);
-
-    table.getRegionInfo().write(s);
-    
-    meta.put(writeid, COL_REGIONINFO, new BytesWritable(bytes.toByteArray()));
-    
-    meta.commit(writeid);
-  }
-  
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.HMasterInterface#deleteTable(org.apache.hadoop.io.Text)
    */
@@ -1728,13 +1686,6 @@ public class HMaster implements HConstants, HMasterInterface,
    */
   public void deleteColumn(Text tableName, Text columnName) throws IOException {
     new DeleteColumn(tableName, HStoreKey.extractFamily(columnName)).process();
-  }
-  
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#mergeRegions(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text)
-   */
-  public void mergeRegions(Text regionName1, Text regionName2) throws IOException {
-    //TODO
   }
   
   /* (non-Javadoc)
@@ -1941,7 +1892,7 @@ public class HMaster implements HConstants, HMasterInterface,
     protected abstract void postProcessMeta(MetaRegion m, 
         HRegionInterface server) throws IOException;
   }
-  
+
   private class ChangeTableState extends TableOperation {
     private boolean online;
     
