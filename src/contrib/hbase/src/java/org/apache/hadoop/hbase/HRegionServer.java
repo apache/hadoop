@@ -824,33 +824,6 @@ public class HRegionServer
     }
   }
 
-  /*****************************************************************************
-   * TODO - Figure out how the master is to determine when regions should be
-   *        merged. It once it makes this determination, it needs to ensure that
-   *        the regions to be merged are first being served by the same
-   *        HRegionServer and if not, move them so they are.
-   *        
-   *        For now, we do not do merging. Splits are driven by the HRegionServer.
-   ****************************************************************************/
-/*
-  private void mergeRegions(Text regionNameA, Text regionNameB) throws IOException {
-    locking.writeLock().lock();
-    try {
-      HRegion srcA = regions.remove(regionNameA);
-      HRegion srcB = regions.remove(regionNameB);
-      HRegion newRegion = HRegion.closeAndMerge(srcA, srcB);
-      regions.put(newRegion.getRegionName(), newRegion);
-
-      reportClose(srcA);
-      reportClose(srcB);
-      reportOpen(newRegion);
-      
-    } finally {
-      locking.writeLock().unlock();
-    }
-  }
-*/
-
   //////////////////////////////////////////////////////////////////////////////
   // HRegionInterface
   //////////////////////////////////////////////////////////////////////////////

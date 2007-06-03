@@ -40,8 +40,29 @@ public class MiniHBaseCluster implements HConstants {
   private HRegionServer[] regionServers;
   private Thread[] regionThreads;
   
+  /**
+   * Starts a MiniHBaseCluster on top of a new MiniDFSCluster
+   * 
+   * @param conf
+   * @param nRegionNodes
+   */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes) {
     this(conf, nRegionNodes, true);
+  }
+  
+  /**
+   * Starts a MiniHBaseCluster on top of an existing HDFSCluster
+   * 
+   * @param conf
+   * @param nRegionNodes
+   * @param dfsCluster
+   */
+  public MiniHBaseCluster(Configuration conf, int nRegionNodes,
+      MiniDFSCluster dfsCluster) {
+
+    this.conf = conf;
+    this.cluster = dfsCluster;
+    init(nRegionNodes);
   }
   
   /**
@@ -55,22 +76,23 @@ public class MiniHBaseCluster implements HConstants {
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
       final boolean miniHdfsFilesystem) {
     this.conf = conf;
+    
+    if (miniHdfsFilesystem) {
+      try {
+        this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
+        
+      } catch(Throwable t) {
+        LOG.error("Failed setup of mini dfs cluster", t);
+        t.printStackTrace();
+        return;
+      }
+    }
+    init(nRegionNodes);
+  }
 
+  private void init(int nRegionNodes) {
     try {
       try {
-        if(System.getProperty(StaticTestEnvironment.TEST_DIRECTORY_KEY) == null) {
-          File testDir = new File(new File("").getAbsolutePath(),
-              "build/contrib/hbase/test");
-
-          String dir = testDir.getAbsolutePath();
-          LOG.info("Setting test.build.data to " + dir);
-          System.setProperty(StaticTestEnvironment.TEST_DIRECTORY_KEY, dir);
-        }
-
-        if (miniHdfsFilesystem) {
-          this.cluster =
-            new MiniDFSCluster(this.conf, 2, true, (String[])null);
-        }
         this.fs = FileSystem.get(conf);
         this.parentdir = new Path(conf.get(HREGION_DIR, DEFAULT_HREGION_DIR));
         fs.mkdirs(parentdir);
@@ -110,7 +132,7 @@ public class MiniHBaseCluster implements HConstants {
       shutdown();
     }
   }
-  
+
   private void startRegionServers(Configuration conf, int nRegionNodes)
       throws IOException {
     this.regionServers = new HRegionServer[nRegionNodes];

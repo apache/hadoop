@@ -142,8 +142,7 @@ public class HRegion implements HConstants {
     
     TreeSet<HStoreFile> alreadyMerged = new TreeSet<HStoreFile>();
     TreeMap<Text, Vector<HStoreFile>> filesToMerge = new TreeMap<Text, Vector<HStoreFile>>();
-    for(Iterator<HStoreFile> it = srcA.flushcache(true).iterator(); it.hasNext(); ) {
-      HStoreFile src = it.next();
+    for(HStoreFile src: srcA.flushcache(true)) {
       Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
       if(v == null) {
         v = new Vector<HStoreFile>();
@@ -156,8 +155,7 @@ public class HRegion implements HConstants {
       LOG.debug("flushing and getting file names for region " + srcB.getRegionName());
     }
     
-    for(Iterator<HStoreFile> it = srcB.flushcache(true).iterator(); it.hasNext(); ) {
-      HStoreFile src = it.next();
+    for(HStoreFile src: srcB.flushcache(true)) {
       Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
       if(v == null) {
         v = new Vector<HStoreFile>();
@@ -189,9 +187,7 @@ public class HRegion implements HConstants {
     }
 
     filesToMerge.clear();
-    for(Iterator<HStoreFile> it = srcA.close().iterator(); it.hasNext(); ) {
-      HStoreFile src = it.next();
-      
+    for(HStoreFile src: srcA.close()) {
       if(! alreadyMerged.contains(src)) {
         Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
         if(v == null) {
@@ -207,9 +203,7 @@ public class HRegion implements HConstants {
           + srcB.getRegionName());
     }
     
-    for(Iterator<HStoreFile> it = srcB.close().iterator(); it.hasNext(); ) {
-      HStoreFile src = it.next();
-      
+    for(HStoreFile src: srcB.close()) {
       if(! alreadyMerged.contains(src)) {
         Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
         if(v == null) {
@@ -246,6 +240,59 @@ public class HRegion implements HConstants {
     return dstRegion;
   }
 
+  /**
+   * Internal method to create a new HRegion. Used by createTable and by the
+   * bootstrap code in the HMaster constructor
+   * 
+   * @param fs          - file system to create region in
+   * @param dir         - base directory
+   * @param conf        - configuration object
+   * @param desc        - table descriptor
+   * @param regionId    - region id
+   * @param startKey    - first key in region
+   * @param endKey      - last key in region
+   * @return            - new HRegion
+   * @throws IOException
+   */
+  public static HRegion createNewHRegion(FileSystem fs, Path dir,
+      Configuration conf, HTableDescriptor desc, long regionId, Text startKey,
+      Text endKey) throws IOException {
+    
+    HRegionInfo info = new HRegionInfo(regionId, desc, startKey, endKey);
+    Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
+    fs.mkdirs(regionDir);
+
+    return new HRegion(dir,
+      new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf),
+      fs, conf, info, null, null);
+  }
+  
+  /**
+   * Inserts a new table's meta information into the meta table. Used by
+   * the HMaster bootstrap code.
+   * 
+   * @param meta                - HRegion to be updated
+   * @param table               - HRegion of new table
+   * 
+   * @throws IOException
+   */
+  public static void addRegionToMeta(HRegion meta, HRegion table)
+      throws IOException {
+    
+    // The row key is the region name
+    
+    long writeid = meta.startUpdate(table.getRegionName());
+    
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    DataOutputStream s = new DataOutputStream(bytes);
+
+    table.getRegionInfo().write(s);
+    
+    meta.put(writeid, COL_REGIONINFO, new BytesWritable(bytes.toByteArray()));
+    
+    meta.commit(writeid);
+  }
+  
   //////////////////////////////////////////////////////////////////////////////
   // Members
   //////////////////////////////////////////////////////////////////////////////
@@ -627,6 +674,28 @@ public class HRegion implements HConstants {
     }
   }
 
+  /**
+   * @return - returns the size of the largest HStore
+   */
+  public long largestHStore() {
+    long maxsize = 0;
+    lock.obtainReadLock();
+    try {
+      Text key = new Text();
+      for(HStore h: stores.values()) {
+        long size = h.getLargestFileSize(key);
+
+        if(size > maxsize) {                      // Largest so far
+          maxsize = size;
+        }
+      }
+      return maxsize;
+    
+    } finally {
+      lock.releaseReadLock();
+    }
+  }
+  
   /**
    * @return true if the region should be compacted.
    */

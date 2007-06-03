@@ -15,7 +15,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.lang.Class;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -131,7 +130,7 @@ public class HClient implements HConstants {
   }
   
   /* Find the address of the master and connect to it */
-  private void checkMaster() throws IOException {
+  private void checkMaster() throws MasterNotRunningException {
     if (this.master != null) {
       return;
     }
@@ -174,6 +173,21 @@ public class HClient implements HConstants {
   // Administrative methods
   //////////////////////////////////////////////////////////////////////////////
 
+  /**
+   * @return - true if the master server is running
+   */
+  public boolean isMasterRunning() {
+    if(this.master == null) {
+      try {
+        checkMaster();
+        
+      } catch(MasterNotRunningException e) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
   /**
    * Creates a new table
    * 
@@ -303,10 +317,6 @@ public class HClient implements HConstants {
     } catch(RemoteException e) {
       handleRemoteException(e);
     }
-  }
-  
-  public synchronized void mergeRegions(Text regionName1, Text regionName2) throws IOException {
-    
   }
   
   public synchronized void enableTable(Text tableName) throws IOException {
