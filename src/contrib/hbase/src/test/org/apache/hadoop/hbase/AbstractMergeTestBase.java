@@ -25,44 +25,19 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
-/** Tests region merging */
-public class TestMerge extends HBaseTestCase {
-  private static final Text COLUMN_NAME = new Text("contents:");
-  private Random rand;
-  private HTableDescriptor desc;
-  private BytesWritable value;
+/** Abstract base class for merge tests */
+public abstract class AbstractMergeTestBase extends HBaseTestCase {
+  protected static final Text COLUMN_NAME = new Text("contents:");
+  protected Random rand;
+  protected HTableDescriptor desc;
+  protected BytesWritable value;
 
-  private MiniDFSCluster dfsCluster;
-  private FileSystem fs;
-  private Path dir;
+  protected MiniDFSCluster dfsCluster;
+  protected FileSystem fs;
+  protected Path dir;
 
-  private MiniHBaseCluster hCluster;
-  
-  public void testMerge() {
-    setup();
-    startMiniDFSCluster();
-    createRegions();
-    try {
-      HMerge.merge(conf, fs, HConstants.META_TABLE_NAME);
-      
-      hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
-      try {
-        HMerge.merge(conf, fs, desc.getName());
-      
-      } finally {
-        hCluster.shutdown();
-      }
-      
-    } catch(Throwable t) {
-      t.printStackTrace();
-      fail();
-      
-    } finally {
-      dfsCluster.shutdown();
-    }
-  }
-  
-  private void setup() {
+  public void setUp() throws Exception {
+    super.setUp();
     rand = new Random();
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor(COLUMN_NAME.toString()));
@@ -80,9 +55,7 @@ public class TestMerge extends HBaseTestCase {
     } catch(UnsupportedEncodingException e) {
       fail();
     }
-  }
 
-  private void startMiniDFSCluster() {
     try {
       dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
       fs = dfsCluster.getFileSystem();
@@ -93,9 +66,7 @@ public class TestMerge extends HBaseTestCase {
       t.printStackTrace();
       fail();
     }
-  }
-  
-  private void createRegions() {
+
     // We create three data regions: The first is too large to merge since it 
     // will be > 64 MB in size. The second two will be smaller and will be 
     // selected for merging.
@@ -139,7 +110,12 @@ public class TestMerge extends HBaseTestCase {
       fail();
     }
   }
-  
+
+  public void tearDown() throws Exception {
+    super.tearDown();
+    dfsCluster.shutdown();
+  }
+
   private HRegion createAregion(Text startKey, Text endKey, int firstRow, int nrows)
       throws IOException {
     HRegion region = HRegion.createNewHRegion(fs, dir, conf, desc,
