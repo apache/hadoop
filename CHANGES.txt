@@ -76,7 +76,7 @@ Trunk (unreleased changes)
      shutdown.  (stack via cutting)
 
 
-Branch 0.13 (unreleased changes)
+Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
     (Hairong Kuang via cutting)
