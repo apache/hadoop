@@ -214,7 +214,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
           for (int i = 0; i < lockCount; i++) {
             try {
               Text rowid = new Text(Integer.toString(i));
-              lockids[i] = region.obtainLock(rowid);
+              lockids[i] = region.obtainRowLock(rowid);
               rowid.equals(region.getRowFromLock(lockids[i]));
               LOG.debug(getName() + " locked " + rowid.toString());
             } catch (IOException e) {
@@ -590,8 +590,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   }
 
   // NOTE: This test depends on testBatchWrite succeeding
-  
-  private void splitAndMerge() throws IOException {
+  void splitAndMerge() throws IOException {
     Text midKey = new Text();
 
     if(region.needsSplit(midKey)) {
@@ -634,7 +633,11 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.RegionUnavailableListener#regionIsUnavailable(org.apache.hadoop.io.Text)
    */
-  public void regionIsUnavailable(Text regionName) {
+  public void closing(@SuppressWarnings("unused") final Text regionName) {
+    // We don't use this here. It is only for the HRegionServer
+  }
+  
+  public void closed(@SuppressWarnings("unused") final Text regionName) {
     // We don't use this here. It is only for the HRegionServer
   }
   

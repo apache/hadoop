@@ -146,7 +146,9 @@ public class HMerge implements HConstants {
 
         nextSize = nextRegion.largestHStore();
 
-        if((currentSize + nextSize) <= (DESIRED_MAX_FILE_SIZE / 2)) {
+        long maxFilesize =
+          conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);
+        if((currentSize + nextSize) <= (maxFilesize / 2)) {
           // We merge two adjacent regions if their total size is less than
           // one half of the desired maximum size
 

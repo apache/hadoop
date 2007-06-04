@@ -21,21 +21,18 @@
     </description>
   </property>
   <property>
-    <name>hbase.client.timeout.length</name>
-    <value>10000</value>
-    <description>Client timeout in milliseconds</description>
-  </property>
-  <property>
-    <name>hbase.client.timeout.number</name>
-    <value>5</value>
-    <description>Try this many timeouts before giving up.
-    </description>
+    <name>hbase.client.pause</name>
+    <value>30000</value>
+    <description>General client pause value.  Used mostly as value to wait
+    before running a retry of a failed get, region lookup, etc.</description>
   </property>
   <property>
     <name>hbase.client.retries.number</name>
-    <value>2</value>
-    <description>Count of maximum retries fetching the root region from root
-        region server.
+    <value>5</value>
+    <description>Maximum retries.  Used as maximum for all retryable
+    operations such as fetching of the root region from root region
+    server, getting a cell's value, starting a row update, etc.
+    Default: 5.
     </description>
   </property>
   <property>
@@ -52,17 +49,17 @@
     30 seconds.</description>
   </property>
   <property>
+    <name>hbase.regionserver.lease.period</name>
+    <value>180000</value>
+    <description>HRegion server lease period in milliseconds. Default is
+    180 seconds.</description>
+  </property>
+  <property>
     <name>hbase.server.thread.wakefrequency</name>
     <value>10000</value>
     <description>Time to sleep in between searches for work (in milliseconds).
     Used as sleep interval by service threads such as META scanner and log roller.
     </description>
-  </property>
-  <property>
-    <name>hbase.regionserver.lease.period</name>
-    <value>30000</value>
-    <description>HRegion server lease period in milliseconds. Default is
-    30 seconds.</description>
   </property>
   <property>
     <name>hbase.regionserver.handler.count</name>
@@ -80,5 +77,27 @@
     tests to be responsive.
     </description>
   </property>
-
+  <property>
+    <name>hbase.regionserver.maxlogentries</name>
+    <value>30000</value>
+    <description>Rotate the logs when count of entries exceeds this value.
+    Default: 30,000
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.maxunflushed</name>
+    <value>10000</value>
+    <description>
+    Memcache will be flushed to disk if number of Memcache writes
+    are in excess of this number.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.max.filesize</name>
+    <value>134217728</value>
+    <description>
+    Maximum desired file size for an HRegion.  If filesize exceeds
+    value + (value / 2), the HRegion is split in two.  Default: 128M.
+    </description>
+  </property>
 </configuration>

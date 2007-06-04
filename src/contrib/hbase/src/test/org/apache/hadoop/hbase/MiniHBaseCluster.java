@@ -157,25 +157,20 @@ public class MiniHBaseCluster implements HConstants {
   public void shutdown() {
     LOG.info("Shutting down the HBase Cluster");
     for(int i = 0; i < regionServers.length; i++) {
-      try {
-        regionServers[i].stop();
-        
-      } catch(IOException e) {
-        e.printStackTrace();
-      }
+      regionServers[i].stop();
     }
     master.shutdown();
     for(int i = 0; i < regionServers.length; i++) {
       try {
         regionThreads[i].join();
-        
       } catch(InterruptedException e) {
+        // continue
       }
     }
     try {
       masterThread.join();
-      
     } catch(InterruptedException e) {
+      // continue
     }
     LOG.info("HBase Cluster shutdown complete");
 
