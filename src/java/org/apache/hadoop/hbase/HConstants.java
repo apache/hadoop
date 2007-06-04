@@ -49,6 +49,8 @@ public interface HConstants {
   // TODO: Someone may try to name a column family 'log'.  If they
   // do, it will clash with the HREGION log dir subdirectory. FIX.
   static final String HREGION_LOGDIR_NAME = "log";
+  
+  static final long DEFAULT_MAX_FILE_SIZE = 128 * 1024 * 1024;        // 128MB
 
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
@@ -72,7 +74,6 @@ public interface HConstants {
 
   // Other constants
   
-  static final long DESIRED_MAX_FILE_SIZE = 128 * 1024 * 1024;        // 128MB
   static final String UTF8_ENCODING = "UTF-8";
   
   static final BytesWritable DELETE_BYTES = 

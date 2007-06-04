@@ -369,8 +369,8 @@ public class HStore {
    * Compact the back-HStores.  This method may take some time, so the calling 
    * thread must be able to block for long periods.
    * 
-   * During this time, the HStore can work as usual, getting values from MapFiles
-   * and writing new MapFiles from given memcaches.
+   * During this time, the HStore can work as usual, getting values from
+   * MapFiles and writing new MapFiles from given memcaches.
    * 
    * Existing MapFiles are not destroyed until the new compacted TreeMap is 
    * completely written-out to disk.
@@ -410,8 +410,7 @@ public class HStore {
         // Compute the max-sequenceID seen in any of the to-be-compacted TreeMaps
 
         long maxSeenSeqID = -1;
-        for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext(); ) {
-          HStoreFile hsf = it.next();
+        for (HStoreFile hsf: toCompactFiles) {
           long seqid = hsf.loadInfo(fs);
           if(seqid > 0) {
             if(seqid > maxSeenSeqID) {
@@ -587,7 +586,6 @@ public class HStore {
             HStoreFile hsf = it.next();
             hsf.write(out);
           }
-          
         } finally {
           out.close();
         }
@@ -595,12 +593,7 @@ public class HStore {
         // Indicate that we're done.
 
         Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
-        out = new DataOutputStream(fs.create(doneFile));
-        
-        try {
-        } finally {
-          out.close();
-        }
+        (new DataOutputStream(fs.create(doneFile))).close();
 
         // Move the compaction into place.
 

@@ -20,8 +20,10 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -124,13 +126,27 @@ public class HRegionInfo implements WritableComparable {
     this.regionName.readFields(in);
     this.offLine = in.readBoolean();
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Comparable
   //////////////////////////////////////////////////////////////////////////////
   
   public int compareTo(Object o) {
-    HRegionInfo other = (HRegionInfo)o;
-    return regionName.compareTo(other.regionName);
+    HRegionInfo other = (HRegionInfo) o;
+    
+    // Are regions of same table?
+    int result = this.tableDesc.compareTo(other.tableDesc);
+    if (result != 0) {
+      return result;
+    }
+
+    // Compare start keys.
+    result = this.startKey.compareTo(other.startKey);
+    if (result != 0) {
+      return result;
+    }
+    
+    // Compare end keys.
+    return this.endKey.compareTo(other.endKey);
   }
 }

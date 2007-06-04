@@ -27,12 +27,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
-/*******************************************************************************
+/**
  * The HMemcache holds in-memory modifications to the HRegion.  This is really a
  * wrapper around a TreeMap that helps us when staging the Memcache out to disk.
- ******************************************************************************/
+ */
 public class HMemcache {
-  private static final Log LOG = LogFactory.getLog(HMemcache.class);
+  private final Log LOG = LogFactory.getLog(this.getClass().getName());
   
   TreeMap<HStoreKey, BytesWritable> memcache 
       = new TreeMap<HStoreKey, BytesWritable>();
@@ -42,7 +42,7 @@ public class HMemcache {
   
   TreeMap<HStoreKey, BytesWritable> snapshot = null;
 
-  private final HLocking lock = new HLocking();
+  final HLocking lock = new HLocking();
 
   public HMemcache() {
     super();
@@ -147,7 +147,8 @@ public class HMemcache {
    *
    * Operation uses a write lock.
    */
-  public void add(Text row, TreeMap<Text, BytesWritable> columns, long timestamp) {
+  public void add(final Text row, final TreeMap<Text, BytesWritable> columns,
+      final long timestamp) {
     this.lock.obtainWriteLock();
     try {
       for (Map.Entry<Text, BytesWritable> es: columns.entrySet()) {
@@ -239,7 +240,6 @@ public class HMemcache {
     Vector<BytesWritable> result = new Vector<BytesWritable>();
     HStoreKey curKey = new HStoreKey(key.getRow(), key.getColumn(), key.getTimestamp());
     SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(curKey);
-
     for (Map.Entry<HStoreKey, BytesWritable> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       if (itKey.matchesRowCol(curKey)) {
@@ -257,9 +257,9 @@ public class HMemcache {
   /**
    * Return a scanner over the keys in the HMemcache
    */
-  public HInternalScannerInterface getScanner(long timestamp, Text targetCols[], Text firstRow)
-      throws IOException {
-    
+  public HInternalScannerInterface getScanner(long timestamp,
+      Text targetCols[], Text firstRow)
+  throws IOException {  
     return new HMemcacheScanner(timestamp, targetCols, firstRow);
   }
 
@@ -295,16 +295,11 @@ public class HMemcache {
         this.vals = new BytesWritable[backingMaps.length];
 
         // Generate list of iterators
-
         HStoreKey firstKey = new HStoreKey(firstRow);
         for(int i = 0; i < backingMaps.length; i++) {
-          if(firstRow.getLength() != 0) {
-            keyIterators[i] = backingMaps[i].tailMap(firstKey).keySet().iterator();
-            
-          } else {
-            keyIterators[i] = backingMaps[i].keySet().iterator();
-          }
-          
+          keyIterators[i] = (firstRow.getLength() != 0)?
+            backingMaps[i].tailMap(firstKey).keySet().iterator():
+            backingMaps[i].keySet().iterator();
           while(getNext(i)) {
             if(! findFirstRow(i, firstRow)) {
               continue;
@@ -314,7 +309,6 @@ public class HMemcache {
             }
           }
         }
-        
       } catch(IOException ex) {
         LOG.error(ex);
         close();
@@ -326,9 +320,9 @@ public class HMemcache {
      * The user didn't want to start scanning at the first row. This method
      * seeks to the requested row.
      *
-     * @param i         - which iterator to advance
-     * @param firstRow  - seek to this row
-     * @return          - true if this is the first row
+     * @param i which iterator to advance
+     * @param firstRow seek to this row
+     * @return true if this is the first row
      */
     boolean findFirstRow(int i, Text firstRow) {
       return ((firstRow.getLength() == 0)
@@ -338,11 +332,11 @@ public class HMemcache {
     /**
      * Get the next value from the specified iterater.
      * 
-     * @param i - which iterator to fetch next value from
-     * @return - true if there is more data available
+     * @param i Which iterator to fetch next value from
+     * @return true if there is more data available
      */
     boolean getNext(int i) {
-      if(! keyIterators[i].hasNext()) {
+      if (!keyIterators[i].hasNext()) {
         closeSubScanner(i);
         return false;
       }

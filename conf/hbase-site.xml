@@ -1,4 +1,54 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
+  <property>
+    <name>hbase.regiondir</name>
+    <value>hbase</value>
+    <description>The directory shared by region servers.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.msginterval</name>
+    <value>1000</value>
+    <description>Interval between messages from the RegionServer to HMaster
+    in milliseconds.  Default is 15. Set this value low if you want unit
+    tests to be responsive.
+    </description>
+  </property>
+  <!--
+  <property>
+    <name>hbase.master.meta.thread.rescanfrequency</name>
+    <value>600000</value>
+    <description>How long the HMaster sleeps (in milliseconds) between scans of
+    the root and meta tables.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.lease.period</name>
+    <value>360000</value>
+    <description>HMaster server lease period in milliseconds. Default is
+    180 seconds.</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.lease.period</name>
+    <value>360000</value>
+    <description>HMaster server lease period in milliseconds. Default is
+    180 seconds.</description>
+  </property>
+  -->
+  <!--
+  <property>
+    <name>hbase.hregion.max.filesize</name>
+    <value>3421223</value>
+    <description>
+    Maximum desired file size for an HRegion.  If filesize exceeds
+    value + (value / 2), the HRegion is split in two.  Default: 128M.
+    </description>
+  </property>
+  <property>
+    <name>hbase.client.timeout.length</name>
+    <value>10000</value>
+    <description>Client timeout in milliseconds</description>
+  </property>
+  -->
 </configuration>

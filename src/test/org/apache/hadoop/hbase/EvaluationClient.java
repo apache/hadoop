@@ -42,7 +42,7 @@ public class EvaluationClient implements HConstants {
   private static final int ROW_LENGTH = 1024;
   
 
-  private static final int ONE_HUNDRED_MB = 1024 * 1024 * 1 /*100 RESTORE*/;
+  private static final int ONE_HUNDRED_MB = 1024 * 1024 * 100;
   private static final int ROWS_PER_100_MB = ONE_HUNDRED_MB / ROW_LENGTH;
   
   private static final int ONE_GB = ONE_HUNDRED_MB * 10;
@@ -62,7 +62,7 @@ public class EvaluationClient implements HConstants {
     RANDOM_WRITE,
     SEQUENTIAL_READ,
     SEQUENTIAL_WRITE,
-    SCAN};
+    SCAN}
   
   private Random rand;
   private Configuration conf;
@@ -177,8 +177,8 @@ public class EvaluationClient implements HConstants {
           test == Test.SCAN || test == Test.SEQUENTIAL_READ ||
           test == Test.SEQUENTIAL_WRITE) {
 
-        for(int range = 0; range < 10; range++) {
-          long elapsedTime = sequentialWrite(range * nRows, nRows);
+        for(int i = 0; i < 10; i++) {
+          long elapsedTime = sequentialWrite(i * nRows, nRows);
           if (test == Test.SEQUENTIAL_WRITE) {
             totalElapsedTime += elapsedTime;
           }
@@ -188,8 +188,8 @@ public class EvaluationClient implements HConstants {
       switch(test) {
       
       case RANDOM_READ:
-        for(int range = 0 ; range < 10; range++) {
-          long elapsedTime = randomRead(range * nRows, nRows);
+        for(int i = 0 ; i < 10; i++) {
+          long elapsedTime = randomRead(i * nRows, nRows);
           totalElapsedTime += elapsedTime;
         }
         System.out.print("Random read of " + R + " rows completed in: ");
@@ -199,15 +199,15 @@ public class EvaluationClient implements HConstants {
         throw new UnsupportedOperationException("Not yet implemented");
 
       case RANDOM_WRITE:
-        for(int range = 0 ; range < 10; range++) {
-          long elapsedTime = randomWrite(range * nRows, nRows);
+        for(int i = 0 ; i < 10; i++) {
+          long elapsedTime = randomWrite(i * nRows, nRows);
           totalElapsedTime += elapsedTime;
         }
         System.out.print("Random write of " + R + " rows completed in: ");
         break;
 
       case SCAN:
-        for(int range = 0 ; range < 10; range++) {
+        for(int i = 0 ; i < 10; i++) {
           long elapsedTime = scan(range * nRows, nRows);
           totalElapsedTime += elapsedTime;
         }
@@ -215,8 +215,8 @@ public class EvaluationClient implements HConstants {
         break;
 
       case SEQUENTIAL_READ:
-        for(int range = 0 ; range < 10; range++) {
-          long elapsedTime = sequentialRead(range * nRows, nRows);
+        for(int i = 0 ; i < 10; i++) {
+          long elapsedTime = sequentialRead(i * nRows, nRows);
           totalElapsedTime += elapsedTime;
         }
         System.out.print("Sequential read of " + R + " rows completed in: ");
@@ -230,16 +230,16 @@ public class EvaluationClient implements HConstants {
         throw new IllegalArgumentException("Invalid command value: " + test);
       }
       System.out.println((totalElapsedTime / 1000.0));
-
     } catch(Exception e) {
-      e.printStackTrace();
-      
+      LOG.error("Failed", e);
     } finally {
+      LOG.info("Deleting table " + tableDescriptor.getName());
       this.client.deleteTable(tableDescriptor.getName());
     }
   }
   
-  private void runOneTest(Test cmd) {
+  private void runOneTest(@SuppressWarnings("unused") Test cmd) {
+    // TODO
   }
   
   private void runTest(Test test) throws IOException {
@@ -302,6 +302,10 @@ public class EvaluationClient implements HConstants {
     System.err.println("                 running: 1 <= value <= 500");
     System.err.println(" range           Integer. Required. 0 <= value <= " +
       "(nclients * 10) - 1");
+    System.err.println("Examples:");
+    System.err.println(" To run a single evaluation client:");
+    System.err.println(" $ bin/hbase " +
+      "org.apache.hadoop.hbase.EvaluationClient sequentialWrite 1 1");
   }
 
   private void getArgs(final int start, final String[] args) {

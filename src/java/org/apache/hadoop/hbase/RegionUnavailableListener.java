@@ -19,9 +19,22 @@ import org.apache.hadoop.io.Text;
 
 /**
  * Used as a callback mechanism so that an HRegion can notify the HRegionServer
- * when a region is about to be closed during a split operation. This is done
- * to minimize the amount of time the region is off-line.
+ * of the different stages making an HRegion unavailable.  Regions are made
+ * unavailable during region split operations.
  */
 public interface RegionUnavailableListener {
-  public void regionIsUnavailable(Text regionName);
+  /**
+   * <code>regionName</code> is closing.
+   * Listener should stop accepting new writes but can continue to service
+   * outstanding transactions.
+   * @param regionName
+   */
+  public void closing(final Text regionName);
+  
+  /**
+   * <code>regionName</code> is closed and no longer available.
+   * Listener should clean up any references to <code>regionName</code>
+   * @param regionName
+   */
+  public void closed(final Text regionName);
 }

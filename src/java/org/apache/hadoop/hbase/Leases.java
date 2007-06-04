@@ -91,7 +91,9 @@ public class Leases {
         Lease lease = new Lease(holderId, resourceId, listener);
         Text leaseId = lease.getLeaseId();
         if(leases.get(leaseId) != null) {
-          throw new IOException("Impossible state for createLease(): Lease for holderId " + holderId + " and resourceId " + resourceId + " is still held.");
+          throw new IOException("Impossible state for createLease(): Lease " +
+            "for holderId " + holderId + " and resourceId " + resourceId +
+            " is still held.");
         }
         leases.put(leaseId, lease);
         sortedLeases.add(lease);
@@ -106,11 +108,10 @@ public class Leases {
         Text leaseId = createLeaseId(holderId, resourceId);
         Lease lease = leases.get(leaseId);
         if(lease == null) {
-          
           // It's possible that someone tries to renew the lease, but 
           // it just expired a moment ago.  So fail.
-          
-          throw new IOException("Cannot renew lease is not held (holderId=" + holderId + ", resourceId=" + resourceId + ")");
+          throw new IOException("Cannot renew lease; not held (holderId=" +
+            holderId + ", resourceId=" + resourceId + ")");
         }
         
         sortedLeases.remove(lease);

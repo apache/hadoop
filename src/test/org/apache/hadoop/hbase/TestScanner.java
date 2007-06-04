@@ -28,6 +28,9 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 
+/**
+ * Test of a long-lived scanner validating as we go.
+ */
 public class TestScanner extends HBaseTestCase {
   private static final Text FIRST_ROW = new Text();
   private static final Text[] COLS = {

@@ -62,7 +62,7 @@ public class HRegion implements HConstants {
   static int MIN_COMMITS_FOR_COMPACTION = 10;
   static Random rand = new Random();
 
-  private static final Log LOG = LogFactory.getLog(HRegion.class);
+  static final Log LOG = LogFactory.getLog(HRegion.class);
 
   /**
    * Deletes all the files for a HRegion
@@ -74,6 +74,7 @@ public class HRegion implements HConstants {
    */
   public static void deleteRegion(FileSystem fs, Path baseDirectory,
       Text regionName) throws IOException {
+    LOG.debug("Deleting region " + regionName);
     fs.delete(HStoreFile.getHRegionDir(baseDirectory, regionName));
   }
   
@@ -134,14 +135,10 @@ public class HRegion implements HConstants {
         + (endKey == null ? "" : endKey) + "'");
     
     // Flush each of the sources, and merge their files into a single 
-    // target for each column family.
-
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("flushing and getting file names for region " + srcA.getRegionName());
-    }
-    
+    // target for each column family.    
     TreeSet<HStoreFile> alreadyMerged = new TreeSet<HStoreFile>();
-    TreeMap<Text, Vector<HStoreFile>> filesToMerge = new TreeMap<Text, Vector<HStoreFile>>();
+    TreeMap<Text, Vector<HStoreFile>> filesToMerge =
+      new TreeMap<Text, Vector<HStoreFile>>();
     for(HStoreFile src: srcA.flushcache(true)) {
       Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
       if(v == null) {
@@ -149,10 +146,6 @@ public class HRegion implements HConstants {
         filesToMerge.put(src.getColFamily(), v);
       }
       v.add(src);
-    }
-    
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("flushing and getting file names for region " + srcB.getRegionName());
     }
     
     for(HStoreFile src: srcB.flushcache(true)) {
@@ -187,6 +180,7 @@ public class HRegion implements HConstants {
     }
 
     filesToMerge.clear();
+    
     for(HStoreFile src: srcA.close()) {
       if(! alreadyMerged.contains(src)) {
         Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
@@ -330,6 +324,7 @@ public class HRegion implements HConstants {
   int maxUnflushedEntries = 0;
   int compactionThreshold = 0;
   private final HLocking lock = new HLocking();
+  private long desiredMaxFileSize;
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -382,7 +377,6 @@ public class HRegion implements HConstants {
     // Load in all the HStores.
     for(Map.Entry<Text, HColumnDescriptor> e :
         this.regionInfo.tableDesc.families().entrySet()) {
-      
       Text colFamily = HStoreKey.extractFamily(e.getKey());
       stores.put(colFamily, new HStore(dir, this.regionInfo.regionName,
           e.getValue(), fs, oldLogFile, conf));
@@ -404,7 +398,12 @@ public class HRegion implements HConstants {
     
     // By default, we compact the region if an HStore has more than 10 map files
     
-    this.compactionThreshold = conf.getInt("hbase.hregion.compactionThreshold", 10);
+    this.compactionThreshold =
+      conf.getInt("hbase.hregion.compactionThreshold", 10);
+    
+    // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
+    this.desiredMaxFileSize =
+      conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);
 
     // HRegion is ready to go!
     this.writestate.writesOngoing = false;
@@ -448,6 +447,7 @@ public class HRegion implements HConstants {
           try {
             writestate.wait();
           } catch (InterruptedException iex) {
+            // continue
           }
         }
         writestate.writesOngoing = true;
@@ -456,24 +456,21 @@ public class HRegion implements HConstants {
 
       if(! shouldClose) {
         return null;
+      }
+      LOG.info("closing region " + this.regionInfo.regionName);
+      Vector<HStoreFile> allHStoreFiles = internalFlushcache();
+      for (HStore store: stores.values()) {
+        store.close();
+      }
+      try {
+        return allHStoreFiles;
 
-      } else {
-        LOG.info("closing region " + this.regionInfo.regionName);
-        Vector<HStoreFile> allHStoreFiles = internalFlushcache();
-        for(Iterator<HStore> it = stores.values().iterator(); it.hasNext(); ) {
-          HStore store = it.next();
-          store.close();
+      } finally {
+        synchronized (writestate) {
+          writestate.closed = true;
+          writestate.writesOngoing = false;
         }
-        try {
-          return allHStoreFiles;
-
-        } finally {
-          synchronized(writestate) {
-            writestate.closed = true;
-            writestate.writesOngoing = false;
-          }
-          LOG.info("region " + this.regionInfo.regionName + " closed");
-        }
+        LOG.info("region " + this.regionInfo.regionName + " closed");
       }
     } finally {
       lock.releaseWriteLock();
@@ -493,10 +490,11 @@ public class HRegion implements HConstants {
         && (regionInfo.startKey.compareTo(midKey) > 0))
         || ((regionInfo.endKey.getLength() != 0)
             && (regionInfo.endKey.compareTo(midKey) < 0))) {
-      throw new IOException("Region splitkey must lie within region boundaries.");
+      throw new IOException("Region splitkey must lie within region " +
+        "boundaries.");
     }
 
-    LOG.info("splitting region " + this.regionInfo.regionName);
+    LOG.info("Splitting region " + this.regionInfo.regionName);
 
     Path splits = new Path(regiondir, SPLITDIR);
     if(! fs.exists(splits)) {
@@ -524,39 +522,41 @@ public class HRegion implements HConstants {
     // Flush this HRegion out to storage, and turn off flushes
     // or compactions until close() is called.
     
+    // TODO: flushcache can come back null if it can't do the flush. FIX.
     Vector<HStoreFile> hstoreFilesToSplit = flushcache(true);
-    for(Iterator<HStoreFile> it = hstoreFilesToSplit.iterator(); it.hasNext(); ) {
-      HStoreFile hsf = it.next();
-      
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("splitting HStore " + hsf.getRegionName() + "/"
-            + hsf.getColFamily() + "/" + hsf.fileId());
+    for(HStoreFile hsf: hstoreFilesToSplit) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Splitting HStore " + hsf.getRegionName() + "/" +
+          hsf.getColFamily() + "/" + hsf.fileId());
       }
-
       HStoreFile dstA = new HStoreFile(conf, splits, regionAInfo.regionName, 
-          hsf.getColFamily(), Math.abs(rand.nextLong()));
-      
+        hsf.getColFamily(), Math.abs(rand.nextLong()));
       HStoreFile dstB = new HStoreFile(conf, splits, regionBInfo.regionName, 
-          hsf.getColFamily(), Math.abs(rand.nextLong()));
-      
+        hsf.getColFamily(), Math.abs(rand.nextLong()));
       hsf.splitStoreFile(midKey, dstA, dstB, fs, conf);
       alreadySplit.add(hsf);
     }
 
     // We just copied most of the data.
+    
     // Notify the caller that we are about to close the region
+    listener.closing(this.getRegionName());
     
-    listener.regionIsUnavailable(this.getRegionName());
+    // Wait on the last row updates to come in.
+    waitOnRowLocks();
     
-    // Now close the HRegion and copy the small remainder
-    
+    // Now close the HRegion
     hstoreFilesToSplit = close();
-    for(Iterator<HStoreFile> it = hstoreFilesToSplit.iterator(); it.hasNext(); ) {
-      HStoreFile hsf = it.next();
-      
+    
+    // Tell listener that region is now closed and that they can therefore
+    // clean up any outstanding references.
+    listener.closed(this.getRegionName());
+    
+    // Copy the small remainder
+    for(HStoreFile hsf: hstoreFilesToSplit) {
       if(! alreadySplit.contains(hsf)) {
         if(LOG.isDebugEnabled()) {
-          LOG.debug("splitting HStore " + hsf.getRegionName() + "/"
+          LOG.debug("Splitting HStore " + hsf.getRegionName() + "/"
               + hsf.getColFamily() + "/" + hsf.fileId());
         }
 
@@ -585,8 +585,9 @@ public class HRegion implements HConstants {
     regions[0] = regionA;
     regions[1] = regionB;
     
-    LOG.info("region split complete. new regions are: " + regions[0].getRegionName()
-        + ", " + regions[1].getRegionName());
+    LOG.info("Region split of " + this.regionInfo.regionName + " complete. " +
+      "New regions are: " + regions[0].getRegionName() + ", " +
+      regions[1].getRegionName());
     
     return regions;
   }
@@ -653,22 +654,19 @@ public class HRegion implements HConstants {
    */
   public boolean needsSplit(Text midKey) {
     lock.obtainReadLock();
-
     try {
       Text key = new Text();
       long maxSize = 0;
-
-      for(Iterator<HStore> i = stores.values().iterator(); i.hasNext(); ) {
-        long size = i.next().getLargestFileSize(key);
-
+      for(HStore store: stores.values()) {
+        long size = store.getLargestFileSize(key);
         if(size > maxSize) {                      // Largest so far
           maxSize = size;
           midKey.set(key);
         }
       }
 
-      return (maxSize > (DESIRED_MAX_FILE_SIZE + (DESIRED_MAX_FILE_SIZE / 2)));
-      
+      return (maxSize >
+        (this.desiredMaxFileSize + (this.desiredMaxFileSize / 2)));
     } finally {
       lock.releaseReadLock();
     }
@@ -701,16 +699,16 @@ public class HRegion implements HConstants {
    */
   public boolean needsCompaction() {
     boolean needsCompaction = false;
-    lock.obtainReadLock();
+    this.lock.obtainReadLock();
     try {
-      for(Iterator<HStore> i = stores.values().iterator(); i.hasNext(); ) {
-        if(i.next().getNMaps() > compactionThreshold) {
+      for(HStore store: stores.values()) {
+        if(store.getNMaps() > this.compactionThreshold) {
           needsCompaction = true;
           break;
         }
       }
     } finally {
-      lock.releaseReadLock();
+      this.lock.releaseReadLock();
     }
     return needsCompaction;
   }
@@ -732,41 +730,35 @@ public class HRegion implements HConstants {
     boolean shouldCompact = false;
     lock.obtainReadLock();
     try {
-      synchronized(writestate) {
-        if((! writestate.writesOngoing)
-            && writestate.writesEnabled
-            && (! writestate.closed)
-            && recentCommits > MIN_COMMITS_FOR_COMPACTION) {
-
+      synchronized (writestate) {
+        if ((!writestate.writesOngoing) &&
+            writestate.writesEnabled &&
+            (!writestate.closed) &&
+            recentCommits > MIN_COMMITS_FOR_COMPACTION) {
           writestate.writesOngoing = true;
           shouldCompact = true;
         }
       }
-    } finally {
-      lock.releaseReadLock();
-    }
 
-    if(! shouldCompact) {
-      LOG.info("not compacting region " + this.regionInfo.regionName);
-      return false; 
-    }
-    lock.obtainWriteLock();
-    try {
-      LOG.info("starting compaction on region " + this.regionInfo.regionName);
-      for (Iterator<HStore> it = stores.values().iterator(); it.hasNext();) {
-        HStore store = it.next();
+      if (!shouldCompact) {
+        LOG.info("not compacting region " + this.regionInfo);
+        return false;
+      }
+
+      LOG.info("starting compaction on region " + this.regionInfo);
+      for (HStore store : stores.values()) {
         store.compact();
       }
-      LOG.info("compaction completed on region " + this.regionInfo.regionName);
+      LOG.info("compaction completed on region " + this.regionInfo);
       return true;
-
+      
     } finally {
+      lock.releaseReadLock();
       synchronized (writestate) {
         writestate.writesOngoing = false;
         recentCommits = 0;
         writestate.notifyAll();
       }
-      lock.releaseWriteLock();
     }
   }
 
@@ -800,7 +792,8 @@ public class HRegion implements HConstants {
    * This method may block for some time, so it should not be called from a 
    * time-sensitive thread.
    */
-  public Vector<HStoreFile> flushcache(boolean disableFutureWrites) throws IOException {
+  public Vector<HStoreFile> flushcache(boolean disableFutureWrites)
+  throws IOException {
     boolean shouldFlush = false;
     synchronized(writestate) {
       if((! writestate.writesOngoing)
@@ -818,45 +811,45 @@ public class HRegion implements HConstants {
     
     if(! shouldFlush) {
       if(LOG.isDebugEnabled()) {
-        LOG.debug("not flushing cache for region " + this.regionInfo.regionName);
+        LOG.debug("not flushing cache for region " +
+          this.regionInfo.regionName);
       }
-      return null;
-      
-    } else {
-      try {
-        return internalFlushcache();
-        
-      } finally {
-        synchronized(writestate) {
-          writestate.writesOngoing = false;
-          writestate.notifyAll();
-        }
+      return null;  
+    }
+    
+    try {
+      return internalFlushcache();
+
+    } finally {
+      synchronized (writestate) {
+        writestate.writesOngoing = false;
+        writestate.notifyAll();
       }
     }
   }
 
   /**
-   * Flushing the cache is a little tricky.  We have a lot of updates in the 
-   * HMemcache, all of which have also been written to the log.  We need to write
-   * those updates in the HMemcache out to disk, while being able to process 
-   * reads/writes as much as possible during the flush operation.  Also, the log
+   * Flushing the cache is a little tricky. We have a lot of updates in the
+   * HMemcache, all of which have also been written to the log. We need to write
+   * those updates in the HMemcache out to disk, while being able to process
+   * reads/writes as much as possible during the flush operation. Also, the log
    * has to state clearly the point in time at which the HMemcache was flushed.
    * (That way, during recovery, we know when we can rely on the on-disk flushed
    * structures and when we have to recover the HMemcache from the log.)
-   *
+   * 
    * So, we have a three-step process:
-   *
+   * 
    * A. Flush the memcache to the on-disk stores, noting the current sequence ID
-   *    for the log.
-   *    
-   * B. Write a FLUSHCACHE-COMPLETE message to the log, using the sequence ID 
-   *    that was current at the time of memcache-flush.
-   *    
-   * C. Get rid of the memcache structures that are now redundant, as they've 
-   *    been flushed to the on-disk HStores.
-   *
+   * for the log.
+   * 
+   * B. Write a FLUSHCACHE-COMPLETE message to the log, using the sequence ID
+   * that was current at the time of memcache-flush.
+   * 
+   * C. Get rid of the memcache structures that are now redundant, as they've
+   * been flushed to the on-disk HStores.
+   * 
    * This method is protected, but can be accessed via several public routes.
-   *
+   * 
    * This method may block for some time.
    */
   Vector<HStoreFile> internalFlushcache() throws IOException {
@@ -884,8 +877,7 @@ public class HRegion implements HConstants {
     HMemcache.Snapshot retval = memcache.snapshotMemcacheForLog(log);
     TreeMap<HStoreKey, BytesWritable> memcacheSnapshot = retval.memcacheSnapshot;
     if(memcacheSnapshot == null) {
-      for(Iterator<HStore> it = stores.values().iterator(); it.hasNext(); ) {
-        HStore hstore = it.next();
+      for(HStore hstore: stores.values()) {
         Vector<HStoreFile> hstoreFiles = hstore.getAllMapFiles();
         allHStoreFiles.addAll(0, hstoreFiles);
       }
@@ -944,12 +936,7 @@ public class HRegion implements HConstants {
   /** Fetch a single data item. */
   public BytesWritable get(Text row, Text column) throws IOException {
     BytesWritable[] results = get(row, column, Long.MAX_VALUE, 1);
-    if(results == null) {
-      return null;
-      
-    } else {
-      return results[0];
-    }
+    return (results == null)? null: results[0];
   }
   
   /** Fetch multiple versions of a single data item */
@@ -972,13 +959,13 @@ public class HRegion implements HConstants {
 
     // Obtain the row-lock
 
-    obtainLock(row);
+    obtainRowLock(row);
     try {
       // Obtain the -col results
       return get(new HStoreKey(row, column, timestamp), numVersions);
     
     } finally {
-      releaseLock(row);
+      releaseRowLock(row);
     }
   }
 
@@ -1042,7 +1029,8 @@ public class HRegion implements HConstants {
    * Return an iterator that scans over the HRegion, returning the indicated 
    * columns.  This Iterator must be closed by the caller.
    */
-  public HInternalScannerInterface getScanner(Text[] cols, Text firstRow) throws IOException {
+  public HInternalScannerInterface getScanner(Text[] cols, Text firstRow)
+  throws IOException {
     lock.obtainReadLock();
     try {
       TreeSet<Text> families = new TreeSet<Text>();
@@ -1052,12 +1040,10 @@ public class HRegion implements HConstants {
 
       HStore[] storelist = new HStore[families.size()];
       int i = 0;
-      for(Iterator<Text> it = families.iterator(); it.hasNext(); ) {
-        Text family = it.next();
+      for (Text family: families) {
         storelist[i++] = stores.get(family);
       }
       return new HScanner(cols, firstRow, memcache, storelist);
-      
     } finally {
       lock.releaseReadLock();
     }
@@ -1068,26 +1054,26 @@ public class HRegion implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
   
   /**
-   * The caller wants to apply a series of writes to a single row in the HRegion.
-   * The caller will invoke startUpdate(), followed by a series of calls to 
-   * put/delete, then finally either abort() or commit().
+   * The caller wants to apply a series of writes to a single row in the
+   * HRegion. The caller will invoke startUpdate(), followed by a series of
+   * calls to put/delete, then finally either abort() or commit().
    *
-   * Note that we rely on the external caller to properly abort() or commit() 
-   * every transaction.  If the caller is a network client, there should be a 
-   * lease-system in place that automatically aborts() transactions after a 
-   * specified quiet period.
+   * <p>Note that we rely on the external caller to properly abort() or
+   * commit() every transaction.  If the caller is a network client, there
+   * should be a lease-system in place that automatically aborts() transactions
+   * after a specified quiet period.
+   * 
+   * @param row Row to update
+   * @return lockid
+   * @see #put(long, Text, BytesWritable)
    */
   public long startUpdate(Text row) throws IOException {
-
-    // We obtain a per-row lock, so other clients will
-    // block while one client performs an update.
-
-    lock.obtainReadLock();
-    try {
-      return obtainLock(row);
-    } finally {
-      lock.releaseReadLock();
-    }
+    // We obtain a per-row lock, so other clients will block while one client
+    // performs an update.  The read lock is released by the client calling
+    // #commit or #abort or if the HRegionServer lease on the lock expires.
+    // See HRegionServer#RegionListener for how the expire on HRegionServer
+    // invokes a HRegion#abort.
+    return obtainRowLock(row);
   }
 
   /**
@@ -1099,10 +1085,11 @@ public class HRegion implements HConstants {
    * This method really just tests the input, then calls an internal localput() 
    * method.
    */
-  public void put(long lockid, Text targetCol, BytesWritable val) throws IOException {
+  public void put(long lockid, Text targetCol, BytesWritable val)
+  throws IOException {
     if(val.getSize() == DELETE_BYTES.getSize()
         && val.compareTo(DELETE_BYTES) == 0) {
-        throw new IOException("Cannot insert value: " + val);
+      throw new IOException("Cannot insert value: " + val);
     }
     localput(lockid, targetCol, val);
   }
@@ -1114,14 +1101,21 @@ public class HRegion implements HConstants {
     localput(lockid, targetCol, DELETE_BYTES);
   }
 
-  /**
+  /*
    * Private implementation.
    * 
-   * localput() is used for both puts and deletes. We just place the values into
-   * a per-row pending area, until a commit() or abort() call is received.
+   * localput() is used for both puts and deletes. We just place the values
+   * into a per-row pending area, until a commit() or abort() call is received.
    * (Or until the user's write-lock expires.)
+   * 
+   * @param lockid
+   * @param targetCol
+   * @param val Value to enter into cell
+   * @throws IOException
    */
-  void localput(long lockid, Text targetCol, BytesWritable val) throws IOException {
+  void localput(final long lockid, final Text targetCol,
+    final BytesWritable val)
+  throws IOException {
     checkColumn(targetCol);
     
     Text row = getRowFromLock(lockid);
@@ -1132,15 +1126,12 @@ public class HRegion implements HConstants {
     // This sync block makes localput() thread-safe when multiple
     // threads from the same client attempt an insert on the same 
     // locked row (via lockid).
-
     synchronized(row) {
-      
       // This check makes sure that another thread from the client
       // hasn't aborted/committed the write-operation.
-
       if(row != getRowFromLock(lockid)) {
-        throw new LockException("Locking error: put operation on lock " + lockid 
-            + " unexpected aborted by another thread");
+        throw new LockException("Locking error: put operation on lock " +
+            lockid + " unexpected aborted by another thread");
       }
       
       TreeMap<Text, BytesWritable> targets = targetColumns.get(lockid);
@@ -1178,22 +1169,22 @@ public class HRegion implements HConstants {
       }
       
       targetColumns.remove(lockid);
-      releaseLock(row);
+      releaseRowLock(row);
     }
   }
 
   /**
-   * Commit a pending set of writes to the memcache. This also results in writing
-   * to the change log.
+   * Commit a pending set of writes to the memcache. This also results in
+   * writing to the change log.
    *
    * Once updates hit the change log, they are safe.  They will either be moved 
    * into an HStore in the future, or they will be recovered from the log.
+   * @param lockid Lock for row we're to commit.
+   * @throws IOException
    */
-  public void commit(long lockid) throws IOException {
-    
+  public void commit(final long lockid) throws IOException {
     // Remove the row from the pendingWrites list so 
     // that repeated executions won't screw this up.
-    
     Text row = getRowFromLock(lockid);
     if(row == null) {
       throw new LockException("No write lock for lockid " + lockid);
@@ -1201,22 +1192,16 @@ public class HRegion implements HConstants {
     
     // This check makes sure that another thread from the client
     // hasn't aborted/committed the write-operation
-
     synchronized(row) {
-      
-      // We can now commit the changes.
       // Add updates to the log and add values to the memcache.
-
       long commitTimestamp = System.currentTimeMillis();
       log.append(regionInfo.regionName, regionInfo.tableDesc.getName(), row, 
-          targetColumns.get(lockid), commitTimestamp);
-      
-      memcache.add(row, targetColumns.get(lockid), commitTimestamp);
-
+        targetColumns.get(Long.valueOf(lockid)), commitTimestamp);
+      memcache.add(row, targetColumns.get(Long.valueOf(lockid)),
+        commitTimestamp);
       // OK, all done!
-
-      targetColumns.remove(lockid);
-      releaseLock(row);
+      targetColumns.remove(Long.valueOf(lockid));
+      releaseRowLock(row);
     }
     recentCommits++;
     this.commitsSinceFlush++;
@@ -1235,9 +1220,10 @@ public class HRegion implements HConstants {
       // all's well
       
     } else {
-      throw new IOException("Requested row out of range for HRegion "
-          + regionInfo.regionName + ", startKey='" + regionInfo.startKey
-          + "', endKey='" + regionInfo.endKey + "', row='" + row + "'");
+      throw new WrongRegionException("Requested row out of range for " +
+        "HRegion " + regionInfo.regionName + ", startKey='" +
+        regionInfo.startKey + "', endKey='" + regionInfo.endKey + "', row='" +
+        row + "'");
     }
   }
   
@@ -1255,25 +1241,32 @@ public class HRegion implements HConstants {
    * Obtain a lock on the given row.  Blocks until success.
    *
    * I know it's strange to have two mappings:
+   * <pre>
    *   ROWS  ==> LOCKS
+   * </pre>
    * as well as
+   * <pre>
    *   LOCKS ==> ROWS
+   * </pre>
    *
-   * But it acts as a guard on the client; a miswritten client just can't submit
-   * the name of a row and start writing to it; it must know the correct lockid,
-   * which matches the lock list in memory.
+   * But it acts as a guard on the client; a miswritten client just can't
+   * submit the name of a row and start writing to it; it must know the correct
+   * lockid, which matches the lock list in memory.
    * 
-   * It would be more memory-efficient to assume a correctly-written client, 
+   * <p>It would be more memory-efficient to assume a correctly-written client, 
    * which maybe we'll do in the future.
+   * 
+   * @param row Name of row to lock.
+   * @return The id of the held lock.
    */
-  long obtainLock(Text row) throws IOException {
+  long obtainRowLock(Text row) throws IOException {
     checkRow(row);
-    
     synchronized(rowsToLocks) {
       while(rowsToLocks.get(row) != null) {
         try {
           rowsToLocks.wait();
         } catch (InterruptedException ie) {
+          // Empty
         }
       }
       
@@ -1285,7 +1278,7 @@ public class HRegion implements HConstants {
     }
   }
   
-  Text getRowFromLock(long lockid) throws IOException {
+  Text getRowFromLock(long lockid) {
     // Pattern is that all access to rowsToLocks and/or to
     // locksToRows is via a lock on rowsToLocks.
     synchronized(rowsToLocks) {
@@ -1293,17 +1286,32 @@ public class HRegion implements HConstants {
     }
   }
   
-  /** Release the row lock! */
-  void releaseLock(Text row) throws IOException {
+  /** Release the row lock!
+   * @param lock Name of row whose lock we are to release
+   */
+  void releaseRowLock(Text row) {
     synchronized(rowsToLocks) {
       long lockid = rowsToLocks.remove(row).longValue();
       locksToRows.remove(lockid);
       rowsToLocks.notifyAll();
     }
   }
-  /*******************************************************************************
+  
+  private void waitOnRowLocks() {
+    synchronized (this.rowsToLocks) {
+      while (this.rowsToLocks.size() > 0) {
+        try {
+          this.rowsToLocks.wait();
+        } catch (InterruptedException e) {
+          // Catch. Let while test determine loop-end.
+        }
+      }
+    }
+  }
+  
+  /*
    * HScanner is an iterator through a bunch of rows in an HRegion.
-   ******************************************************************************/
+   */
   private static class HScanner implements HInternalScannerInterface {
     private HInternalScannerInterface[] scanners;
     private TreeMap<Text, BytesWritable>[] resultSets;
@@ -1314,10 +1322,8 @@ public class HRegion implements HConstants {
     /** Create an HScanner with a handle on many HStores. */
     @SuppressWarnings("unchecked")
     public HScanner(Text[] cols, Text firstRow, HMemcache memcache, HStore[] stores)
-        throws IOException {
-      
+    throws IOException {  
       long scanTime = System.currentTimeMillis();
-      
       this.scanners = new HInternalScannerInterface[stores.length + 1];
       for(int i = 0; i < this.scanners.length; i++) {
         this.scanners[i] = null;
@@ -1332,12 +1338,9 @@ public class HRegion implements HConstants {
       // All results will match the required column-set and scanTime.
       
       // NOTE: the memcache scanner should be the first scanner
-
       try {
         HInternalScannerInterface scanner =
           memcache.getScanner(scanTime, cols, firstRow);
-
-
         if(scanner.isWildcardScanner()) {
           this.wildcardMatch = true;
         }
@@ -1368,8 +1371,7 @@ public class HRegion implements HConstants {
       for(int i = 0; i < scanners.length; i++) {
         keys[i] = new HStoreKey();
         resultSets[i] = new TreeMap<Text, BytesWritable>();
-
-        if(scanners[i] != null && ! scanners[i].next(keys[i], resultSets[i])) {
+        if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
           closeScanner(i);
         }
       }
@@ -1393,13 +1395,12 @@ public class HRegion implements HConstants {
      * Grab the next row's worth of values.  The HScanner will return the most 
      * recent data value for each row that is not newer than the target time.
      */
-    public boolean next(HStoreKey key, TreeMap<Text, BytesWritable> results) throws IOException {
-      
+    public boolean next(HStoreKey key, TreeMap<Text, BytesWritable> results)
+    throws IOException {
       // Find the lowest-possible key.
-      
       Text chosenRow = null;
       long chosenTimestamp = -1;
-      for(int i = 0; i < keys.length; i++) {
+      for(int i = 0; i < this.keys.length; i++) {
         if(scanners[i] != null
             && (chosenRow == null
                 || (keys[i].getRow().compareTo(chosenRow) < 0)
@@ -1412,18 +1413,15 @@ public class HRegion implements HConstants {
       }
 
       // Store the key and results for each sub-scanner. Merge them as appropriate.
-      
       boolean insertedItem = false;
       if(chosenTimestamp > 0) {
         key.setRow(chosenRow);
         key.setVersion(chosenTimestamp);
         key.setColumn(new Text(""));
 
-        for(int i = 0; i < scanners.length; i++) {        
+        for(int i = 0; i < scanners.length; i++) {
           while((scanners[i] != null)
               && (keys[i].getRow().compareTo(chosenRow) == 0)) {
-            
-
             // If we are doing a wild card match or there are multiple matchers
             // per column, we need to scan all the older versions of this row
             // to pick up the rest of the family members
@@ -1439,11 +1437,7 @@ public class HRegion implements HConstants {
             //       values with older ones. So now we only insert
             //       a result if the map does not contain the key.
             
-            for(Iterator<Map.Entry<Text, BytesWritable>> it
-                = resultSets[i].entrySet().iterator();
-                it.hasNext(); ) {
-              
-              Map.Entry<Text, BytesWritable> e = it.next();
+            for(Map.Entry<Text, BytesWritable> e: resultSets[i].entrySet()) {
               if(!results.containsKey(e.getKey())) {
                 results.put(e.getKey(), e.getValue());
                 insertedItem = true;
@@ -1476,7 +1470,6 @@ public class HRegion implements HConstants {
     void closeScanner(int i) {
       try {
         scanners[i].close();
-        
       } finally {
         scanners[i] = null;
         keys[i] = null;
@@ -1492,5 +1485,161 @@ public class HRegion implements HConstants {
         }
       }
     }
+  }
+  
+  // Utility methods
+  
+  /**
+   * Convenience method creating new HRegions.
+   * @param regionId ID to use
+   * @param tableDesc Descriptor
+   * @param dir Home directory for the new region.
+   * @param conf
+   * @return New META region (ROOT or META).
+   * @throws IOException
+   */
+  public static HRegion createHRegion(final long regionId,
+    final HTableDescriptor tableDesc, final Path dir, final Configuration conf)
+  throws IOException {
+    return createHRegion(new HRegionInfo(regionId, tableDesc, null, null),
+      dir, conf, null, null);
+  }
+  
+  /**
+   * Convenience method creating new HRegions. Used by createTable and by the
+   * bootstrap code in the HMaster constructor
+   * 
+   * @param info Info for region to create.
+   * @param dir Home dir for new region
+   * @param conf
+   * @param initialFiles InitialFiles to pass new HRegion. Pass null if none.
+   * @param oldLogFile Old log file to use in region initialization.  Pass null
+   * if none. 
+   * @return new HRegion
+   * 
+   * @throws IOException
+   */
+  public static HRegion createHRegion(final HRegionInfo info,
+    final Path dir, final Configuration conf, final Path initialFiles,
+    final Path oldLogFile) 
+  throws IOException {
+    Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
+    FileSystem fs = FileSystem.get(conf);
+    fs.mkdirs(regionDir);
+    return new HRegion(dir,
+      new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf),
+      fs, conf, info, initialFiles, oldLogFile);
+  }
+  
+  /**
+   * Inserts a new region's meta information into the passed
+   * <code>meta</code> region. Used by the HMaster bootstrap code adding
+   * new table to ROOT table.
+   * 
+   * @param meta META HRegion to be updated
+   * @param r HRegion to add to <code>meta</code>
+   *
+   * @throws IOException
+   */
+  public static void addRegionToMETA(HRegion meta, HRegion r)
+  throws IOException {  
+    // The row key is the region name
+    long writeid = meta.startUpdate(r.getRegionName());
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    DataOutputStream s = new DataOutputStream(bytes);
+    r.getRegionInfo().write(s);
+    meta.put(writeid, COL_REGIONINFO, new BytesWritable(bytes.toByteArray()));
+    meta.commit(writeid);
+  }
+  
+  public static void addRegionToMETA(final HClient client,
+      final Text table, final HRegion region,
+      final HServerAddress serverAddress,
+      final long startCode)
+  throws IOException {
+    client.openTable(table);
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    DataOutputStream out = new DataOutputStream(bytes);
+    region.getRegionInfo().write(out);
+    long lockid = client.startUpdate(region.getRegionName());
+    client.put(lockid, COL_REGIONINFO, bytes.toByteArray());
+    client.put(lockid, COL_SERVER,
+      serverAddress.toString().getBytes(UTF8_ENCODING));
+    client.put(lockid, COL_STARTCODE,
+      String.valueOf(startCode).getBytes(UTF8_ENCODING));
+    client.commit(lockid);
+    LOG.info("Added region " + region.getRegionName() + " to table " + table);
+  }
+  
+  /**
+   * Delete <code>region</code> from META <code>table</code>.
+   * @param client Client to use running update.
+   * @param table META table we are to delete region from.
+   * @param regionName Region to remove.
+   * @throws IOException
+   */
+  public static void removeRegionFromMETA(final HClient client,
+      final Text table, final Text regionName)
+  throws IOException {
+    client.openTable(table);
+    long lockid = client.startUpdate(regionName);
+    client.delete(lockid, COL_REGIONINFO);
+    client.delete(lockid, COL_SERVER);
+    client.delete(lockid, COL_STARTCODE);
+    client.commit(lockid);
+    LOG.info("Removed " + regionName + " from table " + table);
+  }
+  
+  /**
+   * @param data Map of META row labelled column data.
+   * @return Server
+   */
+  static HRegionInfo getRegionInfo(final TreeMap<Text, byte[]> data)
+  throws IOException {
+    byte[] bytes = data.get(COL_REGIONINFO);
+    if (bytes == null || bytes.length == 0) {
+      throw new IOException("no value for " + COL_REGIONINFO);
+    }
+    DataInputBuffer in = new DataInputBuffer();
+    in.reset(bytes, bytes.length);
+    HRegionInfo info = new HRegionInfo();
+    info.readFields(in);
+    return info;
+  }
+  
+  /**
+   * @param data Map of META row labelled column data.
+   * @return Server
+   */
+  static String getServerName(final TreeMap<Text, byte[]> data) {
+    byte [] bytes = data.get(COL_SERVER);
+    String name = null;
+    try {
+      name = (bytes != null && bytes.length != 0) ?
+          new String(bytes, UTF8_ENCODING): null;
+
+    } catch(UnsupportedEncodingException e) {
+      assert(false);
+    }
+    return (name != null)? name.trim(): name;
+  }
+
+  /**
+   * @param data Map of META row labelled column data.
+   * @return Start code.
+   */
+  static long getStartCode(final TreeMap<Text, byte[]> data) {
+    long startCode = -1L;
+    byte [] bytes = data.get(COL_STARTCODE);
+    if(bytes != null && bytes.length != 0) {
+      try {
+        startCode = Long.parseLong(new String(bytes, UTF8_ENCODING).trim());
+      } catch(NumberFormatException e) {
+        LOG.error("Failed getting " + COL_STARTCODE, e);
+      } catch(UnsupportedEncodingException e) {
+        LOG.error("Failed getting " + COL_STARTCODE, e);
+      }
+    }
+    return startCode;
   }
 }

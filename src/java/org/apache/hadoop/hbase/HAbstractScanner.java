@@ -21,6 +21,8 @@ import java.util.Vector;
 
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.BytesWritable;
@@ -31,10 +33,11 @@ import org.apache.hadoop.io.Text;
  * Used by the concrete HMemcacheScanner and HStoreScanners
  ******************************************************************************/
 public abstract class HAbstractScanner implements HInternalScannerInterface {
+  final Log LOG = LogFactory.getLog(this.getClass().getName());
 
   // Pattern to determine if a column key is a regex
 
-  private static Pattern isRegexPattern = Pattern.compile("^.*[\\\\+|^&*$\\[\\]\\}{)(]+.*$");
+  static Pattern isRegexPattern = Pattern.compile("^.*[\\\\+|^&*$\\[\\]\\}{)(]+.*$");
   
   // The kind of match we are doing on a column:
 
@@ -42,7 +45,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     FAMILY_ONLY,                        // Just check the column family name
     REGEX,                              // Column family + matches regex
     SIMPLE                              // Literal matching
-  };
+  }
 
   // This class provides column matching functions that are more sophisticated
   // than a simple string compare. There are three types of matching:
@@ -89,15 +92,15 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     
     // Matching method
     
-    boolean matches(Text col) throws IOException {
+    boolean matches(Text c) throws IOException {
       if(this.matchType == MATCH_TYPE.SIMPLE) {
-        return col.equals(this.col);
+        return c.equals(this.col);
         
       } else if(this.matchType == MATCH_TYPE.FAMILY_ONLY) {
-        return col.toString().startsWith(this.family);
+        return c.toString().startsWith(this.family);
         
       } else if(this.matchType == MATCH_TYPE.REGEX) {
-        return this.columnMatcher.matcher(col.toString()).matches();
+        return this.columnMatcher.matcher(c.toString()).matches();
         
       } else {
         throw new IOException("Invalid match type: " + this.matchType);
@@ -201,20 +204,19 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   public boolean isMultipleMatchScanner() {
     return this.multipleMatchers;
   }
+  
   /**
    * Get the next set of values for this scanner.
    * 
-   * @param key - The key that matched
-   * @param results - all the results for that key.
-   * @return - true if a match was found
+   * @param key The key that matched
+   * @param results All the results for <code>key</code>
+   * @return true if a match was found
    * 
    * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.TreeMap)
    */
   public boolean next(HStoreKey key, TreeMap<Text, BytesWritable> results)
-      throws IOException {
- 
+  throws IOException {
     // Find the next row label (and timestamp)
- 
     Text chosenRow = null;
     long chosenTimestamp = -1;
     for(int i = 0; i < keys.length; i++) {
@@ -232,7 +234,6 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     }
 
     // Grab all the values that match this row/timestamp
-
     boolean insertedItem = false;
     if(chosenRow != null) {
       key.setRow(chosenRow);
@@ -241,7 +242,6 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
 
       for(int i = 0; i < keys.length; i++) {
         // Fetch the data
-
         while((keys[i] != null)
             && (keys[i].getRow().compareTo(chosenRow) == 0)) {
 
@@ -255,10 +255,8 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
             break;
           }
 
-          if(columnMatch(i)) {
-              
+          if(columnMatch(i)) {              
             // We only want the first result for any specific family member
-            
             if(!results.containsKey(keys[i].getColumn())) {
               results.put(new Text(keys[i].getColumn()), vals[i]);
               insertedItem = true;
@@ -277,7 +275,6 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
             && ((keys[i].getRow().compareTo(chosenRow) <= 0)
                 || (keys[i].getTimestamp() > this.timestamp)
                 || (! columnMatch(i)))) {
-
           getNext(i);
         }
       }
