@@ -519,6 +519,9 @@ Branch 0.13 (unreleased changes)
      to a long, permitting map outputs to exceed 2^31 bytes.
      (omalley via cutting)
 
+133. HADOOP-1443.  Fix a bug opening zero-length files in HDFS.
+     (Konstantin Shvachko via cutting)
+
 
 Release 0.12.3 - 2007-04-06
 

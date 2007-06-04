@@ -961,7 +961,7 @@ class DFSClient implements FSConstants {
         throw new IOException("Stream closed");
       }
       long filelen = getFileLength();
-      if ((position < 0) || (position > filelen)) {
+      if ((position < 0) || (position >= filelen)) {
         return -1;
       }
       int realLen = length;

@@ -38,7 +38,25 @@ public class TestPread extends TestCase {
     // create and write a file that contains three blocks of data
     DataOutputStream stm = fileSys.create(name, true, 4096, (short)1,
                                           (long)blockSize);
+    // test empty file open and read
+    stm.close();
+    FSDataInputStream in = fileSys.open(name);
     byte[] buffer = new byte[(int)(12*blockSize)];
+    in.readFully(0, buffer, 0, 0);
+    IOException res = null;
+    try { // read beyond the end of the file
+      in.readFully(0, buffer, 0, 1);
+    } catch (IOException e) {
+      // should throw an exception
+      res = e;
+    }
+    assertTrue("Error reading beyond file boundary.", res != null);
+    in.close();
+    if (!fileSys.delete(name))
+      assertTrue("Cannot delete file", false);
+    
+    // now create the real file
+    stm = fileSys.create(name, true, 4096, (short)1, (long)blockSize);
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
     stm.write(buffer);
@@ -112,6 +130,17 @@ public class TestPread extends TestCase {
     actual = new byte[8*4096];
     stm.readFully(3*blockSize, actual, 0, 8*4096);
     checkAndEraseData(actual, 3*blockSize, expected, "Pread Test 8");
+    // read the tail
+    stm.readFully(11*blockSize+blockSize/2, actual, 0, blockSize/2);
+    IOException res = null;
+    try { // read beyond the end of the file
+      stm.readFully(11*blockSize+blockSize/2, actual, 0, blockSize);
+    } catch (IOException e) {
+      // should throw an exception
+      res = e;
+    }
+    assertTrue("Error reading beyond file boundary.", res != null);
+    
     stm.close();
   }
   

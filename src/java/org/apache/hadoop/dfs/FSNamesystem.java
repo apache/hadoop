@@ -432,7 +432,14 @@ class FSNamesystem implements FSConstants {
   synchronized LocatedBlocks  getBlockLocations(String clientMachine,
                                                 String src, 
                                                 long offset, 
-                                                long length) {
+                                                long length
+                                                ) throws IOException {
+    if (offset < 0) {
+      throw new IOException("Negative offset is not supported. File: " + src );
+    }
+    if (length < 0) {
+      throw new IOException("Negative length is not supported. File: " + src );
+    }
     return  getBlockLocations(clientMachine, 
                               dir.getFileINode(src), 
                               offset, length, Integer.MAX_VALUE);
@@ -442,7 +449,8 @@ class FSNamesystem implements FSConstants {
                                           FSDirectory.INode inode, 
                                           long offset, 
                                           long length,
-                                          int nrBlocksToReturn) {
+                                          int nrBlocksToReturn
+                                          ) throws IOException {
     if(inode == null || inode.isDir()) {
       return null;
     }
@@ -450,18 +458,24 @@ class FSNamesystem implements FSConstants {
     if (blocks == null) {
       return null;
     }
+    assert blocks.length > 0 : "Array of blocks is empty.";
     List<LocatedBlock> results;
     results = new ArrayList<LocatedBlock>(blocks.length);
 
     int curBlk = 0;
     long curPos = 0, blkSize = 0;
-    for (curBlk = 0; curBlk < blocks.length; curBlk++) {
+    int nrBlocks = (blocks[0].getNumBytes() == 0) ? 0 : blocks.length;
+    for (curBlk = 0; curBlk < nrBlocks; curBlk++) {
       blkSize = blocks[curBlk].getNumBytes();
+      assert blkSize > 0 : "Block of size 0";
       if (curPos + blkSize > offset) {
         break;
       }
       curPos += blkSize;
     }
+    
+    if (nrBlocks > 0 && curBlk == nrBlocks)   // offset >= end of file
+      return null;
     
     long endOff = offset + length;
     
