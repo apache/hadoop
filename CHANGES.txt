@@ -23,3 +23,5 @@ Trunk (unreleased changes)
  12. HADOOP-1392. Part2: includes table compaction by merging adjacent regions
      that have shrunk in size.
  13. HADOOP-1445 Support updates across region splits and compactions
+ 14. HADOOP-1460 On shutdown IOException with complaint 'Cannot cancel lease
+     that is not held'
