@@ -22,7 +22,7 @@ import org.apache.hadoop.io.*;
 import java.io.*;
 import java.util.*;
 
-/*******************************************************************************
+/**
  * Leases
  *
  * There are several server classes in HBase that need to track external clients
@@ -36,9 +36,9 @@ import java.util.*;
  *
  * An instance of the Leases class will create a thread to do its dirty work.  
  * You should close() the instance if you want to clean up the thread properly.
- ******************************************************************************/
+ */
 public class Leases {
-  private static final Log LOG = LogFactory.getLog(Leases.class);
+  static final Log LOG = LogFactory.getLog(Leases.class.getName());
 
   long leasePeriod;
   long leaseCheckFrequency;
@@ -83,21 +83,29 @@ public class Leases {
       LOG.debug("leases closed");
     }
   }
+  
+  String getLeaseName(final Text holderId, final Text resourceId) {
+    return "<holderId=" + holderId + ", resourceId=" + resourceId + ">";
+  }
 
   /** A client obtains a lease... */
-  public void createLease(Text holderId, Text resourceId, LeaseListener listener) throws IOException {
+  public void createLease(Text holderId, Text resourceId,
+      final LeaseListener listener)
+  throws IOException {
     synchronized(leases) {
       synchronized(sortedLeases) {
         Lease lease = new Lease(holderId, resourceId, listener);
         Text leaseId = lease.getLeaseId();
         if(leases.get(leaseId) != null) {
           throw new IOException("Impossible state for createLease(): Lease " +
-            "for holderId " + holderId + " and resourceId " + resourceId +
-            " is still held.");
+            getLeaseName(holderId, resourceId) + " is still held.");
         }
         leases.put(leaseId, lease);
         sortedLeases.add(lease);
       }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Created lease " + getLeaseName(holderId, resourceId));
     }
   }
   
@@ -110,8 +118,8 @@ public class Leases {
         if(lease == null) {
           // It's possible that someone tries to renew the lease, but 
           // it just expired a moment ago.  So fail.
-          throw new IOException("Cannot renew lease; not held (holderId=" +
-            holderId + ", resourceId=" + resourceId + ")");
+          throw new IOException("Cannot renew lease that is not held: " +
+            getLeaseName(holderId, resourceId));
         }
         
         sortedLeases.remove(lease);
@@ -119,9 +127,14 @@ public class Leases {
         sortedLeases.add(lease);
       }
     }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Renewed lease " + getLeaseName(holderId, resourceId));
+    }
   }
 
-  /** A client explicitly cancels a lease.  The lease-cleanup method is not called. */
+  /** A client explicitly cancels a lease.
+   * The lease-cleanup method is not called.
+   */
   public void cancelLease(Text holderId, Text resourceId) throws IOException {
     synchronized(leases) {
       synchronized(sortedLeases) {
@@ -132,7 +145,8 @@ public class Leases {
           // It's possible that someone tries to renew the lease, but 
           // it just expired a moment ago.  So fail.
           
-          throw new IOException("Cannot cancel lease that is not held (holderId=" + holderId + ", resourceId=" + resourceId + ")");
+          throw new IOException("Cannot cancel lease that is not held: " +
+            getLeaseName(holderId, resourceId));
         }
         
         sortedLeases.remove(lease);
@@ -140,7 +154,10 @@ public class Leases {
 
         lease.cancelled();
       }
-    }        
+    }     
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Cancel lease " + getLeaseName(holderId, resourceId));
+    }
   }
 
   /** LeaseMonitor is a thread that expires Leases that go on too long. */
@@ -211,6 +228,10 @@ public class Leases {
     }
     
     public void expired() {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Lease expired " + getLeaseName(this.holderId,
+          this.resourceId));
+      }
       listener.leaseExpired();
     }
     

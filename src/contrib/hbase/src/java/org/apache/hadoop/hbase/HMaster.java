@@ -738,17 +738,17 @@ public class HMaster implements HConstants, HMasterInterface,
   
   /** HRegionServers call this method upon startup. */
   public void regionServerStartup(HServerInfo serverInfo) throws IOException {
-    String server = serverInfo.getServerAddress().toString().trim();
+    String s = serverInfo.getServerAddress().toString().trim();
     HServerInfo storedInfo = null;
 
     if(LOG.isDebugEnabled()) {
-      LOG.debug("received start message from: " + server);
+      LOG.debug("received start message from: " + s);
     }
     
     // If we get the startup message but there's an old server by that
     // name, then we can timeout the old one right away and register
     // the new one.
-    storedInfo = serversToServerInfo.remove(server);
+    storedInfo = serversToServerInfo.remove(s);
 
     if(storedInfo != null && !closed) {
       synchronized(msgQueue) {
@@ -759,34 +759,40 @@ public class HMaster implements HConstants, HMasterInterface,
 
     // Either way, record the new server
 
-    serversToServerInfo.put(server, serverInfo);
+    serversToServerInfo.put(s, serverInfo);
 
     if(!closed) {
-      Text serverLabel = new Text(server);        
-      serverLeases.createLease(serverLabel, serverLabel, new ServerExpirer(server));
+      Text serverLabel = new Text(s);
+      LOG.debug("Created lease for " + serverLabel);
+      serverLeases.createLease(serverLabel, serverLabel, new ServerExpirer(s));
     }
   }
 
   /** HRegionServers call this method repeatedly. */
-  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[]) throws IOException {
-    String server = serverInfo.getServerAddress().toString().trim();
-    Text serverLabel = new Text(server);
+  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[])
+  throws IOException {
+    String s = serverInfo.getServerAddress().toString().trim();
+    Text serverLabel = new Text(s);
 
-    if(closed
-        || (msgs.length == 1 && msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING)) {
-      // We're shutting down. Or the HRegionServer is.
-      serversToServerInfo.remove(server);
-      serverLeases.cancelLease(serverLabel, serverLabel);
+    if (closed ||
+        msgs.length == 1 && msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
+      // HRegionServer is shutting down.
+      if (serversToServerInfo.remove(s) != null) {
+        // Only cancel lease once (This block can run a couple of times during
+        // shutdown).
+        LOG.debug("Cancelling lease for " + serverLabel);
+        serverLeases.cancelLease(serverLabel, serverLabel);
+      }
       HMsg returnMsgs[] = {new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
       return returnMsgs;
     }
 
-    HServerInfo storedInfo = serversToServerInfo.get(server);
+    HServerInfo storedInfo = serversToServerInfo.get(s);
 
     if(storedInfo == null) {
 
       if(LOG.isDebugEnabled()) {
-        LOG.debug("received server report from unknown server: " + server);
+        LOG.debug("received server report from unknown server: " + s);
       }
 
       // The HBaseMaster may have been restarted.
@@ -808,7 +814,7 @@ public class HMaster implements HConstants, HMasterInterface,
       // The answer is to ask A to shut down for good.
 
       if(LOG.isDebugEnabled()) {
-        LOG.debug("region server race condition detected: " + server);
+        LOG.debug("region server race condition detected: " + s);
       }
 
       HMsg returnMsgs[] = {
@@ -821,11 +827,11 @@ public class HMaster implements HConstants, HMasterInterface,
       // All's well.  Renew the server's lease.
       // This will always succeed; otherwise, the fetch of serversToServerInfo
       // would have failed above.
-
+      
       serverLeases.renewLease(serverLabel, serverLabel);
 
       // Refresh the info object
-      serversToServerInfo.put(server, serverInfo);
+      serversToServerInfo.put(s, serverInfo);
 
       // Next, process messages for this server
       return processMsgs(serverInfo, msgs);
