@@ -922,7 +922,7 @@ public class TaskTracker
    * @param action The action with the job
    * @throws IOException
    */
-  private void purgeJob(KillJobAction action) throws IOException {
+  private synchronized void purgeJob(KillJobAction action) throws IOException {
     String jobId = action.getJobId();
     LOG.info("Received 'KillJobAction' for job: " + jobId);
     RunningJob rjob = null;
