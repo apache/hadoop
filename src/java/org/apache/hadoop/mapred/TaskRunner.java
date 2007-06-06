@@ -282,7 +282,8 @@ abstract class TaskRunner extends Thread {
 
         // Add main class and its arguments 
         vargs.add(TaskTracker.Child.class.getName());  // main of Child
-        vargs.add(tracker.taskReportPort + "");        // pass umbilical port
+        // pass umbilical port
+        vargs.add(tracker.getTaskTrackerReportPort() + ""); 
         vargs.add(t.getTaskId());                      // pass task identifier
 
         // Run java

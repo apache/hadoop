@@ -78,6 +78,9 @@ Trunk (unreleased changes)
  25. HADOOP-1461.  Fix the synchronization of the task tracker to
      avoid lockups in job cleanup.  (Arun C Murthy via omalley)
 
+ 26. HADOOP-1446.  Update the TaskTracker metrics while the task is
+     running. (Devaraj via omalley)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
