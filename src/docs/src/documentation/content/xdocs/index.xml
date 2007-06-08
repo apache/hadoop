@@ -16,9 +16,21 @@
 
       <section>
       <title>8 June, 2007: release 0.13.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/2prl3k">release notes</a>. The release can
-      be obtained from <a
+      <p>In addition to new features, this release contains
+      significant performance and reliability improvements.  For
+      example, MapReduce sort performance on large clusters has <a
+      href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">
+      doubled</a>.</p>
+
+      <p>Note: when upgrading an existing HDFS filesystem to this
+      release, you must first start HDFS with <code>bin/start-dfs.sh
+      -upgrade</code>.  For more information on this issue, see <a
+      href="https://issues.apache.org/jira/browse/HADOOP-702#action_12482953">HADOOP-702</a>.
+      </p>
+
+      <p>For full details, see the <a
+      href="http://tinyurl.com/2prl3k">release notes</a>. The release
+      can be obtained from <a
       href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
       nearby mirror</a>.
       </p> </section>
