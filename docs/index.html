@@ -242,8 +242,9 @@ document.write("<text>Last Published:</text> " + document.lastModified);
       example, MapReduce sort performance on large clusters has <a href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">
       doubled</a>.</p>
 <p>Note: when upgrading an existing HDFS filesystem to this
-      release, you must first start HDFS with <span class="codefrag">bin/start-dfs.sh
-      -upgrade</span>.  For more information on this issue, see <a href="https://issues.apache.org/jira/browse/HADOOP-702#action_12482953">HADOOP-702</a>.
+      release, you should first start HDFS with <span class="codefrag">bin/start-dfs.sh
+      -upgrade</span>, which makes it possible to revert the upgrade.
+      For more information on this issue, see <a href="https://issues.apache.org/jira/browse/HADOOP-702#action_12482953">HADOOP-702</a>.
       </p>
 <p>For full details, see the <a href="http://tinyurl.com/2prl3k">release notes</a>. The release
       can be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a

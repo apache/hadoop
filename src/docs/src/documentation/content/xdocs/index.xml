@@ -23,8 +23,9 @@
       doubled</a>.</p>
 
       <p>Note: when upgrading an existing HDFS filesystem to this
-      release, you must first start HDFS with <code>bin/start-dfs.sh
-      -upgrade</code>.  For more information on this issue, see <a
+      release, you should first start HDFS with <code>bin/start-dfs.sh
+      -upgrade</code>, which makes it possible to revert the upgrade.
+      For more information on this issue, see <a
       href="https://issues.apache.org/jira/browse/HADOOP-702#action_12482953">HADOOP-702</a>.
       </p>
 
