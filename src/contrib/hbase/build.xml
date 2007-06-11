@@ -15,6 +15,30 @@ to call at top-level: ant deploy-contrib compile-core-test
       basedir="${build.classes}"      
     />
   </target>
+
+  <!-- Override compile-test  target so can generate a hbase 
+       test jar that has test and hbase classes. 
+   --> 
+  <target name="compile-test" depends="compile" if="test.available"> 
+    <echo message="contrib: ${name}"/> 
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${src.test}" 
+     includes="**/*.java" 
+     destdir="${build.test}" 
+     debug="${javac.debug}"> 
+      <classpath refid="test.classpath"/> 
+    </javac>
+    <jar jarfile="${build.dir}/hadoop-${name}-test.jar" >
+      <fileset dir="${build.test}" includes="org/**" />
+      <fileset dir="${build.classes}" />
+      <fileset dir="${src.test}" includes="**/*.properties" />
+      <manifest>
+        <attribute name="Main-Class"
+          value="org/apache/hadoop/hbase/PerformanceEvaluation"/>
+      </manifest>
+    </jar>
+  </target>
   
   <target name="test">
     <antcall target="hadoopbuildcontrib.test"/>
