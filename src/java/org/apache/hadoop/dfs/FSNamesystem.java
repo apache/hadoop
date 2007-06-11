@@ -1482,15 +1482,17 @@ class FSNamesystem implements FSConstants {
                                       "BLOCK* NameSystem.registerDatanode: "
                                       + "node " + nodeS.getName()
                                       + " is replaced by " + nodeReg.getName() + ".");
+        getEditLog().logRemoveDatanode(nodeS);
       }
-      getEditLog().logRemoveDatanode(nodeS);
       // update cluster map
       clusterMap.remove(nodeS);
       nodeS.updateRegInfo(nodeReg);
       nodeS.setNetworkLocation(networkLocation);
       clusterMap.add(nodeS);
       nodeS.setHostName(hostName);
-      getEditLog().logAddDatanode(nodeS);
+      if ( nodeS != nodeN ) {
+        getEditLog().logAddDatanode( nodeS );
+      }
         
       // also treat the registration message as a heartbeat
       synchronized(heartbeats) {

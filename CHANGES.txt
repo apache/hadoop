@@ -90,6 +90,9 @@ Trunk (unreleased changes)
  29. HADOOP-1412.  Fix "dodgy" bugs identified by FindBugs in fs and
      io packages.  (Hairong Kuang via cutting)
 
+ 30. HADOOP-1261.  Remove redundant events from HDFS namenode's edit
+     log when a datanode restarts.  (Raghu Angadi via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
