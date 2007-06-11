@@ -81,6 +81,12 @@ public class HColumnDescriptor implements WritableComparable {
     this.versionNumber = COLUMN_DESCRIPTOR_VERSION;
   }
   
+  /**
+   * Construct a column descriptor specifying only the family name 
+   * The other attributes are defaulted.
+   * 
+   * @param columnName - column family name
+   */
   public HColumnDescriptor(String columnName) {
     this();
     this.name.set(columnName);

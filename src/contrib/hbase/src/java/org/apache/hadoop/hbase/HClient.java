@@ -53,7 +53,7 @@ public class HClient implements HConstants {
     COL_REGIONINFO
   };
   
-  private static final Text EMPTY_START_ROW = new Text();
+  static final Text EMPTY_START_ROW = new Text();
   
   long pause;
   int numRetries;
@@ -64,8 +64,8 @@ public class HClient implements HConstants {
    * Data structure that holds current location for a region and its info.
    */
   static class RegionLocation {
-    public HRegionInfo regionInfo;
-    public HServerAddress serverAddress;
+    HRegionInfo regionInfo;
+    HServerAddress serverAddress;
 
     RegionLocation(HRegionInfo regionInfo, HServerAddress serverAddress) {
       this.regionInfo = regionInfo;
@@ -83,7 +83,7 @@ public class HClient implements HConstants {
   private TreeMap<Text, SortedMap<Text, RegionLocation>> tablesToServers;
   
   // For the "current" table: Map startRow -> (HRegionInfo, HServerAddress)
-  private SortedMap<Text, RegionLocation> tableServers;
+  SortedMap<Text, RegionLocation> tableServers;
   
   // Known region HServerAddress.toString() -> HRegionInterface 
   private TreeMap<String, HRegionInterface> servers;
@@ -95,7 +95,10 @@ public class HClient implements HConstants {
   Random rand;
   long clientid;
 
-  /** Creates a new HClient */
+  /** 
+   * Creates a new HClient
+   * @param conf - Configuration object
+   */
   public HClient(Configuration conf) {
     this.conf = conf;
 
@@ -239,6 +242,12 @@ public class HClient implements HConstants {
     }
   }
 
+  /**
+   * Deletes a table
+   * 
+   * @param tableName           - name of table to delete
+   * @throws IOException
+   */
   public synchronized void deleteTable(Text tableName) throws IOException {
     checkReservedTableName(tableName);
     checkMaster();
@@ -254,23 +263,21 @@ public class HClient implements HConstants {
     HRegionInterface server =
       getHRegionConnection(firstMetaServer.serverAddress);
     DataInputBuffer inbuf = new DataInputBuffer();
-    HStoreKey key = new HStoreKey();
     HRegionInfo info = new HRegionInfo();
     for (int tries = 0; tries < numRetries; tries++) {
       long scannerId = -1L;
       try {
         scannerId = server.openScanner(firstMetaServer.regionInfo.regionName,
             REGIONINFO, tableName);
-        LabelledData[] values = server.next(scannerId, key);
+        KeyedData[] values = server.next(scannerId);
         if(values == null || values.length == 0) {
           break;
         }
         boolean found = false;
         for(int j = 0; j < values.length; j++) {
-          if(values[j].getLabel().equals(COL_REGIONINFO)) {
+          if(values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
             byte[] bytes = new byte[values[j].getData().getSize()];
-            System.arraycopy(values[j].getData().get(), 0, bytes, 0,
-              bytes.length);
+            System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
             inbuf.reset(bytes, bytes.length);
             info.readFields(inbuf);
             if(info.tableDesc.getName().equals(tableName)) {
@@ -301,7 +308,15 @@ public class HClient implements HConstants {
     LOG.info("table " + tableName + " deleted");
   }
 
-  public synchronized void addColumn(Text tableName, HColumnDescriptor column) throws IOException {
+  /**
+   * Add a column to an existing table
+   * 
+   * @param tableName   - name of the table to add column to
+   * @param column      - column descriptor of column to be added
+   * @throws IOException
+   */
+  public synchronized void addColumn(Text tableName, HColumnDescriptor column)
+  throws IOException {
     checkReservedTableName(tableName);
     checkMaster();
     try {
@@ -312,7 +327,15 @@ public class HClient implements HConstants {
     }
   }
 
-  public synchronized void deleteColumn(Text tableName, Text columnName) throws IOException {
+  /**
+   * Delete a column from a table
+   * 
+   * @param tableName           - name of table
+   * @param columnName          - name of column to be deleted
+   * @throws IOException
+   */
+  public synchronized void deleteColumn(Text tableName, Text columnName)
+  throws IOException {
     checkReservedTableName(tableName);
     checkMaster();
     try {
@@ -323,6 +346,12 @@ public class HClient implements HConstants {
     }
   }
   
+  /**
+   * Brings a table on-line (enables it)
+   * 
+   * @param tableName   - name of the table
+   * @throws IOException
+   */
   public synchronized void enableTable(Text tableName) throws IOException {
     checkReservedTableName(tableName);
     checkMaster();
@@ -340,7 +369,6 @@ public class HClient implements HConstants {
     HRegionInterface server = getHRegionConnection(firstMetaServer.serverAddress);
 
     DataInputBuffer inbuf = new DataInputBuffer();
-    HStoreKey key = new HStoreKey();
     HRegionInfo info = new HRegionInfo();
     for(int tries = 0; tries < numRetries; tries++) {
       int valuesfound = 0;
@@ -348,21 +376,28 @@ public class HClient implements HConstants {
       try {
         scannerId = server.openScanner(firstMetaServer.regionInfo.regionName,
             REGIONINFO, tableName);
-        LabelledData[] values = server.next(scannerId, key);
-        if(values == null || values.length == 0) {
-          if(valuesfound == 0) {
-            throw new NoSuchElementException("table " + tableName + " not found");
-          }
-        }
-        valuesfound += 1;
         boolean isenabled = false;
-        for(int j = 0; j < values.length; j++) {
-          if(values[j].getLabel().equals(COL_REGIONINFO)) {
-            byte[] bytes = new byte[values[j].getData().getSize()];
-            System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
-            inbuf.reset(bytes, bytes.length);
-            info.readFields(inbuf);
-            isenabled = !info.offLine;
+        while(true) {
+          KeyedData[] values = server.next(scannerId);
+          if(values == null || values.length == 0) {
+            if(valuesfound == 0) {
+              throw new NoSuchElementException("table " + tableName + " not found");
+            }
+            break;
+          }
+          valuesfound += 1;
+          for(int j = 0; j < values.length; j++) {
+            if(values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
+              byte[] bytes = new byte[values[j].getData().getSize()];
+              System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
+              inbuf.reset(bytes, bytes.length);
+              info.readFields(inbuf);
+              isenabled = !info.offLine;
+              break;
+            }
+          }
+          if(isenabled) {
+            break;
           }
         }
         if(isenabled) {
@@ -395,6 +430,13 @@ public class HClient implements HConstants {
     LOG.info("Enabled table " + tableName);
   }
 
+  /**
+   * Disables a table (takes it off-line) If it is being served, the master
+   * will tell the servers to stop serving it.
+   * 
+   * @param tableName           - name of table
+   * @throws IOException
+   */
   public synchronized void disableTable(Text tableName) throws IOException {
     checkReservedTableName(tableName);
     checkMaster();
@@ -412,7 +454,6 @@ public class HClient implements HConstants {
     HRegionInterface server = getHRegionConnection(firstMetaServer.serverAddress);
 
     DataInputBuffer inbuf = new DataInputBuffer();
-    HStoreKey key = new HStoreKey();
     HRegionInfo info = new HRegionInfo();
     for(int tries = 0; tries < numRetries; tries++) {
       int valuesfound = 0;
@@ -420,21 +461,28 @@ public class HClient implements HConstants {
       try {
         scannerId = server.openScanner(firstMetaServer.regionInfo.regionName,
             REGIONINFO, tableName);
-        LabelledData[] values = server.next(scannerId, key);
-        if(values == null || values.length == 0) {
-          if(valuesfound == 0) {
-            throw new NoSuchElementException("table " + tableName + " not found");
-          }
-        }
-        valuesfound += 1;
         boolean disabled = false;
-        for(int j = 0; j < values.length; j++) {
-          if(values[j].getLabel().equals(COL_REGIONINFO)) {
-            byte[] bytes = new byte[values[j].getData().getSize()];
-            System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
-            inbuf.reset(bytes, bytes.length);
-            info.readFields(inbuf);
-            disabled = info.offLine;
+        while(true) {
+          KeyedData[] values = server.next(scannerId);
+          if(values == null || values.length == 0) {
+            if(valuesfound == 0) {
+              throw new NoSuchElementException("table " + tableName + " not found");
+            }
+            break;
+          }
+          valuesfound += 1;
+          for(int j = 0; j < values.length; j++) {
+            if(values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
+              byte[] bytes = new byte[values[j].getData().getSize()];
+              System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
+              inbuf.reset(bytes, bytes.length);
+              info.readFields(inbuf);
+              disabled = info.offLine;
+              break;
+            }
+          }
+          if(disabled) {
+            break;
           }
         }
         if(disabled) {
@@ -466,6 +514,10 @@ public class HClient implements HConstants {
     LOG.info("Disabled table " + tableName);
   }
   
+  /** 
+   * Shuts down the HBase instance 
+   * @throws IOException
+   */
   public synchronized void shutdown() throws IOException {
     checkMaster();
     this.master.shutdown();
@@ -675,8 +727,8 @@ public class HClient implements HConstants {
    * @throws IOException 
    */
   private TreeMap<Text, RegionLocation> scanOneMetaRegion(final RegionLocation t,
-    final Text tableName)
-  throws IOException {
+    final Text tableName) throws IOException {
+    
     HRegionInterface server = getHRegionConnection(t.serverAddress);
     TreeMap<Text, RegionLocation> servers = new TreeMap<Text, RegionLocation>();
     for(int tries = 0; servers.size() == 0 && tries < this.numRetries;
@@ -691,8 +743,7 @@ public class HClient implements HConstants {
         while(true) {
           HRegionInfo regionInfo = null;
           String serverAddress = null;
-          HStoreKey key = new HStoreKey();
-          LabelledData[] values = server.next(scannerId, key);
+          KeyedData[] values = server.next(scannerId);
           if(values.length == 0) {
             if(servers.size() == 0) {
               // If we didn't find any servers then the table does not exist
@@ -713,7 +764,7 @@ public class HClient implements HConstants {
           for(int i = 0; i < values.length; i++) {
             bytes = new byte[values[i].getData().getSize()];
             System.arraycopy(values[i].getData().get(), 0, bytes, 0, bytes.length);
-            results.put(values[i].getLabel(), bytes);
+            results.put(values[i].getKey().getColumn(), bytes);
           }
           regionInfo = new HRegionInfo();
           bytes = results.get(COL_REGIONINFO);
@@ -808,6 +859,9 @@ public class HClient implements HConstants {
    * If we wanted this to be really fast, we could implement a special
    * catalog table that just contains table names and their descriptors.
    * Right now, it only exists as part of the META table's region info.
+   *
+   * @return - returns an array of HTableDescriptors 
+   * @throws IOException
    */
   public synchronized HTableDescriptor[] listTables()
       throws IOException {
@@ -828,15 +882,14 @@ public class HClient implements HConstants {
         scannerId = server.openScanner(t.regionInfo.regionName,
             META_COLUMNS, EMPTY_START_ROW);
         
-        HStoreKey key = new HStoreKey();
         DataInputBuffer inbuf = new DataInputBuffer();
         while(true) {
-          LabelledData[] values = server.next(scannerId, key);
+          KeyedData[] values = server.next(scannerId);
           if(values.length == 0) {
             break;
           }
           for(int i = 0; i < values.length; i++) {
-            if(values[i].getLabel().equals(COL_REGIONINFO)) {
+            if(values[i].getKey().getColumn().equals(COL_REGIONINFO)) {
               byte[] bytes = values[i].getData().get();
               inbuf.reset(bytes, bytes.length);
               HRegionInfo info = new HRegionInfo();
@@ -901,7 +954,14 @@ public class HClient implements HConstants {
     }
   }
   
-  /** Get a single value for the specified row and column */
+  /** 
+   * Get a single value for the specified row and column
+   *
+   * @param row         - row key
+   * @param column      - column name
+   * @return            - value for specified row/column
+   * @throws IOException
+   */
   public byte[] get(Text row, Text column) throws IOException {
     RegionLocation info = null;
     BytesWritable value = null;
@@ -931,7 +991,15 @@ public class HClient implements HConstants {
     return null;
   }
  
-  /** Get the specified number of versions of the specified row and column */
+  /** 
+   * Get the specified number of versions of the specified row and column
+   * 
+   * @param row         - row key
+   * @param column      - column name
+   * @param numVersions - number of versions to retrieve
+   * @return            - array byte values
+   * @throws IOException
+   */
   public byte[][] get(Text row, Text column, int numVersions) throws IOException {
     RegionLocation info = null;
     BytesWritable[] values = null;
@@ -968,8 +1036,16 @@ public class HClient implements HConstants {
   /** 
    * Get the specified number of versions of the specified row and column with
    * the specified timestamp.
+   *
+   * @param row         - row key
+   * @param column      - column name
+   * @param timestamp   - timestamp
+   * @param numVersions - number of versions to retrieve
+   * @return            - array of values that match the above criteria
+   * @throws IOException
    */
-  public byte[][] get(Text row, Text column, long timestamp, int numVersions) throws IOException {
+  public byte[][] get(Text row, Text column, long timestamp, int numVersions)
+  throws IOException {
     RegionLocation info = null;
     BytesWritable[] values = null;
 
@@ -1002,10 +1078,16 @@ public class HClient implements HConstants {
     return null;
   }
     
-  /** Get all the data for the specified row */
-  public LabelledData[] getRow(Text row) throws IOException {
+  /** 
+   * Get all the data for the specified row
+   * 
+   * @param row         - row key
+   * @return            - map of colums to values
+   * @throws IOException
+   */
+  public SortedMap<Text, byte[]> getRow(Text row) throws IOException {
     RegionLocation info = null;
-    LabelledData[] value = null;
+    KeyedData[] value = null;
     
     for(int tries = 0; tries < numRetries && info == null; tries++) {
       info = getRegionLocation(row);
@@ -1023,15 +1105,29 @@ public class HClient implements HConstants {
         info = null;
       }
     }
-    
-    return value;
+    TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+    if(value != null && value.length != 0) {
+      for(int i = 0; i < value.length; i++) {
+        byte[] bytes = new byte[value[i].getData().getSize()];
+        System.arraycopy(value[i].getData().get(), 0, bytes, 0, bytes.length);
+        results.put(value[i].getKey().getColumn(), bytes);
+      }
+    }
+    return results;
   }
 
   /** 
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
+   *
+   * @param columns     - array of columns to return
+   * @param startRow    - starting row in table to scan
+   * @return            - scanner
+   * @throws IOException
    */
-  public synchronized HScannerInterface obtainScanner(Text[] columns, Text startRow) throws IOException {
+  public synchronized HScannerInterface obtainScanner(Text[] columns,
+      Text startRow) throws IOException {
+    
     if(this.tableServers == null) {
       throw new IllegalStateException("Must open table first");
     }
@@ -1069,9 +1165,20 @@ public class HClient implements HConstants {
     long startUpdate() throws IOException;
   }
 
-  /* Start an atomic row insertion or update
+  /** 
+   * Start an atomic row insertion/update.  No changes are committed until the 
+   * call to commit() returns. A call to abort() will abandon any updates in progress.
+   *
+   * Callers to this method are given a lease for each unique lockid; before the
+   * lease expires, either abort() or commit() must be called. If it is not 
+   * called, the system will automatically call abort() on the client's behalf.
+   *
+   * The client can gain extra time with a call to renewLease().
+   * Start an atomic row insertion or update
+   * 
    * @param row Name of row to start update against.
    * @return Row lockid.
+   * @throws IOException
    */
   public long startUpdate(final Text row) throws IOException {
     // Implemention of the StartUpdate interface.
@@ -1114,7 +1221,14 @@ public class HClient implements HConstants {
     return retryProxy.startUpdate();
   }
   
-  /** Change a value for the specified column */
+  /** 
+   * Change a value for the specified column
+   *
+   * @param lockid              - lock id returned from startUpdate
+   * @param column              - column whose value is being set
+   * @param val                 - new value for column
+   * @throws IOException
+   */
   public void put(long lockid, Text column, byte val[]) throws IOException {
     try {
       this.currentServer.put(this.currentRegion, this.clientid, lockid, column,
@@ -1131,7 +1245,13 @@ public class HClient implements HConstants {
     }
   }
   
-  /** Delete the value for a column */
+  /** 
+   * Delete the value for a column
+   *
+   * @param lockid              - lock id returned from startUpdate
+   * @param column              - name of column whose value is to be deleted
+   * @throws IOException
+   */
   public void delete(long lockid, Text column) throws IOException {
     try {
       this.currentServer.delete(this.currentRegion, this.clientid, lockid,
@@ -1148,7 +1268,12 @@ public class HClient implements HConstants {
     }
   }
   
-  /** Abort a row mutation */
+  /** 
+   * Abort a row mutation
+   *
+   * @param lockid              - lock id returned from startUpdate
+   * @throws IOException
+   */
   public void abort(long lockid) throws IOException {
     try {
       this.currentServer.abort(this.currentRegion, this.clientid, lockid);
@@ -1159,7 +1284,12 @@ public class HClient implements HConstants {
     }
   }
   
-  /** Finalize a row mutation */
+  /** 
+   * Finalize a row mutation
+   *
+   * @param lockid              - lock id returned from startUpdate
+   * @throws IOException
+   */
   public void commit(long lockid) throws IOException {
     try {
       this.currentServer.commit(this.currentRegion, this.clientid, lockid);
@@ -1170,11 +1300,33 @@ public class HClient implements HConstants {
   }
   
   /**
+   * Renew lease on update
+   * 
+   * @param lockid              - lock id returned from startUpdate
+   * @throws IOException
+   */
+  public void renewLease(long lockid) throws IOException {
+    try {
+      this.currentServer.renewLease(lockid, this.clientid);
+    } catch(IOException e) {
+      try {
+        this.currentServer.abort(this.currentRegion, this.clientid, lockid);
+      } catch(IOException e2) {
+        LOG.warn(e2);
+      }
+      this.currentServer = null;
+      this.currentRegion = null;
+      throw e;
+    }
+  }
+
+  /**
    * Implements the scanner interface for the HBase client.
    * If there are multiple regions in a table, this scanner will iterate
    * through them all.
    */
   private class ClientScanner implements HScannerInterface {
+    private final Text EMPTY_COLUMN = new Text();
     private Text[] columns;
     private Text startRow;
     private boolean closed;
@@ -1198,7 +1350,7 @@ public class HClient implements HConstants {
       this.regions = info.toArray(new RegionLocation[info.size()]);
     }
     
-    public ClientScanner(Text[] columns, Text startRow) throws IOException {
+    ClientScanner(Text[] columns, Text startRow) throws IOException {
       this.columns = columns;
       this.startRow = startRow;
       this.closed = false;
@@ -1260,17 +1412,22 @@ public class HClient implements HConstants {
       if(this.closed) {
         return false;
       }
-      LabelledData[] values = null;
+      KeyedData[] values = null;
       do {
-        values = this.server.next(this.scannerId, key);
-      } while(values.length == 0 && nextScanner());
+        values = this.server.next(this.scannerId);
+      } while(values != null && values.length == 0 && nextScanner());
 
-      for(int i = 0; i < values.length; i++) {
-        byte[] bytes = new byte[values[i].getData().getSize()];
-        System.arraycopy(values[i].getData().get(), 0, bytes, 0, bytes.length);
-        results.put(values[i].getLabel(), bytes);
+      if(values != null && values.length != 0) {
+        for(int i = 0; i < values.length; i++) {
+          key.setRow(values[i].getKey().getRow());
+          key.setVersion(values[i].getKey().getTimestamp());
+          key.setColumn(EMPTY_COLUMN);
+          byte[] bytes = new byte[values[i].getData().getSize()];
+          System.arraycopy(values[i].getData().get(), 0, bytes, 0, bytes.length);
+          results.put(values[i].getKey().getColumn(), bytes);
+        }
       }
-      return values.length != 0;
+      return values == null ? false : values.length != 0;
     }
 
     /* (non-Javadoc)
@@ -1333,8 +1490,13 @@ public class HClient implements HConstants {
       " deleteTable testtable");
   }
   
+  /**
+   * Process command-line args.
+   * @param args - command arguments
+   * @return 0 if successful -1 otherwise
+   */
   public int doCommandLine(final String args[]) {
-    // Process command-line args. TODO: Better cmd-line processing
+    // TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).    
     int errCode = -1;
     if (args.length < 1) {
@@ -1416,6 +1578,10 @@ public class HClient implements HConstants {
     return errCode;
   }
   
+  /**
+   * Main program
+   * @param args
+   */
   public static void main(final String args[]) {
     Configuration c = new HBaseConfiguration();
     int errCode = (new HClient(c)).doCommandLine(args);

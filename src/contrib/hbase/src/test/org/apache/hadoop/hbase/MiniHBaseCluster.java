@@ -38,7 +38,7 @@ public class MiniHBaseCluster implements HConstants {
   private HMaster master;
   private Thread masterThread;
   private HRegionServer[] regionServers;
-  private Thread[] regionThreads;
+  Thread[] regionThreads;
   
   /**
    * Starts a MiniHBaseCluster on top of a new MiniDFSCluster
@@ -94,7 +94,7 @@ public class MiniHBaseCluster implements HConstants {
     try {
       try {
         this.fs = FileSystem.get(conf);
-        this.parentdir = new Path(conf.get(HREGION_DIR, DEFAULT_HREGION_DIR));
+        this.parentdir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
         fs.mkdirs(parentdir);
 
       } catch(Throwable e) {
@@ -146,11 +146,37 @@ public class MiniHBaseCluster implements HConstants {
   }
   
   /** 
-   * Returns the rpc address actually used by the master server, because the 
-   * supplied port is not necessarily the actual port used.
+   * @return Returns the rpc address actually used by the master server, because
+   * the supplied port is not necessarily the actual port used.
    */
   public HServerAddress getHMasterAddress() {
     return master.getMasterAddress();
+  }
+  
+  /**
+   * Shut down the specified region server cleanly
+   * 
+   * @param serverNumber
+   */
+  public void stopRegionServer(int serverNumber) {
+    if(serverNumber >= regionServers.length) {
+      throw new ArrayIndexOutOfBoundsException(
+          "serverNumber > number of region servers");
+    }
+    this.regionServers[serverNumber].stop();
+  }
+  
+  /**
+   * Cause a region server to exit without cleaning up
+   * 
+   * @param serverNumber
+   */
+  public void abortRegionServer(int serverNumber) {
+    if(serverNumber >= regionServers.length) {
+      throw new ArrayIndexOutOfBoundsException(
+          "serverNumber > number of region servers");
+    }
+    this.regionServers[serverNumber].abort();
   }
   
   /** Shut down the HBase cluster */

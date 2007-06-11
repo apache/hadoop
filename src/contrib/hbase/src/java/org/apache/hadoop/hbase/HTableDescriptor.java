@@ -43,7 +43,8 @@ public class HTableDescriptor implements WritableComparable {
    */
   private static final Pattern LEGAL_TABLE_NAME =
     Pattern.compile("[\\w-]+");
-  
+
+  /** Constructs an empty object */
   public HTableDescriptor() {
     this.name = new Text();
     this.families = new TreeMap<Text, HColumnDescriptor>();
@@ -66,6 +67,7 @@ public class HTableDescriptor implements WritableComparable {
     this.families = new TreeMap<Text, HColumnDescriptor>();
   }
 
+  /** @return name of table */
   public Text getName() {
     return name;
   }
@@ -78,7 +80,12 @@ public class HTableDescriptor implements WritableComparable {
     families.put(family.getName(), family);
   }
 
-  /** Do we contain a given column? */
+  /**
+   * Checks to see if this table contains the given column family
+   * 
+   * @param family - family name
+   * @return true if the table contains the specified family name
+   */
   public boolean hasFamily(Text family) {
     return families.containsKey(family);
   }
@@ -87,6 +94,8 @@ public class HTableDescriptor implements WritableComparable {
    * 
    *  TODO: What is this used for? Seems Dangerous to let people play with our
    *  private members.
+   *  
+   *  @return map of family members
    */
   public TreeMap<Text, HColumnDescriptor> families() {
     return families;
@@ -95,7 +104,7 @@ public class HTableDescriptor implements WritableComparable {
   @Override
   public String toString() {
     return "name: " + this.name.toString() + ", families: " + this.families;
-  }
+      }
   
   @Override
   public boolean equals(Object obj) {

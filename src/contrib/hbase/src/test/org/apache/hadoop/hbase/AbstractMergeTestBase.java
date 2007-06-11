@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +37,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
   protected FileSystem fs;
   protected Path dir;
 
+  @Override
   public void setUp() throws Exception {
     super.setUp();
     rand = new Random();
@@ -87,23 +89,19 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
       // Now create the root and meta regions and insert the data regions
       // created above into the meta
       
-      HRegion root = HRegion.createNewHRegion(fs, dir, conf, 
-          HGlobals.rootTableDesc, 0L, null, null);
-      HRegion meta = HRegion.createNewHRegion(fs, dir, conf,
-          HGlobals.metaTableDesc, 1L, null, null);
+      HRegion root = createNewHRegion(fs, dir, conf, HGlobals.rootTableDesc, 0L, null, null);
+      HRegion meta = createNewHRegion(fs, dir, conf, HGlobals.metaTableDesc, 1L, null, null);
     
-      HRegion.addRegionToMeta(root, meta);
+      HRegion.addRegionToMETA(root, meta);
       
       for(int i = 0; i < regions.length; i++) {
-        HRegion.addRegionToMeta(meta, regions[i]);
+        HRegion.addRegionToMETA(meta, regions[i]);
       }
       
       root.close();
-      root.getLog().close();
-      fs.delete(new Path(root.getRegionDir(), HConstants.HREGION_LOGDIR_NAME));
+      root.getLog().closeAndDelete();
       meta.close();
-      meta.getLog().close();
-      fs.delete(new Path(meta.getRegionDir(), HConstants.HREGION_LOGDIR_NAME));
+      meta.getLog().closeAndDelete();
       
     } catch(Throwable t) {
       t.printStackTrace();
@@ -111,6 +109,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     }
   }
 
+  @Override
   public void tearDown() throws Exception {
     super.tearDown();
     dfsCluster.shutdown();
@@ -118,8 +117,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
 
   private HRegion createAregion(Text startKey, Text endKey, int firstRow, int nrows)
       throws IOException {
-    HRegion region = HRegion.createNewHRegion(fs, dir, conf, desc,
-        rand.nextLong(), startKey, endKey);
+    HRegion region = createNewHRegion(fs, dir, conf, desc, rand.nextLong(), startKey, endKey);
     
     System.out.println("created region " + region.getRegionName());
 
@@ -138,9 +136,22 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     region.log.rollWriter();
     region.compactStores();
     region.close();
-    region.getLog().close();
-    fs.delete(new Path(region.getRegionDir(), HConstants.HREGION_LOGDIR_NAME));
+    region.getLog().closeAndDelete();
     region.getRegionInfo().offLine = true;
     return region;
   }
+
+  private HRegion createNewHRegion(FileSystem fs, Path dir,
+      Configuration conf, HTableDescriptor desc, long regionId, Text startKey,
+      Text endKey) throws IOException {
+    
+    HRegionInfo info = new HRegionInfo(regionId, desc, startKey, endKey);
+    Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
+    fs.mkdirs(regionDir);
+
+    return new HRegion(dir,
+      new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME), conf),
+      fs, conf, info, null);
+  }
+  
 }

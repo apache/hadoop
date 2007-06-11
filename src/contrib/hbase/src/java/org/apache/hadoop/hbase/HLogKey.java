@@ -32,14 +32,20 @@ public class HLogKey implements WritableComparable {
   Text row = new Text();
   long logSeqNum = 0L;
 
+  /** Create an empty key useful when deserializing */
+  public HLogKey() {
+  }
+  
   /**
    * Create the log key!
    * We maintain the tablename mainly for debugging purposes.
    * A regionName is always a sub-table object.
+   *
+   * @param regionName  - name of region
+   * @param tablename   - name of table
+   * @param row         - row key
+   * @param logSeqNum   - log sequence number
    */
-  public HLogKey() {
-  }
-  
   public HLogKey(Text regionName, Text tablename, Text row, long logSeqNum) {
     this.regionName.set(regionName);
     this.tablename.set(tablename);
@@ -51,26 +57,25 @@ public class HLogKey implements WritableComparable {
   // A bunch of accessors
   //////////////////////////////////////////////////////////////////////////////
 
-  public Text getRegionName() {
+  Text getRegionName() {
     return regionName;
   }
   
-  public Text getTablename() {
+  Text getTablename() {
     return tablename;
   }
   
-  public Text getRow() {
+  Text getRow() {
     return row;
   }
   
-  public long getLogSeqNum() {
+  long getLogSeqNum() {
     return logSeqNum;
   }
   
   @Override
   public String toString() {
-    return getTablename().toString() + " " + getRegionName().toString() + " " +
-      getRow().toString() + " " + getLogSeqNum();
+    return tablename + " " + regionName + " " + row + " " + logSeqNum;
   }
   
   @Override
@@ -90,10 +95,8 @@ public class HLogKey implements WritableComparable {
   // Comparable
   //////////////////////////////////////////////////////////////////////////////
 
-  /**
-   * When sorting through log entries, we want to group items
-   * first in the same table, then to the same row, then finally
-   * ordered by write-order.
+  /* (non-Javadoc)
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
    */
   public int compareTo(Object o) {
     HLogKey other = (HLogKey) o;
@@ -119,6 +122,9 @@ public class HLogKey implements WritableComparable {
   // Writable
   //////////////////////////////////////////////////////////////////////////////
 
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
+   */
   public void write(DataOutput out) throws IOException {
     this.regionName.write(out);
     this.tablename.write(out);
@@ -126,6 +132,9 @@ public class HLogKey implements WritableComparable {
     out.writeLong(logSeqNum);
   }
   
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
+   */
   public void readFields(DataInput in) throws IOException {
     this.regionName.readFields(in);
     this.tablename.readFields(in);

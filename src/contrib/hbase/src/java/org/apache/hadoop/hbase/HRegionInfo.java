@@ -20,10 +20,8 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -32,13 +30,14 @@ import org.apache.hadoop.io.WritableComparable;
  * HRegions' table descriptor, etc.
  */
 public class HRegionInfo implements WritableComparable {
-  public Text regionName;
-  public long regionId;
-  public Text startKey;
-  public Text endKey;
-  public boolean offLine;
-  public HTableDescriptor tableDesc;
+  Text regionName;
+  long regionId;
+  Text startKey;
+  Text endKey;
+  boolean offLine;
+  HTableDescriptor tableDesc;
   
+  /** Default constructor - creates empty object */
   public HRegionInfo() {
     this.regionId = 0;
     this.tableDesc = new HTableDescriptor();
@@ -48,14 +47,28 @@ public class HRegionInfo implements WritableComparable {
     this.offLine = false;
   }
   
+  /**
+   * Construct a HRegionInfo object from byte array
+   * 
+   * @param serializedBytes
+   * @throws IOException
+   */
   public HRegionInfo(final byte [] serializedBytes) throws IOException {
     this();
     readFields(new DataInputStream(new ByteArrayInputStream(serializedBytes)));
   }
 
-  public HRegionInfo(long regionId, HTableDescriptor tableDesc,
-      Text startKey, Text endKey)
-  throws IllegalArgumentException {
+  /**
+   * Construct HRegionInfo with explicit parameters
+   * 
+   * @param regionId    - the regionid
+   * @param tableDesc   - the table descriptor
+   * @param startKey    - first key in region
+   * @param endKey      - end of key range
+   * @throws IllegalArgumentException
+   */
+  public HRegionInfo(long regionId, HTableDescriptor tableDesc, Text startKey,
+      Text endKey) throws IllegalArgumentException {
     
     this.regionId = regionId;
     
