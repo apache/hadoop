@@ -93,6 +93,9 @@ Trunk (unreleased changes)
  30. HADOOP-1261.  Remove redundant events from HDFS namenode's edit
      log when a datanode restarts.  (Raghu Angadi via cutting)
 
+ 31. HADOOP-1336.  Re-enable speculative execution by
+     default. (omalley via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

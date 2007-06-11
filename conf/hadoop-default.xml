@@ -625,7 +625,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>mapred.speculative.execution</name>
-  <value>false</value>
+  <value>true</value>
   <description>If true, then multiple instances of some map and reduce tasks 
                may be executed in parallel.</description>
 </property>
