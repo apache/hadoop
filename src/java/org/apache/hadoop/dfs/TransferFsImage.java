@@ -134,14 +134,14 @@ class TransferFsImage implements FSConstants {
     URLConnection connection = url.openConnection();
     InputStream stream = connection.getInputStream();
     FileOutputStream[] output = null;
-    if (localPath != null) {
-      output = new FileOutputStream[localPath.length];
-      for (int i = 0; i < output.length; i++) {
-        output[i] = new FileOutputStream(localPath[i]);
-      }
-    }
 
     try {
+      if (localPath != null) {
+        output = new FileOutputStream[localPath.length];
+        for (int i = 0; i < output.length; i++) {
+          output[i] = new FileOutputStream(localPath[i]);
+        }
+      }
       int num = 1;
       while (num > 0) {
         num = stream.read(buf);
@@ -155,7 +155,9 @@ class TransferFsImage implements FSConstants {
       stream.close();
       if (localPath != null) {
         for (int i = 0; i < output.length; i++) {
-          output[i].close();
+          if (output[i] != null) {
+            output[i].close();
+          }
         }
       }
     }

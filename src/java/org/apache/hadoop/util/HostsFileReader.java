@@ -23,8 +23,9 @@ public class HostsFileReader {
 
   private void readFileToSet(String filename, Set<String> set) throws IOException {
     FileInputStream fis = new FileInputStream(new File(filename));
+    BufferedReader reader = null;
     try {
-      BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
+      reader = new BufferedReader(new InputStreamReader(fis));
       String line;
       while ((line = reader.readLine()) != null) {
         String[] nodes = line.split("[ \t\n\f\r]+");
@@ -35,6 +36,9 @@ public class HostsFileReader {
         }
       }   
     } finally {
+      if (reader != null) {
+        reader.close();
+      }
       fis.close();
     }  
   }

@@ -30,6 +30,7 @@ import java.util.jar.*;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.JobConf;
 
@@ -320,10 +321,10 @@ public class StreamUtil {
   static String slurpHadoop(Path p, FileSystem fs) throws IOException {
     int len = (int) fs.getLength(p);
     byte[] buf = new byte[len];
-    InputStream in = fs.open(p);
+    FSDataInputStream in = fs.open(p);
     String contents = null;
     try {
-      in.read(buf, 0, len);
+      in.readFully(in.getPos(), buf);
       contents = new String(buf, "UTF-8");
     } finally {
       in.close();

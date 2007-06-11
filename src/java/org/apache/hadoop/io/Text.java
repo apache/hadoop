@@ -215,7 +215,7 @@ public class Text implements WritableComparable {
     try {
       return decode(bytes, 0, length);
     } catch (CharacterCodingException e) { 
-      return null;
+      throw new RuntimeException("Should not have happened " + e.toString()); 
     }
   }
   

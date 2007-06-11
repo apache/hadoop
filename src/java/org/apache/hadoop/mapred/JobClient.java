@@ -717,10 +717,11 @@ public class JobClient extends ToolBase implements MRConstants  {
     
   public int run(String[] argv) throws Exception {
     if (argv.length < 2) {
-      System.out.println("JobClient -submit <job> | -status <id> |" + 
-                         " -events <id> |" +
-                         " -kill <id> [-jt <jobtracker:port>|<config>]");
-      System.exit(-1);
+      String cmd = "JobClient -submit <job> | -status <id> |" + 
+                   " -events <id> |" +
+                   " -kill <id> [-jt <jobtracker:port>|<config>]";
+      System.out.println(cmd);
+      throw new RuntimeException("JobClient:" + cmd);
     }
 
     // initialize JobClient

@@ -652,6 +652,10 @@ public class CopyFiles extends ToolBase {
       if (fis != null) {
         fis.close();
       }
+    } finally {
+      if (fis != null) {
+        fis.close();
+      }
     }
 
     return !uris.isEmpty()? uris.toArray(new String[0]): null;

@@ -367,7 +367,7 @@ class FSEditLog {
           } catch (IOException e) {
             FSNamesystem.LOG.error("Unable to append to edit log. " +
                                    "Fatal Error.");
-            System.exit(-1);
+            throw new RuntimeException("Unable to append to edit log. ");
           }
         }
       }

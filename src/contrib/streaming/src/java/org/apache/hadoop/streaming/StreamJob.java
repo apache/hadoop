@@ -526,7 +526,7 @@ public class StreamJob {
   public void fail(String message) {
     if (mayExit_) {
       System.err.println(message);
-      System.exit(1);
+      throw new RuntimeException(message);
     } else {
       throw new IllegalArgumentException(message);
     }

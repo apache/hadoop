@@ -131,6 +131,9 @@ class Block implements Writable, Comparable {
     }
   }
   public boolean equals(Object o) {
+    if (!(o instanceof Block)) {
+      return false;
+    }
     return blkid == ((Block)o).blkid;
   }
     

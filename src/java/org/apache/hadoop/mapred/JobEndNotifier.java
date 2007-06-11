@@ -196,7 +196,20 @@ public class JobEndNotifier {
       return (int)(delayTime - ((JobEndStatusInfo)d).delayTime);
     }
 
+    public boolean equals(Object o) {
+      if (!(o instanceof JobEndStatusInfo)) {
+        return false;
+      }
+      if (delayTime == ((JobEndStatusInfo)o).delayTime) {
+        return true;
+      }
+      return false;
+    }
 
+    public int hashCode() {
+      return 37 * 17 + (int) (delayTime^(delayTime>>>32));
+    }
+      
     public String toString() {
       return "URL: " + uri + " remaining retries: " + retryAttempts +
         " interval: " + retryInterval;

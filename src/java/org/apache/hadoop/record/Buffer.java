@@ -240,6 +240,8 @@ public class Buffer implements Comparable, Cloneable {
   
   // inherit javadoc
   public Object clone() throws CloneNotSupportedException {
-    return new Buffer(this.get().clone(), 0, this.getCount());
+    Buffer result = (Buffer) super.clone();
+    result.copy(this.get(), 0, this.getCount());
+    return result;
   }
 }

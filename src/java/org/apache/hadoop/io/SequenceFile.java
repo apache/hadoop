@@ -576,6 +576,11 @@ public class SequenceFile {
       }
       return true;
     }
+
+    public int hashCode() {
+      assert false : "hashCode not designed";
+      return 42; // any arbitrary constant will do 
+    }
     
     public String toString() {
       StringBuffer sb = new StringBuffer();
@@ -1298,11 +1303,16 @@ public class SequenceFile {
                                          CompressionInputStream filter) throws IOException {
       // Read data into a temporary buffer
       DataOutputBuffer dataBuffer = new DataOutputBuffer();
-      int dataBufferLength = WritableUtils.readVInt(in);
-      dataBuffer.write(in, dataBufferLength);
+
+      try {
+        int dataBufferLength = WritableUtils.readVInt(in);
+        dataBuffer.write(in, dataBufferLength);
       
-      // Set up 'buffer' connected to the input-stream
-      buffer.reset(dataBuffer.getData(), 0, dataBuffer.getLength());
+        // Set up 'buffer' connected to the input-stream
+        buffer.reset(dataBuffer.getData(), 0, dataBuffer.getLength());
+      } finally {
+        dataBuffer.close();
+      }
 
       // Reset the codec
       filter.resetState();
@@ -2548,6 +2558,24 @@ public class SequenceFile {
         }
         return (this.segmentPathName.toString()).
           compareTo(that.segmentPathName.toString());
+      }
+
+      public boolean equals(Object o) {
+        if (!(o instanceof SegmentDescriptor)) {
+          return false;
+        }
+        SegmentDescriptor that = (SegmentDescriptor)o;
+        if (this.segmentLength == that.segmentLength &&
+            this.segmentOffset == that.segmentOffset &&
+            this.segmentPathName.toString().equals(
+              that.segmentPathName.toString())) {
+          return true;
+        }
+        return false;
+      }
+
+      public int hashCode() {
+        return 37 * 17 + (int) (segmentOffset^(segmentOffset>>>32));
       }
 
       /** Fills up the rawKey object with the key returned by the Reader

@@ -140,13 +140,17 @@ abstract class Storage extends StorageInfo {
     
     void read(File from) throws IOException {
       RandomAccessFile file = new RandomAccessFile(from, "rws");
+      FileInputStream in = null;
       try {
-        FileInputStream in = new FileInputStream(file.getFD());
+        in = new FileInputStream(file.getFD());
         file.seek(0);
         Properties props = new Properties();
         props.load(in);
         getFields(props, this);
       } finally {
+        if (in != null) {
+          in.close();
+        }
         file.close();
       }
     }
@@ -165,11 +169,15 @@ abstract class Storage extends StorageInfo {
       Properties props = new Properties();
       setFields(props, this);
       RandomAccessFile file = new RandomAccessFile(to, "rws");
+      FileOutputStream out = null;
       try {
         file.seek(0);
-        FileOutputStream out = new FileOutputStream(file.getFD());
+        out = new FileOutputStream(file.getFD());
         props.store(out, null);
       } finally {
+        if (out != null) {
+          out.close();
+        }
         file.close();
       }
     }

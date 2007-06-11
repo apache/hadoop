@@ -81,6 +81,10 @@ Trunk (unreleased changes)
  26. HADOOP-1446.  Update the TaskTracker metrics while the task is
      running. (Devaraj via omalley)
 
+ 27. HADOOP-1414.  Fix a number of issues identified by FindBugs as
+     "Bad Practice".  (Dhruba Borthakur via cutting)
+
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

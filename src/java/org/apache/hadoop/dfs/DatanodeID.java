@@ -97,6 +97,12 @@ public class DatanodeID implements WritableComparable {
   }
 
   public boolean equals(Object to) {
+    if (this == to) {
+      return true;
+    }
+    if (!(to instanceof DatanodeID)) {
+      return false;
+    }
     return (name.equals(((DatanodeID)to).getName()) &&
             storageID.equals(((DatanodeID)to).getStorageID()));
   }

@@ -29,6 +29,7 @@ import java.util.*;
  *****************************************************************/
 public class LocalFileSystem extends ChecksumFileSystem {
   static final URI NAME = URI.create("file:///");
+  static private Random rand = new Random();
 
   public LocalFileSystem() {
     super(new RawLocalFileSystem());
@@ -87,7 +88,7 @@ public class LocalFileSystem extends ChecksumFileSystem {
           throw new IOException("Mkdirs failed to create " + badDir.toString());
         }
       }
-      String suffix = "." + new Random().nextInt();
+      String suffix = "." + rand.nextInt();
       File badFile = new File(badDir, f.getName()+suffix);
       LOG.warn("Moving bad file " + f + " to " + badFile);
       in.close();                               // close it first

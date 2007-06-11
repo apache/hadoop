@@ -1234,6 +1234,22 @@ class FSNamesystem implements FSConstants {
         return l1.holder.compareTo(l2.holder);
       }
     }
+
+    public boolean equals(Object o) {
+      if (!(o instanceof Lease)) {
+        return false;
+      }
+      Lease obj = (Lease) o;
+      if (lastUpdate == obj.lastUpdate &&
+          holder.equals(obj.holder)) {
+        return true;
+      }
+      return false;
+    }
+
+    public int hashCode() {
+      return holder.hashCode();
+    }
   }
   /******************************************************
    * LeaseMonitor checks for leases that have expired,

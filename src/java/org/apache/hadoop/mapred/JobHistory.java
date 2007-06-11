@@ -115,15 +115,19 @@ public class JobHistory {
    */
   public static void parseHistory(File path, Listener l) throws IOException{
     BufferedReader reader = new BufferedReader(new FileReader(path));
-    String line = null; 
-    StringBuffer buf = new StringBuffer(); 
-    while ((line = reader.readLine())!= null){
-      buf.append(line); 
-      if (!line.trim().endsWith("\"")){
-        continue; 
+    try {
+      String line = null; 
+      StringBuffer buf = new StringBuffer(); 
+      while ((line = reader.readLine())!= null){
+        buf.append(line); 
+        if (!line.trim().endsWith("\"")){
+          continue; 
+        }
+        parseLine(buf.toString(), l);
+        buf = new StringBuffer(); 
       }
-      parseLine(buf.toString(), l);
-      buf = new StringBuffer(); 
+    } finally {
+      try { reader.close(); } catch (IOException ex) {}
     }
   }
   /**

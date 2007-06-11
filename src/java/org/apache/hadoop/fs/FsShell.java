@@ -123,7 +123,7 @@ public class FsShell extends ToolBase {
   void copyToLocal(String[]argv, int pos) throws IOException {
     if (argv.length-pos<2 || (argv.length-pos==2 && argv[pos].equalsIgnoreCase("-crc"))) {
       System.err.println("Usage: -get [-crc] <src> <dst>");
-      System.exit(-1);
+      throw new RuntimeException("Usage: -get [-crc] <src> <dst>");
     }
     boolean copyCrc = false;
     if ("-crc".equalsIgnoreCase(argv[pos])) {
@@ -221,7 +221,7 @@ public class FsShell extends ToolBase {
   private void setReplication(String[] cmd, int pos) throws IOException {
     if (cmd.length-pos<2 || (cmd.length-pos==2 && cmd[pos].equalsIgnoreCase("-R"))) {
       System.err.println("Usage: [-R] <repvalue> <path>");
-      System.exit(-1);
+      throw new RuntimeException("Usage: [-R] <repvalue> <path>");
     }
       
     boolean recursive = false;
@@ -238,7 +238,7 @@ public class FsShell extends ToolBase {
       pos++;
     } catch (NumberFormatException e) {
       System.err.println("Cannot set replication to: " + cmd[pos]);
-      System.exit(-1);
+      throw new RuntimeException("Cannot set replication to: " + cmd[pos]);
     }
       
     setReplication(rep, cmd[pos], recursive);

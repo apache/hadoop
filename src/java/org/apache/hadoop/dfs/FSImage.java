@@ -937,6 +937,14 @@ class FSImage extends Storage {
       return node.compareTo(o);
     }
 
+    public boolean equals(Object o) {
+      return node.equals(o);
+    }
+
+    public int hashCode() {
+      return node.hashCode();
+    }
+
     /////////////////////////////////////////////////
     // Writable
     /////////////////////////////////////////////////
