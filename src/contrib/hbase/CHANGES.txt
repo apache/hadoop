@@ -28,3 +28,4 @@ Trunk (unreleased changes)
  15. HADOOP-1421 Failover detection, split log files.
      For the files modified, also clean up javadoc, class, field and method 
      visibility (HADOOP-1466)
+ 16. HADOOP-1479 Fix NPE in HStore#get if store file only has keys < passed key.

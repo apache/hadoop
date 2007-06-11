@@ -835,7 +835,7 @@ class HStore implements HConstants {
    * If 'numVersions' is negative, the method returns all available versions.
    */
   BytesWritable[] get(HStoreKey key, int numVersions) throws IOException {
-    if(numVersions <= 0) {
+    if (numVersions <= 0) {
       throw new IllegalArgumentException("Number of versions must be > 0");
     }
     
@@ -852,15 +852,19 @@ class HStore implements HConstants {
           BytesWritable readval = new BytesWritable();
           map.reset();
           HStoreKey readkey = (HStoreKey)map.getClosest(key, readval);
-          
-          if(readkey.matchesRowCol(key)) {
+          if (readkey == null) {
+            // map.getClosest returns null if the passed key is > than the
+            // last key in the map file.  getClosest is a bit of a misnomer
+            // since it returns exact match or the next closest key AFTER not
+            // BEFORE.
+            continue;
+          }
+          if (readkey.matchesRowCol(key)) {
             results.add(readval);
             readval = new BytesWritable();
-
             while(map.next(readkey, readval) && readkey.matchesRowCol(key)) {
-              if(numVersions > 0 && (results.size() >= numVersions)) {
+              if (numVersions > 0 && (results.size() >= numVersions)) {
                 break;
-                
               }
               results.add(readval);
               readval = new BytesWritable();
