@@ -144,12 +144,20 @@ public class DF {
   private void parseExecResult(BufferedReader lines) throws IOException {
     lines.readLine();                         // skip headings
   
+    String line = lines.readLine();
+    if (line == null) {
+      throw new IOException( "Expecting a line not the end of stream" );
+    }
     StringTokenizer tokens =
-      new StringTokenizer(lines.readLine(), " \t\n\r\f%");
+      new StringTokenizer(line, " \t\n\r\f%");
     
     this.filesystem = tokens.nextToken();
     if (!tokens.hasMoreTokens()) {            // for long filesystem name
-      tokens = new StringTokenizer(lines.readLine(), " \t\n\r\f%");
+      line = lines.readLine();
+      if (line == null) {
+        throw new IOException( "Expecting a line not the end of stream" );
+      }
+      tokens = new StringTokenizer(line, " \t\n\r\f%");
     }
     this.capacity = Long.parseLong(tokens.nextToken()) * 1024;
     this.used = Long.parseLong(tokens.nextToken()) * 1024;

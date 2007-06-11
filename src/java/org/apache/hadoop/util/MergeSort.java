@@ -51,7 +51,7 @@ public class MergeSort {
     }
 
     // Recursively sort halves of dest into src
-    int mid = (low + high) >> 1;
+    int mid = (low + high) >>> 1;
     mergeSort(dest, src, low, mid);
     mergeSort(dest, src, mid, high);
 

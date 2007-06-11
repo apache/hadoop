@@ -1827,7 +1827,7 @@ public class SequenceFile {
 
       int segments = sortPass(deleteInput);
       if (segments > 1) {
-        segments = mergePass(outFile.getParent());
+        mergePass(outFile.getParent());
       }
     }
 

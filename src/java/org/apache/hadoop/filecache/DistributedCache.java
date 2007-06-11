@@ -327,9 +327,7 @@ public class DistributedCache {
     } else {
       FSDataInputStream fsStream = fileSystem.open(md5File);
       digest = new byte[md5.getDigestLength()];
-      // assuming reading 16 bytes once is not a problem
-      // though it should be checked if 16 bytes have been read or not
-      int read = fsStream.read(digest);
+      fsStream.readFully(digest);
       fsStream.close();
     }
 
@@ -636,7 +634,7 @@ public class DistributedCache {
         String frag1 = uriFiles[i].getFragment();
         if (frag1 == null)
           return false;
-        for (int j=i+1; j < uriFiles.length; i++){
+        for (int j=i+1; j < uriFiles.length; j++){
           String frag2 = uriFiles[j].getFragment();
           if (frag2 == null)
             return false;

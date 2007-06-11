@@ -571,17 +571,24 @@ public class CopyFiles extends ToolBase {
         reporter.setStatus("Copied: " + srcURI.toString() + 
                            " to: " + destinationPath.toString());
         
-      } catch(Exception e) {
-        reporter.setStatus("Failed to copy from: " + (Text)key);
-        if (ignoreReadFailures) {
-          return;
-        } else {
-          throw new IOException("Failed to copy from: " + (Text)key);
-        }
+      } catch (URISyntaxException e) {
+        handleException(reporter, (Text)key, e);
+      } catch (IOException ioe) {
+        handleException(reporter,(Text)key, ioe);
+      }
+    }
+
+    /* handle exceptions */
+    private void handleException( Reporter reporter, Text key, Throwable e )
+    throws IOException {
+      String errMsg = "Failed to copy from: " + (Text)key;
+      reporter.setStatus(errMsg);
+      if ( !ignoreReadFailures ) {
+        throw new IOException(errMsg);
       }
     }
   }
-  
+    
   /**
    * Factory to create requisite Mapper objects for distcp.
    * @author Arun C Murthy

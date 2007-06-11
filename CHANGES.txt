@@ -84,8 +84,11 @@ Trunk (unreleased changes)
  27. HADOOP-1414.  Fix a number of issues identified by FindBugs as
      "Bad Practice".  (Dhruba Borthakur via cutting)
 
- 28. HADOOP-1392.  Fix "correctness" bugs reported by FindBugs in
+ 28. HADOOP-1392.  Fix "correctness" bugs identified by FindBugs in
      fs and dfs packages.  (Raghu Angadi via cutting)
+
+ 29. HADOOP-1412.  Fix "dodgy" bugs identified by FindBugs in fs and
+     io packages.  (Hairong Kuang via cutting)
 
 
 Release 0.13.0 - 2007-06-08

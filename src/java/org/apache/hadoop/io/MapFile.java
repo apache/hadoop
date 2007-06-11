@@ -387,7 +387,7 @@ public class MapFile {
       int high = count-1;
 
       while (low <= high) {
-        int mid = (low + high) >> 1;
+        int mid = (low + high) >>> 1;
         WritableComparable midVal = keys[mid];
         int cmp = comparator.compare(midVal, key);
 
@@ -537,7 +537,6 @@ public class MapFile {
     String out = args[1];
 
     Configuration conf = new Configuration();
-    int ioFileBufferSize = conf.getInt("io.file.buffer.size", 4096);
     FileSystem fs = FileSystem.getLocal(conf);
     MapFile.Reader reader = new MapFile.Reader(fs, in, conf);
     MapFile.Writer writer =
