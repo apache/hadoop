@@ -33,13 +33,13 @@ public class ArrayListBackedIterator implements ResetableIterator {
 
   private Iterator iter;
 
-  private ArrayList data;
+  private ArrayList<Object> data;
 
   public ArrayListBackedIterator() {
-    this(new ArrayList());
+    this(new ArrayList<Object>());
   }
 
-  public ArrayListBackedIterator(ArrayList data) {
+  public ArrayListBackedIterator(ArrayList<Object> data) {
     this.data = data;
     this.iter = this.data.iterator();
   }

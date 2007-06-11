@@ -30,6 +30,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 
 /**
@@ -58,26 +59,33 @@ public class DataJoinJob {
 
     String inputDir = args[0];
     String outputDir = args[1];
-    int numOfReducers = Integer.parseInt(args[2]);
-    Class mapper = getClassByName(args[3]);
-    Class reducer = getClassByName(args[4]);
-    Class mapoutputValueClass = getClassByName(args[5]);
+    Class inputFormat = SequenceFileInputFormat.class;
+    if (args[2].compareToIgnoreCase("text") != 0) {
+      System.out.println("Using SequenceFileInputFormat: " + args[2]);
+    } else {
+      System.out.println("Using TextInputFormat: " + args[2]);
+      inputFormat = TextInputFormat.class;
+    }
+    int numOfReducers = Integer.parseInt(args[3]);
+    Class mapper = getClassByName(args[4]);
+    Class reducer = getClassByName(args[5]);
+    Class mapoutputValueClass = getClassByName(args[6]);
     Class outputFormat = TextOutputFormat.class;
     Class outputValueClass = Text.class;
-    if (args[6].compareToIgnoreCase("text") != 0) {
-      System.out.println("Using SequenceFileOutputFormat: " + args[6]);
+    if (args[7].compareToIgnoreCase("text") != 0) {
+      System.out.println("Using SequenceFileOutputFormat: " + args[7]);
       outputFormat = SequenceFileOutputFormat.class;
-      outputValueClass = getClassByName(args[6]);
+      outputValueClass = getClassByName(args[7]);
     } else {
-      System.out.println("Using TextOutputFormat: " + args[6]);
+      System.out.println("Using TextOutputFormat: " + args[7]);
     }
     long maxNumOfValuesPerGroup = 100;
     String jobName = "";
-    if (args.length > 7) {
-      maxNumOfValuesPerGroup = Long.parseLong(args[7]);
-    }
     if (args.length > 8) {
-      jobName = args[8];
+      maxNumOfValuesPerGroup = Long.parseLong(args[8]);
+    }
+    if (args.length > 9) {
+      jobName = args[9];
     }
     Configuration defaults = new Configuration();
     JobConf job = new JobConf(defaults, DataJoinJob.class);
@@ -91,7 +99,7 @@ public class DataJoinJob {
       job.addInputPath(new Path(spec));
     }
 
-    job.setInputFormat(SequenceFileInputFormat.class);
+    job.setInputFormat(inputFormat);
 
     job.setMapperClass(mapper);
     job.setOutputPath(new Path(outputDir));
@@ -106,10 +114,7 @@ public class DataJoinJob {
 
     job.setNumMapTasks(1);
     job.setNumReduceTasks(numOfReducers);
-    job.setLong("ultjoin.maxNumOfValuesPerGroup",
-                maxNumOfValuesPerGroup);
-    job.set("mapred.child.java.opts", "-Xmx1024m");
-    job.setKeepFailedTaskFiles(true);
+    job.setLong("datajoin.maxNumOfValuesPerGroup", maxNumOfValuesPerGroup);
     return job;
   }
 
@@ -151,8 +156,8 @@ public class DataJoinJob {
    */
   public static void main(String[] args) {
     boolean success;
-    if (args.length < 7 || args.length > 9) {
-      System.out.println("usage: DataJoinJob " + "inputdirs outputdir "
+    if (args.length < 8 || args.length > 10) {
+      System.out.println("usage: DataJoinJob " + "inputdirs outputdir map_input_file_format "
                          + "numofParts " + "mapper_class " + "reducer_class "
                          + "map_output_value_class "
                          + "output_value_class [maxNumOfValuesPerGroup [descriptionOfJob]]]");

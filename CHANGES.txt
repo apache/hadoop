@@ -104,6 +104,9 @@ Trunk (unreleased changes)
      verified after data is read from large buffers, to better catch
      memory errors.  (cutting)
 
+ 34. HADOOP-1447.  Add support in contrib/data_join for text inputs.
+     (Senthil Subramanian via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

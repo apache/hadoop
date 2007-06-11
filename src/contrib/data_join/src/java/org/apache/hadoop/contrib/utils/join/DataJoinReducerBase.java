@@ -68,8 +68,7 @@ public abstract class DataJoinReducerBase extends JobBase {
   public void configure(JobConf job) {
     super.configure(job);
     this.job = job;
-    this.maxNumOfValuesPerGroup = job.getLong("ultjoin.maxNumOfValuesPerGroup",
-                                              100);
+    this.maxNumOfValuesPerGroup = job.getLong("datajoin.maxNumOfValuesPerGroup", 100);
   }
 
   /**
@@ -155,7 +154,7 @@ public abstract class DataJoinReducerBase extends JobBase {
                          OutputCollector output, Reporter reporter) throws IOException {
     this.collected += 1;
     addLongValue("collectedCount", 1);
-    if (aRecord != null && this.collected % 1 == 0) {
+    if (aRecord != null) {
       output.collect(key, aRecord.getData());
       reporter.setStatus("key: " + key.toString() + " collected: " + collected);
       addLongValue("actuallyCollectedCount", 1);
