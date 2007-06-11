@@ -109,9 +109,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     
     public FSInputChecker(ChecksumFileSystem fs, Path file, int bufferSize)
       throws IOException {
-      // open with an extremly small buffer size,
-      // so that the buffer could be by-passed by the buffer in FSDataInputStream
-      datas = fs.getRawFileSystem().open(file, 1);
+      datas = fs.getRawFileSystem().open(file, bufferSize);
       this.fs = fs;
       this.file = file;
       Path sumFile = fs.getChecksumFile(file);
@@ -338,7 +336,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       throw new FileNotFoundException(f.toString());
     }
     return new FSDataInputStream(new FSInputChecker(this, f, bufferSize),
-                                 bufferSize);
+                                 getBytesPerSum());
   }
 
   /** This class provides an output stream for a checksummed file.
@@ -371,7 +369,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
                           long blockSize,
                           Progressable progress)
       throws IOException {
-      super(fs.getRawFileSystem().create(file, overwrite, 1, 
+      super(fs.getRawFileSystem().create(file, overwrite, bufferSize, 
                                          replication, blockSize, progress));
       this.bytesPerSum = fs.getBytesPerSum();
       int sumBufferSize = fs.getSumBufferSize(bytesPerSum, bufferSize);
@@ -447,7 +445,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       throw new IOException("Mkdirs failed to create " + parent);
     }
     return new FSDataOutputStream(new FSOutputSummer(this, f, overwrite,
-                                                     bufferSize, replication, blockSize, progress), bufferSize);
+                                                     bufferSize, replication, blockSize, progress), getBytesPerSum());
   }
 
   /**
