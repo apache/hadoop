@@ -96,6 +96,9 @@ Trunk (unreleased changes)
  31. HADOOP-1336.  Re-enable speculative execution by
      default. (omalley via cutting)
 
+ 32. HADOOP-1311.  Fix a bug in BytesWritable#set() where start offset
+     was ignored.  (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

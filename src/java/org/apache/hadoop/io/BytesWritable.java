@@ -122,7 +122,7 @@ public class BytesWritable implements WritableComparable {
   public void set(byte[] newData, int offset, int length) {
     setSize(0);
     setSize(length);
-    System.arraycopy(newData, 0, bytes, 0, size);
+    System.arraycopy(newData, offset, bytes, 0, size);
   }
 
   // inherit javadoc
