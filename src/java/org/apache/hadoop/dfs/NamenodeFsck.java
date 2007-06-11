@@ -420,7 +420,7 @@ public class NamenodeFsck {
     }
     if (chosenNode == null) {
       do  {
-        chosenNode = nodes[Math.abs(r.nextInt())  % nodes.length];
+        chosenNode = nodes[r.nextInt(nodes.length)];
       } while (deadNodes.contains(chosenNode));
     }
     return chosenNode;

@@ -61,7 +61,7 @@
 
     String blockSizeStr = req.getParameter("blockSize"); 
     long blockSize = 0;
-    if (blockSizeStr == null && blockSizeStr.length() == 0) {
+    if (blockSizeStr == null || blockSizeStr.length() == 0) {
       out.print("Invalid input");
       return;
     } 

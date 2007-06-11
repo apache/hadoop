@@ -200,10 +200,11 @@ public abstract class FileSystem extends Configured {
     String thisAuthority = this.getUri().getAuthority();
     String thatAuthority = uri.getAuthority();
     if (!(this.getUri().getScheme().equals(uri.getScheme()) &&
-          (thisAuthority == null && thatAuthority == null)
-          || thisAuthority.equals(thatAuthority)))
+           (thisAuthority == thatAuthority || 
+             (thisAuthority != null && thisAuthority.equals(thatAuthority))))){
       throw new IllegalArgumentException("Wrong FS: "+path+
                                          ", expected: "+this.getUri());
+    }
   }
 
   /**

@@ -583,7 +583,7 @@ class FSImage extends Storage {
       if (checkpointTime <= 0L)
         needToSave |= true;
       // set finalized flag
-      isUpgradeFinalized &= !sd.getPreviousDir().exists();
+      isUpgradeFinalized = isUpgradeFinalized && !sd.getPreviousDir().exists();
     }
     assert latestSD != null : "Latest storage directory was not determined.";
 

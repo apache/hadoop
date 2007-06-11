@@ -298,8 +298,8 @@ public class CopyFiles extends ToolBase {
       jobConf.setBoolean(readFailuresAttribute, ignoreReadFailures);
       
       Random r = new Random();
-      Path jobDirectory = new Path(jobConf.getSystemDir(), "distcp_" 
-                                   + Integer.toString(Math.abs(r.nextInt()), 36));
+      Path jobDirectory = new Path(jobConf.getSystemDir(), "distcp_"
+                                   + Integer.toString(r.nextInt(Integer.MAX_VALUE), 36));
       Path inDir = new Path(jobDirectory, "in");
       Path fakeOutDir = new Path(jobDirectory, "out");
       FileSystem fileSys = FileSystem.get(jobConf);
@@ -477,7 +477,7 @@ public class CopyFiles extends ToolBase {
       FileSystem fileSystem = FileSystem.get(conf);
       Random r = new Random();
       Path jobDirectory = new Path(jobConf.getSystemDir(), "distcp_" + 
-                                   Integer.toString(Math.abs(r.nextInt()), 36));
+                                   Integer.toString(r.nextInt(Integer.MAX_VALUE), 36));
       Path jobInputDir = new Path(jobDirectory, "in");
       if (!fileSystem.mkdirs(jobInputDir)) {
         throw new IOException("Mkdirs failed to create " + jobInputDir.toString());

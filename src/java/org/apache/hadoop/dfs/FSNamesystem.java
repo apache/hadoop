@@ -842,11 +842,16 @@ class FSNamesystem implements FSConstants {
       throw new SafeModeException("Cannot complete file " + src, safeMode);
     FileUnderConstruction pendingFile = pendingCreates.get(src);
 
-    if (dir.getFileBlocks(src.toString()) != null || pendingFile == null) {
+    Block[] fileBlocks =  dir.getFileBlocks(src.toString());
+    if (fileBlocks!= null || pendingFile == null) {    
       NameNode.stateChangeLog.warn("DIR* NameSystem.completeFile: "
                                    + "failed to complete " + src
-                                    + " because dir.getFile()==" + dir.getFileBlocks(src.toString()) 
-                                   + " and " + pendingFile);
+                                   + " because dir.getFileBlocks() is " + 
+                                   ((fileBlocks == null) ? "null":"non-null") + 
+                                   " and pendingFile is " + 
+                                   ((pendingFile == null) ? "null" : 
+                                     ("from " + pendingFile.getClientMachine()))
+                                  );                      
       return OPERATION_FAILED;
     } else if (!checkFileProgress(pendingFile, true)) {
       return STILL_WAITING;
