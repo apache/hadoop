@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
+/** Test case for get */
 public class TestGet extends HBaseTestCase {
   private static final Text CONTENTS = new Text("contents:");
   private static final Text ROW_KEY = new Text(HGlobals.rootRegionInfo.regionName);
@@ -59,6 +60,10 @@ public class TestGet extends HBaseTestCase {
     }
   }
   
+  /** 
+   * Constructor
+   * @throws IOException
+   */
   public void testGet() throws IOException {
     MiniDFSCluster cluster = null;
 
@@ -81,7 +86,7 @@ public class TestGet extends HBaseTestCase {
       
       HLog log = new HLog(fs, new Path(regionDir, "log"), conf);
 
-      HRegion r = new HRegion(dir, log, fs, conf, info, null, null);
+      HRegion r = new HRegion(dir, log, fs, conf, info, null);
       
       // Write information to the table
       
@@ -126,7 +131,7 @@ public class TestGet extends HBaseTestCase {
       
       r.close();
       log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, info, null, null);
+      r = new HRegion(dir, log, fs, conf, info, null);
       
       // Read it back
       
@@ -156,7 +161,7 @@ public class TestGet extends HBaseTestCase {
       
       r.close();
       log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, info, null, null);
+      r = new HRegion(dir, log, fs, conf, info, null);
 
       // Read it back
       
@@ -165,6 +170,7 @@ public class TestGet extends HBaseTestCase {
       // Close region once and for all
       
       r.close();
+      log.closeAndDelete();
       
     } catch(IOException e) {
       e.printStackTrace();

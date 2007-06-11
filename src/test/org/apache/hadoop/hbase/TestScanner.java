@@ -132,7 +132,9 @@ public class TestScanner extends HBaseTestCase {
     validateRegionInfo(bytes);  
   }
  
-  /** The test! */
+  /** The test!
+   * @throws IOException
+   */
   public void testScanner() throws IOException {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
@@ -152,7 +154,7 @@ public class TestScanner extends HBaseTestCase {
       
       HLog log = new HLog(fs, new Path(regionDir, "log"), conf);
 
-      region = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
+      region = new HRegion(dir, log, fs, conf, REGION_INFO, null);
       
       // Write information to the meta table
       
@@ -175,7 +177,7 @@ public class TestScanner extends HBaseTestCase {
       
       region.close();
       log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
+      region = new HRegion(dir, log, fs, conf, REGION_INFO, null);
 
       // Verify we can get the data back now that it is on disk.
       
@@ -216,7 +218,7 @@ public class TestScanner extends HBaseTestCase {
       
       region.close();
       log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
+      region = new HRegion(dir, log, fs, conf, REGION_INFO, null);
 
       // Validate again
       
@@ -252,12 +254,17 @@ public class TestScanner extends HBaseTestCase {
       
       region.close();
       log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
+      region = new HRegion(dir, log, fs, conf, REGION_INFO, null);
 
       // Validate again
       
       scan(true, address.toString());
       getRegionInfo();
+      
+      // clean up
+      
+      region.close();
+      log.closeAndDelete();
 
     } catch(IOException e) {
       e.printStackTrace();

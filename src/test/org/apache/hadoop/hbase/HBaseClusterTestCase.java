@@ -22,9 +22,15 @@ package org.apache.hadoop.hbase;
 public abstract class HBaseClusterTestCase extends HBaseTestCase {
   protected MiniHBaseCluster cluster;
   final boolean miniHdfs;
+  int regionServers;
   
   protected HBaseClusterTestCase() {
     this(true);
+  }
+  
+  protected HBaseClusterTestCase(int regionServers) {
+    this(true);
+    this.regionServers = regionServers;
   }
 
   protected HBaseClusterTestCase(String name) {
@@ -34,18 +40,23 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   protected HBaseClusterTestCase(final boolean miniHdfs) {
     super();
     this.miniHdfs = miniHdfs;
+    this.regionServers = 1;
   }
 
   protected HBaseClusterTestCase(String name, final boolean miniHdfs) {
     super(name);
     this.miniHdfs = miniHdfs;
+    this.regionServers = 1;
   }
 
+  @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.cluster = new MiniHBaseCluster(this.conf, 1, this.miniHdfs);
+    this.cluster =
+      new MiniHBaseCluster(this.conf, this.regionServers, this.miniHdfs);
   }
 
+  @Override
   public void tearDown() throws Exception {
     super.tearDown();
     if (this.cluster != null) {

@@ -25,3 +25,6 @@ Trunk (unreleased changes)
  13. HADOOP-1445 Support updates across region splits and compactions
  14. HADOOP-1460 On shutdown IOException with complaint 'Cannot cancel lease
      that is not held'
+ 15. HADOOP-1421 Failover detection, split log files.
+     For the files modified, also clean up javadoc, class, field and method 
+     visibility (HADOOP-1466)

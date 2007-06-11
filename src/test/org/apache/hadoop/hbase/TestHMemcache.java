@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HMemcache.Snapshot;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
+/** memcache test case */
 public class TestHMemcache extends TestCase {
   
   private HMemcache hmemcache;
@@ -41,6 +42,10 @@ public class TestHMemcache extends TestCase {
   
   private static final String COLUMN_FAMILY = "column";
 
+  /* (non-Javadoc)
+   * @see junit.framework.TestCase#setUp()
+   */
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
 
@@ -55,6 +60,10 @@ public class TestHMemcache extends TestCase {
         "org.apache.hadoop.fs.LocalFileSystem");
   }
 
+  /* (non-Javadoc)
+   * @see junit.framework.TestCase#tearDown()
+   */
+  @Override
   protected void tearDown() throws Exception {
     super.tearDown();
   }
@@ -117,24 +126,24 @@ public class TestHMemcache extends TestCase {
     return s;
   }
 
+  /** 
+   * Test memcache snapshots
+   * @throws IOException
+   */
   public void testSnapshotting() throws IOException {
     final int snapshotCount = 5;
     final Text tableName = new Text(getName());
     HLog log = getLogfile();
-    try {
-      // Add some rows, run a snapshot. Do it a few times.
-      for (int i = 0; i < snapshotCount; i++) {
-        addRows(this.hmemcache);
-        Snapshot s = runSnapshot(this.hmemcache, log);
-        log.completeCacheFlush(new Text(Integer.toString(i)),
-            tableName, s.sequenceId);
-        // Clean up snapshot now we are done with it.
-        this.hmemcache.deleteSnapshot();
-      }
-      log.close();
-    } finally {
-      log.dir.getFileSystem(this.conf).delete(log.dir);
+    // Add some rows, run a snapshot. Do it a few times.
+    for (int i = 0; i < snapshotCount; i++) {
+      addRows(this.hmemcache);
+      Snapshot s = runSnapshot(this.hmemcache, log);
+      log.completeCacheFlush(new Text(Integer.toString(i)),
+          tableName, s.sequenceId);
+      // Clean up snapshot now we are done with it.
+      this.hmemcache.deleteSnapshot();
     }
+    log.closeAndDelete();
   }
   
   private void isExpectedRow(final int rowIndex,
@@ -157,7 +166,8 @@ public class TestHMemcache extends TestCase {
     }
   }
 
-  public void testGetFull() throws IOException {
+  /** Test getFull from memcache */
+  public void testGetFull() {
     addRows(this.hmemcache);
     for (int i = 0; i < ROW_COUNT; i++) {
       HStoreKey hsk = new HStoreKey(getRowName(i));
@@ -166,6 +176,10 @@ public class TestHMemcache extends TestCase {
     }
   }
   
+  /**
+   * Test memcache scanner
+   * @throws IOException
+   */
   public void testScanner() throws IOException {
     addRows(this.hmemcache);
     long timestamp = System.currentTimeMillis();

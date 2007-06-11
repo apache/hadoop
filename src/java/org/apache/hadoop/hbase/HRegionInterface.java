@@ -26,18 +26,67 @@ import java.io.*;
  * a handle to the HRegionInterface.
  ******************************************************************************/
 public interface HRegionInterface extends VersionedProtocol {
-  public static final long versionID = 1L; // initial version
+  /** initial version */
+  public static final long versionID = 1L;
 
-  // Get metainfo about an HRegion
+  /** 
+   * Get metainfo about an HRegion
+   * 
+   * @param regionName                  - name of the region
+   * @return                            - HRegionInfo object for region
+   * @throws NotServingRegionException
+   */
+  public HRegionInfo getRegionInfo(final Text regionName) throws NotServingRegionException;
 
-  public HRegionInfo getRegionInfo(Text regionName) throws NotServingRegionException;
+  /**
+   * Retrieve a single value from the specified region for the specified row
+   * and column keys
+   * 
+   * @param regionName  - name of region
+   * @param row         - row key
+   * @param column      - column key
+   * @return            - value for that region/row/column
+   * @throws IOException
+   */
+  public BytesWritable get(final Text regionName, final Text row, final Text column) throws IOException;
 
-  // GET methods for an HRegion.
-
-  public BytesWritable get(Text regionName, Text row, Text column) throws IOException;
-  public BytesWritable[] get(Text regionName, Text row, Text column, int numVersions) throws IOException;
-  public BytesWritable[] get(Text regionName, Text row, Text column, long timestamp, int numVersions) throws IOException;
-  public LabelledData[] getRow(Text regionName, Text row) throws IOException;
+  /**
+   * Get the specified number of versions of the specified row and column
+   * 
+   * @param regionName  - region name
+   * @param row         - row key
+   * @param column      - column key
+   * @param numVersions - number of versions to return
+   * @return            - array of values
+   * @throws IOException
+   */
+  public BytesWritable[] get(final Text regionName, final Text row,
+      final Text column, final int numVersions) throws IOException;
+  
+  /**
+   * Get the specified number of versions of the specified row and column with
+   * the specified timestamp.
+   *
+   * @param regionName  - region name
+   * @param row         - row key
+   * @param column      - column key
+   * @param timestamp   - timestamp
+   * @param numVersions - number of versions to return
+   * @return            - array of values
+   * @throws IOException
+   */
+  public BytesWritable[] get(final Text regionName, final Text row, final Text column,
+      final long timestamp, final int numVersions) throws IOException;
+  
+  /**
+   * Get all the data for the specified row
+   * 
+   * @param regionName  - region name
+   * @param row         - row key
+   * @return            - array of values
+   * @throws IOException
+   */
+  public KeyedData[] getRow(final Text regionName, final Text row) throws IOException;
 
   //////////////////////////////////////////////////////////////////////////////
   // Start an atomic row insertion/update.  No changes are committed until the 
@@ -50,11 +99,80 @@ public interface HRegionInterface extends VersionedProtocol {
   // The client can gain extra time with a call to renewLease().
   //////////////////////////////////////////////////////////////////////////////
 
-  public long startUpdate(Text regionName, long clientid, Text row) throws IOException;
-  public void put(Text regionName, long clientid, long lockid, Text column, BytesWritable val) throws IOException;
-  public void delete(Text regionName, long clientid, long lockid, Text column) throws IOException;
-  public void abort(Text regionName, long clientid, long lockid) throws IOException;
-  public void commit(Text regionName, long clientid, long lockid) throws IOException;
+  /** 
+   * Start an atomic row insertion/update.  No changes are committed until the 
+   * call to commit() returns. A call to abort() will abandon any updates in progress.
+   *
+   * Callers to this method are given a lease for each unique lockid; before the
+   * lease expires, either abort() or commit() must be called. If it is not 
+   * called, the system will automatically call abort() on the client's behalf.
+   *
+   * The client can gain extra time with a call to renewLease().
+   * Start an atomic row insertion or update
+   * 
+   * @param regionName  - region name
+   * @param clientid    - a unique value to identify the client
+   * @param row         - Name of row to start update against.
+   * @return Row lockid.
+   * @throws IOException
+   */
+  public long startUpdate(final Text regionName, final long clientid,
+      final Text row) throws IOException;
+  
+  /** 
+   * Change a value for the specified column
+   *
+   * @param regionName          - region name
+   * @param clientid            - a unique value to identify the client
+   * @param lockid              - lock id returned from startUpdate
+   * @param column              - column whose value is being set
+   * @param val                 - new value for column
+   * @throws IOException
+   */
+  public void put(final Text regionName, final long clientid, final long lockid,
+      final Text column, final BytesWritable val) throws IOException;
+  
+  /** 
+   * Delete the value for a column
+   *
+   * @param regionName          - region name
+   * @param clientid            - a unique value to identify the client
+   * @param lockid              - lock id returned from startUpdate
+   * @param column              - name of column whose value is to be deleted
+   * @throws IOException
+   */
+  public void delete(final Text regionName, final long clientid, final long lockid,
+      final Text column) throws IOException;
+  
+  /** 
+   * Abort a row mutation
+   *
+   * @param regionName          - region name
+   * @param clientid            - a unique value to identify the client
+   * @param lockid              - lock id returned from startUpdate
+   * @throws IOException
+   */
+  public void abort(final Text regionName, final long clientid, 
+      final long lockid) throws IOException;
+  
+  /** 
+   * Finalize a row mutation
+   *
+   * @param regionName          - region name
+   * @param clientid            - a unique value to identify the client
+   * @param lockid              - lock id returned from startUpdate
+   * @throws IOException
+   */
+  public void commit(final Text regionName, final long clientid,
+      final long lockid) throws IOException;
+  
+  /**
+   * Renew lease on update
+   * 
+   * @param lockid              - lock id returned from startUpdate
+   * @param clientid            - a unique value to identify the client
+   * @throws IOException
+   */
   public void renewLease(long lockid, long clientid) throws IOException;
 
   //////////////////////////////////////////////////////////////////////////////
@@ -77,11 +195,10 @@ public interface HRegionInterface extends VersionedProtocol {
    * Get the next set of values
    * 
    * @param scannerId   - clientId passed to openScanner
-   * @param key         - the next HStoreKey
-   * @return            - true if a value was retrieved
+   * @return            - array of values
    * @throws IOException
    */
-  public LabelledData[] next(long scannerId, HStoreKey key) throws IOException;
+  public KeyedData[] next(long scannerId) throws IOException;
   
   /**
    * Close a scanner

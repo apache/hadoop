@@ -15,6 +15,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -24,74 +25,83 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.Reader;
 
+/** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
 
-  protected void setUp() throws Exception {
+  @Override
+  public void setUp() throws Exception {
     super.setUp();
   }
   
-  public void testAppend() throws Exception {
-    Path dir = getUnitTestdir(getName());
-    FileSystem fs = FileSystem.get(this.conf);
-    if (fs.exists(dir)) {
-      fs.delete(dir);
-    }
-    final int COL_COUNT = 10;
-    final Text regionName = new Text("regionname");
-    final Text tableName = new Text("tablename");
-    final Text row = new Text("row");
-    Reader reader = null;
-    HLog log = new HLog(fs, dir, this.conf);
+  /** The test */
+  public void testAppend() {
     try {
-      // Write columns named 1, 2, 3, etc. and then values of single byte
-      // 1, 2, 3...
-      TreeMap<Text, BytesWritable> cols = new TreeMap<Text, BytesWritable>();
-      for (int i = 0; i < COL_COUNT; i++) {
-        cols.put(new Text(Integer.toString(i)),
-          new BytesWritable(new byte[] { (byte)(i + '0') }));
-      }
-      long timestamp = System.currentTimeMillis();
-      log.append(regionName, tableName, row, cols, timestamp);
-      long logSeqId = log.startCacheFlush();
-      log.completeCacheFlush(regionName, tableName, logSeqId);
-      log.close();
-      Path filename = log.computeFilename(log.filenum - 1);
-      log = null;
-      // Now open a reader on the log and assert append worked.
-      reader = new SequenceFile.Reader(fs, filename, conf);
-      HLogKey key = new HLogKey();
-      HLogEdit val = new HLogEdit();
-      for (int i = 0; i < COL_COUNT; i++) {
-        reader.next(key, val);
-        assertEquals(key.getRegionName(), regionName);
-        assertEquals(key.getTablename(), tableName);
-        assertEquals(key.getRow(), row);
-        assertEquals(val.getVal().get()[0], (byte)(i + '0'));
-        System.out.println(key + " " + val);
-      }
-      while (reader.next(key, val)) {
-        // Assert only one more row... the meta flushed row.
-        assertEquals(key.getRegionName(), regionName);
-        assertEquals(key.getTablename(), tableName);
-        assertEquals(key.getRow(), HLog.METAROW);
-        assertEquals(val.getColumn(), HLog.METACOLUMN);
-        assertEquals(0, val.getVal().compareTo(COMPLETE_CACHEFLUSH));
-        System.out.println(key + " " + val);
-      }
-    } finally {
-      if (log != null) {
-        log.close();
-      }
-      if (reader != null) {
-        reader.close();
-      }
+      Path dir = getUnitTestdir(getName());
+      FileSystem fs = FileSystem.get(this.conf);
       if (fs.exists(dir)) {
         fs.delete(dir);
       }
+      final int COL_COUNT = 10;
+      final Text regionName = new Text("regionname");
+      final Text tableName = new Text("tablename");
+      final Text row = new Text("row");
+      Reader reader = null;
+      HLog log = new HLog(fs, dir, this.conf);
+      try {
+        // Write columns named 1, 2, 3, etc. and then values of single byte
+        // 1, 2, 3...
+        TreeMap<Text, BytesWritable> cols = new TreeMap<Text, BytesWritable>();
+        for (int i = 0; i < COL_COUNT; i++) {
+          cols.put(new Text(Integer.toString(i)),
+              new BytesWritable(new byte[] { (byte)(i + '0') }));
+        }
+        long timestamp = System.currentTimeMillis();
+        log.append(regionName, tableName, row, cols, timestamp);
+        long logSeqId = log.startCacheFlush();
+        log.completeCacheFlush(regionName, tableName, logSeqId);
+        log.close();
+        Path filename = log.computeFilename(log.filenum - 1);
+        log = null;
+        // Now open a reader on the log and assert append worked.
+        reader = new SequenceFile.Reader(fs, filename, conf);
+        HLogKey key = new HLogKey();
+        HLogEdit val = new HLogEdit();
+        for (int i = 0; i < COL_COUNT; i++) {
+          reader.next(key, val);
+          assertEquals(regionName, key.getRegionName());
+          assertEquals(tableName, key.getTablename());
+          assertEquals(row, key.getRow());
+          assertEquals((byte)(i + '0'), val.getVal().get()[0]);
+          System.out.println(key + " " + val);
+        }
+        while (reader.next(key, val)) {
+          // Assert only one more row... the meta flushed row.
+          assertEquals(regionName, key.getRegionName());
+          assertEquals(tableName, key.getTablename());
+          assertEquals(HLog.METAROW, key.getRow());
+          assertEquals(HLog.METACOLUMN, val.getColumn());
+          assertEquals(0, val.getVal().compareTo(COMPLETE_CACHEFLUSH));
+          System.out.println(key + " " + val);
+        }
+      } finally {
+        if (log != null) {
+          log.close();
+        }
+        if (reader != null) {
+          reader.close();
+        }
+        if (fs.exists(dir)) {
+          fs.delete(dir);
+        }
+      }
+    } catch(IOException e) {
+      e.printStackTrace();
+      fail();
     }
   }
 
-  protected void tearDown() throws Exception {
+  @Override
+  public void tearDown() throws Exception {
     super.tearDown();
   }
 }

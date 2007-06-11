@@ -15,8 +15,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
@@ -25,9 +23,15 @@ import java.io.*;
  * A Key for a stored row
  ******************************************************************************/
 public class HStoreKey implements WritableComparable {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
   
-  public static Text extractFamily(Text col) throws IOException {
+  /**
+   * Extracts the column family name from a column
+   * For example, returns 'info' if the specified column was 'info:server'
+   * 
+   * @param col         - name of column
+   * @return            - column family name
+   */
+  public static Text extractFamily(Text col) {
     String column = col.toString();
     int colpos = column.indexOf(":");
     if(colpos < 0) {
@@ -40,56 +44,126 @@ public class HStoreKey implements WritableComparable {
   Text column;
   long timestamp;
 
+  /** Default constructor used in conjunction with Writable interface */
   public HStoreKey() {
     this.row = new Text();
     this.column = new Text();
     this.timestamp = Long.MAX_VALUE;
   }
   
+  /**
+   * Create an HStoreKey specifying only the row
+   * The column defaults to the empty string and the time stamp defaults to
+   * Long.MAX_VALUE
+   * 
+   * @param row - row key
+   */
   public HStoreKey(Text row) {
     this.row = new Text(row);
     this.column = new Text();
     this.timestamp = Long.MAX_VALUE;
   }
   
+  /**
+   * Create an HStoreKey specifying the row and timestamp
+   * The column name defaults to the empty string
+   * 
+   * @param row         - row key
+   * @param timestamp   - timestamp value
+   */
   public HStoreKey(Text row, long timestamp) {
     this.row = new Text(row);
     this.column = new Text();
     this.timestamp = timestamp;
   }
   
+  /**
+   * Create an HStoreKey specifying the row and column names
+   * The timestamp defaults to Long.MAX_VALUE
+   * 
+   * @param row         - row key
+   * @param column      - column key
+   */
   public HStoreKey(Text row, Text column) {
     this.row = new Text(row);
     this.column = new Text(column);
     this.timestamp = Long.MAX_VALUE;
   }
   
+  /**
+   * Create an HStoreKey specifying all the fields
+   * 
+   * @param row         - row key
+   * @param column      - column key
+   * @param timestamp   - timestamp value
+   */
   public HStoreKey(Text row, Text column, long timestamp) {
     this.row = new Text(row);
     this.column = new Text(column);
     this.timestamp = timestamp;
   }
   
+  /**
+   * Construct a new HStoreKey from another
+   * 
+   * @param other - the source key
+   */
+  public HStoreKey(HStoreKey other) {
+    this();
+    this.row.set(other.row);
+    this.column.set(other.column);
+    this.timestamp = other.timestamp;
+  }
+  
+  /**
+   * Change the value of the row key
+   * 
+   * @param newrow      - new row key value
+   */
   public void setRow(Text newrow) {
     this.row.set(newrow);
   }
   
+  /**
+   * Change the value of the column key
+   * 
+   * @param newcol      - new column key value
+   */
   public void setColumn(Text newcol) {
     this.column.set(newcol);
   }
   
+  /**
+   * Change the value of the timestamp field
+   * 
+   * @param timestamp   - new timestamp value
+   */
   public void setVersion(long timestamp) {
     this.timestamp = timestamp;
   }
   
+  /**
+   * Set the value of this HStoreKey from the supplied key
+   * 
+   * @param k - key value to copy
+   */
+  public void set(HStoreKey k) {
+    this.row = k.getRow();
+    this.column = k.getColumn();
+    this.timestamp = k.getTimestamp();
+  }
+  
+  /** @return value of row key */
   public Text getRow() {
     return row;
   }
   
+  /** @return value of column key */
   public Text getColumn() {
     return column;
   }
   
+  /** @return value of timestamp */
   public long getTimestamp() {
     return timestamp;
   }
@@ -125,18 +199,12 @@ public class HStoreKey implements WritableComparable {
    * @see #matchesWithoutColumn(HStoreKey)
    */
   public boolean matchesRowFamily(HStoreKey other) {
-    boolean status = false;
-    try {
-      status = this.row.compareTo(other.row) == 0
+    return this.row.compareTo(other.row) == 0
         && extractFamily(this.column).compareTo(
             extractFamily(other.getColumn())) == 0;
-      
-    } catch(IOException e) {
-      LOG.error(e);
-    }
-    return status;
   }
   
+  @Override
   public String toString() {
     return row.toString() + "/" + column.toString() + "/" + timestamp;
   }
@@ -158,6 +226,9 @@ public class HStoreKey implements WritableComparable {
   // Comparable
   //////////////////////////////////////////////////////////////////////////////
 
+  /* (non-Javadoc)
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
   public int compareTo(Object o) {
     HStoreKey other = (HStoreKey) o;
     int result = this.row.compareTo(other.row);
@@ -180,12 +251,18 @@ public class HStoreKey implements WritableComparable {
   // Writable
   //////////////////////////////////////////////////////////////////////////////
 
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
+   */
   public void write(DataOutput out) throws IOException {
     row.write(out);
     column.write(out);
     out.writeLong(timestamp);
   }
 
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
+   */
   public void readFields(DataInput in) throws IOException {
     row.readFields(in);
     column.readFields(in);

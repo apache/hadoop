@@ -42,9 +42,12 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   // The kind of match we are doing on a column:
 
   private static enum MATCH_TYPE {
-    FAMILY_ONLY,                        // Just check the column family name
-    REGEX,                              // Column family + matches regex
-    SIMPLE                              // Literal matching
+    /** Just check the column family name */
+    FAMILY_ONLY,
+    /** Column family + matches regex */
+    REGEX,
+    /** Literal matching */
+    SIMPLE
   }
 
   // This class provides column matching functions that are more sophisticated
@@ -63,12 +66,12 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     ColumnMatcher(Text col) throws IOException {
       String column = col.toString();
       try {
-        int colpos = column.indexOf(":") + 1;
-        if(colpos == 0) {
+        int colpos = column.indexOf(":");
+        if(colpos == -1) {
           throw new InvalidColumnNameException("Column name has no family indicator.");
         }
 
-        String columnkey = column.substring(colpos);
+        String columnkey = column.substring(colpos + 1);
 
         if(columnkey == null || columnkey.length() == 0) {
           this.matchType = MATCH_TYPE.FAMILY_ONLY;
@@ -97,7 +100,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
         return c.equals(this.col);
         
       } else if(this.matchType == MATCH_TYPE.FAMILY_ONLY) {
-        return c.toString().startsWith(this.family);
+        return HStoreKey.extractFamily(c).toString().equals(this.family);
         
       } else if(this.matchType == MATCH_TYPE.REGEX) {
         return this.columnMatcher.matcher(c.toString()).matches();
@@ -211,6 +214,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
    * @param key The key that matched
    * @param results All the results for <code>key</code>
    * @return true if a match was found
+   * @throws IOException
    * 
    * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.TreeMap)
    */

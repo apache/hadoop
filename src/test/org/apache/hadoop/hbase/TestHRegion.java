@@ -37,7 +37,7 @@ import org.apache.log4j.Logger;
  * HRegions or in the HBaseMaster, so only basic testing is possible.
  */
 public class TestHRegion extends HBaseTestCase implements RegionUnavailableListener {
-  private Logger LOG = Logger.getLogger(this.getClass().getName());
+  Logger LOG = Logger.getLogger(this.getClass().getName());
   
   /** Constructor */
   public TestHRegion() {
@@ -83,10 +83,9 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   private static FileSystem fs = null;
   private static Path parentdir = null;
   private static Path newlogdir = null;
-  private static Path oldlogfile = null;
   private static HLog log = null;
   private static HTableDescriptor desc = null;
-  private static HRegion region = null;
+  static HRegion region = null;
   
   private static int numInserted = 0;
 
@@ -99,14 +98,13 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     parentdir = new Path("/hbase");
     fs.mkdirs(parentdir);
     newlogdir = new Path(parentdir, "log");
-    oldlogfile = new Path(parentdir, "oldlogfile");
 
     log = new HLog(fs, newlogdir, conf);
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor("contents:"));
     desc.addFamily(new HColumnDescriptor("anchor:"));
     region = new HRegion(parentdir, log, fs, conf, 
-        new HRegionInfo(1, desc, null, null), null, oldlogfile);
+        new HRegionInfo(1, desc, null, null), null);
   }
 
   // Test basic functionality. Writes to contents:basic and anchor:anchornum-*
@@ -208,6 +206,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     List<Thread>threads = new ArrayList<Thread>(threadCount);
     for (int i = 0; i < threadCount; i++) {
       threads.add(new Thread(Integer.toString(i)) {
+        @Override
         public void run() {
           long [] lockids = new long[lockCount];
           // Get locks.
@@ -822,7 +821,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     f.delete();
   }
   
-  private void cleanup() throws IOException {
+  private void cleanup() {
 
     // Shut down the mini cluster
 

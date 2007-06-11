@@ -20,26 +20,34 @@ import java.io.*;
 
 /*******************************************************************************
  * LabelledData is just a data pair.
- * It includes a Text label and some associated data.
+ * It includes an HStoreKey and some associated data.
  ******************************************************************************/
-public class LabelledData implements Writable {
-  Text label;
+public class KeyedData implements Writable {
+  HStoreKey key;
   BytesWritable data;
 
-  public LabelledData() {
-    this.label = new Text();
+  /** Default constructor. Used by Writable interface */
+  public KeyedData() {
+    this.key = new HStoreKey();
     this.data = new BytesWritable();
   }
 
-  public LabelledData(Text label, BytesWritable data) {
-    this.label = new Text(label);
+  /**
+   * Create a KeyedData object specifying the parts
+   * @param key         - HStoreKey
+   * @param data        - BytesWritable
+   */
+  public KeyedData(HStoreKey key, BytesWritable data) {
+    this.key = key;
     this.data = data;
   }
 
-  public Text getLabel() {
-    return label;
+  /** @return - returns the key */
+  public HStoreKey getKey() {
+    return key;
   }
 
+  /** @return - returns the value */
   public BytesWritable getData() {
     return data;
   }
@@ -48,13 +56,19 @@ public class LabelledData implements Writable {
   // Writable
   //////////////////////////////////////////////////////////////////////////////
 
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
+   */
   public void write(DataOutput out) throws IOException {
-    label.write(out);
+    key.write(out);
     data.write(out);
   }
   
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
+   */
   public void readFields(DataInput in) throws IOException {
-    label.readFields(in);
+    key.readFields(in);
     data.readFields(in);
   }
 }

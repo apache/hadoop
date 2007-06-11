@@ -36,12 +36,12 @@ import org.apache.hadoop.io.Text;
  * file system only.
  * TODO: Add dumping of HStoreFile content and HLog.
  */
-public class HRegiondirReader {
+class HRegiondirReader {
   private final Configuration conf;
   private final Path parentdir;
   
-  private static final Pattern REGION_NAME_PARSER =
-    Pattern.compile(HGlobals.HREGIONDIR_PREFIX +
+  static final Pattern REGION_NAME_PARSER =
+    Pattern.compile(HConstants.HREGIONDIR_PREFIX +
         "([^_]+)_([^_]*)_([^_]*)");
   
   private static final String USAGE = "Usage: " +
@@ -50,7 +50,7 @@ public class HRegiondirReader {
   
   private final List<HRegionInfo> infos;
   
-  public HRegiondirReader(final HBaseConfiguration conf,
+  HRegiondirReader(final HBaseConfiguration conf,
       final String parentdirName)
   throws IOException {
     this.conf = conf;
@@ -65,6 +65,9 @@ public class HRegiondirReader {
     // Look for regions in parentdir.
     Path [] regiondirs =
       fs.listPaths(parentdir, new PathFilter() {
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.fs.PathFilter#accept(org.apache.hadoop.fs.Path)
+         */
         public boolean accept(Path path) {
           Matcher m = REGION_NAME_PARSER.matcher(path.getName());
           return m != null && m.matches();
@@ -136,12 +139,11 @@ public class HRegiondirReader {
     return families.toArray(new Text [] {});
   }
   
-  public List <HRegionInfo> getRegions() {
+  List <HRegionInfo> getRegions() {
     return this.infos;
   }
   
-  public HRegionInfo getRegionInfo(final String tableName)
-  throws IOException {
+  HRegionInfo getRegionInfo(final String tableName) {
     HRegionInfo result = null;
     for(HRegionInfo i: getRegions()) {
       if(i.tableDesc.getName().equals(tableName)) {
@@ -162,7 +164,7 @@ public class HRegiondirReader {
   
   private void dump(final HRegionInfo info) throws IOException {
     HRegion r = new HRegion(this.parentdir, null,
-        FileSystem.get(this.conf), conf, info, null, null);
+        FileSystem.get(this.conf), conf, info, null);
     Text [] families = info.tableDesc.families().keySet().toArray(new Text [] {});
     HInternalScannerInterface scanner = r.getScanner(families, new Text());
     HStoreKey key = new HStoreKey();
@@ -201,6 +203,10 @@ public class HRegiondirReader {
     }
   }
   
+  /**
+   * @param args
+   * @throws IOException
+   */
   public static void main(String[] args) throws IOException {
     if (args.length < 1) {
       System.err.println(USAGE);

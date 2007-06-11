@@ -15,7 +15,7 @@
     </description>
   </property>
   <property>
-    <name>hbase.regiondir</name>
+    <name>hbase.rootdir</name>
     <value>${hadoop.tmp.dir}/hbase</value>
     <description>The directory shared by region servers.
     </description>

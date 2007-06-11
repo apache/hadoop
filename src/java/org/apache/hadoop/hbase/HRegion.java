@@ -55,7 +55,7 @@ import java.util.*;
  * regionName is a unique identifier for this HRegion. (startKey, endKey]
  * defines the keyspace for this HRegion.
  */
-public class HRegion implements HConstants {
+class HRegion implements HConstants {
   static String SPLITDIR = "splits";
   static String MERGEDIR = "merges";
   static String TMPREGION_PREFIX = "tmpregion_";
@@ -72,7 +72,7 @@ public class HRegion implements HConstants {
    * @param regionName          - name of the region to delete
    * @throws IOException
    */
-  public static void deleteRegion(FileSystem fs, Path baseDirectory,
+  static void deleteRegion(FileSystem fs, Path baseDirectory,
       Text regionName) throws IOException {
     LOG.debug("Deleting region " + regionName);
     fs.delete(HStoreFile.getHRegionDir(baseDirectory, regionName));
@@ -83,7 +83,7 @@ public class HRegion implements HConstants {
    * HRegionServer. Returns a brand-new active HRegion, also
    * running on the current HRegionServer.
    */
-  public static HRegion closeAndMerge(HRegion srcA, HRegion srcB) throws IOException {
+  static HRegion closeAndMerge(HRegion srcA, HRegion srcB) throws IOException {
 
     // Make sure that srcA comes first; important for key-ordering during
     // write of the merged file.
@@ -110,7 +110,7 @@ public class HRegion implements HConstants {
     Configuration conf = srcA.getConf();
     HTableDescriptor tabledesc = srcA.getTableDesc();
     HLog log = srcA.getLog();
-    Path dir = srcA.getDir();
+    Path rootDir = srcA.getRootDir();
 
     Text startKey = srcA.getStartKey();
     Text endKey = srcB.getEndKey();
@@ -222,8 +222,8 @@ public class HRegion implements HConstants {
 
     // Done
     
-    HRegion dstRegion = new HRegion(dir, log, fs, conf, newRegionInfo,
-        newRegionDir, null);
+    HRegion dstRegion = new HRegion(rootDir, log, fs, conf, newRegionInfo,
+        newRegionDir);
 
     // Get rid of merges directory
     
@@ -234,59 +234,6 @@ public class HRegion implements HConstants {
     return dstRegion;
   }
 
-  /**
-   * Internal method to create a new HRegion. Used by createTable and by the
-   * bootstrap code in the HMaster constructor
-   * 
-   * @param fs          - file system to create region in
-   * @param dir         - base directory
-   * @param conf        - configuration object
-   * @param desc        - table descriptor
-   * @param regionId    - region id
-   * @param startKey    - first key in region
-   * @param endKey      - last key in region
-   * @return            - new HRegion
-   * @throws IOException
-   */
-  public static HRegion createNewHRegion(FileSystem fs, Path dir,
-      Configuration conf, HTableDescriptor desc, long regionId, Text startKey,
-      Text endKey) throws IOException {
-    
-    HRegionInfo info = new HRegionInfo(regionId, desc, startKey, endKey);
-    Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
-    fs.mkdirs(regionDir);
-
-    return new HRegion(dir,
-      new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf),
-      fs, conf, info, null, null);
-  }
-  
-  /**
-   * Inserts a new table's meta information into the meta table. Used by
-   * the HMaster bootstrap code.
-   * 
-   * @param meta                - HRegion to be updated
-   * @param table               - HRegion of new table
-   * 
-   * @throws IOException
-   */
-  public static void addRegionToMeta(HRegion meta, HRegion table)
-      throws IOException {
-    
-    // The row key is the region name
-    
-    long writeid = meta.startUpdate(table.getRegionName());
-    
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    DataOutputStream s = new DataOutputStream(bytes);
-
-    table.getRegionInfo().write(s);
-    
-    meta.put(writeid, COL_REGIONINFO, new BytesWritable(bytes.toByteArray()));
-    
-    meta.commit(writeid);
-  }
-  
   //////////////////////////////////////////////////////////////////////////////
   // Members
   //////////////////////////////////////////////////////////////////////////////
@@ -299,7 +246,7 @@ public class HRegion implements HConstants {
   
   HMemcache memcache;
 
-  Path dir;
+  Path rootDir;
   HLog log;
   FileSystem fs;
   Configuration conf;
@@ -307,10 +254,10 @@ public class HRegion implements HConstants {
   Path regiondir;
 
   static class WriteState {
-    public volatile boolean writesOngoing;
-    public volatile boolean writesEnabled;
-    public volatile boolean closed;
-    public WriteState() {
+    volatile boolean writesOngoing;
+    volatile boolean writesEnabled;
+    volatile boolean closed;
+    WriteState() {
       this.writesOngoing = true;
       this.writesEnabled = true;
       this.closed = false;
@@ -340,18 +287,22 @@ public class HRegion implements HConstants {
    * appropriate log info for this HRegion. If there is a previous log file
    * (implying that the HRegion has been written-to before), then read it from
    * the supplied path.
+   * 
+   * @param rootDir root directory for HBase instance
+   * @param log HLog where changes should be committed
    * @param fs is the filesystem.  
-   * @param dir dir is where the HRegion is stored.
    * @param conf is global configuration settings.
+   * @param regionInfo - HRegionInfo that describes the region
    * @param initialFiles If there are initial files (implying that the HRegion
    * is new), then read them from the supplied path.
+   * 
    * @throws IOException
    */
-  public HRegion(Path dir, HLog log, FileSystem fs, Configuration conf, 
-      HRegionInfo regionInfo, Path initialFiles, Path oldLogFile)
+  HRegion(Path rootDir, HLog log, FileSystem fs, Configuration conf, 
+      HRegionInfo regionInfo, Path initialFiles)
   throws IOException {
     
-    this.dir = dir;
+    this.rootDir = rootDir;
     this.log = log;
     this.fs = fs;
     this.conf = conf;
@@ -366,7 +317,8 @@ public class HRegion implements HConstants {
     // Declare the regionName.  This is a unique string for the region, used to 
     // build a unique filename.
     
-    this.regiondir = HStoreFile.getHRegionDir(dir, this.regionInfo.regionName);
+    this.regiondir = HStoreFile.getHRegionDir(rootDir, this.regionInfo.regionName);
+    Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
 
     // Move prefab HStore files into place (if any)
     
@@ -378,7 +330,7 @@ public class HRegion implements HConstants {
     for(Map.Entry<Text, HColumnDescriptor> e :
         this.regionInfo.tableDesc.families().entrySet()) {
       Text colFamily = HStoreKey.extractFamily(e.getKey());
-      stores.put(colFamily, new HStore(dir, this.regionInfo.regionName,
+      stores.put(colFamily, new HStore(rootDir, this.regionInfo.regionName,
           e.getValue(), fs, oldLogFile, conf));
     }
 
@@ -411,12 +363,12 @@ public class HRegion implements HConstants {
   }
 
   /** Returns a HRegionInfo object for this region */
-  public HRegionInfo getRegionInfo() {
+  HRegionInfo getRegionInfo() {
     return this.regionInfo;
   }
 
   /** returns true if region is closed */
-  public boolean isClosed() {
+  boolean isClosed() {
     boolean closed = false;
     synchronized(writestate) {
       closed = writestate.closed;
@@ -434,7 +386,7 @@ public class HRegion implements HConstants {
    * This method could take some time to execute, so don't call it from a 
    * time-sensitive thread.
    */
-  public Vector<HStoreFile> close() throws IOException {
+  Vector<HStoreFile> close() throws IOException {
     lock.obtainWriteLock();
     try {
       boolean shouldClose = false;
@@ -483,7 +435,7 @@ public class HRegion implements HConstants {
    *
    * Returns two brand-new (and open) HRegions
    */
-  public HRegion[] closeAndSplit(Text midKey, RegionUnavailableListener listener)
+  HRegion[] closeAndSplit(Text midKey, RegionUnavailableListener listener)
       throws IOException {
     
     if(((regionInfo.startKey.getLength() != 0)
@@ -572,9 +524,9 @@ public class HRegion implements HConstants {
 
     // Done
 
-    HRegion regionA = new HRegion(dir, log, fs, conf, regionAInfo, dirA, null);
+    HRegion regionA = new HRegion(rootDir, log, fs, conf, regionAInfo, dirA);
     
-    HRegion regionB = new HRegion(dir, log, fs, conf, regionBInfo, dirB, null);
+    HRegion regionB = new HRegion(rootDir, log, fs, conf, regionBInfo, dirB);
 
     // Cleanup
 
@@ -596,43 +548,43 @@ public class HRegion implements HConstants {
   // HRegion accessors
   //////////////////////////////////////////////////////////////////////////////
 
-  public Text getStartKey() {
+  Text getStartKey() {
     return regionInfo.startKey;
   }
   
-  public Text getEndKey() {
+  Text getEndKey() {
     return regionInfo.endKey;
   }
   
-  public long getRegionId() {
+  long getRegionId() {
     return regionInfo.regionId;
   }
 
-  public Text getRegionName() {
+  Text getRegionName() {
     return regionInfo.regionName;
   }
   
-  public Path getDir() {
-    return dir;
+  Path getRootDir() {
+    return rootDir;
   }
  
-  public HTableDescriptor getTableDesc() {
+  HTableDescriptor getTableDesc() {
     return regionInfo.tableDesc;
   }
   
-  public HLog getLog() {
+  HLog getLog() {
     return log;
   }
   
-  public Configuration getConf() {
+  Configuration getConf() {
     return conf;
   }
   
-  public Path getRegionDir() {
+  Path getRegionDir() {
     return regiondir;
   }
   
-  public FileSystem getFilesystem() {
+  FileSystem getFilesystem() {
     return fs;
   }
 
@@ -652,7 +604,7 @@ public class HRegion implements HConstants {
    * @param midKey      - (return value) midKey of the largest MapFile
    * @return            - true if the region should be split
    */
-  public boolean needsSplit(Text midKey) {
+  boolean needsSplit(Text midKey) {
     lock.obtainReadLock();
     try {
       Text key = new Text();
@@ -675,7 +627,7 @@ public class HRegion implements HConstants {
   /**
    * @return - returns the size of the largest HStore
    */
-  public long largestHStore() {
+  long largestHStore() {
     long maxsize = 0;
     lock.obtainReadLock();
     try {
@@ -697,7 +649,7 @@ public class HRegion implements HConstants {
   /**
    * @return true if the region should be compacted.
    */
-  public boolean needsCompaction() {
+  boolean needsCompaction() {
     boolean needsCompaction = false;
     this.lock.obtainReadLock();
     try {
@@ -726,7 +678,7 @@ public class HRegion implements HConstants {
    * HRegion is busy doing something else storage-intensive (like flushing the 
    * cache).  The caller should check back later.
    */
-  public boolean compactStores() throws IOException {
+  boolean compactStores() throws IOException {
     boolean shouldCompact = false;
     lock.obtainReadLock();
     try {
@@ -766,7 +718,7 @@ public class HRegion implements HConstants {
    * Each HRegion is given a periodic chance to flush the cache, which it should
    * only take if there have been a lot of uncommitted writes.
    */
-  public void optionallyFlush() throws IOException {
+  void optionallyFlush() throws IOException {
     if(commitsSinceFlush > maxUnflushedEntries) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Flushing cache. Number of commits is: " + commitsSinceFlush);
@@ -792,8 +744,7 @@ public class HRegion implements HConstants {
    * This method may block for some time, so it should not be called from a 
    * time-sensitive thread.
    */
-  public Vector<HStoreFile> flushcache(boolean disableFutureWrites)
-  throws IOException {
+  Vector<HStoreFile> flushcache(boolean disableFutureWrites) throws IOException {
     boolean shouldFlush = false;
     synchronized(writestate) {
       if((! writestate.writesOngoing)
@@ -934,18 +885,18 @@ public class HRegion implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
 
   /** Fetch a single data item. */
-  public BytesWritable get(Text row, Text column) throws IOException {
+  BytesWritable get(Text row, Text column) throws IOException {
     BytesWritable[] results = get(row, column, Long.MAX_VALUE, 1);
     return (results == null)? null: results[0];
   }
   
   /** Fetch multiple versions of a single data item */
-  public BytesWritable[] get(Text row, Text column, int numVersions) throws IOException {
+  BytesWritable[] get(Text row, Text column, int numVersions) throws IOException {
     return get(row, column, Long.MAX_VALUE, numVersions);
   }
 
   /** Fetch multiple versions of a single data item, with timestamp. */
-  public BytesWritable[] get(Text row, Text column, long timestamp, int numVersions) 
+  BytesWritable[] get(Text row, Text column, long timestamp, int numVersions) 
       throws IOException {
     
     if(writestate.closed) {
@@ -969,8 +920,7 @@ public class HRegion implements HConstants {
     }
   }
 
-  // Private implementation: get the value for the indicated HStoreKey
-
+  /** Private implementation: get the value for the indicated HStoreKey */
   private BytesWritable[] get(HStoreKey key, int numVersions) throws IOException {
 
     lock.obtainReadLock();
@@ -1007,7 +957,7 @@ public class HRegion implements HConstants {
    * determine which column groups are useful for that row.  That would let us 
    * avoid a bunch of disk activity.
    */
-  public TreeMap<Text, BytesWritable> getFull(Text row) throws IOException {
+  TreeMap<Text, BytesWritable> getFull(Text row) throws IOException {
     HStoreKey key = new HStoreKey(row, System.currentTimeMillis());
 
     lock.obtainReadLock();
@@ -1029,7 +979,7 @@ public class HRegion implements HConstants {
    * Return an iterator that scans over the HRegion, returning the indicated 
    * columns.  This Iterator must be closed by the caller.
    */
-  public HInternalScannerInterface getScanner(Text[] cols, Text firstRow)
+  HInternalScannerInterface getScanner(Text[] cols, Text firstRow)
   throws IOException {
     lock.obtainReadLock();
     try {
@@ -1067,7 +1017,7 @@ public class HRegion implements HConstants {
    * @return lockid
    * @see #put(long, Text, BytesWritable)
    */
-  public long startUpdate(Text row) throws IOException {
+  long startUpdate(Text row) throws IOException {
     // We obtain a per-row lock, so other clients will block while one client
     // performs an update.  The read lock is released by the client calling
     // #commit or #abort or if the HRegionServer lease on the lock expires.
@@ -1085,8 +1035,7 @@ public class HRegion implements HConstants {
    * This method really just tests the input, then calls an internal localput() 
    * method.
    */
-  public void put(long lockid, Text targetCol, BytesWritable val)
-  throws IOException {
+  void put(long lockid, Text targetCol, BytesWritable val) throws IOException {
     if(val.getSize() == DELETE_BYTES.getSize()
         && val.compareTo(DELETE_BYTES) == 0) {
       throw new IOException("Cannot insert value: " + val);
@@ -1097,11 +1046,11 @@ public class HRegion implements HConstants {
   /**
    * Delete a value or write a value. This is a just a convenience method for put().
    */
-  public void delete(long lockid, Text targetCol) throws IOException {
+  void delete(long lockid, Text targetCol) throws IOException {
     localput(lockid, targetCol, DELETE_BYTES);
   }
 
-  /*
+  /**
    * Private implementation.
    * 
    * localput() is used for both puts and deletes. We just place the values
@@ -1148,7 +1097,7 @@ public class HRegion implements HConstants {
    * writes associated with the given row-lock.  These values have not yet
    * been placed in memcache or written to the log.
    */
-  public void abort(long lockid) throws IOException {
+  void abort(long lockid) throws IOException {
     Text row = getRowFromLock(lockid);
     if(row == null) {
       throw new LockException("No write lock for lockid " + lockid);
@@ -1182,7 +1131,7 @@ public class HRegion implements HConstants {
    * @param lockid Lock for row we're to commit.
    * @throws IOException
    */
-  public void commit(final long lockid) throws IOException {
+  void commit(final long lockid) throws IOException {
     // Remove the row from the pendingWrites list so 
     // that repeated executions won't screw this up.
     Text row = getRowFromLock(lockid);
@@ -1286,7 +1235,8 @@ public class HRegion implements HConstants {
     }
   }
   
-  /** Release the row lock!
+  /** 
+   * Release the row lock!
    * @param lock Name of row whose lock we are to release
    */
   void releaseRowLock(Text row) {
@@ -1309,7 +1259,7 @@ public class HRegion implements HConstants {
     }
   }
   
-  /*
+  /**
    * HScanner is an iterator through a bunch of rows in an HRegion.
    */
   private static class HScanner implements HInternalScannerInterface {
@@ -1321,7 +1271,7 @@ public class HRegion implements HConstants {
 
     /** Create an HScanner with a handle on many HStores. */
     @SuppressWarnings("unchecked")
-    public HScanner(Text[] cols, Text firstRow, HMemcache memcache, HStore[] stores)
+    HScanner(Text[] cols, Text firstRow, HMemcache memcache, HStore[] stores)
     throws IOException {  
       long scanTime = System.currentTimeMillis();
       this.scanners = new HInternalScannerInterface[stores.length + 1];
@@ -1391,9 +1341,12 @@ public class HRegion implements HConstants {
       return multipleMatchers;
     }
     
-    /**
+    /* (non-Javadoc)
+     * 
      * Grab the next row's worth of values.  The HScanner will return the most 
      * recent data value for each row that is not newer than the target time.
+     *
+     * @see org.apache.hadoop.hbase.HInternalScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.TreeMap)
      */
     public boolean next(HStoreKey key, TreeMap<Text, BytesWritable> results)
     throws IOException {
@@ -1477,7 +1430,9 @@ public class HRegion implements HConstants {
       }
     }
 
-    /** All done with the scanner. */
+    /* (non-Javadoc)
+     * @see org.apache.hadoop.hbase.HInternalScannerInterface#close()
+     */
     public void close() {
       for(int i = 0; i < scanners.length; i++) {
         if(scanners[i] != null) {
@@ -1493,16 +1448,17 @@ public class HRegion implements HConstants {
    * Convenience method creating new HRegions.
    * @param regionId ID to use
    * @param tableDesc Descriptor
-   * @param dir Home directory for the new region.
+   * @param rootDir Root directory of HBase instance
    * @param conf
    * @return New META region (ROOT or META).
    * @throws IOException
    */
-  public static HRegion createHRegion(final long regionId,
-    final HTableDescriptor tableDesc, final Path dir, final Configuration conf)
+  static HRegion createHRegion(final long regionId,
+    final HTableDescriptor tableDesc, final Path rootDir,
+    final Configuration conf)
   throws IOException {
     return createHRegion(new HRegionInfo(regionId, tableDesc, null, null),
-      dir, conf, null, null);
+      rootDir, conf, null);
   }
   
   /**
@@ -1510,25 +1466,22 @@ public class HRegion implements HConstants {
    * bootstrap code in the HMaster constructor
    * 
    * @param info Info for region to create.
-   * @param dir Home dir for new region
+   * @param rootDir Root directory for HBase instance
    * @param conf
    * @param initialFiles InitialFiles to pass new HRegion. Pass null if none.
-   * @param oldLogFile Old log file to use in region initialization.  Pass null
-   * if none. 
    * @return new HRegion
    * 
    * @throws IOException
    */
-  public static HRegion createHRegion(final HRegionInfo info,
-    final Path dir, final Configuration conf, final Path initialFiles,
-    final Path oldLogFile) 
+  static HRegion createHRegion(final HRegionInfo info,
+    final Path rootDir, final Configuration conf, final Path initialFiles)
   throws IOException {
-    Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
+    Path regionDir = HStoreFile.getHRegionDir(rootDir, info.regionName);
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
-    return new HRegion(dir,
+    return new HRegion(rootDir,
       new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf),
-      fs, conf, info, initialFiles, oldLogFile);
+      fs, conf, info, initialFiles);
   }
   
   /**
@@ -1541,7 +1494,7 @@ public class HRegion implements HConstants {
    *
    * @throws IOException
    */
-  public static void addRegionToMETA(HRegion meta, HRegion r)
+  static void addRegionToMETA(HRegion meta, HRegion r)
   throws IOException {  
     // The row key is the region name
     long writeid = meta.startUpdate(r.getRegionName());
@@ -1552,7 +1505,7 @@ public class HRegion implements HConstants {
     meta.commit(writeid);
   }
   
-  public static void addRegionToMETA(final HClient client,
+  static void addRegionToMETA(final HClient client,
       final Text table, final HRegion region,
       final HServerAddress serverAddress,
       final long startCode)
@@ -1578,7 +1531,7 @@ public class HRegion implements HConstants {
    * @param regionName Region to remove.
    * @throws IOException
    */
-  public static void removeRegionFromMETA(final HClient client,
+  static void removeRegionFromMETA(final HClient client,
       final Text table, final Text regionName)
   throws IOException {
     client.openTable(table);

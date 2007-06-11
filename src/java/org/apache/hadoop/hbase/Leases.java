@@ -48,7 +48,12 @@ public class Leases {
   TreeSet<Lease> sortedLeases = new TreeSet<Lease>();
   boolean running = true;
 
-  /** Indicate the length of the lease, in milliseconds */
+  /**
+   * Creates a lease
+   * 
+   * @param leasePeriod - length of time (milliseconds) that the lease is valid
+   * @param leaseCheckFrequency - how often the lease should be checked (milliseconds)
+   */
   public Leases(long leasePeriod, long leaseCheckFrequency) {
     this.leasePeriod = leasePeriod;
     this.leaseCheckFrequency = leaseCheckFrequency;
@@ -59,7 +64,7 @@ public class Leases {
   }
 
   /**
-   * Shut down this Leases outfit.  All pending leases will be destroyed, 
+   * Shut down this Leases instance.  All pending leases will be destroyed, 
    * without any cancellation calls.
    */
   public void close() {
@@ -89,15 +94,21 @@ public class Leases {
   }
 
   /** A client obtains a lease... */
+  /**
+   * Obtain a lease
+   * 
+   * @param holderId - name of lease holder
+   * @param resourceId - resource being leased
+   * @param listener - listener that will process lease expirations
+   */
   public void createLease(Text holderId, Text resourceId,
-      final LeaseListener listener)
-  throws IOException {
+      final LeaseListener listener) {
     synchronized(leases) {
       synchronized(sortedLeases) {
         Lease lease = new Lease(holderId, resourceId, listener);
         Text leaseId = lease.getLeaseId();
         if(leases.get(leaseId) != null) {
-          throw new IOException("Impossible state for createLease(): Lease " +
+          throw new AssertionError("Impossible state for createLease(): Lease " +
             getLeaseName(holderId, resourceId) + " is still held.");
         }
         leases.put(leaseId, lease);
@@ -110,6 +121,13 @@ public class Leases {
   }
   
   /** A client renews a lease... */
+  /**
+   * Renew a lease
+   * 
+   * @param holderId - name of lease holder
+   * @param resourceId - resource being leased
+   * @throws IOException
+   */
   public void renewLease(Text holderId, Text resourceId) throws IOException {
     synchronized(leases) {
       synchronized(sortedLeases) {
@@ -132,8 +150,12 @@ public class Leases {
     }
   }
 
-  /** A client explicitly cancels a lease.
-   * The lease-cleanup method is not called.
+  /**
+   * Client explicitly cancels a lease.
+   * 
+   * @param holderId - name of lease holder
+   * @param resourceId - resource being leased
+   * @throws IOException
    */
   public void cancelLease(Text holderId, Text resourceId) throws IOException {
     synchronized(leases) {
@@ -152,7 +174,6 @@ public class Leases {
         sortedLeases.remove(lease);
         leases.remove(leaseId);
 
-        lease.cancelled();
       }
     }     
     if (LOG.isDebugEnabled()) {
@@ -197,37 +218,33 @@ public class Leases {
   }
 
   /** This class tracks a single Lease. */
-  class Lease implements Comparable {
+  @SuppressWarnings("unchecked")
+  private class Lease implements Comparable {
     Text holderId;
     Text resourceId;
     LeaseListener listener;
     long lastUpdate;
 
-    public Lease(Text holderId, Text resourceId, LeaseListener listener) {
+    Lease(Text holderId, Text resourceId, LeaseListener listener) {
       this.holderId = holderId;
       this.resourceId = resourceId;
       this.listener = listener;
       renew();
     }
     
-    public Text getLeaseId() {
+    Text getLeaseId() {
       return createLeaseId(holderId, resourceId);
     }
     
-    public boolean shouldExpire() {
+    boolean shouldExpire() {
       return (System.currentTimeMillis() - lastUpdate > leasePeriod);
     }
     
-    public void renew() {
+    void renew() {
       this.lastUpdate = System.currentTimeMillis();
-      listener.leaseRenewed();
     }
     
-    public void cancelled() {
-      listener.leaseCancelled();
-    }
-    
-    public void expired() {
+    void expired() {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Lease expired " + getLeaseName(this.holderId,
           this.resourceId));

@@ -42,7 +42,7 @@ import org.apache.hadoop.io.Text;
  * Locking and transactions are handled at a higher level.  This API should not 
  * be called directly by any writer, but rather by an HRegion manager.
  ******************************************************************************/
-public class HStore {
+class HStore implements HConstants {
   private static final Log LOG = LogFactory.getLog(HStore.class);
 
   static final String COMPACTION_DIR = "compaction.tmp";
@@ -64,7 +64,7 @@ public class HStore {
   Integer compactLock = 0;
   Integer flushLock = 0;
 
-  private final HLocking lock = new HLocking();
+  final HLocking lock = new HLocking();
 
   TreeMap<Long, MapFile.Reader> maps = new TreeMap<Long, MapFile.Reader>();
   TreeMap<Long, HStoreFile> mapFiles = new TreeMap<Long, HStoreFile>();
@@ -98,8 +98,16 @@ public class HStore {
    *
    * <p>It's assumed that after this constructor returns, the reconstructionLog
    * file will be deleted (by whoever has instantiated the HStore).
+   *
+   * @param dir         - log file directory
+   * @param regionName  - name of region
+   * @param family      - name of column family
+   * @param fs          - file system object
+   * @param reconstructionLog - existing log file to apply if any
+   * @param conf        - configuration object
+   * @throws IOException
    */
-  public HStore(Path dir, Text regionName, HColumnDescriptor family, 
+  HStore(Path dir, Text regionName, HColumnDescriptor family, 
       FileSystem fs, Path reconstructionLog, Configuration conf)
   throws IOException {  
     this.dir = dir;
@@ -200,18 +208,25 @@ public class HStore {
           // Check this edit is for me.  Also, guard against writing
           // METACOLUMN info such as HBASE::CACHEFLUSH entries
           Text column = val.getColumn();
-          if (!key.getRegionName().equals(this.regionName) ||
-              column.equals(HLog.METACOLUMN) ||
-              HStoreKey.extractFamily(column).equals(this.familyName)) {
+          if (column.equals(HLog.METACOLUMN)
+              || !key.getRegionName().equals(this.regionName)
+              || !HStoreKey.extractFamily(column).equals(this.familyName)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Passing on edit " + key.getRegionName() + ", "
-                  + key.getRegionName() + ", " + column.toString() + ": "
-                  + new String(val.getVal().get()));
+                  + column.toString() + ": " + new String(val.getVal().get())
+                  + ", my region: " + this.regionName + ", my column: "
+                  + this.familyName);
             }
             continue;
           }
-          reconstructedCache.put(new HStoreKey(key.getRow(), val.getColumn(), 
-              val.getTimestamp()), val.getVal());
+          byte[] bytes = new byte[val.getVal().getSize()];
+          System.arraycopy(val.getVal().get(), 0, bytes, 0, bytes.length);
+          HStoreKey k = new HStoreKey(key.getRow(), column,val.getTimestamp());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Applying edit " + k.toString() + "="
+                + new String(bytes, UTF8_ENCODING));
+          }
+          reconstructedCache.put(k, new BytesWritable(bytes));
         }
       } finally {
         login.close();
@@ -248,8 +263,11 @@ public class HStore {
     LOG.info("HStore online for " + this.regionName + "/" + this.familyName);
   }
 
-  /** Turn off all the MapFile readers */
-  public void close() throws IOException {
+  /**
+   * Turn off all the MapFile readers
+   * @throws IOException
+   */
+  void close() throws IOException {
     LOG.info("closing HStore for " + this.regionName + "/" + this.familyName);
     this.lock.obtainWriteLock();
     try {
@@ -279,8 +297,13 @@ public class HStore {
    * Also, we are not expecting any reads of this MapFile just yet.
    *
    * Return the entire list of HStoreFiles currently used by the HStore.
+   *
+   * @param inputCache          - memcache to flush
+   * @param logCacheFlushId     - flush sequence number
+   * @return - Vector of all the HStoreFiles in use
+   * @throws IOException
    */
-  public Vector<HStoreFile> flushCache(TreeMap<HStoreKey, BytesWritable> inputCache,
+  Vector<HStoreFile> flushCache(TreeMap<HStoreKey, BytesWritable> inputCache,
       long logCacheFlushId) throws IOException {
     
     return flushCacheHelper(inputCache, logCacheFlushId, true);
@@ -351,7 +374,10 @@ public class HStore {
     }
   }
 
-  public Vector<HStoreFile> getAllMapFiles() {
+  /**
+   * @return - vector of all the HStore files in use
+   */
+  Vector<HStoreFile> getAllMapFiles() {
     this.lock.obtainReadLock();
     try {
       return new Vector<HStoreFile>(mapFiles.values());
@@ -380,8 +406,10 @@ public class HStore {
    * 
    * We don't want to hold the structureLock for the whole time, as a compact() 
    * can be lengthy and we want to allow cache-flushes during this period.
+   * 
+   * @throws IOException
    */
-  public void compact() throws IOException {
+  void compact() throws IOException {
     compactHelper(false);
   }
   
@@ -766,7 +794,7 @@ public class HStore {
    *
    * The returned object should map column names to byte arrays (byte[]).
    */
-  public void getFull(HStoreKey key, TreeMap<Text, BytesWritable> results) throws IOException {
+  void getFull(HStoreKey key, TreeMap<Text, BytesWritable> results) throws IOException {
     this.lock.obtainReadLock();
     try {
       MapFile.Reader[] maparray 
@@ -806,7 +834,7 @@ public class HStore {
    *
    * If 'numVersions' is negative, the method returns all available versions.
    */
-  public BytesWritable[] get(HStoreKey key, int numVersions) throws IOException {
+  BytesWritable[] get(HStoreKey key, int numVersions) throws IOException {
     if(numVersions <= 0) {
       throw new IllegalArgumentException("Number of versions must be > 0");
     }
@@ -833,10 +861,9 @@ public class HStore {
               if(numVersions > 0 && (results.size() >= numVersions)) {
                 break;
                 
-              } else {
-                results.add(readval);
-                readval = new BytesWritable();
               }
+              results.add(readval);
+              readval = new BytesWritable();
             }
           }
         }
@@ -845,12 +872,8 @@ public class HStore {
         }
       }
 
-      if(results.size() == 0) {
-        return null;
-        
-      } else {
-        return results.toArray(new BytesWritable[results.size()]);
-      }
+      return results.size() == 0 ?
+          null :results.toArray(new BytesWritable[results.size()]);
       
     } finally {
       this.lock.releaseReadLock();
@@ -863,7 +886,7 @@ public class HStore {
    * @param midKey      - the middle key for the largest MapFile
    * @return            - size of the largest MapFile
    */
-  public long getLargestFileSize(Text midKey) {
+  long getLargestFileSize(Text midKey) {
     long maxSize = 0L;
     if (this.mapFiles.size() <= 0) {
       return maxSize;
@@ -904,7 +927,7 @@ public class HStore {
   /**
    * @return    Returns the number of map files currently in use
    */
-  public int getNMaps() {
+  int getNMaps() {
     this.lock.obtainReadLock();
     try {
       return maps.size();
@@ -933,7 +956,7 @@ public class HStore {
    * Return a set of MapFile.Readers, one for each HStore file.
    * These should be closed after the user is done with them.
    */
-  public HInternalScannerInterface getScanner(long timestamp, Text targetCols[],
+  HInternalScannerInterface getScanner(long timestamp, Text targetCols[],
       Text firstRow) throws IOException {
     
     return new HStoreScanner(timestamp, targetCols, firstRow);
@@ -947,7 +970,7 @@ public class HStore {
   class HStoreScanner extends HAbstractScanner {
     private MapFile.Reader[] readers;
     
-    public HStoreScanner(long timestamp, Text[] targetCols, Text firstRow)
+    HStoreScanner(long timestamp, Text[] targetCols, Text firstRow)
         throws IOException {
       
       super(timestamp, targetCols);
@@ -1000,6 +1023,7 @@ public class HStore {
      * @param firstRow  - seek to this row
      * @return          - true if this is the first row or if the row was not found
      */
+    @Override
     boolean findFirstRow(int i, Text firstRow) throws IOException {
       HStoreKey firstKey
         = (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow), vals[i]);
@@ -1023,6 +1047,7 @@ public class HStore {
      * @param i - which reader to fetch next value from
      * @return - true if there is more data available
      */
+    @Override
     boolean getNext(int i) throws IOException {
       vals[i] = new BytesWritable();
       if(! readers[i].next(keys[i], vals[i])) {
@@ -1033,6 +1058,7 @@ public class HStore {
     }
     
     /** Close down the indicated reader. */
+    @Override
     void closeSubScanner(int i) {
       try {
         if(readers[i] != null) {
@@ -1052,6 +1078,7 @@ public class HStore {
     }
 
     /** Shut it down! */
+    @Override
     public void close() {
       if(! scannerClosed) {
         try {

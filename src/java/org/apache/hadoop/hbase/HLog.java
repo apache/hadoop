@@ -81,26 +81,26 @@ public class HLog implements HConstants {
   Integer rollLock = 0;
 
   /**
-   * Bundle up a bunch of log files (which are no longer being written to),
-   * into a new file.  Delete the old log files when ready.
-   * @param srcDir Directory of log files to bundle:
-   * e.g. <code>${REGIONDIR}/log_HOST_PORT</code>
-   * @param dstFile Destination file:
-   * e.g. <code>${REGIONDIR}/oldlogfile_HOST_PORT</code>
+   * Split up a bunch of log files, that are no longer being written to,
+   * into new files, one per region.  Delete the old log files when ready.
+   * @param rootDir Root directory of the HBase instance
+   * @param srcDir Directory of log files to split:
+   * e.g. <code>${ROOTDIR}/log_HOST_PORT</code>
    * @param fs FileSystem
    * @param conf HBaseConfiguration
    * @throws IOException
    */
-  public static void consolidateOldLog(Path srcDir, Path dstFile,
-      FileSystem fs, Configuration conf)
-  throws IOException {
+  static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
+      Configuration conf) throws IOException {
+    
     if(LOG.isDebugEnabled()) {
-      LOG.debug("consolidating log files");
+      LOG.debug("splitting log files");
     }
     
     Path logfiles[] = fs.listPaths(srcDir);
-    SequenceFile.Writer newlog = SequenceFile.createWriter(fs, conf, dstFile,
-        HLogKey.class, HLogEdit.class);
+    TreeMap<Text, SequenceFile.Writer> logWriters =
+      new TreeMap<Text, SequenceFile.Writer>();
+    
     try {
       for(int i = 0; i < logfiles.length; i++) {
         SequenceFile.Reader in =
@@ -109,7 +109,17 @@ public class HLog implements HConstants {
           HLogKey key = new HLogKey();
           HLogEdit val = new HLogEdit();
           while(in.next(key, val)) {
-            newlog.append(key, val);
+            Text regionName = key.getRegionName();
+            SequenceFile.Writer w = logWriters.get(regionName);
+            if(w == null) {
+              Path logfile = new Path(HStoreFile.getHRegionDir(rootDir,
+                  regionName), HREGION_OLDLOGFILE_NAME);
+              
+              w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
+                  HLogEdit.class);
+              logWriters.put(regionName, w);
+            }
+            w.append(key, val);
           }
           
         } finally {
@@ -118,7 +128,9 @@ public class HLog implements HConstants {
       }
       
     } finally {
-      newlog.close();
+      for(SequenceFile.Writer w: logWriters.values()) {
+        w.close();
+      }
     }
     
     if(fs.exists(srcDir)) {
@@ -132,7 +144,7 @@ public class HLog implements HConstants {
       }
     }
     if(LOG.isDebugEnabled()) {
-      LOG.debug("log file consolidation completed");
+      LOG.debug("log file splitting completed");
     }
   }
 
@@ -142,8 +154,13 @@ public class HLog implements HConstants {
    * You should never have to load an existing log.  If there is a log
    * at startup, it should have already been processed and deleted by 
    * the time the HLog object is started up.
+   * 
+   * @param fs
+   * @param dir
+   * @param conf
+   * @throws IOException
    */
-  public HLog(FileSystem fs, Path dir, Configuration conf) throws IOException {
+  HLog(FileSystem fs, Path dir, Configuration conf) throws IOException {
     this.fs = fs;
     this.dir = dir;
     this.conf = conf;
@@ -163,8 +180,10 @@ public class HLog implements HConstants {
    *
    * The 'this' lock limits access to the current writer so
    * we don't append multiple items simultaneously.
+   * 
+   * @throws IOException
    */
-  public void rollWriter() throws IOException {
+  void rollWriter() throws IOException {
     synchronized(rollLock) {
 
       // Try to roll the writer to a new file.  We may have to
@@ -267,8 +286,21 @@ public class HLog implements HConstants {
     return new Path(dir, HLOG_DATFILE + String.format("%1$03d", filenum));
   }
 
-  /** Shut down the log. */
-  public synchronized void close() throws IOException {
+  /**
+   * Shut down the log and delete the log directory
+   * @throws IOException
+   */
+  synchronized void closeAndDelete() throws IOException {
+    rollWriter();
+    close();
+    fs.delete(dir);
+  }
+  
+  /**
+   * Shut down the log.
+   * @throws IOException
+   */
+  synchronized void close() throws IOException {
     if(LOG.isDebugEnabled()) {
       LOG.debug("closing log writer");
     }
@@ -300,7 +332,7 @@ public class HLog implements HConstants {
    * @param timestamp
    * @throws IOException
    */
-  public synchronized void append(Text regionName, Text tableName, Text row,
+  synchronized void append(Text regionName, Text tableName, Text row,
       TreeMap<Text, BytesWritable> columns, long timestamp)
   throws IOException {
     if(closed) {
@@ -327,8 +359,8 @@ public class HLog implements HConstants {
     }
   }
 
-  /** How many items have been added to the log? */
-  public int getNumEntries() {
+  /** @return How many items have been added to the log */
+  int getNumEntries() {
     return numEntries;
   }
 
@@ -340,6 +372,12 @@ public class HLog implements HConstants {
     return logSeqNum++;
   }
   
+  /**
+   * Obtain a specified number of sequence numbers
+   * 
+   * @param num - number of sequence numbers to obtain
+   * @return - array of sequence numbers
+   */
   synchronized long[] obtainSeqNum(int num) {
     long[] results = new long[num];
     for (int i = 0; i < num; i++) {
@@ -358,7 +396,7 @@ public class HLog implements HConstants {
    * @return sequence ID to pass {@link #completeCacheFlush(Text, Text, long)}
    * @see #completeCacheFlush(Text, Text, long)
    */
-  public synchronized long startCacheFlush() {
+  synchronized long startCacheFlush() {
     while (insideCacheFlush) {
       try {
         wait();
@@ -370,8 +408,13 @@ public class HLog implements HConstants {
     return obtainSeqNum();
   }
 
-  /** Complete the cache flush */
-  public synchronized void completeCacheFlush(final Text regionName,
+  /** Complete the cache flush
+   * @param regionName
+   * @param tableName
+   * @param logSeqId
+   * @throws IOException
+   */
+  synchronized void completeCacheFlush(final Text regionName,
     final Text tableName, final long logSeqId)
   throws IOException {
     if(closed) {
