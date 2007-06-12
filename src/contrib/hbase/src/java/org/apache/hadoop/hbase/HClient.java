@@ -207,38 +207,48 @@ public class HClient implements HConstants {
   /**
    * Creates a new table
    * 
-   * @param desc - table descriptor for table
+   * @param desc table descriptor for table
    * 
-   * @throws IllegalArgumentException - if the table name is reserved
-   * @throws MasterNotRunningException - if master is not running
-   * @throws NoServerForRegionException - if root region is not being served
+   * @throws IllegalArgumentException if the table name is reserved
+   * @throws MasterNotRunningException if master is not running
+   * @throws NoServerForRegionException if root region is not being served
    * @throws IOException
    */
-  public synchronized void createTable(HTableDescriptor desc) throws IOException {
+  public synchronized void createTable(HTableDescriptor desc)
+  throws IOException {
+    createTableAsync(desc);
+
+    // Save the current table
+    SortedMap<Text, RegionLocation> oldServers = this.tableServers;
+    try {
+      // Wait for new table to come on-line
+      findServersForTable(desc.getName());
+    } finally {
+      if(oldServers != null && oldServers.size() != 0) {
+        // Restore old current table if there was one
+        this.tableServers = oldServers;
+      }
+    }
+  }
+  
+  /**
+   * Creates a new table but does not block and wait for it to come online.
+   * 
+   * @param desc table descriptor for table
+   * 
+   * @throws IllegalArgumentException if the table name is reserved
+   * @throws MasterNotRunningException if master is not running
+   * @throws NoServerForRegionException if root region is not being served
+   * @throws IOException
+   */
+  public synchronized void createTableAsync(HTableDescriptor desc)
+      throws IOException {
     checkReservedTableName(desc.getName());
     checkMaster();
     try {
       this.master.createTable(desc);
-      
-    } catch(RemoteException e) {
+    } catch (RemoteException e) {
       handleRemoteException(e);
-    }
-
-    // Save the current table
-    
-    SortedMap<Text, RegionLocation> oldServers = this.tableServers;
-
-    try {
-      // Wait for new table to come on-line
-
-      findServersForTable(desc.getName());
-      
-    } finally {
-      if(oldServers != null && oldServers.size() != 0) {
-        // Restore old current table if there was one
-      
-        this.tableServers = oldServers;
-      }
     }
   }
 
