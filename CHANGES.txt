@@ -30,3 +30,4 @@ Trunk (unreleased changes)
      visibility (HADOOP-1466)
  16. HADOOP-1479 Fix NPE in HStore#get if store file only has keys < passed key.
  17. HADOOP-1476 Distributed version of 'Performance Evaluation' script
+ 18. HADOOP-1469 Asychronous table creation
