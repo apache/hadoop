@@ -107,6 +107,10 @@ Trunk (unreleased changes)
  34. HADOOP-1447.  Add support in contrib/data_join for text inputs.
      (Senthil Subramanian via cutting)
 
+ 35. HADOOP-1456.  Fix TestDecommission assertion failure by setting
+     the namenode to ignore the load on datanodes while allocating
+     replicas.  (Dhruba Borthakur via tomwhite)
+
 
 Release 0.13.0 - 2007-06-08
 

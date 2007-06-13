@@ -127,13 +127,13 @@ public class TestDecommission extends TestCase {
       for (int j = 0; j < nodes.length; j++) {     // for each replica
         if (nodes[j].getName().equals(downnode)) {
           hasdown++;
-          System.out.println("Block " + blk + " replica " +
+          System.out.println("Block " + blk.getBlock() + " replica " +
                              nodes[j].getName() + " is decommissioned.");
         }
       }
-      System.out.println("Block " + blk + " has " + hasdown +
+      System.out.println("Block " + blk.getBlock() + " has " + hasdown +
                          " decommissioned replica.");
-      assertEquals("Number of replicas for block" + blk,
+      assertEquals("Number of replicas for block" + blk.getBlock(),
                    Math.min(numDatanodes, repl+hasdown), nodes.length);  
     }
   }
@@ -251,6 +251,7 @@ public class TestDecommission extends TestCase {
    */
   public void testDecommission() throws IOException {
     Configuration conf = new Configuration();
+    conf.setBoolean("dfs.replication.considerLoad", false);
 
     // Set up the hosts/exclude files.
     FileSystem localFileSys = FileSystem.getLocal(conf);
