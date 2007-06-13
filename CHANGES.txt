@@ -111,6 +111,9 @@ Trunk (unreleased changes)
      the namenode to ignore the load on datanodes while allocating
      replicas.  (Dhruba Borthakur via tomwhite)
 
+ 36. HADOOP-1396.  Fix FileNotFoundException on DFS block.
+     (Dhruba Borthakur via tomwhite)
+
 
 Release 0.13.0 - 2007-06-08
 
