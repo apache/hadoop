@@ -114,6 +114,9 @@ Trunk (unreleased changes)
  36. HADOOP-1396.  Fix FileNotFoundException on DFS block.
      (Dhruba Borthakur via tomwhite)
 
+ 37. HADOOP-1467.  Remove redundant counters from WordCount example.
+     (Owen O'Malley via tomwhite)
+
 
 Release 0.13.0 - 2007-06-08
 
