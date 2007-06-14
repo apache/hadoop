@@ -938,9 +938,9 @@ class FSNamesystem implements FSConstants {
     FileUnderConstruction v = pendingCreates.get(src);
     v.getBlocks().add(b);
     pendingCreateBlocks.add(b);
-    NameNode.stateChangeLog.debug("BLOCK* NameSystem.allocateBlock: "
-                                  +src+ ". "+b.getBlockName()+
-                                  " is created and added to pendingCreates and pendingCreateBlocks");      
+    NameNode.stateChangeLog.info("BLOCK* NameSystem.allocateBlock: "
+                                 +src+ ". "+b.getBlockName()+
+                                 " is created and added to pendingCreates and pendingCreateBlocks");      
     return b;
   }
 
@@ -1033,7 +1033,7 @@ class FSNamesystem implements FSConstants {
     if (count > 1) {
       addToInvalidates(blk, dn);
       removeStoredBlock(blk, getDatanode(dn));
-      NameNode.stateChangeLog.info("BLOCK* NameSystem.invalidateBlocks: "
+      NameNode.stateChangeLog.debug("BLOCK* NameSystem.invalidateBlocks: "
                                    + blk.getBlockName() + " on " 
                                    + dn.getName() + " listed for deletion.");
     } else {
@@ -1084,7 +1084,7 @@ class FSNamesystem implements FSConstants {
                blocksMap.nodeIterator(b); it.hasNext();) {
           DatanodeDescriptor node = it.next();
           addToInvalidates(b, node);
-          NameNode.stateChangeLog.debug("BLOCK* NameSystem.delete: "
+          NameNode.stateChangeLog.info("BLOCK* NameSystem.delete: "
                                         + b.getBlockName() + " is added to invalidSet of " 
                                         + node.getName());
         }
@@ -2064,14 +2064,12 @@ class FSNamesystem implements FSConstants {
     if (added) {
       curReplicaDelta = 1;
       // 
-      // Hairong: I would prefer to set the level of next logrecord
-      // to be debug.
-      // But at startup time, because too many new blocks come in
-      // they simply take up all the space in the log file 
-      // So I set the level to be trace
+      // At startup time, because too many new blocks come in
+      // they take up lots of space in the log file. 
+      // So, we log only when namenode is out of safemode.
       //
-      if (NameNode.stateChangeLog.isTraceEnabled()) {
-        NameNode.stateChangeLog.trace("BLOCK* NameSystem.addStoredBlock: "
+      if (!isInSafeMode()) {
+        NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
                                       +"blockMap updated: "+node.getName()+" is added to "+block.getBlockName());
       }
     } else {
@@ -2429,15 +2427,15 @@ class FSNamesystem implements FSConstants {
       recentInvalidateSets.put(nodeID.getStorageID(), invalidateSet);
     }
         
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
+    if (NameNode.stateChangeLog.isInfoEnabled()) {
       StringBuffer blockList = new StringBuffer();
       for (int i = 0; i < sendBlock.size(); i++) {
         blockList.append(' ');
         Block block = sendBlock.get(i);
         blockList.append(block.getBlockName());
       }
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockToInvalidate: "
-                                    +"ask "+nodeID.getName()+" to delete " + blockList);
+      NameNode.stateChangeLog.info("BLOCK* NameSystem.blockToInvalidate: "
+                                   +"ask "+nodeID.getName()+" to delete " + blockList);
     }
     return sendBlock.toArray(new Block[sendBlock.size()]);
   }

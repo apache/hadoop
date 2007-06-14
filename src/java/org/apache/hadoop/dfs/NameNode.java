@@ -361,7 +361,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    * check the blocks are actually corrupt. 
    */
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.reportBadBlocks");
+    stateChangeLog.info("*DIR* NameNode.reportBadBlocks");
     for (int i = 0; i < blocks.length; i++) {
       Block blk = blocks[i].getBlock();
       DatanodeInfo[] nodes = blocks[i].getLocations();
