@@ -123,6 +123,10 @@ Trunk (unreleased changes)
  39. HADOOP-1269.  Finer grained locking in HDFS namenode.
      (Dhruba Borthakur via cutting)
 
+ 40. HADOOP-1438.  Improve HDFS documentation, correcting typos and
+     making images appear in PDF.  Also update copyright date for all
+     docs.  (Luke Nezda via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
