@@ -45,8 +45,10 @@ public class MiniHBaseCluster implements HConstants {
    * 
    * @param conf
    * @param nRegionNodes
+   * @throws IOException 
    */
-  public MiniHBaseCluster(Configuration conf, int nRegionNodes) {
+  public MiniHBaseCluster(Configuration conf, int nRegionNodes)
+  throws IOException {
     this(conf, nRegionNodes, true);
   }
   
@@ -56,9 +58,11 @@ public class MiniHBaseCluster implements HConstants {
    * @param conf
    * @param nRegionNodes
    * @param dfsCluster
+   * @throws IOException 
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
-      MiniDFSCluster dfsCluster) {
+      MiniDFSCluster dfsCluster)
+  throws IOException {
 
     this.conf = conf;
     this.cluster = dfsCluster;
@@ -72,15 +76,16 @@ public class MiniHBaseCluster implements HConstants {
    * @param miniHdfsFilesystem If true, set the hbase mini
    * cluster atop a mini hdfs cluster.  Otherwise, use the
    * filesystem configured in <code>conf</code>.
+   * @throws IOException 
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
-      final boolean miniHdfsFilesystem) {
+      final boolean miniHdfsFilesystem)
+  throws IOException {
     this.conf = conf;
     
     if (miniHdfsFilesystem) {
       try {
         this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
-        
       } catch(Throwable t) {
         LOG.error("Failed setup of mini dfs cluster", t);
         t.printStackTrace();
@@ -90,14 +95,14 @@ public class MiniHBaseCluster implements HConstants {
     init(nRegionNodes);
   }
 
-  private void init(int nRegionNodes) {
+  private void init(int nRegionNodes) throws IOException {
     try {
       try {
         this.fs = FileSystem.get(conf);
         this.parentdir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
         fs.mkdirs(parentdir);
 
-      } catch(Throwable e) {
+      } catch(IOException e) {
         LOG.error("Failed setup of FileSystem", e);
         throw e;
       }
@@ -118,18 +123,17 @@ public class MiniHBaseCluster implements HConstants {
       String address = master.getMasterAddress().toString();
       this.conf.set(MASTER_ADDRESS, address);
 
-      // Start the HRegionServers
-
-      if(this.conf.get(REGIONSERVER_ADDRESS) == null) {
-        this.conf.set(REGIONSERVER_ADDRESS, "localhost:0");
+      // Start the HRegionServers.  If > 1 region servers,need to set
+      // port to '0'.
+      if(this.conf.get(REGIONSERVER_ADDRESS) == null || nRegionNodes > 1) {
+        this.conf.set(REGIONSERVER_ADDRESS, DEFAULT_HOST + ":0");
       }
       
       LOG.info("Starting HRegionServers");
       startRegionServers(this.conf, nRegionNodes);
-      
-    } catch(Throwable e) {
-      e.printStackTrace();
+    } catch(IOException e) {
       shutdown();
+      throw e;
     }
   }
 
@@ -183,12 +187,16 @@ public class MiniHBaseCluster implements HConstants {
   public void shutdown() {
     LOG.info("Shutting down the HBase Cluster");
     for(int i = 0; i < regionServers.length; i++) {
-      regionServers[i].stop();
+      if (regionServers[i] != null) {
+        regionServers[i].stop();
+      }
     }
     master.shutdown();
     for(int i = 0; i < regionServers.length; i++) {
       try {
-        regionThreads[i].join();
+        if (regionThreads[i] != null) {
+          regionThreads[i].join();
+        }
       } catch(InterruptedException e) {
         // continue
       }

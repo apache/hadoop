@@ -241,8 +241,8 @@ class HRegion implements HConstants {
   TreeMap<Text, Long> rowsToLocks = new TreeMap<Text, Long>();
   TreeMap<Long, Text> locksToRows = new TreeMap<Long, Text>();
   TreeMap<Text, HStore> stores = new TreeMap<Text, HStore>();
-  TreeMap<Long, TreeMap<Text, BytesWritable>> targetColumns 
-      = new TreeMap<Long, TreeMap<Text, BytesWritable>>();
+  Map<Long, TreeMap<Text, BytesWritable>> targetColumns 
+    = new HashMap<Long, TreeMap<Text, BytesWritable>>();
   
   HMemcache memcache;
 
@@ -1066,9 +1066,9 @@ class HRegion implements HConstants {
     final BytesWritable val)
   throws IOException {
     checkColumn(targetCol);
-    
+
     Text row = getRowFromLock(lockid);
-    if(row == null) {
+    if (row == null) {
       throw new LockException("No write lock for lockid " + lockid);
     }
 
@@ -1078,15 +1078,15 @@ class HRegion implements HConstants {
     synchronized(row) {
       // This check makes sure that another thread from the client
       // hasn't aborted/committed the write-operation.
-      if(row != getRowFromLock(lockid)) {
+      if (row != getRowFromLock(lockid)) {
         throw new LockException("Locking error: put operation on lock " +
             lockid + " unexpected aborted by another thread");
       }
       
-      TreeMap<Text, BytesWritable> targets = targetColumns.get(lockid);
-      if(targets == null) {
+      TreeMap<Text, BytesWritable> targets = this.targetColumns.get(lockid);
+      if (targets == null) {
         targets = new TreeMap<Text, BytesWritable>();
-        targetColumns.put(lockid, targets);
+        this.targetColumns.put(lockid, targets);
       }
       targets.put(targetCol, val);
     }
@@ -1117,7 +1117,7 @@ class HRegion implements HConstants {
             + lockid + " unexpected aborted by another thread");
       }
       
-      targetColumns.remove(lockid);
+      this.targetColumns.remove(lockid);
       releaseRowLock(row);
     }
   }
@@ -1144,12 +1144,15 @@ class HRegion implements HConstants {
     synchronized(row) {
       // Add updates to the log and add values to the memcache.
       long commitTimestamp = System.currentTimeMillis();
-      log.append(regionInfo.regionName, regionInfo.tableDesc.getName(), row, 
-        targetColumns.get(Long.valueOf(lockid)), commitTimestamp);
-      memcache.add(row, targetColumns.get(Long.valueOf(lockid)),
-        commitTimestamp);
-      // OK, all done!
-      targetColumns.remove(Long.valueOf(lockid));
+      TreeMap<Text, BytesWritable> columns = 
+        this.targetColumns.get(lockid);
+      if (columns != null && columns.size() > 0) {
+        log.append(regionInfo.regionName, regionInfo.tableDesc.getName(),
+          row, columns, commitTimestamp);
+        memcache.add(row, columns, commitTimestamp);
+        // OK, all done!
+      }
+      targetColumns.remove(lockid);
       releaseRowLock(row);
     }
     recentCommits++;

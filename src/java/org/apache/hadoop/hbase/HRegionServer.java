@@ -16,6 +16,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
 
 /*******************************************************************************
@@ -59,29 +61,29 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   static final Log LOG = LogFactory.getLog(HRegionServer.class);
   
-  volatile boolean stopRequested;
-  volatile boolean abortRequested;
-  private Path rootDir;
-  HServerInfo info;
-  Configuration conf;
-  private Random rand;
+  protected volatile boolean stopRequested;
+  protected volatile boolean abortRequested;
+  private final Path rootDir;
+  protected final HServerInfo serverInfo;
+  protected final Configuration conf;
+  private final Random rand;
   
   // region name -> HRegion
-  SortedMap<Text, HRegion> onlineRegions;
-  Map<Text, HRegion> retiringRegions = new HashMap<Text, HRegion>();
+  protected final SortedMap<Text, HRegion> onlineRegions;
+  protected final Map<Text, HRegion> retiringRegions = new HashMap<Text, HRegion>();
   
-  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  private Vector<HMsg> outboundMsgs;
+  protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final Vector<HMsg> outboundMsgs;
 
   int numRetries;
-  long threadWakeFrequency;
-  private long msgInterval;
+  protected final long threadWakeFrequency;
+  private final long msgInterval;
   
   // Check to see if regions should be split
-  long splitOrCompactCheckFrequency;
-  private SplitOrCompactChecker splitOrCompactChecker;
-  private Thread splitOrCompactCheckerThread;
-  Integer splitOrCompactLock = Integer.valueOf(0);
+  protected final long splitOrCompactCheckFrequency;
+  private final SplitOrCompactChecker splitOrCompactChecker;
+  private final Thread splitOrCompactCheckerThread;
+  protected final Integer splitOrCompactLock = new Integer(0);
   
   /**
    * Interface used by the {@link org.apache.hadoop.io.retry} mechanism.
@@ -211,7 +213,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             region.getRegionName());
           for (int i = 0; i < newRegions.length; i++) {
             HRegion.addRegionToMETA(client, tableToUpdate, newRegions[i],
-              info.getServerAddress(), info.getStartCode());
+              serverInfo.getServerAddress(), serverInfo.getStartCode());
           }
           
           // Now tell the master about the new regions
@@ -247,9 +249,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   // Cache flushing  
-  private Flusher cacheFlusher;
-  private Thread cacheFlusherThread;
-  Integer cacheFlusherLock = Integer.valueOf(0);
+  private final Flusher cacheFlusher;
+  private final Thread cacheFlusherThread;
+  protected final Integer cacheFlusherLock = new Integer(0);
   /** Runs periodically to flush the memcache */
   class Flusher implements Runnable {
     /* (non-Javadoc)
@@ -308,10 +310,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   // Logging
   
-  HLog log;
-  private LogRoller logRoller;
-  private Thread logRollerThread;
-  Integer logRollerLock = Integer.valueOf(0);
+  protected final HLog log;
+  private final LogRoller logRoller;
+  private final Thread logRollerThread;
+  protected final Integer logRollerLock = new Integer(0);
   
   /** Runs periodically to determine if the log should be rolled */
   class LogRoller implements Runnable {
@@ -369,7 +371,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   public HRegionServer(Configuration conf) throws IOException {
     this(new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR)),
-        new HServerAddress(conf.get(REGIONSERVER_ADDRESS, "localhost:0")),
+        new HServerAddress(conf.get(REGIONSERVER_ADDRESS,
+          DEFAULT_REGIONSERVER_ADDRESS)),
         conf);
   }
   
@@ -420,28 +423,33 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
     try {
       // Server to handle client requests
-      
       this.server = RPC.getServer(this, address.getBindAddress(), 
         address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
         false, conf);
 
-      this.info = new HServerInfo(new HServerAddress(server.getListenerAddress()),
-          this.rand.nextLong());
+       // Use configured nameserver & interface to get local hostname.
+       // 'serverInfo' is sent to master.  Should have name of this host rather than
+       // 'localhost' or 0.0.0.0 or 127.0.0.1 in it.
+       String localHostname = DNS.getDefaultHost(
+         conf.get("dfs.datanode.dns.interface","default"),
+         conf.get("dfs.datanode.dns.nameserver","default"));
+       InetSocketAddress hostnameAddress = new InetSocketAddress(localHostname,
+         server.getListenerAddress().getPort());
+       this.serverInfo = new HServerInfo(new HServerAddress(hostnameAddress),
+         this.rand.nextLong());
 
       // Local file paths
-      
-      String serverName =
-        this.info.getServerAddress().getBindAddress() + "_"
-        + this.info.getServerAddress().getPort();
+      String serverName = localHostname + "_" +
+        this.serverInfo.getServerAddress().getPort();
       
       Path logdir = new Path(rootDir, "log" + "_" + serverName);
 
       // Logging
-      
       this.fs = FileSystem.get(conf);
       if(fs.exists(logdir)) {
-        throw new RegionServerRunningException("region server already running at "
-            + this.info.getServerAddress().toString());
+        throw new RegionServerRunningException("region server already running at " +
+          this.serverInfo.getServerAddress().toString() + " because logdir " +
+          " exists");
       }
       
       this.log = new HLog(fs, logdir, conf);
@@ -449,12 +457,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.logRollerThread = new Thread(logRoller);
 
       // Remote HMaster
-      
       this.hbaseMaster = (HMasterRegionInterface)RPC.waitForProxy(
           HMasterRegionInterface.class, HMasterRegionInterface.versionID,
           new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
           conf);
-
     } catch(IOException e) {
       this.stopRequested = true;
       throw e;
@@ -512,7 +518,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // continue
     }
     LOG.info("HRegionServer stopped at: " +
-      info.getServerAddress().toString());
+      serverInfo.getServerAddress().toString());
   }
   
   /**
@@ -541,8 +547,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
     try {
       this.server.start();
-      LOG.info("HRegionServer started at: " + info.getServerAddress().toString());
-      
+      LOG.info("HRegionServer started at: " + serverInfo.getServerAddress().toString());
     } catch(IOException e) {
       LOG.error(e);
       stopRequested = true;
@@ -558,7 +563,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           LOG.debug("Telling master we are up");
         }
         
-        hbaseMaster.regionServerStartup(info);
+        hbaseMaster.regionServerStartup(serverInfo);
         
         if (LOG.isDebugEnabled()) {
           LOG.debug("Done telling master we are up");
@@ -590,7 +595,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           }
 
           try {
-            HMsg msgs[] = hbaseMaster.regionServerReport(info, outboundArray);
+            HMsg msgs[] = hbaseMaster.regionServerReport(serverInfo, outboundArray);
             lastMsg = System.currentTimeMillis();
 
             // Queue up the HMaster's instruction stream for processing
@@ -679,7 +684,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       } catch(IOException e) {
         LOG.warn(e);
       }
-      LOG.info("aborting server at: " + info.getServerAddress().toString());
+      LOG.info("aborting server at: " + serverInfo.getServerAddress().toString());
       
     } else {
       Vector<HRegion> closedRegions = closeAllRegions();
@@ -701,14 +706,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
 
         LOG.info("telling master that region server is shutting down at: "
-            +info.getServerAddress().toString());
+            + serverInfo.getServerAddress().toString());
         
-        hbaseMaster.regionServerReport(info, exitMsg);
+        hbaseMaster.regionServerReport(serverInfo, exitMsg);
 
       } catch(IOException e) {
         LOG.warn(e);
       }
-      LOG.info("stopping server at: " + info.getServerAddress().toString());
+      LOG.info("stopping server at: " + serverInfo.getServerAddress().toString());
     }
 
     join();

@@ -3,14 +3,14 @@
 <configuration>
   <property>
     <name>hbase.master</name>
-    <value>localhost:60000</value>
+    <value>0.0.0.0:60000</value>
     <description>The host and port that the HBase master runs at.
         TODO: Support 'local' (All running in single context).
     </description>
   </property>
   <property>
     <name>hbase.regionserver</name>
-    <value>localhost:60010</value>
+    <value>0.0.0.0:60010</value>
     <description>The host and port a HBase region server runs at.
     </description>
   </property>
