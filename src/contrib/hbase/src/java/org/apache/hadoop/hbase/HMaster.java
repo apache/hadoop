@@ -818,16 +818,12 @@ public class HMaster implements HConstants, HMasterInterface,
   public void regionServerStartup(HServerInfo serverInfo) throws IOException {
     String s = serverInfo.getServerAddress().toString().trim();
     HServerInfo storedInfo = null;
-
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("received start message from: " + s);
-    }
+    LOG.info("received start message from: " + s);
     
     // If we get the startup message but there's an old server by that
     // name, then we can timeout the old one right away and register
     // the new one.
     storedInfo = serversToServerInfo.remove(s);
-
     if(storedInfo != null && !closed) {
       synchronized(msgQueue) {
         msgQueue.addLast(new PendingServerShutdown(storedInfo));
@@ -836,9 +832,7 @@ public class HMaster implements HConstants, HMasterInterface,
     }
 
     // Either way, record the new server
-
     serversToServerInfo.put(s, serverInfo);
-
     if(!closed) {
       Text serverLabel = new Text(s);
       LOG.debug("Created lease for " + serverLabel);
@@ -1101,11 +1095,8 @@ public class HMaster implements HConstants, HMasterInterface,
     }
 
     // Figure out what the RegionServer ought to do, and write back.
-
     if(unassignedRegions.size() > 0) {
-
       // Open new regions as necessary
-
       int targetForServer = (int) Math.ceil(unassignedRegions.size()
           / (1.0 * serversToServerInfo.size()));
 

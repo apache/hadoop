@@ -17,28 +17,32 @@ Set <code>JAVA_HOME</code> to the root of your Java installation</li>
 <h2>Getting Started</h2>
 <p>First, you need a working instance of Hadoop.  Download a recent release from
 <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/">Hadoop downloads</a>. 
-Unpack the release and connect to its top-level directory.  Edit the file
-<code>conf/hadoop-env.sh</code> to define at least <code>JAVA_HOME</code>.  Also,
-add site-particular customizations to the file <code>conf/hadoop-site.xml</code>.
-Try the following command:
-<pre>bin/hadoop
-</pre>
-This will display the documentation for the Hadoop command script.
-</p>
-<p>Next, start hbase servers.  Currently each server -- the master server and the
-'slave' regionservers -- must be started manually (FIX).
-<pre>src/contrib/hbase/bin/hbase master start
-src/contrib/hbase/bin/hbase regionserver start
+Unpack the release and connect to its top-level directory.  Let this be
+<code>${HADOOP_HOME}.  Edit the file <code>${HADOOP_HOME}/conf/hadoop-env.sh</code>
+to define at least <code>JAVA_HOME</code>.  Also, add site-particular
+customizations to the file <code>${HADOOP_HOME}/conf/hadoop-site.xml</code>.
+Try the following command: <pre>bin/hadoop
 </pre>
 </p>
-<p>As for hadoop, local customizations can be added to
-<code>src/contrib/hbase/conf/hbase-site.xml</code>.
+<p>Next, change to the hbase root.  Let this be <code>${HBASE_HOME}</code>  It is
+usually located at <code>${HADOOP_HOME}/src/contrib/hbase</code>.  Configure hbase.
+Edit <code>${HBASE_HOME}/conf/hbase-env.sh</code> and 
+<code>${HBASE_HOME}/conf/hbase-site.xml</code> to make site particular settings.
+List the hosts running regionservers in <code>${HBASE_HOME}/conf/regionservers</code>.
+</p>
+<p>
+Here is how to start and then stop hbase:
+<pre>${HBASE_HOME}/bin/start-hbase.sh
+${HBASE_HOME}/bin/stop-hbase.sh
+</pre>
+Logs can be found in ${HADOOP_LOG_DIR}.
 </p>
 
 <h2>Related Documentation</h2>
 
 <ul>
-  <li><a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">Hbase/HbaseArchitecture</a>
+  <li><a href="http://wiki.apache.org/lucene-hadoop/Hbase">HBase Home Page</a>
+  <li><a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">Hbase Architecture</a>
 </ul>
 
 </body>

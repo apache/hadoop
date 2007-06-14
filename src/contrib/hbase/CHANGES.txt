@@ -32,3 +32,5 @@ Trunk (unreleased changes)
  17. HADOOP-1476 Distributed version of 'Performance Evaluation' script
  18. HADOOP-1469 Asychronous table creation
  19. HADOOP-1415 Integrate BSD licensed bloom filter implementation.
+ 20. HADOOP-1465 Add cluster stop/start scripts for hbase
+

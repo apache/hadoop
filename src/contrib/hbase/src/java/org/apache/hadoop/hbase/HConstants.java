@@ -38,14 +38,16 @@ public interface HConstants {
   /** Parameter name for master address */
   static final String MASTER_ADDRESS = "hbase.master";
   
+  static final String DEFAULT_HOST = "0.0.0.0";
+  
   /** Default master address */
-  static final String DEFAULT_MASTER_ADDRESS = "localhost:60000";
+  static final String DEFAULT_MASTER_ADDRESS = DEFAULT_HOST + ":60000";
 
   /** Parameter name for hbase.regionserver address. */
   static final String REGIONSERVER_ADDRESS = "hbase.regionserver";
   
   /** Default region server address */
-  static final String DEFAULT_REGIONSERVER_ADDRESS = "localhost:60010";
+  static final String DEFAULT_REGIONSERVER_ADDRESS = DEFAULT_HOST + ":60010";
 
   /** Parameter name for how often threads should wake up */
   static final String THREAD_WAKE_FREQUENCY = "hbase.server.thread.wakefrequency";

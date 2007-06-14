@@ -28,32 +28,15 @@ public class TestCleanRegionServerExit extends HBaseClusterTestCase {
     client = new HClient(conf);
   }
   
-  /** The test */
-  public void testCleanRegionServerExit() {
-    try {
-      // When the META table can be opened, the region servers are running
-      
-      client.openTable(HConstants.META_TABLE_NAME);
-      
-    } catch(IOException e) {
-      e.printStackTrace();
-      fail();
-    }
-    
-    // Shut down a region server cleanly
-    
+  /** The test 
+   * @throws IOException 
+   * @throws InterruptedException */
+  public void testCleanRegionServerExit()
+  throws IOException, InterruptedException {
+    // When the META table can be opened, the region servers are running
+    this.client.openTable(HConstants.META_TABLE_NAME);
     this.cluster.stopRegionServer(0);
-    try {
-      this.cluster.regionThreads[0].join();
-      
-    } catch(InterruptedException e) {
-    }
-    
-    try {
-      Thread.sleep(60000);              // Wait for cluster to adjust
-      
-    } catch(InterruptedException e) {
-    }
+    this.cluster.regionThreads[0].join();
+    Thread.sleep(60000);              // Wait for cluster to adjust
   }
-
 }

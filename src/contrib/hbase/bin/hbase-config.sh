@@ -1,6 +1,7 @@
 # included in all the hbase scripts with source command
 # should not be executable directly
 # also should not be passed any arguments, since we need original $*
+# Modelled after $HADOOP_HOME/bin/hadoop-env.sh.
 
 # resolve links - $0 may be a softlink
 
@@ -42,12 +43,12 @@ do
         shift
       ;;
     --hosts=*)
-        regionservers=`echo $1|sed 's/[^=]*=\(.*\)/\1/'`
+        HBASE_REGIONSERVERS=`echo $1|sed 's/[^=]*=\(.*\)/\1/'`
         shift
       ;;
 
-      *)
-        break
+    *)
+      break
       ;; 
   esac
 done
