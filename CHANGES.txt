@@ -118,7 +118,7 @@ Trunk (unreleased changes)
      (Owen O'Malley via tomwhite)
 
  38. HADOOP-1139.  Log HDFS block transitions at INFO level, to better
-     enable diagnosis of problems.  (Dhruba Borthakur via tomwhite)
+     enable diagnosis of problems.  (Dhruba Borthakur via cutting)
 
 
 Release 0.13.0 - 2007-06-08
