@@ -1273,9 +1273,10 @@ class DFSClient implements FSConstants {
                          " seconds");
               }
               try {
-                LOG.debug("NotReplicatedYetException sleeping " + src +
+                LOG.warn("NotReplicatedYetException sleeping " + src +
                           " retries left " + retries);
                 Thread.sleep(sleeptime);
+                sleeptime *= 2;
               } catch (InterruptedException ie) {
               }
             }                

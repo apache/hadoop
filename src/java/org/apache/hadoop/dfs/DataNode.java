@@ -289,22 +289,6 @@ public class DataNode implements FSConstants, Runnable {
       }
     }
     String errorMsg = null;
-    // verify build version
-    if (!nsInfo.getBuildVersion().equals(Storage.getBuildVersion())) {
-      errorMsg = "Incompatible build versions: namenode BV = " 
-        + nsInfo.getBuildVersion() + "; datanode BV = "
-        + Storage.getBuildVersion();
-      LOG.fatal(errorMsg);
-      try {
-        namenode.errorReport(dnRegistration,
-                             DatanodeProtocol.NOTIFY, errorMsg);
-      } catch(SocketTimeoutException e) {  // namenode is busy
-        LOG.info("Problem connecting to server: " + getNameNodeAddr());
-      }
-      throw new IOException(errorMsg);
-    }
-    assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
-      "Data-node and name-node layout versions must be the same.";
     return nsInfo;
   }
 

@@ -18,26 +18,34 @@
 package org.apache.hadoop.dfs;
 
 import java.util.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 class Host2NodesMap {
   private HashMap<String, DatanodeDescriptor[]> map
     = new HashMap<String, DatanodeDescriptor[]>();
   private Random r = new Random();
+  private ReadWriteLock hostmapLock = new ReentrantReadWriteLock();
                       
   /** Check if node is already in the map. */
-  synchronized boolean contains(DatanodeDescriptor node) {
+  boolean contains(DatanodeDescriptor node) {
     if (node==null) {
       return false;
     }
       
     String host = node.getHost();
-    DatanodeDescriptor[] nodes = map.get(host);
-    if (nodes != null) {
-      for(DatanodeDescriptor containedNode:nodes) {
-        if (node==containedNode) {
-          return true;
+    hostmapLock.readLock().lock();
+    try {
+      DatanodeDescriptor[] nodes = map.get(host);
+      if (nodes != null) {
+        for(DatanodeDescriptor containedNode:nodes) {
+          if (node==containedNode) {
+            return true;
+          }
         }
       }
+    } finally {
+      hostmapLock.readLock().unlock();
     }
     return false;
   }
@@ -45,85 +53,101 @@ class Host2NodesMap {
   /** add node to the map 
    * return true if the node is added; false otherwise.
    */
-  synchronized boolean add(DatanodeDescriptor node) {
-    if (node==null || contains(node)) {
-      return false;
-    }
+  boolean add(DatanodeDescriptor node) {
+    hostmapLock.writeLock().lock();
+    try {
+      if (node==null || contains(node)) {
+        return false;
+      }
       
-    String host = node.getHost();
-    DatanodeDescriptor[] nodes = map.get(host);
-    DatanodeDescriptor[] newNodes;
-    if (nodes==null) {
-      newNodes = new DatanodeDescriptor[1];
-      newNodes[0]=node;
-    } else { // rare case: more than one datanode on the host
-      newNodes = new DatanodeDescriptor[nodes.length+1];
-      System.arraycopy(nodes, 0, newNodes, 0, nodes.length);
-      newNodes[nodes.length] = node;
+      String host = node.getHost();
+      DatanodeDescriptor[] nodes = map.get(host);
+      DatanodeDescriptor[] newNodes;
+      if (nodes==null) {
+        newNodes = new DatanodeDescriptor[1];
+        newNodes[0]=node;
+      } else { // rare case: more than one datanode on the host
+        newNodes = new DatanodeDescriptor[nodes.length+1];
+        System.arraycopy(nodes, 0, newNodes, 0, nodes.length);
+        newNodes[nodes.length] = node;
+      }
+      map.put(host, newNodes);
+      return true;
+    } finally {
+      hostmapLock.writeLock().unlock();
     }
-    map.put(host, newNodes);
-    return true;
   }
     
   /** remove node from the map 
    * return true if the node is removed; false otherwise.
    */
-  synchronized boolean remove(DatanodeDescriptor node) {
+  boolean remove(DatanodeDescriptor node) {
     if (node==null) {
       return false;
     }
       
     String host = node.getHost();
-    DatanodeDescriptor[] nodes = map.get(host);
-    if (nodes==null) {
-      return false;
-    }
-    if (nodes.length==1) {
-      if (nodes[0]==node) {
-        map.remove(host);
-        return true;
-      } else {
+    hostmapLock.writeLock().lock();
+    try {
+
+      DatanodeDescriptor[] nodes = map.get(host);
+      if (nodes==null) {
         return false;
       }
-    }
-    //rare case
-    int i=0;
-    for(; i<nodes.length; i++) {
-      if (nodes[i]==node) {
-        break;
+      if (nodes.length==1) {
+        if (nodes[0]==node) {
+          map.remove(host);
+          return true;
+        } else {
+          return false;
+        }
       }
-    }
-    if (i==nodes.length) {
-      return false;
-    } else {
-      DatanodeDescriptor[] newNodes;
-      newNodes = new DatanodeDescriptor[nodes.length-1];
-      System.arraycopy(nodes, 0, newNodes, 0, i);
-      System.arraycopy(nodes, i+1, newNodes, i, nodes.length-i-1);
-      map.put(host, newNodes);
-      return true;
+      //rare case
+      int i=0;
+      for(; i<nodes.length; i++) {
+        if (nodes[i]==node) {
+          break;
+        }
+      }
+      if (i==nodes.length) {
+        return false;
+      } else {
+        DatanodeDescriptor[] newNodes;
+        newNodes = new DatanodeDescriptor[nodes.length-1];
+        System.arraycopy(nodes, 0, newNodes, 0, i);
+        System.arraycopy(nodes, i+1, newNodes, i, nodes.length-i-1);
+        map.put(host, newNodes);
+        return true;
+      }
+    } finally {
+      hostmapLock.writeLock().unlock();
     }
   }
     
   /** get a data node by its host.
    * @return DatanodeDescriptor if found; otherwise null.
    */
-  synchronized DatanodeDescriptor getDatanodeByHost(String host) {
+  DatanodeDescriptor getDatanodeByHost(String host) {
     if (host==null) {
       return null;
     }
       
-    DatanodeDescriptor[] nodes = map.get(host);
-    // no entry
-    if (nodes== null) {
-      return null;
+    hostmapLock.readLock().lock();
+    try {
+      DatanodeDescriptor[] nodes = map.get(host);
+      // no entry
+      if (nodes== null) {
+        return null;
+      }
+      // one node
+      if (nodes.length == 1) {
+        return nodes[0];
+      }
+      // more than one node
+      return nodes[r.nextInt(nodes.length)];
+    } finally {
+      hostmapLock.readLock().unlock();
     }
-    // one node
-    if (nodes.length == 1) {
-      return nodes[0];
-    }
-    // more than one node
-    return nodes[r.nextInt(nodes.length)];
   }
     
   /**
@@ -144,16 +168,21 @@ class Host2NodesMap {
       host = name.substring(0, colon);
     }
 
-    DatanodeDescriptor[] nodes = map.get(host);
-    // no entry
-    if (nodes== null) {
-      return null;
-    }
-    for(DatanodeDescriptor containedNode:nodes) {
-      if (name.equals(containedNode.getName())) {
-        return containedNode;
+    hostmapLock.readLock().lock();
+    try {
+      DatanodeDescriptor[] nodes = map.get(host);
+      // no entry
+      if (nodes== null) {
+        return null;
       }
+      for(DatanodeDescriptor containedNode:nodes) {
+        if (name.equals(containedNode.getName())) {
+          return containedNode;
+        }
+      }
+      return null;
+    } finally {
+      hostmapLock.readLock().unlock();
     }
-    return null;
   }
 }

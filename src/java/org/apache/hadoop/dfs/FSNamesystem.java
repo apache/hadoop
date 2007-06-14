@@ -429,28 +429,39 @@ class FSNamesystem implements FSConstants {
    * @see ClientProtocol#open(String, long, long)
    * @see ClientProtocol#getBlockLocations(String, long, long)
    */
-  synchronized LocatedBlocks  getBlockLocations(String clientMachine,
-                                                String src, 
-                                                long offset, 
-                                                long length
-                                                ) throws IOException {
+  LocatedBlocks getBlockLocations(String clientMachine,
+                                  String src, 
+                                  long offset, 
+                                  long length
+                                  ) throws IOException {
     if (offset < 0) {
       throw new IOException("Negative offset is not supported. File: " + src );
     }
     if (length < 0) {
       throw new IOException("Negative length is not supported. File: " + src );
     }
-    return  getBlockLocations(clientMachine, 
-                              dir.getFileINode(src), 
-                              offset, length, Integer.MAX_VALUE);
+
+    DatanodeDescriptor client = null;
+    LocatedBlocks blocks =  getBlockLocations(dir.getFileINode(src), 
+                                              offset, length, 
+                                              Integer.MAX_VALUE);
+    if (blocks == null) {
+      return null;
+    }
+    client = host2DataNodeMap.getDatanodeByHost(clientMachine);
+    for (Iterator<LocatedBlock> it = blocks.getLocatedBlocks().iterator();
+         it.hasNext();) {
+      LocatedBlock block = (LocatedBlock) it.next();
+      clusterMap.sortByDistance(client, 
+                                (DatanodeDescriptor[])(block.getLocations()));
+    }
+    return blocks;
   }
   
-  private LocatedBlocks getBlockLocations(String clientMachine,
-                                          FSDirectory.INode inode, 
-                                          long offset, 
-                                          long length,
-                                          int nrBlocksToReturn
-                                          ) throws IOException {
+  private synchronized LocatedBlocks getBlockLocations(FSDirectory.INode inode, 
+                                                       long offset, 
+                                                       long length,
+                                                       int nrBlocksToReturn) {
     if(inode == null || inode.isDir()) {
       return null;
     }
@@ -479,8 +490,6 @@ class FSNamesystem implements FSConstants {
     
     long endOff = offset + length;
     
-    DatanodeDescriptor client;
-    client = host2DataNodeMap.getDatanodeByHost(clientMachine);
     do {
       // get block locations
       int numNodes = blocksMap.numNodes(blocks[curBlk]);
@@ -491,7 +500,6 @@ class FSNamesystem implements FSConstants {
             blocksMap.nodeIterator(blocks[curBlk]); it.hasNext();) {
           machineSet[numNodes++] = it.next();
         }
-        clusterMap.sortByDistance(client, machineSet);
       }
       results.add(new LocatedBlock(blocks[curBlk], machineSet, curPos));
       curPos += blocks[curBlk].getNumBytes();
@@ -585,7 +593,54 @@ class FSNamesystem implements FSConstants {
    * @throws IOException if the filename is invalid
    *         {@link FSDirectory#isValidToCreate(UTF8)}.
    */
-  public synchronized LocatedBlock startFile(UTF8 src, 
+  public LocatedBlock startFile(UTF8 src, 
+                                UTF8 holder, 
+                                UTF8 clientMachine, 
+                                boolean overwrite,
+                                short replication,
+                                long blockSize
+                                ) throws IOException {
+
+    //
+    // Create file into pendingCreates and get the first blockId
+    //
+    Block newBlock = startFileInternal(src, holder, clientMachine,
+                                       overwrite, replication,
+                                       blockSize);
+
+    //
+    // Get the array of replication targets
+    //
+    try {
+      DatanodeDescriptor clientNode = 
+        host2DataNodeMap.getDatanodeByHost(clientMachine.toString());
+      DatanodeDescriptor targets[] = replicator.chooseTarget(replication,
+                                                             clientNode, null, blockSize);
+      if (targets.length < this.minReplication) {
+        if (clusterMap.getNumOfLeaves() == 0) {
+          throw new IOException("Failed to create file " + src
+                                + " on client " + clientMachine
+                                + " because this cluster has no datanodes.");
+        }
+        throw new IOException("Failed to create file " + src
+                              + " on client " + clientMachine
+                              + " because there were not enough datanodes available. "
+                              + "Found " + targets.length
+                              + " datanodes but MIN_REPLICATION for the cluster is "
+                              + "configured to be "
+                              + this.minReplication
+                              + ".");
+      }
+      return new LocatedBlock(newBlock, targets, 0L);
+
+    } catch (IOException ie) {
+      NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: "
+                                   + ie.getMessage());
+      throw ie;
+    }
+  }
+
+  public synchronized Block startFileInternal(UTF8 src, 
                                              UTF8 holder, 
                                              UTF8 clientMachine, 
                                              boolean overwrite,
@@ -666,26 +721,8 @@ class FSNamesystem implements FSConstants {
         }
       }
 
-      // Get the array of replication targets
       DatanodeDescriptor clientNode = 
         host2DataNodeMap.getDatanodeByHost(clientMachine.toString());
-      DatanodeDescriptor targets[] = replicator.chooseTarget(replication,
-                                                             clientNode, null, blockSize);
-      if (targets.length < this.minReplication) {
-        if (clusterMap.getNumOfLeaves() == 0) {
-          throw new IOException("Failed to create file "+src
-                                + " on client " + clientMachine
-                                + " because this cluster has no datanodes.");
-        }
-        throw new IOException("Failed to create file "+src
-                              + " on client " + clientMachine
-                              + " because there were not enough datanodes available. "
-                              + "Found " + targets.length
-                              + " datanodes but MIN_REPLICATION for the cluster is "
-                              + "configured to be "
-                              + this.minReplication
-                              + ".");
-      }
 
       // Reserve space for this pending file
       pendingCreates.put(src, 
@@ -709,9 +746,9 @@ class FSNamesystem implements FSConstants {
         }
         lease.startedCreate(src);
       }
-
+      
       // Create first block
-      return new LocatedBlock(allocateBlock(src), targets, 0L);
+      return allocateBlock(src);
     } catch (IOException ie) {
       NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: "
                                    +ie.getMessage());
@@ -730,38 +767,52 @@ class FSNamesystem implements FSConstants {
    * are replicated.  Will return an empty 2-elt array if we want the
    * client to "try again later".
    */
-  public synchronized LocatedBlock getAdditionalBlock(UTF8 src, 
-                                                      UTF8 clientName
-                                                      ) throws IOException {
+  public LocatedBlock getAdditionalBlock(UTF8 src, 
+                                         UTF8 clientName
+                                         ) throws IOException {
+    long fileLength, blockSize;
+    int replication;
+    DatanodeDescriptor clientNode = null;
+    Block newBlock = null;
+
     NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: file "
                                   +src+" for "+clientName);
-    if (isInSafeMode())
-      throw new SafeModeException("Cannot add block to " + src, safeMode);
-    FileUnderConstruction pendingFile = pendingCreates.get(src);
-    // make sure that we still have the lease on this file
-    if (pendingFile == null) {
-      throw new LeaseExpiredException("No lease on " + src);
-    }
-    if (!pendingFile.getClientName().equals(clientName)) {
-      throw new LeaseExpiredException("Lease mismatch on " + src + 
-                                      " owned by " + pendingFile.getClientName() + 
-                                      " and appended by " + clientName);
+
+    synchronized (this) {
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot add block to " + src, safeMode);
+      }
+
+      //
+      // make sure that we still have the lease on this file
+      //
+      FileUnderConstruction pendingFile = pendingCreates.get(src);
+      if (pendingFile == null) {
+        throw new LeaseExpiredException("No lease on " + src);
+      }
+      if (!pendingFile.getClientName().equals(clientName)) {
+        throw new LeaseExpiredException("Lease mismatch on " + src + 
+                                        " owned by " + pendingFile.getClientName() + 
+                                        " and appended by " + clientName);
+      }
+
+      //
+      // If we fail this, bad things happen!
+      //
+      if (!checkFileProgress(pendingFile, false)) {
+        throw new NotReplicatedYetException("Not replicated yet:" + src);
+      }
+      fileLength = pendingFile.computeFileLength();
+      blockSize = pendingFile.getBlockSize();
+      clientNode = pendingFile.getClientNode();
+      replication = (int)pendingFile.getReplication();
+      newBlock = allocateBlock(src);
     }
 
-    //
-    // If we fail this, bad things happen!
-    //
-    if (!checkFileProgress(pendingFile, false)) {
-      throw new NotReplicatedYetException("Not replicated yet:" + src);
-    }
-
-    // Get the array of replication targets
-    DatanodeDescriptor clientNode = pendingFile.getClientNode();
-    DatanodeDescriptor targets[] = replicator.chooseTarget(
-                                                           (int)(pendingFile.getReplication()),
+    DatanodeDescriptor targets[] = replicator.chooseTarget(replication,
                                                            clientNode,
                                                            null,
-                                                           pendingFile.getBlockSize());
+                                                           blockSize);
     if (targets.length < this.minReplication) {
       throw new IOException("File " + src + " could only be replicated to " +
                             targets.length + " nodes, instead of " +
@@ -769,9 +820,7 @@ class FSNamesystem implements FSConstants {
     }
         
     // Create next block
-    return new LocatedBlock(allocateBlock(src), 
-                            targets, 
-                            pendingFile.computeFileLength());
+    return new LocatedBlock(newBlock, targets, fileLength);
   }
 
   /**
@@ -930,7 +979,7 @@ class FSNamesystem implements FSConstants {
   /**
    * Allocate a block at the given pending filename
    */
-  synchronized Block allocateBlock(UTF8 src) {
+  private Block allocateBlock(UTF8 src) {
     Block b = null;
     do {
       b = new Block(FSNamesystem.randBlockId.nextLong(), 0);
