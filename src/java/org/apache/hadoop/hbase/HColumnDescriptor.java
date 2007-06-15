@@ -65,7 +65,8 @@ public class HColumnDescriptor implements WritableComparable {
   byte compressionType;                         // Compression setting if any
   boolean inMemory;                             // Serve reads from in-memory cache
   int maxValueLength;                           // Maximum value size
-  boolean bloomFilterEnabled;                   // True if column has a bloom filter
+  private boolean bloomFilterSpecified;         // True if bloom filter was specified
+  BloomFilterDescriptor bloomFilter;            // Descriptor of bloom filter
   byte versionNumber;                           // Version number of this class
   
   /**
@@ -77,7 +78,8 @@ public class HColumnDescriptor implements WritableComparable {
     this.compressionType = COMPRESSION_NONE;
     this.inMemory = false;
     this.maxValueLength = Integer.MAX_VALUE;
-    this.bloomFilterEnabled = false;
+    this.bloomFilterSpecified = false;
+    this.bloomFilter = null;
     this.versionNumber = COLUMN_DESCRIPTOR_VERSION;
   }
   
@@ -100,7 +102,7 @@ public class HColumnDescriptor implements WritableComparable {
    * @param inMemory            - If true, column data should be kept in a
    *                              HRegionServer's cache
    * @param maxValueLength      - Restrict values to &lt;= this value
-   * @param bloomFilter         - Enable a bloom filter for this column
+   * @param bloomFilter         - Enable the specified bloom filter for this column
    * 
    * @throws IllegalArgumentException if passed a family name that is made of 
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> and does not
@@ -108,7 +110,7 @@ public class HColumnDescriptor implements WritableComparable {
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
   public HColumnDescriptor(Text name, int maxVersions, CompressionType compression,
-      boolean inMemory, int maxValueLength, boolean bloomFilter) {
+      boolean inMemory, int maxValueLength, BloomFilterDescriptor bloomFilter) {
     String familyStr = name.toString();
     Matcher m = LEGAL_FAMILY_NAME.matcher(familyStr);
     if(m == null || !m.matches()) {
@@ -138,7 +140,8 @@ public class HColumnDescriptor implements WritableComparable {
     }
     this.inMemory = inMemory;
     this.maxValueLength = maxValueLength;
-    this.bloomFilterEnabled = bloomFilter;
+    this.bloomFilter = bloomFilter;
+    this.bloomFilterSpecified = this.bloomFilter == null ? false : true;
     this.versionNumber = COLUMN_DESCRIPTOR_VERSION;
   }
   
@@ -195,7 +198,8 @@ public class HColumnDescriptor implements WritableComparable {
     
     return "(" + name + ", max versions: " + maxVersions + ", compression: "
       + compression + ", in memory: " + inMemory + ", max value length: "
-      + maxValueLength + ", bloom filter:" + bloomFilterEnabled + ")";
+      + maxValueLength + ", bloom filter: "
+      + (bloomFilterSpecified ? bloomFilter.toString() : "none") + ")";
   }
   
   @Override
@@ -210,8 +214,11 @@ public class HColumnDescriptor implements WritableComparable {
     result ^= Byte.valueOf(this.compressionType).hashCode();
     result ^= Boolean.valueOf(this.inMemory).hashCode();
     result ^= Integer.valueOf(this.maxValueLength).hashCode();
-    result ^= Boolean.valueOf(this.bloomFilterEnabled).hashCode();
+    result ^= Boolean.valueOf(this.bloomFilterSpecified).hashCode();
     result ^= Byte.valueOf(this.versionNumber).hashCode();
+    if(this.bloomFilterSpecified) {
+      result ^= this.bloomFilter.hashCode();
+    }
     return result;
   }
   
@@ -226,7 +233,12 @@ public class HColumnDescriptor implements WritableComparable {
     this.compressionType = in.readByte();
     this.inMemory = in.readBoolean();
     this.maxValueLength = in.readInt();
-    this.bloomFilterEnabled = in.readBoolean();
+    this.bloomFilterSpecified = in.readBoolean();
+    
+    if(bloomFilterSpecified) {
+      bloomFilter = new BloomFilterDescriptor();
+      bloomFilter.readFields(in);
+    }
   }
 
   public void write(DataOutput out) throws IOException {
@@ -236,7 +248,11 @@ public class HColumnDescriptor implements WritableComparable {
     out.writeByte(this.compressionType);
     out.writeBoolean(this.inMemory);
     out.writeInt(this.maxValueLength);
-    out.writeBoolean(this.bloomFilterEnabled);
+    out.writeBoolean(this.bloomFilterSpecified);
+    
+    if(bloomFilterSpecified) {
+      bloomFilter.write(out);
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -279,15 +295,19 @@ public class HColumnDescriptor implements WritableComparable {
     }
     
     if(result == 0) {
-      if(this.bloomFilterEnabled == other.bloomFilterEnabled) {
+      if(this.bloomFilterSpecified == other.bloomFilterSpecified) {
         result = 0;
         
-      } else if(this.bloomFilterEnabled) {
+      } else if(this.bloomFilterSpecified) {
         result = -1;
         
       } else {
         result = 1;
       }
+    }
+    
+    if(result == 0 && this.bloomFilterSpecified) {
+      result = this.bloomFilter.compareTo(other.bloomFilter);
     }
     
     return result;

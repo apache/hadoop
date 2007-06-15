@@ -31,12 +31,13 @@ import java.util.*;
  * This class handles all that path-building stuff for you.
  ******************************************************************************/
 public class HStoreFile implements HConstants, WritableComparable {
-  public static final byte INFO_SEQ_NUM = 0;
-  public static final String HSTORE_DATFILE_PREFIX = "mapfile.dat.";
-  public static final String HSTORE_INFOFILE_PREFIX = "mapfile.info.";
-  public static final String HSTORE_DATFILE_DIR = "mapfiles";
-  public static final String HSTORE_INFO_DIR = "info";
-  static Random rand = new Random();
+  static final byte INFO_SEQ_NUM = 0;
+  static final String HSTORE_DATFILE_PREFIX = "mapfile.dat.";
+  static final String HSTORE_INFOFILE_PREFIX = "mapfile.info.";
+  static final String HSTORE_DATFILE_DIR = "mapfiles";
+  static final String HSTORE_INFO_DIR = "info";
+  static final String HSTORE_FILTER_DIR = "filter";
+  private static Random rand = new Random();
 
   Path dir;
   Text regionName;
@@ -52,7 +53,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * When merging or splitting HRegions, we might want to modify one of the 
    * params for an HStoreFile (effectively moving it elsewhere).
    */
-  public HStoreFile(Configuration conf) {
+  HStoreFile(Configuration conf) {
     this.conf = conf;
     this.dir = new Path(Path.CUR_DIR);
     this.regionName = new Text();
@@ -60,7 +61,7 @@ public class HStoreFile implements HConstants, WritableComparable {
     this.fileId = 0;
   }
   
-  public HStoreFile(Configuration conf, Path dir, Text regionName, 
+  HStoreFile(Configuration conf, Path dir, Text regionName, 
       Text colFamily, long fileId) {
     
     this.conf = conf;
@@ -72,30 +73,30 @@ public class HStoreFile implements HConstants, WritableComparable {
 
   // Get the individual components
   
-  public Path getDir() {
+  Path getDir() {
     return dir;
   }
   
-  public Text getRegionName() {
+  Text getRegionName() {
     return regionName;
   }
   
-  public Text getColFamily() {
+  Text getColFamily() {
     return colFamily;
   }
   
-  public long fileId() {
+  long fileId() {
     return fileId;
   }
 
   // Build full filenames from those components
   
-  public Path getMapFilePath() {
+  Path getMapFilePath() {
     return new Path(HStoreFile.getMapDir(dir, regionName, colFamily), 
         HSTORE_DATFILE_PREFIX + fileId);
   }
   
-  public Path getInfoFilePath() {
+  Path getInfoFilePath() {
     return new Path(HStoreFile.getInfoDir(dir, regionName, colFamily), 
         HSTORE_INFOFILE_PREFIX + fileId);
   }
@@ -103,22 +104,27 @@ public class HStoreFile implements HConstants, WritableComparable {
   // Static methods to build partial paths to internal directories.  Useful for 
   // HStore construction and log-rebuilding.
   
-  public static Path getMapDir(Path dir, Text regionName, Text colFamily) {
+  static Path getMapDir(Path dir, Text regionName, Text colFamily) {
     return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName, 
         new Path(colFamily.toString(), HSTORE_DATFILE_DIR)));
   }
 
-  public static Path getInfoDir(Path dir, Text regionName, Text colFamily) {
+  static Path getInfoDir(Path dir, Text regionName, Text colFamily) {
     return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName, 
         new Path(colFamily.toString(), HSTORE_INFO_DIR)));
   }
+  
+  static Path getFilterDir(Path dir, Text regionName, Text colFamily) {
+    return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName,
+        new Path(colFamily.toString(), HSTORE_FILTER_DIR)));
+  }
 
-  public static Path getHStoreDir(Path dir, Text regionName, Text colFamily) {
+  static Path getHStoreDir(Path dir, Text regionName, Text colFamily) {
     return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName, 
         colFamily.toString()));
   }
 
-  public static Path getHRegionDir(Path dir, Text regionName) {
+  static Path getHRegionDir(Path dir, Text regionName) {
     return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName));
   }
 
@@ -199,7 +205,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * Break this HStoreFile file into two new parts, which live in different 
    * brand-new HRegions.
    */
-  public void splitStoreFile(Text midKey, HStoreFile dstA, HStoreFile dstB,
+  void splitStoreFile(Text midKey, HStoreFile dstA, HStoreFile dstB,
       FileSystem fs, Configuration conf) throws IOException {
 
     // Copy the appropriate tuples to one MapFile or the other.
@@ -251,7 +257,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * Write to this HStoreFile with all the contents of the given source HStoreFiles.
    * We are merging multiple regions into a single new one.
    */
-  public void mergeStoreFiles(Vector<HStoreFile> srcFiles, FileSystem fs, 
+  void mergeStoreFiles(Vector<HStoreFile> srcFiles, FileSystem fs, 
       Configuration conf) throws IOException {
 
     // Copy all the source MapFile tuples into this HSF's MapFile
@@ -295,7 +301,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   }
 
   /** Read in an info file, give it a unique ID. */
-  public long loadInfo(FileSystem fs) throws IOException {
+  long loadInfo(FileSystem fs) throws IOException {
     Path p = getInfoFilePath();
     DataInputStream in = new DataInputStream(fs.open(p));
     
@@ -304,9 +310,8 @@ public class HStoreFile implements HConstants, WritableComparable {
       if(flag == INFO_SEQ_NUM) {
         return in.readLong();
         
-      } else {
-        throw new IOException("Cannot process log file: " + p);
       }
+      throw new IOException("Cannot process log file: " + p);
       
     } finally {
       in.close();
@@ -314,7 +319,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   }
   
   /** Write the file-identifier to disk */
-  public void writeInfo(FileSystem fs, long infonum) throws IOException {
+  void writeInfo(FileSystem fs, long infonum) throws IOException {
     Path p = getInfoFilePath();
     DataOutputStream out = new DataOutputStream(fs.create(p));
     
@@ -326,7 +331,8 @@ public class HStoreFile implements HConstants, WritableComparable {
       out.close();
     }
   }
-  
+
+  @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
@@ -344,6 +350,9 @@ public class HStoreFile implements HConstants, WritableComparable {
   // Writable
   //////////////////////////////////////////////////////////////////////////////
 
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
+   */
   public void write(DataOutput out) throws IOException {
     out.writeUTF(dir.toString());
     regionName.write(out);
@@ -351,6 +360,9 @@ public class HStoreFile implements HConstants, WritableComparable {
     out.writeLong(fileId);
   }
   
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
+   */
   public void readFields(DataInput in) throws IOException {
     this.dir = new Path(in.readUTF());
     this.regionName.readFields(in);
@@ -362,6 +374,9 @@ public class HStoreFile implements HConstants, WritableComparable {
   // Comparable
   //////////////////////////////////////////////////////////////////////////////
 
+  /* (non-Javadoc)
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
   public int compareTo(Object o) {
     HStoreFile other = (HStoreFile) o;
     int result = this.dir.compareTo(other.dir);    

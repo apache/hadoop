@@ -27,12 +27,12 @@ public class HGlobals implements HConstants {
   static {
     rootTableDesc = new HTableDescriptor(ROOT_TABLE_NAME.toString());
     rootTableDesc.addFamily(new HColumnDescriptor(COLUMN_FAMILY, 1,
-        HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE, false));
+        HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE, null));
     
     rootRegionInfo = new HRegionInfo(0L, rootTableDesc, null, null);
     
     metaTableDesc = new HTableDescriptor(META_TABLE_NAME.toString());
     metaTableDesc.addFamily(new HColumnDescriptor(COLUMN_FAMILY, 1,
-        HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE, false));
+        HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE, null));
   }
 }
