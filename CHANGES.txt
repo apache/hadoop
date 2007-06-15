@@ -133,6 +133,10 @@ Trunk (unreleased changes)
  42. HADOOP-1472.  Fix so that timed-out tasks are counted as failures
      rather than as killed.  (Arun C Murthy via cutting)
 
+ 43. HADOOP-1234.  Fix a race condition in file cache that caused
+     tasktracker to not be able to find cached files.
+     (Arun C Murthy via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
