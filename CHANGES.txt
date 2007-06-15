@@ -150,6 +150,9 @@ Trunk (unreleased changes)
  47. HADOOP-1320.  Rewrite RandomWriter example to bypass reduce.
      (Arun C Murthy via cutting)
 
+ 48. HADOOP-1449.  Add some examples to contrib/data_join.
+     (Senthil Subramanian via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

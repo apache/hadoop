@@ -20,4 +20,9 @@ to call at top-level: ant deploy-contrib compile-core-test
     </jar>
   </target>
 
+  <target name="jar-examples" depends="jar">
+   <antcall target="hadoopbuildcontrib.jar-examples">
+   </antcall>
+  </target>
+
 </project>

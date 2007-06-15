@@ -16,7 +16,9 @@
 
   <property name="src.dir"  location="${root}/src/java"/>
   <property name="src.test" location="${root}/src/test"/>
+  <property name="src.examples" location="${root}/src/examples"/>
 
+  <available file="${src.examples}" type="dir" property="examples.available"/>
   <available file="${src.test}" type="dir" property="test.available"/>
 
   <property name="conf.dir" location="${hadoop.root}/conf"/>
@@ -26,6 +28,7 @@
   <property name="build.dir" location="${hadoop.root}/build/contrib/${name}"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
+  <property name="build.examples" location="${build.dir}/examples"/>
   <property name="hadoop.log.dir" location="${build.dir}/test/logs"/>
   <!-- all jars together -->
   <property name="deploy.dir" location="${hadoop.root}/build/"/>
@@ -71,6 +74,7 @@
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.test}"/>
+    <mkdir dir="${build.examples}"/>
     <mkdir dir="${hadoop.log.dir}"/>
     <antcall target="init-contrib"/>
   </target>
@@ -91,6 +95,23 @@
       <classpath refid="classpath"/>
     </javac>
   </target>
+
+
+  <!-- ======================================================= -->
+  <!-- Compile a Hadoop contrib's example files (if available) -->
+  <!-- ======================================================= -->
+  <target name="compile-examples" depends="compile" if="examples.available">
+    <echo message="contrib: ${name}"/>
+    <javac
+     encoding="${build.encoding}"
+     srcdir="${src.examples}"
+     includes="**/*.java"
+     destdir="${build.examples}"
+     debug="${javac.debug}">
+      <classpath refid="classpath"/>
+    </javac>
+  </target>
+
 
   <!-- ================================================================== -->
   <!-- Compile test code                                                  -->
@@ -118,8 +139,22 @@
       basedir="${build.classes}"      
     />
   </target>
+
   
-  <target name="deploy" depends="jar">
+  <!-- ====================================================== -->
+  <!-- Make a Hadoop contrib's examples jar                   -->
+  <!-- ====================================================== -->
+  <target name="jar-examples" depends="compile-examples">
+    <echo message="contrib: ${name}"/>
+    <jar jarfile="${build.dir}/hadoop-${name}-examples.jar">
+      <fileset dir="${build.classes}">
+      </fileset>
+      <fileset dir="${build.examples}">
+      </fileset>
+    </jar>
+  </target>
+  
+  <target name="deploy" depends="jar, jar-examples">
     <echo message="contrib: ${name}"/>
     <mkdir dir="${deploy.dir}"/>
     <copy file="${build.dir}/hadoop-${name}.jar" todir="${deploy.dir}"/>
