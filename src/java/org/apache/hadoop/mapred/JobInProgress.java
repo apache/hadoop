@@ -101,7 +101,10 @@ class JobInProgress {
   // Per-job counters
   public static enum Counter { 
     NUM_FAILED_MAPS, 
-    NUM_FAILED_REDUCES
+    NUM_FAILED_REDUCES,
+    TOTAL_LAUNCHED_MAPS,
+    TOTAL_LAUNCHED_REDUCES,
+    DATA_LOCAL_MAPS
   }
   private Counters jobCounters = new Counters();
   
@@ -508,12 +511,14 @@ class JobInProgress {
       LOG.info("Cannot create task split for " + profile.getJobId());
       return null;
     }
+    
     ArrayList mapCache = (ArrayList)hostToMaps.get(tts.getHost());
     int target = findNewTask(tts, clusterSize, status.mapProgress(), 
                              maps, mapCache);
     if (target == -1) {
       return null;
     }
+    
     boolean wasRunning = maps[target].isRunning();
     Task result = maps[target].getTaskToRun(tts.getTrackerName());
     if (!wasRunning) {
@@ -522,6 +527,9 @@ class JobInProgress {
                                  maps[target].getTIPId(), Values.MAP.name(),
                                  System.currentTimeMillis());
     }
+
+    jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_MAPS, 1);
+
     return result;
   }    
 
@@ -543,6 +551,7 @@ class JobInProgress {
     if (target == -1) {
       return null;
     }
+    
     boolean wasRunning = reduces[target].isRunning();
     Task result = reduces[target].getTaskToRun(tts.getTrackerName());
     if (!wasRunning) {
@@ -551,6 +560,9 @@ class JobInProgress {
                                  reduces[target].getTIPId(), Values.REDUCE.name(),
                                  System.currentTimeMillis());
     }
+    
+    jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_REDUCES, 1);
+
     return result;
   }
     
@@ -670,6 +682,7 @@ class JobInProgress {
             !tip.hasFailedOnMachine(taskTracker)) {
           LOG.info("Choosing cached task " + tip.getTIPId());
           int cacheTarget = tip.getIdWithinJob();
+          jobCounters.incrCounter(Counter.DATA_LOCAL_MAPS, 1);
           return cacheTarget;
         }
       }
@@ -717,6 +730,7 @@ class JobInProgress {
       LOG.info("Choosing failed task " + 
                tasks[failedTarget].getTIPId());          
     }
+    
     return specTarget != -1 ? specTarget : failedTarget;
   }
 

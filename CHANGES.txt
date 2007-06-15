@@ -127,6 +127,9 @@ Trunk (unreleased changes)
      making images appear in PDF.  Also update copyright date for all
      docs.  (Luke Nezda via cutting)
 
+ 41. HADOOP-1457.  Add counters for monitoring task assignments.
+     (Arun C Murthy via tomwhite)
+
 
 Release 0.13.0 - 2007-06-08
 
