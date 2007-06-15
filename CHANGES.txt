@@ -147,6 +147,9 @@ Trunk (unreleased changes)
  46. HADOOP-1417.  Disable a few FindBugs checks that generate a lot
      of spurious warnings.  (Nigel Daley via cutting)
 
+ 47. HADOOP-1320.  Rewrite RandomWriter example to bypass reduce.
+     (Arun C Murthy via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

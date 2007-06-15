@@ -71,6 +71,7 @@ public class TestStreamReduceNone extends TestCase
   
   public void testCommandLine()
   {
+    String outFileName = "part-00000";
     File outFile = null;
     try {
       try {
@@ -85,7 +86,7 @@ public class TestStreamReduceNone extends TestCase
       // So don't specify -config or -cluster
       job = new StreamJob(genArgs(), mayExit);      
       job.go();
-      outFile = new File(OUTPUT_DIR, "tip_m_map_0000").getAbsoluteFile();
+      outFile = new File(OUTPUT_DIR, outFileName).getAbsoluteFile();
       String output = StreamUtil.slurp(outFile);
       System.err.println("outEx1=" + outputExpect);
       System.err.println("  out1=" + output);
@@ -94,7 +95,7 @@ public class TestStreamReduceNone extends TestCase
       failTrace(e);
     } finally {
       outFile.delete();
-      File outFileCRC = new File(OUTPUT_DIR, ".tip_m_map_0000.crc").getAbsoluteFile();
+      File outFileCRC = new File(OUTPUT_DIR, "."+outFileName+".crc").getAbsoluteFile();
       INPUT_FILE.delete();
       outFileCRC.delete();
       OUTPUT_DIR.getAbsoluteFile().delete();

@@ -26,7 +26,6 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -373,20 +372,6 @@ class ReduceTask extends Task {
       throw ioe;
     }
     done(umbilical);
-  }
-
-  /** Construct output file names so that, when an output directory listing is
-   * sorted lexicographically, positions correspond to output partitions.*/
-
-  private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
-
-  static {
-    NUMBER_FORMAT.setMinimumIntegerDigits(5);
-    NUMBER_FORMAT.setGroupingUsed(false);
-  }
-
-  static synchronized String getOutputName(int partition) {
-    return "part-" + NUMBER_FORMAT.format(partition);
   }
 
   private class ReduceCopier implements MRConstants {

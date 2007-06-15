@@ -239,7 +239,7 @@ class MapTask extends Task {
         JobConf job, Reporter reporter) throws IOException {
       this.job = job;
       this.reporter = reporter;
-      String finalName = getTipId();
+      String finalName = getOutputName(getPartition());
       FileSystem fs = FileSystem.get(this.job);
 
       out = job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);
