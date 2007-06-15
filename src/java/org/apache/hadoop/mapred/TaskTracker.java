@@ -215,7 +215,7 @@ public class TaskTracker
                 }
                 LOG.info("Received KillTaskAction for task: " + 
                          killAction.getTaskId());
-                purgeTask(tip);
+                purgeTask(tip, false);
               } else {
                 LOG.error("Non-delete action given to cleanup thread: "
                           + action);
@@ -623,7 +623,7 @@ public class TaskTracker
       new TreeMap<String, TaskInProgress>();
     tasksToClose.putAll(tasks);
     for (TaskInProgress tip : tasksToClose.values()) {
-      tip.jobHasFinished();
+      tip.jobHasFinished(false);
     }
 
     // Shutdown local RPC servers.  Do them
@@ -920,13 +920,13 @@ public class TaskTracker
         // time-period greater than the configured time-out
         long timeSinceLastReport = now - tip.getLastProgressReport();
         if (timeSinceLastReport > jobTaskTimeout && !tip.wasKilled) {
-          String msg = "Task failed to report status for " +
-            (timeSinceLastReport / 1000) + 
-            " seconds. Killing.";
+          String msg = 
+            "Task " + tip.getTask().getTaskId() + " failed to report status for " 
+            + (timeSinceLastReport / 1000) + " seconds. Killing!";
           LOG.info(tip.getTask().getTaskId() + ": " + msg);
           ReflectionUtils.logThreadInfo(LOG, "lost task", 30);
           tip.reportDiagnosticInfo(msg);
-          purgeTask(tip);
+          purgeTask(tip, true);
         }
       }
     }
@@ -951,7 +951,7 @@ public class TaskTracker
       synchronized (rjob) {            
         // Add this tips of this job to queue of tasks to be purged 
         for (TaskInProgress tip : rjob.tasks) {
-          tip.jobHasFinished();
+          tip.jobHasFinished(false);
         }
         // Delete the job directory for this  
         // task if the job is done/failed
@@ -974,17 +974,17 @@ public class TaskTracker
    * Remove the tip and update all relevant state.
    * 
    * @param tip {@link TaskInProgress} to be removed.
-   * @param purgeJobFiles <code>true</code> if the job files are to be
-   *                      purged, <code>false</code> otherwise.
+   * @param wasFailure did the task fail or was it killed?
    */
-  private void purgeTask(TaskInProgress tip) throws IOException {
+  private void purgeTask(TaskInProgress tip, boolean wasFailure) 
+  throws IOException {
     if (tip != null) {
       LOG.info("About to purge task: " + tip.getTask().getTaskId());
         
       // Remove the task from running jobs, 
       // removing the job if it's the last task
       removeTaskFromJob(tip.getTask().getJobId(), tip);
-      tip.jobHasFinished();
+      tip.jobHasFinished(wasFailure);
     }
   }
 
@@ -1008,7 +1008,7 @@ public class TaskTracker
             " Killing task.";
           LOG.info(killMe.getTask().getTaskId() + ": " + msg);
           killMe.reportDiagnosticInfo(msg);
-          purgeTask(killMe);
+          purgeTask(killMe, false);
         }
       }
     }
@@ -1105,7 +1105,7 @@ public class TaskTracker
       LOG.warn(msg);
       tip.reportDiagnosticInfo(msg);
       try {
-        tip.killAndCleanup(true);
+        tip.kill(true);
       } catch (IOException ie2) {
         LOG.info("Error cleaning up " + tip.getTask().getTaskId() + ":\n" +
                  StringUtils.stringifyException(ie2));          
@@ -1187,7 +1187,6 @@ public class TaskTracker
     private boolean keepFailedTaskFiles;
     private boolean alwaysKeepTaskFiles;
     private TaskStatus taskStatus; 
-    private boolean keepJobFiles;
     private long taskTimeout;
         
     /**
@@ -1207,7 +1206,6 @@ public class TaskTracker
                                   getName(), task.isMapTask()? TaskStatus.Phase.MAP:
                                   TaskStatus.Phase.SHUFFLE,
                                   task.getCounters()); 
-      keepJobFiles = false;
       taskTimeout = (10 * 60 * 1000);
     }
         
@@ -1236,7 +1234,6 @@ public class TaskTracker
       task.setConf(localJobConf);
       String keepPattern = localJobConf.getKeepTaskFilesPattern();
       if (keepPattern != null) {
-        keepJobFiles = true;
         alwaysKeepTaskFiles = 
           Pattern.matches(keepPattern, task.getTaskId());
       } else {
@@ -1408,50 +1405,36 @@ public class TaskTracker
 
     /**
      * We no longer need anything from this task, as the job has
-     * finished.  If the task is still running, kill it (and clean up
+     * finished.  If the task is still running, kill it and clean up.
+     * 
+     * @param wasFailure did the task fail, as opposed to was it killed by
+     *                   the framework
      */
-    public void jobHasFinished() throws IOException {
-      boolean killTask = false;  
+    public void jobHasFinished(boolean wasFailure) throws IOException {
+      // Kill the task if it is still running
       synchronized(this){
-        killTask = (getRunState() == TaskStatus.State.RUNNING);
-        if (killTask) {
-          killAndCleanup(false);
+        if (getRunState() == TaskStatus.State.RUNNING) {
+          kill(wasFailure);
         }
       }
-      if (!killTask) {
-        cleanup();
-      }
-      if (keepJobFiles)
-        return;
-              
-      synchronized(this){
-        // Delete temp directory in case any task used PhasedFileSystem.
-        try{
-          String systemDir = task.getConf().get("mapred.system.dir");
-          Path taskTempDir = new Path(systemDir + "/" + 
-                                      task.getJobId() + "/" + task.getTipId() + "/" + task.getTaskId());
-          if (fs.exists(taskTempDir)){
-            fs.delete(taskTempDir);
-          }
-        }catch(IOException e){
-          LOG.warn("Error in deleting reduce temporary output", e); 
-        }
-      }
+      
+      // Cleanup on the finished task
+      cleanup();
     }
 
     /**
      * Something went wrong and the task must be killed.
      * @param wasFailure was it a failure (versus a kill request)?
      */
-    public synchronized void killAndCleanup(boolean wasFailure
-                                            ) throws IOException {
+    public synchronized void kill(boolean wasFailure) throws IOException {
       if (runstate == TaskStatus.State.RUNNING) {
         wasKilled = true;
         if (wasFailure) {
           failures += 1;
         }
         runner.kill();
-        runstate = TaskStatus.State.KILLED;
+        runstate = 
+          (wasFailure) ? TaskStatus.State.FAILED : TaskStatus.State.KILLED;
       } else if (runstate == TaskStatus.State.UNASSIGNED) {
         if (wasFailure) {
           failures += 1;
@@ -1596,7 +1579,7 @@ public class TaskTracker
     LOG.fatal("Task: " + taskId + " - Killed due to FSError: " + message);
     TaskInProgress tip = runningTasks.get(taskId);
     tip.reportDiagnosticInfo("FSError: " + message);
-    purgeTask(tip);
+    purgeTask(tip, true);
   }
 
   public TaskCompletionEvent[] getMapCompletionEvents(

@@ -130,6 +130,9 @@ Trunk (unreleased changes)
  41. HADOOP-1457.  Add counters for monitoring task assignments.
      (Arun C Murthy via tomwhite)
 
+ 42. HADOOP-1472.  Fix so that timed-out tasks are counted as failures
+     rather than as killed.  (Arun C Murthy via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
