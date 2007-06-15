@@ -140,6 +140,10 @@ Trunk (unreleased changes)
  44. HADOOP-1482.  Fix secondary namenode to roll info port.
      (Dhruba Borthakur via cutting)
 
+ 45. HADOOP-1300.  Improve removal of excess block replicas to be
+     rack-aware.  Attempts are now made to keep replicas on more
+     racks.  (Hairong Kuang via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
