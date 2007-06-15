@@ -98,10 +98,16 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     //
     infoPort = conf.getInt("dfs.secondary.info.port", 50090);
     infoBindAddress = conf.get("dfs.secondary.info.bindAddress", "0.0.0.0");
-    infoServer = new StatusHttpServer("dfs", infoBindAddress, infoPort, false);
+    infoServer = new StatusHttpServer("dfs", infoBindAddress, infoPort, true);
     infoServer.setAttribute("name.secondary", this);
+    this.infoServer.setAttribute("name.conf", conf);
     infoServer.addServlet("getimage", "/getimage", GetImageServlet.class);
     infoServer.start();
+
+    // The web-server port can be ephemeral... ensure we have the correct info
+    infoPort = infoServer.getPort();
+    conf.setInt("dfs.secondary.info.port", infoPort);
+    LOG.info("Secondary Web-server up at: " + conf.get("dfs.secondary.info.port"));
 
     //
     // Initialize other scheduling parameters from the configuration

@@ -137,6 +137,9 @@ Trunk (unreleased changes)
      tasktracker to not be able to find cached files.
      (Arun C Murthy via cutting)
 
+ 44. HADOOP-1482.  Fix secondary namenode to roll info port.
+     (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
