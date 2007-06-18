@@ -164,6 +164,11 @@ Trunk (unreleased changes)
      files, so that disk space, writability, etc. is considered.
      (Dhruba Borthakur via cutting)
 
+ 52. HADOOP-1193.  Pool allocation of compression codecs.  This
+     eliminates a memory leak that could cause OutOfMemoryException,
+     and also substantially improves performance.
+     (Arun C Murthy via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

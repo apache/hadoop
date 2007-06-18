@@ -21,8 +21,6 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
 import org.apache.commons.logging.*;
@@ -30,6 +28,8 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
@@ -293,7 +293,7 @@ public class SequenceFile {
                  Class keyClass, Class valClass, boolean compress, boolean blockCompress,
                  CompressionCodec codec, Metadata metadata)
     throws IOException {
-    if ((codec instanceof GzipCodec) && 
+    if (codec != null && (codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
         !ZlibFactory.isNativeZlibLoaded()) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
@@ -315,25 +315,47 @@ public class SequenceFile {
 
   /**
    * Construct the preferred type of 'raw' SequenceFile Writer.
-   * @param out The stream on top which the writer is to be constructed.
+   * @param fs The configured filesystem. 
+   * @param conf The configuration.
+   * @param file The name of the file. 
    * @param keyClass The 'key' type.
    * @param valClass The 'value' type.
    * @param compress Compress data?
    * @param blockCompress Compress blocks?
+   * @param codec The compression codec.
+   * @param progress
+   * @param metadata The metadata of the file.
    * @return Returns the handle to the constructed SequenceFile Writer.
    * @throws IOException
    */
   private static Writer
-    createWriter(Configuration conf, FSDataOutputStream out, 
-                 Class keyClass, Class valClass, boolean compress, boolean blockCompress,
-                 CompressionCodec codec)
-    throws IOException {
-    Writer writer = createWriter(conf, out, keyClass, valClass, compress, 
-                                 blockCompress, codec, new Metadata());
-    return writer;
+  createWriter(FileSystem fs, Configuration conf, Path file, 
+               Class keyClass, Class valClass, 
+               boolean compress, boolean blockCompress,
+               CompressionCodec codec, Progressable progress, Metadata metadata)
+  throws IOException {
+  if (codec != null && (codec instanceof GzipCodec) && 
+      !NativeCodeLoader.isNativeCodeLoaded() && 
+      !ZlibFactory.isNativeZlibLoaded()) {
+    throw new IllegalArgumentException("SequenceFile doesn't work with " +
+                                       "GzipCodec without native-hadoop code!");
   }
 
+  Writer writer = null;
+
+  if (!compress) {
+    writer = new Writer(fs, conf, file, keyClass, valClass, progress, metadata);
+  } else if (compress && !blockCompress) {
+    writer = new RecordCompressWriter(fs, conf, file, keyClass, valClass, 
+                                      codec, progress, metadata);
+  } else {
+    writer = new BlockCompressWriter(fs, conf, file, keyClass, valClass, 
+                                     codec, progress, metadata);
+  }
   
+  return writer;
+}
+
   /**
    * Construct the preferred type of 'raw' SequenceFile Writer.
    * @param conf The configuration.
@@ -598,8 +620,16 @@ public class SequenceFile {
   
   /** Write key/value pairs to a sequence-format file. */
   public static class Writer {
+    /**
+     * A global compressor pool used to save the expensive 
+     * construction/destruction of (possibly native) compression codecs.
+     */
+    private static final CodecPool<Compressor> compressorPool = 
+      new CodecPool<Compressor>();
+    
     Configuration conf;
     FSDataOutputStream out;
+    boolean ownOutputStream = true;
     DataOutputBuffer buffer = new DataOutputBuffer();
 
     Class keyClass;
@@ -610,7 +640,8 @@ public class SequenceFile {
     CompressionOutputStream deflateFilter = null;
     DataOutputStream deflateOut = null;
     Metadata metadata = null;
-
+    Compressor compressor = null;
+    
     // Insert a globally unique 16-byte value every few entries, so that one
     // can seek into the middle of a file and then synchronize with record
     // starts and ends by scanning for this value.
@@ -651,6 +682,7 @@ public class SequenceFile {
     private Writer(Configuration conf, FSDataOutputStream out, 
                    Class keyClass, Class valClass, Metadata metadata)
       throws IOException {
+      this.ownOutputStream = false;
       init(null, conf, out, keyClass, valClass, false, null, metadata);
       
       initializeFileHeader();
@@ -703,7 +735,11 @@ public class SequenceFile {
       this.metadata = metadata;
       if (this.codec != null) {
         ReflectionUtils.setConf(this.codec, this.conf);
-        this.deflateFilter = this.codec.createOutputStream(buffer);
+        compressor = compressorPool.getCodec(this.codec.getCompressorType());
+        if (compressor == null) {
+          compressor = this.codec.createCompressor();
+        }
+        this.deflateFilter = this.codec.createOutputStream(buffer, compressor);
         this.deflateOut = 
           new DataOutputStream(new BufferedOutputStream(deflateFilter));
       }
@@ -727,8 +763,15 @@ public class SequenceFile {
     
     /** Close the file. */
     public synchronized void close() throws IOException {
+      compressorPool.returnCodec(compressor);
+
       if (out != null) {
-        out.close();
+        out.flush();
+        
+        // Close the underlying stream iff we own it...
+        if (ownOutputStream) {
+          out.close();
+        }
         out = null;
       }
     }
@@ -849,6 +892,7 @@ public class SequenceFile {
     private RecordCompressWriter(Configuration conf, FSDataOutputStream out,
                                  Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
       throws IOException {
+      this.ownOutputStream = false;
       super.init(null, conf, out, keyClass, valClass, true, codec, metadata);
       
       initializeFileHeader();
@@ -967,6 +1011,7 @@ public class SequenceFile {
     private BlockCompressWriter(Configuration conf, FSDataOutputStream out,
                                 Class keyClass, Class valClass, CompressionCodec codec, Metadata metadata)
       throws IOException {
+      this.ownOutputStream = false;
       super.init(null, conf, out, keyClass, valClass, true, codec, metadata);
       init(1000000);
       
@@ -1035,9 +1080,8 @@ public class SequenceFile {
     public synchronized void close() throws IOException {
       if (out != null) {
         writeBlock();
-        out.close();
-        out = null;
       }
+      super.close();
     }
 
     public void sync() throws IOException {
@@ -1107,6 +1151,13 @@ public class SequenceFile {
   
   /** Reads key/value pairs from a sequence-format file. */
   public static class Reader {
+    /**
+     * A global decompressor pool used to save the expensive 
+     * construction/destruction of (possibly native) decompression codecs.
+     */
+    private static final CodecPool<Decompressor> decompressorPool = 
+      new CodecPool<Decompressor>();
+    
     private Path file;
     private FSDataInputStream in;
     private DataOutputBuffer outBuf = new DataOutputBuffer();
@@ -1142,43 +1193,62 @@ public class SequenceFile {
     private DataInputBuffer keyLenBuffer = null;
     private CompressionInputStream keyLenInFilter = null;
     private DataInputStream keyLenIn = null;
+    private Decompressor keyLenDecompressor = null;
     private DataInputBuffer keyBuffer = null;
     private CompressionInputStream keyInFilter = null;
     private DataInputStream keyIn = null;
+    private Decompressor keyDecompressor = null;
 
     private DataInputBuffer valLenBuffer = null;
     private CompressionInputStream valLenInFilter = null;
     private DataInputStream valLenIn = null;
+    private Decompressor valLenDecompressor = null;
     private DataInputBuffer valBuffer = null;
     private CompressionInputStream valInFilter = null;
     private DataInputStream valIn = null;
+    private Decompressor valDecompressor = null;
 
     /** Open the named file. */
     public Reader(FileSystem fs, Path file, Configuration conf)
       throws IOException {
-      this(fs, file, conf.getInt("io.file.buffer.size", 4096), conf);
+      this(fs, file, conf.getInt("io.file.buffer.size", 4096), conf, false);
     }
 
-    private Reader(FileSystem fs, Path name, int bufferSize,
-                   Configuration conf) throws IOException {
-      this.file = name;
-      this.in = fs.open(file, bufferSize);
-      this.end = fs.getLength(file);
-      this.conf = conf;
-      init();
+    private Reader(FileSystem fs, Path file, int bufferSize,
+                   Configuration conf, boolean tempReader) throws IOException {
+      this(fs, file, bufferSize, 0, fs.getLength(file), conf, tempReader);
     }
     
     private Reader(FileSystem fs, Path file, int bufferSize, long start,
-                   long length, Configuration conf) throws IOException {
+                   long length, Configuration conf, boolean tempReader) 
+    throws IOException {
       this.file = file;
       this.in = fs.open(file, bufferSize);
       this.conf = conf;
       seek(start);
       this.end = in.getPos() + length;
-      init();
+      init(tempReader);
     }
     
-    private void init() throws IOException {
+    private Decompressor getPooledOrNewDecompressor() {
+      Decompressor decompressor = null;
+      decompressor = decompressorPool.getCodec(codec.getDecompressorType());
+      if (decompressor == null) {
+        decompressor = codec.createDecompressor();
+      }
+      return decompressor;
+    }
+    
+
+    /**
+     * Initialize the {@link Reader}
+     * @param tmpReader <code>true</code> if we are constructing a temporary
+     *                  reader {@link SequenceFile.Sorter.cloneFileAttributes}, 
+     *                  and hence do not initialize every component; 
+     *                  <code>false</code> otherwise.
+     * @throws IOException
+     */
+    private void init(boolean tempReader) throws IOException {
       byte[] versionBlock = new byte[VERSION.length];
       in.readFully(versionBlock);
 
@@ -1245,33 +1315,48 @@ public class SequenceFile {
         in.readFully(sync);                       // read sync bytes
       }
       
-      // Initialize
-      valBuffer = new DataInputBuffer();
-      if (decompress) {
-        valInFilter = this.codec.createInputStream(valBuffer);
-        valIn = new DataInputStream(valInFilter);
-      } else {
-        valIn = valBuffer;
-      }
-      
-      if (blockCompressed) {
-        keyLenBuffer = new DataInputBuffer();
-        keyBuffer = new DataInputBuffer();
-        valLenBuffer = new DataInputBuffer();
-        
-        keyLenInFilter = this.codec.createInputStream(keyLenBuffer);
-        keyLenIn = new DataInputStream(keyLenInFilter);
+      // Initialize... *not* if this we are constructing a temporary Reader
+      if (!tempReader) {
+        valBuffer = new DataInputBuffer();
+        if (decompress) {
+          valDecompressor = getPooledOrNewDecompressor();
+          valInFilter = codec.createInputStream(valBuffer, valDecompressor);
+          valIn = new DataInputStream(valInFilter);
+        } else {
+          valIn = valBuffer;
+        }
 
-        keyInFilter = this.codec.createInputStream(keyBuffer);
-        keyIn = new DataInputStream(keyInFilter);
+        if (blockCompressed) {
+          keyLenBuffer = new DataInputBuffer();
+          keyBuffer = new DataInputBuffer();
+          valLenBuffer = new DataInputBuffer();
 
-        valLenInFilter = this.codec.createInputStream(valLenBuffer);
-        valLenIn = new DataInputStream(valLenInFilter);
+          keyLenDecompressor = getPooledOrNewDecompressor();
+          keyLenInFilter = codec.createInputStream(keyLenBuffer, 
+                                                   keyLenDecompressor);
+          keyLenIn = new DataInputStream(keyLenInFilter);
+
+          keyDecompressor = getPooledOrNewDecompressor();
+          keyInFilter = codec.createInputStream(keyBuffer, keyDecompressor);
+          keyIn = new DataInputStream(keyInFilter);
+
+          valLenDecompressor = getPooledOrNewDecompressor();
+          valLenInFilter = codec.createInputStream(valLenBuffer, 
+                                                   valLenDecompressor);
+          valLenIn = new DataInputStream(valLenInFilter);
+        }
       }
     }
     
     /** Close the file. */
     public synchronized void close() throws IOException {
+      // Return the decompressors to the pool
+      decompressorPool.returnCodec(keyLenDecompressor);
+      decompressorPool.returnCodec(keyDecompressor);
+      decompressorPool.returnCodec(valLenDecompressor);
+      decompressorPool.returnCodec(valDecompressor);
+      
+      // Close the input-stream
       in.close();
     }
 
@@ -1755,6 +1840,49 @@ public class SequenceFile {
 
   }
 
+  private static class CodecPool<T> {
+
+    private Map<Class, List<T>> pool = new HashMap<Class, List<T>>();
+    
+    public T getCodec(Class codecClass) {
+      T codec = null;
+      
+      // Check if an appropriate codec is available
+      synchronized (pool) {
+        if (pool.containsKey(codecClass)) {
+          List<T> codecList = pool.get(codecClass);
+          
+          if (codecList != null) {
+            synchronized (codecList) {
+              if (!codecList.isEmpty()) {
+                codec = codecList.remove(0);
+              }
+            }
+          }
+        }
+      }
+      
+      return codec;
+    }
+
+    public void returnCodec(T codec) {
+      if (codec != null) {
+        Class codecClass = codec.getClass();
+        synchronized (pool) {
+          if (!pool.containsKey(codecClass)) {
+            pool.put(codecClass, new ArrayList<T>());
+          }
+
+          List<T> codecList = pool.get(codecClass);
+          synchronized (codecList) {
+            codecList.add(codec);
+          }
+        }
+      }
+    }
+
+  }
+  
   /** Sorts key/value pairs in a sequence-format file.
    *
    * <p>For best performance, applications should make sure that the {@link
@@ -1951,7 +2079,7 @@ public class SequenceFile {
               }
               continue;
             }
-            //int length = buffer.getLength() - start;
+
             int keyLength = rawKeys.getLength() - keyOffset;
 
             if (count == keyOffsets.length)
@@ -2026,7 +2154,8 @@ public class SequenceFile {
 
         long segmentStart = out.getPos();
         Writer writer = createWriter(conf, out, keyClass, valClass, 
-                                     isCompressed, isBlockCompressed, codec);
+                                     isCompressed, isBlockCompressed, codec, 
+                                     new Metadata());
         
         if (!done) {
           writer.sync = null;                     // disable sync on temp files
@@ -2036,14 +2165,12 @@ public class SequenceFile {
           int p = pointers[i];
           writer.appendRaw(rawBuffer, keyOffsets[p], keyLengths[p], rawValues[p]);
         }
-        writer.sync();
-        writer.out.flush();
-        
+        writer.close();
         
         if (!done) {
           // Save the segment length
           WritableUtils.writeVLong(indexOut, segmentStart);
-          WritableUtils.writeVLong(indexOut, (writer.out.getPos()-segmentStart));
+          WritableUtils.writeVLong(indexOut, (out.getPos()-segmentStart));
           indexOut.flush();
         }
       }
@@ -2179,24 +2306,6 @@ public class SequenceFile {
     /**
      * Clones the attributes (like compression of the input file and creates a 
      * corresponding Writer
-     * @param ignoredFileSys the (ignored) FileSystem object
-     * @param inputFile the path of the input file whose attributes should be 
-     * cloned 
-     * @param outputFile the path of the output file 
-     * @param prog the Progressable to report status during the file write
-     * @return Writer
-     * @throws IOException
-     * @deprecated call  #cloneFileAttributes(Path,Path,Progressable) instead
-     */
-    public Writer cloneFileAttributes(FileSystem ignoredFileSys,
-                                      Path inputFile, Path outputFile, Progressable prog) 
-      throws IOException {
-      return cloneFileAttributes(inputFile, outputFile, prog);
-    }
-
-    /**
-     * Clones the attributes (like compression of the input file and creates a 
-     * corresponding Writer
      * @param inputFile the path of the input file whose attributes should be 
      * cloned
      * @param outputFile the path of the output file 
@@ -2205,24 +2314,19 @@ public class SequenceFile {
      * @throws IOException
      */
     public Writer cloneFileAttributes(Path inputFile, Path outputFile, 
-                                      Progressable prog) throws IOException {
+                                      Progressable prog) 
+    throws IOException {
       FileSystem srcFileSys = inputFile.getFileSystem(conf);
-      Reader reader = new Reader(srcFileSys, inputFile, 4096, conf);
+      Reader reader = new Reader(srcFileSys, inputFile, 4096, conf, true);
       boolean compress = reader.isCompressed();
       boolean blockCompress = reader.isBlockCompressed();
       CompressionCodec codec = reader.getCompressionCodec();
       reader.close();
-      
-      FileSystem dstFileSys = outputFile.getFileSystem(conf);
-      FSDataOutputStream out;
-      if (prog != null)
-        out = dstFileSys.create(outputFile, true, 
-                                conf.getInt("io.file.buffer.size", 4096), prog);
-      else
-        out = dstFileSys.create(outputFile, true, 
-                                conf.getInt("io.file.buffer.size", 4096));
-      Writer writer = createWriter(conf, out, keyClass, valClass, compress, 
-                                   blockCompress, codec);
+
+      Writer writer = createWriter(outputFile.getFileSystem(conf), conf, 
+                                   outputFile, keyClass, valClass, compress, 
+                                   blockCompress, codec, prog,
+                                   new Metadata());
       return writer;
     }
 
@@ -2457,7 +2561,7 @@ public class SequenceFile {
             Path outputFile =  lDirAlloc.getLocalPathForWrite(
                                                 tmpFilename.toString(),
                                                 approxOutputSize, conf);
-            LOG.info("writing intermediate results to " + outputFile);
+            LOG.debug("writing intermediate results to " + outputFile);
             Writer writer = cloneFileAttributes(
                                                 fs.makeQualified(segmentsToMerge.get(0).segmentPathName), 
                                                 fs.makeQualified(outputFile), null);
@@ -2590,7 +2694,7 @@ public class SequenceFile {
           }
           Reader reader = new Reader(fs, segmentPathName, 
                                      bufferSize, segmentOffset, 
-                                     segmentLength, conf);
+                                     segmentLength, conf, false);
         
           //sometimes we ignore syncs especially for temp merge files
           if (ignoreSync) reader.sync = null;

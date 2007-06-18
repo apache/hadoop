@@ -29,7 +29,7 @@ import org.apache.hadoop.io.compress.zlib.*;
 public class DefaultCodec implements Configurable, CompressionCodec {
   
   Configuration conf;
-  
+
   public void setConf(Configuration conf) {
     this.conf = conf;
   }
@@ -38,33 +38,50 @@ public class DefaultCodec implements Configurable, CompressionCodec {
     return conf;
   }
   
-  /**
-   * Create a stream compressor that will write to the given output stream.
-   * @param out the location for the final output stream
-   * @return a stream the user can write uncompressed data to
-   */
   public CompressionOutputStream createOutputStream(OutputStream out) 
-    throws IOException {
-    return new CompressorStream(out, ZlibFactory.getZlibCompressor(), 
+  throws IOException {
+    return new CompressorStream(out, createCompressor(), 
                                 conf.getInt("io.file.buffer.size", 4*1024));
   }
-  
-  /**
-   * Create a stream decompressor that will read from the given input stream.
-   * @param in the stream to read compressed bytes from
-   * @return a stream to read uncompressed bytes from
-   */
+
+  public CompressionOutputStream createOutputStream(OutputStream out, 
+                                                    Compressor compressor) 
+  throws IOException {
+    return new CompressorStream(out, compressor, 
+                                conf.getInt("io.file.buffer.size", 4*1024));
+  }
+
+  public Class getCompressorType() {
+    return ZlibFactory.getZlibCompressorType();
+  }
+
+  public Compressor createCompressor() {
+    return ZlibFactory.getZlibCompressor();
+  }
+
   public CompressionInputStream createInputStream(InputStream in) 
-    throws IOException {
-    return new DecompressorStream(in, ZlibFactory.getZlibDecompressor(),
+  throws IOException {
+    return new DecompressorStream(in, createDecompressor(),
                                   conf.getInt("io.file.buffer.size", 4*1024));
   }
+
+  public CompressionInputStream createInputStream(InputStream in, 
+                                                  Decompressor decompressor) 
+  throws IOException {
+    return new DecompressorStream(in, decompressor, 
+                                  conf.getInt("io.file.buffer.size", 4*1024));
+  }
+
+  public Class getDecompressorType() {
+    return ZlibFactory.getZlibDecompressorType();
+  }
+
+  public Decompressor createDecompressor() {
+    return ZlibFactory.getZlibDecompressor();
+  }
   
-  /**
-   * Get the default filename extension for this kind of compression.
-   * @return the extension including the '.'
-   */
   public String getDefaultExtension() {
     return ".deflate";
   }
+
 }

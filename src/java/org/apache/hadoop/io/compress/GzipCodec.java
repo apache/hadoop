@@ -135,58 +135,68 @@ public class GzipCodec extends DefaultCodec {
     }
   }  
   
-  /**
-   * Create a stream compressor that will write to the given output stream.
-   * @param out the location for the final output stream
-   * @return a stream the user can write uncompressed data to
-   */
   public CompressionOutputStream createOutputStream(OutputStream out) 
     throws IOException {
-    CompressionOutputStream compOutStream = null;
-    
-    if (ZlibFactory.isNativeZlibLoaded()) {
-      Compressor compressor = 
-        new ZlibCompressor(ZlibCompressor.CompressionLevel.DEFAULT_COMPRESSION,
-                           ZlibCompressor.CompressionStrategy.DEFAULT_STRATEGY,
-                           ZlibCompressor.CompressionHeader.GZIP_FORMAT,
-                           64*1024); 
-     
-      compOutStream = new CompressorStream(out, compressor,
-                                           conf.getInt("io.file.buffer.size", 4*1024)); 
-    } else {
-      compOutStream = new GzipOutputStream(out);
-    }
-    
-    return compOutStream;
+    return (ZlibFactory.isNativeZlibLoaded()) ?
+               new CompressorStream(out, createCompressor(),
+                                    conf.getInt("io.file.buffer.size", 4*1024)) :
+               new GzipOutputStream(out);
   }
   
-  /**
-   * Create a stream decompressor that will read from the given input stream.
-   * @param in the stream to read compressed bytes from
-   * @return a stream to read uncompressed bytes from
-   */
-  public CompressionInputStream createInputStream(InputStream in) 
-    throws IOException {
-    CompressionInputStream compInStream = null;
-    
-    if (ZlibFactory.isNativeZlibLoaded()) {
-      Decompressor decompressor =
-        new ZlibDecompressor(ZlibDecompressor.CompressionHeader.AUTODETECT_GZIP_ZLIB,
-                             64*1024);
+  public CompressionOutputStream createOutputStream(OutputStream out, 
+                                                    Compressor compressor) 
+  throws IOException {
+    return (compressor != null) ?
+               new CompressorStream(out, compressor,
+                                    conf.getInt("io.file.buffer.size", 
+                                                4*1024)) :
+               createOutputStream(out);                                               
 
-      compInStream = new DecompressorStream(in, decompressor,
-                                            conf.getInt("io.file.buffer.size", 4*1024)); 
-    } else {
-      compInStream = new GzipInputStream(in);
-    }
-    
-    return compInStream;
   }
-  
-  /**
-   * Get the default filename extension for this kind of compression.
-   * @return the extension including the '.'
-   */
+
+  public Compressor createCompressor() {
+    return (ZlibFactory.isNativeZlibLoaded()) ?
+               new ZlibCompressor(ZlibCompressor.CompressionLevel.DEFAULT_COMPRESSION,
+                                  ZlibCompressor.CompressionStrategy.DEFAULT_STRATEGY,
+                                  ZlibCompressor.CompressionHeader.GZIP_FORMAT,
+                                  64*1024) :
+               null;
+  }
+
+  public Class getCompressorType() {
+    return ZlibFactory.getZlibCompressorType();
+  }
+
+  public CompressionInputStream createInputStream(InputStream in) 
+  throws IOException {
+  return (ZlibFactory.isNativeZlibLoaded()) ?
+             new DecompressorStream(in, createDecompressor(),
+                                    conf.getInt("io.file.buffer.size", 
+                                                4*1024)) :
+             new GzipInputStream(in);                                         
+  }
+
+  public CompressionInputStream createInputStream(InputStream in, 
+                                                  Decompressor decompressor) 
+  throws IOException {
+    return (decompressor != null) ? 
+               new DecompressorStream(in, decompressor,
+                                      conf.getInt("io.file.buffer.size", 
+                                                  4*1024)) :
+               createInputStream(in); 
+  }
+
+  public Decompressor createDecompressor() {
+    return (ZlibFactory.isNativeZlibLoaded()) ?
+               new ZlibDecompressor(ZlibDecompressor.CompressionHeader.AUTODETECT_GZIP_ZLIB,
+                                    64*1024) :
+               null;                               
+  }
+
+  public Class getDecompressorType() {
+    return ZlibFactory.getZlibDecompressorType();
+  }
+
   public String getDefaultExtension() {
     return ".gz";
   }

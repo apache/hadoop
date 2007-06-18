@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A collection of factories to create the right 
@@ -60,21 +61,53 @@ public class ZlibFactory {
   }
   
   /**
+   * Return the appropriate type of the zlib compressor. 
+   * 
+   * @return the appropriate type of the zlib compressor.
+   */
+  public static Class getZlibCompressorType() {
+    return (nativeZlibLoaded) ? 
+            ZlibCompressor.class : BuiltInZlibDeflater.class;
+  }
+  
+  /**
    * Return the appropriate implementation of the zlib compressor. 
    * 
    * @return the appropriate implementation of the zlib compressor.
    */
   public static Compressor getZlibCompressor() {
+    LOG.info("Creating a new ZlibCompressor");
+    try {
+      throw new Exception();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
     return (nativeZlibLoaded) ? 
       new ZlibCompressor() : new BuiltInZlibDeflater(); 
   }
 
+  /**
+   * Return the appropriate type of the zlib decompressor. 
+   * 
+   * @return the appropriate type of the zlib decompressor.
+   */
+  public static Class getZlibDecompressorType() {
+    return (nativeZlibLoaded) ? 
+            ZlibDecompressor.class : BuiltInZlibInflater.class;
+  }
+  
   /**
    * Return the appropriate implementation of the zlib decompressor. 
    * 
    * @return the appropriate implementation of the zlib decompressor.
    */
   public static Decompressor getZlibDecompressor() {
+    LOG.info("Creating a new ZlibDecompressor");
+    try {
+      throw new Exception();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
     return (nativeZlibLoaded) ? 
       new ZlibDecompressor() : new BuiltInZlibInflater(); 
   }

@@ -42,6 +42,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Sorter;
+import org.apache.hadoop.io.SequenceFile.Writer;
 import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
 import org.apache.hadoop.io.SequenceFile.Sorter.SegmentDescriptor;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -332,10 +333,10 @@ class MapTask extends Task {
                                   job.getMapOutputValueClass(), compressionType, codec);
     }
     private void endPartition(int partNumber) throws IOException {
-      //Need to write syncs especially if block compression is in use
+      //Need to close the file, especially if block compression is in use
       //We also update the index file to contain the part offsets per 
       //spilled file
-      writer.sync();
+      writer.close();
       indexOut.writeLong(segmentStart);
       //we also store 0 length key/val segments to make the merge phase easier.
       indexOut.writeLong(out.getPos()-segmentStart);
@@ -529,11 +530,13 @@ class MapTask extends Task {
         //create dummy files
         for (int i = 0; i < partitions; i++) {
           segmentStart = finalOut.getPos();
-          SequenceFile.createWriter(job, finalOut, 
-                                    job.getMapOutputKeyClass(), job.getMapOutputValueClass(), 
-                                    compressionType, codec);
+          Writer writer = SequenceFile.createWriter(job, finalOut, 
+                                                    job.getMapOutputKeyClass(), 
+                                                    job.getMapOutputValueClass(), 
+                                                    compressionType, codec);
           finalIndexOut.writeLong(segmentStart);
           finalIndexOut.writeLong(finalOut.getPos() - segmentStart);
+          writer.close();
         }
         finalOut.close();
         finalIndexOut.close();
@@ -560,14 +563,14 @@ class MapTask extends Task {
             segmentList.add(i, s);
           }
           segmentStart = finalOut.getPos();
+          RawKeyValueIterator kvIter = sorter.merge(segmentList, new Path(getTaskId())); 
           SequenceFile.Writer writer = SequenceFile.createWriter(job, finalOut, 
                                                                  job.getMapOutputKeyClass(), job.getMapOutputValueClass(), 
                                                                  compressionType, codec);
-          sorter.writeFile(sorter.merge(segmentList, new Path(getTaskId())), 
-                           writer);
-          //add a sync block - required esp. for block compression to ensure
+          sorter.writeFile(kvIter, writer);
+          //close the file - required esp. for block compression to ensure
           //partition data don't span partition boundaries
-          writer.sync();
+          writer.close();
           //when we write the offset/length to the final index file, we write
           //longs for both. This helps us to reliably seek directly to the
           //offset/length for a partition when we start serving the byte-ranges

@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
 
@@ -35,7 +33,7 @@ import org.apache.hadoop.util.NativeCodeLoader;
  * @author Arun C Murthy
  */
 public class ZlibDecompressor implements Decompressor {
-  private static final int DEFAULT_DIRECT_BUFFER_SIZE = 1*1024;
+  private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64*1024;
   
   private long stream;
   private CompressionHeader header;

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.io.compress;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.*;
@@ -39,14 +40,44 @@ public class TestCodecFactory extends TestCase {
       return conf;
     }
     
-    public CompressionOutputStream createOutputStream(OutputStream out) {
+    public CompressionOutputStream createOutputStream(OutputStream out) 
+    throws IOException {
       return null;
     }
     
-    public CompressionInputStream createInputStream(InputStream in) {
+    public Class getCompressorType() {
       return null;
     }
-    
+
+    public Compressor createCompressor() {
+      return null;
+    }
+
+    public CompressionInputStream createInputStream(InputStream in, 
+                                                    Decompressor decompressor) 
+    throws IOException {
+      return null;
+    }
+
+    public CompressionInputStream createInputStream(InputStream in) 
+    throws IOException {
+      return null;
+    }
+
+    public CompressionOutputStream createOutputStream(OutputStream out, 
+                                                      Compressor compressor) 
+    throws IOException {
+      return null;
+    }
+
+    public Class getDecompressorType() {
+      return null;
+    }
+
+    public Decompressor createDecompressor() {
+      return null;
+    }
+
     public String getDefaultExtension() {
       return ".base";
     }

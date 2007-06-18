@@ -41,7 +41,7 @@ public class LzoCodec implements Configurable, CompressionCodec {
   private static final Log LOG = LogFactory.getLog(LzoCodec.class.getName());
 
   private Configuration conf;
-  
+
   public void setConf(Configuration conf) {
     this.conf = conf;
   }
@@ -81,7 +81,7 @@ public class LzoCodec implements Configurable, CompressionCodec {
     throws IOException {
     // Ensure native-lzo library is loaded & initialized
     if (!isNativeLzoLoaded()) {
-      throw new IOException("native-lzo library not available");
+      throw new RuntimeException("native-lzo library not available");
     }
     
     /**
@@ -119,12 +119,66 @@ public class LzoCodec implements Configurable, CompressionCodec {
     } else {
       compressionOverhead = (int)(((bufferSize - (128 + 3)) * 8.0) / 9.0);
     }
-     
+    
     return new BlockCompressorStream(out, 
                                      new LzoCompressor(strategy, bufferSize), 
                                      bufferSize, compressionOverhead);
   }
   
+  public CompressionOutputStream createOutputStream(OutputStream out, 
+                                                    Compressor compressor) 
+  throws IOException {
+    // Ensure native-lzo library is loaded & initialized
+    if (!isNativeLzoLoaded()) {
+      throw new RuntimeException("native-lzo library not available");
+    }
+    
+    LzoCompressor.CompressionStrategy strategy = 
+      LzoCompressor.CompressionStrategy.valueOf(
+                                                conf.get("io.compression.codec.lzo.compressor",
+                                                         LzoCompressor.CompressionStrategy.LZO1X_1.name()
+                                                         )
+                                                ); 
+    int bufferSize = conf.getInt("io.compression.codec.lzo.buffersize", 
+                                 64*1024);
+    int compressionOverhead = 0;
+    if (strategy.name().contains("LZO1")) {
+      compressionOverhead = (int)(((bufferSize - (64 + 3)) * 16.0) / 17.0);  
+    } else {
+      compressionOverhead = (int)(((bufferSize - (128 + 3)) * 8.0) / 9.0);
+    }
+    
+    return new BlockCompressorStream(out, compressor, bufferSize, 
+                                     compressionOverhead); 
+  }
+
+  public Class getCompressorType() {
+    // Ensure native-lzo library is loaded & initialized
+    if (!isNativeLzoLoaded()) {
+      throw new RuntimeException("native-lzo library not available");
+    }
+    
+    return LzoCompressor.class;
+  }
+
+  public Compressor createCompressor() {
+    // Ensure native-lzo library is loaded & initialized
+    if (!isNativeLzoLoaded()) {
+      throw new RuntimeException("native-lzo library not available");
+    }
+    
+    LzoCompressor.CompressionStrategy strategy = 
+      LzoCompressor.CompressionStrategy.valueOf(
+                                                conf.get("io.compression.codec.lzo.compressor",
+                                                         LzoCompressor.CompressionStrategy.LZO1X_1.name()
+                                                         )
+                                                ); 
+    int bufferSize = conf.getInt("io.compression.codec.lzo.buffersize", 
+                                 64*1024);
+    
+    return new LzoCompressor(strategy, bufferSize); 
+  }
+
   public CompressionInputStream createInputStream(InputStream in) 
     throws IOException {
     // Ensure native-lzo library is loaded & initialized
@@ -146,7 +200,47 @@ public class LzoCodec implements Configurable, CompressionCodec {
                                        new LzoDecompressor(strategy, bufferSize), 
                                        bufferSize);
   }
-  
+
+  public CompressionInputStream createInputStream(InputStream in, 
+                                                  Decompressor decompressor) 
+  throws IOException {
+    // Ensure native-lzo library is loaded & initialized
+    if (!isNativeLzoLoaded()) {
+      throw new RuntimeException("native-lzo library not available");
+    }
+    
+    return new BlockDecompressorStream(in, decompressor, 
+                                       conf.getInt("io.compression.codec.lzo.buffersize", 
+                                                   64*1024));
+  }
+
+  public Class getDecompressorType() {
+    // Ensure native-lzo library is loaded & initialized
+    if (!isNativeLzoLoaded()) {
+      throw new RuntimeException("native-lzo library not available");
+    }
+    
+    return LzoDecompressor.class;
+  }
+
+  public Decompressor createDecompressor() {
+    // Ensure native-lzo library is loaded & initialized
+    if (!isNativeLzoLoaded()) {
+      throw new RuntimeException("native-lzo library not available");
+    }
+    
+    LzoDecompressor.CompressionStrategy strategy = 
+      LzoDecompressor.CompressionStrategy.valueOf(
+                                                  conf.get("io.compression.codec.lzo.decompressor",
+                                                           LzoDecompressor.CompressionStrategy.LZO1X.name()
+                                                           )
+                                                  ); 
+    int bufferSize = conf.getInt("io.compression.codec.lzo.buffersize", 
+                                 64*1024);
+
+    return new LzoDecompressor(strategy, bufferSize); 
+  }
+
   /**
    * Get the default filename extension for this kind of compression.
    * @return the extension including the '.'
