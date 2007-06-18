@@ -257,10 +257,24 @@ abstract class TaskRunner extends Thread {
         int port = conf.getInt("mapred.task.tracker.report.port", 50050) + 1;
         javaOpts = replaceAll(javaOpts, "@port@", Integer.toString(port));
         String [] javaOptsSplit = javaOpts.split(" ");
+        //Add java.library.path; necessary for native-hadoop libraries
+        String libraryPath = System.getProperty("java.library.path");
+        if (libraryPath != null) {
+          boolean hasLibrary = false;
+          for(int i=0; i<javaOptsSplit.length ;i++) { 
+            if(javaOptsSplit[i].startsWith("-Djava.library.path=")) {
+              javaOptsSplit[i] += sep + libraryPath;
+              hasLibrary = true;
+              break;
+            }
+          }
+          if(!hasLibrary)
+            vargs.add("-Djava.library.path=" + libraryPath);
+        }
         for (int i = 0; i < javaOptsSplit.length; i++) {
           vargs.add(javaOptsSplit[i]);
         }
-
+        
         // Add classpath.
         vargs.add("-classpath");
         vargs.add(classPath.toString());
@@ -274,11 +288,7 @@ abstract class TaskRunner extends Thread {
         vargs.add("-Dhadoop.tasklog.purgeLogSplits=" + conf.getBoolean("mapred.userlog.purgesplits", true));
         vargs.add("-Dhadoop.tasklog.logsRetainHours=" + conf.getInt("mapred.userlog.retain.hours", 12)); 
 
-        // Add java.library.path; necessary for native-hadoop libraries
-        String libraryPath = System.getProperty("java.library.path");
-        if (libraryPath != null) {
-          vargs.add("-Djava.library.path=" + libraryPath);
-        }
+        
 
         // Add main class and its arguments 
         vargs.add(TaskTracker.Child.class.getName());  // main of Child

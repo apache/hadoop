@@ -156,6 +156,10 @@ Trunk (unreleased changes)
  49. HADOOP-1459.  Fix so that, in HDFS, getFileCacheHints() returns
      hostnames instead of IP addresses.  (Dhruba Borthakur via cutting)
 
+ 50. HADOOP-1493.  Permit specification of "java.library.path" system
+     property in "mapred.child.java.opts" configuration property.
+     (Enis Soztutar via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
