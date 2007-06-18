@@ -137,6 +137,23 @@ public class LocalDirAllocator {
     AllocatorPerContext context = obtainContext(contextCfgItemName);
     return context.getLocalPathToRead(pathStr, conf);
   }
+
+  /** Creates a temporary file in the local FS. Pass size as -1 if not known 
+   *  apriori. We round-robin over the set of disks (via the configured dirs) 
+   *  and select the first complete path which has enough space. A file is
+   *  created on this directory. The file is guaranteed to go away when the
+   *  JVM exits.
+   *  @param pathStr prefix for the temporary file
+   *  @param size the size of the file that is going to be written
+   *  @param conf the Configuration object
+   *  @return a unique temporary file
+   *  @throws IOException
+   */
+  public File createTmpFileForWrite(String pathStr, long size, 
+      Configuration conf) throws IOException {
+    AllocatorPerContext context = obtainContext(contextCfgItemName);
+    return context.createTmpFileForWrite(pathStr, size, conf);
+  }
   
   /** Method to check whether a context is valid
    * @param contextCfgItemName
@@ -245,6 +262,25 @@ public class LocalDirAllocator {
       //no path found
       throw new DiskErrorException("Could not find any valid local " +
           "directory for " + pathStr);
+    }
+
+    /** Creates a file on the local FS. Pass size as -1 if not known apriori. We
+     *  round-robin over the set of disks (via the configured dirs) and return
+     *  a file on the first path which has enough space. The file is guaranteed
+     *  to go away when the JVM exits.
+     */
+    public File createTmpFileForWrite(String pathStr, long size, 
+        Configuration conf) throws IOException {
+
+      // find an appropriate directory
+      Path path = getLocalPathForWrite(pathStr, size, conf);
+      File dir = new File(path.getParent().toUri().getPath());
+      String prefix = path.getName();
+
+      // create a temp file on this directory
+      File result = File.createTempFile(prefix, null, dir);
+      result.deleteOnExit();
+      return result;
     }
 
     /** Get a path from the local FS for reading. We search through all the

@@ -160,6 +160,10 @@ Trunk (unreleased changes)
      property in "mapred.child.java.opts" configuration property.
      (Enis Soztutar via cutting)
 
+ 51. HADOOP-1372.  Use LocalDirAllocator for HDFS temporary block
+     files, so that disk space, writability, etc. is considered.
+     (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

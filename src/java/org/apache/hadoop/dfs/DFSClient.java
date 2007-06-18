@@ -58,6 +58,7 @@ class DFSClient implements FSConstants {
   private Configuration conf;
   private long defaultBlockSize;
   private short defaultReplication;
+  private LocalDirAllocator dirAllocator;
     
   /**
    * A map from name -> DFSOutputStream of files that are currently being
@@ -159,6 +160,7 @@ class DFSClient implements FSConstants {
     }
     defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     defaultReplication = (short) conf.getInt("dfs.replication", 3);
+    dirAllocator = new LocalDirAllocator("dfs.client.buffer.dir");
     this.leaseChecker = new Daemon(new LeaseChecker());
     this.leaseChecker.start();
   }
@@ -1167,12 +1169,11 @@ class DFSClient implements FSConstants {
     }
         
     private File newBackupFile() throws IOException {
-      File file = conf.getFile("dfs.client.buffer.dir", "tmp");
-      File dir = file.getParentFile();
-      String prefix = "client-" + Math.abs(r.nextLong());
-      String suffix = ".tmp";
-      File result = File.createTempFile(prefix, suffix, dir);
-      result.deleteOnExit();
+      String name = "tmp" + File.separator +
+                     "client-" + Math.abs(r.nextLong());
+      File result = dirAllocator.createTmpFileForWrite(name, 
+                                                       2 * blockSize, 
+                                                       conf);
       return result;
     }
 
