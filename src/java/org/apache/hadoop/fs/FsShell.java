@@ -18,7 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
-import java.text.*;
+import java.util.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.dfs.DistributedFileSystem;
@@ -206,10 +206,19 @@ public class FsShell extends ToolBase {
    * @see org.apache.hadoop.fs.FileSystem.globPaths 
    */
   void cat(String srcf) throws IOException {
-    Path [] srcs = fs.globPaths(new Path(srcf));
-    for(int i=0; i<srcs.length; i++) {
-      printToStdout(srcs[i]);
-    }
+    //cat behavior in Linux
+    //  [~/1207]$ ls ?.txt
+    //  x.txt  z.txt
+    //  [~/1207]$ cat x.txt y.txt z.txt
+    //  xxx
+    //  cat: y.txt: No such file or directory
+    //  zzz
+
+    new DelayedExceptionThrowing() {
+      void process(Path p) throws IOException {
+        printToStdout(p);
+      }
+    }.process(srcf);
   }
     
   /**
@@ -571,11 +580,18 @@ public class FsShell extends ToolBase {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
-  public void delete(String srcf, boolean recursive) throws IOException {
-    Path [] srcs = fs.globPaths(new Path(srcf));
-    for(int i=0; i<srcs.length; i++) {
-      delete(srcs[i], recursive);
-    }
+  public void delete(String srcf, final boolean recursive) throws IOException {
+    //rm behavior in Linux
+    //  [~/1207]$ ls ?.txt
+    //  x.txt  z.txt
+    //  [~/1207]$ rm x.txt y.txt z.txt 
+    //  rm: cannot remove `y.txt': No such file or directory
+
+    new DelayedExceptionThrowing() {
+      void process(Path p) throws IOException {
+        delete(p, recursive);
+      }
+    }.process(srcf);
   }
     
   /* delete a file */
@@ -1091,5 +1107,26 @@ public class FsShell extends ToolBase {
   public static void main(String argv[]) throws Exception {
     int res = new FsShell().doMain(new Configuration(), argv);
     System.exit(res);
+  }
+
+  /*
+   * Accumulate exceptions if there is any.  Throw them at last.
+   */
+  private abstract class DelayedExceptionThrowing {
+    abstract void process(Path p) throws IOException;
+
+    void process(String srcf) throws IOException {
+      List<IOException> exceptions = new ArrayList<IOException>();
+
+      for(Path p : fs.globPaths(new Path(srcf)))
+        try { process(p); } 
+        catch(IOException ioe) { exceptions.add(ioe); }
+    
+      if (!exceptions.isEmpty())
+        if (exceptions.size() == 1)
+          throw exceptions.get(0);
+        else 
+          throw new IOException("Multiple IOExceptions: " + exceptions);
+    }
   }
 }

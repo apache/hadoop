@@ -179,6 +179,9 @@ Trunk (unreleased changes)
  55. HADOOP-1444.  Fix HDFS block id generation to check pending
      blocks for duplicates. (Dhruba Borthakur via cutting)
 
+ 56. HADOOP-1207.  Fix FsShell's 'rm' command to not stop when one of
+     the named files does not exist.  (Tsz Wo Sze via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
