@@ -89,6 +89,12 @@ public class TestTextInputFormat extends TestCase {
         InputSplit[] splits = format.getSplits(job, numSplits);
         LOG.debug("splitting: got =        " + splits.length);
 
+        if (length == 0) {
+           assertEquals("Files of length 0 are not returned from FileInputFormat.getSplits().", 
+                        1, splits.length);
+           assertEquals("Empty file length == 0", 0, splits[0].getLength());
+        }
+
         // check each split
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
@@ -224,6 +230,25 @@ public class TestTextInputFormat extends TestCase {
                  results.get(0).toString());    
     assertEquals("splits[1][1]", "of gzip", 
                  results.get(1).toString());    
+  }
+
+  /**
+   * Test using the gzip codec and an empty input file
+   */
+  public static void testGzipEmpty() throws IOException {
+    JobConf job = new JobConf();
+    CompressionCodec gzip = new GzipCodec();
+    ReflectionUtils.setConf(gzip, job);
+    localFs.delete(workDir);
+    writeFile(localFs, new Path(workDir, "empty.gz"), gzip, "");
+    job.setInputPath(workDir);
+    TextInputFormat format = new TextInputFormat();
+    format.configure(job);
+    InputSplit[] splits = format.getSplits(job, 100);
+    assertEquals("Compressed files of length 0 are not returned from FileInputFormat.getSplits().",
+                 1, splits.length);
+    List<Text> results = readSplit(format, splits[0], job);
+    assertEquals("Compressed empty file length == 0", 0, results.size());
   }
   
   public static void main(String[] args) throws Exception {

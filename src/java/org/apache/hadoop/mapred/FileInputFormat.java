@@ -167,7 +167,7 @@ public abstract class FileInputFormat implements InputFormat {
       Path file = files[i];
       FileSystem fs = file.getFileSystem(job);
       long length = fs.getLength(file);
-      if (isSplitable(fs, file)) { 
+      if ((length != 0) && isSplitable(fs, file)) { 
         long blockSize = fs.getBlockSize(file);
         long splitSize = computeSplitSize(goalSize, minSize, blockSize);
 
@@ -183,9 +183,7 @@ public abstract class FileInputFormat implements InputFormat {
                                    bytesRemaining, job));
         }
       } else {
-        if (length != 0) {
-          splits.add(new FileSplit(file, 0, length, job));
-        }
+        splits.add(new FileSplit(file, 0, length, job));
       }
     }
     LOG.debug("Total # of splits: " + splits.size());

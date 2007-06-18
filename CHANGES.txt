@@ -173,6 +173,9 @@ Trunk (unreleased changes)
      mismatch during datanode registration.
      (Konstantin Shvachko via cutting)
 
+ 54. HADOOP-1442.  Fix handling of zero-length input splits.
+     (Senthil Subramanian via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
