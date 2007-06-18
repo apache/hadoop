@@ -18,29 +18,26 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.TreeMap;
 import java.util.Vector;
-
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
-/*******************************************************************************
+/**
  * Abstract base class that implements the HScannerInterface.
  * Used by the concrete HMemcacheScanner and HStoreScanners
- ******************************************************************************/
+ */
 public abstract class HAbstractScanner implements HInternalScannerInterface {
   final Log LOG = LogFactory.getLog(this.getClass().getName());
 
   // Pattern to determine if a column key is a regex
-
-  static Pattern isRegexPattern = Pattern.compile("^.*[\\\\+|^&*$\\[\\]\\}{)(]+.*$");
+  static Pattern isRegexPattern =
+    Pattern.compile("^.*[\\\\+|^&*$\\[\\]\\}{)(]+.*$");
   
   // The kind of match we are doing on a column:
-
   private static enum MATCH_TYPE {
     /** Just check the column family name */
     FAMILY_ONLY,
@@ -55,7 +52,6 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   // 1. Match on the column family name only
   // 2. Match on the column family + column key regex
   // 3. Simple match: compare column family + column key literally
-  
   private static class ColumnMatcher {
     private boolean wildCardmatch;
     private MATCH_TYPE matchType;
@@ -63,33 +59,24 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     private Pattern columnMatcher;
     private Text col;
   
-    ColumnMatcher(Text col) throws IOException {
-      String column = col.toString();
+    ColumnMatcher(final Text col) throws IOException {
+      Text qualifier = HStoreKey.extractQualifier(col);
       try {
-        int colpos = column.indexOf(":");
-        if(colpos == -1) {
-          throw new InvalidColumnNameException("Column name has no family indicator.");
-        }
-
-        String columnkey = column.substring(colpos + 1);
-
-        if(columnkey == null || columnkey.length() == 0) {
+        if(qualifier == null || qualifier.getLength() == 0) {
           this.matchType = MATCH_TYPE.FAMILY_ONLY;
-          this.family = column.substring(0, colpos);
+          this.family = HStoreKey.extractFamily(col).toString();
           this.wildCardmatch = true;
-
-        } else if(isRegexPattern.matcher(columnkey).matches()) {
+        } else if(isRegexPattern.matcher(qualifier.toString()).matches()) {
           this.matchType = MATCH_TYPE.REGEX;
-          this.columnMatcher = Pattern.compile(column);
+          this.columnMatcher = Pattern.compile(col.toString());
           this.wildCardmatch = true;
-
         } else {
           this.matchType = MATCH_TYPE.SIMPLE;
           this.col = col;
           this.wildCardmatch = false;
         }
       } catch(Exception e) {
-        throw new IOException("Column: " + column + ": " + e.getMessage());
+        throw new IOException("Column: " + col + ": " + e.getMessage());
       }
     }
     
@@ -119,8 +106,10 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   
   protected boolean scannerClosed = false;                      // True when scanning is done
   
-  protected HStoreKey keys[];                                   // Keys retrieved from the sources
-  protected BytesWritable vals[];                               // Values that correspond to those keys
+  // Keys retrieved from the sources
+  protected HStoreKey keys[];
+  // Values that correspond to those keys
+  protected byte [][] vals;
   
   protected long timestamp;                                     // The timestamp to match entries against
   private boolean wildcardMatch;
@@ -218,7 +207,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
    * 
    * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.TreeMap)
    */
-  public boolean next(HStoreKey key, TreeMap<Text, BytesWritable> results)
+  public boolean next(HStoreKey key, TreeMap<Text, byte []> results)
   throws IOException {
     // Find the next row label (and timestamp)
     Text chosenRow = null;

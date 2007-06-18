@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 
@@ -39,7 +38,9 @@ class HMerge implements HConstants {
   static final Log LOG = LogFactory.getLog(HMerge.class);
   static final Text[] META_COLS = {COL_REGIONINFO};
   
-  private HMerge() {}                           // Not instantiable
+  private HMerge() {
+    // Not instantiable
+  }
   
   /**
    * Scans the table and merges two adjacent regions if they are small. This
@@ -317,7 +318,7 @@ class HMerge implements HConstants {
   private static class OfflineMerger extends Merger {
     private Path dir;
     private TreeSet<HRegionInfo> metaRegions;
-    private TreeMap<Text, BytesWritable> results;
+    private TreeMap<Text, byte []> results;
     
     OfflineMerger(Configuration conf, FileSystem fs, Text tableName)
         throws IOException {
@@ -325,7 +326,7 @@ class HMerge implements HConstants {
       super(conf, fs, tableName);
       this.dir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
       this.metaRegions = new TreeSet<HRegionInfo>();
-      this.results = new TreeMap<Text, BytesWritable>();
+      this.results = new TreeMap<Text, byte []>();
 
       // Scan root region to find all the meta regions
       
@@ -337,10 +338,8 @@ class HMerge implements HConstants {
       
       try {
         while(rootScanner.next(key, results)) {
-          for(BytesWritable b: results.values()) {
-            byte[] bytes = new byte[b.getSize()];
-            System.arraycopy(b.get(), 0, bytes, 0, bytes.length);
-            in.reset(bytes, bytes.length);
+          for(byte [] b: results.values()) {
+            in.reset(b, b.length);
             info.readFields(in);
             metaRegions.add(info);
             results.clear();
@@ -405,8 +404,7 @@ class HMerge implements HConstants {
       long lockid = -1L;
       try {
         lockid = root.startUpdate(newRegion.getRegionName());
-        root.put(lockid, COL_REGIONINFO,
-            new BytesWritable(byteValue.toByteArray()));
+        root.put(lockid, COL_REGIONINFO, byteValue.toByteArray());
         root.commit(lockid);
         lockid = -1L;
 

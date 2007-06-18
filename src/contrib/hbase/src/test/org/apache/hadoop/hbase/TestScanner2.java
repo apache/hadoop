@@ -89,10 +89,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
         }
 
         for (int i = 0; i < values.length; i++) {
-          byte[] bytes = new byte[values[i].getData().getSize()];
-          System.arraycopy(values[i].getData().get(), 0, bytes, 0,
-            bytes.length);
-          results.put(values[i].getKey().getColumn(), bytes);
+          results.put(values[i].getKey().getColumn(), values[i].getData());
         }
 
         HRegionInfo info = HRegion.getRegionInfo(results);

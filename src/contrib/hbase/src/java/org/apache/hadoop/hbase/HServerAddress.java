@@ -45,7 +45,8 @@ public class HServerAddress implements Writable {
       throw new IllegalArgumentException("Not a host:port pair: " + hostAndPort);
     }
     String host = hostAndPort.substring(0, colonIndex);
-    int port = Integer.valueOf(hostAndPort.substring(colonIndex + 1));
+    int port =
+      Integer.valueOf(hostAndPort.substring(colonIndex + 1)).intValue();
     this.address = new InetSocketAddress(host, port);
     this.stringValue = hostAndPort;
   }

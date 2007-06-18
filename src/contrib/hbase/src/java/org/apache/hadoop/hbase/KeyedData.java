@@ -24,31 +24,30 @@ import java.io.*;
  ******************************************************************************/
 public class KeyedData implements Writable {
   HStoreKey key;
-  BytesWritable data;
+  byte [] data;
 
   /** Default constructor. Used by Writable interface */
   public KeyedData() {
     this.key = new HStoreKey();
-    this.data = new BytesWritable();
   }
 
   /**
    * Create a KeyedData object specifying the parts
-   * @param key         - HStoreKey
-   * @param data        - BytesWritable
+   * @param key HStoreKey
+   * @param data
    */
-  public KeyedData(HStoreKey key, BytesWritable data) {
+  public KeyedData(HStoreKey key, byte [] data) {
     this.key = key;
     this.data = data;
   }
 
-  /** @return - returns the key */
+  /** @return returns the key */
   public HStoreKey getKey() {
     return key;
   }
 
   /** @return - returns the value */
-  public BytesWritable getData() {
+  public byte [] getData() {
     return data;
   }
 
@@ -61,7 +60,8 @@ public class KeyedData implements Writable {
    */
   public void write(DataOutput out) throws IOException {
     key.write(out);
-    data.write(out);
+    out.writeShort(this.data.length);
+    out.write(this.data);
   }
   
   /* (non-Javadoc)
@@ -69,6 +69,7 @@ public class KeyedData implements Writable {
    */
   public void readFields(DataInput in) throws IOException {
     key.readFields(in);
-    data.readFields(in);
+    this.data = new byte[in.readShort()];
+    in.readFully(this.data);
   }
 }

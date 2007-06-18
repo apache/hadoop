@@ -16,7 +16,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -24,7 +26,7 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -34,13 +36,13 @@ import org.apache.hadoop.io.Text;
 public class HMemcache {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   
-  TreeMap<HStoreKey, BytesWritable> memcache 
-      = new TreeMap<HStoreKey, BytesWritable>();
+  TreeMap<HStoreKey, byte []> memcache =
+    new TreeMap<HStoreKey, byte []>();
   
-  Vector<TreeMap<HStoreKey, BytesWritable>> history 
-      = new Vector<TreeMap<HStoreKey, BytesWritable>>();
+  Vector<TreeMap<HStoreKey, byte []>> history
+    = new Vector<TreeMap<HStoreKey, byte []>>();
   
-  TreeMap<HStoreKey, BytesWritable> snapshot = null;
+  TreeMap<HStoreKey, byte []> snapshot = null;
 
   final HLocking lock = new HLocking();
 
@@ -49,7 +51,7 @@ public class HMemcache {
   }
 
   public static class Snapshot {
-    public TreeMap<HStoreKey, BytesWritable> memcacheSnapshot = null;
+    public TreeMap<HStoreKey, byte []> memcacheSnapshot = null;
     public long sequenceId = 0;
     
     public Snapshot() {
@@ -92,7 +94,7 @@ public class HMemcache {
       retval.memcacheSnapshot = memcache;
       this.snapshot = memcache;
       history.add(memcache);
-      memcache = new TreeMap<HStoreKey, BytesWritable>();
+      memcache = new TreeMap<HStoreKey, byte []>();
       retval.sequenceId = log.startCacheFlush();
       
       if(LOG.isDebugEnabled()) {
@@ -122,21 +124,18 @@ public class HMemcache {
         LOG.debug("deleting snapshot");
       }
       
-      for(Iterator<TreeMap<HStoreKey, BytesWritable>> it = history.iterator(); 
+      for(Iterator<TreeMap<HStoreKey, byte []>> it = history.iterator(); 
           it.hasNext(); ) {
-        
-        TreeMap<HStoreKey, BytesWritable> cur = it.next();
-        if(snapshot == cur) {
+        TreeMap<HStoreKey, byte []> cur = it.next();
+        if (snapshot == cur) {
           it.remove();
           break;
         }
       }
       this.snapshot = null;
-      
       if(LOG.isDebugEnabled()) {
         LOG.debug("snapshot deleted");
       }
-      
     } finally {
       this.lock.releaseWriteLock();
     }
@@ -144,14 +143,16 @@ public class HMemcache {
 
   /**
    * Store a value.  
-   *
    * Operation uses a write lock.
+   * @param row
+   * @param columns
+   * @param timestamp
    */
-  public void add(final Text row, final TreeMap<Text, BytesWritable> columns,
+  public void add(final Text row, final TreeMap<Text, byte []> columns,
       final long timestamp) {
     this.lock.obtainWriteLock();
     try {
-      for (Map.Entry<Text, BytesWritable> es: columns.entrySet()) {
+      for (Map.Entry<Text, byte []> es: columns.entrySet()) {
         HStoreKey key = new HStoreKey(row, es.getKey(), timestamp);
         memcache.put(key, es.getValue());
       }
@@ -162,45 +163,47 @@ public class HMemcache {
 
   /**
    * Look back through all the backlog TreeMaps to find the target.
-   *
-   * We only need a readlock here.
+   * @param key
+   * @param numVersions
+   * @return An array of byte arrays orderded by timestamp.
    */
-  public BytesWritable[] get(HStoreKey key, int numVersions) {
-    Vector<BytesWritable> results = new Vector<BytesWritable>();
+  public byte [][] get(final HStoreKey key, final int numVersions) {
+    List<byte []> results = new ArrayList<byte[]>();
     this.lock.obtainReadLock();
     try {
-      Vector<BytesWritable> result = get(memcache, key, numVersions-results.size());
+      ArrayList<byte []> result =
+        get(memcache, key, numVersions - results.size());
       results.addAll(0, result);
-
-      for(int i = history.size()-1; i >= 0; i--) {
-        if(numVersions > 0 && results.size() >= numVersions) {
+      for (int i = history.size() - 1; i >= 0; i--) {
+        if (numVersions > 0 && results.size() >= numVersions) {
           break;
         }
-        
-        result = get(history.elementAt(i), key, numVersions-results.size());
+        result = get(history.elementAt(i), key, numVersions - results.size());
         results.addAll(results.size(), result);
       }
-      
       return (results.size() == 0)?
-        null: results.toArray(new BytesWritable[results.size()]);
+        null: ImmutableBytesWritable.toArray(results);
     } finally {
       this.lock.releaseReadLock();
     }
   }
+
   
   /**
    * Return all the available columns for the given key.  The key indicates a 
    * row and timestamp, but not a column name.
    *
    * The returned object should map column names to byte arrays (byte[]).
+   * @param key
+   * @return All columns for given key.
    */
-  public TreeMap<Text, BytesWritable> getFull(HStoreKey key) {
-    TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
+  public TreeMap<Text, byte []> getFull(HStoreKey key) {
+    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
     this.lock.obtainReadLock();
     try {
       internalGetFull(memcache, key, results);
-      for(int i = history.size()-1; i >= 0; i--) {
-        TreeMap<HStoreKey, BytesWritable> cur = history.elementAt(i);
+      for (int i = history.size()-1; i >= 0; i--) {
+        TreeMap<HStoreKey, byte []> cur = history.elementAt(i);
         internalGetFull(cur, key, results);
       }
       return results;
@@ -210,17 +213,16 @@ public class HMemcache {
     }
   }
   
-  void internalGetFull(TreeMap<HStoreKey, BytesWritable> map, HStoreKey key, 
-      TreeMap<Text, BytesWritable> results) {
-    SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(key);
-    for (Map.Entry<HStoreKey, BytesWritable> es: tailMap.entrySet()) {
+  void internalGetFull(TreeMap<HStoreKey, byte []> map, HStoreKey key, 
+      TreeMap<Text, byte []> results) {
+    SortedMap<HStoreKey, byte []> tailMap = map.tailMap(key);
+    for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       Text itCol = itKey.getColumn();
       if (results.get(itCol) == null
           && key.matchesWithoutColumn(itKey)) {
-        BytesWritable val = tailMap.get(itKey);
+        byte [] val = tailMap.get(itKey);
         results.put(itCol, val);
-        
       } else if (key.getRow().compareTo(itKey.getRow()) > 0) {
         break;
       }
@@ -235,18 +237,23 @@ public class HMemcache {
    *
    * TODO - This is kinda slow.  We need a data structure that allows for 
    * proximity-searches, not just precise-matches.
-   */    
-  Vector<BytesWritable> get(TreeMap<HStoreKey, BytesWritable> map, HStoreKey key, int numVersions) {
-    Vector<BytesWritable> result = new Vector<BytesWritable>();
-    HStoreKey curKey = new HStoreKey(key.getRow(), key.getColumn(), key.getTimestamp());
-    SortedMap<HStoreKey, BytesWritable> tailMap = map.tailMap(curKey);
-    for (Map.Entry<HStoreKey, BytesWritable> es: tailMap.entrySet()) {
+   * @param map
+   * @param key
+   * @param numVersions
+   * @return Ordered list of items found in passed <code>map</code>
+   */
+  ArrayList<byte []> get(final TreeMap<HStoreKey, byte []> map,
+      final HStoreKey key, final int numVersions) {
+    ArrayList<byte []> result = new ArrayList<byte []>();
+    HStoreKey curKey =
+      new HStoreKey(key.getRow(), key.getColumn(), key.getTimestamp());
+    SortedMap<HStoreKey, byte []> tailMap = map.tailMap(curKey);
+    for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       if (itKey.matchesRowCol(curKey)) {
         result.add(tailMap.get(itKey));
         curKey.setVersion(itKey.getTimestamp() - 1);
       }
-      
       if (numVersions > 0 && result.size() >= numVersions) {
         break;
       }
@@ -269,8 +276,8 @@ public class HMemcache {
   //////////////////////////////////////////////////////////////////////////////
 
   class HMemcacheScanner extends HAbstractScanner {
-    TreeMap<HStoreKey, BytesWritable> backingMaps[];
-    Iterator<HStoreKey> keyIterators[];
+    final TreeMap<HStoreKey, byte []> backingMaps[];
+    final Iterator<HStoreKey> keyIterators[];
 
     @SuppressWarnings("unchecked")
     public HMemcacheScanner(long timestamp, Text targetCols[], Text firstRow)
@@ -292,7 +299,7 @@ public class HMemcache {
       
         this.keyIterators = new Iterator[backingMaps.length];
         this.keys = new HStoreKey[backingMaps.length];
-        this.vals = new BytesWritable[backingMaps.length];
+        this.vals = new byte[backingMaps.length][];
 
         // Generate list of iterators
         HStoreKey firstKey = new HStoreKey(firstRow);

@@ -41,19 +41,14 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
    * Since all the "tests" depend on the results of the previous test, they are
    * not Junit tests that can stand alone. Consequently we have a single Junit
    * test that runs the "sub-tests" as private methods.
+   * @throws IOException 
    */
-  public void testHBaseCluster() {
-    try {
-      setup();
-      basic();
-      scanner();
-      listTables();
-      cleanup();
-      
-    } catch(IOException e) {
-      e.printStackTrace();
-      fail();
-    }
+  public void testHBaseCluster() throws IOException {
+    setup();
+    basic();
+    scanner();
+    listTables();
+    cleanup();
   }
 
   public void tearDown() throws Exception {

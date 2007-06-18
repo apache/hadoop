@@ -47,7 +47,9 @@ public class BloomFilterDescriptor implements WritableComparable {
   public static final int RETOUCHED_BLOOMFILTER = 3;
 
   /** Default constructor - used in conjunction with Writable */
-  public BloomFilterDescriptor() {}
+  public BloomFilterDescriptor() {
+    super();
+  }
   
   /**
    * @param type The kind of bloom filter to use.

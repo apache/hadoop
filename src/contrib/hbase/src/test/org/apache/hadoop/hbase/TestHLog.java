@@ -20,7 +20,6 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.Reader;
@@ -50,10 +49,10 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       try {
         // Write columns named 1, 2, 3, etc. and then values of single byte
         // 1, 2, 3...
-        TreeMap<Text, BytesWritable> cols = new TreeMap<Text, BytesWritable>();
+        TreeMap<Text, byte []> cols = new TreeMap<Text, byte []>();
         for (int i = 0; i < COL_COUNT; i++) {
           cols.put(new Text(Integer.toString(i)),
-              new BytesWritable(new byte[] { (byte)(i + '0') }));
+            new byte[] { (byte)(i + '0') });
         }
         long timestamp = System.currentTimeMillis();
         log.append(regionName, tableName, row, cols, timestamp);
@@ -71,7 +70,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
           assertEquals(regionName, key.getRegionName());
           assertEquals(tableName, key.getTablename());
           assertEquals(row, key.getRow());
-          assertEquals((byte)(i + '0'), val.getVal().get()[0]);
+          assertEquals((byte)(i + '0'), val.getVal()[0]);
           System.out.println(key + " " + val);
         }
         while (reader.next(key, val)) {
@@ -80,7 +79,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
           assertEquals(tableName, key.getTablename());
           assertEquals(HLog.METAROW, key.getRow());
           assertEquals(HLog.METACOLUMN, val.getColumn());
-          assertEquals(0, val.getVal().compareTo(COMPLETE_CACHEFLUSH));
+          assertEquals(0, COMPLETE_CACHEFLUSH.compareTo(val.getVal()));
           System.out.println(key + " " + val);
         }
       } finally {

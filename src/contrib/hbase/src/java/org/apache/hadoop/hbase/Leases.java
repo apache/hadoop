@@ -17,42 +17,41 @@ package org.apache.hadoop.hbase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.*;
-
 import java.io.*;
 import java.util.*;
 
 /**
  * Leases
  *
- * There are several server classes in HBase that need to track external clients
- * that occasionally send heartbeats.
+ * There are several server classes in HBase that need to track external
+ * clients that occasionally send heartbeats.
  * 
- * These external clients hold resources in the server class.  Those resources 
- * need to be released if the external client fails to send a heartbeat after 
- * some interval of time passes.
+ * <p>These external clients hold resources in the server class.
+ * Those resources need to be released if the external client fails to send a
+ * heartbeat after some interval of time passes.
  *
- * The Leases class is a general reusable class for this kind of pattern.
- *
+ * <p>The Leases class is a general reusable class for this kind of pattern.
  * An instance of the Leases class will create a thread to do its dirty work.  
  * You should close() the instance if you want to clean up the thread properly.
  */
 public class Leases {
-  static final Log LOG = LogFactory.getLog(Leases.class.getName());
+  protected static final Log LOG = LogFactory.getLog(Leases.class.getName());
 
-  long leasePeriod;
-  long leaseCheckFrequency;
-  LeaseMonitor leaseMonitor;
-  Thread leaseMonitorThread;
-  TreeMap<Text, Lease> leases = new TreeMap<Text, Lease>();
-  TreeSet<Lease> sortedLeases = new TreeSet<Lease>();
-  boolean running = true;
+  protected final long leasePeriod;
+  protected final long leaseCheckFrequency;
+  private final LeaseMonitor leaseMonitor;
+  private final Thread leaseMonitorThread;
+  protected final Map<LeaseName, Lease> leases =
+    new HashMap<LeaseName, Lease>();
+  protected final TreeSet<Lease> sortedLeases = new TreeSet<Lease>();
+  protected boolean running = true;
 
   /**
    * Creates a lease
    * 
    * @param leasePeriod - length of time (milliseconds) that the lease is valid
-   * @param leaseCheckFrequency - how often the lease should be checked (milliseconds)
+   * @param leaseCheckFrequency - how often the lease should be checked
+   * (milliseconds)
    */
   public Leases(long leasePeriod, long leaseCheckFrequency) {
     this.leasePeriod = leasePeriod;
@@ -88,96 +87,93 @@ public class Leases {
       LOG.debug("leases closed");
     }
   }
-  
-  String getLeaseName(final Text holderId, final Text resourceId) {
-    return "<holderId=" + holderId + ", resourceId=" + resourceId + ">";
-  }
 
-  /** A client obtains a lease... */
+  /* A client obtains a lease... */
+  
   /**
    * Obtain a lease
    * 
-   * @param holderId - name of lease holder
-   * @param resourceId - resource being leased
-   * @param listener - listener that will process lease expirations
+   * @param holderId id of lease holder
+   * @param resourceId id of resource being leased
+   * @param listener listener that will process lease expirations
    */
-  public void createLease(Text holderId, Text resourceId,
+  public void createLease(final long holderId, final long resourceId,
       final LeaseListener listener) {
+    LeaseName name = null;
     synchronized(leases) {
       synchronized(sortedLeases) {
         Lease lease = new Lease(holderId, resourceId, listener);
-        Text leaseId = lease.getLeaseId();
-        if(leases.get(leaseId) != null) {
-          throw new AssertionError("Impossible state for createLease(): Lease " +
-            getLeaseName(holderId, resourceId) + " is still held.");
+        name = lease.getLeaseName();
+        if(leases.get(name) != null) {
+          throw new AssertionError("Impossible state for createLease(): " +
+            "Lease " + name + " is still held.");
         }
-        leases.put(leaseId, lease);
+        leases.put(name, lease);
         sortedLeases.add(lease);
       }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Created lease " + getLeaseName(holderId, resourceId));
+      LOG.debug("Created lease " + name);
     }
   }
   
-  /** A client renews a lease... */
+  /* A client renews a lease... */
   /**
    * Renew a lease
    * 
-   * @param holderId - name of lease holder
-   * @param resourceId - resource being leased
+   * @param holderId id of lease holder
+   * @param resourceId id of resource being leased
    * @throws IOException
    */
-  public void renewLease(Text holderId, Text resourceId) throws IOException {
+  public void renewLease(final long holderId, final long resourceId)
+  throws IOException {
+    LeaseName name = null;
     synchronized(leases) {
       synchronized(sortedLeases) {
-        Text leaseId = createLeaseId(holderId, resourceId);
-        Lease lease = leases.get(leaseId);
-        if(lease == null) {
+        name = createLeaseName(holderId, resourceId);
+        Lease lease = leases.get(name);
+        if (lease == null) {
           // It's possible that someone tries to renew the lease, but 
           // it just expired a moment ago.  So fail.
           throw new IOException("Cannot renew lease that is not held: " +
-            getLeaseName(holderId, resourceId));
+            name);
         }
-        
         sortedLeases.remove(lease);
         lease.renew();
         sortedLeases.add(lease);
       }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Renewed lease " + getLeaseName(holderId, resourceId));
+      LOG.debug("Renewed lease " + name);
     }
   }
 
   /**
    * Client explicitly cancels a lease.
    * 
-   * @param holderId - name of lease holder
-   * @param resourceId - resource being leased
+   * @param holderId id of lease holder
+   * @param resourceId id of resource being leased
    * @throws IOException
    */
-  public void cancelLease(Text holderId, Text resourceId) throws IOException {
+  public void cancelLease(final long holderId, final long resourceId)
+  throws IOException {
+    LeaseName name = null;
     synchronized(leases) {
       synchronized(sortedLeases) {
-        Text leaseId = createLeaseId(holderId, resourceId);
-        Lease lease = leases.get(leaseId);
-        if(lease == null) {
-          
+        name = createLeaseName(holderId, resourceId);
+        Lease lease = leases.get(name);
+        if (lease == null) {
           // It's possible that someone tries to renew the lease, but 
           // it just expired a moment ago.  So fail.
-          
           throw new IOException("Cannot cancel lease that is not held: " +
-            getLeaseName(holderId, resourceId));
+            name);
         }
-        
         sortedLeases.remove(lease);
-        leases.remove(leaseId);
-
+        leases.remove(name);
       }
     }     
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Cancel lease " + getLeaseName(holderId, resourceId));
+      LOG.debug("Cancel lease " + name);
     }
   }
 
@@ -190,13 +186,10 @@ public class Leases {
             Lease top;
             while((sortedLeases.size() > 0)
                 && ((top = sortedLeases.first()) != null)) {
-              
               if(top.shouldExpire()) {
-                leases.remove(top.getLeaseId());
+                leases.remove(top.getLeaseName());
                 sortedLeases.remove(top);
-
                 top.expired();
-              
               } else {
                 break;
               }
@@ -206,34 +199,92 @@ public class Leases {
         try {
           Thread.sleep(leaseCheckFrequency);
         } catch (InterruptedException ie) {
-          // Ignore
+          // continue
         }
       }
     }
   }
+  
+  /*
+   * A Lease name.
+   * More lightweight than String or Text.
+   */
+  class LeaseName implements Comparable {
+    private final long holderId;
+    private final long resourceId;
+    
+    LeaseName(final long hid, final long rid) {
+      this.holderId = hid;
+      this.resourceId = rid;
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+      LeaseName other = (LeaseName)obj;
+      return this.holderId == other.holderId &&
+        this.resourceId == other.resourceId;
+    }
+    
+    @Override
+    public int hashCode() {
+      // Copy OR'ing from javadoc for Long#hashCode.
+      int result = (int)(this.holderId ^ (this.holderId >>> 32));
+      result ^= (int)(this.resourceId ^ (this.resourceId >>> 32));
+      return result;
+    }
+    
+    @Override
+    public String toString() {
+      return Long.toString(this.holderId) + "/" +
+        Long.toString(this.resourceId);
+    }
 
+    public int compareTo(Object obj) {
+      LeaseName other = (LeaseName)obj;
+      if (this.holderId < other.holderId) {
+        return -1;
+      }
+      if (this.holderId > other.holderId) {
+        return 1;
+      }
+      // holderIds are equal
+      if (this.resourceId < other.resourceId) {
+        return -1;
+      }
+      if (this.resourceId > other.resourceId) {
+        return 1;
+      }
+      // Objects are equal
+      return 0;
+    }
+  }
+  
   /** Create a lease id out of the holder and resource ids. */
-  Text createLeaseId(Text holderId, Text resourceId) {
-    return new Text("_" + holderId + "/" + resourceId + "_");
+  protected LeaseName createLeaseName(final long hid, final long rid) {
+    return new LeaseName(hid, rid);
   }
 
   /** This class tracks a single Lease. */
-  @SuppressWarnings("unchecked")
   private class Lease implements Comparable {
-    Text holderId;
-    Text resourceId;
-    LeaseListener listener;
+    final long holderId;
+    final long resourceId;
+    final LeaseListener listener;
     long lastUpdate;
+    private LeaseName leaseId;
 
-    Lease(Text holderId, Text resourceId, LeaseListener listener) {
+    Lease(final long holderId, final long resourceId,
+        final LeaseListener listener) {
       this.holderId = holderId;
       this.resourceId = resourceId;
       this.listener = listener;
       renew();
     }
     
-    Text getLeaseId() {
-      return createLeaseId(holderId, resourceId);
+    synchronized LeaseName getLeaseName() {
+      if (this.leaseId == null) {
+        this.leaseId = createLeaseName(holderId, resourceId);
+      }
+      return this.leaseId;
     }
     
     boolean shouldExpire() {
@@ -246,8 +297,7 @@ public class Leases {
     
     void expired() {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Lease expired " + getLeaseName(this.holderId,
-          this.resourceId));
+        LOG.debug("Lease expired " + getLeaseName());
       }
       listener.leaseExpired();
     }
@@ -259,7 +309,7 @@ public class Leases {
     
     @Override
     public int hashCode() {
-      int result = this.getLeaseId().hashCode();
+      int result = this.getLeaseName().hashCode();
       result ^= Long.valueOf(this.lastUpdate).hashCode();
       return result;
     }
@@ -272,14 +322,11 @@ public class Leases {
       Lease other = (Lease) o;
       if(this.lastUpdate < other.lastUpdate) {
         return -1;
-        
       } else if(this.lastUpdate > other.lastUpdate) {
         return 1;
-        
       } else {
-        return this.getLeaseId().compareTo(other.getLeaseId());
+        return this.getLeaseName().compareTo(other.getLeaseName());
       }
     }
   }
 }
-

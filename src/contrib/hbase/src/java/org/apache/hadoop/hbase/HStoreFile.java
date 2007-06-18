@@ -15,6 +15,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
@@ -213,41 +214,34 @@ public class HStoreFile implements HConstants, WritableComparable {
     MapFile.Reader in = new MapFile.Reader(fs, getMapFilePath().toString(), conf);
     try {
       MapFile.Writer outA = new MapFile.Writer(conf, fs, 
-          dstA.getMapFilePath().toString(), HStoreKey.class, BytesWritable.class);
-      
+        dstA.getMapFilePath().toString(), HStoreKey.class,
+        ImmutableBytesWritable.class);
       try {
         MapFile.Writer outB = new MapFile.Writer(conf, fs, 
-            dstB.getMapFilePath().toString(), HStoreKey.class, BytesWritable.class);
-        
+          dstB.getMapFilePath().toString(), HStoreKey.class,
+          ImmutableBytesWritable.class);
         try {
           HStoreKey readkey = new HStoreKey();
-          BytesWritable readval = new BytesWritable();
-          
+          ImmutableBytesWritable readval = new ImmutableBytesWritable();
           while(in.next(readkey, readval)) {
             Text key = readkey.getRow();
-            
             if(key.compareTo(midKey) < 0) {
               outA.append(readkey, readval);
-              
             } else {
               outB.append(readkey, readval);
             }
           }
-          
         } finally {
           outB.close();
         }
-        
       } finally {
         outA.close();
       }
-      
     } finally {
       in.close();
     }
 
     // Build an InfoFile for each output
-
     long seqid = loadInfo(fs);
     dstA.writeInfo(fs, seqid);
     dstB.writeInfo(fs, seqid);
@@ -262,8 +256,9 @@ public class HStoreFile implements HConstants, WritableComparable {
 
     // Copy all the source MapFile tuples into this HSF's MapFile
 
-    MapFile.Writer out = new MapFile.Writer(conf, fs, getMapFilePath().toString(),
-        HStoreKey.class, BytesWritable.class);
+    MapFile.Writer out = new MapFile.Writer(conf, fs,
+      getMapFilePath().toString(),
+      HStoreKey.class, ImmutableBytesWritable.class);
     
     try {
       for(Iterator<HStoreFile> it = srcFiles.iterator(); it.hasNext(); ) {
@@ -272,11 +267,10 @@ public class HStoreFile implements HConstants, WritableComparable {
         
         try {
           HStoreKey readkey = new HStoreKey();
-          BytesWritable readval = new BytesWritable();
+          ImmutableBytesWritable readval = new ImmutableBytesWritable();
           while(in.next(readkey, readval)) {
             out.append(readkey, readval);
           }
-          
         } finally {
           in.close();
         }
@@ -287,12 +281,10 @@ public class HStoreFile implements HConstants, WritableComparable {
     }
 
     // Build a unified InfoFile from the source InfoFiles.
-
     long unifiedSeqId = -1;
     for(Iterator<HStoreFile> it = srcFiles.iterator(); it.hasNext(); ) {
       HStoreFile hsf = it.next();
       long curSeqId = hsf.loadInfo(fs);
-      
       if(curSeqId > unifiedSeqId) {
         unifiedSeqId = curSeqId;
       }

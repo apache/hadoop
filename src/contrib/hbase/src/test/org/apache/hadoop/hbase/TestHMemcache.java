@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HMemcache.Snapshot;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 /** memcache test case */
@@ -85,10 +84,10 @@ public class TestHMemcache extends TestCase {
    */
   private void addRows(final HMemcache hmc) {
     for (int i = 0; i < ROW_COUNT; i++) {
-      TreeMap<Text, BytesWritable> columns = new TreeMap<Text, BytesWritable>();
+      TreeMap<Text, byte []> columns = new TreeMap<Text, byte []>();
       for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
         Text k = getColumnName(i, ii);
-        columns.put(k, new BytesWritable(k.toString().getBytes()));
+        columns.put(k, k.toString().getBytes());
       }
       hmc.add(getRowName(i), columns, System.currentTimeMillis());
     }
@@ -111,7 +110,7 @@ public class TestHMemcache extends TestCase {
       throws IOException {
     // Save off old state.
     int oldHistorySize = hmc.history.size();
-    TreeMap<HStoreKey, BytesWritable> oldMemcache = hmc.memcache;
+    TreeMap<HStoreKey, byte []> oldMemcache = hmc.memcache;
     // Run snapshot.
     Snapshot s = hmc.snapshotMemcacheForLog(log);
     // Make some assertions about what just happened.
@@ -147,7 +146,7 @@ public class TestHMemcache extends TestCase {
   }
   
   private void isExpectedRow(final int rowIndex,
-      TreeMap<Text, BytesWritable> row) {
+      TreeMap<Text, byte []> row) {
     int i = 0;
     for (Text colname: row.keySet()) {
       String expectedColname =
@@ -158,10 +157,8 @@ public class TestHMemcache extends TestCase {
       // 100 bytes in size at least. This is the default size
       // for BytesWriteable.  For comparison, comvert bytes to
       // String and trim to remove trailing null bytes.
-      BytesWritable value = row.get(colname);
-      byte[] bytes = new byte[value.getSize()];
-      System.arraycopy(value.get(), 0, bytes, 0, bytes.length);
-      String colvalueStr = new String(bytes).trim();
+      byte [] value = row.get(colname);
+      String colvalueStr = new String(value).trim();
       assertEquals("Content", colnameStr, colvalueStr);
     }
   }
@@ -171,7 +168,7 @@ public class TestHMemcache extends TestCase {
     addRows(this.hmemcache);
     for (int i = 0; i < ROW_COUNT; i++) {
       HStoreKey hsk = new HStoreKey(getRowName(i));
-      TreeMap<Text, BytesWritable> all = this.hmemcache.getFull(hsk);
+      TreeMap<Text, byte []> all = this.hmemcache.getFull(hsk);
       isExpectedRow(i, all);
     }
   }
@@ -192,16 +189,16 @@ public class TestHMemcache extends TestCase {
     HInternalScannerInterface scanner =
       this.hmemcache.getScanner(timestamp, cols, new Text());
     HStoreKey key = new HStoreKey();
-    TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
+    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
     for (int i = 0; scanner.next(key, results); i++) {
       assertTrue("Row name",
           key.toString().startsWith(getRowName(i).toString()));
       assertEquals("Count of columns", COLUMNS_COUNT,
           results.size());
-      TreeMap<Text, BytesWritable> row = new TreeMap<Text, BytesWritable>();
-      for(Iterator<Map.Entry<Text, BytesWritable>> it = results.entrySet().iterator();
+      TreeMap<Text, byte []> row = new TreeMap<Text, byte []>();
+      for(Iterator<Map.Entry<Text, byte []>> it = results.entrySet().iterator();
           it.hasNext(); ) {
-        Map.Entry<Text, BytesWritable> e = it.next();
+        Map.Entry<Text, byte []> e = it.next();
         row.put(e.getKey(), e.getValue());
       }
       isExpectedRow(i, row);
