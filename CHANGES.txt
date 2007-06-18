@@ -153,6 +153,9 @@ Trunk (unreleased changes)
  48. HADOOP-1449.  Add some examples to contrib/data_join.
      (Senthil Subramanian via cutting)
 
+ 49. HADOOP-1459.  Fix so that, in HDFS, getFileCacheHints() returns
+     hostnames instead of IP addresses.  (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

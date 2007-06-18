@@ -288,6 +288,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
     Text.writeString(out, location);
+    if (hostName == null) {
+      Text.writeString(out, "");
+    } else {
+      Text.writeString(out, hostName);
+    }
     WritableUtils.writeEnum(out, getAdminState());
   }
 
@@ -300,6 +305,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.lastUpdate = in.readLong();
     this.xceiverCount = in.readInt();
     this.location = Text.readString(in);
+    this.hostName = Text.readString(in);
     AdminStates newState = (AdminStates) WritableUtils.readEnum(in,
                                                                 AdminStates.class);
     setAdminState(newState);

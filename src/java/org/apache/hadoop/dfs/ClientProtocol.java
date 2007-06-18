@@ -35,8 +35,9 @@ interface ClientProtocol extends VersionedProtocol {
    *     getBlockLocations() added; 
    *     DFSFileInfo format changed;
    *     getHints() removed.
+   *     DatanodeInfo serialization has hostname.
    */
-  public static final long versionID = 12L;
+  public static final long versionID = 13L;
   
   ///////////////////////////////////////
   // File contents
