@@ -103,16 +103,8 @@ class FSNamesystem implements FSConstants {
   //
   // Keeps track of files that are being created, plus the
   // blocks that make them up.
-  // Mapping: fileName -> FileUnderConstruction
   //
-  Map<UTF8, FileUnderConstruction> pendingCreates = 
-    new TreeMap<UTF8, FileUnderConstruction>();
-
-  //
-  // Keeps track of the blocks that are part of those pending creates
-  // Set of: Block
-  //
-  Collection<Block> pendingCreateBlocks = new TreeSet<Block>();
+  PendingCreates pendingCreates = new PendingCreates();
 
   //
   // Stats on overall usage
@@ -833,23 +825,13 @@ class FSNamesystem implements FSConstants {
     //
     NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
                                   +b.getBlockName()+"of file "+src);
-    FileUnderConstruction pendingFile = pendingCreates.get(src);
-    if (pendingFile != null) {
-      Collection<Block> pendingVector = pendingFile.getBlocks();
-      for (Iterator<Block> it = pendingVector.iterator(); it.hasNext();) {
-        Block cur = it.next();
-        if (cur.compareTo(b) == 0) {
-          pendingCreateBlocks.remove(cur);
-          it.remove();
-          NameNode.stateChangeLog.debug(
-                                        "BLOCK* NameSystem.abandonBlock: "
-                                        +b.getBlockName()
-                                        +" is removed from pendingCreateBlock and pendingCreates");
-          return true;
-        }
-      }
+    boolean status = pendingCreates.removeBlock(src, b);
+    if (status) {
+      NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
+                                    + b.getBlockName()
+                                    + " is removed from pendingCreates");
     }
-    return false;
+    return status;
   }
 
   /**
@@ -937,9 +919,6 @@ class FSNamesystem implements FSConstants {
     NameNode.stateChangeLog.debug(
                                   "DIR* NameSystem.completeFile: " + src
                                   + " is removed from pendingCreates");
-    for (int i = 0; i < nrBlocks; i++) {
-      pendingCreateBlocks.remove(pendingBlocks[i]);
-    }
 
     synchronized (leases) {
       Lease lease = leases.get(holder);
@@ -985,9 +964,7 @@ class FSNamesystem implements FSConstants {
     do {
       b = new Block(FSNamesystem.randBlockId.nextLong(), 0);
     } while (isValidBlock(b));
-    FileUnderConstruction v = pendingCreates.get(src);
-    v.getBlocks().add(b);
-    pendingCreateBlocks.add(b);
+    pendingCreates.addBlock(src, b);
     NameNode.stateChangeLog.info("BLOCK* NameSystem.allocateBlock: "
                                  +src+ ". "+b.getBlockName()+
                                  " is created and added to pendingCreates and pendingCreateBlocks");      
@@ -1403,19 +1380,16 @@ class FSNamesystem implements FSConstants {
    * @param holder The datanode that was creating the file
    */
   private void internalReleaseCreate(UTF8 src, UTF8 holder) {
-    FileUnderConstruction v = pendingCreates.remove(src);
-    if (v != null) {
-      NameNode.stateChangeLog.debug(
-                                    "DIR* NameSystem.internalReleaseCreate: " + src
+    boolean status =  pendingCreates.remove(src);
+    if (status) {
+      NameNode.stateChangeLog.debug("DIR* NameSystem.internalReleaseCreate: " 
+                                    + src
                                     + " is removed from pendingCreates for "
                                     + holder + " (failure)");
-      for (Iterator<Block> it2 = v.getBlocks().iterator(); it2.hasNext();) {
-        Block b = it2.next();
-        pendingCreateBlocks.remove(b);
-      }
     } else {
       NameNode.stateChangeLog.warn("DIR* NameSystem.internalReleaseCreate: "
-                                   + "attempt to release a create lock on "+ src.toString()
+                                   + "attempt to release a create lock on "
+                                   + src.toString()
                                    + " that was not in pedingCreates");
     }
   }
@@ -2076,7 +2050,7 @@ class FSNamesystem implements FSConstants {
       // they are added to recentInvalidateSets and will be sent out
       // thorugh succeeding heartbeat responses.
       //
-      if (!isValidBlock(b) && !pendingCreateBlocks.contains(b)) {
+      if (!isValidBlock(b)) {
         if (obsolete.size() > FSConstants.BLOCK_INVALIDATE_CHUNK) {
           addToInvalidates(b, node);
         } else {
@@ -3361,7 +3335,8 @@ class FSNamesystem implements FSConstants {
   /**
    * Returns whether the given block is one pointed-to by a file.
    */
-  public boolean isValidBlock(Block b) {
-    return blocksMap.getINode(b) != null;
+  private boolean isValidBlock(Block b) {
+    return (blocksMap.getINode(b) != null ||
+            pendingCreates.contains(b));
   }
 }

@@ -176,6 +176,9 @@ Trunk (unreleased changes)
  54. HADOOP-1442.  Fix handling of zero-length input splits.
      (Senthil Subramanian via cutting)
 
+ 55. HADOOP-1444.  Fix HDFS block id generation to check pending
+     blocks for duplicates. (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
