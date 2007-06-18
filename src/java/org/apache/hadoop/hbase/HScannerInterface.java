@@ -24,6 +24,7 @@ import java.util.*;
  * HScannerInterface iterates through a set of rows.  It's implemented by several classes.
  ******************************************************************************/
 public interface HScannerInterface {
-  public boolean next(HStoreKey key, TreeMap<Text, byte[]> results) throws IOException;
+  public boolean next(HStoreKey key, TreeMap<Text, byte[]> results)
+  throws IOException;
   public void close() throws IOException;
 }

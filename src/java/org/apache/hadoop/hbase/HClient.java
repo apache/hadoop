@@ -30,11 +30,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -285,10 +284,8 @@ public class HClient implements HConstants {
         }
         boolean found = false;
         for(int j = 0; j < values.length; j++) {
-          if(values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
-            byte[] bytes = new byte[values[j].getData().getSize()];
-            System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
-            inbuf.reset(bytes, bytes.length);
+          if (values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
+            inbuf.reset(values[j].getData(), values[j].getData().length);
             info.readFields(inbuf);
             if(info.tableDesc.getName().equals(tableName)) {
               found = true;
@@ -398,9 +395,7 @@ public class HClient implements HConstants {
           valuesfound += 1;
           for(int j = 0; j < values.length; j++) {
             if(values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
-              byte[] bytes = new byte[values[j].getData().getSize()];
-              System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
-              inbuf.reset(bytes, bytes.length);
+              inbuf.reset(values[j].getData(), values[j].getData().length);
               info.readFields(inbuf);
               isenabled = !info.offLine;
               break;
@@ -483,9 +478,7 @@ public class HClient implements HConstants {
           valuesfound += 1;
           for(int j = 0; j < values.length; j++) {
             if(values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
-              byte[] bytes = new byte[values[j].getData().getSize()];
-              System.arraycopy(values[j].getData().get(), 0, bytes, 0, bytes.length);
-              inbuf.reset(bytes, bytes.length);
+              inbuf.reset(values[j].getData(), values[j].getData().length);
               info.readFields(inbuf);
               disabled = info.offLine;
               break;
@@ -737,8 +730,8 @@ public class HClient implements HConstants {
    * @throws IOException 
    */
   private TreeMap<Text, RegionLocation> scanOneMetaRegion(final RegionLocation t,
-    final Text tableName) throws IOException {
-    
+    final Text tableName)
+  throws IOException {  
     HRegionInterface server = getHRegionConnection(t.serverAddress);
     TreeMap<Text, RegionLocation> servers = new TreeMap<Text, RegionLocation>();
     for(int tries = 0; servers.size() == 0 && tries < this.numRetries;
@@ -772,9 +765,7 @@ public class HClient implements HConstants {
           byte[] bytes = null;
           TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
           for(int i = 0; i < values.length; i++) {
-            bytes = new byte[values[i].getData().getSize()];
-            System.arraycopy(values[i].getData().get(), 0, bytes, 0, bytes.length);
-            results.put(values[i].getKey().getColumn(), bytes);
+            results.put(values[i].getKey().getColumn(), values[i].getData());
           }
           regionInfo = new HRegionInfo();
           bytes = results.get(COL_REGIONINFO);
@@ -900,8 +891,7 @@ public class HClient implements HConstants {
           }
           for(int i = 0; i < values.length; i++) {
             if(values[i].getKey().getColumn().equals(COL_REGIONINFO)) {
-              byte[] bytes = values[i].getData().get();
-              inbuf.reset(bytes, bytes.length);
+              inbuf.reset(values[i].getData(), values[i].getData().length);
               HRegionInfo info = new HRegionInfo();
               info.readFields(inbuf);
 
@@ -967,22 +957,19 @@ public class HClient implements HConstants {
   /** 
    * Get a single value for the specified row and column
    *
-   * @param row         - row key
-   * @param column      - column name
-   * @return            - value for specified row/column
+   * @param row row key
+   * @param column column name
+   * @return value for specified row/column
    * @throws IOException
    */
   public byte[] get(Text row, Text column) throws IOException {
     RegionLocation info = null;
-    BytesWritable value = null;
-
+    byte [] value = null;
     for(int tries = 0; tries < numRetries && info == null; tries++) {
       info = getRegionLocation(row);
-      
       try {
-        value = getHRegionConnection(info.serverAddress).get(
-            info.regionInfo.regionName, row, column);
-        
+        value = getHRegionConnection(info.serverAddress).
+          get(info.regionInfo.regionName, row, column);
       } catch(NotServingRegionException e) {
         if(tries == numRetries - 1) {
           // No more tries
@@ -992,13 +979,7 @@ public class HClient implements HConstants {
         info = null;
       }
     }
-
-    if(value != null) {
-      byte[] bytes = new byte[value.getSize()];
-      System.arraycopy(value.get(), 0, bytes, 0, bytes.length);
-      return bytes;
-    }
-    return null;
+    return value;
   }
  
   /** 
@@ -1012,15 +993,12 @@ public class HClient implements HConstants {
    */
   public byte[][] get(Text row, Text column, int numVersions) throws IOException {
     RegionLocation info = null;
-    BytesWritable[] values = null;
-
+    byte [][] values = null;
     for(int tries = 0; tries < numRetries && info == null; tries++) {
       info = getRegionLocation(row);
-      
       try {
         values = getHRegionConnection(info.serverAddress).get(
-            info.regionInfo.regionName, row, column, numVersions);
-        
+          info.regionInfo.regionName, row, column, numVersions);
       } catch(NotServingRegionException e) {
         if(tries == numRetries - 1) {
           // No more tries
@@ -1034,9 +1012,7 @@ public class HClient implements HConstants {
     if(values != null) {
       ArrayList<byte[]> bytes = new ArrayList<byte[]>();
       for(int i = 0 ; i < values.length; i++) {
-        byte[] value = new byte[values[i].getSize()];
-        System.arraycopy(values[i].get(), 0, value, 0, value.length);
-        bytes.add(value);
+        bytes.add(values[i]);
       }
       return bytes.toArray(new byte[values.length][]);
     }
@@ -1057,14 +1033,12 @@ public class HClient implements HConstants {
   public byte[][] get(Text row, Text column, long timestamp, int numVersions)
   throws IOException {
     RegionLocation info = null;
-    BytesWritable[] values = null;
-
+    byte [][] values = null;
     for(int tries = 0; tries < numRetries && info == null; tries++) {
       info = getRegionLocation(row);
-      
       try {
-        values = getHRegionConnection(info.serverAddress).get(
-            info.regionInfo.regionName, row, column, timestamp, numVersions);
+        values = getHRegionConnection(info.serverAddress).
+          get(info.regionInfo.regionName, row, column, timestamp, numVersions);
     
       } catch(NotServingRegionException e) {
         if(tries == numRetries - 1) {
@@ -1079,9 +1053,7 @@ public class HClient implements HConstants {
     if(values != null) {
       ArrayList<byte[]> bytes = new ArrayList<byte[]>();
       for(int i = 0 ; i < values.length; i++) {
-        byte[] value = new byte[values[i].getSize()];
-        System.arraycopy(values[i].get(), 0, value, 0, value.length);
-        bytes.add(value);
+        bytes.add(values[i]);
       }
       return bytes.toArray(new byte[values.length][]);
     }
@@ -1118,9 +1090,7 @@ public class HClient implements HConstants {
     TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
     if(value != null && value.length != 0) {
       for(int i = 0; i < value.length; i++) {
-        byte[] bytes = new byte[value[i].getData().getSize()];
-        System.arraycopy(value[i].getData().get(), 0, bytes, 0, bytes.length);
-        results.put(value[i].getKey().getColumn(), bytes);
+        results.put(value[i].getKey().getColumn(), value[i].getData());
       }
     }
     return results;
@@ -1242,7 +1212,7 @@ public class HClient implements HConstants {
   public void put(long lockid, Text column, byte val[]) throws IOException {
     try {
       this.currentServer.put(this.currentRegion, this.clientid, lockid, column,
-          new BytesWritable(val));
+        val);
     } catch(IOException e) {
       try {
         this.currentServer.abort(this.currentRegion, this.clientid, lockid);
@@ -1432,9 +1402,7 @@ public class HClient implements HConstants {
           key.setRow(values[i].getKey().getRow());
           key.setVersion(values[i].getKey().getTimestamp());
           key.setColumn(EMPTY_COLUMN);
-          byte[] bytes = new byte[values[i].getData().getSize()];
-          System.arraycopy(values[i].getData().get(), 0, bytes, 0, bytes.length);
-          results.put(values[i].getKey().getColumn(), bytes);
+          results.put(values[i].getKey().getColumn(), values[i].getData());
         }
       }
       return values == null ? false : values.length != 0;

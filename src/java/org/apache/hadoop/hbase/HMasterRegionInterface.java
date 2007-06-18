@@ -25,5 +25,6 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 public interface HMasterRegionInterface extends VersionedProtocol {
   public static final long versionID = 1L;
   public void regionServerStartup(HServerInfo info) throws IOException;
-  public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[]) throws IOException;
+  public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[])
+  throws IOException;
 }

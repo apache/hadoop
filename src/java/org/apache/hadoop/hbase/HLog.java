@@ -78,7 +78,7 @@ public class HLog implements HConstants {
   long filenum = 0;
   transient int numEntries = 0;
 
-  Integer rollLock = 0;
+  Integer rollLock = new Integer(0);
 
   /**
    * Split up a bunch of log files, that are no longer being written to,
@@ -205,6 +205,7 @@ public class HLog implements HConstants {
           try {
             wait();
           } catch (InterruptedException ie) {
+            // continue;
           }
         }
         
@@ -282,8 +283,8 @@ public class HLog implements HConstants {
    * This is a convenience method that computes a new filename with
    * a given file-number.
    */
-  Path computeFilename(long filenum) {
-    return new Path(dir, HLOG_DATFILE + String.format("%1$03d", filenum));
+  Path computeFilename(final long fn) {
+    return new Path(dir, HLOG_DATFILE + String.format("%1$03d", fn));
   }
 
   /**
@@ -333,7 +334,7 @@ public class HLog implements HConstants {
    * @throws IOException
    */
   synchronized void append(Text regionName, Text tableName, Text row,
-      TreeMap<Text, BytesWritable> columns, long timestamp)
+      TreeMap<Text, byte []> columns, long timestamp)
   throws IOException {
     if(closed) {
       throw new IOException("Cannot append; log is closed");
@@ -350,7 +351,7 @@ public class HLog implements HConstants {
     }
 
     int counter = 0;
-    for (Map.Entry<Text, BytesWritable> es: columns.entrySet()) {
+    for (Map.Entry<Text, byte []> es: columns.entrySet()) {
       HLogKey logKey =
         new HLogKey(regionName, tableName, row, seqNum[counter++]);
       HLogEdit logEdit = new HLogEdit(es.getKey(), es.getValue(), timestamp);
@@ -401,6 +402,7 @@ public class HLog implements HConstants {
       try {
         wait();
       } catch (InterruptedException ie) {
+        // continue
       }
     }
     insideCacheFlush = true;
@@ -427,7 +429,7 @@ public class HLog implements HConstants {
     }
     
     writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
-      new HLogEdit(HLog.METACOLUMN, COMPLETE_CACHEFLUSH,
+      new HLogEdit(HLog.METACOLUMN, COMPLETE_CACHEFLUSH.get(),
         System.currentTimeMillis()));
     numEntries++;
 

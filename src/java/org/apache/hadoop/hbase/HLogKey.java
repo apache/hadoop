@@ -34,6 +34,7 @@ public class HLogKey implements WritableComparable {
 
   /** Create an empty key useful when deserializing */
   public HLogKey() {
+    super();
   }
   
   /**
@@ -47,6 +48,7 @@ public class HLogKey implements WritableComparable {
    * @param logSeqNum   - log sequence number
    */
   public HLogKey(Text regionName, Text tablename, Text row, long logSeqNum) {
+    // TODO: Is this copy of the instances necessary? They are expensive.
     this.regionName.set(regionName);
     this.tablename.set(tablename);
     this.row.set(row);

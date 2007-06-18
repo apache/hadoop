@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -168,7 +167,7 @@ class HRegiondirReader {
     Text [] families = info.tableDesc.families().keySet().toArray(new Text [] {});
     HInternalScannerInterface scanner = r.getScanner(families, new Text());
     HStoreKey key = new HStoreKey();
-    TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
+    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
     // Print out table header line.
     String s = info.startKey.toString();
     String startKey = (s == null || s.length() <= 0)? "<>": s;
@@ -184,19 +183,15 @@ class HRegiondirReader {
     // Every line starts with row name followed by column name
     // followed by cell content.
     while(scanner.next(key, results)) {
-      for (Map.Entry<Text, BytesWritable> es: results.entrySet()) {
-      Text colname = es.getKey();
-      BytesWritable colvalue = es.getValue();
+      for (Map.Entry<Text, byte []> es: results.entrySet()) {
+        Text colname = es.getKey();
+        byte [] colvalue = es.getValue();
         Object value = null;
-        byte[] bytes = new byte[colvalue.getSize()];
         if (colname.toString().equals("info:regioninfo")) {
-          // Then bytes are instance of an HRegionInfo.
-          System.arraycopy(colvalue, 0, bytes, 0, bytes.length);
-          value = new HRegionInfo(bytes);
+          value = new HRegionInfo(colvalue);
         } else {
-          value = new String(bytes, HConstants.UTF8_ENCODING);
+          value = new String(colvalue, HConstants.UTF8_ENCODING);
         }
-   
         System.out.println(" " + key + ", " + colname.toString() + ": \"" +
             value.toString() + "\"");
       }

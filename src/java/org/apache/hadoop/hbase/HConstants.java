@@ -15,7 +15,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -106,11 +106,10 @@ public interface HConstants {
   static final String UTF8_ENCODING = "UTF-8";
 
   /** Value stored for a deleted item */
-  static final BytesWritable DELETE_BYTES = 
-    new BytesWritable("HBASE::DELETEVAL".getBytes());
+  static final ImmutableBytesWritable DELETE_BYTES =
+    new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes());
 
   /** Value written to HLog on a complete cache flush */
-  static final BytesWritable COMPLETE_CACHEFLUSH =
-    new BytesWritable("HBASE::CACHEFLUSH".getBytes());
-
+  static final ImmutableBytesWritable COMPLETE_CACHEFLUSH =
+    new ImmutableBytesWritable("HBASE::CACHEFLUSH".getBytes());
 }

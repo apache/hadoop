@@ -238,11 +238,11 @@ class HRegion implements HConstants {
   // Members
   //////////////////////////////////////////////////////////////////////////////
 
-  TreeMap<Text, Long> rowsToLocks = new TreeMap<Text, Long>();
-  TreeMap<Long, Text> locksToRows = new TreeMap<Long, Text>();
-  TreeMap<Text, HStore> stores = new TreeMap<Text, HStore>();
-  Map<Long, TreeMap<Text, BytesWritable>> targetColumns 
-    = new HashMap<Long, TreeMap<Text, BytesWritable>>();
+  Map<Text, Long> rowsToLocks = new HashMap<Text, Long>();
+  Map<Long, Text> locksToRows = new HashMap<Long, Text>();
+  Map<Text, HStore> stores = new HashMap<Text, HStore>();
+  Map<Long, TreeMap<Text, byte []>> targetColumns 
+    = new HashMap<Long, TreeMap<Text, byte []>>();
   
   HMemcache memcache;
 
@@ -826,7 +826,7 @@ class HRegion implements HConstants {
     }
     
     HMemcache.Snapshot retval = memcache.snapshotMemcacheForLog(log);
-    TreeMap<HStoreKey, BytesWritable> memcacheSnapshot = retval.memcacheSnapshot;
+    TreeMap<HStoreKey, byte []> memcacheSnapshot = retval.memcacheSnapshot;
     if(memcacheSnapshot == null) {
       for(HStore hstore: stores.values()) {
         Vector<HStoreFile> hstoreFiles = hstore.getAllMapFiles();
@@ -885,31 +885,28 @@ class HRegion implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
 
   /** Fetch a single data item. */
-  BytesWritable get(Text row, Text column) throws IOException {
-    BytesWritable[] results = get(row, column, Long.MAX_VALUE, 1);
-    return (results == null)? null: results[0];
+  byte [] get(Text row, Text column) throws IOException {
+    byte [][] results = get(row, column, Long.MAX_VALUE, 1);
+    return (results == null || results.length == 0)? null: results[0];
   }
   
   /** Fetch multiple versions of a single data item */
-  BytesWritable[] get(Text row, Text column, int numVersions) throws IOException {
+  byte [][] get(Text row, Text column, int numVersions) throws IOException {
     return get(row, column, Long.MAX_VALUE, numVersions);
   }
 
   /** Fetch multiple versions of a single data item, with timestamp. */
-  BytesWritable[] get(Text row, Text column, long timestamp, int numVersions) 
-      throws IOException {
-    
+  byte [][] get(Text row, Text column, long timestamp, int numVersions) 
+  throws IOException {  
     if(writestate.closed) {
       throw new IOException("HRegion is closed.");
     }
 
     // Make sure this is a valid row and valid column
-
     checkRow(row);
     checkColumn(column);
 
     // Obtain the row-lock
-
     obtainRowLock(row);
     try {
       // Obtain the -col results
@@ -921,13 +918,12 @@ class HRegion implements HConstants {
   }
 
   /** Private implementation: get the value for the indicated HStoreKey */
-  private BytesWritable[] get(HStoreKey key, int numVersions) throws IOException {
+  private byte [][] get(HStoreKey key, int numVersions) throws IOException {
 
     lock.obtainReadLock();
     try {
       // Check the memcache
-
-      BytesWritable[] result = memcache.get(key, numVersions);
+      byte [][] result = memcache.get(key, numVersions);
       if(result != null) {
         return result;
       }
@@ -957,19 +953,17 @@ class HRegion implements HConstants {
    * determine which column groups are useful for that row.  That would let us 
    * avoid a bunch of disk activity.
    */
-  TreeMap<Text, BytesWritable> getFull(Text row) throws IOException {
+  TreeMap<Text, byte []> getFull(Text row) throws IOException {
     HStoreKey key = new HStoreKey(row, System.currentTimeMillis());
 
     lock.obtainReadLock();
     try {
-      TreeMap<Text, BytesWritable> memResult = memcache.getFull(key);
-      for(Iterator<Text> it = stores.keySet().iterator(); it.hasNext(); ) {
-        Text colFamily = it.next();
+      TreeMap<Text, byte []> memResult = memcache.getFull(key);
+      for (Text colFamily: stores.keySet()) {
         HStore targetStore = stores.get(colFamily);
         targetStore.getFull(key, memResult);
       }
       return memResult;
-      
     } finally {
       lock.releaseReadLock();
     }
@@ -1035,9 +1029,8 @@ class HRegion implements HConstants {
    * This method really just tests the input, then calls an internal localput() 
    * method.
    */
-  void put(long lockid, Text targetCol, BytesWritable val) throws IOException {
-    if(val.getSize() == DELETE_BYTES.getSize()
-        && val.compareTo(DELETE_BYTES) == 0) {
+  void put(long lockid, Text targetCol, byte [] val) throws IOException {
+    if (DELETE_BYTES.compareTo(val) == 0) {
       throw new IOException("Cannot insert value: " + val);
     }
     localput(lockid, targetCol, val);
@@ -1047,7 +1040,7 @@ class HRegion implements HConstants {
    * Delete a value or write a value. This is a just a convenience method for put().
    */
   void delete(long lockid, Text targetCol) throws IOException {
-    localput(lockid, targetCol, DELETE_BYTES);
+    localput(lockid, targetCol, DELETE_BYTES.get());
   }
 
   /**
@@ -1063,7 +1056,7 @@ class HRegion implements HConstants {
    * @throws IOException
    */
   void localput(final long lockid, final Text targetCol,
-    final BytesWritable val)
+    final byte [] val)
   throws IOException {
     checkColumn(targetCol);
 
@@ -1083,9 +1076,9 @@ class HRegion implements HConstants {
             lockid + " unexpected aborted by another thread");
       }
       
-      TreeMap<Text, BytesWritable> targets = this.targetColumns.get(lockid);
+      TreeMap<Text, byte []> targets = this.targetColumns.get(lockid);
       if (targets == null) {
-        targets = new TreeMap<Text, BytesWritable>();
+        targets = new TreeMap<Text, byte []>();
         this.targetColumns.put(lockid, targets);
       }
       targets.put(targetCol, val);
@@ -1144,8 +1137,7 @@ class HRegion implements HConstants {
     synchronized(row) {
       // Add updates to the log and add values to the memcache.
       long commitTimestamp = System.currentTimeMillis();
-      TreeMap<Text, BytesWritable> columns = 
-        this.targetColumns.get(lockid);
+      TreeMap<Text, byte []> columns =  this.targetColumns.get(lockid);
       if (columns != null && columns.size() > 0) {
         log.append(regionInfo.regionName, regionInfo.tableDesc.getName(),
           row, columns, commitTimestamp);
@@ -1267,7 +1259,7 @@ class HRegion implements HConstants {
    */
   private static class HScanner implements HInternalScannerInterface {
     private HInternalScannerInterface[] scanners;
-    private TreeMap<Text, BytesWritable>[] resultSets;
+    private TreeMap<Text, byte []>[] resultSets;
     private HStoreKey[] keys;
     private boolean wildcardMatch;
     private boolean multipleMatchers;
@@ -1323,7 +1315,7 @@ class HRegion implements HConstants {
       }
       for(int i = 0; i < scanners.length; i++) {
         keys[i] = new HStoreKey();
-        resultSets[i] = new TreeMap<Text, BytesWritable>();
+        resultSets[i] = new TreeMap<Text, byte []>();
         if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
           closeScanner(i);
         }
@@ -1351,7 +1343,7 @@ class HRegion implements HConstants {
      *
      * @see org.apache.hadoop.hbase.HInternalScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.TreeMap)
      */
-    public boolean next(HStoreKey key, TreeMap<Text, BytesWritable> results)
+    public boolean next(HStoreKey key, TreeMap<Text, byte []> results)
     throws IOException {
       // Find the lowest-possible key.
       Text chosenRow = null;
@@ -1393,7 +1385,7 @@ class HRegion implements HConstants {
             //       values with older ones. So now we only insert
             //       a result if the map does not contain the key.
             
-            for(Map.Entry<Text, BytesWritable> e: resultSets[i].entrySet()) {
+            for(Map.Entry<Text, byte []> e: resultSets[i].entrySet()) {
               if(!results.containsKey(e.getKey())) {
                 results.put(e.getKey(), e.getValue());
                 insertedItem = true;
@@ -1504,7 +1496,7 @@ class HRegion implements HConstants {
     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     DataOutputStream s = new DataOutputStream(bytes);
     r.getRegionInfo().write(s);
-    meta.put(writeid, COL_REGIONINFO, new BytesWritable(bytes.toByteArray()));
+    meta.put(writeid, COL_REGIONINFO, bytes.toByteArray());
     meta.commit(writeid);
   }
   

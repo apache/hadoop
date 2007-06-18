@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 
@@ -52,8 +51,8 @@ public class TestScanner extends HBaseTestCase {
   private DataInputBuffer in = new DataInputBuffer();
 
   /** Compare the HRegionInfo we read from HBase to what we stored */
-  private void validateRegionInfo(BytesWritable regionBytes) throws IOException {
-    in.reset(regionBytes.get(), regionBytes.getSize());
+  private void validateRegionInfo(byte [] regionBytes) throws IOException {
+    in.reset(regionBytes, regionBytes.length);
     HRegionInfo info = new HRegionInfo();
     info.readFields(in);
     
@@ -69,7 +68,7 @@ public class TestScanner extends HBaseTestCase {
       throws IOException {
     
     HInternalScannerInterface scanner = null;
-    TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
+    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
     HStoreKey key = new HStoreKey();
 
     Text[][] scanColumns = {
@@ -82,21 +81,15 @@ public class TestScanner extends HBaseTestCase {
         scanner = region.getScanner(scanColumns[i], FIRST_ROW);
         while(scanner.next(key, results)) {
           assertTrue(results.containsKey(HConstants.COL_REGIONINFO));
-          BytesWritable val = results.get(HConstants.COL_REGIONINFO); 
-          byte[] bytes = new byte[val.getSize()];
-          System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
-          
-          validateRegionInfo(new BytesWritable(bytes));
-          
+          byte [] val = results.get(HConstants.COL_REGIONINFO); 
+          validateRegionInfo(val);
           if(validateStartcode) {
             assertTrue(results.containsKey(HConstants.COL_STARTCODE));
             val = results.get(HConstants.COL_STARTCODE);
             assertNotNull(val);
-            bytes = new byte[val.getSize()];
-            System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
-            assertFalse(bytes.length == 0);
+            assertFalse(val.length == 0);
             long startCode = 
-              Long.valueOf(new String(bytes, HConstants.UTF8_ENCODING));
+              Long.valueOf(new String(val, HConstants.UTF8_ENCODING));
             assertEquals(START_CODE, startCode);
           }
           
@@ -104,10 +97,8 @@ public class TestScanner extends HBaseTestCase {
             assertTrue(results.containsKey(HConstants.COL_SERVER));
             val = results.get(HConstants.COL_SERVER);
             assertNotNull(val);
-            bytes = new byte[val.getSize()];
-            System.arraycopy(val.get(), 0, bytes, 0, bytes.length);
-            assertFalse(bytes.length == 0);
-            String server = new String(bytes, HConstants.UTF8_ENCODING);
+            assertFalse(val.length == 0);
+            String server = new String(val, HConstants.UTF8_ENCODING);
             assertEquals(0, server.compareTo(serverName));
           }
           results.clear();
@@ -128,7 +119,7 @@ public class TestScanner extends HBaseTestCase {
 
   /** Use get to retrieve the HRegionInfo and validate it */
   private void getRegionInfo() throws IOException {
-    BytesWritable bytes = region.get(ROW_KEY, HConstants.COL_REGIONINFO);
+    byte [] bytes = region.get(ROW_KEY, HConstants.COL_REGIONINFO);
     validateRegionInfo(bytes);  
   }
  
@@ -163,8 +154,7 @@ public class TestScanner extends HBaseTestCase {
       ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteStream);
       HGlobals.rootRegionInfo.write(s);
-      region.put(lockid, HConstants.COL_REGIONINFO,
-          new BytesWritable(byteStream.toByteArray()));
+      region.put(lockid, HConstants.COL_REGIONINFO, byteStream.toByteArray());
       region.commit(lockid);
 
       // What we just committed is in the memcache. Verify that we can get
@@ -191,11 +181,10 @@ public class TestScanner extends HBaseTestCase {
       lockid = region.startUpdate(ROW_KEY);
 
       region.put(lockid, HConstants.COL_SERVER, 
-          new BytesWritable(address.toString().getBytes(HConstants.UTF8_ENCODING)));
+        address.toString().getBytes(HConstants.UTF8_ENCODING));
 
       region.put(lockid, HConstants.COL_STARTCODE, 
-          new BytesWritable(
-              String.valueOf(START_CODE).getBytes(HConstants.UTF8_ENCODING)));
+        String.valueOf(START_CODE).getBytes(HConstants.UTF8_ENCODING));
 
       region.commit(lockid);
       
@@ -232,7 +221,7 @@ public class TestScanner extends HBaseTestCase {
       lockid = region.startUpdate(ROW_KEY);
 
       region.put(lockid, HConstants.COL_SERVER, 
-          new BytesWritable(address.toString().getBytes(HConstants.UTF8_ENCODING)));
+        address.toString().getBytes(HConstants.UTF8_ENCODING));
 
       region.commit(lockid);
       

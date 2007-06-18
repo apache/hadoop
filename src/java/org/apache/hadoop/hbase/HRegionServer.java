@@ -33,7 +33,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.RPC;
@@ -396,8 +395,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       Collections.synchronizedSortedMap(new TreeMap<Text, HRegion>());
     
     this.outboundMsgs = new Vector<HMsg>();
-    this.scanners =
-      Collections.synchronizedMap(new TreeMap<Text, HInternalScannerInterface>());
 
     // Config'ed params
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
@@ -914,27 +911,26 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.HRegionInterface#get(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, org.apache.hadoop.io.Text)
    */
-  public BytesWritable get(final Text regionName, final Text row,
-      final Text column) throws IOException {
-    
+  public byte [] get(final Text regionName, final Text row,
+      final Text column)
+  throws IOException {
     return getRegion(regionName).get(row, column);
   }
 
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.HRegionInterface#get(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, int)
    */
-  public BytesWritable[] get(final Text regionName, final Text row,
-      final Text column, final int numVersions) throws IOException {
-    
+  public byte [][] get(final Text regionName, final Text row,
+      final Text column, final int numVersions)
+  throws IOException {  
     return getRegion(regionName).get(row, column, numVersions);
   }
 
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.HRegionInterface#get(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, long, int)
    */
-  public BytesWritable[] get(final Text regionName, final Text row, final Text column, 
+  public byte [][] get(final Text regionName, final Text row, final Text column, 
       final long timestamp, final int numVersions) throws IOException {
-    
     return getRegion(regionName).get(row, column, timestamp, numVersions);
   }
 
@@ -943,10 +939,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   public KeyedData[] getRow(final Text regionName, final Text row) throws IOException {
     HRegion region = getRegion(regionName);
-    TreeMap<Text, BytesWritable> map = region.getFull(row);
+    TreeMap<Text, byte[]> map = region.getFull(row);
     KeyedData result[] = new KeyedData[map.size()];
     int counter = 0;
-    for (Map.Entry<Text, BytesWritable> es: map.entrySet()) {
+    for (Map.Entry<Text, byte []> es: map.entrySet()) {
       result[counter++] =
         new KeyedData(new HStoreKey(row, es.getKey()), es.getValue());
     }
@@ -957,30 +953,28 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @see org.apache.hadoop.hbase.HRegionInterface#next(long)
    */
   public KeyedData[] next(final long scannerId)
-      throws IOException {
-    
-    Text scannerName = new Text(String.valueOf(scannerId));
+  throws IOException {
+    String scannerName = String.valueOf(scannerId);
     HInternalScannerInterface s = scanners.get(scannerName);
     if (s == null) {
       throw new UnknownScannerException("Name: " + scannerName);
     }
-    leases.renewLease(scannerName, scannerName);
+    leases.renewLease(scannerId, scannerId);
     
     // Collect values to be returned here
     
     ArrayList<KeyedData> values = new ArrayList<KeyedData>();
     
-    TreeMap<Text, BytesWritable> results = new TreeMap<Text, BytesWritable>();
+    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
     
     // Keep getting rows until we find one that has at least one non-deleted column value
     
     HStoreKey key = new HStoreKey();
     while (s.next(key, results)) {
-      for(Map.Entry<Text, BytesWritable> e: results.entrySet()) {
+      for(Map.Entry<Text, byte []> e: results.entrySet()) {
         HStoreKey k = new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp());
-        BytesWritable val = e.getValue();
-        if(val.getSize() == DELETE_BYTES.getSize()
-            && val.compareTo(DELETE_BYTES) == 0) {
+        byte [] val = e.getValue();
+        if (DELETE_BYTES.compareTo(val) == 0) {
           // Column value is deleted. Don't return it.
           if (LOG.isDebugEnabled()) {
             LOG.debug("skipping deleted value for key: " + k.toString());
@@ -1011,10 +1005,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       throws IOException {
     HRegion region = getRegion(regionName);
     long lockid = region.startUpdate(row);
-    this.leases.createLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)), 
-        new RegionListener(region, lockid));
-    
+    this.leases.createLease(clientid, lockid,
+      new RegionListener(region, lockid));
     return lockid;
   }
 
@@ -1041,11 +1033,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.HRegionInterface#put(org.apache.hadoop.io.Text, long, long, org.apache.hadoop.io.Text, org.apache.hadoop.io.BytesWritable)
    */
-  public void put(Text regionName, long clientid, long lockid, Text column, 
-      BytesWritable val) throws IOException {
+  public void put(final Text regionName, final long clientid,
+      final long lockid, final Text column, final byte [] val)
+  throws IOException {
     HRegion region = getRegion(regionName, true);
-    leases.renewLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+    leases.renewLease(clientid, lockid);
     region.put(lockid, column, val);
   }
 
@@ -1053,10 +1045,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @see org.apache.hadoop.hbase.HRegionInterface#delete(org.apache.hadoop.io.Text, long, long, org.apache.hadoop.io.Text)
    */
   public void delete(Text regionName, long clientid, long lockid, Text column) 
-      throws IOException {
+  throws IOException {
     HRegion region = getRegion(regionName);
-    leases.renewLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+    leases.renewLease(clientid, lockid);
     region.delete(lockid, column);
   }
 
@@ -1064,10 +1055,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @see org.apache.hadoop.hbase.HRegionInterface#abort(org.apache.hadoop.io.Text, long, long)
    */
   public void abort(Text regionName, long clientid, long lockid) 
-      throws IOException {
+  throws IOException {
     HRegion region = getRegion(regionName, true);
-    leases.cancelLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+    leases.cancelLease(clientid, lockid);
     region.abort(lockid);
   }
 
@@ -1077,8 +1067,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   public void commit(Text regionName, long clientid, long lockid) 
   throws IOException {
     HRegion region = getRegion(regionName, true);
-    leases.cancelLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+    leases.cancelLease(clientid, lockid);
     region.commit(lockid);
   }
 
@@ -1086,8 +1075,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @see org.apache.hadoop.hbase.HRegionInterface#renewLease(long, long)
    */
   public void renewLease(long lockid, long clientid) throws IOException {
-    leases.renewLease(new Text(String.valueOf(clientid)), 
-        new Text(String.valueOf(lockid)));
+    leases.renewLease(clientid, lockid);
   }
 
   /** 
@@ -1139,29 +1127,31 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // remote scanner interface
   //////////////////////////////////////////////////////////////////////////////
 
-  Map<Text, HInternalScannerInterface> scanners;
+  Map<String, HInternalScannerInterface> scanners =
+    Collections.synchronizedMap(new HashMap<String,
+      HInternalScannerInterface>());
 
   /** 
    * Instantiated as a scanner lease.
    * If the lease times out, the scanner is closed
    */
   private class ScannerListener implements LeaseListener {
-    private Text scannerName;
+    private final String scannerName;
     
-    ScannerListener(Text scannerName) {
-      this.scannerName = scannerName;
+    ScannerListener(final String n) {
+      this.scannerName = n;
     }
     
     /* (non-Javadoc)
      * @see org.apache.hadoop.hbase.LeaseListener#leaseExpired()
      */
     public void leaseExpired() {
-      LOG.info("Scanner " + scannerName + " lease expired");
+      LOG.info("Scanner " + this.scannerName + " lease expired");
       HInternalScannerInterface s = null;
       synchronized(scanners) {
-        s = scanners.remove(scannerName);
+        s = scanners.remove(this.scannerName);
       }
-      if(s != null) {
+      if (s != null) {
         s.close();
       }
     }
@@ -1177,11 +1167,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       HInternalScannerInterface s = r.getScanner(cols, firstRow);
       scannerId = rand.nextLong();
-      Text scannerName = new Text(String.valueOf(scannerId));
+      String scannerName = String.valueOf(scannerId);
       synchronized(scanners) {
         scanners.put(scannerName, s);
       }
-      leases.createLease(scannerName, scannerName,
+      leases.createLease(scannerId, scannerId,
         new ScannerListener(scannerName));
     } catch(IOException e) {
       LOG.error(e);
@@ -1193,8 +1183,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /* (non-Javadoc)
    * @see org.apache.hadoop.hbase.HRegionInterface#close(long)
    */
-  public void close(long scannerId) throws IOException {
-    Text scannerName = new Text(String.valueOf(scannerId));
+  public void close(final long scannerId) throws IOException {
+    String scannerName = String.valueOf(scannerId);
     HInternalScannerInterface s = null;
     synchronized(scanners) {
       s = scanners.remove(scannerName);
@@ -1203,7 +1193,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       throw new UnknownScannerException(scannerName.toString());
     }
     s.close();
-    leases.cancelLease(scannerName, scannerName);
+    leases.cancelLease(scannerId, scannerId);
   }
 
   private static void printUsageAndExit() {

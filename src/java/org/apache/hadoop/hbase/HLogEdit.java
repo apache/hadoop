@@ -27,14 +27,15 @@ import java.io.*;
  * This just indicates the column and value.
  ******************************************************************************/
 public class HLogEdit implements Writable {
-  Text column = new Text();
-  BytesWritable val = new BytesWritable();
-  long timestamp;
+  private Text column = new Text();
+  private byte [] val;
+  private long timestamp;
 
   public HLogEdit() {
+    super();
   }
 
-  public HLogEdit(Text column, BytesWritable bval, long timestamp) {
+  public HLogEdit(Text column, byte [] bval, long timestamp) {
     this.column.set(column);
     this.val = bval;
     this.timestamp = timestamp;
@@ -44,7 +45,7 @@ public class HLogEdit implements Writable {
     return this.column;
   }
 
-  public BytesWritable getVal() {
+  public byte [] getVal() {
     return this.val;
   }
 
@@ -55,7 +56,7 @@ public class HLogEdit implements Writable {
   @Override
   public String toString() {
     return getColumn().toString() + " " + this.getTimestamp() + " " +
-      new String(getVal().get()).trim();
+      new String(getVal()).trim();
   }
   
   //////////////////////////////////////////////////////////////////////////////
@@ -64,13 +65,15 @@ public class HLogEdit implements Writable {
 
   public void write(DataOutput out) throws IOException {
     this.column.write(out);
-    this.val.write(out);
+    out.writeShort(this.val.length);
+    out.write(this.val);
     out.writeLong(timestamp);
   }
   
   public void readFields(DataInput in) throws IOException {
     this.column.readFields(in);
-    this.val.readFields(in);
+    this.val = new byte[in.readShort()];
+    in.readFully(this.val);
     this.timestamp = in.readLong();
   }
 }

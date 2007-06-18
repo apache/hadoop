@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Text;
 
 /** Abstract base class for merge tests */
@@ -31,7 +31,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
   protected static final Text COLUMN_NAME = new Text("contents:");
   protected Random rand;
   protected HTableDescriptor desc;
-  protected BytesWritable value;
+  protected ImmutableBytesWritable value;
 
   protected MiniDFSCluster dfsCluster;
   protected FileSystem fs;
@@ -52,7 +52,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
       val.append(partialValue);
     }
     try {
-      value = new BytesWritable(val.toString().getBytes(HConstants.UTF8_ENCODING));
+      value = new ImmutableBytesWritable(val.toString().getBytes(HConstants.UTF8_ENCODING));
       
     } catch(UnsupportedEncodingException e) {
       fail();
@@ -125,7 +125,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
       long lockid = region.startUpdate(new Text("row_"
           + String.format("%1$05d", i)));
 
-      region.put(lockid, COLUMN_NAME, value);
+      region.put(lockid, COLUMN_NAME, value.get());
       region.commit(lockid);
       if(i % 10000 == 0) {
         System.out.println("Flushing write #" + i);

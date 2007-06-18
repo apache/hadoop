@@ -34,4 +34,4 @@ Trunk (unreleased changes)
  19. HADOOP-1415 Integrate BSD licensed bloom filter implementation.
  20. HADOOP-1465 Add cluster stop/start scripts for hbase
  21. HADOOP-1415 Provide configurable per-column bloom filters - part 2.
-
+ 22. HADOOP-1498. Replace boxed types with primitives in many places.
