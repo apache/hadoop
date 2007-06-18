@@ -212,6 +212,10 @@ public class DataNode implements FSConstants, Runnable {
                                      conf.get("dfs.datanode.dns.nameserver","default"));
     InetSocketAddress nameNodeAddr = createSocketAddr(
                                                       conf.get("fs.default.name", "local"));
+    int tmpPort = conf.getInt("dfs.datanode.port", 50010);
+    storage = new DataStorage();
+    // construct registration
+    this.dnRegistration = new DatanodeRegistration(machineName + ":" + tmpPort);
 
     // connect to name node
     this.namenode = (DatanodeProtocol) 
@@ -225,15 +229,15 @@ public class DataNode implements FSConstants, Runnable {
     // read storage info, lock data dirs and transition fs state if necessary
     StartupOption startOpt = getStartupOption(conf);
     assert startOpt != null : "Startup option must be set.";
-    storage = new DataStorage();
     storage.recoverTransitionRead(nsInfo, dataDirs, startOpt);
+    // adjust
+    this.dnRegistration.setStorageInfo(storage);
       
     // initialize data node internal structure
     this.data = new FSDataset(storage, conf);
       
     // find free port
     ServerSocket ss = null;
-    int tmpPort = conf.getInt("dfs.datanode.port", 50010);
     String bindAddress = conf.get("dfs.datanode.bindAddress", "0.0.0.0");
     while (ss == null) {
       try {
@@ -244,11 +248,8 @@ public class DataNode implements FSConstants, Runnable {
         tmpPort++;
       }
     }
-    // construct registration
-    this.dnRegistration = new DatanodeRegistration(
-                                                   machineName + ":" + tmpPort, 
-                                                   -1,   // info port determined later
-                                                   storage);
+    // adjust machine name with the actual port
+    this.dnRegistration.setName(machineName + ":" + tmpPort);
       
     this.dataXceiveServer = new Daemon(new DataXceiveServer(ss));
 
@@ -265,7 +266,8 @@ public class DataNode implements FSConstants, Runnable {
     this.infoServer = new StatusHttpServer("datanode", infoServerBindAddress, infoServerPort, true);
     this.infoServer.addServlet(null, "/streamFile/*", StreamFile.class);
     this.infoServer.start();
-    this.dnRegistration.infoPort = this.infoServer.getPort();
+    // adjust info port
+    this.dnRegistration.setInfoPort(this.infoServer.getPort());
     // get network location
     this.networkLoc = conf.get("dfs.datanode.rack");
     if (networkLoc == null)  // exec network script or set the default rack

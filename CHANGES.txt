@@ -169,6 +169,10 @@ Trunk (unreleased changes)
      and also substantially improves performance.
      (Arun C Murthy via cutting)
 
+ 53. HADOOP-1492.  Fix a NullPointerException handling version
+     mismatch during datanode registration.
+     (Konstantin Shvachko via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

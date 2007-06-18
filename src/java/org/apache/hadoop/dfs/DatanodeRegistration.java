@@ -38,11 +38,21 @@ class DatanodeRegistration extends DatanodeID implements Writable {
   /**
    * Create DatanodeRegistration
    */
-  public DatanodeRegistration(String nodeName, 
-                              int infoPort,
-                              DataStorage storage) {
-    super(nodeName, storage.getStorageID(), infoPort);
+  public DatanodeRegistration(String nodeName) {
+    super(nodeName, "", -1);
+    this.storageInfo = new StorageInfo();
+  }
+  
+  void setInfoPort(int infoPort) {
+    this.infoPort = infoPort;
+  }
+  
+  void setStorageInfo(DataStorage storage) {
     this.storageInfo = new StorageInfo(storage);
+  }
+  
+  void setName(String name) {
+    this.name = name;
   }
 
   /**

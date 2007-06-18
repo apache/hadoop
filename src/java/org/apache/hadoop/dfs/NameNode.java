@@ -646,7 +646,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                           int errorCode, 
                           String msg) throws IOException {
     // Log error message from datanode
-    LOG.info("Report from " + nodeReg.getName() + ": " + msg);
+    String dnName = (nodeReg == null ? "unknown DataNode" : nodeReg.getName());
+    LOG.info("Error report from " + dnName + ": " + msg);
     if (errorCode == DatanodeProtocol.NOTIFY) {
       return;
     }

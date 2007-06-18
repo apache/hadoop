@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
 import java.util.Properties;
@@ -115,7 +116,7 @@ abstract class Storage extends StorageInfo {
   }
   
   private NodeType storageType;    // Type of the node using this storage 
-  protected List<StorageDirectory> storageDirs;
+  protected List<StorageDirectory> storageDirs = new ArrayList<StorageDirectory>();
   
   /**
    * One of the storage directories.
