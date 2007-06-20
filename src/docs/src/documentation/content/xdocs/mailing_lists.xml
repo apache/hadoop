@@ -23,7 +23,10 @@
       <ul>
         <li><a href="mailto:hadoop-user-subscribe@lucene.apache.org">Subscribe to List</a></li>
         <li><a href="mailto:hadoop-user-unsubscribe@lucene.apache.org">Unsubscribe from List</a></li>
-        <li><a href="http://lucene.apache.org/mail/hadoop-user/">View List Archive</a></li>
+        <li>Search List Archive on <a href="http://www.mail-archive.com/hadoop-user%40lucene.apache.org/">The Mail Archive</a>,
+        <a href="http://www.nabble.com/Hadoop-Users-f17067.html">Nabble</a>,
+        or <a href="http://dir.gmane.org/gmane.comp.jakarta.lucene.hadoop.user">Gmane</a></li>
+        <li><a href="http://mail-archives.apache.org/mod_mbox/lucene-hadoop-user/">View List Archive</a> (<a href="http://lucene.apache.org/mail/hadoop-user/">Raw files</a>)</li>
       </ul>
       <note>In order to post to the list, it is necessary to first subscribe to it.</note>
     </section>
@@ -41,7 +44,10 @@
       <ul>
         <li><a href="mailto:hadoop-dev-subscribe@lucene.apache.org">Subscribe to List</a></li>
         <li><a href="mailto:hadoop-dev-unsubscribe@lucene.apache.org">Unsubscribe from List</a></li>
-        <li><a href="http://lucene.apache.org/mail/hadoop-dev/">View List Archive</a></li>
+        <li>Search List Archive on <a href="http://www.mail-archive.com/hadoop-dev%40lucene.apache.org/">The Mail Archive</a>,
+        <a href="http://www.nabble.com/Hadoop-Dev-f17068.html">Nabble</a>,
+        or <a href="http://dir.gmane.org/gmane.comp.jakarta.lucene.hadoop.devel">Gmane</a></li>
+        <li><a href="http://mail-archives.apache.org/mod_mbox/lucene-hadoop-dev/">View List Archive</a> (<a href="http://lucene.apache.org/mail/hadoop-dev/">Raw files</a>)</li>
       </ul>
       <note>In order to post to the list, it is necessary to first subscribe to it.</note>
     </section>
@@ -56,7 +62,8 @@
       <ul>
         <li><a href="mailto:hadoop-commits-subscribe@lucene.apache.org">Subscribe to List</a></li>
         <li><a href="mailto:hadoop-commits-unsubscribe@lucene.apache.org">Unsubscribe from List</a></li>
-        <li><a href="http://lucene.apache.org/mail/hadoop-commits/">View List Archive</a></li>
+        <li>Search List Archive on <a href="http://www.mail-archive.com/hadoop-commits%40lucene.apache.org/">The Mail Archive</a></li>        
+        <li><a href="http://mail-archives.apache.org/mod_mbox/lucene-hadoop-commits/">View List Archive</a> (<a href="http://lucene.apache.org/mail/hadoop-commits/">Raw files</a>)</li>
       </ul>
     </section>
   

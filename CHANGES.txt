@@ -197,6 +197,9 @@ Trunk (unreleased changes)
      namenode lock, increasing namenode throughput.
      (Dhruba Borthakur via cutting)
 
+ 61. HADOOP-1023.  Add links to searchable mail archives.
+     (tomwhite via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
