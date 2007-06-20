@@ -518,7 +518,14 @@ class FSNamesystem implements FSConstants {
    *         false if file does not exist or is a directory
    * @author shv
    */
-  public synchronized boolean setReplication(String src, 
+  public boolean setReplication(String src, short replication) 
+                                throws IOException {
+    boolean status = setReplicationInternal(src, replication);
+    getEditLog().logSync();
+    return status;
+  }
+
+  private synchronized boolean setReplicationInternal(String src, 
                                              short replication
                                              ) throws IOException {
     if (isInSafeMode())
@@ -867,8 +874,14 @@ class FSNamesystem implements FSConstants {
    * Before we return, we make sure that all the file's blocks have 
    * been reported by datanodes and are replicated correctly.
    */
-  public synchronized int completeFile(UTF8 src, 
-                                       UTF8 holder) throws IOException {
+  public int completeFile(UTF8 src, UTF8 holder) throws IOException {
+    int status = completeFileInternal(src, holder);
+    getEditLog().logSync();
+    return status;
+  }
+
+  private synchronized int completeFileInternal(UTF8 src, 
+                                                UTF8 holder) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder);
     if (isInSafeMode())
       throw new SafeModeException("Cannot complete file " + src, safeMode);
@@ -1081,10 +1094,16 @@ class FSNamesystem implements FSConstants {
   // are made, edit namespace and return to client.
   ////////////////////////////////////////////////////////////////
 
+  public boolean renameTo(UTF8 src, UTF8 dst) throws IOException {
+    boolean status = renameToInternal(src, dst);
+    getEditLog().logSync();
+    return status;
+  }
+
   /**
    * Change the indicated filename.
    */
-  public synchronized boolean renameTo(UTF8 src, UTF8 dst) throws IOException {
+  private synchronized boolean renameToInternal(UTF8 src, UTF8 dst) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src + " to " + dst);
     if (isInSafeMode())
       throw new SafeModeException("Cannot rename " + src, safeMode);
@@ -1098,7 +1117,17 @@ class FSNamesystem implements FSConstants {
    * Remove the indicated filename from the namespace.  This may
    * invalidate some blocks that make up the file.
    */
-  public synchronized boolean delete(UTF8 src) throws IOException {
+  public boolean delete(UTF8 src) throws IOException {
+    boolean status = deleteInternal(src);
+    getEditLog().logSync();
+    return status;
+  }
+
+  /**
+   * Remove the indicated filename from the namespace.  This may
+   * invalidate some blocks that make up the file.
+   */
+  private synchronized boolean deleteInternal(UTF8 src) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
     if (isInSafeMode())
       throw new SafeModeException("Cannot delete " + src, safeMode);
@@ -1163,11 +1192,19 @@ class FSNamesystem implements FSConstants {
     }
     return true;
   }
+  /**
+   * Create all the necessary directories
+   */
+  public boolean mkdirs(String src) throws IOException {
+    boolean status = mkdirsInternal(src);
+    getEditLog().logSync();
+    return status;
+  }
     
   /**
    * Create all the necessary directories
    */
-  public synchronized boolean mkdirs(String src) throws IOException {
+  private synchronized boolean mkdirsInternal(String src) throws IOException {
     boolean    success;
     NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     if (isInSafeMode())
@@ -1447,7 +1484,15 @@ class FSNamesystem implements FSConstants {
    * @see DataNode#register()
    * @author Konstantin Shvachko
    */
-  public synchronized void registerDatanode(DatanodeRegistration nodeReg,
+  public void registerDatanode(DatanodeRegistration nodeReg,
+                               String networkLocation
+                               ) throws IOException {
+    registerDatanodeInternal(nodeReg, networkLocation);
+    getEditLog().logSync();
+  }
+
+  private synchronized void registerDatanodeInternal(
+                                            DatanodeRegistration nodeReg,
                                             String networkLocation
                                             ) throws IOException {
 

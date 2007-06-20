@@ -48,6 +48,9 @@ class FSEditLog {
 
   private ArrayList<EditLogOutputStream> editStreams = null;
   private FSImage fsimage = null;
+
+  private long lastModificationTime;
+  private long lastSyncTime;
   
   static class EditLogOutputStream extends DataOutputStream {
     private FileDescriptor fd;
@@ -70,6 +73,8 @@ class FSEditLog {
 
   FSEditLog(FSImage image) {
     fsimage = image;
+    lastModificationTime = 0;
+    lastSyncTime = 0;
   }
 
   private File getEditFile(int idx) {
@@ -345,9 +350,10 @@ class FSEditLog {
   }
 
   /**
-   * Write an operation to the edit log
+   * Write an operation to the edit log. Do not sync to persistent
+   * store yet.
    */
-  void logEdit(byte op, Writable w1, Writable w2) {
+  synchronized void logEdit(byte op, Writable w1, Writable w2) {
     assert this.getNumEditStreams() > 0 : "no editlog streams";
     for (int idx = 0; idx < editStreams.size(); idx++) {
       EditLogOutputStream eStream;
@@ -360,7 +366,6 @@ class FSEditLog {
           if (w2 != null) {
             w2.write(eStream);
           }
-          eStream.flushAndSync();
         } catch (IOException ie) {
           try {
             processIOError(idx);         
@@ -368,6 +373,44 @@ class FSEditLog {
             FSNamesystem.LOG.error("Unable to append to edit log. " +
                                    "Fatal Error.");
             throw new RuntimeException("Unable to append to edit log. ");
+          }
+        }
+      }
+    }
+    //
+    // record the time when new data was written to the edits log
+    //
+    lastModificationTime = System.currentTimeMillis();
+  }
+
+  //
+  // flush all data of the Edits log into persistent store
+  //
+  synchronized void logSync() {
+    assert this.getNumEditStreams() > 0 : "no editlog streams";
+
+    //
+    // If data was generated before the beginning of the last sync time
+    // then there is nothing to flush
+    //
+    if (lastModificationTime < lastSyncTime) {
+      return;
+    }
+    lastSyncTime = System.currentTimeMillis();
+
+    for (int idx = 0; idx < editStreams.size(); idx++) {
+      EditLogOutputStream eStream;
+      synchronized (eStream = editStreams.get(idx)) {
+        try {
+          eStream.flushAndSync();
+        } catch (IOException ie) {
+          try {
+            processIOError(idx);         
+          } catch (IOException e) {
+            FSNamesystem.LOG.error("Unable to sync edit log. " +
+                                   "Fatal Error.");
+            throw new RuntimeException("Unable to sync edit log. " +
+                                       "Fatal Error.");
           }
         }
       }

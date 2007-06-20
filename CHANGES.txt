@@ -193,6 +193,10 @@ Trunk (unreleased changes)
      "webinterface.private.actions" to enable this.
      (Enis Soztutar via cutting)
 
+ 60. HADOOP-1003.  Remove flushing of namenode edit log from primary
+     namenode lock, increasing namenode throughput.
+     (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
