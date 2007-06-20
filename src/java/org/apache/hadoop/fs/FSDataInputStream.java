@@ -103,6 +103,15 @@ public class FSDataInputStream extends DataInputStream
       throws IOException {
       ((PositionCache)in).readFully(position, buffer, offset, length);
     }
+
+    // Disable marking, as its use can cause the BufferedInputStream superclass
+    // to read a smaller amount of data than bytesPerChecksum, which breaks
+    // ChecksumFileSystem.
+    public boolean markSupported() {
+      return false;
+    }
+
+    public synchronized void mark(int readlimit) {}
   }
 
   protected FSInputStream inStream;

@@ -217,6 +217,9 @@ Trunk (unreleased changes)
      when opening files, reducing the namenode load somewhat.
      (Raghu Angadi via cutting)
 
+ 66. HADOOP-1489.  Fix text input truncation bug due to mark/reset.
+     Add a unittest. (Bwolen Yang via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

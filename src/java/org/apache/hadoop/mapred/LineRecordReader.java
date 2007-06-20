@@ -56,16 +56,20 @@ public class LineRecordReader implements RecordReader {
     FileSystem fs = FileSystem.get(job);
     FSDataInputStream fileIn = fs.open(split.getPath());
     InputStream in = fileIn;
+    boolean skipFirstLine = false;
     if (codec != null) {
       in = codec.createInputStream(fileIn);
       end = Long.MAX_VALUE;
     } else if (start != 0) {
-      fileIn.seek(start - 1);
-      LineRecordReader.readLine(fileIn, null);
-      start = fileIn.getPos();
+      skipFirstLine = true;  // wait till BufferedInputStream to skip
+      --start;
+      fileIn.seek(start);
     }
 
     this.in = new BufferedInputStream(in);
+    if (skipFirstLine) {  // skip first line and re-establish "start".
+      start += LineRecordReader.readLine(this.in, null);
+    }
     this.start = start;
     this.pos = start;
     this.end = end;
