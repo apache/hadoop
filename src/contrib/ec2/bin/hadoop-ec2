@@ -12,7 +12,7 @@ if [ $# = 0 ]; then
   echo "  start-hadoop         start Hadoop daemons on a cluster"
   echo "  login                login to the master node of the Hadoop EC2 cluster"
   echo "  run                  'launch-cluster', 'start-hadoop', 'login'"
-  echo "  terminate-cluster    terminate a cluster of Hadoop EC2 instances"
+  echo "  terminate-cluster    terminate all Hadoop EC2 instances"
   exit 1
 fi
 

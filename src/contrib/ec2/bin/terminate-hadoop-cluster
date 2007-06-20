@@ -6,4 +6,16 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 . "$bin"/hadoop-ec2-env.sh
 
-ec2-terminate-instances `ec2-describe-instances | grep INSTANCE | awk '{print $2}'`
+# Finding Hadoop image
+AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep $HADOOP_VERSION | grep available | awk '{print $2}'`
+HADOOP_INSTANCES=`ec2-describe-instances | grep INSTANCE | grep $AMI_IMAGE`
+
+echo "Running Hadoop instances:"
+echo "$HADOOP_INSTANCES"
+read -p "Terminate all instances? [yes or no]: " answer
+
+if [ "$answer" != "yes" ]; then
+  exit 1
+fi
+
+ec2-terminate-instances `echo "$HADOOP_INSTANCES" | awk '{print $2}'`

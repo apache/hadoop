@@ -200,6 +200,10 @@ Trunk (unreleased changes)
  61. HADOOP-1023.  Add links to searchable mail archives.
      (tomwhite via cutting)
 
+ 62. HADOOP-1504.  Fix terminate-hadoop-cluster script in contrib/ec2
+     to only terminate Hadoop instances, and not other instances
+     started by the same user.  (tomwhite via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
