@@ -220,6 +220,9 @@ Trunk (unreleased changes)
  66. HADOOP-1489.  Fix text input truncation bug due to mark/reset.
      Add a unittest. (Bwolen Yang via cutting)
 
+ 67. HADOOP-1455.  Permit specification of arbitrary job options on
+     pipes command line.  (Devaraj Das via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

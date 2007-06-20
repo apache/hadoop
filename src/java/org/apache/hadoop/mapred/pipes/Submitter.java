@@ -23,6 +23,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.StringTokenizer;
 
 import org.apache.commons.cli2.CommandLine;
 import org.apache.commons.cli2.OptionException;
@@ -283,6 +284,10 @@ public class Submitter {
       // to make it print something reasonable.
       System.out.println("bin/hadoop pipes");
       System.out.println("  [-conf <path>]  // Configuration for job");
+      System.out.println("  [-jobconf <key=value>, <key=value>, ...]" +
+                         "  // add/override configuration for job." +
+                         " (Multiple comma delimited key=value pairs" +
+                         " can be passed)");
       System.out.println("  [-input <path>] // Input directory");
       System.out.println("  [-output <path>] // Output directory");
       System.out.println("  [-jar <jar file> // jar filename");
@@ -328,6 +333,9 @@ public class Submitter {
     cli.addOption("writer", false, "java classname of OutputFormat", "class");
     cli.addOption("program", false, "URI to application executable", "class");
     cli.addOption("reduces", false, "number of reduces", "num");
+    cli.addOption("jobconf", false, 
+        "\"n1=v1,n2=v2,..\" Optional. Add or override a JobConf property.",
+        "key=val");
     Parser parser = cli.createParser();
     try {
       CommandLine results = parser.parse(args);
@@ -375,6 +383,15 @@ public class Submitter {
       }
       if (results.hasOption("-program")) {
         setExecutable(conf, (String) results.getValue("-program"));
+      }
+      if (results.hasOption("-jobconf")) {
+        String options = (String)results.getValue("-jobconf");
+        StringTokenizer tokenizer = new StringTokenizer(options, ",");
+        while (tokenizer.hasMoreTokens()) {
+          String keyVal = tokenizer.nextToken().trim();
+          String[] keyValSplit = keyVal.split("=");
+          conf.set(keyValSplit[0], keyValSplit[1]);
+        }
       }
       // if they gave us a jar file, include it into the class path
       String jarFile = conf.getJar();
