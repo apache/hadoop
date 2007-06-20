@@ -213,6 +213,10 @@ Trunk (unreleased changes)
      returned by InputFormat#getSplits when numbering outputs.
      (Senthil Subramanian via cutting)
 
+ 65. HADOOP-1453.  Remove some unneeded calls to FileSystem#exists()
+     when opening files, reducing the namenode load somewhat.
+     (Raghu Angadi via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

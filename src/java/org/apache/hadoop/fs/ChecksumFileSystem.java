@@ -332,9 +332,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    */
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-    if (!exists(f)) {
-      throw new FileNotFoundException(f.toString());
-    }
     return new FSDataInputStream(new FSInputChecker(this, f, bufferSize),
                                  getBytesPerSum());
   }

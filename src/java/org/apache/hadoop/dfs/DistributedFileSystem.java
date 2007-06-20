@@ -129,10 +129,6 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     }
 
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-      if (!exists(f)) {
-        throw new FileNotFoundException(f.toString());
-      }
-
       return new DFSClient.DFSDataInputStream(dfs.open(getPath(f)), bufferSize);
     }
 
