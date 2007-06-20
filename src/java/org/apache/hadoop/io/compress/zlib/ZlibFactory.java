@@ -77,11 +77,6 @@ public class ZlibFactory {
    */
   public static Compressor getZlibCompressor() {
     LOG.info("Creating a new ZlibCompressor");
-    try {
-      throw new Exception();
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
     return (nativeZlibLoaded) ? 
       new ZlibCompressor() : new BuiltInZlibDeflater(); 
   }
@@ -103,11 +98,6 @@ public class ZlibFactory {
    */
   public static Decompressor getZlibDecompressor() {
     LOG.info("Creating a new ZlibDecompressor");
-    try {
-      throw new Exception();
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
     return (nativeZlibLoaded) ? 
       new ZlibDecompressor() : new BuiltInZlibInflater(); 
   }

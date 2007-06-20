@@ -185,6 +185,9 @@ Trunk (unreleased changes)
  57. HADOOP-1475.  Clear tasktracker's file cache before it
      re-initializes, to avoid confusion.  (omalley via cutting)
 
+ 58. HADOOP-1505.  Remove spurious stacktrace in ZlibFactory
+     introduced in HADOOP-1093.  (Michael Stack via tomwhite)
+
 
 Release 0.13.0 - 2007-06-08
 
