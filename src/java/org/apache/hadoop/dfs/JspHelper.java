@@ -32,7 +32,7 @@ import org.apache.hadoop.conf.*;
 public class JspHelper {
   static FSNamesystem fsn = null;
   static InetSocketAddress nameNodeAddr;
-  static Configuration conf = new Configuration();
+  public static Configuration conf = new Configuration();
 
   static int defaultChunkSizeToView = 
     conf.getInt("dfs.default.chunk.view.size", 32 * 1024);

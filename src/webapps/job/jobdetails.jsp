@@ -8,10 +8,14 @@
   import="java.text.DecimalFormat"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
+  import="org.apache.hadoop.dfs.JspHelper"
 %>
 
 <%!
   
+	private static final String PRIVATE_ACTIONS_KEY 
+		= "webinterface.private.actions";
+
   JobTracker tracker = JobTracker.getTracker();
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
@@ -70,6 +74,18 @@
                   ) + 
               "</td></tr>\n");
   }
+  
+  private void printConfirm(JspWriter out, String jobId) throws IOException{
+    String url = "jobdetails.jsp?jobid=" + jobId;
+    out.print("<html><head><META http-equiv=\"refresh\" content=\"15;URL="
+        + url+"\"></head>"
+        + "<body><h3> Are you sure you want to kill " + jobId
+        + " ?<h3><br><table border=\"0\"><tr><td width=\"100\">"
+        + "<a href=\"" +  url + "&action=kill"
+        + "\">Kill</a></td><td width=\"100\"><a href=\"" + url
+        + "\">Don't Kill</a></td></tr></table></body></html>");
+  }
+  
 %>       
 <%   
     String jobId = request.getParameter("jobid"); 
@@ -82,6 +98,19 @@
         }
         catch (NumberFormatException ignored) {
         }
+    }
+    
+    JobInProgress job = (JobInProgress) tracker.getJob(jobId);
+    
+    if(JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) {
+    	String action = request.getParameter("action");
+	    if(action!=null && action.equalsIgnoreCase("confirm")) {
+  	      printConfirm(out, jobId);
+    	    return;
+	    }
+  	  else if(action != null && action.equalsIgnoreCase("kill")) {
+				job.kill();
+	    }
     }
 %>
 
@@ -100,7 +129,6 @@
 <h1>Hadoop <%=jobId%> on <a href="/jobtracker.jsp"><%=trackerName%></a></h1>
 
 <% 
-    JobInProgress job = (JobInProgress) tracker.getJob(jobId);
     if (job == null) {
       out.print("<b>Job " + jobId + " not found.</b><br>\n");
       return;
@@ -117,17 +145,27 @@
     } else {
       out.print("<b>Job File:</b> " + profile.getJobFile() + "<br>\n");
     }
-    out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
     if (runState == JobStatus.RUNNING) {
       out.print("<b>Status:</b> Running<br>\n");
+      out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
+      out.print("<b>Runnning for:</b> " + StringUtils.formatTimeDiff(
+          System.currentTimeMillis(), job.getStartTime()) + "<br>\n");
     } else {
       if (runState == JobStatus.SUCCEEDED) {
         out.print("<b>Status:</b> Succeeded<br>\n");
+        out.print("<b>Started at :</b> " + new Date(job.getStartTime()) + "<br>\n");
+        out.print("<b>Finished at:</b> " + new Date(job.getFinishTime()) +
+                  "<br>\n");
+        out.print("<b>Finished in:</b> " + StringUtils.formatTimeDiff(
+            job.getFinishTime(), job.getStartTime()) + "<br>\n");
       } else if (runState == JobStatus.FAILED) {
         out.print("<b>Status:</b> Failed<br>\n");
+        out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
+        out.print("<b>Failed at :</b> " + new Date(job.getFinishTime()) +
+                  "<br>\n");
+        out.print("<b>Failed in :</b> " + StringUtils.formatTimeDiff(
+            job.getFinishTime(), job.getStartTime()) + "<br>\n");
       }
-      out.print("<b>Finished at:</b> " + new Date(job.getFinishTime()) +
-                "<br>\n");
     }
     if (flakyTaskTrackers > 0) {
       out.print("<b>Black-listed TaskTrackers:</b> " + 
@@ -195,6 +233,11 @@
     %>
     </table>
 
+
+<% if(JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) 
+    	&& runState == JobStatus.RUNNING) { %>
+	<hr><a href="jobdetails.jsp?action=confirm&jobid=<%=jobId%>"> Kill this job </a>
+<% } %>
 <hr>
 <a href="/jobtracker.jsp">Go back to JobTracker</a><br>
 <a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>

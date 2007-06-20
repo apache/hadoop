@@ -64,10 +64,12 @@
     ClusterStatus status = tracker.getClusterStatus();
     out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n"+
               "<tr><th>Maps</th><th>Reduces</th>" + 
-              "<th>Tasks/Node</th><th>Nodes</th></tr>\n");
+              "<th>Tasks/Node</th><th>Total Submissions</th>" +
+              "<th>Nodes</th></tr>\n");
     out.print("<tr><td>" + status.getMapTasks() + "</td><td>" +
               status.getReduceTasks() + "</td><td>" + 
-              status.getMaxTasks() + "</td><td><a href=\"/machines.jsp\">" +
+              status.getMaxTasks() + "</td><td>" +
+              tracker.getTotalSubmissions() + "</td><td><a href=\"/machines.jsp\">" +
               status.getTaskTrackers() + "</a></td></tr></table>\n");
   }
 %>

@@ -188,6 +188,11 @@ Trunk (unreleased changes)
  58. HADOOP-1505.  Remove spurious stacktrace in ZlibFactory
      introduced in HADOOP-1093.  (Michael Stack via tomwhite)
 
+ 59. HADOOP-1484.  Permit one to kill jobs from the web ui.  Note that
+     this is disabled by default.  One must set
+     "webinterface.private.actions" to enable this.
+     (Enis Soztutar via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
