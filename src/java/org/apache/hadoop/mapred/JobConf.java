@@ -661,7 +661,6 @@ public class JobConf extends Configuration {
   /** Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
    * on the class path that has a class with the same name.
-   * @author Owen O'Malley
    * @param my_class the class to find
    * @return a jar file that contains the class, or null
    * @throws IOException

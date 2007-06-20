@@ -24,7 +24,6 @@ import java.util.*;
 /**
  * Maps a relative pathname to an absolute pathname using the
  * PATH enviroment.
- * @author Dhruba Borthakur
  */
 public class PathFinder
 {

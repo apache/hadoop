@@ -30,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
  * @see org.apache.hadoop.metrics.MetricsRecord
  * @see org.apache.hadoop.metrics.MetricsContext
  * @see org.apache.hadoop.metrics.ContextFactory
- * @author Milind Bhandarkar
  */
 public class MetricsUtil {
     

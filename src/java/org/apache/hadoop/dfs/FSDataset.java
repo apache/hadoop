@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.*;
  * FSDataset manages a set of data blocks.  Each block
  * has a unique name and an extent on disk.
  *
- * @author Mike Cafarella
  ***************************************************/
 class FSDataset implements FSConstants {
 
@@ -179,7 +178,6 @@ class FSDataset implements FSConstants {
     /**
      * check if a data diretory is healthy
      * @throws DiskErrorException
-     * @author hairong
      */
     public void checkDirTree() throws DiskErrorException {
       DiskChecker.checkDir(dir);
@@ -651,7 +649,6 @@ class FSDataset implements FSConstants {
   /**
    * check if a data diretory is healthy
    * @throws DiskErrorException
-   * @author hairong
    */
   void checkDataDir() throws DiskErrorException {
     volumes.checkDirs();

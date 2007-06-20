@@ -28,7 +28,6 @@ import org.apache.hadoop.io.compress.Decompressor;
  * A wrapper around java.util.zip.Inflater to make it conform 
  * to org.apache.hadoop.io.compress.Decompressor interface.
  * 
- * @author Arun C Murthy
  */
 public class BuiltInZlibInflater extends Inflater implements Decompressor {
 

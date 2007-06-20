@@ -29,7 +29,6 @@ import org.apache.hadoop.mapred.JobConf;
  * 
  * This abstract class implements some common functionalities of the
  * the generic mapper, reducer and combiner classes of Abacus.
- *
  */
 public abstract class ValueAggregatorJobBase extends JobBase {
  

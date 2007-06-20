@@ -42,8 +42,6 @@ import org.apache.hadoop.mapred.MapReduceBase;
  *
  * To run: bin/hadoop jar build/hadoop-examples.jar wordcount
  *            [-m <i>maps</i>] [-r <i>reduces</i>] <i>in-dir</i> <i>out-dir</i> 
- *
- * @author Owen O'Malley
  */
 public class WordCount {
   

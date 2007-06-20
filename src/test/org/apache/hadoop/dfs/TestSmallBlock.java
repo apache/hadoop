@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.Path;
 /**
  * This class tests the creation of files with block-size
  * smaller than the default buffer size of 4K.
- * @author Milind Bhandarkar
  */
 public class TestSmallBlock extends TestCase {
   static final long seed = 0xDEADBEEFL;

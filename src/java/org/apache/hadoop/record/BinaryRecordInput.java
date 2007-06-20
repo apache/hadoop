@@ -24,8 +24,6 @@ import java.io.DataInputStream;
 import java.io.InputStream;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class BinaryRecordInput implements RecordInput {
     

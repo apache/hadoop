@@ -28,8 +28,6 @@ import java.io.IOException;
  * old version of the class may still be processed by the new version.  To
  * handle this situation, {@link #readFields(DataInput)}
  * implementations should catch {@link VersionMismatchException}.
- *
- * @author Doug Cutting
  */
 public abstract class VersionedWritable implements Writable {
 

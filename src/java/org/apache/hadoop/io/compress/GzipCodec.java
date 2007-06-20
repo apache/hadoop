@@ -27,13 +27,11 @@ import org.apache.hadoop.io.compress.zlib.*;
 
 /**
  * This class creates gzip compressors/decompressors. 
- * @author Owen O'Malley
  */
 public class GzipCodec extends DefaultCodec {
   /**
    * A bridge that wraps around a DeflaterOutputStream to make it 
    * a CompressionOutputStream.
-   * @author Owen O'Malley
    */
   protected static class GzipOutputStream extends CompressorStream {
 

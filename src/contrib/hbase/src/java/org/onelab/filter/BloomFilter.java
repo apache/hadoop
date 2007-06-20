@@ -46,7 +46,6 @@ import java.io.IOException;
  * filter will occasionally return a false positive, it will never return a false negative. When creating 
  * the filter, the sender can choose its desired point in a trade-off between the false positive rate and the size. 
  * 
- * @author <a href="mailto:donnet@ucl.ac.be">Benoit Donnet</a> - Universite Catholique de Louvain - Faculte des Sciences Appliquees - Departement d'Ingenierie Informatique.
  * contract <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  *
  * @version 1.0 - 2 Feb. 07

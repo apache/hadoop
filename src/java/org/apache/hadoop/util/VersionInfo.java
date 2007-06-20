@@ -23,7 +23,6 @@ import org.apache.hadoop.HadoopVersionAnnotation;
 /**
  * This class finds the package info for Hadoop and the HadoopVersionAnnotation
  * information.
- * @author Owen O'Malley
  */
 public class VersionInfo {
   private static Package myPackage;

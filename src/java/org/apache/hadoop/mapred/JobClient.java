@@ -35,7 +35,6 @@ import java.util.*;
  * should be the primary method by which user programs interact
  * with the networked job system.
  *
- * @author Mike Cafarella
  *******************************************************/
 public class JobClient extends ToolBase implements MRConstants  {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");

@@ -19,8 +19,6 @@ import java.util.ArrayList;
 
 /**
  * A wrapper around StringBuffer that automatically does indentation
- *
- * @author Milind Bhandarkar
  */
 public class CodeBuffer {
   

@@ -29,7 +29,6 @@ import org.apache.hadoop.util.StringUtils;
  * A collection of factories to create the right 
  * zlib/gzip compressor/decompressor instances.
  * 
- * @author Arun C Murthy
  */
 public class ZlibFactory {
   private static final Log LOG =

@@ -226,6 +226,8 @@ Trunk (unreleased changes)
  68. HADOOP-1501.  Better randomize sending of block reports to
      namenode, so reduce load spikes.  (Dhruba Borthakur via cutting)
 
+ 69. HADOOP-1147.  Remove @author tags from Java source files.
+
 
 Release 0.13.0 - 2007-06-08
 

@@ -28,7 +28,6 @@ import org.apache.hadoop.io.Text;
  * Represents a directive from the {@link org.apache.hadoop.mapred.JobTracker} 
  * to the {@link org.apache.hadoop.mapred.TaskTracker} to kill a task.
  * 
- * @author Arun C Murthy
  */
 class KillTaskAction extends TaskTrackerAction {
   String taskId;

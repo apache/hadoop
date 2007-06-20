@@ -10,7 +10,6 @@ import org.apache.hadoop.io.WritableComparable;
  * This is an example simple writable class.  This is used as a class external 
  * to the Hadoop IO classes for testing of user Writable classes.
  * 
- * @author Dennis E. Kubes
  */
 public class ExternalWritable
   implements WritableComparable {

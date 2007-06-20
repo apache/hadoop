@@ -59,8 +59,6 @@ import org.apache.hadoop.io.UTF8;
  *  Additionally, the tool collects a detailed overall DFS statistics, and
  *  optionally can print detailed statistics on block locations and replication
  *  factors of each file.
- *
- * @author Andrzej Bialecki
  */
 public class NamenodeFsck {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.NameNode");
@@ -462,7 +460,6 @@ public class NamenodeFsck {
   /**
    * FsckResult of checking, plus overall DFS statistics.
    *
-   * @author Andrzej Bialecki
    */
   public static class FsckResult {
     private ArrayList<String> missingIds = new ArrayList<String>();

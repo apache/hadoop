@@ -29,8 +29,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class DFSTestUtil extends TestCase {
   

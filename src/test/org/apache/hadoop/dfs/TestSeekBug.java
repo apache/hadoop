@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 /**
  * This class tests the presence of seek bug as described
  * in HADOOP-508 
- * @author Milind Bhandarkar
  */
 public class TestSeekBug extends TestCase {
   static final long seed = 0xDEADBEEFL;

@@ -23,8 +23,6 @@ import org.apache.hadoop.conf.Configurable;
 /**
  * A tool interface that support generic options handling
  * 
- * @author hairong
- *
  */
 public interface Tool extends Configurable {
   /**

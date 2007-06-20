@@ -59,8 +59,6 @@ import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 /**
  * A Map-reduce program to recursively copy directories between
  * different file-systems.
- *
- * @author Milind Bhandarkar
  */
 public class CopyFiles extends ToolBase {
   private static final String HDFS = "hdfs";
@@ -86,7 +84,6 @@ public class CopyFiles extends ToolBase {
   
   /**
    * Base-class for all mappers for distcp
-   * @author Arun C Murthy
    */
   public static abstract class CopyFilesMapper extends MapReduceBase 
   {
@@ -181,7 +178,6 @@ public class CopyFiles extends ToolBase {
   
   /**
    * DFSCopyFilesMapper: The mapper for copying files from the DFS.
-   * @author Milind Bhandarkar
    */
   public static class FSCopyFilesMapper extends CopyFilesMapper 
     implements Mapper 
@@ -591,7 +587,6 @@ public class CopyFiles extends ToolBase {
     
   /**
    * Factory to create requisite Mapper objects for distcp.
-   * @author Arun C Murthy
    */
   private static class CopyMapperFactory
   {

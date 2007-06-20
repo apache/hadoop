@@ -38,8 +38,6 @@ import org.apache.hadoop.dfs.DatanodeDescriptor;
  * nodes represent switches/routers that manage traffic in/out of data centers
  * or racks.  
  * 
- * @author hairong
- *
  */
 public class NetworkTopology {
   public final static String DEFAULT_RACK = "/default-rack";

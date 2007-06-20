@@ -20,8 +20,6 @@ package org.apache.hadoop.record.compiler;
 
 /**
  * A thin wrappper around record field.
- *
- * @author Milind Bhandarkar
  */
 public class JField<T> {
   

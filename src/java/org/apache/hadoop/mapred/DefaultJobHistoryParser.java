@@ -128,7 +128,6 @@ public class DefaultJobHistoryParser {
 
   /**
    * Parses and returns a map of values in master index. 
-   * @author sanjaydahiya
    * 
    */
   static class MasterIndexParseListener

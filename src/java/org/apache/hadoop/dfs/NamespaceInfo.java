@@ -31,7 +31,6 @@ import org.apache.hadoop.io.WritableFactory;
  * NamespaceInfo is returned by the name-node in reply 
  * to a data-node handshake.
  * 
- * @author Konstantin Shvachko
  */
 class NamespaceInfo extends StorageInfo implements Writable {
   String  buildVersion;

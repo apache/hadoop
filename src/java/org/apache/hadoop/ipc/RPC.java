@@ -172,7 +172,6 @@ public class RPC {
 
   /**
    * A version mismatch for the RPC protocol.
-   * @author Owen O'Malley
    */
   public static class VersionMismatch extends IOException {
     private String interfaceName;

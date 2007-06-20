@@ -22,7 +22,6 @@ import java.util.jar.*;
 
 /**
  * A micro-application that prints the main class name out of a jar file.
- * @author Owen O'Malley
  */
 public class PrintJarMainClass {
   

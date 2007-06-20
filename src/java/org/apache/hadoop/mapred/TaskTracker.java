@@ -74,7 +74,6 @@ import org.apache.log4j.LogManager;
  * in a networked environment.  It contacts the JobTracker
  * for Task assignments and reporting results.
  *
- * @author Mike Cafarella
  *******************************************************/
 public class TaskTracker 
              implements MRConstants, TaskUmbilicalProtocol, Runnable {
@@ -1770,7 +1769,6 @@ public class TaskTracker
    * (and parent directories, if necessary) can be created.
    * @param localDirs where the new TaskTracker should keep its local files.
    * @throws DiskErrorException if all local directories are not writable
-   * @author hairong
    */
   private static void checkLocalDirs(String[] localDirs) 
     throws DiskErrorException {
@@ -1824,7 +1822,6 @@ public class TaskTracker
   /**
    * This class is used in TaskTracker's Jetty to serve the map outputs
    * to other nodes.
-   * @author Owen O'Malley
    */
   public static class MapOutputServlet extends HttpServlet {
     private static final int MAX_BYTES_TO_READ = 64 * 1024;

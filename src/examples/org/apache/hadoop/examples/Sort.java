@@ -33,8 +33,6 @@ import org.apache.hadoop.fs.*;
  *
  * To run: bin/hadoop jar build/hadoop-examples.jar sort
  *            [-m <i>maps</i>] [-r <i>reduces</i>] <i>in-dir</i> <i>out-dir</i> 
- *
- * @author Owen O'Malley
  */
 public class Sort {
   

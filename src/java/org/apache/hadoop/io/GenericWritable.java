@@ -43,7 +43,6 @@ import java.io.IOException;
  * }
  * </pre></blockquote>
  * 
- * @author Feng Jiang (Feng.a.Jiang@gmail.com)
  * @since Nov 8, 2006
  */
 public abstract class GenericWritable implements Writable {

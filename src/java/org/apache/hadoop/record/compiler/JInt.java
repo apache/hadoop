@@ -23,7 +23,6 @@ import org.apache.hadoop.record.compiler.JType.CppType;
 
 /**
  * Code generator for "int" type
- * @author Milind Bhandarkar
  */
 public class JInt extends JType {
   

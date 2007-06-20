@@ -29,8 +29,6 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 /**
  * This test case tests the symlink creation
  * utility provided by distributed caching 
- * @author mahadev
- *
  */
 public class TestSymLink extends TestCase
 {

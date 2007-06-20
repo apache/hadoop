@@ -1007,7 +1007,6 @@ class JobInProgress {
 
   /**
    * Fail a task with a given reason, but without a status object.
-   * @author Owen O'Malley
    * @param tip The task's tip
    * @param taskid The task id
    * @param reason The reason that the task failed

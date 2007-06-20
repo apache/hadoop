@@ -27,7 +27,6 @@ import java.util.*;
  * on the host machines running the map/reduce. This class
  * assumes that setting the environment in streaming is 
  * allowed on windows/ix/linuz/freebsd/sunos/solaris/hp-ux
- * @author michel
  */
 public class Environment extends Properties {
 

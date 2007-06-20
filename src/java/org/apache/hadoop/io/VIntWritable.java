@@ -23,7 +23,6 @@ import java.io.*;
 /** A WritableComparable for integer values stored in variable-length format.
  * Such values take between one and five bytes.  Smaller values take fewer bytes.
  * 
- * @author Andrzej Bialecki
  * @see org.apache.hadoop.io.WritableUtils#readVInt(DataInput)
  */
 public class VIntWritable implements WritableComparable {

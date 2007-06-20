@@ -25,7 +25,6 @@ import java.util.Iterator;
  * This class wraps a list of problems with the input, so that the user
  * can get a list of problems together instead of finding and fixing them one 
  * by one.
- * @author Owen O'Malley
  */
 public class InvalidInputException extends IOException {
   private List<IOException> problems;

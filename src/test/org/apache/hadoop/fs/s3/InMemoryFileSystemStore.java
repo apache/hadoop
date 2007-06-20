@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.s3.INode.FileType;
 /**
  * A stub implementation of {@link FileSystemStore} for testing
  * {@link S3FileSystem} without actually connecting to S3.
- * @author Tom White
  */
 class InMemoryFileSystemStore implements FileSystemStore {
   

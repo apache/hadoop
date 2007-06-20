@@ -34,8 +34,6 @@ import org.apache.hadoop.examples.WordCount;
 
 /**
  * A JUnit test to test Mini Map-Reduce Cluster with Mini-DFS.
- *
- * @author Milind Bhandarkar
  */
 public class TestMiniMRWithDFS extends TestCase {
   private static final Log LOG =

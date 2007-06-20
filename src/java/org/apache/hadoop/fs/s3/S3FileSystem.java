@@ -22,7 +22,6 @@ import org.apache.hadoop.util.Progressable;
  * <p>
  * A {@link FileSystem} backed by <a href="http://aws.amazon.com/s3">Amazon S3</a>.
  * </p>
- * @author Tom White
  */
 public class S3FileSystem extends FileSystem {
 

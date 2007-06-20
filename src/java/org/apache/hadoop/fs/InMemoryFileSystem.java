@@ -33,8 +33,6 @@ import org.apache.hadoop.util.Progressable;
  * reserveSpaceWithCheckSum(Path f, int size) (see below for a description of
  * the API for reserving space in the FS. The uri of this filesystem starts with
  * ramfs:// .
- * @author ddas
- *
  */
 public class InMemoryFileSystem extends ChecksumFileSystem {
   private static class RawInMemoryFileSystem extends FileSystem {

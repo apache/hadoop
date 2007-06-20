@@ -8,7 +8,6 @@ import java.io.IOException;
  * with the jobtracker when it does not appear on the list of included nodes, 
  * or has been specifically excluded.
  * 
- * @author Wendy Chien
  */
 class DisallowedTaskTrackerException extends IOException {
 

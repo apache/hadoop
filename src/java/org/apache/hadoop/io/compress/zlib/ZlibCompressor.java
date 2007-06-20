@@ -30,7 +30,6 @@ import org.apache.hadoop.util.NativeCodeLoader;
  * zlib compression algorithm.
  * http://www.zlib.net/
  * 
- * @author Arun C Murthy
  */
 public class ZlibCompressor implements Compressor {
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64*1024;

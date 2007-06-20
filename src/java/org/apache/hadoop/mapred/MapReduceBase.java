@@ -25,8 +25,6 @@ import org.apache.hadoop.mapred.JobConfigurable;
 
 /** Base class for {@link Mapper} and {@link Reducer} implementations.
  * Provides default implementations for a few methods.
- *
- * @author Owen O'Malley
  */
 public class MapReduceBase implements Closeable, JobConfigurable {
 

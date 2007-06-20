@@ -29,7 +29,6 @@ import org.apache.hadoop.io.WritableUtils;
  * A generic directive from the {@link org.apache.hadoop.mapred.JobTracker}
  * to the {@link org.apache.hadoop.mapred.TaskTracker} to take some 'action'. 
  * 
- * @author Arun C Murthy
  */
 abstract class TaskTrackerAction implements Writable {
   
@@ -37,7 +36,6 @@ abstract class TaskTrackerAction implements Writable {
    * Ennumeration of various 'actions' that the {@link JobTracker}
    * directs the {@link TaskTracker} to perform periodically.
    * 
-   * @author Arun C Murthy
    */
   public static enum ActionType {
     /** Launch a new task. */

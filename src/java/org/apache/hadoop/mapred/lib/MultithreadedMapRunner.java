@@ -31,8 +31,6 @@ import java.util.concurrent.TimeUnit;
  * the number of thread the thread-pool can use (using the
  * <b>mapred.map.multithreadedrunner.threads</b> property).
  * <p>
- *
- * @author Alejandro Abdelnur
  */
 public class MultithreadedMapRunner implements MapRunnable {
   private static final Log LOG =

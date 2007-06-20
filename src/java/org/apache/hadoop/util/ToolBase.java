@@ -78,8 +78,6 @@ import org.apache.hadoop.fs.Path;
  *     submit a job to local runner
  * </pre></blockquote>
  *        
- * @author hairong
- *
  */
 public abstract class ToolBase implements Tool {
   private static final Log LOG = LogFactory.getLog(

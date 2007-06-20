@@ -22,7 +22,6 @@ package org.apache.hadoop.io.retry;
  * Specifies a policy for retrying method failures.
  * Implementations of this interface should be immutable.
  * </p>
- * @author Tom White
  */
 public interface RetryPolicy {
   /**

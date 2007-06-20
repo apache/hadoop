@@ -39,8 +39,6 @@ import org.apache.hadoop.util.ReflectionUtils;
  * A class that allows a map/red job to work on a sample of sequence files.
  * The sample is decided by the filter class set by the job.
  * 
- * @author hairong
- *
  */
 
 public class SequenceFileInputFilter extends SequenceFileInputFormat {

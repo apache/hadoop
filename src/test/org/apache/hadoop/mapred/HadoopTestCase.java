@@ -18,8 +18,6 @@ import java.io.IOException;
  *
  * Job Configurations should be created using a configuration returned by the
  * 'createJobConf()' method.
- *
- * @author Alejandro Abdelnur
  */
 public abstract class HadoopTestCase extends TestCase {
   public static final int LOCAL_MR = 1;

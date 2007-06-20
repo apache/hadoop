@@ -28,7 +28,6 @@ import java.util.*;
  * This class contains a <code>Collection</code> of blocks that has
  * been written into the file so far, and file replication. 
  * 
- * @author shv
  */
 class FileUnderConstruction {
   private short blockReplication; // file replication

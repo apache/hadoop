@@ -38,7 +38,6 @@ import org.apache.commons.logging.*;
  * and is selected with the option bin/hadoopStreaming -inputreader ...
  * @see StreamLineRecordReader
  * @see StreamXmlRecordReader 
- * @author Michel Tourn
  */
 public abstract class StreamBaseRecordReader implements RecordReader {
 

@@ -38,7 +38,6 @@ import org.apache.hadoop.util.Progressable;
  * and may also provide additional methods
  * and fields.
  *
- * @author Hairong Kuang
  *****************************************************************/
 public class FilterFileSystem extends FileSystem {
   

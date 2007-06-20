@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 
 /** Utility to permit renaming of Writable implementation classes without
  * invalidiating files that contain their class name.
- * @author Doug Cutting
  */
 public class WritableName {
   private static HashMap<String, Class> NAME_TO_CLASS =

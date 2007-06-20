@@ -26,7 +26,6 @@ import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Various utility functions for Hadooop record I/O runtime.
- * @author Milind Bhandarkar
  */
 public class Utils {
   

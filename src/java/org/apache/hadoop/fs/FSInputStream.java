@@ -23,7 +23,6 @@ import java.io.*;
  * FSInputStream is a generic old InputStream with a little bit
  * of RAF-style seek ability.
  *
- * @author Mike Cafarella
  *****************************************************************/
 public abstract class FSInputStream extends InputStream
     implements Seekable, PositionedReadable {

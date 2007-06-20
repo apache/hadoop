@@ -25,8 +25,6 @@ import java.io.PushbackReader;
 import java.io.UnsupportedEncodingException;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class CsvRecordInput implements RecordInput {
     

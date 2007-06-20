@@ -35,7 +35,6 @@ import org.apache.hadoop.io.Writable;
 /**
  * FSEditLog maintains a log of the namespace modifications.
  * 
- * @author Konstantin Shvachko
  */
 class FSEditLog {
   private static final byte OP_ADD = 0;

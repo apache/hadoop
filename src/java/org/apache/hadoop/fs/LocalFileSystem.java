@@ -25,7 +25,6 @@ import java.util.*;
 /****************************************************************
  * Implement the FileSystem API for the checksumed local filesystem.
  *
- * @author Mike Cafarella
  *****************************************************************/
 public class LocalFileSystem extends ChecksumFileSystem {
   static final URI NAME = URI.create("file:///");

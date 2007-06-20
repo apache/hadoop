@@ -27,7 +27,6 @@ import java.io.DataOutput;
  * It is resizable and distinguishes between the size of the seqeunce and
  * the current capacity. The hash function is the front of the md5 of the 
  * buffer. The sort order is the same as memcmp.
- * @author Doug Cutting
  */
 public class BytesWritable implements WritableComparable {
   private int size;

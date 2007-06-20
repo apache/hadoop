@@ -28,8 +28,6 @@ import java.io.IOException;
  * <p>Implementations typically implement a static <code>read(DataInput)</code>
  * method which constructs a new instance, calls {@link
  * #readFields(DataInput)}, and returns the instance.
- *
- * @author Doug Cutting
  */
 public interface Writable {
   /** Writes the fields of this object to <code>out</code>. */

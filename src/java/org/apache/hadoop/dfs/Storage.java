@@ -40,7 +40,6 @@ import org.apache.hadoop.util.VersionInfo;
  * Common class for storage information.
  * 
  * TODO namespaceID should be long and computed as hash(address + port)
- * @author Konstantin Shvachko
  */
 class StorageInfo {
   int   layoutVersion;  // Version read from the stored file.
@@ -85,7 +84,6 @@ class StorageInfo {
  * other nodes were not able to startup sharing the same storage.
  * The locks are released when the servers stop (normally or abnormally).
  * 
- * @author Konstantin Shvachko
  */
 abstract class Storage extends StorageInfo {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.Storage");

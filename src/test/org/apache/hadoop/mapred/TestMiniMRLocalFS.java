@@ -33,8 +33,6 @@ import junit.framework.TestCase;
 
 /**
  * A JUnit test to test min map-reduce cluster with local file system.
- *
- * @author Milind Bhandarkar
  */
 public class TestMiniMRLocalFS extends TestCase {
   

@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.*;
 
 /**
  * General string utils
- * @author Owen O'Malley
  */
 public class StringUtils {
 

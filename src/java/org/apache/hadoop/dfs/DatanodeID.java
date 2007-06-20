@@ -12,7 +12,6 @@ import org.apache.hadoop.io.WritableComparable;
  * name (hostname:portNumber) and the data storage ID, 
  * which it currently represents.
  * 
- * @author Konstantin Shvachko
  */
 public class DatanodeID implements WritableComparable {
 

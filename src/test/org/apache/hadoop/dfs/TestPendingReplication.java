@@ -22,7 +22,6 @@ import java.lang.System;
 
 /**
  * This class tests the internals of PendingReplicationBlocks.java
- * @author Dhruba Borthakur
  */
 public class TestPendingReplication extends TestCase {
   public void testPendingReplication() {

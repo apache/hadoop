@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FileSystem;
 /**
  * A JUnit test to test caching with DFS
  * 
- * @author Mahadev Konar
  */
 public class TestMiniMRDFSCaching extends TestCase {
 

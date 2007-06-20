@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.Path;
 /**
  * This class tests that the DFS command mkdirs cannot create subdirectories
  * from a file when passed an illegal path.  HADOOP-281.
- * @author Wendy Chien
  */
 public class TestDFSMkdirs extends TestCase {
 

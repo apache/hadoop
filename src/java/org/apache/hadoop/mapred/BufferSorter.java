@@ -33,8 +33,6 @@ import org.apache.hadoop.util.Progressable;
  * structures maintained by an implementation of this interface. That is why
  * a method is provided to get the memory consumed so far by the datastructures
  * in the interface implementation.  
- * @author ddas
- *
  */
 interface BufferSorter extends JobConfigurable {
   

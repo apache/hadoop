@@ -36,9 +36,6 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Runs a job multiple times and takes average of all runs.
- *
- * @author Sanjay Dahiya
- * @author Nigel Daley
  */
 public class MRBench {
   

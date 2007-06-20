@@ -43,7 +43,6 @@ import java.util.concurrent.TimeUnit;
  * DistributedFileSystem, which uses DFSClient to handle
  * filesystem tasks.
  *
- * @author Mike Cafarella, Tessa MacDuff
  ********************************************************/
 class DFSClient implements FSConstants {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.DFSClient");
@@ -70,7 +69,6 @@ class DFSClient implements FSConstants {
   /**
    * A class to track the list of DFS clients, so that they can be closed
    * on exit.
-   * @author Owen O'Malley
    */
   private static class ClientFinalizer extends Thread {
     private List<DFSClient> clients = new ArrayList<DFSClient>();
@@ -355,7 +353,6 @@ class DFSClient implements FSConstants {
    * @param replication
    * @throws IOException
    * @return true is successful or false if file does not exist 
-   * @author shv
    */
   public boolean setReplication(UTF8 src, 
                                 short replication

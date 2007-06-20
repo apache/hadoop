@@ -30,8 +30,6 @@ package org.apache.hadoop.record;
  *   idx.incr();
  * }
  * </code>
- *
- * @author Milind Bhandarkar
  */
 public interface Index {
   boolean done();

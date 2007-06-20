@@ -35,7 +35,6 @@ import org.apache.hadoop.metrics.MetricsContext;
  * It keeps the filename->blockset mapping always-current
  * and logged to disk.
  * 
- * @author Mike Cafarella
  *************************************************/
 class FSDirectory implements FSConstants {
 
@@ -180,7 +179,6 @@ class FSDirectory implements FSConstants {
      * @param newNode INode to be added
      * @return null if the node already exists; inserted INode, otherwise
      * @throws FileNotFoundException 
-     * @author shv
      */
     INode addNode(String path, INode newNode) throws FileNotFoundException {
       File target = new File(path);

@@ -28,7 +28,6 @@ import java.util.*;
  * of the most recent TaskTrackerStatus objects for each
  * unique TaskTracker it knows about.
  *
- * @author Mike Cafarella
  **************************************************/
 class TaskTrackerStatus implements Writable {
 

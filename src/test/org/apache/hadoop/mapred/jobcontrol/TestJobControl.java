@@ -41,8 +41,6 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * This class performs unit test for Job/JobControl classes.
  *  
- * @author runping
- *
  */
 public class TestJobControl extends junit.framework.TestCase {
 

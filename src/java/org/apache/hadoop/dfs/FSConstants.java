@@ -22,7 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 /************************************
  * Some handy constants
  *
- * @author Mike Cafarella
  ************************************/
 public interface FSConstants {
   public static int MIN_BLOCKS_FOR_WRITE = 5;

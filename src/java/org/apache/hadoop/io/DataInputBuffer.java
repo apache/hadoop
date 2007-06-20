@@ -38,7 +38,6 @@ import java.io.*;
  * }
  * </pre>
  *  
- * @author Doug Cutting
  */
 public class DataInputBuffer extends DataInputStream {
 

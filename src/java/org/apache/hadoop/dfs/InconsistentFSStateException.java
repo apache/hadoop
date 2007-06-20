@@ -25,7 +25,6 @@ import org.apache.hadoop.util.StringUtils;
  * The exception is thrown when file system state is inconsistent 
  * and is not recoverable. 
  * 
- * @author Konstantin Shvachko
  */
 class InconsistentFSStateException extends IOException {
 

@@ -23,7 +23,6 @@ import org.apache.hadoop.examples.dancing.*;
 /**
  * A description of an example program based on its class and a 
  * human-readable description.
- * @author Owen O'Malley
  */
 public class ExampleDriver {
   

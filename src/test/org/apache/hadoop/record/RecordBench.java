@@ -30,7 +30,6 @@ import java.util.Random;
 
 /**
  * Benchmark for various types of serializations
- * @author milindb
  */
 public class RecordBench {
   

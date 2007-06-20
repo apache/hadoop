@@ -27,7 +27,6 @@ import org.apache.hadoop.io.compress.Compressor;
  * A wrapper around java.util.zip.Deflater to make it conform 
  * to org.apache.hadoop.io.compress.Compressor interface.
  * 
- * @author Arun C Murthy
  */
 public class BuiltInZlibDeflater extends Deflater implements Compressor {
 

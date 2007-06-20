@@ -29,7 +29,6 @@ import org.apache.hadoop.io.Text;
  * to the {@link org.apache.hadoop.mapred.TaskTracker} to kill the task of 
  * a job and cleanup resources.
  * 
- * @author Arun C Murthy
  */
 class KillJobAction extends TaskTrackerAction {
   String jobId;

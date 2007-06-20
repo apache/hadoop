@@ -46,7 +46,6 @@ import javax.servlet.http.HttpServletResponse;
  * The Secondary NameNode uses the ClientProtocol to talk to the
  * primary NameNode.
  *
- * @author  Dhruba Borthakur
  **********************************************************/
 public class SecondaryNameNode implements FSConstants, Runnable {
     
@@ -428,7 +427,6 @@ public class SecondaryNameNode implements FSConstants, Runnable {
    * This class is used in Namesystem's jetty to retrieve a file.
    * Typically used by the Secondary NameNode to retrieve image and
    * edit file for periodic checkpointing.
-   * @author Dhruba Borthakur
    */
   public static class GetImageServlet extends HttpServlet {
     @SuppressWarnings("unchecked")

@@ -68,7 +68,6 @@ import java.lang.reflect.InvocationTargetException;
  * <p>
  * <p>For a another approach to filesystem testing, see the high level
  * (HadoopFS level) test {@link org.apache.hadoop.fs.TestFileSystem}.
- * @author Paul Baclace
  */
 public class ClusterTestDFS extends TestCase implements FSConstants {
   private static final Log LOG =

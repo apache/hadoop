@@ -26,8 +26,6 @@ import java.io.DataOutputStream;
 import java.io.OutputStream;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class BinaryRecordOutput implements RecordOutput {
     

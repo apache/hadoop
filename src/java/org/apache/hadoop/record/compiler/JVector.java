@@ -22,8 +22,6 @@ import org.apache.hadoop.record.compiler.JCompType.CCompType;
 import org.apache.hadoop.record.compiler.JCompType.CppCompType;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class JVector extends JCompType {
   

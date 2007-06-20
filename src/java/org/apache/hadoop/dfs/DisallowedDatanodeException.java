@@ -8,7 +8,6 @@ import java.io.IOException;
  * with the namenode when it does not appear on the list of included nodes, 
  * or has been specifically excluded.
  * 
- * @author Wendy Chien
  */
 class DisallowedDatanodeException extends IOException {
 

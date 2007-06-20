@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class JRecord extends JCompType {
   

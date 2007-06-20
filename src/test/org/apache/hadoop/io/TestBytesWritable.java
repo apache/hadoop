@@ -21,7 +21,6 @@ import junit.framework.TestCase;
 
 /**
  * This is the unit test for BytesWritable.
- * @author Owen O'Malley
  */
 public class TestBytesWritable extends TestCase {
 

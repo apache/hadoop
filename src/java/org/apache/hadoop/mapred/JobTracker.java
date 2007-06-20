@@ -55,7 +55,6 @@ import org.apache.hadoop.util.StringUtils;
  * JobTracker is the central location for submitting and 
  * tracking MR jobs in a network environment.
  *
- * @author Mike Cafarella
  *******************************************************/
 public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmissionProtocol {
   static long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
@@ -151,7 +150,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * but that haven't reported back yet.
    * Note that I included a stop() method, even though there is no place
    * where JobTrackers are cleaned up.
-   * @author Owen O'Malley
    */
   private class ExpireLaunchingTasks implements Runnable {
     private volatile boolean shouldRun = true;
@@ -1162,7 +1160,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   /**
    * Update the last recorded status for the given task tracker.
    * It assumes that the taskTrackers are locked on entry.
-   * @author Owen O'Malley
    * @param trackerName The name of the tracker
    * @param status The new status for the task tracker
    * @return Was an old status found?

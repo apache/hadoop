@@ -38,7 +38,6 @@ import org.apache.hadoop.mapred.Reporter;
  * overloaded in derived classes to define the IO operation and the
  * statistics data to be collected by subsequent reducers.
  * 
- * @author Konstantin Shvachko
  */
 public abstract class IOMapperBase extends Configured implements Mapper {
   protected byte[] buffer;

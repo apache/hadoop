@@ -25,8 +25,6 @@ import java.util.Arrays;
 import java.security.*;
 
 /** A Writable for MD5 hash values.
- *
- * @author Doug Cutting
  */
 public class MD5Hash implements WritableComparable {
   public static final int MD5_LEN = 16;

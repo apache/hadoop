@@ -25,7 +25,6 @@ import org.apache.hadoop.io.*;
  * A Block is a Hadoop FS primitive, identified by a 
  * long.
  *
- * @author Mike Cafarella
  **************************************************/
 class Block implements Writable, Comparable {
 

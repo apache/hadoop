@@ -27,8 +27,6 @@ import java.util.ArrayList;
 import java.util.TreeMap;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class TestRecordIO extends TestCase {
     

@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * This class tests the decommissioning of nodes.
- * @author Dhruba Borthakur
  */
 public class TestDecommission extends TestCase {
   static final long seed = 0xDEADBEEFL;

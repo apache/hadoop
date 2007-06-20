@@ -28,8 +28,6 @@ import org.apache.hadoop.util.CopyFiles;
 
 /**
  * A JUnit test for copying files recursively.
- *
- * @author Milind Bhandarkar
  */
 public class TestCopyFiles extends TestCase {
   

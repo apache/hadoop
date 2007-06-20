@@ -33,7 +33,6 @@ import java.sql.Time;
  * 3)  a thread that periodically identifies replication-requests
  *     that never made it.
  *
- * @author Dhruba Borthakur
  ***************************************************/
 class PendingReplicationBlocks {
   private Log LOG = null;

@@ -38,8 +38,6 @@ import org.apache.hadoop.examples.WordCount;
 /**
  * This is an example Hadoop Map/Reduce application being used for 
  * TestMiniMRClasspath. Uses the WordCount examples in hadoop.
- * @author Owen O'Malley
- *
  */
 public class ClassWordCount {
   

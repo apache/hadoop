@@ -27,7 +27,6 @@ import java.util.Iterator;
  * according the their source tags. Once the value re-grouped, the reducer can
  * perform the cross product over the values in different groups.
  * 
- * @author runping
  * 
  */
 public interface ResetableIterator extends Iterator {

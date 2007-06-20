@@ -25,7 +25,6 @@ import java.io.*;
 /**
  * General xml utilities.
  *   
- * @author Arun C Murthy
  */
 public class XMLUtils {
   /**

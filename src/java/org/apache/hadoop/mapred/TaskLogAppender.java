@@ -11,7 +11,6 @@ import org.apache.log4j.spi.LoggingEvent;
  * A simple log4j-appender for the task child's 
  * map-reduce system logs.
  * 
- * @author Arun C Murthy
  */
 public class TaskLogAppender extends AppenderSkeleton {
   private TaskLog.Writer taskLogWriter = null;

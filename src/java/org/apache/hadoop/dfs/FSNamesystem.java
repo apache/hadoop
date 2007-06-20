@@ -516,7 +516,6 @@ class FSNamesystem implements FSConstants {
    * @param replication new replication
    * @return true if successful; 
    *         false if file does not exist or is a directory
-   * @author shv
    */
   public boolean setReplication(String src, short replication) 
                                 throws IOException {
@@ -1482,7 +1481,6 @@ class FSNamesystem implements FSConstants {
    * registered with the namenode without restarting the whole cluster.
    * 
    * @see DataNode#register()
-   * @author Konstantin Shvachko
    */
   public void registerDatanode(DatanodeRegistration nodeReg,
                                String networkLocation
@@ -1875,7 +1873,6 @@ class FSNamesystem implements FSConstants {
   /**
    * remove a datanode descriptor
    * @param nodeID datanode ID
-   * @author hairong
    */
   synchronized public void removeDatanode(DatanodeID nodeID) 
     throws IOException {
@@ -1891,7 +1888,6 @@ class FSNamesystem implements FSConstants {
   /**
    * remove a datanode descriptor
    * @param nodeInfo datanode descriptor
-   * @author hairong
    */
   private void removeDatanode(DatanodeDescriptor nodeInfo) {
     synchronized (heartbeats) {
@@ -3021,7 +3017,6 @@ class FSNamesystem implements FSConstants {
    *
    * @see ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
    * @see SafeModeMonitor
-   * @author Konstantin Shvachko
    */
   class SafeModeInfo {
     // configuration fields
@@ -3251,7 +3246,6 @@ class FSNamesystem implements FSConstants {
    * Periodically check whether it is time to leave safe mode.
    * This thread starts when the threshold level is reached.
    *
-   * @author Konstantin Shvachko
    */
   class SafeModeMonitor implements Runnable {
     /** interval in msec for checking safe mode: {@value} */

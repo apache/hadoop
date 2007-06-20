@@ -25,8 +25,6 @@ import java.util.ArrayList;
  * Container for the Hadoop Record DDL.
  * The main components of the file are filename, list of included files,
  * and records defined in that file.
- *
- * @author Milind Bhandarkar
  */
 public class JFile {
   /** Possibly full name of the file */

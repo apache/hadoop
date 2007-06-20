@@ -48,7 +48,6 @@ import org.apache.hadoop.fs.Path;
  *     [-Dhadoop.test.localoutputfile=/tmp/fifo] \ 
  *     test-unix 
  * </pre>
- * @author michel
  */
 public class TestStreamedMerge extends TestCase {
 

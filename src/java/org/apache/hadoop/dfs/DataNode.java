@@ -68,7 +68,6 @@ import org.apache.hadoop.metrics.Updater;
  * this server is reported to the NameNode, which then sends that
  * information to clients or other DataNodes that might be interested.
  *
- * @author Mike Cafarella
  **********************************************************/
 public class DataNode implements FSConstants, Runnable {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.DataNode");

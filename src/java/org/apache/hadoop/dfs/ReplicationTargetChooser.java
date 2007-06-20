@@ -29,8 +29,6 @@ import java.util.*;
  * otherwise a random datanode. The 2nd replica is placed on a datanode
  * that is on a different rack. The 3rd replica is placed on a datanode
  * which is on the same rack as the first replca.
- * @author hairong
- *
  */
 class ReplicationTargetChooser {
   private final boolean considerLoad; 

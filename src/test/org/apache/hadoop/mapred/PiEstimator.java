@@ -32,8 +32,6 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 /**
  * A Map-reduce program to estimate the value of Pi using monte-carlo
  * method.
- *
- * @author Milind Bhandarkar
  */
 public class PiEstimator {
   

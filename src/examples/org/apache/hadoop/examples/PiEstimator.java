@@ -34,8 +34,6 @@ import org.apache.hadoop.mapred.*;
 /**
  * A Map-reduce program to estimaate the valu eof Pi using monte-carlo
  * method.
- *
- * @author Milind Bhandarkar
  */
 public class PiEstimator {
   

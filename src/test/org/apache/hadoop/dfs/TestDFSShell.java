@@ -28,7 +28,6 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * This class tests commands from DFSShell.
- * @author Dhruba Borthakur
  */
 public class TestDFSShell extends TestCase {
   private static String TEST_ROOT_DIR =

@@ -43,7 +43,6 @@ import org.apache.hadoop.mapred.TaskTracker;
  * <li><tt>l:</tt> - long, summ</li>
  * </ul>
  * 
- * @author Konstantin Shvachko
  */
 public class AccumulatingReducer extends MapReduceBase implements Reducer {
   protected String hostName;

@@ -30,7 +30,6 @@ import org.apache.hadoop.util.Progressable;
 
 /** This class implements the sort interface using primitive int arrays as 
  * the data structures (that is why this class is called 'BasicType'SorterBase)
- * @author ddas
  */
 abstract class BasicTypeSorterBase implements BufferSorter {
   

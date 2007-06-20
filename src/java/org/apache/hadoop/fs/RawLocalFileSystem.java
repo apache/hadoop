@@ -30,7 +30,6 @@ import org.apache.hadoop.util.Progressable;
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
  *
- * @author Mike Cafarella
  *****************************************************************/
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");

@@ -32,7 +32,6 @@ import org.apache.commons.logging.LogFactory;
  * For parsing the job history it supports a listener based interface where each line is parsed
  * and passed to listener. The listener can create an object model of history or look for specific 
  * events and discard rest of the history.  
- *
  */
 public class JobHistory {
   
@@ -659,7 +658,6 @@ public class JobHistory {
    * Delete history files older than one month. Update master index and remove all 
    * jobs older than one month. Also if a job tracker has no jobs in last one month
    * remove reference to the job tracker. 
-   * @author sanjaydahiya
    *
    */
   public static class HistoryCleaner implements Runnable{

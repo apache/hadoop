@@ -30,7 +30,6 @@ import org.apache.hadoop.ipc.RemoteException;
  * <p>
  * A collection of useful implementations of {@link RetryPolicy}.
  * </p>
- * @author Tom White
  */
 public class RetryPolicies {
   

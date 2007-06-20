@@ -34,7 +34,6 @@ import org.apache.hadoop.io.Writable;
 
 /** A generic Mapper bridge.
  *  It delegates operations to an external program via stdin and stdout.
- *  @author Michel Tourn
  */
 public class PipeMapper extends PipeMapRed implements Mapper {
 

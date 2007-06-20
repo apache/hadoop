@@ -22,8 +22,6 @@ import org.apache.hadoop.io.WritableComparator;
 
 /**
  * A raw record comparator base class
- *
- * @author Milind Bhandarkar
  */
 public abstract class RecordComparator extends WritableComparator {
   

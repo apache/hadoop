@@ -25,8 +25,6 @@ package org.apache.hadoop.net;
  * For example, a data node's name is hostname:port# and if it's located at
  * rack "orange" in datacenter "dog", the string representation of its
  * network location is /dog/orange
- * @author hairong
- *
  */
 
 public interface Node {

@@ -41,7 +41,6 @@ import org.mortbay.jetty.servlet.WebApplicationContext;
  *   "/logs/" -> points to the log directory
  *   "/static/" -> points to common static files (src/webapps/static)
  *   "/" -> the jsp server code from (src/webapps/<name>)
- * @author Owen O'Malley
  */
 public class StatusHttpServer {
   private static final boolean isWindows = 
@@ -218,7 +217,6 @@ public class StatusHttpServer {
    * stack traces. It both returns the stacks to the caller and logs them.
    * Currently the stack traces are done sequentially rather than exactly the
    * same data.
-   * @author Owen O'Malley
    */
   public static class StackServlet extends HttpServlet {
     public void doGet(HttpServletRequest request, 

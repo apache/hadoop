@@ -22,8 +22,6 @@ import org.apache.hadoop.record.compiler.JType.CType;
 import org.apache.hadoop.record.compiler.JType.CppType;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class JBoolean extends JType {
   

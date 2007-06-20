@@ -18,7 +18,6 @@ import org.apache.hadoop.fs.FileUtil.HardLink;
  * Data storage information file.
  * <p>
  * @see Storage
- * @author Konstantin Shvachko
  */
 class DataStorage extends Storage {
   // Constants

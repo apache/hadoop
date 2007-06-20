@@ -17,7 +17,6 @@ import javax.naming.directory.InitialDirContext;
  * A class that provides direct and reverse lookup functionalities, allowing
  * the querying of specific network interfaces or nameservers.
  * 
- * @author Lorenzo Thione
  * 
  */
 public class DNS {

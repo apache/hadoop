@@ -29,8 +29,6 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * A JUnit test for checking if restarting DFS preserves integrity.
- *
- * @author Milind Bhandarkar
  */
 public class TestRestartDFS extends TestCase {
   

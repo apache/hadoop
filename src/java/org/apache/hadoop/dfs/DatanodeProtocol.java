@@ -28,7 +28,6 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * The only way a NameNode can communicate with a DataNode is by
  * returning values from these functions.
  *
- * @author Michael Cafarella
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /*

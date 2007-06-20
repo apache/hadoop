@@ -31,7 +31,6 @@ import java.util.*;
  *     Mapping: fileName -> FileUnderConstruction
  * 2)  a global set of all blocks that are part of all pending files.
  *
- * @author Dhruba Borthakur
  ***************************************************/
 class PendingCreates {
   private Map<UTF8, FileUnderConstruction> pendingCreates =

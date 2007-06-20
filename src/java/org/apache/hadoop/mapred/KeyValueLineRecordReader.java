@@ -30,7 +30,6 @@ import org.apache.hadoop.io.WritableComparable;
  * separator character. The separator can be specified in config file 
  * under the attribute name key.value.separator.in.input.line. The default
  * separator is the tab character ('\t').
- *
  */
 public class KeyValueLineRecordReader extends LineRecordReader {
 

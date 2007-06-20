@@ -23,7 +23,6 @@ import java.io.IOException;
  * The exception is thrown when external version does not match 
  * current version of the appication.
  * 
- * @author Konstantin Shvachko
  */
 class IncorrectVersionException extends IOException {
 

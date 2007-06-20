@@ -9,7 +9,6 @@ import org.apache.hadoop.io.WritableUtils;
 /**
  * This is used to track task completion events on 
  * job tracker. 
- *
  */
 public class TaskCompletionEvent implements Writable{
   static public enum Status {FAILED, SUCCEEDED, OBSOLETE, TIPFAILED};

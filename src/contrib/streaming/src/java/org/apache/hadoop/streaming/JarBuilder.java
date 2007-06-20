@@ -30,8 +30,6 @@ import java.util.zip.ZipException;
  * hadoop-streaming is a user level appplication, so all the classes
  * with hadoop-streaming that are needed in the job are also included
  * in the job.jar.
- * @author michel
- *
  */
 public class JarBuilder {
 

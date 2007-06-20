@@ -41,8 +41,6 @@ import org.apache.hadoop.mapred.JobConf;
  *    int maxrec   (maximum record size)
  *    int lookahead(maximum lookahead to sync CDATA)
  *    boolean slowmatch
- *
- *  @author Michel Tourn
  */
 public class StreamXmlRecordReader extends StreamBaseRecordReader {
 

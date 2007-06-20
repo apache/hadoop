@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 /**
  * This class tests the DFS positional read functionality in a single node
  * mini-cluster.
- * @author Milind Bhandarkar
  */
 public class TestPread extends TestCase {
   static final long seed = 0xDEADBEEFL;

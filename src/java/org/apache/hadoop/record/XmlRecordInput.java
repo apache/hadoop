@@ -29,7 +29,6 @@ import javax.xml.parsers.SAXParser;
 
 /**
  * XML Deserializer.
- * @author Milind Bhandarkar
  */
 public class XmlRecordInput implements RecordInput {
     

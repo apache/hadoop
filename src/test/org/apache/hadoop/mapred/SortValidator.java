@@ -47,8 +47,6 @@ import org.apache.hadoop.fs.*;
  * To run: bin/hadoop jar build/hadoop-examples.jar sortvalidate
  *            [-m <i>maps</i>] [-r <i>reduces</i>] [-deep] 
  *            -sortInput <i>sort-in-dir</i> -sortOutput <i>sort-out-dir</i> 
- *
- * @author Arun C Murthy
  */
 public class SortValidator {
 
@@ -98,7 +96,6 @@ public class SortValidator {
    * d) The input and output have the correct 'checksum' by xor'ing 
    *    the md5 of each record.
    *    
-   * @author Arun C Murthy
    */
   public static class RecordStatsChecker {
     
@@ -308,7 +305,6 @@ public class SortValidator {
    * of the framework's sort is consistent by ensuring each record 
    * is present in both the input and the output.
    * 
-   * @author Arun C   Murthy
    */
   public static class RecordChecker {
     

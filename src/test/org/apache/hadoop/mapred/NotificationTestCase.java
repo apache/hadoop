@@ -35,7 +35,6 @@ import java.net.InetSocketAddress;
  * In both cases local file system is used (this is irrelevant for
  * the tested functionality)
  *
- * @author Alejandro Abdelnur
  * 
  */
 public abstract class NotificationTestCase extends HadoopTestCase {

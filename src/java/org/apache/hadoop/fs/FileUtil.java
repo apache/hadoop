@@ -345,7 +345,6 @@ public class FileUtil {
    * Class for creating hardlinks.
    * Supports Unix, Cygwin, WindXP.
    *  
-   * @author Konstantin Shvachko
    */
   public static class HardLink { 
     enum OSType {

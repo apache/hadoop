@@ -43,7 +43,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.fs.FileSystem;
 
 /** Shared functionality for PipeMapper, PipeReducer.
- *  @author Michel Tourn
  */
 public abstract class PipeMapRed {
 

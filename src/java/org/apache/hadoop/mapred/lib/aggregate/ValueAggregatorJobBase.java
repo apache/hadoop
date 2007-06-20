@@ -28,7 +28,6 @@ import org.apache.hadoop.mapred.Reducer;
 /**
  * This abstract class implements some common functionalities of the
  * the generic mapper, reducer and combiner classes of Abacus.
- *
  */
 public abstract class ValueAggregatorJobBase implements Mapper, Reducer {
 

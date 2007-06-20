@@ -27,7 +27,6 @@ import org.apache.hadoop.mapred.LineRecordReader;
 
 /**
  * General utils for byte array containing UTF-8 encoded strings
- * @author hairong 
  */
 
 public class UTF8ByteArrayUtils {

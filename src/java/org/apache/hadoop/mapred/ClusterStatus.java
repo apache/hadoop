@@ -10,7 +10,6 @@ import org.apache.hadoop.io.WritableFactories;
 
 /**
  * Summarizes the size and current state of the cluster.
- * @author Owen O'Malley
  */
 public class ClusterStatus implements Writable {
 

@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 /**
  * This class tests the DFS class via the FileSystem interface in a single node
  * mini-cluster.
- * @author Owen O'Malley
  */
 public class TestLocalDFS extends TestCase {
 

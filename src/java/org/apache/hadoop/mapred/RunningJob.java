@@ -23,8 +23,6 @@ import java.io.*;
 /** 
  * Includes details on a running MapReduce job.  A client can
  * track a living job using this object.
- *
- * @author Mike Cafarella
  */
 public interface RunningJob {
   /**

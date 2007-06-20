@@ -26,7 +26,6 @@ import java.net.*;
  * A JobProfile is a MapReduce primitive.  Tracks a job,
  * whether living or dead.
  *
- * @author Mike Cafarella
  **************************************************/
 public class JobProfile implements Writable {
 

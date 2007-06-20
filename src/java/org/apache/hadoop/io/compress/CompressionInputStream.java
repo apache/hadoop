@@ -27,8 +27,6 @@ import java.io.InputStream;
  * <p>Implementations are assumed to be buffered.  This permits clients to
  * reposition the underlying input stream then call {@link #resetState()},
  * without having to also synchronize client buffers.
- *
- * @author Arun C Murthy
  */
 public abstract class CompressionInputStream extends InputStream {
   /**

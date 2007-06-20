@@ -24,8 +24,6 @@ import java.util.Iterator;
 
 /**
  * Java Code generator front-end for Hadoop record I/O.
- *
- * @author Milind Bhandarkar
  */
 class JavaGenerator extends CodeGenerator {
   

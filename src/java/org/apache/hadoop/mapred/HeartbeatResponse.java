@@ -31,7 +31,6 @@ import org.apache.hadoop.io.WritableUtils;
  * The response sent by the {@link JobTracker} to the hearbeat sent
  * periodically by the {@link TaskTracker}
  * 
- * @author Arun C Murthy
  */
 class HeartbeatResponse implements Writable, Configurable {
   Configuration conf = null;

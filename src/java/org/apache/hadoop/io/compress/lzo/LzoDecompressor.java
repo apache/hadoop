@@ -31,7 +31,6 @@ import org.apache.hadoop.util.NativeCodeLoader;
  * A {@link Decompressor} based on the lzo algorithm.
  * http://www.oberhumer.com/opensource/lzo/
  * 
- * @author Arun C Murthy
  */
 public class LzoDecompressor implements Decompressor {
   private static final Log LOG = 

@@ -7,7 +7,6 @@ import java.io.IOException;
  * This exception is thrown when a datanode that has not previously 
  * registered is trying to access the name node.
  * 
- * @author Konstantin Shvachko
  */
 class UnregisteredDatanodeException extends IOException {
 

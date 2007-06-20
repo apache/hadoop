@@ -26,7 +26,6 @@ import java.io.IOException;
  * Represents a directive from the {@link org.apache.hadoop.mapred.JobTracker} 
  * to the {@link org.apache.hadoop.mapred.TaskTracker} to launch a new task.
  * 
- * @author Arun C Murthy
  */
 class LaunchTaskAction extends TaskTrackerAction {
   private Task task;

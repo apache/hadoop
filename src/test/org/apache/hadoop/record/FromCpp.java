@@ -26,8 +26,6 @@ import java.util.TreeMap;
 import junit.framework.*;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class FromCpp extends TestCase {
     

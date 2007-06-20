@@ -14,7 +14,6 @@ import org.apache.hadoop.io.WritableFactory;
  * to identify and verify a Datanode when it contacts the Namenode.
  * This information is sent by Datanode with each communication request.
  * 
- * @author Konstantin Shvachko
  */
 class DatanodeRegistration extends DatanodeID implements Writable {
   static {                                      // register a ctor

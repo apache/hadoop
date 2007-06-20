@@ -23,7 +23,6 @@ import java.util.*;
 /**
  * This class creates a single-process Map-Reduce cluster for junit testing.
  * One thread is created for each server.
- * @author Milind Bhandarkar
  */
 public class MiniMRCluster {
     

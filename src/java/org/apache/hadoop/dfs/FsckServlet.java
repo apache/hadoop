@@ -31,7 +31,6 @@ import javax.servlet.http.HttpServletResponse;
 
 /**
  * This class is used in Namesystem's jetty to do fsck on namenode.
- * @author Milind Bhandarkar
  */
 public class FsckServlet extends HttpServlet {
 

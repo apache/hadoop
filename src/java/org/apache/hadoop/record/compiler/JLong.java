@@ -23,7 +23,6 @@ import org.apache.hadoop.record.compiler.JType.CppType;
 
 /**
  * Code generator for "long" type
- * @author Milind Bhandarkar
  */
 public class JLong extends JType {
   

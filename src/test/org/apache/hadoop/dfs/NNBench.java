@@ -36,8 +36,6 @@ import org.apache.hadoop.mapred.JobConf;
  * When run simultaneously on multiple nodes, this program functions 
  * as a stress-test and benchmark for namenode, especially when 
  * the number of bytes written to each file is small.
- *
- * @author Nigel Daley
  */
 public class NNBench {
   // variable initialzed from command line arguments

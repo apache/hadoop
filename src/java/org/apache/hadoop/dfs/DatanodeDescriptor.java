@@ -32,8 +32,6 @@ import org.apache.hadoop.net.Node;
  * or the Datnodes. Neither is it stored persistently in the
  * fsImage.
 
- * @author Mike Cafarella
- * @author Konstantin Shvachko
  **************************************************/
 public class DatanodeDescriptor extends DatanodeInfo {
 

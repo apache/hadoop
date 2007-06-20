@@ -21,7 +21,6 @@ package org.apache.hadoop.util;
 /**
  * A helper class for getting build-info of the java-vm. 
  * 
- * @author Arun C Murthy
  */
 public class PlatformName {
   /**

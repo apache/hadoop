@@ -24,8 +24,6 @@ import java.util.ArrayList;
 
 /**
  * Interface that alll the serializers have to implement.
- *
- * @author Milind Bhandarkar
  */
 public interface RecordOutput {
   /**

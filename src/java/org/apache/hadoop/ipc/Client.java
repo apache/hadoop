@@ -51,7 +51,6 @@ import org.apache.hadoop.util.StringUtils;
  * parameter, and return a {@link Writable} as their value.  A service runs on
  * a port and is defined by a parameter class and a value class.
  * 
- * @author Doug Cutting
  * @see Server
  */
 public class Client {

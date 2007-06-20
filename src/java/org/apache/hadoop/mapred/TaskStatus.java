@@ -28,7 +28,6 @@ import org.apache.hadoop.io.WritableUtils;
  * Describes the current status of a task.  This is
  * not intended to be a comprehensive piece of data.
  *
- * @author Mike Cafarella
  **************************************************/
 class TaskStatus implements Writable {
   //enumeration for reporting current phase of a task. 

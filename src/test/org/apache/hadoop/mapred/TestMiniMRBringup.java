@@ -23,8 +23,6 @@ import junit.framework.TestCase;
 
 /**
  * A Unit-test to test bringup and shutdown of Mini Map-Reduce Cluster.
- *
- * @author Milind Bhandarkar
  */
 public class TestMiniMRBringup extends TestCase {
 

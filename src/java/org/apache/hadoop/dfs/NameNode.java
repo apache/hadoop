@@ -66,7 +66,6 @@ import org.apache.hadoop.metrics.Updater;
  * methods are invoked repeatedly and automatically by all the
  * DataNodes in a DFS deployment.
  *
- * @author Mike Cafarella
  **********************************************************/
 public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   public long getProtocolVersion(String protocol, 

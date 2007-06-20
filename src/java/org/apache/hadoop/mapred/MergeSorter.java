@@ -31,8 +31,6 @@ import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
  * on the core algorithm (thereby allowing easy integration of a mergesort
  * implementation). The bridge between this class and the util.MergeSort class
  * is the Comparator.
- * @author ddas
- *
  */
 class MergeSorter extends BasicTypeSorterBase 
 implements Comparator<IntWritable> {

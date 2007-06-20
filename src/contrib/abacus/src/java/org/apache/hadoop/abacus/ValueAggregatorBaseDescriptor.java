@@ -28,7 +28,6 @@ import org.apache.hadoop.mapred.JobConf;
  * 
  * This class implements the common functionalities of 
  * the subclasses of ValueAggregatorDescriptor class.
- *
  */
 public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor {
 

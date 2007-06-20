@@ -59,7 +59,6 @@ class DatanodeCommand implements Writable {
  * blocks, or to copy a set of indicated blocks to 
  * another DataNode.
  * 
- * @author Mike Cafarella
  ****************************************************/
 class BlockCommand extends DatanodeCommand {
   Block blocks[];

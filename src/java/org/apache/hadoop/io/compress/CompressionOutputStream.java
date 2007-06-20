@@ -23,7 +23,6 @@ import java.io.OutputStream;
 
 /**
  * A compression output stream.
- * @author Arun C Murthy
  */
 public abstract class CompressionOutputStream extends OutputStream {
   /**

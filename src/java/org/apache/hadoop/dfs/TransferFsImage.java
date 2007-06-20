@@ -26,7 +26,6 @@ import javax.servlet.http.HttpServletRequest;
 
 /**
  * This class provides fetching a specified file from the NameNode.
- * @author Dhruba Borthakur
  */
 class TransferFsImage implements FSConstants {
   

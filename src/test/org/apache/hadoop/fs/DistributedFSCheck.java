@@ -42,7 +42,6 @@ import org.apache.hadoop.conf.*;
  * <p>
  * Optionally displays statistics on read performance.
  * 
- * @author Konstantin Shvachko
  */
 public class DistributedFSCheck extends TestCase {
   // Constants

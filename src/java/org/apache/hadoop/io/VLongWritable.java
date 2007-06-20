@@ -23,7 +23,6 @@ import java.io.*;
 /** A WritableComparable for longs in a variable-length format. Such values take
  *  between one and five bytes.  Smaller values take fewer bytes.
  *  
- *  @author Andrzej Bialecki
  *  @see org.apache.hadoop.io.WritableUtils#readVLong(DataInput)
  */
 public class VLongWritable implements WritableComparable {

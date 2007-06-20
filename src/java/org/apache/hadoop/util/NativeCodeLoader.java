@@ -25,7 +25,6 @@ import org.apache.commons.logging.*;
  * This handles the fallback to either the bundled libhadoop-Linux-i386-32.so
  * or the the default java implementations where appropriate.
  *  
- * @author Arun C Murthy
  */
 public class NativeCodeLoader {
 

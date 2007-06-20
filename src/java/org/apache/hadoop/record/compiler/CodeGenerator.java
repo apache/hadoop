@@ -22,8 +22,6 @@ import java.util.HashMap;
 /**
  * CodeGenerator is a Factory and a base class for Hadoop Record I/O translators.
  * Different translators register creation methods with this factory.
- *
- * @author Milind Bhandarkar
  */
 abstract class CodeGenerator {
   

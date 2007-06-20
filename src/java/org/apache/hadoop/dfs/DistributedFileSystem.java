@@ -31,7 +31,6 @@ import org.apache.hadoop.util.*;
  * This object is the way end-user code interacts with a Hadoop
  * DistributedFileSystem.
  *
- * @author Mike Cafarella
  *****************************************************************/
 public class DistributedFileSystem extends ChecksumFileSystem {
   private static class RawDistributedFileSystem extends FileSystem {

@@ -29,7 +29,6 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * test for the input truncation bug when mark/reset is used.
  * HADOOP-1489
- * @author Bwolen Yang
  */
 public class TestTruncatedInputBug extends TestCase {
   private static String TEST_ROOT_DIR =

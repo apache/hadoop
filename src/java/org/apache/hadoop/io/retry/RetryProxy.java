@@ -24,7 +24,6 @@ import java.util.Map;
  * <p>
  * A factory for creating retry proxies.
  * </p>
- * @author Tom White
  */
 public class RetryProxy {
   /**

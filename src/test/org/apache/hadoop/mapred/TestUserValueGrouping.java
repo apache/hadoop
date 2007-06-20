@@ -26,7 +26,6 @@ import java.io.*;
 import java.util.*;
 
 /** 
- *
  */
 public class TestUserValueGrouping extends TestCase 
 {

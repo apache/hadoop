@@ -5,7 +5,6 @@ import java.io.IOException;
 
 /**
  * Class that provides utility functions for checking disk problem
- * @author Hairong Kuang
  */
 
 public class DiskChecker {

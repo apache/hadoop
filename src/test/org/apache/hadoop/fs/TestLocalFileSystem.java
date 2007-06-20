@@ -23,7 +23,6 @@ import junit.framework.*;
 
 /**
  * This class tests the local file system via the FileSystem abstraction.
- * @author Owen O'Malley
  */
 public class TestLocalFileSystem extends TestCase {
 

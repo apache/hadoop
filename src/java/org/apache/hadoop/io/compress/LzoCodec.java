@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
  * <b>lzo</b> compression/decompression pair.
  * http://www.oberhumer.com/opensource/lzo/
  * 
- * @author Arun C Murthy
  */
 public class LzoCodec implements Configurable, CompressionCodec {
   

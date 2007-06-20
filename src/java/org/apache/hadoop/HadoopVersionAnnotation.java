@@ -21,7 +21,6 @@ import java.lang.annotation.*;
 
 /**
  * A package attribute that captures the version of Hadoop that was compiled.
- * @author Owen O'Malley
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PACKAGE)

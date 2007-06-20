@@ -26,8 +26,6 @@ import org.apache.hadoop.fs.*;
 
 /**
  * A JUnit test for doing fsck
- *
- * @author Milind Bhandarkar
  */
 public class TestFsck extends TestCase {
  

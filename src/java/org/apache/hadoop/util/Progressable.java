@@ -6,7 +6,6 @@ import java.io.IOException;
 
 /**
  * An interface for callbacks when an method makes some progress.
- * @author Owen O'Malley
  */
 public interface Progressable {
   /** callback for reporting progress. Used by DFSclient to report

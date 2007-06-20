@@ -27,7 +27,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A factory that will find the correct codec for a given filename.
- * @author Owen O'Malley
  */
 public class CompressionCodecFactory {
 

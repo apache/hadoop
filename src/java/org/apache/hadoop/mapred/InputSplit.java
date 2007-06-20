@@ -23,7 +23,6 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * The description of the data for a single map task.
- * @author Owen O'Malley
  */
 public interface InputSplit extends Writable {
 

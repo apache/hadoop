@@ -25,7 +25,6 @@ import java.io.IOException;
  * plugged into a {@link CompressionOutputStream} to compress data.
  * This is modelled after {@link java.util.zip.Deflater}
  * 
- * @author Arun C Murthy
  */
 public interface Compressor {
   /**

@@ -23,7 +23,6 @@ import org.apache.hadoop.record.compiler.JType.CppType;
 
 /**
  * Code generator for "byte" type.
- * @author Milind Bhandarkar
  */
 public class JByte extends JType {
   

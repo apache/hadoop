@@ -23,7 +23,6 @@ import java.io.IOException;
 /**
  * This exception is thrown when jobconf misses some mendatory attributes
  * or value of some attributes is invalid. 
- *
  */
 public class InvalidJobConfException
     extends IOException {

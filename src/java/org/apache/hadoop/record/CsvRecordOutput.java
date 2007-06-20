@@ -26,8 +26,6 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class CsvRecordOutput implements RecordOutput {
 

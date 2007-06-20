@@ -20,8 +20,6 @@ package org.apache.hadoop.record.compiler;
 
 /**
  * Abstract Base class for all types supported by Hadoop Record I/O.
- *
- * @author Milind Bhandarkar
  */
 abstract public class JType {
   

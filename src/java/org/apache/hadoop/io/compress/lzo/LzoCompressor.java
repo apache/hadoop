@@ -31,7 +31,6 @@ import org.apache.hadoop.util.NativeCodeLoader;
  * A {@link Compressor} based on the lzo algorithm.
  * http://www.oberhumer.com/opensource/lzo/
  * 
- * @author Arun C Murthy
  */
 public class LzoCompressor implements Compressor {
   private static final Log LOG = 

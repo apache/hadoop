@@ -44,8 +44,6 @@ import org.apache.tools.ant.types.FileSet;
  *   &lt;fileset include="**\/*.jr" /&gt;
  * &lt;/recordcc&gt;
  * </pre>
- *
- * @author Milind Bhandarkar
  */
 public class RccTask extends Task {
   

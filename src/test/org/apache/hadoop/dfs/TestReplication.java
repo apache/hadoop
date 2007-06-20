@@ -32,7 +32,6 @@ import org.apache.hadoop.ipc.RPC;
 
 /**
  * This class tests the replication of a DFS file.
- * @author Milind Bhandarkar, Hairong Kuang
  */
 public class TestReplication extends TestCase {
   private static final long seed = 0xDEADBEEFL;

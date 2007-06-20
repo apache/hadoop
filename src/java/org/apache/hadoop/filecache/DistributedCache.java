@@ -33,7 +33,6 @@ import java.net.URI;
  * The DistributedCache maintains all the caching information of cached archives
  * and unarchives all the files as well and returns the path
  * 
- * @author Mahadev Konar
  ******************************************************************************/
 public class DistributedCache {
   // cacheID to cacheStatus mapping

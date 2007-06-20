@@ -27,7 +27,6 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * Abstract class that is extended by generated classes.
  * 
- * @author Milind Bhandarkar
  */
 public abstract class Record implements WritableComparable, Cloneable {
   

@@ -25,7 +25,6 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * with the NameNode.  User code can manipulate the directory namespace, 
  * as well as open/close file streams, etc.
  *
- * @author Mike Cafarella
  **********************************************************************/
 interface ClientProtocol extends VersionedProtocol {
 
@@ -114,7 +113,6 @@ interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    * @return true if successful;
    *         false if file does not exist or is a directory
-   * @author shv
    */
   public boolean setReplication(String src, 
                                 short replication
@@ -324,7 +322,6 @@ interface ClientProtocol extends VersionedProtocol {
    * @return <ul><li>0 if the safe mode is OFF or</li> 
    *         <li>1 if the safe mode is ON.</li></ul>
    * @throws IOException
-   * @author Konstantin Shvachko
    */
   public boolean setSafeMode(FSConstants.SafeModeAction action) throws IOException;
 

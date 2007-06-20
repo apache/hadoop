@@ -26,8 +26,6 @@ import org.apache.hadoop.ipc.RPC;
 
 /**
  * This class provides some DFS administrative access.
- *
- * @author Dhruba Borthakur
  */
 public class DFSAdmin extends FsShell {
 

@@ -45,7 +45,6 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
  * 
- * @author Konstantin Shvachko
  */
 class FSImage extends Storage {
 

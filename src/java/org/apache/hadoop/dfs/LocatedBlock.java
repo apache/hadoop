@@ -25,7 +25,6 @@ import java.io.*;
  * A LocatedBlock is a pair of Block, DatanodeInfo[]
  * objects.  It tells where to find a Block.
  * 
- * @author Michael Cafarella
  ****************************************************/
 class LocatedBlock implements Writable {
 

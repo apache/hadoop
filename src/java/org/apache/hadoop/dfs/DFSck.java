@@ -52,7 +52,6 @@ import org.apache.hadoop.util.ToolBase;
  *  optionally can print detailed statistics on block locations and replication
  *  factors of each file.
  *  
- * @author Andrzej Bialecki
  */
 public class DFSck extends ToolBase {
   private static final Log LOG = LogFactory.getLog(DFSck.class.getName());

@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 /*******************************
  * Some handy constants
  * 
- * @author Mike Cafarella
  *******************************/
 interface MRConstants {
   //

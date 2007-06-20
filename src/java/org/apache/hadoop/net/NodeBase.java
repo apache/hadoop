@@ -19,8 +19,6 @@ package org.apache.hadoop.net;
 
 /** A base class that implements interface Node
  * 
- * @author hairong
- *
  */
 
 public class NodeBase implements Node {

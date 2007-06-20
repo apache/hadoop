@@ -23,7 +23,6 @@ import java.io.IOException;
 /**
  * This class is similar to SequenceFileInputFormat, except it generates SequenceFileAsTextRecordReader 
  * which converts the input keys and values to their String forms by calling toString() method. 
- *
  */
 public class SequenceFileAsTextInputFormat extends SequenceFileInputFormat {
 

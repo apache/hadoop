@@ -35,7 +35,6 @@ import org.apache.hadoop.util.StringUtils;
  * which creates a checksum file for each raw file.
  * It generates & verifies checksums at the client side.
  *
- * @author Hairong Kuang
  *****************************************************************/
 public abstract class ChecksumFileSystem extends FilterFileSystem {
   private static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};

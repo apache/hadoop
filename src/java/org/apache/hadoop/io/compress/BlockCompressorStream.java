@@ -26,7 +26,6 @@ import java.io.OutputStream;
  * with 'block-based' based compression algorithms, as opposed to 
  * 'stream-based' compression algorithms.
  *  
- * @author Arun C Murthy
  */
 class BlockCompressorStream extends CompressorStream {
 

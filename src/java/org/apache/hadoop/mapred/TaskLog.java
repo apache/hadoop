@@ -28,7 +28,6 @@ import org.apache.commons.logging.*;
  * A simple logger to handle the task-specific user logs.
  * This class uses the system property <code>hadoop.log.dir</code>.
  * 
- * @author Arun C Murthy
  */
 class TaskLog {
   private static final Log LOG =
@@ -78,7 +77,6 @@ class TaskLog {
    * and maintaining splits and ensuring job-specifc limits 
    * w.r.t logs-size etc. are honoured.
    *  
-   * @author Arun C Murthy
    */
   static class Writer {
     private String taskId;
@@ -285,7 +283,6 @@ class TaskLog {
   /**
    * The log-reader for reading the 'split' user-logs.
    *
-   * @author Arun C Murthy
    */
   static class Reader {
     private String taskId;

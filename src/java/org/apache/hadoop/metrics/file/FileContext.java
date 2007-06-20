@@ -41,7 +41,6 @@ import org.apache.hadoop.metrics.spi.OutputRecord;
  * myContextName.fileName=/tmp/metrics.log
  * myContextName.period=5
  * </pre>
- *
  */
 public class FileContext extends AbstractMetricsContext {
     

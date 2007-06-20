@@ -19,8 +19,6 @@
 package org.apache.hadoop.record.compiler;
 
 /**
- *
- * @author Milind Bhandarkar
  */
 public class JMap extends JCompType {
   

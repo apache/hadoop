@@ -66,7 +66,6 @@ import org.apache.hadoop.util.*;
 
 /** All the client-side work happens here.
  * (Jar packaging, MapRed job submission and monitoring)
- * @author Michel Tourn
  */
 public class StreamJob {
 

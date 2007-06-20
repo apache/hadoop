@@ -22,8 +22,6 @@ import java.io.IOException;
 
 /**
  * Interface that all the Deserializers have to implement.
- *
- * @author Milind Bhandarkar
  */
 public interface RecordInput {
   /**

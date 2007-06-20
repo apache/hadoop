@@ -29,8 +29,6 @@ import org.apache.hadoop.io.Writable;
  * file name of the input file. This tag will be used by the reducers
  * to re-group the values of a given key according to their source tags.
  * 
- * @author runping
- *
  */
 public abstract class TaggedMapOutput implements Writable {
   protected Text tag;

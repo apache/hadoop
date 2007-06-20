@@ -27,7 +27,6 @@ import org.apache.hadoop.mapred.JobConf;
 /**
  * This class implements a user defined aggregator descriptor that is used
  * for counting the words in the input data
- *
  */
 public class WordCountAggregatorDescriptor extends
     ValueAggregatorBaseDescriptor {

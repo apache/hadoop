@@ -37,9 +37,6 @@ import org.apache.hadoop.net.NodeBase;
  * DatanodeInfo represents the status of a DataNode.
  * This object is used for communication in the
  * Datanode Protocol and the Client Protocol.
- *
- * @author Mike Cafarella
- * @author Konstantin Shvachko
  */
 public class DatanodeInfo extends DatanodeID implements Node {
   protected long capacity;

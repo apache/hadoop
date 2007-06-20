@@ -55,8 +55,6 @@ import java.util.regex.Matcher;
  * Usage: 
  * Logalyzer -archive -archiveDir <directory to archive logs> -analysis <directory> -logs <log-list uri> -grep <pattern> -sort <col1, col2> -separator <separator>   
  * <p>
- *
- * @author Arun C Murthy
  */
 
 public class Logalyzer {

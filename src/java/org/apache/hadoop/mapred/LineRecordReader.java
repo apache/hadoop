@@ -19,8 +19,6 @@ import org.apache.hadoop.io.compress.CompressionCodecFactory;
 
 /**
  * Treats keys as offset in file and value as line. 
- * @author sanjaydahiya
- *
  */
 public class LineRecordReader implements RecordReader {
   private CompressionCodecFactory compressionCodecs = null;

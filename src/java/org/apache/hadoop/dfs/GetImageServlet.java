@@ -34,7 +34,6 @@ import javax.servlet.http.HttpServletResponse;
  * This class is used in Namesystem's jetty to retrieve a file.
  * Typically used by the Secondary NameNode to retrieve image and
  * edit file for periodic checkpointing.
- * @author Dhruba Borthakur
  */
 public class GetImageServlet extends HttpServlet {
 

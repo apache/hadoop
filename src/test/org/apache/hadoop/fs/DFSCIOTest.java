@@ -57,8 +57,6 @@ import org.apache.hadoop.conf.*;
  * <li>average i/o rate in mb/sec per file</li>
  * <li>standard i/o rate deviation</li>
  * </ul>
- *
- * @author Konstantin Shvachko
  */
 public class DFSCIOTest extends TestCase {
   // Constants

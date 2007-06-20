@@ -25,7 +25,6 @@ import java.io.UnsupportedEncodingException;
  * It is resizable and distinguishes between the count of the seqeunce and
  * the current capacity.
  * 
- * @author Milind Bhandarkar
  */
 public class Buffer implements Comparable, Cloneable {
   /** Number of valid bytes in this.bytes. */

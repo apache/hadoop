@@ -22,8 +22,6 @@ import org.apache.hadoop.record.compiler.JCompType.CCompType;
 
 /**
  * Code generator for "buffer" type.
- *
- * @author Milind Bhandarkar
  */
 public class JBuffer extends JCompType {
   

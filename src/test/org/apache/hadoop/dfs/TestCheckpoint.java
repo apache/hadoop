@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * This class tests the creation and validation of a checkpoint.
- * @author Dhruba Borthakur
  */
 public class TestCheckpoint extends TestCase {
   static final long seed = 0xDEADBEEFL;

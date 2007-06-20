@@ -24,7 +24,6 @@ import java.io.OutputStream;
 
 /**
  * This class encapsulates a streaming compression/decompression pair.
- * @author Owen O'Malley
  */
 public interface CompressionCodec {
 

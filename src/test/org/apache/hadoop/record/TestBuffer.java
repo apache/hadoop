@@ -22,8 +22,6 @@ import junit.framework.*;
 
 /**
  * A Unit test for Record I/O Buffer class
- *
- * @author milindb
  */
 public class TestBuffer extends TestCase {
   

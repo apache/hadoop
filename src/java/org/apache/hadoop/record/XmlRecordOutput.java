@@ -28,7 +28,6 @@ import java.util.Stack;
 
 /**
  * XML Serializer.
- * @author Milind Bhandarkar
  */
 public class XmlRecordOutput implements RecordOutput {
 

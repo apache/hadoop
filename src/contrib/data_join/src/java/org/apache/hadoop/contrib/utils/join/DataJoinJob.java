@@ -39,8 +39,6 @@ import org.apache.hadoop.mapred.TextOutputFormat;
  * user must implement a mapper class that extends DataJoinMapperBase class,
  * and a reducer class that extends DataJoinReducerBase. 
  * 
- * @author runping
- *
  */
 public class DataJoinJob {
 

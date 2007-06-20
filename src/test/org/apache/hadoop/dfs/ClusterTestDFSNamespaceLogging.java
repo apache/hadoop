@@ -40,7 +40,6 @@ import java.util.ArrayList;
 /**
  * Test DFS logging
  * make sure that any namespace mutations are logged.
- * @author Hairong Kuang
  */
 public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConstants {
   private static final Log LOG =

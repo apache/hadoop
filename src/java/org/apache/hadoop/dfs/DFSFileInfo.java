@@ -29,7 +29,6 @@ import java.io.*;
  * Includes partial information about its blocks.
  * Block locations are sorted by the distance to the current client.
  * 
- * @author Mike Cafarella
  ******************************************************/
 class DFSFileInfo implements Writable {
   static {                                      // register a ctor

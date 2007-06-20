@@ -45,7 +45,6 @@ import org.apache.hadoop.util.*;
  * <p>
  * The local implementation is {@link LocalFileSystem} and distributed
  * implementation is {@link DistributedFileSystem}.
- * @author Mike Cafarella
  *****************************************************************/
 public abstract class FileSystem extends Configured {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FileSystem");
