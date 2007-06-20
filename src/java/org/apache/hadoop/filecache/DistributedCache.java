@@ -40,6 +40,8 @@ public class DistributedCache {
   private static TreeMap<String, CacheStatus> cachedArchives = new TreeMap<String, CacheStatus>();
   // buffer size for reading checksum files
   private static final int CRC_BUFFER_SIZE = 64 * 1024;
+  private static final Log LOG =
+    LogFactory.getLog(DistributedCache.class);
   
   /**
    * 
@@ -679,4 +681,22 @@ public class DistributedCache {
     public byte[] md5;
   }
 
+  /**
+   * Clear the entire contents of the cache and delete the backing files. This
+   * should only be used when the server is reinitializing, because the users
+   * are going to lose their files.
+   */
+  public static void purgeCache(Configuration conf) throws IOException {
+    synchronized (cachedArchives) {
+      FileSystem localFs = FileSystem.getLocal(conf);
+      for (Map.Entry<String,CacheStatus> f: cachedArchives.entrySet()) {
+        try {
+          localFs.delete(f.getValue().localLoadPath);
+        } catch (IOException ie) {
+          LOG.debug("Error cleaning up cache", ie);
+        }
+      }
+      cachedArchives.clear();
+    }
+  }
 }

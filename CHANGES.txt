@@ -182,6 +182,9 @@ Trunk (unreleased changes)
  56. HADOOP-1207.  Fix FsShell's 'rm' command to not stop when one of
      the named files does not exist.  (Tsz Wo Sze via cutting)
 
+ 57. HADOOP-1475.  Clear tasktracker's file cache before it
+     re-initializes, to avoid confusion.  (omalley via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

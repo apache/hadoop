@@ -45,6 +45,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSError;
@@ -349,6 +350,7 @@ public class TaskTracker
     LOG.info("Starting tracker " + taskTrackerName);
 
     // Clear out temporary files that might be lying around
+    DistributedCache.purgeCache(this.fConf);
     this.mapOutputFile.cleanupStorage();
     this.justStarted = true;
 
