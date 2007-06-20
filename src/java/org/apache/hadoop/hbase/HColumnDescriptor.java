@@ -27,7 +27,6 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * A HColumnDescriptor contains information about a column family such as the
  * number of versions, compression settings, etc.
- *
  */
 public class HColumnDescriptor implements WritableComparable {
   

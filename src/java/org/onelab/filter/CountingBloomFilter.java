@@ -42,7 +42,6 @@ import java.io.IOException;
  * allows dynamic additions and deletions of set membership information.  This 
  * is achieved through the use of a counting vector instead of a bit vector.
  * 
- * @author <a href="mailto:donnet@ucl.ac.be">Benoit Donnet</a> - Universite Catholique de Louvain - Faculte des Sciences Appliquees - Departement d'Ingenierie Informatique.
  * contract <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  *
  * @version 1.0 - 5 Feb. 07

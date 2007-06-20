@@ -38,7 +38,6 @@ import org.onelab.filter.*;
 /**
  * Test class.
  * 
- * @author <a href="mailto:donnet@ucl.ac.be">Benoit Donnet</a> - Universite Catholique de Louvain - Faculte des Sciences Appliquees - Departement d'Ingenierie Informatique.
  * contract <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  *
  * @version 1.0 - 8 Feb. 07
