@@ -223,6 +223,9 @@ Trunk (unreleased changes)
  67. HADOOP-1455.  Permit specification of arbitrary job options on
      pipes command line.  (Devaraj Das via cutting)
 
+ 68. HADOOP-1501.  Better randomize sending of block reports to
+     namenode, so reduce load spikes.  (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

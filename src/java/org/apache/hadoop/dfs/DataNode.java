@@ -483,7 +483,15 @@ public class DataNode implements FSConstants, Runnable {
           //
           DatanodeCommand cmd = namenode.blockReport(dnRegistration,
                                                      data.getBlockReport());
-          lastBlockReport = now;
+          //
+          // If we have sent the first block report, then wait a random
+          // time before we start the periodic block reports.
+          //
+          if (lastBlockReport == 0) {
+            lastBlockReport = now - new Random().nextInt((int)(blockReportInterval));
+          } else {
+            lastBlockReport = now;
+          }
           processCommand(cmd);
         }
             
