@@ -1908,6 +1908,8 @@ public class SequenceFile {
     private Class valClass;
 
     private Configuration conf;
+    
+    private Progressable progressable = null;
 
     /** Sort and merge files containing the named classes. */
     public Sorter(FileSystem fs, Class keyClass, Class valClass, Configuration conf)  {
@@ -1938,6 +1940,11 @@ public class SequenceFile {
     /** Get the total amount of buffer memory, in bytes.*/
     public int getMemory() { return memory; }
 
+    /** Set the progressable object in order to report progress. */
+    public void setProgressable(Progressable progressable) {
+      this.progressable = progressable;
+    }
+    
     /** 
      * Perform a file sort from a set of input files into an output file.
      * @param inFiles the files to be sorted
@@ -2000,6 +2007,7 @@ public class SequenceFile {
     private int sortPass(boolean deleteInput) throws IOException {
       LOG.debug("running sort pass");
       SortPass sortPass = new SortPass();         // make the SortPass
+      sortPass.setProgressable(progressable);
       mergeSort = new MergeSort(sortPass.new SeqFileComparator());
       try {
         return sortPass.run(deleteInput);         // run it
@@ -2027,6 +2035,8 @@ public class SequenceFile {
       private FSDataOutputStream out = null;
       private FSDataOutputStream indexOut = null;
       private Path outName;
+
+      private Progressable progressable = null;
 
       public int run(boolean deleteInput) throws IOException {
         int segments = 0;
@@ -2098,6 +2108,10 @@ public class SequenceFile {
           LOG.debug("flushing segment " + segments);
           rawBuffer = rawKeys.getData();
           sort(count);
+          // indicate we're making progress
+          if (progressable != null) {
+            progressable.progress();
+          }
           flush(count, bytesProcessed, isCompressed, isBlockCompressed, codec, 
                 segments==0 && atEof);
           segments++;
@@ -2186,6 +2200,13 @@ public class SequenceFile {
                                     keyOffsets[J.get()], keyLengths[J.get()]);
         }
       }
+      
+      /** set the progressable object in order to report progress */
+      public void setProgressable(Progressable progressable)
+      {
+        this.progressable = progressable;
+      }
+      
     } // SequenceFile.Sorter.SortPass
 
     /** The interface to iterate over raw keys/values of SequenceFiles. */
@@ -2225,7 +2246,8 @@ public class SequenceFile {
     public RawKeyValueIterator merge(List <SegmentDescriptor> segments, 
                                      Path tmpDir) 
       throws IOException {
-      MergeQueue mQueue = new MergeQueue(segments, tmpDir);
+      // pass in object to report progress, if present
+      MergeQueue mQueue = new MergeQueue(segments, tmpDir, progressable);
       return mQueue.merge();
     }
 
@@ -2270,7 +2292,7 @@ public class SequenceFile {
         a.add(s);
       }
       this.factor = factor;
-      MergeQueue mQueue = new MergeQueue(a, tmpDir);
+      MergeQueue mQueue = new MergeQueue(a, tmpDir, progressable);
       return mQueue.merge();
     }
 
@@ -2299,7 +2321,8 @@ public class SequenceFile {
         a.add(s);
       }
       factor = (inNames.length < factor) ? inNames.length : factor;
-      MergeQueue mQueue = new MergeQueue(a, tempDir);
+      // pass in object to report progress, if present
+      MergeQueue mQueue = new MergeQueue(a, tempDir, progressable);
       return mQueue.merge();
     }
 
@@ -2391,7 +2414,7 @@ public class SequenceFile {
       //the contained segments during the merge process & hence don't need 
       //them anymore
       SegmentContainer container = new SegmentContainer(inName, indexIn);
-      MergeQueue mQueue = new MergeQueue(container.getSegmentList(), tmpDir);
+      MergeQueue mQueue = new MergeQueue(container.getSegmentList(), tmpDir, progressable);
       return mQueue.merge();
     }
     
@@ -2406,6 +2429,7 @@ public class SequenceFile {
       private float progPerByte;
       private Progress mergeProgress = new Progress();
       private Path tmpDir;
+      private Progressable progress = null; //handle to the progress reporting object
       
       //a TreeMap used to store the segments sorted by size (segment offset and
       //segment path name is used to break ties between segments of same sizes)
@@ -2427,16 +2451,22 @@ public class SequenceFile {
        * A queue of file segments to merge
        * @param segments the file segments to merge
        * @param tmpDir a relative local directory to save intermediate files in
+       * @param progress the reference to the Progressable object
        */
       public MergeQueue(List <SegmentDescriptor> segments,
-                        Path tmpDir) {
+          Path tmpDir, Progressable progress) {
         int size = segments.size();
         for (int i = 0; i < size; i++) {
           sortedSegmentSizes.put(segments.get(i), null);
         }
         this.tmpDir = tmpDir;
+        this.progress = progress;
       }
       protected boolean lessThan(Object a, Object b) {
+        // indicate we're making progress
+        if (progress != null) {
+          progress.progress();
+        }
         SegmentDescriptor msa = (SegmentDescriptor)a;
         SegmentDescriptor msb = (SegmentDescriptor)b;
         return comparator.compare(msa.getKey().getData(), 0, 

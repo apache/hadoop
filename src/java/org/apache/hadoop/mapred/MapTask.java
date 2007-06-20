@@ -117,6 +117,9 @@ class MapTask extends Task {
 
     final Reporter reporter = getReporter(umbilical);
 
+    // start thread that will handle communication with parent
+    startCommunicationThread(umbilical);
+
     int numReduceTasks = conf.getNumReduceTasks();
     LOG.info("numReduceTasks: " + numReduceTasks);
     MapOutputCollector collector = null;
@@ -164,7 +167,6 @@ class MapTask extends Task {
           throws IOException {
 
           setProgress(getProgress());
-          reportProgress(umbilical);
           long beforePos = getPos();
           boolean ret = rawIn.next(key, value);
           if (ret) {
@@ -194,32 +196,6 @@ class MapTask extends Task {
     done(umbilical);
   }
 
-  private Thread createProgressThread(final TaskUmbilicalProtocol umbilical) {
-    //spawn a thread to give merge progress heartbeats
-    Thread sortProgress = new Thread() {
-        public void run() {
-          LOG.debug("Started thread: " + getName());
-          while (true) {
-            try {
-              reportProgress(umbilical);
-              Thread.sleep(PROGRESS_INTERVAL);
-            } catch (InterruptedException e) {
-              return;
-            } catch (Throwable e) {
-              LOG.info("Thread Exception in " +
-                       "reporting sort progress\n" +
-                       StringUtils.stringifyException(e));
-              continue;
-            }
-          }
-        }
-      };
-    sortProgress.setName("Sort progress reporter for task "+getTaskId());
-    sortProgress.setDaemon(true);
-    sortProgress.start();
-    return sortProgress;
-  }
-  
   interface MapOutputCollector extends OutputCollector {
 
     public void close() throws IOException;
@@ -376,19 +352,10 @@ class MapTask extends Task {
         for (int i = 0; i < partitions; i++)
           totalMem += sortImpl[i].getMemoryUtilized();
         if ((keyValBuffer.getLength() + totalMem) >= maxBufferSize) {
-
-          // Start the progress thread
-          Thread progress = createProgressThread(umbilical);
-
-          try {
-            sortAndSpillToDisk();
-            keyValBuffer.reset();
-            for (int i = 0; i < partitions; i++) {
-              sortImpl[i].close();
-            }
-          } finally {
-            // Stop the progress thread
-            progress.interrupt();
+          sortAndSpillToDisk();
+          keyValBuffer.reset();
+          for (int i = 0; i < partitions; i++) {
+            sortImpl[i].close();
           }
         }
       }
@@ -414,6 +381,7 @@ class MapTask extends Task {
         //invoke the sort
         for (int i = 0; i < partitions; i++) {
           sortImpl[i].setInputBuffer(keyValBuffer);
+          sortImpl[i].setProgressable(reporter);
           RawKeyValueIterator rIter = sortImpl[i].sort();
           
           startPartition(i);
@@ -459,6 +427,8 @@ class MapTask extends Task {
         combiner.reduce(values.getKey(), values, combineCollector, reporter);
         values.nextKey();
         reporter.incrCounter(COMBINE_OUTPUT_RECORDS, 1);
+        // indicate we're making progress
+        reporter.progress();
       }
     }
     
@@ -467,6 +437,9 @@ class MapTask extends Task {
       Writable value = null;
 
       try {
+        // indicate progress, since constructor may take a while (because of 
+        // user code) 
+        reporter.progress();
         key = (WritableComparable)ReflectionUtils.newInstance(keyClass, job);
         value = (Writable)ReflectionUtils.newInstance(valClass, job);
       } catch (Exception e) {
@@ -484,8 +457,8 @@ class MapTask extends Task {
         (resultIter.getValue()).writeUncompressedBytes(valOut);
         valIn.reset(valOut.getData(), valOut.getLength());
         value.readFields(valIn);
-
         writer.append(key, value);
+        reporter.progress();
       }
     }
     
@@ -546,6 +519,7 @@ class MapTask extends Task {
         //create a sorter object as we need access to the SegmentDescriptor
         //class and merge methods
         Sorter sorter = new Sorter(localFs, keyClass, valClass, job);
+        sorter.setProgressable(reporter);
         
         for (int parts = 0; parts < partitions; parts++){
           List<SegmentDescriptor> segmentList =
@@ -608,23 +582,15 @@ class MapTask extends Task {
       }
     }
 
-    public void flush() throws IOException {
-
-      // Start the progress thread
-      Thread progress = createProgressThread(umbilical);
-
-      try {
-        //check whether the length of the key/value buffer is 0. If not, then
-        //we need to spill that to disk. Note that we reset the key/val buffer
-        //upon each spill (so a length > 0 means that we have not spilled yet)
-        if (keyValBuffer.getLength() > 0) {
-          sortAndSpillToDisk();
-        }
-        mergeParts();
-      } finally {
-        // Stop the progress thread
-        progress.interrupt();
+    public void flush() throws IOException 
+    {
+      //check whether the length of the key/value buffer is 0. If not, then
+      //we need to spill that to disk. Note that we reset the key/val buffer
+      //upon each spill (so a length > 0 means that we have not spilled yet)
+      if (keyValBuffer.getLength() > 0) {
+        sortAndSpillToDisk();
       }
+      mergeParts();
     }
   }
 }

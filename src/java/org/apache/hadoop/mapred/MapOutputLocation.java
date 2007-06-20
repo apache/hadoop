@@ -191,7 +191,8 @@ class MapOutputLocation implements Writable, MRConstants {
                       Path localFilename, 
                       LocalDirAllocator lDirAlloc,
                       Configuration conf, int reduce,
-                      int timeout) throws IOException, InterruptedException {
+                      int timeout, Progressable progressable) 
+  throws IOException, InterruptedException {
     boolean good = false;
     long totalBytes = 0;
     FileSystem fileSys = localFileSys;
@@ -245,6 +246,8 @@ class MapOutputLocation implements Writable, MRConstants {
             if (currentThread.isInterrupted()) {
               throw new InterruptedException();
             }
+            // indicate we're making progress
+            progressable.progress();
             len = input.read(buffer);
           }
         } finally {

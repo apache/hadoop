@@ -65,7 +65,7 @@ class OutputHandler implements UpwardProtocol {
   /**
    * Update the status message for the task.
    */
-  public void status(String msg) throws IOException {
+  public void status(String msg) {
     reporter.setStatus(msg);
   }
 

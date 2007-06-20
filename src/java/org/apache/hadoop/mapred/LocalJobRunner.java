@@ -195,7 +195,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
     public Task getTask(String taskid) { return null; }
 
-    public void progress(String taskId, float progress, String state, 
+    public boolean progress(String taskId, float progress, String state, 
                          TaskStatus.Phase phase, Counters taskCounters) {
       LOG.info(state);
       float taskIndex = mapIds.indexOf(taskId);
@@ -208,6 +208,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
       currentCounters = Counters.sum(completedTaskCounters, taskCounters);
       
       // ignore phase
+      
+      return true;
     }
     
     /**

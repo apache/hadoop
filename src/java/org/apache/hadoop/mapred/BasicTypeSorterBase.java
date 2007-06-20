@@ -26,7 +26,7 @@ import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
-
+import org.apache.hadoop.util.Progressable;
 
 /** This class implements the sort interface using primitive int arrays as 
  * the data structures (that is why this class is called 'BasicType'SorterBase)
@@ -51,6 +51,8 @@ abstract class BasicTypeSorterBase implements BufferSorter {
   //4 for indices into startOffsets array in the
   //pointers array (ignored the partpointers list itself)
   static private final int BUFFERED_KEY_VAL_OVERHEAD = 16;
+  //Reference to the Progressable object for sending KeepAlive
+  private Progressable reporter;
 
   //Implementation of methods of the SorterBase interface
   //
@@ -62,6 +64,10 @@ abstract class BasicTypeSorterBase implements BufferSorter {
     comparator = conf.getOutputKeyComparator();
   }
   
+  public void setProgressable(Progressable reporter) {
+    this.reporter = reporter;  
+  }
+
   public void addKeyValue(int recordOffset, int keyLength, int valLength) {
     //Add the start offset of the key in the startOffsets array and the
     //length in the keyLengths array.
@@ -92,6 +98,8 @@ abstract class BasicTypeSorterBase implements BufferSorter {
   //A compare method that references the keyValBuffer through the indirect
   //pointers
   protected int compare(int i, int j) {
+    // indicate we're making progress
+    reporter.progress();
     return comparator.compare(keyValBuffer.getData(), startOffsets[i],
                               keyLengths[i],
                               keyValBuffer.getData(), startOffsets[j], 

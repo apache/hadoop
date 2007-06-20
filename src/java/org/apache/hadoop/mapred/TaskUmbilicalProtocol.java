@@ -29,8 +29,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * and parent is via this protocol. */ 
 interface TaskUmbilicalProtocol extends VersionedProtocol {
 
-  /** Changed the version to 2, since we have a new method getMapOutputs */
-  public static final long versionID = 2L;
+  /** Changed the version to 2, since we have a new method getMapOutputs 
+   * Changed version to 3 to have progress() return a boolean
+   * */
+  public static final long versionID = 3L;
   
   /** Called when a child task process starts, to get its task.*/
   Task getTask(String taskid) throws IOException;
@@ -41,8 +43,9 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * @param state description of task's current state
    * @param phase current phase of the task.
    * @param counters the counters for this task.
+   * @return True if the task is known
    */
-  void progress(String taskid, float progress, String state, 
+  boolean progress(String taskid, float progress, String state, 
                 TaskStatus.Phase phase, Counters counters)
     throws IOException, InterruptedException;
 

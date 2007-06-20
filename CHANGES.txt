@@ -204,6 +204,11 @@ Trunk (unreleased changes)
      to only terminate Hadoop instances, and not other instances
      started by the same user.  (tomwhite via cutting)
 
+ 63. HADOOP-1462.  Improve task progress reporting.  Progress reports
+     are no longer blocking since i/o is performed in a separate
+     thread.  Reporting during sorting and more is also more
+     consistent.  (Vivek Ratan via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

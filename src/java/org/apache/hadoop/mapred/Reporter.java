@@ -31,7 +31,7 @@ public interface Reporter extends Progressable {
   public static final Reporter NULL = new Reporter() {
       public void setStatus(String s) {
       }
-      public void progress() throws IOException {
+      public void progress() {
       }
       public void incrCounter(Enum key, long amount) {
       }
@@ -46,7 +46,7 @@ public interface Reporter extends Progressable {
    * @param status
    *          a brief description of the current status
    */
-  public abstract void setStatus(String status) throws IOException;
+  public abstract void setStatus(String status);
   
   /**
    * Increments the counter identified by the key, which can be of

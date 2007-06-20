@@ -59,7 +59,7 @@ public class IsolationRunner {
       return true;
     }
 
-    public void progress(String taskid, float progress, String state,
+    public boolean progress(String taskid, float progress, String state,
                          TaskStatus.Phase phase, Counters counters) 
       throws IOException 
     {
@@ -74,6 +74,7 @@ public class IsolationRunner {
       LOG.info(buf.toString());
       // ignore phase
       // ignore counters
+      return true;
     }
 
     public void reportDiagnosticInfo(String taskid, String trace) throws IOException {

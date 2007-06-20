@@ -78,7 +78,6 @@ class ReduceTask extends Task {
   
   private static final Log LOG = LogFactory.getLog(ReduceTask.class.getName());
   private int numMaps;
-  AtomicBoolean sortComplete = new AtomicBoolean(false);
   private ReduceCopier reduceCopier;
 
   { 
@@ -169,12 +168,7 @@ class ReduceTask extends Task {
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
-      // ignore the error, since failures in progress shouldn't kill us
-      try {
-        reporter.progress();
-      } catch (IOException ie) { 
-        LOG.debug("caught exception from progress", ie);
-      }
+      reporter.progress();
       return result;                              // return saved value
     }
 
@@ -232,11 +226,7 @@ class ReduceTask extends Task {
     }
     public void informReduceProgress() {
       reducePhase.set(super.in.getProgress().get()); // update progress
-      try {
-        reporter.progress();
-      } catch (IOException ie) {
-        LOG.debug("Exception caught from progress", ie);
-      }
+      reporter.progress();
     }
     public Object next() {
       reporter.incrCounter(REDUCE_INPUT_RECORDS, 1);
@@ -249,8 +239,11 @@ class ReduceTask extends Task {
     Class valueClass = job.getMapOutputValueClass();
     Reducer reducer = (Reducer)ReflectionUtils.newInstance(
                                                            job.getReducerClass(), job);
-    FileSystem lfs = FileSystem.getLocal(job);
 
+    // start thread that will handle communication with parent
+    startCommunicationThread(umbilical);
+
+    FileSystem lfs = FileSystem.getLocal(job);
     if (!job.get("mapred.job.tracker", "local").equals("local")) {
       reduceCopier = new ReduceCopier(umbilical, job);
       if (!reduceCopier.fetchOutputs()) {
@@ -280,52 +273,26 @@ class ReduceTask extends Task {
     Path[] mapFiles = new Path[mapFilesList.size()];
     mapFiles = mapFilesList.toArray(mapFiles);
     
-    // spawn a thread to give sort progress heartbeats
-    Thread sortProgress = new Thread() {
-        public void run() {
-          while (!sortComplete.get()) {
-            try {
-              reportProgress(umbilical);
-              Thread.sleep(PROGRESS_INTERVAL);
-            } catch (InterruptedException e) {
-              return;
-            } catch (Throwable e) {
-              System.out.println("Thread Exception in " +
-                                 "reporting sort progress\n" +
-                                 StringUtils.stringifyException(e));
-              continue;
-            }
-          }
-        }
-      };
-    sortProgress.setDaemon(true);
-    sortProgress.setName("Sort progress reporter for task "+getTaskId());
-
     Path tempDir = new Path(getTaskId()); 
 
     WritableComparator comparator = job.getOutputValueGroupingComparator();
     
     SequenceFile.Sorter.RawKeyValueIterator rIter;
  
-    try {
-      setPhase(TaskStatus.Phase.SORT); 
-      sortProgress.start();
+    setPhase(TaskStatus.Phase.SORT); 
 
-      // sort the input file
-      SequenceFile.Sorter sorter =
-        new SequenceFile.Sorter(lfs, comparator, valueClass, job);
-      rIter = sorter.merge(mapFiles, tempDir, 
-                           !conf.getKeepFailedTaskFiles()); // sort
-
-    } finally {
-      sortComplete.set(true);
-    }
+    final Reporter reporter = getReporter(umbilical);
+    
+    // sort the input file
+    SequenceFile.Sorter sorter =
+      new SequenceFile.Sorter(lfs, comparator, valueClass, job);
+    sorter.setProgressable(reporter);
+    rIter = sorter.merge(mapFiles, tempDir, 
+        !conf.getKeepFailedTaskFiles()); // sort
 
     sortPhase.complete();                         // sort is complete
     setPhase(TaskStatus.Phase.REDUCE); 
 
-    final Reporter reporter = getReporter(umbilical);
-    
     // make output collector
     String finalName = getOutputName(getPartition());
     FileSystem fs = FileSystem.get(job);
@@ -338,7 +305,8 @@ class ReduceTask extends Task {
           throws IOException {
           out.write(key, value);
           reporter.incrCounter(REDUCE_OUTPUT_RECORDS, 1);
-          reportProgress(umbilical);
+          // indicate that progress update needs to be sent
+          reporter.progress();
         }
       };
     
@@ -532,31 +500,6 @@ class ReduceTask extends Task {
                               "map_".length(), endIndex));
     }
     
-    private Thread createProgressThread(final TaskUmbilicalProtocol umbilical) {
-      //spawn a thread to give copy progress heartbeats
-      Thread copyProgress = new Thread() {
-          public void run() {
-            LOG.debug("Started thread: " + getName());
-            while (true) {
-              try {
-                reportProgress(umbilical);
-                Thread.sleep(PROGRESS_INTERVAL);
-              } catch (InterruptedException e) {
-                return;
-              } catch (Throwable e) {
-                LOG.info("Thread Exception in " +
-                         "reporting copy progress\n" +
-                         StringUtils.stringifyException(e));
-                continue;
-              }
-            }
-          }
-        };
-      copyProgress.setName("Copy progress reporter for task "+getTaskId());
-      copyProgress.setDaemon(true);
-      return copyProgress;
-    }
-    
     private int nextMapOutputCopierId = 0;
     
     /** Copies map outputs as they become available */
@@ -564,10 +507,12 @@ class ReduceTask extends Task {
       
       private MapOutputLocation currentLocation = null;
       private int id = nextMapOutputCopierId++;
+      private Reporter reporter;
       
-      public MapOutputCopier() {
+      public MapOutputCopier(Reporter reporter) {
         setName("MapOutputCopier " + reduceTask.getTaskId() + "." + id);
         LOG.debug(getName() + " created");
+        this.reporter = reporter;
       }
       
       /**
@@ -665,7 +610,7 @@ class ReduceTask extends Task {
         tmpFilename = loc.getFile(inMemFileSys, localFileSys, shuffleMetrics,
                                   tmpFilename, lDirAlloc, 
                                   conf, reduceTask.getPartition(), 
-                                  STALLED_COPY_TIMEOUT);
+                                  STALLED_COPY_TIMEOUT, reporter);
         if (!neededOutputs.contains(loc.getMapId())) {
           if (tmpFilename != null) {
             FileSystem fs = tmpFilename.getFileSystem(conf);
@@ -788,6 +733,7 @@ class ReduceTask extends Task {
       sorter =
         new SequenceFile.Sorter(inMemFileSys, conf.getOutputKeyComparator(), 
                                 conf.getMapOutputValueClass(), conf);
+      sorter.setProgressable(getReporter(umbilical));
       
       // hosts -> next contact time
       this.penaltyBox = new Hashtable<String, Long>();
@@ -832,9 +778,10 @@ class ReduceTask extends Task {
       
       copiers = new MapOutputCopier[numCopiers];
       
+      Reporter reporter = getReporter(umbilical);
       // start all the copying threads
       for (int i=0; i < copiers.length; i++) {
-        copiers[i] = new MapOutputCopier();
+        copiers[i] = new MapOutputCopier(reporter);
         copiers[i].start();
       }
       
@@ -843,8 +790,6 @@ class ReduceTask extends Task {
       long currentTime = startTime;
       IntWritable fromEventId = new IntWritable(0);
       
-      Thread copyProgress = createProgressThread(umbilical);
-      copyProgress.start();
       try {
         // loop until we get all required outputs
         while (!neededOutputs.isEmpty() && mergeThrowable == null) {
@@ -1077,7 +1022,6 @@ class ReduceTask extends Task {
         return mergeThrowable == null && neededOutputs.isEmpty();
       } finally {
         inMemFileSys.close();
-        copyProgress.interrupt();
       }
     }
     

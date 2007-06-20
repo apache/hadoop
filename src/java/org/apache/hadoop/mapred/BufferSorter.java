@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
+import org.apache.hadoop.util.Progressable;
 
 /** This class provides a generic sort interface that should be implemented
  * by specific sort algorithms. The use case is the following:
@@ -37,6 +38,11 @@ import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
  */
 interface BufferSorter extends JobConfigurable {
   
+  /** Pass the Progressable object so that sort can call progress while it is sorting
+   * @param reporter the Progressable object reference
+   */
+  public void setProgressable(Progressable reporter);
+    
   /** When a key/value is added at a particular offset in the key/value buffer, 
    * this method is invoked by the user class so that the impl of this sort 
    * interface can update its datastructures. 

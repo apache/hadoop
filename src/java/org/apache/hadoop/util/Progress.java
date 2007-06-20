@@ -44,7 +44,7 @@ public class Progress {
   }
 
   /** Adds a node to the tree. */
-  public Progress addPhase() {
+  public synchronized Progress addPhase() {
     Progress phase = new Progress();
     phases.add(phase);
     phase.parent = this;
@@ -54,17 +54,17 @@ public class Progress {
 
   /** Called during execution to move to the next phase at this level in the
    * tree. */
-  public void startNextPhase() {
+  public synchronized void startNextPhase() {
     currentPhase++;
   }
 
   /** Returns the current sub-node executing. */
-  public Progress phase() {
+  public synchronized Progress phase() {
     return phases.get(currentPhase);
   }
 
   /** Completes this node, moving the parent node to its next child. */
-  public void complete() {
+  public synchronized void complete() {
     progress = 1.0f;
     if (parent != null) {
       parent.startNextPhase();
@@ -72,12 +72,14 @@ public class Progress {
   }
 
   /** Called during execution on a leaf node to set its progress. */
-  public void set(float progress) {
+  public synchronized void set(float progress) {
     this.progress = progress;
   }
 
   /** Returns the overall progress of the root. */
-  public float get() {
+  // this method probably does not need to be synchronized as getINternal() is synchronized 
+  // and the node's parent never changes. Still, it doesn't hurt. 
+  public synchronized float get() {
     Progress node = this;
     while (node.parent != null) {                 // find the root
       node = parent;
@@ -86,7 +88,7 @@ public class Progress {
   }
 
   /** Computes progress in this node. */
-  private float getInternal() {
+  private synchronized float getInternal() {
     int phaseCount = phases.size();
     if (phaseCount != 0) {
       float subProgress =
@@ -97,7 +99,7 @@ public class Progress {
     }
   }
 
-  public void setStatus(String status) {
+  public synchronized void setStatus(String status) {
     this.status = status;
   }
 
@@ -107,7 +109,7 @@ public class Progress {
     return result.toString();
   }
 
-  private void toString(StringBuffer buffer) {
+  private synchronized void toString(StringBuffer buffer) {
     buffer.append(status);
     if (phases.size() != 0 && currentPhase < phases.size()) {
       buffer.append(" > ");

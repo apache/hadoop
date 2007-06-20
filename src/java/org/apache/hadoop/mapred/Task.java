@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.text.NumberFormat;
 
 import org.apache.commons.logging.Log;
@@ -36,6 +37,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progress;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 /** Base class for tasks. */
@@ -129,16 +131,17 @@ abstract class Task implements Writable, Configurable {
   }
   /**
    * Return current phase of the task. 
+   * needs to be synchronized as communication thread sends the phase every second
    * @return
    */
-  public TaskStatus.Phase getPhase(){
+  public synchronized TaskStatus.Phase getPhase(){
     return this.phase; 
   }
   /**
    * Set current phase of the task. 
    * @param p
    */
-  protected void setPhase(TaskStatus.Phase p){
+  protected synchronized void setPhase(TaskStatus.Phase p){
     this.phase = p; 
   }
 
@@ -217,11 +220,23 @@ abstract class Task implements Writable, Configurable {
   public static final int PROGRESS_INTERVAL = 1000;
 
   private transient Progress taskProgress = new Progress();
-  private transient long nextProgressTime =
-    System.currentTimeMillis() + PROGRESS_INTERVAL;
 
   // Current counters
   private transient Counters counters = new Counters();
+  
+  /**
+   * flag that indicates whether progress update needs to be sent to parent.
+   * If true, it has been set. If false, it has been reset. 
+   * Using AtomicBoolean since we need an atomic read & reset method. 
+   */  
+  private AtomicBoolean progressFlag = new AtomicBoolean(false);
+  // getters and setters for flag
+  private void setProgressFlag() {
+    progressFlag.set(true);
+  }
+  private boolean resetProgressFlag() {
+    return progressFlag.getAndSet(false);
+  }
   
   public abstract boolean isMapTask();
 
@@ -231,18 +246,76 @@ abstract class Task implements Writable, Configurable {
     throw new UnsupportedOperationException("Input only available on map");
   }
 
+  /** 
+   * The communication thread handles communication with the parent (Task Tracker). 
+   * It sends progress updates if progress has been made or if the task needs to 
+   * let the parent know that it's alive. It also pings the parent to see if it's alive. 
+   */
+  protected void startCommunicationThread(final TaskUmbilicalProtocol umbilical) {
+    Thread thread = new Thread(new Runnable() {
+        public void run() {
+          final int MAX_RETRIES = 3;
+          int remainingRetries = MAX_RETRIES;
+          while (true) {
+            try {
+              // get current flag value and reset it as well
+              boolean sendProgress = resetProgressFlag();
+              boolean taskFound = true; // whether TT knows about this task
+              
+              if (sendProgress) {
+                // we need to send progress update
+                taskFound = umbilical.progress(taskId, taskProgress.get(), 
+                    taskProgress.toString(), getPhase(), counters);
+              }
+              else {
+                // send ping 
+                taskFound = umbilical.ping(taskId);
+              }
+              
+              // if Task Tracker is not aware of our task ID (probably because it died and 
+              // came back up), kill ourselves
+              if (!taskFound) {
+                LOG.warn("Parent died.  Exiting "+taskId);
+                System.exit(66);
+              }
+              
+              remainingRetries = MAX_RETRIES;
+              // sleep for a bit
+              try {
+                Thread.sleep(PROGRESS_INTERVAL);
+              } 
+              catch (InterruptedException e) {
+              }
+            } 
+            catch (Throwable t) {
+              LOG.info("Communication exception: " + StringUtils.stringifyException(t));
+              remainingRetries -=1;
+              if (remainingRetries == 0) {
+                ReflectionUtils.logThreadInfo(LOG, "Communication exception", 0);
+                LOG.warn("Last retry, killing "+taskId);
+                System.exit(65);
+              }
+            }
+          }
+        }
+      }, "Comm thread for "+taskId);
+    thread.setDaemon(true);
+    thread.start();
+  }
+
+  
   protected Reporter getReporter(final TaskUmbilicalProtocol umbilical) 
     throws IOException 
   {
     return new Reporter() {
-        public void setStatus(String status) throws IOException {
-          synchronized (this) {
-            taskProgress.setStatus(status);
-            progress();
-          }
+        public void setStatus(String status) {
+          taskProgress.setStatus(status);
+          // indicate that progress update needs to be sent
+          setProgressFlag();
         }
-        public void progress() throws IOException {
-          reportProgress(umbilical);
+        public void progress() {
+          // indicate that progress update needs to be sent
+          setProgressFlag();
         }
         public void incrCounter(Enum key, long amount) {
           Counters counters = getCounters();
@@ -258,24 +331,8 @@ abstract class Task implements Writable, Configurable {
 
   public void setProgress(float progress) {
     taskProgress.set(progress);
-  }
-
-  public void reportProgress(TaskUmbilicalProtocol umbilical) {
-    long now = System.currentTimeMillis();
-    synchronized (this) {
-      if (now > nextProgressTime)  {
-        nextProgressTime = now + PROGRESS_INTERVAL;
-        float progress = taskProgress.get();
-        String status = taskProgress.toString();
-        try {
-          umbilical.progress(getTaskId(), progress, status, phase, counters);
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();     // interrupt ourself
-        } catch (IOException ie) {
-          LOG.warn(StringUtils.stringifyException(ie));
-        }
-      }
-    }
+    // indicate that progress update needs to be sent
+    setProgressFlag();
   }
 
   public void done(TaskUmbilicalProtocol umbilical) throws IOException {
@@ -286,14 +343,17 @@ abstract class Task implements Writable, Configurable {
         if (needProgress) {
           // send a final status report
           try {
-            umbilical.progress(getTaskId(), taskProgress.get(), 
-                               taskProgress.toString(), phase, counters);
+            if (!umbilical.progress(taskId, taskProgress.get(),
+                taskProgress.toString(), getPhase(), counters)) {
+              LOG.warn("Parent died.  Exiting "+taskId);
+              System.exit(66);
+            }
             needProgress = false;
           } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();       // interrupt ourself
           }
         }
-        umbilical.done(getTaskId());
+        umbilical.done(taskId);
         return;
       } catch (IOException ie) {
         LOG.warn("Failure signalling completion: " + 

@@ -1530,7 +1530,7 @@ public class TaskTracker
   /**
    * Called periodically to report Task progress, from 0.0 to 1.0.
    */
-  public synchronized void progress(String taskid, float progress, 
+  public synchronized boolean progress(String taskid, float progress, 
                                     String state, 
                                     TaskStatus.Phase phase,
                                     Counters counters
@@ -1538,8 +1538,10 @@ public class TaskTracker
     TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
     if (tip != null) {
       tip.reportProgress(progress, state, phase, counters);
+      return true;
     } else {
-      LOG.warn("Progress from unknown child task: "+taskid+". Ignored.");
+      LOG.warn("Progress from unknown child task: "+taskid);
+      return false;
     }
   }
 
@@ -1697,8 +1699,6 @@ public class TaskTracker
           
       defaultConf.addFinalResource(new Path(task.getJobFile()));
 
-      startPinging(umbilical, taskid);        // start pinging parent
-
       try {
         // use job-specified working directory
         FileSystem.get(job).setWorkingDirectory(job.getWorkingDirectory());
@@ -1720,41 +1720,6 @@ public class TaskTracker
         // there is no more logging done.
         LogManager.shutdown();
       }
-    }
-
-    /** Periodically ping parent and exit when this fails.*/
-    private static void startPinging(final TaskUmbilicalProtocol umbilical,
-                                     final String taskid) {
-      Thread thread = new Thread(new Runnable() {
-          public void run() {
-            final int MAX_RETRIES = 3;
-            int remainingRetries = MAX_RETRIES;
-            while (true) {
-              try {
-                if (!umbilical.ping(taskid)) {
-                  LOG.warn("Parent died.  Exiting "+taskid);
-                  System.exit(66);
-                }
-                remainingRetries = MAX_RETRIES;
-              } catch (Throwable t) {
-                String msg = StringUtils.stringifyException(t);
-                LOG.info("Ping exception: " + msg);
-                remainingRetries -=1;
-                if (remainingRetries == 0) {
-                  ReflectionUtils.logThreadInfo(LOG, "ping exception", 0);
-                  LOG.warn("Last retry, killing "+taskid);
-                  System.exit(65);
-                }
-              }
-              try {
-                Thread.sleep(1000);
-              } catch (InterruptedException e) {
-              }
-            }
-          }
-        }, "Pinger for "+taskid);
-      thread.setDaemon(true);
-      thread.start();
     }
   }
 
