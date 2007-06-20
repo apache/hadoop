@@ -209,6 +209,10 @@ Trunk (unreleased changes)
      thread.  Reporting during sorting and more is also more
      consistent.  (Vivek Ratan via cutting)
 
+ 64. HADOOP-1440.  When reduce is disabled, use order of splits
+     returned by InputFormat#getSplits when numbering outputs.
+     (Senthil Subramanian via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

@@ -221,7 +221,7 @@ class JobInProgress {
       maps[i] = new TaskInProgress(uniqueString, jobFile, 
                                    splits[i].getClassName(),
                                    splits[i].getBytes(), 
-                                   jobtracker, conf, this, i);
+                                   jobtracker, conf, this, splits[i].getPosition());
       for(String host: splits[i].getLocations()) {
         List<TaskInProgress> hostMaps = hostToMaps.get(host);
         if (hostMaps == null) {
