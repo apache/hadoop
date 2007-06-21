@@ -233,6 +233,9 @@ Trunk (unreleased changes)
 
  71. HADOOP-1511.  Speedup hbase unit tests.  (stack via cutting)
 
+ 72. HADOOP-1517.  Remove some synchronization in namenode to permit
+     finer grained locking previously added.  (Konstantin Shvachko via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

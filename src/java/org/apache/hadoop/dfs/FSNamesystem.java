@@ -596,13 +596,13 @@ class FSNamesystem implements FSConstants {
    * @throws IOException if the filename is invalid
    *         {@link FSDirectory#isValidToCreate(String)}.
    */
-  public synchronized LocatedBlock startFile(String src, 
-                                             String holder, 
-                                             String clientMachine, 
-                                             boolean overwrite,
-                                             short replication,
-                                             long blockSize
-                                             ) throws IOException {
+  public LocatedBlock startFile(String src, 
+                                String holder, 
+                                String clientMachine, 
+                                boolean overwrite,
+                                short replication,
+                                long blockSize
+                                ) throws IOException {
 
     //
     // Create file into pendingCreates and get the first blockId
@@ -769,9 +769,9 @@ class FSNamesystem implements FSConstants {
    * are replicated.  Will return an empty 2-elt array if we want the
    * client to "try again later".
    */
-  public synchronized LocatedBlock getAdditionalBlock(String src, 
-                                                      String clientName
-                                                      ) throws IOException {
+  public LocatedBlock getAdditionalBlock(String src, 
+                                         String clientName
+                                         ) throws IOException {
     long fileLength, blockSize;
     int replication;
     DatanodeDescriptor clientNode = null;
@@ -973,7 +973,7 @@ class FSNamesystem implements FSConstants {
   /**
    * Allocate a block at the given pending filename
    */
-  synchronized Block allocateBlock(String src) throws IOException {
+  private Block allocateBlock(String src) throws IOException {
     Block b = null;
     do {
       b = new Block(FSNamesystem.randBlockId.nextLong(), 0);
