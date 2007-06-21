@@ -662,7 +662,7 @@ class FSImage extends Storage {
             blocks[j].readFields(in);
           }
         }
-        fsDir.unprotectedAddFile(name, blocks, replication);
+        fsDir.unprotectedAddFile(name.toString(), blocks, replication);
       }
       
       // load datanode info

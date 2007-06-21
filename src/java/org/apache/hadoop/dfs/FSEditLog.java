@@ -262,7 +262,7 @@ class FSEditLog {
             Block blocks[] = new Block[writables.length];
             System.arraycopy(writables, 0, blocks, 0, blocks.length);
             // add to the file tree
-            fsDir.unprotectedAddFile(name, blocks, replication);
+            fsDir.unprotectedAddFile(name.toString(), blocks, replication);
             break;
           }
           case OP_SET_REPLICATION: {
@@ -281,13 +281,13 @@ class FSEditLog {
             UTF8 dst = new UTF8();
             src.readFields(in);
             dst.readFields(in);
-            fsDir.unprotectedRenameTo(src, dst);
+            fsDir.unprotectedRenameTo(src.toString(), dst.toString());
             break;
           }
           case OP_DELETE: {
             UTF8 src = new UTF8();
             src.readFields(in);
-            fsDir.unprotectedDelete(src);
+            fsDir.unprotectedDelete(src.toString());
             break;
           }
           case OP_MKDIR: {
@@ -439,8 +439,8 @@ class FSEditLog {
    * Add rename record to edit log
    * TODO: use String parameters until just before writing to disk
    */
-  void logRename(UTF8 src, UTF8 dst) {
-    logEdit(OP_RENAME, src, dst);
+  void logRename(String src, String dst) {
+    logEdit(OP_RENAME, new UTF8(src), new UTF8(dst));
   }
   
   /** 
@@ -455,8 +455,8 @@ class FSEditLog {
   /** 
    * Add delete file record to edit log
    */
-  void logDelete(UTF8 src) {
-    logEdit(OP_DELETE, src, null);
+  void logDelete(String src) {
+    logEdit(OP_DELETE, new UTF8(src), null);
   }
   
   /** 

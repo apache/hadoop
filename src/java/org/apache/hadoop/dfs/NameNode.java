@@ -295,9 +295,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       throw new IOException("create: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    LocatedBlock result =  namesystem.startFile(new UTF8(src), 
-                                                new UTF8(clientName), 
-                                                new UTF8(clientMachine), 
+    LocatedBlock result =  namesystem.startFile(src, 
+                                                clientName, 
+                                                clientMachine, 
                                                 overwrite,
                                                 replication,
                                                 blockSize);
@@ -317,9 +317,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                String clientName) throws IOException {
     stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
                          +src+" for "+clientName);
-    UTF8 src8 = new UTF8(src);
-    UTF8 client8 = new UTF8(clientName);
-    return namesystem.getAdditionalBlock(src8, client8);
+    return namesystem.getAdditionalBlock(src, clientName);
   }
 
   /**
@@ -328,7 +326,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   public void abandonBlock(Block b, String src) throws IOException {
     stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
                          +b.getBlockName()+" of file "+src);
-    if (!namesystem.abandonBlock(b, new UTF8(src))) {
+    if (!namesystem.abandonBlock(b, src)) {
       throw new IOException("Cannot abandon block during write to " + src);
     }
   }
@@ -337,13 +335,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   public void abandonFileInProgress(String src, 
                                     String holder) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.abandonFileInProgress:" + src);
-    namesystem.abandonFileInProgress(new UTF8(src), new UTF8(holder));
+    namesystem.abandonFileInProgress(src, holder);
   }
   /**
    */
   public boolean complete(String src, String clientName) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.complete: " + src + " for " + clientName);
-    int returnCode = namesystem.completeFile(new UTF8(src), new UTF8(clientName));
+    int returnCode = namesystem.completeFile(src, clientName);
     if (returnCode == STILL_WAITING) {
       return false;
     } else if (returnCode == COMPLETE_SUCCESS) {
@@ -383,7 +381,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       throw new IOException("rename: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    boolean ret = namesystem.renameTo(new UTF8(src), new UTF8(dst));
+    boolean ret = namesystem.renameTo(src, dst);
     if (ret) {
       myMetrics.renameFile();
     }
@@ -394,19 +392,19 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    */
   public boolean delete(String src) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.delete: " + src);
-    return namesystem.delete(new UTF8(src));
+    return namesystem.delete(src);
   }
 
   /**
    */
   public boolean exists(String src) throws IOException {
-    return namesystem.exists(new UTF8(src));
+    return namesystem.exists(src);
   }
 
   /**
    */
   public boolean isDir(String src) throws IOException {
-    return namesystem.isDir(new UTF8(src));
+    return namesystem.isDir(src);
   }
 
   /**
@@ -459,13 +457,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   /**
    */
   public void renewLease(String clientName) throws IOException {
-    namesystem.renewLease(new UTF8(clientName));        
+    namesystem.renewLease(clientName);        
   }
 
   /**
    */
   public DFSFileInfo[] getListing(String src) throws IOException {
-    DFSFileInfo[] files = namesystem.getListing(new UTF8(src));
+    DFSFileInfo[] files = namesystem.getListing(src);
     if (files != null) {
       myMetrics.listFile(files.length);
     }

@@ -228,6 +228,9 @@ Trunk (unreleased changes)
 
  69. HADOOP-1147.  Remove @author tags from Java source files.
 
+ 70. HADOOP-1283.  Convert most uses of UTF8 in the namenode to be
+     String.  (Konstantin Shvachko via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

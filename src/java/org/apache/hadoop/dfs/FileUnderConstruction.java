@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.dfs;
 
-import org.apache.hadoop.io.UTF8;
 import java.io.*;
 import java.util.*;
 
@@ -33,20 +32,20 @@ class FileUnderConstruction {
   private short blockReplication; // file replication
   private long blockSize;
   private Collection<Block> blocks;
-  private UTF8 clientName;         // lease holder
-  private UTF8 clientMachine;
+  private StringBytesWritable clientName;         // lease holder
+  private StringBytesWritable clientMachine;
   private DatanodeDescriptor clientNode; // if client is a cluster node too.
     
   FileUnderConstruction(short replication,
                         long blockSize,
-                        UTF8 clientName,
-                        UTF8 clientMachine,
+                        String clientName,
+                        String clientMachine,
                         DatanodeDescriptor clientNode) throws IOException {
     this.blockReplication = replication;
     this.blockSize = blockSize;
     this.blocks = new ArrayList<Block>();
-    this.clientName = clientName;
-    this.clientMachine = clientMachine;
+    this.clientName = new StringBytesWritable(clientName);
+    this.clientMachine = new StringBytesWritable(clientMachine);
     this.clientNode = clientNode;
   }
     
@@ -62,12 +61,12 @@ class FileUnderConstruction {
     return blocks;
   }
     
-  public UTF8 getClientName() {
-    return clientName;
+  String getClientName() throws IOException {
+    return clientName.getString();
   }
     
-  public UTF8 getClientMachine() {
-    return clientMachine;
+  String getClientMachine() throws IOException {
+    return clientMachine.getString();
   }
 
   public DatanodeDescriptor getClientNode() {

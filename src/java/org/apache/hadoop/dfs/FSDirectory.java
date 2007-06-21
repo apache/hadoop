@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.dfs;
 
-import org.apache.hadoop.io.*;
-
 import java.io.*;
 import java.util.*;
 
@@ -308,8 +306,8 @@ class FSDirectory implements FSConstants {
 
   FSNamesystem namesystem = null;
   INode rootDir = new INode("");
-  TreeMap<UTF8, TreeSet<UTF8>> activeLocks =
-    new TreeMap<UTF8, TreeSet<UTF8>>();
+  TreeMap<StringBytesWritable, TreeSet<StringBytesWritable>> activeLocks =
+    new TreeMap<StringBytesWritable, TreeSet<StringBytesWritable>>();
   FSImage fsImage;  
   boolean ready = false;
   // Metrics record
@@ -384,15 +382,14 @@ class FSDirectory implements FSConstants {
   /**
    * Add the given filename to the fs.
    */
-  public boolean addFile(UTF8 path, Block[] blocks, short replication) {
+  public boolean addFile(String path, Block[] blocks, short replication) {
     waitForReady();
 
     // Always do an implicit mkdirs for parent directory tree
-    String pathString = path.toString();
-    if (!mkdirs(new Path(pathString).getParent().toString())) {
+    if (!mkdirs(new Path(path).getParent().toString())) {
       return false;
     }
-    INode newNode = new INode(new File(pathString).getName(), blocks, replication);
+    INode newNode = new INode(new File(path).getName(), blocks, replication);
     if (!unprotectedAddFile(path, newNode)) {
       NameNode.stateChangeLog.info("DIR* FSDirectory.addFile: "
                                    +"failed to add "+path+" with "
@@ -408,10 +405,10 @@ class FSDirectory implements FSConstants {
     
   /**
    */
-  boolean unprotectedAddFile(UTF8 path, INode newNode) {
+  boolean unprotectedAddFile(String path, INode newNode) {
     synchronized (rootDir) {
       try {
-        if (rootDir.addNode(path.toString(), newNode) != null) {
+        if (rootDir.addNode(path, newNode) != null) {
           int nrBlocks = (newNode.blocks == null) ? 0 : newNode.blocks.length;
           // Add file->block mapping
           for (int i = 0; i < nrBlocks; i++)
@@ -426,15 +423,15 @@ class FSDirectory implements FSConstants {
     }
   }
     
-  boolean unprotectedAddFile(UTF8 path, Block[] blocks, short replication) {
+  boolean unprotectedAddFile(String path, Block[] blocks, short replication) {
     return unprotectedAddFile(path,  
-                              new INode(path.toString(), blocks, replication));
+                              new INode(path, blocks, replication));
   }
 
   /**
    * Change the filename
    */
-  public boolean renameTo(UTF8 src, UTF8 dst) {
+  public boolean renameTo(String src, String dst) {
     NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
                                   +src+" to "+dst);
     waitForReady();
@@ -446,29 +443,27 @@ class FSDirectory implements FSConstants {
 
   /**
    */
-  boolean unprotectedRenameTo(UTF8 src, UTF8 dst) {
+  boolean unprotectedRenameTo(String src, String dst) {
     synchronized(rootDir) {
-      String srcStr = src.toString();
-      String dstStr = dst.toString();
-      INode renamedNode = rootDir.getNode(srcStr);
+      INode renamedNode = rootDir.getNode(src);
       if (renamedNode == null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                                      +"failed to rename "+src+" to "+dst+ " because source does not exist");
         return false;
       }
       if (isDir(dst)) {
-        dstStr += "/" + new File(srcStr).getName();
+        dst += "/" + new File(src).getName();
       }
-      if (rootDir.getNode(dstStr) != null) {
+      if (rootDir.getNode(dst) != null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                     +"failed to rename "+src+" to "+dstStr+ " because destination exists");
+                                     +"failed to rename "+src+" to "+dst+ " because destination exists");
         return false;
       }
       renamedNode.removeNode();
             
       // the renamed node can be reused now
       try {
-        if (rootDir.addNode(dstStr, renamedNode) != null) {
+        if (rootDir.addNode(dst, renamedNode) != null) {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: "
                                         +src+" is renamed to "+dst);
           return true;
@@ -477,7 +472,7 @@ class FSDirectory implements FSConstants {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                                      +"failed to rename "+src+" to "+dst);
         try {
-          rootDir.addNode(srcStr, renamedNode); // put it back
+          rootDir.addNode(src, renamedNode); // put it back
         }catch(FileNotFoundException e2) {                
         }
       }
@@ -550,7 +545,7 @@ class FSDirectory implements FSConstants {
   /**
    * Remove the file from management, return blocks
    */
-  public Block[] delete(UTF8 src) {
+  public Block[] delete(String src) {
     NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "
                                   +src);
     waitForReady();
@@ -562,9 +557,9 @@ class FSDirectory implements FSConstants {
 
   /**
    */
-  Block[] unprotectedDelete(UTF8 src) {
+  Block[] unprotectedDelete(String src) {
     synchronized (rootDir) {
-      INode targetNode = rootDir.getNode(src.toString());
+      INode targetNode = rootDir.getNode(src);
       if (targetNode == null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: "
                                      +"failed to remove "+src+" because it does not exist");
@@ -594,28 +589,31 @@ class FSDirectory implements FSConstants {
 
   /**
    */
-  public int obtainLock(UTF8 src, UTF8 holder, boolean exclusive) {
-    TreeSet<UTF8> holders = activeLocks.get(src);
+  public int obtainLock(String src, String holder, boolean exclusive) throws IOException {
+    StringBytesWritable srcSBW = new StringBytesWritable(src);
+    TreeSet<StringBytesWritable> holders = activeLocks.get(srcSBW);
     if (holders == null) {
-      holders = new TreeSet<UTF8>();
-      activeLocks.put(src, holders);
+      holders = new TreeSet<StringBytesWritable>();
+      activeLocks.put(srcSBW, holders);
     }
     if (exclusive && holders.size() > 0) {
       return STILL_WAITING;
     } else {
-      holders.add(holder);
+      holders.add(new StringBytesWritable(holder));
       return COMPLETE_SUCCESS;
     }
   }
 
   /**
    */
-  public int releaseLock(UTF8 src, UTF8 holder) {
-    TreeSet holders = (TreeSet) activeLocks.get(src);
-    if (holders != null && holders.contains(holder)) {
-      holders.remove(holder);
+  public int releaseLock(String src, String holder) throws IOException {
+    StringBytesWritable srcSBW = new StringBytesWritable(src);
+    StringBytesWritable holderSBW = new StringBytesWritable(holder);
+    TreeSet<StringBytesWritable> holders = activeLocks.get(srcSBW);
+    if (holders != null && holders.contains(holderSBW)) {
+      holders.remove(holderSBW);
       if (holders.size() == 0) {
-        activeLocks.remove(src);
+        activeLocks.remove(srcSBW);
       }
       return COMPLETE_SUCCESS;
     } else {
@@ -629,7 +627,7 @@ class FSDirectory implements FSConstants {
    * This function is admittedly very inefficient right now.  We'll
    * make it better later.
    */
-  public DFSFileInfo[] getListing(UTF8 src) {
+  public DFSFileInfo[] getListing(String src) {
     String srcs = normalizePath(src);
 
     synchronized (rootDir) {
@@ -678,7 +676,7 @@ class FSDirectory implements FSConstants {
   /** 
    * Check whether the filepath could be created
    */
-  public boolean isValidToCreate(UTF8 src) {
+  public boolean isValidToCreate(String src) {
     String srcs = normalizePath(src);
     synchronized (rootDir) {
       if (srcs.startsWith("/") && 
@@ -694,7 +692,7 @@ class FSDirectory implements FSConstants {
   /**
    * Check whether the path specifies a directory
    */
-  public boolean isDir(UTF8 src) {
+  public boolean isDir(String src) {
     synchronized (rootDir) {
       INode node = rootDir.getNode(normalizePath(src));
       return node != null && node.isDir();
@@ -705,7 +703,7 @@ class FSDirectory implements FSConstants {
    * Create directory entries for every item
    */
   boolean mkdirs(String src) {
-    src = normalizePath(new UTF8(src));
+    src = normalizePath(src);
 
     // Use this to collect all the dirs we need to construct
     Vector<String> v = new Vector<String>();
@@ -732,7 +730,7 @@ class FSDirectory implements FSConstants {
                                         +"created directory "+cur);
           fsImage.getEditLog().logMkDir(inserted);
         } else { // otherwise cur exists, verify that it is a directory
-          if (!isDir(new UTF8(cur))) {
+          if (!isDir(cur)) {
             NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
                                           +"path " + cur + " is not a directory ");
             return false;
@@ -757,11 +755,10 @@ class FSDirectory implements FSConstants {
 
   /**
    */
-  String normalizePath(UTF8 src) {
-    String srcs = src.toString();
-    if (srcs.length() > 1 && srcs.endsWith("/")) {
-      srcs = srcs.substring(0, srcs.length() - 1);
+  String normalizePath(String src) {
+    if (src.length() > 1 && src.endsWith("/")) {
+      src = src.substring(0, src.length() - 1);
     }
-    return srcs;
+    return src;
   }
 }

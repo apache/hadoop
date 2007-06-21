@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.dfs;
 
-import org.apache.commons.logging.*;
-import org.apache.hadoop.io.UTF8;
 import java.io.*;
 import java.util.*;
 
@@ -33,8 +31,8 @@ import java.util.*;
  *
  ***************************************************/
 class PendingCreates {
-  private Map<UTF8, FileUnderConstruction> pendingCreates =
-                         new TreeMap<UTF8, FileUnderConstruction>();
+  private Map<StringBytesWritable, FileUnderConstruction> pendingCreates = 
+                    new TreeMap<StringBytesWritable, FileUnderConstruction>();
 
   //
   // Keeps track of the blocks that are part of files that are being
@@ -46,27 +44,28 @@ class PendingCreates {
   //
   // returns a file if it is being created. Otherwise returns null.
   //
-  FileUnderConstruction get(UTF8 filename) {
-    return pendingCreates.get(filename);
+  FileUnderConstruction get(String src) throws IOException {
+    return pendingCreates.get(new StringBytesWritable(src));
   }
 
   //
   // inserts a filename into pendingCreates. throws exception if it 
   // already exists
   //
-  void put(UTF8 src, FileUnderConstruction file) throws IOException {
-    FileUnderConstruction oldfile = pendingCreates.put(src, file);
+  void put(String src, FileUnderConstruction file) throws IOException {
+    FileUnderConstruction oldfile = pendingCreates.put(
+                                          new StringBytesWritable(src), file);
     if (oldfile != null && oldfile != file) {
-      throw new IOException("Duplicate entry " + src +
-                            " in pendingCreates.");
+      throw new IOException("Duplicate entry " + src + " in pendingCreates.");
     }
   }
 
   //
   // The specified file is no longer pending.
   //
-  boolean remove(UTF8 file) {
-    FileUnderConstruction v = pendingCreates.remove(file);
+  boolean remove(String src) throws IOException {
+    FileUnderConstruction v = pendingCreates.remove(
+                                          new StringBytesWritable(src));
     if (v != null) {
       for (Iterator<Block> it2 = v.getBlocks().iterator(); it2.hasNext(); ) {
         Block b = it2.next();
@@ -81,8 +80,8 @@ class PendingCreates {
   // Make this block part of this file. This block
   // should not already exists in here.
   //
-  boolean addBlock(UTF8 file, Block b) {
-    FileUnderConstruction v =  pendingCreates.get(file);
+  boolean addBlock(String src, Block b) throws IOException {
+    FileUnderConstruction v =  get(src);
     assert !pendingCreateBlocks.contains(b);
     v.getBlocks().add(b);
     pendingCreateBlocks.add(b);
@@ -92,8 +91,8 @@ class PendingCreates {
   //
   // Remove this block from a file.
   //
-  boolean removeBlock(UTF8 file, Block b) {
-    FileUnderConstruction v =  pendingCreates.get(file);
+  boolean removeBlock(String src, Block b) throws IOException {
+    FileUnderConstruction v =  get(src);
     if (v != null) {
       Collection<Block> pendingVector = v.getBlocks();
       for (Iterator<Block> it = pendingVector.iterator(); it.hasNext(); ) {
