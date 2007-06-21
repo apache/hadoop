@@ -20,7 +20,6 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * Test HClient.
- * This class can only run one unit test while hadoop-1299 is outstanding.
  */
 public class TestHClient extends HBaseClusterTestCase {
   private Log LOG = LogFactory.getLog(this.getClass().getName());

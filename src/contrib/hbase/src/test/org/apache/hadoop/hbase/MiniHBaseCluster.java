@@ -17,6 +17,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
@@ -37,8 +39,8 @@ public class MiniHBaseCluster implements HConstants {
   private Path parentdir;
   private HMaster master;
   private Thread masterThread;
-  private HRegionServer[] regionServers;
-  Thread[] regionThreads;
+  List<HRegionServer> regionServers;
+  List<Thread> regionThreads;
   
   /**
    * Starts a MiniHBaseCluster on top of a new MiniDFSCluster
@@ -123,30 +125,33 @@ public class MiniHBaseCluster implements HConstants {
       String address = master.getMasterAddress().toString();
       this.conf.set(MASTER_ADDRESS, address);
 
-      // Start the HRegionServers.  If > 1 region servers,need to set
-      // port to '0'.
-      if(this.conf.get(REGIONSERVER_ADDRESS) == null || nRegionNodes > 1) {
-        this.conf.set(REGIONSERVER_ADDRESS, DEFAULT_HOST + ":0");
-      }
-      
+      // Start the HRegionServers.  Always have regionservers come up on
+      // port '0' so there won't be clashes over default port as unit tests
+      // start/stop ports at different times during the life of the test.
+      this.conf.set(REGIONSERVER_ADDRESS, DEFAULT_HOST + ":0");
       LOG.info("Starting HRegionServers");
-      startRegionServers(this.conf, nRegionNodes);
+      startRegionServers(nRegionNodes);
     } catch(IOException e) {
       shutdown();
       throw e;
     }
   }
 
-  private void startRegionServers(Configuration conf, int nRegionNodes)
+  private void startRegionServers(final int nRegionNodes)
       throws IOException {
-    this.regionServers = new HRegionServer[nRegionNodes];
-    this.regionThreads = new Thread[nRegionNodes];
-    
+    this.regionServers = new ArrayList<HRegionServer>(nRegionNodes);
+    this.regionThreads = new ArrayList<Thread>(nRegionNodes);    
     for(int i = 0; i < nRegionNodes; i++) {
-      regionServers[i] = new HRegionServer(conf);
-      regionThreads[i] = new Thread(regionServers[i], "HRegionServer-" + i);
-      regionThreads[i].start();
+      startRegionServer();
     }
+  }
+  
+  void startRegionServer() throws IOException {
+    HRegionServer hsr = new HRegionServer(this.conf);
+    this.regionServers.add(hsr);
+    Thread t = new Thread(hsr, "HRegionServer-" + this.regionServers.size());
+    t.start();
+    this.regionThreads.add(t);
   }
   
   /** 
@@ -163,11 +168,23 @@ public class MiniHBaseCluster implements HConstants {
    * @param serverNumber
    */
   public void stopRegionServer(int serverNumber) {
-    if(serverNumber >= regionServers.length) {
+    if (serverNumber >= regionServers.size()) {
       throw new ArrayIndexOutOfBoundsException(
           "serverNumber > number of region servers");
     }
-    this.regionServers[serverNumber].stop();
+    this.regionServers.get(serverNumber).stop();
+  }
+  
+  public void waitOnRegionServer(int serverNumber) {
+    if (serverNumber >= regionServers.size()) {
+      throw new ArrayIndexOutOfBoundsException(
+          "serverNumber > number of region servers");
+    }
+    try {
+      this.regionThreads.get(serverNumber).join();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
   }
   
   /**
@@ -176,29 +193,27 @@ public class MiniHBaseCluster implements HConstants {
    * @param serverNumber
    */
   public void abortRegionServer(int serverNumber) {
-    if(serverNumber >= regionServers.length) {
+    if(serverNumber >= this.regionServers.size()) {
       throw new ArrayIndexOutOfBoundsException(
           "serverNumber > number of region servers");
     }
-    this.regionServers[serverNumber].abort();
+    this.regionServers.get(serverNumber).abort();
   }
   
   /** Shut down the HBase cluster */
   public void shutdown() {
     LOG.info("Shutting down the HBase Cluster");
-    for(int i = 0; i < regionServers.length; i++) {
-      if (regionServers[i] != null) {
-        regionServers[i].stop();
-      }
+    for(HRegionServer hsr: this.regionServers) {
+      hsr.stop();
     }
     master.shutdown();
-    for(int i = 0; i < regionServers.length; i++) {
-      try {
-        if (regionThreads[i] != null) {
-          regionThreads[i].join();
+    for(Thread t: this.regionThreads) {
+      if (t.isAlive()) {
+        try {
+          t.join();
+        } catch (InterruptedException e) {
+          // continue
         }
-      } catch(InterruptedException e) {
-        // continue
       }
     }
     try {

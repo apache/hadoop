@@ -91,6 +91,8 @@ public interface HConstants {
   /** The ROOT and META column family */
   static final Text COLUMN_FAMILY = new Text("info:");
   
+  static final Text [] COLUMN_FAMILY_ARRAY = new Text [] {COLUMN_FAMILY};
+  
   /** ROOT/META column family member - contains HRegionInfo */
   static final Text COL_REGIONINFO = new Text(COLUMN_FAMILY + "regioninfo");
   
