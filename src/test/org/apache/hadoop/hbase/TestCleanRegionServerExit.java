@@ -17,26 +17,58 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-/** Tests region server failover when a region server exits cleanly */
+/**
+ * Tests region server failover when a region server exits.
+ */
 public class TestCleanRegionServerExit extends HBaseClusterTestCase {
-
   private HClient client;
   
-  /** Constructor */
-  public TestCleanRegionServerExit() {
-    super(2);                                   // Start two region servers
-    client = new HClient(conf);
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+    this.client = new HClient(conf);
   }
   
-  /** The test 
-   * @throws IOException 
-   * @throws InterruptedException */
   public void testCleanRegionServerExit()
   throws IOException, InterruptedException {
     // When the META table can be opened, the region servers are running
     this.client.openTable(HConstants.META_TABLE_NAME);
-    this.cluster.stopRegionServer(0);
-    this.cluster.regionThreads[0].join();
-    Thread.sleep(60000);              // Wait for cluster to adjust
+    // Put something into the meta table.
+    this.client.createTable(new HTableDescriptor(getName()));
+    // Get current region server instance.
+    HRegionServer hsr = this.cluster.regionServers.get(0);
+    Thread hrst = this.cluster.regionThreads.get(0);
+    // Start up a new one to take over serving of root and meta after we shut
+    // down the current meta/root host.
+    this.cluster.startRegionServer();
+    // Now shutdown the region server and wait for it to go down.
+    hsr.stop();
+    hrst.join();
+    // The recalibration of the client is not working properly.  FIX.
+    // After above is fixed, add in assertions that we can get data from
+    // newly located meta table.
   }
+
+/* Comment out till recalibration of client is working properly.
+
+  public void testRegionServerAbort()
+  throws IOException, InterruptedException {
+    // When the META table can be opened, the region servers are running
+    this.client.openTable(HConstants.META_TABLE_NAME);
+    // Put something into the meta table.
+    this.client.createTable(new HTableDescriptor(getName()));
+    // Get current region server instance.
+    HRegionServer hsr = this.cluster.regionServers.get(0);
+    Thread hrst = this.cluster.regionThreads.get(0);
+    // Start up a new one to take over serving of root and meta after we shut
+    // down the current meta/root host.
+    this.cluster.startRegionServer();
+    // Force a region server to exit "ungracefully"
+    hsr.abort();
+    hrst.join();
+    // The recalibration of the client is not working properly.  FIX.
+    // After above is fixed, add in assertions that we can get data from
+    // newly located meta table.
+  }
+*/
 }

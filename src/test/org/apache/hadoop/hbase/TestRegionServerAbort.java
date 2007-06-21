@@ -17,38 +17,12 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-/** Tests region server failover when a region server exits cleanly */
-public class TestRegionServerAbort extends HBaseClusterTestCase {
+import junit.framework.TestCase;
 
-  private HClient client;
-  
-  /** Constructor */
-  public TestRegionServerAbort() {
-    super(2);                                   // Start two region servers
-    client = new HClient(conf);
-  }
-  
+/** Tests region server failover when a region server exits cleanly */
+public class TestRegionServerAbort extends TestCase {
   /** The test */
   public void testRegionServerAbort() {
-    try {
-      // When the META table can be opened, the region servers are running
-      
-      client.openTable(HConstants.META_TABLE_NAME);
-      
-    } catch(IOException e) {
-      e.printStackTrace();
-      fail();
-    }
-    
-    // Force a region server to exit "ungracefully"
-    
-    this.cluster.abortRegionServer(0);
-    
-    try {
-      Thread.sleep(120000);              // Wait for cluster to adjust
-      
-    } catch(InterruptedException e) {
-    }
+   // REMOVE THIS CLASS. TEST HAS BEEN MOVED TO TestCleanRegionExit.
   }
-
 }

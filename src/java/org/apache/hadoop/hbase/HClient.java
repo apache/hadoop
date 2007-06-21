@@ -634,7 +634,8 @@ public class HClient implements HConstants {
   /*
    * Repeatedly try to find the root region by asking the master for where it is
    * @return TreeMap<Text, TableInfo> for root regin if found
-   * @throws NoServerForRegionException - if the root region can not be located after retrying
+   * @throws NoServerForRegionException - if the root region can not be located
+   * after retrying
    * @throws IOException 
    */
   private TreeMap<Text, RegionLocation> locateRootRegion() throws IOException {
@@ -917,9 +918,6 @@ public class HClient implements HConstants {
    * @return Location of row.
    */
   synchronized RegionLocation getRegionLocation(Text row) {
-    if(row == null || row.getLength() == 0) {
-      throw new IllegalArgumentException("row key cannot be null or zero length");
-    }
     if(this.tableServers == null) {
       throw new IllegalStateException("Must open table first");
     }
@@ -970,13 +968,11 @@ public class HClient implements HConstants {
       try {
         value = getHRegionConnection(info.serverAddress).
           get(info.regionInfo.regionName, row, column);
-      } catch(NotServingRegionException e) {
-        if(tries == numRetries - 1) {
-          // No more tries
+      } catch (NotServingRegionException e) {
+        if (tries == numRetries - 1) {
           throw e;
         }
         findRegion(info);
-        info = null;
       }
     }
     return value;
@@ -1005,7 +1001,6 @@ public class HClient implements HConstants {
           throw e;
         }
         findRegion(info);
-        info = null;
       }
     }
 
@@ -1046,7 +1041,6 @@ public class HClient implements HConstants {
           throw e;
         }
         findRegion(info);
-        info = null;
       }
     }
 
@@ -1084,7 +1078,6 @@ public class HClient implements HConstants {
           throw e;
         }
         findRegion(info);
-        info = null;
       }
     }
     TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();

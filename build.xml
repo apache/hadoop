@@ -39,6 +39,19 @@ to call at top-level: ant deploy-contrib compile-core-test
       </manifest>
     </jar>
   </target>
+
+  <!-- the unit test classpath
+    Copied from ../build-contrib.xml so can add 
+  -->
+  <path id="test.classpath">
+    <pathelement location="${build.test}" />
+    <pathelement location="${hadoop.root}/build/test/classes"/>
+    <pathelement location="${hadoop.root}/src/contrib/test"/>
+    <pathelement location="${conf.dir}"/>
+    <pathelement location="${hadoop.root}/build"/>
+    <pathelement location="${src.test}"/>
+    <path refid="classpath"/>
+  </path>
   
   <target name="test">
     <antcall target="hadoopbuildcontrib.test"/>
