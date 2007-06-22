@@ -196,6 +196,7 @@ public class TestTextInputFormat extends TestCase {
       result.add(value);
       value = (Text) reader.createValue();
     }
+    reader.close();
     return result;
   }
   

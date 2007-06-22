@@ -236,6 +236,9 @@ Trunk (unreleased changes)
  72. HADOOP-1517.  Remove some synchronization in namenode to permit
      finer grained locking previously added.  (Konstantin Shvachko via cutting)
 
+ 73. HADOOP-1512.  Fix failing TestTextInputFormat on Windows.
+     (Senthil Subramanian via nigel)
+
 
 Release 0.13.0 - 2007-06-08
 
