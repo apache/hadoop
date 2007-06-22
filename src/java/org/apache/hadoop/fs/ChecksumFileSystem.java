@@ -567,8 +567,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   @Override
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
-    FileSystem localFs = getNamed("file:///", getConf());
-    FileUtil.copy(localFs, src, this, dst, delSrc, getConf());
+    Configuration conf = getConf();
+    FileUtil.copy(getLocal(conf), src, this, dst, delSrc, conf);
   }
 
   /**
@@ -578,8 +578,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   @Override
   public void copyToLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
-    FileSystem localFs = getNamed("file:///", getConf());
-    FileUtil.copy(this, src, localFs, dst, delSrc, getConf());
+    Configuration conf = getConf();
+    FileUtil.copy(this, src, getLocal(conf), dst, delSrc, conf);
   }
 
   /**
@@ -592,7 +592,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     throws IOException {
     if (!fs.isDirectory(src)) { // source is a file
       fs.copyToLocalFile(src, dst);
-      FileSystem localFs = getNamed("file:///", getConf());
+      FileSystem localFs = getLocal(getConf());
       if (localFs instanceof ChecksumFileSystem) {
         localFs = ((ChecksumFileSystem) localFs).getRawFileSystem();
       }

@@ -194,9 +194,6 @@ public class FileUtil {
   public static boolean copy(FileSystem srcFS, Path src, 
                              File dst, boolean deleteSource,
                              Configuration conf) throws IOException {
-
-    dst = checkDest(src.getName(), dst);
-
     if (srcFS.isDirectory(src)) {
       if (!dst.mkdirs()) {
         return false;
@@ -431,5 +428,27 @@ public class FileUtil {
     String cmd = "chmod " + perm + " " + filename;
     Process p = Runtime.getRuntime().exec(cmd, null);
     return p.waitFor();
+  }
+
+  /**
+   * Create a tmp file for a base file.
+   * @param basefile the base file of the tmp
+   * @param prefix file name prefix of tmp
+   * @param isDeleteOnExit if true, the tmp will be deleted when the VM exits
+   * @return a newly created tmp file
+   * @exception IOException If a tmp file cannot created
+   * @see java.io.File#createTempFile(String, String, File)
+   * @see java.io.File#deleteOnExit()
+   */
+  public static final File createLocalTempFile(final File basefile,
+                                               final String prefix,
+                                               final boolean isDeleteOnExit)
+    throws IOException {
+    File tmp = File.createTempFile(prefix + basefile.getName(),
+                                   "", basefile.getParentFile());
+    if (isDeleteOnExit) {
+      tmp.deleteOnExit();
+    }
+    return tmp;
   }
 }

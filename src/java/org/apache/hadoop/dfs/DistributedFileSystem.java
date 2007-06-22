@@ -65,7 +65,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       int port = uri.getPort();
       this.dfs = new DFSClient(new InetSocketAddress(host, port), conf);
       this.uri = URI.create("hdfs://"+host+":"+port);
-      this.localFs = getNamed("file:///", conf);
+      this.localFs = getLocal(conf);
     }
 
     public Path getWorkingDirectory() {

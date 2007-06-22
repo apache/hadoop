@@ -242,6 +242,10 @@ Trunk (unreleased changes)
  74. HADOOP-1518.  Add a session id to job metrics, for use by HOD.
      (David Bowen via cutting)
 
+ 75. HADOOP-1292.  Change 'bin/hadoop fs -get' to first copy files to
+     a temporary name, then rename them to their final name, so that
+     failures don't leave partial files.  (Tsz Wo Sze via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

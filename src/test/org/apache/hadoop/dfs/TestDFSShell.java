@@ -36,10 +36,97 @@ public class TestDFSShell extends TestCase {
   
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     DataOutputStream stm = fileSys.create(name);
-    stm.writeBytes("dhruba");
+    stm.writeBytes("dhruba: " + name);
     stm.close();
   }
-  
+
+  public void testCopyToLocal() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    FileSystem fs = cluster.getFileSystem();
+    assertTrue("Not a HDFS: "+fs.getUri(),
+               fs instanceof DistributedFileSystem);
+    DistributedFileSystem dfs = (DistributedFileSystem)fs;
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+
+    try {
+      {
+        // create a tree
+        //   ROOT
+        //   |- f1
+        //   |- f2
+        //   + sub
+        //      |- f3
+        //      |- f4
+        Path root = new Path("/test/copyToLocal");
+        assertTrue(dfs.mkdirs(root));
+        assertTrue(dfs.exists(root));
+        assertTrue(dfs.isDirectory(root));
+
+        Path sub = new Path(root, "sub");
+        assertTrue(dfs.mkdirs(sub));
+        assertTrue(dfs.exists(sub));
+        assertTrue(dfs.isDirectory(sub));
+
+        Path f1 = new Path(root, "f1");
+        writeFile(dfs, f1);
+        assertTrue(dfs.exists(f1));
+
+        Path f2 = new Path(root, "f2");
+        writeFile(dfs, f2);
+        assertTrue(dfs.exists(f2));
+
+        Path f3 = new Path(sub, "f3");
+        writeFile(dfs, f3);
+        assertTrue(dfs.exists(f3));
+
+        Path f4 = new Path(sub, "f4");
+        writeFile(dfs, f4);
+        assertTrue(dfs.exists(f4));
+      }
+
+
+      // Verify copying the tree
+      {
+        String[] args = {"-copyToLocal", "/test/copyToLocal", TEST_ROOT_DIR};
+        try {
+          assertEquals(0, shell.run(args));
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+
+        File f1 = new File(TEST_ROOT_DIR, "f1");
+        assertTrue("Copying failed.", f1.isFile());
+
+        File f2 = new File(TEST_ROOT_DIR, "f2");
+        assertTrue("Copying failed.", f2.isFile());
+
+        File sub = new File(TEST_ROOT_DIR, "sub");
+        assertTrue("Copying failed.", sub.isDirectory());
+
+        File f3 = new File(sub, "f3");
+        assertTrue("Copying failed.", f3.exists());
+
+        File f4 = new File(sub, "f4");
+        assertTrue("Copying failed.", f4.exists());
+
+        f1.delete();
+        f2.delete();
+        f3.delete();
+        f4.delete();
+        sub.delete();
+      }
+    } finally {
+      try {
+        dfs.close();
+      } catch (Exception e) {
+      }
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Tests various options of DFSShell.
    */
