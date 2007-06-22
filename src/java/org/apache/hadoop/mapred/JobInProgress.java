@@ -152,8 +152,9 @@ class JobInProgress {
                                     System.currentTimeMillis(), jobFile); 
         
     MetricsContext metricsContext = MetricsUtil.getContext("mapred");
-    this.jobMetrics = metricsContext.createRecord("job");
+    this.jobMetrics = MetricsUtil.createRecord(metricsContext, "job");
     this.jobMetrics.setTag("user", conf.getUser());
+    this.jobMetrics.setTag("sessionId", conf.getSessionId());
     this.jobMetrics.setTag("jobName", conf.getJobName());
     this.jobMetrics.setTag("jobId", jobid);
   }

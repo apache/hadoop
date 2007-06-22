@@ -162,8 +162,10 @@ public class TaskTracker
     private int numCompletedTasks = 0;
       
     TaskTrackerMetrics() {
+      JobConf conf = getJobConf();
       MetricsContext context = MetricsUtil.getContext("mapred");
       metricsRecord = MetricsUtil.createRecord(context, "tasktracker");
+      metricsRecord.setTag("sessionId", conf.getSessionId());
       context.registerUpdater(this);
     }
       
@@ -317,10 +319,10 @@ public class TaskTracker
     int numCopiers = this.fConf.getInt("mapred.reduce.parallel.copies", 5);
     //tweak the probe sample size (make it a function of numCopiers)
     probe_sample_size = Math.max(numCopiers*5, 50);
-        
-        
+    
+    
     this.myMetrics = new TaskTrackerMetrics();
-        
+    
     // port numbers
     this.taskReportPort = this.fConf.getInt("mapred.task.tracker.report.port", 50050);
     // bind address

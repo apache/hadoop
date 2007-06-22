@@ -424,9 +424,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     private int numJobsSubmitted = 0;
     private int numJobsCompleted = 0;
       
-    JobTrackerMetrics() {
+    JobTrackerMetrics(JobConf conf) {
       MetricsContext context = MetricsUtil.getContext("mapred");
       metricsRecord = MetricsUtil.createRecord(context, "jobtracker");
+      metricsRecord.setTag("sessionId", conf.getSessionId());
       context.registerUpdater(this);
     }
       
@@ -651,7 +652,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
     this.startTime = System.currentTimeMillis();
 
-    myMetrics = new JobTrackerMetrics();
+    myMetrics = new JobTrackerMetrics(jobConf);
     this.expireTrackersThread = new Thread(this.expireTrackers,
                                            "expireTrackers");
     this.expireTrackersThread.start();

@@ -239,6 +239,9 @@ Trunk (unreleased changes)
  73. HADOOP-1512.  Fix failing TestTextInputFormat on Windows.
      (Senthil Subramanian via nigel)
 
+ 74. HADOOP-1518.  Add a session id to job metrics, for use by HOD.
+     (David Bowen via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

@@ -747,6 +747,7 @@ class ReduceTask extends Task {
       this.shuffleMetrics = 
         MetricsUtil.createRecord(metricsContext, "shuffleInput");
       this.shuffleMetrics.setTag("user", conf.getUser());
+      this.shuffleMetrics.setTag("sessionId", conf.getSessionId());
 
       // Seed the random number generator with a reasonably globally unique seed
       long randomSeed = System.nanoTime() + 

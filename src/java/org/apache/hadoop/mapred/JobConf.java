@@ -597,6 +597,34 @@ public class JobConf extends Configuration {
   }
   
   /**
+   * Get the user-specified session identifier. The default is the empty string.
+   *
+   * The session identifier is used to tag metric data that is reported to some
+   * performance metrics system via the org.apache.hadoop.metrics API.  The 
+   * session identifier is intended, in particular, for use by Hadoop-On-Demand 
+   * (HOD) which allocates a virtual Hadoop cluster dynamically and transiently. 
+   * HOD will set the session identifier by modifying the hadoop-site.xml file 
+   * before starting the cluster.
+   *
+   * When not running under HOD, this identifer is expected to remain set to 
+   * the empty string.
+   *
+   * @return the session identifier, defaulting to ""
+   */
+  public String getSessionId() {
+      return get("session.id", "");
+  }
+  
+  /**
+   * Set the user-specified session idengifier.  
+   *
+   * @param sessionId the new session id
+   */
+  public void setSessionId(String sessionId) {
+      set("session.id", sessionId);
+  }
+    
+  /**
    * Set the maximum no. of failures of a given job per tasktracker.
    * 
    * @param noFailures maximum no. of failures of a given job per tasktracker.
