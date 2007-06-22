@@ -195,10 +195,6 @@ public class RawLocalFileSystem extends FileSystem {
   /**
    * Replication is not supported for the local file system.
    */
-  public short getReplication(Path f) throws IOException {
-    return 1;
-  }
-  
   /** Set the replication of the given file */
   public boolean setReplication(Path src,
                                 short replication
@@ -221,14 +217,6 @@ public class RawLocalFileSystem extends FileSystem {
   
   public boolean exists(Path f) throws IOException {
     return pathToFile(f).exists();
-  }
-  
-  public boolean isDirectory(Path f) throws IOException {
-    return pathToFile(f).isDirectory();
-  }
-  
-  public long getLength(Path f) throws IOException {
-    return pathToFile(f).length();
   }
   
   public Path[] listPaths(Path f) throws IOException {
@@ -366,12 +354,38 @@ public class RawLocalFileSystem extends FileSystem {
     return "LocalFS";
   }
   
-  public long getBlockSize(Path filename) {
-    // local doesn't really do blocks, so just use the global number
-    return getDefaultBlockSize();
+  public FileStatus getFileStatus(Path f) throws IOException {
+    return new RawLocalFileStatus(pathToFile(f));
   }
-  
+
   public short getDefaultReplication() {
     return 1;
+  }
+  
+  private class RawLocalFileStatus implements FileStatus {
+    private long length;
+    private boolean isDir;
+    private long mtime;
+
+    RawLocalFileStatus(File f) throws IOException {
+      length = f.length();
+      isDir = f.isDirectory();
+      mtime = f.lastModified();
+    }
+    public long getLen() {
+      return length;
+    }
+    public boolean isDir() {
+      return isDir;
+    }
+    public long getBlockSize() {
+      return getDefaultBlockSize();
+    }
+    public short getReplication() {
+      return 1;
+    }
+    public long getModificationTime() {
+      return mtime;
+    }
   }
 }

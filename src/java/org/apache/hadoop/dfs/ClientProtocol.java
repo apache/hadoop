@@ -30,10 +30,8 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Compared to the previous version the following changes have been introduced:
-   * 12: open() prototype changed; 
-   *     getBlockLocations() added; 
-   *     DFSFileInfo format changed;
-   *     getHints() removed.
+   * 13: getListing returns file creation times and modification times.
+   *     getFileInfo added.
    *     DatanodeInfo serialization has hostname.
    */
   public static final long versionID = 13L;
@@ -370,4 +368,11 @@ interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public void metaSave(String filename) throws IOException;
+
+  /* Get the file info for a specific file or directory.
+   * @param src The string representation of the path to the file
+   * @throws IOException if file does not exist
+   * @return object containing information regarding the file
+   */
+  public DFSFileInfo getFileInfo(String src) throws IOException;
 }

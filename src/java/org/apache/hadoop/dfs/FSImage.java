@@ -647,11 +647,15 @@ class FSImage extends Storage {
       short replication = FSNamesystem.getFSNamesystem().getDefaultReplication();
       for (int i = 0; i < numFiles; i++) {
         UTF8 name = new UTF8();
+        long modificationTime = 0;
         name.readFields(in);
         // version 0 does not support per file replication
         if (!(imgVersion >= 0)) {
           replication = in.readShort(); // other versions do
           replication = FSEditLog.adjustReplication(replication);
+        }
+        if (imgVersion <= -5) {
+          modificationTime = in.readLong();
         }
         int numBlocks = in.readInt();
         Block blocks[] = null;
@@ -662,7 +666,8 @@ class FSImage extends Storage {
             blocks[j].readFields(in);
           }
         }
-        fsDir.unprotectedAddFile(name.toString(), blocks, replication);
+        fsDir.unprotectedAddFile(name.toString(), blocks, replication,
+                                 modificationTime);
       }
       
       // load datanode info
@@ -784,6 +789,7 @@ class FSImage extends Storage {
       fullName = parentPrefix + "/" + root.getLocalName();
       new UTF8(fullName).write(out);
       out.writeShort(root.getReplication());
+      out.writeLong(root.getModificationTime());
       if (root.isDir()) {
         out.writeInt(0);
       } else {

@@ -368,11 +368,15 @@ public abstract class FileSystem extends Configured {
   /**
    * Get replication.
    * 
+   * @deprecated Use getFileStatus() instead
    * @param src file name
    * @return file replication
    * @throws IOException
-   */
-  public abstract short getReplication(Path src) throws IOException;
+   */ 
+  @Deprecated
+  public short getReplication(Path src) throws IOException {
+    return getFileStatus(src).getReplication();
+  }
 
   /**
    * Set replication for an existing file.
@@ -400,7 +404,14 @@ public abstract class FileSystem extends Configured {
   public abstract boolean exists(Path f) throws IOException;
 
   /** True iff the named path is a directory. */
-  public abstract boolean isDirectory(Path f) throws IOException;
+  /** @deprecated Use getFileStatus() instead */ @Deprecated
+  public boolean isDirectory(Path f) throws IOException {
+    try {
+      return getFileStatus(f).isDir();
+    } catch (IOException e) {
+      return false;               // f does not exist
+    }
+  }
 
   /** True iff the named path is a regular file. */
   public boolean isFile(Path f) throws IOException {
@@ -412,7 +423,10 @@ public abstract class FileSystem extends Configured {
   }
     
   /** The number of bytes in a file. */
-  public abstract long getLength(Path f) throws IOException;
+  /** @deprecated Use getFileStatus() instead */ @Deprecated
+  public long getLength(Path f) throws IOException {
+    return getFileStatus(f).getLen();
+  }
     
   /** Return the number of bytes of the given path 
    * If <i>f</i> is a file, return the size of the file;
@@ -817,7 +831,10 @@ public abstract class FileSystem extends Configured {
    * @param f the filename
    * @return the number of bytes in a block
    */
-  public abstract long getBlockSize(Path f) throws IOException;
+  /** @deprecated Use getFileStatus() instead */ @Deprecated
+  public long getBlockSize(Path f) throws IOException {
+    return getFileStatus(f).getBlockSize();
+  }
     
   /** Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time. */
@@ -831,4 +848,12 @@ public abstract class FileSystem extends Configured {
    */
   public abstract short getDefaultReplication();
 
+  /* 
+   * Return a file status object that represents the
+   * file.
+   * @param f The path to the file we want information from
+   * @return filestatus object
+   * @throws IOException see specific implementation
+   */
+  public abstract FileStatus getFileStatus(Path f) throws IOException;
 }

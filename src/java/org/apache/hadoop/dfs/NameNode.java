@@ -470,6 +470,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     return files;
   }
 
+  /* Get the file info for a specific file.
+   * @param src The string representation of the path to the file
+   * @throws IOException if file does not exist
+   * @return object containing information regarding the file
+   */
+  public DFSFileInfo getFileInfo(String src)  throws IOException {
+    return namesystem.getFileInfo(src);
+  }
+
   /**
    */
   public long[] getStats() throws IOException {

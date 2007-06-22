@@ -246,6 +246,11 @@ Trunk (unreleased changes)
      a temporary name, then rename them to their final name, so that
      failures don't leave partial files.  (Tsz Wo Sze via cutting)
 
+ 76. HADOOP-1377.  Add support for modification time to FileSystem and
+     implement in HDFS and local implementations.  Also, alter access
+     to file properties to be through a new FileStatus interface.
+     (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

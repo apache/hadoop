@@ -55,4 +55,7 @@ class DfsPath extends Path {
   public long getBlockSize() {
     return info.getBlockSize();
   }
+  public long getModificationTime() {
+    return info.getModificationTime();
+  }
 }

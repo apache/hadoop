@@ -136,8 +136,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -4;
+  public static final int LAYOUT_VERSION = -5;
   // Current version: 
-  // Top level directory is reorganized to allow file system state 
-  // transitions: upgrade, rollback, and finalize.
+  // File modification times added.
 }

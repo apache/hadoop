@@ -76,14 +76,6 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       return dfs.getDefaultBlockSize();
     }
     
-    public long getBlockSize(Path f) throws IOException {
-      // if we already know the answer, use it.
-      if (f instanceof DfsPath) {
-        return ((DfsPath) f).getBlockSize();
-      }
-      return dfs.getBlockSize(getPath(f));
-    }
-    
     public short getDefaultReplication() {
       return dfs.getDefaultReplication();
     }
@@ -172,22 +164,6 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       return dfs.exists(getPath(f));
     }
 
-    public boolean isDirectory(Path f) throws IOException {
-      if (f instanceof DfsPath) {
-        return ((DfsPath)f).isDirectory();
-      }
-      return dfs.isDirectory(getPath(f));
-    }
-
-    public long getLength(Path f) throws IOException {
-      if (f instanceof DfsPath) {
-        return ((DfsPath)f).length();
-      }
-
-      DFSFileInfo info[] = dfs.listPaths(getPath(f));
-      return (info == null) ? 0 : info[0].getLen();
-    }
-
     public long getContentLength(Path f) throws IOException {
       if (f instanceof DfsPath) {
         return ((DfsPath)f).getContentsLength();
@@ -195,15 +171,6 @@ public class DistributedFileSystem extends ChecksumFileSystem {
 
       DFSFileInfo info[] = dfs.listPaths(getPath(f));
       return (info == null) ? 0 : info[0].getLen();
-    }
-
-    public short getReplication(Path f) throws IOException {
-      if (f instanceof DfsPath) {
-        return ((DfsPath)f).getReplication();
-      }
-
-      DFSFileInfo info[] = dfs.listPaths(getPath(f));
-      return info[0].getReplication();
     }
 
     public Path[] listPaths(Path f) throws IOException {
@@ -367,6 +334,20 @@ public class DistributedFileSystem extends ChecksumFileSystem {
 
       return true;
     }
+
+    /**
+     * Returns the stat information about the file.
+     */
+    public FileStatus getFileStatus(Path f) throws IOException {
+      if (f instanceof DfsPath) {
+        DfsPath p = (DfsPath) f;
+        return p.info;
+      }
+      else {
+        DFSFileInfo p = dfs.getFileInfo(getPath(f));
+        return p;
+      }
+    }
   }
 
   public DistributedFileSystem() {
@@ -443,5 +424,13 @@ public class DistributedFileSystem extends ChecksumFileSystem {
                                        FSDataInputStream sums, long sumsPos) {
     return ((RawDistributedFileSystem)fs).reportChecksumFailure(
                                                                 f, in, inPos, sums, sumsPos);
+  }
+
+  /**
+   * Returns the stat information about the file.
+   */
+  @Override
+  public FileStatus getFileStatus(Path f) throws IOException {
+    return ((RawDistributedFileSystem)fs).getFileStatus(f);
   }
 }

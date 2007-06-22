@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
 
 import java.io.*;
 
@@ -30,7 +31,7 @@ import java.io.*;
  * Block locations are sorted by the distance to the current client.
  * 
  ******************************************************/
-class DFSFileInfo implements Writable {
+class DFSFileInfo implements Writable, FileStatus {
   static {                                      // register a ctor
     WritableFactories.setFactory
       (DFSFileInfo.class,
@@ -44,7 +45,8 @@ class DFSFileInfo implements Writable {
   boolean isDir;
   short blockReplication;
   long blockSize;
-  
+  long modificationTime;
+
   /**
    */
   public DFSFileInfo() {
@@ -59,6 +61,7 @@ class DFSFileInfo implements Writable {
     this.len = isDir ? node.computeContentsLength() : node.computeFileLength();
     this.blockReplication = node.getReplication();
     blockSize = node.getBlockSize();
+    modificationTime = node.getModificationTime();
   }
 
   /**
@@ -112,6 +115,14 @@ class DFSFileInfo implements Writable {
   public long getBlockSize() {
     return blockSize;
   }
+
+  /**
+   * Get the last modification time of the file.
+   * @return the number of milliseconds since January 1, 1970 UTC.
+   */
+  public long getModificationTime() {
+    return modificationTime;
+  }
     
   //////////////////////////////////////////////////
   // Writable
@@ -122,6 +133,7 @@ class DFSFileInfo implements Writable {
     out.writeBoolean(isDir);
     out.writeShort(blockReplication);
     out.writeLong(blockSize);
+    out.writeLong(modificationTime);
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -131,5 +143,6 @@ class DFSFileInfo implements Writable {
     this.isDir = in.readBoolean();
     this.blockReplication = in.readShort();
     blockSize = in.readLong();
+    modificationTime = in.readLong();
   }
 }

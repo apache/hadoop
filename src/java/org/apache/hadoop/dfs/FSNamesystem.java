@@ -1169,6 +1169,15 @@ class FSNamesystem implements FSConstants {
     return dir.isDir(src);
   }
 
+  /* Get the file info for a specific file.
+   * @param src The string representation of the path to the file
+   * @throws IOException if file does not exist
+   * @return object containing information regarding the file
+   */
+  DFSFileInfo getFileInfo(String src) throws IOException {
+    return dir.getFileInfo(src);
+  }
+
   /**
    * Whether the pathname is valid.  Currently prohibits relative paths, 
    * and names which contain a ":" or "/" 
@@ -1213,7 +1222,7 @@ class FSNamesystem implements FSConstants {
     if (!isValidName(src)) {
       throw new IOException("Invalid directory name: " + src);
     }
-    success = dir.mkdirs(src);
+    success = dir.mkdirs(src, now());
     if (!success) {
       throw new IOException("Invalid directory name: " + src);
     }

@@ -233,7 +233,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
     /**
      * Replication is not supported for the inmemory file system.
      */
-    public short getReplication(Path src) throws IOException {
+    public short getDefaultReplication() {
       return 1;
     }
 
@@ -269,23 +269,6 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
     public boolean exists(Path f) throws IOException {
       synchronized (this) {
         return pathToFileAttribs.containsKey(getPath(f));
-      }
-    }
-  
-    /**
-     * Directory operations are not supported
-     */
-    public boolean isDirectory(Path f) throws IOException {
-      return !isFile(f);
-    }
-
-    public boolean isFile(Path f) throws IOException {
-      return exists(f);
-    }
-
-    public long getLength(Path f) throws IOException {
-      synchronized (this) {
-        return pathToFileAttribs.get(getPath(f)).size;
       }
     }
   
@@ -330,16 +313,14 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       throws IOException {
     }
 
-    public long getBlockSize(Path f) throws IOException {
-      return getDefaultBlockSize();
-    }
-
     public long getDefaultBlockSize() {
       return 32 * 1024; //some random large number. can be anything actually
     }
 
-    public short getDefaultReplication() {
-      return 1;
+    public FileStatus getFileStatus(Path f) throws IOException {
+      synchronized (this) {
+        return new InMemoryFileStatus(pathToFileAttribs.get(getPath(f)));
+      }
     }
   
     /** Some APIs exclusively for InMemoryFileSystem */
@@ -428,6 +409,29 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       public FileAttributes(int size) {
         this.size = size;
         this.data = new byte[size];
+      }
+    }
+
+    private class InMemoryFileStatus implements FileStatus {
+      private long length;
+
+      InMemoryFileStatus(FileAttributes attr) throws IOException {
+        length = attr.size;
+      }
+      public long getLen() {
+        return length;
+      }
+      public boolean isDir() {
+        return false;
+      }
+      public long getBlockSize() {
+        return getDefaultBlockSize();
+      }
+      public short getReplication() {
+        return 1;
+      }
+      public long getModificationTime() {
+        return 0;  // not supported yet
       }
     }
   }

@@ -48,6 +48,7 @@ class FSDirectory implements FSConstants {
     private TreeMap<String, INode> children = null;
     private Block blocks[] = null;
     private short blockReplication;
+    private long modificationTime;
 
     /**
      */
@@ -56,6 +57,7 @@ class FSDirectory implements FSConstants {
       this.parent = null;
       this.blocks = blocks;
       this.blockReplication = replication;
+      this.modificationTime = 0;
     }
 
     /**
@@ -65,6 +67,26 @@ class FSDirectory implements FSConstants {
       this.parent = null;
       this.blocks = null;
       this.blockReplication = 0;
+      this.modificationTime = 0;
+    }
+
+    INode(String name, long modifictionTime) {
+      this.name = name;
+      this.parent = null;
+      this.blocks = null;
+      this.blockReplication = 0;
+      this.modificationTime = modifictionTime;
+    }
+
+    /**
+     */
+    INode(String name, Block blocks[], short replication,
+          long modificationTime) {
+      this.name = name;
+      this.parent = null;
+      this.blocks = blocks;
+      this.blockReplication = replication;
+      this.modificationTime = modificationTime;
     }
 
     /**
@@ -104,6 +126,24 @@ class FSDirectory implements FSConstants {
      */
     INode getParent() {
       return this.parent;
+    }
+
+    /**
+     * Get last modification time of inode.
+     * @return access time
+     */
+    long getModificationTime() {
+      return this.modificationTime;
+    }
+
+    /**
+     * Set last modification time of inode.
+     */
+    void setModificationTime(long modtime) {
+      assert isDir();
+      if (this.modificationTime <= modtime) {
+        this.modificationTime = modtime;
+      }
     }
 
     /**
@@ -215,7 +255,7 @@ class FSDirectory implements FSConstants {
         return true;
       }
     }
-          
+
     /**
      * Collect all the blocks at this INode and all its children.
      * This operation is performed after a node is removed from the tree,
@@ -385,12 +425,14 @@ class FSDirectory implements FSConstants {
   public boolean addFile(String path, Block[] blocks, short replication) {
     waitForReady();
 
-    // Always do an implicit mkdirs for parent directory tree
-    if (!mkdirs(new Path(path).getParent().toString())) {
+    // Always do an implicit mkdirs for parent directory tree.
+    long modTime = FSNamesystem.now();
+    if (!mkdirs(new Path(path).getParent().toString(), modTime)) {
       return false;
     }
-    INode newNode = new INode(new File(path).getName(), blocks, replication);
-    if (!unprotectedAddFile(path, newNode)) {
+    INode newNode = new INode(new File(path).getName(), blocks, 
+                              replication, modTime);
+    if (!unprotectedAddFile(path, newNode, modTime)) {
       NameNode.stateChangeLog.info("DIR* FSDirectory.addFile: "
                                    +"failed to add "+path+" with "
                                    +blocks.length+" blocks to the file system");
@@ -405,14 +447,17 @@ class FSDirectory implements FSConstants {
     
   /**
    */
-  boolean unprotectedAddFile(String path, INode newNode) {
+  private boolean unprotectedAddFile(String path, INode newNode, long parentModTime) {
     synchronized (rootDir) {
       try {
         if (rootDir.addNode(path, newNode) != null) {
           int nrBlocks = (newNode.blocks == null) ? 0 : newNode.blocks.length;
           // Add file->block mapping
-          for (int i = 0; i < nrBlocks; i++)
+          for (int i = 0; i < nrBlocks; i++) {
             namesystem.blocksMap.addINode(newNode.blocks[i], newNode);
+          }
+          // update modification time of parent directory
+          newNode.getParent().setModificationTime(parentModTime);
           return true;
         } else {
           return false;
@@ -423,9 +468,12 @@ class FSDirectory implements FSConstants {
     }
   }
     
-  boolean unprotectedAddFile(String path, Block[] blocks, short replication) {
+  boolean unprotectedAddFile(String path, Block[] blocks, short replication,
+                             long modificationTime) {
     return unprotectedAddFile(path,  
-                              new INode(path, blocks, replication));
+                              new INode(path, blocks, replication,
+                                        modificationTime),
+                              modificationTime);
   }
 
   /**
@@ -435,15 +483,16 @@ class FSDirectory implements FSConstants {
     NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
                                   +src+" to "+dst);
     waitForReady();
-    if (!unprotectedRenameTo(src, dst))
+    long now = namesystem.now();
+    if (!unprotectedRenameTo(src, dst, now))
       return false;
-    fsImage.getEditLog().logRename(src, dst);
+    fsImage.getEditLog().logRename(src, dst, now);
     return true;
   }
 
   /**
    */
-  boolean unprotectedRenameTo(String src, String dst) {
+  boolean unprotectedRenameTo(String src, String dst, long timestamp) {
     synchronized(rootDir) {
       INode renamedNode = rootDir.getNode(src);
       if (renamedNode == null) {
@@ -459,6 +508,7 @@ class FSDirectory implements FSConstants {
                                      +"failed to rename "+src+" to "+dst+ " because destination exists");
         return false;
       }
+      INode oldParent = renamedNode.getParent();
       renamedNode.removeNode();
             
       // the renamed node can be reused now
@@ -466,6 +516,10 @@ class FSDirectory implements FSConstants {
         if (rootDir.addNode(dst, renamedNode) != null) {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: "
                                         +src+" is renamed to "+dst);
+
+          // update modification time of old parent as well as new parent dir
+          oldParent.setModificationTime(timestamp);
+          renamedNode.getParent().setModificationTime(timestamp);
           return true;
         }
       } catch (FileNotFoundException e) {
@@ -476,7 +530,6 @@ class FSDirectory implements FSConstants {
         }catch(FileNotFoundException e2) {                
         }
       }
-
       return false;
     }
   }
@@ -549,15 +602,16 @@ class FSDirectory implements FSConstants {
     NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "
                                   +src);
     waitForReady();
-    Block[] blocks = unprotectedDelete(src); 
+    long now = namesystem.now();
+    Block[] blocks = unprotectedDelete(src, now); 
     if (blocks != null)
-      fsImage.getEditLog().logDelete(src);
+      fsImage.getEditLog().logDelete(src, now);
     return blocks;
   }
 
   /**
    */
-  Block[] unprotectedDelete(String src) {
+  Block[] unprotectedDelete(String src, long modificationTime) {
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(src);
       if (targetNode == null) {
@@ -576,6 +630,7 @@ class FSDirectory implements FSConstants {
         } else {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
                                         +src+" is removed");
+          targetNode.getParent().setModificationTime(modificationTime);
           Vector<Block> v = new Vector<Block>();
           targetNode.collectSubtreeBlocks(v);
           for (Block b : v) {
@@ -648,6 +703,24 @@ class FSDirectory implements FSConstants {
     }
   }
 
+  /* Get the file info for a specific file.
+   * @param src The string representation of the path to the file
+   * @throws IOException if file does not exist
+   * @return object containing information regarding the file
+   */
+  DFSFileInfo getFileInfo(String src) throws IOException {
+    String srcs = normalizePath(src);
+    synchronized (rootDir) {
+      INode targetNode = rootDir.getNode(srcs);
+      if (targetNode == null) {
+        throw new IOException("File does not exist");
+      }
+      else {
+        return new DFSFileInfo(targetNode);
+      }
+    }
+  }
+
   /**
    * Get the blocks associated with the file.
    */
@@ -702,7 +775,7 @@ class FSDirectory implements FSConstants {
   /**
    * Create directory entries for every item
    */
-  boolean mkdirs(String src) {
+  boolean mkdirs(String src, long now) {
     src = normalizePath(src);
 
     // Use this to collect all the dirs we need to construct
@@ -724,7 +797,7 @@ class FSDirectory implements FSConstants {
     for (int i = numElts - 1; i >= 0; i--) {
       String cur = v.elementAt(i);
       try {
-        INode inserted = unprotectedMkdir(cur);
+        INode inserted = unprotectedMkdir(cur, now);
         if (inserted != null) {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
                                         +"created directory "+cur);
@@ -747,9 +820,10 @@ class FSDirectory implements FSConstants {
 
   /**
    */
-  INode unprotectedMkdir(String src) throws FileNotFoundException {
+  INode unprotectedMkdir(String src, long timestamp) throws FileNotFoundException {
     synchronized (rootDir) {
-      return rootDir.addNode(src, new INode(new File(src).getName()));
+      return rootDir.addNode(src, new INode(new File(src).getName(),
+                                            timestamp));
     }
   }
 

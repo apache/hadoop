@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.*;
+import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.ipc.*;
@@ -29,6 +30,8 @@ public class FsShell extends ToolBase {
 
   protected FileSystem fs;
   private Trash trash;
+  public static final SimpleDateFormat dateForm = 
+    new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
   /**
    */
@@ -405,12 +408,15 @@ public class FsShell extends ToolBase {
       }
       for (int i = 0; i < items.length; i++) {
         Path cur = items[i];
+        FileStatus stat = fs.getFileStatus(cur);
+        String mdate = dateForm.format(new Date(stat.getModificationTime()));
         System.out.println(cur.toUri().getPath() + "\t" 
-                           + (fs.isDirectory(cur) ? 
-                              "<dir>" : 
-                              ("<r " + fs.getReplication(cur) 
-                               + ">\t" + fs.getLength(cur))));
-        if (recursive && fs.isDirectory(cur)) {
+                           + (stat.isDir() ? 
+                              "<dir>\t" : 
+                              ("<r " + stat.getReplication() 
+                               + ">\t" + stat.getLen()))
+                           + "\t" + mdate);
+        if (recursive && stat.isDir()) {
           ls(cur, recursive, printHeader);
         }
       }

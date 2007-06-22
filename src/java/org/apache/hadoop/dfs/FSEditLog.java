@@ -227,6 +227,9 @@ class FSEditLog {
       short replication = fsNamesys.getDefaultReplication();
       try {
         while (true) {
+          long timestamp = 0;
+          long ctime = 0; 
+          long mtime = 0;
           byte opcode = -1;
           try {
             opcode = in.readByte();
@@ -247,13 +250,18 @@ class FSEditLog {
               aw = new ArrayWritable(UTF8.class);
               aw.readFields(in);
               writables = aw.get(); 
-              if (writables.length != 2)
-                throw new IOException("Incorrect data fortmat. " 
-                                      + "Name & replication pair expected");
+              if (logVersion >= -4 && writables.length != 2 ||
+                  logVersion < -4 && writables.length != 3) {
+                  throw new IOException("Incorrect data fortmat. " 
+                                        + "Name & replication pair expected");
+              }
               name = (UTF8) writables[0];
               replication = Short.parseShort(
                                              ((UTF8)writables[1]).toString());
               replication = adjustReplication(replication);
+              if (logVersion < -4) {
+                mtime = Long.parseLong(((UTF8)writables[2]).toString());
+              }
             }
             // get blocks
             aw = new ArrayWritable(Block.class);
@@ -262,7 +270,7 @@ class FSEditLog {
             Block blocks[] = new Block[writables.length];
             System.arraycopy(writables, 0, blocks, 0, blocks.length);
             // add to the file tree
-            fsDir.unprotectedAddFile(name.toString(), blocks, replication);
+            fsDir.unprotectedAddFile(name.toString(), blocks, replication, mtime);
             break;
           }
           case OP_SET_REPLICATION: {
@@ -277,23 +285,70 @@ class FSEditLog {
             break;
           } 
           case OP_RENAME: {
-            UTF8 src = new UTF8();
-            UTF8 dst = new UTF8();
-            src.readFields(in);
-            dst.readFields(in);
-            fsDir.unprotectedRenameTo(src.toString(), dst.toString());
+            UTF8 src = null;
+            UTF8 dst = null;
+            if (logVersion >= -4) {
+              src = new UTF8();
+              dst = new UTF8();
+              src.readFields(in);
+              dst.readFields(in);
+            } else {
+              ArrayWritable aw = null;
+              Writable writables[];
+              aw = new ArrayWritable(UTF8.class);
+              aw.readFields(in);
+              writables = aw.get(); 
+              if (writables.length != 3) {
+                throw new IOException("Incorrect data fortmat. " 
+                                      + "Mkdir operation.");
+              }
+              src = (UTF8) writables[0];
+              dst = (UTF8) writables[1];
+              timestamp = Long.parseLong(((UTF8)writables[2]).toString());
+            }
+            fsDir.unprotectedRenameTo(src.toString(), dst.toString(), timestamp);
             break;
           }
           case OP_DELETE: {
-            UTF8 src = new UTF8();
-            src.readFields(in);
-            fsDir.unprotectedDelete(src.toString());
+            UTF8 src = null;
+            if (logVersion >= -4) {
+              src = new UTF8();
+              src.readFields(in);
+            } else {
+              ArrayWritable aw = null;
+              Writable writables[];
+              aw = new ArrayWritable(UTF8.class);
+              aw.readFields(in);
+              writables = aw.get(); 
+              if (writables.length != 2) {
+                throw new IOException("Incorrect data fortmat. " 
+                                      + "delete operation.");
+              }
+              src = (UTF8) writables[0];
+              timestamp = Long.parseLong(((UTF8)writables[1]).toString());
+            }
+            fsDir.unprotectedDelete(src.toString(), timestamp);
             break;
           }
           case OP_MKDIR: {
-            UTF8 src = new UTF8();
-            src.readFields(in);
-            fsDir.unprotectedMkdir(src.toString());
+            UTF8 src = null;
+            if (logVersion >= -4) {
+              src = new UTF8();
+              src.readFields(in);
+            } else {
+              ArrayWritable aw = null;
+              Writable writables[];
+              aw = new ArrayWritable(UTF8.class);
+              aw.readFields(in);
+              writables = aw.get(); 
+              if (writables.length != 2) {
+                throw new IOException("Incorrect data fortmat. " 
+                                      + "Mkdir operation.");
+              }
+              src = (UTF8) writables[0];
+              timestamp = Long.parseLong(((UTF8)writables[1]).toString());
+            }
+            fsDir.unprotectedMkdir(src.toString(), timestamp);
             break;
           }
           case OP_DATANODE_ADD: {
@@ -422,7 +477,8 @@ class FSEditLog {
   void logCreateFile(FSDirectory.INode newNode) {
     UTF8 nameReplicationPair[] = new UTF8[] { 
       new UTF8(newNode.computeName()), 
-      FSEditLog.toLogReplication(newNode.getReplication())};
+      FSEditLog.toLogReplication(newNode.getReplication()),
+      FSEditLog.toLogTimeStamp(newNode.getModificationTime())};
     logEdit(OP_ADD,
             new ArrayWritable(UTF8.class, nameReplicationPair), 
             new ArrayWritable(Block.class, newNode.getBlocks()));
@@ -432,15 +488,23 @@ class FSEditLog {
    * Add create directory record to edit log
    */
   void logMkDir(FSDirectory.INode newNode) {
-    logEdit(OP_MKDIR, new UTF8(newNode.computeName()), null);
+    UTF8 info[] = new UTF8[] {
+      new UTF8(newNode.computeName()),
+      FSEditLog.toLogTimeStamp(newNode.getModificationTime())
+    };
+    logEdit(OP_MKDIR, new ArrayWritable(UTF8.class, info), null);
   }
   
   /** 
    * Add rename record to edit log
    * TODO: use String parameters until just before writing to disk
    */
-  void logRename(String src, String dst) {
-    logEdit(OP_RENAME, new UTF8(src), new UTF8(dst));
+  void logRename(String src, String dst, long timestamp) {
+    UTF8 info[] = new UTF8[] { 
+      new UTF8(src),
+      new UTF8(dst),
+      FSEditLog.toLogTimeStamp(timestamp)};
+    logEdit(OP_RENAME, new ArrayWritable(UTF8.class, info), null);
   }
   
   /** 
@@ -455,8 +519,11 @@ class FSEditLog {
   /** 
    * Add delete file record to edit log
    */
-  void logDelete(String src) {
-    logEdit(OP_DELETE, new UTF8(src), null);
+  void logDelete(String src, long timestamp) {
+    UTF8 info[] = new UTF8[] { 
+      new UTF8(src),
+      FSEditLog.toLogTimeStamp(timestamp)};
+    logEdit(OP_DELETE, new ArrayWritable(UTF8.class, info), null);
   }
   
   /** 
@@ -481,6 +548,10 @@ class FSEditLog {
   
   static short fromLogReplication(UTF8 replication) {
     return Short.parseShort(replication.toString());
+  }
+
+  static UTF8 toLogTimeStamp(long timestamp) {
+    return new UTF8(Long.toString(timestamp));
   }
 
   /**

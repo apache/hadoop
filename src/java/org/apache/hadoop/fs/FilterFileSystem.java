@@ -124,17 +124,6 @@ public class FilterFileSystem extends FileSystem {
   }
 
   /**
-   * Get replication.
-   * 
-   * @param src file name
-   * @return file replication
-   * @throws IOException
-   */
-  public short getReplication(Path src) throws IOException {
-    return fs.getReplication(src);
-  }
-
-  /**
    * Set replication for an existing file.
    * 
    * @param src file name
@@ -167,16 +156,6 @@ public class FilterFileSystem extends FileSystem {
     return fs.exists(f);
   }
 
-  /** True iff the named path is a directory. */
-  public boolean isDirectory(Path f) throws IOException {
-    return fs.isDirectory(f);
-  }
-
-  /** The number of bytes in a file. */
-  public long getLength(Path f) throws IOException {
-    return fs.getLength(f);
-  }
-  
   /** List files in a directory. */
   public Path[] listPaths(Path f) throws IOException {
     return fs.listPaths(f);
@@ -272,15 +251,6 @@ public class FilterFileSystem extends FileSystem {
     fs.completeLocalOutput(fsOutputFile, tmpLocalFile);
   }
 
-  /**
-   * Get the block size for a particular file.
-   * @param f the filename
-   * @return the number of bytes in a block
-   */
-  public long getBlockSize(Path f) throws IOException {
-    return fs.getBlockSize(f);
-  }
-  
   /** Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time. */
   public long getDefaultBlockSize() {
@@ -292,6 +262,13 @@ public class FilterFileSystem extends FileSystem {
    */
   public short getDefaultReplication() {
     return fs.getDefaultReplication();
+  }
+
+  /**
+   * Get file status.
+   */
+  public FileStatus getFileStatus(Path f) throws IOException {
+    return fs.getFileStatus(f);
   }
 
   @Override

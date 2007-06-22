@@ -13,6 +13,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -119,15 +120,6 @@ public class S3FileSystem extends FileSystem {
     }
     Path parent = absolutePath.getParent();
     return (parent == null || mkdirs(parent));
-  }
-
-  @Override
-  public boolean isDirectory(Path path) throws IOException {
-    INode inode = store.retrieveINode(makeAbsolute(path));
-    if (inode == null) {
-      return false;
-    }
-    return inode.isDirectory();
   }
 
   @Override
@@ -270,28 +262,25 @@ public class S3FileSystem extends FileSystem {
     return true;
   }
 
-  @Override
-  public long getLength(Path path) throws IOException {
-    INode inode = checkFile(path);
-    long length = 0;
-    for (Block block : inode.getBlocks()) {
-      length += block.getLength();
-    }
-    return length;
-  }
-
   /**
    * Replication is not supported for S3 file systems since S3 handles it for
    * us.
    */
   @Override
-  public short getReplication(Path path) throws IOException {
+  public short getDefaultReplication() {
     return 1;
   }
 
+  /**
+   * FileStatus for S3 file systems. 
+   */
   @Override
-  public short getDefaultReplication() {
-    return 1;
+  public FileStatus getFileStatus(Path f)  throws IOException {
+    INode inode = store.retrieveINode(makeAbsolute(f));
+    if (inode == null) {
+      throw new IOException(f.toString() + ": No such file or directory.");
+    }
+    return new S3FileStatus(inode);
   }
 
   /**
@@ -302,19 +291,6 @@ public class S3FileSystem extends FileSystem {
   public boolean setReplication(Path path, short replication)
     throws IOException {
     return true;
-  }
-
-  @Override
-  public long getBlockSize(Path path) throws IOException {
-    INode inode = store.retrieveINode(makeAbsolute(path));
-    if (inode == null) {
-      throw new IOException(path.toString() + ": No such file or directory.");
-    }
-    Block[] blocks = inode.getBlocks();
-    if (blocks == null || blocks.length == 0) {
-      return 0;
-    }
-    return blocks[0].getLength();
   }
 
   @Override
@@ -379,4 +355,35 @@ public class S3FileSystem extends FileSystem {
     store.purge();
   }
 
+  private static class S3FileStatus implements FileStatus {
+    private long length = 0, blockSize = 0;
+    private boolean isDir;
+
+    S3FileStatus(INode inode) throws IOException {
+      isDir = inode.isDirectory();
+      if (!isDir) {
+        for (Block block : inode.getBlocks()) {
+          length += block.getLength();
+          if (blockSize == 0) {
+            blockSize = block.getLength();
+          }
+        }
+      }
+    }
+    public long getLen() {
+      return length;
+    }
+    public boolean isDir() {
+      return isDir;
+    }
+    public long getBlockSize() {
+      return blockSize;
+    }
+    public short getReplication() {
+      return 1;
+    }
+    public long getModificationTime() {
+      return 0;  // not supported yet
+    }
+  }
 }

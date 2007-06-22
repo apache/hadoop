@@ -399,6 +399,11 @@ class DFSClient implements FSConstants {
     return namenode.getListing(src.toString());
   }
 
+  public DFSFileInfo getFileInfo(UTF8 src) throws IOException {
+    checkOpen();
+    return namenode.getFileInfo(src.toString());
+  }
+
   /**
    */
   public long totalRawCapacity() throws IOException {

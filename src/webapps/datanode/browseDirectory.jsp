@@ -69,9 +69,10 @@
       // directory
       DFSFileInfo[] files = dfs.listPaths(target);
       //generate a table and dump the info
-      String [] headings = new String[5];
+      String [] headings = new String[7];
       headings[0] = "Name"; headings[1] = "Type"; headings[2] = "Size";
       headings[3] = "Replication"; headings[4] = "BlockSize";
+      headings[5] = "Creation Time"; headings[6] = "Modification Time";
       out.print("<h3>Contents of directory ");
       JspHelper.printPathWithLinks(dir, out, namenodeInfoPort);
       out.print("</h3><hr>");
@@ -92,7 +93,7 @@
         jspHelper.addTableHeader(out);
         int row=0;
         jspHelper.addTableRow(out, headings, row++);
-        String cols [] = new String[5];
+        String cols [] = new String[6];
         for (int i = 0; i < files.length; i++) {
           //Get the location of the first block of the file
           if (files[i].getPath().endsWith(".crc")) continue;
@@ -113,6 +114,7 @@
             cols[2] = FsShell.byteDesc(files[i].getLen());
             cols[3] = Short.toString(files[i].getReplication());
             cols[4] = FsShell.byteDesc(files[i].getBlockSize());
+            cols[5] = FsShell.dateForm.format(new Date((files[i].getModificationTime())));
           }
           else {
             String datanodeUrl = req.getRequestURL()+"?dir="+
@@ -123,6 +125,7 @@
             cols[2] = "";
             cols[3] = "";
             cols[4] = "";
+            cols[5] = FsShell.dateForm.format(new Date((files[i].getModificationTime())));
           }
           jspHelper.addTableRow(out, cols, row++);
         }
