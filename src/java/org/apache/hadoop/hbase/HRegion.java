@@ -55,7 +55,7 @@ import java.util.*;
  * regionName is a unique identifier for this HRegion. (startKey, endKey]
  * defines the keyspace for this HRegion.
  */
-class HRegion implements HConstants {
+public class HRegion implements HConstants {
   static String SPLITDIR = "splits";
   static String MERGEDIR = "merges";
   static String TMPREGION_PREFIX = "tmpregion_";
@@ -289,7 +289,6 @@ class HRegion implements HConstants {
    * the supplied path.
    * 
    * @param rootDir root directory for HBase instance
-   * @param log HLog where changes should be committed
    * @param fs is the filesystem.  
    * @param conf is global configuration settings.
    * @param regionInfo - HRegionInfo that describes the region
@@ -298,7 +297,7 @@ class HRegion implements HConstants {
    * 
    * @throws IOException
    */
-  HRegion(Path rootDir, HLog log, FileSystem fs, Configuration conf, 
+  public HRegion(Path rootDir, HLog log, FileSystem fs, Configuration conf, 
       HRegionInfo regionInfo, Path initialFiles)
   throws IOException {
     
@@ -386,7 +385,7 @@ class HRegion implements HConstants {
    * This method could take some time to execute, so don't call it from a 
    * time-sensitive thread.
    */
-  Vector<HStoreFile> close() throws IOException {
+  public Vector<HStoreFile> close() throws IOException {
     lock.obtainWriteLock();
     try {
       boolean shouldClose = false;
@@ -548,43 +547,43 @@ class HRegion implements HConstants {
   // HRegion accessors
   //////////////////////////////////////////////////////////////////////////////
 
-  Text getStartKey() {
+  public Text getStartKey() {
     return regionInfo.startKey;
   }
   
-  Text getEndKey() {
+  public Text getEndKey() {
     return regionInfo.endKey;
   }
   
-  long getRegionId() {
+  public long getRegionId() {
     return regionInfo.regionId;
   }
 
-  Text getRegionName() {
+  public Text getRegionName() {
     return regionInfo.regionName;
   }
   
-  Path getRootDir() {
+  public Path getRootDir() {
     return rootDir;
   }
  
-  HTableDescriptor getTableDesc() {
+  public HTableDescriptor getTableDesc() {
     return regionInfo.tableDesc;
   }
   
-  HLog getLog() {
+  public HLog getLog() {
     return log;
   }
   
-  Configuration getConf() {
+  public Configuration getConf() {
     return conf;
   }
   
-  Path getRegionDir() {
+  public Path getRegionDir() {
     return regiondir;
   }
   
-  FileSystem getFilesystem() {
+  public FileSystem getFilesystem() {
     return fs;
   }
 
@@ -973,7 +972,7 @@ class HRegion implements HConstants {
    * Return an iterator that scans over the HRegion, returning the indicated 
    * columns.  This Iterator must be closed by the caller.
    */
-  HInternalScannerInterface getScanner(Text[] cols, Text firstRow)
+  public HInternalScannerInterface getScanner(Text[] cols, Text firstRow)
   throws IOException {
     lock.obtainReadLock();
     try {
@@ -1009,9 +1008,9 @@ class HRegion implements HConstants {
    * 
    * @param row Row to update
    * @return lockid
-   * @see #put(long, Text, BytesWritable)
+   * @see #put(long, Text, byte[])
    */
-  long startUpdate(Text row) throws IOException {
+  public long startUpdate(Text row) throws IOException {
     // We obtain a per-row lock, so other clients will block while one client
     // performs an update.  The read lock is released by the client calling
     // #commit or #abort or if the HRegionServer lease on the lock expires.
@@ -1029,7 +1028,7 @@ class HRegion implements HConstants {
    * This method really just tests the input, then calls an internal localput() 
    * method.
    */
-  void put(long lockid, Text targetCol, byte [] val) throws IOException {
+  public void put(long lockid, Text targetCol, byte [] val) throws IOException {
     if (DELETE_BYTES.compareTo(val) == 0) {
       throw new IOException("Cannot insert value: " + val);
     }
@@ -1039,7 +1038,7 @@ class HRegion implements HConstants {
   /**
    * Delete a value or write a value. This is a just a convenience method for put().
    */
-  void delete(long lockid, Text targetCol) throws IOException {
+  public void delete(long lockid, Text targetCol) throws IOException {
     localput(lockid, targetCol, DELETE_BYTES.get());
   }
 
@@ -1090,7 +1089,7 @@ class HRegion implements HConstants {
    * writes associated with the given row-lock.  These values have not yet
    * been placed in memcache or written to the log.
    */
-  void abort(long lockid) throws IOException {
+  public void abort(long lockid) throws IOException {
     Text row = getRowFromLock(lockid);
     if(row == null) {
       throw new LockException("No write lock for lockid " + lockid);
@@ -1124,7 +1123,7 @@ class HRegion implements HConstants {
    * @param lockid Lock for row we're to commit.
    * @throws IOException
    */
-  void commit(final long lockid) throws IOException {
+  public void commit(final long lockid) throws IOException {
     // Remove the row from the pendingWrites list so 
     // that repeated executions won't screw this up.
     Text row = getRowFromLock(lockid);

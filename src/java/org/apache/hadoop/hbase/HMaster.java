@@ -659,7 +659,7 @@ public class HMaster implements HConstants, HMasterInterface,
   /** 
    * @return HServerAddress of the master server
    */
-  HServerAddress getMasterAddress() {
+  public HServerAddress getMasterAddress() {
     return address;
   }
 

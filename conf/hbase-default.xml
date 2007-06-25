@@ -15,6 +15,13 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.class</name>
+    <value>org.apache.hadoop.hbase.HRegionInterface</value>
+    <description>An interface that is assignable to HRegionInterface.  Used in HClient for
+    opening proxy to remote region server.
+    </description>
+  </property>
+  <property>
     <name>hbase.rootdir</name>
     <value>${hadoop.tmp.dir}/hbase</value>
     <description>The directory shared by region servers.

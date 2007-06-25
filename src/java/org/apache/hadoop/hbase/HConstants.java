@@ -47,7 +47,13 @@ public interface HConstants {
   static final String REGIONSERVER_ADDRESS = "hbase.regionserver";
   
   /** Default region server address */
-  static final String DEFAULT_REGIONSERVER_ADDRESS = DEFAULT_HOST + ":60010";
+  static final String DEFAULT_REGIONSERVER_ADDRESS = DEFAULT_HOST + ":60010";  
+
+  /** Parameter name for what region server interface to use. */
+  static final String REGION_SERVER_CLASS = "hbase.regionserver.class";
+  
+  /** Default region server interface class name. */
+  static final String DEFAULT_REGION_SERVER_CLASS = HRegionInterface.class.getName();
 
   /** Parameter name for how often threads should wake up */
   static final String THREAD_WAKE_FREQUENCY = "hbase.server.thread.wakefrequency";

@@ -58,11 +58,12 @@ public class HClient implements HConstants {
   int numRetries;
   private HMasterInterface master;
   private final Configuration conf;
+  private Class<? extends HRegionInterface> serverInterfaceClass;
   
   /*
    * Data structure that holds current location for a region and its info.
    */
-  static class RegionLocation {
+  protected static class RegionLocation {
     HRegionInfo regionInfo;
     HServerAddress serverAddress;
 
@@ -75,6 +76,14 @@ public class HClient implements HConstants {
     public String toString() {
       return "address: " + this.serverAddress.toString() + ", regioninfo: " +
         this.regionInfo;
+    }
+    
+    public HRegionInfo getRegionInfo(){
+      return regionInfo;
+    }
+
+    public HServerAddress getServerAddress(){
+      return serverAddress;
     }
   }
   
@@ -93,6 +102,7 @@ public class HClient implements HConstants {
   HRegionInterface currentServer;
   Random rand;
   long clientid;
+
 
   /** 
    * Creates a new HClient
@@ -116,7 +126,7 @@ public class HClient implements HConstants {
     this.rand = new Random();
   }
   
-  private void handleRemoteException(RemoteException e) throws IOException {
+  protected void handleRemoteException(RemoteException e) throws IOException {
     String msg = e.getMessage();
     if(e.getClassName().equals("org.apache.hadoop.hbase.InvalidColumnNameException")) {
       throw new InvalidColumnNameException(msg);
@@ -143,7 +153,7 @@ public class HClient implements HConstants {
   
   /* Find the address of the master and connect to it
    */
-  private void checkMaster() throws MasterNotRunningException {
+  protected void checkMaster() throws MasterNotRunningException {
     if (this.master != null) {
       return;
     }
@@ -531,7 +541,7 @@ public class HClient implements HConstants {
    * @param tableName - the table name to be checked
    * @throws IllegalArgumentException - if the table name is reserved
    */
-  private void checkReservedTableName(Text tableName) {
+  protected void checkReservedTableName(Text tableName) {
     if(tableName.equals(ROOT_TABLE_NAME)
         || tableName.equals(META_TABLE_NAME)) {
       
@@ -547,7 +557,7 @@ public class HClient implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
   // Client API
   //////////////////////////////////////////////////////////////////////////////
-
+  
   /**
    * Loads information so that a table can be manipulated.
    * 
@@ -558,15 +568,29 @@ public class HClient implements HConstants {
     if(tableName == null || tableName.getLength() == 0) {
       throw new IllegalArgumentException("table name cannot be null or zero length");
     }
-    this.tableServers = tablesToServers.get(tableName);
-    if (this.tableServers == null ) {
+    this.tableServers = getTableServers(tableName);
+  }
+  
+  /**
+   * Gets the servers of the given table.
+   * 
+   * @param tableName - the table to be located
+   * @throws IOException - if the table can not be located after retrying
+   */
+  protected synchronized SortedMap<Text, RegionLocation> getTableServers(Text tableName) throws IOException {
+    if(tableName == null || tableName.getLength() == 0) {
+      throw new IllegalArgumentException("table name cannot be null or zero length");
+    }
+    SortedMap<Text, RegionLocation> serverResult  = tablesToServers.get(tableName);
+    if (serverResult == null ) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("No servers for " + tableName + ". Doing a find...");
       }
       // We don't know where the table is.
       // Load the information from meta.
-      this.tableServers = findServersForTable(tableName);
+      serverResult = findServersForTable(tableName);
     }
+    return serverResult;
   }
 
   /*
@@ -832,24 +856,39 @@ public class HClient implements HConstants {
     return servers;
   }
 
-  /* 
-   * Establishes a connection to the region server at the specified address
+  /** 
+   * Establishes a connection to the region server at the specified address.
    * @param regionServer - the server to connect to
    * @throws IOException
    */
-  synchronized HRegionInterface getHRegionConnection(HServerAddress regionServer)
-      throws IOException {
+  protected synchronized HRegionInterface getHRegionConnection(
+      HServerAddress regionServer) throws IOException{
 
-      // See if we already have a connection
+    getRegionServerInterface();
 
+    // See if we already have a connection
     HRegionInterface server = this.servers.get(regionServer.toString());
-    
-    if(server == null) {                                // Get a connection
-      
-      server = (HRegionInterface)RPC.waitForProxy(HRegionInterface.class, 
-          HRegionInterface.versionID, regionServer.getInetSocketAddress(),
-          this.conf);
-      
+
+    if (server == null) { // Get a connection
+      long versionId = 0;
+      try {
+        versionId = serverInterfaceClass.getDeclaredField("versionID").getLong(server);
+      } catch (IllegalAccessException e) {
+        // Should never happen unless visibility of versionID changes
+        throw new UnsupportedOperationException(
+            "Unable to open a connection to a " + serverInterfaceClass.getName() + " server.", e);
+      } catch (NoSuchFieldException e) {
+        // Should never happen unless versionID field name changes in HRegionInterface
+        throw new UnsupportedOperationException(
+            "Unable to open a connection to a " + serverInterfaceClass.getName() + " server.", e);
+      }
+
+      server = (HRegionInterface) RPC.waitForProxy(
+               serverInterfaceClass,
+               versionId,
+               regionServer.getInetSocketAddress(),
+               this.conf);
+
       this.servers.put(regionServer.toString(), server);
     }
     return server;
@@ -917,7 +956,7 @@ public class HClient implements HConstants {
    * @param row Row to find.
    * @return Location of row.
    */
-  synchronized RegionLocation getRegionLocation(Text row) {
+  protected synchronized RegionLocation getRegionLocation(Text row) {
     if(this.tableServers == null) {
       throw new IllegalStateException("Must open table first");
     }
@@ -1547,6 +1586,35 @@ public class HClient implements HConstants {
     }
     
     return errCode;
+  }    
+
+  /**
+   * Determine the region server interface to use from configuration properties.
+   *
+   */
+  @SuppressWarnings("unchecked")
+  private void getRegionServerInterface() {
+    if (this.serverInterfaceClass != null) {
+      return;
+    }
+
+    String serverClassName = this.conf.get(REGION_SERVER_CLASS,
+                                           DEFAULT_REGION_SERVER_CLASS);
+
+    try {
+      this.serverInterfaceClass = (Class<? extends HRegionInterface>) Class
+                                                                           .forName(serverClassName);
+    } catch (ClassNotFoundException e) {
+      throw new UnsupportedOperationException(
+            "Unable to find region server interface " + serverClassName, e);
+    }
+  }
+
+  /**
+   * @return the configuration for this client
+   */
+  protected Configuration getConf(){
+    return conf;
   }
   
   /**
@@ -1558,4 +1626,5 @@ public class HClient implements HConstants {
     int errCode = (new HClient(c)).doCommandLine(args);
     System.exit(errCode);
   }
+
 }

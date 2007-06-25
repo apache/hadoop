@@ -468,7 +468,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Sets a flag that will cause all the HRegionServer threads to shut down
    * in an orderly fashion.
    */
-  synchronized void stop() {
+  public synchronized void stop() {
     stopRequested = true;
     notifyAll();                        // Wakes run() if it is sleeping
   }
@@ -1079,25 +1079,25 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** 
-   * Private utility method for safely obtaining an HRegion handle.
+   * Protected utility method for safely obtaining an HRegion handle.
    * @param regionName Name of online {@link HRegion} to return
    * @return {@link HRegion} for <code>regionName</code>
    * @throws NotServingRegionException
    */
-  private HRegion getRegion(final Text regionName)
+  protected HRegion getRegion(final Text regionName)
   throws NotServingRegionException {
     return getRegion(regionName, false);
   }
   
   /** 
-   * Private utility method for safely obtaining an HRegion handle.
+   * Protected utility method for safely obtaining an HRegion handle.
    * @param regionName Name of online {@link HRegion} to return
    * @param checkRetiringRegions Set true if we're to check retiring regions
    * as well as online regions.
    * @return {@link HRegion} for <code>regionName</code>
    * @throws NotServingRegionException
    */
-  private HRegion getRegion(final Text regionName,
+  protected HRegion getRegion(final Text regionName,
       final boolean checkRetiringRegions)
   throws NotServingRegionException {
     HRegion region = null;

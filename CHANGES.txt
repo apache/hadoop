@@ -35,3 +35,8 @@ Trunk (unreleased changes)
  20. HADOOP-1465 Add cluster stop/start scripts for hbase
  21. HADOOP-1415 Provide configurable per-column bloom filters - part 2.
  22. HADOOP-1498. Replace boxed types with primitives in many places.
+ 23. HADOOP-1509.  Made methods/inner classes in HRegionServer and HClient protected
+     instead of private for easier extension. Also made HRegion and HRegionInfo public too.
+     Added an hbase-default.xml property for specifying what HRegionInterface extension to use
+     for proxy server connection.
+ 
