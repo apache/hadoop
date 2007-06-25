@@ -139,6 +139,41 @@ public class HRegionInfo implements WritableComparable {
     this.regionName.readFields(in);
     this.offLine = in.readBoolean();
   }
+  
+  /**
+   * @return the endKey
+   */
+  public Text getEndKey(){
+    return endKey;
+  }
+
+  /**
+   * @return the regionId
+   */
+  public long getRegionId(){
+    return regionId;
+  }
+
+  /**
+   * @return the regionName
+   */
+  public Text getRegionName(){
+    return regionName;
+  }
+
+  /**
+   * @return the startKey
+   */
+  public Text getStartKey(){
+    return startKey;
+  }
+
+  /**
+   * @return the tableDesc
+   */
+  public HTableDescriptor getTableDesc(){
+    return tableDesc;
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Comparable
