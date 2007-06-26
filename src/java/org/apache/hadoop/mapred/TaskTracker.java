@@ -1804,6 +1804,7 @@ public class TaskTracker
    * Start the TaskTracker, point toward the indicated JobTracker
    */
   public static void main(String argv[]) throws Exception {
+    StringUtils.startupShutdownMessage(TaskTracker.class, argv, LOG);
     if (argv.length != 0) {
       System.out.println("usage: TaskTracker");
       System.exit(-1);

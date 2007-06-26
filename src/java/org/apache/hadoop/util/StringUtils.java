@@ -20,11 +20,14 @@ package org.apache.hadoop.util;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -265,5 +268,52 @@ public class StringUtils {
       values.add(tokenizer.nextToken());
     }
     return (String[])values.toArray(new String[values.size()]);
+  }
+
+  /**
+   * Return hostname without throwing exception.
+   * @return hostname
+   */
+  public static String getHostname() {
+    try {return "" + InetAddress.getLocalHost();}
+    catch(UnknownHostException uhe) {return "" + uhe;}
+  }
+
+  /**
+   * Return a message for logging.
+   * @param prefix prefix keyword for the message
+   * @param msg content of the message
+   * @return a message for logging
+   */
+  private static String toStartupShutdownString(String prefix, String [] msg) {
+    StringBuffer b = new StringBuffer(prefix);
+    b.append("\n/************************************************************");
+    for(String s : msg)
+      b.append("\n" + prefix + s);
+    b.append("\n************************************************************/");
+    return b.toString();
+  }
+
+  /**
+   * Print a log message for starting up and shutting down
+   * @param clazz the class of the server
+   * @param args arguments
+   * @param LOG the target log object
+   */
+  public static void startupShutdownMessage(Class clazz, String[] args,
+                                     final org.apache.commons.logging.Log LOG) {
+    final String hostname = getHostname();
+    final String classname = clazz.getSimpleName();
+    LOG.info(toStartupShutdownString("STARTUP_MSG: ", new String[]{
+      "Starting " + classname,
+      "  host = " + hostname,
+      "  args = " + Arrays.asList(args)}));
+
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        LOG.info(toStartupShutdownString("SHUTDOWN_MSG: ", new String[]{
+          "Shutting down " + classname + " at " + hostname}));
+      }
+    });
   }
 }

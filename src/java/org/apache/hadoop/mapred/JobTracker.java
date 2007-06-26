@@ -1719,6 +1719,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * JobTracker should be run as part of the DFS Namenode process.
    */
   public static void main(String argv[]) throws IOException, InterruptedException {
+    StringUtils.startupShutdownMessage(JobTracker.class, argv, LOG);
     if (argv.length != 0) {
       System.out.println("usage: JobTracker");
       System.exit(-1);

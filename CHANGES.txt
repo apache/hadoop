@@ -261,6 +261,9 @@ Trunk (unreleased changes)
      new FsShell commands "touchz", "test" and "stat".
      (Chris Douglas via cutting)
 
+ 80. HADOOP-1028.  Add log messages for server startup and shutdown.
+     (Tsz Wo Sze via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

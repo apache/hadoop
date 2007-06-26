@@ -818,6 +818,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    */
   public static void main(String argv[]) throws Exception {
     try {
+      StringUtils.startupShutdownMessage(NameNode.class, argv, LOG);
       NameNode namenode = createNameNode(argv, null);
       if (namenode != null)
         namenode.join();

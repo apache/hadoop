@@ -461,6 +461,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
    * @exception Exception if the filesystem does not exist.
    */
   public static void main(String[] argv) throws Exception {
+    StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
     Configuration tconf = new Configuration();
     if (argv.length >= 1) {
       SecondaryNameNode secondary = new SecondaryNameNode(tconf);

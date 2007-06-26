@@ -289,7 +289,6 @@ public class DataNode implements FSConstants, Runnable {
         } catch (InterruptedException ie) {}
       }
     }
-    String errorMsg = null;
     return nsInfo;
   }
 
@@ -1103,8 +1102,8 @@ public class DataNode implements FSConstants, Runnable {
    * Only stop when "shouldRun" is turned off (which can only happen at shutdown).
    */
   public void run() {
-    LOG.info("Starting DataNode in: "+data);
-        
+    LOG.info("In DataNode.run, data = " + data);
+
     // start dataXceiveServer
     dataXceiveServer.start();
         
@@ -1324,6 +1323,7 @@ public class DataNode implements FSConstants, Runnable {
    */
   public static void main(String args[]) {
     try {
+      StringUtils.startupShutdownMessage(DataNode.class, args, LOG);
       DataNode datanode = createDataNode(args, null);
       if (datanode != null)
         datanode.join();
