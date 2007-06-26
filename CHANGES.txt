@@ -254,6 +254,9 @@ Trunk (unreleased changes)
  77. HADOOP-1515.  Add MultiFileInputFormat, which can pack multiple,
      typically small, input files into each split.  (Enis Soztutar via cutting)
 
+ 78. HADOOP-1514.  Make reducers report progress while waiting for map
+     outputs, so they're not killed.  (Vivek Ratan via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

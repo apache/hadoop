@@ -872,6 +872,9 @@ class ReduceTask extends Task {
           // new, just wait for a bit
           try {
             if (numInFlight == 0 && numScheduled == 0) {
+              // we should indicate progress as we don't want TT to think
+              // we're stuck and kill us
+              reporter.progress();
               Thread.sleep(5000);
             }
           } catch (InterruptedException e) { } // IGNORE
