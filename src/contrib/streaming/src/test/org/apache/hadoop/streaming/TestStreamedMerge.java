@@ -105,10 +105,7 @@ public class TestStreamedMerge extends TestCase {
   void lsr() {
     try {
       System.out.println("lsr /");
-      FsShell shell = new FsShell();
-      shell.setConf(conf_);
-      shell.init();
-      shell.ls("/", true);
+      new FsShell().doMain(conf_, new String[]{ "-lsr", "/" });
     } catch (Exception e) {
       e.printStackTrace();
     }

@@ -17,6 +17,7 @@
   <property name="src.dir" value="${basedir}/src/java"/>
   <property name="native.src.dir" value="${basedir}/src/native"/>
   <property name="examples.dir" value="${basedir}/src/examples"/>
+  <property name="anttasks.dir" value="${basedir}/src/ant"/>
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
   <property name="docs.dir" value="${basedir}/docs"/>
@@ -33,6 +34,7 @@
   <property name="build.src" value="${build.dir}/src"/>
   <property name="build.webapps" value="${build.dir}/webapps"/>
   <property name="build.examples" value="${build.dir}/examples"/>
+  <property name="build.anttasks" value="${build.dir}/ant"/>
   <property name="build.libhdfs" value="${build.dir}/libhdfs"/>
   <property name="build.platform" 
             value="${os.name}-${os.arch}-${sun.arch.data.model}"/>
@@ -122,6 +124,7 @@
     <mkdir dir="${build.webapps}/dfs/WEB-INF"/>
     <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
+    <mkdir dir="${build.anttasks}"/>
     <mkdir dir="${build.dir}/c++"/>
  
     <mkdir dir="${test.build.dir}"/>
@@ -891,5 +894,29 @@
 
   <target name="compile-c++-examples" 
           depends="compile-c++-examples-pipes"/>
+
+  <target name="compile-ant-tasks" depends="compile-core">
+    <javac
+        encoding="${build.encoding}"
+        srcdir="${anttasks.dir}"
+        includes="org/apache/hadoop/ant/**/*.java"
+        destdir="${build.anttasks}"
+        debug="${javac.debug}"
+        optimize="${javac.optimize}"
+        target="${javac.version}"
+        source="${javac.version}"
+        deprecation="${javac.deprecation}">
+        <compilerarg line="${javac.args}"/>
+        <classpath refid="classpath"/>
+    </javac>
+  </target>
+
+  <target name="ant-tasks" depends="jar, compile-ant-tasks">
+    <copy file="${anttasks.dir}/org/apache/hadoop/ant/antlib.xml"
+          todir="${build.anttasks}/org/apache/hadoop/ant"/>
+    <jar destfile="${build.dir}/ant-${final.name}.jar">
+      <fileset dir="${build.anttasks}"/>
+    </jar>
+  </target>
 
 </project>

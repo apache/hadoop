@@ -257,6 +257,10 @@ Trunk (unreleased changes)
  78. HADOOP-1514.  Make reducers report progress while waiting for map
      outputs, so they're not killed.  (Vivek Ratan via cutting)
 
+ 79. HADOOP-1508.  Add an Ant task for FsShell operations.  Also add
+     new FsShell commands "touchz", "test" and "stat".
+     (Chris Douglas via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

@@ -261,6 +261,30 @@ public class TestDFSShell extends TestCase {
         }
         assertTrue(val == 0);
       }
+
+      // Verify touch/test
+      {
+        String[] args = new String[2];
+        args[0] = "-touchz";
+        args[1] = "/test/mkdirs/noFileHere";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertTrue(val == 0);
+
+        args[0] = "-test";
+        args[1] = "-e " + args[1];
+        try {
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertTrue(val == 0);
+      }
         
     } finally {
       try {

@@ -32,13 +32,18 @@ public class FsShell extends ToolBase {
   private Trash trash;
   public static final SimpleDateFormat dateForm = 
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
+  protected static final SimpleDateFormat modifFmt =
+    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  {
+    modifFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+  }
 
   /**
    */
   public FsShell() {
   }
 
-  public void init() throws IOException {
+  protected void init() throws IOException {
     conf.setQuietMode(true);
     this.fs = FileSystem.get(conf);
     this.trash = new Trash(conf);
@@ -333,7 +338,7 @@ public class FsShell extends ToolBase {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
-  public void setReplication(short newRep, String srcf, boolean recursive)
+  void setReplication(short newRep, String srcf, boolean recursive)
     throws IOException {
     Path[] srcs = fs.globPaths(new Path(srcf));
     for(int i=0; i<srcs.length; i++) {
@@ -389,7 +394,7 @@ public class FsShell extends ToolBase {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
-  public void ls(String srcf, boolean recursive) throws IOException {
+  void ls(String srcf, boolean recursive) throws IOException {
     Path[] srcs = fs.globPaths(new Path(srcf));
     boolean printHeader = (srcs.length == 1) ? true: false;
     for(int i=0; i<srcs.length; i++) {
@@ -429,7 +434,7 @@ public class FsShell extends ToolBase {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
-  public void du(String src) throws IOException {
+  void du(String src) throws IOException {
     Path items[] = fs.listPaths(fs.globPaths(new Path(src)));
     if (items == null) {
       throw new IOException("Could not get listing for " + src);
@@ -449,7 +454,7 @@ public class FsShell extends ToolBase {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
-  public void dus(String src) throws IOException {
+  void dus(String src) throws IOException {
     Path paths[] = fs.globPaths(new Path(src));
     if (paths==null || paths.length==0) {
       throw new IOException("dus: No match: " + src);
@@ -471,13 +476,107 @@ public class FsShell extends ToolBase {
   /**
    * Create the given dir
    */
-  public void mkdir(String src) throws IOException {
+  void mkdir(String src) throws IOException {
     Path f = new Path(src);
     if (!fs.mkdirs(f)) {
       throw new IOException("Mkdirs failed to create " + src);
     }
   }
-    
+
+  /**
+   * (Re)create zero-length file at the specified path.
+   * This will be replaced by a more UNIX-like touch when files may be
+   * modified.
+   */
+  void touchz(String src) throws IOException {
+    Path f = new Path(src);
+    FileStatus st;
+    if (fs.exists(f)) {
+      st = fs.getFileStatus(f);
+      if (st.isDir()) {
+        // TODO: handle this
+        throw new IOException(src + " is a directory");
+      } else if (st.getLen() != 0)
+        throw new IOException(src + " must be a zero-length file");
+    }
+    FSDataOutputStream out = fs.create(f);
+    out.close();
+  }
+
+  /**
+   * Check file types.
+   */
+  int test(String argv[], int i) throws IOException {
+    if (!argv[i].startsWith("-") || argv[i].length() > 2)
+      throw new IOException("Not a flag: " + argv[i]);
+    char flag = argv[i].toCharArray()[1];
+    Path f = new Path(argv[++i]);
+    switch(flag) {
+      case 'e':
+        return fs.exists(f) ? 1 : 0;
+      case 'z':
+        return fs.getFileStatus(f).getLen() == 0 ? 1 : 0;
+      case 'd':
+        return fs.getFileStatus(f).isDir() ? 1 : 0;
+      default:
+        throw new IOException("Unknown flag: " + flag);
+    }
+  }
+
+  /**
+   * Print statistics about path in specified format.
+   * Format sequences:
+   *   %b: Size of file in blocks
+   *   %n: Filename
+   *   %o: Block size
+   *   %r: replication
+   *   %y: UTC date as &quot;yyyy-MM-dd HH:mm:ss&quot;
+   *   %Y: Milliseconds since January 1, 1970 UTC
+   */
+  void stat(char[] fmt, String src) throws IOException {
+    Path glob[] = fs.globPaths(new Path(src));
+    if (null == glob)
+      throw new IOException("cannot stat `" + src + "': No such file or directory");
+    for (Path f : glob) {
+      FileStatus st = fs.getFileStatus(f);
+      StringBuilder buf = new StringBuilder();
+      for (int i = 0; i < fmt.length; ++i) {
+        if (fmt[i] != '%') {
+          buf.append(fmt[i]);
+        } else {
+          if (i + 1 == fmt.length) break;
+          switch(fmt[++i]) {
+            case 'b':
+              buf.append(st.getLen());
+              break;
+            case 'F':
+              buf.append(st.isDir() ? "directory" : "regular file");
+              break;
+            case 'n':
+              buf.append(f.getName());
+              break;
+            case 'o':
+              buf.append(st.getBlockSize());
+              break;
+            case 'r':
+              buf.append(st.getReplication());
+              break;
+            case 'y':
+              buf.append(modifFmt.format(new Date(st.getModificationTime())));
+              break;
+            case 'Y':
+              buf.append(st.getModificationTime());
+              break;
+            default:
+              buf.append(fmt[i]);
+              break;
+          }
+        }
+      }
+      System.out.println(buf.toString());
+    }
+  }
+
   /**
    * Move files that match the file pattern <i>srcf</i>
    * to a destination file.
@@ -488,7 +587,7 @@ public class FsShell extends ToolBase {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
-  public void rename(String srcf, String dstf) throws IOException {
+  void rename(String srcf, String dstf) throws IOException {
     Path [] srcs = fs.globPaths(new Path(srcf));
     Path dst = new Path(dstf);
     if (srcs.length > 1 && !fs.isDirectory(dst)) {
@@ -574,7 +673,7 @@ public class FsShell extends ToolBase {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
-  public void copy(String srcf, String dstf, Configuration conf) throws IOException {
+  void copy(String srcf, String dstf, Configuration conf) throws IOException {
     Path [] srcs = fs.globPaths(new Path(srcf));
     Path dst = new Path(dstf);
     if (srcs.length > 1 && !fs.isDirectory(dst)) {
@@ -653,7 +752,7 @@ public class FsShell extends ToolBase {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
-  public void delete(String srcf, final boolean recursive) throws IOException {
+  void delete(String srcf, final boolean recursive) throws IOException {
     //rm behavior in Linux
     //  [~/1207]$ ls ?.txt
     //  x.txt  z.txt
@@ -735,7 +834,8 @@ public class FsShell extends ToolBase {
       "[-getmerge <src> <localdst> [addnl]] [-cat <src>]\n\t" +
       "[-copyToLocal <src><localdst>] [-moveToLocal <src> <localdst>]\n\t" +
       "[-mkdir <path>] [-report] [-setrep [-R] <rep> <path/file>]\n" +
-      "[-help [cmd]]\n"; 
+      "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n" +
+      "[-help [cmd]]\n";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
  
@@ -822,7 +922,17 @@ public class FsShell extends ToolBase {
     String setrep = "-setrep [-R] <rep> <path/file>:  Set the replication level of a file. \n" +
       "\t\tThe -R flag requests a recursive change of replication level \n" + 
       "\t\tfor an entire tree.\n"; 
-        
+
+    String touchz = "-touchz <path>: Write a timestamp in yyyy-MM-dd HH:mm:ss format\n" +
+      "\t\tin a file at <path>. An error is returned if the file exists with non-zero length\n";
+
+    String test = "-test -[ezd] <path>: If file { exists, has zero length, is a directory\n" +
+      "\t\tthen return 1, else return 0.\n";
+
+    String stat = "-stat [format] <path>: Print statistics about the file/directory at <path>\n" +
+      "\t\tin the specified format. Format accepts filesize in blocks (%b), filename (%n),\n" +
+      "\t\tblock size (%o), replication (%r), modification date (%y, %Y)\n";
+
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -870,6 +980,12 @@ public class FsShell extends ToolBase {
       System.out.println(get);
     } else if ("setrep".equals(cmd)) {
       System.out.println(setrep);
+    } else if ("touchz".equals(cmd)) {
+      System.out.println(touchz);
+    } else if ("test".equals(cmd)) {
+      System.out.println(test);
+    } else if ("stat".equals(cmd)) {
+      System.out.println(stat);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -931,6 +1047,8 @@ public class FsShell extends ToolBase {
           ls(argv[i], false);
         } else if ("-lsr".equals(cmd)) {
           ls(argv[i], true);
+        } else if ("-touchz".equals(cmd)) {
+          touchz(argv[i]);
         }
       } catch (RemoteException e) {
         //
@@ -963,7 +1081,7 @@ public class FsShell extends ToolBase {
    * Displays format of commands.
    * 
    */
-  public void printUsage(String cmd) {
+  void printUsage(String cmd) {
     if ("-fs".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [-fs <local | file system URI>]");
@@ -974,9 +1092,9 @@ public class FsShell extends ToolBase {
       System.err.println("Usage: java FsShell" + 
                          " [-D <[property=value>]");
     } else if ("-ls".equals(cmd) || "-lsr".equals(cmd) ||
-               "-du".equals(cmd) || "-dus".equals(cmd) || 
-               "-rm".equals(cmd) || "-rmr".equals(cmd) || 
-               "-mkdir".equals(cmd)) {
+               "-du".equals(cmd) || "-dus".equals(cmd) ||
+               "-rm".equals(cmd) || "-rmr".equals(cmd) ||
+               "-touchz".equals(cmd) || "-mkdir".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <path>]");
     } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
@@ -999,6 +1117,12 @@ public class FsShell extends ToolBase {
     } else if ("-setrep".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [-setrep [-R] <rep> <path/file>]");
+    } else if ("-test".equals(cmd)) {
+      System.err.println("Usage: java FsShell" +
+                         " [-test -[ezd] <path>]");
+    } else if ("-stat".equals(cmd)) {
+      System.err.println("Usage: java FsShell" +
+                         " [-stat [format] <path>]");
     } else {
       System.err.println("Usage: java FsShell");
       System.err.println("           [-fs <local | file system URI>]");
@@ -1023,6 +1147,9 @@ public class FsShell extends ToolBase {
       System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
       System.err.println("           [-mkdir <path>]");
       System.err.println("           [-setrep [-R] <rep> <path/file>]");
+      System.err.println("           [-touchz <path>]");
+      System.err.println("           [-test -[ezd] <path>]");
+      System.err.println("           [-stat [format] <path>]");
       System.err.println("           [-help [cmd]]");
     }
   }
@@ -1044,7 +1171,7 @@ public class FsShell extends ToolBase {
     //
     // verify that we have enough command line parameters
     //
-    if ("-put".equals(cmd) || 
+    if ("-put".equals(cmd) || "-test".equals(cmd) ||
         "-copyFromLocal".equals(cmd) || "-moveFromLocal".equals(cmd)) {
       if (argv.length != 3) {
         printUsage(cmd);
@@ -1062,7 +1189,8 @@ public class FsShell extends ToolBase {
         return exitCode;
       }
     } else if ("-rm".equals(cmd) || "-rmr".equals(cmd) ||
-               "-cat".equals(cmd) || "-mkdir".equals(cmd)) {
+               "-cat".equals(cmd) || "-mkdir".equals(cmd) ||
+               "-touchz".equals(cmd) || "-stat".equals(cmd)) {
       if (argv.length < 2) {
         printUsage(cmd);
         return exitCode;
@@ -1136,6 +1264,16 @@ public class FsShell extends ToolBase {
         }         
       } else if ("-mkdir".equals(cmd)) {
         exitCode = doall(cmd, argv, conf, i);
+      } else if ("-touchz".equals(cmd)) {
+        exitCode = doall(cmd, argv, conf, i);
+      } else if ("-test".equals(cmd)) {
+        exitCode = test(argv, i);
+      } else if ("-stat".equals(cmd)) {
+        if (i + 1 < argv.length) {
+          stat(argv[i++].toCharArray(), argv[i++]);
+        } else {
+          stat("%y".toCharArray(), argv[i]);
+        }
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
