@@ -31,22 +31,27 @@ public class TestCleanRegionServerExit extends HBaseClusterTestCase {
   
   public void testCleanRegionServerExit()
   throws IOException, InterruptedException {
-    // When the META table can be opened, the region servers are running
-    this.client.openTable(HConstants.META_TABLE_NAME);
-    // Put something into the meta table.
-    this.client.createTable(new HTableDescriptor(getName()));
-    // Get current region server instance.
-    HRegionServer hsr = this.cluster.regionServers.get(0);
-    Thread hrst = this.cluster.regionThreads.get(0);
-    // Start up a new one to take over serving of root and meta after we shut
-    // down the current meta/root host.
-    this.cluster.startRegionServer();
-    // Now shutdown the region server and wait for it to go down.
-    hsr.stop();
-    hrst.join();
-    // The recalibration of the client is not working properly.  FIX.
-    // After above is fixed, add in assertions that we can get data from
-    // newly located meta table.
+    try {
+      // When the META table can be opened, the region servers are running
+      this.client.openTable(HConstants.META_TABLE_NAME);
+      // Put something into the meta table.
+      this.client.createTable(new HTableDescriptor(getName()));
+      // Get current region server instance.
+      HRegionServer hsr = this.cluster.regionServers.get(0);
+      Thread hrst = this.cluster.regionThreads.get(0);
+      // Start up a new one to take over serving of root and meta after we shut
+      // down the current meta/root host.
+      this.cluster.startRegionServer();
+      // Now shutdown the region server and wait for it to go down.
+      hsr.stop();
+      hrst.join();
+      // The recalibration of the client is not working properly.  FIX.
+      // After above is fixed, add in assertions that we can get data from
+      // newly located meta table.
+    } catch(Exception e) {
+      e.printStackTrace();
+      fail();
+    }
   }
 
 /* Comment out till recalibration of client is working properly.

@@ -40,3 +40,6 @@ Trunk (unreleased changes)
      Added an hbase-default.xml property for specifying what HRegionInterface extension to use
      for proxy server connection. 
  24. HADOOP-1534. [hbase] Memcache scanner fails if start key not present
+ 25. HADOOP-1537. Catch exceptions in testCleanRegionServerExit so we can see
+     what is failing.
+
