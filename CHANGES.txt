@@ -264,6 +264,9 @@ Trunk (unreleased changes)
  80. HADOOP-1028.  Add log messages for server startup and shutdown.
      (Tsz Wo Sze via cutting)
 
+ 81. HADOOP-1485.  Add metrics for monitoring shuffle.
+     (Devaraj Das via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

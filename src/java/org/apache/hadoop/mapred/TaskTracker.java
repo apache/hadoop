@@ -148,6 +148,7 @@ public class TaskTracker
   private int failures;
   private int finishedCount[] = new int[1];
   private MapEventsFetcherThread mapEventsFetcher;
+  int workerThreads;
   /**
    * the minimum interval between jobtracker polls
    */
@@ -157,6 +158,60 @@ public class TaskTracker
    */  
   private int probe_sample_size = 50;
     
+  private ShuffleServerMetrics shuffleServerMetrics;
+  /** This class contains the methods that should be used for metrics-reporting
+   * the specific metrics for shuffle. The TaskTracker is actually a server for
+   * the shuffle and hence the name ShuffleServerMetrics.
+   */
+  private class ShuffleServerMetrics implements Updater {
+    private MetricsRecord shuffleMetricsRecord = null;
+    private int serverHandlerBusy = 0;
+    private long outputBytes = 0;
+    private int failedOutputs = 0;
+    private int successOutputs = 0;
+    ShuffleServerMetrics(JobConf conf) {
+      MetricsContext context = MetricsUtil.getContext("mapred");
+      shuffleMetricsRecord = 
+                           MetricsUtil.createRecord(context, "shuffleOutput");
+      this.shuffleMetricsRecord.setTag("sessionId", conf.getSessionId());
+      context.registerUpdater(this);
+    }
+    synchronized void serverHandlerBusy() {
+      ++serverHandlerBusy;
+    }
+    synchronized void serverHandlerFree() {
+      --serverHandlerBusy;
+    }
+    synchronized void outputBytes(long bytes) {
+      outputBytes += bytes;
+    }
+    synchronized void failedOutput() {
+      ++failedOutputs;
+    }
+    synchronized void successOutput() {
+      ++successOutputs;
+    }
+    public void doUpdates(MetricsContext unused) {
+      synchronized (this) {
+        if (workerThreads != 0) {
+          shuffleMetricsRecord.setMetric("shuffle_handler_busy_percent", 
+              100*((float)serverHandlerBusy/workerThreads));
+        } else {
+          shuffleMetricsRecord.setMetric("shuffle_handler_busy_percent", 0);
+        }
+        shuffleMetricsRecord.incrMetric("shuffle_output_bytes", 
+                                        outputBytes);
+        shuffleMetricsRecord.incrMetric("shuffle_failed_outputs", 
+                                        failedOutputs);
+        shuffleMetricsRecord.incrMetric("shuffle_success_outputs", 
+                                        successOutputs);
+        outputBytes = 0;
+        failedOutputs = 0;
+        successOutputs = 0;
+      }
+      shuffleMetricsRecord.update();
+    }
+  }
   private class TaskTrackerMetrics implements Updater {
     private MetricsRecord metricsRecord = null;
     private int numCompletedTasks = 0;
@@ -663,7 +718,8 @@ public class TaskTracker
     int httpPort = conf.getInt("tasktracker.http.port", 50060);
     String httpBindAddress = conf.get("tasktracker.http.bindAddress", "0.0.0.0");
     this.server = new StatusHttpServer("task", httpBindAddress, httpPort, true);
-    int workerThreads = conf.getInt("tasktracker.http.threads", 40);
+    workerThreads = conf.getInt("tasktracker.http.threads", 40);
+    this.shuffleServerMetrics = new ShuffleServerMetrics(fConf);
     server.setThreads(1, workerThreads);
     // let the jsp pages get to the task tracker, config, and other relevant
     // objects
@@ -674,6 +730,7 @@ public class TaskTracker
     server.setAttribute("conf", conf);
     server.setAttribute("log", LOG);
     server.setAttribute("localDirAllocator", localDirAllocator);
+    server.setAttribute("shuffleServerMetrics", shuffleServerMetrics);
     server.addServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
     server.start();
     this.httpPort = server.getPort();
@@ -1839,27 +1896,31 @@ public class TaskTracker
       ServletContext context = getServletContext();
       int reduce = Integer.parseInt(reduceId);
       byte[] buffer = new byte[MAX_BYTES_TO_READ];
-      OutputStream outStream = response.getOutputStream();
-      JobConf conf = (JobConf) context.getAttribute("conf");
-      LocalDirAllocator lDirAlloc = 
-        (LocalDirAllocator)context.getAttribute("localDirAllocator");
-      FileSystem fileSys = 
-        (FileSystem) context.getAttribute("local.file.system");
-
-      // Index file
-      Path indexFileName = lDirAlloc.getLocalPathToRead(
-                                            mapId+"/file.out.index", conf);
-      FSDataInputStream indexIn = null;
-         
-      // Map-output file
-      Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-                                            mapId+"/file.out", conf);
-      FSDataInputStream mapOutputIn = null;
-        
       // true iff IOException was caused by attempt to access input
       boolean isInputException = true;
-        
+      OutputStream outStream = null;
+      FSDataInputStream indexIn = null;
+      FSDataInputStream mapOutputIn = null;
+      
+      ShuffleServerMetrics shuffleMetrics = (ShuffleServerMetrics)
+                                      context.getAttribute("shuffleServerMetrics");
       try {
+        shuffleMetrics.serverHandlerBusy();
+        outStream = response.getOutputStream();
+        JobConf conf = (JobConf) context.getAttribute("conf");
+        LocalDirAllocator lDirAlloc = 
+          (LocalDirAllocator)context.getAttribute("localDirAllocator");
+        FileSystem fileSys = 
+          (FileSystem) context.getAttribute("local.file.system");
+
+        // Index file
+        Path indexFileName = lDirAlloc.getLocalPathToRead(
+            mapId+"/file.out.index", conf);
+        
+        // Map-output file
+        Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
+            mapId+"/file.out", conf);
+
         /**
          * Read the index file to get the information about where
          * the map-output for the given reducer is available. 
@@ -1899,6 +1960,7 @@ public class TaskTracker
                                    ? (int)partLength : MAX_BYTES_TO_READ);
         while (len > 0) {
           try {
+            shuffleMetrics.outputBytes(len);
             outStream.write(buffer, 0, len);
             outStream.flush();
           } catch (IOException ie) {
@@ -1923,6 +1985,7 @@ public class TaskTracker
           tracker.mapOutputLost(mapId, errorMsg);
         }
         response.sendError(HttpServletResponse.SC_GONE, errorMsg);
+        shuffleMetrics.failedOutput();
         throw ie;
       } finally {
         if (indexIn != null) {
@@ -1931,8 +1994,10 @@ public class TaskTracker
         if (mapOutputIn != null) {
           mapOutputIn.close();
         }
+        shuffleMetrics.serverHandlerFree();
       }
       outStream.close();
+      shuffleMetrics.successOutput();
     }
   }
 }

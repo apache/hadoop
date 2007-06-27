@@ -58,6 +58,7 @@ import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -342,7 +343,7 @@ class ReduceTask extends Task {
     done(umbilical);
   }
 
-  private class ReduceCopier implements MRConstants {
+  class ReduceCopier implements MRConstants {
 
     /** Reference to the umbilical object */
     private TaskUmbilicalProtocol umbilical;
@@ -431,9 +432,9 @@ class ReduceTask extends Task {
     private MapOutputCopier[] copiers = null;
     
     /**
-     * The threads for fetching the files.
+     * The object for metrics reporting.
      */
-    private MetricsRecord shuffleMetrics = null;
+    private ShuffleClientMetrics shuffleClientMetrics = null;
     
     /**
      * the minimum interval between tasktracker polls
@@ -464,6 +465,65 @@ class ReduceTask extends Task {
      */
     private long ramfsMergeOutputSize;
     
+    /**
+     * This class contains the methods that should be used for metrics-reporting
+     * the specific metrics for shuffle. This class actually reports the
+     * metrics for the shuffle client (the ReduceTask), and hence the name
+     * ShuffleClientMetrics.
+     */
+    class ShuffleClientMetrics implements Updater {
+      private MetricsRecord shuffleMetrics = null;
+      private int numFailedFetches = 0;
+      private int numSuccessFetches = 0;
+      private long numBytes = 0;
+      private int numThreadsBusy = 0;
+      ShuffleClientMetrics(JobConf conf) {
+        MetricsContext metricsContext = MetricsUtil.getContext("mapred");
+        this.shuffleMetrics = 
+          MetricsUtil.createRecord(metricsContext, "shuffleInput");
+        this.shuffleMetrics.setTag("user", conf.getUser());
+        this.shuffleMetrics.setTag("jobName", conf.getJobName());
+        this.shuffleMetrics.setTag("jobId", ReduceTask.this.getJobId());
+        this.shuffleMetrics.setTag("taskId", getTaskId());
+        this.shuffleMetrics.setTag("sessionId", conf.getSessionId());
+        metricsContext.registerUpdater(this);
+      }
+      public synchronized void inputBytes(long numBytes) {
+        this.numBytes += numBytes;
+      }
+      public synchronized void failedFetch() {
+        ++numFailedFetches;
+      }
+      public synchronized void successFetch() {
+        ++numSuccessFetches;
+      }
+      public synchronized void threadBusy() {
+        ++numThreadsBusy;
+      }
+      public synchronized void threadFree() {
+        --numThreadsBusy;
+      }
+      public void doUpdates(MetricsContext unused) {
+        synchronized (this) {
+          shuffleMetrics.incrMetric("shuffle_input_bytes", numBytes);
+          shuffleMetrics.incrMetric("shuffle_failed_fetches", 
+                                    numFailedFetches);
+          shuffleMetrics.incrMetric("shuffle_success_fetches", 
+                                    numSuccessFetches);
+          if (numCopiers != 0) {
+            shuffleMetrics.setMetric("shuffle_fetchers_busy_percent",
+                100*((float)numThreadsBusy/numCopiers));
+          } else {
+            shuffleMetrics.setMetric("shuffle_fetchers_busy_percent", 0);
+          }
+          numBytes = 0;
+          numSuccessFetches = 0;
+          numFailedFetches = 0;
+        }
+        shuffleMetrics.update();
+      }
+    }
+
     /** Represents the result of an attempt to copy a map output */
     private class CopyResult {
       
@@ -567,13 +627,17 @@ class ReduceTask extends Task {
             }
             
             try {
+              shuffleClientMetrics.threadBusy();
               start(loc);
               size = copyOutput(loc);
+              shuffleClientMetrics.successFetch();
             } catch (IOException e) {
               LOG.warn(reduceTask.getTaskId() + " copy failed: " +
                        loc.getMapTaskId() + " from " + loc.getHost());
               LOG.warn(StringUtils.stringifyException(e));
+              shuffleClientMetrics.failedFetch();
             } finally {
+              shuffleClientMetrics.threadFree();
               finish(size);
             }
           } catch (InterruptedException e) { 
@@ -607,7 +671,7 @@ class ReduceTask extends Task {
         // a working filename that will be unique to this attempt
         Path tmpFilename = new Path(filename + "-" + id);
         // this copies the map output file
-        tmpFilename = loc.getFile(inMemFileSys, localFileSys, shuffleMetrics,
+        tmpFilename = loc.getFile(inMemFileSys, localFileSys, shuffleClientMetrics,
                                   tmpFilename, lDirAlloc, 
                                   conf, reduceTask.getPartition(), 
                                   STALLED_COPY_TIMEOUT, reporter);
@@ -712,6 +776,7 @@ class ReduceTask extends Task {
       throws IOException {
       
       configureClasspath(conf);
+      this.shuffleClientMetrics = new ShuffleClientMetrics(conf);
       this.umbilical = umbilical;      
       this.reduceTask = ReduceTask.this;
       this.scheduledCopies = new ArrayList<MapOutputLocation>(100);
@@ -743,11 +808,6 @@ class ReduceTask extends Task {
       
       this.lastPollTime = 0;
       
-      MetricsContext metricsContext = MetricsUtil.getContext("mapred");
-      this.shuffleMetrics = 
-        MetricsUtil.createRecord(metricsContext, "shuffleInput");
-      this.shuffleMetrics.setTag("user", conf.getUser());
-      this.shuffleMetrics.setTag("sessionId", conf.getSessionId());
 
       // Seed the random number generator with a reasonably globally unique seed
       long randomSeed = System.nanoTime() + 

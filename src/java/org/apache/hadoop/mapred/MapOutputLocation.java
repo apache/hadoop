@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.mapred.ReduceTask.ReduceCopier.ShuffleClientMetrics;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.conf.*;
 
@@ -187,7 +187,7 @@ class MapOutputLocation implements Writable, MRConstants {
    */
   public Path getFile(InMemoryFileSystem inMemFileSys,
                       FileSystem localFileSys,
-                      MetricsRecord shuffleMetrics,
+                      ShuffleClientMetrics shuffleMetrics,
                       Path localFilename, 
                       LocalDirAllocator lDirAlloc,
                       Configuration conf, int reduce,
@@ -240,8 +240,7 @@ class MapOutputLocation implements Writable, MRConstants {
           int len = input.read(buffer);
           while (len > 0) {
             totalBytes += len;
-            shuffleMetrics.incrMetric("shuffle_input_bytes", len);
-            shuffleMetrics.update();
+            shuffleMetrics.inputBytes(len);
             output.write(buffer, 0 , len);
             if (currentThread.isInterrupted()) {
               throw new InterruptedException();
