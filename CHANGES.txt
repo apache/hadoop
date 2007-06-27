@@ -38,5 +38,5 @@ Trunk (unreleased changes)
  23. HADOOP-1509.  Made methods/inner classes in HRegionServer and HClient protected
      instead of private for easier extension. Also made HRegion and HRegionInfo public too.
      Added an hbase-default.xml property for specifying what HRegionInterface extension to use
-     for proxy server connection.
- 
+     for proxy server connection. 
+ 24. HADOOP-1534. [hbase] Memcache scanner fails if start key not present
