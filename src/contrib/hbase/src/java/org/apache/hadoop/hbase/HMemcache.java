@@ -332,8 +332,8 @@ public class HMemcache {
      * @return true if this is the first row
      */
     boolean findFirstRow(int i, Text firstRow) {
-      return ((firstRow.getLength() == 0)
-          || (keys[i].getRow().toString().startsWith(firstRow.toString())));
+      return firstRow.getLength() == 0 ||
+        keys[i].getRow().compareTo(firstRow) >= 0;
     }
     
     /**

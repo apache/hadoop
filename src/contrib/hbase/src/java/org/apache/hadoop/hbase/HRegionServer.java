@@ -446,7 +446,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       if(fs.exists(logdir)) {
         throw new RegionServerRunningException("region server already running at " +
           this.serverInfo.getServerAddress().toString() + " because logdir " +
-          " exists");
+          logdir.toString() + " exists");
       }
       
       this.log = new HLog(fs, logdir, conf);
