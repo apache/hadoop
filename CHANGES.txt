@@ -42,4 +42,4 @@ Trunk (unreleased changes)
  24. HADOOP-1534. [hbase] Memcache scanner fails if start key not present
  25. HADOOP-1537. Catch exceptions in testCleanRegionServerExit so we can see
      what is failing.
-
+ 26. HADOOP-1543 [hbase] Add HClient.tableExists
