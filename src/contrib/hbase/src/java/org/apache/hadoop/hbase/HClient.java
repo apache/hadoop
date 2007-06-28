@@ -125,6 +125,23 @@ public class HClient implements HConstants {
     this.currentServer = null;
     this.rand = new Random();
   }
+
+  /**
+   * @param tableName Table to check.
+   * @return True if table exists already.
+   * @throws IOException
+   */
+  public boolean tableExists(final Text tableName) throws IOException {
+    HTableDescriptor [] tables = listTables();
+    boolean result = false;
+    for (int i = 0; i < tables.length; i++) {
+      if (tables[i].getName().equals(tableName)) {
+        result = true;
+        break;
+      }
+    }
+    return result;
+  }
   
   protected void handleRemoteException(RemoteException e) throws IOException {
     String msg = e.getMessage();
