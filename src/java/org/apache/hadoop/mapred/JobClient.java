@@ -338,10 +338,6 @@ public class JobClient extends ToolBase implements MRConstants  {
     LOG.debug("Creating splits at " + fs.makeQualified(submitSplitFile));
     InputSplit[] splits = 
       job.getInputFormat().getSplits(job, job.getNumMapTasks());
-    Hashtable<InputSplit, Integer> splitPositions = new Hashtable<InputSplit, Integer>(); 
-    for (int i = 0; i < splits.length; ++i) {
-      splitPositions.put(splits[i], i);
-    }
     // sort the splits into order based on size, so that the biggest
     // go first
     Arrays.sort(splits, new Comparator<InputSplit>() {
@@ -365,7 +361,7 @@ public class JobClient extends ToolBase implements MRConstants  {
     // write the splits to a file for the job tracker
     FSDataOutputStream out = fs.create(submitSplitFile);
     try {
-      writeSplitsFile(splits, splitPositions, out);
+      writeSplitsFile(splits, out);
     } finally {
       out.close();
     }
@@ -394,7 +390,6 @@ public class JobClient extends ToolBase implements MRConstants  {
   static class RawSplit implements Writable {
     private String splitClass;
     private BytesWritable bytes = new BytesWritable();
-    private int position;
     private String[] locations;
       
     public void setBytes(byte[] data, int offset, int length) {
@@ -412,17 +407,9 @@ public class JobClient extends ToolBase implements MRConstants  {
     public BytesWritable getBytes() {
       return bytes;
     }
-
-    public void setPosition(int position) {
-      this.position = position;
-    }
       
     public void setLocations(String[] locations) {
       this.locations = locations;
-    }
-      
-    public int getPosition() {
-      return position;
     }
       
     public String[] getLocations() {
@@ -432,7 +419,6 @@ public class JobClient extends ToolBase implements MRConstants  {
     public void readFields(DataInput in) throws IOException {
       splitClass = Text.readString(in);
       bytes.readFields(in);
-      position = WritableUtils.readVInt(in);
       int len = WritableUtils.readVInt(in);
       locations = new String[len];
       for(int i=0; i < len; ++i) {
@@ -443,7 +429,6 @@ public class JobClient extends ToolBase implements MRConstants  {
     public void write(DataOutput out) throws IOException {
       Text.writeString(out, splitClass);
       bytes.write(out);
-      WritableUtils.writeVInt(out, position);
       WritableUtils.writeVInt(out, locations.length);
       for(int i = 0; i < locations.length; i++) {
         Text.writeString(out, locations[i]);
@@ -463,8 +448,7 @@ public class JobClient extends ToolBase implements MRConstants  {
    * @param splits the input splits to write out
    * @param out the stream to write to
    */
-  private void writeSplitsFile(InputSplit[] splits, Hashtable splitPositions,
-                              FSDataOutputStream out) throws IOException {
+  private void writeSplitsFile(InputSplit[] splits, FSDataOutputStream out) throws IOException {
     out.write(SPLIT_FILE_HEADER);
     WritableUtils.writeVInt(out, CURRENT_SPLIT_FILE_VERSION);
     WritableUtils.writeVInt(out, splits.length);
@@ -475,7 +459,6 @@ public class JobClient extends ToolBase implements MRConstants  {
       buffer.reset();
       split.write(buffer);
       rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
-      rawSplit.setPosition(((Integer) splitPositions.get(split)).intValue());
       rawSplit.setLocations(split.getLocations());
       rawSplit.write(out);
     }
