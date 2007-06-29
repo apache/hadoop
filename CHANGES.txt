@@ -265,6 +265,9 @@ Trunk (unreleased changes)
  81. HADOOP-1485.  Add metrics for monitoring shuffle.
      (Devaraj Das via cutting)
 
+ 82. HADOOP-1536.  Remove file locks from libhdfs tests.
+     (Dhruba Borthakur via nigel)
+
 
 Release 0.13.0 - 2007-06-08
 

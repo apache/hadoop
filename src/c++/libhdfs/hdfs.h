@@ -267,25 +267,6 @@ extern  "C" {
     int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath);
 
 
-    /**
-     * hdfsLock - Obtain a lock on the file.
-     * @param fs The configured filesystem handle.
-     * @param path The path of the file. 
-     * @param shared Shared/exclusive lock-type. 
-     * @return Returns 0 on success, -1 on error. 
-     */
-    int hdfsLock(hdfsFS fs, const char* path, int shared);
-
-
-    /**
-     * hdfsReleaseLock - Release the lock.
-     * @param fs The configured filesystem handle.
-     * @param path The path of the file. 
-     * @return Returns 0 on success, -1 on error. 
-     */
-    int hdfsReleaseLock(hdfsFS fs, const char* path);
-
-
     /** 
      * hdfsGetWorkingDirectory - Get the current working directory for
      * the given filesystem.

@@ -138,11 +138,6 @@ int main(int argc, char **argv) {
         fprintf(stderr, "hdfsCopy(remote-remote): %s\n", ((result = hdfsCopy(fs, srcPath, fs, dstPath)) ? "Failed!" : "Success!"));
         totalResult += result;
 
-        fprintf(stderr, "hdfsLock: %s\n", ((result = hdfsLock(fs, srcPath, 1)) ? "Failed!" : "Success!"));
-        totalResult += result;
-        fprintf(stderr, "hdfsReleaseLock: %s\n", ((result = hdfsReleaseLock(fs, srcPath)) ? "Failed!" : "Success!"));
-        totalResult += result;
-
         const char* slashTmp = "/tmp";
         const char* newDirectory = "/tmp/newdir";
         fprintf(stderr, "hdfsCreateDirectory: %s\n", ((result = hdfsCreateDirectory(fs, newDirectory)) ? "Failed!" : "Success!"));
