@@ -88,7 +88,7 @@ class FSEditLog {
     return fsimage.getNumStorageDirs();
   }
   
-  int getNumEditStreams() {
+  synchronized int getNumEditStreams() {
     return editStreams == null ? 0 : editStreams.size();
   }
 
@@ -98,7 +98,7 @@ class FSEditLog {
    * 
    * @throws IOException
    */
-  void open() throws IOException {
+  synchronized void open() throws IOException {
     int size = getNumStorageDirs();
     if (editStreams == null)
       editStreams = new ArrayList<EditLogOutputStream>(size);
@@ -115,7 +115,7 @@ class FSEditLog {
     }
   }
 
-  void createEditLogFile(File name) throws IOException {
+  synchronized void createEditLogFile(File name) throws IOException {
     EditLogOutputStream eStream = new EditLogOutputStream(name);
     eStream.create();
     eStream.flushAndSync();
@@ -125,7 +125,7 @@ class FSEditLog {
   /**
    * Create edits.new if non existant.
    */
-  void createNewIfMissing() throws IOException {
+  synchronized void createNewIfMissing() throws IOException {
     for (int idx = 0; idx < getNumStorageDirs(); idx++) {
       File newFile = getEditNewFile(idx);
       if (!newFile.exists())
@@ -136,7 +136,7 @@ class FSEditLog {
   /**
    * Shutdown the filestore
    */
-  void close() throws IOException {
+  synchronized void close() throws IOException {
     if (editStreams == null) {
       return;
     }
@@ -159,7 +159,7 @@ class FSEditLog {
    * remain, then raise an exception that will possibly cause the
    * server to exit
    */
-  void processIOError(int index) throws IOException {
+  synchronized void processIOError(int index) throws IOException {
     if (editStreams == null || editStreams.size() == 1) {
       throw new IOException("Checkpoint directories inaccessible.");
     }
@@ -557,7 +557,7 @@ class FSEditLog {
   /**
    * Return the size of the current EditLog
    */
-  long getEditLogSize() throws IOException {
+  synchronized long getEditLogSize() throws IOException {
     assert(getNumStorageDirs() == editStreams.size());
     long size = 0;
     for (int idx = 0; idx < getNumStorageDirs(); idx++) {
@@ -572,7 +572,7 @@ class FSEditLog {
   /**
    * Closes the current edit log and opens edits.new. 
    */
-  void rollEditLog() throws IOException {
+  synchronized void rollEditLog() throws IOException {
     //
     // If edits.new already exists, then return error.
     //
@@ -601,7 +601,7 @@ class FSEditLog {
    * Removes the old edit log and renamed edits.new as edits.
    * Reopens the edits file.
    */
-  void purgeEditLog() throws IOException {
+  synchronized void purgeEditLog() throws IOException {
     //
     // If edits.new does not exists, then return error.
     //
@@ -636,7 +636,7 @@ class FSEditLog {
   /**
    * Return the name of the edit file
    */
-  File getFsEditName() throws IOException {
+  synchronized File getFsEditName() throws IOException {
     return getEditFile(0);
   }
 }

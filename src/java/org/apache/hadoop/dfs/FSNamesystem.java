@@ -3352,12 +3352,12 @@ class FSNamesystem implements FSConstants {
       throw new SafeModeException("Checkpoint not created",
                                   safeMode);
     }
-    LOG.info("Roll Edit Log");
+    LOG.info("Roll Edit Log from " + Server.getRemoteAddress());
     getEditLog().rollEditLog();
   }
 
   synchronized void rollFSImage() throws IOException {
-    LOG.info("Roll FSImage");
+    LOG.info("Roll FSImage from " + Server.getRemoteAddress());
     if (isInSafeMode()) {
       throw new SafeModeException("Checkpoint not created",
                                   safeMode);
