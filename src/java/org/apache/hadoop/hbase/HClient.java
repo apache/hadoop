@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicies;
@@ -78,10 +79,16 @@ public class HClient implements HConstants {
         this.regionInfo;
     }
     
+    /**
+     * @return HRegionInfo
+     */
     public HRegionInfo getRegionInfo(){
       return regionInfo;
     }
 
+    /**
+     * @return HServerAddress
+     */
     public HServerAddress getServerAddress(){
       return serverAddress;
     }
@@ -586,6 +593,23 @@ public class HClient implements HConstants {
       throw new IllegalArgumentException("table name cannot be null or zero length");
     }
     this.tableServers = getTableServers(tableName);
+  }
+  
+  /**
+   * Gets the starting row key for every region in the currently open table
+   * @return Array of region starting row keys
+   */
+  public synchronized Text[] getStartKeys() {
+    if(this.tableServers == null) {
+      throw new IllegalStateException("Must open table first");
+    }
+
+    Text[] keys = new Text[tableServers.size()];
+    int i = 0;
+    for(Text key: tableServers.keySet()){
+      keys[i++] = key;
+    }
+    return keys;
   }
   
   /**
@@ -1360,6 +1384,7 @@ public class HClient implements HConstants {
     private Text startRow;
     private boolean closed;
     private RegionLocation[] regions;
+    @SuppressWarnings("hiding")
     private int currentRegion;
     private HRegionInterface server;
     private long scannerId;

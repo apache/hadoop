@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Random;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -141,17 +140,4 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     return region;
   }
 
-  private HRegion createNewHRegion(FileSystem fs, Path dir,
-      Configuration conf, HTableDescriptor desc, long regionId, Text startKey,
-      Text endKey) throws IOException {
-    
-    HRegionInfo info = new HRegionInfo(regionId, desc, startKey, endKey);
-    Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
-    fs.mkdirs(regionDir);
-
-    return new HRegion(dir,
-      new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME), conf),
-      fs, conf, info, null);
-  }
-  
 }

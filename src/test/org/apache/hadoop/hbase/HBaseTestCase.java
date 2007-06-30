@@ -15,10 +15,14 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 
 /**
  * Abstract base class for test cases. Performs all static initialization
@@ -43,4 +47,18 @@ public abstract class HBaseTestCase extends TestCase {
   protected Path getUnitTestdir(String testName) {
     return new Path(StaticTestEnvironment.TEST_DIRECTORY_KEY, testName);
   }
+
+  protected HRegion createNewHRegion(FileSystem fs, Path dir,
+      Configuration conf, HTableDescriptor desc, long regionId, Text startKey,
+      Text endKey) throws IOException {
+    
+    HRegionInfo info = new HRegionInfo(regionId, desc, startKey, endKey);
+    Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
+    fs.mkdirs(regionDir);
+
+    return new HRegion(dir,
+      new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME), conf),
+      fs, conf, info, null);
+  }
+  
 }

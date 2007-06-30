@@ -11,13 +11,13 @@
   </property>
   <property>
     <name>hbase.client.pause</name>
-    <value>3000</value>
+    <value>5000</value>
     <description>General client pause value.  Used mostly as value to wait
     before running a retry of a failed get, region lookup, etc.</description>
   </property>
   <property>
     <name>hbase.client.retries.number</name>
-    <value>2</value>
+    <value>5</value>
     <description>Maximum retries.  Used as maximum for all retryable
     operations such as fetching of the root region from root region
     server, getting a cell's value, starting a row update, etc.
