@@ -37,6 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
@@ -1854,7 +1855,6 @@ public class HMaster implements HConstants, HMasterInterface,
               
               try {
                 DataInputBuffer inbuf = new DataInputBuffer();
-                byte[] bytes;
                 while(true) {
                   HRegionInfo info = new HRegionInfo();
                   String serverName = null;
@@ -1978,8 +1978,7 @@ public class HMaster implements HConstants, HMasterInterface,
     
     @Override
     protected void processScanItem(String serverName, long startCode,
-        HRegionInfo info)
-    throws IOException {
+        HRegionInfo info) {
       if (isBeingServed(serverName, startCode)) {
         TreeSet<HRegionInfo> regions = servedRegions.get(serverName);
         if (regions == null) {
@@ -2260,6 +2259,7 @@ public class HMaster implements HConstants, HMasterInterface,
 
   /** Instantiated to monitor the health of a region server */
   private class ServerExpirer implements LeaseListener {
+    @SuppressWarnings("hiding")
     private String server;
     
     ServerExpirer(String server) {

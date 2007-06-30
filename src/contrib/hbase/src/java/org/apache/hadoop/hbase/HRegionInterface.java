@@ -17,6 +17,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
 

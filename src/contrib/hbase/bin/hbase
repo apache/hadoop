@@ -82,10 +82,10 @@ fi
 
 # CLASSPATH initially contains $HBASE_CONF_DIR
 # Add HADOOP_CONF_DIR if its been defined.
-CLASSPATH="${HBASE_CONF_DIR}"
 if [ ! "$HADOOP_CONF_DIR" = "" ]; then
     CLASSPATH="${CLASSPATH}:${HADOOP_CONF_DIR}"
 fi
+CLASSPATH="${CLASSPATH}:${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add hbase and hadoop classes to CLASSPATH
@@ -112,13 +112,13 @@ IFS=
 for f in  "$HBASE_HOME/hadoop-hbase-*.jar"; do
   CLASSPATH=${CLASSPATH}:$f;
 done
-for f in  "$HADOOP_HOME/build/contrib/hbase/hadoop-hbase-*.jar"; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
+if [ -f "$HADOOP_HOME/contrib/hadoop-hbase.jar" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/contrib/hadoop-hbase.jar
+fi
 if [ -d "$HADOOP_HOME/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME
 fi
-for f in $HADOOP_HOME/hadoop-*-core.jar; do
+for f in $HADOOP_HOME/hadoop-*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 

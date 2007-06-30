@@ -43,3 +43,4 @@ Trunk (unreleased changes)
  25. HADOOP-1537. Catch exceptions in testCleanRegionServerExit so we can see
      what is failing.
  26. HADOOP-1543 [hbase] Add HClient.tableExists
+ 27. HADOOP-1519 [hbase] map/reduce interface for HBase

@@ -23,6 +23,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.Text;
 
 /**

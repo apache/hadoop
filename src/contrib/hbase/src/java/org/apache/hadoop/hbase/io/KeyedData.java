@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.io;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
 
 /*******************************************************************************
- * LabelledData is just a data pair.
+ * KeyedData is just a data pair.
  * It includes an HStoreKey and some associated data.
  ******************************************************************************/
 public class KeyedData implements Writable {
@@ -60,7 +61,7 @@ public class KeyedData implements Writable {
    */
   public void write(DataOutput out) throws IOException {
     key.write(out);
-    out.writeShort(this.data.length);
+    out.writeInt(this.data.length);
     out.write(this.data);
   }
   
@@ -69,7 +70,7 @@ public class KeyedData implements Writable {
    */
   public void readFields(DataInput in) throws IOException {
     key.readFields(in);
-    this.data = new byte[in.readShort()];
+    this.data = new byte[in.readInt()];
     in.readFully(this.data);
   }
 }

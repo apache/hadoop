@@ -41,7 +41,8 @@ public class MiniHBaseCluster implements HConstants {
   private Thread masterThread;
   List<HRegionServer> regionServers;
   List<Thread> regionThreads;
-  
+  private boolean deleteOnExit = true;
+
   /**
    * Starts a MiniHBaseCluster on top of a new MiniDFSCluster
    * 
@@ -51,9 +52,23 @@ public class MiniHBaseCluster implements HConstants {
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes)
   throws IOException {
-    this(conf, nRegionNodes, true);
+    this(conf, nRegionNodes, true, true, true);
   }
-  
+
+  /**
+   * Start a MiniHBaseCluster. Use the native file system unless
+   * miniHdfsFilesystem is set to true.
+   * 
+   * @param conf
+   * @param nRegionNodes
+   * @param miniHdfsFilesystem
+   * @throws IOException
+   */
+  public MiniHBaseCluster(Configuration conf, int nRegionNodes,
+      final boolean miniHdfsFilesystem) throws IOException {
+    this(conf, nRegionNodes, miniHdfsFilesystem, true, true);
+  }
+
   /**
    * Starts a MiniHBaseCluster on top of an existing HDFSCluster
    * 
@@ -70,7 +85,7 @@ public class MiniHBaseCluster implements HConstants {
     this.cluster = dfsCluster;
     init(nRegionNodes);
   }
-  
+
   /**
    * Constructor.
    * @param conf
@@ -78,16 +93,20 @@ public class MiniHBaseCluster implements HConstants {
    * @param miniHdfsFilesystem If true, set the hbase mini
    * cluster atop a mini hdfs cluster.  Otherwise, use the
    * filesystem configured in <code>conf</code>.
+   * @param format the mini hdfs cluster
+   * @param deleteOnExit clean up mini hdfs files
    * @throws IOException 
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
-      final boolean miniHdfsFilesystem)
+      final boolean miniHdfsFilesystem, boolean format, boolean deleteOnExit) 
   throws IOException {
     this.conf = conf;
-    
+    this.deleteOnExit = deleteOnExit;
+
     if (miniHdfsFilesystem) {
       try {
-        this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
+        this.cluster = new MiniDFSCluster(this.conf, 2, format, (String[])null);
+
       } catch(Throwable t) {
         LOG.error("Failed setup of mini dfs cluster", t);
         t.printStackTrace();
@@ -112,7 +131,7 @@ public class MiniHBaseCluster implements HConstants {
       if(this.conf.get(MASTER_ADDRESS) == null) {
         this.conf.set(MASTER_ADDRESS, "localhost:0");
       }
-      
+
       // Create the master
       this.master = new HMaster(conf);
       this.masterThread = new Thread(this.master, "HMaster");
@@ -120,7 +139,7 @@ public class MiniHBaseCluster implements HConstants {
       // Start up the master
       LOG.info("Starting HMaster");
       masterThread.start();
-      
+
       // Set the master's port for the HRegionServers
       String address = master.getMasterAddress().toString();
       this.conf.set(MASTER_ADDRESS, address);
@@ -137,15 +156,24 @@ public class MiniHBaseCluster implements HConstants {
     }
   }
 
+  /**
+   * Get the cluster on which this HBase cluster is running
+   * 
+   * @return MiniDFSCluster
+   */
+  public MiniDFSCluster getDFSCluster() {
+    return cluster;
+  }
+
   private void startRegionServers(final int nRegionNodes)
-      throws IOException {
+  throws IOException {
     this.regionServers = new ArrayList<HRegionServer>(nRegionNodes);
     this.regionThreads = new ArrayList<Thread>(nRegionNodes);    
     for(int i = 0; i < nRegionNodes; i++) {
       startRegionServer();
     }
   }
-  
+
   void startRegionServer() throws IOException {
     HRegionServer hsr = new HRegionServer(this.conf);
     this.regionServers.add(hsr);
@@ -153,7 +181,7 @@ public class MiniHBaseCluster implements HConstants {
     t.start();
     this.regionThreads.add(t);
   }
-  
+
   /** 
    * @return Returns the rpc address actually used by the master server, because
    * the supplied port is not necessarily the actual port used.
@@ -161,7 +189,7 @@ public class MiniHBaseCluster implements HConstants {
   public HServerAddress getHMasterAddress() {
     return master.getMasterAddress();
   }
-  
+
   /**
    * Shut down the specified region server cleanly
    * 
@@ -170,15 +198,20 @@ public class MiniHBaseCluster implements HConstants {
   public void stopRegionServer(int serverNumber) {
     if (serverNumber >= regionServers.size()) {
       throw new ArrayIndexOutOfBoundsException(
-          "serverNumber > number of region servers");
+      "serverNumber > number of region servers");
     }
     this.regionServers.get(serverNumber).stop();
   }
-  
+
+  /**
+   * Wait for the specified region server to stop
+   * 
+   * @param serverNumber
+   */
   public void waitOnRegionServer(int serverNumber) {
     if (serverNumber >= regionServers.size()) {
       throw new ArrayIndexOutOfBoundsException(
-          "serverNumber > number of region servers");
+      "serverNumber > number of region servers");
     }
     try {
       this.regionThreads.get(serverNumber).join();
@@ -186,7 +219,7 @@ public class MiniHBaseCluster implements HConstants {
       e.printStackTrace();
     }
   }
-  
+
   /**
    * Cause a region server to exit without cleaning up
    * 
@@ -195,11 +228,11 @@ public class MiniHBaseCluster implements HConstants {
   public void abortRegionServer(int serverNumber) {
     if(serverNumber >= this.regionServers.size()) {
       throw new ArrayIndexOutOfBoundsException(
-          "serverNumber > number of region servers");
+      "serverNumber > number of region servers");
     }
     this.regionServers.get(serverNumber).abort();
   }
-  
+
   /** Shut down the HBase cluster */
   public void shutdown() {
     LOG.info("Shutting down the HBase Cluster");
@@ -218,6 +251,7 @@ public class MiniHBaseCluster implements HConstants {
     }
     try {
       masterThread.join();
+
     } catch(InterruptedException e) {
       // continue
     }
@@ -227,12 +261,14 @@ public class MiniHBaseCluster implements HConstants {
       LOG.info("Shutting down Mini DFS cluster");
       cluster.shutdown();
     }
-    
+
     // Delete all DFS files
-    deleteFile(new File(System.getProperty(
-        StaticTestEnvironment.TEST_DIRECTORY_KEY), "dfs"));
+    if(deleteOnExit) {
+      deleteFile(new File(System.getProperty(
+          StaticTestEnvironment.TEST_DIRECTORY_KEY), "dfs"));
+    }
   }
-  
+
   private void deleteFile(File f) {
     if(f.isDirectory()) {
       File[] children = f.listFiles();
