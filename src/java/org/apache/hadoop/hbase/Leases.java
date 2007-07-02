@@ -63,6 +63,29 @@ public class Leases {
   }
 
   /**
+   * Shuts down this lease instance when all outstanding leases expire.
+   * Like {@link #close()} but rather than violently end all leases, waits
+   * first on extant leases to finish.  Use this method if the lease holders
+   * could loose data, leak locks, etc.  Presumes client has shutdown
+   * allocation of new leases.
+   */
+  public void closeAfterLeasesExpire() {
+    synchronized(this.leases) {
+      while (this.leases.size() > 0) {
+        LOG.info(Integer.toString(leases.size()) + " lease(s) " +
+          "outstanding. Waiting for them to expire.");
+        try {
+          this.leases.wait(this.leaseCheckFrequency);
+        } catch (InterruptedException e) {
+          // continue
+        }
+      }
+    }
+    // Now call close since no leases outstanding.
+    close();
+  }
+  
+  /**
    * Shut down this Leases instance.  All pending leases will be destroyed, 
    * without any cancellation calls.
    */
