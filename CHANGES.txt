@@ -271,6 +271,8 @@ Trunk (unreleased changes)
  83. HADOOP-1520.  Add appropriate synchronization to FSEditsLog.
      (Dhruba Borthakur via nigel)
 
+ 84. HADOOP-1513.  Fix a race condition in directory creation. 
+     (Devaraj via omalley)
 
 Release 0.13.0 - 2007-06-08
 
