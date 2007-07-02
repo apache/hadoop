@@ -61,8 +61,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   static final Log LOG = LogFactory.getLog(HRegionServer.class);
   
+  // Set when a report to the master comes back with a message asking us to
+  // shutdown.  Also set by call to stop when debugging or running unit tests
+  // of HRegionServer in isolation.
   protected volatile boolean stopRequested;
+  
+  // Go down hard.  Used debugging and in unit tests.
   protected volatile boolean abortRequested;
+  
   private final Path rootDir;
   protected final HServerInfo serverInfo;
   protected final Configuration conf;
@@ -468,8 +474,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * Sets a flag that will cause all the HRegionServer threads to shut down
    * in an orderly fashion.
+   * <p>FOR DEBUGGING ONLY
    */
-  public synchronized void stop() {
+  synchronized void stop() {
     stopRequested = true;
     notifyAll();                        // Wakes run() if it is sleeping
   }
@@ -477,8 +484,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * Cause the server to exit without closing the regions it is serving, the
    * log it is using and without notifying the master.
-   * 
-   * FOR DEBUGGING ONLY
+   * <p>FOR DEBUGGING ONLY
    */
   synchronized void abort() {
     abortRequested = true;
@@ -560,16 +566,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Telling master we are up");
         }
-        
         hbaseMaster.regionServerStartup(serverInfo);
-        
         if (LOG.isDebugEnabled()) {
           LOG.debug("Done telling master we are up");
         }
       } catch(IOException e) {
         waitTime = stopRequested ? 0
             : msgInterval - (System.currentTimeMillis() - lastMsg);
-        
         if(waitTime > 0) {
           synchronized (this) {
             try {
@@ -585,7 +588,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // Now ask master what it wants us to do and tell it what we have done.
       while (!stopRequested) {
         if ((System.currentTimeMillis() - lastMsg) >= msgInterval) {
-
           HMsg outboundArray[] = null;
           synchronized(outboundMsgs) {
             outboundArray = outboundMsgs.toArray(new HMsg[outboundMsgs.size()]);
@@ -595,14 +597,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           try {
             HMsg msgs[] = hbaseMaster.regionServerReport(serverInfo, outboundArray);
             lastMsg = System.currentTimeMillis();
-
             // Queue up the HMaster's instruction stream for processing
-
             synchronized(toDo) {
               boolean restart = false;
               for(int i = 0; i < msgs.length && !stopRequested && !restart; i++) {
                 switch(msgs[i].getMsg()) {
-                
+              
                 case HMsg.MSG_CALL_SERVER_STARTUP:
                   if (LOG.isDebugEnabled()) {
                     LOG.debug("Got call server startup message");
@@ -657,9 +657,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
       }
     }
+    leases.closeAfterLeasesExpire();
     this.worker.stop();
     this.server.stop();
-    leases.close();
     
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
 
@@ -675,50 +675,43 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.splitOrCompactCheckerThread.interrupt();
     }
 
-    if(abortRequested) {
+    if (abortRequested) {
       try {
         log.rollWriter();
-        
       } catch(IOException e) {
         LOG.warn(e);
       }
-      LOG.info("aborting server at: " + serverInfo.getServerAddress().toString());
-      
+      LOG.info("aborting server at: " +
+        serverInfo.getServerAddress().toString());
     } else {
       Vector<HRegion> closedRegions = closeAllRegions();
       try {
         log.closeAndDelete();
-
       } catch(IOException e) {
         LOG.error(e);
       }
       try {
         HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
         exitMsg[0] = new HMsg(HMsg.MSG_REPORT_EXITING);
-
         // Tell the master what regions we are/were serving
-
         int i = 1;
         for(HRegion region: closedRegions) {
-          exitMsg[i++] = new HMsg(HMsg.MSG_REPORT_CLOSE, region.getRegionInfo());
+          exitMsg[i++] = new HMsg(HMsg.MSG_REPORT_CLOSE,
+            region.getRegionInfo());
         }
 
         LOG.info("telling master that region server is shutting down at: "
             + serverInfo.getServerAddress().toString());
-        
         hbaseMaster.regionServerReport(serverInfo, exitMsg);
-
       } catch(IOException e) {
         LOG.warn(e);
       }
-      LOG.info("stopping server at: " + serverInfo.getServerAddress().toString());
+      LOG.info("stopping server at: " +
+        serverInfo.getServerAddress().toString());
     }
 
-    join();
-      
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("main thread exiting");
-    }
+    join(); 
+    LOG.info("main thread exiting");
   }
 
   /** Add to the outbound message buffer */
@@ -1024,7 +1017,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     public void leaseExpired() {
       try {
         localRegion.abort(localLockId);
-        
       } catch(IOException iex) {
         LOG.error(iex);
       }

@@ -682,7 +682,7 @@ public class HMaster implements HConstants, HMasterInterface,
     }
 
     // Main processing loop
-    for(PendingOperation op = null; !closed; ) {
+    for (PendingOperation op = null; !closed; ) {
       synchronized(msgQueue) {
         while(msgQueue.size() == 0 && !closed) {
           try {
@@ -756,26 +756,22 @@ public class HMaster implements HConstants, HMasterInterface,
     LOG.info("HMaster main thread exiting");
   }
   
-  /**
-   * Wait on regionservers to report in.  Then, they notice the HMaster
-   * is going down and will shut themselves down.
+  /*
+   * Wait on regionservers to report in
+   * with {@link #regionServerReport(HServerInfo, HMsg[])} so they get notice
+   * the master is going down.  Waits until all region servers come back with
+   * a MSG_REGIONSERVER_STOP which will cancel their lease or until leases held
+   * by remote region servers have expired.
    */
   private void letRegionServersShutdown() {
-    long regionServerMsgInterval =
-      conf.getLong("hbase.regionserver.msginterval", 15 * 1000);
-    // Wait for 3 * hbase.regionserver.msginterval intervals or until all
-    // regionservers report in as closed.
-    long endTime = System.currentTimeMillis() + (regionServerMsgInterval * 3);
-    while (endTime > System.currentTimeMillis() &&
-        this.serversToServerInfo.size() > 0) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Waiting on regionservers: "
-            + this.serversToServerInfo.values());
-      }
+    while (this.serversToServerInfo.size() > 0) {
+      LOG.info("Waiting on following regionserver(s) to go down (or " +
+        "region server lease expiration, whichever happens first): " +
+        this.serversToServerInfo.values());
       try {
         Thread.sleep(threadWakeFrequency);
       } catch (InterruptedException e) {
-        // Ignore interrupt.
+        // continue
       }
     }
   }
@@ -849,56 +845,50 @@ public class HMaster implements HConstants, HMasterInterface,
   throws IOException {
     String s = serverInfo.getServerAddress().toString().trim();
     long serverLabel = getServerLabel(s);
-
-    if (closed) {
-      // Cancel the server's lease
-      cancelLease(s, serverLabel);
-      
-      // Tell server to shut down
-      HMsg returnMsgs[] = {new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
-      return returnMsgs;
-    }
     
-    if(msgs.length > 0 && msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
-      // HRegionServer is shutting down.
-      
-      // Cancel the server's lease
+    if (msgs.length > 0 && msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
+      // HRegionServer is shutting down. Cancel the server's lease.
+      LOG.debug("Region server " + s + ": MSG_REPORT_EXITING");
       cancelLease(s, serverLabel);
       
-      // Get all the regions the server was serving reassigned
-      
-      for(int i = 1; i < msgs.length; i++) {
-        HRegionInfo info = msgs[i].getRegionInfo();
-        if(info.tableDesc.getName().equals(ROOT_TABLE_NAME)) {
-          rootRegionLocation = null;
-          
-        } else if(info.tableDesc.getName().equals(META_TABLE_NAME)) {
-          allMetaRegionsScanned = false;
+      // Get all the regions the server was serving reassigned (if we
+      // are not shutting down).
+      if (!closed) {
+        for (int i = 1; i < msgs.length; i++) {
+          HRegionInfo info = msgs[i].getRegionInfo();
+          if (info.tableDesc.getName().equals(ROOT_TABLE_NAME)) {
+            rootRegionLocation = null;
+          } else if (info.tableDesc.getName().equals(META_TABLE_NAME)) {
+            allMetaRegionsScanned = false;
+          }
+          unassignedRegions.put(info.regionName, info);
+          assignAttempts.put(info.regionName, Long.valueOf(0L));
         }
-        unassignedRegions.put(info.regionName, info);
-        assignAttempts.put(info.regionName, Long.valueOf(0L));
       }
       
       // We don't need to return anything to the server because it isn't
       // going to do any more work.
       return new HMsg[0];
     }
+    
+    if (closed) {
+      // Tell server to shut down if we are shutting down.  This should
+      // happen after check of MSG_REPORT_EXITING above, since region server
+      // will send us one of these messages after it gets MSG_REGIONSERVER_STOP
+      return HMsg.MSG_REGIONSERVER_STOP_IN_ARRAY;
+    }
 
     HServerInfo storedInfo = serversToServerInfo.get(s);
-
     if(storedInfo == null) {
-
       if(LOG.isDebugEnabled()) {
         LOG.debug("received server report from unknown server: " + s);
       }
 
       // The HBaseMaster may have been restarted.
       // Tell the RegionServer to start over and call regionServerStartup()
-
       HMsg returnMsgs[] = new HMsg[1];
       returnMsgs[0] = new HMsg(HMsg.MSG_CALL_SERVER_STARTUP);
       return returnMsgs;
-
     } else if(storedInfo.getStartCode() != serverInfo.getStartCode()) {
 
       // This state is reachable if:
@@ -914,11 +904,7 @@ public class HMaster implements HConstants, HMasterInterface,
         LOG.debug("region server race condition detected: " + s);
       }
 
-      HMsg returnMsgs[] = {
-          new HMsg(HMsg.MSG_REGIONSERVER_STOP)
-      };
-      return returnMsgs;
-
+      return HMsg.MSG_REGIONSERVER_STOP_IN_ARRAY;
     } else {
 
       // All's well.  Renew the server's lease.

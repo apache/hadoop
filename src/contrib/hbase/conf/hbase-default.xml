@@ -53,13 +53,16 @@
     <name>hbase.master.lease.period</name>
     <value>30000</value>
     <description>HMaster server lease period in milliseconds. Default is
-    30 seconds.</description>
+    30 seconds.  Region servers must report in within this period else
+    they are considered dead.  On loaded cluster, may need to up this
+    period.</description>
   </property>
   <property>
     <name>hbase.regionserver.lease.period</name>
-    <value>180000</value>
+    <value>30000</value>
     <description>HRegion server lease period in milliseconds. Default is
-    180 seconds.</description>
+    30 seconds. Clients must report in within this period else they are
+    considered dead.</description>
   </property>
   <property>
     <name>hbase.server.thread.wakefrequency</name>

@@ -44,3 +44,4 @@ Trunk (unreleased changes)
      what is failing.
  26. HADOOP-1543 [hbase] Add HClient.tableExists
  27. HADOOP-1519 [hbase] map/reduce interface for HBase
+ 28. HADOOP-1523 Hung region server waiting on write locks 

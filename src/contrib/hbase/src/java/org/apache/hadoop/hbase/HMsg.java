@@ -39,6 +39,9 @@ public class HMsg implements Writable {
   /** Master tells region server to stop */
   public static final byte MSG_REGIONSERVER_STOP = 5;
   
+  public static final HMsg [] MSG_REGIONSERVER_STOP_IN_ARRAY = 
+    {new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
+  
   /** Stop serving the specified region and don't report back that it's closed */
   public static final byte MSG_REGION_CLOSE_WITHOUT_REPORT = 6;
 
