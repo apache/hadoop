@@ -69,10 +69,10 @@
       // directory
       DFSFileInfo[] files = dfs.listPaths(target);
       //generate a table and dump the info
-      String [] headings = new String[7];
+      String [] headings = new String[6];
       headings[0] = "Name"; headings[1] = "Type"; headings[2] = "Size";
       headings[3] = "Replication"; headings[4] = "BlockSize";
-      headings[5] = "Creation Time"; headings[6] = "Modification Time";
+      headings[5] = "Modification Time";
       out.print("<h3>Contents of directory ");
       JspHelper.printPathWithLinks(dir, out, namenodeInfoPort);
       out.print("</h3><hr>");

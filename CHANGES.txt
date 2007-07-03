@@ -274,6 +274,10 @@ Trunk (unreleased changes)
  84. HADOOP-1513.  Fix a race condition in directory creation. 
      (Devaraj via omalley)
 
+ 85. HADOOP-1546.  Remove spurious column from HDFS web UI.
+     (Dhruba Borthakur via cutting)
+
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
