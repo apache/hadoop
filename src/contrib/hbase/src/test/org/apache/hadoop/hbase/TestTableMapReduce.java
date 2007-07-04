@@ -75,39 +75,46 @@ public class TestTableMapReduce extends HBaseTestCase {
     desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
     
     dfsCluster = new MiniDFSCluster(conf, 1, true, (String[])null);
-    fs = dfsCluster.getFileSystem();
-    dir = new Path("/hbase");
-    fs.mkdirs(dir);
+    try {
+      fs = dfsCluster.getFileSystem();
+      dir = new Path("/hbase");
+      fs.mkdirs(dir);
 
-    // create the root and meta regions and insert the data region into the meta
+      // create the root and meta regions and insert the data region into the meta
 
-    HRegion root = createNewHRegion(fs, dir, conf, HGlobals.rootTableDesc, 0L, null, null);
-    HRegion meta = createNewHRegion(fs, dir, conf, HGlobals.metaTableDesc, 1L, null, null);
-    HRegion.addRegionToMETA(root, meta);
+      HRegion root = createNewHRegion(fs, dir, conf, HGlobals.rootTableDesc, 0L, null, null);
+      HRegion meta = createNewHRegion(fs, dir, conf, HGlobals.metaTableDesc, 1L, null, null);
+      HRegion.addRegionToMETA(root, meta);
 
-    HRegion region = createNewHRegion(fs, dir, conf, desc, rand.nextLong(), null, null);
-    HRegion.addRegionToMETA(meta, region);
+      HRegion region = createNewHRegion(fs, dir, conf, desc, rand.nextLong(), null, null);
+      HRegion.addRegionToMETA(meta, region);
 
-    // insert some data into the test table
+      // insert some data into the test table
 
-    for(int i = 0; i < values.length; i++) {
-      long lockid = region.startUpdate(new Text("row_"
-          + String.format("%1$05d", i)));
+      for(int i = 0; i < values.length; i++) {
+        long lockid = region.startUpdate(new Text("row_"
+            + String.format("%1$05d", i)));
 
-      region.put(lockid, TEXT_INPUT_COLUMN, values[i]);
-      region.commit(lockid);
+        region.put(lockid, TEXT_INPUT_COLUMN, values[i]);
+        region.commit(lockid);
+      }
+
+      region.close();
+      region.getLog().closeAndDelete();
+      meta.close();
+      meta.getLog().closeAndDelete();
+      root.close();
+      root.getLog().closeAndDelete();
+
+      // Start up HBase cluster
+
+      hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
+      
+    } catch (Exception e) {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
     }
-
-    region.close();
-    region.getLog().closeAndDelete();
-    meta.close();
-    meta.getLog().closeAndDelete();
-    root.close();
-    root.getLog().closeAndDelete();
-  
-    // Start up HBase cluster
-    
-    hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
   }
 
   @Override

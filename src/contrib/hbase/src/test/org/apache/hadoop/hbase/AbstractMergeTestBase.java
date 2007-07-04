@@ -32,7 +32,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
   protected HTableDescriptor desc;
   protected ImmutableBytesWritable value;
 
-  protected MiniDFSCluster dfsCluster;
+  protected MiniDFSCluster dfsCluster = null;
   protected FileSystem fs;
   protected Path dir;
 
@@ -104,6 +104,9 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
       
     } catch(Throwable t) {
       t.printStackTrace();
+      if(dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
       fail();
     }
   }

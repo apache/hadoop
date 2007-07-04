@@ -61,6 +61,9 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       cleanup();
       
     } catch(Exception e) {
+      if(cluster != null) {
+        cluster.shutdown();
+      }
       e.printStackTrace();
       fail();
     }
@@ -798,6 +801,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     // Shut down the mini cluster
 
     cluster.shutdown();
+    cluster = null;
 
     // Delete all the DFS files
 
