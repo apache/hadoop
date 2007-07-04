@@ -260,9 +260,6 @@ public class TestScanner extends HBaseTestCase {
       throw e;
       
     } finally {
-      if(fs != null) {
-        fs.close();
-      }
       if(cluster != null) {
         cluster.shutdown();
       }

@@ -37,8 +37,8 @@ public class MiniHBaseCluster implements HConstants {
   private MiniDFSCluster cluster;
   private FileSystem fs;
   private Path parentdir;
-  private HMaster master;
-  private Thread masterThread;
+  private HMaster master = null;
+  private Thread masterThread = null;
   List<HRegionServer> regionServers;
   List<Thread> regionThreads;
   private boolean deleteOnExit = true;
@@ -83,6 +83,8 @@ public class MiniHBaseCluster implements HConstants {
 
     this.conf = conf;
     this.cluster = dfsCluster;
+    this.regionServers = new ArrayList<HRegionServer>(nRegionNodes);
+    this.regionThreads = new ArrayList<Thread>(nRegionNodes);
     init(nRegionNodes);
   }
 
@@ -102,6 +104,8 @@ public class MiniHBaseCluster implements HConstants {
   throws IOException {
     this.conf = conf;
     this.deleteOnExit = deleteOnExit;
+    this.regionServers = new ArrayList<HRegionServer>(nRegionNodes);
+    this.regionThreads = new ArrayList<Thread>(nRegionNodes);
 
     if (miniHdfsFilesystem) {
       try {
@@ -167,8 +171,6 @@ public class MiniHBaseCluster implements HConstants {
 
   private void startRegionServers(final int nRegionNodes)
   throws IOException {
-    this.regionServers = new ArrayList<HRegionServer>(nRegionNodes);
-    this.regionThreads = new ArrayList<Thread>(nRegionNodes);    
     for(int i = 0; i < nRegionNodes; i++) {
       startRegionServer();
     }
@@ -239,7 +241,9 @@ public class MiniHBaseCluster implements HConstants {
     for(HRegionServer hsr: this.regionServers) {
       hsr.stop();
     }
-    master.shutdown();
+    if(master != null) {
+      master.shutdown();
+    }
     for(Thread t: this.regionThreads) {
       if (t.isAlive()) {
         try {
@@ -249,11 +253,13 @@ public class MiniHBaseCluster implements HConstants {
         }
       }
     }
-    try {
-      masterThread.join();
+    if (masterThread != null) {
+      try {
+        masterThread.join();
 
-    } catch(InterruptedException e) {
-      // continue
+      } catch(InterruptedException e) {
+        // continue
+      }
     }
     LOG.info("HBase Cluster shutdown complete");
 
