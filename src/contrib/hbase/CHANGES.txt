@@ -50,3 +50,4 @@ Trunk (unreleased changes)
  30. HADOOP-1531 Add RowFilter to HRegion.HScanner
      Adds a row filtering interface and two implemenentations: A page scanner,
      and a regex row/column-data matcher. (James Kennedy via Stack)
+ 31. HADOOP-1566 Key-making utility
