@@ -38,11 +38,15 @@ Trunk (unreleased changes)
  23. HADOOP-1509.  Made methods/inner classes in HRegionServer and HClient protected
      instead of private for easier extension. Also made HRegion and HRegionInfo public too.
      Added an hbase-default.xml property for specifying what HRegionInterface extension to use
-     for proxy server connection. 
+     for proxy server connection. (James Kennedy via Jim Kellerman)
  24. HADOOP-1534. [hbase] Memcache scanner fails if start key not present
  25. HADOOP-1537. Catch exceptions in testCleanRegionServerExit so we can see
      what is failing.
  26. HADOOP-1543 [hbase] Add HClient.tableExists
- 27. HADOOP-1519 [hbase] map/reduce interface for HBase
+ 27. HADOOP-1519 [hbase] map/reduce interface for HBase.  (Vuk Ercegovac and
+     Jim Kellerman)
  28. HADOOP-1523 Hung region server waiting on write locks 
  29. HADOOP-1560 NPE in MiniHBaseCluster on Windows
+ 30. HADOOP-1531 Add RowFilter to HRegion.HScanner
+     Adds a row filtering interface and two implemenentations: A page scanner,
+     and a regex row/column-data matcher. (James Kennedy via Stack)

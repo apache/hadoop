@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
@@ -1173,18 +1174,34 @@ public class HClient implements HConstants {
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
-   * @param columns     - array of columns to return
-   * @param startRow    - starting row in table to scan
-   * @return            - scanner
+   * @param columns array of columns to return
+   * @param startRow starting row in table to scan
+   * @return scanner
    * @throws IOException
    */
   public synchronized HScannerInterface obtainScanner(Text[] columns,
-      Text startRow) throws IOException {
-    
+      Text startRow)
+  throws IOException {
+    return obtainScanner(columns, startRow, null);
+  }
+  
+  /** 
+   * Get a scanner on the current table starting at the specified row.
+   * Return the specified columns.
+   *
+   * @param columns array of columns to return
+   * @param startRow starting row in table to scan
+   * @param filter a row filter using row-key regexp and/or column data filter.
+   * @return scanner
+   * @throws IOException
+   */
+  public synchronized HScannerInterface obtainScanner(Text[] columns,
+      Text startRow, RowFilterInterface filter)
+  throws IOException { 
     if(this.tableServers == null) {
       throw new IllegalStateException("Must open table first");
     }
-    return new ClientScanner(columns, startRow);
+    return new ClientScanner(columns, startRow, filter);
   }
   
   /*
@@ -1388,6 +1405,7 @@ public class HClient implements HConstants {
     private int currentRegion;
     private HRegionInterface server;
     private long scannerId;
+    private RowFilterInterface filter;
     
     private void loadRegions() {
       Text firstServer = null;
@@ -1404,11 +1422,15 @@ public class HClient implements HConstants {
       this.regions = info.toArray(new RegionLocation[info.size()]);
     }
     
-    ClientScanner(Text[] columns, Text startRow) throws IOException {
+    ClientScanner(Text[] columns, Text startRow, RowFilterInterface filter)
+    throws IOException {
       this.columns = columns;
       this.startRow = startRow;
       this.closed = false;
-      
+      this.filter = filter;
+      if (filter != null) {
+        filter.validate(columns);
+      }
       loadRegions();
       this.currentRegion = -1;
       this.server = null;
@@ -1437,9 +1459,16 @@ public class HClient implements HConstants {
           RegionLocation info = this.regions[currentRegion];
           
           try {
-            this.scannerId = this.server.openScanner(info.regionInfo.regionName,
-                this.columns, currentRegion == 0 ? this.startRow : EMPTY_START_ROW);
-            
+            if (this.filter == null) {
+              this.scannerId = this.server.openScanner(info.regionInfo.regionName,
+                      this.columns, currentRegion == 0 ? this.startRow
+                          : EMPTY_START_ROW);
+            } else {
+              this.scannerId = this.server.openScanner(info.regionInfo.regionName,
+                      this.columns, currentRegion == 0 ? this.startRow
+                          : EMPTY_START_ROW, filter);
+            }
+
             break;
         
           } catch(NotServingRegionException e) {
