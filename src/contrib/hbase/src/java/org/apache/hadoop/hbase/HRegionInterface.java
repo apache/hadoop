@@ -17,6 +17,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -200,6 +201,20 @@ public interface HRegionInterface extends VersionedProtocol {
    * @throws IOException
    */
   public long openScanner(Text regionName, Text[] columns, Text startRow)
+  throws IOException;
+  
+  /**
+   * Opens a remote scanner with a RowFilter.
+   * 
+   * @param regionName name of region to scan
+   * @param columns columns to scan
+   * @param startRow starting row to scan
+   * @param filter RowFilter for filtering results at the row-level.
+   *
+   * @return scannerId scanner identifier used in other calls
+   * @throws IOException
+   */
+  public long openScanner(Text regionName, Text[] columns, Text startRow, RowFilterInterface filter)
   throws IOException;
 
   /**

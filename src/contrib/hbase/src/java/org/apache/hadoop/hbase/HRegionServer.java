@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -1150,15 +1151,25 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#openScanner(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text[], org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
-  public long openScanner(Text regionName, Text[] cols, Text firstRow)
+  public long openScanner(final Text regionName, final Text[] cols,
+      final Text firstRow)
+  throws IOException{
+    return openScanner(regionName, cols, firstRow, null);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public long openScanner(Text regionName, Text[] cols, Text firstRow,
+      final RowFilterInterface filter)
   throws IOException {
     HRegion r = getRegion(regionName);
     long scannerId = -1L;
     try {
-      HInternalScannerInterface s = r.getScanner(cols, firstRow);
+      HInternalScannerInterface s = r.getScanner(cols, firstRow, filter);
       scannerId = rand.nextLong();
       String scannerName = String.valueOf(scannerId);
       synchronized(scanners) {
