@@ -51,3 +51,6 @@ Trunk (unreleased changes)
      Adds a row filtering interface and two implemenentations: A page scanner,
      and a regex row/column-data matcher. (James Kennedy via Stack)
  31. HADOOP-1566 Key-making utility
+ 32. HADOOP-1415 Provide configurable per-column bloom filters. 
+     HADOOP-1466 Clean up visibility and javadoc issues in HBase.
+

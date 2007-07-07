@@ -79,6 +79,7 @@ public class BloomFilter extends Filter {
     }
 
     int[] h = hash.hash(key);
+    hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
       vector[h[i]] = true;
@@ -108,6 +109,7 @@ public class BloomFilter extends Filter {
     }
 
     int[] h = hash.hash(key);
+    hash.clear();
     for(int i = 0; i < nbHash; i++) {
       if(!vector[h[i]]) {
         return false;
