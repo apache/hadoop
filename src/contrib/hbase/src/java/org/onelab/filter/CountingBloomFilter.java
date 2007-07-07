@@ -74,6 +74,7 @@ public final class CountingBloomFilter extends Filter {
     }
 
     int[] h = hash.hash(key);
+    hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
       vector[h[i]]++;
@@ -95,6 +96,7 @@ public final class CountingBloomFilter extends Filter {
     }
 
     int[] h = hash.hash(key);
+    hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
       if(vector[h[i]] >= 1) {
@@ -125,6 +127,7 @@ public final class CountingBloomFilter extends Filter {
     }
 
     int[] h = hash.hash(key);
+    hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
       if(vector[h[i]] == 0) {

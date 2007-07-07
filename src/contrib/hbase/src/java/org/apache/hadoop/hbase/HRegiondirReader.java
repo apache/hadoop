@@ -58,7 +58,7 @@ class HRegiondirReader {
     if (!fs.exists(parentdir)) {
       throw new FileNotFoundException(parentdirName);
     }
-    if (!fs.isDirectory(parentdir)) {
+    if (!fs.getFileStatus(parentdir).isDir()) {
       throw new IOException(parentdirName + " not a directory");
     }
     // Look for regions in parentdir.

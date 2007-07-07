@@ -95,6 +95,7 @@ implements RemoveScheme {
     }
 
     int[] h = hash.hash(key);
+    hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
       vector[h[i]] = true;
@@ -114,6 +115,7 @@ implements RemoveScheme {
     }
 
     int[] h = hash.hash(key);
+    hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
       fpVector[h[i]].add(key);
@@ -328,6 +330,7 @@ implements RemoveScheme {
     }
 
     int[] h = hash.hash(k);
+    hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
       vector[h[i]].remove(k);
