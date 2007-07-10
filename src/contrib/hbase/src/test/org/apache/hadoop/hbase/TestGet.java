@@ -104,7 +104,7 @@ public class TestGet extends HBaseTestCase {
       
       r.put(lockid, HConstants.COL_REGIONINFO, bytes.toByteArray());
       
-      r.commit(lockid);
+      r.commit(lockid, System.currentTimeMillis());
       
       lockid = r.startUpdate(ROW_KEY);
 
@@ -120,7 +120,7 @@ public class TestGet extends HBaseTestCase {
       r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "region"), 
         "region".getBytes(HConstants.UTF8_ENCODING));
 
-      r.commit(lockid);
+      r.commit(lockid, System.currentTimeMillis());
       
       // Verify that get works the same from memcache as when reading from disk
       // NOTE dumpRegion won't work here because it only reads from disk.
@@ -152,7 +152,7 @@ public class TestGet extends HBaseTestCase {
       r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "junk"),
         "junk".getBytes());
       
-      r.commit(lockid);
+      r.commit(lockid, System.currentTimeMillis());
 
       verifyGet(r, otherServerName);
       

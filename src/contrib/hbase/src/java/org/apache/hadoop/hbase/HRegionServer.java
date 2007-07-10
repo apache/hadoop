@@ -48,8 +48,8 @@ import org.apache.hadoop.util.StringUtils;
  ******************************************************************************/
 public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.ipc.VersionedProtocol#getProtocolVersion(java.lang.String, long)
+  /**
+   * {@inheritDoc}
    */
   public long getProtocolVersion(final String protocol, 
       @SuppressWarnings("unused") final long clientVersion)
@@ -107,8 +107,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   class SplitOrCompactChecker implements Runnable, RegionUnavailableListener {
     HClient client = new HClient(conf);
   
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.hbase.RegionUnavailableListener#closing(org.apache.hadoop.io.Text)
+    /**
+     * {@inheritDoc}
      */
     public void closing(final Text regionName) {
       lock.writeLock().lock();
@@ -124,8 +124,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.hbase.RegionUnavailableListener#closed(org.apache.hadoop.io.Text)
+    /**
+     * {@inheritDoc}
      */
     public void closed(final Text regionName) {
       lock.writeLock().lock();
@@ -139,8 +139,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
 
-    /* (non-Javadoc)
-     * @see java.lang.Runnable#run()
+    /**
+     * {@inheritDoc}
      */
     public void run() {
       while(! stopRequested) {
@@ -261,8 +261,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   protected final Integer cacheFlusherLock = new Integer(0);
   /** Runs periodically to flush the memcache */
   class Flusher implements Runnable {
-    /* (non-Javadoc)
-     * @see java.lang.Runnable#run()
+    /**
+     * {@inheritDoc}
      */
     public void run() {
       while(! stopRequested) {
@@ -327,8 +327,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     private int maxLogEntries =
       conf.getInt("hbase.regionserver.maxlogentries", 30 * 1000);
     
-    /* (non-Javadoc)
-     * @see java.lang.Runnable#run()
+    /**
+     * {@inheritDoc}
      */
     public void run() {
       while(! stopRequested) {
@@ -769,8 +769,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     
-    /* (non-Javadoc)
-     * @see java.lang.Runnable#run()
+    /**
+     * {@inheritDoc}
      */
     public void run() {
       for(ToDoEntry e = null; !stopRequested; ) {
@@ -895,16 +895,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // HRegionInterface
   //////////////////////////////////////////////////////////////////////////////
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#getRegionInfo(org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public HRegionInfo getRegionInfo(final Text regionName)
   throws NotServingRegionException {
     return getRegion(regionName).getRegionInfo();
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#get(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public byte [] get(final Text regionName, final Text row,
       final Text column)
@@ -912,8 +912,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return getRegion(regionName).get(row, column);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#get(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, int)
+  /**
+   * {@inheritDoc}
    */
   public byte [][] get(final Text regionName, final Text row,
       final Text column, final int numVersions)
@@ -921,16 +921,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return getRegion(regionName).get(row, column, numVersions);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#get(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, org.apache.hadoop.io.Text, long, int)
+  /**
+   * {@inheritDoc}
    */
   public byte [][] get(final Text regionName, final Text row, final Text column, 
       final long timestamp, final int numVersions) throws IOException {
     return getRegion(regionName).get(row, column, timestamp, numVersions);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#getRow(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public KeyedData[] getRow(final Text regionName, final Text row) throws IOException {
     HRegion region = getRegion(regionName);
@@ -944,8 +944,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return result;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#next(long)
+  /**
+   * {@inheritDoc}
    */
   public KeyedData[] next(final long scannerId)
   throws IOException {
@@ -993,8 +993,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return values.toArray(new KeyedData[values.size()]);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#startUpdate(org.apache.hadoop.io.Text, long, org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public long startUpdate(Text regionName, long clientid, Text row) 
       throws IOException {
@@ -1015,6 +1015,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.localLockId = lockId;
     }
     
+    /**
+     * {@inheritDoc}
+     */
     public void leaseExpired() {
       try {
         localRegion.abort(localLockId);
@@ -1024,8 +1027,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#put(org.apache.hadoop.io.Text, long, long, org.apache.hadoop.io.Text, org.apache.hadoop.io.BytesWritable)
+  /**
+   * {@inheritDoc}
    */
   public void put(final Text regionName, final long clientid,
       final long lockid, final Text column, final byte [] val)
@@ -1035,8 +1038,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.put(lockid, column, val);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#delete(org.apache.hadoop.io.Text, long, long, org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public void delete(Text regionName, long clientid, long lockid, Text column) 
   throws IOException {
@@ -1045,8 +1048,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.delete(lockid, column);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#abort(org.apache.hadoop.io.Text, long, long)
+  /**
+   * {@inheritDoc}
    */
   public void abort(Text regionName, long clientid, long lockid) 
   throws IOException {
@@ -1055,18 +1058,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.abort(lockid);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#commit(org.apache.hadoop.io.Text, long, long)
+  /**
+   * {@inheritDoc}
    */
-  public void commit(Text regionName, long clientid, long lockid) 
-  throws IOException {
+  public void commit(Text regionName, final long clientid, final long lockid,
+      final long timestamp) throws IOException {
     HRegion region = getRegion(regionName, true);
     leases.cancelLease(clientid, lockid);
-    region.commit(lockid);
+    region.commit(lockid, timestamp);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#renewLease(long, long)
+  /**
+   * {@inheritDoc}
    */
   public void renewLease(long lockid, long clientid) throws IOException {
     leases.renewLease(clientid, lockid);
@@ -1136,8 +1139,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.scannerName = n;
     }
     
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.hbase.LeaseListener#leaseExpired()
+    /**
+     * {@inheritDoc}
      */
     public void leaseExpired() {
       LOG.info("Scanner " + this.scannerName + " lease expired");
@@ -1154,22 +1157,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * {@inheritDoc}
    */
-  public long openScanner(final Text regionName, final Text[] cols,
-      final Text firstRow)
-  throws IOException{
-    return openScanner(regionName, cols, firstRow, null);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
   public long openScanner(Text regionName, Text[] cols, Text firstRow,
-      final RowFilterInterface filter)
+      final long timestamp, final RowFilterInterface filter)
   throws IOException {
     HRegion r = getRegion(regionName);
     long scannerId = -1L;
     try {
-      HInternalScannerInterface s = r.getScanner(cols, firstRow, filter);
+      HInternalScannerInterface s =
+        r.getScanner(cols, firstRow, timestamp, filter);
       scannerId = rand.nextLong();
       String scannerName = String.valueOf(scannerId);
       synchronized(scanners) {
@@ -1184,8 +1179,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return scannerId;
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HRegionInterface#close(long)
+  /**
+   * {@inheritDoc}
    */
   public void close(final long scannerId) throws IOException {
     String scannerName = String.valueOf(scannerId);

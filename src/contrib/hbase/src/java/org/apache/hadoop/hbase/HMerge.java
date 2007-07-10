@@ -316,7 +316,6 @@ class HMerge implements HConstants {
 
   /** Instantiated to compact the meta region */
   private static class OfflineMerger extends Merger {
-    private Path dir;
     private TreeSet<HRegionInfo> metaRegions;
     private TreeMap<Text, byte []> results;
     
@@ -324,7 +323,6 @@ class HMerge implements HConstants {
         throws IOException {
       
       super(conf, fs, tableName);
-      this.dir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
       this.metaRegions = new TreeSet<HRegionInfo>();
       this.results = new TreeMap<Text, byte []>();
 
@@ -334,7 +332,7 @@ class HMerge implements HConstants {
         new HRegion(dir, hlog,fs, conf, HGlobals.rootRegionInfo, null);
 
       HInternalScannerInterface rootScanner =
-        root.getScanner(META_COLS, new Text());
+        root.getScanner(META_COLS, new Text(), System.currentTimeMillis(), null);
       
       try {
         while(rootScanner.next(key, results)) {
@@ -357,7 +355,7 @@ class HMerge implements HConstants {
     }
 
     @Override
-    protected TreeSet<HRegionInfo> next() throws IOException {
+    protected TreeSet<HRegionInfo> next() {
       more = false;
       return metaRegions;
     }
@@ -380,7 +378,7 @@ class HMerge implements HConstants {
           root.delete(lockid, COL_REGIONINFO);
           root.delete(lockid, COL_SERVER);
           root.delete(lockid, COL_STARTCODE);
-          root.commit(lockid);
+          root.commit(lockid, System.currentTimeMillis());
           lockid = -1L;
 
           if(LOG.isDebugEnabled()) {
@@ -405,7 +403,7 @@ class HMerge implements HConstants {
       try {
         lockid = root.startUpdate(newRegion.getRegionName());
         root.put(lockid, COL_REGIONINFO, byteValue.toByteArray());
-        root.commit(lockid);
+        root.commit(lockid, System.currentTimeMillis());
         lockid = -1L;
 
         if(LOG.isDebugEnabled()) {

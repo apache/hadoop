@@ -171,10 +171,11 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param regionName region name
    * @param clientid a unique value to identify the client
    * @param lockid lock id returned from startUpdate
+   * @param timestamp the time (in milliseconds to associate with this change)
    * @throws IOException
    */
   public void commit(final Text regionName, final long clientid,
-      final long lockid)
+      final long lockid, final long timestamp)
   throws IOException;
   
   /**
@@ -191,30 +192,19 @@ public interface HRegionInterface extends VersionedProtocol {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Opens a remote scanner.
-   * 
-   * @param regionName name of region to scan
-   * @param columns columns to scan
-   * @param startRow starting row to scan
-   *
-   * @return scannerId scanner identifier used in other calls
-   * @throws IOException
-   */
-  public long openScanner(Text regionName, Text[] columns, Text startRow)
-  throws IOException;
-  
-  /**
    * Opens a remote scanner with a RowFilter.
    * 
    * @param regionName name of region to scan
    * @param columns columns to scan
    * @param startRow starting row to scan
+   * @param timestamp only return values whose timestamp is <= this value
    * @param filter RowFilter for filtering results at the row-level.
    *
    * @return scannerId scanner identifier used in other calls
    * @throws IOException
    */
-  public long openScanner(Text regionName, Text[] columns, Text startRow, RowFilterInterface filter)
+  public long openScanner(Text regionName, Text[] columns, Text startRow,
+      long timestamp, RowFilterInterface filter)
   throws IOException;
 
   /**

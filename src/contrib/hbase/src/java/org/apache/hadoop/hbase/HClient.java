@@ -74,6 +74,9 @@ public class HClient implements HConstants {
       this.serverAddress = serverAddress;
     }
     
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString() {
       return "address: " + this.serverAddress.toString() + ", regioninfo: " +
@@ -312,7 +315,7 @@ public class HClient implements HConstants {
       long scannerId = -1L;
       try {
         scannerId = server.openScanner(firstMetaServer.regionInfo.regionName,
-            REGIONINFO, tableName);
+            REGIONINFO, tableName, System.currentTimeMillis(), null);
         KeyedData[] values = server.next(scannerId);
         if(values == null || values.length == 0) {
           break;
@@ -417,7 +420,7 @@ public class HClient implements HConstants {
       long scannerId = -1L;
       try {
         scannerId = server.openScanner(firstMetaServer.regionInfo.regionName,
-            REGIONINFO, tableName);
+            REGIONINFO, tableName, System.currentTimeMillis(), null);
         boolean isenabled = false;
         while(true) {
           KeyedData[] values = server.next(scannerId);
@@ -500,7 +503,7 @@ public class HClient implements HConstants {
       long scannerId = -1L;
       try {
         scannerId = server.openScanner(firstMetaServer.regionInfo.regionName,
-            REGIONINFO, tableName);
+            REGIONINFO, tableName, System.currentTimeMillis(), null);
         boolean disabled = false;
         while(true) {
           KeyedData[] values = server.next(scannerId);
@@ -807,7 +810,8 @@ public class HClient implements HConstants {
       long scannerId = -1L;
       try {
         scannerId =
-          server.openScanner(t.regionInfo.regionName, META_COLUMNS, tableName);
+          server.openScanner(t.regionInfo.regionName, META_COLUMNS, tableName,
+              System.currentTimeMillis(), null);
 
         DataInputBuffer inbuf = new DataInputBuffer();
         while(true) {
@@ -963,7 +967,7 @@ public class HClient implements HConstants {
       long scannerId = -1L;
       try {
         scannerId = server.openScanner(t.regionInfo.regionName,
-            META_COLUMNS, EMPTY_START_ROW);
+            META_COLUMNS, EMPTY_START_ROW, System.currentTimeMillis(), null);
         
         DataInputBuffer inbuf = new DataInputBuffer();
         while(true) {
@@ -1180,9 +1184,23 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public synchronized HScannerInterface obtainScanner(Text[] columns,
-      Text startRow)
-  throws IOException {
-    return obtainScanner(columns, startRow, null);
+      Text startRow) throws IOException {
+    return obtainScanner(columns, startRow, System.currentTimeMillis(), null);
+  }
+  
+  /** 
+   * Get a scanner on the current table starting at the specified row.
+   * Return the specified columns.
+   *
+   * @param columns array of columns to return
+   * @param startRow starting row in table to scan
+   * @param timestamp only return results whose timestamp <= this value
+   * @return scanner
+   * @throws IOException
+   */
+  public synchronized HScannerInterface obtainScanner(Text[] columns,
+      Text startRow, long timestamp) throws IOException {
+    return obtainScanner(columns, startRow, timestamp, null);
   }
   
   /** 
@@ -1196,14 +1214,30 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public synchronized HScannerInterface obtainScanner(Text[] columns,
-      Text startRow, RowFilterInterface filter)
-  throws IOException { 
+      Text startRow, RowFilterInterface filter) throws IOException { 
+    return obtainScanner(columns, startRow, System.currentTimeMillis(), filter);
+  }
+  
+  /** 
+   * Get a scanner on the current table starting at the specified row.
+   * Return the specified columns.
+   *
+   * @param columns array of columns to return
+   * @param startRow starting row in table to scan
+   * @param timestamp only return results whose timestamp <= this value
+   * @param filter a row filter using row-key regexp and/or column data filter.
+   * @return scanner
+   * @throws IOException
+   */
+  public synchronized HScannerInterface obtainScanner(Text[] columns,
+      Text startRow, long timestamp, RowFilterInterface filter)
+  throws IOException {
     if(this.tableServers == null) {
       throw new IllegalStateException("Must open table first");
     }
-    return new ClientScanner(columns, startRow, filter);
+    return new ClientScanner(columns, startRow, timestamp, filter);
   }
-  
+
   /*
    * @return General HClient RetryPolicy instance.
    */
@@ -1361,8 +1395,21 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public void commit(long lockid) throws IOException {
+    commit(lockid, System.currentTimeMillis());
+  }
+
+  /** 
+   * Finalize a row mutation
+   *
+   * @param lockid              - lock id returned from startUpdate
+   * @param timestamp           - time to associate with the change
+   * @throws IOException
+   */
+  public void commit(long lockid, long timestamp) throws IOException {
     try {
-      this.currentServer.commit(this.currentRegion, this.clientid, lockid);
+      this.currentServer.commit(this.currentRegion, this.clientid, lockid,
+          timestamp);
+      
     } finally {
       this.currentServer = null;
       this.currentRegion = null;
@@ -1399,6 +1446,7 @@ public class HClient implements HConstants {
     private final Text EMPTY_COLUMN = new Text();
     private Text[] columns;
     private Text startRow;
+    private long scanTime;
     private boolean closed;
     private RegionLocation[] regions;
     @SuppressWarnings("hiding")
@@ -1422,10 +1470,11 @@ public class HClient implements HConstants {
       this.regions = info.toArray(new RegionLocation[info.size()]);
     }
     
-    ClientScanner(Text[] columns, Text startRow, RowFilterInterface filter)
-    throws IOException {
+    ClientScanner(Text[] columns, Text startRow, long timestamp,
+        RowFilterInterface filter) throws IOException {
       this.columns = columns;
       this.startRow = startRow;
+      this.scanTime = timestamp;
       this.closed = false;
       this.filter = filter;
       if (filter != null) {
@@ -1462,11 +1511,12 @@ public class HClient implements HConstants {
             if (this.filter == null) {
               this.scannerId = this.server.openScanner(info.regionInfo.regionName,
                       this.columns, currentRegion == 0 ? this.startRow
-                          : EMPTY_START_ROW);
+                          : EMPTY_START_ROW, scanTime, null);
             } else {
-              this.scannerId = this.server.openScanner(info.regionInfo.regionName,
-                      this.columns, currentRegion == 0 ? this.startRow
-                          : EMPTY_START_ROW, filter);
+              this.scannerId =
+                this.server.openScanner(info.regionInfo.regionName,
+                    this.columns, currentRegion == 0 ? this.startRow
+                        : EMPTY_START_ROW, scanTime, filter);
             }
 
             break;
@@ -1488,8 +1538,8 @@ public class HClient implements HConstants {
       return true;
     }
     
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.TreeMap)
+    /**
+     * {@inheritDoc}
      */
     public boolean next(HStoreKey key, TreeMap<Text, byte[]> results) throws IOException {
       if(this.closed) {
@@ -1511,8 +1561,8 @@ public class HClient implements HConstants {
       return values == null ? false : values.length != 0;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.hbase.HScannerInterface#close()
+    /**
+     * {@inheritDoc}
      */
     public void close() throws IOException {
       if(this.scannerId != -1L) {

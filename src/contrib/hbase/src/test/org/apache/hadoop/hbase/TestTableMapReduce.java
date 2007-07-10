@@ -66,6 +66,9 @@ public class TestTableMapReduce extends HBaseTestCase {
       "6789".getBytes()
   };
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -96,7 +99,7 @@ public class TestTableMapReduce extends HBaseTestCase {
             + String.format("%1$05d", i)));
 
         region.put(lockid, TEXT_INPUT_COLUMN, values[i]);
-        region.commit(lockid);
+        region.commit(lockid, System.currentTimeMillis());
       }
 
       region.close();
@@ -117,6 +120,9 @@ public class TestTableMapReduce extends HBaseTestCase {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public void tearDown() throws Exception {
     super.tearDown();

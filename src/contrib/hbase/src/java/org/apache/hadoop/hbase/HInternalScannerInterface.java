@@ -26,10 +26,22 @@ import org.apache.hadoop.io.Text;
  * is specified) or if multiple members of the same column family were
  * specified. If so, we need to ignore the timestamp to ensure that we get all
  * the family members, as they may have been last updated at different times.
- * This interface exposes two APIs for querying the scanner.
  */
 public interface HInternalScannerInterface {
   
+  /**
+   * Grab the next row's worth of values. The HScanner will return the most
+   * recent data value for each row that is not newer than the target time.
+   * 
+   * If a dataFilter is defined, it will be used to skip rows that do not
+   * match its criteria. It may cause the scanner to stop prematurely if it
+   * knows that it will no longer accept the remaining results.
+   * 
+   * @param key HStoreKey containing row and timestamp
+   * @param results Map of column/value pairs
+   * @return true if a value was found
+   * @throws IOException
+   */
   public boolean next(HStoreKey key, TreeMap<Text, byte []> results)
   throws IOException;
   
@@ -38,9 +50,9 @@ public interface HInternalScannerInterface {
    */
   public void close();
   
-  /** Returns true if the scanner is matching a column family or regex */
+  /** @return true if the scanner is matching a column family or regex */
   public boolean isWildcardScanner();
   
-  /** Returns true if the scanner is matching multiple column family members */
+  /** @return true if the scanner is matching multiple column family members */
   public boolean isMultipleMatchScanner();
 }
