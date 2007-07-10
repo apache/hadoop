@@ -280,6 +280,9 @@ Trunk (unreleased changes)
  86. HADOOP-1556.  Make LocalJobRunner delete working files at end of
      job run.  (Devaraj Das via tomwhite)
 
+ 87. HADOOP-1571.  Add contrib lib directories to root build.xml
+     javadoc classpath.  (Michael Stack via tomwhite)
+
 
 Release 0.13.0 - 2007-06-08
 

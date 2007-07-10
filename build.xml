@@ -602,7 +602,13 @@
     	<packageset dir="src/contrib/hbase/src/java"/>
 
         <link href="${javadoc.link.java}"/>
-        <classpath refid="classpath"/>
+
+        <classpath >
+          <path refid="classpath" />
+          <fileset dir="src/contrib/">
+            <include name="*/lib/*.jar" />
+          </fileset>
+        </classpath>
 
     	<group title="Core" packages="org.apache.*"/>
     	<group title="Examples" packages="org.apache.hadoop.examples*"/>
