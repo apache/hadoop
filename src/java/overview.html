@@ -155,7 +155,7 @@ command, run on the master node:</p>
 examine it:</p>
 
 <tt>
-bin/hadoop org.apache.hadoop.mapred.demo.Grep input output 'dfs[a-z.]+'<br>
+bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'<br>
 bin/hadoop dfs -get output output
 cat output/*
 </tt>
