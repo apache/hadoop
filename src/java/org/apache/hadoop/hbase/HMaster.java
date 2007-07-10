@@ -51,8 +51,8 @@ import org.apache.hadoop.util.StringUtils;
 public class HMaster implements HConstants, HMasterInterface, 
     HMasterRegionInterface, Runnable {
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.ipc.VersionedProtocol#getProtocolVersion(java.lang.String, long)
+  /**
+   * {@inheritDoc}
    */
   public long getProtocolVersion(String protocol,
     @SuppressWarnings("unused") long clientVersion)
@@ -169,7 +169,7 @@ public class HMaster implements HConstants, HMasterInterface,
       try {
         regionServer = client.getHRegionConnection(region.server);
         scannerId = regionServer.openScanner(region.regionName, METACOLUMNS,
-            FIRST_ROW);
+            FIRST_ROW, System.currentTimeMillis(), null);
 
         while (true) {
           TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
@@ -278,6 +278,9 @@ public class HMaster implements HConstants, HMasterInterface,
    * Scanner for the <code>ROOT</code> HRegion.
    */
   class RootScanner extends BaseScanner {
+    /**
+     * {@inheritDoc}
+     */
     public void run() {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Running ROOT scanner");
@@ -338,11 +341,17 @@ public class HMaster implements HConstants, HMasterInterface,
     Text regionName;
     Text startKey;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean equals(Object o) {
       return this.compareTo(o) == 0;
     }
     
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int hashCode() {
       int result = this.regionName.hashCode();
@@ -351,6 +360,10 @@ public class HMaster implements HConstants, HMasterInterface,
     }
 
     // Comparable
+
+    /**
+     * {@inheritDoc}
+     */
     public int compareTo(Object o) {
       MetaRegion other = (MetaRegion)o;
       
@@ -380,6 +393,9 @@ public class HMaster implements HConstants, HMasterInterface,
    * action would prevent other work from getting done.
    */
   class MetaScanner extends BaseScanner {
+    /**
+     * {@inheritDoc}
+     */
     @SuppressWarnings("null")
     public void run() {
       while (!closed) {
@@ -804,8 +820,8 @@ public class HMaster implements HConstants, HMasterInterface,
   // HMasterRegionInterface
   //////////////////////////////////////////////////////////////////////////////
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterRegionInterface#regionServerStartup(org.apache.hadoop.hbase.HServerInfo)
+  /**
+   * {@inheritDoc}
    */
   @SuppressWarnings("unused")
   public void regionServerStartup(HServerInfo serverInfo)
@@ -838,8 +854,8 @@ public class HMaster implements HConstants, HMasterInterface,
     return s.hashCode();
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterRegionInterface#regionServerReport(org.apache.hadoop.hbase.HServerInfo, org.apache.hadoop.hbase.HMsg[])
+  /**
+   * {@inheritDoc}
    */
   public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[])
   throws IOException {
@@ -1336,7 +1352,7 @@ public class HMaster implements HConstants, HMasterInterface,
         }
         server.delete(regionName, clientId, lockid, COL_SERVER);
         server.delete(regionName, clientId, lockid, COL_STARTCODE);
-        server.commit(regionName, clientId, lockid);
+        server.commit(regionName, clientId, lockid, System.currentTimeMillis());
       }
 
       // Get regions reassigned
@@ -1384,7 +1400,8 @@ public class HMaster implements HConstants, HMasterInterface,
         
         try {
           LOG.debug("scanning root region");
-          scannerId = server.openScanner(HGlobals.rootRegionInfo.regionName, columns, startRow);
+          scannerId = server.openScanner(HGlobals.rootRegionInfo.regionName,
+              columns, startRow, System.currentTimeMillis(), null);
           scanMetaRegion(server, scannerId, HGlobals.rootRegionInfo.regionName);
           break;
           
@@ -1413,7 +1430,8 @@ public class HMaster implements HConstants, HMasterInterface,
 
             server = client.getHRegionConnection(r.server);
           
-            scannerId = server.openScanner(r.regionName, columns, startRow);
+            scannerId = server.openScanner(r.regionName, columns, startRow,
+                System.currentTimeMillis(), null);
             scanMetaRegion(server, scannerId, r.regionName);
             
           }
@@ -1513,7 +1531,9 @@ public class HMaster implements HConstants, HMasterInterface,
           }
           server.delete(metaRegionName, clientId, lockid, COL_SERVER);
           server.delete(metaRegionName, clientId, lockid, COL_STARTCODE);
-          server.commit(metaRegionName, clientId, lockid);
+          server.commit(metaRegionName, clientId, lockid,
+              System.currentTimeMillis());
+          
           break;
 
         } catch(NotServingRegionException e) {
@@ -1622,7 +1642,9 @@ public class HMaster implements HConstants, HMasterInterface,
           long lockid = server.startUpdate(metaRegionName, clientId, regionName);
           server.put(metaRegionName, clientId, lockid, COL_SERVER, serverAddress);
           server.put(metaRegionName, clientId, lockid, COL_STARTCODE, startCode);
-          server.commit(metaRegionName, clientId, lockid);
+          server.commit(metaRegionName, clientId, lockid,
+              System.currentTimeMillis());
+          
           break;
           
         } catch(NotServingRegionException e) {
@@ -1639,15 +1661,15 @@ public class HMaster implements HConstants, HMasterInterface,
   // HMasterInterface
   //////////////////////////////////////////////////////////////////////////////
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#isMasterRunning()
+  /**
+   * {@inheritDoc}
    */
   public boolean isMasterRunning() {
     return !closed;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#shutdown()
+  /**
+   * {@inheritDoc}
    */
   public void shutdown() {
     TimerTask tt = new TimerTask() {
@@ -1664,8 +1686,8 @@ public class HMaster implements HConstants, HMasterInterface,
     t.schedule(tt, 10);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#createTable(org.apache.hadoop.hbase.HTableDescriptor)
+  /**
+   * {@inheritDoc}
    */
   public void createTable(HTableDescriptor desc) throws IOException {
     if (!isMasterRunning()) {
@@ -1717,7 +1739,8 @@ public class HMaster implements HConstants, HMasterInterface,
         long lockid = server.startUpdate(metaRegionName, clientId, regionName);
         server.put(metaRegionName, clientId, lockid, COL_REGIONINFO,
           byteValue.toByteArray());
-        server.commit(metaRegionName, clientId, lockid);
+        server.commit(metaRegionName, clientId, lockid,
+            System.currentTimeMillis());
 
         // 4. Close the new region to flush it to disk
 
@@ -1741,8 +1764,8 @@ public class HMaster implements HConstants, HMasterInterface,
     }
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#deleteTable(org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public void deleteTable(Text tableName) throws IOException {
     new TableDelete(tableName).process();
@@ -1751,36 +1774,36 @@ public class HMaster implements HConstants, HMasterInterface,
     }
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#addColumn(org.apache.hadoop.io.Text, org.apache.hadoop.hbase.HColumnDescriptor)
+  /**
+   * {@inheritDoc}
    */
   public void addColumn(Text tableName, HColumnDescriptor column) throws IOException {
     new AddColumn(tableName, column).process();
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#deleteColumn(org.apache.hadoop.io.Text, org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public void deleteColumn(Text tableName, Text columnName) throws IOException {
     new DeleteColumn(tableName, HStoreKey.extractFamily(columnName)).process();
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#enableTable(org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public void enableTable(Text tableName) throws IOException {
     new ChangeTableState(tableName, true).process();
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#findRootRegion()
+  /**
+   * {@inheritDoc}
    */
   public HServerAddress findRootRegion() {
     return rootRegionLocation;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HMasterInterface#disableTable(org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public void disableTable(Text tableName) throws IOException {
     new ChangeTableState(tableName, false).process();
@@ -1837,7 +1860,8 @@ public class HMaster implements HConstants, HMasterInterface,
               // Open a scanner on the meta region
               
               long scannerId =
-                server.openScanner(m.regionName, METACOLUMNS, tableName);
+                server.openScanner(m.regionName, METACOLUMNS, tableName,
+                    System.currentTimeMillis(), null);
               
               try {
                 DataInputBuffer inbuf = new DataInputBuffer();
@@ -1995,7 +2019,9 @@ public class HMaster implements HConstants, HMasterInterface,
           updateRegionInfo(server, m.regionName, i);
           server.delete(m.regionName, clientId, lockid, COL_SERVER);
           server.delete(m.regionName, clientId, lockid, COL_STARTCODE);
-          server.commit(m.regionName, clientId, lockid);
+          server.commit(m.regionName, clientId, lockid,
+              System.currentTimeMillis());
+          
           lockid = -1L;
 
           if(LOG.isDebugEnabled()) {
@@ -2151,7 +2177,7 @@ public class HMaster implements HConstants, HMasterInterface,
         lockid = server.startUpdate(regionName, clientId, i.regionName);
         server.put(regionName, clientId, lockid, COL_REGIONINFO,
           byteValue.toByteArray());
-        server.commit(regionName, clientId, lockid);
+        server.commit(regionName, clientId, lockid, System.currentTimeMillis());
         lockid = -1L;
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + i.regionName);
@@ -2252,8 +2278,8 @@ public class HMaster implements HConstants, HMasterInterface,
       this.server = server;
     }
     
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.hbase.LeaseListener#leaseExpired()
+    /**
+     * {@inheritDoc}
      */
     public void leaseExpired() {
       LOG.info(server + " lease expired");

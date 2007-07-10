@@ -53,4 +53,7 @@ Trunk (unreleased changes)
  31. HADOOP-1566 Key-making utility
  32. HADOOP-1415 Provide configurable per-column bloom filters. 
      HADOOP-1466 Clean up visibility and javadoc issues in HBase.
+ 33. HADOOP-1538 Provide capability for client specified time stamps in HBase
+     HADOOP-1466 Clean up visibility and javadoc issues in HBase.
+
 

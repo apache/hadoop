@@ -36,6 +36,9 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
   protected FileSystem fs;
   protected Path dir;
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -111,6 +114,9 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
@@ -128,7 +134,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
           + String.format("%1$05d", i)));
 
       region.put(lockid, COLUMN_NAME, value.get());
-      region.commit(lockid);
+      region.commit(lockid, System.currentTimeMillis());
       if(i % 10000 == 0) {
         System.out.println("Flushing write #" + i);
         region.flushcache(false);

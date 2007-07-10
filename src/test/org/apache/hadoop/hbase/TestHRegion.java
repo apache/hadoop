@@ -120,7 +120,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       long writeid = region.startUpdate(new Text("row_" + k));
       region.put(writeid, CONTENTS_BASIC, (CONTENTSTR + k).getBytes());
       region.put(writeid, new Text(ANCHORNUM + k), (ANCHORSTR + k).getBytes());
-      region.commit(writeid);
+      region.commit(writeid, System.currentTimeMillis());
     }
     System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
@@ -275,7 +275,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       long lockid = region.startUpdate(new Text("row_vals1_" + kLabel));
       region.put(lockid, cols[0], vals1[k].getBytes());
       region.put(lockid, cols[1], vals1[k].getBytes());
-      region.commit(lockid);
+      region.commit(lockid, System.currentTimeMillis());
       numInserted += 2;
     }
 
@@ -286,7 +286,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
 
-    HInternalScannerInterface s = region.getScanner(cols, new Text());
+    HInternalScannerInterface s =
+      region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     int numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -331,7 +332,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
     
-    s = region.getScanner(cols, new Text());
+    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -373,7 +374,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       long lockid = region.startUpdate(new Text("row_vals1_" + kLabel));
       region.put(lockid, cols[0], vals1[k].getBytes());
       region.put(lockid, cols[1], vals1[k].getBytes());
-      region.commit(lockid);
+      region.commit(lockid, System.currentTimeMillis());
       numInserted += 2;
     }
 
@@ -384,7 +385,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
 
-    s = region.getScanner(cols, new Text());
+    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -429,7 +430,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
     
-    s = region.getScanner(cols, new Text());
+    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -464,7 +465,9 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
     startTime = System.currentTimeMillis();
     
-    s = region.getScanner(cols, new Text("row_vals1_500"));
+    s = region.getScanner(cols, new Text("row_vals1_500"),
+        System.currentTimeMillis(), null);
+    
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -524,7 +527,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       // Write to the HRegion
       long writeid = region.startUpdate(new Text("row_" + k));
       region.put(writeid, CONTENTS_BODY, buf1.toString().getBytes());
-      region.commit(writeid);
+      region.commit(writeid, System.currentTimeMillis());
       if (k > 0 && k % (N_ROWS / 100) == 0) {
         System.out.println("Flushing write #" + k);
 
@@ -609,13 +612,16 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     fs.delete(oldRegion2);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.RegionUnavailableListener#regionIsUnavailable(org.apache.hadoop.io.Text)
+  /**
+   * {@inheritDoc}
    */
   public void closing(@SuppressWarnings("unused") final Text regionName) {
     // We don't use this here. It is only for the HRegionServer
   }
   
+  /**
+   * {@inheritDoc}
+   */
   public void closed(@SuppressWarnings("unused") final Text regionName) {
     // We don't use this here. It is only for the HRegionServer
   }
@@ -633,7 +639,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     long startTime = System.currentTimeMillis();
     
-    HInternalScannerInterface s = region.getScanner(cols, new Text());
+    HInternalScannerInterface s =
+      region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
 
     try {
 
@@ -689,7 +696,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
 
-    s = region.getScanner(cols, new Text());
+    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     try {
       int numFetched = 0;
       HStoreKey curKey = new HStoreKey();
@@ -726,7 +733,9 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
     if(StaticTestEnvironment.debugging) {
       startTime = System.currentTimeMillis();
-      s = region.getScanner(new Text[] { CONTENTS_BODY }, new Text());
+      s = region.getScanner(new Text[] { CONTENTS_BODY }, new Text(),
+          System.currentTimeMillis(), null);
+      
       try {
         int numFetched = 0;
         HStoreKey curKey = new HStoreKey();
@@ -762,7 +771,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
     
-    s = region.getScanner(cols, new Text());
+    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
 
     try {
       int fetched = 0;

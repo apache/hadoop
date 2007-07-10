@@ -81,7 +81,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
       HClient.RegionLocation rl = client.getRegionLocation(table);
       regionServer = client.getHRegionConnection(rl.serverAddress);
       scannerId = regionServer.openScanner(rl.regionInfo.regionName,
-          HMaster.METACOLUMNS, new Text());
+          HMaster.METACOLUMNS, new Text(), System.currentTimeMillis(), null);
       while (true) {
         TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
         KeyedData[] values = regionServer.next(scannerId);

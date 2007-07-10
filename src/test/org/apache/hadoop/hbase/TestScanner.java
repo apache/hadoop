@@ -78,7 +78,9 @@ public class TestScanner extends HBaseTestCase {
     
     for(int i = 0; i < scanColumns.length; i++) {
       try {
-        scanner = region.getScanner(scanColumns[i], FIRST_ROW);
+        scanner = region.getScanner(scanColumns[i], FIRST_ROW,
+            System.currentTimeMillis(), null);
+        
         while(scanner.next(key, results)) {
           assertTrue(results.containsKey(HConstants.COL_REGIONINFO));
           byte [] val = results.get(HConstants.COL_REGIONINFO); 
@@ -155,7 +157,7 @@ public class TestScanner extends HBaseTestCase {
       DataOutputStream s = new DataOutputStream(byteStream);
       HGlobals.rootRegionInfo.write(s);
       region.put(lockid, HConstants.COL_REGIONINFO, byteStream.toByteArray());
-      region.commit(lockid);
+      region.commit(lockid, System.currentTimeMillis());
 
       // What we just committed is in the memcache. Verify that we can get
       // it back both with scanning and get
@@ -186,7 +188,7 @@ public class TestScanner extends HBaseTestCase {
       region.put(lockid, HConstants.COL_STARTCODE, 
         String.valueOf(START_CODE).getBytes(HConstants.UTF8_ENCODING));
 
-      region.commit(lockid);
+      region.commit(lockid, System.currentTimeMillis());
       
       // Validate that we can still get the HRegionInfo, even though it is in
       // an older row on disk and there is a newer row in the memcache
@@ -223,7 +225,7 @@ public class TestScanner extends HBaseTestCase {
       region.put(lockid, HConstants.COL_SERVER, 
         address.toString().getBytes(HConstants.UTF8_ENCODING));
 
-      region.commit(lockid);
+      region.commit(lockid, System.currentTimeMillis());
       
       // Validate again
       

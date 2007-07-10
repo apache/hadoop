@@ -391,6 +391,7 @@ class HStore implements HConstants {
       super(fs, dirName, conf);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Writable get(WritableComparable key, Writable val) throws IOException {
       // Note - the key being passed to us is always a HStoreKey
@@ -407,6 +408,7 @@ class HStore implements HConstants {
       return null;
     }
 
+    /** {@inheritDoc} */
     @Override
     public WritableComparable getClosest(WritableComparable key, Writable val)
     throws IOException {
@@ -438,6 +440,7 @@ class HStore implements HConstants {
       super(conf, fs, dirName, keyClass, valClass, compression);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void append(WritableComparable key, Writable val) throws IOException {
       // Note - the key being passed to us is always a HStoreKey
@@ -1031,6 +1034,9 @@ class HStore implements HConstants {
             Text readcol = readkey.getColumn();
             if (results.get(readcol) == null
                 && key.matchesWithoutColumn(readkey)) {
+              if(readval.equals(HConstants.DELETE_BYTES)) {
+                break;
+              }
               results.put(new Text(readcol), readval.get());
               readval = new ImmutableBytesWritable();
             } else if(key.getRow().compareTo(readkey.getRow()) > 0) {
@@ -1078,10 +1084,14 @@ class HStore implements HConstants {
             continue;
           }
           if (readkey.matchesRowCol(key)) {
+            if(readval.equals(HConstants.DELETE_BYTES)) {
+              break;
+            }
             results.add(readval.get());
             readval = new ImmutableBytesWritable();
             while(map.next(readkey, readval) && readkey.matchesRowCol(key)) {
-              if (numVersions > 0 && (results.size() >= numVersions)) {
+              if ((numVersions > 0 && (results.size() >= numVersions))
+                  || readval.equals(HConstants.DELETE_BYTES)) {
                 break;
               }
               results.add(readval.get());

@@ -165,7 +165,9 @@ class HRegiondirReader {
     HRegion r = new HRegion(this.parentdir, null,
         FileSystem.get(this.conf), conf, info, null);
     Text [] families = info.tableDesc.families().keySet().toArray(new Text [] {});
-    HInternalScannerInterface scanner = r.getScanner(families, new Text());
+    HInternalScannerInterface scanner =
+      r.getScanner(families, new Text(), System.currentTimeMillis(), null);
+    
     HStoreKey key = new HStoreKey();
     TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
     // Print out table header line.

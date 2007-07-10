@@ -46,15 +46,17 @@ public class HMemcache {
 
   final HLocking lock = new HLocking();
 
+  /** constructor */
   public HMemcache() {
     super();
   }
 
+  /** represents the state of the memcache at a specified point in time */
   public static class Snapshot {
-    public TreeMap<HStoreKey, byte []> memcacheSnapshot = null;
-    public long sequenceId = 0;
+    TreeMap<HStoreKey, byte []> memcacheSnapshot = null;
+    long sequenceId = 0;
     
-    public Snapshot() {
+    Snapshot() {
       super();
     }
   }
@@ -72,7 +74,7 @@ public class HMemcache {
    * 
    * @return frozen HMemcache TreeMap and HLog sequence number.
    */
-  public Snapshot snapshotMemcacheForLog(HLog log) throws IOException {
+  Snapshot snapshotMemcacheForLog(HLog log) throws IOException {
     Snapshot retval = new Snapshot();
 
     this.lock.obtainWriteLock();
@@ -112,6 +114,7 @@ public class HMemcache {
    * Delete the snapshot, remove from history.
    *
    * Modifying the structure means we need to obtain a writelock.
+   * @throws IOException
    */
   public void deleteSnapshot() throws IOException {
     this.lock.obtainWriteLock();
@@ -251,6 +254,9 @@ public class HMemcache {
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       if (itKey.matchesRowCol(curKey)) {
+        if(HConstants.DELETE_BYTES.compareTo(es.getValue()) == 0) {
+          break;
+        }
         result.add(tailMap.get(itKey));
         curKey.setVersion(itKey.getTimestamp() - 1);
       }
@@ -264,7 +270,7 @@ public class HMemcache {
   /**
    * Return a scanner over the keys in the HMemcache
    */
-  public HInternalScannerInterface getScanner(long timestamp,
+  HInternalScannerInterface getScanner(long timestamp,
       Text targetCols[], Text firstRow)
   throws IOException {  
     return new HMemcacheScanner(timestamp, targetCols, firstRow);
@@ -280,7 +286,7 @@ public class HMemcache {
     final Iterator<HStoreKey> keyIterators[];
 
     @SuppressWarnings("unchecked")
-    public HMemcacheScanner(long timestamp, Text targetCols[], Text firstRow)
+    HMemcacheScanner(long timestamp, Text targetCols[], Text firstRow)
         throws IOException {
       
       super(timestamp, targetCols);
@@ -331,6 +337,7 @@ public class HMemcache {
      * @param firstRow seek to this row
      * @return true if this is the first row
      */
+    @Override
     boolean findFirstRow(int i, Text firstRow) {
       return firstRow.getLength() == 0 ||
         keys[i].getRow().compareTo(firstRow) >= 0;
@@ -342,6 +349,7 @@ public class HMemcache {
      * @param i Which iterator to fetch next value from
      * @return true if there is more data available
      */
+    @Override
     boolean getNext(int i) {
       if (!keyIterators[i].hasNext()) {
         closeSubScanner(i);
@@ -353,6 +361,7 @@ public class HMemcache {
     }
 
     /** Shut down an individual map iterator. */
+    @Override
     void closeSubScanner(int i) {
       keyIterators[i] = null;
       keys[i] = null;
@@ -361,6 +370,7 @@ public class HMemcache {
     }
 
     /** Shut down map iterators, and release the lock */
+    @Override
     public void close() {
       if(! scannerClosed) {
         try {
