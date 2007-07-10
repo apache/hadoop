@@ -33,9 +33,12 @@
 <%
 	for( JobHistory.Task task : tasks.values() ) {
 	  if( taskType.equals(task.get(Keys.TASK_TYPE) ) ){
-	    if( taskStatus.equals(task.get(Keys.TASK_STATUS)) || taskStatus.equals("all")){
-	       printTask(jobid, jobTrackerId, task, out); 
-	    }
+            Map <String, TaskAttempt> taskAttempts = task.getTaskAttempts();
+            for (JobHistory.TaskAttempt taskAttempt : taskAttempts.values()) {
+	      if( taskStatus.equals(taskAttempt.get(Keys.TASK_STATUS)) || taskStatus.equals("all")){
+	         printTask(jobid, jobTrackerId, task, out); 
+	      }
+            }
 	  }
 	}
 %>

@@ -283,6 +283,8 @@ Trunk (unreleased changes)
  87. HADOOP-1571.  Add contrib lib directories to root build.xml
      javadoc classpath.  (Michael Stack via tomwhite)
 
+ 88. HADOOP-1554.  Log killed tasks to the job history and display them on the
+     web/ui. (Devaraj Das via omalley)
 
 Release 0.13.0 - 2007-06-08
 

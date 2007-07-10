@@ -564,6 +564,28 @@ public class JobHistory {
                                        String.valueOf(timestamp), hostName, error}); 
         }
       }
+    }
+    /**
+     * Log task attempt failed event.  
+     * @param jobId jobid
+     * @param taskId taskid
+     * @param taskAttemptId task attempt id
+     * @param timestamp timestamp
+     * @param hostName hostname of this task attempt.
+     * @param error error message if any for this task attempt. 
+     */
+    public static void logKilled(String jobId, String taskId, String taskAttemptId, 
+                                 long timestamp, String hostName, String error){
+      if (!disableHistory){
+        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        if (null != writer){
+          JobHistory.log(writer, RecordTypes.MapAttempt, 
+                         new Enum[]{Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
+                                    Keys.FINISH_TIME, Keys.HOSTNAME, Keys.ERROR},
+                         new String[]{ Values.MAP.name(), taskId, taskAttemptId, Values.KILLED.name(),
+                                       String.valueOf(timestamp), hostName, error}); 
+        }
+      }
     } 
   }
   /**
@@ -638,6 +660,29 @@ public class JobHistory {
         }
       }
     }
+    /**
+     * Log failed reduce task attempt. 
+     * @param jobId job id 
+     * @param taskId task id
+     * @param taskAttemptId task attempt id
+     * @param timestamp time stamp when task failed
+     * @param hostName host name of the task attempt.  
+     * @param error error message of the task. 
+     */
+    public static void logKilled(String jobId, String taskId, String taskAttemptId, long timestamp, 
+                                 String hostName, String error){
+      if (!disableHistory){
+        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        if (null != writer){
+          JobHistory.log(writer, RecordTypes.ReduceAttempt, 
+                         new Enum[]{  Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
+                                      Keys.FINISH_TIME, Keys.HOSTNAME, Keys.ERROR },
+                         new String[]{ Values.REDUCE.name(), taskId, taskAttemptId, Values.KILLED.name(), 
+                                       String.valueOf(timestamp), hostName, error }); 
+        }
+      }
+    }
+
   }
   /**
    * Callback interface for reading back log events from JobHistory. This interface 

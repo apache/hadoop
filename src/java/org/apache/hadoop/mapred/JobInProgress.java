@@ -929,18 +929,30 @@ class JobInProgress {
     String taskTrackerName = status.getTaskTracker();
     if (status.getIsMap()) {
       JobHistory.MapAttempt.logStarted(profile.getJobId(), 
-                                       tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
-                                       taskTrackerName); 
-      JobHistory.MapAttempt.logFailed(profile.getJobId(), 
-                                      tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
-                                      taskTrackerName, status.getDiagnosticInfo()); 
+                tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+                taskTrackerName);
+      if (status.getRunState() == TaskStatus.State.FAILED) {
+        JobHistory.MapAttempt.logFailed(profile.getJobId(), 
+                tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+                taskTrackerName, status.getDiagnosticInfo());
+      } else {
+        JobHistory.MapAttempt.logKilled(profile.getJobId(), 
+                tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+                taskTrackerName, status.getDiagnosticInfo());
+      }
     } else {
       JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
-                                          tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
-                                          taskTrackerName); 
-      JobHistory.ReduceAttempt.logFailed(profile.getJobId(), 
-                                         tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
-                                         taskTrackerName, status.getDiagnosticInfo()); 
+                tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+                taskTrackerName);
+      if (status.getRunState() == TaskStatus.State.FAILED) {
+        JobHistory.ReduceAttempt.logFailed(profile.getJobId(), 
+                tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+                taskTrackerName, status.getDiagnosticInfo());
+      } else {
+        JobHistory.ReduceAttempt.logKilled(profile.getJobId(), 
+                tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+                taskTrackerName, status.getDiagnosticInfo());
+      }
     }
         
     // After this, try to assign tasks with the one after this, so that

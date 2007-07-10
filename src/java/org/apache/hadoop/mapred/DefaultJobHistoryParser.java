@@ -169,7 +169,7 @@ public class DefaultJobHistoryParser {
   
   
   // call this only for jobs that succeeded for better results. 
-  static class BadNodesFilter implements JobHistory.Listener {
+  static class FailedOnNodesFilter implements JobHistory.Listener {
     private Map<String, Set<String>> badNodesToNumFailedTasks =
       new HashMap<String, Set<String>>();
     
@@ -183,6 +183,34 @@ public class DefaultJobHistoryParser {
           recType.equals(JobHistory.RecordTypes.ReduceAttempt)) {
         
         if (Values.FAILED.name().equals(values.get(Keys.TASK_STATUS)) ){
+          String hostName = values.get(Keys.HOSTNAME);
+          String taskid = values.get(Keys.TASKID); 
+          Set<String> tasks = badNodesToNumFailedTasks.get(hostName); 
+          if (null == tasks ){
+            tasks = new TreeSet<String>(); 
+            tasks.add(taskid);
+            badNodesToNumFailedTasks.put(hostName, tasks);
+          }else{
+            tasks.add(taskid);
+          }
+        }
+      }      
+    }
+  }
+  static class KilledOnNodesFilter implements JobHistory.Listener {
+    private Map<String, Set<String>> badNodesToNumFailedTasks =
+      new HashMap<String, Set<String>>();
+    
+    Map<String, Set<String>> getValues(){
+      return badNodesToNumFailedTasks; 
+    }
+    public void handle(JobHistory.RecordTypes recType, Map<Keys, String> values)
+      throws IOException {
+      
+      if (recType.equals(JobHistory.RecordTypes.MapAttempt) || 
+          recType.equals(JobHistory.RecordTypes.ReduceAttempt)) {
+        
+        if (Values.KILLED.name().equals(values.get(Keys.TASK_STATUS)) ){
           String hostName = values.get(Keys.HOSTNAME);
           String taskid = values.get(Keys.TASKID); 
           Set<String> tasks = badNodesToNumFailedTasks.get(hostName); 
