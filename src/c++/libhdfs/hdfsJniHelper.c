@@ -39,14 +39,6 @@ static volatile int hashTableInited = 0;
 
 
 /**
- * Helpful macro to convert a pthread_t to a string
- */
-#define GET_threadID(threadID, key, keySize) \
-    snprintf(key, keySize, "__hdfs_threadID__%u", (unsigned)(threadID)); 
-#define threadID_SIZE 32
-
-
-/**
  * MAX_HASH_TABLE_ELEM: The maximum no. of entries in the hashtable.
  * It's set to 4096 to account for (classNames + No. of threads)
  */
@@ -287,34 +279,12 @@ jclass globalClassReference(const char *className, JNIEnv *env)
  */
 JNIEnv* getJNIEnv(void)
 {
-    char threadID[threadID_SIZE];
 
     const jsize vmBufLength = 1;
     JavaVM* vmBuf[vmBufLength]; 
     JNIEnv *env;
     jint rv = 0; 
     jint noVMs = 0;
-
-    //Get the threadID and stringize it 
-    GET_threadID(pthread_self(), threadID, sizeof(threadID));
-
-    //See if you already have the JNIEnv* cached...
-    env = (JNIEnv*)searchEntryFromTable(threadID);
-    if (env != NULL) {
-        return env; 
-    }
-
-    //All right... some serious work required here!
-    //1. Initialize the HashTable
-    //2. LOCK!
-    //3. Check if any JVMs have been created here
-    //      Yes: Use it (we should only have 1 VM)
-    //      No: Create the JVM
-    //4. UNLOCK
-
-    hashTableInit();
-
-    LOCK_HASH_TABLE();
 
     rv = JNI_GetCreatedJavaVMs(&(vmBuf[0]), vmBufLength, &noVMs);
     if (rv != 0) {
@@ -370,17 +340,6 @@ JNIEnv* getJNIEnv(void)
             exit(1);
         }
     }
-
-    //Save the threadID -> env mapping
-    ENTRY e, *ep;
-    e.key = threadID;
-    e.data = (void*)(env);
-    if ((ep = hsearch(e, ENTER)) == NULL) {
-        fprintf(stderr, "Call to hsearch(ENTER) failed\n");
-        exit(1);
-    }
-
-    UNLOCK_HASH_TABLE();
 
     return env;
 }
