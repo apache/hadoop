@@ -353,9 +353,20 @@ public class DataNode implements FSConstants, Runnable {
         } catch (InterruptedException ie) {}
       }
     }
+    assert ("".equals(storage.getStorageID()) 
+            && !"".equals(dnRegistration.getStorageID()))
+            || storage.getStorageID().equals(dnRegistration.getStorageID()) :
+            "New storageID can be assigned only if data-node is not formatted";
     if (storage.getStorageID().equals("")) {
       storage.setStorageID(dnRegistration.getStorageID());
       storage.writeAll();
+      LOG.info("New storage id " + dnRegistration.getStorageID()
+          + " is assigned to data-node " + dnRegistration.getName());
+    }
+    if(! storage.getStorageID().equals(dnRegistration.getStorageID())) {
+      throw new IOException("Inconsistent storage IDs. Name-node returned "
+          + dnRegistration.getStorageID() 
+          + ". Expecting " + storage.getStorageID());
     }
   }
 

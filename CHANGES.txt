@@ -300,6 +300,9 @@ Trunk (unreleased changes)
      locations returned to client, so that load is better balanced.
      (Hairong Kuang via cutting)
 
+ 93. HADOOP-1578.  Fix datanode to send its storage id to namenode
+     during registration.  (Konstantin Shvachko via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

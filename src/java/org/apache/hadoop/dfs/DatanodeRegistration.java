@@ -4,7 +4,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -48,6 +47,7 @@ class DatanodeRegistration extends DatanodeID implements Writable {
   
   void setStorageInfo(DataStorage storage) {
     this.storageInfo = new StorageInfo(storage);
+    this.storageID = storage.getStorageID();
   }
   
   void setName(String name) {
