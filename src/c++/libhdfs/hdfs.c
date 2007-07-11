@@ -481,8 +481,10 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
         noReadBytes = jVal.i;
         if (noReadBytes > 0) {
             (*env)->GetByteArrayRegion(env, jbRarray, 0, noReadBytes, buffer);
+        }  else {
+            //This is a valid case: there aren't any bytes left to read!
+            noReadBytes = 0;
         }
-        //This is a valid case: there aren't any bytes left to read!
         errno = 0;
     }
 
@@ -536,8 +538,10 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
         noReadBytes = jVal.i;
         if (noReadBytes > 0) {
             (*env)->GetByteArrayRegion(env, jbRarray, 0, noReadBytes, buffer);
+        }  else {
+            //This is a valid case: there aren't any bytes left to read!
+            noReadBytes = 0;
         }
-        //This is a valid case: there aren't any bytes left to read!
         errno = 0;
     }
     destroyLocalReference(env, jbRarray);

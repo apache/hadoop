@@ -309,6 +309,9 @@ Trunk (unreleased changes)
  95. HADOOP-1473.  Make job ids unique across jobtracker restarts.
      (omalley via cutting)
 
+ 96. HADOOP-1582.  Fix hdfslib to return 0 instead of -1 at
+     end-of-file, per C conventions.  (Christian Kunz via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
