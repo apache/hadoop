@@ -83,7 +83,7 @@ public class RawLocalFileSystem extends FileSystem {
    *******************************************************/
   class LocalFSFileInputStream extends FSInputStream {
     FileInputStream fis;
-    
+
     public LocalFSFileInputStream(Path f) throws IOException {
       this.fis = new FileInputStream(pathToFile(f));
     }
@@ -140,7 +140,8 @@ public class RawLocalFileSystem extends FileSystem {
     if (!exists(f)) {
       throw new FileNotFoundException(f.toString());
     }
-    return new FSDataInputStream(new LocalFSFileInputStream(f), bufferSize);
+    return new FSDataInputStream(new BufferedFSInputStream(
+        new LocalFSFileInputStream(f), bufferSize));
   }
   
   /*********************************************************
@@ -151,10 +152,6 @@ public class RawLocalFileSystem extends FileSystem {
     
     public LocalFSFileOutputStream(Path f) throws IOException {
       this.fos = new FileOutputStream(pathToFile(f));
-    }
-    
-    public long getPos() throws IOException {
-      return fos.getChannel().position();
     }
     
     /*
@@ -189,7 +186,8 @@ public class RawLocalFileSystem extends FileSystem {
     if (parent != null && !mkdirs(parent)) {
       throw new IOException("Mkdirs failed to create " + parent.toString());
     }
-    return new FSDataOutputStream(new LocalFSFileOutputStream(f), getConf());
+    return new FSDataOutputStream(
+        new BufferedOutputStream(new LocalFSFileOutputStream(f), bufferSize));
   }
   
   /**

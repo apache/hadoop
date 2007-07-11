@@ -143,7 +143,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
     }
 
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-      return new FSDataInputStream(new InMemoryInputStream(f), bufferSize);
+      return new FSDataInputStream(new InMemoryInputStream(f));
     }
 
     private class InMemoryOutputStream extends OutputStream {
@@ -212,8 +212,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       // map) until close is called on the outputstream that this method is
       // going to return
       // Create an output stream out of data byte array
-      return new FSDataOutputStream(new InMemoryOutputStream(f, fAttr),
-                                    getConf());
+      return new FSDataOutputStream(new InMemoryOutputStream(f, fAttr));
     }
 
     public void close() throws IOException {

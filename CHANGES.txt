@@ -318,6 +318,10 @@ Trunk (unreleased changes)
  98. HADOOP-1486.  Fix so that fatal exceptions in namenode cause it
      to exit.  (Dhruba Borthakur via cutting)
 
+ 99. HADOOP-1470.  Factor checksum code out of ChecksumFileSystem so
+     that it can be reused by FileSystem's with built-in checksumming.
+     (Hairong Kuang via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

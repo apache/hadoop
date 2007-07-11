@@ -46,7 +46,8 @@ class S3OutputStream extends OutputStream {
   private Block nextBlock;
 
   public S3OutputStream(Configuration conf, FileSystemStore store,
-                        Path path, long blockSize, Progressable progress) throws IOException {
+                        Path path, long blockSize, Progressable progress,
+                        int buffersize) throws IOException {
     
     this.conf = conf;
     this.store = store;
@@ -54,7 +55,7 @@ class S3OutputStream extends OutputStream {
     this.blockSize = blockSize;
     this.backupFile = newBackupFile();
     this.backupStream = new FileOutputStream(backupFile);
-    this.bufferSize = conf.getInt("io.file.buffer.size", 4096);
+    this.bufferSize = buffersize;
     this.outBuf = new byte[bufferSize];
 
   }

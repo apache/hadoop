@@ -120,7 +120,7 @@ public class DistributedFileSystem extends ChecksumFileSystem {
     }
 
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-      return new DFSClient.DFSDataInputStream(dfs.open(getPath(f)), bufferSize);
+      return new DFSClient.DFSDataInputStream(dfs.open(getPath(f),bufferSize));
     }
 
     public FSDataOutputStream create(Path f, boolean overwrite,
@@ -134,10 +134,8 @@ public class DistributedFileSystem extends ChecksumFileSystem {
         throw new IOException("Mkdirs failed to create " + parent);
       }
       
-      return new FSDataOutputStream(
-                                    dfs.create(getPath(f), overwrite,
-                                               replication, blockSize, progress),
-                                    bufferSize);
+      return new FSDataOutputStream( dfs.create(
+          getPath(f), overwrite, replication, blockSize, progress, bufferSize));
     }
     
     public boolean setReplication(Path src, 

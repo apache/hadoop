@@ -19,8 +19,6 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 
-import org.apache.hadoop.conf.Configuration;
-
 /** Utility that wraps a {@link OutputStream} in a {@link DataOutputStream},
  * buffers output through a {@link BufferedOutputStream} and creates a checksum
  * file. */
@@ -32,8 +30,11 @@ public class FSDataOutputStream extends DataOutputStream {
       super(out);
     }
 
-    // This is the only write() method called by BufferedOutputStream, so we
-    // trap calls to it in order to cache the position.
+    public void write(int b) throws IOException {
+      out.write(b);
+      position++;
+    }
+    
     public void write(byte b[], int off, int len) throws IOException {
       out.write(b, off, len);
       position += len;                            // update position
@@ -49,42 +50,13 @@ public class FSDataOutputStream extends DataOutputStream {
     }
   }
 
-  private static class Buffer extends BufferedOutputStream {
-    public Buffer(PositionCache out, int bufferSize) throws IOException {
-      super(out, bufferSize);
-    }
-
-    public long getPos() throws IOException {
-      return ((PositionCache)out).getPos() + this.count;
-    }
-
-    // optimized version of write(int)
-    public void write(int b) throws IOException {
-      if (count >= buf.length) {
-        super.write(b);
-      } else {
-        buf[count++] = (byte)b;
-      }
-    }
-
-    public void close() throws IOException {
-      flush();
-      out.close();
-    }
-  }
-
-  public FSDataOutputStream(OutputStream out, int bufferSize)
+  public FSDataOutputStream(OutputStream out)
     throws IOException {
-    super(new Buffer(new PositionCache(out), bufferSize));
+    super(new PositionCache(out));
   }
   
-  public FSDataOutputStream(OutputStream out, Configuration conf)
-    throws IOException {
-    this(out, conf.getInt("io.file.buffer.size", 4096));
-  }
-
   public long getPos() throws IOException {
-    return ((Buffer)out).getPos();
+    return ((PositionCache)out).getPos();
   }
 
   public void close() throws IOException {

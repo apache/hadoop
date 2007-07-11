@@ -273,6 +273,12 @@ class DFSClient implements FSConstants {
     return new DFSInputStream(src.toString());
   }
 
+  public DFSInputStream open(UTF8 src, int buffersize) throws IOException {
+    checkOpen();
+    //    Get block info from namenode
+    return new DFSInputStream(src.toString(), buffersize);
+  }
+
   /**
    * Create a new dfs file and return an output stream for writing into it. 
    * 
@@ -321,6 +327,7 @@ class DFSClient implements FSConstants {
     return create(src, overwrite, replication, blockSize, null);
   }
 
+  
   /**
    * Create a new dfs file with the specified block replication 
    * with write-progress reporting and return an output stream for writing
@@ -338,9 +345,30 @@ class DFSClient implements FSConstants {
                              long blockSize,
                              Progressable progress
                              ) throws IOException {
+    return create(src, overwrite, replication, blockSize, progress,
+        conf.getInt("io.file.buffer.size", 4096));
+  }
+  /**
+   * Create a new dfs file with the specified block replication 
+   * with write-progress reporting and return an output stream for writing
+   * into the file.  
+   * 
+   * @param src stream name
+   * @param overwrite do not check for file existence if true
+   * @param replication block replication
+   * @return output stream
+   * @throws IOException
+   */
+  public OutputStream create(UTF8 src, 
+                             boolean overwrite, 
+                             short replication,
+                             long blockSize,
+                             Progressable progress,
+                             int buffersize
+                             ) throws IOException {
     checkOpen();
-    OutputStream result = new DFSOutputStream(src, overwrite, 
-                                              replication, blockSize, progress);
+    OutputStream result = new DFSOutputStream(
+        src, overwrite, replication, blockSize, progress, buffersize);
     synchronized (pendingCreates) {
       pendingCreates.put(src.toString(), result);
     }
@@ -577,10 +605,16 @@ class DFSClient implements FSConstants {
     private long pos = 0;
     private long blockEnd = -1;
     private TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
+    private int buffersize;
         
     /**
      */
     public DFSInputStream(String src) throws IOException {
+      this(src, conf.getInt("io.file.buffer.size", 4096));
+    }
+    
+    public DFSInputStream(String src, int buffersize) throws IOException {
+      this.buffersize = buffersize;
       this.src = src;
       prefetchSize = conf.getLong("dfs.read.prefetch.size", prefetchSize);
       openInfo();
@@ -747,7 +781,7 @@ class DFSClient implements FSConstants {
           //
           // Get bytes in block, set streams
           //
-          DataInputStream in = new DataInputStream(new BufferedInputStream(s.getInputStream()));
+          DataInputStream in = new DataInputStream(new BufferedInputStream(s.getInputStream(), buffersize));
           long curBlockSize = in.readLong();
           long amtSkipped = in.readLong();
           if (curBlockSize != block.getNumBytes()) {
@@ -1066,39 +1100,35 @@ class DFSClient implements FSConstants {
     public void mark(int readLimit) {
     }
     public void reset() throws IOException {
-      throw new IOException("Mark not supported");
+      throw new IOException("Mark/reset not supported");
     }
   }
     
   static class DFSDataInputStream extends FSDataInputStream {
-    DFSDataInputStream(DFSInputStream in, Configuration conf)
+    DFSDataInputStream(DFSInputStream in)
       throws IOException {
-      super(in, conf);
-    }
-      
-    DFSDataInputStream(DFSInputStream in, int bufferSize) throws IOException {
-      super(in, bufferSize);
+      super(in);
     }
       
     /**
      * Returns the datanode from which the stream is currently reading.
      */
     public DatanodeInfo getCurrentDatanode() {
-      return ((DFSInputStream)inStream).getCurrentDatanode();
+      return ((DFSInputStream)in).getCurrentDatanode();
     }
       
     /**
      * Returns the block containing the target position. 
      */
     public Block getCurrentBlock() {
-      return ((DFSInputStream)inStream).getCurrentBlock();
+      return ((DFSInputStream)in).getCurrentBlock();
     }
 
     /**
      * Return collection of blocks that has already been located.
      */
     synchronized List<LocatedBlock> getAllBlocks() throws IOException {
-      return ((DFSInputStream)inStream).getAllBlocks();
+      return ((DFSInputStream)in).getAllBlocks();
     }
 
   }
@@ -1126,6 +1156,7 @@ class DFSClient implements FSConstants {
     private int bytesWrittenToBlock = 0;
     private String datanodeName;
     private long blockSize;
+    private int buffersize;
 
     private Progressable progress;
     /**
@@ -1133,7 +1164,8 @@ class DFSClient implements FSConstants {
      */
     public DFSOutputStream(UTF8 src, boolean overwrite, 
                            short replication, long blockSize,
-                           Progressable progress
+                           Progressable progress,
+                           int buffersize
                            ) throws IOException {
       this.src = src;
       this.overwrite = overwrite;
@@ -1145,6 +1177,7 @@ class DFSClient implements FSConstants {
       if (progress != null) {
         LOG.debug("Set non-null progress callback on DFSOutputStream "+src);
       }
+      this.buffersize = buffersize;
     }
 
     /* Wrapper for closing backupStream. This sets backupStream to null so
@@ -1234,7 +1267,7 @@ class DFSClient implements FSConstants {
         //
         // Xmit header info to datanode
         //
-        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
+        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream(), buffersize));
         out.write(OP_WRITE_BLOCK);
         out.writeBoolean(true);
         block.write(out);
