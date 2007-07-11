@@ -296,6 +296,10 @@ Trunk (unreleased changes)
  91. HADOOP-1580.  Improve contrib/streaming so that subprocess exit
      status is displayed for errors.  (John Heidemann via cutting)
 
+ 92. HADOOP-1448.  In HDFS, randomize lists of non-local block
+     locations returned to client, so that load is better balanced.
+     (Hairong Kuang via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

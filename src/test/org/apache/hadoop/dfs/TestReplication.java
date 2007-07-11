@@ -99,10 +99,15 @@ public class TestReplication extends TestCase {
       }
       isOnSameRack = false;
       isNotOnSameRack = false;
-      for (int idy = 0; idy < datanodes.length-1; idy++) {
-        LOG.info("datanode "+ idy + ": "+ datanodes[idy].getName());
-        boolean onRack = datanodes[idy].getNetworkLocation().equals(
-                                                                    datanodes[idy+1].getNetworkLocation());
+      for (int i = 0; i < datanodes.length-1; i++) {
+        LOG.info("datanode "+ i + ": "+ datanodes[i].getName());
+        boolean onRack = false;
+        for( int j=i+1; j<datanodes.length; j++) {
+           if( datanodes[i].getNetworkLocation().equals(
+            datanodes[j].getNetworkLocation()) ) {
+             onRack = true;
+           }
+        }
         if (onRack) {
           isOnSameRack = true;
         }

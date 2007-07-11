@@ -450,7 +450,7 @@ class FSNamesystem implements FSConstants {
     for (Iterator<LocatedBlock> it = blocks.getLocatedBlocks().iterator();
          it.hasNext();) {
       LocatedBlock block = (LocatedBlock) it.next();
-      clusterMap.sortByDistance(client, 
+      clusterMap.pseudoSortByDistance(client, 
                                 (DatanodeDescriptor[])(block.getLocations()));
     }
     return blocks;

@@ -19,10 +19,8 @@ package org.apache.hadoop.net;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
-import java.util.Arrays;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -473,10 +471,6 @@ public class NetworkTopology {
       
     netlock.readLock().lock();
     try {
-      if (node1 == node2 || node1.equals(node2)) {
-        return true;
-      }
-        
       return node1.getParent()==node2.getParent();
     } finally {
       netlock.readLock().unlock();
@@ -592,25 +586,60 @@ public class NetworkTopology {
     return tree.toString();
   }
 
-  /* Set and used only inside sortByDistance. 
-   * This saves an allocation each time we sort.
+  /* swap two array items */
+  static private void swap(DatanodeDescriptor[] nodes, int i, int j) {
+    DatanodeDescriptor tempNode;
+    tempNode = nodes[j];
+    nodes[j] = nodes[i];
+    nodes[i] = tempNode;
+    
+  }
+  
+  /** Sort nodes array by their distances to <i>reader</i>
+   * It linearly scans the array, if a local node is found, swap it with
+   * the first element of the array.
+   * If a local rack node is found, swap it with the first element following
+   * the local node.
+   * If neither local node or local rack node is found, put a random replica
+   * location at postion 0.
+   * It leaves the rest nodes untouched.
    */
-  private static ThreadLocal<DatanodeDescriptor> distFrom = 
-    new ThreadLocal<DatanodeDescriptor>();
-  private final Comparator<DatanodeDescriptor> nodeDistanceComparator = 
-    new Comparator<DatanodeDescriptor>() {
-      public int compare(DatanodeDescriptor n1, DatanodeDescriptor n2) {
-        return getDistance(distFrom.get(), n1) - getDistance(distFrom.get(), n2);
+  public synchronized void pseudoSortByDistance(
+      DatanodeDescriptor reader, DatanodeDescriptor[] nodes ) {
+    int tempIndex = 0;
+    if (reader != null ) {
+      int localRackNode = -1;
+      //scan the array to find the local node & local rack node
+      for(int i=0; i<nodes.length; i++) {
+        if(tempIndex == 0 && reader == nodes[i]) { //local node
+          //swap the local node and the node at position 0
+          if( i != 0 ) {
+            swap(nodes, tempIndex, i);
+          }
+          tempIndex=1;
+          if(localRackNode != -1 ) {
+            if(localRackNode == 0) {
+              localRackNode = i;
+            }
+            break;
+          }
+        } else if(localRackNode == -1 && isOnSameRack(reader, nodes[i])) {
+          //local rack
+          localRackNode = i;
+          if(tempIndex != 0 ) break;
+        }
       }
-    };
-      
-  /** Sorts nodes array by their distances to <i>reader</i>. */
-  public void sortByDistance(final DatanodeDescriptor reader,
-                             DatanodeDescriptor[] nodes) { 
-    if (reader != null && contains(reader)) {
-      distFrom.set(reader);
-      Arrays.sort(nodes, nodeDistanceComparator);
-      distFrom.set(null);
+
+      // swap the local rack node and the node at position tempIndex
+      if(localRackNode != -1 && localRackNode != tempIndex ) {
+        swap(nodes, tempIndex, localRackNode);
+        tempIndex++;
+      }
+    }
+    
+    // put a random node at position 0 if it is not a local/local-rack node
+    if(tempIndex == 0) {
+      swap(nodes, 0, r.nextInt(nodes.length));
     }
   }
 }
