@@ -306,6 +306,9 @@ Trunk (unreleased changes)
  94. HADOOP-1584.  Fix a bug in GenericWritable which limited it to
      128 types instead of 256.  (Espen Amble Kolstad via cutting)
 
+ 95. HADOOP-1473.  Make job ids unique across jobtracker restarts.
+     (omalley via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

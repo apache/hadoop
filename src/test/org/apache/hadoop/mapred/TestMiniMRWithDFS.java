@@ -42,10 +42,18 @@ public class TestMiniMRWithDFS extends TestCase {
   static final int NUM_MAPS = 10;
   static final int NUM_SAMPLES = 100000;
   
-  public static String launchWordCount(JobConf conf,
-                                       String input,
-                                       int numMaps,
-                                       int numReduces) throws IOException {
+  public static class TestResult {
+    public String output;
+    public RunningJob job;
+    TestResult(RunningJob job, String output) {
+      this.job = job;
+      this.output = output;
+    }
+  }
+  public static TestResult launchWordCount(JobConf conf,
+                                           String input,
+                                           int numMaps,
+                                           int numReduces) throws IOException {
     final Path inDir = new Path("/testing/wc/input");
     final Path outDir = new Path("/testing/wc/output");
     FileSystem fs = FileSystem.get(conf);
@@ -73,8 +81,8 @@ public class TestMiniMRWithDFS extends TestCase {
     conf.setOutputPath(outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
-    JobClient.runJob(conf);
-    return readOutput(outDir, conf);
+    RunningJob job = JobClient.runJob(conf);
+    return new TestResult(job, readOutput(outDir, conf));
   }
 
   public static String readOutput(Path outDir, 
@@ -167,19 +175,21 @@ public class TestMiniMRWithDFS extends TestCase {
       // Run a word count example
       JobConf jobConf = mr.createJobConf();
       // Keeping tasks that match this pattern
-      jobConf.setKeepTaskFilesPattern("task_[0-9]*_m_000001_.*");
-      String result;
+      jobConf.setKeepTaskFilesPattern("task_[^_]*_[0-9]*_m_000001_.*");
+      TestResult result;
       result = launchWordCount(jobConf, 
                                "The quick brown fox\nhas many silly\n" + 
                                "red fox sox\n",
                                3, 1);
       assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
-                   "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
-      checkTaskDirectories(mr, new String[]{"job_0002"}, new String[]{"task_0002_m_000001_0"});
+                   "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
+      String jobid = result.job.getJobID();
+      String taskid = "task_" + jobid.substring(4) + "_m_000001_0";
+      checkTaskDirectories(mr, new String[]{jobid}, new String[]{taskid});
       // test with maps=0
       jobConf = mr.createJobConf();
       result = launchWordCount(jobConf, "owen is oom", 0, 1);
-      assertEquals("is\t1\noom\t1\nowen\t1\n", result);
+      assertEquals("is\t1\noom\t1\nowen\t1\n", result.output);
     } finally {
       if (fileSys != null) { fileSys.close(); }
       if (dfs != null) { dfs.shutdown(); }

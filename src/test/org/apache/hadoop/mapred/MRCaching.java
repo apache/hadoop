@@ -124,8 +124,18 @@ public class MRCaching {
     }
   }
 
-  public static boolean launchMRCache(String indir,
-                                      String outdir, String cacheDir, JobConf conf, String input)
+  public static class TestResult {
+    public RunningJob job;
+    public boolean isOutputOk;
+    TestResult(RunningJob job, boolean isOutputOk) {
+      this.job = job;
+      this.isOutputOk = isOutputOk;
+    }
+  }
+
+  public static TestResult launchMRCache(String indir,
+                                         String outdir, String cacheDir, 
+                                         JobConf conf, String input)
     throws IOException {
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/tmp"))
       .toString().replace(' ', '+');
@@ -197,7 +207,7 @@ public class MRCaching {
     DistributedCache.addCacheArchive(uri1, conf);
     DistributedCache.addCacheArchive(uri2, conf);
     DistributedCache.addCacheFile(uri3, conf);
-    JobClient.runJob(conf);
+    RunningJob job = JobClient.runJob(conf);
     int count = 0;
     // after the job ran check to see if the the input from the localized cache
     // match the real string. check if there are 3 instances or not.
@@ -208,7 +218,7 @@ public class MRCaching {
       String line = file.readLine();
       while (line != null) {
         if (!testStr.equals(line))
-          return false;
+          return new TestResult(job, false);
         count++;
         line = file.readLine();
 
@@ -216,9 +226,9 @@ public class MRCaching {
       file.close();
     }
     if (count != 3)
-      return false;
+      return new TestResult(job, false);
 
-    return true;
+    return new TestResult(job, true);
 
   }
 }

@@ -96,7 +96,7 @@ class JobInProgress {
   boolean tasksInited = false;
 
   private LocalFileSystem localFs;
-  private String uniqueString;
+  private String jobId;
 
   // Per-job counters
   public static enum Counter { 
@@ -116,23 +116,24 @@ class JobInProgress {
    */
   public JobInProgress(String jobFile, JobTracker jobtracker, 
                        Configuration default_conf) throws IOException {
-    uniqueString = jobtracker.createUniqueId();
-    String jobid = "job_" + uniqueString;
-    String url = "http://" + jobtracker.getJobTrackerMachine() + ":" + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + jobid;
+    jobId = jobtracker.getTrackerIdentifier() + "_" +jobtracker.createJobId();
+    String fullJobId = "job_" + jobId;
+    String url = "http://" + jobtracker.getJobTrackerMachine() + ":" 
+        + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + fullJobId;
     this.jobtracker = jobtracker;
-    this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
+    this.status = new JobStatus(fullJobId, 0.0f, 0.0f, JobStatus.PREP);
     this.startTime = System.currentTimeMillis();
     this.localFs = (LocalFileSystem)FileSystem.getLocal(default_conf);
 
     JobConf default_job_conf = new JobConf(default_conf);
     this.localJobFile = default_job_conf.getLocalPath(JobTracker.SUBDIR 
-                                                      +"/"+jobid + ".xml");
+                                                      +"/"+fullJobId + ".xml");
     this.localJarFile = default_job_conf.getLocalPath(JobTracker.SUBDIR
-                                                      +"/"+ jobid + ".jar");
+                                                      +"/"+ fullJobId + ".jar");
     FileSystem fs = FileSystem.get(default_conf);
     fs.copyToLocalFile(new Path(jobFile), localJobFile);
     conf = new JobConf(localJobFile);
-    this.profile = new JobProfile(conf.getUser(), jobid, jobFile, url,
+    this.profile = new JobProfile(conf.getUser(), fullJobId, jobFile, url,
                                   conf.getJobName());
     String jarFile = conf.getJar();
     if (jarFile != null) {
@@ -142,13 +143,13 @@ class JobInProgress {
 
     this.numMapTasks = conf.getNumMapTasks();
     this.numReduceTasks = conf.getNumReduceTasks();
-    this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>(
-                                                                   numMapTasks + numReduceTasks + 10);
+    this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
+       (numMapTasks + numReduceTasks + 10);
 
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
         
-    JobHistory.JobInfo.logSubmitted(jobid, conf.getJobName(), conf.getUser(), 
+    JobHistory.JobInfo.logSubmitted(fullJobId, conf.getJobName(), conf.getUser(), 
                                     System.currentTimeMillis(), jobFile); 
         
     MetricsContext metricsContext = MetricsUtil.getContext("mapred");
@@ -156,7 +157,7 @@ class JobInProgress {
     this.jobMetrics.setTag("user", conf.getUser());
     this.jobMetrics.setTag("sessionId", conf.getSessionId());
     this.jobMetrics.setTag("jobName", conf.getJobName());
-    this.jobMetrics.setTag("jobId", jobid);
+    this.jobMetrics.setTag("jobId", fullJobId);
   }
 
   /**
@@ -219,7 +220,7 @@ class JobInProgress {
     numMapTasks = splits.length;
     maps = new TaskInProgress[numMapTasks];
     for(int i=0; i < numMapTasks; ++i) {
-      maps[i] = new TaskInProgress(uniqueString, jobFile, 
+      maps[i] = new TaskInProgress(jobId, jobFile, 
                                    splits[i].getClassName(),
                                    splits[i].getBytes(), 
                                    jobtracker, conf, this, i);
@@ -254,7 +255,7 @@ class JobInProgress {
     //
     this.reduces = new TaskInProgress[numReduceTasks];
     for (int i = 0; i < numReduceTasks; i++) {
-      reduces[i] = new TaskInProgress(uniqueString, jobFile, 
+      reduces[i] = new TaskInProgress(jobId, jobFile, 
                                       numMapTasks, i, 
                                       jobtracker, conf, this);
     }
@@ -1071,7 +1072,7 @@ class JobInProgress {
         
       // Delete temp dfs dirs created if any, like in case of 
       // speculative exn of reduces.  
-      String tempDir = conf.get("mapred.system.dir") + "/job_" + uniqueString; 
+      String tempDir = conf.get("mapred.system.dir") + "/job_" + jobId; 
       fs.delete(new Path(tempDir)); 
 
     } catch (IOException e) {

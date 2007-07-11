@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.MRCaching.TestResult;
 import org.apache.hadoop.util.Progressable;
 
 import java.io.DataInput;
@@ -52,7 +53,7 @@ public class TestMiniMRLocalFS extends TestCase {
       assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
       // run the wordcount example with caching
       JobConf job = mr.createJobConf();
-      boolean ret = MRCaching.launchMRCache(TEST_ROOT_DIR + "/wc/input",
+      TestResult ret = MRCaching.launchMRCache(TEST_ROOT_DIR + "/wc/input",
                                             TEST_ROOT_DIR + "/wc/output", 
                                             TEST_ROOT_DIR + "/cachedir",
                                             job,
@@ -60,12 +61,13 @@ public class TestMiniMRLocalFS extends TestCase {
                                             + "has many silly\n"
                                             + "red fox sox\n");
       // assert the number of lines read during caching
-      assertTrue("Failed test archives not matching", ret);
+      assertTrue("Failed test archives not matching", ret.isOutputOk);
       // test the task report fetchers
       JobClient client = new JobClient(job);
-      TaskReport[] reports = client.getMapTaskReports("job_0001");
-      assertEquals("number of maps", 10, reports.length);
-      reports = client.getReduceTaskReports("job_0001");
+      String jobid = ret.job.getJobID();
+      TaskReport[] reports = client.getMapTaskReports(jobid);
+      assertEquals("number of maps", 1, reports.length);
+      reports = client.getReduceTaskReports(jobid);
       assertEquals("number of reduces", 1, reports.length);
       runCustomFormats(mr);
     } finally {

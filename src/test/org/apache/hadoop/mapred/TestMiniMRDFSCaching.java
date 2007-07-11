@@ -22,6 +22,7 @@ import java.io.*;
 import junit.framework.TestCase;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.mapred.MRCaching.TestResult;
 
 /**
  * A JUnit test to test caching with DFS
@@ -39,13 +40,13 @@ public class TestMiniMRDFSCaching extends TestCase {
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(2, fileSys.getName(), 4);
       // run the wordcount example with caching
-      boolean ret = MRCaching.launchMRCache("/testing/wc/input",
+      TestResult ret = MRCaching.launchMRCache("/testing/wc/input",
                                             "/testing/wc/output",
                                             "/cachedir",
                                             mr.createJobConf(),
                                             "The quick brown fox\nhas many silly\n"
                                             + "red fox sox\n");
-      assertTrue("Archives not matching", ret);
+      assertTrue("Archives not matching", ret.isOutputOk);
     } finally {
       if (fileSys != null) {
         fileSys.close();

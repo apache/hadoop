@@ -21,16 +21,17 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -492,6 +493,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   ////////////////////////////////////////////////////////////////
   int port;
   String localMachine;
+  private String trackerIdentifier;
   long startTime;
   int totalSubmissions = 0;
 
@@ -651,6 +653,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     this.infoServer.start();
 
     this.startTime = System.currentTimeMillis();
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmm");
+    trackerIdentifier = dateFormat.format(new Date());
 
     myMetrics = new JobTrackerMetrics(jobConf);
     this.expireTrackersThread = new Thread(this.expireTrackers,
@@ -973,6 +977,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   public String getJobTrackerMachine() {
     return localMachine;
   }
+  
+  /**
+   * Get the unique identifier (ie. timestamp) of this job tracker start.
+   * @return a string with a unique identifier
+   */
+  public String getTrackerIdentifier() {
+    return trackerIdentifier;
+  }
+
   public int getTrackerPort() {
     return port;
   }
@@ -1633,7 +1646,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   /**
    * Grab random num for job id
    */
-  String createUniqueId() {
+  String createJobId() {
     return idFormat.format(nextJobId++);
   }
 
