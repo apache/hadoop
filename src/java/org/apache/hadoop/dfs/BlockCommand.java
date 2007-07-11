@@ -21,16 +21,20 @@ import java.io.*;
 import org.apache.hadoop.io.*;
 
 class DatanodeCommand implements Writable {
-  DatanodeProtocol.DataNodeAction action;
+  protected int action;
   
   public DatanodeCommand() {
-    this(DatanodeProtocol.DataNodeAction.DNA_UNKNOWN);
+    this(DatanodeProtocol.DNA_UNKNOWN);
   }
   
-  public DatanodeCommand(DatanodeProtocol.DataNodeAction action) {
+  public DatanodeCommand(int action) {
     this.action = action;
   }
 
+  int getAction() {
+    return this.action;
+  }
+  
   ///////////////////////////////////////////
   // Writable
   ///////////////////////////////////////////
@@ -43,12 +47,11 @@ class DatanodeCommand implements Writable {
   }
 
   public void write(DataOutput out) throws IOException {
-    WritableUtils.writeEnum(out, action);
+    out.writeInt(this.action);
   }
   
   public void readFields(DataInput in) throws IOException {
-    this.action = (DatanodeProtocol.DataNodeAction)
-      WritableUtils.readEnum(in, DatanodeProtocol.DataNodeAction.class);
+    this.action = in.readInt();
   }
 }
 
@@ -72,7 +75,7 @@ class BlockCommand extends DatanodeCommand {
    * @param targets   nodes to transfer
    */
   public BlockCommand(Block blocks[], DatanodeInfo targets[][]) {
-    super( DatanodeProtocol.DataNodeAction.DNA_TRANSFER);
+    super( DatanodeProtocol.DNA_TRANSFER);
     this.blocks = blocks;
     this.targets = targets;
   }
@@ -82,7 +85,7 @@ class BlockCommand extends DatanodeCommand {
    * @param blocks  blocks to invalidate
    */
   public BlockCommand(Block blocks[]) {
-    super(DatanodeProtocol.DataNodeAction.DNA_INVALIDATE);
+    super(DatanodeProtocol.DNA_INVALIDATE);
     this.blocks = blocks;
     this.targets = new DatanodeInfo[0][];
   }

@@ -289,6 +289,11 @@ Trunk (unreleased changes)
  89. HADOOP-1533.  Add persistent error logging for distcp. The logs are stored
     into a specified hdfs directory. (Senthil Subramanian via omalley)
 
+ 90. HADOOP-1286.  Add support to HDFS for distributed upgrades, which
+     permits coordinated upgrade of datanode data.
+     (Konstantin Shvachko via cutting)
+
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

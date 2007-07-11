@@ -194,6 +194,7 @@ public class DataNode implements FSConstants, Runnable {
    */
   DataNode(Configuration conf, 
            AbstractList<File> dataDirs) throws IOException {
+    datanodeObject = this;
     try {
       startDataNode(conf, dataDirs);
     } catch (IOException ie) {
@@ -273,7 +274,6 @@ public class DataNode implements FSConstants, Runnable {
       networkLoc = getNetworkLoc(conf);
     // register datanode
     register();
-    datanodeObject = this;
   }
 
   private NamespaceInfo handshake() throws IOException {
@@ -289,6 +289,23 @@ public class DataNode implements FSConstants, Runnable {
         } catch (InterruptedException ie) {}
       }
     }
+    String errorMsg = null;
+    // verify build version
+    if( ! nsInfo.getBuildVersion().equals( Storage.getBuildVersion() )) {
+      errorMsg = "Incompatible build versions: namenode BV = " 
+        + nsInfo.getBuildVersion() + "; datanode BV = "
+        + Storage.getBuildVersion();
+      LOG.fatal( errorMsg );
+      try {
+        namenode.errorReport( dnRegistration,
+                              DatanodeProtocol.NOTIFY, errorMsg );
+      } catch( SocketTimeoutException e ) {  // namenode is busy
+        LOG.info("Problem connecting to server: " + getNameNodeAddr());
+      }
+      throw new IOException( errorMsg );
+    }
+    assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
+      "Data-node and name-node layout versions must be the same.";
     return nsInfo;
   }
 
@@ -358,6 +375,8 @@ public class DataNode implements FSConstants, Runnable {
       ((DataXceiveServer) this.dataXceiveServer.getRunnable()).kill();
       this.dataXceiveServer.interrupt();
     }
+    if(upgradeManager != null)
+      upgradeManager.shutdownUpgrade();
     if (storage != null) {
       try {
         this.storage.unlockAll();
@@ -531,15 +550,15 @@ public class DataNode implements FSConstants, Runnable {
   private boolean processCommand(DatanodeCommand cmd) throws IOException {
     if (cmd == null)
       return true;
-    switch(cmd.action) {
-    case DNA_TRANSFER:
+    switch(cmd.getAction()) {
+    case DatanodeProtocol.DNA_TRANSFER:
       //
       // Send a copy of a block to another datanode
       //
       BlockCommand bcmd = (BlockCommand)cmd;
       transferBlocks(bcmd.getBlocks(), bcmd.getTargets());
       break;
-    case DNA_INVALIDATE:
+    case DatanodeProtocol.DNA_INVALIDATE:
       //
       // Some local block(s) are obsolete and can be 
       // safely garbage-collected.
@@ -553,25 +572,38 @@ public class DataNode implements FSConstants, Runnable {
       }
       myMetrics.removedBlocks(toDelete.length);
       break;
-    case DNA_SHUTDOWN:
+    case DatanodeProtocol.DNA_SHUTDOWN:
       // shut down the data node
       this.shutdown();
       return false;
-    case DNA_REGISTER:
+    case DatanodeProtocol.DNA_REGISTER:
       // namenode requested a registration
       register();
       lastHeartbeat=0;
       lastBlockReport=0;
       break;
-    case DNA_FINALIZE:
+    case DatanodeProtocol.DNA_FINALIZE:
       storage.finalizeUpgrade();
       break;
+    case UpgradeCommand.UC_ACTION_START_UPGRADE:
+      // start distributed upgrade here
+      processDistributedUpgradeCommand((UpgradeCommand)cmd);
+      break;
     default:
-      LOG.warn("Unknown DatanodeCommand action: " + cmd.action);
+      LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }
     return true;
   }
-    
+
+  // Distributed upgrade manager
+  UpgradeManagerDatanode upgradeManager = new UpgradeManagerDatanode(this);
+
+  private void processDistributedUpgradeCommand(UpgradeCommand comm
+                                               ) throws IOException {
+    assert upgradeManager != null : "DataNode.upgradeManager is null.";
+    upgradeManager.processUpgradeCommand(comm);
+  }
+
   private void transferBlocks( Block blocks[], 
                                DatanodeInfo xferTargets[][] 
                                ) throws IOException {

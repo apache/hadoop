@@ -15,70 +15,78 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.dfs;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
 /**
- * NamespaceInfo is returned by the name-node in reply 
- * to a data-node handshake.
+ * This as a generic distributed upgrade command.
  * 
+ * During the upgrade cluster components send upgrade commands to each other
+ * in order to obtain or share information with them.
+ * It is supposed that each upgrade defines specific upgrade command by
+ * deriving them from this class.
+ * The upgrade command contains version of the upgrade, which is verified 
+ * on the receiving side and current status of the upgrade.
  */
-class NamespaceInfo extends StorageInfo implements Writable {
-  String  buildVersion;
-  int distributedUpgradeVersion;
+class UpgradeCommand extends DatanodeCommand {
+  final static int UC_ACTION_UNKNOWN = DatanodeProtocol.DNA_UNKNOWN;
+  final static int UC_ACTION_REPORT_STATUS = 100; // report upgrade status
+  final static int UC_ACTION_START_UPGRADE = 101; // start upgrade
 
-  public NamespaceInfo() {
-    super();
-    buildVersion = null;
-  }
-  
-  public NamespaceInfo(int nsID, long cT, int duVersion) {
-    super(FSConstants.LAYOUT_VERSION, nsID, cT);
-    buildVersion = Storage.getBuildVersion();
-    this.distributedUpgradeVersion = duVersion;
-  }
-  
-  public String getBuildVersion() {
-    return buildVersion;
+  private int version;
+  private short upgradeStatus;
+
+  UpgradeCommand() {
+    super(UC_ACTION_UNKNOWN);
+    this.version = 0;
+    this.upgradeStatus = 0;
   }
 
-  public int getDistributedUpgradeVersion() {
-    return distributedUpgradeVersion;
+  UpgradeCommand(int action, int version, short status) {
+    super(action);
+    this.version = version;
+    this.upgradeStatus = status;
   }
-  
+
+  int getVersion() {
+    return this.version;
+  }
+
+  short getCurrentStatus() {
+    return this.upgradeStatus;
+  }
+
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
   static {                                      // register a ctor
     WritableFactories.setFactory
-      (NamespaceInfo.class,
+      (UpgradeCommand.class,
        new WritableFactory() {
-         public Writable newInstance() { return new NamespaceInfo(); }
+         public Writable newInstance() { return new UpgradeCommand(); }
        });
   }
 
+  /**
+   */
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, getBuildVersion());
-    out.writeInt(getLayoutVersion());
-    out.writeInt(getNamespaceID());
-    out.writeLong(getCTime());
-    out.writeInt(getDistributedUpgradeVersion());
+    super.write(out);
+    out.writeInt(this.version);
+    out.writeShort(this.upgradeStatus);
   }
 
+  /**
+   */
   public void readFields(DataInput in) throws IOException {
-    buildVersion = UTF8.readString(in);
-    layoutVersion = in.readInt();
-    namespaceID = in.readInt();
-    cTime = in.readLong();
-    distributedUpgradeVersion = in.readInt();
+    super.readFields(in);
+    this.version = in.readInt();
+    this.upgradeStatus = in.readShort();
   }
 }

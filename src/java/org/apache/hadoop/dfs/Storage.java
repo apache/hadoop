@@ -170,6 +170,7 @@ abstract class Storage extends StorageInfo {
       RandomAccessFile file = new RandomAccessFile(to, "rws");
       FileOutputStream out = null;
       try {
+        file.setLength(0);
         file.seek(0);
         out = new FileOutputStream(file.getFD());
         props.store(out, null);

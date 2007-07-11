@@ -183,12 +183,14 @@ class FSImage extends Storage {
     if (!isFormatted && startOpt != StartupOption.ROLLBACK)
       throw new IOException("NameNode is not formatted.");
     if (startOpt != StartupOption.UPGRADE
-        && layoutVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION
-        && layoutVersion != FSConstants.LAYOUT_VERSION)
-      throw new IOException(
-                            "\nFile system image contains an old layout version " + layoutVersion
-                            + ".\nAn upgrade to version " + FSConstants.LAYOUT_VERSION
-                            + " is required.\nPlease restart NameNode with -upgrade option.");
+          && layoutVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION
+          && layoutVersion != FSConstants.LAYOUT_VERSION)
+        throw new IOException(
+                          "\nFile system image contains an old layout version " + layoutVersion
+                          + ".\nAn upgrade to version " + FSConstants.LAYOUT_VERSION
+                          + " is required.\nPlease restart NameNode with -upgrade option.");
+    // check whether distributed upgrade is reguired and/or should be continued
+    verifyDistributedUpgradeProgress(startOpt);
 
     // 2. Format unformatted dirs.
     this.checkpointTime = 0L;
@@ -219,14 +221,20 @@ class FSImage extends Storage {
     case REGULAR:
       if (loadFSImage())
         saveFSImage();
-      else
-        editLog.open();
     }
     assert editLog != null : "editLog must be initialized";
-    assert editLog.getNumEditStreams() > 0 : "editLog should be opened";
+    if(!editLog.isOpen())
+      editLog.open();
   }
 
   private void doUpgrade() throws IOException {
+    if(getDistributedUpgradeState()) {
+      // only distributed upgrade need to continue
+      // don't do version upgrade
+      this.loadFSImage();
+      initializeDistributedUpgrade();
+      return;
+    }
     // Upgrade is allowed only if there are 
     // no previous fs states in any of the directories
     for(int idx = 0; idx < getNumStorageDirs(); idx++) {
@@ -273,6 +281,7 @@ class FSImage extends Storage {
       isUpgradeFinalized = false;
       LOG.info("Upgrade of " + sd.root + " is complete.");
     }
+    initializeDistributedUpgrade();
     editLog.open();
   }
 
@@ -325,6 +334,8 @@ class FSImage extends Storage {
       LOG.info("Rollback of " + sd.root + " is complete.");
     }
     isUpgradeFinalized = true;
+    // check whether name-node can start in regular mode
+    verifyDistributedUpgradeProgress(StartupOption.REGULAR);
   }
 
   private void doFinalize(StorageDirectory sd) throws IOException {
@@ -360,6 +371,12 @@ class FSImage extends Storage {
     if (layoutVersion == 0)
       throw new IOException("NameNode directory " 
                             + sd.root + " is not formatted.");
+    String sDUS, sDUV;
+    sDUS = props.getProperty("distributedUpgradeState"); 
+    sDUV = props.getProperty("distributedUpgradeVersion");
+    setDistributedUpgradeState(
+        sDUS == null? false : Boolean.parseBoolean(sDUS),
+        sDUV == null? getLayoutVersion() : Integer.parseInt(sDUV));
     this.checkpointTime = readCheckpointTime(sd);
   }
 
@@ -391,6 +408,12 @@ class FSImage extends Storage {
                            StorageDirectory sd 
                            ) throws IOException {
     super.setFields(props, sd);
+    boolean uState = getDistributedUpgradeState();
+    int uVersion = getDistributedUpgradeVersion();
+    if(uState && uVersion != getLayoutVersion()) {
+      props.setProperty("distributedUpgradeState", Boolean.toString(uState));
+      props.setProperty("distributedUpgradeVersion", Integer.toString(uVersion)); 
+    }
     writeCheckpointTime(sd);
   }
 
@@ -440,8 +463,6 @@ class FSImage extends Storage {
     // check the layout version inside the image file
     File oldF = new File(oldImageDir, "fsimage");
     RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
-    if (oldFile == null)
-      throw new IOException("Cannot read file: " + oldF);
     try {
       oldFile.seek(0);
       int odlVersion = oldFile.readInt();
@@ -597,7 +618,7 @@ class FSImage extends Storage {
     // which we read in the image
     //
     needToSave |= (loadFSEdits(latestSD) > 0);
-
+    
     return needToSave;
   }
 
@@ -610,7 +631,9 @@ class FSImage extends Storage {
     assert this.getLayoutVersion() < 0 : "Negative layout version is expected.";
     assert curFile != null : "curFile is null";
 
-    FSDirectory fsDir = FSNamesystem.getFSNamesystem().dir;
+    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSDirectory fsDir = fsNamesys.dir;
+
     //
     // Load in bits
     //
@@ -699,7 +722,8 @@ class FSImage extends Storage {
    * Save the contents of the FS image to the file.
    */
   void saveFSImage(File newFile ) throws IOException {
-    FSDirectory fsDir = FSNamesystem.getFSNamesystem().dir;
+    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    FSDirectory fsDir = fsNamesys.dir;
     //
     // Write out data
     //
@@ -1000,13 +1024,51 @@ class FSImage extends Storage {
       if (!oldImage.createNewFile())
         throw new IOException("Cannot create file " + oldImage);
     RandomAccessFile oldFile = new RandomAccessFile(oldImage, "rws");
-    if (oldFile == null)
-      throw new IOException("Cannot read file: " + oldImage);
     // write new version into old image file
     try {
       writeCorruptedData(oldFile);
     } finally {
       oldFile.close();
     }
+  }
+
+  private boolean getDistributedUpgradeState() {
+    return FSNamesystem.getFSNamesystem().getDistributedUpgradeState();
+  }
+
+  private int getDistributedUpgradeVersion() {
+    return FSNamesystem.getFSNamesystem().getDistributedUpgradeVersion();
+  }
+
+  private void setDistributedUpgradeState(boolean uState, int uVersion) {
+    FSNamesystem.getFSNamesystem().upgradeManager.setUpgradeState(uState, uVersion);
+  }
+
+  private void verifyDistributedUpgradeProgress(StartupOption startOpt
+                                                ) throws IOException {
+    if(startOpt == StartupOption.ROLLBACK)
+      return;
+    UpgradeManager um = FSNamesystem.getFSNamesystem().upgradeManager;
+    assert um != null : "FSNameSystem.upgradeManager is null.";
+    if(startOpt != StartupOption.UPGRADE) {
+      if(um.getUpgradeState())
+        throw new IOException(
+                    "\n   Previous distributed upgrade was not completed. "
+                  + "\n   Please restart NameNode with -upgrade option.");
+      if(um.getDistributedUpgrades() != null)
+        throw new IOException("\n   Distributed upgrade for NameNode version " 
+          + um.getUpgradeVersion() + " to current LV " + FSConstants.LAYOUT_VERSION
+          + " is required.\n   Please restart NameNode with -upgrade option.");
+    }
+  }
+
+  private void initializeDistributedUpgrade() throws IOException {
+    UpgradeManagerNamenode um = FSNamesystem.getFSNamesystem().upgradeManager;
+    um.initializeUpgrade();
+    // write new upgrade state into disk
+    FSNamesystem.getFSNamesystem().getFSImage().writeAll();
+    NameNode.LOG.info("\n   Distributed upgrade for NameNode version " 
+        + um.getUpgradeVersion() + " to current LV " 
+        + FSConstants.LAYOUT_VERSION + " is initialized.");
   }
 }

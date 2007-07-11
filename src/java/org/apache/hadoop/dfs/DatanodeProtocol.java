@@ -44,14 +44,14 @@ interface DatanodeProtocol extends VersionedProtocol {
 
   /**
    * Determines actions that data node should perform 
-   * when receiving a block command. 
+   * when receiving a datanode command. 
    */
-  public enum DataNodeAction{ DNA_UNKNOWN,    // unknown action   
-                              DNA_TRANSFER,   // transfer blocks to another datanode
-                              DNA_INVALIDATE, // invalidate blocks
-                              DNA_SHUTDOWN,   // shutdown node
-                              DNA_REGISTER,   // re-register
-                              DNA_FINALIZE; } // finalize previous upgrade
+  final static int DNA_UNKNOWN = 0;    // unknown action   
+  final static int DNA_TRANSFER = 1;   // transfer blocks to another datanode
+  final static int DNA_INVALIDATE = 2; // invalidate blocks
+  final static int DNA_SHUTDOWN = 3;   // shutdown node
+  final static int DNA_REGISTER = 4;   // re-register
+  final static int DNA_FINALIZE = 5;   // finalize previous upgrade
 
   /** 
    * Register Datanode.
@@ -106,4 +106,6 @@ interface DatanodeProtocol extends VersionedProtocol {
                           String msg) throws IOException;
     
   public NamespaceInfo versionRequest() throws IOException;
+  
+  UpgradeCommand processUpgradeCommand(UpgradeCommand comm) throws IOException;
 }

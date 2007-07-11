@@ -505,7 +505,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   public boolean setSafeMode(SafeModeAction action) throws IOException {
     switch(action) {
     case SAFEMODE_LEAVE: // leave safe mode
-      namesystem.leaveSafeMode();
+      namesystem.leaveSafeMode(false);
       break;
     case SAFEMODE_ENTER: // enter safe mode
       namesystem.enterSafeMode();
@@ -599,7 +599,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
                                 deleteList)) {
       // request block report from the datanode
       assert(xferResults[0] == null && deleteList[0] == null);
-      return new DatanodeCommand(DataNodeAction.DNA_REGISTER);
+      return new DatanodeCommand(DatanodeProtocol.DNA_REGISTER);
     }
         
     //
@@ -619,7 +619,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     if (deleteList[0] != null) {
       return new BlockCommand((Block[]) deleteList[0]);
     }
-    return null;
+    
+    // check whether a distributed upgrade need to be done
+    // and send a request to start one if required
+    return namesystem.getDistributedUpgradeCommand();
   }
 
   public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
@@ -632,7 +635,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     if (blocksToDelete != null && blocksToDelete.length > 0)
       return new BlockCommand(blocksToDelete);
     if (getFSImage().isUpgradeFinalized())
-      return new DatanodeCommand(DataNodeAction.DNA_FINALIZE);
+      return new DatanodeCommand(DatanodeProtocol.DNA_FINALIZE);
     return null;
   }
 
@@ -665,6 +668,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     
   public NamespaceInfo versionRequest() throws IOException {
     return namesystem.getNamespaceInfo();
+  }
+
+  public UpgradeCommand processUpgradeCommand(UpgradeCommand comm) throws IOException {
+    return namesystem.processDistributedUpgradeCommand(comm);
   }
 
   /** 

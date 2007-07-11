@@ -165,8 +165,6 @@ class DataStorage extends Storage {
     // check the layout version inside the storage file
     // Lock and Read old storage file
     RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
-    if (oldFile == null)
-      throw new IOException("Cannot read file: " + oldF);
     FileLock oldLock = oldFile.getChannel().tryLock();
     try {
       oldFile.seek(0);
@@ -214,8 +212,6 @@ class DataStorage extends Storage {
     
     // Lock and Read old storage file
     RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
-    if (oldFile == null)
-      throw new IOException("Cannot read file: " + oldF);
     FileLock oldLock = oldFile.getChannel().tryLock();
     if (oldLock == null)
       throw new IOException("Cannot lock file: " + oldF);
@@ -284,6 +280,8 @@ class DataStorage extends Storage {
     if (this.layoutVersion == FSConstants.LAYOUT_VERSION 
         && this.cTime == nsInfo.getCTime())
       return; // regular startup
+    // verify necessity of a distributed upgrade
+    verifyDistributedUpgradeProgress(nsInfo);
     if (this.layoutVersion > FSConstants.LAYOUT_VERSION
         || this.cTime < nsInfo.getCTime()) {
       doUpgrade(sd, nsInfo);  // upgrade
@@ -433,13 +431,20 @@ class DataStorage extends Storage {
     if (!oldF.createNewFile())
       throw new IOException("Cannot create file " + oldF);
     RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
-    if (oldFile == null)
-      throw new IOException("Cannot read file: " + oldF);
     // write new version into old storage file
     try {
       writeCorruptedData(oldFile);
     } finally {
       oldFile.close();
     }
+  }
+
+  private void verifyDistributedUpgradeProgress(
+                  NamespaceInfo nsInfo
+                ) throws IOException {
+    UpgradeManagerDatanode um = DataNode.getDataNode().upgradeManager;
+    assert um != null : "DataNode.upgradeManager is null.";
+    um.setUpgradeState(false, getLayoutVersion());
+    um.initializeUpgrade(nsInfo);
   }
 }

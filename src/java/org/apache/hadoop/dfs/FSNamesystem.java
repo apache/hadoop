@@ -308,7 +308,8 @@ class FSNamesystem implements FSConstants {
     
   NamespaceInfo getNamespaceInfo() {
     return new NamespaceInfo(dir.fsImage.getNamespaceID(),
-                             dir.fsImage.getCTime());
+                             dir.fsImage.getCTime(),
+                             getDistributedUpgradeVersion());
   }
 
   /** Close down this filesystem manager.
@@ -1644,7 +1645,7 @@ class FSNamesystem implements FSConstants {
    * If a substantial amount of time passed since the last datanode 
    * heartbeat then request an immediate block report.  
    * 
-   * @return true if block report is required or false otherwise.
+   * @return true if registration is required or false otherwise.
    * @throws IOException
    */
   public boolean gotHeartbeat(DatanodeID nodeID,
@@ -1940,9 +1941,13 @@ class FSNamesystem implements FSConstants {
                                   + nodeID.getName() + " storage " + key 
                                   + " is removed from datanodeMap.");
   }
-    
-  private FSEditLog getEditLog() {
-    return dir.fsImage.getEditLog();
+
+  FSImage getFSImage() {
+    return dir.fsImage;
+  }
+
+  FSEditLog getEditLog() {
+    return getFSImage().getEditLog();
   }
 
   /**
@@ -3097,8 +3102,25 @@ class FSNamesystem implements FSConstants {
       
     /**
      * Leave safe mode.
+     * Switch to manual safe mode if distributed upgrade is required.
      */
-    synchronized void leave() {
+    synchronized void leave(boolean checkForUpgrades) {
+      if(checkForUpgrades) {
+        // verify whether a distributed upgrade needs to be started
+        boolean needUpgrade = false;
+        try {
+          needUpgrade = startDistributedUpgradeIfNeeded();
+        } catch(IOException e) {
+          FSNamesystem.LOG.error(StringUtils.stringifyException(e));
+        }
+        if(needUpgrade) {
+          // switch to manual safe mode
+          safeMode = new SafeModeInfo();
+          NameNode.stateChangeLog.info("STATE* SafeModeInfo.leave: " 
+                                      + "Safe mode is ON.\n" + getTurnOffTip()); 
+          return;
+        }
+      }
       if (reached >= 0)
         NameNode.stateChangeLog.info(
                                      "STATE* SafeModeInfo.leave: " + "Safe mode is OFF."); 
@@ -3152,7 +3174,7 @@ class FSNamesystem implements FSConstants {
       // the threshold is reached
       if (!isOn() ||                           // safe mode is off
           extension <= 0 || threshold <= 0) {  // don't need to wait
-        this.leave();                           // just leave safe mode
+        this.leave(true); // leave safe mode
         return;
       }
       if (reached > 0)  // threshold has already been reached before
@@ -3204,9 +3226,11 @@ class FSNamesystem implements FSConstants {
      * A tip on how safe mode is to be turned off: manually or automatically.
      */
     String getTurnOffTip() {
-      return (isManual() ? 
-              "Use \"hadoop dfs -safemode leave\" to turn safe mode off." :
-              "Safe mode will be turned off automatically.");
+      return (isManual() ?  getDistributedUpgradeState() ?
+        "Safe mode will be turned off automatically upon completion of " + 
+        "the distributed upgrade: status = " + getDistributedUpgradeStatus() + "%" :
+        "Use \"hadoop dfs -safemode leave\" to turn safe mode off." :
+        "Safe mode will be turned off automatically.");
     }
       
     /**
@@ -3259,7 +3283,7 @@ class FSNamesystem implements FSConstants {
         }
       }
       // leave safe mode an stop the monitor
-      safeMode.leave();
+      safeMode.leave(true);
       smmthread = null;
     }
   }
@@ -3294,7 +3318,6 @@ class FSNamesystem implements FSConstants {
 
   /**
    * Decrement number of blocks that reached minimal replication.
-   * @param replication current replication
    */
   void decrementSafeBlockCount(Block b) {
     if (safeMode == null) // mostly true
@@ -3328,13 +3351,16 @@ class FSNamesystem implements FSConstants {
    * Leave safe mode.
    * @throws IOException
    */
-  synchronized void leaveSafeMode() throws IOException {
+  synchronized void leaveSafeMode(boolean checkForUpgrades) throws IOException {
     if (!isInSafeMode()) {
       NameNode.stateChangeLog.info(
                                    "STATE* FSNamesystem.leaveSafeMode: " + "Safe mode is already OFF."); 
       return;
     }
-    safeMode.leave();
+    if(getDistributedUpgradeState())
+      throw new SafeModeException("Distributed upgrade is in progress",
+                                  safeMode);
+    safeMode.leave(checkForUpgrades);
   }
     
   String getSafeModeTip() {
@@ -3375,5 +3401,32 @@ class FSNamesystem implements FSConstants {
   private boolean isValidBlock(Block b) {
     return (blocksMap.getINode(b) != null ||
             pendingCreates.contains(b));
+  }
+
+  // Distributed upgrade manager
+  UpgradeManagerNamenode upgradeManager = new UpgradeManagerNamenode();
+
+  UpgradeCommand processDistributedUpgradeCommand(UpgradeCommand comm) throws IOException {
+    return upgradeManager.processUpgradeCommand(comm);
+  }
+
+  int getDistributedUpgradeVersion() {
+    return upgradeManager.getUpgradeVersion();
+  }
+
+  UpgradeCommand getDistributedUpgradeCommand() throws IOException {
+    return upgradeManager.getBroadcastCommand();
+  }
+
+  boolean getDistributedUpgradeState() {
+    return upgradeManager.getUpgradeState();
+  }
+
+  short getDistributedUpgradeStatus() {
+    return upgradeManager.getUpgradeStatus();
+  }
+
+  boolean startDistributedUpgradeIfNeeded() throws IOException {
+    return upgradeManager.startUpgrade();
   }
 }

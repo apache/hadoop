@@ -92,6 +92,10 @@ class FSEditLog {
     return editStreams == null ? 0 : editStreams.size();
   }
 
+  boolean isOpen() {
+    return getNumEditStreams() > 0;
+  }
+
   /**
    * Create empty edit log files.
    * Initialize the output stream for logging.
@@ -228,7 +232,6 @@ class FSEditLog {
       try {
         while (true) {
           long timestamp = 0;
-          long ctime = 0; 
           long mtime = 0;
           byte opcode = -1;
           try {
