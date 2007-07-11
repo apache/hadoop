@@ -315,6 +315,9 @@ Trunk (unreleased changes)
  97. HADOOP-911.  Fix a multithreading bug in libhdfs.
      (Christian Kunz)
 
+ 98. HADOOP-1486.  Fix so that fatal exceptions in namenode cause it
+     to exit.  (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

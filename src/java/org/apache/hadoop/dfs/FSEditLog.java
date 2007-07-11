@@ -429,7 +429,7 @@ class FSEditLog {
           } catch (IOException e) {
             FSNamesystem.LOG.error("Unable to append to edit log. " +
                                    "Fatal Error.");
-            throw new RuntimeException("Unable to append to edit log. ");
+            Runtime.getRuntime().exit(-1);
           }
         }
       }
@@ -466,8 +466,7 @@ class FSEditLog {
           } catch (IOException e) {
             FSNamesystem.LOG.error("Unable to sync edit log. " +
                                    "Fatal Error.");
-            throw new RuntimeException("Unable to sync edit log. " +
-                                       "Fatal Error.");
+            Runtime.getRuntime().exit(-1);
           }
         }
       }

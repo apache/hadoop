@@ -1745,6 +1745,9 @@ class FSNamesystem implements FSConstants {
         } catch (InterruptedException ie) {
         } catch (IOException ie) {
           LOG.warn("ReplicationMonitor thread received exception. " + ie);
+        } catch (Throwable t) {
+          LOG.warn("ReplicationMonitor thread received Runtime exception. " + t);
+          Runtime.getRuntime().exit(-1);
         }
       }
     }
