@@ -1,0 +1,58 @@
+/**
+ * Copyright 2007 The Apache Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.shell;
+
+import java.io.IOException;
+
+import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.hbase.HTableDescriptor;
+
+public class ShowCommand extends BasicCommand {
+  String argument;
+
+  public ReturnMsg execute(HClient client) {
+    if (this.argument == null)
+      return new ReturnMsg(0, "Syntax error : Please check 'Show' syntax.");
+
+    try {
+      int tableLength = 0;
+
+      if ("tables".equals(this.argument)) {
+        HTableDescriptor[] tables = client.listTables();
+        tableLength = tables.length;
+        if (tableLength == 0) {
+          return new ReturnMsg(0, "Table not found.");
+        }
+
+        ConsoleTable.printHead("Table Name");
+        for (int i = 0; i < tableLength; i++) {
+          String tableName = tables[i].getName().toString();
+          ConsoleTable.printTable(i, tableName);
+        }
+        ConsoleTable.printFoot();
+
+        return new ReturnMsg(1, tableLength + " table(s) found.");
+      }
+      return new ReturnMsg(0, "Missing parameters. Please check 'Show' syntax.");
+    } catch (IOException e) {
+      return new ReturnMsg(0, "error msg : " + e.toString());
+    }
+  }
+
+  public void setArgument(String argument) {
+    this.argument = argument;
+  }
+}

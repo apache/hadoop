@@ -38,9 +38,7 @@ esac
 if [ $# = 0 ]; then
   echo "Usage: hbase [--hadoop=hadoopdir] <command>"
   echo "where <command> is one of:"
-  echo "  client           run a hbase client"
-  echo "  reader           run a hbase region directory reader"
-  echo "  logreader        output content of a logfile"
+  echo "  shell            run the hbase shell"
   echo "  master           run a hbase HMaster node" 
   echo "  regionserver     run a hbase HRegionServer node" 
   echo " or"
@@ -181,12 +179,8 @@ fi
 unset IFS
 
 # figure out which class to run
-if [ "$COMMAND" = "client" ] ; then
-  CLASS='org.apache.hadoop.hbase.HClient'
-elif [ "$COMMAND" = "reader" ] ; then
-  CLASS='org.apache.hadoop.hbase.HRegiondirReader'
-elif [ "$COMMAND" = "logreader" ] ; then
-  CLASS='org.apache.hadoop.hbase.HLog'
+if [ "$COMMAND" = "shell" ] ; then
+  CLASS='org.apache.hadoop.hbase.Shell'
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.HMaster'
 elif [ "$COMMAND" = "regionserver" ] ; then
