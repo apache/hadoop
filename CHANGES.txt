@@ -303,6 +303,9 @@ Trunk (unreleased changes)
  93. HADOOP-1578.  Fix datanode to send its storage id to namenode
      during registration.  (Konstantin Shvachko via cutting)
 
+ 94. HADOOP-1584.  Fix a bug in GenericWritable which limited it to
+     128 types instead of 256.  (Espen Amble Kolstad via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

@@ -81,7 +81,7 @@ public abstract class GenericWritable implements Writable {
 
   public void readFields(DataInput in) throws IOException {
     type = in.readByte();
-    Class clazz = getTypes()[type];
+    Class clazz = getTypes()[type & 0xff];
     try {
       instance = (Writable) clazz.newInstance();
     } catch (Exception e) {
