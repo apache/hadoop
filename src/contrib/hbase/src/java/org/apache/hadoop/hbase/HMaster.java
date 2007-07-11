@@ -1205,11 +1205,13 @@ public class HMaster implements HConstants, HMasterInterface,
           try {
             values = server.next(scannerId);
             
-          } catch(NotServingRegionException e) {
-            throw e;
-            
-          } catch(IOException e) {
-            LOG.error(e);
+          } catch(Exception e) {
+            try {
+              RemoteExceptionHandler.handleRemoteException(e);
+              
+            } catch(Exception ex) {
+              LOG.error(ex);
+            }
             break;
           }
           
@@ -1405,9 +1407,9 @@ public class HMaster implements HConstants, HMasterInterface,
           scanMetaRegion(server, scannerId, HGlobals.rootRegionInfo.regionName);
           break;
           
-        } catch(NotServingRegionException e) {
+        } catch(Exception e) {
           if(tries == numRetries - 1) {
-            throw e;
+            RemoteExceptionHandler.handleRemoteException(e);
           }
         }
       }
@@ -1437,9 +1439,9 @@ public class HMaster implements HConstants, HMasterInterface,
           }
           break;
             
-        } catch(NotServingRegionException e) {
+        } catch(Exception e) {
           if(tries == numRetries - 1) {
-            throw e;
+            RemoteExceptionHandler.handleRemoteException(e);
           }
         }
       }
@@ -1536,9 +1538,9 @@ public class HMaster implements HConstants, HMasterInterface,
           
           break;
 
-        } catch(NotServingRegionException e) {
+        } catch(Exception e) {
           if(tries == numRetries - 1) {
-            throw e;
+            RemoteExceptionHandler.handleRemoteException(e);
           }
           continue;
         }
@@ -1647,9 +1649,9 @@ public class HMaster implements HConstants, HMasterInterface,
           
           break;
           
-        } catch(NotServingRegionException e) {
+        } catch(Exception e) {
           if(tries == numRetries - 1) {
-            throw e;
+            RemoteExceptionHandler.handleRemoteException(e);
           }
         }
         pendingRegions.remove(regionName);
@@ -1752,9 +1754,9 @@ public class HMaster implements HConstants, HMasterInterface,
         assignAttempts.put(regionName, Long.valueOf(0L));
         break;
 
-      } catch(NotServingRegionException e) {
+      } catch(Exception e) {
         if(tries == numRetries - 1) {
-          throw e;
+          RemoteExceptionHandler.handleRemoteException(e);
         }
       }
     }
@@ -1941,9 +1943,9 @@ public class HMaster implements HConstants, HMasterInterface,
             } // for(MetaRegion m:)
           } // synchronized(metaScannerLock)
           
-        } catch(NotServingRegionException e) {
+        } catch(Exception e) {
           if(tries == numRetries - 1) {
-            throw e;
+            RemoteExceptionHandler.handleRemoteException(e);
           }
           continue;
         }
@@ -2028,12 +2030,10 @@ public class HMaster implements HConstants, HMasterInterface,
             LOG.debug("updated columns in row: " + i.regionName);
           }
 
-        } catch(NotServingRegionException e) {
-          throw e;
-
-        } catch(IOException e) {
+        } catch(Exception e) {
           LOG.error("column update failed in row: " + i.regionName);
           LOG.error(e);
+          RemoteExceptionHandler.handleRemoteException(e);
 
         } finally {
           try {
@@ -2182,11 +2182,10 @@ public class HMaster implements HConstants, HMasterInterface,
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + i.regionName);
         }
-      } catch(NotServingRegionException e) {
-        throw e;
-      } catch(IOException e) {
+      } catch(Exception e) {
         LOG.error("column update failed in row: " + i.regionName);
         LOG.error(e);
+        RemoteExceptionHandler.handleRemoteException(e);
 
       } finally {
         if(lockid != -1L) {
