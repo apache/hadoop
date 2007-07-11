@@ -56,5 +56,4 @@ Trunk (unreleased changes)
  33. HADOOP-1538 Provide capability for client specified time stamps in HBase
      HADOOP-1466 Clean up visibility and javadoc issues in HBase.
  34. HADOOP-1589 Exception handling in HBase is broken over client server connections
-
-
+ 35. HADOOP-1375 a simple parser for hbase (Edward Yoon via Stack)

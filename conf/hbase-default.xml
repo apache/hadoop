@@ -110,4 +110,13 @@
     value + (value / 2), the HRegion is split in two.  Default: 128M.
     </description>
   </property>
+
+  <!-- HbaseShell Configurations -->
+  <property>
+ 	<name>hbaseshell.jline.bell.enabled</name>
+  	<value>true</value>
+  	<description>
+  		if true, enable audible keyboard bells if an alert is required.
+  	</description>
+  </property>  
 </configuration>

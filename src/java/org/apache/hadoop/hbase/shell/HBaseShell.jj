@@ -1,0 +1,474 @@
+options {
+  STATIC = false;
+  IGNORE_CASE = true;
+}
+
+PARSER_BEGIN(Parser)
+/**
+ * Copyright 2007 The Apache Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.shell.generated;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.io.StringReader;
+import java.io.Reader;
+
+import org.apache.hadoop.hbase.shell.*;
+
+/**
+ * Parsing command line.
+ */
+public class Parser {
+  private static String QueryString;
+  
+  public Parser(String query) {
+    this((Reader)(new StringReader(query)));
+    this.QueryString = query;
+  }
+  
+  public String getQueryStr() {
+    return this.QueryString;
+  }
+}
+
+PARSER_END(Parser)
+
+SKIP :                             
+{
+    " "
+ | "\t"
+ | "\r"
+ | "\n"
+}
+
+TOKEN:
+{
+   <HELP: "help">
+ | <SHOW: "show">
+ | <DESCRIBE: "describe">
+ | <CREATE: "create">	
+ | <DROP: "drop">
+ | <EXIT: "exit">
+ | <INSERT: "insert">
+ | <DELETE: "delete">
+ | <SELECT: "select">
+ | <ROW: "row">
+ | <COLUMN: "column">
+ | <TIME: "time">
+ | <VALUES: "values">
+ | <COLUMNFAMILIES: "columnfamilies">
+ | <WHERE: "where">
+ | <LIMIT: "limit">
+ | <AND: "and">
+ | <OR:  "or">
+ | <COMMA: ",">
+ | <DOT: ".">
+ | <LPAREN: "(">
+ | <RPAREN: ")">
+ | <EQUALS: "=">
+ | <NOTEQUAL: "<>">
+ | <OPTIONS: "-">
+}
+
+TOKEN :
+{
+   <ID: ["a"-"z","A"-"Z","_","-"] ( ["a"-"z","A"-"Z","_","0"-"9","-"] )* >
+ | <NUM: ( ["0"-"9"] )+ >
+ | <STRING: (["A"-"Z","a"-"z","0"-"9"])+ >
+ | <QUOTED_STRING: "\"" (~["\""])+ "\"" >
+ | <STRING_LITERAL: "'" (~["'"])* ( "''" (~["'"])* )* "'" >
+}
+
+/**
+ * Parses the given array of command line arguments.
+ */
+Command terminatedCommand() :
+{
+    Command statement = null;
+}
+{
+    ([statement = cmdStatement()] ";" | <EOF>)
+    {
+        return statement;
+    }
+}
+
+Command cmdStatement() :
+{
+    Command cmd = null;
+}
+{
+  (
+       cmd = exitCommand()
+     | cmd = helpCommand()
+     | cmd = showCommand()
+     | cmd = descCommand()
+     | cmd = createCommand()
+     | cmd = dropCommand()
+     | cmd = insertCommand()
+     | cmd = deleteCommand()
+     | cmd = selectCommand()
+  )
+   {
+       return cmd;
+   }
+}
+
+ExitCommand exitCommand() :
+{
+  ExitCommand exit = new ExitCommand();
+}
+{
+   <EXIT>  { return exit; }
+}
+
+HelpCommand helpCommand() :
+{
+  Token t = null;
+  HelpCommand help = new HelpCommand();
+  String argument = "";
+}
+{
+   <HELP>
+   [
+     (
+         t=<SHOW>
+       | t=<DESCRIBE>
+       | t=<CREATE>
+       | t=<DROP>
+       | t=<EXIT>
+       | t=<INSERT>
+       | t=<DELETE>
+       | t=<SELECT>
+       | t=<ID>
+     ) { argument = t.image.toString(); }
+   ]
+   
+  { 
+      help.setArgument(argument);
+      return help;  
+  }
+}
+
+ShowCommand showCommand() :
+{
+  ShowCommand show = new ShowCommand();
+  String argument = null;
+}
+{
+   <SHOW>
+   [
+       argument = getString()
+   ]
+   
+  { 
+      show.setArgument(argument);
+      return show;
+  }
+}
+
+DescCommand descCommand() :
+{
+  DescCommand desc = new DescCommand();
+  String argument = null;
+}
+{
+   <DESCRIBE>
+   [
+       argument = getString()
+   ]
+   
+  { 
+      desc.setArgument(argument);
+      return desc;
+  }
+}
+
+CreateCommand createCommand() :
+{
+  CreateCommand create = new CreateCommand();
+  String argument = null;
+  List<String> columnfamilies = null;
+  int limit = 1;
+}
+{
+    <CREATE>
+    argument = getString() 
+    { 
+         create.setTable(argument); 
+    }
+    
+    <COLUMNFAMILIES>
+    columnfamilies = getLiteralValues()
+    { 
+         create.setColumnfamilies(columnfamilies); 
+    }
+
+    [ <LIMIT><EQUALS> limit = getInt() {
+            try{
+               create.setLimit(limit);
+            }catch(ClassCastException ce) {
+               throw generateParseException();
+        }
+   } ]
+  { return create; }
+}
+
+DropCommand dropCommand() :
+{
+  DropCommand drop = new DropCommand();
+  String argument = null;
+}
+{
+   <DROP>
+   [
+       argument = getString()
+   ]
+   
+  { 
+      drop.setArgument(argument);
+      return drop;
+  }
+}
+
+InsertCommand insertCommand() :
+{
+    InsertCommand in = new InsertCommand();
+    Map<String, List<String>> cond = null;
+    List<String> columnfamilies = null;
+    List<String> values = null;
+    String table = null;
+}
+{
+    <INSERT>
+    table = getString()
+    { 
+         in.setTable(table); 
+    }
+    
+    columnfamilies = getLiteralValues()
+    {
+        in.setColumnfamilies(columnfamilies);
+    }
+    
+    <VALUES> values = getLiteralValues()
+    {
+        in.setValues(values);
+    }
+      
+    <WHERE> cond = WhereClause() 
+    {
+        try{
+           in.setCondition(cond);
+        }catch(ClassCastException ce) {
+           throw generateParseException();
+        }
+    } 
+    {
+       return in;
+    }
+}
+
+DeleteCommand deleteCommand() :
+{
+    DeleteCommand del = new DeleteCommand();
+    Map<String, List<String>> cond = null;
+    String argument = null;
+}
+{
+    <DELETE>
+    argument = getString()
+    { 
+         del.setTable(argument); 
+    }
+    
+     <WHERE> cond = WhereClause() {
+        try{
+           del.setCondition(cond);
+        }catch(ClassCastException ce) {
+            throw generateParseException();
+       }
+    } 
+    {
+       return del;
+    }
+}
+
+SelectCommand selectCommand() :
+{
+    SelectCommand select = new SelectCommand();
+    Map<String, List<String>> cond = null;
+    String argument = null;
+    int limit;
+}
+{
+    <SELECT>
+    argument = getString()
+    { 
+         select.setTable(argument); 
+    }
+
+     [ <WHERE> cond = WhereClause() {
+        try{
+           select.setCondition(cond);
+        }catch(ClassCastException ce) {
+            throw generateParseException();
+        }
+    } ] 
+    
+    [ <LIMIT><EQUALS> limit = getInt() {
+            try{
+               select.setLimit(limit);
+            }catch(ClassCastException ce) {
+               throw generateParseException();
+        }
+   } ]
+  { return select; }
+}
+
+/**
+* TODO : expressions codes need more love.
+*/
+
+String getString():
+{ Token t = null; }
+{
+    (  t=<ID>
+     | t=<QUOTED_STRING>
+    ) 
+    { return t.image.toString(); }
+}
+
+int getInt():
+{ Token t = null; }
+{
+   t = <NUM>
+   { return Integer.parseInt(t.image.toString()); }
+}
+
+Map<String, List<String>> WhereClause() :
+{
+    Map<String, List<String>> result = 
+               new HashMap<String, List<String>>();
+    List<String> exception = 
+               new ArrayList<String>();
+}
+{
+  { 
+      try{
+        result.putAll(ConditionExpression()); 
+      }catch(ParseException pe) {
+        exception.add(pe.toString());
+        result.put("error", exception);
+      }
+  }
+	(
+     <AND> { 
+      try{
+        result.putAll(ConditionExpression()); 
+      }catch(ParseException pe) {
+        exception.add(pe.toString());
+        result.put("error", exception);
+      }
+     }
+	)*
+	
+ { return result; }
+}
+
+Map<String, List<String>> ConditionExpression() :
+{
+    Token tSearchName, tComparator, tComparand;
+    Map<String, List<String>> tmp = 
+               new HashMap<String, List<String>>();
+    List<String> values = 
+               new ArrayList<String>();
+}
+{
+	( 
+	   tSearchName=<ROW>
+	 | tSearchName=<COLUMN>
+	 | tSearchName=<TIME> 
+	 | tSearchName=<ID>
+	 | tSearchName=<VALUES>
+	 | tSearchName=<COLUMNFAMILIES>
+	 )
+	 
+	( tComparator=<EQUALS> | tComparator=<NOTEQUAL> )
+
+ ( tComparand=<QUOTED_STRING>
+    { 
+          values.add("quoted string"); 
+          tmp.put("error", values); 
+          return tmp; 
+    } 
+  |  tComparand=<STRING_LITERAL> {
+    values.add(tComparator.image);
+    values.add(tComparand.image.substring(1,tComparand.image.length() - 1));
+  
+  if(tSearchName.image.toString().equals("row") || 
+  tSearchName.image.toString().equals("column") || 
+  tSearchName.image.toString().equals("time"))
+    { tmp.put(tSearchName.image, values); }
+  else   
+    {
+    values.add(tSearchName.image.toString());
+    tmp.put("error", values); 
+    }
+    
+    return tmp; 
+} )
+}
+
+List<String> getLiteralValues() :
+{
+    List<String> values = new ArrayList<String>();
+    String literal = null;
+}
+{    
+<LPAREN>
+ { literal = getStringLiteral();
+ if(literal != null) values.add(literal); 
+ }
+    (
+<COMMA> { 
+   literal = getStringLiteral(); 
+   if(literal != null) values.add(literal); 
+}
+| ( 
+       <ID>
+     | <STRING_LITERAL>
+     | <QUOTED_STRING>
+     | <STRING> 
+  )  { values.removeAll(values); }
+	)*
+<RPAREN>
+   { 
+     return values;
+    }
+}
+
+String getStringLiteral() :
+{
+    Token stringLiteral;
+}
+{
+ stringLiteral=<STRING_LITERAL> 
+ { return stringLiteral.image.substring(1,stringLiteral.image.length() - 1); }
+ | <QUOTED_STRING> { return null; }
+}
