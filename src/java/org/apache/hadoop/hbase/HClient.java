@@ -15,6 +15,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -153,32 +155,7 @@ public class HClient implements HConstants {
     }
     return result;
   }
-  
-  protected void handleRemoteException(RemoteException e) throws IOException {
-    String msg = e.getMessage();
-    if(e.getClassName().equals("org.apache.hadoop.hbase.InvalidColumnNameException")) {
-      throw new InvalidColumnNameException(msg);
-      
-    } else if(e.getClassName().equals("org.apache.hadoop.hbase.LockException")) {
-      throw new LockException(msg);
-      
-    } else if(e.getClassName().equals("org.apache.hadoop.hbase.MasterNotRunningException")) {
-      throw new MasterNotRunningException(msg);
-      
-    } else if(e.getClassName().equals("org.apache.hadoop.hbase.NoServerForRegionException")) {
-      throw new NoServerForRegionException(msg);
-      
-    } else if(e.getClassName().equals("org.apache.hadoop.hbase.NotServingRegionException")) {
-      throw new NotServingRegionException(msg);
-      
-    } else if(e.getClassName().equals("org.apache.hadoop.hbase.TableNotDisabledException")) {
-      throw new TableNotDisabledException(msg);
-      
-    } else {
-      throw e;
-    }
-  }
-  
+
   /* Find the address of the master and connect to it
    */
   protected void checkMaster() throws MasterNotRunningException {
@@ -284,8 +261,8 @@ public class HClient implements HConstants {
     checkMaster();
     try {
       this.master.createTable(desc);
-    } catch (RemoteException e) {
-      handleRemoteException(e);
+    } catch (Exception e) {
+      RemoteExceptionHandler.handleRemoteException(e);
     }
   }
 
@@ -302,8 +279,8 @@ public class HClient implements HConstants {
 
     try {
       this.master.deleteTable(tableName);
-    } catch(RemoteException e) {
-      handleRemoteException(e);
+    } catch(Exception e) {
+      RemoteExceptionHandler.handleRemoteException(e);
     }
 
     // Wait until first region is deleted
@@ -333,13 +310,18 @@ public class HClient implements HConstants {
         if(!found) {
           break;
         }
-        
+
+      } catch (Exception ex) {
+        if(tries == numRetries - 1) {           // no more tries left
+          RemoteExceptionHandler.handleRemoteException(ex);
+        }
+
       } finally {
         if(scannerId != -1L) {
           try {
             server.close(scannerId);
-          } catch(Exception e) {
-            LOG.warn(e);
+          } catch(Exception ex) {
+            LOG.warn(ex);
           }
         }
       }
@@ -367,8 +349,8 @@ public class HClient implements HConstants {
     try {
       this.master.addColumn(tableName, column);
       
-    } catch(RemoteException e) {
-      handleRemoteException(e);
+    } catch (Exception e) {
+      RemoteExceptionHandler.handleRemoteException(e);
     }
   }
 
@@ -386,8 +368,8 @@ public class HClient implements HConstants {
     try {
       this.master.deleteColumn(tableName, columnName);
       
-    } catch(RemoteException e) {
-      handleRemoteException(e);
+    } catch(Exception e) {
+      RemoteExceptionHandler.handleRemoteException(e);
     }
   }
   
@@ -405,8 +387,8 @@ public class HClient implements HConstants {
     try {
       this.master.enableTable(tableName);
       
-    } catch(RemoteException e) {
-      handleRemoteException(e);
+    } catch(Exception e) {
+      RemoteExceptionHandler.handleRemoteException(e);
     }
 
     // Wait until first region is enabled
@@ -445,6 +427,11 @@ public class HClient implements HConstants {
         }
         if(isenabled) {
           break;
+        }
+        
+      } catch (Exception e) {
+        if(tries == numRetries - 1) {                   // no more retries
+          RemoteExceptionHandler.handleRemoteException(e);
         }
         
       } finally {
@@ -488,8 +475,8 @@ public class HClient implements HConstants {
     try {
       this.master.disableTable(tableName);
       
-    } catch(RemoteException e) {
-      handleRemoteException(e);
+    } catch(Exception e) {
+      RemoteExceptionHandler.handleRemoteException(e);
     }
 
     // Wait until first region is disabled
@@ -530,6 +517,11 @@ public class HClient implements HConstants {
           break;
         }
         
+      } catch(Exception e) {
+        if(tries == numRetries - 1) {                   // no more retries
+          RemoteExceptionHandler.handleRemoteException(e);
+        }
+        
       } finally {
         if(scannerId != -1L) {
           try {
@@ -561,7 +553,11 @@ public class HClient implements HConstants {
    */
   public synchronized void shutdown() throws IOException {
     checkMaster();
-    this.master.shutdown();
+    try {
+      this.master.shutdown();
+    } catch(Exception e) {
+      RemoteExceptionHandler.handleRemoteException(e);
+    }
   }
 
   /*
@@ -741,10 +737,10 @@ public class HClient implements HConstants {
       try {
         rootRegion.getRegionInfo(HGlobals.rootRegionInfo.regionName);
         break;
-      } catch(NotServingRegionException e) {
+      } catch(Exception e) {
         if(tries == numRetries - 1) {
           // Don't bother sleeping. We've run out of retries.
-          break;
+          RemoteExceptionHandler.handleRemoteException(e);
         }
         
         // Sleep and retry finding root region.
@@ -806,7 +802,7 @@ public class HClient implements HConstants {
     TreeMap<Text, RegionLocation> servers = new TreeMap<Text, RegionLocation>();
     for(int tries = 0; servers.size() == 0 && tries < this.numRetries;
         tries++) {
-  
+
       long scannerId = -1L;
       try {
         scannerId =
@@ -822,13 +818,13 @@ public class HClient implements HConstants {
             if(servers.size() == 0) {
               // If we didn't find any servers then the table does not exist
               throw new RegionNotFoundException("table '" + tableName +
-                "' does not exist in " + t);
+                  "' does not exist in " + t);
             }
 
             // We found at least one server for the table and now we're done.
             if (LOG.isDebugEnabled()) {
               LOG.debug("Found " + servers.size() + " server(s) for " +
-                "location: " + t + " for tablename " + tableName);
+                  "location: " + t + " for tablename " + tableName);
             }
             break;
           }
@@ -868,19 +864,24 @@ public class HClient implements HConstants {
           servers.put(regionInfo.startKey, 
               new RegionLocation(regionInfo, new HServerAddress(serverAddress)));
         }
+      } catch (Exception e) {
+        if(tries == numRetries - 1) {                   // no retries left
+          RemoteExceptionHandler.handleRemoteException(e);
+        }
+        
       } finally {
         if(scannerId != -1L) {
           try {
             server.close(scannerId);
-          } catch(Exception e) {
-            LOG.warn(e);
+          } catch(Exception ex) {
+            LOG.warn(ex);
           }
         }
       }
-        
+      
       if(servers.size() == 0 && tries == this.numRetries - 1) {
         throw new NoServerForRegionException("failed to find server for "
-            + tableName + " after " + this.numRetries + " retries");
+              + tableName + " after " + this.numRetries + " retries");
       }
 
       if (servers.size() <= 0) {
@@ -891,7 +892,7 @@ public class HClient implements HConstants {
         }
         try {
           Thread.sleep(this.pause);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ie) {
           // continue
         }
         if (LOG.isDebugEnabled()) {
@@ -907,8 +908,8 @@ public class HClient implements HConstants {
    * @param regionServer - the server to connect to
    * @throws IOException
    */
-  protected synchronized HRegionInterface getHRegionConnection(
-      HServerAddress regionServer) throws IOException{
+  protected synchronized HRegionInterface getHRegionConnection (
+      HServerAddress regionServer) throws IOException {
 
     getRegionServerInterface();
 
@@ -918,22 +919,29 @@ public class HClient implements HConstants {
     if (server == null) { // Get a connection
       long versionId = 0;
       try {
-        versionId = serverInterfaceClass.getDeclaredField("versionID").getLong(server);
+        versionId =
+          serverInterfaceClass.getDeclaredField("versionID").getLong(server);
+        
       } catch (IllegalAccessException e) {
         // Should never happen unless visibility of versionID changes
         throw new UnsupportedOperationException(
-            "Unable to open a connection to a " + serverInterfaceClass.getName() + " server.", e);
+            "Unable to open a connection to a " + serverInterfaceClass.getName()
+            + " server.", e);
+        
       } catch (NoSuchFieldException e) {
         // Should never happen unless versionID field name changes in HRegionInterface
         throw new UnsupportedOperationException(
-            "Unable to open a connection to a " + serverInterfaceClass.getName() + " server.", e);
+            "Unable to open a connection to a " + serverInterfaceClass.getName()
+            + " server.", e);
       }
 
-      server = (HRegionInterface) RPC.waitForProxy(
-               serverInterfaceClass,
-               versionId,
-               regionServer.getInetSocketAddress(),
-               this.conf);
+      try {
+        server = (HRegionInterface) RPC.waitForProxy(serverInterfaceClass,
+            versionId, regionServer.getInetSocketAddress(), this.conf);
+        
+      } catch (Exception e) {
+        RemoteExceptionHandler.handleRemoteException(e);
+      }
 
       this.servers.put(regionServer.toString(), server);
     }
@@ -988,6 +996,9 @@ public class HClient implements HConstants {
             }
           }
         }
+      } catch (Exception ex) {
+        RemoteExceptionHandler.handleRemoteException(ex);
+        
       } finally {
         if(scannerId != -1L) {
           server.close(scannerId);
@@ -1046,18 +1057,25 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public byte[] get(Text row, Text column) throws IOException {
-    RegionLocation info = null;
     byte [] value = null;
-    for(int tries = 0; tries < numRetries && info == null; tries++) {
-      info = getRegionLocation(row);
+    for(int tries = 0; tries < numRetries; tries++) {
+      RegionLocation info = getRegionLocation(row);
+      HRegionInterface server = getHRegionConnection(info.serverAddress);
       try {
-        value = getHRegionConnection(info.serverAddress).
-          get(info.regionInfo.regionName, row, column);
-      } catch (NotServingRegionException e) {
+        value = server.get(info.regionInfo.regionName, row, column);
+        break;
+        
+      } catch (Exception e) {
         if (tries == numRetries - 1) {
-          throw e;
+          RemoteExceptionHandler.handleRemoteException(e);
         }
         findRegion(info);
+      }
+      try {
+        Thread.sleep(this.pause);
+        
+      } catch (InterruptedException x) {
+        // continue
       }
     }
     return value;
@@ -1073,19 +1091,27 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public byte[][] get(Text row, Text column, int numVersions) throws IOException {
-    RegionLocation info = null;
     byte [][] values = null;
-    for(int tries = 0; tries < numRetries && info == null; tries++) {
-      info = getRegionLocation(row);
+    for(int tries = 0; tries < numRetries; tries++) {
+      RegionLocation info = getRegionLocation(row);
+      HRegionInterface server = getHRegionConnection(info.serverAddress);
+      
       try {
-        values = getHRegionConnection(info.serverAddress).get(
-          info.regionInfo.regionName, row, column, numVersions);
-      } catch(NotServingRegionException e) {
+        values = server.get(info.regionInfo.regionName, row, column, numVersions);
+        break;
+        
+      } catch(Exception e) {
         if(tries == numRetries - 1) {
           // No more tries
-          throw e;
+          RemoteExceptionHandler.handleRemoteException(e);
         }
         findRegion(info);
+      }
+      try {
+        Thread.sleep(this.pause);
+        
+      } catch (InterruptedException x) {
+        // continue
       }
     }
 
@@ -1112,20 +1138,26 @@ public class HClient implements HConstants {
    */
   public byte[][] get(Text row, Text column, long timestamp, int numVersions)
   throws IOException {
-    RegionLocation info = null;
     byte [][] values = null;
-    for(int tries = 0; tries < numRetries && info == null; tries++) {
-      info = getRegionLocation(row);
+    for(int tries = 0; tries < numRetries; tries++) {
+      RegionLocation info = getRegionLocation(row);
+      HRegionInterface server = getHRegionConnection(info.serverAddress);
       try {
-        values = getHRegionConnection(info.serverAddress).
-          get(info.regionInfo.regionName, row, column, timestamp, numVersions);
+        values = server.get(info.regionInfo.regionName, row, column, timestamp, numVersions);
+        break;
     
-      } catch(NotServingRegionException e) {
+      } catch(Exception e) {
         if(tries == numRetries - 1) {
           // No more tries
-          throw e;
+          RemoteExceptionHandler.handleRemoteException(e);
         }
         findRegion(info);
+      }
+      try {
+        Thread.sleep(this.pause);
+        
+      } catch (InterruptedException x) {
+        // continue
       }
     }
 
@@ -1147,22 +1179,27 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public SortedMap<Text, byte[]> getRow(Text row) throws IOException {
-    RegionLocation info = null;
     KeyedData[] value = null;
-    
-    for(int tries = 0; tries < numRetries && info == null; tries++) {
-      info = getRegionLocation(row);
+    for(int tries = 0; tries < numRetries; tries++) {
+      RegionLocation info = getRegionLocation(row);
+      HRegionInterface server = getHRegionConnection(info.serverAddress);
       
       try {
-        value = getHRegionConnection(info.serverAddress).getRow(
-            info.regionInfo.regionName, row);
+        value = server.getRow(info.regionInfo.regionName, row);
+        break;
         
       } catch(NotServingRegionException e) {
         if(tries == numRetries - 1) {
           // No more tries
-          throw e;
+          RemoteExceptionHandler.handleRemoteException(e);
         }
         findRegion(info);
+      }
+      try {
+        Thread.sleep(this.pause);
+        
+      } catch (InterruptedException x) {
+        // continue
       }
     }
     TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
@@ -1337,7 +1374,7 @@ public class HClient implements HConstants {
     try {
       this.currentServer.put(this.currentRegion, this.clientid, lockid, column,
         val);
-    } catch(IOException e) {
+    } catch(Exception e) {
       try {
         this.currentServer.abort(this.currentRegion, this.clientid, lockid);
       } catch(IOException e2) {
@@ -1345,7 +1382,7 @@ public class HClient implements HConstants {
       }
       this.currentServer = null;
       this.currentRegion = null;
-      throw e;
+      RemoteExceptionHandler.handleRemoteException(e);
     }
   }
   
@@ -1360,7 +1397,7 @@ public class HClient implements HConstants {
     try {
       this.currentServer.delete(this.currentRegion, this.clientid, lockid,
         column);
-    } catch(IOException e) {
+    } catch(Exception e) {
       try {
         this.currentServer.abort(this.currentRegion, this.clientid, lockid);
       } catch(IOException e2) {
@@ -1368,7 +1405,7 @@ public class HClient implements HConstants {
       }
       this.currentServer = null;
       this.currentRegion = null;
-      throw e;
+      RemoteExceptionHandler.handleRemoteException(e);
     }
   }
   
@@ -1381,10 +1418,10 @@ public class HClient implements HConstants {
   public void abort(long lockid) throws IOException {
     try {
       this.currentServer.abort(this.currentRegion, this.clientid, lockid);
-    } catch(IOException e) {
+    } catch(Exception e) {
       this.currentServer = null;
       this.currentRegion = null;
-      throw e;
+      RemoteExceptionHandler.handleRemoteException(e);
     }
   }
   
@@ -1410,9 +1447,10 @@ public class HClient implements HConstants {
       this.currentServer.commit(this.currentRegion, this.clientid, lockid,
           timestamp);
       
-    } finally {
+    } catch (Exception e) {
       this.currentServer = null;
       this.currentRegion = null;
+      RemoteExceptionHandler.handleRemoteException(e);
     }
   }
   
@@ -1425,7 +1463,7 @@ public class HClient implements HConstants {
   public void renewLease(long lockid) throws IOException {
     try {
       this.currentServer.renewLease(lockid, this.clientid);
-    } catch(IOException e) {
+    } catch(Exception e) {
       try {
         this.currentServer.abort(this.currentRegion, this.clientid, lockid);
       } catch(IOException e2) {
@@ -1433,7 +1471,7 @@ public class HClient implements HConstants {
       }
       this.currentServer = null;
       this.currentRegion = null;
-      throw e;
+      RemoteExceptionHandler.handleRemoteException(e);
     }
   }
 
@@ -1521,19 +1559,19 @@ public class HClient implements HConstants {
 
             break;
         
-          } catch(NotServingRegionException e) {
+          } catch(Exception e) {
             if(tries == numRetries - 1) {
               // No more tries
-              throw e;
+              RemoteExceptionHandler.handleRemoteException(e);
             }
             findRegion(info);
             loadRegions();
           }
         }
 
-      } catch(IOException e) {
+      } catch(Exception e) {
         close();
-        throw e;
+        RemoteExceptionHandler.handleRemoteException(e);
       }
       return true;
     }
