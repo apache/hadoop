@@ -46,7 +46,7 @@
 <html>
 <title>Hadoop <%=jobId%>'s black-listed tasktrackers</title>
 <body>
-<h1>Hadoop <a href="/jobdetails.jsp?jobid=<%=jobId%>"><%=jobId%></a> - 
+<h1>Hadoop <a href="jobdetails.jsp?jobid=<%=jobId%>"><%=jobId%></a> - 
 Black-listed task-trackers</h1>
 
 <% 
@@ -54,7 +54,7 @@ Black-listed task-trackers</h1>
 %>
 
 <hr>
-<a href="/jobdetails.jsp?jobid=><%=jobId%>">Go back to <%=jobId%></a><br>
+<a href="jobdetails.jsp?jobid=><%=jobId%>">Go back to <%=jobId%></a><br>
 <a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
 </body>
 </html>

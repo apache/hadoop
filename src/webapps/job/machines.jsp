@@ -66,7 +66,7 @@
 <title><%=trackerLabel%> Hadoop Machine List</title>
 
 <body>
-<h1><a href="/jobtracker.jsp"><%=trackerLabel%></a> Hadoop Machine List</h1>
+<h1><a href="jobtracker.jsp"><%=trackerLabel%></a> Hadoop Machine List</h1>
 
 <h2>Task Trackers</h2>
 <%

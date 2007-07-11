@@ -44,7 +44,7 @@
       failedTaskAttempts += task.numTaskFailures();
       killedTaskAttempts += task.numKilledTasks();
     }
-    out.print("<tr><th><a href=\"/jobtasks.jsp?jobid=" + jobId + 
+    out.print("<tr><th><a href=\"jobtasks.jsp?jobid=" + jobId + 
               "&type="+ kind + "&pagenum=1\">" + kind + 
               "</a></th><td align=\"right\">" + 
               StringUtils.formatPercent(completePercent, 2) +
@@ -60,14 +60,14 @@
               killedTasks +
               "</td><td align=\"right\">" + 
               ((failedTaskAttempts > 0) ? 
-                  ("<a href=\"/jobfailures.jsp?jobid=" + jobId + 
+                  ("<a href=\"jobfailures.jsp?jobid=" + jobId + 
                    "&kind=" + kind + "&cause=failed\">" + failedTaskAttempts + 
                    "</a>") : 
                   "0"
                   ) + 
               " / " +
               ((killedTaskAttempts > 0) ? 
-                  ("<a href=\"/jobfailures.jsp?jobid=" + jobId + 
+                  ("<a href=\"jobfailures.jsp?jobid=" + jobId + 
                    "&kind=" + kind + "&cause=killed\">" + killedTaskAttempts + 
                    "</a>") : 
                   "0"
@@ -126,7 +126,7 @@
 <title>Hadoop <%=jobId%> on <%=trackerName%></title>
 </head>
 <body>
-<h1>Hadoop <%=jobId%> on <a href="/jobtracker.jsp"><%=trackerName%></a></h1>
+<h1>Hadoop <%=jobId%> on <a href="jobtracker.jsp"><%=trackerName%></a></h1>
 
 <% 
     if (job == null) {
@@ -140,7 +140,7 @@
     out.print("<b>User:</b> " + profile.getUser() + "<br>\n");
     out.print("<b>Job Name:</b> " + profile.getJobName() + "<br>\n");
     if (runState == JobStatus.RUNNING) {
-      out.print("<b>Job File:</b> <a href=\"/jobconf.jsp?jobid=" + jobId + "\">" + 
+      out.print("<b>Job File:</b> <a href=\"jobconf.jsp?jobid=" + jobId + "\">" + 
           profile.getJobFile() + "</a><br>\n");
     } else {
       out.print("<b>Job File:</b> " + profile.getJobFile() + "<br>\n");
@@ -169,7 +169,7 @@
     }
     if (flakyTaskTrackers > 0) {
       out.print("<b>Black-listed TaskTrackers:</b> " + 
-          "<a href=\"/jobblacklistedtrackers.jsp?jobid=" + jobId + "\">" +
+          "<a href=\"jobblacklistedtrackers.jsp?jobid=" + jobId + "\">" +
           flakyTaskTrackers + "</a><br>\n");
     }
     out.print("<hr>\n");
@@ -177,7 +177,7 @@
     out.print("<tr><th>Kind</th><th>% Complete</th><th>Num Tasks</th>" +
               "<th>Pending</th><th>Running</th><th>Complete</th>" +
               "<th>Killed</th>" +
-              "<th><a href=\"/jobfailures.jsp?jobid=" + jobId + 
+              "<th><a href=\"jobfailures.jsp?jobid=" + jobId + 
               "\">Failed/Killed<br>Task Attempts</a></th></tr>\n");
     printTaskSummary(out, jobId, "map", status.mapProgress(), 
                      job.getMapTasks());
@@ -239,7 +239,7 @@
 	<hr><a href="jobdetails.jsp?action=confirm&jobid=<%=jobId%>"> Kill this job </a>
 <% } %>
 <hr>
-<a href="/jobtracker.jsp">Go back to JobTracker</a><br>
+<a href="jobtracker.jsp">Go back to JobTracker</a><br>
 <a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
 </body>
 </html>

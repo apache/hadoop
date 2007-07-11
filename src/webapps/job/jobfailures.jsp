@@ -26,7 +26,7 @@
         String taskTrackerName = statuses[i].getTaskTracker();
         TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
         out.print("<tr><td>" + statuses[i].getTaskId() +
-                  "</td><td><a href=\"/taskdetails.jsp?jobid="+ jobId + 
+                  "</td><td><a href=\"taskdetails.jsp?jobid="+ jobId + 
                   "&tipid=" + tipId + "\">" + tipId +
                   "</a></td>");
         if (taskTracker == null) {
@@ -144,15 +144,15 @@
 <html>
 <title>Hadoop <%=jobId%> failures on <%=trackerName%></title>
 <body>
-<h1>Hadoop <a href="/jobdetails.jsp?jobid=<%=jobId%>"><%=jobId%></a>
-failures on <a href="/jobtracker.jsp"><%=trackerName%></a></h1>
+<h1>Hadoop <a href="jobdetails.jsp?jobid=<%=jobId%>"><%=jobId%></a>
+failures on <a href="jobtracker.jsp"><%=trackerName%></a></h1>
 
 <% 
     printFailures(out, jobId, kind, cause); 
 %>
 
 <hr>
-<a href="/jobtracker.jsp">Go back to JobTracker</a><br>
+<a href="jobtracker.jsp">Go back to JobTracker</a><br>
 <a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
 </body>
 </html>

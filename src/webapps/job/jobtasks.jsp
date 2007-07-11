@@ -41,8 +41,8 @@
   </head>
 <body>
 <h1>Hadoop <%=type%> task list for 
-<a href="/jobdetails.jsp?jobid=<%=jobid%>"><%=jobid%></a> on 
-<a href="/jobtracker.jsp"><%=trackerLabel%></a></h1>
+<a href="jobdetails.jsp?jobid=<%=jobid%>"><%=jobid%></a> on 
+<a href="jobtracker.jsp"><%=trackerLabel%></a></h1>
 <%
   if (job == null) {
     out.print("<b>Job " + jobid + " not found.</b><br>\n");
@@ -80,7 +80,7 @@
          }
          out.println("</pre><br/></td>");
          out.println("<td>" + 
-             "<a href=\"/taskstats.jsp?jobid=" + jobid + 
+             "<a href=\"taskstats.jsp?jobid=" + jobid + 
              "&tipid=" + report.getTaskId() +
              "\">" + report.getCounters().size() +
              "</a></td></tr>");
@@ -90,19 +90,19 @@
   }
   if (end_index < report_len) {
     out.print("<div style=\"text-align:right\">" + 
-              "<a href=\"/jobtasks.jsp?jobid="+ jobid + "&type=" + type +
+              "<a href=\"jobtasks.jsp?jobid="+ jobid + "&type=" + type +
               "&pagenum=" + next_page +
               "\">" + "Next" + "</a></div>");
   }
   if (start_index != 0) {
       out.print("<div style=\"text-align:right\">" + 
-                "<a href=\"/jobtasks.jsp?jobid="+ jobid + "&type=" + type +
+                "<a href=\"jobtasks.jsp?jobid="+ jobid + "&type=" + type +
                 "&pagenum=" + (pnum -1) + "\">" + "Prev" + "</a></div>");
   }
 %>
 
 <hr>
-<a href="/jobtracker.jsp">Go back to JobTracker</a><br>
+<a href="jobtracker.jsp">Go back to JobTracker</a><br>
 <a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
 </body>
 </html>

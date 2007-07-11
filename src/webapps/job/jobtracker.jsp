@@ -69,7 +69,7 @@
     out.print("<tr><td>" + status.getMapTasks() + "</td><td>" +
               status.getReduceTasks() + "</td><td>" + 
               status.getMaxTasks() + "</td><td>" +
-              tracker.getTotalSubmissions() + "</td><td><a href=\"/machines.jsp\">" +
+              tracker.getTotalSubmissions() + "</td><td><a href=\"machines.jsp\">" +
               status.getTaskTrackers() + "</a></td></tr></table>\n");
   }
 %>
@@ -117,7 +117,7 @@
 <hr>
 
 <h2>Local logs</h2>
-<a href="/logs/">Log</a> directory, <a href="jobhistory.jsp?historyFile=JobHistory.log&reload=true">
+<a href="logs/">Log</a> directory, <a href="jobhistory.jsp?historyFile=JobHistory.log&reload=true">
 Job Tracker History</a>
 
 <hr>
