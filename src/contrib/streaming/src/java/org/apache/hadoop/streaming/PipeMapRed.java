@@ -286,7 +286,11 @@ public abstract class PipeMapRed {
 
   void waitOutputThreads() {
     try {
-      sim.waitFor();
+      int exitVal = sim.waitFor();
+      // how'd it go?
+      if (exitVal != 0) {
+	  logprintln("PipeMapRed.waitOutputThreads(): subprocess failed with code " + exitVal + " in " + PipeMapRed.class.getName());
+      };
       if (outThread_ != null) {
         outThread_.join(joinDelay_);
       }

@@ -86,9 +86,23 @@ public class PipeReducer extends PipeMapRed implements Reducer {
         }
       }
     } catch (IOException io) {
+      // a common reason to get here is failure of the subprocess.
+      // Document that fact, if possible.
+      String extraInfo = "";
+      try {
+        int exitVal = sim.exitValue();
+	if (exitVal == 0) {
+	  extraInfo = "subprocess exited successfully\n";
+	} else {
+	  extraInfo = "subprocess exited with error code " + exitVal + "\n";
+	};
+      } catch (IllegalThreadStateException e) {
+        // hmm, but child is still running.  go figure.
+	extraInfo = "subprocess still running\n";
+      };
       appendLogToJobLog("failure");
       mapRedFinished();
-      throw new IOException(getContext() + io.getMessage());
+      throw new IOException(extraInfo + getContext() + io.getMessage());
     }
   }
 

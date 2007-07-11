@@ -293,6 +293,9 @@ Trunk (unreleased changes)
      permits coordinated upgrade of datanode data.
      (Konstantin Shvachko via cutting)
 
+ 91. HADOOP-1580.  Improve contrib/streaming so that subprocess exit
+     status is displayed for errors.  (John Heidemann via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
