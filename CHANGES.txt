@@ -286,6 +286,9 @@ Trunk (unreleased changes)
  88. HADOOP-1554.  Log killed tasks to the job history and display them on the
      web/ui. (Devaraj Das via omalley)
 
+ 89. HADOOP-1533.  Add persistent error logging for distcp. The logs are stored
+    into a specified hdfs directory. (Senthil Subramanian via omalley)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

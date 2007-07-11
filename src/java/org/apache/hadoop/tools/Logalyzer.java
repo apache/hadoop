@@ -177,7 +177,7 @@ public class Logalyzer {
   {
     String destURL = "hdfs://" + fsConfig.get("fs.default.name", "local") + 
                          archiveDirectory;
-    CopyFiles.copy(fsConfig, logListURI, destURL, true, false);
+    CopyFiles.copy(fsConfig, logListURI, destURL, null, true, false);
   }
   
   /**

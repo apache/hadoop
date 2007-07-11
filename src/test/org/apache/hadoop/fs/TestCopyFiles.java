@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.util.Random;
+import java.net.URI;
 import junit.framework.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
@@ -182,11 +183,17 @@ public class TestCopyFiles extends TestCase {
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
         new CopyFiles().doMain(conf, new String[] {"hdfs://"+namenode+"/srcdat",
-                                                   "hdfs://"+namenode+"/destdat"});
+                                                   "hdfs://"+namenode+"/destdat",
+                                                   "-log",
+                                                   "hdfs://"+namenode+"/logs"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(namenode, "/destdat", files));
+        FileSystem fs = FileSystem.get(URI.create("hdfs://"+namenode+"/logs"), conf);
+        assertTrue("Log directory doesnot exist.",
+                    fs.exists(new Path("hdfs://"+namenode+"/logs")));
         deldir(namenode, "/destdat");
         deldir(namenode, "/srcdat");
+        deldir(namenode, "/logs");
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
@@ -204,10 +211,16 @@ public class TestCopyFiles extends TestCase {
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
         new CopyFiles().doMain(conf, new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
-                                                   "hdfs://"+namenode+"/destdat"});
+                                                   "hdfs://"+namenode+"/destdat",
+                                                   "-log",
+                                                   "hdfs://"+namenode+"/logs"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(namenode, "/destdat", files));
+        FileSystem fs = FileSystem.get(URI.create("hdfs://"+namenode+"/logs"), conf);
+        assertTrue("Log directory doesnot exist.",
+                    fs.exists(new Path("hdfs://"+namenode+"/logs")));
         deldir(namenode, "/destdat");
+        deldir(namenode, "/logs");
         deldir("local", TEST_ROOT_DIR+"/srcdat");
       }
     } finally {
@@ -226,10 +239,16 @@ public class TestCopyFiles extends TestCase {
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
         new CopyFiles().doMain(conf, new String[] {"hdfs://"+namenode+"/srcdat",
-                                                   "file://"+TEST_ROOT_DIR+"/destdat"});
+                                                   "file://"+TEST_ROOT_DIR+"/destdat",
+                                                   "-log",
+                                                   TEST_ROOT_DIR+"/logs"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
+        FileSystem fs = FileSystem.get(URI.create("hdfs://"+namenode+"/logs"), conf);
+        assertTrue("Log directory doesnot exist.",
+                    fs.exists(new Path(TEST_ROOT_DIR+"/logs")));
         deldir("local", TEST_ROOT_DIR+"/destdat");
+        deldir("local", TEST_ROOT_DIR+"/logs");
         deldir(namenode, "/srcdat");
       }
     } finally {
