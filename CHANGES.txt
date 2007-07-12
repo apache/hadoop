@@ -331,6 +331,9 @@ Trunk (unreleased changes)
 102. HADOOP-1535.  Fix the user-controlled grouping to the reduce function.
      (Vivek Ratan via omalley)
 
+103. HADOOP-1585.  Modify GenericWritable to declare the classes as subtypes
+     of Writable (Espen Amble Kolstad via omalley)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

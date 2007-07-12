@@ -81,9 +81,9 @@ public abstract class GenericWritable implements Writable {
 
   public void readFields(DataInput in) throws IOException {
     type = in.readByte();
-    Class clazz = getTypes()[type & 0xff];
+    Class<? extends Writable> clazz = getTypes()[type & 0xff];
     try {
-      instance = (Writable) clazz.newInstance();
+      instance = clazz.newInstance();
     } catch (Exception e) {
       e.printStackTrace();
       throw new IOException("Cannot initialize the class: " + clazz);
@@ -103,6 +103,6 @@ public abstract class GenericWritable implements Writable {
    * Return all classes that may be wrapped.  Subclasses should implement this
    * to return a constant array of classes.
    */
-  abstract protected Class[] getTypes();
+  abstract protected Class<? extends Writable>[] getTypes();
 
 }
