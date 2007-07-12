@@ -193,7 +193,7 @@ public class SequenceFile {
     throws IOException {
     if ((codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
-        !ZlibFactory.isNativeZlibLoaded()) {
+        !ZlibFactory.isNativeZlibLoaded(conf)) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
                                          "GzipCodec without native-hadoop code!");
     }
@@ -234,7 +234,7 @@ public class SequenceFile {
                  Progressable progress, Metadata metadata) throws IOException {
     if ((codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
-        !ZlibFactory.isNativeZlibLoaded()) {
+        !ZlibFactory.isNativeZlibLoaded(conf)) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
                                          "GzipCodec without native-hadoop code!");
     }
@@ -295,7 +295,7 @@ public class SequenceFile {
     throws IOException {
     if (codec != null && (codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
-        !ZlibFactory.isNativeZlibLoaded()) {
+        !ZlibFactory.isNativeZlibLoaded(conf)) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
                                          "GzipCodec without native-hadoop code!");
     }
@@ -336,7 +336,7 @@ public class SequenceFile {
   throws IOException {
   if (codec != null && (codec instanceof GzipCodec) && 
       !NativeCodeLoader.isNativeCodeLoaded() && 
-      !ZlibFactory.isNativeZlibLoaded()) {
+      !ZlibFactory.isNativeZlibLoaded(conf)) {
     throw new IllegalArgumentException("SequenceFile doesn't work with " +
                                        "GzipCodec without native-hadoop code!");
   }
@@ -375,7 +375,7 @@ public class SequenceFile {
     throws IOException {
     if ((codec instanceof GzipCodec) && 
         !NativeCodeLoader.isNativeCodeLoaded() && 
-        !ZlibFactory.isNativeZlibLoaded()) {
+        !ZlibFactory.isNativeZlibLoaded(conf)) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
                                          "GzipCodec without native-hadoop code!");
     }

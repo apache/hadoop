@@ -19,6 +19,7 @@
 package org.apache.hadoop.util;
 
 import org.apache.commons.logging.*;
+import org.apache.hadoop.mapred.JobConf;
 
 /**
  * A helper to load the native hadoop code i.e. libhadoop.so.
@@ -60,6 +61,28 @@ public class NativeCodeLoader {
    */
   public static boolean isNativeCodeLoaded() {
     return nativeCodeLoaded;
+  }
+
+  /**
+   * Return if native hadoop libraries, if present, can be used for this job.
+   * @param jobConf job configuration
+   * 
+   * @return <code>true</code> if native hadoop libraries, if present, can be 
+   *         used for this job; <code>false</code> otherwise.
+   */
+  public boolean getLoadNativeLibraries(JobConf jobConf) {
+    return jobConf.getBoolean("hadoop.native.lib", true);
+  }
+  
+  /**
+   * Set if native hadoop libraries, if present, can be used for this job.
+   * 
+   * @param jobConf job configuration
+   * @param loadNativeLibraries can native hadoop libraries be loaded
+   */
+  public void setLoadNativeLibraries(JobConf jobConf, 
+                                     boolean loadNativeLibraries) {
+    jobConf.setBoolean("hadoop.native.lib", loadNativeLibraries);
   }
 
 }

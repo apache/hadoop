@@ -49,7 +49,7 @@ public class TestSequenceFile extends TestCase {
   }
   
   public void testLzoSequenceFile() throws Exception {
-    if (LzoCodec.isNativeLzoLoaded()) {
+    if (LzoCodec.isNativeLzoLoaded(conf)) {
       LOG.info("Testing SequenceFile with LzoCodec");
       CompressionCodec lzoCodec = null;
       try {

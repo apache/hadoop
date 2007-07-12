@@ -40,28 +40,29 @@ public class TestCodec extends TestCase {
   private static final Log LOG= 
     LogFactory.getLog("org.apache.hadoop.io.compress.TestCodec");
 
+  private Configuration conf = new Configuration();
   private int count = 10000;
   private int seed = new Random().nextInt();
   
   public void testDefaultCodec() throws IOException {
-    codecTest(seed, count, "org.apache.hadoop.io.compress.DefaultCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.DefaultCodec");
   }
   
   public void testGzipCodec() throws IOException {
-    codecTest(seed, count, "org.apache.hadoop.io.compress.GzipCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
   
   public void testLzoCodec() throws IOException {
-    if (LzoCodec.isNativeLzoLoaded()) {
-      codecTest(seed, count, "org.apache.hadoop.io.compress.LzoCodec");
+    if (LzoCodec.isNativeLzoLoaded(conf)) {
+      codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzoCodec");
     }
   }
   
-  private static void codecTest(int seed, int count, String codecClass) 
+  private static void codecTest(Configuration conf, int seed, int count, 
+                                String codecClass) 
     throws IOException {
     
     // Create the codec
-    Configuration conf = new Configuration();
     CompressionCodec codec = null;
     try {
       codec = (CompressionCodec)
@@ -144,8 +145,9 @@ public class TestCodec extends TestCase {
         }
       }
 
+      Configuration conf = new Configuration();
       int seed = 0;
-      codecTest(seed, count, codecClass);
+      codecTest(conf, seed, count, codecClass);
     } catch (Exception e) {
       System.err.println("Caught: " + e);
       e.printStackTrace();

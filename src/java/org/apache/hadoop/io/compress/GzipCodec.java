@@ -135,7 +135,7 @@ public class GzipCodec extends DefaultCodec {
   
   public CompressionOutputStream createOutputStream(OutputStream out) 
     throws IOException {
-    return (ZlibFactory.isNativeZlibLoaded()) ?
+    return (ZlibFactory.isNativeZlibLoaded(conf)) ?
                new CompressorStream(out, createCompressor(),
                                     conf.getInt("io.file.buffer.size", 4*1024)) :
                new GzipOutputStream(out);
@@ -153,7 +153,7 @@ public class GzipCodec extends DefaultCodec {
   }
 
   public Compressor createCompressor() {
-    return (ZlibFactory.isNativeZlibLoaded()) ?
+    return (ZlibFactory.isNativeZlibLoaded(conf)) ?
                new ZlibCompressor(ZlibCompressor.CompressionLevel.DEFAULT_COMPRESSION,
                                   ZlibCompressor.CompressionStrategy.DEFAULT_STRATEGY,
                                   ZlibCompressor.CompressionHeader.GZIP_FORMAT,
@@ -162,12 +162,12 @@ public class GzipCodec extends DefaultCodec {
   }
 
   public Class getCompressorType() {
-    return ZlibFactory.getZlibCompressorType();
+    return ZlibFactory.getZlibCompressorType(conf);
   }
 
   public CompressionInputStream createInputStream(InputStream in) 
   throws IOException {
-  return (ZlibFactory.isNativeZlibLoaded()) ?
+  return (ZlibFactory.isNativeZlibLoaded(conf)) ?
              new DecompressorStream(in, createDecompressor(),
                                     conf.getInt("io.file.buffer.size", 
                                                 4*1024)) :
@@ -185,14 +185,14 @@ public class GzipCodec extends DefaultCodec {
   }
 
   public Decompressor createDecompressor() {
-    return (ZlibFactory.isNativeZlibLoaded()) ?
+    return (ZlibFactory.isNativeZlibLoaded(conf)) ?
                new ZlibDecompressor(ZlibDecompressor.CompressionHeader.AUTODETECT_GZIP_ZLIB,
                                     64*1024) :
                null;                               
   }
 
   public Class getDecompressorType() {
-    return ZlibFactory.getZlibDecompressorType();
+    return ZlibFactory.getZlibDecompressorType(conf);
   }
 
   public String getDefaultExtension() {

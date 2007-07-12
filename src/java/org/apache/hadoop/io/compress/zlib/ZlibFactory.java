@@ -20,10 +20,10 @@ package org.apache.hadoop.io.compress.zlib;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * A collection of factories to create the right 
@@ -50,54 +50,58 @@ public class ZlibFactory {
   }
   
   /**
-   * Check if native-zlib code is loaded and initialized correctly.
+   * Check if native-zlib code is loaded & initialized correctly and 
+   * can be loaded for this job.
    * 
-   * @return <code>true</code> if native-zlib is loaded and initialized, 
-   *         else <code>false</code>
+   * @param conf configuration
+   * @return <code>true</code> if native-zlib is loaded & initialized 
+   *         and can be loaded for this job, else <code>false</code>
    */
-  public static boolean isNativeZlibLoaded() {
-    return nativeZlibLoaded; 
+  public static boolean isNativeZlibLoaded(Configuration conf) {
+    return nativeZlibLoaded && conf.getBoolean("hadoop.native.lib", true); 
   }
   
   /**
    * Return the appropriate type of the zlib compressor. 
    * 
+   * @param conf configuration
    * @return the appropriate type of the zlib compressor.
    */
-  public static Class getZlibCompressorType() {
-    return (nativeZlibLoaded) ? 
+  public static Class getZlibCompressorType(Configuration conf) {
+    return (isNativeZlibLoaded(conf)) ? 
             ZlibCompressor.class : BuiltInZlibDeflater.class;
   }
   
   /**
    * Return the appropriate implementation of the zlib compressor. 
    * 
+   * @param conf configuration
    * @return the appropriate implementation of the zlib compressor.
    */
-  public static Compressor getZlibCompressor() {
-    LOG.info("Creating a new ZlibCompressor");
-    return (nativeZlibLoaded) ? 
+  public static Compressor getZlibCompressor(Configuration conf) {
+    return (isNativeZlibLoaded(conf)) ? 
       new ZlibCompressor() : new BuiltInZlibDeflater(); 
   }
 
   /**
    * Return the appropriate type of the zlib decompressor. 
    * 
+   * @param conf configuration
    * @return the appropriate type of the zlib decompressor.
    */
-  public static Class getZlibDecompressorType() {
-    return (nativeZlibLoaded) ? 
+  public static Class getZlibDecompressorType(Configuration conf) {
+    return (isNativeZlibLoaded(conf)) ? 
             ZlibDecompressor.class : BuiltInZlibInflater.class;
   }
   
   /**
    * Return the appropriate implementation of the zlib decompressor. 
    * 
+   * @param conf configuration
    * @return the appropriate implementation of the zlib decompressor.
    */
-  public static Decompressor getZlibDecompressor() {
-    LOG.info("Creating a new ZlibDecompressor");
-    return (nativeZlibLoaded) ? 
+  public static Decompressor getZlibDecompressor(Configuration conf) {
+    return (isNativeZlibLoaded(conf)) ? 
       new ZlibDecompressor() : new BuiltInZlibInflater(); 
   }
   

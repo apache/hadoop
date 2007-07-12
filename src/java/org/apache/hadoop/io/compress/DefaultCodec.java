@@ -52,11 +52,11 @@ public class DefaultCodec implements Configurable, CompressionCodec {
   }
 
   public Class getCompressorType() {
-    return ZlibFactory.getZlibCompressorType();
+    return ZlibFactory.getZlibCompressorType(conf);
   }
 
   public Compressor createCompressor() {
-    return ZlibFactory.getZlibCompressor();
+    return ZlibFactory.getZlibCompressor(conf);
   }
 
   public CompressionInputStream createInputStream(InputStream in) 
@@ -73,11 +73,11 @@ public class DefaultCodec implements Configurable, CompressionCodec {
   }
 
   public Class getDecompressorType() {
-    return ZlibFactory.getZlibDecompressorType();
+    return ZlibFactory.getZlibDecompressorType(conf);
   }
 
   public Decompressor createDecompressor() {
-    return ZlibFactory.getZlibDecompressor();
+    return ZlibFactory.getZlibDecompressor(conf);
   }
   
   public String getDefaultExtension() {

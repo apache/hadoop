@@ -15,6 +15,11 @@
   <description>A base for other temporary directories.</description>
 </property>
 
+<property>
+  <name>hadoop.native.lib</name>
+  <value>true</value>
+  <description>Should native hadoop libraries, if present, be used.</description>
+</property>
 
 <!--- logging properties -->
 

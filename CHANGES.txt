@@ -343,6 +343,9 @@ Trunk (unreleased changes)
 106. HADOOP-1547.  Provide examples for aggregate library.
      (Runping Qi via tomwhite)
 
+107. HADOOP-1570.  Permit jobs to enable and disable the use of
+     hadoop's native library.  (Arun C Murthy via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
