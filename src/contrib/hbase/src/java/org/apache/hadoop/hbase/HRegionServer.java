@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
@@ -96,17 +96,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private final Thread splitOrCompactCheckerThread;
   protected final Integer splitOrCompactLock = new Integer(0);
   
-  /**
-   * Interface used by the {@link org.apache.hadoop.io.retry} mechanism.
-   */
-  public interface UpdateMetaInterface {
-    /**
-     * @return True if succeeded.
-     * @throws IOException
-     */
-   public boolean update() throws IOException;
-  }
-
   /** Runs periodically to determine if regions need to be compacted or split */
   class SplitOrCompactChecker implements Runnable, RegionUnavailableListener {
     HClient client = new HClient(conf);
@@ -207,55 +196,71 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // When a region is split, the META table needs to updated if we're
       // splitting a 'normal' region, and the ROOT table needs to be
       // updated if we are splitting a META region.
+      
       final Text tableToUpdate =
         region.getRegionInfo().tableDesc.getName().equals(META_TABLE_NAME) ?
             ROOT_TABLE_NAME : META_TABLE_NAME;
       if(LOG.isDebugEnabled()) {
         LOG.debug("Updating " + tableToUpdate + " with region split info");
       }
-      
-      // Wrap the update of META region with an org.apache.hadoop.io.retry.
-      UpdateMetaInterface implementation = new UpdateMetaInterface() {
-        /* (non-Javadoc)
-         * @see org.apache.hadoop.hbase.HRegionServer.UpdateMetaInterface#update()
-         */
-        public boolean update() throws IOException {
-          HRegion.removeRegionFromMETA(client, tableToUpdate,
-            region.getRegionName());
-          for (int i = 0; i < newRegions.length; i++) {
-            HRegion.addRegionToMETA(client, tableToUpdate, newRegions[i],
-              serverInfo.getServerAddress(), serverInfo.getStartCode());
-          }
-          
-          // Now tell the master about the new regions
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Reporting region split to master");
-          }
-          reportSplit(newRegions[0].getRegionInfo(), newRegions[1].
-            getRegionInfo());
-          LOG.info("region split, META update, and report to master all" +
-            " successful. Old region=" + oldRegion + ", new regions: " +
-            newRegions[0].getRegionName() + ", " +
-            newRegions[1].getRegionName());
 
-          // Finally, start serving the new regions
-          lock.writeLock().lock();
-          try {
-            onlineRegions.put(newRegions[0].getRegionName(), newRegions[0]);
-            onlineRegions.put(newRegions[1].getRegionName(), newRegions[1]);
-          } finally {
-            lock.writeLock().unlock();
-          }
-          return true;
-        }
-      };
+      // Remove old region from META
       
-      // Get retry proxy wrapper around 'implementation'.
-      UpdateMetaInterface retryProxy = (UpdateMetaInterface)RetryProxy.
-        create(UpdateMetaInterface.class, implementation,
-        client.getRetryPolicy());
-      // Run retry.
-      retryProxy.update();
+      for (int tries = 0; tries < numRetries; tries++) {
+        try {
+          HRegion.removeRegionFromMETA(client, tableToUpdate,
+              region.getRegionName());
+          
+        } catch (IOException e) {
+          if(tries == numRetries - 1) {
+            if(e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            }
+            throw e;
+          }
+        }
+      }
+      
+      // Add new regions to META
+      
+      for (int i = 0; i < newRegions.length; i++) {
+        for (int tries = 0; tries < numRetries; tries ++) {
+          try {
+            HRegion.addRegionToMETA(client, tableToUpdate, newRegions[i],
+                serverInfo.getServerAddress(), serverInfo.getStartCode());
+
+          } catch(IOException e) {
+            if(tries == numRetries - 1) {
+              if(e instanceof RemoteException) {
+                e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+              }
+              throw e;
+            }
+          }
+        }
+      }
+          
+      // Now tell the master about the new regions
+      
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Reporting region split to master");
+      }
+      reportSplit(newRegions[0].getRegionInfo(), newRegions[1].
+          getRegionInfo());
+      LOG.info("region split, META update, and report to master all" +
+          " successful. Old region=" + oldRegion + ", new regions: " +
+          newRegions[0].getRegionName() + ", " +
+          newRegions[1].getRegionName());
+
+      // Finally, start serving the new regions
+      
+      lock.writeLock().lock();
+      try {
+        onlineRegions.put(newRegions[0].getRegionName(), newRegions[0]);
+        onlineRegions.put(newRegions[1].getRegionName(), newRegions[1]);
+      } finally {
+        lock.writeLock().unlock();
+      }
     }
   }
 
@@ -293,7 +298,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
             try {
               cur.optionallyFlush();
-            } catch(IOException iex) {
+            } catch (IOException iex) {
+              if (iex instanceof RemoteException) {
+                try {
+                  iex = RemoteExceptionHandler.decodeRemoteException((RemoteException) iex);
+                  
+                } catch (IOException x) {
+                  iex = x;
+                }
+              }
               LOG.error(iex);
             }
           }
@@ -346,8 +359,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 LOG.debug("Rolling log. Number of entries is: " + nEntries);
               }
               log.rollWriter();
-            } catch(IOException iex) {
-              // continue
+            } catch (IOException iex) {
+              if (iex instanceof RemoteException) {
+                try {
+                  iex = RemoteExceptionHandler.decodeRemoteException((RemoteException) iex);
+                  
+                } catch (IOException x) {
+                  iex = x;
+                }
+              }
+              LOG.warn(iex);
             }
           }
         }
@@ -470,8 +491,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           HMasterRegionInterface.class, HMasterRegionInterface.versionID,
           new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
           conf);
-    } catch(IOException e) {
+    } catch (IOException e) {
       this.stopRequested = true;
+      if (e instanceof RemoteException) {
+        e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+      }
       throw e;
     }
   }
@@ -558,8 +582,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.server.start();
       LOG.info("HRegionServer started at: " + serverInfo.getServerAddress().toString());
     } catch(IOException e) {
-      LOG.error(e);
       stopRequested = true;
+      if (e instanceof RemoteException) {
+        try {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          
+        } catch (IOException ex) {
+          e = ex;
+        }
+      }
+      LOG.error(e);
     }
 
     while(! stopRequested) {
@@ -644,7 +676,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               }
             }
 
-          } catch(IOException e) {
+          } catch (IOException e) {
+            if (e instanceof RemoteException) {
+              try {
+                e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+                
+              } catch (IOException ex) {
+                e = ex;
+              }
+            }
             LOG.error(e);
           }
         }
@@ -683,7 +723,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     if (abortRequested) {
       try {
         log.rollWriter();
-      } catch(IOException e) {
+      } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          try {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            
+          } catch (IOException ex) {
+            e = ex;
+          }
+        }
         LOG.warn(e);
       }
       LOG.info("aborting server at: " +
@@ -692,7 +740,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       Vector<HRegion> closedRegions = closeAllRegions();
       try {
         log.closeAndDelete();
-      } catch(IOException e) {
+      } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          try {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            
+          } catch (IOException ex) {
+            e = ex;
+          }
+        }
         LOG.error(e);
       }
       try {
@@ -708,7 +764,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.info("telling master that region server is shutting down at: "
             + serverInfo.getServerAddress().toString());
         hbaseMaster.regionServerReport(serverInfo, exitMsg);
-      } catch(IOException e) {
+      } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          try {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            
+          } catch (IOException ex) {
+            e = ex;
+          }
+        }
         LOG.warn(e);
       }
       LOG.info("stopping server at: " +
@@ -822,7 +886,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 "Impossible state during msg processing.  Instruction: "
                 + e.msg.toString());
           }
-        } catch(IOException ie) {
+        } catch (IOException ie) {
+          if (ie instanceof RemoteException) {
+            try {
+              ie = RemoteExceptionHandler.decodeRemoteException((RemoteException) ie);
+              
+            } catch (IOException x) {
+              ie = x;
+            }
+          }
           if(e.tries < numRetries) {
             LOG.warn(ie);
             e.tries++;
@@ -888,7 +960,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       try {
         region.close();
         LOG.debug("region closed " + region.getRegionName());
-      } catch(IOException e) {
+      } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          try {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            
+          } catch (IOException x) {
+            e = x;
+          }
+        }
         LOG.error("error closing region " + region.getRegionName(), e);
       }
     }
@@ -1025,7 +1105,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     public void leaseExpired() {
       try {
         localRegion.abort(localLockId);
-      } catch(IOException iex) {
+      } catch (IOException iex) {
+        if (iex instanceof RemoteException) {
+          try {
+            iex = RemoteExceptionHandler.decodeRemoteException((RemoteException) iex);
+            
+          } catch (IOException x) {
+            iex = x;
+          }
+        }
         LOG.error(iex);
       }
     }
@@ -1176,7 +1264,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       leases.createLease(scannerId, scannerId,
         new ScannerListener(scannerName));
-    } catch(IOException e) {
+    } catch (IOException e) {
+      if (e instanceof RemoteException) {
+        try {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          
+        } catch (IOException x) {
+          e = x;
+        }
+      }
       LOG.error(e);
       throw e;
     }

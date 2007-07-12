@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.StringUtils;
@@ -215,6 +216,9 @@ public class HMaster implements HConstants, HMasterInterface,
             }
           }
         } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          }
           LOG.error(e);
         }
       }
@@ -313,7 +317,15 @@ public class HMaster implements HConstants, HMasterInterface,
           }
           tries = 0;
 
-        } catch(IOException e) {
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            try {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+              
+            } catch (IOException ex) {
+              LOG.warn(ex);
+            }
+          }
           tries++;
           if(tries < numRetries) {
             LOG.warn("ROOT scanner", e);
@@ -465,6 +477,9 @@ public class HMaster implements HConstants, HMasterInterface,
               tries = 0;
               
             } catch (IOException e) {
+              if (e instanceof RemoteException) {
+                e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+              }
               tries++;
               if(tries < numRetries) {
                 LOG.warn("META scanner", e);
@@ -475,7 +490,15 @@ public class HMaster implements HConstants, HMasterInterface,
             }
           } while(true);
 
-        } catch(IOException e) {
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            try {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+              
+            } catch (IOException ex) {
+              LOG.warn(ex);
+            }
+          }
           LOG.error("META scanner", e);
           closed = true;
         }
@@ -601,7 +624,10 @@ public class HMaster implements HConstants, HMasterInterface,
         root.getLog().closeAndDelete();
         meta.close();
         meta.getLog().closeAndDelete();
-      } catch(IOException e) {
+      } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        }
         LOG.error(e);
       }
     }
@@ -695,7 +721,15 @@ public class HMaster implements HConstants, HMasterInterface,
       // Start the server last so everything else is running before we start
       // receiving requests
       this.server.start();
-    } catch(IOException e) {
+    } catch (IOException e) {
+      if (e instanceof RemoteException) {
+        try {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          
+        } catch (IOException ex) {
+          LOG.warn(ex);
+        }
+      }
       // Something happened during startup. Shut things down.
       this.closed = true;
       LOG.error(e);
@@ -721,7 +755,16 @@ public class HMaster implements HConstants, HMasterInterface,
           LOG.debug("Processing " + op.toString());
         }
         op.process();
-      } catch(Exception ex) {
+        
+      } catch (Exception ex) {
+        if (ex instanceof RemoteException) {
+          try {
+            ex = RemoteExceptionHandler.decodeRemoteException((RemoteException) ex);
+            
+          } catch (IOException e) {
+            LOG.warn(e);
+          }
+        }
         LOG.warn(ex);
         synchronized(msgQueue) {
           msgQueue.addLast(op);
@@ -750,7 +793,7 @@ public class HMaster implements HConstants, HMasterInterface,
     try {
       // Wait for the root scanner to finish.
       rootScannerThread.join();
-    } catch(Exception iex) {
+    } catch (Exception iex) {
       // Print if ever there is an interrupt (Just for kicks. Remove if it
       // ever happens).
       LOG.warn(iex);
@@ -1209,13 +1252,12 @@ public class HMaster implements HConstants, HMasterInterface,
           try {
             values = server.next(scannerId);
             
-          } catch(Exception e) {
-            try {
-              RemoteExceptionHandler.handleRemoteException(e);
+          } catch (IOException e) {
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
               
-            } catch(Exception ex) {
-              LOG.error(ex);
             }
+            LOG.error(e);
             break;
           }
           
@@ -1287,7 +1329,10 @@ public class HMaster implements HConstants, HMasterInterface,
           try {
             info.readFields(inbuf);
             
-          } catch(IOException e) {
+          } catch (IOException e) {
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            }
             LOG.error(e);
             break;
           }
@@ -1335,9 +1380,11 @@ public class HMaster implements HConstants, HMasterInterface,
           try {
             server.close(scannerId);
             
-          } catch(IOException e) {
+          } catch (IOException e) {
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            }
             LOG.error(e);
-            
           }
         }
       }
@@ -1411,9 +1458,12 @@ public class HMaster implements HConstants, HMasterInterface,
           scanMetaRegion(server, scannerId, HGlobals.rootRegionInfo.regionName);
           break;
           
-        } catch(Exception e) {
-          if(tries == numRetries - 1) {
-            RemoteExceptionHandler.handleRemoteException(e);
+        } catch (IOException e) {
+          if (tries == numRetries - 1) {
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            }
+            throw e;
           }
         }
       }
@@ -1443,9 +1493,12 @@ public class HMaster implements HConstants, HMasterInterface,
           }
           break;
             
-        } catch(Exception e) {
-          if(tries == numRetries - 1) {
-            RemoteExceptionHandler.handleRemoteException(e);
+        } catch (IOException e) {
+          if (tries == numRetries - 1) {
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            }
+            throw e;
           }
         }
       }
@@ -1542,9 +1595,12 @@ public class HMaster implements HConstants, HMasterInterface,
           
           break;
 
-        } catch(Exception e) {
-          if(tries == numRetries - 1) {
-            RemoteExceptionHandler.handleRemoteException(e);
+        } catch (IOException e) {
+          if (tries == numRetries - 1) {
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            }
+            throw e;
           }
           continue;
         }
@@ -1562,7 +1618,10 @@ public class HMaster implements HConstants, HMasterInterface,
         try {
           HRegion.deleteRegion(fs, dir, regionInfo.regionName);
 
-        } catch(IOException e) {
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          }
           LOG.error("failed to delete region " + regionInfo.regionName);
           LOG.error(e);
           throw e;
@@ -1653,9 +1712,12 @@ public class HMaster implements HConstants, HMasterInterface,
           
           break;
           
-        } catch(Exception e) {
+        } catch (IOException e) {
           if(tries == numRetries - 1) {
-            RemoteExceptionHandler.handleRemoteException(e);
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            }
+            throw e;
           }
         }
         pendingRegions.remove(regionName);
@@ -1758,9 +1820,12 @@ public class HMaster implements HConstants, HMasterInterface,
         assignAttempts.put(regionName, Long.valueOf(0L));
         break;
 
-      } catch(Exception e) {
+      } catch (IOException e) {
         if(tries == numRetries - 1) {
-          RemoteExceptionHandler.handleRemoteException(e);
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          }
+          throw e;
         }
       }
     }
@@ -1930,7 +1995,10 @@ public class HMaster implements HConstants, HMasterInterface,
                   try {
                     server.close(scannerId);
 
-                  } catch(IOException e) {
+                  } catch (IOException e) {
+                    if (e instanceof RemoteException) {
+                      e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+                    }
                     LOG.error(e);
                   }
                 }
@@ -1947,9 +2015,12 @@ public class HMaster implements HConstants, HMasterInterface,
             } // for(MetaRegion m:)
           } // synchronized(metaScannerLock)
           
-        } catch(Exception e) {
+        } catch (IOException e) {
           if(tries == numRetries - 1) {
-            RemoteExceptionHandler.handleRemoteException(e);
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            }
+            throw e;
           }
           continue;
         }
@@ -2034,10 +2105,12 @@ public class HMaster implements HConstants, HMasterInterface,
             LOG.debug("updated columns in row: " + i.regionName);
           }
 
-        } catch(Exception e) {
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          }
           LOG.error("column update failed in row: " + i.regionName);
           LOG.error(e);
-          RemoteExceptionHandler.handleRemoteException(e);
 
         } finally {
           try {
@@ -2045,7 +2118,10 @@ public class HMaster implements HConstants, HMasterInterface,
               server.abort(m.regionName, clientId, lockid);
             }
 
-          } catch(IOException iex) {
+          } catch (IOException iex) {
+            if (iex instanceof RemoteException) {
+              iex = RemoteExceptionHandler.decodeRemoteException((RemoteException) iex);
+            }
             LOG.error(iex);
           }
         }
@@ -2136,7 +2212,10 @@ public class HMaster implements HConstants, HMasterInterface,
         // Delete the region
         try {
           HRegion.deleteRegion(fs, dir, i.regionName);
-        } catch(IOException e) {
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          }
           LOG.error("failed to delete region " + i.regionName);
           LOG.error(e);
         }
@@ -2186,17 +2265,22 @@ public class HMaster implements HConstants, HMasterInterface,
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + i.regionName);
         }
-      } catch(Exception e) {
+      } catch (Exception e) {
+        if (e instanceof RemoteException) {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        }
         LOG.error("column update failed in row: " + i.regionName);
         LOG.error(e);
-        RemoteExceptionHandler.handleRemoteException(e);
 
       } finally {
         if(lockid != -1L) {
           try {
             server.abort(regionName, clientId, lockid);
             
-          } catch(IOException iex) {
+          } catch (IOException iex) {
+            if (iex instanceof RemoteException) {
+              iex = RemoteExceptionHandler.decodeRemoteException((RemoteException) iex);
+            }
             LOG.error(iex);
           }
         }
@@ -2226,14 +2310,20 @@ public class HMaster implements HConstants, HMasterInterface,
         try {
           fs.delete(HStoreFile.getMapDir(dir, i.regionName, columnName));
           
-        } catch(IOException e) {
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          }
           LOG.error(e);
         }
         
         try {
           fs.delete(HStoreFile.getInfoDir(dir, i.regionName, columnName));
           
-        } catch(IOException e) {
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          }
           LOG.error(e);
         }
         
