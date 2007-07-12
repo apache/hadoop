@@ -28,7 +28,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
- * This class implements the generic mapper of Abacus.
+ * This class implements the generic mapper of Aggregate.
  */
 public class ValueAggregatorMapper extends ValueAggregatorJobBase {
 

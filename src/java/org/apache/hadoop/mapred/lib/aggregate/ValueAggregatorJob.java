@@ -21,7 +21,6 @@ package org.apache.hadoop.mapred.lib.aggregate;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.InputFormat;
@@ -35,36 +34,34 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.RunningJob;
 
 /**
- * This is the main class for creating a map/reduce job using Abacus framework.
- * The Abacus is a specialization of map/reduce framework, specilizing for
- * performing various simple aggregations.
+ * This is the main class for creating a map/reduce job using Aggregate
+ * framework. The Aggregate is a specialization of map/reduce framework,
+ * specilizing for performing various simple aggregations.
  * 
  * Generally speaking, in order to implement an application using Map/Reduce
  * model, the developer is to implement Map and Reduce functions (and possibly
  * combine function). However, a lot of applications related to counting and
- * statistics computing have very similar characteristics. Abacus abstracts out
- * the general patterns of these functions and implementing those patterns. In
- * particular, the package provides generic mapper/redducer/combiner classes,
+ * statistics computing have very similar characteristics. Aggregate abstracts
+ * out the general patterns of these functions and implementing those patterns.
+ * In particular, the package provides generic mapper/redducer/combiner classes,
  * and a set of built-in value aggregators, and a generic utility class that
  * helps user create map/reduce jobs using the generic class. The built-in
  * aggregators include:
  * 
- *      sum over numeric values 
- *      count the number of distinct values 
- *      compute the histogram of values 
- *      compute the minimum, maximum, media,average, standard deviation of numeric values
+ * sum over numeric values count the number of distinct values compute the
+ * histogram of values compute the minimum, maximum, media,average, standard
+ * deviation of numeric values
  * 
- * The developer using Abacus will need only to provide a plugin class
+ * The developer using Aggregate will need only to provide a plugin class
  * conforming to the following interface:
  * 
- *      public interface ValueAggregatorDescriptor { 
- *          public ArrayList<Entry> generateKeyValPairs(Object key, Object value); 
- *          public void configure(JobConfjob); 
- *     } 
+ * public interface ValueAggregatorDescriptor { public ArrayList<Entry>
+ * generateKeyValPairs(Object key, Object value); public void
+ * configure(JobConfjob); }
  * 
- * The package also provides a base class,
- * ValueAggregatorBaseDescriptor, implementing the above interface. The user can
- * extend the base class and implement generateKeyValPairs accordingly.
+ * The package also provides a base class, ValueAggregatorBaseDescriptor,
+ * implementing the above interface. The user can extend the base class and
+ * implement generateKeyValPairs accordingly.
  * 
  * The primary work of generateKeyValPairs is to emit one or more key/value
  * pairs based on the input key/value pair. The key in an output key/value pair
@@ -72,7 +69,7 @@ import org.apache.hadoop.mapred.RunningJob;
  * value will be aggregated onto the aggregation id according the aggregation
  * type.
  * 
- * This class offers a function to generate a map/reduce job using Abacus
+ * This class offers a function to generate a map/reduce job using Aggregate
  * framework. The function takes the following parameters: input directory spec
  * input format (text or sequence file) output directory a file specifying the
  * user plugin class
@@ -91,7 +88,7 @@ public class ValueAggregatorJob {
   }
 
   /**
-   * Create an Abacus based map/reduce job.
+   * Create an Aggregate based map/reduce job.
    * 
    * @param args the arguments used for job creation
    * @return a JobConf object ready for submission.
@@ -102,7 +99,8 @@ public class ValueAggregatorJob {
     throws IOException {
 
     if (args.length < 2) {
-      System.out.println("usage: inputDirs outDir [numOfReducer [textinputformat|seq [specfile [jobName]]]]");
+      System.out.println("usage: inputDirs outDir "
+          + "[numOfReducer [textinputformat|seq [specfile [jobName]]]]");
       System.exit(1);
     }
     String inputDir = args[0];
@@ -113,9 +111,12 @@ public class ValueAggregatorJob {
     }
 
     Class<? extends InputFormat> theInputFormat =
-      SequenceFileInputFormat.class;
-    if (args.length > 3 && args[3].compareToIgnoreCase("textinputformat") == 0) {
+      TextInputFormat.class;
+    if (args.length > 3 && 
+        args[3].compareToIgnoreCase("textinputformat") == 0) {
       theInputFormat = TextInputFormat.class;
+    } else {
+      theInputFormat = SequenceFileInputFormat.class;
     }
 
     Path specFile = null;
@@ -130,11 +131,16 @@ public class ValueAggregatorJob {
       jobName = args[5];
     }
     
-    JobConf theJob = new JobConf(ValueAggregatorJob.class);
+    JobConf theJob = new JobConf();
     if (specFile != null) {
       theJob.addDefaultResource(specFile);
     }
-    FileSystem fs = FileSystem.get(theJob);
+    String userJarFile = theJob.get("user.jar.file");
+    if (userJarFile == null) {
+      theJob.setJarByClass(ValueAggregator.class);
+    } else {
+      theJob.setJar(userJarFile);
+    }
     theJob.setJobName("ValueAggregatorJob: " + jobName);
 
     String[] inputDirsSpecs = inputDir.split(",");
@@ -159,46 +165,13 @@ public class ValueAggregatorJob {
   }
 
   /**
-   * Submit/run a map/reduce job.
-   * 
-   * @param job
-   * @return true for success
-   * @throws IOException
-   */
-  public static boolean runJob(JobConf job) throws IOException {
-    JobClient jc = new JobClient(job);
-    boolean sucess = true;
-    RunningJob running = null;
-    try {
-      running = jc.submitJob(job);
-      String jobId = running.getJobID();
-      System.out.println("Job " + jobId + " is submitted");
-      while (!running.isComplete()) {
-        System.out.println("Job " + jobId + " is still running.");
-        try {
-          Thread.sleep(60000);
-        } catch (InterruptedException e) {
-        }
-        running = jc.getJob(jobId);
-      }
-      sucess = running.isSuccessful();
-    } finally {
-      if (!sucess && (running != null)) {
-        running.killJob();
-      }
-      jc.close();
-    }
-    return sucess;
-  }
-
-  /**
-   * create and run an Abacus based map/reduce job.
+   * create and run an Aggregate based map/reduce job.
    * 
    * @param args the arguments used for job creation
    * @throws IOException
    */
   public static void main(String args[]) throws IOException {
     JobConf job = ValueAggregatorJob.createValueAggregatorJob(args);
-    runJob(job);
+    JobClient.runJob(job);
   }
 }

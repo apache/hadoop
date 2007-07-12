@@ -27,7 +27,7 @@ import org.apache.hadoop.mapred.Reducer;
 
 /**
  * This abstract class implements some common functionalities of the
- * the generic mapper, reducer and combiner classes of Abacus.
+ * the generic mapper, reducer and combiner classes of Aggregate.
  */
 public abstract class ValueAggregatorJobBase implements Mapper, Reducer {
 
@@ -75,16 +75,7 @@ public abstract class ValueAggregatorJobBase implements Mapper, Reducer {
   }
 
   protected void logSpec() {
-    StringBuffer sb = new StringBuffer();
-    sb.append("\n");
-    if (aggregatorDescriptorList == null) {
-      sb.append(" aggregatorDescriptorList: null");
-    } else {
-      sb.append(" aggregatorDescriptorList: ");
-      for (int i = 0; i < aggregatorDescriptorList.size(); i++) {
-        sb.append(" ").append(aggregatorDescriptorList.get(i).toString());
-      }
-    }
+
   }
 
   public void close() throws IOException {

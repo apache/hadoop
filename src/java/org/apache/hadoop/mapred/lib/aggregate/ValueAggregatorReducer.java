@@ -28,7 +28,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
- * This class implements the generic reducer of Abacus.
+ * This class implements the generic reducer of Aggregate.
  * 
  * 
  */

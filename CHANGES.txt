@@ -340,6 +340,9 @@ Trunk (unreleased changes)
 105. HADOOP-1598.  Fix license headers: adding missing; updating old.
      (Enis Soztutar via cutting)
 
+106. HADOOP-1547.  Provide examples for aggregate library.
+     (Runping Qi via tomwhite)
+
 
 Release 0.13.0 - 2007-06-08
 

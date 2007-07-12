@@ -24,7 +24,6 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Arrays;
 
-import org.apache.hadoop.io.Text;
 
 /**
  * This class implements a value aggregator that computes the 

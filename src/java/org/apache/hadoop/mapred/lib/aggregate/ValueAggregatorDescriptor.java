@@ -29,8 +29,8 @@ import org.apache.hadoop.mapred.JobConf;
  * support. Such a descriptor can be configured with a JobConf object. Its main
  * function is to generate a list of aggregation-id/value pairs. An aggregation
  * id encodes an aggregation type which is used to guide the way to aggregate
- * the value in the reduce/combiner phrase of an Abacus based job.The mapper in
- * an Abacus based map/reduce job may create one or more of
+ * the value in the reduce/combiner phrase of an Aggregate based job.The mapper in
+ * an Aggregate based map/reduce job may create one or more of
  * ValueAggregatorDescriptor objects at configuration time. For each input
  * key/value pair, the mapper will use those objects to create aggregation
  * id/value pairs.
@@ -44,7 +44,7 @@ public interface ValueAggregatorDescriptor {
 
   /**
    * Generate a list of aggregation-id/value pairs for the given key/value pair.
-   * This function is usually called by the mapper of an Abacus based job.
+   * This function is usually called by the mapper of an Aggregate based job.
    * 
    * @param key
    *          input key
@@ -52,7 +52,7 @@ public interface ValueAggregatorDescriptor {
    *          input value
    * @return a list of aggregation id/value pairs. An aggregation id encodes an
    *         aggregation type which is used to guide the way to aggregate the
-   *         value in the reduce/combiner phrase of an Abacus based job.
+   *         value in the reduce/combiner phrase of an Aggregate based job.
    */
   public ArrayList<Entry> generateKeyValPairs(Object key, Object val);
 
