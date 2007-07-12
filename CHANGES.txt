@@ -58,3 +58,4 @@ Trunk (unreleased changes)
  34. HADOOP-1589 Exception handling in HBase is broken over client server connections
  35. HADOOP-1375 a simple parser for hbase (Edward Yoon via Stack)
  36. HADOOP-1600 Update license in HBase code
+ 37. HADOOP-1589 Exception handling in HBase is broken over client server
