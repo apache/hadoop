@@ -237,7 +237,6 @@ class ReduceTask extends Task {
 
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
-    Class valueClass = job.getMapOutputValueClass();
     Reducer reducer = (Reducer)ReflectionUtils.newInstance(
                                                            job.getReducerClass(), job);
 
@@ -276,8 +275,6 @@ class ReduceTask extends Task {
     
     Path tempDir = new Path(getTaskId()); 
 
-    WritableComparator comparator = job.getOutputValueGroupingComparator();
-    
     SequenceFile.Sorter.RawKeyValueIterator rIter;
  
     setPhase(TaskStatus.Phase.SORT); 
@@ -285,8 +282,8 @@ class ReduceTask extends Task {
     final Reporter reporter = getReporter(umbilical);
     
     // sort the input file
-    SequenceFile.Sorter sorter =
-      new SequenceFile.Sorter(lfs, comparator, valueClass, job);
+    SequenceFile.Sorter sorter = new SequenceFile.Sorter(lfs, 
+        job.getOutputKeyComparator(), job.getMapOutputValueClass(), job);
     sorter.setProgressable(reporter);
     rIter = sorter.merge(mapFiles, tempDir, 
         !conf.getKeepFailedTaskFiles()); // sort
@@ -315,8 +312,10 @@ class ReduceTask extends Task {
     try {
       Class keyClass = job.getMapOutputKeyClass();
       Class valClass = job.getMapOutputValueClass();
-      ReduceValuesIterator values = new ReduceValuesIterator(rIter, comparator, 
-                                                             keyClass, valClass, job, reporter);
+      
+      ReduceValuesIterator values = new ReduceValuesIterator(rIter, 
+          job.getOutputValueGroupingComparator(), keyClass, valClass, 
+          job, reporter);
       values.informReduceProgress();
       while (values.more()) {
         reporter.incrCounter(REDUCE_INPUT_GROUPS, 1);

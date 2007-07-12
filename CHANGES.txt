@@ -328,6 +328,9 @@ Trunk (unreleased changes)
 101. HADOOP-1596.  Fix the parsing of taskids by streaming and improve the
      error reporting. (omalley)
 
+102. HADOOP-1535.  Fix the user-controlled grouping to the reduce function.
+     (Vivek Ratan via omalley)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

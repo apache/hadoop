@@ -518,7 +518,7 @@ class MapTask extends Task {
       {
         //create a sorter object as we need access to the SegmentDescriptor
         //class and merge methods
-        Sorter sorter = new Sorter(localFs, keyClass, valClass, job);
+        Sorter sorter = new Sorter(localFs, job.getOutputKeyComparator(), valClass, job);
         sorter.setProgressable(reporter);
         
         for (int parts = 0; parts < partitions; parts++){
