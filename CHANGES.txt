@@ -334,6 +334,10 @@ Trunk (unreleased changes)
 103. HADOOP-1585.  Modify GenericWritable to declare the classes as subtypes
      of Writable (Espen Amble Kolstad via omalley)
 
+104. HADOOP-1576.  Fix errors in count of completed tasks when
+     speculative execution is enabled.  (Arun C Murthy via cutting)
+
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

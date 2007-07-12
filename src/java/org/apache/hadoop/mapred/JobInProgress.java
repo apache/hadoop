@@ -745,19 +745,11 @@ class JobInProgress {
   throws IOException {
     String taskid = status.getTaskId();
         
-    // Sanity check: is the TIP already complete?
+    // Sanity check: is the TIP already complete? 
     if (tip.isComplete()) {
-      LOG.info("Already complete TIP " + tip.getTIPId() + 
-               " has completed task " + taskid);
-          
-      // Just mark this 'task' as complete
-      try {
-        tip.alreadyCompletedTask(taskid);
-      } catch (IOException ioe) {
-        LOG.info("Failed to discard output of " + taskid + " : " + 
-                StringUtils.stringifyException(ioe));
-      }
-          
+      // Mark this task as KILLED
+      tip.alreadyCompletedTask(taskid);
+
       // Let the JobTracker cleanup this taskid if the job isn't running
       if (this.status.getRunState() != JobStatus.RUNNING) {
         jobtracker.markCompletedTaskAttempt(status.getTaskTracker(), taskid);
@@ -905,7 +897,7 @@ class JobInProgress {
                           boolean wasRunning, boolean wasComplete,
                           JobTrackerMetrics metrics) {
     // Mark the taskid as a 'failure'
-    tip.incompleteSubTask(taskid, trackerName);
+    tip.incompleteSubTask(taskid, trackerName, this.status);
         
     boolean isRunning = tip.isRunning();
     boolean isComplete = tip.isComplete();
