@@ -24,6 +24,7 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
@@ -335,8 +336,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           List<JobInProgress> retiredJobs = new ArrayList<JobInProgress>();
           long retireBefore = System.currentTimeMillis() - 
             RETIRE_JOB_INTERVAL;
-          synchronized (jobsByArrival) {
-            for(JobInProgress job: jobsByArrival) {
+          synchronized (jobsByPriority) {
+            for(JobInProgress job: jobsByPriority) {
               if (job.getStatus().getRunState() != JobStatus.RUNNING &&
                   job.getStatus().getRunState() != JobStatus.PREP &&
                   (job.getFinishTime()  < retireBefore)) {
@@ -347,13 +348,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           if (!retiredJobs.isEmpty()) {
             synchronized (JobTracker.this) {
               synchronized (jobs) {
-                synchronized (jobsByArrival) {
+                synchronized (jobsByPriority) {
                   synchronized (jobInitQueue) {
                     for (JobInProgress job: retiredJobs) {
                       removeJobTasks(job);
                       jobs.remove(job.getProfile().getJobId());
                       jobInitQueue.remove(job);
-                      jobsByArrival.remove(job);
+                      jobsByPriority.remove(job);
                       String jobUser = job.getProfile().getUser();
                       synchronized (userToJobsMap) {
                         ArrayList<JobInProgress> userJobs =
@@ -518,7 +519,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
   // All the known jobs.  (jobid->JobInProgress)
   Map<String, JobInProgress> jobs = new TreeMap<String, JobInProgress>();
-  List<JobInProgress> jobsByArrival = new ArrayList<JobInProgress>();
+  List<JobInProgress> jobsByPriority = new ArrayList<JobInProgress>();
 
   // (user -> list of JobInProgress)
   TreeMap<String, ArrayList<JobInProgress>> userToJobsMap =
@@ -904,7 +905,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // in memory; information about the purged jobs is available via
     // JobHistory.
     synchronized (jobs) {
-      synchronized (jobsByArrival) {
+      synchronized (jobsByPriority) {
         synchronized (jobInitQueue) {
           synchronized (userToJobsMap) {
             String jobUser = job.getProfile().getUser();
@@ -945,7 +946,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                   userJobs.remove(0);
                   jobs.remove(rjob.getProfile().getJobId());
                   jobInitQueue.remove(rjob);
-                  jobsByArrival.remove(rjob);
+                  jobsByPriority.remove(rjob);
                     
                   LOG.info("Retired job with id: '" + 
                            rjob.getProfile().getJobId() + "' of user: '" +
@@ -1261,8 +1262,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
     int totalCapacity = numTaskTrackers * maxCurrentTasks;
 
-    synchronized(jobsByArrival){
-      for (Iterator it = jobsByArrival.iterator(); it.hasNext();) {
+    synchronized(jobsByPriority){
+      for (Iterator it = jobsByPriority.iterator(); it.hasNext();) {
         JobInProgress job = (JobInProgress) it.next();
         if (job.getStatus().getRunState() == JobStatus.RUNNING) {
           int totalMapTasks = job.desiredMaps();
@@ -1306,11 +1307,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // task.
     //
        
-    synchronized (jobsByArrival) {
+    synchronized (jobsByPriority) {
       if (numMaps < maxMapLoad) {
 
         int totalNeededMaps = 0;
-        for (Iterator it = jobsByArrival.iterator(); it.hasNext();) {
+        for (Iterator it = jobsByPriority.iterator(); it.hasNext();) {
           JobInProgress job = (JobInProgress) it.next();
           if (job.getStatus().getRunState() != JobStatus.RUNNING) {
             continue;
@@ -1346,7 +1347,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       if (numReduces < maxReduceLoad) {
 
         int totalNeededReduces = 0;
-        for (Iterator it = jobsByArrival.iterator(); it.hasNext();) {
+        for (Iterator it = jobsByPriority.iterator(); it.hasNext();) {
           JobInProgress job = (JobInProgress) it.next();
           if (job.getStatus().getRunState() != JobStatus.RUNNING ||
               job.numReduceTasks == 0) {
@@ -1453,17 +1454,44 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     totalSubmissions++;
     JobInProgress job = new JobInProgress(jobFile, this, this.conf);
     synchronized (jobs) {
-      synchronized (jobsByArrival) {
+      synchronized (jobsByPriority) {
         synchronized (jobInitQueue) {
           jobs.put(job.getProfile().getJobId(), job);
-          jobsByArrival.add(job);
+          jobsByPriority.add(job);
           jobInitQueue.add(job);
+          resortPriority();
           jobInitQueue.notifyAll();
         }
       }
     }
     myMetrics.submitJob();
     return job.getStatus();
+  }
+
+  /**
+   * Sort jobs by priority and then by start time.
+   */
+  public void resortPriority() {
+    Comparator<JobInProgress> comp = new Comparator<JobInProgress>() {
+      public int compare(JobInProgress o1, JobInProgress o2) {
+        int res = o1.getPriority().compareTo(o2.getPriority());
+        if(res == 0) {
+          if(o1.getStartTime() < o2.getStartTime())
+            res = -1;
+          else
+            res = (o1.getStartTime()==o2.getStartTime() ? 0 : 1);
+        }
+          
+        return res;
+      }
+    };
+    
+    synchronized(jobsByPriority) {
+      Collections.sort(jobsByPriority, comp);
+    }
+    synchronized (jobInitQueue) {
+      Collections.sort(jobInitQueue, comp);
+    }
   }
 
   public synchronized ClusterStatus getClusterStatus() {

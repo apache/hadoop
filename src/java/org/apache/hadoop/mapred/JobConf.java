@@ -686,6 +686,28 @@ public class JobConf extends Configuration {
     setInt("mapred.max.reduce.failures.percent", percent);
   }
   
+  /**
+   * Set job priority for this job.
+   * 
+   * @param prio
+   */
+  public void setJobPriority(JobPriority prio) {
+    set("mapred.job.priority", prio.toString());
+  }
+  
+  /**
+   * Get the job priority for this job.
+   */
+  public JobPriority getJobPriority() {
+    String prio = get("mapred.job.priority");
+    if(prio == null) {
+      return JobPriority.NORMAL;
+    }
+    
+    return JobPriority.valueOf(prio);
+  }
+  
+  
   /** Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
    * on the class path that has a class with the same name.

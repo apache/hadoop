@@ -102,8 +102,14 @@
     
     JobInProgress job = (JobInProgress) tracker.getJob(jobId);
     
+    String action = request.getParameter("action");
+    if("changeprio".equalsIgnoreCase(action)) {
+	  job.setPriority(JobPriority.valueOf(request.getParameter("prio")));
+	  tracker.resortPriority();
+    }
+    
     if(JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) {
-    	String action = request.getParameter("action");
+        action = request.getParameter("action");
 	    if(action!=null && action.equalsIgnoreCase("confirm")) {
   	      printConfirm(out, jobId);
     	    return;
@@ -234,9 +240,20 @@
     </table>
 
 
+<hr>Change priority from <%=job.getPriority()%> to: 
+<%
+  JobPriority jobPrio = job.getPriority();
+  for (JobPriority prio : JobPriority.values()) {
+    if(jobPrio != prio) {
+      %><a href="jobdetails.jsp?action=changeprio&jobid=<%=jobId%>&prio=<%=prio%>"> <%=prio%> </a><%
+    }
+  }
+%>
+</br>
+    
 <% if(JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) 
     	&& runState == JobStatus.RUNNING) { %>
-	<hr><a href="jobdetails.jsp?action=confirm&jobid=<%=jobId%>"> Kill this job </a>
+	<br/><a href="jobdetails.jsp?action=confirm&jobid=<%=jobId%>"> Kill this job </a>
 <% } %>
 <hr>
 <a href="jobtracker.jsp">Go back to JobTracker</a><br>

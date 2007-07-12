@@ -69,7 +69,8 @@ class JobInProgress {
   int reduceFailuresPercent = 0;
   int failedMapTIPs = 0;
   int failedReduceTIPs = 0;
-  
+
+  JobPriority priority = JobPriority.NORMAL;
   JobTracker jobtracker = null;
   Map<String,List<TaskInProgress>> hostToMaps =
     new HashMap<String,List<TaskInProgress>>();
@@ -133,6 +134,7 @@ class JobInProgress {
     FileSystem fs = FileSystem.get(default_conf);
     fs.copyToLocalFile(new Path(jobFile), localJobFile);
     conf = new JobConf(localJobFile);
+    this.priority = conf.getJobPriority();
     this.profile = new JobProfile(conf.getUser(), fullJobId, jobFile, url,
                                   conf.getJobName());
     String jarFile = conf.getJar();
@@ -298,6 +300,16 @@ class JobInProgress {
   }
   public synchronized int finishedReduces() {
     return finishedReduceTasks;
+  }
+  public JobPriority getPriority() {
+    return this.priority;
+  }
+  public void setPriority(JobPriority priority) {
+    if(priority == null) {
+      this.priority = JobPriority.NORMAL;
+    } else {
+      this.priority = priority;
+    }
   }
  
   /**

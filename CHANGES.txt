@@ -346,6 +346,8 @@ Trunk (unreleased changes)
 107. HADOOP-1570.  Permit jobs to enable and disable the use of
      hadoop's native library.  (Arun C Murthy via cutting)
 
+108. HADOOP-1433.  Add job priority.  (Johan Oskarsson via tomwhite)
+
 
 Release 0.13.0 - 2007-06-08
 
