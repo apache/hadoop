@@ -177,6 +177,8 @@ public abstract class PipeMapRed {
 
     } catch (Exception e) {
       logStackTrace(e);
+      LOG.error("configuration exception", e);
+      throw new RuntimeException("configuration exception", e);
     }
   }
 

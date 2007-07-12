@@ -446,10 +446,10 @@ public class StreamUtil {
       res.execid = 0;
     } else {
       String[] e = id.split("_");
-      res.mapTask = e[2].equals("m");
-      res.jobid = e[1];
-      res.taskid = Integer.parseInt(e[3]);
-      res.execid = Integer.parseInt(e[4]);
+      res.mapTask = e[3].equals("m");
+      res.jobid = e[1] + "_" + e[2];
+      res.taskid = Integer.parseInt(e[4]);
+      res.execid = Integer.parseInt(e[5]);
     }
     return res;
   }
