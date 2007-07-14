@@ -41,7 +41,8 @@ public class HelpManager {
 
   /** Print out the program version. */
   public void printVersion() {
-    System.out.println("\n" + APP_NAME + ", " + APP_VERSION + " version.\n"
+    ClearCommand.clear();
+    System.out.println(APP_NAME + ", " + APP_VERSION + " version.\n"
         + "Copyright (c) 2007 by udanax, "
         + "licensed to Apache Software Foundation.\n"
         + "Type 'help;' for usage.\n");

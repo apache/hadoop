@@ -51,6 +51,7 @@ public class Parser implements ParserConstants {
     Command statement = null;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case HELP:
+    case CLEAR:
     case SHOW:
     case DESCRIBE:
     case CREATE:
@@ -59,9 +60,10 @@ public class Parser implements ParserConstants {
     case INSERT:
     case DELETE:
     case SELECT:
-    case 35:
+    case 36:
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case HELP:
+      case CLEAR:
       case SHOW:
       case DESCRIBE:
       case CREATE:
@@ -76,7 +78,7 @@ public class Parser implements ParserConstants {
         jj_la1[0] = jj_gen;
         ;
       }
-      jj_consume_token(35);
+      jj_consume_token(36);
       break;
     case 0:
       jj_consume_token(0);
@@ -120,6 +122,9 @@ public class Parser implements ParserConstants {
     case SELECT:
       cmd = selectCommand();
       break;
+    case CLEAR:
+      cmd = clearCommand();
+      break;
     default:
       jj_la1[2] = jj_gen;
       jj_consume_token(-1);
@@ -142,6 +147,7 @@ public class Parser implements ParserConstants {
   String argument = "";
     jj_consume_token(HELP);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+    case CLEAR:
     case SHOW:
     case DESCRIBE:
     case CREATE:
@@ -175,6 +181,9 @@ public class Parser implements ParserConstants {
         break;
       case SELECT:
         t = jj_consume_token(SELECT);
+        break;
+      case CLEAR:
+        t = jj_consume_token(CLEAR);
         break;
       case ID:
         t = jj_consume_token(ID);
@@ -298,8 +307,8 @@ public class Parser implements ParserConstants {
         try{
            in.setCondition(cond);
         }catch(ClassCastException ce) {
-            {if (true) throw generateParseException();}
-     }
+           {if (true) throw generateParseException();}
+        }
        {if (true) return in;}
     throw new Error("Missing return statement in function");
   }
@@ -317,7 +326,7 @@ public class Parser implements ParserConstants {
            del.setCondition(cond);
         }catch(ClassCastException ce) {
             {if (true) throw generateParseException();}
-        }
+       }
        {if (true) return del;}
     throw new Error("Missing return statement in function");
   }
@@ -363,6 +372,13 @@ public class Parser implements ParserConstants {
     throw new Error("Missing return statement in function");
   }
 
+  final public ClearCommand clearCommand() throws ParseException {
+  ClearCommand clear = new ClearCommand();
+    jj_consume_token(CLEAR);
+              {if (true) return clear;}
+    throw new Error("Missing return statement in function");
+  }
+
 /**
 * TODO : expressions codes need more love.
 */
@@ -380,7 +396,7 @@ public class Parser implements ParserConstants {
       jj_consume_token(-1);
       throw new ParseException();
     }
-        {if (true) return t.image.toString();}
+      {if (true) return t.image.toString();}
     throw new Error("Missing return statement in function");
   }
 
@@ -591,10 +607,10 @@ public class Parser implements ParserConstants {
       jj_la1_1();
    }
    private static void jj_la1_0() {
-      jj_la1_0 = new int[] {0x3fe0,0x3fe1,0x3fe0,0x40003fc0,0x40003fc0,0x40000000,0x40000000,0x100000,0x40000000,0x80000,0x100000,0x40000000,0x200000,0x4007c000,0x18000000,0x0,0x40800000,0x40000000,0x40800000,0x0,};
+      jj_la1_0 = new int[] {0x7fe0,0x7fe1,0x7fe0,0x80007fc0,0x80007fc0,0x80000000,0x80000000,0x200000,0x80000000,0x100000,0x200000,0x80000000,0x400000,0x800f8000,0x30000000,0x0,0x81000000,0x80000000,0x81000000,0x0,};
    }
    private static void jj_la1_1() {
-      jj_la1_1 = new int[] {0x0,0x8,0x0,0x0,0x0,0x2,0x2,0x0,0x2,0x0,0x0,0x2,0x0,0x0,0x0,0x6,0x7,0x7,0x7,0x6,};
+      jj_la1_1 = new int[] {0x0,0x10,0x0,0x0,0x0,0x4,0x4,0x0,0x4,0x0,0x0,0x4,0x0,0x0,0x0,0xc,0xe,0xe,0xe,0xc,};
    }
 
   public Parser(java.io.InputStream stream) {
@@ -699,8 +715,8 @@ public class Parser implements ParserConstants {
 
   public ParseException generateParseException() {
     jj_expentries.removeAllElements();
-    boolean[] la1tokens = new boolean[36];
-    for (int i = 0; i < 36; i++) {
+    boolean[] la1tokens = new boolean[37];
+    for (int i = 0; i < 37; i++) {
       la1tokens[i] = false;
     }
     if (jj_kind >= 0) {
@@ -719,7 +735,7 @@ public class Parser implements ParserConstants {
         }
       }
     }
-    for (int i = 0; i < 36; i++) {
+    for (int i = 0; i < 37; i++) {
       if (la1tokens[i]) {
         jj_expentry = new int[1];
         jj_expentry[0] = i;

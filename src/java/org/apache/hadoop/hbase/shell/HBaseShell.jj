@@ -63,6 +63,7 @@ SKIP :
 TOKEN:
 {
    <HELP: "help">
+ | <CLEAR: "clear">
  | <SHOW: "show">
  | <DESCRIBE: "describe">
  | <CREATE: "create">	
@@ -127,6 +128,7 @@ Command cmdStatement() :
      | cmd = insertCommand()
      | cmd = deleteCommand()
      | cmd = selectCommand()
+     | cmd = clearCommand()
   )
    {
        return cmd;
@@ -159,6 +161,7 @@ HelpCommand helpCommand() :
        | t=<INSERT>
        | t=<DELETE>
        | t=<SELECT>
+       | t=<CLEAR>
        | t=<ID>
      ) { argument = t.image.toString(); }
    ]
@@ -343,6 +346,14 @@ SelectCommand selectCommand() :
         }
    } ]
   { return select; }
+}
+
+ClearCommand clearCommand() :
+{
+  ClearCommand clear = new ClearCommand();
+}
+{
+   <CLEAR>  { return clear; }
 }
 
 /**

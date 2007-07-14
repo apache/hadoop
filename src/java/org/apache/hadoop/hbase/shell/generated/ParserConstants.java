@@ -24,35 +24,36 @@ public interface ParserConstants {
 
   int EOF = 0;
   int HELP = 5;
-  int SHOW = 6;
-  int DESCRIBE = 7;
-  int CREATE = 8;
-  int DROP = 9;
-  int EXIT = 10;
-  int INSERT = 11;
-  int DELETE = 12;
-  int SELECT = 13;
-  int ROW = 14;
-  int COLUMN = 15;
-  int TIME = 16;
-  int VALUES = 17;
-  int COLUMNFAMILIES = 18;
-  int WHERE = 19;
-  int LIMIT = 20;
-  int AND = 21;
-  int OR = 22;
-  int COMMA = 23;
-  int DOT = 24;
-  int LPAREN = 25;
-  int RPAREN = 26;
-  int EQUALS = 27;
-  int NOTEQUAL = 28;
-  int OPTIONS = 29;
-  int ID = 30;
-  int NUM = 31;
-  int STRING = 32;
-  int QUOTED_STRING = 33;
-  int STRING_LITERAL = 34;
+  int CLEAR = 6;
+  int SHOW = 7;
+  int DESCRIBE = 8;
+  int CREATE = 9;
+  int DROP = 10;
+  int EXIT = 11;
+  int INSERT = 12;
+  int DELETE = 13;
+  int SELECT = 14;
+  int ROW = 15;
+  int COLUMN = 16;
+  int TIME = 17;
+  int VALUES = 18;
+  int COLUMNFAMILIES = 19;
+  int WHERE = 20;
+  int LIMIT = 21;
+  int AND = 22;
+  int OR = 23;
+  int COMMA = 24;
+  int DOT = 25;
+  int LPAREN = 26;
+  int RPAREN = 27;
+  int EQUALS = 28;
+  int NOTEQUAL = 29;
+  int OPTIONS = 30;
+  int ID = 31;
+  int NUM = 32;
+  int STRING = 33;
+  int QUOTED_STRING = 34;
+  int STRING_LITERAL = 35;
 
   int DEFAULT = 0;
 
@@ -63,6 +64,7 @@ public interface ParserConstants {
     "\"\\r\"",
     "\"\\n\"",
     "\"help\"",
+    "\"clear\"",
     "\"show\"",
     "\"describe\"",
     "\"create\"",
