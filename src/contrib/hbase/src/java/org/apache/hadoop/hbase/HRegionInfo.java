@@ -40,7 +40,7 @@ public class HRegionInfo implements WritableComparable {
   Text endKey;
   boolean offLine;
   HTableDescriptor tableDesc;
-  public static final char DELIMITER = '_';
+  public static final char DELIMITER = ',';
   
   /** Default constructor - creates empty object */
   public HRegionInfo() {
@@ -66,10 +66,10 @@ public class HRegionInfo implements WritableComparable {
   /**
    * Construct HRegionInfo with explicit parameters
    * 
-   * @param regionId    - the regionid
-   * @param tableDesc   - the table descriptor
-   * @param startKey    - first key in region
-   * @param endKey      - end of key range
+   * @param regionId the region id
+   * @param tableDesc the table descriptor
+   * @param startKey first key in region
+   * @param endKey end of key range
    * @throws IllegalArgumentException
    */
   public HRegionInfo(long regionId, HTableDescriptor tableDesc, Text startKey,
@@ -204,9 +204,9 @@ public class HRegionInfo implements WritableComparable {
     return tableDesc;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////
   // Comparable
-  //////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////
   
   public int compareTo(Object o) {
     HRegionInfo other = (HRegionInfo) o;

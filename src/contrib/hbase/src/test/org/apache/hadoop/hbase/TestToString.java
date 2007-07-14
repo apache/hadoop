@@ -46,7 +46,7 @@ public class TestToString extends TestCase {
     HRegionInfo hri = new HRegionInfo(-1, htd, new Text(), new Text("10"));
     System.out.println(hri.toString());
     assertEquals("HRegionInfo", 
-        "regionname: hank__-1, startKey: <>, tableDesc: {" + "name: hank, "
+        "regionname: hank,,-1, startKey: <>, tableDesc: {" + "name: hank, "
         + "families: {hankfamily:=(hankfamily:, max versions: 3, "
         + "compression: none, in memory: false, max value length: 2147483647, "
         + "bloom filter: none), hankotherfamily:=(hankotherfamily:, "

@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase;
+import org.apache.hadoop.io.Text;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,7 +29,7 @@ public class TestTable extends HBaseClusterTestCase {
     super(true);
   }
 
-  public void testTable() throws IOException {
+  public void testCreateTable() throws IOException {
     final HClient client = new HClient(conf);
     String msg = null;
     try {
@@ -103,5 +104,17 @@ public class TestTable extends HBaseClusterTestCase {
     // how many failed w/ appropriate exception.
     assertTrue(successes.get() == 1);
     assertTrue(failures.get() == (count - 1));
+  }
+  
+  /**
+   * Test for hadoop-1581 'HBASE: Unopenable tablename bug'.
+   * @throws Exception
+   */
+  public void testTableNameClash() throws Exception {
+    HClient client = new HClient(conf);
+    client.createTable(new HTableDescriptor(getName() + "SOMEUPPERCASE"));
+    client.createTable(new HTableDescriptor(getName()));
+    // Before fix, below would fail throwing a NoServerForRegionException.
+    client.openTable(new Text(getName()));
   }
 }
