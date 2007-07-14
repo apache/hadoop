@@ -40,6 +40,7 @@ public class HRegionInfo implements WritableComparable {
   Text endKey;
   boolean offLine;
   HTableDescriptor tableDesc;
+  public static final char DELIMITER = '_';
   
   /** Default constructor - creates empty object */
   public HRegionInfo() {
@@ -92,8 +93,8 @@ public class HRegionInfo implements WritableComparable {
       this.endKey.set(endKey);
     }
     
-    this.regionName = new Text(tableDesc.getName() + "_" +
-      (startKey == null ? "" : startKey.toString()) + "_" +
+    this.regionName = new Text(tableDesc.getName().toString() + DELIMITER +
+      (startKey == null ? "" : startKey.toString()) + DELIMITER +
       regionId);
     
     this.offLine = false;
@@ -163,6 +164,30 @@ public class HRegionInfo implements WritableComparable {
    */
   public Text getRegionName(){
     return regionName;
+  }
+  
+  /**
+   * Extracts table name prefix from a region name.
+   * Presumes region names are ASCII characters only.
+   * @param regionName A region name.
+   * @return The table prefix of a region name.
+   */
+  public static Text getTableNameFromRegionName(final Text regionName) {
+    int index = -1;
+    byte [] bytes = regionName.getBytes();
+    for (int i = 0; i < bytes.length; i++) {
+      if (((char) bytes[i]) == DELIMITER) {
+        index = i;
+        break;
+      }
+    }
+    if (index == -1) {
+      throw new IllegalArgumentException(regionName.toString() + " does not " +
+        "contain " + DELIMITER + " character");
+    }
+    byte [] tableName = new byte[index];
+    System.arraycopy(bytes, 0, tableName, 0, index);
+    return new Text(tableName);
   }
 
   /**

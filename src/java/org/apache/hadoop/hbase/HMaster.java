@@ -24,10 +24,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.Timer;
@@ -48,6 +50,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.StringUtils;
+
 
 /**
  * HMaster is the "master server" for a HBase.
@@ -174,7 +177,7 @@ public class HMaster implements HConstants, HMasterInterface,
       try {
         regionServer = client.getHRegionConnection(region.server);
         scannerId = regionServer.openScanner(region.regionName, METACOLUMNS,
-            FIRST_ROW, System.currentTimeMillis(), null);
+          FIRST_ROW, System.currentTimeMillis(), null);
 
         while (true) {
           TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
@@ -231,7 +234,6 @@ public class HMaster implements HConstants, HMasterInterface,
     
     protected void checkAssigned(final HRegionInfo info,
         final String serverName, final long startCode) {
-
       // Skip region - if ...
       if(info.offLine                                           // offline
           || killedRegions.contains(info.regionName)            // queued for offline
@@ -466,7 +468,6 @@ public class HMaster implements HConstants, HMasterInterface,
             try {
               
               // Rescan the known meta regions every so often
-
               synchronized(metaScannerLock) { // Don't interrupt us while we're working
                 Vector<MetaRegion> v = new Vector<MetaRegion>();
                 v.addAll(knownMetaRegions.values());
@@ -637,15 +638,13 @@ public class HMaster implements HConstants, HMasterInterface,
     this.maxRegionOpenTime = conf.getLong("hbase.hbasemaster.maxregionopen", 30 * 1000);
     this.msgQueue = new LinkedList<PendingOperation>();
     this.serverLeases = new Leases(
-        conf.getLong("hbase.master.lease.period", 30 * 1000), 
-        conf.getLong("hbase.master.lease.thread.wakefrequency", 15 * 1000));
-    
+      conf.getLong("hbase.master.lease.period", 30 * 1000), 
+      conf.getLong("hbase.master.lease.thread.wakefrequency", 15 * 1000));
     this.server = RPC.getServer(this, address.getBindAddress(),
-        address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
-        false, conf);
+      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
+      false, conf);
 
     //  The rpc-server port can be ephemeral... ensure we have the correct info
-    
     this.address = new HServerAddress(server.getListenerAddress());
     conf.set(MASTER_ADDRESS, address.toString());
     
@@ -847,13 +846,7 @@ public class HMaster implements HConstants, HMasterInterface,
   synchronized boolean waitForRootRegionOrClose() {
     while (!closed && rootRegionLocation == null) {
       try {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Wait for root region (or close)");
-        }
         wait(threadWakeFrequency);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Wake from wait for root region (or close)");
-        }
       } catch(InterruptedException e) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Wake from wait for root region (or close) (IE)");
@@ -1154,12 +1147,10 @@ public class HMaster implements HConstants, HMasterInterface,
 
       int counter = 0;
       long now = System.currentTimeMillis();
-
-      for(Text curRegionName: unassignedRegions.keySet()) {
+      for (Text curRegionName: unassignedRegions.keySet()) {
         HRegionInfo regionInfo = unassignedRegions.get(curRegionName);
         long assignedTime = assignAttempts.get(curRegionName);
-
-        if(now - assignedTime > maxRegionOpenTime) {
+        if (now - assignedTime > maxRegionOpenTime) {
           if(LOG.isDebugEnabled()) {
             LOG.debug("assigning region " + regionInfo.regionName + " to server "
                 + info.getServerAddress().toString());
@@ -1757,7 +1748,8 @@ public class HMaster implements HConstants, HMasterInterface,
   /**
    * {@inheritDoc}
    */
-  public void createTable(HTableDescriptor desc) throws IOException {
+  public void createTable(HTableDescriptor desc)
+  throws IOException {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
@@ -1765,61 +1757,13 @@ public class HMaster implements HConstants, HMasterInterface,
 
     for(int tries = 0; tries < numRetries; tries++) {
       try {
-        // We can not access any meta region if they have not already been assigned
-        // and scanned.
-
-        if(metaScanner.waitForMetaScanOrClose()) {
-          return;                       // We're shutting down. Forget it.
+        // We can not access meta regions if they have not already been
+        // assigned and scanned.  If we timeout waiting, just shutdown.
+        if (metaScanner.waitForMetaScanOrClose()) {
+          return;
         }
-
-        // 1. Check to see if table already exists
-        MetaRegion m = (knownMetaRegions.containsKey(newRegion.regionName))?
-          knownMetaRegions.get(newRegion.regionName):
-          knownMetaRegions.get(
-              knownMetaRegions.headMap(newRegion.regionName).lastKey());
-        Text metaRegionName = m.regionName;
-        HRegionInterface server = client.getHRegionConnection(m.server);
-        byte [] infoBytes =
-          server.get(metaRegionName, desc.getName(), COL_REGIONINFO);
-        if (infoBytes != null && infoBytes.length != 0) {
-          DataInputBuffer inbuf = new DataInputBuffer();
-          inbuf.reset(infoBytes, infoBytes.length);
-          HRegionInfo info = new HRegionInfo();
-          info.readFields(inbuf);
-          if (info.tableDesc.getName().compareTo(desc.getName()) == 0) {
-            throw new IOException("table already exists");
-          }
-        }
-
-        // 2. Create the HRegion
-        HRegion r = HRegion.createHRegion(newRegion.regionId, desc, this.dir,
-          this.conf);
-
-        // 3. Insert into meta
-
-        HRegionInfo info = r.getRegionInfo();
-        Text regionName = r.getRegionName();
-        ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
-        DataOutputStream s = new DataOutputStream(byteValue);
-        info.write(s);
-
-        long clientId = rand.nextLong();
-        long lockid = server.startUpdate(metaRegionName, clientId, regionName);
-        server.put(metaRegionName, clientId, lockid, COL_REGIONINFO,
-          byteValue.toByteArray());
-        server.commit(metaRegionName, clientId, lockid,
-            System.currentTimeMillis());
-
-        // 4. Close the new region to flush it to disk
-
-        r.close();
-
-        // 5. Get it assigned to a server
-
-        unassignedRegions.put(regionName, info);
-        assignAttempts.put(regionName, Long.valueOf(0L));
+         createTable(newRegion);
         break;
-
       } catch (IOException e) {
         if(tries == numRetries - 1) {
           if (e instanceof RemoteException) {
@@ -1832,6 +1776,81 @@ public class HMaster implements HConstants, HMasterInterface,
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("created table " + desc.getName());
+    }
+  }
+  
+  /*
+   * Set of tables currently in creation. Access needs to be synchronized.
+   */
+  private Set<Text> tableInCreation = new HashSet<Text>();
+  
+  private void createTable(final HRegionInfo newRegion) throws IOException {
+    Text tableName = newRegion.tableDesc.getName();
+    synchronized (tableInCreation) {
+      if (tableInCreation.contains(tableName)) {
+        throw new TableExistsException("Table " + tableName + " in process "
+            + "of being created");
+      }
+      tableInCreation.add(tableName);
+    }
+    try {
+      // 1. Check to see if table already exists. Get meta region where
+      // table would sit should it exist. Open scanner on it. If a region
+      // for the table we want to create already exists, then table already
+      // created. Throw already-exists exception.
+      MetaRegion m = (knownMetaRegions.containsKey(newRegion.regionName))?
+          knownMetaRegions.get(newRegion.regionName):
+            knownMetaRegions.get(knownMetaRegions.
+              headMap(newRegion.getTableDesc().getName()).lastKey());
+      Text metaRegionName = m.regionName;
+      HRegionInterface connection = client.getHRegionConnection(m.server);
+      long scannerid = connection.openScanner(metaRegionName,
+        new Text[] { COL_REGIONINFO }, tableName, System.currentTimeMillis(),
+        null);
+      try {
+        KeyedData[] data = connection.next(scannerid);
+        // Test data and that the row for the data is for our table. If
+        // table does not exist, scanner will return row after where our table
+        // would be inserted if it exists so look for exact match on table
+        // name.
+        if (data != null && data.length > 0 &&
+          HRegionInfo.getTableNameFromRegionName(data[0].getKey().getRow()).
+            equals(tableName)) {
+          // Then a region for this table already exists. Ergo table exists.
+          throw new TableExistsException(tableName.toString());
+        }
+      } finally {
+        connection.close(scannerid);
+      }
+
+      // 2. Create the HRegion
+      HRegion r = HRegion.createHRegion(newRegion.regionId, newRegion.
+        getTableDesc(), this.dir, this.conf);
+
+      // 3. Insert into meta
+      HRegionInfo info = r.getRegionInfo();
+      Text regionName = r.getRegionName();
+      ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
+      DataOutputStream s = new DataOutputStream(byteValue);
+      info.write(s);
+      long clientId = rand.nextLong();
+      long lockid = connection.
+        startUpdate(metaRegionName, clientId, regionName);
+      connection.put(metaRegionName, clientId, lockid, COL_REGIONINFO,
+        byteValue.toByteArray());
+      connection.commit(metaRegionName, clientId, lockid,
+        System.currentTimeMillis());
+
+      // 4. Close the new region to flush it to disk
+      r.close();
+
+      // 5. Get it assigned to a server
+      unassignedRegions.put(regionName, info);
+      assignAttempts.put(regionName, Long.valueOf(0L));
+    } finally {
+      synchronized (tableInCreation) {
+        tableInCreation.remove(newRegion.getTableDesc().getName());
+      }
     }
   }
 
@@ -1865,19 +1884,19 @@ public class HMaster implements HConstants, HMasterInterface,
   public void enableTable(Text tableName) throws IOException {
     new ChangeTableState(tableName, true).process();
   }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public HServerAddress findRootRegion() {
-    return rootRegionLocation;
-  }
 
   /**
    * {@inheritDoc}
    */
   public void disableTable(Text tableName) throws IOException {
     new ChangeTableState(tableName, false).process();
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  public HServerAddress findRootRegion() {
+    return rootRegionLocation;
   }
   
   // Helper classes for HMasterInterface
