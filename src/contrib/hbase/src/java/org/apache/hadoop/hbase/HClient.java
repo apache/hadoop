@@ -220,9 +220,14 @@ public class HClient implements HConstants {
    * 
    * @param desc table descriptor for table
    * 
+   * @throws RemoteException if exception occurred on remote side of
+   * connection.
    * @throws IllegalArgumentException if the table name is reserved
    * @throws MasterNotRunningException if master is not running
    * @throws NoServerForRegionException if root region is not being served
+   * @throws TableExistsException if table already exists (If concurrent
+   * threads, the table may have been created between test-for-existence
+   * and attempt-at-creation).
    * @throws IOException
    */
   public synchronized void createTable(HTableDescriptor desc)
@@ -247,13 +252,18 @@ public class HClient implements HConstants {
    * 
    * @param desc table descriptor for table
    * 
+   * @throws RemoteException if exception occurred on remote side of
+   * connection.
    * @throws IllegalArgumentException if the table name is reserved
    * @throws MasterNotRunningException if master is not running
    * @throws NoServerForRegionException if root region is not being served
+   * @throws TableExistsException if table already exists (If concurrent
+   * threads, the table may have been created between test-for-existence
+   * and attempt-at-creation).
    * @throws IOException
    */
   public synchronized void createTableAsync(HTableDescriptor desc)
-      throws IOException {
+  throws IOException {
     checkReservedTableName(desc.getName());
     checkMaster();
     try {
@@ -266,7 +276,7 @@ public class HClient implements HConstants {
   /**
    * Deletes a table
    * 
-   * @param tableName           - name of table to delete
+   * @param tableName name of table to delete
    * @throws IOException
    */
   public synchronized void deleteTable(Text tableName) throws IOException {
@@ -338,8 +348,8 @@ public class HClient implements HConstants {
   /**
    * Add a column to an existing table
    * 
-   * @param tableName   - name of the table to add column to
-   * @param column      - column descriptor of column to be added
+   * @param tableName name of the table to add column to
+   * @param column column descriptor of column to be added
    * @throws IOException
    */
   public synchronized void addColumn(Text tableName, HColumnDescriptor column)
@@ -357,8 +367,8 @@ public class HClient implements HConstants {
   /**
    * Delete a column from a table
    * 
-   * @param tableName           - name of table
-   * @param columnName          - name of column to be deleted
+   * @param tableName name of table
+   * @param columnName name of column to be deleted
    * @throws IOException
    */
   public synchronized void deleteColumn(Text tableName, Text columnName)
@@ -376,7 +386,7 @@ public class HClient implements HConstants {
   /**
    * Brings a table on-line (enables it)
    * 
-   * @param tableName   - name of the table
+   * @param tableName name of the table
    * @throws IOException
    */
   public synchronized void enableTable(Text tableName) throws IOException {
@@ -467,7 +477,7 @@ public class HClient implements HConstants {
    * Disables a table (takes it off-line) If it is being served, the master
    * will tell the servers to stop serving it.
    * 
-   * @param tableName           - name of table
+   * @param tableName name of table
    * @throws IOException
    */
   public synchronized void disableTable(Text tableName) throws IOException {
@@ -591,8 +601,8 @@ public class HClient implements HConstants {
   /**
    * Loads information so that a table can be manipulated.
    * 
-   * @param tableName - the table to be located
-   * @throws IOException - if the table can not be located after retrying
+   * @param tableName the table to be located
+   * @throws IOException if the table can not be located after retrying
    */
   public synchronized void openTable(Text tableName) throws IOException {
     if(tableName == null || tableName.getLength() == 0) {
@@ -851,7 +861,8 @@ public class HClient implements HConstants {
           if(!regionInfo.tableDesc.getName().equals(tableName)) {
             // We're done
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Found " + tableName);
+              LOG.debug("Found " + servers.size() + " servers for table " +
+                tableName);
             }
             break;
           }
@@ -1352,11 +1363,12 @@ public class HClient implements HConstants {
   }
   
   /** 
-   * Change a value for the specified column
+   * Change a value for the specified column.
+   * Runs {@link #abort(long)} if exception thrown.
    *
-   * @param lockid              - lock id returned from startUpdate
-   * @param column              - column whose value is being set
-   * @param val                 - new value for column
+   * @param lockid lock id returned from startUpdate
+   * @param column column whose value is being set
+   * @param val new value for column
    * @throws IOException
    */
   public void put(long lockid, Text column, byte val[]) throws IOException {

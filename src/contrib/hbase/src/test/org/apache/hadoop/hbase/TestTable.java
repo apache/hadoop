@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Tests table creation restrictions*/
 public class TestTable extends HBaseClusterTestCase {
@@ -27,55 +28,80 @@ public class TestTable extends HBaseClusterTestCase {
     super(true);
   }
 
-  public void testTable() {
-    HClient client = new HClient(conf);
-    
+  public void testTable() throws IOException {
+    final HClient client = new HClient(conf);
+    String msg = null;
     try {
       client.createTable(HGlobals.rootTableDesc);
-      
-    } catch(IllegalArgumentException e) {
-      // Expected - ignore it
-      
-    } catch(Exception e) {
-      System.err.println("Unexpected exception");
-      e.printStackTrace();
-      fail();
+    } catch (IllegalArgumentException e) {
+      msg = e.toString();
     }
+    assertTrue("Unexcepted exception message " + msg, msg != null &&
+      msg.startsWith(IllegalArgumentException.class.getName()) &&
+      msg.contains(HGlobals.rootTableDesc.getName().toString()));
     
+    msg = null;
     try {
       client.createTable(HGlobals.metaTableDesc);
-      
     } catch(IllegalArgumentException e) {
-      // Expected - ignore it
-      
-    } catch(Exception e) {
-      System.err.println("Unexpected exception");
-      e.printStackTrace();
-      fail();
+      msg = e.toString();
     }
-
-    HTableDescriptor desc = new HTableDescriptor("test");
+    assertTrue("Unexcepted exception message " + msg, msg != null &&
+      msg.startsWith(IllegalArgumentException.class.getName()) &&
+      msg.contains(HGlobals.metaTableDesc.getName().toString()));
+    
+    // Try doing a duplicate database create.
+    msg = null;
+    HTableDescriptor desc = new HTableDescriptor(getName());
     desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
-
+    client.createTable(desc);
     try {
       client.createTable(desc);
-      
-    } catch(Exception e) {
-      System.err.println("Unexpected exception");
-      e.printStackTrace();
-      fail();
+    } catch (TableExistsException e) {
+      msg = e.getMessage();
     }
-
-    try {
-      client.createTable(desc);
-      
-    } catch(IOException e) {
-      // Expected. Ignore it.
-      
-    } catch(Exception e) {
-      System.err.println("Unexpected exception");
-      e.printStackTrace();
-      fail();
+    assertTrue("Unexpected exception message " + msg, msg != null &&
+      msg.contains(getName()));
+    
+    // Now try and do concurrent creation with a bunch of threads.
+    final HTableDescriptor threadDesc =
+      new HTableDescriptor("threaded-" + getName());
+    threadDesc.addFamily(new HColumnDescriptor(HConstants.
+      COLUMN_FAMILY.toString()));
+    int count = 10;
+    Thread [] threads = new Thread [count];
+    final AtomicInteger successes = new AtomicInteger(0);
+    final AtomicInteger failures = new AtomicInteger(0);
+    for (int i = 0; i < count; i++) {
+      threads[i] = new Thread(Integer.toString(i)) {
+        @Override
+        public void run() {
+          try {
+            client.createTable(threadDesc);
+            successes.incrementAndGet();
+          } catch (TableExistsException e) {
+            failures.incrementAndGet();
+          } catch (IOException e) {
+            // ignore.
+          }
+        }
+      };
     }
+    for (int i = 0; i < count; i++) {
+      threads[i].start();
+    }
+    for (int i = 0; i < count; i++) {
+      while(threads[i].isAlive()) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          // continue
+        }
+      }
+    }
+    // All threads are now dead.  Count up how many tables were created and
+    // how many failed w/ appropriate exception.
+    assertTrue(successes.get() == 1);
+    assertTrue(failures.get() == (count - 1));
   }
 }
