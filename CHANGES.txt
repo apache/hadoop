@@ -60,3 +60,4 @@ Trunk (unreleased changes)
  36. HADOOP-1600 Update license in HBase code
  37. HADOOP-1589 Exception handling in HBase is broken over client server
  38. HADOOP-1574 Concurrent creates of a table named 'X' all succeed
+ 39. HADOOP-1581 Un-openable tablename bug
