@@ -59,6 +59,7 @@ public class HClient implements HConstants {
   int numRetries;
   private HMasterInterface master;
   private final Configuration conf;
+  private long currentLockId;
   private Class<? extends HRegionInterface> serverInterfaceClass;
   
   /*
@@ -120,6 +121,7 @@ public class HClient implements HConstants {
    */
   public HClient(Configuration conf) {
     this.conf = conf;
+    this.currentLockId = -1;
 
     this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
@@ -607,6 +609,9 @@ public class HClient implements HConstants {
   public synchronized void openTable(Text tableName) throws IOException {
     if(tableName == null || tableName.getLength() == 0) {
       throw new IllegalArgumentException("table name cannot be null or zero length");
+    }
+    if(this.currentLockId != -1) {
+      throw new IllegalStateException("update in progress");
     }
     this.tableServers = getTableServers(tableName);
   }
@@ -1325,8 +1330,10 @@ public class HClient implements HConstants {
    * @return Row lockid.
    * @throws IOException
    */
-  public long startUpdate(final Text row) throws IOException {
-    long lockid = -1;
+  public synchronized long startUpdate(final Text row) throws IOException {
+    if(this.currentLockId != -1) {
+      throw new IllegalStateException("update in progress");
+    }
     for(int tries = 0; tries < numRetries; tries++) {
       IOException e = null;
       RegionLocation info = getRegionLocation(row);
@@ -1334,7 +1341,7 @@ public class HClient implements HConstants {
         currentServer = getHRegionConnection(info.serverAddress);
         currentRegion = info.regionInfo.regionName;
         clientid = rand.nextLong();
-        lockid = currentServer.startUpdate(currentRegion, clientid, row);
+        this.currentLockId = currentServer.startUpdate(currentRegion, clientid, row);
         break;
         
       } catch (IOException ex) {
@@ -1359,7 +1366,7 @@ public class HClient implements HConstants {
         throw e;
       }
     }
-    return lockid;
+    return this.currentLockId;
   }
   
   /** 
@@ -1372,6 +1379,9 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public void put(long lockid, Text column, byte val[]) throws IOException {
+    if(lockid != this.currentLockId) {
+      throw new IllegalArgumentException("invalid lockid");
+    }
     try {
       this.currentServer.put(this.currentRegion, this.clientid, lockid, column,
         val);
@@ -1398,6 +1408,9 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public void delete(long lockid, Text column) throws IOException {
+    if(lockid != this.currentLockId) {
+      throw new IllegalArgumentException("invalid lockid");
+    }
     try {
       this.currentServer.delete(this.currentRegion, this.clientid, lockid,
         column);
@@ -1423,6 +1436,9 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public void abort(long lockid) throws IOException {
+    if(lockid != this.currentLockId) {
+      throw new IllegalArgumentException("invalid lockid");
+    }
     try {
       this.currentServer.abort(this.currentRegion, this.clientid, lockid);
     } catch(IOException e) {
@@ -1432,6 +1448,8 @@ public class HClient implements HConstants {
         e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
       }
       throw e;
+    } finally {
+      this.currentLockId = -1;
     }
   }
   
@@ -1453,6 +1471,9 @@ public class HClient implements HConstants {
    * @throws IOException
    */
   public void commit(long lockid, long timestamp) throws IOException {
+    if(lockid != this.currentLockId) {
+      throw new IllegalArgumentException("invalid lockid");
+    }
     try {
       this.currentServer.commit(this.currentRegion, this.clientid, lockid,
           timestamp);
@@ -1464,6 +1485,8 @@ public class HClient implements HConstants {
         e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
       }
       throw e;
+    } finally {
+      this.currentLockId = -1;
     }
   }
   
