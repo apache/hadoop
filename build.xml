@@ -614,7 +614,7 @@
     	<group title="Examples" packages="org.apache.hadoop.examples*"/>
 
        <group title="contrib: Streaming" packages="org.apache.hadoop.streaming*"/>
-       <group title="contrib: DataJoin" packages="org.apache.hadoop.contrib/join*"/>
+       <group title="contrib: DataJoin" packages="org.apache.hadoop.contrib.utils.join*"/>
        <group title="contrib: HBase" packages="org.apache.hadoop.hbase*"/>
 
     </javadoc>
