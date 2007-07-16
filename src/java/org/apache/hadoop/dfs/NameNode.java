@@ -35,6 +35,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.metrics.jvm.JvmMetrics;
 
 /**********************************************************
  * NameNode serves as both directory namespace manager and
@@ -100,14 +101,20 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
   private static class NameNodeMetrics implements Updater {
     private final MetricsRecord metricsRecord;
+    
     private int numFilesCreated = 0;
     private int numFilesOpened = 0;
     private int numFilesRenamed = 0;
     private int numFilesListed = 0;
       
-    NameNodeMetrics() {
+    NameNodeMetrics(Configuration conf) {
+      String sessionId = conf.get("session.id");
+      // Initiate Java VM metrics
+      JvmMetrics.init("NameNode", sessionId);
+      // Create a record for NameNode metrics
       MetricsContext metricsContext = MetricsUtil.getContext("dfs");
       metricsRecord = MetricsUtil.createRecord(metricsContext, "namenode");
+      metricsRecord.setTag("sessionId", sessionId);
       metricsContext.registerUpdater(this);
     }
       
@@ -147,7 +154,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
   }
     
-  private NameNodeMetrics myMetrics = new NameNodeMetrics();
+  private NameNodeMetrics myMetrics;
     
   /**
    * Initialize the server
@@ -168,6 +175,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     conf.set("fs.default.name", nameNodeAddress.getHostName() + ":" + nameNodeAddress.getPort());
     LOG.info("Namenode up at: " + this.nameNodeAddress);
 
+    myMetrics = new NameNodeMetrics(conf);
+        
     try {
       this.namesystem = new FSNamesystem(this.nameNodeAddress.getHostName(), this.nameNodeAddress.getPort(), this, conf);
       this.server.start();  //start RPC server   
@@ -179,7 +188,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       this.server.stop();
       throw e;
     }
-      
+    
   }
     
   /**
@@ -767,7 +776,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       }
     }
 
-    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat));
+    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat), conf);
     nsys.dir.fsImage.format();
     return false;
   }

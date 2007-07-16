@@ -75,7 +75,8 @@ public interface MetricsRecord {
   public abstract String getRecordName();
     
   /**
-   * Sets the named tag to the specified value.
+   * Sets the named tag to the specified value.  The tagValue may be null, 
+   * which is treated the same as an empty String.
    *
    * @param tagName name of the tag
    * @param tagValue new value of the tag

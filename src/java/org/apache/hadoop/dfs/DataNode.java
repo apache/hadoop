@@ -34,9 +34,11 @@ import org.apache.hadoop.net.NetworkTopology;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.metrics.jvm.JvmMetrics;
 
 /**********************************************************
  * DataNode is a class (and program) that stores a set of
@@ -119,7 +121,7 @@ public class DataNode implements FSConstants, Runnable {
   long heartBeatInterval;
   private DataStorage storage = null;
   private StatusHttpServer infoServer = null;
-  private DataNodeMetrics myMetrics = new DataNodeMetrics();
+  private DataNodeMetrics myMetrics;
   private static InetSocketAddress nameNodeAddr;
   private static DataNode datanodeObject = null;
   private static Thread dataNodeThread = null;
@@ -134,9 +136,14 @@ public class DataNode implements FSConstants, Runnable {
     private int blocksReplicated = 0;
     private int blocksRemoved = 0;
       
-    DataNodeMetrics() {
+    DataNodeMetrics(Configuration conf) {
+      String sessionId = conf.get("session.id"); 
+      // Initiate reporting of Java VM metrics
+      JvmMetrics.init("DataNode", sessionId);
+      // Create record for DataNode metrics
       MetricsContext context = MetricsUtil.getContext("dfs");
       metricsRecord = MetricsUtil.createRecord(context, "datanode");
+      metricsRecord.setTag("sessionId", sessionId);
       context.registerUpdater(this);
     }
       
@@ -194,7 +201,10 @@ public class DataNode implements FSConstants, Runnable {
    */
   DataNode(Configuration conf, 
            AbstractList<File> dataDirs) throws IOException {
+      
+    myMetrics = new DataNodeMetrics(conf);
     datanodeObject = this;
+
     try {
       startDataNode(conf, dataDirs);
     } catch (IOException ie) {

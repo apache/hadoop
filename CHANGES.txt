@@ -356,6 +356,9 @@ Trunk (unreleased changes)
 
 111. HADOOP-1599.  Fix distcp bug on Windows.  (Senthil Subramanian via cutting)
 
+112. HADOOP-1562.  Add JVM metrics, including GC and logging stats.
+     (David Bowen via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

@@ -61,6 +61,7 @@ import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -218,9 +219,13 @@ public class TaskTracker
       
     TaskTrackerMetrics() {
       JobConf conf = getJobConf();
+      String sessionId = conf.getSessionId();
+      // Initiate Java VM Metrics
+      JvmMetrics.init("TaskTracker", sessionId);
+      // Create a record for Task Tracker metrics
       MetricsContext context = MetricsUtil.getContext("mapred");
       metricsRecord = MetricsUtil.createRecord(context, "tasktracker");
-      metricsRecord.setTag("sessionId", conf.getSessionId());
+      metricsRecord.setTag("sessionId", sessionId);
       context.registerUpdater(this);
     }
       
@@ -1756,6 +1761,9 @@ public class TaskTracker
       task.setConf(job);
           
       defaultConf.addFinalResource(new Path(task.getJobFile()));
+      
+      // Initiate Java VM metrics
+      JvmMetrics.init(task.getPhase().toString(), job.getSessionId());
 
       try {
         // use job-specified working directory

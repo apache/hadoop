@@ -50,6 +50,7 @@ import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.StringUtils;
 
@@ -427,9 +428,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     private int numJobsCompleted = 0;
       
     JobTrackerMetrics(JobConf conf) {
+      String sessionId = conf.getSessionId();
+      // Initiate JVM Metrics
+      JvmMetrics.init("JobTracker", sessionId);
+      // Create a record for map-reduce metrics
       MetricsContext context = MetricsUtil.getContext("mapred");
       metricsRecord = MetricsUtil.createRecord(context, "jobtracker");
-      metricsRecord.setTag("sessionId", conf.getSessionId());
+      metricsRecord.setTag("sessionId", sessionId);
       context.registerUpdater(this);
     }
       
@@ -658,6 +663,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     trackerIdentifier = dateFormat.format(new Date());
 
     myMetrics = new JobTrackerMetrics(jobConf);
+    
     this.expireTrackersThread = new Thread(this.expireTrackers,
                                            "expireTrackers");
     this.expireTrackersThread.start();

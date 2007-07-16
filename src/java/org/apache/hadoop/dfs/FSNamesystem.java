@@ -243,7 +243,7 @@ class FSNamesystem implements FSConstants {
 
     this.localMachine = hostname;
     this.port = port;
-    this.dir = new FSDirectory(this);
+    this.dir = new FSDirectory(this, conf);
     StartupOption startOpt = NameNode.getStartupOption(conf);
     this.dir.loadFSImage(getNamespaceDirs(conf), startOpt);
     this.safeMode = new SafeModeInfo(conf);
@@ -294,9 +294,9 @@ class FSNamesystem implements FSConstants {
    * dirs is a list of directories where the filesystem directory state 
    * is stored
    */
-  FSNamesystem(FSImage fsImage) throws IOException {
+  FSNamesystem(FSImage fsImage, Configuration conf) throws IOException {
     fsNamesystemObject = this;
-    this.dir = new FSDirectory(fsImage, this);
+    this.dir = new FSDirectory(fsImage, this, conf);
   }
 
   /** Return the FSNamesystem object

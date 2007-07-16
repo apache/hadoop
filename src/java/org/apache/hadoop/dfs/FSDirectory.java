@@ -19,6 +19,8 @@ package org.apache.hadoop.dfs;
 
 import java.io.*;
 import java.util.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.StartupOption;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -354,21 +356,22 @@ class FSDirectory implements FSConstants {
   private MetricsRecord directoryMetrics = null;
     
   /** Access an existing dfs name directory. */
-  public FSDirectory(FSNamesystem ns) throws IOException {
+  public FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this.fsImage = new FSImage();
     namesystem = ns;
-    initialize();
+    initialize(conf);
   }
 
-  public FSDirectory(FSImage fsImage, FSNamesystem ns) throws IOException {
+  public FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) throws IOException {
     this.fsImage = fsImage;
     namesystem = ns;
-    initialize();
+    initialize(conf);
   }
     
-  private void initialize() {
+  private void initialize(Configuration conf) {
     MetricsContext metricsContext = MetricsUtil.getContext("dfs");
     directoryMetrics = MetricsUtil.createRecord(metricsContext, "FSDirectory");
+    directoryMetrics.setTag("sessionId", conf.get("session.id"));
   }
 
   void loadFSImage(Collection<File> dataDirs,

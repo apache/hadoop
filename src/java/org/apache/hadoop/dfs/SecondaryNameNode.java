@@ -33,6 +33,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.hadoop.metrics.jvm.JvmMetrics;
 
 /**********************************************************
  * The Secondary NameNode is a helper to the primary NameNode.
@@ -77,6 +78,9 @@ public class SecondaryNameNode implements FSConstants, Runnable {
    */
   public SecondaryNameNode(Configuration conf)  throws IOException {
 
+    // initiate Java VM metrics
+    JvmMetrics.init("SecondaryNameNode", conf.get("session.id"));
+    
     //
     // initialize error simulation code for junit test
     //
@@ -294,8 +298,8 @@ public class SecondaryNameNode implements FSConstants, Runnable {
    * DEST_FS_IMAGE
    */
   private void doMerge() throws IOException {
-    FSNamesystem namesystem = new FSNamesystem(
-                                               new FSImage(checkpointDir));
+    FSNamesystem namesystem = 
+            new FSNamesystem(new FSImage(checkpointDir), conf);
     FSImage fsImage = namesystem.dir.fsImage;
     fsImage.loadFSImage(srcImage);
     fsImage.getEditLog().loadFSEdits(editFile);
