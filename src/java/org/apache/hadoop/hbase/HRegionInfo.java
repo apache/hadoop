@@ -34,13 +34,39 @@ import org.apache.hadoop.io.WritableComparable;
  * HRegions' table descriptor, etc.
  */
 public class HRegionInfo implements WritableComparable {
+  /** delimiter used between portions of a region name */
+  public static final char DELIMITER = ',';
+  
+  /**
+   * Extracts table name prefix from a region name.
+   * Presumes region names are ASCII characters only.
+   * @param regionName A region name.
+   * @return The table prefix of a region name.
+   */
+  public static Text getTableNameFromRegionName(final Text regionName) {
+    int index = -1;
+    byte [] bytes = regionName.getBytes();
+    for (int i = 0; i < bytes.length; i++) {
+      if (((char) bytes[i]) == DELIMITER) {
+        index = i;
+        break;
+      }
+    }
+    if (index == -1) {
+      throw new IllegalArgumentException(regionName.toString() + " does not " +
+        "contain " + DELIMITER + " character");
+    }
+    byte [] tableName = new byte[index];
+    System.arraycopy(bytes, 0, tableName, 0, index);
+    return new Text(tableName);
+  }
+
   Text regionName;
   long regionId;
   Text startKey;
   Text endKey;
   boolean offLine;
   HTableDescriptor tableDesc;
-  public static final char DELIMITER = ',';
   
   /** Default constructor - creates empty object */
   public HRegionInfo() {
@@ -100,6 +126,34 @@ public class HRegionInfo implements WritableComparable {
     this.offLine = false;
   }
   
+  /** @return the endKey */
+  public Text getEndKey(){
+    return endKey;
+  }
+
+  /** @return the regionId */
+  public long getRegionId(){
+    return regionId;
+  }
+
+  /** @return the regionName */
+  public Text getRegionName(){
+    return regionName;
+  }
+
+  /** @return the startKey */
+  public Text getStartKey(){
+    return startKey;
+  }
+
+  /** @return the tableDesc */
+  public HTableDescriptor getTableDesc(){
+    return tableDesc;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public String toString() {
     return "regionname: " + this.regionName.toString() + ", startKey: <" +
@@ -107,11 +161,17 @@ public class HRegionInfo implements WritableComparable {
       this.tableDesc.toString() + "}";
   }
     
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
   
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public int hashCode() {
     int result = this.regionName.hashCode();
@@ -123,10 +183,13 @@ public class HRegionInfo implements WritableComparable {
     return result;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
+  //
   // Writable
-  //////////////////////////////////////////////////////////////////////////////
+  //
 
+  /**
+   * {@inheritDoc}
+   */
   public void write(DataOutput out) throws IOException {
     out.writeLong(regionId);
     tableDesc.write(out);
@@ -136,6 +199,9 @@ public class HRegionInfo implements WritableComparable {
     out.writeBoolean(offLine);
   }
   
+  /**
+   * {@inheritDoc}
+   */
   public void readFields(DataInput in) throws IOException {
     this.regionId = in.readLong();
     this.tableDesc.readFields(in);
@@ -145,69 +211,13 @@ public class HRegionInfo implements WritableComparable {
     this.offLine = in.readBoolean();
   }
   
-  /**
-   * @return the endKey
-   */
-  public Text getEndKey(){
-    return endKey;
-  }
-
-  /**
-   * @return the regionId
-   */
-  public long getRegionId(){
-    return regionId;
-  }
-
-  /**
-   * @return the regionName
-   */
-  public Text getRegionName(){
-    return regionName;
-  }
-  
-  /**
-   * Extracts table name prefix from a region name.
-   * Presumes region names are ASCII characters only.
-   * @param regionName A region name.
-   * @return The table prefix of a region name.
-   */
-  public static Text getTableNameFromRegionName(final Text regionName) {
-    int index = -1;
-    byte [] bytes = regionName.getBytes();
-    for (int i = 0; i < bytes.length; i++) {
-      if (((char) bytes[i]) == DELIMITER) {
-        index = i;
-        break;
-      }
-    }
-    if (index == -1) {
-      throw new IllegalArgumentException(regionName.toString() + " does not " +
-        "contain " + DELIMITER + " character");
-    }
-    byte [] tableName = new byte[index];
-    System.arraycopy(bytes, 0, tableName, 0, index);
-    return new Text(tableName);
-  }
-
-  /**
-   * @return the startKey
-   */
-  public Text getStartKey(){
-    return startKey;
-  }
-
-  /**
-   * @return the tableDesc
-   */
-  public HTableDescriptor getTableDesc(){
-    return tableDesc;
-  }
-
-  /////////////////////////////////////////////////////////////////////////////
+  //
   // Comparable
-  /////////////////////////////////////////////////////////////////////////////
+  //
   
+  /**
+   * {@inheritDoc}
+   */
   public int compareTo(Object o) {
     HRegionInfo other = (HRegionInfo) o;
     

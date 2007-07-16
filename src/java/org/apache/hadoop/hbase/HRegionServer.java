@@ -38,6 +38,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
@@ -987,6 +989,29 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return getRegion(regionName).getRegionInfo();
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b) throws IOException {
+    for(Map.Entry<Text, ArrayList<BatchOperation>> e: b) {
+      Text row = e.getKey();
+      long clientid = rand.nextLong();
+      long lockid = startUpdate(regionName, clientid, row);
+      for(BatchOperation op: e.getValue()) {
+        switch(op.getOp()) {
+        case BatchOperation.PUT_OP:
+          put(regionName, clientid, lockid, op.getColumn(), op.getValue());
+          break;
+          
+        case BatchOperation.DELETE_OP:
+          delete(regionName, clientid, lockid, op.getColumn());
+          break;
+        }
+      }
+      commit(regionName, clientid, lockid, timestamp);
+    }
+  }
+  
   /**
    * {@inheritDoc}
    */
