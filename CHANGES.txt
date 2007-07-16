@@ -359,6 +359,9 @@ Trunk (unreleased changes)
 112. HADOOP-1562.  Add JVM metrics, including GC and logging stats.
      (David Bowen via cutting)
 
+113. HADOOP-1613.  Fix "DFS Health" page to display correct time of
+     last contact.  (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

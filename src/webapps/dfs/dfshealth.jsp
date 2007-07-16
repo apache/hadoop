@@ -14,7 +14,6 @@
 <%!
   FSNamesystem fsn = FSNamesystem.getFSNamesystem();
   String namenodeLabel = fsn.getDFSNameNodeMachine() + ":" + fsn.getDFSNameNodePort();
-  long currentTime;
   JspHelper jspHelper = new JspHelper();
 
   int rowNum = 0;
@@ -97,8 +96,10 @@
                          (d.isDecommissionInProgress() ? "Decommission In Progress":
                           "In Service"));
     
+    long timestamp = d.getLastUpdate();
+    long currentTime = System.currentTimeMillis();
     out.print("<td class=\"lastcontact\"> " +
-              ((currentTime - d.getLastUpdate())/1000) +
+              ((currentTime - timestamp)/1000) +
 	      "<td class=\"adminstate\">" +
               adminState +
 	      "<td class=\"size\">" +
@@ -165,7 +166,6 @@
     }
     else {
         
-        currentTime = System.currentTimeMillis();
 	out.print( "<div id=\"dfsnodetable\"> "+
                    "<a name=\"LiveNodes\" id=\"title\">" +
                    "Live Datanodes : " + live.size() + "</a>" +
