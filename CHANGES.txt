@@ -354,6 +354,8 @@ Trunk (unreleased changes)
 110. HADOOP-1524.  Permit user task logs to appear as they're
      created.  (Michael Bieniosek via cutting)
 
+111. HADOOP-1599.  Fix distcp bug on Windows.  (Senthil Subramanian via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

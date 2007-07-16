@@ -805,7 +805,7 @@ public class CopyFiles extends ToolBase {
       } else if (destPath == null) {
         destPath = args[idx];
       } else if ("-log".equals(args[idx])) {
-        logPath = new Path(args[++idx]);
+        logPath = new Path(toURI(args[++idx]).getPath());
       } else {
         System.out.println(usage);
         return -1;
@@ -829,14 +829,14 @@ public class CopyFiles extends ToolBase {
     try {
       URI srcURI = toURI(srcPath);
       FileSystem srcfs = FileSystem.get(srcURI, conf);
-      if (!srcfs.exists(new Path(srcPath))) {
+      if (!srcfs.exists(new Path(srcURI.getPath()))) {
         System.out.println(srcPath + " does not exist.");
         return -1;
       }
 
       URI destURI = toURI(destPath);
       FileSystem destfs = FileSystem.get(destURI, conf);
-      if (destfs.exists(new Path(destPath))) {
+      if (destfs.exists(new Path(destURI.getPath()))) {
         System.out.println("WARNING: " + destPath + " already exists.");
       }
 

@@ -241,14 +241,14 @@ public class TestCopyFiles extends TestCase {
         new CopyFiles().doMain(conf, new String[] {"hdfs://"+namenode+"/srcdat",
                                                    "file://"+TEST_ROOT_DIR+"/destdat",
                                                    "-log",
-                                                   TEST_ROOT_DIR+"/logs"});
+                                                   "/logs"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
         FileSystem fs = FileSystem.get(URI.create("hdfs://"+namenode+"/logs"), conf);
         assertTrue("Log directory doesnot exist.",
-                    fs.exists(new Path(TEST_ROOT_DIR+"/logs")));
+                    fs.exists(new Path("/logs")));
         deldir("local", TEST_ROOT_DIR+"/destdat");
-        deldir("local", TEST_ROOT_DIR+"/logs");
+        deldir(namenode, "/logs");
         deldir(namenode, "/srcdat");
       }
     } finally {
