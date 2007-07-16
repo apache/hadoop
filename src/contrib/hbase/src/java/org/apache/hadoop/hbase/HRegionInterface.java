@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -211,6 +212,16 @@ public interface HRegionInterface extends VersionedProtocol {
       long timestamp, RowFilterInterface filter)
   throws IOException;
 
+  /**
+   * Applies a batch of updates via one RPC
+   * 
+   * @param regionName name of the region to update
+   * @param timestamp the time to be associated with the changes
+   * @param b BatchUpdate
+   * @throws IOException
+   */
+  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b) throws IOException;
+  
   /**
    * Get the next set of values
    * 
