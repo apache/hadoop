@@ -351,6 +351,9 @@ Trunk (unreleased changes)
 109. HADOOP-1597.  Add status reports and post-upgrade options to HDFS
      distributed upgrade.  (Konstantin Shvachko via cutting)
 
+110. HADOOP-1524.  Permit user task logs to appear as they're
+     created.  (Michael Bieniosek via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
