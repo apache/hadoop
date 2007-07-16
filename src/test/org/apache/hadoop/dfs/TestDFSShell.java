@@ -42,11 +42,15 @@ public class TestDFSShell extends TestCase {
 
   public void testCopyToLocal() throws IOException {
     Configuration conf = new Configuration();
+    /* This tests some properties of ChecksumFileSystem as well.
+     * Make sure that we create ChecksumDFS */
+    conf.set("fs.hdfs.impl",
+             "org.apache.hadoop.dfs.ChecksumDistributedFileSystem");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
-               fs instanceof DistributedFileSystem);
-    DistributedFileSystem dfs = (DistributedFileSystem)fs;
+               fs instanceof ChecksumDistributedFileSystem);
+    ChecksumDistributedFileSystem dfs = (ChecksumDistributedFileSystem)fs;
     FsShell shell = new FsShell();
     shell.setConf(conf);
 
@@ -132,11 +136,15 @@ public class TestDFSShell extends TestCase {
    */
   public void testDFSShell() throws IOException {
     Configuration conf = new Configuration();
+    /* This tests some properties of ChecksumFileSystem as well.
+     * Make sure that we create ChecksumDFS */
+    conf.set("fs.hdfs.impl",
+             "org.apache.hadoop.dfs.ChecksumDistributedFileSystem");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
-               fs instanceof DistributedFileSystem);
-    DistributedFileSystem fileSys = (DistributedFileSystem)fs;
+            fs instanceof ChecksumDistributedFileSystem);
+    ChecksumDistributedFileSystem fileSys = (ChecksumDistributedFileSystem)fs;
     FsShell shell = new FsShell();
     shell.setConf(conf);
 

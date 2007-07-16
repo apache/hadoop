@@ -86,12 +86,20 @@ public interface FSConstants {
   // Processed at datanode stream-handler
   public static final byte OP_WRITE_BLOCK = (byte) 80;
   public static final byte OP_READ_BLOCK = (byte) 81;
-  public static final byte OP_READSKIP_BLOCK = (byte) 82;
-  public static final byte OP_READ_RANGE_BLOCK = (byte) 83;
+  public static final byte OP_READ_METADATA = (byte) 82;
+  
+  public static final int OP_STATUS_SUCCESS = 0;  
+  public static final int OP_STATUS_ERROR = 1;  
+  public static final int OP_STATUS_ERROR_CHECKSUM = 2;  
+  public static final int OP_STATUS_ERROR_INVALID = 3;  
+  public static final int OP_STATUS_ERROR_EXISTS = 4;  
 
-  // Encoding types
-  public static final byte RUNLENGTH_ENCODING = 0;
-  public static final byte CHUNKED_ENCODING = 1;
+  
+  /** Version for data transfers between clients and datanodes
+   * This should change when serialization of DatanodeInfo, not just
+   * when protocol changes. It is not very obvious. 
+   */
+  public static final int DATA_TRANFER_VERSION = 5; //Should it be 1?
 
   // Return codes for file create
   public static final int OPERATION_FAILED = 0;
@@ -115,8 +123,9 @@ public interface FSConstants {
   public static int MAX_PATH_LENGTH = 8000;
   public static int MAX_PATH_DEPTH = 1000;
     
-  //TODO mb@media-style.com: should be conf injected?
   public static final int BUFFER_SIZE = new Configuration().getInt("io.file.buffer.size", 4096);
+  //TODO mb@media-style.com: should be conf injected?
+  public static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
 
   // SafeMode actions
   public enum SafeModeAction{ SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET; }
@@ -149,7 +158,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -6;
+  public static final int LAYOUT_VERSION = -7;
   // Current version: 
-  // Dustributed upgrade is introduced.
+  // Block Level CRCs added.
 }

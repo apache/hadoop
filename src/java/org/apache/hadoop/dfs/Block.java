@@ -39,7 +39,9 @@ class Block implements Writable, Comparable {
   /**
    */
   public static boolean isBlockFilename(File f) {
-    if (f.getName().startsWith("blk_")) {
+    String name = f.getName();
+    if ( name.startsWith( "blk_" ) && 
+        name.indexOf( '.' ) < 0 ) {
       return true;
     } else {
       return false;

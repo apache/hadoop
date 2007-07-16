@@ -81,6 +81,7 @@ public class TestSmallBlock extends TestCase {
    */
   public void testSmallBlock() throws IOException {
     Configuration conf = new Configuration();
+    conf.set("io.bytes.per.checksum", "1");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {

@@ -117,7 +117,7 @@ public class TestDecommission extends TestCase {
     assertTrue("Not HDFS:"+fileSys.getUri(), fileSys instanceof DistributedFileSystem);
         
     DFSClient.DFSDataInputStream dis = (DFSClient.DFSDataInputStream) 
-      ((DistributedFileSystem)fileSys).getRawFileSystem().open(name);
+      ((DistributedFileSystem)fileSys).open(name);
     Collection<LocatedBlock> dinfo = dis.getAllBlocks();
 
     for (LocatedBlock blk : dinfo) { // for each block

@@ -416,6 +416,109 @@ class FSNamesystem implements FSConstants {
                               curReplicasDelta, expectedReplicasDelta);
   }
 
+  /**
+   * Used only during DFS upgrade for block level CRCs (HADOOP-1134).
+   * This returns information for a given blocks that includes:
+   * <li> full path name for the file that contains the block.
+   * <li> offset of first byte of the block.
+   * <li> file length and length of the block.
+   * <li> all block locations for the crc file (".file.crc").
+   * <li> replication for crc file.
+   * When replicas is true, it includes replicas of the block.
+   */
+  public synchronized BlockCrcInfo blockCrcInfo(Block block, 
+                                                boolean replicas) {
+    BlockCrcInfo crcInfo = new BlockCrcInfo();
+    crcInfo.status = BlockCrcInfo.STATUS_ERROR;
+    
+    FSDirectory.INode fileINode = blocksMap.getINode(block);
+    if ( fileINode == null || fileINode.isDir() ) {
+      // Most probably reason is that this block does not exist
+      if (blocksMap.getStoredBlock(block) == null) {
+        crcInfo.status = BlockCrcInfo.STATUS_UNKNOWN_BLOCK;
+      } else {
+        LOG.warn("getBlockCrcInfo(): Could not find file for " + block);
+      }
+      return crcInfo;
+    }
+
+    crcInfo.fileName = fileINode.getAbsoluteName();
+    
+    // Find the offset and length for this block.
+    Block[] fileBlocks = fileINode.getBlocks();
+    crcInfo.blockLen = -1;
+    if ( fileBlocks != null ) {
+      for ( Block b:fileBlocks ) {
+        if ( block.equals(b) ) {
+          crcInfo.blockLen = b.getNumBytes();
+        }
+        if ( crcInfo.blockLen < 0 ) {
+          crcInfo.startOffset += b.getNumBytes();
+        }
+        crcInfo.fileSize += b.getNumBytes();
+      }
+    }
+
+    if ( crcInfo.blockLen <= 0 ) {
+      LOG.warn("blockCrcInfo(): " + block + 
+               " could not be found in blocks for " + crcInfo.fileName);
+      return crcInfo;
+    }
+    
+    String fileName = fileINode.getLocalName();    
+    if ( fileName.startsWith(".") && fileName.endsWith(".crc") ) {
+      crcInfo.status = BlockCrcInfo.STATUS_CRC_BLOCK;
+      return crcInfo;
+    }
+
+    if (replicas) {
+      // include block replica locations, instead of crcBlocks
+      crcInfo.blockLocationsIncluded = true;
+      
+      DatanodeInfo[] dnInfo = new DatanodeInfo[blocksMap.numNodes(block)];
+      Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block);
+      for (int i=0; it != null && it.hasNext(); i++ ) {
+        dnInfo[i] = new DatanodeInfo(it.next());
+      }
+      crcInfo.blockLocations = new LocatedBlock(block, dnInfo, 
+                                                crcInfo.startOffset);
+    } else {
+
+      //Find CRC file
+      String crcName = "." + fileName + ".crc";
+      FSDirectory.INode crcINode = fileINode.getParent().getChild(crcName);
+
+      if ( crcINode == null ) {
+        // Should we log this?
+        crcInfo.status = BlockCrcInfo.STATUS_NO_CRC_DATA;
+        return crcInfo;
+      }
+
+      Block[] blocks = crcINode.getBlocks();
+      if ( blocks == null )  {
+        LOG.warn("getBlockCrcInfo(): could not find blocks for crc file for " +
+                 crcInfo.fileName);
+        return crcInfo;
+      }
+
+      crcInfo.crcBlocks = new LocatedBlock[ blocks.length ];
+      for (int i=0; i<blocks.length; i++) {
+        DatanodeInfo[] dnArr = new DatanodeInfo[ blocksMap.numNodes(blocks[i]) ];
+        int idx = 0;
+        for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blocks[i]); 
+        it.hasNext();) { 
+          dnArr[ idx++ ] = it.next();
+        }
+        crcInfo.crcBlocks[i] = new LocatedBlock(blocks[i], dnArr);
+      }
+
+      crcInfo.crcReplication = crcINode.getReplication();
+    }
+    
+    crcInfo.status = BlockCrcInfo.STATUS_DATA_BLOCK;
+    return crcInfo;
+  }
+  
   /////////////////////////////////////////////////////////
   //
   // These methods are called by HadoopFS clients
@@ -1120,18 +1223,28 @@ class FSNamesystem implements FSConstants {
    * invalidate some blocks that make up the file.
    */
   public boolean delete(String src) throws IOException {
-    boolean status = deleteInternal(src);
+    boolean status = deleteInternal(src, true);
     getEditLog().logSync();
     return status;
   }
 
   /**
+   * An internal delete function that does not enforce safe mode
+   */
+  boolean deleteInSafeMode(String src) throws IOException {
+    boolean status = deleteInternal(src, false);
+    getEditLog().logSync();
+    return status;
+  }
+  /**
    * Remove the indicated filename from the namespace.  This may
    * invalidate some blocks that make up the file.
    */
-  private synchronized boolean deleteInternal(String src) throws IOException {
+  private synchronized boolean deleteInternal(String src, 
+                                              boolean enforceSafeMode) 
+                                              throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
-    if (isInSafeMode())
+    if (enforceSafeMode && isInSafeMode())
       throw new SafeModeException("Cannot delete " + src, safeMode);
     Block deletedBlocks[] = dir.delete(src);
     if (deletedBlocks != null) {

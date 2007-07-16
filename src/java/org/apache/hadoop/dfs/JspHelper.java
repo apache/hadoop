@@ -93,38 +93,24 @@ public class JspHelper {
     Socket s = new Socket();
     s.connect(addr, FSConstants.READ_TIMEOUT);
     s.setSoTimeout(FSConstants.READ_TIMEOUT);
-    //
-    // Xmit header info to datanode
-    //
-    DataOutputStream os = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
-    os.write(FSConstants.OP_READSKIP_BLOCK);
-    new Block(blockId, blockSize).write(os);
-    os.writeLong(offsetIntoBlock);
-    os.flush();
-
-    //
-    // Get bytes in block, set streams
-    //
-    DataInputStream in = new DataInputStream(new BufferedInputStream(s.getInputStream()));
-    long curBlockSize = in.readLong();
-    long amtSkipped = in.readLong();
-    if (curBlockSize != blockSize) {
-      throw new IOException("Recorded block size is " + blockSize + ", but datanode reports size of " + curBlockSize);
-    }
-    if (amtSkipped != offsetIntoBlock) {
-      throw new IOException("Asked for offset of " + offsetIntoBlock + ", but only received offset of " + amtSkipped);
-    }
       
-    long amtToRead = chunkSizeToView;
-    if (amtToRead + offsetIntoBlock > blockSize)
-      amtToRead = blockSize - offsetIntoBlock;
+      long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);     
+      
+      // Use the block name for file name. 
+      DFSClient.BlockReader blockReader = 
+        DFSClient.BlockReader.newBlockReader(s, addr.toString() + ":" + blockId,
+                                             blockId, offsetIntoBlock, 
+                                             amtToRead, 
+                                             conf.getInt("io.file.buffer.size",
+                                                         4096));
+        
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;
     int retries = 2;
-    while (true) {
+    while ( amtToRead > 0 ) {
       int numRead;
       try {
-        numRead = in.read(buf, readOffset, (int)amtToRead);
+        numRead = blockReader.readAll(buf, readOffset, (int)amtToRead);
       }
       catch (IOException e) {
         retries--;
@@ -134,11 +120,9 @@ public class JspHelper {
       }
       amtToRead -= numRead;
       readOffset += numRead;
-      if (amtToRead == 0)
-        break;
     }
+    blockReader = null;
     s.close();
-    in.close();
     out.print(new String(buf));
   }
   public void DFSNodesStatus(ArrayList<DatanodeDescriptor> live,

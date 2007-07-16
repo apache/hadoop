@@ -36,6 +36,8 @@ public class TestMiniMRDFSCaching extends TestCase {
     FileSystem fileSys = null;
     try {
       JobConf conf = new JobConf();
+      conf.set("fs.hdfs.impl",
+               "org.apache.hadoop.dfs.ChecksumDistributedFileSystem");      
       dfs = new MiniDFSCluster(conf, 1, true, null);
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(2, fileSys.getName(), 4);

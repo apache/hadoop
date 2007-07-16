@@ -22,6 +22,7 @@ import java.io.*;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.net.Socket;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
@@ -450,5 +451,48 @@ public class FileUtil {
       tmp.deleteOnExit();
     }
     return tmp;
+  }
+  
+  //XXX These functions should be in IO Utils rather than FileUtil
+  // Reads len bytes in a loop.
+  public static void readFully( InputStream in, byte buf[],
+                                int off, int len ) throws IOException {
+    int toRead = len;
+    while ( toRead > 0 ) {
+      int ret = in.read( buf, off, toRead );
+      if ( ret < 0 ) {
+        throw new IOException( "Premeture EOF from inputStream");
+      }
+      toRead -= ret;
+      off += ret;
+    }
+  }
+  
+  public static void closeSocket( Socket sock ) {
+    // avoids try { close() } dance
+    if ( sock != null ) {
+      try {
+       sock.close();
+      } catch ( IOException ignored ) {
+      }
+    }
+  }
+  public static void closeStream( InputStream in ) {
+    // avoids try { close() } dance
+    if ( in != null ) {
+      try {
+        in.close();
+      } catch ( IOException ignored ) {
+      }
+    }
+  }
+  public static void closeStream( OutputStream out ) {
+    // avoids try { close() } dance
+    if ( out != null ) {
+      try {
+        out.close();
+      } catch ( IOException ignored ) {
+      }
+    }
   }
 }

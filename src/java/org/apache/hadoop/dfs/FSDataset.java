@@ -87,7 +87,14 @@ class FSDataset implements FSConstants {
                           boolean resetIdx) throws IOException {
       if (numBlocks < maxBlocksPerDir) {
         File dest = new File(dir, b.getBlockName());
-        src.renameTo(dest);
+        File metaData = getMetaFile( src );
+        if ( ! metaData.renameTo( getMetaFile(dest) ) ||
+            ! src.renameTo( dest ) ) {
+          throw new IOException( "could not move files for " + b +
+                                 " from tmp to " + 
+                                 dest.getAbsolutePath() );
+        }
+
         numBlocks += 1;
         return dest;
       }
@@ -155,6 +162,7 @@ class FSDataset implements FSConstants {
 
       File blockFiles[] = dir.listFiles();
       for (int i = 0; i < blockFiles.length; i++) {
+        //We are not enforcing presense of metadata file
         if (Block.isBlockFilename(blockFiles[i])) {
           volumeMap.put(new Block(blockFiles[i], blockFiles[i].length()), volume);
         }
@@ -262,6 +270,8 @@ class FSDataset implements FSConstants {
     
     FSVolume(File currentDir, Configuration conf) throws IOException {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
+      // add block size to the configured reserved space
+      this.reserved += conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
       this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct",
                                          (float) USABLE_DISK_PCT_DEFAULT);
       File parent = currentDir.getParentFile();
@@ -418,6 +428,14 @@ class FSDataset implements FSConstants {
   //
   //////////////////////////////////////////////////////
 
+  //Find better place?
+  public static final String METADATA_EXTENSION = ".meta";
+  public static final short METADATA_VERSION = 1;
+    
+  public static File getMetaFile( File f ) {
+    return new File( f.getAbsolutePath() + METADATA_EXTENSION );
+  }
+    
   FSVolumeSet volumes;
   private HashMap<Block,File> ongoingCreates = new HashMap<Block,File>();
   private int maxBlocksPerDir = 0;
@@ -467,20 +485,29 @@ class FSDataset implements FSConstants {
   }
 
   /**
-   * Get a stream of data from the indicated block.
+   * Get File name for a given block.
    */
-  public synchronized InputStream getBlockData(Block b) throws IOException {
+  public synchronized File getBlockFile(Block b) throws IOException {
     if (!isValidBlock(b)) {
       throw new IOException("Block " + b + " is not valid.");
     }
-    // File should be opened with the lock.
-    return new FileInputStream(getFile(b));
+    return getFile(b);
   }
 
+  static class BlockWriteStreams {
+    OutputStream dataOut;
+    OutputStream checksumOut;
+    
+    BlockWriteStreams( File f ) throws IOException {
+      dataOut = new FileOutputStream( f );
+      checksumOut = new FileOutputStream( getMetaFile( f ) );
+    }
+  }
+  
   /**
    * Start writing to a block file
    */
-  public OutputStream writeToBlock(Block b) throws IOException {
+  public BlockWriteStreams writeToBlock(Block b) throws IOException {
     //
     // Make sure the block isn't a valid one - we're still creating it!
     //
@@ -515,7 +542,7 @@ class FSDataset implements FSConstants {
       synchronized (volumes) {
         v = volumes.getNextVolume(blockSize);
         // create temporary file to hold block in the designated volume
-        f = v.createTmpFile(b);
+        f = createTmpFile(v, b);
       }
       ongoingCreates.put(b, f);
       volumeMap.put(b, v);
@@ -526,9 +553,23 @@ class FSDataset implements FSConstants {
     // REMIND - mjc - make this a filter stream that enforces a max
     // block size, so clients can't go crazy
     //
-    return new FileOutputStream(f);
+    return new BlockWriteStreams( f );
   }
 
+  File createTmpFile( FSVolume vol, Block blk ) throws IOException {
+    if ( vol == null ) {
+      synchronized ( this ) {
+        vol = volumeMap.get( blk );
+        if ( vol == null ) {
+          throw new IOException("Could not find volume for block " + blk);
+        }
+      }
+    }
+    synchronized ( volumes ) {
+      return vol.createTmpFile(blk);
+    }
+  }
+  
   //
   // REMIND - mjc - eventually we should have a timeout system
   // in place to clean up block files left by abandoned clients.
@@ -545,8 +586,6 @@ class FSDataset implements FSConstants {
     if (f == null || !f.exists()) {
       throw new IOException("No temporary file " + f + " for block " + b);
     }
-    long finalLen = f.length();
-    b.setNumBytes(finalLen);
     FSVolume v = volumeMap.get(b);
         
     File dest = null;
@@ -575,6 +614,7 @@ class FSDataset implements FSConstants {
    * Check whether the given block is a valid one.
    */
   public boolean isValidBlock(Block b) {
+    //Should we check for metadata file too?
     File f = getFile(b);
     return (f!= null && f.exists());
   }
@@ -619,7 +659,8 @@ class FSDataset implements FSConstants {
         blockMap.remove(invalidBlks[i]);
         volumeMap.remove(invalidBlks[i]);
       }
-      if (!f.delete()) {
+      File metaFile = getMetaFile( f );
+      if ( !f.delete() || ( !metaFile.delete() && metaFile.exists() ) ) {
         DataNode.LOG.warn("Unexpected error trying to delete block "
                           + invalidBlks[i] + " at file " + f);
         error = true;

@@ -30,6 +30,9 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.dfs.BlockCommand;
+import org.apache.hadoop.dfs.DatanodeProtocol;
+import org.apache.hadoop.fs.FileUtil;
 
 import java.io.*;
 import java.net.*;
@@ -73,12 +76,13 @@ import org.apache.hadoop.metrics.jvm.JvmMetrics;
  **********************************************************/
 public class DataNode implements FSConstants, Runnable {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.DataNode");
-  //
-  // REMIND - mjc - I might bring "maxgigs" back so user can place 
-  // artificial  limit on space
-  //private static final long GIGABYTE = 1024 * 1024 * 1024;
-  //private static long numGigs = Configuration.get().getLong("dfs.datanode.maxgigs", 100);
-  //
+
+  /**
+   * A buffer size small enough that read/writes while reading headers 
+   * don't result in multiple io calls but reading larger amount of data 
+   * like one checksum size does not result in extra copy. 
+   */
+  public static final int SMALL_HDR_BUFFER_SIZE = 64;
 
   /**
    * Util method to build socket addr from either:
@@ -112,7 +116,7 @@ public class DataNode implements FSConstants, Runnable {
   DatanodeRegistration dnRegistration = null;
   private String networkLoc;
   volatile boolean shouldRun = true;
-  Vector<Block> receivedBlockList = new Vector<Block>();
+  LinkedList<Block> receivedBlockList = new LinkedList<Block>();
   int xmitsInProgress = 0;
   Daemon dataXceiveServer = null;
   long blockReportInterval;
@@ -126,6 +130,7 @@ public class DataNode implements FSConstants, Runnable {
   private static DataNode datanodeObject = null;
   private static Thread dataNodeThread = null;
   String machineName;
+  int defaultBytesPerChecksum = 512;
 
   private static class DataNodeMetrics implements Updater {
     private final MetricsRecord metricsRecord;
@@ -222,6 +227,10 @@ public class DataNode implements FSConstants, Runnable {
                                      conf.get("dfs.datanode.dns.nameserver","default"));
     InetSocketAddress nameNodeAddr = createSocketAddr(
                                                       conf.get("fs.default.name", "local"));
+    
+    this.defaultBytesPerChecksum = 
+       Math.max(conf.getInt("io.bytes.per.checksum", 512), 1); 
+    
     int tmpPort = conf.getInt("dfs.datanode.port", 50010);
     storage = new DataStorage();
     // construct registration
@@ -709,25 +718,30 @@ public class DataNode implements FSConstants, Runnable {
      */
     public void run() {
       try {
-        DataInputStream in = new DataInputStream(new BufferedInputStream(s.getInputStream()));
-        try {
-          byte op = (byte) in.read();
-          if (op == OP_WRITE_BLOCK) {
-            writeBlock(in);
-          } else if (op == OP_READ_BLOCK || op == OP_READSKIP_BLOCK ||
-                     op == OP_READ_RANGE_BLOCK) {
-            readBlock(in, op);
-          } else {
-            while (op >= 0) {
-              System.out.println("Faulty op: " + op);
-              op = (byte) in.read();
-            }
-            throw new IOException("Unknown opcode for incoming data stream");
-          }
-        } finally {
-          in.close();
+        DataInputStream in = new DataInputStream(
+           new BufferedInputStream(s.getInputStream(), SMALL_HDR_BUFFER_SIZE));
+        short version = in.readShort();
+        if ( version != DATA_TRANFER_VERSION ) {
+          throw new IOException( "Version Mismatch" );
         }
-      } catch (Throwable t) {
+
+        byte op = in.readByte();
+
+        switch ( op ) {
+        case OP_READ_BLOCK:
+          readBlock( in );
+          break;
+        case OP_WRITE_BLOCK:
+          writeBlock( in );
+          break;
+        case OP_READ_METADATA:
+          readMetadata( in );
+          
+        default:
+          System.out.println("Faulty op: " + op);
+          throw new IOException("Unknown opcode " + op + "in data stream");
+        }
+       } catch (Throwable t) {
         LOG.error("DataXCeiver", t);
       } finally {
         try {
@@ -742,104 +756,35 @@ public class DataNode implements FSConstants, Runnable {
     /**
      * Read a block from the disk
      * @param in The stream to read from
-     * @param op OP_READ_BLOCK or OP_READ_SKIPBLOCK
      * @throws IOException
      */
-    private void readBlock(DataInputStream in, byte op) throws IOException {
+    private void readBlock(DataInputStream in) throws IOException {
       //
       // Read in the header
       //
-      Block b = new Block();
-      b.readFields(in);
+      long blockId = in.readLong();          
+      Block block = new Block( blockId, 0 );
 
-      long toSkip = 0;
-      long endOffset = -1;
-      if (op == OP_READSKIP_BLOCK) {
-        toSkip = in.readLong();
-      } else if (op == OP_READ_RANGE_BLOCK) {
-        toSkip = in.readLong();
-        endOffset = in.readLong();
-      }
-
-      //
-      // Open reply stream
-      //
-      DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
+      long startOffset = in.readLong();
+      long length = in.readLong();
+      
       try {
-        //
-        // Write filelen of -1 if error
-        //
-        if (!data.isValidBlock(b)) {
-          out.writeLong(-1);
-        } else {
-          //
-          // Get blockdata from disk
-          //
-          long len = data.getLength(b);
-          if (endOffset < 0) { endOffset = len; }
-          DataInputStream in2 = new DataInputStream(data.getBlockData(b));
-          out.writeLong(len);
-
-          long amtSkipped = 0;
-          if ((op == OP_READSKIP_BLOCK) || (op == OP_READ_RANGE_BLOCK)) {
-            if (toSkip > len) {
-              toSkip = len;
-            }
-            try {
-              amtSkipped = in2.skip(toSkip);
-            } catch (IOException iex) {
-              shutdown();
-              throw iex;
-            }
-            out.writeLong(amtSkipped);
-          }
-          if (op == OP_READ_RANGE_BLOCK) {
-            if (endOffset > len) {
-              endOffset = len;
-            }
-            out.writeLong(endOffset);
-          }
-
-          byte buf[] = new byte[BUFFER_SIZE];
-          try {
-            int toRead = (int) (endOffset - amtSkipped + 1);
-            int bytesRead = 0;
-            try {
-              bytesRead = in2.read(buf, 0, Math.min(BUFFER_SIZE, toRead));
-              myMetrics.readBytes(bytesRead);
-            } catch (IOException iex) {
-              shutdown();
-              throw iex;
-            }
-            while (toRead > 0 && bytesRead >= 0) {
-              out.write(buf, 0, bytesRead);
-              toRead -= bytesRead;
-              if (toRead > 0) {
-                try {
-                  bytesRead = in2.read(buf, 0, Math.min(BUFFER_SIZE, toRead));
-                  myMetrics.readBytes(bytesRead);
-                } catch (IOException iex) {
-                  shutdown();
-                  throw iex;
-                }
-              }
-            }
-          } catch (SocketException se) {
-            // This might be because the reader
-            // closed the stream early
-          } finally {
-            try {
-              in2.close();
-            } catch (IOException iex) {
-              shutdown();
-              throw iex;
-            }
-          }
-        }
+        //XXX Buffered output stream?
+        long read = sendBlock(s, block, startOffset, length, null );
+        myMetrics.readBytes((int)read);
         myMetrics.readBlocks(1);
-        LOG.info("Served block " + b + " to " + s.getInetAddress());
-      } finally {
-        out.close();
+        LOG.info("Served block " + block + " to " + s.getInetAddress());
+      } catch ( SocketException ignored ) {
+        // Its ok for remote side to close the connection anytime.
+        myMetrics.readBlocks(1);
+      } catch ( IOException ioe ) {
+        /* What exactly should we do here?
+         * Earlier version shutdown() datanode if there is disk error.
+         */
+        LOG.warn( "Got exception while serving " + block + " to " +
+                  s.getInetAddress() + ": " + 
+                  StringUtils.stringifyException(ioe) );
+        throw ioe;
       }
     }
 
@@ -852,14 +797,23 @@ public class DataNode implements FSConstants, Runnable {
       //
       // Read in the header
       //
-      DataOutputStream reply = 
-        new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
+      DataOutputStream reply = new DataOutputStream(s.getOutputStream());
+      DataOutputStream out = null;
+      DataOutputStream checksumOut = null;
+      Socket mirrorSock = null;
+      DataOutputStream mirrorOut = null;
+      DataInputStream mirrorIn = null;
+      
       try {
-        boolean shouldReportBlock = in.readBoolean();
-        Block b = new Block();
-        b.readFields(in);
+        /* We need an estimate for block size to check if the 
+         * disk partition has enough space. For now we just increment
+         * FSDataset.reserved by configured dfs.block.size
+         * Other alternative is to include the block size in the header
+         * sent by DFSClient.
+         */
+        Block block = new Block( in.readLong(), 0 );
         int numTargets = in.readInt();
-        if (numTargets <= 0) {
+        if ( numTargets < 0 ) {
           throw new IOException("Mislabelled incoming datastream.");
         }
         DatanodeInfo targets[] = new DatanodeInfo[numTargets];
@@ -868,225 +822,419 @@ public class DataNode implements FSConstants, Runnable {
           tmp.readFields(in);
           targets[i] = tmp;
         }
-        byte encodingType = (byte) in.read();
-        long len = in.readLong();
             
-        //
-        // Make sure curTarget is equal to this machine
-        //
-        DatanodeInfo curTarget = targets[0];
-            
-        //
-        // Track all the places we've successfully written the block
-        //
-        Vector<DatanodeInfo> mirrors = new Vector<DatanodeInfo>();
-            
+        DataChecksum checksum = DataChecksum.newDataChecksum( in );
+
         //
         // Open local disk out
         //
-        OutputStream o;
-        try {
-          o = data.writeToBlock(b);
-        } catch( IOException e ) {
-          checkDiskError( e );
-          throw e;
-        }
-        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(o));
+        FSDataset.BlockWriteStreams streams = data.writeToBlock( block );
+        out = new DataOutputStream(streams.dataOut);
+        checksumOut = new DataOutputStream(streams.checksumOut);
+        
         InetSocketAddress mirrorTarget = null;
         String mirrorNode = null;
-        try {
-          //
-          // Open network conn to backup machine, if 
-          // appropriate
-          //
-          DataInputStream in2 = null;
-          DataOutputStream out2 = null;
-          if (targets.length > 1) {
-            // Connect to backup machine
-            mirrorNode = targets[1].getName();
-            mirrorTarget = createSocketAddr(mirrorNode);
-            try {
-              Socket s2 = new Socket();
-              s2.connect(mirrorTarget, READ_TIMEOUT);
-              s2.setSoTimeout(READ_TIMEOUT);
-              out2 = new DataOutputStream(new BufferedOutputStream(s2.getOutputStream()));
-              in2 = new DataInputStream(new BufferedInputStream(s2.getInputStream()));
-                  
-              // Write connection header
-              out2.write(OP_WRITE_BLOCK);
-              out2.writeBoolean(shouldReportBlock);
-              b.write(out2);
-              out2.writeInt(targets.length - 1);
-              for (int i = 1; i < targets.length; i++) {
-                targets[i].write(out2);
-              }
-              out2.write(encodingType);
-              out2.writeLong(len);
-              myMetrics.replicatedBlocks(1);
-            } catch (IOException ie) {
-              if (out2 != null) {
-                LOG.info("Exception connecting to mirror " + mirrorNode 
-                         + "\n" + StringUtils.stringifyException(ie));
-                try {
-                  out2.close();
-                  in2.close();
-                } catch (IOException out2close) {
-                } finally {
-                  out2 = null;
-                  in2 = null;
-                }
-              }
-            }
-          }
-              
-          //
-          // Process incoming data, copy to disk and
-          // maybe to network. First copy to the network before
-          // writing to local disk so that all datanodes might
-          // write to local disk in parallel.
-          //
-          boolean anotherChunk = len != 0;
-          byte buf[] = new byte[BUFFER_SIZE];
-              
-          while (anotherChunk) {
-            while (len > 0) {
-              int bytesRead = in.read(buf, 0, (int)Math.min(buf.length, len));
-              if (bytesRead < 0) {
-                throw new EOFException("EOF reading from "+s.toString());
-              }
-              if (bytesRead > 0) {
-                if (out2 != null) {
-                  try {
-                    out2.write(buf, 0, bytesRead);
-                  } catch (IOException out2e) {
-                    LOG.info("Exception writing to mirror " + mirrorNode 
-                             + "\n" + StringUtils.stringifyException(out2e));
-                    //
-                    // If stream-copy fails, continue 
-                    // writing to disk.  We shouldn't 
-                    // interrupt client write.
-                    //
-                    try {
-                      out2.close();
-                      in2.close();
-                    } catch (IOException out2close) {
-                    } finally {
-                      out2 = null;
-                      in2 = null;
-                    }
-                  }
-                }
-                try {
-                  out.write(buf, 0, bytesRead);
-                  myMetrics.wroteBytes(bytesRead);
-                } catch (IOException iex) {
-                  checkDiskError(iex);
-                  throw iex;
-                }
-                len -= bytesRead;
-              }
-            }
-                
-            if (encodingType == RUNLENGTH_ENCODING) {
-              anotherChunk = false;
-            } else if (encodingType == CHUNKED_ENCODING) {
-              len = in.readLong();
-              if (out2 != null) {
-                try {
-                  out2.writeLong(len);
-                } catch (IOException ie) {
-                  LOG.info("Exception writing to mirror " + mirrorNode 
-                           + "\n" + StringUtils.stringifyException(ie));
-                  try {
-                    out2.close();
-                    in2.close();
-                  } catch (IOException ie2) {
-                    // NOTHING
-                  } finally {
-                    out2 = null;
-                    in2 = null;
-                  }
-                }
-              }
-              if (len == 0) {
-                anotherChunk = false;
-              }
-            }
-          }
-              
-          if (out2 != null) {
-            try {
-              out2.flush();
-              long complete = in2.readLong();
-              if (complete != WRITE_COMPLETE) {
-                LOG.info("Conflicting value for WRITE_COMPLETE: " + complete);
-              }
-              LocatedBlock newLB = new LocatedBlock();
-              newLB.readFields(in2);
-              in2.close();
-              out2.close();
-              DatanodeInfo mirrorsSoFar[] = newLB.getLocations();
-              for (int k = 0; k < mirrorsSoFar.length; k++) {
-                mirrors.add(mirrorsSoFar[k]);
-              }
-            } catch (IOException ie) {
-              LOG.info("Exception writing to mirror " + mirrorNode 
-                       + "\n" + StringUtils.stringifyException(ie));
-              try {
-                out2.close();
-                in2.close();
-              } catch (IOException ie2) {
-                // NOTHING
-              } finally {
-                out2 = null;
-                in2 = null;
-              }
-            }
-          }
-          if (out2 == null) {
-            LOG.info("Received block " + b + " from " + 
-                     s.getInetAddress());
-          } else {
-            LOG.info("Received block " + b + " from " + 
-                     s.getInetAddress() + 
-                     " and mirrored to " + mirrorTarget);
-          }
-        } finally {
+        //
+        // Open network conn to backup machine, if 
+        // appropriate
+        //
+        if (targets.length > 0) {
+          // Connect to backup machine
+          mirrorNode = targets[0].getName();
+          mirrorTarget = createSocketAddr(mirrorNode);
           try {
-            out.close();
+            mirrorSock = new Socket();
+            mirrorSock.connect(mirrorTarget, READ_TIMEOUT);
+            mirrorSock.setSoTimeout(READ_TIMEOUT);
+            mirrorOut = new DataOutputStream( 
+                        new BufferedOutputStream(mirrorSock.getOutputStream(),
+                                                 SMALL_HDR_BUFFER_SIZE));
+            mirrorIn = new DataInputStream( mirrorSock.getInputStream() );
+            //Copied from DFSClient.java!
+            mirrorOut.writeShort( DATA_TRANFER_VERSION );
+            mirrorOut.write( OP_WRITE_BLOCK );
+            mirrorOut.writeLong( block.getBlockId() );
+            mirrorOut.writeInt( targets.length - 1 );
+            for ( int i = 1; i < targets.length; i++ ) {
+              targets[i].write( mirrorOut );
+            }
+            checksum.writeHeader( mirrorOut );
+            myMetrics.replicatedBlocks(1);
+          } catch (IOException ie) {
+            if (mirrorOut != null) {
+              LOG.info("Exception connecting to mirror " + mirrorNode 
+                       + "\n" + StringUtils.stringifyException(ie));
+              mirrorOut = null;
+            }
+          }
+        }
+        
+        // XXX The following code is similar on both sides...
+        
+        int bytesPerChecksum = checksum.getBytesPerChecksum();
+        int checksumSize = checksum.getChecksumSize();
+        byte buf[] = new byte[ bytesPerChecksum + checksumSize ];
+        long blockLen = 0;
+        long lastOffset = 0;
+        long lastLen = 0;
+        int status = -1;
+        boolean headerWritten = false;
+        
+        while ( true ) {
+          // Read one data chunk in each loop.
+          
+          long offset = lastOffset + lastLen;
+          int len = (int) in.readInt();
+          if ( len < 0 || len > bytesPerChecksum ) {
+            LOG.warn( "Got wrong length during writeBlock(" +
+                      block + ") from " + s.getRemoteSocketAddress() +
+                      " at offset " + offset + ": " + len + 
+                      " expected <= " + bytesPerChecksum );
+            status = OP_STATUS_ERROR;
+            break;
+          }
+
+          in.readFully( buf, 0, len + checksumSize );
+          
+          if ( len > 0 && checksumSize > 0 ) {
+            /*
+             * Verification is not included in the initial design.
+             * For now, it at least catches some bugs. Later, we can 
+             * include this after showing that it does not affect 
+             * performance much.
+             */
+            checksum.update( buf, 0, len  );
+            
+            if ( ! checksum.compare( buf, len ) ) {
+              throw new IOException( "Unexpected checksum mismatch " +
+                                     "while writing " + block + 
+                                     " from " +
+                                     s.getRemoteSocketAddress() );
+            }
+            
+            checksum.reset();
+          }
+
+          // First write to remote node before writing locally.
+          if (mirrorOut != null) {
+            try {
+              mirrorOut.writeInt( len );
+              mirrorOut.write( buf, 0, len + checksumSize );
+            } catch (IOException ioe) {
+              LOG.info( "Exception writing to mirror " + mirrorNode + 
+                        "\n" + StringUtils.stringifyException(ioe) );
+              //
+              // If stream-copy fails, continue 
+              // writing to disk.  We shouldn't 
+              // interrupt client write.
+              //
+              mirrorOut = null;
+            }
+          }
+
+          try {
+            if ( !headerWritten ) { 
+              // First DATA_CHUNK. 
+              // Write the header even if checksumSize is 0.
+              checksumOut.writeShort( FSDataset.METADATA_VERSION );
+              checksum.writeHeader( checksumOut );
+              headerWritten = true;
+            }
+            
+            if ( len > 0 ) {
+              out.write( buf, 0, len );
+              // Write checksum
+              checksumOut.write( buf, len, checksumSize );
+              myMetrics.wroteBytes( len );
+            }
+            
           } catch (IOException iex) {
             checkDiskError(iex);
             throw iex;
           }
-        }
-        data.finalizeBlock(b);
-        myMetrics.wroteBlocks(1);
+          
+          if ( len == 0 ) {
+
+            // We already have one successful write here. Should we
+            // wait for response from next target? We will skip for now.
+
+            block.setNumBytes( blockLen );
             
-        // 
-        // Tell the namenode that we've received this block 
-        // in full, if we've been asked to.  This is done
-        // during NameNode-directed block transfers, but not
-        // client writes.
-        //
-        if (shouldReportBlock) {
-          synchronized (receivedBlockList) {
-            receivedBlockList.add(b);
+            //Does this fsync()?
+            data.finalizeBlock( block );
+            myMetrics.wroteBlocks(1);
+            
+            status = OP_STATUS_SUCCESS;
+            
+            break;
+          }
+          
+          if ( lastLen > 0 && lastLen != bytesPerChecksum ) {
+            LOG.warn( "Got wrong length during writeBlock(" +
+                      block + ") from " + s.getRemoteSocketAddress() +
+                      " : " + " got " + lastLen + " instead of " +
+                      bytesPerChecksum );
+            status = OP_STATUS_ERROR;
+            break;
+          }
+          
+          lastOffset = offset;
+          lastLen = len;
+          blockLen += len;
+        }
+        // done with reading the data.
+        
+        if ( status == OP_STATUS_SUCCESS ) {
+          /* Informing the name node could take a long long time!
+             Should we wait till namenode is informed before responding
+             with success to the client? For now we don't.
+          */
+          synchronized ( receivedBlockList ) {
+            receivedBlockList.add( block );
             receivedBlockList.notifyAll();
           }
+          
+          String msg = "Received block " + block + " from " + 
+                       s.getInetAddress();
+          
+          if ( mirrorOut != null ) {
+            //Wait for the remote reply
+            mirrorOut.flush();
+            byte result = OP_STATUS_ERROR; 
+            try {
+              result = mirrorIn.readByte();
+            } catch ( IOException ignored ) {}
+
+            msg += " and " +  (( result != OP_STATUS_SUCCESS ) ? 
+                                "failed to mirror to " : " mirrored to ") +
+                   mirrorTarget;
+            
+            mirrorOut = null;
+          }
+          
+          LOG.info(msg);
         }
             
-        //
-        // Tell client job is done, and reply with
-        // the new LocatedBlock.
-        //
-        reply.writeLong(WRITE_COMPLETE);
-        mirrors.add(curTarget);
-        LocatedBlock newLB = new LocatedBlock(b, mirrors.toArray(new DatanodeInfo[mirrors.size()]));
-        newLB.write(reply);
+        if ( status >= 0 ) {
+          try {
+            reply.writeByte( status );
+            reply.flush();
+          } catch ( IOException ignored ) {}
+        }
+        
       } finally {
-        reply.close();
+        try {
+          if ( out != null )
+            out.close();
+          if ( checksumOut != null )
+            checksumOut.close();
+          if ( mirrorSock != null )
+            mirrorSock.close();
+        } catch (IOException iex) {
+          shutdown();
+          throw iex;
+        }
       }
     }
+    
+    /**
+     * Reads the metadata and sends the data in one 'DATA_CHUNK'
+     * @param in
+     */
+    void readMetadata(DataInputStream in) throws IOException {
+      
+      Block block = new Block( in.readLong(), 0 );
+      InputStream checksumIn = null;
+      DataOutputStream out = null;
+      
+      try {
+        File blockFile = data.getBlockFile( block );
+        File checksumFile = FSDataset.getMetaFile( blockFile );
+        checksumIn = new FileInputStream(checksumFile);
+
+        long fileSize = checksumFile.length();
+        if (fileSize >= 1L<<31 || fileSize <= 0) {
+          throw new IOException("Unexpected size for checksumFile " +
+                                checksumFile);
+        }
+
+        byte [] buf = new byte[(int)fileSize];
+        FileUtil.readFully(checksumIn, buf, 0, buf.length);
+        
+        out = new DataOutputStream(s.getOutputStream());
+        
+        out.writeByte(OP_STATUS_SUCCESS);
+        out.writeInt(buf.length);
+        out.write(buf);
+        
+        //last DATA_CHUNK
+        out.writeInt(0);
+      } finally {
+        FileUtil.closeStream(checksumIn);
+      }
+    }
+  }
+
+  /** sendBlock() is used to read block and its metadata and stream
+   * the data to either a client or to another datanode.
+   * If argument targets is null, then it is assumed to be replying
+   * to a client request (OP_BLOCK_READ). Otherwise, we are replicating
+   * to another datanode.
+   * 
+   * returns total bytes reads, including crc.
+   */
+  long sendBlock(Socket sock, Block block,
+                 long startOffset, long length, DatanodeInfo targets[] )
+                 throws IOException {
+    // May be we should just use io.file.buffer.size.
+    DataOutputStream out = new DataOutputStream(
+                           new BufferedOutputStream(sock.getOutputStream(), 
+                                                    SMALL_HDR_BUFFER_SIZE));
+    DataInputStream in = null;
+    DataInputStream checksumIn = null;
+    long totalRead = 0;    
+
+
+    /* XXX This will affect inter datanode transfers during 
+     * a CRC upgrade. There should not be any replication
+     * during crc upgrade since we are in safe mode, right?
+     */    
+    boolean corruptChecksumOk = targets == null; 
+
+    try {
+      File blockFile = data.getBlockFile( block );
+      in = new DataInputStream( new FileInputStream( blockFile ) );
+
+      File checksumFile = FSDataset.getMetaFile( blockFile );
+      DataChecksum checksum = null;
+
+      if ( !corruptChecksumOk || checksumFile.exists() ) {
+        checksumIn = new DataInputStream( new FileInputStream(checksumFile) );
+          
+        //read and handle the common header here. For now just a version
+        short version = checksumIn.readShort();
+        if ( version != FSDataset.METADATA_VERSION ) {
+          LOG.warn( "Wrong version (" + version + 
+                    ") for metadata file for " + block + " ignoring ..." );
+        }
+        checksum = DataChecksum.newDataChecksum( checksumIn ) ;
+      } else {
+        LOG.warn( "Could not find metadata file for " + block );
+        // This only decides the buffer size. Use BUFFER_SIZE?
+        checksum = DataChecksum.newDataChecksum( DataChecksum.CHECKSUM_NULL,
+                                                 16*1024 );
+      }
+
+      int bytesPerChecksum = checksum.getBytesPerChecksum();
+      int checksumSize = checksum.getChecksumSize();
+
+      long endOffset = data.getLength( block );
+      if ( startOffset < 0 || startOffset > endOffset ||
+          (length + startOffset) > endOffset ) {
+        String msg = " Offset " + startOffset + " and length " + length + 
+                     " don't match block " + block +  " ( blockLen " + 
+                     endOffset + " )"; 
+        LOG.warn( "sendBlock() : " + msg );
+        if ( targets != null ) {
+          throw new IOException(msg);
+        } else {
+          out.writeShort( OP_STATUS_ERROR_INVALID );
+          return totalRead;
+        }
+      }
+
+      byte buf[] = new byte[ bytesPerChecksum + checksumSize ];
+      long offset = (startOffset - (startOffset % bytesPerChecksum));
+      if ( length >= 0 ) {
+        // Make sure endOffset points to end of a checksumed chunk. 
+        long tmpLen = startOffset + length + (startOffset - offset);
+        if ( tmpLen % bytesPerChecksum != 0 ) { 
+          tmpLen += ( bytesPerChecksum - tmpLen % bytesPerChecksum );
+        }
+        if ( tmpLen < endOffset ) {
+          endOffset = tmpLen;
+        }
+      }
+
+      // seek to the right offsets
+      if ( offset > 0 ) {
+        long checksumSkip = ( offset / bytesPerChecksum ) * checksumSize ;
+        /* XXX skip() could be very inefficent. Should be seek(). 
+         * at least skipFully
+         */
+        if ( in.skip( offset ) != offset || 
+            ( checksumSkip > 0 && 
+                checksumIn.skip( checksumSkip ) != checksumSkip ) ) {
+          throw new IOException( "Could not seek to right position while " +
+                                 "reading for " + block );
+        }
+      }
+      
+      if ( targets != null ) {
+        //
+        // Header info
+        //
+        out.writeShort( DATA_TRANFER_VERSION );
+        out.writeByte( OP_WRITE_BLOCK );
+        out.writeLong( block.getBlockId() );
+        out.writeInt(targets.length-1);
+        for (int i = 1; i < targets.length; i++) {
+          targets[i].write( out );
+        }
+      } else {
+        out.writeShort( OP_STATUS_SUCCESS );          
+      }
+
+      checksum.writeHeader( out );
+      
+      if ( targets == null ) {
+        out.writeLong( offset );
+      }
+      
+      while ( endOffset >= offset ) {
+        // Write one data chunk per loop.
+        int len = (int) Math.min( endOffset - offset, bytesPerChecksum );
+        if ( len > 0 ) {
+          in.readFully( buf, 0, len );
+          totalRead += len;
+          
+          if ( checksumSize > 0 && checksumIn != null ) {
+            try {
+              checksumIn.readFully( buf, len, checksumSize );
+              totalRead += checksumSize;
+            } catch ( IOException e ) {
+              LOG.warn( " Could not read checksum for data at offset " +
+                        offset + " for block " + block + " got : " + 
+                        StringUtils.stringifyException(e) );
+              FileUtil.closeStream( checksumIn );
+              checksumIn = null;
+              if ( corruptChecksumOk ) {
+                // Just fill the array with zeros.
+                Arrays.fill( buf, len, len + checksumSize, (byte)0 );
+              } else {
+                throw e;
+              }
+            }
+          }
+        }
+
+        out.writeInt( len );
+        out.write( buf, 0, len + checksumSize );
+        
+        if ( offset == endOffset ) {
+          out.flush();
+          // We are not waiting for response from target.
+          break;
+        }
+        offset += len;
+      }
+    } finally {
+      FileUtil.closeStream( checksumIn );
+      FileUtil.closeStream( in );
+      FileUtil.closeStream( out );
+    }
+    
+    return totalRead;
   }
 
   /**
@@ -1094,20 +1242,16 @@ public class DataNode implements FSConstants, Runnable {
    * sends a piece of data to another DataNode.
    */
   class DataTransfer implements Runnable {
-    InetSocketAddress curTarget;
     DatanodeInfo targets[];
     Block b;
-    byte buf[];
 
     /**
      * Connect to the first item in the target list.  Pass along the 
      * entire target list, the block, and the data.
      */
     public DataTransfer(DatanodeInfo targets[], Block b) throws IOException {
-      this.curTarget = createSocketAddr(targets[0].getName());
       this.targets = targets;
       this.b = b;
-      this.buf = new byte[BUFFER_SIZE];
     }
 
     /**
@@ -1115,46 +1259,23 @@ public class DataNode implements FSConstants, Runnable {
      */
     public void run() {
       xmitsInProgress++;
+      Socket sock = null;
+      
       try {
-        Socket s = new Socket();
-        s.connect(curTarget, READ_TIMEOUT);
-        s.setSoTimeout(READ_TIMEOUT);
-        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
-        try {
-          long filelen = data.getLength(b);
-          DataInputStream in = new DataInputStream(new BufferedInputStream(data.getBlockData(b)));
-          try {
-            //
-            // Header info
-            //
-            out.write(OP_WRITE_BLOCK);
-            out.writeBoolean(true);
-            b.write(out);
-            out.writeInt(targets.length);
-            for (int i = 0; i < targets.length; i++) {
-              targets[i].write(out);
-            }
-            out.write(RUNLENGTH_ENCODING);
-            out.writeLong(filelen);
+        InetSocketAddress curTarget = 
+          createSocketAddr(targets[0].getName());
+        sock = new Socket();  
+        sock.connect(curTarget, READ_TIMEOUT);
+        sock.setSoTimeout(READ_TIMEOUT);
+        sendBlock( sock, b, 0, -1, targets );
+        LOG.info( "Transmitted block " + b + " to " + curTarget );
 
-            //
-            // Write the data
-            //
-            while (filelen > 0) {
-              int bytesRead = in.read(buf, 0, (int) Math.min(filelen, buf.length));
-              out.write(buf, 0, bytesRead);
-              filelen -= bytesRead;
-            }
-          } finally {
-            in.close();
-          }
-        } finally {
-          out.close();
-        }
-        LOG.info("Transmitted block " + b + " to " + curTarget);
-      } catch (IOException ie) {
-        LOG.warn("Failed to transfer "+b+" to "+curTarget, ie);
+      } catch ( IOException ie ) {
+        LOG.warn( "Failed to transfer " + b + " to " + 
+                  targets[0].getName() + " got " + 
+                  StringUtils.stringifyException( ie ) );
       } finally {
+        FileUtil.closeSocket(sock);
         xmitsInProgress--;
       }
     }

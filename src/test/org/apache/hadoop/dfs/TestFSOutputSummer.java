@@ -113,6 +113,8 @@ public class TestFSOutputSummer extends TestCase {
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", BYTES_PER_CHECKSUM);
+    conf.set("fs.hdfs.impl",
+             "org.apache.hadoop.dfs.ChecksumDistributedFileSystem");      
     MiniDFSCluster cluster = new MiniDFSCluster(
         conf, NUM_OF_DATANODES, true, null);
     fileSys = cluster.getFileSystem();

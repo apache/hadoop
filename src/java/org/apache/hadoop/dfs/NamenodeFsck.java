@@ -310,8 +310,9 @@ public class NamenodeFsck {
     InetSocketAddress targetAddr = null;
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     Socket s = null;
-    DataInputStream in = null;
-    DataOutputStream out = null;
+    DFSClient.BlockReader blockReader = null; 
+    Block block = lblock.getBlock(); 
+
     while (s == null) {
       DatanodeInfo chosenNode;
       
@@ -336,27 +337,12 @@ public class NamenodeFsck {
         s.connect(targetAddr, FSConstants.READ_TIMEOUT);
         s.setSoTimeout(FSConstants.READ_TIMEOUT);
         
-        //
-        // Xmit header info to datanode
-        //
-        out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
-        out.write(FSConstants.OP_READSKIP_BLOCK);
-        lblock.getBlock().write(out);
-        out.writeLong(0L);
-        out.flush();
+        blockReader = 
+          DFSClient.BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
+                                               block.getBlockId(), 
+                                               block.getBlockId(), 0, -1,
+                                               conf.getInt("io.file.buffer.size", 4096));
         
-        //
-        // Get bytes in block, set streams
-        //
-        in = new DataInputStream(new BufferedInputStream(s.getInputStream()));
-        long curBlockSize = in.readLong();
-        long amtSkipped = in.readLong();
-        if (curBlockSize != lblock.getBlock().len) {
-          throw new IOException("Recorded block size is " + lblock.getBlock().len + ", but datanode reports size of " + curBlockSize);
-        }
-        if (amtSkipped != 0L) {
-          throw new IOException("Asked for offset of " + 0L + ", but only received offset of " + amtSkipped);
-        }
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue
         LOG.info("Failed to connect to " + targetAddr + ":" + ex);
@@ -370,22 +356,26 @@ public class NamenodeFsck {
         s = null;
       }
     }
-    if (in == null) {
+    if (blockReader == null) {
       throw new Exception("Could not open data stream for " + lblock.getBlock().getBlockName());
     }
     byte[] buf = new byte[1024];
     int cnt = 0;
     boolean success = true;
+    long bytesRead = 0;
     try {
-      while ((cnt = in.read(buf)) > 0) {
+      while ((cnt = blockReader.read(buf, 0, buf.length)) > 0) {
         fos.write(buf, 0, cnt);
+        bytesRead += cnt;
+      }
+      if ( bytesRead != block.getNumBytes() ) {
+        throw new IOException("Recorded block size is " + block.getNumBytes() + 
+                              ", but datanode returned " +bytesRead+" bytes");
       }
     } catch (Exception e) {
       e.printStackTrace();
       success = false;
     } finally {
-      try {in.close(); } catch (Exception e1) {}
-      try {out.close(); } catch (Exception e1) {}
       try {s.close(); } catch (Exception e1) {}
     }
     if (!success)

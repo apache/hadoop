@@ -688,6 +688,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     return namesystem.processDistributedUpgradeCommand(comm);
   }
 
+  public BlockCrcInfo blockCrcUpgradeGetBlockLocations(Block block) 
+                                                       throws IOException {
+    return namesystem.blockCrcInfo(block, true);
+  }
+
   /** 
    * Verify request.
    * 

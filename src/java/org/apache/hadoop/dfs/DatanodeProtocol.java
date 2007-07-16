@@ -31,9 +31,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /*
-   * 7: processUpgradeCommand() added;
+   * 8: blockCrcUpgradeGetBlockLocations() added;
    */
-  public static final long versionID = 7L;
+  public static final long versionID = 8L;
   
   // error code
   final static int NOTIFY = 0;
@@ -116,4 +116,17 @@ interface DatanodeProtocol extends VersionedProtocol {
    * @return a reply in the form of an upgrade command
    */
   UpgradeCommand processUpgradeCommand(UpgradeCommand comm) throws IOException;
+  
+  /**
+   * Get locations for a given block. This is used only during 
+   * Block Level CRC upgrades (HADOOP-1134), when a datanode node
+   * misses the cluster wide distributed upgrade. It uses the same
+   * BlockCrcInfo class, that is also used during distributed upgrade
+   * 
+   * @param block 
+   * @return BlockCrcInfo that contains the block locations.
+   * @throws IOException
+   */
+  public BlockCrcInfo blockCrcUpgradeGetBlockLocations(Block block)
+                                                      throws IOException;  
 }

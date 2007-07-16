@@ -31,7 +31,9 @@ import org.apache.commons.logging.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.zip.CRC32;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -48,7 +50,6 @@ class DFSClient implements FSConstants {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.DFSClient");
   static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
-  private static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
   ClientProtocol namenode;
   boolean running = true;
   Random r = new Random();
@@ -261,18 +262,15 @@ class DFSClient implements FSConstants {
     return hints;
   }
 
+  public DFSInputStream open(UTF8 src) throws IOException {
+    return open(src, conf.getInt("io.file.buffer.size", 4096));
+  }
   /**
    * Create an input stream that obtains a nodelist from the
    * namenode, and then reads from all the right places.  Creates
    * inner subclass of InputStream that does the right out-of-band
    * work.
    */
-  public DFSInputStream open(UTF8 src) throws IOException {
-    checkOpen();
-    //    Get block info from namenode
-    return new DFSInputStream(src.toString());
-  }
-
   public DFSInputStream open(UTF8 src, int buffersize) throws IOException {
     checkOpen();
     //    Get block info from namenode
@@ -546,10 +544,12 @@ class DFSClient implements FSConstants {
    * Pick the best node from which to stream the data.
    * Entries in <i>nodes</i> are already in the priority order
    */
-  private DatanodeInfo bestNode(DatanodeInfo nodes[], TreeSet deadNodes) throws IOException {
+  private DatanodeInfo bestNode(DatanodeInfo nodes[], 
+                                AbstractMap<DatanodeInfo, DatanodeInfo> deadNodes)
+                                throws IOException {
     if (nodes != null) { 
       for (int i = 0; i < nodes.length; i++) {
-        if (!deadNodes.contains(nodes[i])) {
+        if (!deadNodes.containsKey(nodes[i])) {
           return nodes[i];
         }
       }
@@ -596,6 +596,229 @@ class DFSClient implements FSConstants {
     }
   }
 
+  /** This is a wrapper around connection to datadone
+   * and understands checksum, offset etc
+   */
+  static class BlockReader extends FSInputChecker {
+
+    private DataInputStream in;
+    private DataChecksum checksum;
+    private long lastChunkOffset = -1;
+    private long lastChunkLen = -1;
+
+    private long startOffset;
+    private long firstChunkOffset;
+    private int bytesPerChecksum;
+    private int checksumSize;
+    private boolean gotEOS = false;
+    
+    byte[] skipBuf = null;
+    
+    /* FSInputChecker interface */
+    
+    /* same interface as inputStream java.io.InputStream#read()
+     * used by DFSInputStream#read()
+     * This violates one rule when there is a checksum error:
+     * "Read should not modify user buffer before successful read"
+     * because it first reads the data to user buffer and then checks
+     * the checksum.
+     */
+    public synchronized int read(byte[] buf, int off, int len) 
+                                 throws IOException {
+      
+      //for the first read, skip the extra bytes at the front.
+      if (lastChunkLen < 0 && startOffset > firstChunkOffset && len > 0) {
+        // Skip these bytes. But don't call this.skip()!
+        int toSkip = (int)(startOffset - firstChunkOffset);
+        if ( skipBuf == null ) {
+          skipBuf = new byte[bytesPerChecksum];
+        }
+        if ( super.read(skipBuf, 0, toSkip) != toSkip ) {
+          // should never happen
+          throw new IOException("Could not skip required number of bytes");
+        }
+      }
+      
+      return super.read(buf, off, len);
+    }
+
+    public synchronized long skip(long n) throws IOException {
+      /* How can we make sure we don't throw a ChecksumException, at least
+       * in majority of the cases?. This one throws. */  
+      if ( skipBuf == null ) {
+        skipBuf = new byte[bytesPerChecksum]; 
+      }
+
+      long nSkipped = 0;
+      while ( nSkipped < n ) {
+        int toSkip = (int)Math.min(n-nSkipped, skipBuf.length);
+        int ret = read(skipBuf, 0, toSkip);
+        if ( ret <= 0 ) {
+          return nSkipped;
+        }
+        nSkipped += ret;
+      }
+      return nSkipped;
+    }
+
+    public int read() throws IOException {
+      throw new IOException("read() is not expected to be invoked. " +
+                            "Use read(buf, off, len) instead.");
+    }
+    
+    public boolean seekToNewSource(long targetPos) throws IOException {
+      /* Checksum errors are handled outside the BlockReader. 
+       * DFSInputStream does not always call 'seekToNewSource'. In the 
+       * case of pread(), it just tries a different replica without seeking.
+       */ 
+      return false;
+    }
+    
+    public void seek(long pos) throws IOException {
+      throw new IOException("Seek() is not supported in BlockInputChecker");
+    }
+
+    protected long getChunkPosition(long pos) {
+      throw new RuntimeException("getChunkPosition() is not supported, " +
+                                 "since seek is not required");
+    }
+    
+    protected synchronized int readChunk(long pos, byte[] buf, int offset, 
+                                         int len, byte[] checksumBuf) 
+                                         throws IOException {
+      // Read one chunk.
+      
+      if ( gotEOS ) {
+        if ( startOffset < 0 ) {
+          //This is mainly for debugging. can be removed.
+          throw new IOException( "BlockRead: already got EOS or an error" );
+        }
+        startOffset = -1;
+        return -1;
+      }
+      
+      // Read one DATA_CHUNK.
+      long chunkOffset = lastChunkOffset;
+      if ( lastChunkLen > 0 ) {
+        chunkOffset += lastChunkLen;
+      }
+      
+      if ( (pos + firstChunkOffset) != chunkOffset ) {
+        throw new IOException("Mismatch in pos : " + pos + " + " + 
+                              firstChunkOffset + " != " + chunkOffset);
+      }
+      
+      int chunkLen = (int) in.readInt();
+      
+      // Sanity check the lengths
+      if ( chunkLen < 0 || chunkLen > bytesPerChecksum ||
+          ( lastChunkLen >= 0 && // prev packet exists
+              ( (chunkLen > 0 && lastChunkLen != bytesPerChecksum) ||
+                  chunkOffset != (lastChunkOffset + lastChunkLen) ) ) ) {
+        throw new IOException("BlockReader: error in chunk's offset " +
+                              "or length (" + chunkOffset + ":" +
+                              chunkLen + ")");
+      }
+
+      if ( chunkLen > 0 ) {
+        // len should be >= chunkLen
+        FileUtil.readFully(in, buf, offset, chunkLen);
+      }
+      
+      if ( checksumSize > 0 ) {
+        FileUtil.readFully(in, checksumBuf, 0, checksumSize);
+      }
+
+      lastChunkOffset = chunkOffset;
+      lastChunkLen = chunkLen;
+      
+      if ( chunkLen == 0 ) {
+        gotEOS = true;
+        return -1;
+      }
+      
+      return chunkLen;
+    }
+    
+    private BlockReader( String file, long blockId, DataInputStream in, 
+                         DataChecksum checksum, long startOffset,
+                         long firstChunkOffset ) {
+      super(new Path("/blk_" + blockId + ":of:" + file)/*too non path-like?*/,
+            1, (checksum.getChecksumSize() > 0) ? checksum : null, 
+            checksum.getBytesPerChecksum(),
+            checksum.getChecksumSize());
+      
+      this.in = in;
+      this.checksum = checksum;
+      this.startOffset = Math.max( startOffset, 0 );
+
+      this.firstChunkOffset = firstChunkOffset;
+      lastChunkOffset = firstChunkOffset;
+      lastChunkLen = -1;
+
+      bytesPerChecksum = this.checksum.getBytesPerChecksum();
+      checksumSize = this.checksum.getChecksumSize();
+    }
+
+    /** Java Doc required */
+    static BlockReader newBlockReader( Socket sock, String file, long blockId, 
+                                       long startOffset, long len,
+                                       int bufferSize)
+                                       throws IOException {
+      
+      // in and out will be closed when sock is closed (by the caller)
+      DataOutputStream out = new DataOutputStream(
+                       new BufferedOutputStream(sock.getOutputStream()));
+
+      //write the header.
+      out.writeShort( DATA_TRANFER_VERSION );
+      out.write( OP_READ_BLOCK );
+      out.writeLong( blockId );
+      out.writeLong( startOffset );
+      out.writeLong( len );
+      out.flush();
+
+      //
+      // Get bytes in block, set streams
+      //
+
+      DataInputStream in = new DataInputStream(
+                   new BufferedInputStream(sock.getInputStream(), bufferSize));
+      
+      if ( in.readShort() != OP_STATUS_SUCCESS ) {
+        throw new IOException("Got error in response to OP_READ_BLOCK");
+      }
+      DataChecksum checksum = DataChecksum.newDataChecksum( in );
+      //Warning when we get CHECKSUM_NULL?
+      
+      // Read the first chunk offset.
+      long firstChunkOffset = in.readLong();
+      
+      if ( firstChunkOffset < 0 || firstChunkOffset > startOffset ||
+          firstChunkOffset >= (startOffset + checksum.getBytesPerChecksum())) {
+        throw new IOException("BlockReader: error in first chunk offset (" +
+                              firstChunkOffset + ") startOffset is " + 
+                              startOffset + "for file XXX");
+      }
+
+      return new BlockReader( file, blockId, in, checksum,
+                              startOffset, firstChunkOffset );
+    }
+
+    public synchronized void close() throws IOException {
+      startOffset = -1;
+      checksum = null;
+      // in will be closed when its Socket is closed.
+    }
+    
+    /** kind of like readFully(). Only reads as much as possible.
+     * And allows use of protected readFully().
+     */
+    int readAll(byte[] buf, int offset, int len) throws IOException {
+      return readFully(this, buf, offset, len);
+    }
+  }
+    
   /****************************************************************
    * DFSInputStream provides bytes from a named file.  It handles 
    * negotiation of the namenode and various datanodes as necessary.
@@ -606,27 +829,32 @@ class DFSClient implements FSConstants {
 
     private String src;
     private long prefetchSize = 10 * defaultBlockSize;
-    private DataInputStream blockStream;
+    private BlockReader blockReader;
     private LocatedBlocks locatedBlocks = null;
     private DatanodeInfo currentNode = null;
     private Block currentBlock = null;
     private long pos = 0;
     private long blockEnd = -1;
-    private TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
-    private int buffersize;
-        
-    /**
-     */
-    public DFSInputStream(String src) throws IOException {
-      this(src, conf.getInt("io.file.buffer.size", 4096));
+    /* XXX Use of CocurrentHashMap is temp fix. Need to fix 
+     * parallel accesses to DFSInputStream (through ptreads) properly */
+    private ConcurrentHashMap<DatanodeInfo, DatanodeInfo> deadNodes = 
+               new ConcurrentHashMap<DatanodeInfo, DatanodeInfo>();
+    private int buffersize = 1;
+    
+    private byte[] oneByteBuf = new byte[1]; // used for 'int read()'
+    
+    void addToDeadNodes(DatanodeInfo dnInfo) {
+      deadNodes.put(dnInfo, dnInfo);
     }
     
+    /**
+     */
     public DFSInputStream(String src, int buffersize) throws IOException {
       this.buffersize = buffersize;
       this.src = src;
       prefetchSize = conf.getLong("dfs.read.prefetch.size", prefetchSize);
       openInfo();
-      this.blockStream = null;
+      blockReader = null;
     }
 
     /**
@@ -648,7 +876,7 @@ class DFSClient implements FSConstants {
       this.currentNode = null;
     }
     
-    public long getFileLength() {
+    public synchronized long getFileLength() {
       return (locatedBlocks == null) ? 0 : locatedBlocks.getFileLength();
     }
 
@@ -710,7 +938,8 @@ class DFSClient implements FSConstants {
      * @return consequent segment of located blocks
      * @throws IOException
      */
-    private List<LocatedBlock> getBlockRange(long offset, long length) 
+    private synchronized List<LocatedBlock> getBlockRange(long offset, 
+                                                          long length) 
                                                         throws IOException {
       assert (locatedBlocks != null) : "locatedBlocks is null";
       List<LocatedBlock> blockRange = new ArrayList<LocatedBlock>();
@@ -750,6 +979,11 @@ class DFSClient implements FSConstants {
         throw new IOException("Attempted to read past end of file");
       }
 
+      if ( blockReader != null ) {
+        blockReader.close(); 
+        blockReader = null;
+      }
+      
       if (s != null) {
         s.close();
         s = null;
@@ -775,37 +1009,19 @@ class DFSClient implements FSConstants {
           s = new Socket();
           s.connect(targetAddr, READ_TIMEOUT);
           s.setSoTimeout(READ_TIMEOUT);
-
-          //
-          // Xmit header info to datanode
-          //
-          Block block = targetBlock.getBlock();
-          DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream()));
-          out.write(OP_READSKIP_BLOCK);
-          block.write(out);
-          out.writeLong(offsetIntoBlock);
-          out.flush();
-
-          //
-          // Get bytes in block, set streams
-          //
-          DataInputStream in = new DataInputStream(new BufferedInputStream(s.getInputStream(), buffersize));
-          long curBlockSize = in.readLong();
-          long amtSkipped = in.readLong();
-          if (curBlockSize != block.getNumBytes()) {
-            throw new IOException("Recorded block size is " + block.getNumBytes() + ", but datanode reports size of " + curBlockSize);
-          }
-          if (amtSkipped != offsetIntoBlock) {
-            throw new IOException("Asked for offset of " + offsetIntoBlock + ", but only received offset of " + amtSkipped);
-          }
-
-          this.blockStream = in;
+          Block blk = targetBlock.getBlock();
+          
+          blockReader = BlockReader.newBlockReader(s, src, blk.getBlockId(), 
+                                                   offsetIntoBlock,
+                                                   (blk.getNumBytes() - 
+                                                    offsetIntoBlock),
+                                                   buffersize);
           return chosenNode;
         } catch (IOException ex) {
           // Put chosen node into dead list, continue
           LOG.debug("Failed to connect to " + targetAddr + ":" 
                     + StringUtils.stringifyException(ex));
-          deadNodes.add(chosenNode);
+          addToDeadNodes(chosenNode);
           if (s != null) {
             try {
               s.close();
@@ -827,8 +1043,12 @@ class DFSClient implements FSConstants {
         throw new IOException("Stream closed");
       }
 
+      if ( blockReader != null ) {
+        blockReader.close();
+        blockReader = null;
+      }
+      
       if (s != null) {
-        blockStream.close();
         s.close();
         s = null;
       }
@@ -836,25 +1056,39 @@ class DFSClient implements FSConstants {
       closed = true;
     }
 
-    /**
-     * Basic read()
-     */
     public synchronized int read() throws IOException {
-      checkOpen();
-      if (closed) {
-        throw new IOException("Stream closed");
-      }
-      int result = -1;
-      if (pos < getFileLength()) {
-        if (pos > blockEnd) {
-          currentNode = blockSeekTo(pos);
+      int ret = read( oneByteBuf, 0, 1 );
+      return ( ret <= 0 ) ? -1 : (oneByteBuf[0] & 0xff);
+    }
+
+    /* This is a used by regular read() and handles ChecksumExceptions.
+     * name readBuffer() is chosen to imply similarity to readBuffer() in
+     * ChecksuFileSystem
+     */ 
+    private synchronized int readBuffer(byte buf[], int off, int len) 
+                                                    throws IOException {
+      IOException ioe;
+ 
+      while (true) {
+        // retry as many times as seekToNewSource allows.
+        try {
+          return blockReader.read(buf, off, len);
+        } catch ( ChecksumException ce ) {
+          LOG.warn("Found Checksum error for " + currentBlock + " from " +
+                   currentNode.getName() + " at " + ce.getPos());          
+          reportChecksumFailure(src, currentBlock, currentNode);
+          ioe = ce;
+        } catch ( IOException e ) {
+          LOG.warn("Exception while reading from " + currentBlock +
+                   " of " + src + " from " + currentNode + ": " +
+                   StringUtils.stringifyException(e));
+          ioe = e;
         }
-        result = blockStream.read();
-        if (result >= 0) {
-          pos++;
+        addToDeadNodes(currentNode);
+        if (!seekToNewSource(pos)) {
+            throw ioe;
         }
       }
-      return result;
     }
 
     /**
@@ -873,17 +1107,23 @@ class DFSClient implements FSConstants {
               currentNode = blockSeekTo(pos);
             }
             int realLen = Math.min(len, (int) (blockEnd - pos + 1));
-            int result = blockStream.read(buf, off, realLen);
+            int result = readBuffer(buf, off, realLen);
+            
             if (result >= 0) {
               pos += result;
+            } else {
+              // got a EOS from reader though we expect more data on it.
+              throw new IOException("Unexpected EOS from the reader");
             }
             return result;
+          } catch (ChecksumException ce) {
+            throw ce;            
           } catch (IOException e) {
             if (retries == 1) {
               LOG.warn("DFS Read: " + StringUtils.stringifyException(e));
             }
             blockEnd = -1;
-            if (currentNode != null) { deadNodes.add(currentNode); }
+            if (currentNode != null) { addToDeadNodes(currentNode); }
             if (--retries == 0) {
               throw e;
             }
@@ -931,7 +1171,10 @@ class DFSClient implements FSConstants {
       // Connect to best DataNode for desired Block, with potential offset
       //
       Socket dn = null;
-      while (dn == null) {
+      int numAttempts = block.getLocations().length;
+      IOException ioe = null;
+      
+      while (dn == null && numAttempts-- > 0 ) {
         DNAddrPair retval = chooseDataNode(block);
         DatanodeInfo chosenNode = retval.info;
         InetSocketAddress targetAddr = retval.addr;
@@ -941,52 +1184,39 @@ class DFSClient implements FSConstants {
           dn.connect(targetAddr, READ_TIMEOUT);
           dn.setSoTimeout(READ_TIMEOUT);
               
-          //
-          // Xmit header info to datanode
-          //
-          DataOutputStream out = new DataOutputStream(new BufferedOutputStream(dn.getOutputStream()));
-          out.write(OP_READ_RANGE_BLOCK);
-          block.getBlock().write(out);
-          out.writeLong(start);
-          out.writeLong(end);
-          out.flush();
+          int len = (int) (end - start + 1);
               
-          //
-          // Get bytes in block, set streams
-          //
-          DataInputStream in = new DataInputStream(new BufferedInputStream(dn.getInputStream()));
-          long curBlockSize = in.readLong();
-          long actualStart = in.readLong();
-          long actualEnd = in.readLong();
-          if (curBlockSize != block.getBlockSize()) {
-            throw new IOException("Recorded block size is " +
-                                  block.getBlockSize() + 
-                                  ", but datanode reports size of " +
-                                  curBlockSize);
+          BlockReader reader = 
+            BlockReader.newBlockReader(dn, src, block.getBlock().getBlockId(),
+                                       start, len, buffersize);
+          int nread = reader.readAll(buf, offset, len);
+          if (nread != len) {
+            throw new IOException("truncated return from reader.read(): " +
+                                  "excpected " + len + ", got " + nread);
           }
-          if ((actualStart != start) || (actualEnd != end)) {
-            throw new IOException("Asked for byte range  " + start +
-                                  "-" + end + ", but only received range " + actualStart +
-                                  "-" + actualEnd);
-          }
-          int nread = in.read(buf, offset, (int)(end - start + 1));
-          assert nread == (int)(end - start + 1) : 
-            "Incorrect number of bytes read " + nread
-            + ". Expacted " + (int)(end - start + 1);
-        } catch (IOException ex) {
-          // Put chosen node into dead list, continue
-          LOG.debug("Failed to connect to " + targetAddr + ":" 
-                    + StringUtils.stringifyException(ex));
-          deadNodes.add(chosenNode);
-          if (dn != null) {
-            try {
-              dn.close();
-            } catch (IOException iex) {
-            }
+          return;
+        } catch (ChecksumException e) {
+          ioe = e;
+          LOG.warn("fetchBlockByteRange(). Got a checksum exception for " +
+                   src + " at " + block.getBlock() + ":" + 
+                   e.getPos() + " from " + chosenNode.getName());
+          reportChecksumFailure(src, block.getBlock(), chosenNode);
+        } catch (IOException e) {
+          ioe = e;
+          LOG.warn("Failed to connect to " + targetAddr + ":" 
+                    + StringUtils.stringifyException(e));
+        } 
+        // Put chosen node into dead list, continue
+        addToDeadNodes(chosenNode);
+        if (dn != null) {
+          try {
+            dn.close();
+          } catch (IOException iex) {
           }
           dn = null;
         }
       }
+      throw (ioe == null) ? new IOException("Could not read data") : ioe;
     }
 
     /**
@@ -1031,7 +1261,15 @@ class DFSClient implements FSConstants {
       assert remaining == 0 : "Wrong number of bytes read.";
       return realLen;
     }
-        
+     
+    public long skip(long n) throws IOException {
+      if ( n > 0 ) {
+        seek(getPos()+n);
+        return n;
+      }
+      return n < 0 ? -1 : 0;
+    }
+
     /**
      * Seek to a new arbitrary location
      */
@@ -1048,8 +1286,7 @@ class DFSClient implements FSConstants {
         //
         int diff = (int)(targetPos - pos);
         if (diff <= TCP_WINDOW_SIZE) {
-          int adiff = blockStream.skipBytes(diff);
-          pos += adiff;
+          pos += blockReader.skip(diff);
           if (pos == targetPos) {
             done = true;
           }
@@ -1067,8 +1304,8 @@ class DFSClient implements FSConstants {
      * If another node could not be found, then returns false.
      */
     public synchronized boolean seekToNewSource(long targetPos) throws IOException {
-      boolean markedDead = deadNodes.contains(currentNode);
-      deadNodes.add(currentNode);
+      boolean markedDead = deadNodes.containsKey(currentNode);
+      addToDeadNodes(currentNode);
       DatanodeInfo oldNode = currentNode;
       DatanodeInfo newNode = blockSeekTo(targetPos);
       if (!markedDead) {
@@ -1144,12 +1381,9 @@ class DFSClient implements FSConstants {
   /****************************************************************
    * DFSOutputStream creates files from a stream of bytes.
    ****************************************************************/
-  class DFSOutputStream extends OutputStream {
+  class DFSOutputStream extends FSOutputSummer {
     private Socket s;
     boolean closed = false;
-
-    private byte outBuf[] = new byte[BUFFER_SIZE];
-    private int pos = 0;
 
     private UTF8 src;
     private boolean overwrite;
@@ -1161,10 +1395,10 @@ class DFSClient implements FSConstants {
     private OutputStream backupStream;
     private Block block;
     private long filePos = 0;
-    private int bytesWrittenToBlock = 0;
-    private String datanodeName;
+    private long bytesWrittenToBlock = 0;
     private long blockSize;
     private int buffersize;
+    private DataChecksum checksum;
 
     private Progressable progress;
     /**
@@ -1175,19 +1409,37 @@ class DFSClient implements FSConstants {
                            Progressable progress,
                            int buffersize
                            ) throws IOException {
+      super(new CRC32(), conf.getInt("io.bytes.per.checksum", 512), 4);
       this.src = src;
       this.overwrite = overwrite;
       this.replication = replication;
-      this.backupFile = newBackupFile();
       this.blockSize = blockSize;
-      this.backupStream = new FileOutputStream(backupFile);
+      this.buffersize = buffersize;
       this.progress = progress;
       if (progress != null) {
         LOG.debug("Set non-null progress callback on DFSOutputStream "+src);
       }
-      this.buffersize = buffersize;
+      
+      int bytesPerChecksum = conf.getInt( "io.bytes.per.checksum", 512); 
+      if ( bytesPerChecksum < 1 || blockSize % bytesPerChecksum != 0) {
+        throw new IOException("io.bytes.per.checksum(" + bytesPerChecksum +
+                              ") and blockSize(" + blockSize + 
+                              ") do not match. " + "blockSize should be a " +
+                              "multiple of io.bytes.per.checksum");
+                              
+      }
+      
+      checksum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 
+                                              bytesPerChecksum);
     }
 
+    private void openBackupStream() throws IOException {
+      File tmpFile = newBackupFile();
+      backupStream = new BufferedOutputStream(new FileOutputStream(tmpFile),
+                                              buffersize);
+      backupFile = tmpFile;
+    }
+    
     /* Wrapper for closing backupStream. This sets backupStream to null so
      * that we do not attempt to write to backupStream that could be
      * invalid in subsequent writes. Otherwise we might end trying to write
@@ -1195,6 +1447,7 @@ class DFSClient implements FSConstants {
      */
     private void closeBackupStream() throws IOException {
       if (backupStream != null) {
+        backupStream.flush();
         OutputStream stream = backupStream;
         backupStream = null;
         stream.close();
@@ -1252,7 +1505,6 @@ class DFSClient implements FSConstants {
           s = new Socket();
           s.connect(target, READ_TIMEOUT);
           s.setSoTimeout(replication * READ_TIMEOUT);
-          datanodeName = nodes[0].getName();
         } catch (IOException ie) {
           // Connection failed.  Let's wait a little bit and retry
           try {
@@ -1276,16 +1528,16 @@ class DFSClient implements FSConstants {
         // Xmit header info to datanode
         //
         DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream(), buffersize));
-        out.write(OP_WRITE_BLOCK);
-        out.writeBoolean(true);
-        block.write(out);
-        out.writeInt(nodes.length);
-        for (int i = 0; i < nodes.length; i++) {
+        out.writeShort( DATA_TRANFER_VERSION );
+        out.write( OP_WRITE_BLOCK );
+        out.writeLong( block.getBlockId() );
+        out.writeInt( nodes.length - 1 );
+        for (int i = 1; i < nodes.length; i++) {
           nodes[i].write(out);
         }
-        out.write(CHUNKED_ENCODING);
+        checksum.writeHeader( out );
         blockStream = out;
-        blockReplyStream = new DataInputStream(new BufferedInputStream(s.getInputStream()));
+        blockReplyStream = new DataInputStream(s.getInputStream());
       } while (retry);
       firstTime = false;
     }
@@ -1329,98 +1581,30 @@ class DFSClient implements FSConstants {
       } 
     }
 
-    /**
-     * We're referring to the file pos here
-     */
-    public synchronized long getPos() throws IOException {
-      return filePos;
-    }
-			
-    /**
-     * Writes the specified byte to this output stream.
-     */
-    public synchronized void write(int b) throws IOException {
+    // @see FSOutputSummer#writeChunk()
+    protected void writeChunk(byte[] b, int offset, int len, byte[] checksum) 
+                                                          throws IOException {
       checkOpen();
-      if (closed) {
-        throw new IOException("Stream closed");
+      int bytesPerChecksum = this.checksum.getBytesPerChecksum(); 
+      if (len > bytesPerChecksum || (len + bytesWrittenToBlock) > blockSize) {
+        // should never happen
+        throw new IOException("Mismatch in writeChunk() args");
       }
-
-      if ((bytesWrittenToBlock + pos == blockSize) ||
-          (pos >= BUFFER_SIZE)) {
-        flush();
+      
+      if ( backupFile == null ) {
+        openBackupStream();
       }
-      outBuf[pos++] = (byte) b;
-      filePos++;
-    }
-
-    /**
-     * Writes the specified bytes to this output stream.
-     */
-    public synchronized void write(byte b[], int off, int len)
-      throws IOException {
-      checkOpen();
-      if (closed) {
-        throw new IOException("Stream closed");
-      }
-      while (len > 0) {
-        int remaining = Math.min(BUFFER_SIZE - pos,
-                                 (int)((blockSize - bytesWrittenToBlock) - pos));
-        int toWrite = Math.min(remaining, len);
-        System.arraycopy(b, off, outBuf, pos, toWrite);
-        pos += toWrite;
-        off += toWrite;
-        len -= toWrite;
-        filePos += toWrite;
-
-        if ((bytesWrittenToBlock + pos >= blockSize) ||
-            (pos == BUFFER_SIZE)) {
-          flush();
-        }
-      }
-    }
-
-    /**
-     * Flush the buffer, getting a stream to a new block if necessary.
-     */
-    public synchronized void flush() throws IOException {
-      checkOpen();
-      if (closed) {
-        throw new IOException("Stream closed");
-      }
-
-      if (bytesWrittenToBlock + pos >= blockSize) {
-        flushData((int) blockSize - bytesWrittenToBlock);
-      }
-      if (bytesWrittenToBlock == blockSize) {
+      
+      backupStream.write(b, offset, len);
+      backupStream.write(checksum);
+      
+      bytesWrittenToBlock += len;
+      filePos += len;
+      
+      if ( bytesWrittenToBlock >= blockSize ) {
         endBlock();
       }
-      flushData(pos);
-    }
 
-    /**
-     * Actually flush the accumulated bytes to the remote node,
-     * but no more bytes than the indicated number.
-     */
-    private synchronized void flushData(int maxPos) throws IOException {
-      int workingPos = Math.min(pos, maxPos);
-            
-      if (workingPos > 0) {
-        if (backupStream == null) {
-          throw new IOException("Trying to write to backupStream " +
-                                "but it already closed or not open");
-        }
-        //
-        // To the local block backup, write just the bytes
-        //
-        backupStream.write(outBuf, 0, workingPos);
-
-        //
-        // Track position
-        //
-        bytesWrittenToBlock += workingPos;
-        System.arraycopy(outBuf, workingPos, outBuf, 0, pos - workingPos);
-        pos -= workingPos;
-      }
     }
 
     /**
@@ -1439,21 +1623,63 @@ class DFSClient implements FSConstants {
       boolean sentOk = false;
       int remainingAttempts = 
         conf.getInt("dfs.client.block.write.retries", 3);
+      int numSuccessfulWrites = 0;
+            
       while (!sentOk) {
         nextBlockOutputStream();
-        InputStream in = new FileInputStream(backupFile);
+
+        long bytesLeft = bytesWrittenToBlock;
+        int bytesPerChecksum = checksum.getBytesPerChecksum();
+        int checksumSize = checksum.getChecksumSize(); 
+        byte buf[] = new byte[ bytesPerChecksum + checksumSize ];
+
+        InputStream in = (bytesLeft > 0) ? 
+                         new FileInputStream(backupFile) : null;    
         try {
-          byte buf[] = new byte[BUFFER_SIZE];
-          int bytesRead = in.read(buf);
-          while (bytesRead > 0) {
-            blockStream.writeLong((long) bytesRead);
-            blockStream.write(buf, 0, bytesRead);
+
+          while ( bytesLeft >= 0 ) {
+            int len = (int) Math.min( bytesLeft, bytesPerChecksum );
+            if ( len > 0 ) {
+              FileUtil.readFully( in, buf, 0, len + checksumSize);
+            }
+
+            blockStream.writeInt( len );
+            blockStream.write( buf, 0, len + checksumSize );
+
+            if ( bytesLeft == 0 ) {
+              break;
+            }
+              
+            bytesLeft -= len;
+
             if (progress != null) { progress.progress(); }
-            bytesRead = in.read(buf);
           }
-          internalClose();
-          sentOk = true;
+          
+          blockStream.flush();
+          
+          numSuccessfulWrites++;
+
+          //We should wait for response from the receiver.
+          int reply = blockReplyStream.readByte();
+          if ( reply == OP_STATUS_SUCCESS ||
+              ( reply == OP_STATUS_ERROR_EXISTS &&
+                  numSuccessfulWrites > 1 ) ) {
+            s.close();
+            s = null;
+            sentOk = true;
+          } else {
+            throw new IOException( "Got error reply " + reply +
+                                   " while writting the block " 
+                                   + block );
+          }
+
         } catch (IOException ie) {
+          /*
+           * The error could be OP_STATUS_ERROR_EXISTS.
+           * We are not handling it properly here yet.
+           * We should try to read a byte from blockReplyStream
+           * wihtout blocking. 
+           */
           handleSocketException(ie);
           remainingAttempts -= 1;
           if (remainingAttempts == 0) {
@@ -1464,47 +1690,17 @@ class DFSClient implements FSConstants {
           } catch (InterruptedException e) {
           }
         } finally {
-          in.close();
+          if (in != null) {
+            in.close();
+          }
         }
       }
 
       bytesWrittenToBlock = 0;
       //
-      // Delete local backup, start new one
+      // Delete local backup.
       //
       deleteBackupFile();
-      File tmpFile = newBackupFile();
-      bytesWrittenToBlock = 0;
-      backupStream = new FileOutputStream(tmpFile);
-      backupFile = tmpFile;
-    }
-
-    /**
-     * Close down stream to remote datanode.
-     */
-    private synchronized void internalClose() throws IOException {
-      try {
-        blockStream.writeLong(0);
-        blockStream.flush();
-
-        long complete = blockReplyStream.readLong();
-        if (complete != WRITE_COMPLETE) {
-          LOG.info("Did not receive WRITE_COMPLETE flag: " + complete);
-          throw new IOException("Did not receive WRITE_COMPLETE_FLAG: " + complete);
-        }
-      } catch (IOException ie) {
-        throw (IOException)
-          new IOException("failure closing block of file " +
-                          src.toString() + " to node " +
-                          (datanodeName == null ? "?" : datanodeName)
-                          ).initCause(ie);
-      }
-                    
-      LocatedBlock lb = new LocatedBlock();
-      lb.readFields(blockReplyStream);
-
-      s.close();
-      s = null;
     }
 
     private void handleSocketException(IOException ie) throws IOException {
@@ -1517,6 +1713,7 @@ class DFSClient implements FSConstants {
       } catch (IOException ie2) {
         LOG.warn("Error closing socket.", ie2);
       }
+      //XXX Why are we abondoning the block? There could be retries left.
       namenode.abandonBlock(block, src.toString());
     }
 
@@ -1529,9 +1726,10 @@ class DFSClient implements FSConstants {
       if (closed) {
         throw new IOException("Stream closed");
       }
-          
+      
+      flushBuffer();
+      
       try {
-        flush();
         if (filePos == 0 || bytesWrittenToBlock != 0) {
           try {
             endBlock();
@@ -1540,15 +1738,11 @@ class DFSClient implements FSConstants {
             throw e;
           }
         }
-            
-        closeBackupStream();
-        deleteBackupFile();
 
         if (s != null) {
           s.close();
           s = null;
         }
-        super.close();
 
         long localstart = System.currentTimeMillis();
         boolean fileComplete = false;
@@ -1570,6 +1764,23 @@ class DFSClient implements FSConstants {
           pendingCreates.remove(src.toString());
         }
       }
+    }
+  }
+  
+  void reportChecksumFailure(String file, Block blk, DatanodeInfo dn) {
+    DatanodeInfo [] dnArr = { dn };
+    LocatedBlock [] lblocks = { new LocatedBlock(blk, dnArr) };
+    reportChecksumFailure(file, lblocks);
+  }
+  
+  // just reports checksum failure and ignores any exception during the report.
+  void reportChecksumFailure(String file, LocatedBlock lblocks[]) {
+    try {
+      reportBadBlocks(lblocks);
+    } catch (IOException ie) {
+      LOG.info("Found corruption while reading " + file 
+               + ".  Error repairing corrupt blocks.  Bad blocks remain. " 
+               + StringUtils.stringifyException(ie));
     }
   }
 }

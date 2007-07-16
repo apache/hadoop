@@ -22,6 +22,7 @@ import java.util.*;
 import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.dfs.ChecksumDistributedFileSystem;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.util.ToolBase;
 

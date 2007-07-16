@@ -362,6 +362,11 @@ Trunk (unreleased changes)
 113. HADOOP-1613.  Fix "DFS Health" page to display correct time of
      last contact.  (Dhruba Borthakur via cutting)
 
+114. HADOOP-1134.  Add optimized checksum support to HDFS.  Checksums
+     are now stored with each block, rather than as parallel files.
+     This reduces the namenode's memory requirements and increases
+     data integrity.  (Raghu Angadi via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

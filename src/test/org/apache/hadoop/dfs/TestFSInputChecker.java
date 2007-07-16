@@ -214,6 +214,8 @@ public class TestFSInputChecker extends TestCase {
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", BYTES_PER_SUM);
+    conf.set("fs.hdfs.impl",
+             "org.apache.hadoop.dfs.ChecksumDistributedFileSystem");
     Random rand = new Random(seed);
     rand.nextBytes(expected);
 

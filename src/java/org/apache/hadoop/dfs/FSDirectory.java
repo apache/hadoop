@@ -113,6 +113,13 @@ class FSDirectory implements FSConstants {
     String getLocalName() {
       return name;
     }
+    
+    String getAbsoluteName() {
+      // recursively constructs the absolute path.
+      // Any escaping of name required?
+      return ((parent != null) ? 
+              (parent.getAbsoluteName() + Path.SEPARATOR): "") + name;
+    }
 
     /**
      * Get file blocks 
