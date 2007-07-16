@@ -99,7 +99,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * @param conf configuration for the JobTracker.
    * @throws IOException
    */
-  public static void startTracker(Configuration conf) throws IOException {
+  public static void startTracker(JobConf conf) throws IOException {
     if (tracker != null)
       throw new IOException("JobTracker already running.");
     runTracker = true;
@@ -604,12 +604,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   static final String SUBDIR = "jobTracker";
   FileSystem fs;
   Path systemDir;
-  private Configuration conf;
+  private JobConf conf;
 
   /**
    * Start the JobTracker process, listen on the indicated port
    */
-  JobTracker(Configuration conf) throws IOException {
+  JobTracker(JobConf conf) throws IOException {
     //
     // Grab some static constants
     //
@@ -1441,9 +1441,27 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     LOG.warn("Report from " + taskTracker + ": " + errorMessage);        
   }
 
+  /**
+   * Remove the job_ from jobids to get the unique string.
+   */
+  static String getJobUniqueString(String jobid) {
+    return jobid.substring(4);
+  }
+
   ////////////////////////////////////////////////////
   // JobSubmissionProtocol
   ////////////////////////////////////////////////////
+
+  /**
+   * Allocates a new JobId string.
+   */
+  public String getNewJobId() {
+    synchronized (this) {
+      return "job_" + getTrackerIdentifier() + "_" + 
+             idFormat.format(nextJobId++);
+    }
+  }
+
   /**
    * JobTracker.submitJob() kicks off a new job.  
    *
@@ -1677,12 +1695,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   public JobInProgress getJob(String jobid) {
     return jobs.get(jobid);
   }
-  /**
-   * Grab random num for job id
-   */
-  String createJobId() {
-    return idFormat.format(nextJobId++);
-  }
 
   ////////////////////////////////////////////////////
   // Methods to track all the TaskTrackers
@@ -1773,8 +1785,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
       
     try {
-      Configuration conf=new Configuration();
-      startTracker(conf);
+      startTracker(new JobConf());
     } catch (Throwable e) {
       LOG.fatal(StringUtils.stringifyException(e));
       System.exit(-1);

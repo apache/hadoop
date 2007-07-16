@@ -33,11 +33,20 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    *changed
    */
   public static final long versionID = 3L;
+
+  /**
+   * Allocate a name for the job.
+   * @return a unique job name for submitting jobs.
+   * @throws IOException
+   */
+  public String getNewJobId() throws IOException;
+
   /**
    * Submit a Job for execution.  Returns the latest profile for
    * that job.
+   * The job files should be submitted in <b>system-dir</b>/<b>jobName</b>.
    */
-  public JobStatus submitJob(String jobFile) throws IOException;
+  public JobStatus submitJob(String jobName) throws IOException;
 
   /**
    * Get the current status of the cluster

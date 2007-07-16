@@ -367,6 +367,9 @@ Trunk (unreleased changes)
      This reduces the namenode's memory requirements and increases
      data integrity.  (Raghu Angadi via cutting)
 
+115. HADOOP-1400.  Make JobClient retry requests, so that clients can
+     survive jobtracker problems.  (omalley via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

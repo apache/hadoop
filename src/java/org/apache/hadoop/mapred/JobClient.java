@@ -21,6 +21,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.retry.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
@@ -201,32 +202,52 @@ public class JobClient extends ToolBase implements MRConstants  {
   public JobClient() {
   }
     
-  public JobClient(Configuration conf) throws IOException {
+  public JobClient(JobConf conf) throws IOException {
     setConf(conf);
-    init();
+    init(conf);
   }
     
-  public void init() throws IOException {
+  public void init(JobConf conf) throws IOException {
     String tracker = conf.get("mapred.job.tracker", "local");
     if ("local".equals(tracker)) {
       this.jobSubmitClient = new LocalJobRunner(conf);
     } else {
-      this.jobSubmitClient = (JobSubmissionProtocol) 
-        RPC.getProxy(JobSubmissionProtocol.class,
-                     JobSubmissionProtocol.versionID,
-                     JobTracker.getAddress(conf), conf);
+      this.jobSubmitClient = createProxy(JobTracker.getAddress(conf), conf);
     }        
   }
-  
+
+  /**
+   * Create a proxy JobSubmissionProtocol that retries timeouts.
+   * @param addr the address to connect to
+   * @param conf the server's configuration
+   * @return a proxy object that will retry timeouts
+   * @throws IOException
+   */
+  private JobSubmissionProtocol createProxy(InetSocketAddress addr,
+                                            Configuration conf
+                                            ) throws IOException {
+    JobSubmissionProtocol raw = (JobSubmissionProtocol) 
+      RPC.getProxy(JobSubmissionProtocol.class,
+                   JobSubmissionProtocol.versionID, addr, conf);
+    RetryPolicy backoffPolicy =
+      RetryPolicies.retryUpToMaximumCountWithProportionalSleep
+      (5, 10, java.util.concurrent.TimeUnit.SECONDS);
+    Map<Class<? extends Exception>, RetryPolicy> handlers = 
+      new HashMap<Class<? extends Exception>, RetryPolicy>();
+    handlers.put(SocketTimeoutException.class, backoffPolicy);
+    RetryPolicy backoffTimeOuts = 
+      RetryPolicies.retryByException(RetryPolicies.TRY_ONCE_THEN_FAIL,handlers);
+    return (JobSubmissionProtocol)
+      RetryProxy.create(JobSubmissionProtocol.class, raw, backoffTimeOuts);
+  }
+
   /**
    * Build a job client, connect to the indicated job tracker.
    */
-  public JobClient(InetSocketAddress jobTrackAddr, Configuration conf) throws IOException {
-    this.jobSubmitClient = (JobSubmissionProtocol) 
-      RPC.getProxy(JobSubmissionProtocol.class,
-                   JobSubmissionProtocol.versionID, jobTrackAddr, conf);
+  public JobClient(InetSocketAddress jobTrackAddr, 
+                   Configuration conf) throws IOException {
+    jobSubmitClient = createProxy(jobTrackAddr, conf);
   }
-
 
   /**
    */
@@ -270,15 +291,15 @@ public class JobClient extends ToolBase implements MRConstants  {
     //
 
     // Create a number of filenames in the JobTracker's fs namespace
-    Path submitJobDir = new Path(job.getSystemDir(), "submit_" + 
-                                 Integer.toString(r.nextInt(Integer.MAX_VALUE), 
-                                                  36));
+    String jobId = jobSubmitClient.getNewJobId();
+    Path submitJobDir = new Path(job.getSystemDir(), jobId);
+    FileSystem fs = getFs();
+    LOG.debug("default FileSystem: " + fs.getUri());
+    fs.delete(submitJobDir);    
     Path submitJobFile = new Path(submitJobDir, "job.xml");
     Path submitJarFile = new Path(submitJobDir, "job.jar");
     Path submitSplitFile = new Path(submitJobDir, "job.split");
         
-    FileSystem fs = getFs();
-    LOG.debug("default FileSystem: " + fs.getUri());
     // try getting the md5 of the archives
     URI[] tarchives = DistributedCache.getCacheArchives(job);
     URI[] tfiles = DistributedCache.getCacheFiles(job);
@@ -379,7 +400,7 @@ public class JobClient extends ToolBase implements MRConstants  {
     //
     // Now, actually submit the job (using the submit name)
     //
-    JobStatus status = jobSubmitClient.submitJob(submitJobFile.toString());
+    JobStatus status = jobSubmitClient.submitJob(jobId);
     if (status != null) {
       return new NetworkedJob(status);
     } else {
@@ -723,9 +744,6 @@ public class JobClient extends ToolBase implements MRConstants  {
       throw new RuntimeException("JobClient:" + cmd);
     }
 
-    // initialize JobClient
-    init();
-        
     // Process args
     String submitJobFile = null;
     String jobid = null;
@@ -751,11 +769,20 @@ public class JobClient extends ToolBase implements MRConstants  {
       }
     }
 
+    // initialize JobClient
+    JobConf conf = null;
+    if (submitJobFile != null) {
+      conf = new JobConf(submitJobFile);
+    } else {
+      conf = new JobConf();
+    }
+    init(conf);
+        
     // Submit the request
     int exitCode = -1;
     try {
       if (submitJobFile != null) {
-        RunningJob job = submitJob(submitJobFile);
+        RunningJob job = submitJob(conf);
         System.out.println("Created job " + job.getJobID());
       } else if (getStatus) {
         RunningJob job = getJob(jobid);

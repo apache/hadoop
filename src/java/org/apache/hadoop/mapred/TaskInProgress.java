@@ -114,7 +114,7 @@ class TaskInProgress {
   /**
    * Constructor for MapTask
    */
-  public TaskInProgress(String uniqueString, String jobFile, 
+  public TaskInProgress(String jobid, String jobFile, 
                         String splitClass, BytesWritable split, 
                         JobTracker jobtracker, JobConf conf, 
                         JobInProgress job, int partition) {
@@ -126,13 +126,13 @@ class TaskInProgress {
     this.conf = conf;
     this.partition = partition;
     setMaxTaskAttempts();
-    init(uniqueString);
+    init(JobTracker.getJobUniqueString(jobid));
   }
         
   /**
    * Constructor for ReduceTask
    */
-  public TaskInProgress(String uniqueString, String jobFile, 
+  public TaskInProgress(String jobid, String jobFile, 
                         int numMaps, 
                         int partition, JobTracker jobtracker, JobConf conf,
                         JobInProgress job) {
@@ -143,7 +143,7 @@ class TaskInProgress {
     this.job = job;
     this.conf = conf;
     setMaxTaskAttempts();
-    init(uniqueString);
+    init(JobTracker.getJobUniqueString(jobid));
   }
   /**
    * Set the max number of attempts before we declare a TIP as "failed"

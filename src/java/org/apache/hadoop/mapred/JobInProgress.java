@@ -29,7 +29,6 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -115,28 +114,28 @@ class JobInProgress {
    * Create a JobInProgress with the given job file, plus a handle
    * to the tracker.
    */
-  public JobInProgress(String jobFile, JobTracker jobtracker, 
-                       Configuration default_conf) throws IOException {
-    jobId = jobtracker.getTrackerIdentifier() + "_" +jobtracker.createJobId();
-    String fullJobId = "job_" + jobId;
+  public JobInProgress(String jobid, JobTracker jobtracker, 
+                       JobConf default_conf) throws IOException {
+    this.jobId = jobid;
     String url = "http://" + jobtracker.getJobTrackerMachine() + ":" 
-        + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + fullJobId;
+        + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + jobid;
     this.jobtracker = jobtracker;
-    this.status = new JobStatus(fullJobId, 0.0f, 0.0f, JobStatus.PREP);
+    this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
     this.startTime = System.currentTimeMillis();
     this.localFs = (LocalFileSystem)FileSystem.getLocal(default_conf);
 
     JobConf default_job_conf = new JobConf(default_conf);
     this.localJobFile = default_job_conf.getLocalPath(JobTracker.SUBDIR 
-                                                      +"/"+fullJobId + ".xml");
+                                                      +"/"+jobid + ".xml");
     this.localJarFile = default_job_conf.getLocalPath(JobTracker.SUBDIR
-                                                      +"/"+ fullJobId + ".jar");
+                                                      +"/"+ jobid + ".jar");
     FileSystem fs = FileSystem.get(default_conf);
-    fs.copyToLocalFile(new Path(jobFile), localJobFile);
+    Path jobFile = new Path(default_conf.getSystemDir(), jobid + "/job.xml");
+    fs.copyToLocalFile(jobFile, localJobFile);
     conf = new JobConf(localJobFile);
     this.priority = conf.getJobPriority();
-    this.profile = new JobProfile(conf.getUser(), fullJobId, jobFile, url,
-                                  conf.getJobName());
+    this.profile = new JobProfile(conf.getUser(), jobid, 
+                                  jobFile.toString(), url, jobid);
     String jarFile = conf.getJar();
     if (jarFile != null) {
       fs.copyToLocalFile(new Path(jarFile), localJarFile);
@@ -151,15 +150,16 @@ class JobInProgress {
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
         
-    JobHistory.JobInfo.logSubmitted(fullJobId, conf.getJobName(), conf.getUser(), 
-                                    System.currentTimeMillis(), jobFile); 
+    JobHistory.JobInfo.logSubmitted(jobid, conf.getJobName(), conf.getUser(), 
+                                    System.currentTimeMillis(), 
+                                    jobFile.toString()); 
         
     MetricsContext metricsContext = MetricsUtil.getContext("mapred");
     this.jobMetrics = MetricsUtil.createRecord(metricsContext, "job");
     this.jobMetrics.setTag("user", conf.getUser());
     this.jobMetrics.setTag("sessionId", conf.getSessionId());
     this.jobMetrics.setTag("jobName", conf.getJobName());
-    this.jobMetrics.setTag("jobId", fullJobId);
+    this.jobMetrics.setTag("jobId", jobid);
   }
 
   /**
@@ -1076,8 +1076,8 @@ class JobInProgress {
         
       // Delete temp dfs dirs created if any, like in case of 
       // speculative exn of reduces.  
-      String tempDir = conf.get("mapred.system.dir") + "/job_" + jobId; 
-      fs.delete(new Path(tempDir)); 
+      Path tempDir = new Path(conf.getSystemDir(), jobId); 
+      fs.delete(tempDir); 
 
     } catch (IOException e) {
       LOG.warn("Error cleaning up "+profile.getJobId()+": "+e);
