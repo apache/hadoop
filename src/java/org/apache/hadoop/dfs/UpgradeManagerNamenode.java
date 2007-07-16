@@ -20,6 +20,8 @@ package org.apache.hadoop.dfs;
 import java.util.SortedSet;
 import java.io.IOException;
 
+import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
+
 /**
  * Upgrade manager for name-nodes.
  *
@@ -100,6 +102,24 @@ class UpgradeManagerNamenode extends UpgradeManager {
     currentUpgrades = null;
     broadcastCommand = null;
     FSNamesystem.getFSNamesystem().leaveSafeMode(false);
+  }
+
+  UpgradeStatusReport distributedUpgradeProgress(FSConstants.UpgradeAction action 
+                                                ) throws IOException {
+    if(currentUpgrades == null)
+      return null;  // no upgrades are in progress
+    UpgradeObjectNamenode curUO = (UpgradeObjectNamenode)currentUpgrades.first();
+    boolean details = false;
+    switch(action) {
+    case GET_STATUS:
+      break;
+    case DETAILED_STATUS:
+      details = true;
+      break;
+    case FORCE_PROCEED:
+      curUO.forceProceed();
+    }
+    return curUO.getUpgradeStatusReport(details);
   }
 
   public static void main(String[] args) throws IOException {

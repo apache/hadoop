@@ -24,6 +24,7 @@ import java.net.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 import org.apache.hadoop.util.*;
 
 /****************************************************************
@@ -278,6 +279,11 @@ public class DistributedFileSystem extends ChecksumFileSystem {
       dfs.finalizeUpgrade();
     }
 
+    public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action
+                                                          ) throws IOException {
+      return dfs.distributedUpgradeProgress(action);
+    }
+
     /*
      * Requests the namenode to dump data strcutures into specified 
      * file.
@@ -403,6 +409,11 @@ public class DistributedFileSystem extends ChecksumFileSystem {
    */
   public void finalizeUpgrade() throws IOException {
     ((RawDistributedFileSystem)fs).finalizeUpgrade();
+  }
+
+  public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action
+                                                        ) throws IOException {
+    return ((RawDistributedFileSystem)fs).distributedUpgradeProgress(action);
   }
 
   /*

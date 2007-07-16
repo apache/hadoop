@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import java.io.*;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 
 /**********************************************************************
  * ClientProtocol is used by a piece of DFS user code to communicate 
@@ -30,11 +31,9 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Compared to the previous version the following changes have been introduced:
-   * 13: getListing returns file creation times and modification times.
-   *     getFileInfo added.
-   *     DatanodeInfo serialization has hostname.
+   * 14: distributedUpgradeProgress() added.
    */
-  public static final long versionID = 13L;
+  public static final long versionID = 14L;
   
   ///////////////////////////////////////
   // File contents
@@ -361,6 +360,16 @@ interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public void finalizeUpgrade() throws IOException;
+
+  /**
+   * Report distributed upgrade progress or force current upgrade to proceed.
+   * 
+   * @param action {@link FSConstants.UpgradeAction} to perform
+   * @return upgrade status information or null if no upgrades are in progress
+   * @throws IOException
+   */
+  public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action) 
+  throws IOException;
 
   /**
    * Dumps namenode data structures into specified file. If file

@@ -491,6 +491,14 @@ class DFSClient implements FSConstants {
   }
 
   /**
+   * @see ClientProtocol#distributedUpgradeProgress(FSConstants.UpgradeAction)
+   */
+  public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action
+                                                        ) throws IOException {
+    return namenode.distributedUpgradeProgress(action);
+  }
+
+  /**
    */
   public boolean mkdirs(UTF8 src) throws IOException {
     checkOpen();
@@ -670,7 +678,7 @@ class DFSClient implements FSConstants {
      * Fetch it from the namenode if not cached.
      * 
      * @param offset
-     * @return
+     * @return located block
      * @throws IOException
      */
     private LocatedBlock getBlockAt(long offset) throws IOException {
@@ -699,7 +707,7 @@ class DFSClient implements FSConstants {
      * 
      * @param offset
      * @param length
-     * @return
+     * @return consequent segment of located blocks
      * @throws IOException
      */
     private List<LocatedBlock> getBlockRange(long offset, long length) 

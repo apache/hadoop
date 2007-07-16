@@ -50,23 +50,10 @@ class UpgradeManagerDatanode extends UpgradeManager {
     DataNode.LOG.info("\n   Distributed upgrade for DataNode version " 
         + getUpgradeVersion() + " to current LV " 
         + FSConstants.LAYOUT_VERSION + " is initialized.");
-    upgradeState = false;
-    int nsUpgradeVersion = nsInfo.getDistributedUpgradeVersion();
-    if(nsUpgradeVersion >= getUpgradeVersion())
-      return;
-    String errorMsg = 
-        "\n   Datanode missed a distributed upgrade and will shutdown."
-      + "\n   namenode distributed upgrade version = " + nsUpgradeVersion
-      + "\n   expected version = " + getUpgradeVersion();
-    DataNode.LOG.fatal( errorMsg );
-    try {
-      dataNode.namenode.errorReport(dataNode.dnRegistration,
-                                    DatanodeProtocol.NOTIFY, errorMsg);
-    } catch( SocketTimeoutException e ) {  // namenode is busy
-      DataNode.LOG.info("Problem connecting to server: " 
-          + dataNode.getNameNodeAddr());
-    }
-    throw new IOException( errorMsg );
+    UpgradeObjectDatanode curUO = (UpgradeObjectDatanode)currentUpgrades.first();
+    curUO.setDatanode(dataNode);
+    upgradeState = curUO.preUpgradeAction(nsInfo);
+    // upgradeState is true if the data-node should start the upgrade itself
   }
 
   /**
@@ -95,7 +82,8 @@ class UpgradeManagerDatanode extends UpgradeManager {
       dataNode.namenode.processUpgradeCommand(broadcastCommand);
       return true;
     }
-    currentUpgrades = getDistributedUpgrades();
+    if(currentUpgrades == null)
+      currentUpgrades = getDistributedUpgrades();
     if(currentUpgrades == null) {
       DataNode.LOG.info("\n   Distributed upgrade for DataNode version " 
           + getUpgradeVersion() + " to current LV " 
@@ -103,11 +91,11 @@ class UpgradeManagerDatanode extends UpgradeManager {
           + "The upgrade object is not defined.");
       return false;
     }
-    upgradeState = true;
     if(currentUpgrades.size() > 1)
       throw new IOException(
           "More than one distributed upgrade objects registered for version " 
           + getUpgradeVersion());
+    upgradeState = true;
     UpgradeObjectDatanode curUO = (UpgradeObjectDatanode)currentUpgrades.first();
     curUO.setDatanode(dataNode);
     curUO.startUpgrade();

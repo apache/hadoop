@@ -83,4 +83,14 @@ public interface Upgradeable extends Comparable<Upgradeable> {
    * @throws IOException
    */
   UpgradeCommand completeUpgrade() throws IOException;
+
+  /**
+   * Get status report for the upgrade.
+   * 
+   * @param details true if upgradeStatus details need to be included, 
+   *                false otherwise
+   * @return {@link UpgradeStatusReport}
+   * @throws IOException
+   */
+  UpgradeStatusReport getUpgradeStatusReport(boolean details) throws IOException;
 }

@@ -17,10 +17,15 @@
  */
 package org.apache.hadoop.dfs;
 
+import java.io.IOException;
+
 import org.apache.hadoop.dfs.UpgradeObjectCollection.UOSignature;
 
 /**
  * Abstract upgrade object.
+ * 
+ * Contains default implementation of common methods of {@link Upgradeable}
+ * interface.
  */
 abstract class UpgradeObject implements Upgradeable {
   protected short status;
@@ -31,6 +36,11 @@ abstract class UpgradeObject implements Upgradeable {
 
   public String getDescription() {
     return "Upgrade object for " + getType() + " layout version " + getVersion();
+  }
+
+  public UpgradeStatusReport getUpgradeStatusReport(boolean details) 
+                                                    throws IOException {
+    return new UpgradeStatusReport(getVersion(), getUpgradeStatus());
   }
 
   public int compareTo(Upgradeable o) {

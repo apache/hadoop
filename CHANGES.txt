@@ -348,6 +348,9 @@ Trunk (unreleased changes)
 
 108. HADOOP-1433.  Add job priority.  (Johan Oskarsson via tomwhite)
 
+109. HADOOP-1597.  Add status reports and post-upgrade options to HDFS
+     distributed upgrade.  (Konstantin Shvachko via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

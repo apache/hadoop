@@ -638,7 +638,7 @@ class FSImage extends Storage {
     // Load in bits
     //
     boolean needToSave = true;
-    int imgVersion = this.getLayoutVersion();
+    int imgVersion;
     DataInputStream in = new DataInputStream(
                                              new BufferedInputStream(
                                                                      new FileInputStream(curFile)));
@@ -1064,7 +1064,8 @@ class FSImage extends Storage {
 
   private void initializeDistributedUpgrade() throws IOException {
     UpgradeManagerNamenode um = FSNamesystem.getFSNamesystem().upgradeManager;
-    um.initializeUpgrade();
+    if(! um.initializeUpgrade())
+      return;
     // write new upgrade state into disk
     FSNamesystem.getFSNamesystem().getFSImage().writeAll();
     NameNode.LOG.info("\n   Distributed upgrade for NameNode version " 

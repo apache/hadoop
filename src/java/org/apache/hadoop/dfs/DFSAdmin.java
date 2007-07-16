@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 
 /**
  * This class provides some DFS administrative access.
@@ -46,11 +47,15 @@ public class DFSAdmin extends FsShell {
       long raw = dfs.getRawCapacity();
       long rawUsed = dfs.getRawUsed();
       long used = dfs.getUsed();
-      boolean mode = dfs.setSafeMode(
-                                     FSConstants.SafeModeAction.SAFEMODE_GET);
+      boolean mode = dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET);
+      UpgradeStatusReport status = 
+                      dfs.distributedUpgradeProgress(UpgradeAction.GET_STATUS);
 
       if (mode) {
         System.out.println("Safe mode is ON");
+      }
+      if (status != null) {
+        System.out.println(status.getStatusText(false));
       }
       System.out.println("Total raw bytes: " + raw
                          + " (" + byteDesc(raw) + ")");
@@ -85,7 +90,7 @@ public class DFSAdmin extends FsShell {
    */
   public void setSafeMode(String[] argv, int idx) throws IOException {
     if (!(fs instanceof DistributedFileSystem)) {
-      System.err.println("FileSystem is " + fs.getName());
+      System.err.println("FileSystem is " + fs.getUri());
       return;
     }
     if (idx != argv.length - 1) {
@@ -172,6 +177,9 @@ public class DFSAdmin extends FsShell {
       "\t\tof datanodes that are allowed to connect to the namenode\n" +
       "\t\tand those that should be decommissioned/recommissioned.\n";
 
+    String upgradeProgress = "-upgradeProgress <status|details|force>: request current\n"
+      + "distributed upgrade status, a detailed status or force the upgrade to proceed.";
+
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -181,6 +189,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(safemode);
     } else if ("refreshNodes".equals(cmd)) {
       System.out.println(refreshNodes);
+    } else if ("upgradeProgress".equals(cmd)) {
+      System.out.println(upgradeProgress);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -188,6 +198,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(report);
       System.out.println(safemode);
       System.out.println(refreshNodes);
+      System.out.println(upgradeProgress);
       System.out.println(help);
     }
 
@@ -212,6 +223,44 @@ public class DFSAdmin extends FsShell {
     exitCode = 0;
    
     return exitCode;
+  }
+
+  /**
+   * Command to request current distributed upgrade status, 
+   * a detailed status, or to force the upgrade to proceed.
+   * 
+   * Usage: java DFSAdmin -upgradeProgress [status | details | force]
+   * @exception IOException 
+   */
+  public int upgradeProgress(String[] argv, int idx) throws IOException {
+    if (!(fs instanceof DistributedFileSystem)) {
+      System.out.println("FileSystem is " + fs.getUri());
+      return -1;
+    }
+    if (idx != argv.length - 1) {
+      printUsage("-upgradeProgress");
+      return -1;
+    }
+
+    UpgradeAction action;
+    if ("status".equalsIgnoreCase(argv[idx])) {
+      action = UpgradeAction.GET_STATUS;
+    } else if ("details".equalsIgnoreCase(argv[idx])) {
+      action = UpgradeAction.DETAILED_STATUS;
+    } else if ("force".equalsIgnoreCase(argv[idx])) {
+      action = UpgradeAction.FORCE_PROCEED;
+    } else {
+      printUsage("-upgradeProgress");
+      return -1;
+    }
+
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    UpgradeStatusReport status = dfs.distributedUpgradeProgress(action);
+    String statusText = (status == null ? 
+        "There are no distributed upgrades in progress." :
+          status.getStatusText(action == UpgradeAction.DETAILED_STATUS));
+    System.out.println(statusText);
+    return 0;
   }
 
   /**
@@ -248,6 +297,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-finalizeUpgrade".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-finalizeUpgrade]");
+    } else if ("-upgradeProgress".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-upgradeProgress status | details | force]");
     } else if ("-metasave".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-metasave filename]");
@@ -257,6 +309,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-safemode enter | leave | get | wait]");
       System.err.println("           [-refreshNodes]");
       System.err.println("           [-finalizeUpgrade]");
+      System.err.println("           [-upgradeProgress status | details | force]");
       System.err.println("           [-metasave filename]");
       System.err.println("           [-help [cmd]]");
     }
@@ -301,6 +354,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-upgradeProgress".equals(cmd)) {
+        if (argv.length != 2) {
+          printUsage(cmd);
+          return exitCode;
+        }
     } else if ("-metasave".equals(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
@@ -331,6 +389,8 @@ public class DFSAdmin extends FsShell {
         exitCode = refreshNodes();
       } else if ("-finalizeUpgrade".equals(cmd)) {
         exitCode = finalizeUpgrade();
+      } else if ("-upgradeProgress".equals(cmd)) {
+        exitCode = upgradeProgress(argv, i);
       } else if ("-metasave".equals(cmd)) {
         exitCode = metaSave(argv, i);
       } else if ("-help".equals(cmd)) {

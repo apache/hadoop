@@ -3409,6 +3409,11 @@ class FSNamesystem implements FSConstants {
   // Distributed upgrade manager
   UpgradeManagerNamenode upgradeManager = new UpgradeManagerNamenode();
 
+  UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action 
+                                                 ) throws IOException {
+    return upgradeManager.distributedUpgradeProgress(action);
+  }
+
   UpgradeCommand processDistributedUpgradeCommand(UpgradeCommand comm) throws IOException {
     return upgradeManager.processUpgradeCommand(comm);
   }

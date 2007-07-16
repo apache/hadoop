@@ -53,4 +53,10 @@ abstract class UpgradeObjectNamenode extends UpgradeObject {
   FSNamesystem getFSNamesystem() {
     return FSNamesystem.getFSNamesystem();
   }
+
+  public void forceProceed() throws IOException {
+    // do nothing by default
+    NameNode.LOG.info("forceProceed() is not defined for the upgrade. " 
+        + getDescription());
+  }
 }

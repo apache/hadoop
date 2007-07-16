@@ -31,11 +31,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /*
-   * 6: versionRequest() added;
-   * sendHeartbeat() and blockReport() return DatanodeCommand;
-   * DatanodeRegistration contains StorageInfo
+   * 7: processUpgradeCommand() added;
    */
-  public static final long versionID = 6L;
+  public static final long versionID = 7L;
   
   // error code
   final static int NOTIFY = 0;
@@ -106,6 +104,16 @@ interface DatanodeProtocol extends VersionedProtocol {
                           String msg) throws IOException;
     
   public NamespaceInfo versionRequest() throws IOException;
-  
+
+  /**
+   * This is a very general way to send a command to the name-node during
+   * distributed upgrade process.
+   * 
+   * The generosity is because the variety of upgrade commands is unpredictable.
+   * The reply from the name-node is also received in the form of an upgrade 
+   * command. 
+   * 
+   * @return a reply in the form of an upgrade command
+   */
   UpgradeCommand processUpgradeCommand(UpgradeCommand comm) throws IOException;
 }

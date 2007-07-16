@@ -615,6 +615,19 @@ public class DataNode implements FSConstants, Runnable {
     upgradeManager.processUpgradeCommand(comm);
   }
 
+
+  /**
+   * Start distributed upgrade if it should be initiated by the data-node.
+   */
+  private void startDistributedUpgradeIfNeeded() throws IOException {
+    UpgradeManagerDatanode um = DataNode.getDataNode().upgradeManager;
+    assert um != null : "DataNode.upgradeManager is null.";
+    if(!um.getUpgradeState())
+      return;
+    um.setUpgradeState(false, um.getUpgradeVersion());
+    um.startUpgrade();
+    return;
+  }
   private void transferBlocks( Block blocks[], 
                                DatanodeInfo xferTargets[][] 
                                ) throws IOException {
@@ -1152,6 +1165,7 @@ public class DataNode implements FSConstants, Runnable {
         
     while (shouldRun) {
       try {
+        startDistributedUpgradeIfNeeded();
         offerService();
       } catch (Exception ex) {
         LOG.error("Exception: " + StringUtils.stringifyException(ex));

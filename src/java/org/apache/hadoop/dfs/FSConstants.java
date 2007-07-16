@@ -132,6 +132,19 @@ public interface FSConstants {
     DATA_NODE;
   }
 
+  /**
+   * Distributed upgrade actions:
+   * 
+   * 1. Get upgrade status.
+   * 2. Get detailed upgrade status.
+   * 3. Proceed with the upgrade if it is stuck, no matter what the status is.
+   */
+  public static enum UpgradeAction {
+    GET_STATUS,
+    DETAILED_STATUS,
+    FORCE_PROCEED;
+  }
+
   // Version is reflected in the dfs image and edit log files.
   // Version is reflected in the data storage file.
   // Versions are negative.

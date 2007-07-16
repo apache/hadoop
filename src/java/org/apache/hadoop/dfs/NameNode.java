@@ -555,6 +555,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     getFSImage().finalizeUpgrade();
   }
 
+  public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action
+                                                        ) throws IOException {
+    return namesystem.distributedUpgradeProgress(action);
+  }
+
   /**
    * Dumps namenode state into specified file
    */

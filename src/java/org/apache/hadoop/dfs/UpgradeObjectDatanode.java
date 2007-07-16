@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import org.apache.hadoop.util.StringUtils;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 
 /**
  * Base class for data-node upgrade objects.
@@ -44,6 +45,48 @@ abstract class UpgradeObjectDatanode extends UpgradeObject implements Runnable {
    * @throws IOException
    */
   abstract void doUpgrade() throws IOException;
+
+  /**
+   * Specifies what to do before the upgrade is started.
+   * 
+   * The default implementation checks whether the data-node missed the upgrade
+   * and throws an exception if it did. This leads to the data-node shutdown.
+   * 
+   * Data-nodes usually start distributed upgrade when the name-node replies
+   * to its heartbeat with a start upgrade command.
+   * Sometimes though, e.g. when a data-node missed the upgrade and wants to
+   * catchup with the rest of the cluster, it is necessary to initiate the 
+   * upgrade directly on the data-node, since the name-node might not ever 
+   * start it. An override of this method should then return true.
+   * And the upgrade will start after data-ndoe registration but before sending
+   * its first heartbeat.
+   * 
+   * @param nsInfo name-node versions, verify that the upgrade
+   * object can talk to this name-node version if necessary.
+   * 
+   * @throws IOException
+   * @return true if data-node itself should start the upgrade or 
+   * false if it should wait until the name-node starts the upgrade.
+   */
+  boolean preUpgradeAction(NamespaceInfo nsInfo) throws IOException {
+    int nsUpgradeVersion = nsInfo.getDistributedUpgradeVersion();
+    if(nsUpgradeVersion >= getVersion())
+      return false; // name-node will perform the upgrade
+    // Missed the upgrade. Report problem to the name-node and throw exception
+    String errorMsg = 
+              "\n   Data-node missed a distributed upgrade and will shutdown."
+            + "\n   " + getDescription() + "."
+            + " Name-node version = " + nsInfo.getLayoutVersion() + ".";
+    DataNode.LOG.fatal( errorMsg );
+    try {
+      dataNode.namenode.errorReport(dataNode.dnRegistration,
+                                    DatanodeProtocol.NOTIFY, errorMsg);
+    } catch(SocketTimeoutException e) {  // namenode is busy
+      DataNode.LOG.info("Problem connecting to server: " 
+                        + dataNode.getNameNodeAddr());
+    }
+    throw new IOException(errorMsg);
+  }
 
   public void run() {
     assert dataNode != null : "UpgradeObjectDatanode.dataNode is null";
