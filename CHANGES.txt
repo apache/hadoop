@@ -370,6 +370,9 @@ Trunk (unreleased changes)
 115. HADOOP-1400.  Make JobClient retry requests, so that clients can
      survive jobtracker problems.  (omalley via cutting)
 
+116. HADOOP-1564.  Add unit tests for HDFS block-level checksums.
+     (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

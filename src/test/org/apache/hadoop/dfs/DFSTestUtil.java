@@ -90,11 +90,16 @@ public class DFSTestUtil extends TestCase {
     int getSize() { return size; }
     long getSeed() { return seed; }
   }
+
+  void createFiles(FileSystem fs, String topdir) throws IOException {
+    createFiles(fs, topdir, (short)3);
+  }
   
   /** create nFiles with random names and directory hierarchies
-   * with random (but reproducible) data in them.
+   *  with random (but reproducible) data in them.
    */
-  void createFiles(FileSystem fs, String topdir) throws IOException {
+  void createFiles(FileSystem fs, String topdir,
+                   short replicationFactor) throws IOException {
     files = new MyFile[nFiles];
     
     for (int idx = 0; idx < nFiles; idx++) {
@@ -109,7 +114,7 @@ public class DFSTestUtil extends TestCase {
         throw new IOException("Mkdirs failed to create " + 
                               fPath.getParent().toString());
       }
-      FSDataOutputStream out = fs.create(fPath);
+      FSDataOutputStream out = fs.create(fPath, replicationFactor);
       byte[] toWrite = new byte[files[idx].getSize()];
       Random rb = new Random(files[idx].getSeed());
       rb.nextBytes(toWrite);
@@ -132,7 +137,7 @@ public class DFSTestUtil extends TestCase {
       byte[] toCompare = new byte[files[idx].getSize()];
       Random rb = new Random(files[idx].getSeed());
       rb.nextBytes(toCompare);
-      assertEquals("Cannnot read file.", toRead.length, in.read(toRead));
+      in.readFully(0, toRead);
       in.close();
       for (int i = 0; i < toRead.length; i++) {
         if (toRead[i] != toCompare[i]) {
@@ -144,6 +149,52 @@ public class DFSTestUtil extends TestCase {
     }
     
     return true;
+  }
+
+  void setReplication(FileSystem fs, String topdir, short value) 
+                                              throws IOException {
+    Path root = new Path(topdir);
+    for (int idx = 0; idx < nFiles; idx++) {
+      Path fPath = new Path(root, files[idx].getName());
+      fs.setReplication(fPath, value);
+    }
+  }
+
+  // waits for the replication factor of all files to reach the
+  // specified target
+  //
+  void waitReplication(FileSystem fs, String topdir, short value) 
+                                              throws IOException {
+    Path root = new Path(topdir);
+
+    /** wait for the replication factor to settle down */
+    while (true) {
+      boolean good = true;
+      for (int idx = 0; idx < nFiles; idx++) {
+        Path fPath = new Path(root, files[idx].getName());
+        String locs[][] = fs.getFileCacheHints(fPath, 0, Long.MAX_VALUE);
+        for (int j = 0; j < locs.length; j++) {
+          String[] loc = locs[j];
+          if (loc.length != value) {
+            System.out.println("File " + fPath + " has replication factor " +
+                               loc.length);
+            good = false;
+            break;
+          }
+        }
+        if (!good) {
+          break;
+        }
+      }
+      if (!good) {
+        try {
+          System.out.println("Waiting for replication factor to drain");
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {} 
+        continue;
+      }
+      break;
+    }
   }
   
   /** delete directory and everything underneath it.*/
