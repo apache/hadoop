@@ -373,6 +373,9 @@ Trunk (unreleased changes)
 116. HADOOP-1564.  Add unit tests for HDFS block-level checksums.
      (Dhruba Borthakur via cutting)
 
+117. HADOOP-1620.  Reduce the number of abstract FileSystem methods,
+     simplifying implementations.  (cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

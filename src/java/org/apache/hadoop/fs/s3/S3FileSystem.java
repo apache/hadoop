@@ -280,15 +280,6 @@ public class S3FileSystem extends FileSystem {
   }
 
   /**
-   * Replication is not supported for S3 file systems since S3 handles it for
-   * us.
-   */
-  @Override
-  public short getDefaultReplication() {
-    return 1;
-  }
-
-  /**
    * FileStatus for S3 file systems. 
    */
   @Override
@@ -298,68 +289,6 @@ public class S3FileSystem extends FileSystem {
       throw new IOException(f.toString() + ": No such file or directory.");
     }
     return new S3FileStatus(inode);
-  }
-
-  /**
-   * Replication is not supported for S3 file systems since S3 handles it for
-   * us.
-   */
-  @Override
-  public boolean setReplication(Path path, short replication)
-    throws IOException {
-    return true;
-  }
-
-  @Override
-  public long getDefaultBlockSize() {
-    return getConf().getLong("fs.s3.block.size", DEFAULT_BLOCK_SIZE);
-  }
-
-  /**
-   * Return 1x1 'localhost' cell if the file exists. Return null if otherwise.
-   */
-  @Override
-  public String[][] getFileCacheHints(Path f, long start, long len)
-    throws IOException {
-    // TODO: Check this is the correct behavior
-    if (!exists(f)) {
-      return null;
-    }
-    return new String[][] { { "localhost" } };
-  }
-
-  /** @deprecated */ @Deprecated
-    @Override
-    public void lock(Path path, boolean shared) throws IOException {
-    // TODO: Design and implement
-  }
-
-  /** @deprecated */ @Deprecated
-    @Override
-    public void release(Path path) throws IOException {
-    // TODO: Design and implement
-  }
-
-  @Override
-  public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
-    FileUtil.copy(localFs, src, this, dst, delSrc, getConf());
-  }
-
-  @Override
-  public void copyToLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
-    FileUtil.copy(this, src, localFs, dst, delSrc, getConf());
-  }
-
-  @Override
-  public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-    throws IOException {
-    return tmpLocalFile;
-  }
-
-  @Override
-  public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-    throws IOException {
-    moveFromLocalFile(tmpLocalFile, fsOutputFile);
   }
 
   // diagnostic methods

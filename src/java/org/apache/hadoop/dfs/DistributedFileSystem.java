@@ -198,31 +198,6 @@ public class DistributedFileSystem extends FileSystem {
     dfs.release(getPath(f));
   }
 
-  @Override
-  public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
-  throws IOException {
-    FileUtil.copy(localFs, src, this, dst, delSrc, getConf());
-  }
-
-  @Override
-  public void copyToLocalFile(boolean delSrc, Path src, Path dst)
-  throws IOException {
-    FileUtil.copy(this, src, localFs, dst, delSrc, getConf());
-  }
-
-  public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-  throws IOException {
-    return tmpLocalFile;
-  }
-
-  /**
-   * Move completed local data to DFS destination
-   */
-  public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-  throws IOException {
-    moveFromLocalFile(tmpLocalFile, fsOutputFile);
-  }
-
   public void close() throws IOException {
     super.close();
     dfs.close();

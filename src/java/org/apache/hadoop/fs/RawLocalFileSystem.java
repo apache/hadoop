@@ -54,24 +54,9 @@ public class RawLocalFileSystem extends FileSystem {
     return new File(path.toUri().getPath());
   }
 
-  /**
-   * Return 1x1 'localhost' cell if the file exists.
-   * Return null if otherwise.
-   */
-  public String[][] getFileCacheHints(Path f, long start, long len) throws IOException {
-    if (!exists(f)) {
-      return null;
-    } else {
-      String result[][] = new String[1][];
-      result[0] = new String[1];
-      result[0][0] = "localhost";
-      return result;
-    }
-  }
-  
   /** @deprecated */
   public String getName() { return "local"; }
-  
+
   public URI getUri() { return NAME; }
   
   public void initialize(URI uri, Configuration conf) {
@@ -188,16 +173,6 @@ public class RawLocalFileSystem extends FileSystem {
     }
     return new FSDataOutputStream(
         new BufferedOutputStream(new LocalFSFileOutputStream(f), bufferSize));
-  }
-  
-  /**
-   * Replication is not supported for the local file system.
-   */
-  /** Set the replication of the given file */
-  public boolean setReplication(Path src,
-                                short replication
-                                ) throws IOException {
-    return true;
   }
   
   public boolean rename(Path src, Path dst) throws IOException {
@@ -321,18 +296,6 @@ public class RawLocalFileSystem extends FileSystem {
     rename(src, dst);
   }
   
-  @Override
-  public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
-    throws IOException {
-    FileUtil.copy(this, src, this, dst, delSrc, getConf());
-  }
-  
-  @Override
-  public void copyToLocalFile(boolean delSrc, Path src, Path dst)
-    throws IOException {
-    FileUtil.copy(this, src, this, dst, delSrc, getConf());
-  }
-  
   // We can write output directly to the final location
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
@@ -356,10 +319,6 @@ public class RawLocalFileSystem extends FileSystem {
     return new RawLocalFileStatus(pathToFile(f));
   }
 
-  public short getDefaultReplication() {
-    return 1;
-  }
-  
   private class RawLocalFileStatus implements FileStatus {
     private long length;
     private boolean isDir;

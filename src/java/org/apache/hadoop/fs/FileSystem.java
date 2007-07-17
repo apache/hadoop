@@ -87,7 +87,7 @@ public abstract class FileSystem extends Configured {
 
   /** Returns the configured filesystem implementation.*/
   public static FileSystem get(Configuration conf) throws IOException {
-    return getNamed(conf.get("fs.default.name", "local"), conf);
+    return getNamed(conf.get("fs.default.name", "file:///"), conf);
   }
 
   /** Called after a new FileSystem instance is constructed.
@@ -102,7 +102,7 @@ public abstract class FileSystem extends Configured {
   public abstract URI getUri();
   
   /** @deprecated call #getUri() instead.*/
-  public abstract String getName();
+  public String getName() { return getUri().toString(); }
 
   /** @deprecated call #get(URI,Configuration) instead. */
   public static FileSystem getNamed(String name, Configuration conf)
@@ -216,7 +216,17 @@ public abstract class FileSystem extends Configured {
    *
    * The FileSystem will simply return an elt containing 'localhost'.
    */
-  public abstract String[][] getFileCacheHints(Path f, long start, long len) throws IOException;
+  public String[][] getFileCacheHints(Path f, long start, long len)
+    throws IOException {
+    if (!exists(f)) {
+      return null;
+    } else {
+      String result[][] = new String[1][];
+      result[0] = new String[1];
+      result[0][0] = "localhost";
+      return result;
+    }
+  }
 
   /**
    * Opens an FSDataInputStream at the indicated Path.
@@ -387,7 +397,10 @@ public abstract class FileSystem extends Configured {
    * @return true if successful;
    *         false if file does not exist or is a directory
    */
-  public abstract boolean setReplication(Path src, short replication) throws IOException;
+  public boolean setReplication(Path src, short replication)
+    throws IOException {
+    return true;
+  }
 
   /**
    * Renames Path src to Path dst.  Can take place on local fs
@@ -725,7 +738,7 @@ public abstract class FileSystem extends Configured {
    * @deprecated FS does not support file locks anymore.
    */
   @Deprecated
-  public abstract void lock(Path f, boolean shared) throws IOException;
+  public void lock(Path f, boolean shared) throws IOException {}
 
   /**
    * Release the lock
@@ -733,7 +746,7 @@ public abstract class FileSystem extends Configured {
    * @deprecated FS does not support file locks anymore.     
    */
   @Deprecated
-  public abstract void release(Path f) throws IOException;
+  public void release(Path f) throws IOException {}
 
   /**
    * The src file is on the local disk.  Add it to FS at
@@ -758,8 +771,10 @@ public abstract class FileSystem extends Configured {
    * the given dst name.
    * delSrc indicates if the source should be removed
    */
-  public abstract void copyFromLocalFile(boolean delSrc, Path src, Path dst)
-    throws IOException;
+  public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException {
+    FileUtil.copy(getLocal(getConf()), src, this, dst, delSrc, getConf());
+  }
     
   /**
    * The src file is under FS, and the dst is on the local disk.
@@ -783,8 +798,10 @@ public abstract class FileSystem extends Configured {
    * Copy it from FS control to the local dst name.
    * delSrc indicates if the src will be removed or not.
    */   
-  public abstract void copyToLocalFile(boolean delSrc, Path src, Path dst)
-    throws IOException;
+  public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+    throws IOException {
+    FileUtil.copy(this, src, getLocal(getConf()), dst, delSrc, getConf());
+  }
 
   /**
    * Returns a local File that the user can write output to.  The caller
@@ -792,7 +809,10 @@ public abstract class FileSystem extends Configured {
    * file.  If the FS is local, we write directly into the target.  If
    * the FS is remote, we write into the tmp local area.
    */
-  public abstract Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile) throws IOException;
+  public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
+    throws IOException {
+    return tmpLocalFile;
+  }
 
   /**
    * Called when we're all done writing to the target.  A local FS will
@@ -800,7 +820,10 @@ public abstract class FileSystem extends Configured {
    * FS will copy the contents of tmpLocalFile to the correct target at
    * fsOutputFile.
    */
-  public abstract void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile) throws IOException;
+  public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
+    throws IOException {
+    moveFromLocalFile(tmpLocalFile, fsOutputFile);
+  }
 
   /**
    * No more filesystem operations are needed.  Will
@@ -846,7 +869,7 @@ public abstract class FileSystem extends Configured {
   /**
    * Get the default replication.
    */
-  public abstract short getDefaultReplication();
+  public short getDefaultReplication() { return 1; }
 
   /* 
    * Return a file status object that represents the

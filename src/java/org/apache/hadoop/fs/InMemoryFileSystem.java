@@ -80,11 +80,6 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       return uri;
     }
 
-    /** @deprecated */
-    public String getName() {
-      return uri.toString();
-    }
-
     /**
      * Return 1x1 'inmemory' cell if the file exists.
      * Return null if otherwise.
@@ -229,13 +224,6 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       }
     }
 
-    /**
-     * Replication is not supported for the inmemory file system.
-     */
-    public short getDefaultReplication() {
-      return 1;
-    }
-
     public boolean setReplication(Path src, short replication)
       throws IOException {
       return true;
@@ -290,32 +278,6 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       return true;
     }
   
-    /** lock operations are not supported */
-    public void lock(Path f, boolean shared) throws IOException {}
-    public void release(Path f) throws IOException {}
-  
-    /** copy/move operations are not supported */
-    public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
-      throws IOException {
-    }
-
-    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
-      throws IOException {
-    }
-
-    public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-      throws IOException {
-      return fsOutputFile;
-    }
-
-    public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-      throws IOException {
-    }
-
-    public long getDefaultBlockSize() {
-      return 32 * 1024; //some random large number. can be anything actually
-    }
-
     public FileStatus getFileStatus(Path f) throws IOException {
       synchronized (this) {
         return new InMemoryFileStatus(pathToFileAttribs.get(getPath(f)));
@@ -441,21 +403,6 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
     
   public InMemoryFileSystem(URI uri, Configuration conf) {
     super(new RawInMemoryFileSystem(uri, conf));
-  }
-    
-  /** copy/move operations are not supported */
-  public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
-    throws IOException {}
-  public void copyToLocalFile(boolean delSrc, Path src, Path dst)
-    throws IOException {}
-    
-  public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-    throws IOException {
-    return fsOutputFile;
-  }
-    
-  public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
-    throws IOException {
   }
     
   /**

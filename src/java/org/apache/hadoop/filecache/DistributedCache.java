@@ -168,7 +168,7 @@ public class DistributedCache {
                                     Configuration conf, boolean isArchive, String md5, Path currentWorkDir) throws IOException {
     boolean b = true;
     boolean doSymlink = getSymlink(conf);
-    FileSystem dfs = getFileSystem(cache, conf);
+    FileSystem dfs = FileSystem.get(cache, conf);
     b = ifExistsAndFresh(cacheStatus, cache, dfs, md5, conf);
     String link = currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment();
     File flink = new File(link);
@@ -290,7 +290,7 @@ public class DistributedCache {
     byte[] b = new byte[CRC_BUFFER_SIZE];
     byte[] digest = null;
 
-    FileSystem fileSystem = getFileSystem(cache, conf);
+    FileSystem fileSystem = FileSystem.get(cache, conf);
     if (!(fileSystem instanceof ChecksumFileSystem)) {
       throw new IOException("Not a checksummed file system: "
                             +fileSystem.getUri());
@@ -357,26 +357,6 @@ public class DistributedCache {
                          new File(workDir, list[i].getName()).toString());
       }
     }  
-  }
-  
-  private static String getFileSysName(URI url) {
-    String fsname = url.getScheme();
-    if ("hdfs".equals(fsname)) {
-      String host = url.getHost();
-      int port = url.getPort();
-      return (port == (-1)) ? host : (host + ":" + port);
-    } else {
-      return null;
-    }
-  }
-
-  private static FileSystem getFileSystem(URI cache, Configuration conf)
-    throws IOException {
-    String fileSysName = getFileSysName(cache);
-    if (fileSysName != null)
-      return FileSystem.getNamed(fileSysName, conf);
-    else
-      return FileSystem.get(conf);
   }
 
   /**
