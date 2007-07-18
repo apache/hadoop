@@ -24,12 +24,14 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Vector;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -449,7 +451,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.splitOrCompactCheckerThread = new Thread(splitOrCompactChecker);
     
     // Process requests from Master
-    this.toDo = new LinkedList<ToDoEntry>();
+    this.toDo = new LinkedBlockingQueue<ToDoEntry>();
     this.worker = new Worker();
     this.workerThread = new Thread(worker);
 
@@ -661,7 +663,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   if (LOG.isDebugEnabled()) {
                     LOG.debug("Got default message");
                   }
-                  toDo.addLast(new ToDoEntry(msgs[i]));
+                  try {
+                    toDo.put(new ToDoEntry(msgs[i]));
+                  } catch (InterruptedException e) {
+                    throw new RuntimeException("Putting into msgQueue was interrupted.", e);
+                  }
                 }
               }
               
@@ -828,7 +834,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.msg = msg;
     }
   }
-  LinkedList<ToDoEntry> toDo;
+  BlockingQueue<ToDoEntry> toDo;
   private Worker worker;
   private Thread workerThread;
   /** Thread that performs long running requests from the master */
@@ -844,26 +850,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
      */
     public void run() {
       for(ToDoEntry e = null; !stopRequested; ) {
-        synchronized(toDo) {
-          while(toDo.size() == 0 && !stopRequested) {
-            try {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Wait on todo");
-              }
-              toDo.wait(threadWakeFrequency);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Wake on todo");
-              }
-            } catch(InterruptedException ex) {
-              // continue
-            }
-          }
-          if(stopRequested) {
-            continue;
-          }
-          e = toDo.removeFirst();
+        try {
+          e = toDo.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ex) {
+          // continue
         }
-        
+        if(e == null || stopRequested) {
+          continue;
+        }
         try {
           if (LOG.isDebugEnabled()) {
             LOG.debug(e.msg.toString());
@@ -900,8 +894,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           if(e.tries < numRetries) {
             LOG.warn(ie);
             e.tries++;
-            synchronized(toDo) {
-              toDo.addLast(e);
+            try {
+              toDo.put(e);
+            } catch (InterruptedException ex) {
+              throw new RuntimeException("Putting into msgQueue was interrupted.", ex);
             }
           } else {
             LOG.error("unable to process message: " + e.msg.toString(), ie);
