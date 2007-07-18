@@ -64,4 +64,5 @@ Trunk (unreleased changes)
  40. HADOOP-1607 [shell] Clear screen command (Edward Yoon via Stack)
  41. HADOOP-1614 [hbase] HClient does not protect itself from simultaneous updates
  42. HADOOP-1468 Add HBase batch update to reduce RPC overhead
+ 43. HADOOP-1616 Sporadic TestTable failures
 

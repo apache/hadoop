@@ -1841,8 +1841,9 @@ public class HMaster implements HConstants, HMasterInterface,
       connection.commit(metaRegionName, clientId, lockid,
         System.currentTimeMillis());
 
-      // 4. Close the new region to flush it to disk
+      // 4. Close the new region to flush it to disk.  Close its log file too.
       r.close();
+      r.getLog().closeAndDelete();
 
       // 5. Get it assigned to a server
       unassignedRegions.put(regionName, info);

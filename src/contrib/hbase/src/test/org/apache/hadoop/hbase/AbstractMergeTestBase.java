@@ -95,8 +95,8 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
       // Now create the root and meta regions and insert the data regions
       // created above into the meta
       
-      HRegion root = createNewHRegion(fs, dir, conf, HGlobals.rootTableDesc, 0L, null, null);
-      HRegion meta = createNewHRegion(fs, dir, conf, HGlobals.metaTableDesc, 1L, null, null);
+      HRegion root = createNewHRegion(dir, conf, HGlobals.rootTableDesc, 0L, null, null);
+      HRegion meta = createNewHRegion(dir, conf, HGlobals.metaTableDesc, 1L, null, null);
     
       HRegion.addRegionToMETA(root, meta);
       
@@ -129,7 +129,8 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
 
   private HRegion createAregion(Text startKey, Text endKey, int firstRow, int nrows)
       throws IOException {
-    HRegion region = createNewHRegion(fs, dir, conf, desc, rand.nextLong(), startKey, endKey);
+    
+    HRegion region = createNewHRegion(dir, conf, desc, rand.nextLong(), startKey, endKey);
     
     System.out.println("created region " + region.getRegionName());
 
