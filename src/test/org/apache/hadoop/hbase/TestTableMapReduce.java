@@ -89,11 +89,11 @@ public class TestTableMapReduce extends HBaseTestCase {
 
       // create the root and meta regions and insert the data region into the meta
 
-      HRegion root = createNewHRegion(fs, dir, conf, HGlobals.rootTableDesc, 0L, null, null);
-      HRegion meta = createNewHRegion(fs, dir, conf, HGlobals.metaTableDesc, 1L, null, null);
+      HRegion root = createNewHRegion(dir, conf, HGlobals.rootTableDesc, 0L, null, null);
+      HRegion meta = createNewHRegion(dir, conf, HGlobals.metaTableDesc, 1L, null, null);
       HRegion.addRegionToMETA(root, meta);
 
-      HRegion region = createNewHRegion(fs, dir, conf, desc, rand.nextLong(), null, null);
+      HRegion region = createNewHRegion(dir, conf, desc, rand.nextLong(), null, null);
       HRegion.addRegionToMETA(meta, region);
 
       // insert some data into the test table

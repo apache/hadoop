@@ -88,7 +88,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         }
       } finally {
         if (log != null) {
-          log.close();
+          log.closeAndDelete();
         }
         if (reader != null) {
           reader.close();

@@ -52,17 +52,15 @@ public abstract class HBaseTestCase extends TestCase {
     return new Path(StaticTestEnvironment.TEST_DIRECTORY_KEY, testName);
   }
 
-  protected HRegion createNewHRegion(FileSystem fs, Path dir,
-      Configuration conf, HTableDescriptor desc, long regionId, Text startKey,
-      Text endKey) throws IOException {
-    
+  protected HRegion createNewHRegion(Path dir, Configuration c,
+    HTableDescriptor desc, long regionId, Text startKey, Text endKey)
+  throws IOException {
     HRegionInfo info = new HRegionInfo(regionId, desc, startKey, endKey);
     Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
+    FileSystem fs = dir.getFileSystem(c);
     fs.mkdirs(regionDir);
-
     return new HRegion(dir,
       new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME), conf),
       fs, conf, info, null);
   }
-  
 }

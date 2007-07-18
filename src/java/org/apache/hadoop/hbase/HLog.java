@@ -37,9 +37,9 @@ import java.util.*;
  *
  * <p>A single HLog is used by several HRegions simultaneously.
  * 
- * <p>Each HRegion is identified by a unique long int. HRegions do not need to
- * declare themselves before using the HLog; they simply include their
- * HRegion-id in the {@link #append(Text, Text, Text, TreeMap, long)} or 
+ * <p>Each HRegion is identified by a unique long <code>int</code>. HRegions do
+ * not need to declare themselves before using the HLog; they simply include
+ * their HRegion-id in the {@link #append(Text, Text, Text, TreeMap, long)} or 
  * {@link #completeCacheFlush(Text, Text, long)} calls.
  *
  * <p>An HLog consists of multiple on-disk files, which have a chronological
@@ -95,16 +95,14 @@ public class HLog implements HConstants {
    * @throws IOException
    */
   static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
-      Configuration conf) throws IOException {
-    
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("splitting log files");
-    }
-    
+    Configuration conf) throws IOException {
     Path logfiles[] = fs.listPaths(srcDir);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("splitting " + logfiles.length + " log files in " +
+        srcDir.toString());
+    }
     TreeMap<Text, SequenceFile.Writer> logWriters =
       new TreeMap<Text, SequenceFile.Writer>();
-    
     try {
       for(int i = 0; i < logfiles.length; i++) {
         SequenceFile.Reader in =
@@ -115,40 +113,35 @@ public class HLog implements HConstants {
           while(in.next(key, val)) {
             Text regionName = key.getRegionName();
             SequenceFile.Writer w = logWriters.get(regionName);
-            if(w == null) {
+            if (w == null) {
               Path logfile = new Path(HStoreFile.getHRegionDir(rootDir,
                   regionName), HREGION_OLDLOGFILE_NAME);
-              
               w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
                   HLogEdit.class);
               logWriters.put(regionName, w);
             }
             w.append(key, val);
           }
-          
         } finally {
           in.close();
         }
       }
-      
     } finally {
-      for(SequenceFile.Writer w: logWriters.values()) {
+      for (SequenceFile.Writer w: logWriters.values()) {
         w.close();
       }
     }
     
     if(fs.exists(srcDir)) {
-      
       if(! fs.delete(srcDir)) {
         LOG.error("Cannot delete: " + srcDir);
-        
         if(! FileUtil.fullyDelete(new File(srcDir.toString()))) {
           throw new IOException("Cannot delete: " + srcDir);
         }
       }
     }
     if(LOG.isDebugEnabled()) {
-      LOG.debug("log file splitting completed");
+      LOG.debug("log file splitting completed for " + srcDir.toString());
     }
   }
 
@@ -213,25 +206,25 @@ public class HLog implements HConstants {
           }
         }
         
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("closing current log writer and getting a new one");
-        }
+
 
         // Close the current writer (if any), and grab a new one.
-        
         if(writer != null) {
           writer.close();
-          
-          if(filenum > 0) {
-            outputfiles.put(logSeqNum - 1, computeFilename(filenum - 1));
+          Path p = computeFilename(filenum - 1);
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("Closing current log writer " + p.toString() +
+              " to get a new one");
+          }
+          if (filenum > 0) {
+            outputfiles.put(logSeqNum - 1, p);
           }
         }
-        
         Path newPath = computeFilename(filenum++);
-        this.writer = SequenceFile.createWriter(fs, conf, newPath, HLogKey.class, HLogEdit.class);
-
+        this.writer = SequenceFile.createWriter(fs, conf, newPath,
+          HLogKey.class, HLogEdit.class);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("new log writer created");
+          LOG.debug("new log writer created at " + newPath);
         }
         
         // Can we delete any of the old log files?
@@ -239,8 +232,8 @@ public class HLog implements HConstants {
         // over all the regions.
 
         long oldestOutstandingSeqNum = Long.MAX_VALUE;
-        for(Iterator<Long> it = regionToLastFlush.values().iterator(); it.hasNext(); ) {
-          long curSeqNum = it.next().longValue();
+        for(Long l: regionToLastFlush.values()) {
+          long curSeqNum = l.longValue();
           
           if(curSeqNum < oldestOutstandingSeqNum) {
             oldestOutstandingSeqNum = curSeqNum;
@@ -249,14 +242,8 @@ public class HLog implements HConstants {
 
         // Next, remove all files with a final ID that's older
         // than the oldest pending region-operation.
-
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("removing old log files");
-        }
-        
-        for(Iterator<Long> it = outputfiles.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<Long> it = outputfiles.keySet().iterator(); it.hasNext();) {
           long maxSeqNum = it.next().longValue();
-          
           if(maxSeqNum < oldestOutstandingSeqNum) {
             Path p = outputfiles.get(maxSeqNum);
             it.remove();
@@ -269,16 +256,13 @@ public class HLog implements HConstants {
       }
 
       // Actually delete them, if any!
-
       for(Iterator<Path> it = toDeleteList.iterator(); it.hasNext(); ) {
         Path p = it.next();
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("removing old log file " + p.toString());
+        }
         fs.delete(p);
       }
-
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("old log files deleted");
-      }
-      
       this.numEntries = 0;
     }
   }
@@ -307,13 +291,10 @@ public class HLog implements HConstants {
    */
   synchronized void close() throws IOException {
     if(LOG.isDebugEnabled()) {
-      LOG.debug("closing log writer");
+      LOG.debug("closing log writer in " + this.dir.toString());
     }
     this.writer.close();
     this.closed = true;
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("log writer closed");
-    }
   }
 
   /**

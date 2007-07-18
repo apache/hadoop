@@ -67,12 +67,19 @@ public class TestScanner2 extends HBaseClusterTestCase {
     newRegions.add(HRegion.createHRegion(
       new HRegionInfo(3L, desc, new Text("midway"), null),
         homedir, this.conf, null));
-    for (HRegion r: newRegions) {
-      HRegion.addRegionToMETA(client, HConstants.META_TABLE_NAME, r,
-        this.cluster.getHMasterAddress(), -1L);
+    try {
+      for (HRegion r : newRegions) {
+        HRegion.addRegionToMETA(client, HConstants.META_TABLE_NAME, r,
+            this.cluster.getHMasterAddress(), -1L);
+      }
+      regions = scan(client, HConstants.META_TABLE_NAME);
+      assertEquals("Should be two regions only", 2, regions.size());
+    } finally {
+      for (HRegion r : newRegions) {
+        r.close();
+        r.getLog().closeAndDelete();
+      }
     }
-    regions = scan(client, HConstants.META_TABLE_NAME);
-    assertEquals("Should be two regions only", 2, regions.size());
   }
   
   private List<HRegionInfo> scan(final HClient client, final Text table)

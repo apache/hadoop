@@ -260,7 +260,6 @@ public class TestScanner extends HBaseTestCase {
       
       region.close();
       log.closeAndDelete();
-
     } catch(IOException e) {
       e.printStackTrace();
       throw e;

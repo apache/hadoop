@@ -610,7 +610,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
     System.out.println("Merge regions elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
-
+    
     fs.delete(oldRegionPath);
     fs.delete(oldRegion1);
     fs.delete(oldRegion2);
@@ -812,7 +812,11 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   private void cleanup() {
 
     // Shut down the mini cluster
-
+    try {
+      log.closeAndDelete();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
     cluster.shutdown();
     cluster = null;
 
