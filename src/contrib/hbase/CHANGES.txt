@@ -65,4 +65,5 @@ Trunk (unreleased changes)
  41. HADOOP-1614 [hbase] HClient does not protect itself from simultaneous updates
  42. HADOOP-1468 Add HBase batch update to reduce RPC overhead
  43. HADOOP-1616 Sporadic TestTable failures
-
+ 44. HADOOP-1615 Replacing thread notification-based queue with 
+     java.util.concurrent.BlockingQueue in HMaster, HRegionServer
