@@ -382,6 +382,8 @@ Branch 0.14 (unreleased changes)
 118. HADOOP-1625.  Fix a "could not move files" exception in datanode.
      (Raghu Angadi via cutting)
 
+119. HADOOP-1624.  Fix an infinite loop in datanode. (Raghu Angadi via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
