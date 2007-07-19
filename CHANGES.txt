@@ -379,6 +379,9 @@ Branch 0.14 (unreleased changes)
 117. HADOOP-1620.  Reduce the number of abstract FileSystem methods,
      simplifying implementations.  (cutting)
 
+118. HADOOP-1625.  Fix a "could not move files" exception in datanode.
+     (Raghu Angadi via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

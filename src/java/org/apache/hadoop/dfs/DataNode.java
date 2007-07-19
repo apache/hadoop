@@ -946,6 +946,14 @@ public class DataNode implements FSConstants, Runnable {
               // Write checksum
               checksumOut.write( buf, len, checksumSize );
               myMetrics.wroteBytes( len );
+            } else {
+              /* Should we sync() files here? It can add many millisecs of
+               * latency. We did not sync before HADOOP-1134 either.
+               */ 
+              out.close();
+              out = null;
+              checksumOut.close();
+              checksumOut = null;
             }
             
           } catch (IOException iex) {
