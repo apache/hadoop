@@ -110,20 +110,24 @@ abstract class TaskRunner extends Thread {
       URI[] files = DistributedCache.getCacheFiles(conf);
       if ((archives != null) || (files != null)) {
         if (archives != null) {
-          String[] md5 = DistributedCache.getArchiveMd5(conf);
+          String[] archivesTimestamps = DistributedCache.getArchiveTimestamps(conf);
           Path[] p = new Path[archives.length];
           for (int i = 0; i < archives.length;i++){
             p[i] = DistributedCache.getLocalCache(archives[i], conf, 
-                                                  conf.getLocalPath(TaskTracker.getCacheSubdir()), true, md5[i], new Path(workDir.getAbsolutePath()));
+                                                  conf.getLocalPath(TaskTracker.getCacheSubdir()), 
+                                                  true, Long.parseLong(archivesTimestamps[i]), 
+                                                  new Path(workDir.getAbsolutePath()));
           }
           DistributedCache.setLocalArchives(conf, stringifyPathArray(p));
         }
         if ((files != null)) {
-          String[] md5 = DistributedCache.getFileMd5(conf);
+          String[] fileTimestamps = DistributedCache.getFileTimestamps(conf);
           Path[] p = new Path[files.length];
           for (int i = 0; i < files.length;i++){
-            p[i] = DistributedCache.getLocalCache(files[i], conf, conf.getLocalPath(TaskTracker
-                                                                                    .getCacheSubdir()), false, md5[i], new Path(workDir.getAbsolutePath()));
+            p[i] = DistributedCache.getLocalCache(files[i], conf, 
+                                                  conf.getLocalPath(TaskTracker.getCacheSubdir()), 
+                                                  false, Long.parseLong(fileTimestamps[i]), 
+                                                  new Path(workDir.getAbsolutePath()));
           }
           DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
         }
