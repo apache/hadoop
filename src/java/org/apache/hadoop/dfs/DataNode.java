@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileUtil;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.Updater;
@@ -736,13 +735,12 @@ public class DataNode implements FSConstants, Runnable {
           break;
         case OP_READ_METADATA:
           readMetadata( in );
-          
+          break;
         default:
-          System.out.println("Faulty op: " + op);
           throw new IOException("Unknown opcode " + op + "in data stream");
         }
        } catch (Throwable t) {
-        LOG.error("DataXCeiver", t);
+        LOG.error("DataXceiver: " + StringUtils.stringifyException(t));
       } finally {
         try {
           xceiverCount.decr();
