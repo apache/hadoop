@@ -19,21 +19,16 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 public class TestMergeTable extends AbstractMergeTestBase {
 
-  public void testMergeTable() {
+  public void testMergeTable() throws IOException {
+    MiniHBaseCluster hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
     try {
-      MiniHBaseCluster hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
-      try {
-        HMerge.merge(conf, fs, desc.getName());
-      
-      } finally {
-        hCluster.shutdown();
-      }
-      
-    } catch(Throwable t) {
-      t.printStackTrace();
-      fail();
+      HMerge.merge(conf, fs, desc.getName());
+    } finally {
+      hCluster.shutdown();
     }
   }
 }

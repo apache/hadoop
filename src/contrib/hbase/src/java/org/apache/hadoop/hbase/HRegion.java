@@ -436,7 +436,6 @@ public class HRegion implements HConstants {
       }
       try {
         return allHStoreFiles;
-
       } finally {
         synchronized (writestate) {
           writestate.closed = true;
@@ -1536,6 +1535,9 @@ public class HRegion implements HConstants {
   
   /**
    * Convenience method creating new HRegions.
+   * Note, this method creates an {@link HLog} for the created region. It
+   * needs to be closed explicitly.  Use {@link HRegion#getLog()} to get
+   * access.
    * @param regionId ID to use
    * @param tableDesc Descriptor
    * @param rootDir Root directory of HBase instance
@@ -1550,11 +1552,13 @@ public class HRegion implements HConstants {
     return createHRegion(new HRegionInfo(regionId, tableDesc, null, null),
       rootDir, conf, null);
   }
-  
+
   /**
    * Convenience method creating new HRegions. Used by createTable and by the
-   * bootstrap code in the HMaster constructor
-   * 
+   * bootstrap code in the HMaster constructor.
+   * Note, this method creates an {@link HLog} for the created region. It
+   * needs to be closed explicitly.  Use {@link HRegion#getLog()} to get
+   * access.
    * @param info Info for region to create.
    * @param rootDir Root directory for HBase instance
    * @param conf
