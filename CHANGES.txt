@@ -384,6 +384,10 @@ Branch 0.14 (unreleased changes)
 
 119. HADOOP-1624.  Fix an infinite loop in datanode. (Raghu Angadi via cutting)
 
+120. HADOOP-1084.  Switch mapred file cache to use file modification
+     time instead of checksum to detect file changes, as checksums are
+     no longer easily accessed.  (Arun C Murthy via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

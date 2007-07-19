@@ -300,33 +300,27 @@ public class JobClient extends ToolBase implements MRConstants  {
     Path submitJarFile = new Path(submitJobDir, "job.jar");
     Path submitSplitFile = new Path(submitJobDir, "job.split");
         
-    // try getting the md5 of the archives
+    // set the timestamps of the archives and files
     URI[] tarchives = DistributedCache.getCacheArchives(job);
+    if (tarchives != null) {
+      StringBuffer archiveTimestamps = 
+        new StringBuffer(String.valueOf(DistributedCache.getTimestamp(job, tarchives[0])));
+      for (int i = 1; i < tarchives.length; i++) {
+        archiveTimestamps.append(",");
+        archiveTimestamps.append(String.valueOf(DistributedCache.getTimestamp(job, tarchives[i])));
+      }
+      DistributedCache.setArchiveTimestamps(job, archiveTimestamps.toString());
+    }
+
     URI[] tfiles = DistributedCache.getCacheFiles(job);
-    if ((tarchives != null) || (tfiles != null)) {
-      // prepare these archives for md5 checksums
-      if (tarchives != null) {
-        StringBuffer md5Archives = 
-          new StringBuffer(StringUtils.byteToHexString(DistributedCache.createMD5(tarchives[0], job)));
-        for (int i = 1; i < tarchives.length; i++) {
-          md5Archives.append(",");
-          md5Archives.append(StringUtils.byteToHexString(DistributedCache
-                                          .createMD5(tarchives[i], job)));
-        }
-        DistributedCache.setArchiveMd5(job, md5Archives.toString());
-        //job.set("mapred.cache.archivemd5", md5Archives);
+    if (tfiles != null) {
+      StringBuffer fileTimestamps = 
+        new StringBuffer(String.valueOf(DistributedCache.getTimestamp(job, tfiles[0])));
+      for (int i = 1; i < tfiles.length; i++) {
+        fileTimestamps.append(",");
+        fileTimestamps.append(String.valueOf(DistributedCache.getTimestamp(job, tfiles[i])));
       }
-      if (tfiles != null) {
-        StringBuffer md5Files = 
-          new StringBuffer(StringUtils.byteToHexString(DistributedCache.createMD5(tfiles[0], job)));
-        for (int i = 1; i < tfiles.length; i++) {
-            md5Files.append(",");
-            md5Files.append(StringUtils.byteToHexString(DistributedCache
-                                          .createMD5(tfiles[i], job)));
-        }
-        DistributedCache.setFileMd5(job, md5Files.toString());
-        //"mapred.cache.filemd5", md5Files);
-      }
+      DistributedCache.setFileTimestamps(job, fileTimestamps.toString());
     }
        
     String originalJarPath = job.getJar();
