@@ -289,8 +289,8 @@ public class SecondaryNameNode implements FSConstants, Runnable {
    * DEST_FS_IMAGE
    */
   private void doMerge() throws IOException {
-    FSNamesystem namesystem = new FSNamesystem(
-                                               new FSImage(checkpointDir));
+    FSNamesystem namesystem = new FSNamesystem(new FSImage(checkpointDir), 
+                                               conf);                                               
     FSImage fsImage = namesystem.dir.fsImage;
     fsImage.loadFSImage(srcImage);
     fsImage.getEditLog().loadFSEdits(editFile);

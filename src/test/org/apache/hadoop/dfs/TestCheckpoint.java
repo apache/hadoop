@@ -34,7 +34,8 @@ public class TestCheckpoint extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 4096;
   static final int fileSize = 8192;
-  static final int numDatanodes = 1;
+  static final int numDatanodes = 3;
+  short replication = 3;
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
@@ -52,11 +53,9 @@ public class TestCheckpoint extends TestCase {
   private void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     assertTrue(fileSys.exists(name));
-    String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
-    for (int idx = 0; idx < locations.length; idx++) {
-      assertEquals("Number of replicas for block" + idx,
-                   Math.min(numDatanodes, repl), locations[idx].length);
-    }
+    int replication = fileSys.getReplication(name);
+    assertEquals("replication for " + name, repl, replication);
+    //We should probably test for more of the file properties.
   }
   
   private void cleanupFile(FileSystem fileSys, Path name)
@@ -150,8 +149,8 @@ public class TestCheckpoint extends TestCase {
       //
       // Create a new file
       //
-      writeFile(fileSys, file1, 1);
-      checkFile(fileSys, file1, 1);
+      writeFile(fileSys, file1, replication);
+      checkFile(fileSys, file1, replication);
     } finally {
       fileSys.close();
       cluster.shutdown();
@@ -167,7 +166,7 @@ public class TestCheckpoint extends TestCase {
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
     try {
-      checkFile(fileSys, file1, 1);
+      checkFile(fileSys, file1, replication);
       cleanupFile(fileSys, file1);
       SecondaryNameNode secondary = new SecondaryNameNode(conf);
       secondary.doCheckpoint();
@@ -209,8 +208,8 @@ public class TestCheckpoint extends TestCase {
       //
       // Create a new file
       //
-      writeFile(fileSys, file1, 1);
-      checkFile(fileSys, file1, 1);
+      writeFile(fileSys, file1, replication);
+      checkFile(fileSys, file1, replication);
     } finally {
       fileSys.close();
       cluster.shutdown();
@@ -226,7 +225,7 @@ public class TestCheckpoint extends TestCase {
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
     try {
-      checkFile(fileSys, file1, 1);
+      checkFile(fileSys, file1, replication);
       cleanupFile(fileSys, file1);
       SecondaryNameNode secondary = new SecondaryNameNode(conf);
       secondary.doCheckpoint();
@@ -246,6 +245,7 @@ public class TestCheckpoint extends TestCase {
     Collection<File> namedirs = null;
 
     Configuration conf = new Configuration();
+    replication = (short)conf.getInt("dfs.replication", 3);  
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
     cluster.waitActive();
     FileSystem fileSys = cluster.getFileSystem();
@@ -261,8 +261,8 @@ public class TestCheckpoint extends TestCase {
       //
       // Create file1
       //
-      writeFile(fileSys, file1, 1);
-      checkFile(fileSys, file1, 1);
+      writeFile(fileSys, file1, replication);
+      checkFile(fileSys, file1, replication);
 
       //
       // Take a checkpoint
@@ -283,12 +283,12 @@ public class TestCheckpoint extends TestCase {
     fileSys = cluster.getFileSystem();
     try {
       // check that file1 still exists
-      checkFile(fileSys, file1, 1);
+      checkFile(fileSys, file1, replication);
       cleanupFile(fileSys, file1);
 
       // create new file file2
-      writeFile(fileSys, file2, 1);
-      checkFile(fileSys, file2, 1);
+      writeFile(fileSys, file2, replication);
+      checkFile(fileSys, file2, replication);
 
       //
       // Take a checkpoint
@@ -313,7 +313,7 @@ public class TestCheckpoint extends TestCase {
 
     try {
       // verify that file2 exists
-      checkFile(fileSys, file2, 1);
+      checkFile(fileSys, file2, replication);
     } finally {
       fileSys.close();
       cluster.shutdown();

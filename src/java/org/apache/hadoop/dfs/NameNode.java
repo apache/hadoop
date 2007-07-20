@@ -754,7 +754,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       }
     }
 
-    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat));
+    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat), conf);
     nsys.dir.fsImage.format();
     return false;
   }
