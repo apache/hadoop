@@ -293,6 +293,48 @@ public class TestDFSShell extends TestCase {
         }
         assertTrue(val == 0);
       }
+
+      // Verify that cp from a directory to a subdirectory fails
+      {
+        String[] args = new String[2];
+        args[0] = "-mkdir";
+        args[1] = "/test/dir1";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertTrue(val == 0);
+
+        // this should fail
+        String[] args1 = new String[3];
+        args1[0] = "-cp";
+        args1[1] = "/test/dir1";
+        args1[2] = "/test/dir1/dir2";
+        val = 0;
+        try {
+          val = shell.run(args1);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertTrue(val == -1);
+
+        // this should succeed
+        args1[0] = "-cp";
+        args1[1] = "/test/dir1";
+        args1[2] = "/test/dir1foo";
+        val = -1;
+        try {
+          val = shell.run(args1);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertTrue(val == 0);
+      }
         
     } finally {
       try {
