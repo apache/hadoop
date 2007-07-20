@@ -86,6 +86,29 @@ public class FileUtil {
     fs.delete(dir);
   }
 
+  //
+  // If the destination is a subdirectory of the source, then
+  // generate exception
+  //
+  private static void checkDependencies(FileSystem srcFS, 
+                                        Path src, 
+                                        FileSystem dstFS, 
+                                        Path dst)
+                                        throws IOException {
+    if (srcFS == dstFS) {
+      String srcq = src.makeQualified(srcFS).toString() + Path.SEPARATOR;
+      String dstq = dst.makeQualified(dstFS).toString() + Path.SEPARATOR;
+      if (dstq.startsWith(srcq)) {
+        if (srcq.length() == dstq.length()) {
+          throw new IOException("Cannot copy " + src + " to itself.");
+        } else {
+          throw new IOException("Cannot copy " + src + " to its subdirectory " +
+                                dst);
+        }
+      }
+    }
+  }
+
   /** Copy files between FileSystems. */
   public static boolean copy(FileSystem srcFS, Path src, 
                              FileSystem dstFS, Path dst, 
@@ -94,6 +117,7 @@ public class FileUtil {
     dst = checkDest(src.getName(), dstFS, dst);
 
     if (srcFS.isDirectory(src)) {
+      checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
         return false;
       }

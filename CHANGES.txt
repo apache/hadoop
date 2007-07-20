@@ -388,6 +388,9 @@ Branch 0.14 (unreleased changes)
      time instead of checksum to detect file changes, as checksums are
      no longer easily accessed.  (Arun C Murthy via cutting)
 
+130. HADOOP-1623.  Fix an infinite loop when copying directories.
+     (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
