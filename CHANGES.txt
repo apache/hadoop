@@ -391,6 +391,10 @@ Branch 0.14 (unreleased changes)
 130. HADOOP-1623.  Fix an infinite loop when copying directories.
      (Dhruba Borthakur via cutting)
 
+131. HADOOP-1603.  Fix a bug in namenode initialization where
+     default replication is sometimes reset to one on restart.
+     (Raghu Angadi via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

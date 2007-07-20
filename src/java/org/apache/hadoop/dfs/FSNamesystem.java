@@ -208,38 +208,7 @@ class FSNamesystem implements FSConstants {
                       int port,
                       NameNode nn, Configuration conf) throws IOException {
     fsNamesystemObject = this;
-    this.replicator = new ReplicationTargetChooser(
-                                                   conf.getBoolean("dfs.replication.considerLoad", true),
-                                                   this,
-                                                   clusterMap,
-                                                   LOG);
-    this.defaultReplication = conf.getInt("dfs.replication", 3);
-    this.maxReplication = conf.getInt("dfs.replication.max", 512);
-    this.minReplication = conf.getInt("dfs.replication.min", 1);
-    if (minReplication <= 0)
-      throw new IOException(
-                            "Unexpected configuration parameters: dfs.replication.min = " 
-                            + minReplication
-                            + " must be greater than 0");
-    if (maxReplication >= (int)Short.MAX_VALUE)
-      throw new IOException(
-                            "Unexpected configuration parameters: dfs.replication.max = " 
-                            + maxReplication + " must be less than " + (Short.MAX_VALUE));
-    if (maxReplication < minReplication)
-      throw new IOException(
-                            "Unexpected configuration parameters: dfs.replication.min = " 
-                            + minReplication
-                            + " must be less than dfs.replication.max = " 
-                            + maxReplication);
-    this.maxReplicationStreams = conf.getInt("dfs.max-repl-streams", 2);
-    long heartbeatInterval = conf.getLong("dfs.heartbeat.interval", 3) * 1000;
-    this.heartbeatRecheckInterval = 5 * 60 * 1000; // 5 minutes
-    this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
-      10 * heartbeatInterval;
-    this.replicationRecheckInterval = 3 * 1000; //  3 second
-    this.decommissionRecheckInterval = conf.getInt(
-                                                   "dfs.namenode.decommission.interval",
-                                                   5 * 60 * 1000);
+    setConfigurationParameters(conf);
 
     this.localMachine = hostname;
     this.port = port;
@@ -296,7 +265,47 @@ class FSNamesystem implements FSConstants {
    */
   FSNamesystem(FSImage fsImage, Configuration conf) throws IOException {
     fsNamesystemObject = this;
+    setConfigurationParameters(conf);
     this.dir = new FSDirectory(fsImage, this, conf);
+  }
+
+  /**
+   * Initializes some of the members from configuration
+   */
+  private void setConfigurationParameters(Configuration conf) 
+                                          throws IOException {
+    this.replicator = new ReplicationTargetChooser(
+                                                   conf.getBoolean("dfs.replication.considerLoad", true),
+                                                   this,
+                                                   clusterMap,
+                                                   LOG);
+    this.defaultReplication = conf.getInt("dfs.replication", 3);
+    this.maxReplication = conf.getInt("dfs.replication.max", 512);
+    this.minReplication = conf.getInt("dfs.replication.min", 1);
+    if (minReplication <= 0)
+      throw new IOException(
+                            "Unexpected configuration parameters: dfs.replication.min = " 
+                            + minReplication
+                            + " must be greater than 0");
+    if (maxReplication >= (int)Short.MAX_VALUE)
+      throw new IOException(
+                            "Unexpected configuration parameters: dfs.replication.max = " 
+                            + maxReplication + " must be less than " + (Short.MAX_VALUE));
+    if (maxReplication < minReplication)
+      throw new IOException(
+                            "Unexpected configuration parameters: dfs.replication.min = " 
+                            + minReplication
+                            + " must be less than dfs.replication.max = " 
+                            + maxReplication);
+    this.maxReplicationStreams = conf.getInt("dfs.max-repl-streams", 2);
+    long heartbeatInterval = conf.getLong("dfs.heartbeat.interval", 3) * 1000;
+    this.heartbeatRecheckInterval = 5 * 60 * 1000; // 5 minutes
+    this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
+      10 * heartbeatInterval;
+    this.replicationRecheckInterval = 3 * 1000; //  3 second
+    this.decommissionRecheckInterval = conf.getInt(
+                                                   "dfs.namenode.decommission.interval",
+                                                   5 * 60 * 1000);    
   }
 
   /** Return the FSNamesystem object
