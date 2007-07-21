@@ -1485,8 +1485,8 @@ public class HRegion implements HConstants {
         moreToFollow = chosenTimestamp > 0;
         
         if (dataFilter != null) {
-          if (moreToFollow && !filtered) {
-            dataFilter.acceptedRow(chosenRow);
+          if (moreToFollow) {
+            dataFilter.rowProcessed(filtered, chosenRow);
           }
           if (dataFilter.filterAllRemaining()) {
             moreToFollow = false;
