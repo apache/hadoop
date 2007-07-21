@@ -31,6 +31,8 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.io.Text;
 
@@ -47,6 +49,8 @@ public class RegExpRowFilter implements RowFilterInterface {
   private Map<Text, byte[]> equalsMap = new HashMap<Text, byte[]>();
   private Set<Text> nullColumns = new HashSet<Text>();
 
+  static final Log LOG = LogFactory.getLog(RegExpRowFilter.class);
+  
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
@@ -80,10 +84,18 @@ public class RegExpRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public void acceptedRow(@SuppressWarnings("unused") final Text key) {
+  public void rowProcessed(boolean filtered, Text rowKey) {
     //doesn't care
   }
 
+  /**
+   * 
+   * {@inheritDoc}
+   */
+  public boolean processAlways() {
+    return false;
+  }
+  
   /**
    * Specify a value that must be matched for the given column.
    * 
@@ -93,7 +105,7 @@ public class RegExpRowFilter implements RowFilterInterface {
    *          the value that must equal the stored value.
    */
   public void setColumnFilter(final Text colKey, final byte[] value) {
-    if (null == value) {
+    if (value == null) {
       nullColumns.add(colKey);
     } else {
       equalsMap.put(colKey, value);
@@ -139,7 +151,11 @@ public class RegExpRowFilter implements RowFilterInterface {
    */
   public boolean filter(final Text rowKey) {
     if (filtersByRowKey() && rowKey != null) {
-      return !getRowKeyPattern().matcher(rowKey.toString()).matches();
+      boolean result = !getRowKeyPattern().matcher(rowKey.toString()).matches();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("filter returning " + result + " for rowKey: " + rowKey);
+      }
+      return result;
     }
     return false;
   }
@@ -156,13 +172,26 @@ public class RegExpRowFilter implements RowFilterInterface {
     if (filtersByColumnValue()) {
       byte[] filterValue = equalsMap.get(colKey);
       if (null != filterValue) {
-        return !Arrays.equals(filterValue, data);
+        boolean result = !Arrays.equals(filterValue, data);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("filter returning " + result + " for rowKey: " + rowKey + 
+            " colKey: " + colKey);
+        }
+        return result;
       }
     }
     if (nullColumns.contains(colKey)) {
       if (data != null && !Arrays.equals(HConstants.DELETE_BYTES.get(), data)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("filter returning true for rowKey: " + rowKey + 
+            " colKey: " + colKey);
+        }
         return true;
       }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("filter returning false for rowKey: " + rowKey + " colKey: " + 
+        colKey);
     }
     return false;
   }
@@ -175,13 +204,24 @@ public class RegExpRowFilter implements RowFilterInterface {
     for (Entry<Text, byte[]> col : columns.entrySet()) {
       if (nullColumns.contains(col.getKey())
           && !Arrays.equals(HConstants.DELETE_BYTES.get(), col.getValue())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("filterNotNull returning true for colKey: " + col.getKey()
+            + ", column should be null.");
+        }
         return true;
       }
     }
     for (Text col : equalsMap.keySet()) {
       if (!columns.containsKey(col)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("filterNotNull returning true for colKey: " + col + 
+            ", column not found in given TreeMap<Text, byte[]>.");
+        }
         return true;
       }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("filterNotNull returning false.");
     }
     return false;
   }
@@ -215,7 +255,7 @@ public class RegExpRowFilter implements RowFilterInterface {
   public void readFields(final DataInput in) throws IOException {
     boolean hasRowKeyPattern = in.readBoolean();
     if (hasRowKeyPattern) {
-      rowKeyRegExp = in.readLine();
+      rowKeyRegExp = in.readUTF();
     }
     // equals map
     equalsMap.clear();
@@ -283,7 +323,7 @@ public class RegExpRowFilter implements RowFilterInterface {
       out.writeBoolean(false);
     } else {
       out.writeBoolean(true);
-      out.writeChars(getRowKeyRegExp());
+      out.writeUTF(getRowKeyRegExp());
     }
 
     // equalsMap

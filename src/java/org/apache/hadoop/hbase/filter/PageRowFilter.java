@@ -24,6 +24,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.TreeMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -44,6 +46,8 @@ public class PageRowFilter implements RowFilterInterface {
   private long pageSize = Long.MAX_VALUE;
   private int rowsAccepted = 0;
 
+  static final Log LOG = LogFactory.getLog(PageRowFilter.class);
+  
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
@@ -81,8 +85,22 @@ public class PageRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public void acceptedRow(@SuppressWarnings("unused") final Text key) {
-    rowsAccepted++;
+  public void rowProcessed(boolean filtered, Text rowKey) {
+    if (!filtered) {
+      this.rowsAccepted++;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("rowProcessed incremented rowsAccepted to " + 
+          this.rowsAccepted);
+      }
+    }
+  }
+
+  /**
+   * 
+   * {@inheritDoc}
+   */
+  public boolean processAlways() {
+    return false;
   }
 
   /**
@@ -90,10 +108,12 @@ public class PageRowFilter implements RowFilterInterface {
    * {@inheritDoc}
    */
   public boolean filterAllRemaining() {
-    if (this.rowsAccepted > this.pageSize) {
-      return true;
+    boolean result = this.rowsAccepted > this.pageSize;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("filtering decision is " + result + " with rowsAccepted: " + 
+        this.rowsAccepted);
     }
-    return false;
+    return result;
   }
 
   /**

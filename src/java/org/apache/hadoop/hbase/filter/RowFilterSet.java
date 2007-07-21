@@ -26,23 +26,27 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 /**
  * Implementation of RowFilterInterface that represents a set of RowFilters
- * which will be evaluated with a specified boolean operator AND/OR. Since you
- * can use RowFilterSets as children of RowFilterSet, you can create a
- * hierarchy of filters to be evaluated.
+ * which will be evaluated with a specified boolean operator MUST_PASS_ALL 
+ * (!AND) or MUST_PASS_ONE (!OR).  Since you can use RowFilterSets as children 
+ * of RowFilterSet, you can create a hierarchy of filters to be evaluated.
  */
 public class RowFilterSet implements RowFilterInterface {
 
-  enum Operator {
-    AND, OR
+  public static enum Operator {
+    MUST_PASS_ALL, MUST_PASS_ONE
   }
 
-  private Operator operator = Operator.AND;
+  private Operator operator = Operator.MUST_PASS_ALL;
   private Set<RowFilterInterface> filters = new HashSet<RowFilterInterface>();
 
+  static final Log LOG = LogFactory.getLog(RowFilterSet.class);
+  
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
@@ -52,8 +56,8 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /**
-   * Constructor that takes a set of RowFilters. The default operator AND is
-   * assumed.
+   * Constructor that takes a set of RowFilters. The default operator 
+   * MUST_PASS_ALL is assumed.
    * 
    * @param rowFilters
    */
@@ -80,6 +84,10 @@ public class RowFilterSet implements RowFilterInterface {
   public void validate(final Text[] columns) {
     for (RowFilterInterface filter : filters) {
       filter.validate(columns);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Validated subfilter of type " + 
+          filter.getClass().getSimpleName());
+      }
     }
   }
 
@@ -90,6 +98,10 @@ public class RowFilterSet implements RowFilterInterface {
   public void reset() {
     for (RowFilterInterface filter : filters) {
       filter.reset();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Reset subfilter of type " + 
+          filter.getClass().getSimpleName());
+      }
     }
   }
 
@@ -97,28 +109,60 @@ public class RowFilterSet implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public void acceptedRow(final Text key) {
+  public void rowProcessed(boolean filtered, Text rowKey) {
     for (RowFilterInterface filter : filters) {
-      filter.acceptedRow(key);
+      filter.rowProcessed(filtered, rowKey);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Called rowProcessed on subfilter of type " + 
+          filter.getClass().getSimpleName());
+      }
     }
   }
 
+  /**
+   * 
+   * {@inheritDoc}
+   */
+  public boolean processAlways() {
+    for (RowFilterInterface filter : filters) {
+      if (filter.processAlways()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("processAlways() is true due to subfilter of type " + 
+            filter.getClass().getSimpleName());
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+  
   /**
    * 
    * {@inheritDoc}
    */
   public boolean filterAllRemaining() {
-    boolean result = operator == Operator.OR;
+    boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
-      if (operator == Operator.AND) {
+      if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("op.MPALL filterAllRemaining returning true due" + 
+              " to subfilter of type " + filter.getClass().getSimpleName());
+          }
           return true;
         }
-      } else if (operator == Operator.OR) {
+      } else if (operator == Operator.MUST_PASS_ONE) {
         if (!filter.filterAllRemaining()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("op.MPONE filterAllRemaining returning false due" + 
+              " to subfilter of type " + filter.getClass().getSimpleName());
+          }
           return false;
         }
       }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("filterAllRemaining default returning " + result);
     }
     return result;
   }
@@ -128,39 +172,78 @@ public class RowFilterSet implements RowFilterInterface {
    * {@inheritDoc}
    */
   public boolean filter(final Text rowKey) {
-    boolean result = operator == Operator.OR;
+    boolean resultFound = false;
+    boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
-      if (operator == Operator.AND) {
-        if (filter.filterAllRemaining() || filter.filter(rowKey)) {
-          return true;
+      if (!resultFound) {
+        if (operator == Operator.MUST_PASS_ALL) {
+          if (filter.filterAllRemaining() || filter.filter(rowKey)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("op.MPALL filter(Text) will return true due" + 
+                " to subfilter of type " + filter.getClass().getSimpleName());
+            }
+            result = true;
+            resultFound = true;
+          }
+        } else if (operator == Operator.MUST_PASS_ONE) {
+          if (!filter.filterAllRemaining() && !filter.filter(rowKey)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("op.MPONE filter(Text) will return false due" + 
+                " to subfilter of type " + filter.getClass().getSimpleName());
+            }
+            result = false;
+            resultFound = true;
+          }
         }
-      } else if (operator == Operator.OR) {
-        if (!filter.filterAllRemaining() && !filter.filter(rowKey)) {
-          return false;
-        }
+      } else if (filter.processAlways()) {
+        filter.filter(rowKey);
       }
     }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("filter(Text) returning " + result);
+    }
     return result;
-
   }
 
   /**
    * 
    * {@inheritDoc}
    */
-  public boolean filter(final Text rowKey, final Text colKey, final byte[] data) {
-    boolean result = operator == Operator.OR;
+  public boolean filter(final Text rowKey, final Text colKey, 
+    final byte[] data) {
+    boolean resultFound = false;
+    boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
-      if (operator == Operator.AND) {
-        if (filter.filterAllRemaining() || filter.filter(rowKey, colKey, data)) {
-          return true;
+      if (!resultFound) {
+        if (operator == Operator.MUST_PASS_ALL) {
+          if (filter.filterAllRemaining() || 
+            filter.filter(rowKey, colKey, data)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("op.MPALL filter(Text, Text, byte[]) will" + 
+                " return true due to subfilter of type " + 
+                filter.getClass().getSimpleName());
+            }
+            result = true;
+            resultFound = true;
+          }
+        } else if (operator == Operator.MUST_PASS_ONE) {
+          if (!filter.filterAllRemaining() && 
+            !filter.filter(rowKey, colKey, data)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("op.MPONE filter(Text, Text, byte[]) will" + 
+                " return false due to subfilter of type " + 
+                filter.getClass().getSimpleName());
+            }
+            result = false;
+            resultFound = true;
+          }
         }
-      } else if (operator == Operator.OR) {
-        if (!filter.filterAllRemaining()
-            && !filter.filter(rowKey, colKey, data)) {
-          return false;
-        }
+      } else if (filter.processAlways()) {
+        filter.filter(rowKey, colKey, data);
       }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("filter(Text, Text, byte[]) returning " + result);
     }
     return result;
   }
@@ -170,17 +253,35 @@ public class RowFilterSet implements RowFilterInterface {
    * {@inheritDoc}
    */
   public boolean filterNotNull(final TreeMap<Text, byte[]> columns) {
-    boolean result = operator == Operator.OR;
+    boolean resultFound = false;
+    boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
-      if (operator == Operator.AND) {
-        if (filter.filterAllRemaining() || filter.filterNotNull(columns)) {
-          return true;
+      if (!resultFound) {
+        if (operator == Operator.MUST_PASS_ALL) {
+          if (filter.filterAllRemaining() || filter.filterNotNull(columns)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("op.MPALL filterNotNull will return true due" + 
+                " to subfilter of type " + filter.getClass().getSimpleName());
+            }
+            result = true;
+            resultFound = true;
+          }
+        } else if (operator == Operator.MUST_PASS_ONE) {
+          if (!filter.filterAllRemaining() && !filter.filterNotNull(columns)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("op.MPONE filterNotNull will return false due" + 
+                " to subfilter of type " + filter.getClass().getSimpleName());
+            }
+            result = false;
+            resultFound = true;
+          }
         }
-      } else if (operator == Operator.OR) {
-        if (!filter.filterAllRemaining() && !filter.filterNotNull(columns)) {
-          return false;
-        }
+      } else if (filter.processAlways()) {
+        filter.filterNotNull(columns);
       }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("filterNotNull returning " + result);
     }
     return result;
   }
@@ -203,6 +304,10 @@ public class RowFilterSet implements RowFilterInterface {
           filter = (RowFilterInterface) clazz.newInstance();
           filter.readFields(in);
           filters.add(filter);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Successfully read in subfilter of type " + 
+              filter.getClass().getSimpleName());
+          }
         }
       } catch (InstantiationException e) {
         throw new RuntimeException("Failed to deserialize RowFilterInterface.",

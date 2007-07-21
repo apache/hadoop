@@ -19,34 +19,67 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+
 import org.apache.hadoop.io.Text;
 
 import junit.framework.TestCase;
 
 public class TestPageRowFilter extends TestCase {
+  
+  RowFilterInterface mainFilter;
+  final int ROW_LIMIT = 3;
+  
+  protected void setUp() throws Exception {
+    super.setUp();
+    mainFilter = new PageRowFilter(ROW_LIMIT);
+  }
+  
   public void testPageSize() throws Exception {
-    final int pageSize = 3;
-    RowFilterInterface filter = new PageRowFilter(pageSize);
-    testFiltersBeyondPageSize(filter, pageSize);
+    pageSizeTests(mainFilter);
+  }
+  
+  public void testSerialization() throws Exception {
+    // Decompose mainFilter to bytes.
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    DataOutputStream out = new DataOutputStream(stream);
+    mainFilter.write(out);
+    out.close();
+    byte[] buffer = stream.toByteArray();
+    
+    // Recompose mainFilter.
+    DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
+    RowFilterInterface newFilter = new PageRowFilter();
+    newFilter.readFields(in);
+    
+    // Ensure the serialization preserved the filter by running a full test.
+    pageSizeTests(newFilter);
+  }
+  
+  private void pageSizeTests(RowFilterInterface filter) throws Exception {
+    testFiltersBeyondPageSize(filter, ROW_LIMIT);
     // Test reset works by going in again.
     filter.reset();
-    testFiltersBeyondPageSize(filter, pageSize);
+    testFiltersBeyondPageSize(filter, ROW_LIMIT);
   }
   
   private void testFiltersBeyondPageSize(final RowFilterInterface filter,
-      final int pageSize) {
+    final int pageSize) {
     for (int i = 0; i < (pageSize * 2); i++) {
       Text row = new Text(Integer.toString(i));
       boolean filterOut = filter.filter(row);
       if (!filterOut) {
         assertFalse("Disagrees with 'filter'", filter.filterAllRemaining());
-        filter.acceptedRow(row);
       } else {
         // Once we have all for a page, calls to filterAllRemaining should
         // stay true.
         assertTrue("Disagrees with 'filter'", filter.filterAllRemaining());
         assertTrue(i >= pageSize);
       }
+      filter.rowProcessed(filterOut, row);
     }
   }
 }
