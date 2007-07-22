@@ -21,7 +21,7 @@ AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep $HADOOP_VERSION | gre
 
 # Start a cluster
 echo "Starting cluster with AMI $AMI_IMAGE"
-RUN_INSTANCES_OUTPUT=`ec2-run-instances $AMI_IMAGE -n $NO_INSTANCES -g $GROUP -k gsg-keypair -d "$NO_INSTANCES,$MASTER_HOST" | grep INSTANCE | awk '{print $2}'`
+RUN_INSTANCES_OUTPUT=`ec2-run-instances $AMI_IMAGE -n $NO_INSTANCES -g $GROUP -k $KEY_NAME -d "$NO_INSTANCES,$MASTER_HOST" | grep INSTANCE | awk '{print $2}'`
 for instance in $RUN_INSTANCES_OUTPUT; do
   echo "Waiting for instance $instance to start"
   while true; do
@@ -36,6 +36,6 @@ for instance in $RUN_INSTANCES_OUTPUT; do
 done
 
 echo "Appointing master"
-MASTER_EC2_HOST=`ec2-describe-instances | grep INSTANCE | grep running | awk '{if ($7 == 0) print $4}'`
+MASTER_EC2_HOST=`ec2-describe-instances | grep INSTANCE | grep running | awk '{if ($8 == 0 || $7 == 0) print $4}'`
 MASTER_IP=`dig +short $MASTER_EC2_HOST`
 echo "Master is $MASTER_EC2_HOST. Please set up DNS so $MASTER_HOST points to $MASTER_IP."
