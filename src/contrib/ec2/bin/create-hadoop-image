@@ -11,7 +11,7 @@ bin=`cd "$bin"; pwd`
 AMI_IMAGE=`ec2-describe-images -a | grep fedora-core4-base | awk '{print $2}'`
 
 echo "Starting a fedora core base AMI with ID $AMI_IMAGE."
-OUTPUT=`ec2-run-instances $AMI_IMAGE -k gsg-keypair`
+OUTPUT=`ec2-run-instances $AMI_IMAGE -k $KEY_NAME`
 BOOTING_INSTANCE=`echo $OUTPUT | awk '{print $6}'`
 
 echo "Instance is $BOOTING_INSTANCE."
