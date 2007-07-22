@@ -397,7 +397,10 @@ Branch 0.14 (unreleased changes)
 
 132. HADOOP-1635.  Remove hardcoded keypair name and fix launch-hadoop-cluster
      to support later versions of ec2-api-tools.  (Stu Hood via tomwhite)
- 
+
+133. HADOOP-1638.  Fix contrib EC2 scripts to support NAT addressing.
+     (Stu Hood via tomwhite) 
+
 
 Release 0.13.0 - 2007-06-08
 
