@@ -12,8 +12,13 @@ if ! ssh $SSH_OPTS "root@$MASTER_HOST" echo "hello" ; then
   exit 1
 fi
 
+# Datanodes that are started separately from the rest of the cluster will
+# still use the $MASTER_HOST address to access the master
+echo "Adjusting master hadoop-site.xml to minimize DNS lookups"
+ssh $SSH_OPTS "root@$MASTER_HOST" "sed -i -e \"s/$MASTER_HOST/\$(hostname)/g\" /usr/local/hadoop-$HADOOP_VERSION/conf/hadoop-site.xml"
+
 echo "Creating slaves file and copying to master"
-ec2-describe-instances | grep INSTANCE | grep running | awk '{if ($7 != 0) print $4}' > slaves
+ec2-describe-instances | grep INSTANCE | grep running | awk '{if ($7 != 0 && $8 != 0) print $4}' > slaves
 scp $SSH_OPTS slaves "root@$MASTER_HOST:/usr/local/hadoop-$HADOOP_VERSION/conf/slaves"
 
 echo "Copying private key to master"
