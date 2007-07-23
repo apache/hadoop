@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Branch 0.13 (unreleased changes)
+Release 0.13.1 - 2007-07-25
 
  1. HADOOP-1623.  Fix an infinite loop when copying directories into
     themselves.  (Dhruba Borthakur via cutting)
