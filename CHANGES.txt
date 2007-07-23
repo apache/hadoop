@@ -16,6 +16,9 @@ Release 0.13.1 - 2007-07-25
  4. HADOOP-1638.  Fix contrib EC2 scripts to support NAT addressing.
     (Stu Hood via tomwhite) 
 
+ 5. HADOOP-1396.  Fix FileNotFoundException on DFS block.
+    (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
