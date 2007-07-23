@@ -71,3 +71,5 @@ Trunk (unreleased changes)
      (Izaak Rubin via Stack)
  46. HADOOP-1579 Add new WhileMatchRowFilter and StopRowFilter filters
     (Izaak Rubin via Stack)
+ 47. HADOOP-1637 Fix to HScanner to Support Filters, Add Filter Tests to
+     TestScanner2 (Izaak Rubin via Stack)
