@@ -69,3 +69,5 @@ Trunk (unreleased changes)
      java.util.concurrent.BlockingQueue in HMaster, HRegionServer
  45. HADOOP-1606 Updated implementation of RowFilterSet, RowFilterInterface
      (Izaak Rubin via Stack)
+ 46. HADOOP-1579 Add new WhileMatchRowFilter and StopRowFilter filters
+    (Izaak Rubin via Stack)
