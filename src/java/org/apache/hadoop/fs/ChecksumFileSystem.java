@@ -96,6 +96,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     private static final int HEADER_LENGTH = 8;
     
     private int bytesPerSum = 1;
+    private long fileLen = -1L;
     
     public ChecksumFSInputChecker(ChecksumFileSystem fs, Path file)
       throws IOException {
@@ -202,6 +203,57 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
       return nread;
     }
+    
+    /* Return the file length */
+    private long getFileLength() throws IOException {
+      if( fileLen==-1L ) {
+        fileLen = fs.getContentLength(file);
+      }
+      return fileLen;
+    }
+    
+    /**
+     * Skips over and discards <code>n</code> bytes of data from the
+     * input stream.
+     *
+     *The <code>skip</code> method skips over some smaller number of bytes
+     * when reaching end of file before <code>n</code> bytes have been skipped.
+     * The actual number of bytes skipped is returned.  If <code>n</code> is
+     * negative, no bytes are skipped.
+     *
+     * @param      n   the number of bytes to be skipped.
+     * @return     the actual number of bytes skipped.
+     * @exception  IOException  if an I/O error occurs.
+     *             ChecksumException if the chunk to skip to is corrupted
+     */
+    public synchronized long skip(long n) throws IOException {
+      long curPos = getPos();
+      long fileLength = getFileLength();
+      if( n+curPos > fileLength ) {
+        n = fileLength - curPos;
+      }
+      return super.skip(n);
+    }
+    
+    /**
+     * Seek to the given position in the stream.
+     * The next read() will be from that position.
+     * 
+     * <p>This method does not allow seek past the end of the file.
+     * This produces IOException.
+     *
+     * @param      pos   the postion to seek to.
+     * @exception  IOException  if an I/O error occurs or seeks after EOF
+     *             ChecksumException if the chunk to seek to is corrupted
+     */
+
+    public synchronized void seek(long pos) throws IOException {
+      if(pos>getFileLength()) {
+        throw new IOException("Cannot seek after EOF");
+      }
+      super.seek(pos);
+    }
+
   }
 
   /**

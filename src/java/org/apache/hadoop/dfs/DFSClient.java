@@ -1264,7 +1264,12 @@ class DFSClient implements FSConstants {
      
     public long skip(long n) throws IOException {
       if ( n > 0 ) {
-        seek(getPos()+n);
+        long curPos = getPos();
+        long fileLen = getFileLength();
+        if( n+curPos > fileLen ) {
+          n = fileLen - curPos;
+        }
+        seek(curPos+n);
         return n;
       }
       return n < 0 ? -1 : 0;

@@ -181,6 +181,12 @@ public class TestFSInputChecker extends TestCase {
     
     stm.seek(0);
     assertEquals(stm.skip(FILE_SIZE), FILE_SIZE);
+    assertEquals(stm.skip(10), 0);
+    
+    stm.seek(0);
+    assertEquals(stm.skip(FILE_SIZE+10), FILE_SIZE);
+    stm.seek(10);
+    assertEquals(stm.skip(FILE_SIZE), FILE_SIZE-10);
   }
 
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
