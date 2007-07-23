@@ -638,7 +638,7 @@ public class NetworkTopology {
     }
     
     // put a random node at position 0 if it is not a local/local-rack node
-    if(tempIndex == 0) {
+    if(tempIndex == 0 && nodes.length != 0) {
       swap(nodes, 0, r.nextInt(nodes.length));
     }
   }

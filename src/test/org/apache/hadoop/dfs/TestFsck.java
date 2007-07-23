@@ -59,7 +59,24 @@ public class TestFsck extends TestCase {
       String outStr = bStream.toString();
       assertTrue(-1 != outStr.indexOf("HEALTHY"));
       System.out.println(outStr);
-      util.cleanup(fs, "/srcdat");
+      cluster.shutdown();
+      
+      // restart the cluster; bring up namenode but not the data nodes
+      cluster = new MiniDFSCluster(conf, 0, false, null);
+      oldOut = System.out;
+      bStream = new ByteArrayOutputStream();
+      newOut = new PrintStream(bStream, true);
+      System.setOut(newOut);
+      assertEquals(0, new DFSck().doMain(conf, new String[] {"/"}));
+      System.setOut(oldOut);
+      outStr = bStream.toString();
+      // expect the result is corrupt
+      assertTrue(outStr.contains("CORRUPT"));
+      System.out.println(outStr);
+      
+      // bring up data nodes & cleanup cluster
+      cluster.startDataNodes(conf, 4, true, null, null);
+      util.cleanup(cluster.getFileSystem(), "/srcdat");
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }

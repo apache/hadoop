@@ -401,6 +401,9 @@ Branch 0.14 (unreleased changes)
 133. HADOOP-1638.  Fix contrib EC2 scripts to support NAT addressing.
      (Stu Hood via tomwhite) 
 
+134. HADOOP-1632.  Fix an IllegalArgumentException in fsck.
+     (Hairong Kuang via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
