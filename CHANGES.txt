@@ -404,6 +404,9 @@ Branch 0.14 (unreleased changes)
 134. HADOOP-1632.  Fix an IllegalArgumentException in fsck.
      (Hairong Kuang via cutting)
 
+135. HADOOP-1619.  Fix FSInputChecker to not attempt to read past EOF.
+     (Hairong Kuang via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

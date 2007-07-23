@@ -297,7 +297,23 @@ abstract public class FSInputChecker extends FSInputStream {
     return count-pos;
   }
   
-  @Override
+  /**
+   * Skips over and discards <code>n</code> bytes of data from the
+   * input stream.
+   *
+   * <p>This method may skip more bytes than are remaining in the backing
+   * file. This produces no exception and the number of bytes skipped
+   * may include some number of bytes that were beyond the EOF of the
+   * backing file. Attempting to read from the stream after skipping past
+   * the end will result in -1 indicating the end of the file.
+   *
+   *<p>If <code>n</code> is negative, no bytes are skipped.
+   *
+   * @param      n   the number of bytes to be skipped.
+   * @return     the actual number of bytes skipped.
+   * @exception  IOException  if an I/O error occurs.
+   *             ChecksumException if the chunk to skip to is corrupted
+   */
   public synchronized long skip(long n) throws IOException {
     if (n <= 0) {
       return 0;
@@ -307,7 +323,19 @@ abstract public class FSInputChecker extends FSInputStream {
     return n;
   }
 
-  @Override
+  /**
+   * Seek to the given position in the stream.
+   * The next read() will be from that position.
+   * 
+   * <p>This method may seek past the end of the file.
+   * This produces no exception and an attempt to read from
+   * the stream will result in -1 indicating the end of the file.
+   *
+   * @param      pos   the postion to seek to.
+   * @exception  IOException  if an I/O error occurs.
+   *             ChecksumException if the chunk to seek to is corrupted
+   */
+
   public synchronized void seek(long pos) throws IOException {
     if( pos<0 ) {
       return;
@@ -328,10 +356,7 @@ abstract public class FSInputChecker extends FSInputStream {
     // scan to the desired position
     int delta = (int)(pos - chunkPos);
     if( delta > 0) {
-      int nread = readFully(this, new byte[delta], 0, delta);
-      if (nread < delta) {
-        throw new IOException("Cannot seek after EOF");
-      }
+      readFully(this, new byte[delta], 0, delta);
     }
   }
 
