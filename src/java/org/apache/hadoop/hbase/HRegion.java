@@ -1339,34 +1339,34 @@ public class HRegion implements HConstants {
       try {
         HInternalScannerInterface scanner =
           memcache.getScanner(timestamp, cols, firstRow);
-        if(scanner.isWildcardScanner()) {
+        if (scanner.isWildcardScanner()) {
           this.wildcardMatch = true;
         }
-        if(scanner.isMultipleMatchScanner()) {
+        if (scanner.isMultipleMatchScanner()) {
           this.multipleMatchers = true;
         }
         scanners[0] = scanner;
 
-        for(int i = 0; i < stores.length; i++) {
+        for (int i = 0; i < stores.length; i++) {
           scanner = stores[i].getScanner(timestamp, cols, firstRow);
-          if(scanner.isWildcardScanner()) {
+          if (scanner.isWildcardScanner()) {
             this.wildcardMatch = true;
           }
-          if(scanner.isMultipleMatchScanner()) {
+          if (scanner.isMultipleMatchScanner()) {
             this.multipleMatchers = true;
           }
           scanners[i + 1] = scanner;
         }
 
       } catch(IOException e) {
-        for(int i = 0; i < this.scanners.length; i++) {
+        for (int i = 0; i < this.scanners.length; i++) {
           if(scanners[i] != null) {
             closeScanner(i);
           }
         }
         throw e;
       }
-      for(int i = 0; i < scanners.length; i++) {
+      for (int i = 0; i < scanners.length; i++) {
         keys[i] = new HStoreKey();
         resultSets[i] = new TreeMap<Text, byte []>();
         if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
@@ -1428,9 +1428,8 @@ public class HRegion implements HConstants {
                 && moreToFollow)
                 && (keys[i].getRow().compareTo(chosenRow) == 0)) {
               // If we are doing a wild card match or there are multiple
-              // matchers
-              // per column, we need to scan all the older versions of this row
-              // to pick up the rest of the family members
+              // matchers per column, we need to scan all the older versions of 
+              // this row to pick up the rest of the family members
 
               if (!wildcardMatch
                   && !multipleMatchers
@@ -1469,17 +1468,19 @@ public class HRegion implements HConstants {
                 closeScanner(i);
               }
             }
-
-            // If the current scanner is non-null AND has a lower-or-equal
-            // row label, then its timestamp is bad. We need to advance it.
-            while ((scanners[i] != null) &&
-                (keys[i].getRow().compareTo(chosenRow) <= 0)) {
-              resultSets[i].clear();
-              if (!scanners[i].next(keys[i], resultSets[i])) {
-                closeScanner(i);
-              }
-            }
           }          
+        }
+        
+        for (int i = 0; i < scanners.length; i++) {
+          // If the current scanner is non-null AND has a lower-or-equal
+          // row label, then its timestamp is bad. We need to advance it.
+          while ((scanners[i] != null) &&
+              (keys[i].getRow().compareTo(chosenRow) <= 0)) {
+            resultSets[i].clear();
+            if (!scanners[i].next(keys[i], resultSets[i])) {
+              closeScanner(i);
+            }
+          }
         }
         
         moreToFollow = chosenTimestamp > 0;
@@ -1492,7 +1493,10 @@ public class HRegion implements HConstants {
             moreToFollow = false;
             LOG.debug("page limit");
           }
-        }        
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("ROWKEY = " + chosenRow + ", FILTERED = " + filtered);
+        }
       }
       
       // Make sure scanners closed if no more results
@@ -1507,7 +1511,7 @@ public class HRegion implements HConstants {
       return moreToFollow;
     }
 
-
+    
     /** Shut down a single scanner */
     void closeScanner(int i) {
       try {
