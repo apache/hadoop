@@ -407,6 +407,9 @@ Branch 0.14 (unreleased changes)
 135. HADOOP-1619.  Fix FSInputChecker to not attempt to read past EOF.
      (Hairong Kuang via cutting)
 
+136. HADOOP-1640.  Fix TestDecommission on Windows.
+     (Dhruba Borthakur via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
