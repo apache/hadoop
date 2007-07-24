@@ -24,6 +24,7 @@ import java.util.Random;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.net.*;
+import java.lang.InterruptedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -83,10 +84,19 @@ public class TestDecommission extends TestCase {
   
   private void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
-    String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
-    for (int idx = 0; idx < locations.length; idx++) {
-      assertEquals("Number of replicas for block" + idx,
-                   Math.min(numDatanodes, repl), locations[idx].length);  
+    boolean done = false;
+    while (!done) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {}
+      done = true;
+      String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
+      for (int idx = 0; idx < locations.length; idx++) {
+        if (locations[idx].length < repl) {
+          done = false;
+          break;
+        }
+      }
     }
   }
 
