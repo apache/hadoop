@@ -875,7 +875,7 @@ public class DataNode implements FSConstants, Runnable {
         long blockLen = 0;
         long lastOffset = 0;
         long lastLen = 0;
-        int status = -1;
+        short status = -1;
         boolean headerWritten = false;
         
         while ( true ) {
@@ -1006,9 +1006,9 @@ public class DataNode implements FSConstants, Runnable {
           if ( mirrorOut != null ) {
             //Wait for the remote reply
             mirrorOut.flush();
-            byte result = OP_STATUS_ERROR; 
+            short result = OP_STATUS_ERROR; 
             try {
-              result = mirrorIn.readByte();
+              result = mirrorIn.readShort();
             } catch ( IOException ignored ) {}
 
             msg += " and " +  (( result != OP_STATUS_SUCCESS ) ? 
@@ -1023,7 +1023,7 @@ public class DataNode implements FSConstants, Runnable {
             
         if ( status >= 0 ) {
           try {
-            reply.writeByte( status );
+            reply.writeShort( status );
             reply.flush();
           } catch ( IOException ignored ) {}
         }
@@ -1133,6 +1133,10 @@ public class DataNode implements FSConstants, Runnable {
 
       int bytesPerChecksum = checksum.getBytesPerChecksum();
       int checksumSize = checksum.getChecksumSize();
+      
+      if (length < 0) {
+        length = data.getLength(block);
+      }
 
       long endOffset = data.getLength( block );
       if ( startOffset < 0 || startOffset > endOffset ||

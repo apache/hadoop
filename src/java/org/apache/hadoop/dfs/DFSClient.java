@@ -1665,7 +1665,7 @@ class DFSClient implements FSConstants {
           numSuccessfulWrites++;
 
           //We should wait for response from the receiver.
-          int reply = blockReplyStream.readByte();
+          int reply = blockReplyStream.readShort();
           if ( reply == OP_STATUS_SUCCESS ||
               ( reply == OP_STATUS_ERROR_EXISTS &&
                   numSuccessfulWrites > 1 ) ) {
