@@ -413,6 +413,8 @@ Branch 0.14 (unreleased changes)
 137. HADOOP-1587.  Fix TestSymLink to get required system properties.
      (Devaraj Das via omalley)
 
+138. HADOOP-1628.  Add block CRC protocol unit tests. (Raghu Angadi via omalley)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

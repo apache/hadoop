@@ -26,8 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 public interface FSConstants {
   public static int MIN_BLOCKS_FOR_WRITE = 5;
 
-  public static final long WRITE_COMPLETE = 0xcafae11a;
-
   //
   // IPC Opcodes 
   //
