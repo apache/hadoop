@@ -410,6 +410,8 @@ Branch 0.14 (unreleased changes)
 136. HADOOP-1640.  Fix TestDecommission on Windows.
      (Dhruba Borthakur via cutting)
 
+137. HADOOP-1587.  Fix TestSymLink to get required system properties.
+     (Devaraj Das via omalley)
 
 Release 0.13.0 - 2007-06-08
 

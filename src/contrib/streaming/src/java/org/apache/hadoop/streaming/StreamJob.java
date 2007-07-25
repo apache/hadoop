@@ -258,7 +258,7 @@ public class StreamJob {
       
       if (null != jobConfArgs){
         for(String s : jobConfArgs){
-          String []parts = s.split("="); 
+          String []parts = s.split("=", 2); 
           userJobConfProps_.put(parts[0], parts[1]);
         }
       }
