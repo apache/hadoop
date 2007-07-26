@@ -23,9 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.io.Text;
@@ -38,25 +36,38 @@ import org.apache.hadoop.io.Writable;
  * can result in multiple BatchUpdate objects if the batch contains rows that
  * are served by multiple region servers.
  */
-public class BatchUpdate implements Writable,
-Iterable<Map.Entry<Text, ArrayList<BatchOperation>>> {
+public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   
   // used to generate lock ids
   private Random rand;
+
+  // the row being updated
+  private Text row;
   
-  // used on client side to map lockid to a set of row updates
-  private HashMap<Long, ArrayList<BatchOperation>> lockToRowOps;
+  // the lockid
+  private long lockid;
   
-  // the operations for each row
-  private HashMap<Text, ArrayList<BatchOperation>> operations;
+  // the batched operations
+  private ArrayList<BatchOperation> operations;
   
   /** constructor */
   public BatchUpdate() {
     this.rand = new Random();
-    this.lockToRowOps = new HashMap<Long, ArrayList<BatchOperation>>();
-    this.operations = new HashMap<Text, ArrayList<BatchOperation>>();
+    this.row = new Text();
+    this.lockid = -1L;
+    this.operations = new ArrayList<BatchOperation>();
   }
 
+  /** @return the lock id */
+  public long getLockid() {
+    return lockid;
+  }
+  
+  /** @return the row */
+  public Text getRow() {
+    return row;
+  }
+  
   /** 
    * Start a batch row insertion/update.
    * 
@@ -66,21 +77,15 @@ Iterable<Map.Entry<Text, ArrayList<BatchOperation>>> {
    * The entire batch update can be abandoned by calling HClient.batchAbort();
    *
    * Callers to this method are given a handle that corresponds to the row being
-   * changed. The handle must be supplied on subsequent put or delete calls so
-   * that the row can be identified.
+   * changed. The handle must be supplied on subsequent put or delete calls.
    * 
    * @param row Name of row to start update against.
    * @return Row lockid.
    */
-  public synchronized long startUpdate(Text row) {
-    Long lockid = Long.valueOf(Math.abs(rand.nextLong()));
-    ArrayList<BatchOperation> ops = operations.get(row);
-    if(ops == null) {
-      ops = new ArrayList<BatchOperation>();
-      operations.put(row, ops);
-    }
-    lockToRowOps.put(lockid, ops);
-    return lockid.longValue();
+  public synchronized long startUpdate(final Text row) {
+    this.row = row;
+    this.lockid = Long.valueOf(Math.abs(rand.nextLong()));
+    return this.lockid;
   }
   
   /** 
@@ -90,12 +95,12 @@ Iterable<Map.Entry<Text, ArrayList<BatchOperation>>> {
    * @param column              - column whose value is being set
    * @param val                 - new value for column
    */
-  public synchronized void put(long lockid, Text column, byte val[]) {
-    ArrayList<BatchOperation> ops = lockToRowOps.get(lockid);
-    if(ops == null) {
-      throw new IllegalArgumentException("no row for lockid " + lockid);
+  public synchronized void put(final long lockid, final Text column,
+      final byte val[]) {
+    if(this.lockid != lockid) {
+      throw new IllegalArgumentException("invalid lockid " + lockid);
     }
-    ops.add(new BatchOperation(column, val));
+    operations.add(new BatchOperation(column, val));
   }
   
   /** 
@@ -104,12 +109,11 @@ Iterable<Map.Entry<Text, ArrayList<BatchOperation>>> {
    * @param lockid              - lock id returned from startUpdate
    * @param column              - name of column whose value is to be deleted
    */
-  public synchronized void delete(long lockid, Text column) {
-    ArrayList<BatchOperation> ops = lockToRowOps.get(lockid);
-    if(ops == null) {
-      throw new IllegalArgumentException("no row for lockid " + lockid);
+  public synchronized void delete(final long lockid, final Text column) {
+    if(this.lockid != lockid) {
+      throw new IllegalArgumentException("invalid lockid " + lockid);
     }
-    ops.add(new BatchOperation(column));
+    operations.add(new BatchOperation(column));
   }
 
   //
@@ -117,11 +121,10 @@ Iterable<Map.Entry<Text, ArrayList<BatchOperation>>> {
   //
   
   /**
-   * @return Iterator<Map.Entry<Text, ArrayList<BatchOperation>>>
-   *         Text row -> ArrayList<BatchOperation> changes
+   * @return Iterator<BatchOperation>
    */
-  public Iterator<Map.Entry<Text, ArrayList<BatchOperation>>> iterator() {
-    return operations.entrySet().iterator();
+  public Iterator<BatchOperation> iterator() {
+    return operations.iterator();
   }
   
   //
@@ -132,20 +135,12 @@ Iterable<Map.Entry<Text, ArrayList<BatchOperation>>> {
    * {@inheritDoc}
    */
   public void readFields(DataInput in) throws IOException {
+    row.readFields(in);
     int nOps = in.readInt();
     for (int i = 0; i < nOps; i++) {
-      Text row = new Text();
-      row.readFields(in);
-      
-      int nRowOps = in.readInt();
-      ArrayList<BatchOperation> rowOps = new ArrayList<BatchOperation>();
-      for(int j = 0; j < nRowOps; j++) {
-        BatchOperation op = new BatchOperation();
-        op.readFields(in);
-        rowOps.add(op);
-      }
-      
-      operations.put(row, rowOps);
+      BatchOperation op = new BatchOperation();
+      op.readFields(in);
+      operations.add(op);
     }
   }
 
@@ -153,16 +148,10 @@ Iterable<Map.Entry<Text, ArrayList<BatchOperation>>> {
    * {@inheritDoc}
    */
   public void write(DataOutput out) throws IOException {
+    row.write(out);
     out.writeInt(operations.size());
-    for (Map.Entry<Text, ArrayList<BatchOperation>> e: operations.entrySet()) {
-      e.getKey().write(out);
-      
-      ArrayList<BatchOperation> ops = e.getValue();
-      out.writeInt(ops.size());
-      
-      for(BatchOperation op: ops) {
-        op.write(out);
-      }
+    for (BatchOperation op: operations) {
+      op.write(out);
     }
   }
 }
