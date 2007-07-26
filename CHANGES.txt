@@ -75,3 +75,5 @@ Trunk (unreleased changes)
      TestScanner2 (Izaak Rubin via Stack)
  48. HADOOP-1516 HClient fails to readjust when ROOT or META redeployed on new
      region server
+ 49. HADOOP-1646 RegionServer OOME's under sustained, substantial loading by
+     10 concurrent clients

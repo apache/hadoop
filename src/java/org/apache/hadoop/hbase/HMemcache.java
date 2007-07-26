@@ -27,9 +27,8 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Text;
 
@@ -38,30 +37,36 @@ import org.apache.hadoop.io.Text;
  * wrapper around a TreeMap that helps us when staging the Memcache out to disk.
  */
 public class HMemcache {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
-  
   TreeMap<HStoreKey, byte []> memcache =
     new TreeMap<HStoreKey, byte []>();
-  
-  Vector<TreeMap<HStoreKey, byte []>> history
+  final Vector<TreeMap<HStoreKey, byte []>> history
     = new Vector<TreeMap<HStoreKey, byte []>>();
-  
   TreeMap<HStoreKey, byte []> snapshot = null;
 
   final HLocking lock = new HLocking();
+  
+  /*
+   * Approximate size in bytes of the payload carried by this memcache.
+   */
+  private AtomicLong size = new AtomicLong(0);
 
-  /** constructor */
+
+  /**
+   * Constructor
+   */
   public HMemcache() {
     super();
   }
 
   /** represents the state of the memcache at a specified point in time */
-  public static class Snapshot {
-    TreeMap<HStoreKey, byte []> memcacheSnapshot = null;
-    long sequenceId = 0;
+  static class Snapshot {
+    final TreeMap<HStoreKey, byte []> memcacheSnapshot;
+    final long sequenceId;
     
-    Snapshot() {
+    Snapshot(final TreeMap<HStoreKey, byte[]> memcache, final Long i) {
       super();
+      this.memcacheSnapshot = memcache;
+      this.sequenceId = i;
     }
   }
   
@@ -79,36 +84,22 @@ public class HMemcache {
    * @return frozen HMemcache TreeMap and HLog sequence number.
    */
   Snapshot snapshotMemcacheForLog(HLog log) throws IOException {
-    Snapshot retval = new Snapshot();
-
     this.lock.obtainWriteLock();
     try {
       if(snapshot != null) {
         throw new IOException("Snapshot in progress!");
       }
+      // If no entries in memcache.
       if(memcache.size() == 0) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("memcache empty. Skipping snapshot");
-        }
-        return retval;
+        return null;
       }
-
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("starting memcache snapshot");
-      }
-      
-      retval.memcacheSnapshot = memcache;
+      Snapshot retval = new Snapshot(memcache, log.startCacheFlush());
       this.snapshot = memcache;
       history.add(memcache);
       memcache = new TreeMap<HStoreKey, byte []>();
-      retval.sequenceId = log.startCacheFlush();
-      
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("memcache snapshot complete");
-      }
-      
+      // Reset size of this memcache.
+      this.size.set(0);
       return retval;
-      
     } finally {
       this.lock.releaseWriteLock();
     }
@@ -127,12 +118,8 @@ public class HMemcache {
       if(snapshot == null) {
         throw new IOException("Snapshot not present!");
       }
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("deleting snapshot");
-      }
-      
-      for(Iterator<TreeMap<HStoreKey, byte []>> it = history.iterator(); 
-          it.hasNext(); ) {
+      for (Iterator<TreeMap<HStoreKey, byte []>> it = history.iterator(); 
+          it.hasNext();) {
         TreeMap<HStoreKey, byte []> cur = it.next();
         if (snapshot == cur) {
           it.remove();
@@ -140,9 +127,6 @@ public class HMemcache {
         }
       }
       this.snapshot = null;
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("snapshot deleted");
-      }
     } finally {
       this.lock.releaseWriteLock();
     }
@@ -161,18 +145,28 @@ public class HMemcache {
     try {
       for (Map.Entry<Text, byte []> es: columns.entrySet()) {
         HStoreKey key = new HStoreKey(row, es.getKey(), timestamp);
-        memcache.put(key, es.getValue());
+        byte [] value = es.getValue();
+        this.size.addAndGet(key.getSize());
+        this.size.addAndGet(((value == null)? 0: value.length));
+        memcache.put(key, value);
       }
     } finally {
       this.lock.releaseWriteLock();
     }
+  }
+  
+  /**
+   * @return Approximate size in bytes of payload carried by this memcache.
+   */
+  public long getSize() {
+    return this.size.get();
   }
 
   /**
    * Look back through all the backlog TreeMaps to find the target.
    * @param key
    * @param numVersions
-   * @return An array of byte arrays orderded by timestamp.
+   * @return An array of byte arrays ordered by timestamp.
    */
   public byte [][] get(final HStoreKey key, final int numVersions) {
     List<byte []> results = new ArrayList<byte[]>();
@@ -348,7 +342,7 @@ public class HMemcache {
     }
     
     /**
-     * Get the next value from the specified iterater.
+     * Get the next value from the specified iterator.
      * 
      * @param i Which iterator to fetch next value from
      * @return true if there is more data available

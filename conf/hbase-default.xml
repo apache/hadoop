@@ -102,7 +102,7 @@
   </property>
   <property>
     <name>hbase.regionserver.msginterval</name>
-    <value>15000</value>
+    <value>10000</value>
     <description>Interval between messages from the RegionServer to HMaster
     in milliseconds.  Default is 15. Set this value low if you want unit
     tests to be responsive.
@@ -111,24 +111,60 @@
   <property>
     <name>hbase.regionserver.maxlogentries</name>
     <value>30000</value>
-    <description>Rotate the logs when count of entries exceeds this value.
-    Default: 30,000
+    <description>Rotate the HRegion HLogs when count of entries exceeds this
+    value.  Default: 30,000.  Value is checked by a thread that runs every
+    hbase.server.thread.wakefrequency.
     </description>
   </property>
   <property>
-    <name>hbase.hregion.maxunflushed</name>
-    <value>10000</value>
+    <name>hbase.hregion.memcache.flush.size</name>
+    <value>16777216</value>
     <description>
-    Memcache will be flushed to disk if number of Memcache writes
-    are in excess of this number.
+    A HRegion memcache will be flushed to disk if size of the memcache
+    exceeds this number of bytes.  Value is checked by a thread that runs
+    every hbase.server.thread.wakefrequency.  
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.memcache.block.multiplier</name>
+    <value>2</value>
+    <description>
+    Block updates if memcache has hbase.hregion.block.memcache
+    time hbase.hregion.flush.size bytes.  Useful preventing
+    runaway memcache during spikes in update traffic.  Without an
+    upper-bound, memcache fills such that when it flushes the
+    resultant flush files take a long time to compact or split, or
+    worse, we OOME.
     </description>
   </property>
   <property>
     <name>hbase.hregion.max.filesize</name>
-    <value>134217728</value>
+    <value>67108864</value>
     <description>
     Maximum desired file size for an HRegion.  If filesize exceeds
-    value + (value / 2), the HRegion is split in two.  Default: 128M.
+    value + (value / 2), the HRegion is split in two.  Default: 64M.
+    If too large, splits will take so long, clients timeout.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.compactionThreshold</name>
+    <value>3</value>
+    <description>
+    If more than this number of HStoreFiles in any one HStore
+    (one HStoreFile is written per flush of memcache) then a compaction
+    is run to rewrite all HStoreFiles files as one.  Larger numbers
+    put off compaction but when it runs, it takes longer to complete.
+    During a compaction, updates cannot be flushed to disk.  Long
+    compactions require memory sufficient to carry the logging of
+    all updates across the duration of the compaction.
+    
+    If too large, clients timeout during compaction.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.thread.splitcompactcheckfrequency</name>
+    <value>15000</value>
+    <description>How often a region server runs the split/compaction check.
     </description>
   </property>
 
