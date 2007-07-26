@@ -42,10 +42,7 @@ public class HMsg implements Writable {
   
   /** Master tells region server to stop */
   public static final byte MSG_REGIONSERVER_STOP = 5;
-  
-  public static final HMsg [] MSG_REGIONSERVER_STOP_IN_ARRAY = 
-    {new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
-  
+
   /** Stop serving the specified region and don't report back that it's closed */
   public static final byte MSG_REGION_CLOSE_WITHOUT_REPORT = 6;
 
@@ -57,10 +54,20 @@ public class HMsg implements Writable {
   /** region server is no longer serving the specified region */
   public static final byte MSG_REPORT_CLOSE = 101;
 
-  /** region server is now serving a region produced by a region split */
-  public static final byte MSG_NEW_REGION = 103;
+  /**
+   * region server split the region associated with this message.
+   * 
+   * note that this message is immediately followed by two MSG_REPORT_OPEN
+   * messages, one for each of the new regions resulting from the split
+   */
+  public static final byte MSG_REPORT_SPLIT = 103;
   
-  /** region server is shutting down */
+  /**
+   * region server is shutting down
+   * 
+   * note that this message is followed by MSG_REPORT_CLOSE messages for each
+   * region the region server was serving.
+   */
   public static final byte MSG_REPORT_EXITING = 104;
 
   byte msg;
@@ -108,6 +115,9 @@ public class HMsg implements Writable {
     return info;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public String toString() {
     StringBuilder message = new StringBuilder();
@@ -140,8 +150,8 @@ public class HMsg implements Writable {
       message.append("MSG_REPORT_CLOSE : ");
       break;
       
-    case MSG_NEW_REGION:
-      message.append("MSG_NEW_REGION : ");
+    case MSG_REPORT_SPLIT:
+      message.append("MSG_REGION_SPLIT : ");
       break;
       
     case MSG_REPORT_EXITING:
@@ -162,16 +172,16 @@ public class HMsg implements Writable {
   // Writable
   //////////////////////////////////////////////////////////////////////////////
 
-   /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
+  /**
+   * {@inheritDoc}
    */
   public void write(DataOutput out) throws IOException {
      out.writeByte(msg);
      info.write(out);
    }
 
-   /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
+  /**
+   * {@inheritDoc}
    */
   public void readFields(DataInput in) throws IOException {
      this.msg = in.readByte();

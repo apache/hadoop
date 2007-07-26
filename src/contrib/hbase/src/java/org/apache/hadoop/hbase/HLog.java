@@ -97,12 +97,11 @@ public class HLog implements HConstants {
   static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
     Configuration conf) throws IOException {
     Path logfiles[] = fs.listPaths(srcDir);
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("splitting " + logfiles.length + " log files in " +
+    LOG.info("splitting " + logfiles.length + " log files in " +
         srcDir.toString());
-    }
-    TreeMap<Text, SequenceFile.Writer> logWriters =
-      new TreeMap<Text, SequenceFile.Writer>();
+
+    HashMap<Text, SequenceFile.Writer> logWriters =
+      new HashMap<Text, SequenceFile.Writer>();
     try {
       for(int i = 0; i < logfiles.length; i++) {
         SequenceFile.Reader in =
@@ -116,6 +115,9 @@ public class HLog implements HConstants {
             if (w == null) {
               Path logfile = new Path(HStoreFile.getHRegionDir(rootDir,
                   regionName), HREGION_OLDLOGFILE_NAME);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("getting new log file writer for path " + logfile);
+              }
               w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
                   HLogEdit.class);
               logWriters.put(regionName, w);
@@ -140,9 +142,7 @@ public class HLog implements HConstants {
         }
       }
     }
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("log file splitting completed for " + srcDir.toString());
-    }
+    LOG.info("log file splitting completed for " + srcDir.toString());
   }
 
   /**
@@ -205,8 +205,6 @@ public class HLog implements HConstants {
             // continue;
           }
         }
-        
-
 
         // Close the current writer (if any), and grab a new one.
         if(writer != null) {
@@ -280,7 +278,6 @@ public class HLog implements HConstants {
    * @throws IOException
    */
   synchronized void closeAndDelete() throws IOException {
-    rollWriter();
     close();
     fs.delete(dir);
   }

@@ -194,7 +194,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     
     private void split(final HRegion region, final Text midKey)
     throws IOException {
-      final Text oldRegion = region.getRegionName();
+      final HRegionInfo oldRegionInfo = region.getRegionInfo();
       final HRegion[] newRegions = region.closeAndSplit(midKey, this);
 
       // When a region is split, the META table needs to updated if we're
@@ -204,9 +204,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       final Text tableToUpdate =
         region.getRegionInfo().tableDesc.getName().equals(META_TABLE_NAME) ?
             ROOT_TABLE_NAME : META_TABLE_NAME;
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Updating " + tableToUpdate + " with region split info");
-      }
+      LOG.info("Updating " + tableToUpdate + " with region split info");
 
       // Remove old region from META
       
@@ -249,11 +247,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Reporting region split to master");
       }
-      reportSplit(newRegions[0].getRegionInfo(), newRegions[1].
-          getRegionInfo());
+      reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
+          newRegions[1].getRegionInfo());
       LOG.info("region split, META update, and report to master all" +
-          " successful. Old region=" + oldRegion + ", new regions: " +
-          newRegions[0].getRegionName() + ", " +
+          " successful. Old region=" + oldRegionInfo.getRegionName() +
+          ", new regions: " + newRegions[0].getRegionName() + ", " +
           newRegions[1].getRegionName());
 
       // Finally, start serving the new regions
@@ -262,6 +260,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       try {
         onlineRegions.put(newRegions[0].getRegionName(), newRegions[0]);
         onlineRegions.put(newRegions[1].getRegionName(), newRegions[1]);
+        
       } finally {
         lock.writeLock().unlock();
       }
@@ -461,23 +460,19 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
         false, conf);
 
-       // Use configured nameserver & interface to get local hostname.
-       // 'serverInfo' is sent to master.  Should have name of this host rather than
-       // 'localhost' or 0.0.0.0 or 127.0.0.1 in it.
-       String localHostname = DNS.getDefaultHost(
-         conf.get("dfs.datanode.dns.interface","default"),
-         conf.get("dfs.datanode.dns.nameserver","default"));
-       InetSocketAddress hostnameAddress = new InetSocketAddress(localHostname,
-         server.getListenerAddress().getPort());
-       this.serverInfo = new HServerInfo(new HServerAddress(hostnameAddress),
-         this.rand.nextLong());
+      // Use interface to get the 'real' IP for this host.
+      // 'serverInfo' is sent to master.  Should have the real IP of this host
+      // rather than 'localhost' or 0.0.0.0 or 127.0.0.1 in it.
+      String realIP = DNS.getDefaultIP(
+        conf.get("dfs.datanode.dns.interface","default"));
 
-      // Local file paths
-      String serverName = localHostname + "_" +
-        this.serverInfo.getServerAddress().getPort();
+      this.serverInfo = new HServerInfo(new HServerAddress(
+          new InetSocketAddress(realIP, server.getListenerAddress().getPort())),
+          this.rand.nextLong());
+
+      Path logdir = new Path(rootDir, "log" + "_" + realIP + "_" +
+          this.serverInfo.getServerAddress().getPort());
       
-      Path logdir = new Path(rootDir, "log" + "_" + serverName);
-
       // Logging
       this.fs = FileSystem.get(conf);
       if(fs.exists(logdir)) {
@@ -636,52 +631,46 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           }
 
           try {
-            HMsg msgs[] = hbaseMaster.regionServerReport(serverInfo, outboundArray);
+            HMsg msgs[] =
+              hbaseMaster.regionServerReport(serverInfo, outboundArray);
             lastMsg = System.currentTimeMillis();
+            
             // Queue up the HMaster's instruction stream for processing
-            synchronized(toDo) {
-              boolean restart = false;
-              for(int i = 0; i < msgs.length && !stopRequested && !restart; i++) {
-                switch(msgs[i].getMsg()) {
-              
-                case HMsg.MSG_CALL_SERVER_STARTUP:
-                  if (LOG.isDebugEnabled()) {
-                    LOG.debug("Got call server startup message");
-                  }
-                  closeAllRegions();
-                  restart = true;
-                  break;
-                
-                case HMsg.MSG_REGIONSERVER_STOP:
-                  if (LOG.isDebugEnabled()) {
-                    LOG.debug("Got regionserver stop message");
-                  }
-                  stopRequested = true;
-                  break;
-                  
-                default:
-                  if (LOG.isDebugEnabled()) {
-                    LOG.debug("Got default message");
-                  }
-                  try {
-                    toDo.put(new ToDoEntry(msgs[i]));
-                  } catch (InterruptedException e) {
-                    throw new RuntimeException("Putting into msgQueue was interrupted.", e);
-                  }
-                }
-              }
-              
-              if(restart || stopRequested) {
-                toDo.clear();
-                break;
-              }
-              
-              if(toDo.size() > 0) {
+            
+            boolean restart = false;
+            for(int i = 0; i < msgs.length && !stopRequested && !restart; i++) {
+              switch(msgs[i].getMsg()) {
+
+              case HMsg.MSG_CALL_SERVER_STARTUP:
                 if (LOG.isDebugEnabled()) {
-                  LOG.debug("notify on todo");
+                  LOG.debug("Got call server startup message");
                 }
-                toDo.notifyAll();
+                closeAllRegions();
+                restart = true;
+                break;
+
+              case HMsg.MSG_REGIONSERVER_STOP:
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Got regionserver stop message");
+                }
+                stopRequested = true;
+                break;
+
+              default:
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Got default message");
+                }
+                try {
+                  toDo.put(new ToDoEntry(msgs[i]));
+                } catch (InterruptedException e) {
+                  throw new RuntimeException("Putting into msgQueue was interrupted.", e);
+                }
               }
+            }
+
+            if(restart || stopRequested) {
+              toDo.clear();
+              break;
             }
 
           } catch (IOException e) {
@@ -730,7 +719,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
     if (abortRequested) {
       try {
-        log.rollWriter();
+        log.close();
       } catch (IOException e) {
         if (e instanceof RemoteException) {
           try {
@@ -742,10 +731,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
         LOG.warn(e);
       }
+      closeAllRegions(); // Don't leave any open file handles
       LOG.info("aborting server at: " +
         serverInfo.getServerAddress().toString());
     } else {
-      Vector<HRegion> closedRegions = closeAllRegions();
+      ArrayList<HRegion> closedRegions = closeAllRegions();
       try {
         log.closeAndDelete();
       } catch (IOException e) {
@@ -815,10 +805,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * updated the meta or root regions, and the master will pick that up on its
    * next rescan of the root or meta tables.
    */
-  void reportSplit(HRegionInfo newRegionA, HRegionInfo newRegionB) {
+  void reportSplit(HRegionInfo oldRegion, HRegionInfo newRegionA,
+      HRegionInfo newRegionB) {
     synchronized(outboundMsgs) {
-      outboundMsgs.add(new HMsg(HMsg.MSG_NEW_REGION, newRegionA));
-      outboundMsgs.add(new HMsg(HMsg.MSG_NEW_REGION, newRegionB));
+      outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_SPLIT, oldRegion));
+      outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_OPEN, newRegionA));
+      outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_OPEN, newRegionB));
     }
   }
 
@@ -859,9 +851,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           continue;
         }
         try {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(e.msg.toString());
-          }
+          LOG.info(e.msg.toString());
           
           switch(e.msg.getMsg()) {
 
@@ -942,8 +932,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** Called either when the master tells us to restart or from stop() */
-  Vector<HRegion> closeAllRegions() {
-    Vector<HRegion> regionsToClose = new Vector<HRegion>();
+  ArrayList<HRegion> closeAllRegions() {
+    ArrayList<HRegion> regionsToClose = new ArrayList<HRegion>();
     this.lock.writeLock().lock();
     try {
       regionsToClose.addAll(onlineRegions.values());
@@ -956,7 +946,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.debug("closing region " + region.getRegionName());
       }
       try {
-        region.close();
+        region.close(abortRequested);
         LOG.debug("region closed " + region.getRegionName());
       } catch (IOException e) {
         if (e instanceof RemoteException) {

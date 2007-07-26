@@ -197,16 +197,23 @@ public class MiniHBaseCluster implements HConstants {
   }
 
   /**
+   * Cause a region server to exit without cleaning up
+   * 
+   * @param serverNumber
+   */
+  public void abortRegionServer(int serverNumber) {
+    HRegionServer server = this.regionServers.remove(serverNumber);
+    server.abort();
+  }
+
+  /**
    * Shut down the specified region server cleanly
    * 
    * @param serverNumber
    */
   public void stopRegionServer(int serverNumber) {
-    if (serverNumber >= regionServers.size()) {
-      throw new ArrayIndexOutOfBoundsException(
-      "serverNumber > number of region servers");
-    }
-    this.regionServers.get(serverNumber).stop();
+    HRegionServer server = this.regionServers.remove(serverNumber);
+    server.stop();
   }
 
   /**
@@ -215,28 +222,12 @@ public class MiniHBaseCluster implements HConstants {
    * @param serverNumber
    */
   public void waitOnRegionServer(int serverNumber) {
-    if (serverNumber >= regionServers.size()) {
-      throw new ArrayIndexOutOfBoundsException(
-      "serverNumber > number of region servers");
-    }
+    Thread regionServerThread = this.regionThreads.remove(serverNumber);
     try {
-      this.regionThreads.get(serverNumber).join();
+      regionServerThread.join();
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-  }
-
-  /**
-   * Cause a region server to exit without cleaning up
-   * 
-   * @param serverNumber
-   */
-  public void abortRegionServer(int serverNumber) {
-    if(serverNumber >= this.regionServers.size()) {
-      throw new ArrayIndexOutOfBoundsException(
-      "serverNumber > number of region servers");
-    }
-    this.regionServers.get(serverNumber).abort();
   }
 
   /** Shut down the HBase cluster */

@@ -21,14 +21,17 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-public class RegionNotFoundException extends IOException {
+/** Thrown when a table can not be located */
+public class TableNotFoundException extends IOException {
   private static final long serialVersionUID = 993179627856392526L;
 
-  public RegionNotFoundException() {
+  /** default constructor */
+  public TableNotFoundException() {
     super();
   }
 
-  public RegionNotFoundException(String s) {
+  /** @param s message */
+  public TableNotFoundException(String s) {
     super(s);
   }
 }
