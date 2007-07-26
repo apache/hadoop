@@ -49,7 +49,7 @@ public class HLocking {
   }
 
   /**
-   * Caller needs the nonexclusive read-lock
+   * Caller needs the no-nexclusive read-lock
    */
   public void obtainReadLock() {
     synchronized(mutex) {
@@ -57,6 +57,7 @@ public class HLocking {
         try {
           mutex.wait();
         } catch(InterruptedException ie) {
+          // continue
         }
       }
       lockers.incrementAndGet();
@@ -65,7 +66,7 @@ public class HLocking {
   }
 
   /**
-   * Caller is finished with the nonexclusive read-lock
+   * Caller is finished with the non-exclusive read-lock
    */
   public void releaseReadLock() {
     synchronized(mutex) {
@@ -85,6 +86,7 @@ public class HLocking {
         try {
           mutex.wait();
         } catch (InterruptedException ie) {
+          // continue
         }
       }
       mutex.notifyAll();

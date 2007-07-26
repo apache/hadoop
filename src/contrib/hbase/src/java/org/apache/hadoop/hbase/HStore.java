@@ -45,6 +45,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.util.StringUtils;
 
 import org.onelab.filter.*;
 
@@ -78,6 +79,7 @@ class HStore implements HConstants {
   Path loginfodir;
   Path filterDir;
   Filter bloomFilter;
+  private String storeName;
 
   Integer compactLock = new Integer(0);
   Integer flushLock = new Integer(0);
@@ -129,6 +131,8 @@ class HStore implements HConstants {
     this.family = family;
     this.familyName = HStoreKey.extractFamily(this.family.getName());
     this.compression = SequenceFile.CompressionType.NONE;
+    this.storeName = this.regionName.toString() + "/" +
+      this.familyName.toString();
     
     if(family.getCompression() != HColumnDescriptor.CompressionType.NONE) {
       if(family.getCompression() == HColumnDescriptor.CompressionType.BLOCK) {
@@ -161,7 +165,7 @@ class HStore implements HConstants {
     }
 
     if(LOG.isDebugEnabled()) {
-      LOG.debug("starting HStore for " + regionName + "/"+ familyName);
+      LOG.debug("Starting HStore for " + this.storeName);
     }
     
     // Either restart or get rid of any leftover compaction work.  Either way, 
@@ -216,16 +220,11 @@ class HStore implements HConstants {
 
     // Finally, start up all the map readers! (There should be just one at this 
     // point, as we've compacted them all.)
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("starting map readers");
-    }
     for(Map.Entry<Long, HStoreFile> e: mapFiles.entrySet()) {
       // TODO - is this really necessary?  Don't I do this inside compact()?
       maps.put(e.getKey(),
         getMapFileReader(e.getValue().getMapFilePath().toString()));
     }
-    
-    LOG.info("HStore online for " + this.regionName + "/" + this.familyName);
   }
   
   /*
@@ -239,9 +238,6 @@ class HStore implements HConstants {
   private void doReconstructionLog(final Path reconstructionLog,
       final long maxSeqID)
   throws UnsupportedEncodingException, IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("reading reconstructionLog");
-    }
     if (reconstructionLog == null || !fs.exists(reconstructionLog)) {
       return;
     }
@@ -306,7 +302,7 @@ class HStore implements HConstants {
     Path filterFile = new Path(filterDir, BLOOMFILTER_FILE_NAME);
     if(fs.exists(filterFile)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("loading bloom filter for " + family.getName());
+        LOG.debug("loading bloom filter for " + this.storeName);
       }
 
       switch(family.bloomFilter.filterType) {
@@ -328,7 +324,7 @@ class HStore implements HConstants {
       
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("creating bloom filter for " + family.getName());
+        LOG.debug("creating bloom filter for " + this.storeName);
       }
 
       switch(family.bloomFilter.filterType) {
@@ -357,7 +353,7 @@ class HStore implements HConstants {
    */
   private void flushBloomFilter() throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("flushing bloom filter for " + family.getName());
+      LOG.debug("flushing bloom filter for " + this.storeName);
     }
     FSDataOutputStream out =
       fs.create(new Path(filterDir, BLOOMFILTER_FILE_NAME));
@@ -365,7 +361,7 @@ class HStore implements HConstants {
     bloomFilter.write(out);
     out.close();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("flushed bloom filter for " + family.getName());
+      LOG.debug("flushed bloom filter for " + this.storeName);
     }
   }
 
@@ -494,7 +490,9 @@ class HStore implements HConstants {
    * @throws IOException
    */
   void close() throws IOException {
-    LOG.info("closing HStore for " + this.regionName + "/" + this.familyName);
+    if (LOG.isDebugEnabled()) {
+      LOG.info("closing HStore for " + this.storeName);
+    }
     this.lock.obtainWriteLock();
     try {
       for (MapFile.Reader map: maps.values()) {
@@ -503,7 +501,7 @@ class HStore implements HConstants {
       maps.clear();
       mapFiles.clear();
       
-      LOG.info("HStore closed for " + this.regionName + "/" + this.familyName);
+      LOG.info("HStore closed for " + this.storeName);
     } finally {
       this.lock.releaseWriteLock();
     }
@@ -524,13 +522,13 @@ class HStore implements HConstants {
    *
    * Return the entire list of HStoreFiles currently used by the HStore.
    *
-   * @param inputCache          - memcache to flush
-   * @param logCacheFlushId     - flush sequence number
-   * @return - Vector of all the HStoreFiles in use
+   * @param inputCache memcache to flush
+   * @param logCacheFlushId flush sequence number
+   * @return Vector of all the HStoreFiles in use
    * @throws IOException
    */
-  Vector<HStoreFile> flushCache(TreeMap<HStoreKey, byte []> inputCache,
-      long logCacheFlushId)
+  Vector<HStoreFile> flushCache(final TreeMap<HStoreKey, byte []> inputCache,
+    final long logCacheFlushId)
   throws IOException {
     return flushCacheHelper(inputCache, logCacheFlushId, true);
   }
@@ -538,64 +536,48 @@ class HStore implements HConstants {
   Vector<HStoreFile> flushCacheHelper(TreeMap<HStoreKey, byte []> inputCache,
       long logCacheFlushId, boolean addToAvailableMaps)
   throws IOException {
-    
     synchronized(flushLock) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("flushing HStore " + this.regionName + "/" + this.familyName);
-      }
-      
       // A. Write the TreeMap out to the disk
-
-      HStoreFile flushedFile 
-        = HStoreFile.obtainNewHStoreFile(conf, dir, regionName, familyName, fs);
-      
+      HStoreFile flushedFile = HStoreFile.obtainNewHStoreFile(conf, dir,
+        regionName, familyName, fs);
       Path mapfile = flushedFile.getMapFilePath();
       if(LOG.isDebugEnabled()) {
-        LOG.debug("map file is: " + mapfile.toString());
+        LOG.debug("Flushing to " + mapfile.toString());
       }
-      
       MapFile.Writer out = getMapFileWriter(mapfile.toString());
       try {
         for (Map.Entry<HStoreKey, byte []> es: inputCache.entrySet()) {
           HStoreKey curkey = es.getKey();
-          if (this.familyName.equals(HStoreKey.extractFamily(curkey.getColumn()))) {
+          if (this.familyName.
+              equals(HStoreKey.extractFamily(curkey.getColumn()))) {
             out.append(curkey, new ImmutableBytesWritable(es.getValue()));
           }
         }
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("HStore " + this.regionName + "/" + this.familyName + " flushed");
-        }
-        
       } finally {
         out.close();
       }
 
       // B. Write out the log sequence number that corresponds to this output
       // MapFile.  The MapFile is current up to and including the log seq num.
-
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("writing log cache flush id");
-      }
       flushedFile.writeInfo(fs, logCacheFlushId);
       
       // C. Flush the bloom filter if any
-      
       if(bloomFilter != null) {
         flushBloomFilter();
       }
 
       // D. Finally, make the new MapFile available.
-
       if(addToAvailableMaps) {
         this.lock.obtainWriteLock();
-        
         try {
           Long flushid = Long.valueOf(logCacheFlushId);
           maps.put(flushid, getMapFileReader(mapfile.toString()));
           mapFiles.put(flushid, flushedFile);
           if(LOG.isDebugEnabled()) {
-            LOG.debug("HStore available for " + this.regionName + "/"
-                + this.familyName + " flush id=" + logCacheFlushId);
+            LOG.debug("Added " + mapfile.toString() +
+                " with flush id " + logCacheFlushId + " and size " +
+              StringUtils.humanReadableInt(mapfile.getFileSystem(this.conf).
+                getContentLength(mapfile)));
           }
         } finally {
           this.lock.releaseWriteLock();
@@ -626,7 +608,7 @@ class HStore implements HConstants {
    * Compact the back-HStores.  This method may take some time, so the calling 
    * thread must be able to block for long periods.
    * 
-   * During this time, the HStore can work as usual, getting values from
+   * <p>During this time, the HStore can work as usual, getting values from
    * MapFiles and writing new MapFiles from given memcaches.
    * 
    * Existing MapFiles are not destroyed until the new compacted TreeMap is 
@@ -646,28 +628,25 @@ class HStore implements HConstants {
   
   void compactHelper(boolean deleteSequenceInfo) throws IOException {
     synchronized(compactLock) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("started compaction of " + this.regionName + "/" + this.familyName);
-      }
-      
-      Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, familyName);
+      Path curCompactStore =
+        HStoreFile.getHStoreDir(compactdir, regionName, familyName);
       fs.mkdirs(curCompactStore);
-      
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("started compaction of " + mapFiles.size() + " files in " +
+          curCompactStore.toString());
+      }
       try {
-        
         // Grab a list of files to compact.
-        
         Vector<HStoreFile> toCompactFiles = null;
         this.lock.obtainWriteLock();
         try {
           toCompactFiles = new Vector<HStoreFile>(mapFiles.values());
-          
         } finally {
           this.lock.releaseWriteLock();
         }
 
-        // Compute the max-sequenceID seen in any of the to-be-compacted TreeMaps
-
+        // Compute the max-sequenceID seen in any of the to-be-compacted
+        // TreeMaps
         long maxSeenSeqID = -1;
         for (HStoreFile hsf: toCompactFiles) {
           long seqid = hsf.loadInfo(fs);
@@ -677,18 +656,13 @@ class HStore implements HConstants {
             }
           }
         }
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("max sequence id: " + maxSeenSeqID);
-        }
-        
+
         HStoreFile compactedOutputFile 
           = new HStoreFile(conf, compactdir, regionName, familyName, -1);
-        
         if(toCompactFiles.size() == 1) {
           if(LOG.isDebugEnabled()) {
-            LOG.debug("nothing to compact for " + this.regionName + "/" + this.familyName);
+            LOG.debug("nothing to compact for " + this.storeName);
           }
-          
           HStoreFile hsf = toCompactFiles.elementAt(0);
           if(hsf.loadInfo(fs) == -1) {
             return;
@@ -699,7 +673,6 @@ class HStore implements HConstants {
         MapFile.Writer compactedOut =
           getMapFileWriter(compactedOutputFile.getMapFilePath().toString());
         try {
-
           // We create a new set of MapFile.Reader objects so we don't screw up 
           // the caching associated with the currently-loaded ones.
           //
@@ -711,15 +684,13 @@ class HStore implements HConstants {
           // lowest-ranked one.  Updates to a single row/column will appear 
           // ranked by timestamp.  This allows us to throw out deleted values or
           // obsolete versions.
-
           MapFile.Reader[] readers = new MapFile.Reader[toCompactFiles.size()];
           HStoreKey[] keys = new HStoreKey[toCompactFiles.size()];
           ImmutableBytesWritable[] vals =
             new ImmutableBytesWritable[toCompactFiles.size()];
           boolean[] done = new boolean[toCompactFiles.size()];
           int pos = 0;
-          for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext(); ) {
-            HStoreFile hsf = it.next();
+          for(HStoreFile hsf: toCompactFiles) {
             readers[pos] = getMapFileReader(hsf.getMapFilePath().toString());
             keys[pos] = new HStoreKey();
             vals[pos] = new ImmutableBytesWritable();
@@ -729,11 +700,6 @@ class HStore implements HConstants {
 
           // Now, advance through the readers in order.  This will have the
           // effect of a run-time sort of the entire dataset.
-
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("processing HStoreFile readers");
-          }
-          
           int numDone = 0;
           for(int i = 0; i < readers.length; i++) {
             readers[i].reset();
@@ -747,9 +713,7 @@ class HStore implements HConstants {
           Text lastRow = new Text();
           Text lastColumn = new Text();
           while(numDone < done.length) {
-
             // Find the reader with the smallest key
-
             int smallestKey = -1;
             for(int i = 0; i < readers.length; i++) {
               if(done[i]) {
@@ -758,7 +722,6 @@ class HStore implements HConstants {
               
               if(smallestKey < 0) {
                 smallestKey = i;
-              
               } else {
                 if(keys[i].compareTo(keys[smallestKey]) < 0) {
                   smallestKey = i;
@@ -767,74 +730,60 @@ class HStore implements HConstants {
             }
 
             // Reflect the current key/val in the output
-
             HStoreKey sk = keys[smallestKey];
             if(lastRow.equals(sk.getRow())
                 && lastColumn.equals(sk.getColumn())) {
-              
               timesSeen++;
-              
             } else {
               timesSeen = 1;
             }
             
             if(timesSeen <= family.getMaxVersions()) {
-
               // Keep old versions until we have maxVersions worth.
               // Then just skip them.
-
               if(sk.getRow().getLength() != 0
                   && sk.getColumn().getLength() != 0) {
-                
-                // Only write out objects which have a non-zero length key and value
-
+                // Only write out objects which have a non-zero length key and
+                // value
                 compactedOut.append(sk, vals[smallestKey]);
               }
-              
             }
 
-            //TODO: I don't know what to do about deleted values.  I currently 
+            // TODO: I don't know what to do about deleted values.  I currently 
             // include the fact that the item was deleted as a legitimate 
-            // "version" of the data.  Maybe it should just drop the deleted val?
+            // "version" of the data.  Maybe it should just drop the deleted
+            // val?
 
             // Update last-seen items
-
             lastRow.set(sk.getRow());
             lastColumn.set(sk.getColumn());
 
             // Advance the smallest key.  If that reader's all finished, then 
             // mark it as done.
-
-            if(! readers[smallestKey].next(keys[smallestKey], vals[smallestKey])) {
+            if(! readers[smallestKey].next(keys[smallestKey],
+                vals[smallestKey])) {
               done[smallestKey] = true;
               readers[smallestKey].close();
               numDone++;
             }
           }
-          
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("all HStores processed");
-          }
-          
         } finally {
           compactedOut.close();
         }
 
         if(LOG.isDebugEnabled()) {
-          LOG.debug("writing new compacted HStore");
+          LOG.debug("writing new compacted HStore to " +
+            compactedOutputFile.getMapFilePath().toString());
         }
 
         // Now, write out an HSTORE_LOGINFOFILE for the brand-new TreeMap.
-
         if((! deleteSequenceInfo) && maxSeenSeqID >= 0) {
           compactedOutputFile.writeInfo(fs, maxSeenSeqID);
-          
         } else {
           compactedOutputFile.writeInfo(fs, -1);
         }
 
         // Write out a list of data files that we're replacing
-
         Path filesToReplace = new Path(curCompactStore, COMPACTION_TO_REPLACE);
         DataOutputStream out = new DataOutputStream(fs.create(filesToReplace));
         try {
@@ -848,18 +797,11 @@ class HStore implements HConstants {
         }
 
         // Indicate that we're done.
-
         Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
         (new DataOutputStream(fs.create(doneFile))).close();
 
         // Move the compaction into place.
-
         processReadyCompaction();
-        
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("compaction complete for " + this.regionName + "/" + this.familyName);
-        }
-
       } finally {
         fs.delete(compactdir);
       }
@@ -872,8 +814,8 @@ class HStore implements HConstants {
    *
    * It works by processing a compaction that's been written to disk.
    * 
-   * It is usually invoked at the end of a compaction, but might also be invoked
-   * at HStore startup, if the prior execution died midway through.
+   * It is usually invoked at the end of a compaction, but might also be
+   * invoked at HStore startup, if the prior execution died midway through.
    */
   void processReadyCompaction() throws IOException {
 
@@ -890,22 +832,22 @@ class HStore implements HConstants {
     // 1. Acquiring the write-lock
 
 
-    Path curCompactStore = HStoreFile.getHStoreDir(compactdir, regionName, familyName);
+    Path curCompactStore =
+      HStoreFile.getHStoreDir(compactdir, regionName, familyName);
     this.lock.obtainWriteLock();
     try {
       Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
-      if(! fs.exists(doneFile)) {
+      if(!fs.exists(doneFile)) {
         
         // The last execution didn't finish the compaction, so there's nothing 
         // we can do.  We'll just have to redo it. Abandon it and return.
-        
+        LOG.warn("Redoing a failed compaction");
         return;
       }
 
       // OK, there's actually compaction work that needs to be put into place.
-
       if(LOG.isDebugEnabled()) {
-        LOG.debug("compaction starting");
+        LOG.debug("Process ready compaction starting");
       }
       
       // 2. Load in the files to be deleted.
@@ -927,13 +869,14 @@ class HStore implements HConstants {
       }
 
       if(LOG.isDebugEnabled()) {
-        LOG.debug("loaded files to be deleted");
+        LOG.debug("loaded " + toCompactFiles.size() +
+          " file(s) to be deleted");
       }
       
       // 3. Unload all the replaced MapFiles.
-      
       Iterator<HStoreFile> it2 = mapFiles.values().iterator();
-      for(Iterator<MapFile.Reader> it = maps.values().iterator(); it.hasNext(); ) {
+      for(Iterator<MapFile.Reader> it = maps.values().iterator();
+          it.hasNext(); ) {
         MapFile.Reader curReader = it.next();
         HStoreFile curMapFile = it2.next();
         if(toCompactFiles.contains(curMapFile)) {
@@ -948,24 +891,18 @@ class HStore implements HConstants {
           it.remove();
         }
       }
-
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("unloaded existing MapFiles");
-      }
       
       // What if we crash at this point?  No big deal; we will restart
       // processReadyCompaction(), and nothing has been lost.
 
       // 4. Delete all the old files, no longer needed
-      
-      for(Iterator<HStoreFile> it = toCompactFiles.iterator(); it.hasNext(); ) {
-        HStoreFile hsf = it.next();
+      for(HStoreFile hsf: toCompactFiles) {
         fs.delete(hsf.getMapFilePath());
         fs.delete(hsf.getInfoFilePath());
       }
 
       if(LOG.isDebugEnabled()) {
-        LOG.debug("old files deleted");
+        LOG.debug("old file(s) deleted");
       }
       
       // What if we fail now?  The above deletes will fail silently. We'd better
@@ -973,41 +910,32 @@ class HStore implements HConstants {
       // something we delete, though.
 
       // 5. Moving the new MapFile into place
-      
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("moving new MapFile into place");
-      }
-      
       HStoreFile compactedFile 
         = new HStoreFile(conf, compactdir, regionName, familyName, -1);
-      
       HStoreFile finalCompactedFile 
         = HStoreFile.obtainNewHStoreFile(conf, dir, regionName, familyName, fs);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("moving " + compactedFile.getMapFilePath().toString() +
+          " to " + finalCompactedFile.getMapFilePath().toString());
+      }
       
-      fs.rename(compactedFile.getMapFilePath(), finalCompactedFile.getMapFilePath());
+      fs.rename(compactedFile.getMapFilePath(),
+        finalCompactedFile.getMapFilePath());
       
       // Fail here?  No problem.
-      
-      fs.rename(compactedFile.getInfoFilePath(), finalCompactedFile.getInfoFilePath());
+      fs.rename(compactedFile.getInfoFilePath(),
+        finalCompactedFile.getInfoFilePath());
 
       // Fail here?  No worries.
-      
       Long orderVal = Long.valueOf(finalCompactedFile.loadInfo(fs));
 
       // 6. Loading the new TreeMap.
-      
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("loading new TreeMap");
-      }
-      
       mapFiles.put(orderVal, finalCompactedFile);
       maps.put(orderVal, getMapFileReader(
-          finalCompactedFile.getMapFilePath().toString()));
-      
+        finalCompactedFile.getMapFilePath().toString()));
     } finally {
       
       // 7. Releasing the write-lock
-      
       this.lock.releaseWriteLock();
     }
   }

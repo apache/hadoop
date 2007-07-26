@@ -95,11 +95,10 @@ public class HStoreKey implements WritableComparable {
   Text column;
   long timestamp;
 
+
   /** Default constructor used in conjunction with Writable interface */
   public HStoreKey() {
-    this.row = new Text();
-    this.column = new Text();
-    this.timestamp = Long.MAX_VALUE;
+    this(new Text());
   }
   
   /**
@@ -110,9 +109,7 @@ public class HStoreKey implements WritableComparable {
    * @param row - row key
    */
   public HStoreKey(Text row) {
-    this.row = new Text(row);
-    this.column = new Text();
-    this.timestamp = Long.MAX_VALUE;
+    this(row, Long.MAX_VALUE);
   }
   
   /**
@@ -123,9 +120,7 @@ public class HStoreKey implements WritableComparable {
    * @param timestamp timestamp value
    */
   public HStoreKey(Text row, long timestamp) {
-    this.row = new Text(row);
-    this.column = new Text();
-    this.timestamp = timestamp;
+    this(row, new Text(), timestamp);
   }
   
   /**
@@ -136,9 +131,7 @@ public class HStoreKey implements WritableComparable {
    * @param column column key
    */
   public HStoreKey(Text row, Text column) {
-    this.row = new Text(row);
-    this.column = new Text(column);
-    this.timestamp = Long.MAX_VALUE;
+    this(row, column, Long.MAX_VALUE);
   }
   
   /**
@@ -155,15 +148,20 @@ public class HStoreKey implements WritableComparable {
   }
   
   /**
+   * @return Approximate size in bytes of this key.
+   */
+  public long getSize() {
+    return this.row.getLength() + this.column.getLength() +
+      8 /* There is no sizeof in java. Presume long is 8 (64bit machine)*/;
+  }
+  
+  /**
    * Construct a new HStoreKey from another
    * 
    * @param other the source key
    */
   public HStoreKey(HStoreKey other) {
-    this();
-    this.row.set(other.row);
-    this.column.set(other.column);
-    this.timestamp = other.timestamp;
+    this(other.row, other.column, other.timestamp);
   }
   
   /**

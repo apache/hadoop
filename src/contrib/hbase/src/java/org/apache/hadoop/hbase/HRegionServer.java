@@ -114,7 +114,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // regions.
         retiringRegions.put(regionName, onlineRegions.remove(regionName));
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding " + regionName + " to retiringRegions");
+          LOG.debug(regionName.toString() + "closing (" +
+            "Adding to retiringRegions)");
         }
       } finally {
         lock.writeLock().unlock();
@@ -129,7 +130,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       try {
         retiringRegions.remove(regionName);
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Removing " + regionName + " from retiringRegions");
+          LOG.debug(regionName.toString() + " closed");
         }
       } finally {
         lock.writeLock().unlock();
@@ -140,7 +141,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
      * {@inheritDoc}
      */
     public void run() {
-      while(! stopRequested) {
+      while(!stopRequested) {
         long startTime = System.currentTimeMillis();
         synchronized(splitOrCompactLock) { // Don't interrupt us while we're working
           // Grab a list of regions to check
@@ -151,21 +152,19 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           } finally {
             lock.readLock().unlock();
           }
-
           try {
             for(HRegion cur: regionsToCheck) {
               if(cur.isClosed()) {
                 continue;                               // Skip if closed
               }
-
-              if(cur.needsCompaction()) {
-                // Best time to split a region is right after compaction
-                if(cur.compactStores()) {
-                  Text midKey = new Text();
-                  if(cur.needsSplit(midKey)) {
-                    split(cur, midKey);
-                  }
-                }
+              if (cur.needsCompaction()) {
+                cur.compactStores();
+              }
+              // After compaction, it probably needs splitting.  May also need
+              // splitting just because one of the memcache flushes was big.
+              Text midKey = new Text();
+              if (cur.needsSplit(midKey)) {
+                split(cur, midKey);
               }
             }
           } catch(IOException e) {
@@ -196,23 +195,21 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     throws IOException {
       final HRegionInfo oldRegionInfo = region.getRegionInfo();
       final HRegion[] newRegions = region.closeAndSplit(midKey, this);
-
+      
       // When a region is split, the META table needs to updated if we're
       // splitting a 'normal' region, and the ROOT table needs to be
       // updated if we are splitting a META region.
-      
       final Text tableToUpdate =
         region.getRegionInfo().tableDesc.getName().equals(META_TABLE_NAME) ?
             ROOT_TABLE_NAME : META_TABLE_NAME;
       LOG.info("Updating " + tableToUpdate + " with region split info");
 
       // Remove old region from META
-      
       for (int tries = 0; tries < numRetries; tries++) {
         try {
           HRegion.removeRegionFromMETA(client, tableToUpdate,
               region.getRegionName());
-          
+          break;
         } catch (IOException e) {
           if(tries == numRetries - 1) {
             if(e instanceof RemoteException) {
@@ -224,13 +221,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       
       // Add new regions to META
-      
       for (int i = 0; i < newRegions.length; i++) {
         for (int tries = 0; tries < numRetries; tries ++) {
           try {
             HRegion.addRegionToMETA(client, tableToUpdate, newRegions[i],
                 serverInfo.getServerAddress(), serverInfo.getStartCode());
-
+            break;
           } catch(IOException e) {
             if(tries == numRetries - 1) {
               if(e instanceof RemoteException) {
@@ -243,7 +239,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
           
       // Now tell the master about the new regions
-      
       if (LOG.isDebugEnabled()) {
         LOG.debug("Reporting region split to master");
       }
@@ -253,9 +248,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           " successful. Old region=" + oldRegionInfo.getRegionName() +
           ", new regions: " + newRegions[0].getRegionName() + ", " +
           newRegions[1].getRegionName());
-
-      // Finally, start serving the new regions
       
+      // Finally, start serving the new regions
       lock.writeLock().lock();
       try {
         onlineRegions.put(newRegions[0].getRegionName(), newRegions[0]);
@@ -271,7 +265,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private final Flusher cacheFlusher;
   private final Thread cacheFlusherThread;
   protected final Integer cacheFlusherLock = new Integer(0);
-  /** Runs periodically to flush the memcache */
+  
+  /* Runs periodically to flush memcache.
+   * 
+   * Memcache flush is also called just before compaction and just before
+   * split so memcache is best prepared for the the long trip across
+   * compactions/splits during which it will not be able to flush to disk.
+   */
   class Flusher implements Runnable {
     /**
      * {@inheritDoc}
@@ -293,7 +293,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           }
 
           // Flush them, if necessary
-
           for(HRegion cur: toFlush) {
             if(cur.isClosed()) {                // Skip if closed
               continue;
@@ -305,7 +304,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               if (iex instanceof RemoteException) {
                 try {
                   iex = RemoteExceptionHandler.decodeRemoteException((RemoteException) iex);
-                  
                 } catch (IOException x) {
                   iex = x;
                 }
@@ -316,9 +314,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
         
         // Sleep
-        long waitTime = stopRequested ? 0
-            : threadWakeFrequency - (System.currentTimeMillis() - startTime);
-        
+        long waitTime = stopRequested? 0:
+          threadWakeFrequency - (System.currentTimeMillis() - startTime);
         if(waitTime > 0) {
           try {
             Thread.sleep(waitTime);
@@ -358,9 +355,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           int nEntries = log.getNumEntries();
           if(nEntries > this.maxLogEntries) {
             try {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Rolling log. Number of entries is: " + nEntries);
-              }
+              LOG.info("Rolling hlog. Number of entries: " + nEntries);
               log.rollWriter();
             } catch (IOException iex) {
               if (iex instanceof RemoteException) {
@@ -439,7 +434,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       15 * 1000);
     this.splitOrCompactCheckFrequency =
       conf.getLong("hbase.regionserver.thread.splitcompactcheckfrequency",
-      60 * 1000);
+      30 * 1000);
 
     // Cache flushing
     this.cacheFlusher = new Flusher();
@@ -465,20 +460,21 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // rather than 'localhost' or 0.0.0.0 or 127.0.0.1 in it.
       String realIP = DNS.getDefaultIP(
         conf.get("dfs.datanode.dns.interface","default"));
-
       this.serverInfo = new HServerInfo(new HServerAddress(
-          new InetSocketAddress(realIP, server.getListenerAddress().getPort())),
-          this.rand.nextLong());
-
+        new InetSocketAddress(realIP, server.getListenerAddress().getPort())),
+        this.rand.nextLong());
       Path logdir = new Path(rootDir, "log" + "_" + realIP + "_" +
-          this.serverInfo.getServerAddress().getPort());
+        this.serverInfo.getServerAddress().getPort());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Log dir " + logdir);
+      }
       
       // Logging
       this.fs = FileSystem.get(conf);
       if(fs.exists(logdir)) {
-        throw new RegionServerRunningException("region server already running at " +
-          this.serverInfo.getServerAddress().toString() + " because logdir " +
-          logdir.toString() + " exists");
+        throw new RegionServerRunningException("region server already " +
+          "running at " + this.serverInfo.getServerAddress().toString() +
+          " because logdir " + logdir.toString() + " exists");
       }
       
       this.log = new HLog(fs, logdir, conf);
@@ -579,7 +575,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
     try {
       this.server.start();
-      LOG.info("HRegionServer started at: " + serverInfo.getServerAddress().toString());
+      LOG.info("HRegionServer started at: " +
+        serverInfo.getServerAddress().toString());
     } catch(IOException e) {
       stopRequested = true;
       if (e instanceof RemoteException) {
@@ -759,8 +756,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             region.getRegionInfo());
         }
 
-        LOG.info("telling master that region server is shutting down at: "
-            + serverInfo.getServerAddress().toString());
+        LOG.info("telling master that region server is shutting down at: " +
+          serverInfo.getServerAddress().toString());
         hbaseMaster.regionServerReport(serverInfo, exitMsg);
       } catch (IOException e) {
         if (e instanceof RemoteException) {
@@ -947,7 +944,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       try {
         region.close(abortRequested);
-        LOG.debug("region closed " + region.getRegionName());
       } catch (IOException e) {
         if (e instanceof RemoteException) {
           try {
@@ -978,7 +974,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * {@inheritDoc}
    */
-  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b) throws IOException {
+  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
+  throws IOException {
     for(Map.Entry<Text, ArrayList<BatchOperation>> e: b) {
       Text row = e.getKey();
       long clientid = rand.nextLong();
@@ -1027,7 +1024,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * {@inheritDoc}
    */
-  public KeyedData[] getRow(final Text regionName, final Text row) throws IOException {
+  public KeyedData[] getRow(final Text regionName, final Text row)
+  throws IOException {
     HRegion region = getRegion(regionName);
     TreeMap<Text, byte[]> map = region.getFull(row);
     KeyedData result[] = new KeyedData[map.size()];
@@ -1066,13 +1064,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         byte [] val = e.getValue();
         if (DELETE_BYTES.compareTo(val) == 0) {
           // Column value is deleted. Don't return it.
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("skipping deleted value for key: " + k.toString());
-          }
           continue;
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("adding value for key: " + k.toString());
         }
         values.add(new KeyedData(k, val));
       }

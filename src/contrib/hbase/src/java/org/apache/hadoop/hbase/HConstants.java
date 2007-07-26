@@ -81,7 +81,7 @@ public interface HConstants {
   static final String HREGION_OLDLOGFILE_NAME = "oldlogfile.log";
   
   /** Default maximum file size */
-  static final long DEFAULT_MAX_FILE_SIZE = 128 * 1024 * 1024;        // 128MB
+  static final long DEFAULT_MAX_FILE_SIZE = 64 * 1024 * 1024;        // 64MB
 
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.

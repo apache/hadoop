@@ -51,16 +51,10 @@ public class TestHMemcache extends TestCase {
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-
     this.hmemcache = new HMemcache();
-
     // Set up a configuration that has configuration for a file
     // filesystem implementation.
     this.conf = new HBaseConfiguration();
-    // The test hadoop-site.xml doesn't have a default file fs
-    // implementation. Remove below when gets added.
-    this.conf.set("fs.file.impl",
-        "org.apache.hadoop.fs.LocalFileSystem");
   }
 
   /* (non-Javadoc)
@@ -140,11 +134,14 @@ public class TestHMemcache extends TestCase {
     // Add some rows, run a snapshot. Do it a few times.
     for (int i = 0; i < snapshotCount; i++) {
       addRows(this.hmemcache);
+      int historyInitialSize = this.hmemcache.history.size();
       Snapshot s = runSnapshot(this.hmemcache, log);
       log.completeCacheFlush(new Text(Integer.toString(i)),
           tableName, s.sequenceId);
       // Clean up snapshot now we are done with it.
       this.hmemcache.deleteSnapshot();
+      assertTrue("History not being cleared",
+        historyInitialSize == this.hmemcache.history.size());
     }
     log.closeAndDelete();
   }

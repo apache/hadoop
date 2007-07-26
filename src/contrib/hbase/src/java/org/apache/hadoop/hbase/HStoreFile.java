@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
@@ -36,6 +38,7 @@ import java.util.*;
  * This class handles all that path-building stuff for you.
  ******************************************************************************/
 public class HStoreFile implements HConstants, WritableComparable {
+  private static final Log LOG = LogFactory.getLog(HStoreFile.class.getName());
   static final byte INFO_SEQ_NUM = 0;
   static final String HSTORE_DATFILE_PREFIX = "mapfile.dat.";
   static final String HSTORE_INFOFILE_PREFIX = "mapfile.info.";
@@ -211,28 +214,33 @@ public class HStoreFile implements HConstants, WritableComparable {
    * brand-new HRegions.
    */
   void splitStoreFile(Text midKey, HStoreFile dstA, HStoreFile dstB,
-      FileSystem fs, Configuration conf) throws IOException {
-
+      FileSystem fs, Configuration c)
+  throws IOException {
     // Copy the appropriate tuples to one MapFile or the other.
-
-    MapFile.Reader in = new MapFile.Reader(fs, getMapFilePath().toString(), conf);
+    MapFile.Reader in = new MapFile.Reader(fs, getMapFilePath().toString(), c);
     try {
-      MapFile.Writer outA = new MapFile.Writer(conf, fs, 
+      MapFile.Writer outA = new MapFile.Writer(c, fs, 
         dstA.getMapFilePath().toString(), HStoreKey.class,
         ImmutableBytesWritable.class);
       try {
-        MapFile.Writer outB = new MapFile.Writer(conf, fs, 
+        MapFile.Writer outB = new MapFile.Writer(c, fs, 
           dstB.getMapFilePath().toString(), HStoreKey.class,
           ImmutableBytesWritable.class);
         try {
+          long count = 0;
           HStoreKey readkey = new HStoreKey();
           ImmutableBytesWritable readval = new ImmutableBytesWritable();
           while(in.next(readkey, readval)) {
-            Text key = readkey.getRow();
-            if(key.compareTo(midKey) < 0) {
+            if(readkey.getRow().compareTo(midKey) < 0) {
               outA.append(readkey, readval);
             } else {
               outB.append(readkey, readval);
+            }
+            if (LOG.isDebugEnabled()) {
+              count++;
+              if ((count % 10000) == 0) {
+                LOG.debug("Write " + count + " records");
+              }
             }
           }
         } finally {
@@ -300,15 +308,12 @@ public class HStoreFile implements HConstants, WritableComparable {
   long loadInfo(FileSystem fs) throws IOException {
     Path p = getInfoFilePath();
     DataInputStream in = new DataInputStream(fs.open(p));
-    
     try {
       byte flag = in.readByte();
       if(flag == INFO_SEQ_NUM) {
         return in.readLong();
-        
       }
       throw new IOException("Cannot process log file: " + p);
-      
     } finally {
       in.close();
     }
