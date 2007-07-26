@@ -71,7 +71,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * The maximum no. of 'completed' (successful/failed/killed)
    * jobs kept in memory per-user. 
    */
-  static final int MAX_COMPLETE_USER_JOBS_IN_MEMORY = 100;
+  final int MAX_COMPLETE_USER_JOBS_IN_MEMORY;
     
   /**
    * Used for formatting the id numbers
@@ -621,6 +621,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     TASK_ALLOC_EPSILON = conf.getFloat("mapred.jobtracker.taskalloc.loadbalance.epsilon", 0.2f);
     PAD_FRACTION = conf.getFloat("mapred.jobtracker.taskalloc.capacitypad", 
                                  0.01f);
+    MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
 
     // This is a directory of temporary submission files.  We delete it
     // on startup, and can delete any files that we're done with

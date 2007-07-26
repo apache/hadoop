@@ -600,6 +600,13 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.jobtracker.completeuserjobs.maximum</name>
+  <value>100</value>
+  <description>The maximum number of complete jobs per user to keep around before delegating them to the job history.
+  </description>
+</property>
+
+<property>
   <name>mapred.child.java.opts</name>
   <value>-Xmx200m</value>
   <description>Java opts for the task tracker child processes.  Subsumes

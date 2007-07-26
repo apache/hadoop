@@ -2,7 +2,8 @@ Hadoop Change Log
 
 
 Trunk (unreleased changes)
-
+  1. HADOOP-1636.  Allow configuration of the number of jobs kept in memory
+     by the JobTracker. (Michael Bieniosek via omalley)
 
 Branch 0.14 (unreleased changes)
 
