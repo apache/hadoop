@@ -976,23 +976,20 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
   throws IOException {
-    for(Map.Entry<Text, ArrayList<BatchOperation>> e: b) {
-      Text row = e.getKey();
-      long clientid = rand.nextLong();
-      long lockid = startUpdate(regionName, clientid, row);
-      for(BatchOperation op: e.getValue()) {
-        switch(op.getOp()) {
-        case BatchOperation.PUT_OP:
-          put(regionName, clientid, lockid, op.getColumn(), op.getValue());
-          break;
-          
-        case BatchOperation.DELETE_OP:
-          delete(regionName, clientid, lockid, op.getColumn());
-          break;
-        }
+    long clientid = rand.nextLong();
+    long lockid = startUpdate(regionName, clientid, b.getRow());
+    for(BatchOperation op: b) {
+      switch(op.getOp()) {
+      case BatchOperation.PUT_OP:
+        put(regionName, clientid, lockid, op.getColumn(), op.getValue());
+        break;
+
+      case BatchOperation.DELETE_OP:
+        delete(regionName, clientid, lockid, op.getColumn());
+        break;
       }
-      commit(regionName, clientid, lockid, timestamp);
     }
+    commit(regionName, clientid, lockid, timestamp);
   }
   
   /**

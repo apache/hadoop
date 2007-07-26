@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.TreeMap;
 import org.apache.hadoop.io.Text;
@@ -29,11 +30,21 @@ import org.apache.hadoop.io.Text;
 public class TestBatchUpdate extends HBaseClusterTestCase {
   private static final String CONTENTS_STR = "contents:";
   private static final Text CONTENTS = new Text(CONTENTS_STR);
-  private static final byte[] value = { 1, 2, 3, 4 };
+  private byte[] value;
 
   private HTableDescriptor desc = null;
   private HClient client = null;
 
+  /** constructor */
+  public TestBatchUpdate() {
+    try {
+      value = "abcd".getBytes(HConstants.UTF8_ENCODING);
+      
+    } catch (UnsupportedEncodingException e) {
+      fail();
+    }
+  }
+  
   /**
    * {@inheritDoc}
    */
@@ -56,7 +67,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
   /** the test case */
   public void testBatchUpdate() {
     try {
-      client.commitBatch();
+      client.commitBatch(-1L);
       
     } catch (IllegalStateException e) {
       // expected
@@ -65,7 +76,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       fail();
     }
 
-    client.startBatchUpdate();
+    long lockid = client.startBatchUpdate(new Text("row1"));
     
     try {
       client.openTable(HConstants.META_TABLE_NAME);
@@ -77,14 +88,22 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       fail();
     }
     try {
-      long lockid = client.startUpdate(new Text("row1"));
+      try {
+        @SuppressWarnings("unused")
+        long dummy = client.startUpdate(new Text("row2"));
+      } catch (IllegalStateException e) {
+        // expected
+      } catch (Exception e) {
+        e.printStackTrace();
+        fail();
+      }
       client.put(lockid, CONTENTS, value);
       client.delete(lockid, CONTENTS);
+      client.commitBatch(lockid);
       
-      lockid = client.startUpdate(new Text("row2"));
+      lockid = client.startBatchUpdate(new Text("row2"));
       client.put(lockid, CONTENTS, value);
-      
-      client.commitBatch();
+      client.commit(lockid);
  
       Text[] columns = { CONTENTS };
       HScannerInterface scanner = client.obtainScanner(columns, new Text());
