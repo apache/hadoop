@@ -73,3 +73,5 @@ Trunk (unreleased changes)
     (Izaak Rubin via Stack)
  47. HADOOP-1637 Fix to HScanner to Support Filters, Add Filter Tests to
      TestScanner2 (Izaak Rubin via Stack)
+ 48. HADOOP-1516 HClient fails to readjust when ROOT or META redeployed on new
+     region server

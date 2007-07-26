@@ -23,13 +23,13 @@ import org.apache.hadoop.io.*;
 
 import java.io.*;
 
-/*******************************************************************************
+/**
  * A Key for an entry in the change log.
  * 
  * The log intermingles edits to many tables and rows, so each log entry 
  * identifies the appropriate table and row.  Within a table and row, they're 
  * also sorted.
- ******************************************************************************/
+ */
 public class HLogKey implements WritableComparable {
   Text regionName = new Text();
   Text tablename = new Text();
@@ -79,16 +79,25 @@ public class HLogKey implements WritableComparable {
     return logSeqNum;
   }
   
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public String toString() {
-    return tablename + " " + regionName + " " + row + " " + logSeqNum;
+    return tablename + "," + regionName + "," + row + "," + logSeqNum;
   }
   
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
   
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public int hashCode() {
     int result = this.regionName.hashCode();
@@ -97,12 +106,12 @@ public class HLogKey implements WritableComparable {
     return result;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
+  //
   // Comparable
-  //////////////////////////////////////////////////////////////////////////////
+  //
 
-  /* (non-Javadoc)
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
+  /**
+   * {@inheritDoc}
    */
   public int compareTo(Object o) {
     HLogKey other = (HLogKey) o;
@@ -124,12 +133,12 @@ public class HLogKey implements WritableComparable {
     return result;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
+  //
   // Writable
-  //////////////////////////////////////////////////////////////////////////////
+  //
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
+  /**
+   * {@inheritDoc}
    */
   public void write(DataOutput out) throws IOException {
     this.regionName.write(out);
@@ -138,8 +147,8 @@ public class HLogKey implements WritableComparable {
     out.writeLong(logSeqNum);
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
+  /**
+   * {@inheritDoc}
    */
   public void readFields(DataInput in) throws IOException {
     this.regionName.readFields(in);

@@ -407,6 +407,23 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public Vector<HStoreFile> close() throws IOException {
+    return close(false);
+  }
+  
+  /**
+   * Close down this HRegion.  Flush the cache unless abort parameter is true,
+   * Shut down each HStore, don't service any more calls.
+   *
+   * This method could take some time to execute, so don't call it from a 
+   * time-sensitive thread.
+   * 
+   * @param abort true if server is aborting (only during testing)
+   * @return Vector of all the storage files that the HRegion's component 
+   * HStores make use of.  It's a list of HStoreFile objects.
+   * 
+   * @throws IOException
+   */
+  Vector<HStoreFile> close(boolean abort) throws IOException {
     lock.obtainWriteLock();
     try {
       boolean shouldClose = false;
@@ -430,7 +447,11 @@ public class HRegion implements HConstants {
         return null;
       }
       LOG.info("closing region " + this.regionInfo.regionName);
-      Vector<HStoreFile> allHStoreFiles = internalFlushcache();
+      Vector<HStoreFile> allHStoreFiles = null;
+      if (!abort) {
+        // Don't flush the cache if we are aborting during a test.
+        allHStoreFiles = internalFlushcache();
+      }
       for (HStore store: stores.values()) {
         store.close();
       }

@@ -265,10 +265,11 @@ class HStore implements HConstants {
             || !key.getRegionName().equals(this.regionName)
             || !HStoreKey.extractFamily(column).equals(this.familyName)) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Passing on edit " + key.getRegionName() + ", "
-                + column.toString() + ": " + new String(val.getVal())
-                + ", my region: " + this.regionName + ", my column: "
-                + this.familyName);
+            LOG.debug("Passing on edit " + key.getRegionName() + ", " +
+                column.toString() + ": " + 
+                new String(val.getVal(), UTF8_ENCODING) +
+                ", my region: " + this.regionName + ", my column: " +
+                this.familyName);
           }
           continue;
         }

@@ -23,19 +23,22 @@ import java.io.IOException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.io.Text;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * Tests region server failover when a region server exits.
  */
-public class TestCleanRegionServerExit extends HBaseClusterTestCase {
+public class TestRegionServerAbort extends HBaseClusterTestCase {
   private HClient client;
 
   /** constructor */
-  public TestCleanRegionServerExit() {
+  public TestRegionServerAbort() {
     super();
-    conf.setInt("ipc.client.timeout", 5000);            // reduce ipc client timeout
+    conf.setInt("ipc.client.timeout", 5000);            // reduce client timeout
     conf.setInt("ipc.client.connect.max.retries", 5);   // and number of retries
     conf.setInt("hbase.client.retries.number", 2);      // reduce HBase retries
+//    Logger.getLogger(this.getClass().getPackage().getName()).setLevel(Level.DEBUG);
   }
   
   /**
@@ -51,7 +54,7 @@ public class TestCleanRegionServerExit extends HBaseClusterTestCase {
    * The test
    * @throws IOException
    */
-  public void testCleanRegionServerExit() throws IOException {
+  public void testRegionServerAbort() throws IOException {
     // When the META table can be opened, the region servers are running
     this.client.openTable(HConstants.META_TABLE_NAME);
     // Put something into the meta table.
@@ -70,9 +73,9 @@ public class TestCleanRegionServerExit extends HBaseClusterTestCase {
     // after we shut down the current meta/root host.
     this.cluster.startRegionServer();
     // Now shutdown the region server and wait for it to go down.
-    this.cluster.stopRegionServer(0);
+    this.cluster.abortRegionServer(0);
     this.cluster.waitOnRegionServer(0);
-    
+
     // Verify that the client can find the data after the region has been moved
     // to a different server
 
