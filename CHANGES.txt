@@ -3,11 +3,23 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
-  1. HADOOP-1636.  Allow configuration of the number of jobs kept in memory
-     by the JobTracker. (Michael Bieniosek via omalley)
+  INCOMPATIBLE CHANGES
 
-  2. HADOOP-1463.  HDFS report correct usage statistics for disk space
-     used by HDFS.  (Hairong Kuang via dhruba)
+  NEW FEATURES
+
+    HADOOP-1636.  Allow configuration of the number of jobs kept in
+    memory by the JobTracker.  (Michael Bieniosek via omalley)
+
+    HADOOP-1667.  Reorganize CHANGES.txt into sections to make it
+    easier to read.  Also remove numbering, to make merging easier.
+    (cutting)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-1463.  HDFS report correct usage statistics for disk space
+    used by HDFS.  (Hairong Kuang via dhruba)
 
 
 Branch 0.14 (unreleased changes)
