@@ -5,7 +5,7 @@
 <meta content="Apache Forrest" name="Generator">
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
-<title>Hadoop Version Control System</title>
+<title>Releases</title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
 <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
@@ -99,10 +99,10 @@ document.write("Last Published: " + document.lastModified);
     |start Menu
     +-->
 <div id="menu">
-<div onclick="SwitchMenu('menu_1.1', 'skin/')" id="menu_1.1Title" class="menutitle">Project</div>
-<div id="menu_1.1" class="menuitemgroup">
-<div class="menuitem">
-<a href="releases.html">Releases</a>
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Project</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
+<div class="menupage">
+<div class="menupagetitle">Releases</div>
 </div>
 <div class="menuitem">
 <a href="releases.html#News">News</a>
@@ -135,16 +135,16 @@ document.write("Last Published: " + document.lastModified);
 <a href="mailing_lists.html#Users">Mailing Lists</a>
 </div>
 </div>
-<div onclick="SwitchMenu('menu_selected_1.3', 'skin/')" id="menu_selected_1.3Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Developers</div>
-<div id="menu_selected_1.3" class="selectedmenuitemgroup" style="display: block;">
+<div onclick="SwitchMenu('menu_1.3', 'skin/')" id="menu_1.3Title" class="menutitle">Developers</div>
+<div id="menu_1.3" class="menuitemgroup">
 <div class="menuitem">
 <a href="mailing_lists.html#Developers">Mailing Lists</a>
 </div>
 <div class="menuitem">
 <a href="issue_tracking.html">Issue Tracking</a>
 </div>
-<div class="menupage">
-<div class="menupagetitle">Version Control</div>
+<div class="menuitem">
+<a href="version_control.html">Version Control</a>
 </div>
 <div class="menuitem">
 <a href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/">Nightly Build</a>
@@ -166,75 +166,124 @@ document.write("Last Published: " + document.lastModified);
     +-->
 <div id="content">
 <div title="Portable Document Format" class="pdflink">
-<a class="dida" href="version_control.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
+<a class="dida" href="releases.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
         PDF</a>
 </div>
-<h1>Hadoop Version Control System</h1>
+<h1>Releases</h1>
 <div id="minitoc-area">
 <ul class="minitoc">
 <li>
-<a href="#Overview">Overview</a>
+<a href="#Download">Download</a>
 </li>
 <li>
-<a href="#Web+Access+%28read-only%29">Web Access (read-only)</a>
+<a href="#Release+Notes">Release Notes</a>
 </li>
 <li>
-<a href="#Anonymous+Access+%28read-only%29">Anonymous Access (read-only)</a>
+<a href="#Project+News">Project News</a>
+<ul class="minitoc">
+<li>
+<a href="#25+July%2C+2007%3A+release+0.13.1+available">25 July, 2007: release 0.13.1 available</a>
 </li>
 <li>
-<a href="#Committer+Access+%28read-write%29">Committer Access (read-write)</a>
+<a href="#8+June%2C+2007%3A+release+0.13.0+available"> 8 June, 2007: release 0.13.0 available </a>
+</li>
+<li>
+<a href="#8+June%2C+2006%3A"> 8 June, 2006: FAQ added to Wiki </a>
+</li>
+<li>
+<a href="#5+May%2C+2006%3A+release+0.2.0+available"> 5 May, 2006: release 0.2.0 available </a>
+</li>
+<li>
+<a href="#6+February%2C+2006%3A+nightly+builds"> 6 February, 2006: nightly builds </a>
+</li>
+<li>
+<a href="#3+February%2C+2006%3A+Hadoop+code+moved+out+of+Nutch"> 3 February, 2006: Hadoop code moved out of Nutch </a>
 </li>
 </ul>
-</div>
-  
+</li>
+</ul>
+</div> 
     
-<a name="N1000C"></a><a name="Overview"></a>
-<h2 class="h3">Overview</h2>
+<p>This page lists release numbers along with their dates and a
+    link to release notes. You can obtain releases from a nearby
+    mirror.</p>
+
+    
+<a name="N1000F"></a><a name="Download"></a>
+<h2 class="h3">Download</h2>
 <div class="section">
+<p>Releases may be downloaded from Apache mirrors.</p>
 <p>
-        The Hadoop source code resides in the Apache <a href="http://subversion.tigris.org/">Subversion (SVN)</a> repository.
-        The command-line SVN client can be obtained <a href="http://subversion.tigris.org/project_packages.html">here</a>.
-        The TortoiseSVN GUI client for Windows can be obtained <a href="http://tortoisesvn.tigris.org/">here</a>. There
-        are also SVN plugins available for both <a href="http://subclipse.tigris.org/">Eclipse</a> and 
-        <a href="http://svnup.tigris.org/">IntelliJ IDEA</a>.
+      
+<a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/">
+      <strong><strong>Download a release now!</strong></strong></a>
+      
+</p>
+<p>On the mirror, all recent releases are available, but are not
+      guaranteed to be stable. For stable releases, look in the stable
+      directory.
       </p>
 </div>
+
     
-    
-<a name="N1002A"></a><a name="Web+Access+%28read-only%29"></a>
-<h2 class="h3">Web Access (read-only)</h2>
+<a name="N10026"></a><a name="Release+Notes"></a>
+<h2 class="h3">Release Notes</h2>
 <div class="section">
+<p>Release notes for Hadoop releases are available in Jira.</p>
 <p>
-        The source code can be browsed via the Web at 
-        <a href="http://svn.apache.org/viewcvs.cgi/lucene/hadoop/">http://svn.apache.org/viewcvs.cgi/lucene/hadoop/</a>.
-        No SVN client software is required.
-      </p>
+      
+<a href="http://issues.apache.org/jira/browse/HADOOP?report=com.atlassian.jira.plugin.system.project:changelog-panel">
+      <strong><strong>Browse release notes now!</strong></strong></a>
+      
+</p>
 </div>
+
     
-    
-<a name="N10038"></a><a name="Anonymous+Access+%28read-only%29"></a>
-<h2 class="h3">Anonymous Access (read-only)</h2>
+<a name="N1003A"></a><a name="Project+News"></a>
+<h2 class="h3">Project News</h2>
 <div class="section">
+<a name="N10040"></a><a name="25+July%2C+2007%3A+release+0.13.1+available"></a>
+<h3 class="h4">25 July, 2007: release 0.13.1 available</h3>
+<p>This fixes critical bugs in the 0.13.0 release.</p>
+<a name="N1004A"></a><a name="8+June%2C+2007%3A+release+0.13.0+available"></a>
+<h3 class="h4"> 8 June, 2007: release 0.13.0 available </h3>
 <p>
-        The SVN URL for anonymous users is 
-        <a href="http://svn.apache.org/repos/asf/lucene/hadoop/">http://svn.apache.org/repos/asf/lucene/hadoop/</a>.
-        Instructions for anonymous SVN access are 
-        <a href="http://www.apache.org/dev/version-control.html#anon-svn">here</a>.
-      </p>
+        In addition to new features, this release contains significant performance and reliability improvements.
+        For example, MapReduce sort performance on large clusters has <a href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">doubled</a>.
+        </p>
+<div class="note">
+<div class="label">Note</div>
+<div class="content">
+        When upgrading an existing <acronym title="Hadoop Distributed File System">HDFS</acronym> filesystem to this release, you should first start HDFS with <span class="codefrag">bin/start-dfs.sh -upgrade</span>
+        which makes it possible to revert the upgrade. For more information on this issue, see <a href="https://issues.apache.org/jira/browse/HADOOP-702#action_12482953">HADOOP-702</a>. 
+        </div>
 </div>
-    
-    
-<a name="N1004A"></a><a name="Committer+Access+%28read-write%29"></a>
-<h2 class="h3">Committer Access (read-write)</h2>
-<div class="section">
+<a name="N10066"></a><a name="8+June%2C+2006%3A"></a>
+<h3 class="h4"> 8 June, 2006: FAQ added to Wiki </h3>
 <p>
-        The SVN URL for committers is 
-        <a href="https://svn.apache.org/repos/asf/lucene/hadoop/">https://svn.apache.org/repos/asf/lucene/hadoop/</a>.
-        Instructions for committer SVN access are 
-        <a href="http://www.apache.org/dev/version-control.html#https-svn">here</a>.
-      </p>
+        Hadoop now has a <a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>. Please help make this more complete!
+        </p>
+<a name="N10078"></a><a name="5+May%2C+2006%3A+release+0.2.0+available"></a>
+<h3 class="h4"> 5 May, 2006: release 0.2.0 available </h3>
+<p>
+        We are now aiming for monthly releases. There have been many bug fixes and improvements in the past month.
+        MapReduce and DFS are now fairly reliable on clusters with up to 200 nodes.
+        </p>
+<a name="N10082"></a><a name="6+February%2C+2006%3A+nightly+builds"></a>
+<h3 class="h4"> 6 February, 2006: nightly builds </h3>
+<p>
+        Hadoop now has nightly builds. This automatically creates a <a href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/">downloadable version of Hadoop every night</a>.
+        All unit tests must pass, or a message is sent to the developers mailing list and no new version is created.
+        This also updates the <a href="http://lucene.apache.org/hadoop/api/index.html">javadoc</a>.
+        </p>
+<a name="N10094"></a><a name="3+February%2C+2006%3A+Hadoop+code+moved+out+of+Nutch"></a>
+<h3 class="h4"> 3 February, 2006: Hadoop code moved out of Nutch </h3>
+<p>
+        The Hadoop code has now been moved into its own Subversion tree, renamed into packages under org.apache.hadoop.
+        All unit tests pass, but little else has yet been tested.
+        </p>
 </div>
-    
+
   
 </div>
 <!--+

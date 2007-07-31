@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>Hadoop Documentation</title>
+  </header>
+  
+  <body>
+    <p>
+    The following documents provide concepts and procedures that will help you get started using Hadoop.
+    If you have more questions, you can ask the <a href="mailing_lists.html">mailing list</a> or browse the archives.
+    </p>
+    <ul>
+      <li><a href="hdfs_design.html">Hadoop Distributed File System (<acronym title="Hadoop Distributed File System">HDFS</acronym>)</a></li>
+      <li><a href="ext:overview">Install and configure</a></li>
+      <li><a href="ext:api">API Docs</a></li>
+      <li><a href="ext:wiki">Wiki</a></li>
+      <li><a href="ext:faq">FAQ</a></li>
+    </ul>
+  </body>
+  
+</document>

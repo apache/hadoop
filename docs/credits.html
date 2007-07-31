@@ -1,9 +1,9 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta content="Apache Forrest" name="Generator">
-<meta name="Forrest-version" content="0.7">
+<meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
 <title>Hadoop credits</title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
@@ -16,57 +16,99 @@
 <body onload="init()">
 <script type="text/javascript">ndeSetTextSize();</script>
 <div id="top">
+<!--+
+    |breadtrail
+    +-->
 <div class="breadtrail">
 <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://lucene.apache.org/">Lucene</a> &gt; <a href="http://lucene.apache.org/hadoop/">Hadoop</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
 </div>
+<!--+
+    |header
+    +-->
 <div class="header">
+<!--+
+    |start group logo
+    +-->
 <div class="grouplogo">
 <a href="http://lucene.apache.org/"><img class="logoImage" alt="Lucene" src="images/lucene_green_150.gif" title="Apache Lucene"></a>
 </div>
+<!--+
+    |end group logo
+    +-->
+<!--+
+    |start Project Logo
+    +-->
 <div class="projectlogo">
 <a href="http://lucene.apache.org/hadoop/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 </div>
+<!--+
+    |end Project Logo
+    +-->
+<!--+
+    |start Search
+    +-->
 <div class="searchbox">
 <form action="http://www.google.com/search" method="get" class="roundtopsmall">
 <input value="lucene.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
-                    <input attr="value" name="Search" value="Search" type="submit">
+                    <input name="Search" value="Search" type="submit">
 </form>
 </div>
+<!--+
+    |end search
+    +-->
+<!--+
+    |start Tabs
+    +-->
 <ul id="tabs">
 <li class="current">
-<a class="base-selected" href="index.html">Main</a>
+<a class="selected" href="index.html">Main</a>
 </li>
 <li>
-<a class="base-not-selected" href="http://wiki.apache.org/lucene-hadoop">Wiki</a>
+<a class="unselected" href="http://wiki.apache.org/lucene-hadoop">Wiki</a>
 </li>
 </ul>
+<!--+
+    |end Tabs
+    +-->
 </div>
 </div>
 <div id="main">
 <div id="publishedStrip">
+<!--+
+    |start Subtabs
+    +-->
 <div id="level2tabs"></div>
+<!--+
+    |end Endtabs
+    +-->
 <script type="text/javascript"><!--
-document.write("<text>Last Published:</text> " + document.lastModified);
+document.write("Last Published: " + document.lastModified);
 //  --></script>
 </div>
+<!--+
+    |breadtrail
+    +-->
 <div class="breadtrail">
-             
+
              &nbsp;
            </div>
+<!--+
+    |start Menu, mainarea
+    +-->
+<!--+
+    |start Menu
+    +-->
 <div id="menu">
 <div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Project</div>
 <div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
 <div class="menuitem">
-<a href="index.html">News</a>
+<a href="releases.html">Releases</a>
 </div>
 <div class="menuitem">
-<a href="about.html">About</a>
+<a href="releases.html#News">News</a>
 </div>
 <div class="menupage">
 <div class="menupagetitle">Credits</div>
-</div>
-<div class="menuitem">
-<a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/">Download</a>
 </div>
 <div class="menuitem">
 <a href="http://www.cafepress.com/hadoop/">Buy Stuff</a>
@@ -75,22 +117,28 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 <div onclick="SwitchMenu('menu_1.2', 'skin/')" id="menu_1.2Title" class="menutitle">Documentation</div>
 <div id="menu_1.2" class="menuitemgroup">
 <div class="menuitem">
-<a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>
+<a href="hdfs_design.html">Hadoop File System</a>
+</div>
+<div class="menuitem">
+<a href="api/overview-summary.html#overview_description">Install and Configure</a>
+</div>
+<div class="menuitem">
+<a href="api/index.html">API Docs</a>
 </div>
 <div class="menuitem">
 <a href="http://wiki.apache.org/lucene-hadoop/">Wiki</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_design.html">Hadoop File System</a>
+<a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="api/index.html">API Docs</a>
+<a href="mailing_lists.html#Users">Mailing Lists</a>
 </div>
 </div>
-<div onclick="SwitchMenu('menu_1.3', 'skin/')" id="menu_1.3Title" class="menutitle">Developer</div>
+<div onclick="SwitchMenu('menu_1.3', 'skin/')" id="menu_1.3Title" class="menutitle">Developers</div>
 <div id="menu_1.3" class="menuitemgroup">
 <div class="menuitem">
-<a href="mailing_lists.html">Mailing Lists</a>
+<a href="mailing_lists.html#Developers">Mailing Lists</a>
 </div>
 <div class="menuitem">
 <a href="issue_tracking.html">Issue Tracking</a>
@@ -102,20 +150,20 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 <a href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/">Nightly Build</a>
 </div>
 </div>
-<div onclick="SwitchMenu('menu_1.4', 'skin/')" id="menu_1.4Title" class="menutitle">Related Projects</div>
-<div id="menu_1.4" class="menuitemgroup">
-<div class="menuitem">
-<a href="http://lucene.apache.org/java/">Lucene</a>
-</div>
-<div class="menuitem">
-<a href="http://lucene.apache.org/nutch/">Nutch</a>
-</div>
-</div>
 <div id="credit"></div>
 <div id="roundbottom">
 <img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
+<!--+
+  |alternative credits
+  +-->
 <div id="credit2"></div>
 </div>
+<!--+
+    |end Menu
+    +-->
+<!--+
+    |start content
+    +-->
 <div id="content">
 <div title="Portable Document Format" class="pdflink">
 <a class="dida" href="credits.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
@@ -193,18 +241,27 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 
 
 </div>
+<!--+
+    |end content
+    +-->
 <div class="clearboth">&nbsp;</div>
 </div>
 <div id="footer">
+<!--+
+    |start bottomstrip
+    +-->
 <div class="lastmodified">
 <script type="text/javascript"><!--
-document.write("<text>Last Published:</text> " + document.lastModified);
+document.write("Last Published: " + document.lastModified);
 //  --></script>
 </div>
 <div class="copyright">
         Copyright &copy;
          2007 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
 </div>
+<!--+
+    |end bottomstrip
+    +-->
 </div>
 </body>
 </html>

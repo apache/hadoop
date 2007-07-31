@@ -9,316 +9,64 @@
     <title>Welcome to Hadoop!</title> 
   </header> 
 
-  <body> 
+  <body>
+    <p>
+    Hadoop is a software platform lets one easily write and run
+    applications that process vast amounts of data.</p>
+
+    <p>Here's what makes Hadoop especially useful:</p>
+    <ul>
+      <li><strong>Scalable:</strong>
+      Hadoop can reliably store and process petabytes.</li>
+      <li><strong>Economical:</strong>
+      It distributes the data and processing across clusters of
+      commonly available computers. These clusters can number into the
+      thousands of nodes.</li>
+      <li><strong>Efficient:</strong>
+      By distributing the data, Hadoop can process it in parallel on
+      the nodes where the data is located. This makes it extremely
+      rapid.</li>
+      <li><strong>Reliable:</strong>
+      Hadoop automatically maintains multiple copies of data and
+      automatically redeploys computing tasks based on failures.</li>
+    </ul>
+    <p>
+    Hadoop implements <a
+    href="http://wiki.apache.org/lucene-hadoop/HadoopMapReduce">MapReduce</a>,
+    using the Hadoop Distributed File System (<a
+    href="hdfs_design.html"><acronym title="Hadoop Distributed File
+    System">HDFS</acronym></a>) (see figure below.)  MapReduce divides
+    applications into many small blocks of work.  HDFS creates
+    multiple replicas of data blocks for reliability, placing them on
+    compute nodes around the cluster.  MapReduce can then process the
+    data where it is located.
+    </p>
+
+    <figure alt="architecture" src="images/architecture.gif" />
 
     <section>
-      <title>News</title>
-
-      <section>
-      <title>25 July, 2007: release 0.13.1 available</title>
-      <p>This fixes critical bugs in the 0.13.0 release.  For full
-      details, see the <a href="http://tinyurl.com/2uoabd">release
-      notes</a>. The release can be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
+      <title> Getting Started </title>
+      <p>
+      The Hadoop project plans to scale Hadoop up to handling thousands of computers. However, to begin with you can start by installing in on a single machine or a very small cluster.
       </p>
-      </section>
+      <ol>
+        <li><a href="documentation.html">Learn about</a> Hadoop by reading the documentation.</li>
+        <li><a href="releases.html">Download</a> Hadoop from the release page.</li>
+        <li><a href="ext:overview">Install and configure</a> Hadoop. Scroll down the page.</li>
+        <li><a href="mailing_lists.html">Discuss it</a> on the mailing list.</li>
+      </ol>
+    </section>
 
-      <section>
-      <title>8 June, 2007: release 0.13.0 available</title>
-      <p>In addition to new features, this release contains
-      significant performance and reliability improvements.  For
-      example, MapReduce sort performance on large clusters has <a
-      href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">
-      doubled</a>.</p>
-
-      <p>Note: when upgrading an existing HDFS filesystem to this
-      release, you should first start HDFS with <code>bin/start-dfs.sh
-      -upgrade</code>, which makes it possible to revert the upgrade.
-      For more information on this issue, see <a
-      href="https://issues.apache.org/jira/browse/HADOOP-702#action_12482953">HADOOP-702</a>.
+    <section>
+      <title> Getting Involved </title>
+      <p>
+      Hadoop is an open source volunteer project under the Apache Software Foundation. We encourage you to learn about the project and contribute your expertise. Here are some starter links:
       </p>
-
-      <p>For full details, see the <a
-      href="http://tinyurl.com/2prl3k">release notes</a>. The release
-      can be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>6 April, 2007: release 0.12.3 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/35qyhw">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>23 March, 2007: release 0.12.2 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/2r7kcw">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>17 March, 2007: release 0.12.1 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/2kynuc">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>2 March, 2007: release 0.12.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/2vp248">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>16 February, 2007: release 0.11.2 available</title>
-      <p>This fixes critical bugs in 0.11.1. For details see the <a
-      href="http://tinyurl.com/2ukkt3">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>9 February, 2007: release 0.11.1 available</title>
-      <p>This fixes bugs in 0.11.0. For details see the <a
-      href="http://tinyurl.com/37c5a3">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>2 February, 2007: release 0.11.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/2yn8zs">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>10 January, 2007: release 0.10.1 available</title>
-      <p>This fixes critical bugs in 0.10.0.  For details see the <a
-      href="http://tinyurl.com/ycpsms">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>5 January, 2007: release 0.10.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/yapkxs">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>15 December, 2006: release 0.9.2 available</title>
-      <p>This fixes critical bugs in 0.9.1.  For details see the <a
-      href="http://tinyurl.com/ya8lfd">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>6 December, 2006: release 0.9.1 available</title>
-      <p>This fixes critical bugs in 0.9.0.  For details see the <a
-      href="http://tinyurl.com/y55d7p">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>1 December, 2006: release 0.9.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/sdjhb">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>3 November, 2006: release 0.8.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/ykqv6s">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>18 October, 2006: release 0.7.2 available</title>
-      <p>This fixes critical bugs in 0.7.1.  For details see the <a
-      href="http://tinyurl.com/ygy6y7">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>11 October, 2006: release 0.7.1 available</title>
-      <p>This fixes critical bugs in 0.7.0.  For details see the <a
-      href="http://tinyurl.com/p7qod">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>6 October, 2006: release 0.7.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/kvd9m">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>18 September, 2006: release 0.6.2 available</title>
-      <p>This fixes critical bugs in 0.6.1.  For details see the <a
-      href="http://tinyurl.com/gyb56">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>13 September, 2006: release 0.6.1 available</title>
-      <p>This fixes critical bugs in 0.6.0.  For details see the <a
-      href="http://tinyurl.com/lykp4">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>8 September, 2006: release 0.6.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/r3zoj">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>4 August, 2006: release 0.5.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/pnml2">release notes</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>28 June, 2006: release 0.4.0 available</title>
-      <p>For details see the <a
-      href="http://tinyurl.com/o35b6">change log</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>9 June, 2006: release 0.3.2 available</title>
-      <p>This is a bugfix release.  For details see the <a
-      href="http://tinyurl.com/k9g5c">change log</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>8 June, 2006: FAQ added to Wiki</title>
-      <p>Hadoop now has a <a
-      href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>.  Please
-      help make this more complete!
-      </p> </section>
-
-      <section>
-      <title>5 June, 2006: release 0.3.1 available</title>
-      <p>This is a bugfix release.  For details see the <a
-      href="http://tinyurl.com/l6on4">change log</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>2 June, 2006: release 0.3.0 available</title>
-      <p>This includes many fixes, improving performance, scalability
-      and reliability and adding new features.  For details see the <a
-      href="http://tinyurl.com/rq3f7">change log</a>. The release can
-      be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>12 May, 2006: release 0.2.1 available</title>
-      <p>This fixes a few bugs in release 0.2.0, listed in the <a
-      href="http://tinyurl.com/rnnvz">change log</a>. The
-      release can be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>5 May, 2006: release 0.2.0 available</title>
-      <p>We are now aiming for monthly releases.  There have been many
-      bug fixes and improvements in the past month.  MapReduce and DFS
-      are now fairly reliable on clusters with up to 200 nodes.  See
-      the <a href="http://tinyurl.com/qkgsg">change log</a> for
-      details. The release can be obtained from <a
-      href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p> </section>
-
-      <section>
-      <title>2 April, 2006: release 0.1.0 available</title>
-      <p>This is the first Hadoop release.  The release is available
-      <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/">
-      here</a>.</p>
-      </section>
-
-      <section>
-      <title>6 February, 2006: nightly builds</title>
-      <p>Hadoop now has nightly builds.  This automatically creates a
-      <a href="ext:nightly">downloadable version of Hadoop every
-      night</a>.  All unit tests must pass, or a message is sent to
-      the developers mailing list and no new version is created.  This
-      also updates the <a href="api/index.html">javadoc</a>.</p>
-      </section>
-
-      <section>
-      <title>3 February, 2006: Hadoop code moved out of Nutch</title>
-      <p>The Hadoop code has now been moved into its own Subversion
-      tree, renamed into packages under <code>org.apache.hadoop</code>.
-      All unit tests pass, but little else has yet been tested.</p> 
-      </section>
-
-      <section>
-      <title>30 March, 2006: Hadoop project approved</title>
-      <p>The Lucene PMC has elected to split the Nutch MapReduce and
-      distributed filesytem code into a new project named Hadoop.</p>
-      </section>
-
+      <ol>
+        <li>See our <a href="http://wiki.apache.org/lucene-hadoop/HowToContribute">How to Contribute to Hadoop</a> page.</li>
+        <li>Give us <a href="issue_tracking.html">feedback</a>: What can we do better?</li>
+        <li>Join the <a href="mailing_lists.html">mailing list</a>: Meet the community.</li>
+      </ol>
     </section>
 
   </body>

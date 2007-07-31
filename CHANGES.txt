@@ -1,5 +1,6 @@
 Hadoop Change Log
 
+
 Branch 0.14 (unreleased changes)
 
   1. HADOOP-1197.  In Configuration, deprecate getObject() and add
@@ -411,8 +412,11 @@ Branch 0.14 (unreleased changes)
 
 138. HADOOP-1628.  Add block CRC protocol unit tests. (Raghu Angadi via omalley)
 
-139. HADOOP-1653. FSDirectory code-cleanups. FSDirectory.INode becomes a static
-     class.  (Christophe Taton via dhruba)
+139. HADOOP-1653.  FSDirectory code-cleanups. FSDirectory.INode
+     becomes a static class.  (Christophe Taton via dhruba)
+
+140. HADOOP-1066.  Restructure documentation to make more user
+     friendly.  (Connie Kleinjans and Jeff Hammerbacher via cutting)
 
 
 Release 0.13.0 - 2007-06-08
