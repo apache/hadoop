@@ -113,7 +113,7 @@ class FSNamesystem implements FSConstants {
   //
   // Stats on overall usage
   //
-  long totalCapacity = 0, totalRemaining = 0;
+  long totalCapacity = 0L, totalUsed=0L, totalRemaining = 0L;
 
   // total number of connections per live datanode
   int totalLoad = 0;
@@ -1687,7 +1687,7 @@ class FSNamesystem implements FSConstants {
         if( !heartbeats.contains(nodeS)) {
           heartbeats.add(nodeS);
           //update its timestamp
-          nodeS.updateHeartbeat(0L, 0L, 0);
+          nodeS.updateHeartbeat(0L, 0L, 0L, 0);
           nodeS.isAlive = true;
         }
       }
@@ -1771,7 +1771,8 @@ class FSNamesystem implements FSConstants {
    * @throws IOException
    */
   public boolean gotHeartbeat(DatanodeID nodeID,
-                              long capacity, 
+                              long capacity,
+                              long dfsUsed,
                               long remaining,
                               int xceiverCount,
                               int xmitsInProgress,
@@ -1800,7 +1801,7 @@ class FSNamesystem implements FSConstants {
           return true;
         } else {
           updateStats(nodeinfo, false);
-          nodeinfo.updateHeartbeat(capacity, remaining, xceiverCount);
+          nodeinfo.updateHeartbeat(capacity, dfsUsed, remaining, xceiverCount);
           updateStats(nodeinfo, true);
           //
           // Extract pending replication work or block invalidation
@@ -1825,10 +1826,12 @@ class FSNamesystem implements FSConstants {
     assert(Thread.holdsLock(heartbeats));
     if (isAdded) {
       totalCapacity += node.getCapacity();
+      totalUsed += node.getDfsUsed();
       totalRemaining += node.getRemaining();
       totalLoad += node.getXceiverCount();
     } else {
       totalCapacity -= node.getCapacity();
+      totalUsed -= node.getDfsUsed();
       totalRemaining -= node.getRemaining();
       totalLoad -= node.getXceiverCount();
     }
@@ -2505,15 +2508,22 @@ class FSNamesystem implements FSConstants {
   }
 
   /**
-   * Total raw bytes.
+   * Total raw bytes including non-dfs used space.
    */
   public long totalCapacity() {
-
     synchronized (heartbeats) {
       return totalCapacity;
     }
   }
 
+  /**
+   * Total used space by data nodes
+   */
+  public long totalDfsUsed() {
+    synchronized(heartbeats){
+      return totalUsed;
+    }
+  }
   /**
    * Total non-used raw bytes.
    */

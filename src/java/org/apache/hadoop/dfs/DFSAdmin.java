@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.dfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 
 /**
@@ -44,8 +45,10 @@ public class DFSAdmin extends FsShell {
   public void report() throws IOException {
     if (fs instanceof DistributedFileSystem) {
       DistributedFileSystem dfs = (DistributedFileSystem) fs;
-      long raw = dfs.getRawCapacity();
-      long rawUsed = dfs.getRawUsed();
+      DiskStatus ds = dfs.getDiskStatus();
+      long raw = ds.getCapacity();
+      long rawUsed = ds.getDfsUsed();
+      long remaining = ds.getRemaining();
       long used = dfs.getUsed();
       boolean mode = dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET);
       UpgradeStatusReport status = 
@@ -59,6 +62,8 @@ public class DFSAdmin extends FsShell {
       }
       System.out.println("Total raw bytes: " + raw
                          + " (" + byteDesc(raw) + ")");
+      System.out.println("Remaining raw bytes: " + remaining
+          + " (" + byteDesc(remaining) + ")");
       System.out.println("Used raw bytes: " + rawUsed
                          + " (" + byteDesc(rawUsed) + ")");
       System.out.println("% used: "

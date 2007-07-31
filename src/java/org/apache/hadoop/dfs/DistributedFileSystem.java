@@ -210,6 +210,35 @@ public class DistributedFileSystem extends FileSystem {
   DFSClient getClient() {
     return dfs;
   }        
+  
+  public static class DiskStatus {
+    private long capacity;
+    private long dfsUsed;
+    private long remaining;
+    public DiskStatus(long capacity, long dfsUsed, long remaining) {
+      this.capacity = capacity;
+      this.dfsUsed = dfsUsed;
+      this.remaining = remaining;
+    }
+    
+    public long getCapacity() {
+      return capacity;
+    }
+    public long getDfsUsed() {
+      return dfsUsed;
+    }
+    public long getRemaining() {
+      return remaining;
+    }
+  }
+  
+
+  /** Return the disk usage of the filesystem, including total capacity,
+   * used space, and remaining space */
+  public DiskStatus getDiskStatus() throws IOException {
+    return dfs.getDiskStatus();
+  }
+  
   /** Return the total raw capacity of the filesystem, disregarding
    * replication .*/
   public long getRawCapacity() throws IOException{

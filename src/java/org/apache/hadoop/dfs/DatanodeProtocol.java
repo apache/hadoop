@@ -31,9 +31,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /*
-   * 8: blockCrcUpgradeGetBlockLocations() added;
+   * 9: heartbeat sends also the data node used space;
    */
-  public static final long versionID = 8L;
+  public static final long versionID = 9L;
   
   // error code
   final static int NOTIFY = 0;
@@ -72,7 +72,8 @@ interface DatanodeProtocol extends VersionedProtocol {
    * or to copy them to other DataNodes, etc.
    */
   public DatanodeCommand sendHeartbeat(DatanodeRegistration registration,
-                                       long capacity, long remaining,
+                                       long capacity,
+                                       long dfsUsed, long remaining,
                                        int xmitsInProgress,
                                        int xceiverCount) throws IOException;
 

@@ -6,6 +6,9 @@ Trunk (unreleased changes)
   1. HADOOP-1636.  Allow configuration of the number of jobs kept in memory
      by the JobTracker. (Michael Bieniosek via omalley)
 
+  2. HADOOP-1463.  HDFS report correct usage statistics for disk space
+     used by HDFS.  (Hairong Kuang via dhruba)
+
 
 Branch 0.14 (unreleased changes)
 

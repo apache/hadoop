@@ -265,8 +265,10 @@ class FSDataset implements FSConstants {
     private FSDir dataDir;
     private File tmpDir;
     private DF usage;
+    private DU dfsUsage;
     private long reserved;
     private double usableDiskPct = USABLE_DISK_PCT_DEFAULT;
+
     
     FSVolume(File currentDir, Configuration conf) throws IOException {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
@@ -286,17 +288,29 @@ class FSDataset implements FSConstants {
         }
       }
       this.usage = new DF(parent, conf);
+      this.dfsUsage = new DU(parent, conf);
     }
-      
+
+    void decDfsUsed(long value) {
+      dfsUsage.decDfsUsed(value);
+    }
+    
+    long getDfsUsed() throws IOException {
+      return dfsUsage.getUsed();
+    }
+    
     long getCapacity() throws IOException {
       return usage.getCapacity();
     }
       
     long getAvailable() throws IOException {
-      long capacity = usage.getCapacity();
-      long freespace = Math.round(usage.getAvailableSkipRefresh() -
-                                  capacity * (1 - usableDiskPct) - reserved); 
-      return (freespace > 0) ? freespace : 0;
+      long remaining = getCapacity()-getDfsUsed()-reserved;
+      long available = usage.getAvailable();
+      if (remaining>available) {
+        remaining = available;
+      }
+      remaining = (long)(remaining * usableDiskPct); 
+      return (remaining > 0) ? remaining : 0;
     }
       
     String getMount() throws IOException {
@@ -324,7 +338,10 @@ class FSDataset implements FSConstants {
     }
       
     File addBlock(Block b, File f) throws IOException {
-      return dataDir.addBlock(b, f);
+      File blockFile = dataDir.addBlock(b, f);
+      File metaFile = getMetaFile( blockFile );
+      dfsUsage.incDfsUsed(b.getNumBytes()+metaFile.length());
+      return blockFile;
     }
       
     void checkDirs() throws DiskErrorException {
@@ -373,6 +390,14 @@ class FSDataset implements FSConstants {
       }
     }
       
+    long getDfsUsed() throws IOException {
+      long dfsUsed = 0L;
+      for (int idx = 0; idx < volumes.length; idx++) {
+        dfsUsed += volumes[idx].getDfsUsed();
+      }
+      return dfsUsed;
+    }
+
     synchronized long getCapacity() throws IOException {
       long capacity = 0L;
       for (int idx = 0; idx < volumes.length; idx++) {
@@ -459,6 +484,13 @@ class FSDataset implements FSConstants {
     volumes.getBlockMap(blockMap);
   }
 
+  /**
+   * Return the total space used by dfs datanode
+   */
+  public long getDfsUsed() throws IOException {
+    return volumes.getDfsUsed();
+  }
+  
   /**
    * Return total capacity, used and unused
    */
@@ -628,9 +660,10 @@ class FSDataset implements FSConstants {
     boolean error = false;
     for (int i = 0; i < invalidBlks.length; i++) {
       File f = null;
+      FSVolume v;
       synchronized (this) {
         f = getFile(invalidBlks[i]);
-        FSVolume v = volumeMap.get(invalidBlks[i]);
+        v = volumeMap.get(invalidBlks[i]);
         if (f == null) {
           DataNode.LOG.warn("Unexpected error trying to delete block "
                             + invalidBlks[i] + 
@@ -660,12 +693,14 @@ class FSDataset implements FSConstants {
         volumeMap.remove(invalidBlks[i]);
       }
       File metaFile = getMetaFile( f );
+      long blockSize = f.length()+metaFile.length();
       if ( !f.delete() || ( !metaFile.delete() && metaFile.exists() ) ) {
         DataNode.LOG.warn("Unexpected error trying to delete block "
                           + invalidBlks[i] + " at file " + f);
         error = true;
         continue;
       }
+      v.decDfsUsed(blockSize);
       DataNode.LOG.info("Deleting block " + invalidBlks[i] + " file " + f);
       if (f.exists()) {
         //

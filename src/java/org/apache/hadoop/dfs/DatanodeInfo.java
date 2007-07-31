@@ -40,6 +40,7 @@ import org.apache.hadoop.net.NodeBase;
  */
 public class DatanodeInfo extends DatanodeID implements Node {
   protected long capacity;
+  protected long dfsUsed;
   protected long remaining;
   protected long lastUpdate;
   protected int xceiverCount;
@@ -63,6 +64,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   DatanodeInfo(DatanodeInfo from) {
     super(from);
     this.capacity = from.getCapacity();
+    this.dfsUsed = from.getDfsUsed();
     this.remaining = from.getRemaining();
     this.lastUpdate = from.getLastUpdate();
     this.xceiverCount = from.getXceiverCount();
@@ -74,6 +76,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   DatanodeInfo(DatanodeID nodeID) {
     super(nodeID);
     this.capacity = 0L;
+    this.dfsUsed = 0L;
     this.remaining = 0L;
     this.lastUpdate = 0L;
     this.xceiverCount = 0;
@@ -88,6 +91,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
   
   /** The raw capacity. */
   public long getCapacity() { return capacity; }
+  
+  /** The used space by the data node. */
+  public long getDfsUsed() { return dfsUsed; }
 
   /** The raw free space. */
   public long getRemaining() { return remaining; }
@@ -144,7 +150,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     StringBuffer buffer = new StringBuffer();
     long c = getCapacity();
     long r = getRemaining();
-    long u = c - r;
+    long u = getDfsUsed();
     buffer.append("Name: "+name+"\n");
     if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append("Rack: "+location+"\n");
@@ -157,6 +163,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
       buffer.append("State          : In Service\n");
     }
     buffer.append("Total raw bytes: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
+    buffer.append("Remaining raw bytes: " +r+ "("+FsShell.byteDesc(r)+")"+"\n");
     buffer.append("Used raw bytes: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
     buffer.append("% used: "+FsShell.limitDecimal(((1.0*u)/c)*100, 2)+"%"+"\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
@@ -168,7 +175,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     StringBuffer buffer = new StringBuffer();
     long c = getCapacity();
     long r = getRemaining();
-    long u = c - r;
+    long u = getDfsUsed();
     buffer.append(name);
     if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append(" "+location);
@@ -183,6 +190,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     buffer.append(" " + c + "(" + FsShell.byteDesc(c)+")");
     buffer.append(" " + u + "(" + FsShell.byteDesc(u)+")");
     buffer.append(" " + FsShell.limitDecimal(((1.0*u)/c)*100, 2)+"%");
+    buffer.append(" " + r + "(" + FsShell.byteDesc(r)+")");
     buffer.append(" " + new Date(lastUpdate));
     return buffer.toString();
   }
@@ -281,6 +289,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public void write(DataOutput out) throws IOException {
     super.write(out);
     out.writeLong(capacity);
+    out.writeLong(dfsUsed);
     out.writeLong(remaining);
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
@@ -298,6 +307,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     this.capacity = in.readLong();
+    this.dfsUsed = in.readLong();
     this.remaining = in.readLong();
     this.lastUpdate = in.readLong();
     this.xceiverCount = in.readInt();

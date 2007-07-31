@@ -19,10 +19,10 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.*;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.dfs.ChecksumDistributedFileSystem;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.util.ToolBase;
 
@@ -38,6 +38,8 @@ public class FsShell extends ToolBase {
   {
     modifFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
+  private static final DecimalFormat decimalFormat = 
+    new DecimalFormat("#*0.0#*");
 
   /**
    */
@@ -798,11 +800,11 @@ public class FsShell extends ToolBase {
     String ending = "";
     if (len < 1024 * 1024) {
       val = (1.0 * len) / 1024;
-      ending = " k";
+      ending = " KB";
     } else if (len < 1024 * 1024 * 1024) {
       val = (1.0 * len) / (1024 * 1024);
       ending = " MB";
-    } else if (len < 128L * 1024 * 1024 * 1024) {
+    } else if (len < 1024L * 1024 * 1024 * 1024) {
       val = (1.0 * len) / (1024 * 1024 * 1024);
       ending = " GB";
     } else if (len < 1024L * 1024 * 1024 * 1024 * 1024) {
@@ -816,7 +818,7 @@ public class FsShell extends ToolBase {
   }
 
   public static String limitDecimal(double d, int placesAfterDecimal) {
-    String strVal = Double.toString(d);
+    String strVal = decimalFormat.format(d);
     int decpt = strVal.indexOf(".");
     if (decpt >= 0) {
       strVal = strVal.substring(0, Math.min(strVal.length(), decpt + 1 + placesAfterDecimal));

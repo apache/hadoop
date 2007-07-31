@@ -258,7 +258,7 @@ creations/deletions), or "all".</description>
 <property>
   <name>dfs.datanode.du.reserved</name>
   <value>0</value>
-  <description>Reserved space in bytes. Always leave this much space free for non dfs use
+  <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
   </description>
 </property>
 
@@ -328,7 +328,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.df.interval</name>
-  <value>3000</value>
+  <value>60000</value>
   <description>Disk usage statistics refresh interval in msec.</description>
 </property>
 

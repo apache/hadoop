@@ -83,8 +83,7 @@
         return;
     
     long c = d.getCapacity();
-    long r = d.getRemaining();
-    long u = c - r;
+    long u = d.getDfsUsed();
     
     String percentUsed;
     if (c > 0) 
@@ -105,7 +104,9 @@
 	      "<td class=\"size\">" +
               FsShell.limitDecimal(c*1.0/diskBytes, 2) +
 	      "<td class=\"pcused\">" + percentUsed +
-              "<td class=\"blocks\">" + d.numBlocks() + "\n");
+	      "<td class=\"size\">" +
+              FsShell.limitDecimal(d.getRemaining()*1.0/diskBytes, 2) +
+          "<td class=\"blocks\">" + d.numBlocks() + "\n");
   }
 
   public void generateDFSHealthReport(JspWriter out,
@@ -147,11 +148,12 @@
     out.print( "<div id=\"dfstable\"> <table>\n" +
 	       rowTxt() + colTxt() + "Capacity" + colTxt() + ":" + colTxt() +
 	       FsShell.byteDesc( fsn.totalCapacity() ) +
-	       rowTxt() + colTxt() + "Remaining" + colTxt() + ":" + colTxt() +
+	       rowTxt() + colTxt() + "DFS Remaining" + colTxt() + ":" + colTxt() +
 	       FsShell.byteDesc( fsn.totalRemaining() ) +
-	       rowTxt() + colTxt() + "Used" + colTxt() + ":" + colTxt() +
-	       FsShell.limitDecimal((fsn.totalCapacity() -
-				      fsn.totalRemaining())*100.0/
+	       rowTxt() + colTxt() + "DFS Used" + colTxt() + ":" + colTxt() +
+	       FsShell.byteDesc( fsn.totalDfsUsed() ) +
+	       rowTxt() + colTxt() + "DFS Used%" + colTxt() + ":" + colTxt() +
+	       FsShell.limitDecimal((fsn.totalDfsUsed())*100.0/
 				     (fsn.totalCapacity() + 1e-10), 2) + " %" +
 	       rowTxt() + colTxt() +
                "<a href=\"#LiveNodes\">Live Nodes</a> " +
@@ -181,13 +183,15 @@
             }
 
 	    out.print( "<tr class=\"headerRow\"> <th " +
-                       NodeHeaderStr("name") + "> Node <th " +
+                       ("name") + "> Node <th " +
                        NodeHeaderStr("lastcontact") + "> Last Contact <th " +
                        NodeHeaderStr("adminstate") + "> Admin State <th " +
                        NodeHeaderStr("size") + "> Size (" + diskByteStr +
                        ") <th " + NodeHeaderStr("pcused") +
-                       "> Used (%) <th " + NodeHeaderStr("blocks") +
-                       "> Blocks\n" );
+                       "> Used (%) <th " + 
+                       NodeHeaderStr("remaining") + "> Remaining (" + 
+                       diskByteStr + ") <th " +
+                       NodeHeaderStr("blocks") + "> Blocks\n" );
             
 	    for ( int i=0; i < live.size(); i++ ) {
 		generateNodeData( out, live.get(i), port_suffix, true );

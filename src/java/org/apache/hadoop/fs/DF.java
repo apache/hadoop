@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 
 /** Filesystem disk space usage statistics.  Uses the unix 'df' program.
  * Tested on Linux, FreeBSD, Cygwin. */
-public class DF {
+public class DF extends Command {
   public static final long DF_INTERVAL_DEFAULT = 3 * 1000; // default DF refresh interval 
   
   private String  dirPath;
@@ -56,22 +56,7 @@ public class DF {
   private void doDF() throws IOException { 
     if (lastDF + dfInterval > System.currentTimeMillis())
       return;
-    Process process;
-    process = Runtime.getRuntime().exec(getExecString());
-
-    try {
-      if (process.waitFor() != 0) {
-        throw new IOException
-          (new BufferedReader(new InputStreamReader(process.getErrorStream()))
-           .readLine());
-      }
-      parseExecResult(
-                      new BufferedReader(new InputStreamReader(process.getInputStream())));
-    } catch (InterruptedException e) {
-      throw new IOException(e.toString());
-    } finally {
-      process.destroy();
-    }
+    super.run();
   }
 
   /// ACCESSORS
@@ -110,22 +95,6 @@ public class DF {
     return mount;
   }
   
-  public long getCapacitySkipRefresh() { 
-    return capacity; 
-  }
-  
-  public long getUsedSkipRefresh() { 
-    return used;
-  }
-  
-  public long getAvailableSkipRefresh() { 
-    return available;
-  }
-  
-  public int getPercentUsedSkipRefresh() {
-    return percentUsed;
-  }
-  
   public String toString() {
     return
       "df -k " + mount +"\n" +
@@ -137,11 +106,11 @@ public class DF {
       mount;
   }
 
-  private String[] getExecString() {
+  protected String[] getExecString() {
     return new String[] {"df","-k", dirPath};
   }
   
-  private void parseExecResult(BufferedReader lines) throws IOException {
+  protected void parseExecResult(BufferedReader lines) throws IOException {
     lines.readLine();                         // skip headings
   
     String line = lines.readLine();

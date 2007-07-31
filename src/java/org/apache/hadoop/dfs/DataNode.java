@@ -130,7 +130,6 @@ public class DataNode implements FSConstants, Runnable {
   private static Thread dataNodeThread = null;
   String machineName;
   int defaultBytesPerChecksum = 512;
-
   private static class DataNodeMetrics implements Updater {
     private final MetricsRecord metricsRecord;
     private int bytesWritten = 0;
@@ -490,9 +489,10 @@ public class DataNode implements FSConstants, Runnable {
           // -- Total capacity
           // -- Bytes remaining
           //
-          DatanodeCommand cmd = namenode.sendHeartbeat(dnRegistration, 
-                                                       data.getCapacity(), 
-                                                       data.getRemaining(), 
+          DatanodeCommand cmd = namenode.sendHeartbeat(dnRegistration,
+                                                       data.getCapacity(),
+                                                       data.getDfsUsed(),
+                                                       data.getRemaining(),
                                                        xmitsInProgress,
                                                        xceiverCount.getValue());
           //LOG.info("Just sent heartbeat, with name " + localName);

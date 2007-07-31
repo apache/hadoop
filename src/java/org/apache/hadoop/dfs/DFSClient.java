@@ -24,6 +24,7 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.dfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.util.*;
 
 import org.apache.commons.logging.*;
@@ -430,6 +431,10 @@ class DFSClient implements FSConstants {
     return namenode.getFileInfo(src.toString());
   }
 
+  public DiskStatus getDiskStatus() throws IOException {
+    long rawNums[] = namenode.getStats();
+    return new DiskStatus(rawNums[0], rawNums[1], rawNums[2]);
+  }
   /**
    */
   public long totalRawCapacity() throws IOException {

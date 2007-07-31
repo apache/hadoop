@@ -491,10 +491,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   /**
    */
   public long[] getStats() throws IOException {
-    long results[] = new long[2];
-    long totalCapacity = namesystem.totalCapacity();
-    results[0] = totalCapacity;
-    results[1] = totalCapacity - namesystem.totalRemaining();
+    long results[] = new long[3];
+    results[0] = namesystem.totalCapacity();
+    results[1] = namesystem.totalDfsUsed();
+    results[2] = namesystem.totalRemaining();
     return results;
   }
 
@@ -596,7 +596,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    * This will be either a transfer or a delete operation.
    */
   public DatanodeCommand sendHeartbeat(DatanodeRegistration nodeReg,
-                                       long capacity, 
+                                       long capacity,
+                                       long dfsUsed,
                                        long remaining,
                                        int xmitsInProgress,
                                        int xceiverCount) throws IOException {
@@ -606,7 +607,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     deleteList[0] = null; 
 
     verifyRequest(nodeReg);
-    if (namesystem.gotHeartbeat(nodeReg, capacity, remaining, 
+    if (namesystem.gotHeartbeat(nodeReg, capacity, dfsUsed, remaining, 
                                 xceiverCount, 
                                 xmitsInProgress,
                                 xferResults,
