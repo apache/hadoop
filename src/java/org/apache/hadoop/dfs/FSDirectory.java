@@ -110,6 +110,9 @@ class FSDirectory implements FSConstants {
      * @return the string representation of the absolute path of this file
      */
     String getAbsoluteName() {
+      if (this.parent == null) {    
+        return Path.SEPARATOR;       // root directory is "/"
+      }
       return internalGetAbsolutePathName().toString();
     }
 
@@ -301,8 +304,6 @@ class FSDirectory implements FSConstants {
       return total + 1;
     }
 
-    /**
-     */
     long computeFileLength() {
       long total = 0;
       if (blocks != null) {
