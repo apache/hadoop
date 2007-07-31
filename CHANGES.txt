@@ -424,6 +424,9 @@ Branch 0.14 (unreleased changes)
 140. HADOOP-1066.  Restructure documentation to make more user
      friendly.  (Connie Kleinjans and Jeff Hammerbacher via cutting)
 
+141. HADOOP-1551.  libhdfs supports setting replication factor and
+     retrieving modification time of files.  (Sameer Paranjpye via dhruba)
+
 
 Release 0.13.0 - 2007-06-08
 

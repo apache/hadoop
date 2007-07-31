@@ -28,6 +28,7 @@
 #define HADOOP_DFS      "org/apache/hadoop/dfs/DistributedFileSystem"
 #define HADOOP_ISTRM    "org/apache/hadoop/fs/FSDataInputStream"
 #define HADOOP_OSTRM    "org/apache/hadoop/fs/FSDataOutputStream"
+#define HADOOP_STAT     "org/apache/hadoop/fs/FileStatus"
 #define JAVA_NET_ISA    "java/net/InetSocketAddress"
 #define JAVA_NET_URI    "java/net/URI"
 
@@ -1076,6 +1077,42 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path)
 }
 
 
+int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
+{
+    // JAVA EQUIVALENT:
+    //  fs.setReplication(new Path(path), replication);
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+
+    jobject jFS = (jobject)fs;
+
+    //Create an object of org.apache.hadoop.fs.Path
+    jobject jPath = constructNewObjectOfPath(env, path);
+    if (jPath == NULL) {
+        return -1;
+    }
+
+    //Create the directory
+    jvalue jVal;
+    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+                     "setReplication", "(Lorg/apache/hadoop/fs/Path;S)Z",
+                     jPath, replication) != 0) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs.FileSystem::"
+                "setReplication failed!\n");
+        errno = EINTERNAL;
+        goto done;
+    }
+
+ done:
+
+    //Delete unnecessary local references
+    destroyLocalReference(env, jPath);
+
+    return (jVal.z) ? 0 : -1;
+}
+
+
 
 char***
 hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
@@ -1287,8 +1324,8 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
     //  fs.getLength(f)
     //  f.getPath()
 
-    jboolean jIsDir;
-    jvalue jVal;
+    jobject jStat;
+    jvalue  jVal;
 
     if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                      "exists", JMETHOD1(JPARAM(HADOOP_PATH), "Z"),
@@ -1300,47 +1337,69 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
     }
 
     if (jVal.z == 0) {
-      errno = EINTERNAL;
+      errno = ENOENT;
       return -1;
     }
 
     if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "isDirectory", "(Lorg/apache/hadoop/fs/Path;)Z",
+                     "getFileStatus", JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_STAT)),
                      jPath) != 0) {
         fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::isDirectory failed!\n");
+                "FileSystem::getFileStatus failed!\n");
         errno = EINTERNAL;
         return -1;
     }
-    jIsDir = jVal.z;
+    jStat = jVal.l;
 
-    /*
-    jlong jModTime = 0;
-    if (invokeMethod(env, (RetVal*)&jModTime, &jException, INSTANCE, jFS, 
-                "org/apache/hadoop/fs/FileSystem", "lastModified", 
-                "(Lorg/apache/hadoop/fs/Path;)J", jPath) != 0) {
-        fprintf(stderr, 
-              "Call to org.apache.hadoop.fs.FileSystem::lastModified failed!\n"
-                );
+    if (invokeMethod(env, &jVal, INSTANCE, jStat,
+                     HADOOP_STAT, "isDir", "()Z") != 0) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileStatus::isDir failed!\n");
         errno = EINTERNAL;
         return -1;
     }
-    */
+    fileInfo->mKind = jVal.z ? kObjectKindDirectory : kObjectKindFile;
 
-    jlong jFileLength = 0;
-    if (!jIsDir) {
-        if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                         "getLength", "(Lorg/apache/hadoop/fs/Path;)J",
-                         jPath) != 0) {
+    if (invokeMethod(env, &jVal, INSTANCE, jStat,
+                     HADOOP_STAT, "getReplication", "()S") != 0) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileStatus::getReplication failed!\n");
+        errno = EINTERNAL;
+        return -1;
+    }
+    fileInfo->mReplication = jVal.s;
+
+    if (invokeMethod(env, &jVal, INSTANCE, jStat,
+                     HADOOP_STAT, "getBlockSize", "()J") != 0) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileStatus::getBlockSize failed!\n");
+        errno = EINTERNAL;
+        return -1;
+    }
+    fileInfo->mBlockSize = jVal.j;
+
+    if (invokeMethod(env, &jVal, INSTANCE, jStat,
+                     HADOOP_STAT, "getModificationTime", "()J") != 0) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileStatus::getModificationTime failed!\n");
+        errno = EINTERNAL;
+        return -1;
+    }
+    fileInfo->mLastMod = (tTime) (jVal.j / 1000);
+
+    if (fileInfo->mKind == kObjectKindFile) {
+        if (invokeMethod(env, &jVal, INSTANCE, jStat,
+                         HADOOP_STAT, "getLen", "()J") != 0) {
             fprintf(stderr, "Call to org.apache.hadoop.fs."
-                    "FileSystem::getLength failed!\n");
+                    "FileStatus::getLen failed!\n");
             errno = EINTERNAL;
             return -1;
         }
-        jFileLength = jVal.j;
+        fileInfo->mSize = jVal.j;
     }
 
-    jstring jPathName;
+    jstring     jPathName;
+    const char *cPathName;
     if (invokeMethod(env, &jVal, INSTANCE, jPath, HADOOP_PATH,
                      "toString", "()Ljava/lang/String;")) { 
         fprintf(stderr, "Call to org.apache.hadoop.fs."
@@ -1349,18 +1408,9 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
         return -1;
     }
     jPathName = jVal.l;
-
-    fileInfo->mKind = (jIsDir ? kObjectKindDirectory : kObjectKindFile);
-    //fileInfo->mCreationTime = jModTime;
-    fileInfo->mSize = jFileLength;
-
-    const char* cPathName = (const char*)
-      ((*env)->GetStringUTFChars(env, jPathName, NULL));
-
+    cPathName = (const char*) ((*env)->GetStringUTFChars(env, jPathName, NULL));
     fileInfo->mName = strdup(cPathName);
-
     (*env)->ReleaseStringUTFChars(env, jPathName, cPathName);
-
     destroyLocalReference(env, jPathName);
 
     return 0;

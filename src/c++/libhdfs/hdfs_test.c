@@ -120,9 +120,7 @@ int main(int argc, char **argv) {
         //Generic file-system operations
 
         const char* srcPath = "/tmp/testfile.txt";
-        const char* localSrcPath = "testfile.txt";
         const char* dstPath = "/tmp/testfile2.txt";
-        const char* localDstPath = "testfile2.txt";
 
         fprintf(stderr, "hdfsCopy(remote-local): %s\n", ((result = hdfsCopy(fs, srcPath, lfs, srcPath)) ? "Failed!" : "Success!"));
         totalResult += result;
@@ -143,13 +141,17 @@ int main(int argc, char **argv) {
         fprintf(stderr, "hdfsCreateDirectory: %s\n", ((result = hdfsCreateDirectory(fs, newDirectory)) ? "Failed!" : "Success!"));
         totalResult += result;
 
+        fprintf(stderr, "hdfsSetReplication: %s\n", ((result = hdfsSetReplication(fs, srcPath, 2)) ? "Failed!" : "Success!"));
+        totalResult += result;
+
         char buffer[256];
-        fprintf(stderr, "hdfsGetWorkingDirectory: %s\n", ((result = hdfsGetWorkingDirectory(fs, buffer, sizeof(buffer))) ? buffer : "Failed!"));
-        totalResult += (result ? 0 : 1);
+        const char *resp;
+        fprintf(stderr, "hdfsGetWorkingDirectory: %s\n", ((resp = hdfsGetWorkingDirectory(fs, buffer, sizeof(buffer))) ? buffer : "Failed!"));
+        totalResult += (resp ? 0 : 1);
         fprintf(stderr, "hdfsSetWorkingDirectory: %s\n", ((result = hdfsSetWorkingDirectory(fs, slashTmp)) ? "Failed!" : "Success!"));
         totalResult += result;
-        fprintf(stderr, "hdfsGetWorkingDirectory: %s\n", ((result = hdfsGetWorkingDirectory(fs, buffer, sizeof(buffer))) ? buffer : "Failed!"));
-        totalResult += (result ? 0 : 1);
+        fprintf(stderr, "hdfsGetWorkingDirectory: %s\n", ((resp = hdfsGetWorkingDirectory(fs, buffer, sizeof(buffer))) ? buffer : "Failed!"));
+        totalResult += (resp ? 0 : 1);
 
         fprintf(stderr, "hdfsGetDefaultBlockSize: %Ld\n", hdfsGetDefaultBlockSize(fs));
         fprintf(stderr, "hdfsGetCapacity: %Ld\n", hdfsGetCapacity(fs));
@@ -158,9 +160,12 @@ int main(int argc, char **argv) {
         hdfsFileInfo *fileInfo = NULL;
         if(fileInfo = hdfsGetPathInfo(fs, slashTmp)) {
             fprintf(stderr, "hdfsGetPathInfo - SUCCESS!\n");
-            fprintf(stderr, "Name: %s,", fileInfo->mName);
-            fprintf(stderr, "Type: %c,", (char)fileInfo->mKind);
-            fprintf(stderr, "Size: %ld\n", fileInfo->mSize);
+            fprintf(stderr, "Name: %s, ", fileInfo->mName);
+            fprintf(stderr, "Type: %c, ", (char)(fileInfo->mKind));
+            fprintf(stderr, "Replication: %d, ", fileInfo->mReplication);
+            fprintf(stderr, "BlockSize: %ld, ", fileInfo->mBlockSize);
+            fprintf(stderr, "Size: %ld, ", fileInfo->mSize);
+            fprintf(stderr, "LastMod: %s", ctime(&fileInfo->mLastMod)); 
             hdfsFreeFileInfo(fileInfo, 1);
         } else {
             totalResult++;
@@ -172,9 +177,12 @@ int main(int argc, char **argv) {
         if(fileList = hdfsListDirectory(fs, slashTmp, &numEntries)) {
             int i = 0;
             for(i=0; i < numEntries; ++i) {
-                fprintf(stderr, "Name: %s,", fileList[i].mName);
-                fprintf(stderr, "Type: %c,", (char)fileList[i].mKind);
-                fprintf(stderr, "Size: %ld\n", fileList[i].mSize);
+                fprintf(stderr, "Name: %s, ", fileList[i].mName);
+                fprintf(stderr, "Type: %c, ", (char)fileList[i].mKind);
+                fprintf(stderr, "Replication: %d, ", fileList[i].mReplication);
+                fprintf(stderr, "BlockSize: %ld, ", fileList[i].mBlockSize);
+                fprintf(stderr, "Size: %ld, ", fileList[i].mSize);
+                fprintf(stderr, "LastMod: %s", ctime(&fileList[i].mLastMod));
             }
             hdfsFreeFileInfo(fileList, numEntries);
         } else {
