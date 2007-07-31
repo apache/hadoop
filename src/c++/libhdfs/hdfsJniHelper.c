@@ -175,6 +175,17 @@ int invokeMethod(JNIEnv *env, RetVal *retval, MethType methType,
         CHECK_EXCEPTION_IN_METH_INVOC
         retval->z = jbool;
     }
+    else if (returnType == JSHORT) {
+        jshort js = 0;
+        if (methType == STATIC) {
+            js = (*env)->CallStaticShortMethodV(env, cls, mid, args);
+        }
+        else if (methType == INSTANCE) {
+            js = (*env)->CallShortMethodV(env, instObj, mid, args);
+        }
+        CHECK_EXCEPTION_IN_METH_INVOC
+        retval->s = js;
+    }
     else if (returnType == JLONG) {
         jlong jl = -1;
         if (methType == STATIC) {
