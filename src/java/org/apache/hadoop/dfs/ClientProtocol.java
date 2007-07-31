@@ -31,9 +31,9 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Compared to the previous version the following changes have been introduced:
-   * 14: distributedUpgradeProgress() added.
+   * 15: create(...) should only create a file but not return block.
    */
-  public static final long versionID = 14L;
+  public static final long versionID = 15L;
   
   ///////////////////////////////////////
   // File contents
@@ -90,7 +90,7 @@ interface ClientProtocol extends VersionedProtocol {
    * create multi-block files must also use reportWrittenBlock()
    * and addBlock().
    */
-  public LocatedBlock create(String src, 
+  public void create(String src, 
                              String clientName, 
                              boolean overwrite, 
                              short replication,

@@ -19,12 +19,12 @@ package org.apache.hadoop.dfs;
 
 import junit.framework.TestCase;
 import java.io.*;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
+import java.security.*;
+import java.util.*;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * This class tests commands from DFSShell.
@@ -33,11 +33,141 @@ public class TestDFSShell extends TestCase {
   private static String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
     .toString().replace(' ', '+');
+
+  static private Path writeFile(FileSystem fs, Path f) throws IOException {
+    DataOutputStream out = fs.create(f);
+    out.writeBytes("dhruba: " + f);
+    out.close();
+    assertTrue(fs.exists(f));
+    return f;
+  }
+
+  static private Path mkdir(FileSystem fs, Path p) throws IOException {
+    assertTrue(fs.mkdirs(p));
+    assertTrue(fs.exists(p));
+    assertTrue(fs.getFileStatus(p).isDir());
+    return p;
+  }
+
+  static private File createLocalFile(File f) throws IOException {
+    assertTrue(!f.exists());
+    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(f)));
+    out.println(f.getAbsolutePath());
+    out.close();
+    assertTrue(f.exists());
+    assertTrue(f.isFile());
+    return f;
+  }
+
+  static void show(String s) {
+    System.out.println(Thread.currentThread().getStackTrace()[2] + " " + s);
+  }
+
+  public void testZeroSizeFile() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    FileSystem fs = cluster.getFileSystem();
+    assertTrue("Not a HDFS: "+fs.getUri(),
+               fs instanceof DistributedFileSystem);
+    final DistributedFileSystem dfs = (DistributedFileSystem)fs;
+
+    try {
+      //create a zero size file
+      final File f1 = new File(TEST_ROOT_DIR, "f1");
+      assertTrue(!f1.exists());
+      assertTrue(f1.createNewFile());
+      assertTrue(f1.exists());
+      assertTrue(f1.isFile());
+      assertEquals(0L, f1.length());
+      
+      //copy to remote
+      final Path root = mkdir(dfs, new Path("/test/zeroSizeFile"));
+      final Path remotef = new Path(root, "dst");
+      show("copy local " + f1 + " to remote " + remotef);
+      dfs.copyFromLocalFile(false, false, new Path(f1.getPath()), remotef);
+      
+      //getBlockSize() should not throw exception
+      show("Block size = " + dfs.getFileStatus(remotef).getBlockSize());
+
+      //copy back
+      final File f2 = new File(TEST_ROOT_DIR, "f2");
+      assertTrue(!f2.exists());
+      dfs.copyToLocalFile(remotef, new Path(f2.getPath()));
+      assertTrue(f2.exists());
+      assertTrue(f2.isFile());
+      assertEquals(0L, f2.length());
   
-  private void writeFile(FileSystem fileSys, Path name) throws IOException {
-    DataOutputStream stm = fileSys.create(name);
-    stm.writeBytes("dhruba: " + name);
-    stm.close();
+      f1.delete();
+      f2.delete();
+    } finally {
+      try {dfs.close();} catch (Exception e) {}
+      cluster.shutdown();
+    }
+  }
+
+  public void testPut() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    FileSystem fs = cluster.getFileSystem();
+    assertTrue("Not a HDFS: "+fs.getUri(),
+               fs instanceof DistributedFileSystem);
+    final DistributedFileSystem dfs = (DistributedFileSystem)fs;
+
+    try {
+      final File f1 = createLocalFile(new File(TEST_ROOT_DIR, "f1"));
+      final File f2 = createLocalFile(new File(TEST_ROOT_DIR, "f2"));
+  
+      final Path root = mkdir(dfs, new Path("/test/put"));
+      final Path dst = new Path(root, "dst");
+  
+      show("begin");
+      
+      final Thread copy2ndFileThread = new Thread() {
+        public void run() {
+          try {
+            show("copy local " + f2 + " to remote " + dst);
+            dfs.copyFromLocalFile(false, false, new Path(f2.getPath()), dst);
+          } catch (IOException ioe) {
+            show("good " + StringUtils.stringifyException(ioe));
+            return;
+          }
+          //should not be here, must got IOException
+          assertTrue(false);
+        }
+      };
+      
+      //use SecurityManager to pause the copying of f1 and begin copying f2
+      System.setSecurityManager(new SecurityManager() {
+        private boolean firstTime = true;
+  
+        public void checkPermission(Permission perm) {
+          if (firstTime) {
+            Thread t = Thread.currentThread();
+            if (!t.toString().contains("DataNode")) {
+              String s = "" + Arrays.asList(t.getStackTrace());
+              if (s.contains("FileUtil.copyContent")) {
+                //pause at FileUtil.copyContent
+  
+                firstTime = false;
+                copy2ndFileThread.start();
+                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+              }
+            }
+          }
+        }
+      });
+      show("copy local " + f1 + " to remote " + dst);
+      dfs.copyFromLocalFile(false, false, new Path(f1.getPath()), dst);
+      show("done");
+  
+      try {copy2ndFileThread.join();} catch (InterruptedException e) { }
+      System.setSecurityManager(null);
+      f1.delete();
+      f2.delete();
+    } finally {
+      try {dfs.close();} catch (Exception e) {}
+      cluster.shutdown();
+    }
   }
 
   public void testCopyToLocal() throws IOException {
@@ -63,33 +193,14 @@ public class TestDFSShell extends TestCase {
         //   + sub
         //      |- f3
         //      |- f4
-        Path root = new Path("/test/copyToLocal");
-        assertTrue(dfs.mkdirs(root));
-        assertTrue(dfs.exists(root));
-        assertTrue(dfs.isDirectory(root));
+        Path root = mkdir(dfs, new Path("/test/copyToLocal"));
+        Path sub = mkdir(dfs, new Path(root, "sub"));
 
-        Path sub = new Path(root, "sub");
-        assertTrue(dfs.mkdirs(sub));
-        assertTrue(dfs.exists(sub));
-        assertTrue(dfs.isDirectory(sub));
-
-        Path f1 = new Path(root, "f1");
-        writeFile(dfs, f1);
-        assertTrue(dfs.exists(f1));
-
-        Path f2 = new Path(root, "f2");
-        writeFile(dfs, f2);
-        assertTrue(dfs.exists(f2));
-
-        Path f3 = new Path(sub, "f3");
-        writeFile(dfs, f3);
-        assertTrue(dfs.exists(f3));
-
-        Path f4 = new Path(sub, "f4");
-        writeFile(dfs, f4);
-        assertTrue(dfs.exists(f4));
+        writeFile(fs, new Path(root, "f1"));
+        writeFile(fs, new Path(root, "f2"));
+        writeFile(fs, new Path(sub, "f3"));
+        writeFile(fs, new Path(sub, "f4"));
       }
-
 
       // Verify copying the tree
       {
@@ -111,10 +222,10 @@ public class TestDFSShell extends TestCase {
         assertTrue("Copying failed.", sub.isDirectory());
 
         File f3 = new File(sub, "f3");
-        assertTrue("Copying failed.", f3.exists());
+        assertTrue("Copying failed.", f3.isFile());
 
         File f4 = new File(sub, "f4");
-        assertTrue("Copying failed.", f4.exists());
+        assertTrue("Copying failed.", f4.isFile());
 
         f1.delete();
         f2.delete();

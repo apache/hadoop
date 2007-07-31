@@ -5,6 +5,10 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-999.  A HDFS Client immediately informs the NameNode of a new
+    file creation.  ClientProtocol version changed from 14 to 15.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
   NEW FEATURES
 
     HADOOP-1636.  Allow configuration of the number of jobs kept in

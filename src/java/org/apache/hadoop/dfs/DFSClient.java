@@ -1396,9 +1396,7 @@ class DFSClient implements FSConstants {
     boolean closed = false;
 
     private UTF8 src;
-    private boolean overwrite;
     private short replication;
-    private boolean firstTime = true;
     private DataOutputStream blockStream;
     private DataInputStream blockReplyStream;
     private File backupFile;
@@ -1421,7 +1419,6 @@ class DFSClient implements FSConstants {
                            ) throws IOException {
       super(new CRC32(), conf.getInt("io.bytes.per.checksum", 512), 4);
       this.src = src;
-      this.overwrite = overwrite;
       this.replication = replication;
       this.blockSize = blockSize;
       this.buffersize = buffersize;
@@ -1441,6 +1438,8 @@ class DFSClient implements FSConstants {
       
       checksum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 
                                               bytesPerChecksum);
+      namenode.create(
+          src.toString(), clientName, overwrite, replication, blockSize);
     }
 
     private void openBackupStream() throws IOException {
@@ -1494,13 +1493,7 @@ class DFSClient implements FSConstants {
       do {
         retry = false;
                 
-        LocatedBlock lb;
-        if (firstTime) {
-          lb = locateNewBlock();
-        } else {
-          lb = locateFollowingBlock(startTime);
-        }
-
+        LocatedBlock lb = locateFollowingBlock(startTime);
         block = lb.getBlock();
         if (block.getNumBytes() < bytesWrittenToBlock) {
           block.setNumBytes(bytesWrittenToBlock);
@@ -1524,12 +1517,7 @@ class DFSClient implements FSConstants {
             Thread.sleep(6000);
           } catch (InterruptedException iex) {
           }
-          if (firstTime) {
-            namenode.abandonFileInProgress(src.toString(), 
-                                           clientName);
-          } else {
-            namenode.abandonBlock(block, src.toString());
-          }
+          namenode.abandonBlock(block, src.toString());
           retry = true;
           continue;
         }
@@ -1549,14 +1537,8 @@ class DFSClient implements FSConstants {
         blockStream = out;
         blockReplyStream = new DataInputStream(s.getInputStream());
       } while (retry);
-      firstTime = false;
     }
 
-    private LocatedBlock locateNewBlock() throws IOException {     
-      return namenode.create(src.toString(), clientName,
-          overwrite, replication, blockSize);
-    }
-        
     private LocatedBlock locateFollowingBlock(long start
                                               ) throws IOException {     
       int retries = 5;

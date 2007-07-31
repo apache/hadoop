@@ -249,7 +249,15 @@ public abstract class FileSystem extends Configured {
    * Files are overwritten by default.
    */
   public FSDataOutputStream create(Path f) throws IOException {
-    return create(f, true, 
+    return create(f, true);
+  }
+
+  /**
+   * Opens an FSDataOutputStream at the indicated Path.
+   */
+  public FSDataOutputStream create(Path f, boolean overwrite)
+    throws IOException {
+    return create(f, overwrite, 
                   getConf().getInt("io.file.buffer.size", 4096),
                   getDefaultReplication(),
                   getDefaultBlockSize());
@@ -773,7 +781,19 @@ public abstract class FileSystem extends Configured {
    */
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
-    FileUtil.copy(getLocal(getConf()), src, this, dst, delSrc, getConf());
+    copyFromLocalFile(delSrc, true, src, dst);
+  }
+
+  /**
+   * The src file is on the local disk.  Add it to FS at
+   * the given dst name.
+   * delSrc indicates if the source should be removed
+   */
+  public void copyFromLocalFile(boolean delSrc, boolean overwrite, 
+                                Path src, Path dst)
+    throws IOException {
+    Configuration conf = getConf();
+    FileUtil.copy(getLocal(conf), src, this, dst, delSrc, overwrite, conf);
   }
     
   /**

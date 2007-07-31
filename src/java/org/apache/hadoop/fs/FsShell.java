@@ -109,7 +109,7 @@ public class FsShell extends ToolBase {
     if (src.toString().equals("-")) {
       copyFromStdin(new Path(dstf));
     } else {
-      fs.copyFromLocalFile(src, new Path(dstf));
+      fs.copyFromLocalFile(false, false, src, new Path(dstf));
     }
   }
 

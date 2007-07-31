@@ -709,54 +709,7 @@ class FSNamesystem implements FSConstants {
    * @throws IOException if the filename is invalid
    *         {@link FSDirectory#isValidToCreate(String)}.
    */
-  public LocatedBlock startFile(String src, 
-                                String holder, 
-                                String clientMachine, 
-                                boolean overwrite,
-                                short replication,
-                                long blockSize
-                                ) throws IOException {
-
-    //
-    // Create file into pendingCreates and get the first blockId
-    //
-    Block newBlock = startFileInternal(src, holder, clientMachine,
-                                       overwrite, replication,
-                                       blockSize);
-
-    //
-    // Get the array of replication targets
-    //
-    try {
-      DatanodeDescriptor clientNode = 
-        host2DataNodeMap.getDatanodeByHost(clientMachine);
-      DatanodeDescriptor targets[] = replicator.chooseTarget(replication,
-                                                             clientNode, null, blockSize);
-      if (targets.length < this.minReplication) {
-        if (clusterMap.getNumOfLeaves() == 0) {
-          throw new IOException("Failed to create file " + src
-                                + " on client " + clientMachine
-                                + " because this cluster has no datanodes.");
-        }
-        throw new IOException("Failed to create file " + src
-                              + " on client " + clientMachine
-                              + " because there were not enough datanodes available. "
-                              + "Found " + targets.length
-                              + " datanodes but MIN_REPLICATION for the cluster is "
-                              + "configured to be "
-                              + this.minReplication
-                              + ".");
-      }
-      return new LocatedBlock(newBlock, targets, 0L);
-
-    } catch (IOException ie) {
-      NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: "
-                                   + ie.getMessage());
-      throw ie;
-    }
-  }
-
-  public synchronized Block startFileInternal(String src, 
+  synchronized void startFile(String src, 
                                               String holder, 
                                               String clientMachine, 
                                               boolean overwrite,
@@ -861,9 +814,6 @@ class FSNamesystem implements FSConstants {
         }
         lease.startedCreate(src);
       }
-      
-      // Create first block
-      return allocateBlock(src);
     } catch (IOException ie) {
       NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: "
                                    +ie.getMessage());

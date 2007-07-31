@@ -114,6 +114,15 @@ public class FileUtil {
                              FileSystem dstFS, Path dst, 
                              boolean deleteSource,
                              Configuration conf) throws IOException {
+    return copy(srcFS, src, dstFS, dst, deleteSource, true, conf);
+  }
+  
+  /** Copy files between FileSystems. */
+  public static boolean copy(FileSystem srcFS, Path src, 
+                             FileSystem dstFS, Path dst, 
+                             boolean deleteSource,
+                             boolean overwrite,
+                             Configuration conf) throws IOException {
     dst = checkDest(src.getName(), dstFS, dst);
 
     if (srcFS.isDirectory(src)) {
@@ -124,12 +133,12 @@ public class FileUtil {
       Path contents[] = srcFS.listPaths(src);
       for (int i = 0; i < contents.length; i++) {
         copy(srcFS, contents[i], dstFS, new Path(dst, contents[i].getName()),
-             deleteSource, conf);
+             deleteSource, overwrite, conf);
       }
     } else if (srcFS.isFile(src)) {
       InputStream in = srcFS.open(src);
       try {
-        OutputStream out = dstFS.create(dst);
+        OutputStream out = dstFS.create(dst, overwrite);
         copyContent(in, out, conf);
       } finally {
         in.close();

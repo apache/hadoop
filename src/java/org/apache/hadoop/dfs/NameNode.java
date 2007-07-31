@@ -291,7 +291,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
   /**
    */
-  public LocatedBlock create(String src, 
+  public void create(String src, 
                              String clientName, 
                              boolean overwrite,
                              short replication,
@@ -304,14 +304,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       throw new IOException("create: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    LocatedBlock result =  namesystem.startFile(src, 
-                                                clientName, 
-                                                clientMachine, 
-                                                overwrite,
-                                                replication,
-                                                blockSize);
+    namesystem.startFile(
+        src, clientName, clientMachine, overwrite, replication, blockSize);
     myMetrics.createFile();
-    return result;
   }
 
   public boolean setReplication(String src, 
