@@ -427,6 +427,9 @@ Branch 0.14 (unreleased changes)
 141. HADOOP-1551.  libhdfs supports setting replication factor and
      retrieving modification time of files.  (Sameer Paranjpye via dhruba)
 
+141. HADOOP-1647.  FileSystem.getFileStatus returns valid values for "/".
+     (Dhruba Borthakur via dhruba)
+
 
 Release 0.13.0 - 2007-06-08
 
