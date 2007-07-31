@@ -478,7 +478,7 @@ class FSEditLog {
    */
   void logCreateFile(FSDirectory.INode newNode) {
     UTF8 nameReplicationPair[] = new UTF8[] { 
-      new UTF8(newNode.computeName()), 
+      new UTF8(newNode.getAbsoluteName()), 
       FSEditLog.toLogReplication(newNode.getReplication()),
       FSEditLog.toLogTimeStamp(newNode.getModificationTime())};
     logEdit(OP_ADD,
@@ -491,7 +491,7 @@ class FSEditLog {
    */
   void logMkDir(FSDirectory.INode newNode) {
     UTF8 info[] = new UTF8[] {
-      new UTF8(newNode.computeName()),
+      new UTF8(newNode.getAbsoluteName()),
       FSEditLog.toLogTimeStamp(newNode.getModificationTime())
     };
     logEdit(OP_MKDIR, new ArrayWritable(UTF8.class, info), null);

@@ -20,7 +20,6 @@ package org.apache.hadoop.dfs;
 import java.io.*;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.FSConstants.StartupOption;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -44,23 +43,14 @@ class FSDirectory implements FSConstants {
    * 
    * TODO: Factor out INode to a standalone class.
    ******************************************************/
-  class INode {
+  static class INode {
+
     private String name;
     private INode parent;
     private TreeMap<String, INode> children = null;
     private Block blocks[] = null;
     private short blockReplication;
     private long modificationTime;
-
-    /**
-     */
-    INode(String name, Block blocks[], short replication) {
-      this.name = name;
-      this.parent = null;
-      this.blocks = blocks;
-      this.blockReplication = replication;
-      this.modificationTime = 0;
-    }
 
     /**
      */
@@ -113,12 +103,29 @@ class FSDirectory implements FSConstants {
     String getLocalName() {
       return name;
     }
-    
+
+    /**
+     * Get the full absolute path name of this file (recursively computed).
+     * 
+     * @return the string representation of the absolute path of this file
+     */
     String getAbsoluteName() {
-      // recursively constructs the absolute path.
-      // Any escaping of name required?
-      return ((parent != null) ? 
-              (parent.getAbsoluteName() + Path.SEPARATOR): "") + name;
+      return internalGetAbsolutePathName().toString();
+    }
+
+    /**
+     * Recursive computation of the absolute path name of this INode using a
+     * StringBuffer. This relies on the root INode name being "".
+     * 
+     * @return the StringBuffer containing the absolute path name.
+     */
+    private StringBuffer internalGetAbsolutePathName() {
+      if (parent == null) {
+        return new StringBuffer(name);
+      } else {
+        return parent.internalGetAbsolutePathName().append(
+            Path.SEPARATOR_CHAR).append(name);
+      }
     }
 
     /**
@@ -270,16 +277,16 @@ class FSDirectory implements FSConstants {
      * This operation is performed after a node is removed from the tree,
      * and we want to GC all the blocks at this node and below.
      */
-    void collectSubtreeBlocks(Vector<Block> v) {
+    void collectSubtreeBlocks(FSDirectory fsDir, Vector<Block> v) {
       if (blocks != null) {
         for (int i = 0; i < blocks.length; i++) {
           v.add(blocks[i]);
         }
       }
-      incrDeletedFileCount();
+      fsDir.incrDeletedFileCount();
       for (Iterator<INode> it = getChildIterator(); it != null &&
              it.hasNext();) {
-        it.next().collectSubtreeBlocks(v);
+        it.next().collectSubtreeBlocks(fsDir, v);
       }
     }
 
@@ -292,16 +299,6 @@ class FSDirectory implements FSConstants {
         total += it.next().numItemsInTree();
       }
       return total + 1;
-    }
-
-    /**
-     */
-    String computeName() {
-      if (parent != null) {
-        return parent.computeName() + "/" + name;
-      } else {
-        return name;
-      }
     }
 
     /**
@@ -642,7 +639,7 @@ class FSDirectory implements FSConstants {
                                         +src+" is removed");
           targetNode.getParent().setModificationTime(modificationTime);
           Vector<Block> v = new Vector<Block>();
-          targetNode.collectSubtreeBlocks(v);
+          targetNode.collectSubtreeBlocks(this, v);
           for (Block b : v) {
             namesystem.blocksMap.removeINode(b);
           }

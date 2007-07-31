@@ -5,6 +5,9 @@ Trunk (unreleased changes)
   1. HADOOP-1636.  Allow configuration of the number of jobs kept in memory
      by the JobTracker. (Michael Bieniosek via omalley)
 
+  2. HADOOP-1653. FSDirectory code-cleanups. FSDirectory.INode becomes a static
+     class.  (Christophe Taton via dhruba)
+
 Branch 0.14 (unreleased changes)
 
   1. HADOOP-1197.  In Configuration, deprecate getObject() and add
