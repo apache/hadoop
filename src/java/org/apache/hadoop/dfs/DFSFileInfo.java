@@ -56,7 +56,7 @@ class DFSFileInfo implements Writable, FileStatus {
    * Create DFSFileInfo by file INode 
    */
   public DFSFileInfo(FSDirectory.INode node) {
-    this.path = new Path(node.computeName());
+    this.path = new Path(node.getAbsoluteName());
     this.isDir = node.isDir();
     this.len = isDir ? node.computeContentsLength() : node.computeFileLength();
     this.blockReplication = node.getReplication();
