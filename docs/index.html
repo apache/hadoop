@@ -1,9 +1,9 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta content="Apache Forrest" name="Generator">
-<meta name="Forrest-version" content="0.7">
+<meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
 <title>Welcome to Hadoop!</title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
@@ -16,57 +16,99 @@
 <body onload="init()">
 <script type="text/javascript">ndeSetTextSize();</script>
 <div id="top">
+<!--+
+    |breadtrail
+    +-->
 <div class="breadtrail">
 <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://lucene.apache.org/">Lucene</a> &gt; <a href="http://lucene.apache.org/hadoop/">Hadoop</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
 </div>
+<!--+
+    |header
+    +-->
 <div class="header">
+<!--+
+    |start group logo
+    +-->
 <div class="grouplogo">
 <a href="http://lucene.apache.org/"><img class="logoImage" alt="Lucene" src="images/lucene_green_150.gif" title="Apache Lucene"></a>
 </div>
+<!--+
+    |end group logo
+    +-->
+<!--+
+    |start Project Logo
+    +-->
 <div class="projectlogo">
 <a href="http://lucene.apache.org/hadoop/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 </div>
+<!--+
+    |end Project Logo
+    +-->
+<!--+
+    |start Search
+    +-->
 <div class="searchbox">
 <form action="http://www.google.com/search" method="get" class="roundtopsmall">
 <input value="lucene.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
-                    <input attr="value" name="Search" value="Search" type="submit">
+                    <input name="Search" value="Search" type="submit">
 </form>
 </div>
+<!--+
+    |end search
+    +-->
+<!--+
+    |start Tabs
+    +-->
 <ul id="tabs">
 <li class="current">
-<a class="base-selected" href="index.html">Main</a>
+<a class="selected" href="index.html">Main</a>
 </li>
 <li>
-<a class="base-not-selected" href="http://wiki.apache.org/lucene-hadoop">Wiki</a>
+<a class="unselected" href="http://wiki.apache.org/lucene-hadoop">Wiki</a>
 </li>
 </ul>
+<!--+
+    |end Tabs
+    +-->
 </div>
 </div>
 <div id="main">
 <div id="publishedStrip">
+<!--+
+    |start Subtabs
+    +-->
 <div id="level2tabs"></div>
+<!--+
+    |end Endtabs
+    +-->
 <script type="text/javascript"><!--
-document.write("<text>Last Published:</text> " + document.lastModified);
+document.write("Last Published: " + document.lastModified);
 //  --></script>
 </div>
+<!--+
+    |breadtrail
+    +-->
 <div class="breadtrail">
-             
+
              &nbsp;
            </div>
+<!--+
+    |start Menu, mainarea
+    +-->
+<!--+
+    |start Menu
+    +-->
 <div id="menu">
-<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Project</div>
-<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
-<div class="menupage">
-<div class="menupagetitle">News</div>
+<div onclick="SwitchMenu('menu_1.1', 'skin/')" id="menu_1.1Title" class="menutitle">Project</div>
+<div id="menu_1.1" class="menuitemgroup">
+<div class="menuitem">
+<a href="releases.html">Releases</a>
 </div>
 <div class="menuitem">
-<a href="about.html">About</a>
+<a href="releases.html#News">News</a>
 </div>
 <div class="menuitem">
 <a href="credits.html">Credits</a>
-</div>
-<div class="menuitem">
-<a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/">Download</a>
 </div>
 <div class="menuitem">
 <a href="http://www.cafepress.com/hadoop/">Buy Stuff</a>
@@ -75,22 +117,28 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 <div onclick="SwitchMenu('menu_1.2', 'skin/')" id="menu_1.2Title" class="menutitle">Documentation</div>
 <div id="menu_1.2" class="menuitemgroup">
 <div class="menuitem">
-<a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>
+<a href="hdfs_design.html">Hadoop File System</a>
+</div>
+<div class="menuitem">
+<a href="api/overview-summary.html#overview_description">Install and Configure</a>
+</div>
+<div class="menuitem">
+<a href="api/index.html">API Docs</a>
 </div>
 <div class="menuitem">
 <a href="http://wiki.apache.org/lucene-hadoop/">Wiki</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_design.html">Hadoop File System</a>
+<a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="api/index.html">API Docs</a>
+<a href="mailing_lists.html#Users">Mailing Lists</a>
 </div>
 </div>
-<div onclick="SwitchMenu('menu_1.3', 'skin/')" id="menu_1.3Title" class="menutitle">Developer</div>
+<div onclick="SwitchMenu('menu_1.3', 'skin/')" id="menu_1.3Title" class="menutitle">Developers</div>
 <div id="menu_1.3" class="menuitemgroup">
 <div class="menuitem">
-<a href="mailing_lists.html">Mailing Lists</a>
+<a href="mailing_lists.html#Developers">Mailing Lists</a>
 </div>
 <div class="menuitem">
 <a href="issue_tracking.html">Issue Tracking</a>
@@ -102,23 +150,23 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 <a href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/">Nightly Build</a>
 </div>
 </div>
-<div onclick="SwitchMenu('menu_1.4', 'skin/')" id="menu_1.4Title" class="menutitle">Related Projects</div>
-<div id="menu_1.4" class="menuitemgroup">
-<div class="menuitem">
-<a href="http://lucene.apache.org/java/">Lucene</a>
-</div>
-<div class="menuitem">
-<a href="http://lucene.apache.org/nutch/">Nutch</a>
-</div>
-</div>
 <div id="credit">
 <hr>
 <a href="http://forrest.apache.org/"><img border="0" title="Built with Apache Forrest" alt="Built with Apache Forrest - logo" src="images/built-with-forrest-button.png" style="width: 88px;height: 31px;"></a>
 </div>
 <div id="roundbottom">
 <img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
+<!--+
+  |alternative credits
+  +-->
 <div id="credit2"></div>
 </div>
+<!--+
+    |end Menu
+    +-->
+<!--+
+    |start content
+    +-->
 <div id="content">
 <div title="Portable Document Format" class="pdflink">
 <a class="dida" href="index.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
@@ -128,334 +176,115 @@ document.write("<text>Last Published:</text> " + document.lastModified);
 <div id="minitoc-area">
 <ul class="minitoc">
 <li>
-<a href="#News">News</a>
-<ul class="minitoc">
-<li>
-<a href="#25+July%2C+2007%3A+release+0.13.1+available">25 July, 2007: release 0.13.1 available</a>
+<a href="#Getting+Started"> Getting Started </a>
 </li>
 <li>
-<a href="#8+June%2C+2007%3A+release+0.13.0+available">8 June, 2007: release 0.13.0 available</a>
-</li>
-<li>
-<a href="#6+April%2C+2007%3A+release+0.12.3+available">6 April, 2007: release 0.12.3 available</a>
-</li>
-<li>
-<a href="#23+March%2C+2007%3A+release+0.12.2+available">23 March, 2007: release 0.12.2 available</a>
-</li>
-<li>
-<a href="#17+March%2C+2007%3A+release+0.12.1+available">17 March, 2007: release 0.12.1 available</a>
-</li>
-<li>
-<a href="#2+March%2C+2007%3A+release+0.12.0+available">2 March, 2007: release 0.12.0 available</a>
-</li>
-<li>
-<a href="#16+February%2C+2007%3A+release+0.11.2+available">16 February, 2007: release 0.11.2 available</a>
-</li>
-<li>
-<a href="#9+February%2C+2007%3A+release+0.11.1+available">9 February, 2007: release 0.11.1 available</a>
-</li>
-<li>
-<a href="#2+February%2C+2007%3A+release+0.11.0+available">2 February, 2007: release 0.11.0 available</a>
-</li>
-<li>
-<a href="#10+January%2C+2007%3A+release+0.10.1+available">10 January, 2007: release 0.10.1 available</a>
-</li>
-<li>
-<a href="#5+January%2C+2007%3A+release+0.10.0+available">5 January, 2007: release 0.10.0 available</a>
-</li>
-<li>
-<a href="#15+December%2C+2006%3A+release+0.9.2+available">15 December, 2006: release 0.9.2 available</a>
-</li>
-<li>
-<a href="#6+December%2C+2006%3A+release+0.9.1+available">6 December, 2006: release 0.9.1 available</a>
-</li>
-<li>
-<a href="#1+December%2C+2006%3A+release+0.9.0+available">1 December, 2006: release 0.9.0 available</a>
-</li>
-<li>
-<a href="#3+November%2C+2006%3A+release+0.8.0+available">3 November, 2006: release 0.8.0 available</a>
-</li>
-<li>
-<a href="#18+October%2C+2006%3A+release+0.7.2+available">18 October, 2006: release 0.7.2 available</a>
-</li>
-<li>
-<a href="#11+October%2C+2006%3A+release+0.7.1+available">11 October, 2006: release 0.7.1 available</a>
-</li>
-<li>
-<a href="#6+October%2C+2006%3A+release+0.7.0+available">6 October, 2006: release 0.7.0 available</a>
-</li>
-<li>
-<a href="#18+September%2C+2006%3A+release+0.6.2+available">18 September, 2006: release 0.6.2 available</a>
-</li>
-<li>
-<a href="#13+September%2C+2006%3A+release+0.6.1+available">13 September, 2006: release 0.6.1 available</a>
-</li>
-<li>
-<a href="#8+September%2C+2006%3A+release+0.6.0+available">8 September, 2006: release 0.6.0 available</a>
-</li>
-<li>
-<a href="#4+August%2C+2006%3A+release+0.5.0+available">4 August, 2006: release 0.5.0 available</a>
-</li>
-<li>
-<a href="#28+June%2C+2006%3A+release+0.4.0+available">28 June, 2006: release 0.4.0 available</a>
-</li>
-<li>
-<a href="#9+June%2C+2006%3A+release+0.3.2+available">9 June, 2006: release 0.3.2 available</a>
-</li>
-<li>
-<a href="#8+June%2C+2006%3A+FAQ+added+to+Wiki">8 June, 2006: FAQ added to Wiki</a>
-</li>
-<li>
-<a href="#5+June%2C+2006%3A+release+0.3.1+available">5 June, 2006: release 0.3.1 available</a>
-</li>
-<li>
-<a href="#2+June%2C+2006%3A+release+0.3.0+available">2 June, 2006: release 0.3.0 available</a>
-</li>
-<li>
-<a href="#12+May%2C+2006%3A+release+0.2.1+available">12 May, 2006: release 0.2.1 available</a>
-</li>
-<li>
-<a href="#5+May%2C+2006%3A+release+0.2.0+available">5 May, 2006: release 0.2.0 available</a>
-</li>
-<li>
-<a href="#2+April%2C+2006%3A+release+0.1.0+available">2 April, 2006: release 0.1.0 available</a>
-</li>
-<li>
-<a href="#6+February%2C+2006%3A+nightly+builds">6 February, 2006: nightly builds</a>
-</li>
-<li>
-<a href="#3+February%2C+2006%3A+Hadoop+code+moved+out+of+Nutch">3 February, 2006: Hadoop code moved out of Nutch</a>
-</li>
-<li>
-<a href="#30+March%2C+2006%3A+Hadoop+project+approved">30 March, 2006: Hadoop project approved</a>
+<a href="#Getting+Involved"> Getting Involved </a>
 </li>
 </ul>
-</li>
-</ul>
-</div> 
+</div>
+    
+<p>
+    Hadoop is a software platform lets one easily write and run
+    applications that process vast amounts of data.</p>
 
     
-<a name="N1000C"></a><a name="News"></a>
-<h2 class="h3">News</h2>
+<p>Here's what makes Hadoop especially useful:</p>
+    
+<ul>
+      
+<li>
+<strong>Scalable:</strong>
+      Hadoop can reliably store and process petabytes.</li>
+      
+<li>
+<strong>Economical:</strong>
+      It distributes the data and processing across clusters of
+      commonly available computers. These clusters can number into the
+      thousands of nodes.</li>
+      
+<li>
+<strong>Efficient:</strong>
+      By distributing the data, Hadoop can process it in parallel on
+      the nodes where the data is located. This makes it extremely
+      rapid.</li>
+      
+<li>
+<strong>Reliable:</strong>
+      Hadoop automatically maintains multiple copies of data and
+      automatically redeploys computing tasks based on failures.</li>
+    
+</ul>
+    
+<p>
+    Hadoop implements <a href="http://wiki.apache.org/lucene-hadoop/HadoopMapReduce">MapReduce</a>,
+    using the Hadoop Distributed File System (<a href="hdfs_design.html"><acronym title="Hadoop Distributed File System">HDFS</acronym></a>) (see figure below.)  MapReduce divides
+    applications into many small blocks of work.  HDFS creates
+    multiple replicas of data blocks for reliability, placing them on
+    compute nodes around the cluster.  MapReduce can then process the
+    data where it is located.
+    </p>
+
+    
+<div id="" style="text-align: center;">
+<img id="" class="figure" alt="architecture" src="images/architecture.gif"></div>
+
+    
+<a name="N1003A"></a><a name="Getting+Started"></a>
+<h2 class="h3"> Getting Started </h2>
 <div class="section">
-<a name="N10012"></a><a name="25+July%2C+2007%3A+release+0.13.1+available"></a>
-<h3 class="h4">25 July, 2007: release 0.13.1 available</h3>
-<p>This fixes critical bugs in the 0.13.0 release.  For full
-      details, see the <a href="http://tinyurl.com/2uoabd">release
-      notes</a>. The release can be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
+<p>
+      The Hadoop project plans to scale Hadoop up to handling thousands of computers. However, to begin with you can start by installing in on a single machine or a very small cluster.
       </p>
-<a name="N10024"></a><a name="8+June%2C+2007%3A+release+0.13.0+available"></a>
-<h3 class="h4">8 June, 2007: release 0.13.0 available</h3>
-<p>In addition to new features, this release contains
-      significant performance and reliability improvements.  For
-      example, MapReduce sort performance on large clusters has <a href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">
-      doubled</a>.</p>
-<p>Note: when upgrading an existing HDFS filesystem to this
-      release, you should first start HDFS with <span class="codefrag">bin/start-dfs.sh
-      -upgrade</span>, which makes it possible to revert the upgrade.
-      For more information on this issue, see <a href="https://issues.apache.org/jira/browse/HADOOP-702#action_12482953">HADOOP-702</a>.
+<ol>
+        
+<li>
+<a href="documentation.html">Learn about</a> Hadoop by reading the documentation.</li>
+        
+<li>
+<a href="releases.html">Download</a> Hadoop from the release page.</li>
+        
+<li>
+<a href="api/overview-summary.html#overview_description">Install and configure</a> Hadoop. Scroll down the page.</li>
+        
+<li>
+<a href="mailing_lists.html">Discuss it</a> on the mailing list.</li>
+      
+</ol>
+</div>
+
+    
+<a name="N1005F"></a><a name="Getting+Involved"></a>
+<h2 class="h3"> Getting Involved </h2>
+<div class="section">
+<p>
+      Hadoop is an open source volunteer project under the Apache Software Foundation. We encourage you to learn about the project and contribute your expertise. Here are some starter links:
       </p>
-<p>For full details, see the <a href="http://tinyurl.com/2prl3k">release notes</a>. The release
-      can be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10047"></a><a name="6+April%2C+2007%3A+release+0.12.3+available"></a>
-<h3 class="h4">6 April, 2007: release 0.12.3 available</h3>
-<p>For details see the <a href="http://tinyurl.com/35qyhw">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10059"></a><a name="23+March%2C+2007%3A+release+0.12.2+available"></a>
-<h3 class="h4">23 March, 2007: release 0.12.2 available</h3>
-<p>For details see the <a href="http://tinyurl.com/2r7kcw">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N1006B"></a><a name="17+March%2C+2007%3A+release+0.12.1+available"></a>
-<h3 class="h4">17 March, 2007: release 0.12.1 available</h3>
-<p>For details see the <a href="http://tinyurl.com/2kynuc">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N1007D"></a><a name="2+March%2C+2007%3A+release+0.12.0+available"></a>
-<h3 class="h4">2 March, 2007: release 0.12.0 available</h3>
-<p>For details see the <a href="http://tinyurl.com/2vp248">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N1008F"></a><a name="16+February%2C+2007%3A+release+0.11.2+available"></a>
-<h3 class="h4">16 February, 2007: release 0.11.2 available</h3>
-<p>This fixes critical bugs in 0.11.1. For details see the <a href="http://tinyurl.com/2ukkt3">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N100A1"></a><a name="9+February%2C+2007%3A+release+0.11.1+available"></a>
-<h3 class="h4">9 February, 2007: release 0.11.1 available</h3>
-<p>This fixes bugs in 0.11.0. For details see the <a href="http://tinyurl.com/37c5a3">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N100B3"></a><a name="2+February%2C+2007%3A+release+0.11.0+available"></a>
-<h3 class="h4">2 February, 2007: release 0.11.0 available</h3>
-<p>For details see the <a href="http://tinyurl.com/2yn8zs">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N100C5"></a><a name="10+January%2C+2007%3A+release+0.10.1+available"></a>
-<h3 class="h4">10 January, 2007: release 0.10.1 available</h3>
-<p>This fixes critical bugs in 0.10.0.  For details see the <a href="http://tinyurl.com/ycpsms">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N100D7"></a><a name="5+January%2C+2007%3A+release+0.10.0+available"></a>
-<h3 class="h4">5 January, 2007: release 0.10.0 available</h3>
-<p>For details see the <a href="http://tinyurl.com/yapkxs">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N100E9"></a><a name="15+December%2C+2006%3A+release+0.9.2+available"></a>
-<h3 class="h4">15 December, 2006: release 0.9.2 available</h3>
-<p>This fixes critical bugs in 0.9.1.  For details see the <a href="http://tinyurl.com/ya8lfd">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N100FB"></a><a name="6+December%2C+2006%3A+release+0.9.1+available"></a>
-<h3 class="h4">6 December, 2006: release 0.9.1 available</h3>
-<p>This fixes critical bugs in 0.9.0.  For details see the <a href="http://tinyurl.com/y55d7p">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N1010D"></a><a name="1+December%2C+2006%3A+release+0.9.0+available"></a>
-<h3 class="h4">1 December, 2006: release 0.9.0 available</h3>
-<p>For details see the <a href="http://tinyurl.com/sdjhb">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N1011F"></a><a name="3+November%2C+2006%3A+release+0.8.0+available"></a>
-<h3 class="h4">3 November, 2006: release 0.8.0 available</h3>
-<p>For details see the <a href="http://tinyurl.com/ykqv6s">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10131"></a><a name="18+October%2C+2006%3A+release+0.7.2+available"></a>
-<h3 class="h4">18 October, 2006: release 0.7.2 available</h3>
-<p>This fixes critical bugs in 0.7.1.  For details see the <a href="http://tinyurl.com/ygy6y7">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10143"></a><a name="11+October%2C+2006%3A+release+0.7.1+available"></a>
-<h3 class="h4">11 October, 2006: release 0.7.1 available</h3>
-<p>This fixes critical bugs in 0.7.0.  For details see the <a href="http://tinyurl.com/p7qod">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10155"></a><a name="6+October%2C+2006%3A+release+0.7.0+available"></a>
-<h3 class="h4">6 October, 2006: release 0.7.0 available</h3>
-<p>For details see the <a href="http://tinyurl.com/kvd9m">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10167"></a><a name="18+September%2C+2006%3A+release+0.6.2+available"></a>
-<h3 class="h4">18 September, 2006: release 0.6.2 available</h3>
-<p>This fixes critical bugs in 0.6.1.  For details see the <a href="http://tinyurl.com/gyb56">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10179"></a><a name="13+September%2C+2006%3A+release+0.6.1+available"></a>
-<h3 class="h4">13 September, 2006: release 0.6.1 available</h3>
-<p>This fixes critical bugs in 0.6.0.  For details see the <a href="http://tinyurl.com/lykp4">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N1018B"></a><a name="8+September%2C+2006%3A+release+0.6.0+available"></a>
-<h3 class="h4">8 September, 2006: release 0.6.0 available</h3>
-<p>For details see the <a href="http://tinyurl.com/r3zoj">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N1019D"></a><a name="4+August%2C+2006%3A+release+0.5.0+available"></a>
-<h3 class="h4">4 August, 2006: release 0.5.0 available</h3>
-<p>For details see the <a href="http://tinyurl.com/pnml2">release notes</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N101AF"></a><a name="28+June%2C+2006%3A+release+0.4.0+available"></a>
-<h3 class="h4">28 June, 2006: release 0.4.0 available</h3>
-<p>For details see the <a href="http://tinyurl.com/o35b6">change log</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N101C1"></a><a name="9+June%2C+2006%3A+release+0.3.2+available"></a>
-<h3 class="h4">9 June, 2006: release 0.3.2 available</h3>
-<p>This is a bugfix release.  For details see the <a href="http://tinyurl.com/k9g5c">change log</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N101D3"></a><a name="8+June%2C+2006%3A+FAQ+added+to+Wiki"></a>
-<h3 class="h4">8 June, 2006: FAQ added to Wiki</h3>
-<p>Hadoop now has a <a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>.  Please
-      help make this more complete!
-      </p>
-<a name="N101E1"></a><a name="5+June%2C+2006%3A+release+0.3.1+available"></a>
-<h3 class="h4">5 June, 2006: release 0.3.1 available</h3>
-<p>This is a bugfix release.  For details see the <a href="http://tinyurl.com/l6on4">change log</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N101F3"></a><a name="2+June%2C+2006%3A+release+0.3.0+available"></a>
-<h3 class="h4">2 June, 2006: release 0.3.0 available</h3>
-<p>This includes many fixes, improving performance, scalability
-      and reliability and adding new features.  For details see the <a href="http://tinyurl.com/rq3f7">change log</a>. The release can
-      be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10205"></a><a name="12+May%2C+2006%3A+release+0.2.1+available"></a>
-<h3 class="h4">12 May, 2006: release 0.2.1 available</h3>
-<p>This fixes a few bugs in release 0.2.0, listed in the <a href="http://tinyurl.com/rnnvz">change log</a>. The
-      release can be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10217"></a><a name="5+May%2C+2006%3A+release+0.2.0+available"></a>
-<h3 class="h4">5 May, 2006: release 0.2.0 available</h3>
-<p>We are now aiming for monthly releases.  There have been many
-      bug fixes and improvements in the past month.  MapReduce and DFS
-      are now fairly reliable on clusters with up to 200 nodes.  See
-      the <a href="http://tinyurl.com/qkgsg">change log</a> for
-      details. The release can be obtained from <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/"> a
-      nearby mirror</a>.
-      </p>
-<a name="N10229"></a><a name="2+April%2C+2006%3A+release+0.1.0+available"></a>
-<h3 class="h4">2 April, 2006: release 0.1.0 available</h3>
-<p>This is the first Hadoop release.  The release is available
-      <a href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/">
-      here</a>.</p>
-<a name="N10237"></a><a name="6+February%2C+2006%3A+nightly+builds"></a>
-<h3 class="h4">6 February, 2006: nightly builds</h3>
-<p>Hadoop now has nightly builds.  This automatically creates a
-      <a href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/">downloadable version of Hadoop every
-      night</a>.  All unit tests must pass, or a message is sent to
-      the developers mailing list and no new version is created.  This
-      also updates the <a href="api/index.html">javadoc</a>.</p>
-<a name="N10249"></a><a name="3+February%2C+2006%3A+Hadoop+code+moved+out+of+Nutch"></a>
-<h3 class="h4">3 February, 2006: Hadoop code moved out of Nutch</h3>
-<p>The Hadoop code has now been moved into its own Subversion
-      tree, renamed into packages under <span class="codefrag">org.apache.hadoop</span>.
-      All unit tests pass, but little else has yet been tested.</p>
-<a name="N10256"></a><a name="30+March%2C+2006%3A+Hadoop+project+approved"></a>
-<h3 class="h4">30 March, 2006: Hadoop project approved</h3>
-<p>The Lucene PMC has elected to split the Nutch MapReduce and
-      distributed filesytem code into a new project named Hadoop.</p>
+<ol>
+        
+<li>See our <a href="http://wiki.apache.org/lucene-hadoop/HowToContribute">How to Contribute to Hadoop</a> page.</li>
+        
+<li>Give us <a href="issue_tracking.html">feedback</a>: What can we do better?</li>
+        
+<li>Join the <a href="mailing_lists.html">mailing list</a>: Meet the community.</li>
+      
+</ol>
 </div>
 
   
 </div>
+<!--+
+    |end content
+    +-->
 <div class="clearboth">&nbsp;</div>
 </div>
 <div id="footer">
+<!--+
+    |start bottomstrip
+    +-->
 <div class="lastmodified">
 <script type="text/javascript"><!--
-document.write("<text>Last Published:</text> " + document.lastModified);
+document.write("Last Published: " + document.lastModified);
 //  --></script>
 </div>
 <div class="copyright">
@@ -463,6 +292,9 @@ document.write("<text>Last Published:</text> " + document.lastModified);
          2007 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
 </div>
 <div id="logos"></div>
+<!--+
+    |end bottomstrip
+    +-->
 </div>
 </body>
 </html>

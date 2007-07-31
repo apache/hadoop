@@ -5,10 +5,10 @@
 /Producer (FOP 0.20.5) >>
 endobj
 5 0 obj
-<< /Length 623 /Filter [ /ASCII85Decode /FlateDecode ]
+<< /Length 760 /Filter [ /ASCII85Decode /FlateDecode ]
  >>
 stream
-Gasam9lo#B&A@C2m&_tj.^G-eqj;It95[IO$TU0hCesspr)"g@^6/n<ECd"F!U[&`mI#=:h'M,o\H"61K4IK>rS%kf)$th]?N@A(Kn@]@(dV'9e*L/ID4:DC^2XmUfPK)\KD&p*VOQ23cK=U)ah<7l&F^;2!`LR;6RJ[td`,mQ`U(7NT"PP8pXM?''KkTb]H5ICT%4idl+6W7<kfO=^0Ao\;QILYgBmKfF]82/m69@ekjn];iV#7rO+b0.EC+pF#t2]>)TAD<1o.u^>(I(bPp/898mjK=$4cPrIZqD)Phfqj-Hi/,^2e'0G#beL*Zs47^=h')Quo;q-sS_!p3ST#cr,?Ze9(lUl&b5f1kNS=ANW_70-imU8#%CDF5M*<eS@pYU-\G3F,tI2DU?b`cE?K-3*"*T)D3E[F^[!>QFEXP^N;K2+SMhB./iR0$W"suL#Dt`quL8i?m)tR!>h@qpuOK3U5$k.;ZCa!cCjAR]c8OIDL2G^W0/8Cm>Q&lXbPY6qI[iDr:IEc>R?7E"B*Z-P[G9^o]o+sDt`X:Ola9+:Y&bThVsJCo[`*eiUL:;BKnDerc%e>8'eIYl>:8PMP@KJnJD^:]0j"bC\1,8dHH&\RXH]C~>
+Gat%!_/e6`&A@rkF<iYAO^q*?]d95t-FY=nl(R?-(kEQ`74]C4^TT=L>!l!<iP;PGHLL7dXn7t`pX9\Y#SWFR!cn33"+lg>7E#-QRN0pI6uXP`P\e^Md<@H,Ap]:s0c@UYkfMO^q_0I!\m?,p47jI<cOQNkb"hFh9J.V,,eCqTa5!USJlj,@9U11-?@n[sk!%-\VM\>kFA_kQ;SUi;<jn:c2$r,lP7mNY%0^0.Z(Sr_&iaoh2CK7J1KSM(Os>Qg0$t`R#![^[Ut]0-dCCZd!p[pMWEWEUe55WM++.;IVJDadLTO0)mGmB-QNulpT-1PnH"o5X;8:9uC+<m6<lMMM`dV9,p3NX[nbK-EePT0enKa.l3&A6%-/`.3nt'rGeb\eF2m?EBOBbUuF0.!dfVgZ`C^oV>VY7j]!#NKN/PMb*^!lfQXG%-D1D3g0XcPK]p^QbX`6AdK=XX/JX"qp(<#e[GLfK_/\N97f-&!N)s!K7;1YkY!P3I'OTW#<1*#K)&1E7Gf*ASTnK>D5KZ9u7p08&4\J>/$<4nBie-&j-]oJZ4S`5Moc&IL'W1^n@^jEW6eS?Hc%_'FA(nEkJii]7&M2`BpF:%)>UlqS'sF:_'tFUtAf\WnTpme:oC1hNIM@`_KsHqZ6SW75L#lG<F`\U=,i`(WW?<(f6l'>`)7\P]fd1>>1,>%X%L!T"Zk5%919n2b+<WUO!E.=O.4C9L761,X45L;_Vo_6uK#6,RP*XIYu-H4ERI"2<9H-i~>
 endstream
 endobj
 6 0 obj
@@ -29,7 +29,7 @@ endobj
 8 0 obj
 << /Type /Annot
 /Subtype /Link
-/Rect [ 493.896 585.8 514.548 573.8 ]
+/Rect [ 341.616 585.8 362.268 573.8 ]
 /C [ 0 0 0 ]
 /Border [ 0 0 0 ]
 /A << /URI (http://issues.apache.org/jira/browse/HADOOP)
@@ -40,10 +40,10 @@ endobj
 9 0 obj
 << /Type /Annot
 /Subtype /Link
-/Rect [ 472.776 572.6 527.124 560.6 ]
+/Rect [ 182.316 542.2 236.664 530.2 ]
 /C [ 0 0 0 ]
 /Border [ 0 0 0 ]
-/A << /URI (mailing_lists.html)
+/A << /URI (mailing_lists.html#Users)
 /S /URI >>
 /H /I
 >>
@@ -76,6 +76,13 @@ endobj
 /BaseFont /Helvetica-Oblique
 /Encoding /WinAnsiEncoding >>
 endobj
+14 0 obj
+<< /Type /Font
+/Subtype /Type1
+/Name /F7
+/BaseFont /Times-Bold
+/Encoding /WinAnsiEncoding >>
+endobj
 1 0 obj
 << /Type /Pages
 /Count 1
@@ -88,31 +95,32 @@ endobj
 endobj
 3 0 obj
 << 
-/Font << /F3 10 0 R /F5 11 0 R /F1 12 0 R /F2 13 0 R >> 
+/Font << /F3 10 0 R /F5 11 0 R /F1 12 0 R /F2 13 0 R /F7 14 0 R >> 
 /ProcSet [ /PDF /ImageC /Text ] >> 
 endobj
 xref
-0 14
+0 15
 0000000000 65535 f 
-0000001742 00000 n 
-0000001800 00000 n 
-0000001850 00000 n 
+0000001994 00000 n 
+0000002052 00000 n 
+0000002102 00000 n 
 0000000015 00000 n 
 0000000071 00000 n 
-0000000785 00000 n 
-0000000905 00000 n 
-0000000936 00000 n 
-0000001128 00000 n 
-0000001295 00000 n 
-0000001408 00000 n 
-0000001518 00000 n 
-0000001626 00000 n 
+0000000922 00000 n 
+0000001042 00000 n 
+0000001073 00000 n 
+0000001265 00000 n 
+0000001438 00000 n 
+0000001551 00000 n 
+0000001661 00000 n 
+0000001769 00000 n 
+0000001885 00000 n 
 trailer
 <<
-/Size 14
+/Size 15
 /Root 2 0 R
 /Info 4 0 R
 >>
 startxref
-1962
+2225
 %%EOF

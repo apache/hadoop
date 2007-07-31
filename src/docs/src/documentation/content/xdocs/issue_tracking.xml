@@ -10,11 +10,13 @@
   
   <body>
     <p>
-      Hadoop issues (bugs, as well as enhancement requests) are tracked in 
-      Apache JIRA <a href="http://issues.apache.org/jira/browse/HADOOP">here</a>.
-      If you aren't sure whether something is a bug, post a question on the
-      Hadoop user <a href="mailing_lists.html">mailing list</a>.
+    Hadoop tracks both bugs and enhancement requests <a href="http://issues.apache.org/jira/browse/HADOOP">here</a> using Apache JIRA.
+    We welcome input, however, <strong>before filing a request,</strong> please make sure you do the following:
     </p>
+    <ul>
+      <li>Search the JIRA database.</li>
+      <li>Check the user <a href="mailing_lists.html#Users">mailing list</a>, both by searching the archives and by asking questions.</li>
+    </ul>
   </body>
   
 </document>

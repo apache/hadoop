@@ -1,10 +1,10 @@
 /*
-* Copyright 2002-2004 The Apache Software Foundation or its licensors,
-* as applicable.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
+* Licensed to the Apache Software Foundation (ASF) under one or more
+* contributor license agreements.  See the NOTICE file distributed with
+* this work for additional information regarding copyright ownership.
+* The ASF licenses this file to You under the Apache License, Version 2.0
+* (the "License"); you may not use this file except in compliance with
+* the License.  You may obtain a copy of the License at
 *
 *     http://www.apache.org/licenses/LICENSE-2.0
 *
@@ -17,7 +17,7 @@
 body {  margin: 0px 0px 0px 0px; font-family: Verdana, Helvetica, sans-serif; }
 
 h1     { font-size : 160%; margin: 0px 0px 0px 0px;  padding: 0px; }
-h2     { font-size : 140%; margin: 0.9em 0px 0px 0px; padding: 0px; font-weight : bold;}
+h2     { font-size : 140%; margin: 1em 0px 0.8em 0px; padding: 0px; font-weight : bold;}
 h3     { font-size : 130%; margin: 0.8em 0px 0px 0px; padding: 0px; font-weight : bold; }
 .h3 { margin: 22px 0px 3px 0px; }
 h4     { font-size : 120%; margin: 0.7em 0px 0px 0px; padding: 0px; font-weight : normal; text-align: left; }
@@ -152,6 +152,12 @@ html>body #top .searchbox {
     width: .1em; /* IE/Win fix */
 }
 
+#tabs li a:hover {
+   
+    cursor: pointer;
+    text-decoration:underline;
+}
+
 #tabs > li a { width: auto; } /* Rest of IE/Win fix */
 
 /* Commented Backslash Hack hides rule from IE5-Mac \*/
@@ -188,6 +194,27 @@ html>body #top .searchbox {
 margin: 0;
 float:left;
 position:relative;
+
+}
+
+
+
+#level2tabs  a:hover {
+   
+    cursor: pointer;
+    text-decoration:underline;
+    
+}
+
+#level2tabs  a{
+   
+    cursor: pointer;
+    text-decoration:none;
+    background-image: url('images/chapter.gif');
+    background-repeat: no-repeat;
+    background-position: center left;
+    padding-left: 6px;
+    margin-left: 6px;
 }
 
 /*
@@ -252,10 +279,10 @@ img.cornersmall {
 /**
  * Side menu
  */
-#menu a {  font-weight: normal;}
+#menu a {  font-weight: normal; text-decoration: none;}
 #menu a:visited {  font-weight: normal; }
 #menu a:active {  font-weight: normal; }
-#menu a:hover {  font-weight: normal; }
+#menu a:hover {  font-weight: normal;  text-decoration:underline;}
 
 #menuarea { width:10em;}
 #menu {
@@ -268,6 +295,7 @@ img.cornersmall {
     z-index: 20;
     background-color: #f90;
     font-size : 70%;
+    
 }
 
 .menutitle {
@@ -278,7 +306,11 @@ img.cornersmall {
         background-repeat: no-repeat;
         background-position: center left;
         font-weight : bold;
+
+        
 }
+
+.menutitle:hover{text-decoration:underline;cursor: pointer;}
 
 #menu .menuitemgroup {
         margin: 0px 0px 6px 8px;
@@ -286,12 +318,14 @@ img.cornersmall {
         font-weight : bold; }
 
 #menu .selectedmenuitemgroup{
-        margin: 0px 0px 6px 8px;
+        margin: 0px 0px 0px 8px;
         padding: 0px;
-        font-weight : bold; }
+        font-weight : normal; 
+       
+        }
 
 #menu .menuitem {
-        padding: 0px 0px 2px 12px;
+        padding: 2px 0px 1px 13px;
         background-image: url('images/page.gif');
         background-repeat: no-repeat;
         background-position: center left;
@@ -300,19 +334,20 @@ img.cornersmall {
 }
 
 #menu .menupage {
-        margin: 5px 0px 5px 10px;
+        margin: 2px 0px 1px 10px;
         padding: 0px 3px 0px 12px;
-        background-image: url('images/current.gif');
+        background-image: url('images/page.gif');
         background-repeat: no-repeat;
-        background-position: top left;
+        background-position: center left;
         font-style : normal;
 }
 #menu .menupagetitle {
-        padding: 0px 0px 0px 6px;
+        padding: 0px 0px 0px 1px;
         font-style : normal;
         border-style: solid;
         border-width: 1px;
         margin-right: 10px;
+         
 }
 #menu .menupageitemgroup {
         padding: 3px 0px 4px 6px;
@@ -436,10 +471,11 @@ acronym { cursor: help; }
 #minitoc-area {
     border-top: solid 1px #4C6C8F;
     border-bottom: solid 1px #4C6C8F;
-    margin-bottom: 15px;
+    margin: 15px 10% 5px 15px;
+   /* margin-bottom: 15px;
     margin-left: 15px;
-    margin-right: 10%;
-    padding-bottom: 5px;
+    margin-right: 10%;*/
+    padding-bottom: 7px;
     padding-top: 5px;
 }
 .minitoc {
@@ -523,6 +559,7 @@ li p {
 }
 
 .printlink {
+    position: relative; /* IE bugfix cont'd */
     float: right;
 }
 .printlink br {

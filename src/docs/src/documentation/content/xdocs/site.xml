@@ -17,40 +17,36 @@ See http://forrest.apache.org/docs/linking.html for more info.
 <site label="Hadoop" href="" xmlns="http://apache.org/forrest/linkmap/1.0">
 
   <project label="Project">
-    <news        label="News"             href="index.html" />    
-    <about       label="About"            href="about.html" />    
-    <credits     label="Credits"          href="credits.html" />    
-    <download    label="Download"         href="ext:releases" />
-    <store       label="Buy Stuff"        href="ext:store" />    
+    <releases  label="Releases"           href="releases.html" />
+    <news      label="News"               href="releases.html#News" />
+    <credits   label="Credits"            href="credits.html" /> 
+    <store     label="Buy Stuff"          href="ext:store" />    
   </project>
 
-  <docs label="Documentation">    
-    <faq         label="FAQ"              href="ext:faq" />    
-    <wiki        label="Wiki"             href="ext:wiki" />    
-    <HDFS        label="Hadoop File System"  href="hdfs_design.html" />    
-    <apidocs     label="API Docs"         href="api/index.html" />
+  <docs label="Documentation"> 
+    <hdfs      label="Hadoop File System" href="hdfs_design.html" />
+    <install   label="Install and Configure" href="ext:overview" />
+    <api       label="API Docs"           href="ext:api" />
+    <wiki      label="Wiki"               href="ext:wiki" />
+    <faq       label="FAQ"                href="ext:faq" />
+    <usermail  label="Mailing Lists"      href="mailing_lists.html#Users" />
   </docs>
 
-  <resources label="Developer">
-    <contact     label="Mailing Lists"    href="mailing_lists.html" />
-    <issues      label="Issue Tracking"   href="issue_tracking.html" />
-    <vcs         label="Version Control"  href="version_control.html" />
-    <nightly     label="Nightly Build"    href="ext:nightly" />
+  <resources label="Developers">
+    <devmail   label="Mailing Lists"      href="mailing_lists.html#Developers" />
+    <issues    label="Issue Tracking"     href="issue_tracking.html" />
+    <vcs       label="Version Control"    href="version_control.html" />
+    <nightly   label="Nightly Build"      href="ext:nightly" />
   </resources>
 
-  <projects label="Related Projects">
-    <lucene     label="Lucene"		  href="ext:lucene" />
-    <nutch      label="Nutch"             href="ext:nutch" />
-  </projects>
-
   <external-refs>
-    <lucene    href="http://lucene.apache.org/java/" />
-    <nutch     href="http://lucene.apache.org/nutch/" />
     <wiki      href="http://wiki.apache.org/lucene-hadoop/" />
     <faq       href="http://wiki.apache.org/lucene-hadoop/FAQ" />
     <nightly   href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/" />
     <releases  href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/" />
     <store     href="http://www.cafepress.com/hadoop/" />
+    <api       href="api/index.html" />
+    <overview  href="api/overview-summary.html#overview_description" />
   </external-refs>
  
 </site>
