@@ -449,6 +449,8 @@ Branch 0.14 (unreleased changes)
 141. HADOOP-1647.  FileSystem.getFileStatus returns valid values for "/".
      (Dhruba Borthakur via dhruba)
 
+142. HADOOP-1657.  Fix NNBench to ensure that the block size is a
+     multiple of bytes.per.checksum. (Raghu Angadi via dhruba)
 
 Release 0.13.0 - 2007-06-08
 
