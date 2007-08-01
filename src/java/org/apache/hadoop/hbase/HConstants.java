@@ -41,7 +41,8 @@ public interface HConstants {
   
   /** Parameter name for master address */
   static final String MASTER_ADDRESS = "hbase.master";
-  
+
+  /** default host address */
   static final String DEFAULT_HOST = "0.0.0.0";
   
   /** Default master address */
@@ -100,11 +101,15 @@ public interface HConstants {
   
   /** The ROOT and META column family */
   static final Text COLUMN_FAMILY = new Text("info:");
-  
+
+  /** Array of meta column names */
   static final Text [] COLUMN_FAMILY_ARRAY = new Text [] {COLUMN_FAMILY};
   
   /** ROOT/META column family member - contains HRegionInfo */
   static final Text COL_REGIONINFO = new Text(COLUMN_FAMILY + "regioninfo");
+
+  /** Array of column - contains HRegionInfo */
+  static final Text[] COL_REGIONINFO_ARRAY = new Text [] {COL_REGIONINFO};
   
   /** ROOT/META column family member - contains HServerAddress.toString() */
   static final Text COL_SERVER = new Text(COLUMN_FAMILY + "server");
@@ -113,6 +118,9 @@ public interface HConstants {
   static final Text COL_STARTCODE = new Text(COLUMN_FAMILY + "serverstartcode");
 
   // Other constants
+
+  /** used by scanners, etc when they want to start at the beginning of a region */
+  static final Text EMPTY_START_ROW = new Text();
 
   /** When we encode strings, we always specify UTF8 encoding */
   static final String UTF8_ENCODING = "UTF-8";

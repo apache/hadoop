@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.io.Text;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * Tests region server failover when a region server exits.
@@ -36,6 +38,8 @@ public class TestCleanRegionServerExit extends HBaseClusterTestCase {
     conf.setInt("ipc.client.timeout", 5000);            // reduce ipc client timeout
     conf.setInt("ipc.client.connect.max.retries", 5);   // and number of retries
     conf.setInt("hbase.client.retries.number", 2);      // reduce HBase retries
+    Logger.getRootLogger().setLevel(Level.WARN);
+    Logger.getLogger(this.getClass().getPackage().getName()).setLevel(Level.DEBUG);
   }
   
   /**

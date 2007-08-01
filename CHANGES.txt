@@ -79,3 +79,5 @@ Trunk (unreleased changes)
      10 concurrent clients
  50. HADOOP-1468 Add HBase batch update to reduce RPC overhead (restrict batches
      to a single row at a time)
+ 51. HADOOP-1528 HClient for multiple tables (phase 1)
+
