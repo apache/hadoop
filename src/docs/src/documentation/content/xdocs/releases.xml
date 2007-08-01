@@ -10,9 +10,6 @@
   </header> 
 
   <body> 
-    <p>This page lists release numbers along with their dates and a
-    link to release notes. You can obtain releases from a nearby
-    mirror.</p>
 
     <section>
       <title>Download</title>
@@ -44,7 +41,7 @@
     </section>
 
     <section>
-      <title>Project News</title>
+      <title>News</title>
 
       <section>
       <title>25 July, 2007: release 0.13.1 available</title>
