@@ -53,6 +53,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     this.regionServers = 1;
   }
 
+  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -60,11 +61,13 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
       new MiniHBaseCluster(this.conf, this.regionServers, this.miniHdfs);
   }
 
+  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
     if (this.cluster != null) {
       this.cluster.shutdown();
     }
+    HConnectionManager.deleteConnection(conf);
   }
 }

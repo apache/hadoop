@@ -69,7 +69,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
     // Setup colkeys to be inserted
     HTableDescriptor htd = new HTableDescriptor(getName());
     Text tableName = new Text(getName());
-    Text[] colKeys = new Text[(int)(LAST_COLKEY - FIRST_COLKEY) + 1];
+    Text[] colKeys = new Text[(LAST_COLKEY - FIRST_COLKEY) + 1];
     for (char i = 0; i < colKeys.length; i++) {
       colKeys[i] = new Text(new String(new char[] { 
         (char)(FIRST_COLKEY + i), ':' }));
@@ -201,9 +201,9 @@ public class TestScanner2 extends HBaseClusterTestCase {
     long scannerId = -1L;
     try {
       client.openTable(table);
-      HClient.RegionLocation rl = client.getRegionLocation(table);
-      regionServer = client.getHRegionConnection(rl.serverAddress);
-      scannerId = regionServer.openScanner(rl.regionInfo.regionName,
+      HRegionLocation rl = client.getRegionLocation(table);
+      regionServer = client.getHRegionConnection(rl.getServerAddress());
+      scannerId = regionServer.openScanner(rl.getRegionInfo().getRegionName(),
           HMaster.METACOLUMNS, new Text(), System.currentTimeMillis(), null);
       while (true) {
         TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();

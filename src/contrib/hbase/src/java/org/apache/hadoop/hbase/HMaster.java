@@ -942,25 +942,29 @@ public class HMaster implements HConstants, HMasterInterface,
       
       // HRegionServer is shutting down. Cancel the server's lease.
       
-      LOG.info("Region server " + s + ": MSG_REPORT_EXITING");
-      cancelLease(s, serverLabel);
+      if (cancelLease(s, serverLabel)) {
+        // Only process the exit message if the server still has a lease.
+        // Otherwise we could end up processing the server exit twice.
+
+        LOG.info("Region server " + s + ": MSG_REPORT_EXITING");
       
-      // Get all the regions the server was serving reassigned
-      // (if we are not shutting down).
-      
-      if (!closed) {
-        for (int i = 1; i < msgs.length; i++) {
-          HRegionInfo info = msgs[i].getRegionInfo();
-          
-          if (info.tableDesc.getName().equals(ROOT_TABLE_NAME)) {
-            rootRegionLocation = null;
-          
-          } else if (info.tableDesc.getName().equals(META_TABLE_NAME)) {
-            onlineMetaRegions.remove(info.getStartKey());
+        // Get all the regions the server was serving reassigned
+        // (if we are not shutting down).
+
+        if (!closed) {
+          for (int i = 1; i < msgs.length; i++) {
+            HRegionInfo info = msgs[i].getRegionInfo();
+
+            if (info.tableDesc.getName().equals(ROOT_TABLE_NAME)) {
+              rootRegionLocation = null;
+
+            } else if (info.tableDesc.getName().equals(META_TABLE_NAME)) {
+              onlineMetaRegions.remove(info.getStartKey());
+            }
+
+            unassignedRegions.put(info.regionName, info);
+            assignAttempts.put(info.regionName, Long.valueOf(0L));
           }
-          
-          unassignedRegions.put(info.regionName, info);
-          assignAttempts.put(info.regionName, Long.valueOf(0L));
         }
       }
       
@@ -1021,14 +1025,16 @@ public class HMaster implements HConstants, HMasterInterface,
   }
 
   /** cancel a server's lease */
-  private void cancelLease(final String serverName, final long serverLabel)
-  throws IOException {
+  private boolean cancelLease(final String serverName, final long serverLabel) {
+    boolean leaseCancelled = false;
     if (serversToServerInfo.remove(serverName) != null) {
       // Only cancel lease once.
       // This method can be called a couple of times during shutdown.
       LOG.info("Cancelling lease for " + serverName);
       serverLeases.cancelLease(serverLabel, serverLabel);
+      leaseCancelled = true;
     }
+    return leaseCancelled;
   }
   
   /** Process all the incoming messages from a server that's contacted us. */
@@ -1721,6 +1727,10 @@ public class HMaster implements HConstants, HMasterInterface,
           if (rootRegionLocation == null || !rootScanned) {
             // We can't proceed until the root region is online and has been
             // scanned
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("root region=" + rootRegionLocation.toString() +
+                  ", rootScanned=" + rootScanned);
+            }
             return false;
           }
           metaRegionName = HGlobals.rootRegionInfo.regionName;
@@ -1735,6 +1745,11 @@ public class HMaster implements HConstants, HMasterInterface,
             // online message from being processed. So return false to have this
             // operation requeued.
             
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("rootScanned=" + rootScanned + ", numberOfMetaRegions=" +
+                  numberOfMetaRegions.get() + ", onlineMetaRegions.size()=" +
+                  onlineMetaRegions.size());
+            }
             return false;
           }
 
@@ -2474,16 +2489,15 @@ public class HMaster implements HConstants, HMasterInterface,
      */
     public void leaseExpired() {
       LOG.info(server + " lease expired");
+      
+      // Remove the server from the known servers list
+      
       HServerInfo storedInfo = serversToServerInfo.remove(server);
-      if(rootRegionLocation != null
-          && rootRegionLocation.toString().equals(
-              storedInfo.getServerAddress().toString())) {
-        
-        rootRegionLocation = null;
-        unassignedRegions.put(HGlobals.rootRegionInfo.regionName,
-            HGlobals.rootRegionInfo);
-        assignAttempts.put(HGlobals.rootRegionInfo.regionName, 0L);
-      }
+      
+      // NOTE: If the server was serving the root region, we cannot reassign it
+      // here because the new server will start serving the root region before
+      // the PendingServerShutdown operation has a chance to split the log file.
+      
       try {
         msgQueue.put(new PendingServerShutdown(storedInfo));
       } catch (InterruptedException e) {

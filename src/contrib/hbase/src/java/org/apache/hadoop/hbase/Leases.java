@@ -180,10 +180,8 @@ public class Leases {
    * 
    * @param holderId id of lease holder
    * @param resourceId id of resource being leased
-   * @throws IOException
    */
-  public void cancelLease(final long holderId, final long resourceId)
-  throws IOException {
+  public void cancelLease(final long holderId, final long resourceId) {
     LeaseName name = null;
     synchronized(leases) {
       synchronized(sortedLeases) {
@@ -191,9 +189,8 @@ public class Leases {
         Lease lease = leases.get(name);
         if (lease == null) {
           // It's possible that someone tries to renew the lease, but 
-          // it just expired a moment ago.  So fail.
-          throw new IOException("Cannot cancel lease that is not held: " +
-            name);
+          // it just expired a moment ago.  So just skip it.
+          return;
         }
         sortedLeases.remove(lease);
         leases.remove(name);
@@ -206,6 +203,7 @@ public class Leases {
 
   /** LeaseMonitor is a thread that expires Leases that go on too long. */
   class LeaseMonitor implements Runnable {
+    /** {@inheritDoc} */
     public void run() {
       while(running) {
         synchronized(leases) {
@@ -236,6 +234,7 @@ public class Leases {
    * A Lease name.
    * More lightweight than String or Text.
    */
+  @SuppressWarnings("unchecked")
   class LeaseName implements Comparable {
     private final long holderId;
     private final long resourceId;
@@ -245,6 +244,7 @@ public class Leases {
       this.resourceId = rid;
     }
     
+    /** {@inheritDoc} */
     @Override
     public boolean equals(Object obj) {
       LeaseName other = (LeaseName)obj;
@@ -252,6 +252,7 @@ public class Leases {
         this.resourceId == other.resourceId;
     }
     
+    /** {@inheritDoc} */
     @Override
     public int hashCode() {
       // Copy OR'ing from javadoc for Long#hashCode.
@@ -260,12 +261,14 @@ public class Leases {
       return result;
     }
     
+    /** {@inheritDoc} */
     @Override
     public String toString() {
       return Long.toString(this.holderId) + "/" +
         Long.toString(this.resourceId);
     }
 
+    /** {@inheritDoc} */
     public int compareTo(Object obj) {
       LeaseName other = (LeaseName)obj;
       if (this.holderId < other.holderId) {
@@ -292,6 +295,7 @@ public class Leases {
   }
 
   /** This class tracks a single Lease. */
+  @SuppressWarnings("unchecked")
   private class Lease implements Comparable {
     final long holderId;
     final long resourceId;
@@ -329,11 +333,13 @@ public class Leases {
       listener.leaseExpired();
     }
     
+    /** {@inheritDoc} */
     @Override
     public boolean equals(Object obj) {
       return compareTo(obj) == 0;
     }
     
+    /** {@inheritDoc} */
     @Override
     public int hashCode() {
       int result = this.getLeaseName().hashCode();
@@ -345,6 +351,7 @@ public class Leases {
     // Comparable
     //////////////////////////////////////////////////////////////////////////////
 
+    /** {@inheritDoc} */
     public int compareTo(Object o) {
       Lease other = (Lease) o;
       if(this.lastUpdate < other.lastUpdate) {

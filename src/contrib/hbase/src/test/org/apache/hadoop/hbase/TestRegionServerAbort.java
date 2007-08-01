@@ -38,7 +38,8 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
     conf.setInt("ipc.client.timeout", 5000);            // reduce client timeout
     conf.setInt("ipc.client.connect.max.retries", 5);   // and number of retries
     conf.setInt("hbase.client.retries.number", 2);      // reduce HBase retries
-//    Logger.getLogger(this.getClass().getPackage().getName()).setLevel(Level.DEBUG);
+    Logger.getRootLogger().setLevel(Level.WARN);
+    Logger.getLogger(this.getClass().getPackage().getName()).setLevel(Level.DEBUG);
   }
   
   /**
