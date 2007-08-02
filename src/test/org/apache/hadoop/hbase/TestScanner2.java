@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RegExpRowFilter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
@@ -64,7 +65,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
    */
   public void testScannerFilter() throws Exception {
     // Setup HClient, ensure that it is running correctly
-    HClient client = new HClient(this.conf);
+    HBaseAdmin admin = new HBaseAdmin(conf);
     
     // Setup colkeys to be inserted
     HTableDescriptor htd = new HTableDescriptor(getName());
@@ -75,28 +76,28 @@ public class TestScanner2 extends HBaseClusterTestCase {
         (char)(FIRST_COLKEY + i), ':' }));
       htd.addFamily(new HColumnDescriptor(colKeys[i].toString()));
     }
-    client.createTable(htd);
+    admin.createTable(htd);
     assertTrue("Table with name " + tableName + " created successfully.", 
-        client.tableExists(tableName));
-    assertTrue("Master is running.", client.isMasterRunning());
+        admin.tableExists(tableName));
+    assertTrue("Master is running.", admin.isMasterRunning());
     
     // Enter data
-    client.openTable(tableName);
+    HTable table = new HTable(conf, tableName);
     for (char i = FIRST_ROWKEY; i <= LAST_ROWKEY; i++) {
       Text rowKey = new Text(new String(new char[] { i }));
-      long lockID = client.startUpdate(rowKey);
+      long lockID = table.startUpdate(rowKey);
       for (char j = 0; j < colKeys.length; j++) {
-        client.put(lockID, colKeys[j], (i >= FIRST_BAD_RANGE_ROWKEY && 
+        table.put(lockID, colKeys[j], (i >= FIRST_BAD_RANGE_ROWKEY && 
           i <= LAST_BAD_RANGE_ROWKEY)? BAD_BYTES : GOOD_BYTES);
       }
-      client.commit(lockID);
+      table.commit(lockID);
     }
     
-    regExpFilterTest(client, colKeys);
-    rowFilterSetTest(client, colKeys);
+    regExpFilterTest(table, colKeys);
+    rowFilterSetTest(table, colKeys);
   }
   
-  private void regExpFilterTest(HClient client, Text[] colKeys) 
+  private void regExpFilterTest(HTable table, Text[] colKeys) 
     throws Exception {
     // Get the filter.  The RegExpRowFilter used should filter out vowels.
     Map<Text, byte[]> colCriteria = new TreeMap<Text, byte[]>();
@@ -106,14 +107,14 @@ public class TestScanner2 extends HBaseClusterTestCase {
     RowFilterInterface filter = new RegExpRowFilter("[^aeiou]", colCriteria);
 
     // Create the scanner from the filter.
-    HScannerInterface scanner = client.obtainScanner(colKeys, new Text(new 
+    HScannerInterface scanner = table.obtainScanner(colKeys, new Text(new 
       String(new char[] { FIRST_ROWKEY })), filter);
 
     // Iterate over the scanner, ensuring that results match the passed regex.
     iterateOnScanner(scanner, "[^aei-qu]");
   }
   
-  private void rowFilterSetTest(HClient client, Text[] colKeys) 
+  private void rowFilterSetTest(HTable table, Text[] colKeys) 
     throws Exception {
     // Get the filter.  The RegExpRowFilter used should filter out vowels and 
     // the WhileMatchRowFilter(StopRowFilter) should filter out all rows 
@@ -125,7 +126,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
       new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL, filterSet);
     
     // Create the scanner from the filter.
-    HScannerInterface scanner = client.obtainScanner(colKeys, new Text(new 
+    HScannerInterface scanner = table.obtainScanner(colKeys, new Text(new 
         String(new char[] { FIRST_ROWKEY })), filter);
     
     // Iterate over the scanner, ensuring that results match the passed regex.
@@ -159,16 +160,17 @@ public class TestScanner2 extends HBaseClusterTestCase {
    */
   public void testSplitDeleteOneAddTwoRegions() throws IOException {
     // First add a new table.  Its intial region will be added to META region.
-    HClient client = new HClient(this.conf);
-    client.createTable(new HTableDescriptor(getName()));
-    List<HRegionInfo> regions = scan(client, HConstants.META_TABLE_NAME);
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    Text tableName = new Text(getName());
+    admin.createTable(new HTableDescriptor(tableName.toString()));
+    List<HRegionInfo> regions = scan(conf, HConstants.META_TABLE_NAME);
     assertEquals("Expected one region", regions.size(), 1);
     HRegionInfo region = regions.get(0);
     assertTrue("Expected region named for test",
       region.regionName.toString().startsWith(getName()));
     // Now do what happens at split time; remove old region and then add two
     // new ones in its place.
-    HRegion.removeRegionFromMETA(client, HConstants.META_TABLE_NAME,
+    HRegion.removeRegionFromMETA(conf, HConstants.META_TABLE_NAME,
       region.regionName);
     HTableDescriptor desc = region.tableDesc;
     Path homedir = new Path(getName());
@@ -181,10 +183,10 @@ public class TestScanner2 extends HBaseClusterTestCase {
         homedir, this.conf, null));
     try {
       for (HRegion r : newRegions) {
-        HRegion.addRegionToMETA(client, HConstants.META_TABLE_NAME, r,
+        HRegion.addRegionToMETA(conf, HConstants.META_TABLE_NAME, r,
             this.cluster.getHMasterAddress(), -1L);
       }
-      regions = scan(client, HConstants.META_TABLE_NAME);
+      regions = scan(conf, HConstants.META_TABLE_NAME);
       assertEquals("Should be two regions only", 2, regions.size());
     } finally {
       for (HRegion r : newRegions) {
@@ -194,15 +196,15 @@ public class TestScanner2 extends HBaseClusterTestCase {
     }
   }
   
-  private List<HRegionInfo> scan(final HClient client, final Text table)
+  private List<HRegionInfo> scan(final Configuration conf, final Text table)
   throws IOException {
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     HRegionInterface regionServer = null;
     long scannerId = -1L;
     try {
-      client.openTable(table);
-      HRegionLocation rl = client.getRegionLocation(table);
-      regionServer = client.getHRegionConnection(rl.getServerAddress());
+      HTable t = new HTable(conf, table);
+      HRegionLocation rl = t.getRegionLocation(table);
+      regionServer = t.getConnection().getHRegionConnection(rl.getServerAddress());
       scannerId = regionServer.openScanner(rl.getRegionInfo().getRegionName(),
           HMaster.METACOLUMNS, new Text(), System.currentTimeMillis(), null);
       while (true) {

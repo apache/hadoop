@@ -32,13 +32,15 @@ import org.apache.hadoop.io.Text;
 public class TestHBaseCluster extends HBaseClusterTestCase {
 
   private HTableDescriptor desc;
-  private HClient client;
+  private HBaseAdmin admin;
+  private HTable table;
 
   /** constructor */
   public TestHBaseCluster() {
     super(true);
     this.desc = null;
-    this.client = null;
+    this.admin = null;
+    this.table = null;
   }
 
   /**
@@ -55,6 +57,8 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     cleanup();
   }
 
+  /** {@inheritDoc} */
+  @Override
   public void tearDown() throws Exception {
     super.tearDown();
   }
@@ -69,11 +73,12 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
   private static final String ANCHORSTR = "anchorstr";
 
   private void setup() throws IOException {
-    client = new HClient(conf);
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor(CONTENTS.toString()));
     desc.addFamily(new HColumnDescriptor(ANCHOR.toString()));
-    client.createTable(desc);
+    admin = new HBaseAdmin(conf);
+    admin.createTable(desc);
+    table = new HTable(conf, desc.getName());
   }
       
   // Test basic functionality. Writes to contents:basic and anchor:anchornum-*
@@ -81,15 +86,13 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
   private void basic() throws IOException {
     long startTime = System.currentTimeMillis();
 
-    client.openTable(desc.getName());
-
     // Write out a bunch of values
 
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-      long writeid = client.startUpdate(new Text("row_" + k));
-      client.put(writeid, CONTENTS_BASIC, (CONTENTSTR + k).getBytes());
-      client.put(writeid, new Text(ANCHORNUM + k), (ANCHORSTR + k).getBytes());
-      client.commit(writeid);
+      long writeid = table.startUpdate(new Text("row_" + k));
+      table.put(writeid, CONTENTS_BASIC, (CONTENTSTR + k).getBytes());
+      table.put(writeid, new Text(ANCHORNUM + k), (ANCHORSTR + k).getBytes());
+      table.commit(writeid);
     }
     System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
@@ -102,7 +105,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
       Text rowlabel = new Text("row_" + k);
 
-      byte bodydata[] = client.get(rowlabel, CONTENTS_BASIC);
+      byte bodydata[] = table.get(rowlabel, CONTENTS_BASIC);
       assertNotNull(bodydata);
       String bodystr = new String(bodydata).toString().trim();
       String teststr = CONTENTSTR + k;
@@ -110,7 +113,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
           + "), expected: '" + teststr + "' got: '" + bodystr + "'",
           bodystr, teststr);
       collabel = new Text(ANCHORNUM + k);
-      bodydata = client.get(rowlabel, collabel);
+      bodydata = table.get(rowlabel, collabel);
       bodystr = new String(bodydata).toString().trim();
       teststr = ANCHORSTR + k;
       assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
@@ -130,7 +133,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     
     long startTime = System.currentTimeMillis();
     
-    HScannerInterface s = client.obtainScanner(cols, new Text());
+    HScannerInterface s = table.obtainScanner(cols, new Text());
     try {
 
       int contentsFetched = 0;
@@ -178,7 +181,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
   }
 
   private void listTables() throws IOException {
-    HTableDescriptor[] tables = client.listTables();
+    HTableDescriptor[] tables = admin.listTables();
     assertEquals(1, tables.length);
     assertEquals(desc.getName(), tables[0].getName());
     Set<Text> families = tables[0].families().keySet();
@@ -191,6 +194,6 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
 
     // Delete the table we created
 
-    client.deleteTable(desc.getName());
+    admin.deleteTable(desc.getName());
   }
 }

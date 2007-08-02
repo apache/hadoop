@@ -94,7 +94,7 @@ public class HMaster implements HConstants, HMasterInterface,
   private Server server;
   private HServerAddress address;
   
-  HClient client;
+  HConnection connection;
  
   long metaRescanInterval;
   
@@ -188,7 +188,7 @@ public class HMaster implements HConstants, HMasterInterface,
           region.regionName);
 
       try {
-        regionServer = client.getHRegionConnection(region.server);
+        regionServer = connection.getHRegionConnection(region.server);
         scannerId = regionServer.openScanner(region.regionName, METACOLUMNS,
           FIRST_ROW, System.currentTimeMillis(), null);
 
@@ -681,7 +681,7 @@ public class HMaster implements HConstants, HMasterInterface,
     this.address = new HServerAddress(server.getListenerAddress());
     conf.set(MASTER_ADDRESS, address.toString());
     
-    this.client = new HClient(conf);
+    this.connection = HConnectionManager.getConnection(conf);
     
     this.metaRescanInterval
       = conf.getLong("hbase.master.meta.thread.rescanfrequency", 60 * 1000);
@@ -1478,7 +1478,7 @@ public class HMaster implements HConstants, HMasterInterface,
             // scanned
             return false;
           }
-          server = client.getHRegionConnection(rootRegionLocation);
+          server = connection.getHRegionConnection(rootRegionLocation);
           scannerId = -1L;
 
           try {
@@ -1523,7 +1523,7 @@ public class HMaster implements HConstants, HMasterInterface,
             HRegionInterface server = null;
             long scannerId = -1L;
 
-            server = client.getHRegionConnection(r.server);
+            server = connection.getHRegionConnection(r.server);
           
             scannerId = server.openScanner(r.regionName, columns, startRow,
                 System.currentTimeMillis(), null);
@@ -1595,7 +1595,7 @@ public class HMaster implements HConstants, HMasterInterface,
             return false;
           }
           metaRegionName = HGlobals.rootRegionInfo.regionName;
-          server = client.getHRegionConnection(rootRegionLocation);
+          server = connection.getHRegionConnection(rootRegionLocation);
           onlineMetaRegions.remove(regionInfo.getStartKey());
 
         } else {
@@ -1619,7 +1619,7 @@ public class HMaster implements HConstants, HMasterInterface,
                 onlineMetaRegions.headMap(regionInfo.getRegionName()).lastKey());
           }
           metaRegionName = r.regionName;
-          server = client.getHRegionConnection(r.server);
+          server = connection.getHRegionConnection(r.server);
         }
 
         long clientId = rand.nextLong();
@@ -1734,7 +1734,7 @@ public class HMaster implements HConstants, HMasterInterface,
             return false;
           }
           metaRegionName = HGlobals.rootRegionInfo.regionName;
-          server = client.getHRegionConnection(rootRegionLocation);
+          server = connection.getHRegionConnection(rootRegionLocation);
 
         } else {
           if (!rootScanned
@@ -1762,7 +1762,7 @@ public class HMaster implements HConstants, HMasterInterface,
                 onlineMetaRegions.headMap(region.getRegionName()).lastKey());
           }
           metaRegionName = r.regionName;
-          server = client.getHRegionConnection(r.server);
+          server = connection.getHRegionConnection(r.server);
         }
         LOG.info("updating row " + region.getRegionName() + " in table " +
             metaRegionName);
@@ -1898,12 +1898,12 @@ public class HMaster implements HConstants, HMasterInterface,
             onlineMetaRegions.get(onlineMetaRegions.
               headMap(newRegion.getTableDesc().getName()).lastKey());
       Text metaRegionName = m.regionName;
-      HRegionInterface connection = client.getHRegionConnection(m.server);
-      long scannerid = connection.openScanner(metaRegionName,
+      HRegionInterface r = connection.getHRegionConnection(m.server);
+      long scannerid = r.openScanner(metaRegionName,
         new Text[] { COL_REGIONINFO }, tableName, System.currentTimeMillis(),
         null);
       try {
-        KeyedData[] data = connection.next(scannerid);
+        KeyedData[] data = r.next(scannerid);
         // Test data and that the row for the data is for our table. If
         // table does not exist, scanner will return row after where our table
         // would be inserted if it exists so look for exact match on table
@@ -1915,30 +1915,29 @@ public class HMaster implements HConstants, HMasterInterface,
           throw new TableExistsException(tableName.toString());
         }
       } finally {
-        connection.close(scannerid);
+        r.close(scannerid);
       }
 
       // 2. Create the HRegion
-      HRegion r = HRegion.createHRegion(newRegion.regionId, newRegion.
+      HRegion region = HRegion.createHRegion(newRegion.regionId, newRegion.
         getTableDesc(), this.dir, this.conf);
 
       // 3. Insert into meta
-      HRegionInfo info = r.getRegionInfo();
-      Text regionName = r.getRegionName();
+      HRegionInfo info = region.getRegionInfo();
+      Text regionName = region.getRegionName();
       ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteValue);
       info.write(s);
       long clientId = rand.nextLong();
-      long lockid = connection.
-        startUpdate(metaRegionName, clientId, regionName);
-      connection.put(metaRegionName, clientId, lockid, COL_REGIONINFO,
+      long lockid = r.startUpdate(metaRegionName, clientId, regionName);
+      r.put(metaRegionName, clientId, lockid, COL_REGIONINFO,
         byteValue.toByteArray());
-      connection.commit(metaRegionName, clientId, lockid,
+      r.commit(metaRegionName, clientId, lockid,
         System.currentTimeMillis());
 
       // 4. Close the new region to flush it to disk.  Close its log file too.
-      r.close();
-      r.getLog().closeAndDelete();
+      region.close();
+      region.getLog().closeAndDelete();
 
       // 5. Get it assigned to a server
       unassignedRegions.put(regionName, info);
@@ -2039,7 +2038,7 @@ public class HMaster implements HConstants, HMasterInterface,
 
               // Get a connection to a meta server
 
-              HRegionInterface server = client.getHRegionConnection(m.server);
+              HRegionInterface server = connection.getHRegionConnection(m.server);
 
               // Open a scanner on the meta region
               
@@ -2549,8 +2548,8 @@ public class HMaster implements HConstants, HMasterInterface,
       
       if (cmd.equals("stop")) {
         try {
-          HClient client = new HClient(conf);
-          client.shutdown();
+          HBaseAdmin adm = new HBaseAdmin(conf);
+          adm.shutdown();
         } catch (Throwable t) {
           LOG.error( "Can not stop master because " +
               StringUtils.stringifyException(t) );

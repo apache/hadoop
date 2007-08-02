@@ -29,7 +29,7 @@ public class TestBloomFilters extends HBaseClusterTestCase {
   private static final Text CONTENTS = new Text("contents:");
 
   private HTableDescriptor desc = null;
-  private HClient client = null;
+  private HTable table = null;
   
   private static final Text[] rows = {
     new Text("wmjwjzyv"),
@@ -150,11 +150,11 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     Logger.getLogger(HStore.class).setLevel(Level.DEBUG);
   }
   
+  /** {@inheritDoc} */
   @Override
   public void setUp() {
     try {
       super.setUp();
-      this.client = new HClient(conf);
       this.desc = new HTableDescriptor("test");
       desc.addFamily(
           new HColumnDescriptor(CONTENTS, 1, HColumnDescriptor.CompressionType.NONE,
@@ -164,17 +164,18 @@ public class TestBloomFilters extends HBaseClusterTestCase {
                   12499,                              // number of bits
                   4                                   // number of hash functions
               )));                                    // false positive = 0.0000001
-      client.createTable(desc);
-      client.openTable(desc.getName());
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      admin.createTable(desc);
+      table = new HTable(conf, desc.getName());
 
       // Store some values
 
       for(int i = 0; i < 100; i++) {
         Text row = rows[i];
         String value = row.toString();
-        long lockid = client.startUpdate(rows[i]);
-        client.put(lockid, CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
-        client.commit(lockid);
+        long lockid = table.startUpdate(rows[i]);
+        table.put(lockid, CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
+        table.commit(lockid);
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -195,7 +196,7 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     
     try {
       for(int i = 0; i < testKeys.length; i++) {
-        byte[] value = client.get(testKeys[i], CONTENTS);
+        byte[] value = table.get(testKeys[i], CONTENTS);
         if(value != null && value.length != 0) {
           System.err.println("non existant key: " + testKeys[i] +
               " returned value: " + new String(value, HConstants.UTF8_ENCODING));

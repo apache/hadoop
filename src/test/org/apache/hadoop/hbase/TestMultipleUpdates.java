@@ -30,7 +30,7 @@ public class TestMultipleUpdates extends HBaseClusterTestCase {
   private static final byte[] value = { 1, 2, 3, 4 };
 
   private HTableDescriptor desc = null;
-  private HClient client = null;
+  private HTable table = null;
 
   /**
    * {@inheritDoc}
@@ -38,12 +38,12 @@ public class TestMultipleUpdates extends HBaseClusterTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.client = new HClient(conf);
     this.desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor(CONTENTS_STR));
     try {
-      client.createTable(desc);
-      client.openTable(desc.getName());
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      admin.createTable(desc);
+      table = new HTable(conf, desc.getName());
       
     } catch (Exception e) {
       e.printStackTrace();
@@ -54,18 +54,11 @@ public class TestMultipleUpdates extends HBaseClusterTestCase {
   /** the test */
   public void testMultipleUpdates() {
     try {
-      long lockid = client.startUpdate(new Text("row1"));
+      long lockid = table.startUpdate(new Text("row1"));
       
       try {
-        long lockid2 = client.startUpdate(new Text("row2"));
+        long lockid2 = table.startUpdate(new Text("row2"));
         throw new Exception("second startUpdate returned lock id " + lockid2);
-        
-      } catch (IllegalStateException i) {
-        // expected
-      }
-      
-      try {
-        client.openTable(HConstants.META_TABLE_NAME);
         
       } catch (IllegalStateException i) {
         // expected
@@ -74,41 +67,34 @@ public class TestMultipleUpdates extends HBaseClusterTestCase {
       long invalidid = 42;
       
       try {
-        client.put(invalidid, CONTENTS, value);
+        table.put(invalidid, CONTENTS, value);
         
       } catch (IllegalArgumentException i) {
         // expected
       }
       
       try {
-        client.delete(invalidid, CONTENTS);
+        table.delete(invalidid, CONTENTS);
         
       } catch (IllegalArgumentException i) {
         // expected
       }
       
       try {
-        client.put(invalidid, CONTENTS, value);
+        table.abort(invalidid);
         
       } catch (IllegalArgumentException i) {
         // expected
       }
       
       try {
-        client.abort(invalidid);
+        table.commit(invalidid);
         
       } catch (IllegalArgumentException i) {
         // expected
       }
       
-      try {
-        client.commit(invalidid);
-        
-      } catch (IllegalArgumentException i) {
-        // expected
-      }
-      
-      client.abort(lockid);
+      table.abort(lockid);
       
     } catch (Exception e) {
       System.err.println("unexpected exception");

@@ -102,7 +102,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   /** Runs periodically to determine if regions need to be compacted or split */
   class SplitOrCompactChecker implements Runnable, RegionUnavailableListener {
-    HClient client = new HClient(conf);
   
     /**
      * {@inheritDoc}
@@ -207,7 +206,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // Remove old region from META
       for (int tries = 0; tries < numRetries; tries++) {
         try {
-          HRegion.removeRegionFromMETA(client, tableToUpdate,
+          HRegion.removeRegionFromMETA(conf, tableToUpdate,
               region.getRegionName());
           break;
         } catch (IOException e) {
@@ -224,7 +223,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       for (int i = 0; i < newRegions.length; i++) {
         for (int tries = 0; tries < numRetries; tries ++) {
           try {
-            HRegion.addRegionToMETA(client, tableToUpdate, newRegions[i],
+            HRegion.addRegionToMETA(conf, tableToUpdate, newRegions[i],
                 serverInfo.getServerAddress(), serverInfo.getStartCode());
             break;
           } catch(IOException e) {

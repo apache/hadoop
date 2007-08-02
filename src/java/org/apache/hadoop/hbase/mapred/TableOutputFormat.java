@@ -33,7 +33,7 @@ import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.io.KeyedData;
 import org.apache.hadoop.hbase.io.KeyedDataArrayWritable;
 
@@ -57,20 +57,18 @@ public class TableOutputFormat extends OutputFormatBase {
    * and write to an HBase table
    */
   protected class TableRecordWriter implements RecordWriter {
-    private HClient m_client;
+    private HTable m_table;
 
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing.
      * 
-     * @param client
+     * @param table
      */
-    public TableRecordWriter(HClient client) {
-      m_client = client;
+    public TableRecordWriter(HTable table) {
+      m_table = table;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.mapred.RecordWriter#close(org.apache.hadoop.mapred.Reporter)
-     */
+    /** {@inheritDoc} */
     public void close(@SuppressWarnings("unused") Reporter reporter) {}
 
     /**
@@ -87,16 +85,16 @@ public class TableOutputFormat extends OutputFormatBase {
 
       // start transaction
       
-      long xid = m_client.startUpdate(tKey);
+      long xid = m_table.startUpdate(tKey);
       
       for(int i = 0; i < columns.length; i++) {
         KeyedData column = columns[i];
-        m_client.put(xid, column.getKey().getColumn(), column.getData());
+        m_table.put(xid, column.getKey().getColumn(), column.getData());
       }
       
       // end transaction
       
-      m_client.commit(xid);
+      m_table.commit(xid);
 
       LOG.debug("end write");
     }
@@ -105,6 +103,7 @@ public class TableOutputFormat extends OutputFormatBase {
   /* (non-Javadoc)
    * @see org.apache.hadoop.mapred.OutputFormatBase#getRecordWriter(org.apache.hadoop.fs.FileSystem, org.apache.hadoop.mapred.JobConf, java.lang.String, org.apache.hadoop.util.Progressable)
    */
+  /** {@inheritDoc} */
   @Override
   @SuppressWarnings("unused")
   public RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
@@ -114,20 +113,17 @@ public class TableOutputFormat extends OutputFormatBase {
     
     LOG.debug("start get writer");
     Text tableName = new Text(job.get(OUTPUT_TABLE));
-    HClient client = null;
+    HTable table = null;
     try {
-      client = new HClient(job);
-      client.openTable(tableName);
+      table = new HTable(job, tableName);
     } catch(Exception e) {
       LOG.error(e);
     }
     LOG.debug("end get writer");
-    return new TableRecordWriter(client);
+    return new TableRecordWriter(table);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.mapred.OutputFormatBase#checkOutputSpecs(org.apache.hadoop.fs.FileSystem, org.apache.hadoop.mapred.JobConf)
-   */
+  /** {@inheritDoc} */
   @Override
   @SuppressWarnings("unused")
   public void checkOutputSpecs(FileSystem ignored, JobConf job)

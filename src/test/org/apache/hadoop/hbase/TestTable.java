@@ -25,15 +25,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /** Tests table creation restrictions*/
 public class TestTable extends HBaseClusterTestCase {
+  /** constructor */
   public TestTable() {
     super(true);
   }
 
+  /**
+   * the test
+   * @throws IOException
+   */
   public void testCreateTable() throws IOException {
-    final HClient client = new HClient(conf);
+    final HBaseAdmin admin = new HBaseAdmin(conf);
     String msg = null;
     try {
-      client.createTable(HGlobals.rootTableDesc);
+      admin.createTable(HGlobals.rootTableDesc);
     } catch (IllegalArgumentException e) {
       msg = e.toString();
     }
@@ -43,7 +48,7 @@ public class TestTable extends HBaseClusterTestCase {
     
     msg = null;
     try {
-      client.createTable(HGlobals.metaTableDesc);
+      admin.createTable(HGlobals.metaTableDesc);
     } catch(IllegalArgumentException e) {
       msg = e.toString();
     }
@@ -55,9 +60,9 @@ public class TestTable extends HBaseClusterTestCase {
     msg = null;
     HTableDescriptor desc = new HTableDescriptor(getName());
     desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
-    client.createTable(desc);
+    admin.createTable(desc);
     try {
-      client.createTable(desc);
+      admin.createTable(desc);
     } catch (TableExistsException e) {
       msg = e.getMessage();
     }
@@ -78,7 +83,7 @@ public class TestTable extends HBaseClusterTestCase {
         @Override
         public void run() {
           try {
-            client.createTable(threadDesc);
+            admin.createTable(threadDesc);
             successes.incrementAndGet();
           } catch (TableExistsException e) {
             failures.incrementAndGet();
@@ -111,10 +116,11 @@ public class TestTable extends HBaseClusterTestCase {
    * @throws Exception
    */
   public void testTableNameClash() throws Exception {
-    HClient client = new HClient(conf);
-    client.createTable(new HTableDescriptor(getName() + "SOMEUPPERCASE"));
-    client.createTable(new HTableDescriptor(getName()));
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.createTable(new HTableDescriptor(getName() + "SOMEUPPERCASE"));
+    admin.createTable(new HTableDescriptor(getName()));
     // Before fix, below would fail throwing a NoServerForRegionException.
-    client.openTable(new Text(getName()));
+    @SuppressWarnings("unused")
+    HTable table = new HTable(conf, new Text(getName()));
   }
 }
