@@ -44,12 +44,19 @@ public class FsShell extends ToolBase {
   /**
    */
   public FsShell() {
+    fs = null;
+    trash = null;
   }
 
   protected void init() throws IOException {
     conf.setQuietMode(true);
-    this.fs = FileSystem.get(conf);
-    this.trash = new Trash(conf);
+    if (this.fs == null) {
+      this.fs = FileSystem.get(conf);
+    }
+    if (this.trash == null) {
+      this.trash = new Trash(conf);
+    }
+    System.out.println("XXX FsShell init done");
   }
 
   /**
@@ -1310,16 +1317,28 @@ public class FsShell extends ToolBase {
       System.err.println(cmd.substring(1) + ": " + 
                          e.getLocalizedMessage());  
     } finally {
-      fs.close();
     }
     return exitCode;
+  }
+
+  public void close() throws IOException {
+    if (fs != null) {
+      fs.close();
+      fs = null;
+    }
   }
 
   /**
    * main() has some simple utility methods
    */
   public static void main(String argv[]) throws Exception {
-    int res = new FsShell().doMain(new Configuration(), argv);
+    FsShell shell = new FsShell();
+    int res;
+    try {
+      res = shell.doMain(new Configuration(), argv);
+    } finally {
+      shell.close();
+    }
     System.exit(res);
   }
 
