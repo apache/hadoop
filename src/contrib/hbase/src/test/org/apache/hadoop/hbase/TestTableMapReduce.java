@@ -225,15 +225,14 @@ public class TestTableMapReduce extends HBaseTestCase {
   }
   
   private void scanTable(Configuration conf) throws IOException {
-    HClient client = new HClient(conf);
-    client.openTable(new Text(TABLE_NAME));
+    HTable table = new HTable(conf, new Text(TABLE_NAME));
     
     Text[] columns = {
         TEXT_INPUT_COLUMN,
         TEXT_OUTPUT_COLUMN
     };
     HScannerInterface scanner =
-      client.obtainScanner(columns, HClient.EMPTY_START_ROW);
+      table.obtainScanner(columns, HConstants.EMPTY_START_ROW);
     
     try {
       HStoreKey key = new HStoreKey();

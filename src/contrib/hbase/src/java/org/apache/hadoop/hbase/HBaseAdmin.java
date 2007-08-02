@@ -57,6 +57,46 @@ public class HBaseAdmin implements HConstants {
   }
 
   /**
+   * @return proxy connection to master server for this instance
+   * @throws MasterNotRunningException
+   */
+  public HMasterInterface getMaster() throws MasterNotRunningException{
+    return this.connection.getMaster();
+  }
+  
+  /** @return - true if the master server is running */
+  public boolean isMasterRunning() {
+    return this.connection.isMasterRunning();
+  }
+
+  /**
+   * @param tableName Table to check.
+   * @return True if table exists already.
+   * @throws MasterNotRunningException
+   */
+  public boolean tableExists(final Text tableName) throws MasterNotRunningException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
+    
+    return connection.tableExists(tableName);
+  }
+
+  /**
+   * List all the userspace tables.  In other words, scan the META table.
+   *
+   * If we wanted this to be really fast, we could implement a special
+   * catalog table that just contains table names and their descriptors.
+   * Right now, it only exists as part of the META table's region info.
+   *
+   * @return - returns an array of HTableDescriptors 
+   * @throws IOException
+   */
+  public HTableDescriptor[] listTables() throws IOException {
+    return this.connection.listTables();
+  }
+
+  /**
    * Creates a new table
    * 
    * @param desc table descriptor for table
@@ -380,19 +420,6 @@ public class HBaseAdmin implements HConstants {
     LOG.info("Disabled table " + tableName);
   }
   
-  /**
-   * @param tableName Table to check.
-   * @return True if table exists already.
-   * @throws MasterNotRunningException
-   */
-  public boolean tableExists(final Text tableName) throws MasterNotRunningException {
-    if (this.master == null) {
-      throw new MasterNotRunningException("master has been shut down");
-    }
-    
-    return connection.tableExists(tableName);
-  }
-
   /**
    * Add a column to an existing table
    * 

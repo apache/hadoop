@@ -30,7 +30,7 @@ import org.apache.log4j.Logger;
  * Tests region server failover when a region server exits.
  */
 public class TestCleanRegionServerExit extends HBaseClusterTestCase {
-  private HClient client;
+  private HTable table;
 
   /** constructor */
   public TestCleanRegionServerExit() {
@@ -48,7 +48,6 @@ public class TestCleanRegionServerExit extends HBaseClusterTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.client = new HClient(conf);
   }
   
   /**
@@ -57,19 +56,21 @@ public class TestCleanRegionServerExit extends HBaseClusterTestCase {
    */
   public void testCleanRegionServerExit() throws IOException {
     // When the META table can be opened, the region servers are running
-    this.client.openTable(HConstants.META_TABLE_NAME);
+    @SuppressWarnings("unused")
+    HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     // Put something into the meta table.
     String tableName = getName();
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
-    this.client.createTable(desc);
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.createTable(desc);
     // put some values in the table
-    this.client.openTable(new Text(tableName));
+    this.table = new HTable(conf, new Text(tableName));
     Text row = new Text("row1");
-    long lockid = client.startUpdate(row);
-    client.put(lockid, HConstants.COLUMN_FAMILY,
+    long lockid = table.startUpdate(row);
+    table.put(lockid, HConstants.COLUMN_FAMILY,
         tableName.getBytes(HConstants.UTF8_ENCODING));
-    client.commit(lockid);
+    table.commit(lockid);
     // Start up a new region server to take over serving of root and meta
     // after we shut down the current meta/root host.
     this.cluster.startRegionServer();
@@ -81,7 +82,7 @@ public class TestCleanRegionServerExit extends HBaseClusterTestCase {
     // to a different server
 
     HScannerInterface scanner =
-      client.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
+      table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
 
     try {
       HStoreKey key = new HStoreKey();

@@ -61,9 +61,9 @@ class HMerge implements HConstants {
    */
   public static void merge(Configuration conf, FileSystem fs, Text tableName)
       throws IOException {
-    
-    HClient client = new HClient(conf);
-    boolean masterIsRunning = client.isMasterRunning();
+
+    HConnection connection = HConnectionManager.getConnection(conf);
+    boolean masterIsRunning = connection.isMasterRunning();
     if(tableName.equals(META_TABLE_NAME)) {
         if(masterIsRunning) {
           throw new IllegalStateException(
@@ -76,7 +76,7 @@ class HMerge implements HConstants {
         throw new IllegalStateException(
             "HBase instance must be running to merge a normal table");
       }
-      new OnlineMerger(conf, fs, client, tableName).process();
+      new OnlineMerger(conf, fs, tableName).process();
     }
   }
 
@@ -195,17 +195,16 @@ class HMerge implements HConstants {
 
   /** Instantiated to compact a normal user table */
   private static class OnlineMerger extends Merger {
-    private HClient client;
+    private HTable table;
     private HScannerInterface metaScanner;
     private HRegionInfo latestRegion;
     
-    OnlineMerger(Configuration conf, FileSystem fs, HClient client,
-        Text tableName) throws IOException {
+    OnlineMerger(Configuration conf, FileSystem fs, Text tableName)
+    throws IOException {
       
       super(conf, fs, tableName);
-      this.client = client;
-      client.openTable(META_TABLE_NAME);
-      this.metaScanner = client.obtainScanner(META_COLS, new Text());
+      this.table = new HTable(conf, META_TABLE_NAME);
+      this.metaScanner = table.obtainScanner(META_COLS, new Text());
       this.latestRegion = null;
     }
     
@@ -269,11 +268,11 @@ class HMerge implements HConstants {
         }
         long lockid = -1L;
         try {
-          lockid = client.startUpdate(regionsToDelete[r]);
-          client.delete(lockid, COL_REGIONINFO);
-          client.delete(lockid, COL_SERVER);
-          client.delete(lockid, COL_STARTCODE);
-          client.commit(lockid);
+          lockid = table.startUpdate(regionsToDelete[r]);
+          table.delete(lockid, COL_REGIONINFO);
+          table.delete(lockid, COL_SERVER);
+          table.delete(lockid, COL_STARTCODE);
+          table.commit(lockid);
           lockid = -1L;
 
           if(LOG.isDebugEnabled()) {
@@ -282,7 +281,7 @@ class HMerge implements HConstants {
         } finally {
           try {
             if(lockid != -1L) {
-              client.abort(lockid);
+              table.abort(lockid);
             }
 
           } catch(IOException iex) {
@@ -296,9 +295,9 @@ class HMerge implements HConstants {
       newRegion.getRegionInfo().write(s);
       long lockid = -1L;
       try {
-        lockid = client.startUpdate(newRegion.getRegionName());
-        client.put(lockid, COL_REGIONINFO, byteValue.toByteArray());
-        client.commit(lockid);
+        lockid = table.startUpdate(newRegion.getRegionName());
+        table.put(lockid, COL_REGIONINFO, byteValue.toByteArray());
+        table.commit(lockid);
         lockid = -1L;
 
         if(LOG.isDebugEnabled()) {
@@ -308,7 +307,7 @@ class HMerge implements HConstants {
       } finally {
         try {
           if(lockid != -1L) {
-            client.abort(lockid);
+            table.abort(lockid);
           }
 
         } catch(IOException iex) {

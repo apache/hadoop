@@ -94,6 +94,11 @@ public class HTable implements HConstants {
         row : this.tableServers.headMap(row).lastKey();
     return this.tableServers.get(serverKey);
   }
+
+  /** @return the connection */
+  HConnection getConnection() {
+    return connection;
+  }
   
   /**
    * Verifies that no update is in progress

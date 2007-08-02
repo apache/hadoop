@@ -25,15 +25,21 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Test HClient.
  */
+@Deprecated
 public class TestHClient extends HBaseClusterTestCase {
   private Log LOG = LogFactory.getLog(this.getClass().getName());
   private HClient client;
 
+  /** {@inheritDoc} */
+  @Override
   public void setUp() throws Exception {
     super.setUp();
     this.client = new HClient(this.conf);
   }
   
+  /** the test
+   * @throws Exception
+   */
   public void testCommandline() throws Exception {
     final String m =  "--master=" + this.conf.get(HConstants.MASTER_ADDRESS);
     LOG.info("Creating table");

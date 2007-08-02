@@ -33,7 +33,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
   private byte[] value;
 
   private HTableDescriptor desc = null;
-  private HClient client = null;
+  private HTable table = null;
 
   /** constructor */
   public TestBatchUpdate() {
@@ -51,12 +51,12 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.client = new HClient(conf);
     this.desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor(CONTENTS_STR));
     try {
-      client.createTable(desc);
-      client.openTable(desc.getName());
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      admin.createTable(desc);
+      table = new HTable(conf, desc.getName());
       
     } catch (Exception e) {
       e.printStackTrace();
@@ -67,7 +67,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
   /** the test case */
   public void testBatchUpdate() {
     try {
-      client.commitBatch(-1L);
+      table.commitBatch(-1L);
       
     } catch (IllegalStateException e) {
       // expected
@@ -76,37 +76,28 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       fail();
     }
 
-    long lockid = client.startBatchUpdate(new Text("row1"));
+    long lockid = table.startBatchUpdate(new Text("row1"));
     
-    try {
-      client.openTable(HConstants.META_TABLE_NAME);
-      
-    } catch (IllegalStateException e) {
-      // expected
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
-    }
     try {
       try {
         @SuppressWarnings("unused")
-        long dummy = client.startUpdate(new Text("row2"));
+        long dummy = table.startUpdate(new Text("row2"));
       } catch (IllegalStateException e) {
         // expected
       } catch (Exception e) {
         e.printStackTrace();
         fail();
       }
-      client.put(lockid, CONTENTS, value);
-      client.delete(lockid, CONTENTS);
-      client.commitBatch(lockid);
+      table.put(lockid, CONTENTS, value);
+      table.delete(lockid, CONTENTS);
+      table.commitBatch(lockid);
       
-      lockid = client.startBatchUpdate(new Text("row2"));
-      client.put(lockid, CONTENTS, value);
-      client.commit(lockid);
+      lockid = table.startBatchUpdate(new Text("row2"));
+      table.put(lockid, CONTENTS, value);
+      table.commit(lockid);
  
       Text[] columns = { CONTENTS };
-      HScannerInterface scanner = client.obtainScanner(columns, new Text());
+      HScannerInterface scanner = table.obtainScanner(columns, new Text());
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       while(scanner.next(key, results)) {

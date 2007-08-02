@@ -1715,22 +1715,22 @@ public class HRegion implements HConstants {
     meta.commit(writeid, System.currentTimeMillis());
   }
   
-  static void addRegionToMETA(final HClient client,
+  static void addRegionToMETA(final Configuration conf,
       final Text table, final HRegion region,
       final HServerAddress serverAddress,
       final long startCode)
   throws IOException {
-    client.openTable(table);
+    HTable t = new HTable(conf, table);
     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(bytes);
     region.getRegionInfo().write(out);
-    long lockid = client.startUpdate(region.getRegionName());
-    client.put(lockid, COL_REGIONINFO, bytes.toByteArray());
-    client.put(lockid, COL_SERVER,
+    long lockid = t.startUpdate(region.getRegionName());
+    t.put(lockid, COL_REGIONINFO, bytes.toByteArray());
+    t.put(lockid, COL_SERVER,
       serverAddress.toString().getBytes(UTF8_ENCODING));
-    client.put(lockid, COL_STARTCODE,
+    t.put(lockid, COL_STARTCODE,
       String.valueOf(startCode).getBytes(UTF8_ENCODING));
-    client.commit(lockid);
+    t.commit(lockid);
     if (LOG.isDebugEnabled()) {
       LOG.info("Added region " + region.getRegionName() + " to table " +
         table);
@@ -1739,20 +1739,20 @@ public class HRegion implements HConstants {
   
   /**
    * Delete <code>region</code> from META <code>table</code>.
-   * @param client Client to use running update.
+   * @param conf Configuration object
    * @param table META table we are to delete region from.
    * @param regionName Region to remove.
    * @throws IOException
    */
-  static void removeRegionFromMETA(final HClient client,
+  static void removeRegionFromMETA(final Configuration conf,
       final Text table, final Text regionName)
   throws IOException {
-    client.openTable(table);
-    long lockid = client.startUpdate(regionName);
-    client.delete(lockid, COL_REGIONINFO);
-    client.delete(lockid, COL_SERVER);
-    client.delete(lockid, COL_STARTCODE);
-    client.commit(lockid);
+    HTable t = new HTable(conf, table);
+    long lockid = t.startUpdate(regionName);
+    t.delete(lockid, COL_REGIONINFO);
+    t.delete(lockid, COL_SERVER);
+    t.delete(lockid, COL_STARTCODE);
+    t.commit(lockid);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removed " + regionName + " from table " + table);
     }

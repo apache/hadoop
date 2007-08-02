@@ -80,4 +80,7 @@ Trunk (unreleased changes)
  50. HADOOP-1468 Add HBase batch update to reduce RPC overhead (restrict batches
      to a single row at a time)
  51. HADOOP-1528 HClient for multiple tables (phase 1)
+ 52. HADOOP-1528 HClient for multiple tables (phase 2) all HBase client side code
+     (except TestHClient and HBaseShell) have been converted to use the new client
+     side objects (HTable/HBaseAdmin/HConnection) instead of HClient.
 

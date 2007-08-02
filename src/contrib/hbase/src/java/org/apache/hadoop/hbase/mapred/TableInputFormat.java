@@ -37,7 +37,7 @@ import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.KeyedData;
@@ -59,7 +59,7 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
   
   private Text m_tableName;
   Text[] m_cols;
-  HClient m_client;
+  HTable m_table;
 
   /**
    * Iterate over an HBase table data, return (HStoreKey, KeyedDataArrayWritable) pairs
@@ -78,14 +78,12 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
     public TableRecordReader(Text startRow, Text endRow) throws IOException {
       LOG.debug("start construct");
       m_row = new TreeMap<Text, byte[]>();
-      m_scanner = m_client.obtainScanner(m_cols, startRow);
+      m_scanner = m_table.obtainScanner(m_cols, startRow);
       m_endRow = endRow;
       LOG.debug("end construct");
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.mapred.RecordReader#close()
-     */
+    /** {@inheritDoc} */
     public void close() throws IOException {
       LOG.debug("start close");
       m_scanner.close();
@@ -110,18 +108,14 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
       return new KeyedDataArrayWritable();
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.mapred.RecordReader#getPos()
-     */
+    /** {@inheritDoc} */
     public long getPos() {
       // This should be the ordinal tuple in the range; 
       // not clear how to calculate...
       return 0;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.hadoop.mapred.RecordReader#getProgress()
-     */
+    /** {@inheritDoc} */
     public float getProgress() {
       // Depends on the total number of tuples and getPos
       return 0;
@@ -165,9 +159,7 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
 
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.mapred.InputFormat#getRecordReader(org.apache.hadoop.mapred.InputSplit, org.apache.hadoop.mapred.JobConf, org.apache.hadoop.mapred.Reporter)
-   */
+  /** {@inheritDoc} */
   public RecordReader getRecordReader(InputSplit split,
       @SuppressWarnings("unused") JobConf job,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {
@@ -185,7 +177,7 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     LOG.debug("start getSplits");
 
-    Text[] startKeys = m_client.getStartKeys();
+    Text[] startKeys = m_table.getStartKeys();
     if(startKeys == null || startKeys.length == 0) {
       throw new IOException("Expecting at least one region");
     }
@@ -199,9 +191,7 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
     return splits;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.mapred.JobConfigurable#configure(org.apache.hadoop.mapred.JobConf)
-   */
+  /** {@inheritDoc} */
   public void configure(JobConf job) {
     LOG.debug("start configure");
     Path[] tableNames = job.getInputPaths();
@@ -212,18 +202,15 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
     for(int i = 0; i < m_cols.length; i++) {
       m_cols[i] = new Text(colNames[i]);
     }
-    m_client = new HClient(job);
     try {
-      m_client.openTable(m_tableName);
-    } catch(Exception e) {
+      m_table = new HTable(job, m_tableName);
+    } catch (Exception e) {
       LOG.error(e);
     }
     LOG.debug("end configure");
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.mapred.InputFormat#validateInput(org.apache.hadoop.mapred.JobConf)
-   */
+  /** {@inheritDoc} */
   public void validateInput(JobConf job) throws IOException {
 
     // expecting exactly one path

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.io.Text;
 
+/** tests administrative functions */
 public class TestMasterAdmin extends HBaseClusterTestCase {
   private static final Text COLUMN_NAME = new Text("col1:");
   private static HTableDescriptor testDesc;
@@ -29,17 +30,20 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
     testDesc.addFamily(new HColumnDescriptor(COLUMN_NAME.toString()));
   }
   
-  private HClient client;
+  private HBaseAdmin admin;
 
+  /** constructor */
   public TestMasterAdmin() {
     super(true);
-    client = new HClient(conf);
+    admin = null;
   }
   
+  /** the test */
   public void testMasterAdmin() {
     try {
-      client.createTable(testDesc);
-      client.disableTable(testDesc.getName());
+      admin = new HBaseAdmin(conf);
+      admin.createTable(testDesc);
+      admin.disableTable(testDesc.getName());
       
     } catch(Exception e) {
       e.printStackTrace();
@@ -48,23 +52,24 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
 
     try {
       try {
-        client.openTable(testDesc.getName());
+        @SuppressWarnings("unused")
+        HTable table = new HTable(conf, testDesc.getName());
 
       } catch(IllegalStateException e) {
         // Expected
       }
 
-      client.addColumn(testDesc.getName(), new HColumnDescriptor("col2:"));
-      client.enableTable(testDesc.getName());
+      admin.addColumn(testDesc.getName(), new HColumnDescriptor("col2:"));
+      admin.enableTable(testDesc.getName());
       try {
-        client.deleteColumn(testDesc.getName(), new Text("col2:"));
+        admin.deleteColumn(testDesc.getName(), new Text("col2:"));
         
       } catch(TableNotDisabledException e) {
         // Expected
       }
 
-      client.disableTable(testDesc.getName());
-      client.deleteColumn(testDesc.getName(), new Text("col2:"));
+      admin.disableTable(testDesc.getName());
+      admin.deleteColumn(testDesc.getName(), new Text("col2:"));
       
     } catch(Exception e) {
       e.printStackTrace();
@@ -72,7 +77,7 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
       
     } finally {
       try {
-        client.deleteTable(testDesc.getName());
+        admin.deleteTable(testDesc.getName());
         
       } catch(Exception e) {
         e.printStackTrace();
