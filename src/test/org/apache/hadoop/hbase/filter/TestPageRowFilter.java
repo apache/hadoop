@@ -28,20 +28,33 @@ import org.apache.hadoop.io.Text;
 
 import junit.framework.TestCase;
 
+/**
+ * Tests for the page row filter
+ */
 public class TestPageRowFilter extends TestCase {
   
   RowFilterInterface mainFilter;
   final int ROW_LIMIT = 3;
   
+  /** {@inheritDoc} */
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     mainFilter = new PageRowFilter(ROW_LIMIT);
   }
   
+  /**
+   * test page size filter
+   * @throws Exception
+   */
   public void testPageSize() throws Exception {
     pageSizeTests(mainFilter);
   }
   
+  /**
+   * Test filter serialization
+   * @throws Exception
+   */
   public void testSerialization() throws Exception {
     // Decompose mainFilter to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();

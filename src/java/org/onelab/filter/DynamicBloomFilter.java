@@ -118,6 +118,7 @@ public class DynamicBloomFilter extends Filter {
     matrix[0] = new BloomFilter(this.vectorSize, this.nbHash);
   }//end constructor
 
+  /** {@inheritDoc} */
   @Override
   public void add(Key key){
     if(key == null) {
@@ -137,6 +138,7 @@ public class DynamicBloomFilter extends Filter {
     currentNbRecord++;
   }//end add()
 
+  /** {@inheritDoc} */
   @Override
   public void and(Filter filter) {
     if(filter == null
@@ -157,6 +159,7 @@ public class DynamicBloomFilter extends Filter {
     }
   }//end and()
 
+  /** {@inheritDoc} */
   @Override
   public boolean membershipTest(Key key){
     if(key == null) {
@@ -172,6 +175,7 @@ public class DynamicBloomFilter extends Filter {
     return false;
   }//end membershipTest()
 
+  /** {@inheritDoc} */
   @Override
   public void not(){
     for(int i = 0; i < matrix.length; i++) {
@@ -179,6 +183,7 @@ public class DynamicBloomFilter extends Filter {
     }
   }//end not()
 
+  /** {@inheritDoc} */
   @Override
   public void or(Filter filter){
     if(filter == null
@@ -198,6 +203,7 @@ public class DynamicBloomFilter extends Filter {
     }
   }//end or()
 
+  /** {@inheritDoc} */
   @Override
   public void xor(Filter filter){
     if(filter == null
@@ -217,6 +223,7 @@ public class DynamicBloomFilter extends Filter {
     }
   }//end xor()
 
+  /** {@inheritDoc} */
   @Override
   public String toString(){
     StringBuilder res = new StringBuilder();
@@ -228,6 +235,7 @@ public class DynamicBloomFilter extends Filter {
     return res.toString();
   }//end toString()
 
+  /** {@inheritDoc} */
   @Override
   public Object clone(){
     DynamicBloomFilter dbf = new DynamicBloomFilter(vectorSize, nbHash, nr);
@@ -239,11 +247,13 @@ public class DynamicBloomFilter extends Filter {
     return dbf;
   }//end clone()
 
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = super.hashCode();
@@ -255,6 +265,7 @@ public class DynamicBloomFilter extends Filter {
 
   // Writable
 
+  /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -263,6 +274,7 @@ public class DynamicBloomFilter extends Filter {
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
@@ -274,6 +286,7 @@ public class DynamicBloomFilter extends Filter {
 
   // Comparable
   
+  /** {@inheritDoc} */
   @Override
   public int compareTo(Object o) {
     int result = super.compareTo(o);

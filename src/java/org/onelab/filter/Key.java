@@ -121,11 +121,13 @@ public class Key implements WritableComparable {
     this.weight++;
   }//end incrementWeight()
 
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = 0;
@@ -138,18 +140,14 @@ public class Key implements WritableComparable {
 
   // Writable
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeInt(bytes.length);
     out.write(bytes);
     out.writeDouble(weight);
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.bytes = new byte[in.readInt()];
     in.readFully(this.bytes);
@@ -158,9 +156,7 @@ public class Key implements WritableComparable {
   
   // Comparable
   
-  /* (non-Javadoc)
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   */
+  /** {@inheritDoc} */
   public int compareTo(Object o) {
     Key other = (Key)o;
 

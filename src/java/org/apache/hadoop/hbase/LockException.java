@@ -21,12 +21,20 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+/**
+ * Thrown when a locking error is encountered
+ */
 public class LockException extends IOException {
   private static final long serialVersionUID = 1L << 13 - 1L;
+  /** default constructor */
   public LockException() {
     super();
   }
 
+  /**
+   * Constructor
+   * @param s message
+   */
   public LockException(String s) {
     super(s);
   }

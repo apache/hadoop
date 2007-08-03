@@ -21,12 +21,20 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+/**
+ * Thrown if the master is not running
+ */
 public class MasterNotRunningException extends IOException {
   private static final long serialVersionUID = 1L << 23 - 1L;
+  /** default constructor */
   public MasterNotRunningException() {
     super();
   }
 
+  /**
+   * Constructor
+   * @param s message
+   */
   public MasterNotRunningException(String s) {
     super(s);
   }

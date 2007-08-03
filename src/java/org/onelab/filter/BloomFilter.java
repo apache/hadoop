@@ -89,6 +89,7 @@ public class BloomFilter extends Filter {
     vector = new boolean[this.vectorSize];
   }//end constructor
 
+  /** {@inheritDoc} */
   @Override
   public void add(Key key) {
     if(key == null) {
@@ -103,6 +104,7 @@ public class BloomFilter extends Filter {
     }
   }//end add()
 
+  /** {@inheritDoc} */
   @Override
   public void and(Filter filter){
     if(filter == null
@@ -119,6 +121,7 @@ public class BloomFilter extends Filter {
     }
   }//end and()
 
+  /** {@inheritDoc} */
   @Override
   public boolean membershipTest(Key key){
     if(key == null) {
@@ -135,6 +138,7 @@ public class BloomFilter extends Filter {
     return true;
   }//end memberhsipTest()
 
+  /** {@inheritDoc} */
   @Override
   public void not(){
     for(int i = 0; i < vectorSize; i++) {
@@ -142,6 +146,7 @@ public class BloomFilter extends Filter {
     }
   }//end not()
 
+  /** {@inheritDoc} */
   @Override
   public void or(Filter filter){
     if(filter == null
@@ -158,6 +163,7 @@ public class BloomFilter extends Filter {
     }
   }//end or()
 
+  /** {@inheritDoc} */
   @Override
   public void xor(Filter filter){
     if(filter == null
@@ -175,7 +181,7 @@ public class BloomFilter extends Filter {
     }
   }//and xor()
 
-  /** Returns a String representation of <i>this</i> Bloom filter. */
+  /** {@inheritDoc} */
   @Override
   public String toString(){
     StringBuilder res = new StringBuilder();
@@ -186,7 +192,7 @@ public class BloomFilter extends Filter {
     return res.toString();
   }//end toString()
 
-  /** Returns a shallow copy of <i>this</i> Bloom filter. */
+  /** {@inheritDoc} */
   @Override
   public Object clone(){
     BloomFilter bf = new BloomFilter(vectorSize, nbHash);
@@ -194,11 +200,13 @@ public class BloomFilter extends Filter {
     return bf;
   }//end clone()
 
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = super.hashCode();
@@ -210,6 +218,7 @@ public class BloomFilter extends Filter {
 
   // Writable
 
+  /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -218,6 +227,7 @@ public class BloomFilter extends Filter {
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
@@ -229,6 +239,7 @@ public class BloomFilter extends Filter {
 
   // Comparable
   
+  /** {@inheritDoc} */
   @Override
   public int compareTo(Object o) {
     int result = super.compareTo(o);

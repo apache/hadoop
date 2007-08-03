@@ -23,50 +23,62 @@ import org.apache.hadoop.io.*;
 
 import java.io.*;
 
-/*******************************************************************************
+/**
  * A log value.
  *
  * These aren't sortable; you need to sort by the matching HLogKey.
  * The table and row are already identified in HLogKey.
  * This just indicates the column and value.
- ******************************************************************************/
+ */
 public class HLogEdit implements Writable {
   private Text column = new Text();
   private byte [] val;
   private long timestamp;
 
+  /**
+   * Default constructor used by Writable
+   */
   public HLogEdit() {
     super();
   }
 
+  /**
+   * Construct a fully initialized HLogEdit
+   * @param column column name
+   * @param bval value
+   * @param timestamp timestamp for modification
+   */
   public HLogEdit(Text column, byte [] bval, long timestamp) {
     this.column.set(column);
     this.val = bval;
     this.timestamp = timestamp;
   }
 
+  /** @return the column */
   public Text getColumn() {
     return this.column;
   }
 
+  /** @return the value */
   public byte [] getVal() {
     return this.val;
   }
 
+  /** @return the timestamp */
   public long getTimestamp() {
     return this.timestamp;
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return getColumn().toString() + " " + this.getTimestamp() + " " +
       new String(getVal()).trim();
   }
   
-  //////////////////////////////////////////////////////////////////////////////
   // Writable
-  //////////////////////////////////////////////////////////////////////////////
 
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     this.column.write(out);
     out.writeShort(this.val.length);
@@ -74,6 +86,7 @@ public class HLogEdit implements Writable {
     out.writeLong(timestamp);
   }
   
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.column.readFields(in);
     this.val = new byte[in.readShort()];

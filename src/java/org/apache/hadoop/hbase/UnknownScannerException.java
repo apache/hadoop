@@ -21,13 +21,21 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+/**
+ * Thrown if a region server is passed an unknown scanner id
+ */
 public class UnknownScannerException extends IOException {
   private static final long serialVersionUID = 993179627856392526L;
 
+  /** constructor */
   public UnknownScannerException() {
     super();
   }
 
+  /**
+   * Constructor
+   * @param s message
+   */
   public UnknownScannerException(String s) {
     super(s);
   }

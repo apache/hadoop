@@ -78,7 +78,7 @@ public class HTableDescriptor implements WritableComparable {
   }
 
   /**
-   * Add a column family.
+   * Adds a column family.
    * @param family HColumnDescriptor of familyto add.
    */
   public void addFamily(HColumnDescriptor family) {
@@ -95,7 +95,8 @@ public class HTableDescriptor implements WritableComparable {
     return families.containsKey(family);
   }
 
-  /** All the column families in this table.
+  /** 
+   * All the column families in this table.
    * 
    *  TODO: What is this used for? Seems Dangerous to let people play with our
    *  private members.
@@ -106,16 +107,19 @@ public class HTableDescriptor implements WritableComparable {
     return families;
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "name: " + this.name.toString() + ", families: " + this.families;
       }
   
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     // TODO: Cache.
@@ -128,10 +132,9 @@ public class HTableDescriptor implements WritableComparable {
     return result;
   }
   
-  //////////////////////////////////////////////////////////////////////////////
   // Writable
-  //////////////////////////////////////////////////////////////////////////////
 
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     name.write(out);
     out.writeInt(families.size());
@@ -141,6 +144,7 @@ public class HTableDescriptor implements WritableComparable {
     }
   }
 
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.name.readFields(in);
     int numCols = in.readInt();
@@ -152,10 +156,9 @@ public class HTableDescriptor implements WritableComparable {
     }
   }
 
-  //////////////////////////////////////////////////////////////////////////////
   // Comparable
-  //////////////////////////////////////////////////////////////////////////////
 
+  /** {@inheritDoc} */
   public int compareTo(Object o) {
     HTableDescriptor other = (HTableDescriptor) o;
     int result = name.compareTo(other.name);

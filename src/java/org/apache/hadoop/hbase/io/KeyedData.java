@@ -56,22 +56,16 @@ public class KeyedData implements Writable {
     return data;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
   // Writable
-  //////////////////////////////////////////////////////////////////////////////
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     key.write(out);
     out.writeInt(this.data.length);
     out.write(this.data);
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     key.readFields(in);
     this.data = new byte[in.readInt()];

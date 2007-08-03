@@ -88,7 +88,7 @@ public class ImmutableBytesWritable implements WritableComparable {
   }
   
   /**
-   * Get the current size of the buffer.
+   * @return the current size of the buffer.
    */
   public int getSize() {
     if (this.bytes == null) {
@@ -99,13 +99,13 @@ public class ImmutableBytesWritable implements WritableComparable {
   }
 
 
-  // inherit javadoc
+  /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
     this.bytes = new byte[in.readInt()];
     in.readFully(this.bytes, 0, this.bytes.length);
   }
   
-  // inherit javadoc
+  /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
     out.writeInt(this.bytes.length);
     out.write(this.bytes, 0, this.bytes.length);
@@ -113,6 +113,8 @@ public class ImmutableBytesWritable implements WritableComparable {
   
   // Below methods copied from BytesWritable
   
+  /** {@inheritDoc} */
+  @Override
   public int hashCode() {
     return WritableComparator.hashBytes(bytes, this.bytes.length);
   }
@@ -127,6 +129,12 @@ public class ImmutableBytesWritable implements WritableComparable {
     return compareTo(((ImmutableBytesWritable)right_obj).get());
   }
   
+  /**
+   * Compares the bytes in this object to the specified byte array
+   * @param that
+   * @return Positive if left is bigger than right, 0 if they are equal, and
+   *         negative if left is smaller than right.
+   */
   public int compareTo(final byte [] that) {
     int diff = this.bytes.length - that.length;
     return (diff != 0)?
@@ -135,9 +143,8 @@ public class ImmutableBytesWritable implements WritableComparable {
         0, that.length);
   }
   
-  /**
-   * Are the two byte sequences equal?
-   */
+  /** {@inheritDoc} */
+  @Override
   public boolean equals(Object right_obj) {
     if (right_obj instanceof ImmutableBytesWritable) {
       return compareTo(right_obj) == 0;
@@ -145,9 +152,8 @@ public class ImmutableBytesWritable implements WritableComparable {
     return false;
   }
   
-  /**
-   * Generate the stream of bytes as hex pairs separated by ' '.
-   */
+  /** {@inheritDoc} */
+  @Override
   public String toString() { 
     StringBuffer sb = new StringBuffer(3*this.bytes.length);
     for (int idx = 0; idx < this.bytes.length; idx++) {
@@ -170,14 +176,14 @@ public class ImmutableBytesWritable implements WritableComparable {
   public static class Comparator extends WritableComparator {
     private BytesWritable.Comparator comparator =
       new BytesWritable.Comparator();
-    
+
+    /** constructor */
     public Comparator() {
       super(ImmutableBytesWritable.class);
     }
     
-    /**
-     * Compare the buffers in serialized form.
-     */
+    /** {@inheritDoc} */
+    @Override
     public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       return comparator.compare(b1, s1, l1, b2, s2, l2);
     }

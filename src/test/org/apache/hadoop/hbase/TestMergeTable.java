@@ -21,8 +21,15 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+/**
+ * Tests merging a normal table's regions
+ */
 public class TestMergeTable extends AbstractMergeTestBase {
 
+  /**
+   * Test case
+   * @throws IOException
+   */
   public void testMergeTable() throws IOException {
     MiniHBaseCluster hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
     try {

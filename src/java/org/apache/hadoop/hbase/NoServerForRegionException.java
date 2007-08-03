@@ -21,13 +21,21 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+/**
+ * Thrown when no region server can be found for a region
+ */
 public class NoServerForRegionException extends IOException {
   private static final long serialVersionUID = 1L << 11 - 1L;
 
+  /** default constructor */
   public NoServerForRegionException() {
     super();
   }
 
+  /**
+   * Constructor
+   * @param s message
+   */
   public NoServerForRegionException(String s) {
     super(s);
   }

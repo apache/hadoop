@@ -21,13 +21,13 @@ package org.apache.hadoop.hbase.shell;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HClient;
-import org.apache.hadoop.hbase.shell.generated.ParseException;
 import org.apache.hadoop.hbase.shell.generated.Parser;
 
+/**
+ * Tests for HBase shell
+ */
 public class TestHBaseShell extends TestCase {
+  /** test parsing */
   public void testParse() {
     String queryString1 = "SELECT test_table WHERE row='row_key' and " +
       "column='column_key';";

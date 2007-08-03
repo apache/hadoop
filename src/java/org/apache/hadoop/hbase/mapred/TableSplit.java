@@ -69,40 +69,33 @@ public class TableSplit implements InputSplit {
     return m_endRow;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.mapred.InputSplit#getLength()
-   */
+  /** {@inheritDoc} */
   public long getLength() {
     // Not clear how to obtain this... seems to be used only for sorting splits
     return 0;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.mapred.InputSplit#getLocations()
-   */
+  /** {@inheritDoc} */
   public String[] getLocations() {
     // Return a random node from the cluster for now
     return new String[] { };
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     m_tableName.readFields(in);
     m_startRow.readFields(in);
     m_endRow.readFields(in);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     m_tableName.write(out);
     m_startRow.write(out);
     m_endRow.write(out);
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return m_tableName +"," + m_startRow + "," + m_endRow;

@@ -38,8 +38,12 @@ import org.apache.hadoop.io.Text;
  */
 public class RowFilterSet implements RowFilterInterface {
 
+  /** set operator */
   public static enum Operator {
-    MUST_PASS_ALL, MUST_PASS_ONE
+    /** !AND */
+    MUST_PASS_ALL,
+    /** !OR */
+    MUST_PASS_ONE
   }
 
   private Operator operator = Operator.MUST_PASS_ALL;
@@ -77,10 +81,7 @@ public class RowFilterSet implements RowFilterInterface {
     this.operator = operator;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void validate(final Text[] columns) {
     for (RowFilterInterface filter : filters) {
       filter.validate(columns);
@@ -91,10 +92,7 @@ public class RowFilterSet implements RowFilterInterface {
     }
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void reset() {
     for (RowFilterInterface filter : filters) {
       filter.reset();
@@ -105,10 +103,7 @@ public class RowFilterSet implements RowFilterInterface {
     }
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void rowProcessed(boolean filtered, Text rowKey) {
     for (RowFilterInterface filter : filters) {
       filter.rowProcessed(filtered, rowKey);
@@ -119,10 +114,7 @@ public class RowFilterSet implements RowFilterInterface {
     }
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean processAlways() {
     for (RowFilterInterface filter : filters) {
       if (filter.processAlways()) {
@@ -136,10 +128,7 @@ public class RowFilterSet implements RowFilterInterface {
     return false;
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean filterAllRemaining() {
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
@@ -167,10 +156,7 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean filter(final Text rowKey) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
@@ -205,10 +191,7 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean filter(final Text rowKey, final Text colKey, 
     final byte[] data) {
     boolean resultFound = false;
@@ -248,10 +231,7 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean filterNotNull(final TreeMap<Text, byte[]> columns) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
@@ -286,10 +266,7 @@ public class RowFilterSet implements RowFilterInterface {
     return result;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
     byte opByte = in.readByte();
     operator = Operator.values()[opByte];
@@ -323,10 +300,7 @@ public class RowFilterSet implements RowFilterInterface {
 
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
     out.writeByte(operator.ordinal());
     out.writeInt(filters.size());

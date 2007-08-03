@@ -79,6 +79,7 @@ public class BloomFilterDescriptor implements WritableComparable {
   int vectorSize;
   int nbHash;
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     StringBuilder value = new StringBuilder();
@@ -103,11 +104,13 @@ public class BloomFilterDescriptor implements WritableComparable {
     return value.toString();
   }
 
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = Integer.valueOf(this.filterType).hashCode();
@@ -118,18 +121,14 @@ public class BloomFilterDescriptor implements WritableComparable {
 
   // Writable
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     filterType = in.readInt();
     vectorSize = in.readInt();
     nbHash = in.readInt();
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeInt(filterType);
     out.writeInt(vectorSize);
@@ -138,9 +137,7 @@ public class BloomFilterDescriptor implements WritableComparable {
   
   // Comparable
   
-  /* (non-Javadoc)
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   */
+  /** {@inheritDoc} */
   public int compareTo(Object o) {
     BloomFilterDescriptor other = (BloomFilterDescriptor)o;
     int result = this.filterType - other.filterType;

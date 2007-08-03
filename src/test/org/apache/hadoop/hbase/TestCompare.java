@@ -26,6 +26,7 @@ import junit.framework.TestCase;
  * Test comparing HBase objects.
  */
 public class TestCompare extends TestCase {
+  /** test case */
   public void testHRegionInfo() {
     HRegionInfo a = new HRegionInfo(1, new HTableDescriptor("a"), null, null);
     HRegionInfo b = new HRegionInfo(2, new HTableDescriptor("b"), null, null);

@@ -29,12 +29,26 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
+/**
+ * Initializes test environment
+ */
 public class StaticTestEnvironment {
-  private StaticTestEnvironment() {};                   // Not instantiable
+  private StaticTestEnvironment() {}                    // Not instantiable
 
+  /** configuration parameter name for test directory */
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
+  
+  /** set to true if "DEBUGGING" is set in the environment */
   public static boolean debugging = false;
 
+  /**
+   * Initializes parameters used in the test environment:
+   * 
+   * Sets the configuration parameter TEST_DIRECTORY_KEY if not already set.
+   * Sets the boolean debugging if "DEBUGGING" is set in the environment.
+   * If debugging is enabled, reconfigures loggin so that the root log level is
+   * set to WARN and the logging level for the package is set to DEBUG.
+   */
   @SuppressWarnings("unchecked")
   public static void initialize() {
     String value = null;

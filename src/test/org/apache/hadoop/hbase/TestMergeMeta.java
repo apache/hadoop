@@ -22,6 +22,9 @@ package org.apache.hadoop.hbase;
 /** Tests region merging */
 public class TestMergeMeta extends AbstractMergeTestBase {
   
+  /**
+   * test case
+   */
   public void testMergeMeta() {
     try {
       HMerge.merge(conf, fs, HConstants.META_TABLE_NAME);

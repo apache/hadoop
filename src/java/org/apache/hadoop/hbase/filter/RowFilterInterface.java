@@ -45,6 +45,7 @@ public interface RowFilterInterface extends Writable {
    * RowFilterSet with an OR operator.
    * 
    * @see RowFilterSet
+   * @param filtered
    * @param key
    */
   void rowProcessed(boolean filtered, Text key);

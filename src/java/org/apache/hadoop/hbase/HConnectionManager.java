@@ -113,7 +113,8 @@ public class HConnectionManager implements HConstants {
     // Known region HServerAddress.toString() -> HRegionInterface 
     private HashMap<String, HRegionInterface> servers;
 
-    /** constructor
+    /** 
+     * constructor
      * @param conf Configuration object
      */
     @SuppressWarnings("unchecked")

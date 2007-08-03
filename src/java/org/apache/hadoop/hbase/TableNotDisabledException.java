@@ -21,12 +21,20 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+/**
+ * Thrown if a table should be offline but is not
+ */
 public class TableNotDisabledException extends IOException {
   private static final long serialVersionUID = 1L << 19 - 1L;
+  /** default constructor */
   public TableNotDisabledException() {
     super();
   }
 
+  /**
+   * Constructor
+   * @param s message
+   */
   public TableNotDisabledException(String s) {
     super(s);
   }

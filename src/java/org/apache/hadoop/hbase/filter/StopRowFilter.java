@@ -80,34 +80,23 @@ public class StopRowFilter implements RowFilterInterface {
     // Nothing to reset
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
+  @SuppressWarnings("unused")
   public void rowProcessed(boolean filtered, Text rowKey) {
     // Doesn't care
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean processAlways() {
     return false;
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean filterAllRemaining() {
     return false;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean filter(final Text rowKey) {
     boolean result = this.stopRowKey.compareTo(rowKey) <= 0;
     if (LOG.isDebugEnabled()) {
@@ -118,6 +107,8 @@ public class StopRowFilter implements RowFilterInterface {
   }
 
   /**
+   * {@inheritDoc}
+   *
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling the rowKey-only version of filter.
    */
@@ -127,7 +118,8 @@ public class StopRowFilter implements RowFilterInterface {
     return filter(rowKey);
   }
 
-  /**
+  /** {@inheritDoc}
+   *
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling filterAllRemaining().
    * 
@@ -138,18 +130,12 @@ public class StopRowFilter implements RowFilterInterface {
     return filterAllRemaining();
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     stopRowKey = new Text(in.readUTF());
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeUTF(stopRowKey.toString());
   }

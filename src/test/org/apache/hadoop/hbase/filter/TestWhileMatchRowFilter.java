@@ -28,11 +28,16 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.io.Text;
 
+/**
+ * Tests for the while-match filter
+ */
 public class TestWhileMatchRowFilter extends TestCase {
 
   WhileMatchRowFilter wmStopRowFilter;
   WhileMatchRowFilter wmRegExpRowFilter;
-  
+
+  /** {@inheritDoc} */
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     wmStopRowFilter = new WhileMatchRowFilter(new StopRowFilter(
@@ -41,14 +46,26 @@ public class TestWhileMatchRowFilter extends TestCase {
     ".*regex.*"));
   }
   
+  /**
+   * Tests while match stop row
+   * @throws Exception
+   */
   public void testWhileMatchStopRow() throws Exception {
     whileMatchStopRowTests(wmStopRowFilter);
   }
   
+  /**
+   * Tests while match regex
+   * @throws Exception
+   */
   public void testWhileMatchRegExp() throws Exception {
     whileMatchRegExpTests(wmRegExpRowFilter);
   }
   
+  /**
+   * Tests serialization
+   * @throws Exception
+   */
   public void testSerialization() throws Exception {
     // Decompose wmRegExpRowFilter to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
