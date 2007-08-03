@@ -20,11 +20,17 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HADOOP-1565.  Reduce memory usage of NameNode by replacing 
+    TreeMap in HDFS Namespace with ArrayList.  
+    (Dhruba Borthakur via dhruba)
+
   BUG FIXES
 
     HADOOP-1463.  HDFS report correct usage statistics for disk space
     used by HDFS.  (Hairong Kuang via dhruba)
 
+    HADOOP-1666.  FsShell object can be used for multiple fs commands.
+    (Dhruba Borthakur via dhruba)
 
 Branch 0.14 (unreleased changes)
 

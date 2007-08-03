@@ -19,9 +19,6 @@ package org.apache.hadoop.dfs;
 
 import java.util.*;
 
-import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.net.Node;
-
 /**************************************************
  * DatanodeDescriptor tracks stats on a given DataNode,
  * such as available storage capacity, last update time, etc.,
@@ -172,14 +169,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return blocks.keySet().iterator();
   }
   
-  Block getBlock(long blockId) {
-    return blocks.get(new Block(blockId, 0));
-  }
-  
-  Block getBlock(Block b) {
-    return blocks.get(b);
-  }
-  
   /*
    * Store block replication work.
    */
@@ -218,7 +207,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /*
-   * The number of block invalidattion items that are pending to 
+   * The number of block invalidation items that are pending to 
    * be sent to the datanode
    */
   int getNumberOfBlocksToBeInvalidated() {

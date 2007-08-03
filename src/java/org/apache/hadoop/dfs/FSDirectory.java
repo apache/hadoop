@@ -47,10 +47,11 @@ class FSDirectory implements FSConstants {
 
     private String name;
     private INode parent;
-    private TreeMap<String, INode> children = null;
+    private List<INode> children = null;
     private Block blocks[] = null;
     private short blockReplication;
     private long modificationTime;
+    private static final int DEFAULT_FILES_PER_DIRECTORY = 5;
 
     /**
      */
@@ -102,6 +103,13 @@ class FSDirectory implements FSConstants {
      */
     String getLocalName() {
       return name;
+    }
+
+    /**
+     * Set local file name
+     */
+    void setLocalName(String name) {
+      this.name = name;
     }
 
     /**
@@ -170,15 +178,25 @@ class FSDirectory implements FSConstants {
      * @return Iterator of children
      */
     Iterator<INode> getChildIterator() {
-      return (children != null) ?  children.values().iterator() : null;
+      return (children != null) ?  children.iterator() : null;
       // instead of null, we could return a static empty iterator.
     }
         
-    void addChild(String name, INode node) {
+    private void addChild(String name, INode node) {
       if (children == null) {
-        children = new TreeMap<String, INode>();
+        children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
       }
-      children.put(name, node);
+      int low = Collections.binarySearch(children, node, comp);
+      assert low < 0;
+      children.add(-low - 1, node);
+    }
+
+    private void removeChild(INode node) {
+      assert children != null;
+      int low = Collections.binarySearch(children, node, comp);
+      if (low >= 0) {
+        children.remove(low);
+      }
     }
 
     /**
@@ -225,7 +243,37 @@ class FSDirectory implements FSConstants {
     }
         
     INode getChild(String name) {
-      return (children == null) ? null : children.get(name);
+      return getChild(new INode(name));
+    }
+
+    private INode getChild(INode node) {
+      if (children == null) {
+        return null;
+      }
+      int low = Collections.binarySearch(children, node, comp);
+      if (low >= 0) {
+        return children.get(low);
+      }
+      return null;
+    }
+
+    //
+    // Prints out the children along with their hash codes.
+    // Useful for debugging.
+    //
+    private void printChildTree(List<INode> children) {
+      System.out.print("Names: ");
+      for (int i = 0; i < children.size(); i++) {
+        INode inode = children.get(i);
+        System.out.print(" " + inode.name);
+      }
+      System.out.println("");
+      System.out.print("Hashcodes: ");
+      for (int i = 0; i < children.size(); i++) {
+        INode inode = children.get(i);
+        System.out.print(" " + inode.name.hashCode());
+      }
+      System.out.println("");
     }
 
     /**
@@ -254,8 +302,9 @@ class FSDirectory implements FSConstants {
                                         "Parent path is not a directory: "+path);
       }
       // check whether the parent already has a node with that name
-      String name = newNode.name = target.getName();
-      if (parentNode.getChild(name) != null) {
+      String name =  target.getName();
+      newNode.setLocalName(name);
+      if (parentNode.getChild(newNode) != null) {
         return null;
       }
       // insert into the parent children list
@@ -270,7 +319,7 @@ class FSDirectory implements FSConstants {
       if (parent == null) {
         return false;
       } else {
-        parent.children.remove(name);
+        parent.removeChild(this);
         return true;
       }
     }
@@ -349,6 +398,16 @@ class FSDirectory implements FSConstants {
         v.add(it.next());
       }
     }
+
+    //
+    // Use the name of the INode to implement a natural order 
+    //
+    static private final Comparator<INode> comp =
+      new Comparator<INode>() {
+        public int compare(INode a, INode b) {
+          return a.getLocalName().compareTo(b.getLocalName());
+        }
+      };
   }
 
   FSNamesystem namesystem = null;
