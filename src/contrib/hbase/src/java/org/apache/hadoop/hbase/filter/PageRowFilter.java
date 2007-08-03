@@ -81,11 +81,9 @@ public class PageRowFilter implements RowFilterInterface {
     rowsAccepted = 0;
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
-  public void rowProcessed(boolean filtered, Text rowKey) {
+  /** {@inheritDoc} */
+  public void rowProcessed(boolean filtered,
+      @SuppressWarnings("unused") Text rowKey) {
     if (!filtered) {
       this.rowsAccepted++;
       if (LOG.isDebugEnabled()) {

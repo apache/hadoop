@@ -24,11 +24,24 @@ import org.apache.hadoop.io.*;
 import java.io.*;
 import java.util.*;
 
-/*******************************************************************************
- * HScannerInterface iterates through a set of rows.  It's implemented by several classes.
- ******************************************************************************/
+/**
+ * HScannerInterface iterates through a set of rows.  It's implemented by
+ * several classes.
+ */
 public interface HScannerInterface {
+  /**
+   * Get the next set of values
+   * @param key will contain the row and timestamp upon return
+   * @param results will contain an entry for each column family member and its value
+   * @return true if data was returned
+   * @throws IOException
+   */
   public boolean next(HStoreKey key, TreeMap<Text, byte[]> results)
   throws IOException;
+  
+  /**
+   * Closes a scanner and releases any resources it has allocated
+   * @throws IOException
+   */
   public void close() throws IOException;
 }

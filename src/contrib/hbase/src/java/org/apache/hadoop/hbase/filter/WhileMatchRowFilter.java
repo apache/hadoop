@@ -50,6 +50,10 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     super();
   }
   
+  /**
+   * Constructor
+   * @param filter
+   */
   public WhileMatchRowFilter(RowFilterInterface filter) {
     this.filter = filter;
   }
@@ -63,10 +67,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     return this.filter;
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void reset() {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Resetting.");
@@ -75,10 +76,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     this.filter.reset();
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean processAlways() {
     return true;
   }
@@ -94,10 +92,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     return this.filterAllRemaining || this.filter.filterAllRemaining();
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean filter(final Text rowKey) {
     changeFAR(this.filter.filter(rowKey));
     boolean result = filterAllRemaining();
@@ -107,10 +102,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     return result;
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean filter(final Text rowKey, final Text colKey,
     final byte[] data) {
     changeFAR(this.filter.filter(rowKey, colKey, data));
@@ -122,10 +114,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     return result;
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean filterNotNull(final TreeMap<Text, byte[]> columns) {
     changeFAR(this.filter.filterNotNull(columns));
     boolean result = filterAllRemaining();
@@ -150,26 +139,17 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     }
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void rowProcessed(boolean filtered, Text rowKey) {
     this.filter.rowProcessed(filtered, rowKey);
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void validate(Text[] columns) {
     this.filter.validate(columns);
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     String className = in.readUTF();
     
@@ -193,10 +173,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
     }
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeUTF(this.filter.getClass().getName());
     this.filter.write(out);

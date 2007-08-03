@@ -21,7 +21,11 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
 
+/**
+ * Adds HBase configuration files to a Configuration
+ */
 public class HBaseConfiguration extends Configuration {
+  /** constructor */
   public HBaseConfiguration() {
     super();
     addDefaultResource("hbase-default.xml");

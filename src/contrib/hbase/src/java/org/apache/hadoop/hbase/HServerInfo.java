@@ -23,51 +23,67 @@ import org.apache.hadoop.io.*;
 
 import java.io.*;
 
-/*******************************************************************************
- * HRSInfo contains metainfo about an HRegionServer, including details about the
- * source machine and load statistics.
- ******************************************************************************/
+/**
+ * HServerInfo contains metainfo about an HRegionServer, Currently it only
+ * contains the server start code.
+ * 
+ * In the future it will contain information about the source machine and
+ * load statistics.
+ */
 public class HServerInfo implements Writable {
   private HServerAddress serverAddress;
   private long startCode;
 
+  /** default constructor - used by Writable */
   public HServerInfo() {
     this.serverAddress = new HServerAddress();
     this.startCode = 0;
   }
   
+  /**
+   * Constructs a fully initialized object
+   * @param serverAddress
+   * @param startCode
+   */
   public HServerInfo(HServerAddress serverAddress, long startCode) {
     this.serverAddress = new HServerAddress(serverAddress);
     this.startCode = startCode;
   }
   
+  /**
+   * Construct a new object using another as input (like a copy constructor)
+   * @param other
+   */
   public HServerInfo(HServerInfo other) {
     this.serverAddress = new HServerAddress(other.getServerAddress());
     this.startCode = other.getStartCode();
   }
-  
+
+  /** @return the server address */
   public HServerAddress getServerAddress() {
     return serverAddress;
   }
-  
+ 
+  /** @return the server start code */
   public long getStartCode() {
     return startCode;
   }
   
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "address: " + this.serverAddress + ", startcode: " + this.startCode;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
   // Writable
-  //////////////////////////////////////////////////////////////////////////////
 
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.serverAddress.readFields(in);
     this.startCode = in.readLong();
   }
 
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     this.serverAddress.write(out);
     out.writeLong(this.startCode);

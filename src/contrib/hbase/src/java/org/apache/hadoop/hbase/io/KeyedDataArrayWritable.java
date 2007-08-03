@@ -61,6 +61,7 @@ public class KeyedDataArrayWritable implements Writable {
 
   // Writable
   
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     int len = in.readInt();
     m_data = new KeyedData[len];
@@ -70,6 +71,7 @@ public class KeyedDataArrayWritable implements Writable {
     }
   }
 
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     int len = m_data.length;
     out.writeInt(len);

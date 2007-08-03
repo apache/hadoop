@@ -148,16 +148,12 @@ public class HColumnDescriptor implements WritableComparable {
     this.versionNumber = COLUMN_DESCRIPTOR_VERSION;
   }
   
-  /**
-   * @return    - name of column family
-   */
+  /** @return name of column family */
   public Text getName() {
     return name;
   }
   
-  /**
-   * @return    - compression type being used for the column family
-   */
+  /** @return compression type being used for the column family */
   public CompressionType getCompression() {
     CompressionType value = null;
 
@@ -176,13 +172,12 @@ public class HColumnDescriptor implements WritableComparable {
     return value;
   }
   
-  /**
-   * @return    - maximum number of versions
-   */
+  /** @return maximum number of versions */
   public int getMaxVersions() {
     return this.maxVersions;
   }
   
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     String compression = "none";
@@ -205,11 +200,13 @@ public class HColumnDescriptor implements WritableComparable {
       + (bloomFilterSpecified ? bloomFilter.toString() : "none") + ")";
   }
   
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = this.name.hashCode();
@@ -225,10 +222,9 @@ public class HColumnDescriptor implements WritableComparable {
     return result;
   }
   
-  //////////////////////////////////////////////////////////////////////////////
   // Writable
-  //////////////////////////////////////////////////////////////////////////////
 
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.versionNumber = in.readByte();
     this.name.readFields(in);
@@ -244,6 +240,7 @@ public class HColumnDescriptor implements WritableComparable {
     }
   }
 
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeByte(this.versionNumber);
     this.name.write(out);
@@ -258,10 +255,9 @@ public class HColumnDescriptor implements WritableComparable {
     }
   }
 
-  //////////////////////////////////////////////////////////////////////////////
   // Comparable
-  //////////////////////////////////////////////////////////////////////////////
 
+  /** {@inheritDoc} */
   public int compareTo(Object o) {
     // NOTE: we don't do anything with the version number yet.
     // Version numbers will come into play when we introduce an incompatible

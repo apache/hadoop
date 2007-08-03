@@ -84,6 +84,7 @@ public final class CountingBloomFilter extends Filter {
     vector = new byte[vectorSize];
   }//end constructor
 
+  /** {@inheritDoc} */
   @Override
   public void add(Key key) {
     if(key == null) {
@@ -122,6 +123,7 @@ public final class CountingBloomFilter extends Filter {
     }
   }//end delete
 
+  /** {@inheritDoc} */
   @Override
   public void and(Filter filter){
     if(filter == null
@@ -137,6 +139,7 @@ public final class CountingBloomFilter extends Filter {
     }
   }//end and()
 
+  /** {@inheritDoc} */
   @Override
   public boolean membershipTest(Key key){
     if(key == null) {
@@ -155,12 +158,14 @@ public final class CountingBloomFilter extends Filter {
     return true;
   }//end membershipTest()
 
+  /** {@inheritDoc} */
   @Override
   public void not(){
     throw new UnsupportedOperationException("not() is undefined for "
         + this.getClass().getName());
   }//end not()
 
+  /** {@inheritDoc} */
   @Override
   public void or(Filter filter){
     if(filter == null
@@ -177,6 +182,7 @@ public final class CountingBloomFilter extends Filter {
     }
   }//end or()
 
+  /** {@inheritDoc} */
   @Override
   @SuppressWarnings("unused")
   public void xor(Filter filter){
@@ -184,6 +190,7 @@ public final class CountingBloomFilter extends Filter {
         + this.getClass().getName());
   }//end xor()
 
+  /** {@inheritDoc} */
   @Override
   public String toString(){
     StringBuilder res = new StringBuilder();
@@ -198,6 +205,7 @@ public final class CountingBloomFilter extends Filter {
     return res.toString();
   }//end toString()
 
+  /** {@inheritDoc} */
   @Override
   public Object clone(){
     CountingBloomFilter cbf = new CountingBloomFilter(vectorSize, nbHash);
@@ -205,11 +213,13 @@ public final class CountingBloomFilter extends Filter {
     return cbf;
   }//end clone()
 
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = super.hashCode();
@@ -221,6 +231,7 @@ public final class CountingBloomFilter extends Filter {
 
   // Writable
 
+  /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -229,6 +240,7 @@ public final class CountingBloomFilter extends Filter {
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
@@ -240,6 +252,7 @@ public final class CountingBloomFilter extends Filter {
 
   // Comparable
   
+  /** {@inheritDoc} */
   @Override
   public int compareTo(Object o) {
     int result = super.compareTo(o);

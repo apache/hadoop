@@ -31,6 +31,7 @@ import org.apache.hadoop.io.SequenceFile.Reader;
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
 
+  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -103,6 +104,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     super.tearDown();

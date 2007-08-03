@@ -147,16 +147,14 @@ public class HStoreKey implements WritableComparable {
     this.timestamp = timestamp;
   }
   
-  /**
-   * @return Approximate size in bytes of this key.
-   */
+  /** @return Approximate size in bytes of this key. */
   public long getSize() {
     return this.row.getLength() + this.column.getLength() +
       8 /* There is no sizeof in java. Presume long is 8 (64bit machine)*/;
   }
   
   /**
-   * Construct a new HStoreKey from another
+   * Constructs a new HStoreKey from another
    * 
    * @param other the source key
    */
@@ -218,6 +216,7 @@ public class HStoreKey implements WritableComparable {
   }
   
   /**
+   * Compares the row and column of two keys
    * @param other Key to compare against. Compares row and column.
    * @return True if same row and column.
    * @see #matchesWithoutColumn(HStoreKey)
@@ -229,6 +228,8 @@ public class HStoreKey implements WritableComparable {
   }
   
   /**
+   * Compares the row and timestamp of two keys
+   * 
    * @param other Key to copmare against. Compares row and timestamp.
    * 
    * @return True if same row and timestamp is greater than <code>other</code>
@@ -241,6 +242,8 @@ public class HStoreKey implements WritableComparable {
   }
   
   /**
+   * Compares the row and column family of two keys
+   * 
    * @param that Key to compare against. Compares row and column family
    * 
    * @return true if same row and column family
@@ -255,16 +258,19 @@ public class HStoreKey implements WritableComparable {
         compareTo(extractFamily(that.getColumn())) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return row.toString() + "/" + column.toString() + "/" + timestamp;
   }
   
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
     return compareTo(obj) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = this.row.hashCode();
@@ -273,13 +279,9 @@ public class HStoreKey implements WritableComparable {
     return result;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
   // Comparable
-  //////////////////////////////////////////////////////////////////////////////
 
-  /* (non-Javadoc)
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   */
+  /** {@inheritDoc} */
   public int compareTo(Object o) {
     HStoreKey other = (HStoreKey) o;
     int result = this.row.compareTo(other.row);
@@ -296,22 +298,16 @@ public class HStoreKey implements WritableComparable {
     return result;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
   // Writable
-  //////////////////////////////////////////////////////////////////////////////
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     row.write(out);
     column.write(out);
     out.writeLong(timestamp);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     row.readFields(in);
     column.readFields(in);

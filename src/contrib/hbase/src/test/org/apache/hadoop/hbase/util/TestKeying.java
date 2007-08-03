@@ -21,16 +21,27 @@ package org.apache.hadoop.hbase.util;
 
 import junit.framework.TestCase;
 
+/**
+ * Tests url transformations
+ */
 public class TestKeying extends TestCase {
 
+  /** {@inheritDoc} */
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
   }
 
+  /** {@inheritDoc} */
+  @Override
   protected void tearDown() throws Exception {
     super.tearDown();
   }
 
+  /**
+   * Test url transformations
+   * @throws Exception
+   */
   public void testURI() throws Exception {
     checkTransform("http://abc:bcd@www.example.com/index.html" +
       "?query=something#middle");

@@ -22,7 +22,14 @@ import org.apache.hadoop.io.Text;
 
 import junit.framework.TestCase;
 
+/**
+ * Tests toString methods.
+ */
 public class TestToString extends TestCase {
+  /**
+   * tests toString methods on HSeverAddress, HServerInfo
+   * @throws Exception
+   */
   public void testServerInfo() throws Exception {
     final String hostport = "127.0.0.1:9999";
     HServerAddress address = new HServerAddress(hostport);
@@ -32,6 +39,10 @@ public class TestToString extends TestCase {
         "address: " + hostport + ", startcode: " + -1);
   }
   
+  /**
+   * Tests toString method on HRegionInfo
+   * @throws Exception
+   */
   public void testHRegionInfo() throws Exception {
     HTableDescriptor htd = new HTableDescriptor("hank");
     htd.addFamily(new HColumnDescriptor("hankfamily:"));

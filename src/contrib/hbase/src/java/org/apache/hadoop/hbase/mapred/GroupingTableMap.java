@@ -66,9 +66,7 @@ public class GroupingTableMap extends TableMap {
     job.set(GROUP_COLUMNS, groupColumns);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.mapred.TableMap#configure(org.apache.hadoop.mapred.JobConf)
-   */
+  /** {@inheritDoc} */
   @Override
   public void configure(JobConf job) {
     super.configure(job);

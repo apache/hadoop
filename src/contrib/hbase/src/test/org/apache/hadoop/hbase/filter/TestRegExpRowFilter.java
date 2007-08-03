@@ -31,6 +31,9 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.io.Text;
 
+/**
+ * Tests for regular expression row filter
+ */
 public class TestRegExpRowFilter extends TestCase {
   TreeMap<Text, byte []> colvalues;
   RowFilterInterface mainFilter;
@@ -39,6 +42,7 @@ public class TestRegExpRowFilter extends TestCase {
   byte [] GOOD_BYTES = "abc".getBytes();
   final String HOST_PREFIX = "org.apache.site-";
   
+  /** {@inheritDoc} */
   @Override
   protected void setUp() throws Exception {
     super.setUp();
@@ -49,18 +53,34 @@ public class TestRegExpRowFilter extends TestCase {
     this.mainFilter = new RegExpRowFilter(HOST_PREFIX + ".*", colvalues);
   }
   
+  /**
+   * Tests filtering using a regex on the row key
+   * @throws Exception
+   */
   public void testRegexOnRow() throws Exception {
     regexRowTests(mainFilter);
   }
 
+  /**
+   * Tests filtering using a regex on row and colum
+   * @throws Exception
+   */
   public void testRegexOnRowAndColumn() throws Exception {
     regexRowColumnTests(mainFilter);
   }
   
+  /**
+   * Only return values that are not null
+   * @throws Exception
+   */
   public void testFilterNotNull() throws Exception {
     filterNotNullTests(mainFilter);
   }
   
+  /**
+   * Test serialization
+   * @throws Exception
+   */
   public void testSerialization() throws Exception {
     // Decompose mainFilter to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();

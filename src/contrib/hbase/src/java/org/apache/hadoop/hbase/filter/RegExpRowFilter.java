@@ -80,18 +80,13 @@ public class RegExpRowFilter implements RowFilterInterface {
     this.setColumnFilters(columnFilter);
   }
   
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
+  @SuppressWarnings("unused")
   public void rowProcessed(boolean filtered, Text rowKey) {
     //doesn't care
   }
 
-  /**
-   * 
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public boolean processAlways() {
     return false;
   }

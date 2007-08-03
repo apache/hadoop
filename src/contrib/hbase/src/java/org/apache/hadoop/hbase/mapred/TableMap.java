@@ -70,9 +70,7 @@ public abstract class TableMap extends MapReduceBase implements Mapper {
     job.set(TableInputFormat.COLUMN_LIST, columns);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.mapred.MapReduceBase#configure(org.apache.hadoop.mapred.JobConf)
-   */
+  /** {@inheritDoc} */
   @Override
   public void configure(JobConf job) {
     super.configure(job);

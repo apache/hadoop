@@ -32,6 +32,9 @@ import org.apache.hadoop.io.Text;
 
 import junit.framework.TestCase;
 
+/**
+ * Tests filter sets
+ */
 public class TestRowFilterSet extends TestCase {
 
   RowFilterInterface filterMPALL;
@@ -42,7 +45,9 @@ public class TestRowFilterSet extends TestCase {
   final byte[] GOOD_BYTES = "abc".getBytes();
   final byte[] BAD_BYTES = "def".getBytes();
   TreeMap<Text, byte[]> colvalues;
-  
+
+  /** {@inheritDoc} */
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     
@@ -62,14 +67,26 @@ public class TestRowFilterSet extends TestCase {
       filters);
   }
   
+  /**
+   * Test "must pass one"
+   * @throws Exception
+   */
   public void testMPONE() throws Exception {
     MPONETests(filterMPONE);
   }
 
+  /**
+   * Test "must pass all"
+   * @throws Exception
+   */
   public void testMPALL() throws Exception {
     MPALLTests(filterMPALL);
   }
   
+  /**
+   * Test serialization
+   * @throws Exception
+   */
   public void testSerialization() throws Exception {
     // Decompose filterMPALL to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();

@@ -30,35 +30,68 @@ import java.io.IOException;
  * tables.
  */
 public interface HMasterInterface extends VersionedProtocol {
-  public static final long versionID = 1L; // initial version
+  /** Interface version */
+  public static final long versionID = 1L;
 
-  //////////////////////////////////////////////////////////////////////////////
-  // Check to see if master is available
-  //////////////////////////////////////////////////////////////////////////////
-
+  /** @return true if master is available */
   public boolean isMasterRunning();
   
-  //////////////////////////////////////////////////////////////////////////////
   // Admin tools would use these cmds
-  //////////////////////////////////////////////////////////////////////////////
 
+  /**
+   * Creates a new table
+   * @param desc table descriptor
+   * @throws IOException
+   */
   public void createTable(HTableDescriptor desc) throws IOException;
+
+  /**
+   * Deletes a table
+   * @param tableName
+   * @throws IOException
+   */
   public void deleteTable(Text tableName) throws IOException;
   
+  /**
+   * Adds a column to the specified table
+   * @param tableName
+   * @param column column descriptor
+   * @throws IOException
+   */
   public void addColumn(Text tableName, HColumnDescriptor column) throws IOException;
+
+  /**
+   * Deletes a column from the specified table
+   * @param tableName
+   * @param columnName
+   * @throws IOException
+   */
   public void deleteColumn(Text tableName, Text columnName) throws IOException;
   
+  /**
+   * Puts the table on-line (only needed if table has been previously taken offline)
+   * @param tableName
+   * @throws IOException
+   */
   public void enableTable(Text tableName) throws IOException;
+  
+  /**
+   * Take table offline
+   * 
+   * @param tableName
+   * @throws IOException
+   */
   public void disableTable(Text tableName) throws IOException;
   
   /**
    * Shutdown an HBase cluster.
+   * @throws IOException
    */
   public void shutdown() throws IOException;
 
-  //////////////////////////////////////////////////////////////////////////////
-  // These are the method calls of last resort when trying to find an HRegion
-  //////////////////////////////////////////////////////////////////////////////
-
+  /**
+   * Get the location of the root region
+   * @return address of server that serves the root region
+   */
   public HServerAddress findRootRegion();
 }

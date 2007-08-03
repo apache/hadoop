@@ -21,12 +21,20 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+/**
+ * Thrown when an invalid column name is encountered
+ */
 public class InvalidColumnNameException extends IOException {
   private static final long serialVersionUID = 1L << 29 - 1L;
+  /** default constructor */
   public InvalidColumnNameException() {
     super();
   }
 
+  /**
+   * Constructor
+   * @param s message
+   */
   public InvalidColumnNameException(String s) {
     super(s);
   }

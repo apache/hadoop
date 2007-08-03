@@ -105,6 +105,7 @@ implements RemoveScheme {
     createVector();
   }//end constructor
 
+  /** {@inheritDoc} */
   @Override
   public void add(Key key){
     if(key == null) {
@@ -392,11 +393,13 @@ implements RemoveScheme {
     }//end for -i
   }//end createVector()
   
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;
   }
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = super.hashCode();
@@ -414,6 +417,7 @@ implements RemoveScheme {
 
   // Writable
 
+  /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -436,6 +440,7 @@ implements RemoveScheme {
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
@@ -465,6 +470,7 @@ implements RemoveScheme {
 
   // Comparable
   
+  /** {@inheritDoc} */
   @Override
   public int compareTo(Object o) {
     int result = super.compareTo(o);

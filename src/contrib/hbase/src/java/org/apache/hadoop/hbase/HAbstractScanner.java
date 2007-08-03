@@ -41,7 +41,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   static Pattern isRegexPattern =
     Pattern.compile("^.*[\\\\+|^&*$\\[\\]\\}{)(]+.*$");
   
-  // The kind of match we are doing on a column:
+  /** The kind of match we are doing on a column: */
   private static enum MATCH_TYPE {
     /** Just check the column family name */
     FAMILY_ONLY,
@@ -51,11 +51,13 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     SIMPLE
   }
 
-  // This class provides column matching functions that are more sophisticated
-  // than a simple string compare. There are three types of matching:
-  // 1. Match on the column family name only
-  // 2. Match on the column family + column key regex
-  // 3. Simple match: compare column family + column key literally
+  /**
+   * This class provides column matching functions that are more sophisticated
+   * than a simple string compare. There are three types of matching:
+   * 1. Match on the column family name only
+   * 2. Match on the column family + column key regex
+   * 3. Simple match: compare column family + column key literally
+   */
   private static class ColumnMatcher {
     private boolean wildCardmatch;
     private MATCH_TYPE matchType;
@@ -84,8 +86,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
       }
     }
     
-    // Matching method
-    
+    /** Matching method */
     boolean matches(Text c) throws IOException {
       if(this.matchType == MATCH_TYPE.SIMPLE) {
         return c.equals(this.col);
@@ -187,16 +188,12 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   /** Mechanism used to shut down the whole scan */
   public abstract void close();
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HInternalScannerInterface#isWildcardScanner()
-   */
+  /** {@inheritDoc} */
   public boolean isWildcardScanner() {
     return this.wildcardMatch;
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.HInternalScannerInterface#isMultipleMatchScanner()
-   */
+  /** {@inheritDoc} */
   public boolean isMultipleMatchScanner() {
     return this.multipleMatchers;
   }

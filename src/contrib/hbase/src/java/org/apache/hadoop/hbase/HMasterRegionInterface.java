@@ -22,13 +22,30 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
-/*******************************************************************************
+/**
  * HRegionServers interact with the HMasterRegionInterface to report on local 
  * goings-on and to obtain data-handling instructions from the HMaster.
- *********************************************/
+ */
 public interface HMasterRegionInterface extends VersionedProtocol {
+  /** Interface version number */
   public static final long versionID = 1L;
+  
+  /**
+   * Called when a region server first starts
+   * @param info
+   * @throws IOException
+   */
   public void regionServerStartup(HServerInfo info) throws IOException;
+  
+  /**
+   * Called to renew lease, tell master what the region server is doing and to
+   * receive new instructions from the master
+   * 
+   * @param info server's address and start code
+   * @param msgs things the region server wants to tell the master
+   * @return instructions from the master to the region server
+   * @throws IOException
+   */
   public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[])
   throws IOException;
 }

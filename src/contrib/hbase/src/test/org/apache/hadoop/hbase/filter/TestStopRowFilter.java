@@ -28,22 +28,35 @@ import org.apache.hadoop.io.Text;
 
 import junit.framework.TestCase;
 
+/**
+ * Tests the stop row filter
+ */
 public class TestStopRowFilter extends TestCase {
   private final Text STOP_ROW = new Text("stop_row");
   private final Text GOOD_ROW = new Text("good_row");
   private final Text PAST_STOP_ROW = new Text("zzzzzz");
   
   RowFilterInterface mainFilter;
-  
+
+  /** {@inheritDoc} */
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     mainFilter = new StopRowFilter(STOP_ROW);
   }
   
+  /**
+   * Tests identification of the stop row
+   * @throws Exception
+   */
   public void testStopRowIdentification() throws Exception {
     stopRowTests(mainFilter);
   }
   
+  /**
+   * Tests serialization
+   * @throws Exception
+   */
   public void testSerialization() throws Exception {
     // Decompose mainFilter to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();

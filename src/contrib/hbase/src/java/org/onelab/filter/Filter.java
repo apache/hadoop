@@ -182,6 +182,7 @@ public abstract class Filter implements WritableComparable {
     }
   }//end add()
   
+  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     int result = Integer.valueOf(this.nbHash).hashCode();
@@ -191,17 +192,13 @@ public abstract class Filter implements WritableComparable {
 
   // Writable interface
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeInt(this.nbHash);
     out.writeInt(this.vectorSize);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.nbHash = in.readInt();
     this.vectorSize = in.readInt();
@@ -210,9 +207,7 @@ public abstract class Filter implements WritableComparable {
   
   // Comparable interface
   
-  /* (non-Javadoc)
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   */
+  /** {@inheritDoc} */
   public int compareTo(Object o) {
     Filter other = (Filter)o;
     int result = this.vectorSize - other.vectorSize;
