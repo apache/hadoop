@@ -83,4 +83,4 @@ Trunk (unreleased changes)
  52. HADOOP-1528 HClient for multiple tables (phase 2) all HBase client side code
      (except TestHClient and HBaseShell) have been converted to use the new client
      side objects (HTable/HBaseAdmin/HConnection) instead of HClient.
-
+ 53. HADOOP-1528 HClient for multiple tables - expose close table function
