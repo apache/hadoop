@@ -276,9 +276,7 @@ public class HConnectionManager implements HConstants {
             "table name cannot be null or zero length");
       }
 
-      if (closedTables.contains(tableName)) {
-        throw new IllegalStateException("table closed: " + tableName);
-      }
+      closedTables.remove(tableName);
       
       SortedMap<Text, HRegionLocation> tableServers  =
         tablesToServers.get(tableName);
@@ -302,9 +300,7 @@ public class HConnectionManager implements HConstants {
     public SortedMap<Text, HRegionLocation>
     reloadTableServers(final Text tableName) throws IOException {
       
-      if (closedTables.contains(tableName)) {
-        throw new IllegalStateException("table closed: " + tableName);
-      }
+      closedTables.remove(tableName);
 
       SortedMap<Text, HRegionLocation> servers =
         new TreeMap<Text, HRegionLocation>();
@@ -369,14 +365,14 @@ public class HConnectionManager implements HConstants {
       }
       
       if (closedTables.contains(tableName)) {
-        throw new IllegalStateException("table closed: " + tableName);
+        throw new IllegalStateException("table already closed: " + tableName);
       }
 
       SortedMap<Text, HRegionLocation> tableServers =
         tablesToServers.remove(tableName);
 
       if (tableServers == null) {
-        throw new IllegalArgumentException("table was not opened: " + tableName);
+        throw new IllegalArgumentException("table not open: " + tableName);
       }
       
       closedTables.add(tableName);

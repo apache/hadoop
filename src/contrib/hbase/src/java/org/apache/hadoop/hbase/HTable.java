@@ -59,6 +59,12 @@ public class HTable implements HConstants {
   
   protected volatile boolean closed;
 
+  protected void checkClosed() {
+    if (closed) {
+      throw new IllegalStateException("table is closed");
+    }
+  }
+  
   /**
    * Creates an object to access a HBase table
    * 
@@ -85,6 +91,7 @@ public class HTable implements HConstants {
    * @return Location of row.
    */
   HRegionLocation getRegionLocation(Text row) {
+    checkClosed();
     if (this.tableServers == null) {
       throw new IllegalStateException("Must open table first");
     }
@@ -96,8 +103,24 @@ public class HTable implements HConstants {
   }
 
   /** @return the connection */
-  HConnection getConnection() {
+  public HConnection getConnection() {
+    checkClosed();
     return connection;
+  }
+
+  /**
+   * Releases resources associated with this table. After calling close(), all
+   * other methods will throw an IllegalStateException
+   */
+  public synchronized void close() {
+    closed = true;
+    tableServers = null;
+    batch = null;
+    currentLockId = -1L;
+    currentRegion = null;
+    currentServer = null;
+    clientid = -1L;
+    connection.close(tableName);
   }
   
   /**
@@ -114,9 +137,7 @@ public class HTable implements HConstants {
    * @return Array of region starting row keys
    */
   public Text[] getStartKeys() {
-    if (closed) {
-      throw new IllegalStateException("table is closed");
-    }
+    checkClosed();
     Text[] keys = new Text[tableServers.size()];
     int i = 0;
     for(Text key: tableServers.keySet()){
@@ -134,6 +155,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public byte[] get(Text row, Text column) throws IOException {
+    checkClosed();
     byte [] value = null;
     for(int tries = 0; tries < numRetries; tries++) {
       HRegionLocation r = getRegionLocation(row);
@@ -173,6 +195,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public byte[][] get(Text row, Text column, int numVersions) throws IOException {
+    checkClosed();
     byte [][] values = null;
     for (int tries = 0; tries < numRetries; tries++) {
       HRegionLocation r = getRegionLocation(row);
@@ -226,6 +249,7 @@ public class HTable implements HConstants {
    */
   public byte[][] get(Text row, Text column, long timestamp, int numVersions)
   throws IOException {
+    checkClosed();
     byte [][] values = null;
     for (int tries = 0; tries < numRetries; tries++) {
       HRegionLocation r = getRegionLocation(row);
@@ -274,6 +298,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public SortedMap<Text, byte[]> getRow(Text row) throws IOException {
+    checkClosed();
     KeyedData[] value = null;
     for (int tries = 0; tries < numRetries; tries++) {
       HRegionLocation r = getRegionLocation(row);
@@ -372,6 +397,7 @@ public class HTable implements HConstants {
       Text startRow, long timestamp, RowFilterInterface filter)
   throws IOException {
     
+    checkClosed();
     return new ClientScanner(columns, startRow, timestamp, filter);
   }
 
@@ -385,9 +411,8 @@ public class HTable implements HConstants {
    * @return lockid to be used in subsequent put, delete and commit calls
    */
   public synchronized long startBatchUpdate(final Text row) {
-    if (batch != null || currentLockId != -1L) {
-      throw new IllegalStateException("update in progress");
-    }
+    checkClosed();
+    checkUpdateInProgress();
     batch = new BatchUpdate();
     return batch.startUpdate(row);
   }
@@ -397,6 +422,7 @@ public class HTable implements HConstants {
    * @param lockid lock id returned by startBatchUpdate
    */
   public synchronized void abortBatch(final long lockid) {
+    checkClosed();
     if (batch == null) {
       throw new IllegalStateException("no batch update in progress");
     }
@@ -426,6 +452,7 @@ public class HTable implements HConstants {
   public synchronized void commitBatch(final long lockid, final long timestamp)
   throws IOException {
 
+    checkClosed();
     if (batch == null) {
       throw new IllegalStateException("no batch update in progress");
     }
@@ -481,9 +508,8 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public synchronized long startUpdate(final Text row) throws IOException {
-    if (currentLockId != -1L || batch != null) {
-      throw new IllegalStateException("update in progress");
-    }
+    checkClosed();
+    checkUpdateInProgress();
     for (int tries = 0; tries < numRetries; tries++) {
       IOException e = null;
       HRegionLocation info = getRegionLocation(row);
@@ -532,6 +558,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public void put(long lockid, Text column, byte val[]) throws IOException {
+    checkClosed();
     if (val == null) {
       throw new IllegalArgumentException("value cannot be null");
     }
@@ -569,6 +596,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public void delete(long lockid, Text column) throws IOException {
+    checkClosed();
     if (batch != null) {
       batch.delete(lockid, column);
       return;
@@ -602,6 +630,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public synchronized void abort(long lockid) throws IOException {
+    checkClosed();
     if (batch != null) {
       abortBatch(lockid);
       return;
@@ -645,6 +674,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public synchronized void commit(long lockid, long timestamp) throws IOException {
+    checkClosed();
     if (batch != null) {
       commitBatch(lockid, timestamp);
       return;
@@ -679,6 +709,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public synchronized void renewLease(long lockid) throws IOException {
+    checkClosed();
     if (batch != null) {
       return;
     }
@@ -723,6 +754,7 @@ public class HTable implements HConstants {
     private RowFilterInterface filter;
     
     private void loadRegions() {
+      checkClosed();
       Text firstServer = null;
       if (this.startRow == null || this.startRow.getLength() == 0) {
         firstServer = tableServers.firstKey();
@@ -763,6 +795,7 @@ public class HTable implements HConstants {
      * Returns false if there are no more scanners.
      */
     private boolean nextScanner() throws IOException {
+      checkClosed();
       if (this.scannerId != -1L) {
         this.server.close(this.scannerId);
         this.scannerId = -1L;
@@ -821,6 +854,7 @@ public class HTable implements HConstants {
      * {@inheritDoc}
      */
     public boolean next(HStoreKey key, TreeMap<Text, byte[]> results) throws IOException {
+      checkClosed();
       if (this.closed) {
         return false;
       }
@@ -844,6 +878,7 @@ public class HTable implements HConstants {
      * {@inheritDoc}
      */
     public void close() throws IOException {
+      checkClosed();
       if (this.scannerId != -1L) {
         this.server.close(this.scannerId);
         this.scannerId = -1L;
