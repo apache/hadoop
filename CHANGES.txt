@@ -463,9 +463,9 @@ Branch 0.14 (unreleased changes)
 
 143. HADOOP-1553.  Replace user task output and log capture code to use shell
      redirection instead of copier threads in the TaskTracker. Capping the
-     size of the output is now done via tail in memory and thus should not be large.
-     The output of the tasklog servlet is not forced into UTF8 and is not 
-     buffered entirely in memory. (omalley)
+     size of the output is now done via tail in memory and thus should not be 
+     large. The output of the tasklog servlet is not forced into UTF8 and is
+     not buffered entirely in memory. (omalley)
      Configuration changes to hadoop-default.xml:
        remove mapred.userlog.num.splits
        remove mapred.userlog.purge.splits
