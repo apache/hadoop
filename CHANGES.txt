@@ -18,6 +18,9 @@ Trunk (unreleased changes)
     easier to read.  Also remove numbering, to make merging easier.
     (cutting)
 
+    HADOOP-1610.  Add metrics for failed tasks.
+    (Devaraj Das via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-1565.  Reduce memory usage of NameNode by replacing 

@@ -421,6 +421,9 @@ abstract class TaskRunner extends Thread {
       int exit_code = process.waitFor();
      
       if (!killed && exit_code != 0) {
+        if (exit_code == 65) {
+          tracker.getTaskTrackerMetrics().taskFailedPing();
+        }
         throw new IOException("Task process exit with nonzero status of " +
                               exit_code + ".");
       }
