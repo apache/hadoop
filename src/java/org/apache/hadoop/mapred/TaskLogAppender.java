@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.IOException;
+import java.util.LinkedList;
+import java.util.Queue;
 
-import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.spi.ErrorCode;
+import org.apache.log4j.FileAppender;
 import org.apache.log4j.spi.LoggingEvent;
 
 /**
@@ -30,66 +29,46 @@ import org.apache.log4j.spi.LoggingEvent;
  * map-reduce system logs.
  * 
  */
-public class TaskLogAppender extends AppenderSkeleton {
-  private TaskLog.Writer taskLogWriter = null;
+public class TaskLogAppender extends FileAppender {
   private String taskId;
-  private int noKeepSplits;
-  private long totalLogFileSize;
-  private boolean purgeLogSplits;
-  private int logsRetainHours;
+  private int maxEvents;
+  private Queue<LoggingEvent> tail = null;
 
+  @Override
   public void activateOptions() {
-    taskLogWriter = 
-      new TaskLog.Writer(taskId, TaskLog.LogFilter.SYSLOG, 
-                         noKeepSplits, totalLogFileSize, purgeLogSplits, logsRetainHours);
-    try {
-      taskLogWriter.init();
-    } catch (IOException ioe) {
-      taskLogWriter = null;
-      errorHandler.error("Failed to initialize the task's logging " +
-                         "infrastructure: " + StringUtils.stringifyException(ioe));
+    synchronized (this) {
+      if (maxEvents > 0) {
+        tail = new LinkedList<LoggingEvent>();
+      }
+      setFile(TaskLog.getTaskLogFile(taskId, 
+                                     TaskLog.LogName.SYSLOG).toString());
+      setAppend(true);
+      super.activateOptions();
     }
   }
   
-  protected synchronized void append(LoggingEvent event) {
-    if (taskLogWriter == null) {
-      errorHandler.error("Calling 'append' on uninitialize/closed logger");
-      return;
-    }
-
-    if (this.layout == null) {
-      errorHandler.error("No layout for appender " + name , 
-                         null, ErrorCode.MISSING_LAYOUT);
-      return;
-    }
-    
-    // Log the message to the task's log
-    String logMessage = this.layout.format(event);
-    try {
-      byte[] logMessageData = logMessage.getBytes();
-      taskLogWriter.write(logMessageData, 0, logMessageData.length);
-    } catch (IOException ioe) {
-      errorHandler.error("Failed to log: '" + logMessage + 
-                         "' to the task's logging infrastructure with the exception: " + 
-                         StringUtils.stringifyException(ioe));
-    }
-  }
-
-  public boolean requiresLayout() {
-    return true;
-  }
-
-  public synchronized void close() {
-    if (taskLogWriter != null) {
-      try {
-        taskLogWriter.close();
-      } catch (IOException ioe) {
-        errorHandler.error("Failed to close the task's log with the exception: " 
-                           + StringUtils.stringifyException(ioe));
+  @Override
+  public void append(LoggingEvent event) {
+    synchronized (this) {
+      if (tail == null) {
+        super.append(event);
+      } else {
+        if (tail.size() >= maxEvents) {
+          tail.remove();
+        }
+        tail.add(event);
       }
-    } else {
-      errorHandler.error("Calling 'close' on uninitialize/closed logger");
     }
+  }
+
+  @Override
+  public synchronized void close() {
+    if (tail != null) {
+      for(LoggingEvent event: tail) {
+        super.append(event);
+      }
+    }
+    super.close();
   }
 
   /**
@@ -104,36 +83,14 @@ public class TaskLogAppender extends AppenderSkeleton {
     this.taskId = taskId;
   }
 
-  public int getNoKeepSplits() {
-    return noKeepSplits;
-  }
-
-  public void setNoKeepSplits(int noKeepSplits) {
-    this.noKeepSplits = noKeepSplits;
-  }
-
-  public int getLogsRetainHours() {
-    return logsRetainHours;
-  }
-
-  public void setLogsRetainHours(int logsRetainHours) {
-    this.logsRetainHours = logsRetainHours;
-  }
-
-  public boolean isPurgeLogSplits() {
-    return purgeLogSplits;
-  }
-
-  public void setPurgeLogSplits(boolean purgeLogSplits) {
-    this.purgeLogSplits = purgeLogSplits;
-  }
-
+  private static final int EVENT_SIZE = 100;
+  
   public long getTotalLogFileSize() {
-    return totalLogFileSize;
+    return maxEvents * EVENT_SIZE;
   }
 
-  public void setTotalLogFileSize(long splitFileSize) {
-    this.totalLogFileSize = splitFileSize;
+  public void setTotalLogFileSize(long logSize) {
+    maxEvents = (int) logSize / EVENT_SIZE;
   }
 
 }

@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.mapred.pipes;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -37,6 +36,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -73,6 +73,12 @@ class Application {
     String executable = DistributedCache.getLocalCacheFiles(conf)[0].toString();
     FileUtil.chmod(executable, "a+x");
     cmd.add(executable);
+    // wrap the command in a stdout/stderr capture
+    String taskid = conf.get("mapred.task.id");
+    File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
+    File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
+    long logLength = TaskLog.getTaskLogLength(conf);
+    cmd = TaskLog.captureOutAndError(cmd, stdout, stderr, logLength);
     process = runClient(cmd, env);
     clientSocket = serverSocket.accept();
     handler = new OutputHandler(output, reporter);
@@ -140,39 +146,6 @@ class Application {
   }
 
   /**
-   * A thread to copy an input stream to an output stream.
-   * Errors cause the copy to stop and are not reported back.
-   * The input stream is closed when the thread exits. The output stream
-   * is not closed.
-   */
-  private static class OutputCopier extends Thread {
-    InputStream in;
-    OutputStream out;
-    OutputCopier(String name, InputStream in, OutputStream out) {
-      super(name);
-      this.in = in;
-      this.out = out;
-    }
-    public void run() {
-      byte[] buffer = new byte[65536];
-      try {
-        while (true) {
-          int size = in.read(buffer);
-          if (size == -1) {
-            break;
-          }
-          out.write(buffer, 0, size);
-        }
-      } catch (IOException ie) {
-      } finally {
-        try {
-          in.close();
-        } catch (IOException ie) { }
-      }
-    }
-  }
-
-  /**
    * Run a given command in a subprocess, including threads to copy its stdout
    * and stderr to our stdout and stderr.
    * @param command the command and its arguments
@@ -187,11 +160,6 @@ class Application {
       builder.environment().putAll(env);
     }
     Process result = builder.start();
-    result.getOutputStream().close();
-    new OutputCopier("pipes-stdout", result.getInputStream(), 
-                     System.out).start();
-    new OutputCopier("pipes-stderr", result.getErrorStream(), 
-                     System.err).start();
     return result;
   }
 

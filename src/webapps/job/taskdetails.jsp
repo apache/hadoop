@@ -92,10 +92,10 @@
       if (taskAttemptTracker == null) {
         out.print("n/a");
       } else {
-        String taskLogUrl = taskAttemptTracker + "/tasklog.jsp?taskid=" + 
+        String taskLogUrl = taskAttemptTracker + "/tasklog?taskid=" + 
                               status.getTaskId();
-        String tailFourKBUrl = taskLogUrl + "&tail=true&tailsize=4096";
-        String tailEightKBUrl = taskLogUrl + "&tail=true&tailsize=8192";
+        String tailFourKBUrl = taskLogUrl + "&start=-4097";
+        String tailEightKBUrl = taskLogUrl + "&start=-8193";
         String entireLogUrl = taskLogUrl + "&all=true";
         out.print("<a href=\"" + tailFourKBUrl + "\">Last 4KB</a><br/>");
         out.print("<a href=\"" + tailEightKBUrl + "\">Last 8KB</a><br/>");
