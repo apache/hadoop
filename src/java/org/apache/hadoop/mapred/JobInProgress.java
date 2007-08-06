@@ -135,7 +135,7 @@ class JobInProgress {
     conf = new JobConf(localJobFile);
     this.priority = conf.getJobPriority();
     this.profile = new JobProfile(conf.getUser(), jobid, 
-                                  jobFile.toString(), url, jobid);
+                                  jobFile.toString(), url, conf.getJobName());
     String jarFile = conf.getJar();
     if (jarFile != null) {
       fs.copyToLocalFile(new Path(jarFile), localJarFile);

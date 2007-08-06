@@ -482,6 +482,8 @@ Branch 0.14 (unreleased changes)
      Environment:
        require bash (v2 or later) and tail
 
+144. HADOOP-1659.  Fix a job id/job name mixup. (Arun C. Murthy via omalley)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
