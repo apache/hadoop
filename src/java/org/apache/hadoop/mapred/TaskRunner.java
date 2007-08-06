@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.filecache.*;
 import org.apache.hadoop.util.*;
 import java.io.*;
+import java.util.List;
 import java.util.Vector;
 import java.net.URI;
 
@@ -41,9 +42,6 @@ abstract class TaskRunner extends Thread {
 
   protected JobConf conf;
 
-  private TaskLog.Writer taskStdOutLogWriter;
-  private TaskLog.Writer taskStdErrLogWriter;
-
   /** 
    * for cleaning up old map outputs
    */
@@ -53,18 +51,6 @@ abstract class TaskRunner extends Thread {
     this.t = t;
     this.tracker = tracker;
     this.conf = conf;
-    this.taskStdOutLogWriter = 
-      new TaskLog.Writer(t.getTaskId(), TaskLog.LogFilter.STDOUT, 
-                         this.conf.getInt("mapred.userlog.num.splits", 4), 
-                         this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024, 
-                         this.conf.getBoolean("mapred.userlog.purgesplits", true),
-                         this.conf.getInt("mapred.userlog.retain.hours", 12));
-    this.taskStdErrLogWriter = 
-      new TaskLog.Writer(t.getTaskId(), TaskLog.LogFilter.STDERR, 
-                         this.conf.getInt("mapred.userlog.num.splits", 4), 
-                         this.conf.getInt("mapred.userlog.limit.kb", 100) * 1024, 
-                         this.conf.getBoolean("mapred.userlog.purgesplits", true),
-                         this.conf.getInt("mapred.userlog.retain.hours", 12));
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);
   }
@@ -76,8 +62,6 @@ abstract class TaskRunner extends Thread {
    * process before the child is spawned.  It should not execute user code,
    * only system code. */
   public boolean prepare() throws IOException {
-    taskStdOutLogWriter.init();       // initialize the child task's stdout log
-    taskStdErrLogWriter.init();       // initialize the child task's stderr log
     return true;
   }
 
@@ -105,6 +89,7 @@ abstract class TaskRunner extends Thread {
       //before preparing the job localize 
       //all the archives
       File workDir = new File(t.getJobFile()).getParentFile();
+      String taskid = t.getTaskId();
       File jobCacheDir = new File(workDir.getParent(), "work");
       URI[] archives = DistributedCache.getCacheArchives(conf);
       URI[] files = DistributedCache.getCacheFiles(conf);
@@ -257,7 +242,7 @@ abstract class TaskRunner extends Thread {
         String javaOpts = handleDeprecatedHeapSize(
                                                    conf.get("mapred.child.java.opts", "-Xmx200m"),
                                                    conf.get("mapred.child.heap.size"));
-        javaOpts = replaceAll(javaOpts, "@taskid@", t.getTaskId());
+        javaOpts = replaceAll(javaOpts, "@taskid@", taskid);
         int port = conf.getInt("mapred.task.tracker.report.port", 50050) + 1;
         javaOpts = replaceAll(javaOpts, "@port@", Integer.toString(port));
         String [] javaOptsSplit = javaOpts.split(" ");
@@ -284,24 +269,27 @@ abstract class TaskRunner extends Thread {
         vargs.add(classPath.toString());
 
         // Setup the log4j prop
+        long logSize = TaskLog.getTaskLogLength(conf);
         vargs.add("-Dhadoop.log.dir=" + System.getProperty("hadoop.log.dir"));
         vargs.add("-Dhadoop.root.logger=INFO,TLA");
-        vargs.add("-Dhadoop.tasklog.taskid=" + t.getTaskId());
-        vargs.add("-Dhadoop.tasklog.noKeepSplits=" + conf.getInt("mapred.userlog.num.splits", 4)); 
-        vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + (conf.getInt("mapred.userlog.limit.kb", 100) * 1024));
-        vargs.add("-Dhadoop.tasklog.purgeLogSplits=" + conf.getBoolean("mapred.userlog.purgesplits", true));
-        vargs.add("-Dhadoop.tasklog.logsRetainHours=" + conf.getInt("mapred.userlog.retain.hours", 12)); 
-
-        
+        vargs.add("-Dhadoop.tasklog.taskid=" + taskid);
+        vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + logSize);
 
         // Add main class and its arguments 
         vargs.add(TaskTracker.Child.class.getName());  // main of Child
         // pass umbilical port
-        vargs.add(tracker.getTaskTrackerReportPort() + ""); 
-        vargs.add(t.getTaskId());                      // pass task identifier
+        vargs.add(Integer.toString(tracker.getTaskTrackerReportPort())); 
+        vargs.add(taskid);                      // pass task identifier
 
         // Run java
-        runChild((String[])vargs.toArray(new String[0]), workDir);
+        File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
+        File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
+        stdout.getParentFile().mkdirs();
+
+        List<String> wrappedCommand = 
+          TaskLog.captureOutAndError(vargs, stdout, stderr, logSize);
+        runChild(wrappedCommand, workDir);
+                 
     } catch (FSError e) {
       LOG.fatal("FSError", e);
       try {
@@ -402,22 +390,12 @@ abstract class TaskRunner extends Thread {
   /**
    * Run the child process
    */
-  private void runChild(String[] args, File dir) throws IOException {
-    this.process = Runtime.getRuntime().exec(args, null, dir);
+  private void runChild(List<String> args, File dir) throws IOException {
+    ProcessBuilder builder = new ProcessBuilder(args);
+    builder.directory(dir);
+    process = builder.start();
     
-    Thread logStdErrThread = null;
-    Thread logStdOutThread = null;
     try {
-      // Copy stderr of the child-process via a thread
-      logStdErrThread = logStream((t.getTaskId() + " - " + "stderr"), 
-                                   process.getErrorStream(), 
-                                   taskStdErrLogWriter);
-      
-      // Copy stdout of the child-process via a thread
-      logStdOutThread = logStream((t.getTaskId() + " - " + "stdout"), 
-                                  process.getInputStream(), 
-                                  taskStdOutLogWriter); 
-      
       int exit_code = process.waitFor();
      
       if (!killed && exit_code != 0) {
@@ -427,26 +405,10 @@ abstract class TaskRunner extends Thread {
         throw new IOException("Task process exit with nonzero status of " +
                               exit_code + ".");
       }
-      
     } catch (InterruptedException e) {
       throw new IOException(e.toString());
     } finally {
-      kill();
-      
-      // Kill both stdout/stderr copying threads 
-      if (logStdErrThread != null) {
-        logStdErrThread.interrupt();
-        try {
-          logStdErrThread.join();
-        } catch (InterruptedException ie) {}
-      }
-      
-      if (logStdOutThread != null) {
-        logStdOutThread.interrupt();
-        try {
-          logStdOutThread.join();
-        } catch (InterruptedException ie) {}
-      }
+      kill();      
     }
   }
 
@@ -460,48 +422,4 @@ abstract class TaskRunner extends Thread {
     killed = true;
   }
 
-  /**
-   * Spawn a new thread to copy the child-jvm's stdout/stderr streams
-   * via a {@link TaskLog.Writer}
-   * 
-   * @param threadName thread name
-   * @param stream child-jvm's stdout/stderr stream
-   * @param writer {@link TaskLog.Writer} used to copy the child-jvm's data
-   * @return Return the newly created thread
-   */
-  private Thread logStream(String threadName, 
-                           final InputStream stream, 
-                           final TaskLog.Writer taskLog) {
-    Thread loggerThread = new Thread() {
-      public void run() {
-        try {
-          byte[] buf = new byte[512];
-          while (!Thread.interrupted()) {
-            while (stream.available() > 0) {
-              int n = stream.read(buf, 0, buf.length);
-              taskLog.write(buf, 0, n);
-            }
-            Thread.sleep(1000);
-          }
-        } catch (IOException e) {
-          LOG.warn(t.getTaskId()+" Error reading child output", e);
-        } catch (InterruptedException e) {
-          // expected
-        } finally {
-          try {
-            stream.close();
-            taskLog.close();
-          } catch (IOException e) {
-            LOG.warn(t.getTaskId()+" Error closing child output", e);
-          }
-        }
-      }
-    };
-    loggerThread.setName(threadName);
-    loggerThread.setDaemon(true);
-    loggerThread.start();
-    
-    return loggerThread;
-  }
-  
 }

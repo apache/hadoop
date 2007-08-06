@@ -461,6 +461,27 @@ Branch 0.14 (unreleased changes)
 142. HADOOP-1657.  Fix NNBench to ensure that the block size is a
      multiple of bytes.per.checksum. (Raghu Angadi via dhruba)
 
+143. HADOOP-1553.  Replace user task output and log capture code to use shell
+     redirection instead of copier threads in the TaskTracker. Capping the
+     size of the output is now done via tail in memory and thus should not be large.
+     The output of the tasklog servlet is not forced into UTF8 and is not 
+     buffered entirely in memory. (omalley)
+     Configuration changes to hadoop-default.xml:
+       remove mapred.userlog.num.splits
+       remove mapred.userlog.purge.splits
+       change default mapred.userlog.limit.kb to 0 (no limit)
+       change default mapred.userlog.retain.hours to 24
+     Configuration changes to log4j.properties:
+       remove log4j.appender.TLA.noKeepSplits
+       remove log4j.appender.TLA.purgeLogSplits
+       remove log4j.appender.TLA.logsRetainHours
+     URL changes:
+       http://<tasktracker>/tasklog.jsp -> http://<tasktracker>tasklog with
+         parameters limited to start and end, which may be positive (from
+         start) or negative (from end).
+     Environment:
+       require bash (v2 or later) and tail
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

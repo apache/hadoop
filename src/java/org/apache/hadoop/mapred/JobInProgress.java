@@ -375,8 +375,8 @@ class JobInProgress {
       String httpTaskLogLocation = null; 
       if (null != ttStatus){
         httpTaskLogLocation = "http://" + ttStatus.getHost() + ":" + 
-          ttStatus.getHttpPort() + "/tasklog.jsp?plaintext=true&taskid=" +
-          status.getTaskId() + "&all=true";
+          ttStatus.getHttpPort() + "/tasklog?plaintext=true&taskid=" +
+          status.getTaskId();
       }
 
       TaskCompletionEvent taskEvent = null;

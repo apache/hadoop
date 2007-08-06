@@ -17,9 +17,13 @@
  */
  package org.apache.hadoop.mapred;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.BindException;
@@ -756,6 +760,7 @@ public class TaskTracker
     server.setAttribute("localDirAllocator", localDirAllocator);
     server.setAttribute("shuffleServerMetrics", shuffleServerMetrics);
     server.addServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
+    server.addServlet("taskLog", "/tasklog", TaskLogServlet.class);
     server.start();
     this.httpPort = server.getPort();
     initialize();
@@ -1763,6 +1768,7 @@ public class TaskTracker
    * The main() for child processes. 
    */
   public static class Child {
+    
     public static void main(String[] args) throws Throwable {
       //LogFactory.showTime(false);
       LOG.debug("Child starting");
@@ -1778,6 +1784,7 @@ public class TaskTracker
             
       Task task = umbilical.getTask(taskid);
       JobConf job = new JobConf(task.getJobFile());
+      TaskLog.cleanup(job.getInt("mapred.userlog.retain.hours", 24));
       task.setConf(job);
           
       defaultConf.addFinalResource(new Path(task.getJobFile()));

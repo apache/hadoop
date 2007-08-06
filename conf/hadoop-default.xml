@@ -779,29 +779,15 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.userlog.num.splits</name>
-  <value>4</value>
-  <description>The number of fragments into which the user-log is to be split.
-  </description>
-</property>
-
-<property>
   <name>mapred.userlog.limit.kb</name>
-  <value>100</value>
-  <description>The maximum size of user-logs of each task.
-  </description>
-</property>
-
-<property>
-  <name>mapred.userlog.purgesplits</name>
-  <value>true</value>
-  <description>Should the splits be purged disregarding the user-log size limit.
+  <value>0</value>
+  <description>The maximum size of user-logs of each task in KB. 0 disables the cap.
   </description>
 </property>
 
 <property>
   <name>mapred.userlog.retain.hours</name>
-  <value>12</value>
+  <value>24</value>
   <description>The maximum time, in hours, for which the user-logs are to be 
   				retained.
   </description>

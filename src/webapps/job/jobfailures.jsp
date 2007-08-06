@@ -56,11 +56,11 @@
         out.print("<td>");
         if (taskTracker != null) {
           String taskLogUrl = "http://" + taskTracker.getHost() + ":" +
-          	taskTracker.getHttpPort() + "/tasklog.jsp?taskid=" + 
+          	taskTracker.getHttpPort() + "/tasklog?taskid=" + 
           	statuses[i].getTaskId();
-          String tailFourKBUrl = taskLogUrl + "&tail=true&tailsize=4096";
-          String tailEightKBUrl = taskLogUrl + "&tail=true&tailsize=8192";
-          String entireLogUrl = taskLogUrl + "&all=true";
+          String tailFourKBUrl = taskLogUrl + "&start=-4097";
+          String tailEightKBUrl = taskLogUrl + "&start=-8193";
+          String entireLogUrl = taskLogUrl;
           out.print("<a href=\"" + tailFourKBUrl + "\">Last 4KB</a><br/>");
           out.print("<a href=\"" + tailEightKBUrl + "\">Last 8KB</a><br/>");
           out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");

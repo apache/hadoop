@@ -21,7 +21,6 @@ package org.apache.hadoop.mapred.pipes;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 

@@ -304,6 +304,46 @@ public class FileUtil {
   }
   
   /**
+   * This class is only used on windows to invoke the cygpath command.
+   */
+  private static class CygPathCommand extends Command {
+    String[] command;
+    String result;
+    CygPathCommand(String path) throws IOException {
+      command = new String[]{"cygpath", "-u", path};
+      run();
+    }
+    String getResult() throws IOException {
+      return result;
+    }
+    protected String[] getExecString() {
+      return command;
+    }
+    protected void parseExecResult(BufferedReader lines) throws IOException {
+      String line = lines.readLine();
+      if (line == null) {
+        throw new IOException("Can't convert '" + command[2] + 
+                              " to a cygwin path");
+      }
+      result = line;
+    }
+  }
+
+  /**
+   * Convert a os-native filename to a path that works for the shell.
+   * @param file The filename to convert
+   * @return The unix pathname
+   * @throws IOException on windows, there can be problems with the subprocess
+   */
+  public static String makeShellPath(File file) throws IOException {
+    if (Path.WINDOWS) {
+      return new CygPathCommand(file.toString()).getResult();
+    } else {
+      return file.toString();
+    }
+  }
+
+  /**
    * Takes an input dir and returns the du on that local directory. Very basic
    * implementation.
    * 
