@@ -32,6 +32,11 @@ Trunk (unreleased changes)
     HADOOP-1463.  HDFS report correct usage statistics for disk space
     used by HDFS.  (Hairong Kuang via dhruba)
 
+  IMPROVEMENTS
+
+    HADOOP-1651.  Improve progress reporting.
+    (Devaraj Das via tomwhite)
+
 Branch 0.14 (unreleased changes)
 
   1. HADOOP-1197.  In Configuration, deprecate getObject() and add

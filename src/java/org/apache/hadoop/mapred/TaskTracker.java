@@ -1776,6 +1776,8 @@ public class TaskTracker
       JobConf defaultConf = new JobConf();
       int port = Integer.parseInt(args[0]);
       String taskid = args[1];
+      //set a very high idle timeout so that the connection is never closed
+      defaultConf.setInt("ipc.client.connection.maxidletime", 60*60*1000);
       TaskUmbilicalProtocol umbilical =
         (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
                                             TaskUmbilicalProtocol.versionID,

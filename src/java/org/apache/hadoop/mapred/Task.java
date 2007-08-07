@@ -217,7 +217,7 @@ abstract class Task implements Writable, Configurable {
                                           ) throws IOException;
 
   /** The number of milliseconds between progress reports. */
-  public static final int PROGRESS_INTERVAL = 1000;
+  public static final int PROGRESS_INTERVAL = 3000;
 
   private transient Progress taskProgress = new Progress();
 
@@ -230,6 +230,8 @@ abstract class Task implements Writable, Configurable {
    * Using AtomicBoolean since we need an atomic read & reset method. 
    */  
   private AtomicBoolean progressFlag = new AtomicBoolean(false);
+  /* flag to track whether task is done */
+  private AtomicBoolean taskDone = new AtomicBoolean(false);
   // getters and setters for flag
   private void setProgressFlag() {
     progressFlag.set(true);
@@ -256,11 +258,20 @@ abstract class Task implements Writable, Configurable {
         public void run() {
           final int MAX_RETRIES = 3;
           int remainingRetries = MAX_RETRIES;
-          while (true) {
+          // get current flag value and reset it as well
+          boolean sendProgress = resetProgressFlag();
+          while (!taskDone.get()) {
             try {
-              // get current flag value and reset it as well
-              boolean sendProgress = resetProgressFlag();
               boolean taskFound = true; // whether TT knows about this task
+              // sleep for a bit
+              try {
+                Thread.sleep(PROGRESS_INTERVAL);
+              } 
+              catch (InterruptedException e) {
+                LOG.debug(getTaskId() + " Progress/ping thread exiting " +
+                                        "since it got interrupted");
+                break;
+              }
               
               if (sendProgress) {
                 // we need to send progress update
@@ -279,13 +290,8 @@ abstract class Task implements Writable, Configurable {
                 System.exit(66);
               }
               
+              sendProgress = resetProgressFlag(); 
               remainingRetries = MAX_RETRIES;
-              // sleep for a bit
-              try {
-                Thread.sleep(PROGRESS_INTERVAL);
-              } 
-              catch (InterruptedException e) {
-              }
             } 
             catch (Throwable t) {
               LOG.info("Communication exception: " + StringUtils.stringifyException(t));
@@ -301,6 +307,7 @@ abstract class Task implements Writable, Configurable {
       }, "Comm thread for "+taskId);
     thread.setDaemon(true);
     thread.start();
+    LOG.debug(getTaskId() + " Progress/ping thread started");
   }
 
   
@@ -338,6 +345,7 @@ abstract class Task implements Writable, Configurable {
   public void done(TaskUmbilicalProtocol umbilical) throws IOException {
     int retries = 10;
     boolean needProgress = true;
+    taskDone.set(true);
     while (true) {
       try {
         if (needProgress) {
