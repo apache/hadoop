@@ -56,7 +56,6 @@ public class FsShell extends ToolBase {
     if (this.trash == null) {
       this.trash = new Trash(conf);
     }
-    System.out.println("XXX FsShell init done");
   }
 
   /**
@@ -797,6 +796,13 @@ public class FsShell extends ToolBase {
   private void expunge() throws IOException {
     trash.expunge();
     trash.checkpoint();
+  }
+
+  /**
+   * Returns the Trash object associated with this shell.
+   */
+  public Path getCurrentTrashDir() {
+    return trash.getCurrentTrashDir();
   }
 
   /**

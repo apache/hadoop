@@ -484,6 +484,10 @@ Branch 0.14 (unreleased changes)
 
 144. HADOOP-1659.  Fix a job id/job name mixup. (Arun C. Murthy via omalley)
 
+145. HADOOP-1665.  With HDFS Trash enabled and the same file was created
+     and deleted more than once, the suceeding deletions creates Trash item
+     names suffixed with a integer.  (Dhruba Borthakur via dhruba)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
