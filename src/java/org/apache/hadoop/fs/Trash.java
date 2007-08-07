@@ -98,6 +98,14 @@ public class Trash extends Configured {
         throw new IOException("Failed to create trash directory: "+trashDir);
       }
       try {
+        //
+        // if the target path in Trash already exists, then append with 
+        // a number. Start from 1.
+        //
+        String orig = trashPath.toString();
+        for (int j = 1; fs.exists(trashPath); j++) {
+          trashPath = new Path(orig + "." + j);
+        }
         if (fs.rename(path, trashPath))           // move to current trash
           return true;
       } catch (IOException e) {
@@ -153,6 +161,13 @@ public class Trash extends Configured {
         }
       }
     }
+  }
+
+  //
+  // get the current working directory
+  //
+  Path getCurrentTrashDir() {
+    return current;
   }
 
   /** Return a {@link Runnable} that periodically empties the trash.
