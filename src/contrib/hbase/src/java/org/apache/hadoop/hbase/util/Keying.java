@@ -19,9 +19,17 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HStoreKey;
 
 /**
  * Utility creating hbase friendly keys.
@@ -110,5 +118,62 @@ public class Keying {
       sb.insert(0, next);
     }
     return sb.toString();
+  }
+  
+  /**
+   * @param i
+   * @return <code>i</code> as byte array.
+   */
+  public static byte[] intToBytes(final int i){
+    ByteBuffer buffer = ByteBuffer.allocate(Integer.SIZE);
+    buffer.putInt(i);
+    return buffer.array();
+  }
+  
+  /**
+   * @param l
+   * @return <code>i</code> as byte array.
+   */
+  public static byte[] longToBytes(final long l){
+    ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE);
+    buffer.putLong(l);
+    return buffer.array();
+  }
+
+  /**
+   * Returns row and column bytes out of an HStoreKey.
+   * @param hsk Store key.
+   * @throws UnsupportedEncodingException
+   */
+  public static byte[] getBytes(final HStoreKey hsk)
+  throws UnsupportedEncodingException {
+    StringBuilder s = new StringBuilder(hsk.getRow().toString());
+    s.append(hsk.getColumn().toString());
+    return s.toString().getBytes(HConstants.UTF8_ENCODING);
+  }
+
+  /**
+   * @param bytes
+   * @return String made of the bytes or null if bytes are null.
+   * @throws UnsupportedEncodingException
+   */
+  public static String bytesToString(final byte [] bytes)
+  throws UnsupportedEncodingException {
+    if(bytes == null) {
+      return null;
+    }
+    return new String(bytes, HConstants.UTF8_ENCODING);
+  }
+  
+  public static long bytesToLong(final byte [] bytes) throws IOException {
+    long result = -1;
+    DataInputStream dis = null;
+    try {
+      dis = new DataInputStream(new ByteArrayInputStream(bytes));
+      result = dis.readLong();
+    } finally {
+      dis.close();
+    }
+    return result;
   }
 }

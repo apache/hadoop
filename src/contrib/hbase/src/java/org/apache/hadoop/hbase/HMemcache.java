@@ -29,6 +29,8 @@ import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Text;
 
@@ -37,6 +39,7 @@ import org.apache.hadoop.io.Text;
  * wrapper around a TreeMap that helps us when staging the Memcache out to disk.
  */
 public class HMemcache {
+  static final Log LOG = LogFactory.getLog(HMemcache.class);
   TreeMap<HStoreKey, byte []> memcache =
     new TreeMap<HStoreKey, byte []>();
   final Vector<TreeMap<HStoreKey, byte []>> history
@@ -47,6 +50,7 @@ public class HMemcache {
   
   /*
    * Approximate size in bytes of the payload carried by this memcache.
+   * Does not consider deletes nor adding again on same key.
    */
   private AtomicLong size = new AtomicLong(0);
 
@@ -157,6 +161,7 @@ public class HMemcache {
   
   /**
    * @return Approximate size in bytes of payload carried by this memcache.
+   * Does not take into consideration deletes nor adding again on same key.
    */
   public long getSize() {
     return this.size.get();

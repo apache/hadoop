@@ -77,10 +77,9 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
     // Now shutdown the region server and wait for it to go down.
     this.cluster.abortRegionServer(0);
     this.cluster.waitOnRegionServer(0);
-
+    
     // Verify that the client can find the data after the region has been moved
     // to a different server
-
     HScannerInterface scanner =
       table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
 

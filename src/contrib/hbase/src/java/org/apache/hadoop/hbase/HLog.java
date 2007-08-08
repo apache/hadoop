@@ -97,13 +97,15 @@ public class HLog implements HConstants {
   static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
     Configuration conf) throws IOException {
     Path logfiles[] = fs.listPaths(srcDir);
-    LOG.info("splitting " + logfiles.length + " log files in " +
-        srcDir.toString());
-
+    LOG.info("splitting " + logfiles.length + " log(s) in " +
+      srcDir.toString());
     HashMap<Text, SequenceFile.Writer> logWriters =
       new HashMap<Text, SequenceFile.Writer>();
     try {
       for(int i = 0; i < logfiles.length; i++) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Splitting " + logfiles[i]);
+        }
         SequenceFile.Reader in =
           new SequenceFile.Reader(fs, logfiles[i], conf);
         try {
@@ -113,7 +115,7 @@ public class HLog implements HConstants {
             Text regionName = key.getRegionName();
             SequenceFile.Writer w = logWriters.get(regionName);
             if (w == null) {
-              Path logfile = new Path(HStoreFile.getHRegionDir(rootDir,
+              Path logfile = new Path(HRegion.getRegionDir(rootDir,
                   regionName), HREGION_OLDLOGFILE_NAME);
               if (LOG.isDebugEnabled()) {
                 LOG.debug("getting new log file writer for path " + logfile);
@@ -121,6 +123,9 @@ public class HLog implements HConstants {
               w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
                   HLogEdit.class);
               logWriters.put(regionName, w);
+            }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Edit " + key.toString());
             }
             w.append(key, val);
           }

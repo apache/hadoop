@@ -56,7 +56,7 @@ public abstract class HBaseTestCase extends TestCase {
     HTableDescriptor desc, long regionId, Text startKey, Text endKey)
   throws IOException {
     HRegionInfo info = new HRegionInfo(regionId, desc, startKey, endKey);
-    Path regionDir = HStoreFile.getHRegionDir(dir, info.regionName);
+    Path regionDir = HRegion.getRegionDir(dir, info.regionName);
     FileSystem fs = dir.getFileSystem(c);
     fs.mkdirs(regionDir);
     return new HRegion(dir,

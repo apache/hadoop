@@ -36,8 +36,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.StringUtils;
 
@@ -68,7 +69,7 @@ import org.apache.hadoop.util.StringUtils;
  * each column family.  (This config info will be communicated via the 
  * tabledesc.)
  * 
- * The HTableDescriptor contains metainfo about the HRegion's table.
+ * <p>The HTableDescriptor contains metainfo about the HRegion's table.
  * regionName is a unique identifier for this HRegion. (startKey, endKey]
  * defines the keyspace for this HRegion.
  */
@@ -76,24 +77,12 @@ public class HRegion implements HConstants {
   static String SPLITDIR = "splits";
   static String MERGEDIR = "merges";
   static String TMPREGION_PREFIX = "tmpregion_";
-  static Random rand = new Random();
+  static final Random rand = new Random();
   static final Log LOG = LogFactory.getLog(HRegion.class);
   final AtomicBoolean closed = new AtomicBoolean(false);
   private long noFlushCount = 0;
-
-  /**
-   * Deletes all the files for a HRegion
-   * 
-   * @param fs                  - the file system object
-   * @param baseDirectory       - base directory for HBase
-   * @param regionName          - name of the region to delete
-   * @throws IOException
-   */
-  static void deleteRegion(FileSystem fs, Path baseDirectory,
-      Text regionName) throws IOException {
-    LOG.info("Deleting region " + regionName);
-    fs.delete(HStoreFile.getHRegionDir(baseDirectory, regionName));
-  }
+  static final Text COL_SPLITA = new Text(COLUMN_FAMILY_STR + "splitA");
+  static final Text COL_SPLITB = new Text(COLUMN_FAMILY_STR + "splitB");
   
   /**
    * Merge two HRegions.  They must be available on the current
@@ -108,7 +97,7 @@ public class HRegion implements HConstants {
 
     // Make sure that srcA comes first; important for key-ordering during
     // write of the merged file.
-    
+    FileSystem fs = srcA.getFilesystem();
     if(srcA.getStartKey() == null) {
       if(srcB.getStartKey() == null) {
         throw new IOException("Cannot merge two regions with null start key");
@@ -126,7 +115,6 @@ public class HRegion implements HConstants {
       throw new IOException("Cannot merge non-adjacent regions");
     }
 
-    FileSystem fs = a.getFilesystem();
     Configuration conf = a.getConf();
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
@@ -143,22 +131,21 @@ public class HRegion implements HConstants {
     HRegionInfo newRegionInfo
       = new HRegionInfo(Math.abs(rand.nextLong()), tabledesc, startKey, endKey);
     
-    Path newRegionDir = HStoreFile.getHRegionDir(merges, newRegionInfo.regionName);
+    Path newRegionDir = HRegion.getRegionDir(merges, newRegionInfo.regionName);
 
     if(fs.exists(newRegionDir)) {
       throw new IOException("Cannot merge; target file collision at " + newRegionDir);
     }
 
-    LOG.info("starting merge of regions: " + a.getRegionName() + " and " 
-        + b.getRegionName() + " new region start key is '" 
-        + (startKey == null ? "" : startKey) + "', end key is '" 
-        + (endKey == null ? "" : endKey) + "'");
+    LOG.info("starting merge of regions: " + a.getRegionName() + " and " +
+      b.getRegionName() + " into new region " + newRegionInfo.toString());
     
     // Flush each of the sources, and merge their files into a single 
     // target for each column family.    
     TreeSet<HStoreFile> alreadyMerged = new TreeSet<HStoreFile>();
     TreeMap<Text, Vector<HStoreFile>> filesToMerge =
       new TreeMap<Text, Vector<HStoreFile>>();
+    
     for(HStoreFile src: a.flushcache(true)) {
       Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
       if(v == null) {
@@ -185,7 +172,7 @@ public class HRegion implements HConstants {
       Text colFamily = es.getKey();
       Vector<HStoreFile> srcFiles = es.getValue();
       HStoreFile dst = new HStoreFile(conf, merges, newRegionInfo.regionName, 
-          colFamily, Math.abs(rand.nextLong()));
+        colFamily, Math.abs(rand.nextLong()));
       dst.mergeStoreFiles(srcFiles, fs, conf);
       alreadyMerged.addAll(srcFiles);
     }
@@ -193,7 +180,6 @@ public class HRegion implements HConstants {
     // That should have taken care of the bulk of the data.
     // Now close the source HRegions for good, and repeat the above to take care
     // of any last-minute inserts
-
     if(LOG.isDebugEnabled()) {
       LOG.debug("flushing changes since start of merge for region " 
           + a.getRegionName());
@@ -235,13 +221,13 @@ public class HRegion implements HConstants {
     for (Map.Entry<Text, Vector<HStoreFile>> es : filesToMerge.entrySet()) {
       Text colFamily = es.getKey();
       Vector<HStoreFile> srcFiles = es.getValue();
-      HStoreFile dst = new HStoreFile(conf, merges,
-        newRegionInfo.regionName, colFamily, Math.abs(rand.nextLong()));
+      HStoreFile dst = new HStoreFile(conf, merges, newRegionInfo.regionName,
+        colFamily, Math.abs(rand.nextLong()));
       dst.mergeStoreFiles(srcFiles, fs, conf);
     }
 
     // Done
-    
+    // Construction moves the merge files into place under region.
     HRegion dstRegion = new HRegion(rootDir, log, fs, conf, newRegionInfo,
         newRegionDir);
 
@@ -304,7 +290,6 @@ public class HRegion implements HConstants {
    * appropriate log info for this HRegion. If there is a previous log file
    * (implying that the HRegion has been written-to before), then read it from
    * the supplied path.
-   * 
    * @param rootDir root directory for HBase instance
    * @param fs is the filesystem.  
    * @param conf is global configuration settings.
@@ -324,29 +309,27 @@ public class HRegion implements HConstants {
     this.conf = conf;
     this.regionInfo = regionInfo;
     this.memcache = new HMemcache();
-
-
     this.writestate.writesOngoing = true;
     this.writestate.writesEnabled = true;
 
     // Declare the regionName.  This is a unique string for the region, used to 
     // build a unique filename.
-    
-    this.regiondir = HStoreFile.getHRegionDir(rootDir, this.regionInfo.regionName);
+    this.regiondir = HRegion.getRegionDir(rootDir, this.regionInfo.regionName);
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
 
-    // Move prefab HStore files into place (if any)
-    
+    // Move prefab HStore files into place (if any).  This picks up split files
+    // and any merges from splits and merges dirs.
     if(initialFiles != null && fs.exists(initialFiles)) {
-      fs.rename(initialFiles, regiondir);
+      fs.rename(initialFiles, this.regiondir);
     }
 
     // Load in all the HStores.
     for(Map.Entry<Text, HColumnDescriptor> e :
         this.regionInfo.tableDesc.families().entrySet()) {
       Text colFamily = HStoreKey.extractFamily(e.getKey());
-      stores.put(colFamily, new HStore(rootDir, this.regionInfo.regionName,
-        e.getValue(), fs, oldLogFile, conf));
+      stores.put(colFamily,
+        new HStore(rootDir, this.regionInfo.regionName, e.getValue(), fs,
+          oldLogFile, conf));
     }
 
     // Get rid of any splits or merges that were lost in-progress
@@ -359,7 +342,7 @@ public class HRegion implements HConstants {
       fs.delete(merges);
     }
 
-    // By default, we flush the cache when 32M.
+    // By default, we flush the cache when 16M.
     this.memcacheFlushSize = conf.getInt("hbase.hregion.memcache.flush.size",
       1024*1024*16);
     this.blockingMemcacheSize = this.memcacheFlushSize *
@@ -367,8 +350,8 @@ public class HRegion implements HConstants {
     
     // By default, we compact the region if an HStore has more than
     // MIN_COMMITS_FOR_COMPACTION map files
-    this.compactionThreshold = conf.getInt("hbase.hregion.compactionThreshold",
-      3);
+    this.compactionThreshold =
+      conf.getInt("hbase.hregion.compactionThreshold", 3);
     
     // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
     this.desiredMaxFileSize =
@@ -397,9 +380,8 @@ public class HRegion implements HConstants {
    * time-sensitive thread.
    * 
    * @return Vector of all the storage files that the HRegion's component 
-   * HStores make use of.  It's a list of HStoreFile objects.  Returns empty
-   * vector if already closed and null if it is judged that it should not
-   * close.
+   * HStores make use of.  It's a list of all HStoreFile objects. Returns empty
+   * vector if already closed and null if judged that it should not close.
    * 
    * @throws IOException
    */
@@ -443,7 +425,6 @@ public class HRegion implements HConstants {
       if(!shouldClose) {
         return null;
       }
-      LOG.info("closing region " + this.regionInfo.regionName);
       
       // Write lock means no more row locks can be given out.  Wait on
       // outstanding row locks to come in before we close so we do not drop
@@ -465,124 +446,121 @@ public class HRegion implements HConstants {
           writestate.writesOngoing = false;
         }
         this.closed.set(true);
-        LOG.info("region " + this.regionInfo.regionName + " closed");
+        LOG.info("closed " + this.regionInfo.regionName);
       }
     } finally {
       lock.releaseWriteLock();
     }
   }
-
-  /**
-   * Split the HRegion to create two brand-new ones.  This will also close the 
-   * current HRegion.
-   *
-   * Returns two brand-new (and open) HRegions
+  
+  /*
+   * Split the HRegion to create two brand-new ones.  This also closes
+   * current HRegion.  Split should be fast since we don't rewrite store files
+   * but instead create new 'reference' store files that read off the top and
+   * bottom ranges of parent store files.
+   * @param midKey Row to split on.
+   * @param listener May be null.
+   * @return two brand-new (and open) HRegions
+   * @throws IOException
    */
-  HRegion[] closeAndSplit(Text midKey, RegionUnavailableListener listener)
+  HRegion[] closeAndSplit(final Text midKey,
+      final RegionUnavailableListener listener)
   throws IOException {
-    if(((regionInfo.startKey.getLength() != 0)
-        && (regionInfo.startKey.compareTo(midKey) > 0))
-        || ((regionInfo.endKey.getLength() != 0)
-            && (regionInfo.endKey.compareTo(midKey) < 0))) {
-      throw new IOException("Region splitkey must lie within region " +
-        "boundaries.");
-    }
-
+    checkMidKey(midKey);
     long startTime = System.currentTimeMillis();
-    Path splits = new Path(regiondir, SPLITDIR);
-    if(! fs.exists(splits)) {
-      fs.mkdirs(splits);
+    Path splits = getSplitsDir();
+    HRegionInfo regionAInfo = new HRegionInfo(Math.abs(rand.nextLong()),
+      this.regionInfo.tableDesc, this.regionInfo.startKey, midKey);
+    Path dirA = getSplitRegionDir(splits, regionAInfo.regionName);
+    if(fs.exists(dirA)) {
+      throw new IOException("Cannot split; target file collision at " + dirA);
     }
-    
-    long regionAId = Math.abs(rand.nextLong());
-    HRegionInfo regionAInfo = new HRegionInfo(regionAId, regionInfo.tableDesc, 
-      regionInfo.startKey, midKey);
-    long regionBId = Math.abs(rand.nextLong());
-    HRegionInfo regionBInfo =
-      new HRegionInfo(regionBId, regionInfo.tableDesc, midKey, null);
-    Path dirA = HStoreFile.getHRegionDir(splits, regionAInfo.regionName);
-    Path dirB = HStoreFile.getHRegionDir(splits, regionBInfo.regionName);
-    if(fs.exists(dirA) || fs.exists(dirB)) {
-      throw new IOException("Cannot split; target file collision at " + dirA +
-        " or " + dirB);
+    HRegionInfo regionBInfo = new HRegionInfo(Math.abs(rand.nextLong()),
+      this.regionInfo.tableDesc, midKey, null);
+    Path dirB = getSplitRegionDir(splits, regionBInfo.regionName);
+    if(this.fs.exists(dirB)) {
+      throw new IOException("Cannot split; target file collision at " + dirB);
     }
 
-    // We just copied most of the data. Now get whatever updates are up in
-    // the memcache (after shutting down new updates).
-    
     // Notify the caller that we are about to close the region. This moves
-    // us ot the 'retiring' queue. Means no more updates coming in -- just
+    // us to the 'retiring' queue. Means no more updates coming in -- just
     // whatever is outstanding.
-    listener.closing(this.getRegionName());
-
-    // Wait on the last row updates to come in.
-    LOG.debug("Starting wait on row locks.");
-    waitOnRowLocks();
-
-    // Flush this HRegion out to storage, and turn off flushes
-    // or compactions until close() is called.
-    LOG.debug("Calling flushcache inside closeAndSplit");
-    Vector<HStoreFile> hstoreFilesToSplit = flushcache(true);
-    if (hstoreFilesToSplit == null) {
-      // It should always return a list of hstore files even if memcache is
-      // empty.  It will return null if concurrent compaction or splits which
-      // should not happen.
-      throw new NullPointerException("Flushcache did not return any files");
+    if (listener != null) {
+      listener.closing(getRegionName());
     }
-    TreeSet<HStoreFile> alreadySplit = new TreeSet<HStoreFile>();
-    for(HStoreFile hsf: hstoreFilesToSplit) {
-      alreadySplit.add(splitStoreFile(hsf, splits, regionAInfo,
-        regionBInfo, midKey));
-    }
+
     
-    // Now close the HRegion
-    hstoreFilesToSplit = close();
+    // Now close the HRegion.  Close returns all store files or null if not
+    // supposed to close (? What to do in this case? Implement abort of close?)
+    // Close also does wait on outstanding rows and calls a flush just-in-case.
+    Vector<HStoreFile> hstoreFilesToSplit = close();
+    if (hstoreFilesToSplit == null) {
+      LOG.warn("Close came back null (Implement abort of close?)");
+    }
     
     // Tell listener that region is now closed and that they can therefore
     // clean up any outstanding references.
-    listener.closed(this.getRegionName());
+    if (listener != null) {
+      listener.closed(this.getRegionName());
+    }
     
-    // Copy the small remainder
-    for(HStoreFile hsf: hstoreFilesToSplit) {
-      if(!alreadySplit.contains(hsf)) {
-        splitStoreFile(hsf, splits, regionAInfo, regionBInfo, midKey);
-      }
+    // Split each store file.
+    for(HStoreFile h: hstoreFilesToSplit) {
+      // A reference to the bottom half of the hsf store file.
+      HStoreFile.Reference aReference = new HStoreFile.Reference(
+        getRegionName(), h.getFileId(), new HStoreKey(midKey),
+        HStoreFile.Range.bottom);
+      HStoreFile a = new HStoreFile(this.conf, splits,
+        regionAInfo.regionName, h.getColFamily(), Math.abs(rand.nextLong()),
+        aReference);
+      HStoreFile.Reference bReference = new HStoreFile.Reference(
+        getRegionName(), h.getFileId(), new HStoreKey(midKey),
+        HStoreFile.Range.top);
+      HStoreFile b = new HStoreFile(this.conf, splits,
+        regionBInfo.regionName, h.getColFamily(), Math.abs(rand.nextLong()),
+        bReference);
+      h.splitStoreFile(a, b, this.fs);
     }
 
-    // Done
+    // Done!
+    // Opening the region copies the splits files from the splits directory
+    // under each region.
     HRegion regionA = new HRegion(rootDir, log, fs, conf, regionAInfo, dirA);
     HRegion regionB = new HRegion(rootDir, log, fs, conf, regionBInfo, dirB);
 
     // Cleanup
-    fs.delete(splits);    // Get rid of splits directory
-    fs.delete(regiondir); // and the directory for the old region
-    HRegion regions[] = new HRegion[2];
-    regions[0] = regionA;
-    regions[1] = regionB;
-    LOG.info("Region split of " + this.regionInfo.regionName + " complete. " +
-      "New regions are: " + regions[0].getRegionName() + ", " +
-      regions[1].getRegionName() + ". Took " +
+    boolean deleted = fs.delete(splits);    // Get rid of splits directory
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Cleaned up " + splits.toString() + " " + deleted);
+    }
+    HRegion regions[] = new HRegion [] {regionA, regionB};
+    LOG.info("Region split of " + this.regionInfo.regionName + " complete; " +
+      "new regions: " + regions[0].getRegionName() + ", " +
+      regions[1].getRegionName() + ". Split took " +
       StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
     return regions;
   }
   
-  private HStoreFile splitStoreFile(final HStoreFile hsf, final Path splits,
-      final HRegionInfo a, final HRegionInfo b, final Text midKey)
-  throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Started splitting HStore " + hsf.getRegionName() + "/" +
-        hsf.getColFamily() + "/" + hsf.fileId());
+  private void checkMidKey(final Text midKey) throws IOException {
+    if(((this.regionInfo.startKey.getLength() != 0)
+        && (this.regionInfo.startKey.compareTo(midKey) > 0))
+        || ((this.regionInfo.endKey.getLength() != 0)
+            && (this.regionInfo.endKey.compareTo(midKey) < 0))) {
+      throw new IOException("Region splitkey must lie within region " +
+        "boundaries.");
     }
-    HStoreFile dstA = new HStoreFile(conf, splits, a.regionName, 
-      hsf.getColFamily(), Math.abs(rand.nextLong()));
-    HStoreFile dstB = new HStoreFile(conf, splits, b.regionName, 
-      hsf.getColFamily(), Math.abs(rand.nextLong()));
-    hsf.splitStoreFile(midKey, dstA, dstB, fs, conf);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Finished splitting HStore " + hsf.getRegionName() + "/" +
-        hsf.getColFamily() + "/" + hsf.fileId());
+  }
+  
+  private Path getSplitRegionDir(final Path splits, final Text regionName) {
+    return HRegion.getRegionDir(splits, regionName);
+  }
+  
+  private Path getSplitsDir() throws IOException {
+    Path splits = new Path(this.regiondir, SPLITDIR);
+    if(!this.fs.exists(splits)) {
+      this.fs.mkdirs(splits);
     }
-    return hsf;
+    return splits;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -591,22 +569,22 @@ public class HRegion implements HConstants {
 
   /** @return start key for region */
   public Text getStartKey() {
-    return regionInfo.startKey;
+    return this.regionInfo.startKey;
   }
 
   /** @return end key for region */
   public Text getEndKey() {
-    return regionInfo.endKey;
+    return this.regionInfo.endKey;
   }
 
   /** @return region id */
   public long getRegionId() {
-    return regionInfo.regionId;
+    return this.regionInfo.regionId;
   }
 
   /** @return region name */
   public Text getRegionName() {
-    return regionInfo.regionName;
+    return this.regionInfo.regionName;
   }
 
   /** @return root directory path */
@@ -616,27 +594,27 @@ public class HRegion implements HConstants {
 
   /** @return HTableDescriptor for this region */
   public HTableDescriptor getTableDesc() {
-    return regionInfo.tableDesc;
+    return this.regionInfo.tableDesc;
   }
 
   /** @return HLog in use for this region */
   public HLog getLog() {
-    return log;
+    return this.log;
   }
 
   /** @return Configuration object */
   public Configuration getConf() {
-    return conf;
+    return this.conf;
   }
 
   /** @return region directory Path */
   public Path getRegionDir() {
-    return regiondir;
+    return this.regiondir;
   }
 
   /** @return FileSystem being used by this region */
   public FileSystem getFilesystem() {
-    return fs;
+    return this.fs;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -646,63 +624,74 @@ public class HRegion implements HConstants {
   // upkeep.
   //////////////////////////////////////////////////////////////////////////////
 
-  /**
+  /*
    * Iterates through all the HStores and finds the one with the largest
    * MapFile size. If the size is greater than the (currently hard-coded)
    * threshold, returns true indicating that the region should be split. The
    * midKey for the largest MapFile is returned through the midKey parameter.
-   * 
-   * @param midKey      - (return value) midKey of the largest MapFile
-   * @return            - true if the region should be split
+   * It is possible for us to rule the region non-splitable even in excess of
+   * configured size.  This happens if region contains a reference file.  If
+   * a reference file, the region can not be split.
+   * @param midKey midKey of the largest MapFile
+   * @return true if the region should be split. midKey is set by this method.
+   * Check it for a midKey value on return.
    */
   boolean needsSplit(Text midKey) {
     lock.obtainReadLock();
     try {
-      Text key = new Text();
-      long maxSize = 0;
-      long aggregateSize = 0;
-      for(HStore store: stores.values()) {
-        long size = store.getLargestFileSize(key);
-        aggregateSize += size;
-        if(size > maxSize) {                      // Largest so far
-          maxSize = size;
-          midKey.set(key);
-        }
-      }
+      HStore.HStoreSize biggest = largestHStore(midKey);
       long triggerSize =
         this.desiredMaxFileSize + (this.desiredMaxFileSize / 2);
-      boolean split = (maxSize >= triggerSize || aggregateSize >= triggerSize);
+      boolean split = (biggest.getAggregate() >= triggerSize);
       if (split) {
-        LOG.info("Splitting " + getRegionName().toString() +
-          " because largest file is " + StringUtils.humanReadableInt(maxSize) +
-          ", aggregate size is " +
-          StringUtils.humanReadableInt(aggregateSize) +
-          " and desired size is " +
-          StringUtils.humanReadableInt(this.desiredMaxFileSize));
+        if (!biggest.isSplitable()) {
+          LOG.warn("Region " + getRegionName().toString() +
+            " is NOT splitable though its aggregate size is " +
+            StringUtils.humanReadableInt(biggest.getAggregate()) +
+            " and desired size is " +
+            StringUtils.humanReadableInt(this.desiredMaxFileSize));
+          split = false;
+        } else {
+          LOG.info("Splitting " + getRegionName().toString() +
+            " because largest aggregate size is " +
+            StringUtils.humanReadableInt(biggest.getAggregate()) +
+            " and desired size is " +
+            StringUtils.humanReadableInt(this.desiredMaxFileSize));
+        }
       }
       return split;
     } finally {
       lock.releaseReadLock();
     }
   }
-
+  
   /**
-   * @return - returns the size of the largest HStore
+   * @return returns size of largest HStore.  Also returns whether store is
+   * splitable or not (Its not splitable if region has a store that has a
+   * reference store file).
    */
-  long largestHStore() {
-    long maxsize = 0;
+  HStore.HStoreSize largestHStore(final Text midkey) {
+    HStore.HStoreSize biggest = null;
+    boolean splitable = true;
     lock.obtainReadLock();
     try {
-      Text key = new Text();
       for(HStore h: stores.values()) {
-        long size = h.getLargestFileSize(key);
-
-        if(size > maxsize) {                      // Largest so far
-          maxsize = size;
+        HStore.HStoreSize size = h.size(midkey);
+        // If we came across a reference down in the store, then propagate
+        // fact that region is not splitable.
+        if (splitable) {
+          splitable = size.splitable;
+        }
+        if (biggest == null) {
+          biggest = size;
+          continue;
+        }
+        if(size.getAggregate() > biggest.getAggregate()) { // Largest so far
+          biggest = size;
         }
       }
-      return maxsize;
-    
+      biggest.setSplitable(splitable);
+      return biggest;
     } finally {
       lock.releaseReadLock();
     }
@@ -891,7 +880,6 @@ public class HRegion implements HConstants {
    * not flush, returns list of all store files.
    */
   Vector<HStoreFile> internalFlushcache() throws IOException {
-
     long startTime = -1;
     if(LOG.isDebugEnabled()) {
       startTime = System.currentTimeMillis();
@@ -911,12 +899,14 @@ public class HRegion implements HConstants {
     // explicitly cleaned up using a call to deleteSnapshot().
     HMemcache.Snapshot retval = memcache.snapshotMemcacheForLog(log);
     if(retval == null || retval.memcacheSnapshot == null) {
+      LOG.debug("Finished memcache flush; empty snapshot");
       return getAllStoreFiles();
     }
     long logCacheFlushId = retval.sequenceId;
     if(LOG.isDebugEnabled()) {
       LOG.debug("Snapshotted memcache for region " +
-        this.regionInfo.regionName + ". Sequence id " + retval.sequenceId);
+        this.regionInfo.regionName + " with sequence id " + retval.sequenceId +
+        " and entries " + retval.memcacheSnapshot.size());
     }
 
     // A.  Flush memcache to all the HStores.
@@ -1272,7 +1262,7 @@ public class HRegion implements HConstants {
             + lockid + " unexpected aborted by another thread");
       }
       
-      this.targetColumns.remove(lockid);
+      this.targetColumns.remove(Long.valueOf(lockid));
       releaseRowLock(row);
     }
   }
@@ -1387,7 +1377,7 @@ public class HRegion implements HConstants {
     // Pattern is that all access to rowsToLocks and/or to
     // locksToRows is via a lock on rowsToLocks.
     synchronized(rowsToLocks) {
-      return locksToRows.get(lockid);
+      return locksToRows.get(Long.valueOf(lockid));
     }
   }
   
@@ -1398,7 +1388,7 @@ public class HRegion implements HConstants {
   void releaseRowLock(Text row) {
     synchronized(rowsToLocks) {
       long lockid = rowsToLocks.remove(row).longValue();
-      locksToRows.remove(lockid);
+      locksToRows.remove(Long.valueOf(lockid));
       rowsToLocks.notifyAll();
     }
   }
@@ -1415,6 +1405,11 @@ public class HRegion implements HConstants {
     }
   }
   
+  @Override
+  public String toString() {
+    return getRegionName().toString();
+  }
+
   /**
    * HScanner is an iterator through a bunch of rows in an HRegion.
    */
@@ -1686,7 +1681,7 @@ public class HRegion implements HConstants {
   static HRegion createHRegion(final HRegionInfo info,
     final Path rootDir, final Configuration conf, final Path initialFiles)
   throws IOException {
-    Path regionDir = HStoreFile.getHRegionDir(rootDir, info.regionName);
+    Path regionDir = HRegion.getRegionDir(rootDir, info.regionName);
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
     return new HRegion(rootDir,
@@ -1721,19 +1716,23 @@ public class HRegion implements HConstants {
       final long startCode)
   throws IOException {
     HTable t = new HTable(conf, table);
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(bytes);
-    region.getRegionInfo().write(out);
-    long lockid = t.startUpdate(region.getRegionName());
-    t.put(lockid, COL_REGIONINFO, bytes.toByteArray());
-    t.put(lockid, COL_SERVER,
-      serverAddress.toString().getBytes(UTF8_ENCODING));
-    t.put(lockid, COL_STARTCODE,
-      String.valueOf(startCode).getBytes(UTF8_ENCODING));
-    t.commit(lockid);
-    if (LOG.isDebugEnabled()) {
-      LOG.info("Added region " + region.getRegionName() + " to table " +
-        table);
+    try {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      DataOutputStream out = new DataOutputStream(bytes);
+      region.getRegionInfo().write(out);
+      long lockid = t.startUpdate(region.getRegionName());
+      t.put(lockid, COL_REGIONINFO, bytes.toByteArray());
+      t.put(lockid, COL_SERVER,
+        serverAddress.toString().getBytes(UTF8_ENCODING));
+      t.put(lockid, COL_STARTCODE,
+        String.valueOf(startCode).getBytes(UTF8_ENCODING));
+      t.commit(lockid);
+      if (LOG.isDebugEnabled()) {
+        LOG.info("Added region " + region.getRegionName() + " to table " +
+            table);
+      }
+    } finally {
+      t.close();
     }
   }
   
@@ -1748,31 +1747,126 @@ public class HRegion implements HConstants {
       final Text table, final Text regionName)
   throws IOException {
     HTable t = new HTable(conf, table);
-    long lockid = t.startUpdate(regionName);
+    try {
+      removeRegionFromMETA(t, regionName);
+    } finally {
+      t.close();
+    }
+  }
+  
+  /**
+   * Delete <code>region</code> from META <code>table</code>.
+   * @param conf Configuration object
+   * @param table META table we are to delete region from.
+   * @param regionName Region to remove.
+   * @throws IOException
+   */
+  static void removeRegionFromMETA(final HTable t, final Text regionName)
+  throws IOException {
+    long lockid = t.startBatchUpdate(regionName);
     t.delete(lockid, COL_REGIONINFO);
     t.delete(lockid, COL_SERVER);
     t.delete(lockid, COL_STARTCODE);
     t.commit(lockid);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removed " + regionName + " from table " + table);
+      LOG.debug("Removed " + regionName + " from table " + t.getTableName());
+    }
+  }
+
+  /**
+   * Delete <code>split</code> column from META <code>table</code>.
+   * @param t
+   * @param split
+   * @param regionName Region to remove.
+   * @throws IOException
+   */
+  static void removeSplitFromMETA(final HTable t, final Text regionName,
+    final Text split)
+  throws IOException {
+    long lockid = t.startBatchUpdate(regionName);
+    t.delete(lockid, split);
+    t.commit(lockid);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removed " + split + " from " + regionName +
+        " from table " + t.getTableName());
     }
   }
   
   /**
+   * <code>region</code> has split.  Update META <code>table</code>.
+   * @param client Client to use running update.
+   * @param table META table we are to delete region from.
+   * @param regionName Region to remove.
+   * @throws IOException
+   */
+  static void writeSplitToMETA(final Configuration conf,
+      final Text table, final Text regionName, final HRegionInfo splitA,
+      final HRegionInfo splitB)
+  throws IOException {
+    HTable t = new HTable(conf, table);
+    try {
+      HRegionInfo hri = getRegionInfo(t.get(regionName, COL_REGIONINFO));
+      hri.offLine = true;
+      hri.split = true;
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      DataOutputStream dos = new DataOutputStream(bytes);
+      hri.write(dos);
+      dos.close();
+      long lockid = t.startBatchUpdate(regionName);
+      t.put(lockid, COL_REGIONINFO, bytes.toByteArray());
+      t.put(lockid, COL_SPLITA, Writables.getBytes(splitA));
+      t.put(lockid, COL_SPLITB, Writables.getBytes(splitB));
+      t.commitBatch(lockid);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Updated " + regionName + " in table " + table +
+        " on its being split");
+      }
+    } finally {
+      t.close();
+    }
+  }
+  
+  /**
+   * @param whichSplit COL_SPLITA or COL_SPLITB?
    * @param data Map of META row labelled column data.
-   * @return Server
+   * @return HRegionInfo or null if not found.
+   * @throws IOException 
+   */
+  static HRegionInfo getSplit(final TreeMap<Text, byte[]> data,
+      final Text whichSplit)
+  throws IOException {
+    if (!(whichSplit.equals(COL_SPLITA) || whichSplit.equals(COL_SPLITB))) {
+      throw new IOException("Illegal Argument: " + whichSplit);
+    }
+    byte []  bytes = data.get(whichSplit);
+    if (bytes == null || bytes.length == 0) {
+      return null;
+    }
+    return (HRegionInfo)((bytes == null || bytes.length == 0)?
+      null:
+      Writables.getWritable(bytes, new HRegionInfo()));
+  }
+  
+  /**
+   * @param data Map of META row labelled column data.
+   * @return An HRegionInfo instance.
+   * @throws IOException 
    */
   static HRegionInfo getRegionInfo(final TreeMap<Text, byte[]> data)
   throws IOException {
-    byte[] bytes = data.get(COL_REGIONINFO);
+    return getRegionInfo(data.get(COL_REGIONINFO));
+  }
+  
+  /**
+   * @param bytes Bytes of a HRegionInfo.
+   * @return An HRegionInfo instance.
+   * @throws IOException
+   */
+  static HRegionInfo getRegionInfo(final byte[] bytes) throws IOException {
     if (bytes == null || bytes.length == 0) {
       throw new IOException("no value for " + COL_REGIONINFO);
     }
-    DataInputBuffer in = new DataInputBuffer();
-    in.reset(bytes, bytes.length);
-    HRegionInfo info = new HRegionInfo();
-    info.readFields(in);
-    return info;
+    return (HRegionInfo)Writables.getWritable(bytes, new HRegionInfo());
   }
   
   /**
@@ -1809,5 +1903,53 @@ public class HRegion implements HConstants {
       }
     }
     return startCode;
+  }
+
+  public static Path getRegionDir(final Path dir, final Text regionName) {
+    return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName));
+  }
+  
+
+  /**
+   * Deletes all the files for a HRegion
+   * 
+   * @param fs the file system object
+   * @param baseDirectory base directory for HBase
+   * @param regionName name of the region to delete
+   * @throws IOException
+   * @return True if deleted.
+   */
+  static boolean deleteRegion(FileSystem fs, Path baseDirectory,
+      Text regionName) throws IOException {
+    Path p = HRegion.getRegionDir(fs.makeQualified(baseDirectory), regionName);
+    return fs.delete(p);
+  }
+ 
+  /**
+   * Look for HStoreFile references in passed region.
+   * @param fs
+   * @param baseDirectory
+   * @param hri
+   * @return True if we found references.
+   * @throws IOException 
+   */
+  static boolean hasReferences(final FileSystem fs, final Path baseDirectory,
+      final HRegionInfo hri)
+  throws IOException {
+    boolean result = false;
+    for (Text family: hri.getTableDesc().families().keySet()) {
+      Path p = HStoreFile.getMapDir(baseDirectory, hri.getRegionName(),
+        HStoreKey.extractFamily(family));
+      // Look for reference files.
+      Path [] ps = fs.listPaths(p, new PathFilter () {
+        public boolean accept(Path path) {
+          return HStoreFile.isReference(path);
+        }});
+      if (ps != null && ps.length > 0) {
+        result = true;
+        break;
+      }
+    }
+    return result;
   }
 }

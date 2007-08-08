@@ -131,6 +131,11 @@ public class HTable implements HConstants {
       throw new IllegalStateException("update in progress");
     }
   }
+  
+
+  public Text getTableName() {
+    return this.tableName;
+  }
 
   /**
    * Gets the starting row key for every region in the currently open table

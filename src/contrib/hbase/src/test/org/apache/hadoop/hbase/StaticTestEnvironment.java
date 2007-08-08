@@ -63,7 +63,7 @@ public class StaticTestEnvironment {
       debugging = true;
       
       Logger rootLogger = Logger.getRootLogger();
-      rootLogger.setLevel(Level.WARN);
+      // rootLogger.setLevel(Level.WARN);
 
       Level logLevel = Level.INFO;
       value = System.getenv("LOGGING_LEVEL");

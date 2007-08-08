@@ -40,7 +40,8 @@ import org.apache.log4j.Logger;
  * HRegions or in the HBaseMaster, so only basic testing is possible.
  */
 public class TestHRegion extends HBaseTestCase implements RegionUnavailableListener {
-  Logger LOG = Logger.getLogger(this.getClass().getName());
+  private static final Logger LOG =
+    Logger.getLogger(TestHRegion.class.getName());
   
   /** Constructor */
   public TestHRegion() {
@@ -51,8 +52,9 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
    * Since all the "tests" depend on the results of the previous test, they are
    * not Junit tests that can stand alone. Consequently we have a single Junit
    * test that runs the "sub-tests" as private methods.
+   * @throws IOException 
    */
-  public void testHRegion() {
+  public void testHRegion() throws IOException {
     try {
       setup();
       locks();
@@ -63,13 +65,10 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       splitAndMerge();
       read();
       cleanup();
-      
-    } catch(Exception e) {
+    } finally {
       if(cluster != null) {
         cluster.shutdown();
       }
-      e.printStackTrace();
-      fail();
     }
   }
   
@@ -674,7 +673,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
             anchorFetched++;
             
           } else {
-            System.out.println(col);
+            System.out.println("UNEXPECTED COLUMN " + col);
           }
         }
         curVals.clear();
