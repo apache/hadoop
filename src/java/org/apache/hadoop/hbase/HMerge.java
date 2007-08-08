@@ -143,17 +143,17 @@ class HMerge implements HConstants {
       long currentSize = 0;
       HRegion nextRegion = null;
       long nextSize = 0;
+      Text midKey = new Text();
       for(int i = 0; i < regions.length - 1; i++) {
         if(currentRegion == null) {
           currentRegion =
             new HRegion(dir, hlog, fs, conf, regions[i], null);
-
-          currentSize = currentRegion.largestHStore();
+          currentSize = currentRegion.largestHStore(midKey).getAggregate();
         }
         nextRegion =
           new HRegion(dir, hlog, fs, conf, regions[i + 1], null);
 
-        nextSize = nextRegion.largestHStore();
+        nextSize = nextRegion.largestHStore(midKey).getAggregate();
 
         long maxFilesize =
           conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);

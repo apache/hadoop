@@ -35,14 +35,10 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
   private HTableDescriptor desc = null;
   private HTable table = null;
 
-  /** constructor */
-  public TestBatchUpdate() {
-    try {
-      value = "abcd".getBytes(HConstants.UTF8_ENCODING);
-      
-    } catch (UnsupportedEncodingException e) {
-      fail();
-    }
+  /** constructor 
+   * @throws UnsupportedEncodingException */
+  public TestBatchUpdate() throws UnsupportedEncodingException {
+    value = "abcd".getBytes(HConstants.UTF8_ENCODING);
   }
   
   /**

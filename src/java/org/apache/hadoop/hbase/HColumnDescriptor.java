@@ -76,14 +76,7 @@ public class HColumnDescriptor implements WritableComparable {
    * Default constructor. Must be present for Writable.
    */
   public HColumnDescriptor() {
-    this.name = new Text();
-    this.maxVersions = DEFAULT_N_VERSIONS;
-    this.compressionType = COMPRESSION_NONE;
-    this.inMemory = false;
-    this.maxValueLength = Integer.MAX_VALUE;
-    this.bloomFilterSpecified = false;
-    this.bloomFilter = null;
-    this.versionNumber = COLUMN_DESCRIPTOR_VERSION;
+    this(null);
   }
   
   /**
@@ -93,8 +86,10 @@ public class HColumnDescriptor implements WritableComparable {
    * @param columnName - column family name
    */
   public HColumnDescriptor(String columnName) {
-    this();
-    this.name.set(columnName);
+    this(columnName == null || columnName.length() <= 0?
+      new Text(): new Text(columnName),
+      DEFAULT_N_VERSIONS, CompressionType.NONE, false,
+      Integer.MAX_VALUE, null);
   }
   
   /**
@@ -112,13 +107,19 @@ public class HColumnDescriptor implements WritableComparable {
    * end in a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
-  public HColumnDescriptor(Text name, int maxVersions, CompressionType compression,
-      boolean inMemory, int maxValueLength, BloomFilterDescriptor bloomFilter) {
+  public HColumnDescriptor(final Text name, final int maxVersions,
+      final CompressionType compression, final boolean inMemory,
+      final int maxValueLength, final BloomFilterDescriptor bloomFilter) {
     String familyStr = name.toString();
-    Matcher m = LEGAL_FAMILY_NAME.matcher(familyStr);
-    if(m == null || !m.matches()) {
-      throw new IllegalArgumentException(
-          "Family names can only contain 'word characters' and must end with a ':'");
+    // Test name if not null (It can be null when deserializing after
+    // construction but before we've read in the fields);
+    if (familyStr.length() > 0) {
+      Matcher m = LEGAL_FAMILY_NAME.matcher(familyStr);
+      if(m == null || !m.matches()) {
+        throw new IllegalArgumentException("Illegal family name <" + name +
+          ">. Family names can only contain " +
+          "'word characters' and must end with a ':'");
+      }
     }
     this.name = name;
 

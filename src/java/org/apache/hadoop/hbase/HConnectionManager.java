@@ -270,8 +270,8 @@ public class HConnectionManager implements HConstants {
 
     /** {@inheritDoc} */
     public SortedMap<Text, HRegionLocation>
-    getTableServers(Text tableName) throws IOException {
-      
+      getTableServers(Text tableName)
+    throws IOException {  
       if (tableName == null || tableName.getLength() == 0) {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");
@@ -468,6 +468,7 @@ public class HConnectionManager implements HConstants {
             try {
               this.tablesBeingLocated.wait(threadWakeFrequency);
             } catch (InterruptedException e) {
+              // continue
             }
           }
           if (!waited) {

@@ -66,6 +66,7 @@ public class HRegionInfo implements WritableComparable {
   Text startKey;
   Text endKey;
   boolean offLine;
+  boolean split;
   HTableDescriptor tableDesc;
   
   /** Default constructor - creates empty object */
@@ -76,6 +77,7 @@ public class HRegionInfo implements WritableComparable {
     this.endKey = new Text();
     this.regionName = new Text();
     this.offLine = false;
+    this.split = false;
   }
   
   /**
@@ -88,7 +90,7 @@ public class HRegionInfo implements WritableComparable {
     this();
     readFields(new DataInputStream(new ByteArrayInputStream(serializedBytes)));
   }
-
+  
   /**
    * Construct HRegionInfo with explicit parameters
    * 
@@ -99,7 +101,25 @@ public class HRegionInfo implements WritableComparable {
    * @throws IllegalArgumentException
    */
   public HRegionInfo(long regionId, HTableDescriptor tableDesc, Text startKey,
-      Text endKey) throws IllegalArgumentException {
+      Text endKey)
+  throws IllegalArgumentException {
+    this(regionId, tableDesc, startKey, endKey, false);
+  }
+
+  /**
+   * Construct HRegionInfo with explicit parameters
+   * 
+   * @param regionId the region id
+   * @param tableDesc the table descriptor
+   * @param startKey first key in region
+   * @param endKey end of key range
+   * @param split true if this region has split and we have daughter regions
+   * regions that may or may not hold references to this region.
+   * @throws IllegalArgumentException
+   */
+  public HRegionInfo(long regionId, HTableDescriptor tableDesc, Text startKey,
+      Text endKey, final boolean split)
+  throws IllegalArgumentException {
     
     this.regionId = regionId;
     
@@ -124,6 +144,7 @@ public class HRegionInfo implements WritableComparable {
       regionId);
     
     this.offLine = false;
+    this.split = split;
   }
   
   /** @return the endKey */
@@ -150,6 +171,20 @@ public class HRegionInfo implements WritableComparable {
   public HTableDescriptor getTableDesc(){
     return tableDesc;
   }
+  
+  /**
+   * @return True if has been split and has daughters.
+   */
+  public boolean isSplit() {
+    return this.split;
+  }
+  
+  /**
+   * @return True if this region is offline.
+   */
+  public boolean isOffline() {
+    return this.offLine;
+  }
 
   /**
    * {@inheritDoc}
@@ -157,8 +192,10 @@ public class HRegionInfo implements WritableComparable {
   @Override
   public String toString() {
     return "regionname: " + this.regionName.toString() + ", startKey: <" +
-      this.startKey.toString() + ">, tableDesc: {" +
-      this.tableDesc.toString() + "}";
+      this.startKey.toString() + ">," +
+      (isOffline()? " offline: true,": "") +
+      (isSplit()? " split: true,": "") +
+      " tableDesc: {" + this.tableDesc.toString() + "}";
   }
     
   /**
@@ -197,6 +234,7 @@ public class HRegionInfo implements WritableComparable {
     endKey.write(out);
     regionName.write(out);
     out.writeBoolean(offLine);
+    out.writeBoolean(split);
   }
   
   /**
@@ -209,6 +247,7 @@ public class HRegionInfo implements WritableComparable {
     this.endKey.readFields(in);
     this.regionName.readFields(in);
     this.offLine = in.readBoolean();
+    this.split = in.readBoolean();
   }
   
   //

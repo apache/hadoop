@@ -107,7 +107,7 @@ public class TestTimestamp extends HBaseClusterTestCase {
 
       // flush everything out to disk
       
-      HRegionServer s = cluster.regionServers.get(0);
+      HRegionServer s = cluster.regionThreads.get(0).getRegionServer();
       for(HRegion r: s.onlineRegions.values() ) {
         r.flushcache(false);
       }

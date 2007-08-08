@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
@@ -46,12 +47,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.util.Keying;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.util.StringUtils;
 
 
 /**
@@ -76,8 +78,7 @@ public class HMaster implements HConstants, HMasterInterface,
     }
   }
 
-  static final Log LOG =
-    LogFactory.getLog(org.apache.hadoop.hbase.HMaster.class.getName());
+  static final Log LOG = LogFactory.getLog(HMaster.class.getName());
   
   volatile boolean closed;
   Path dir;
@@ -157,9 +158,16 @@ public class HMaster implements HConstants, HMasterInterface,
   abstract class BaseScanner implements Runnable {
     private final Text FIRST_ROW = new Text();
     protected boolean rootRegion;
+    protected final Text tableName;
     
     protected abstract void initialScan();
     protected abstract void maintenanceScan();
+    
+    BaseScanner(final Text tableName) {
+      super();
+      this.tableName = tableName;
+      this.rootRegion = tableName.equals(ROOT_TABLE_NAME);
+    }
     
     /**
      * {@inheritDoc}
@@ -185,13 +193,15 @@ public class HMaster implements HConstants, HMasterInterface,
       HRegionInterface regionServer = null;
       long scannerId = -1L;
       LOG.info(Thread.currentThread().getName() + " scanning meta region " +
-          region.regionName);
-
+          region.regionName + " on " + region.server.toString());
+      // Array to hold list of split parents found.  Scan adds to list.  After
+      // scan we go check if parents can be removed.
+      Map<HRegionInfo, TreeMap<Text, byte[]>> splitParents =
+        new HashMap<HRegionInfo, TreeMap<Text, byte[]>>();
       try {
         regionServer = connection.getHRegionConnection(region.server);
         scannerId = regionServer.openScanner(region.regionName, METACOLUMNS,
           FIRST_ROW, System.currentTimeMillis(), null);
-
         int numberOfRegionsFound = 0;
         while (true) {
           TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
@@ -199,15 +209,12 @@ public class HMaster implements HConstants, HMasterInterface,
           if (values.length == 0) {
             break;
           }
-
           for (int i = 0; i < values.length; i++) {
             results.put(values[i].getKey().getColumn(), values[i].getData());
           }
-
           HRegionInfo info = HRegion.getRegionInfo(results);
           String serverName = HRegion.getServerName(results);
           long startCode = HRegion.getStartCode(results);
-
           if(LOG.isDebugEnabled()) {
             LOG.debug(Thread.currentThread().getName() + " scanner: " +
                 Long.valueOf(scannerId) + " regioninfo: {" + info.toString() +
@@ -216,17 +223,17 @@ public class HMaster implements HConstants, HMasterInterface,
 
           // Note Region has been assigned.
           checkAssigned(info, serverName, startCode);
-          
+          if (isSplitParent(info)) {
+            splitParents.put(info, results);
+          }
           numberOfRegionsFound += 1;
         }
         if(rootRegion) {
           numberOfMetaRegions.set(numberOfRegionsFound);
         }
-
       } catch (IOException e) {
         if (e instanceof RemoteException) {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          
           if (e instanceof UnknownScannerException) {
             // Reset scannerId so we do not try closing a scanner the other side
             // has lost account of: prevents duplicated stack trace out of the 
@@ -235,7 +242,6 @@ public class HMaster implements HConstants, HMasterInterface,
           }
         }
         throw e;
-
       } finally {
         try {
           if (scannerId != -1L && regionServer != null) {
@@ -245,11 +251,98 @@ public class HMaster implements HConstants, HMasterInterface,
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
           }
-          LOG.error(e);
+          LOG.error("Closing scanner", e);
+        }
+      }
+      // Scan is finished.  Take a look at split parents to see if any
+      // we can clean up.
+      if (splitParents.size() > 0) {
+        for (Map.Entry<HRegionInfo, TreeMap<Text, byte[]>> e:
+            splitParents.entrySet()) {
+          TreeMap<Text, byte[]> results = e.getValue();
+          cleanupSplits(e.getKey(),
+            HRegion.getSplit(results, HRegion.COL_SPLITA),
+            HRegion.getSplit(results, HRegion.COL_SPLITB));
         }
       }
       LOG.info(Thread.currentThread().getName() + " scan of meta region " +
           region.regionName + " complete");
+    }
+    
+    private boolean isSplitParent(final HRegionInfo info) {
+      boolean result = false;
+      // Skip if not a split region.
+      if (!info.isSplit()) {
+        return result;
+      }
+      if (!info.isOffline()) {
+        LOG.warn("Region is split but not offline: " + info.regionName);
+      }
+      return true;
+    }
+    
+    /* 
+     * @param info
+     * @param splitA
+     * @param splitB
+     * @return True if we removed <code>info</code> and this region has
+     * been cleaned up.
+     * @throws IOException
+     */
+    private boolean cleanupSplits(final HRegionInfo info,
+      final HRegionInfo splitA, final HRegionInfo splitB)
+    throws IOException {
+      boolean result = false;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Checking " + info.getRegionName() + " to see if daughter " +
+          "splits still hold references");
+      }
+      boolean noReferencesA = splitA == null;
+      boolean noReferencesB = splitB == null;
+      if (!noReferencesA) {
+        noReferencesA = hasReferences(info.getRegionName(), splitA,
+          HRegion.COL_SPLITA);
+      }
+      if (!noReferencesB) {
+        noReferencesB = hasReferences(info.getRegionName(), splitB,
+          HRegion.COL_SPLITB);
+      }
+      if (!(noReferencesA && noReferencesB)) {
+        // No references.  Remove this item from table and deleted region on
+        // disk.
+        LOG.info("Deleting region " + info.getRegionName() +
+          " because daughter splits no longer hold references");
+        HRegion.deleteRegion(fs, dir, info.getRegionName());
+        HRegion.removeRegionFromMETA(conf, this.tableName,
+          info.getRegionName());
+        result = true;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Done checking " + info.getRegionName() + ": splitA: " +
+          noReferencesA + ", splitB: "+ noReferencesB);
+      }
+      return result;
+    }
+    
+    protected boolean hasReferences(final Text regionName,
+        final HRegionInfo split, final Text column)
+    throws IOException {
+      boolean result =
+        HRegion.hasReferences(fs, fs.makeQualified(dir), split);
+      if (result) {
+        return result;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(split.getRegionName().toString()
+          +" no longer has references to " + regionName.toString());
+      }
+      HTable t = new HTable(conf, this.tableName);
+      try {
+        HRegion.removeSplitFromMETA(t, regionName, column);
+      } finally {
+        t.close();
+      }
+      return result;
     }
     
     protected void checkAssigned(final HRegionInfo info,
@@ -261,9 +354,10 @@ public class HMaster implements HConstants, HMasterInterface,
 
         unassignedRegions.remove(info.regionName);
         assignAttempts.remove(info.regionName);
-        
         if(LOG.isDebugEnabled()) {
-          LOG.debug("not assigning region: " + info.regionName);
+          LOG.debug("not assigning region: " + info.regionName +
+            " (offline: " + info.isOffline() + ", split: " + info.isSplit() +
+            ")");
         }
         return;
       }
@@ -273,33 +367,24 @@ public class HMaster implements HConstants, HMasterInterface,
         TreeMap<Text, HRegionInfo> regionsToKill = killList.get(serverName);
         if(regionsToKill != null && regionsToKill.containsKey(info.regionName)) {
           // Skip if region is on kill list
-          
           if(LOG.isDebugEnabled()) {
-            LOG.debug("not assigning region (on kill list): " + info.regionName);
+            LOG.debug("not assigning region (on kill list): " +
+              info.regionName);
           }
           return;
         }
         storedInfo = serversToServerInfo.get(serverName);
       }
-      if( !(
-          unassignedRegions.containsKey(info.regionName)
-          || pendingRegions.contains(info.regionName)
-          )
-          && (storedInfo == null
-              || storedInfo.getStartCode() != startCode)) {
-                  
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("region unassigned: " + info.regionName
-              + " serverName: " + serverName
-              + (storedInfo == null ? " storedInfo == null"
-                  : (" startCode=" + startCode + ", storedStartCode="
-                      + storedInfo.getStartCode())));
-        }
-
+      if( !(unassignedRegions.containsKey(info.regionName) ||
+            pendingRegions.contains(info.regionName))
+          && (storedInfo == null || storedInfo.getStartCode() != startCode)) {
         // The current assignment is no good; load the region.
-        
         unassignedRegions.put(info.regionName, info);
         assignAttempts.put(info.regionName, Long.valueOf(0L));
+      } else if (LOG.isDebugEnabled()) {
+          LOG.debug("Finished if " + info.getRegionName() + " is assigned: " +
+            "unassigned: " + unassignedRegions.containsKey(info.regionName) +
+            ", pending: " + pendingRegions.contains(info.regionName));
       }
     }
   }
@@ -312,7 +397,7 @@ public class HMaster implements HConstants, HMasterInterface,
   class RootScanner extends BaseScanner {
     /** Constructor */
     public RootScanner() {
-      rootRegion = true;
+      super(HConstants.ROOT_TABLE_NAME);
     }
 
     private void scanRoot() {
@@ -325,6 +410,7 @@ public class HMaster implements HConstants, HMasterInterface,
           try {
             Thread.sleep(threadWakeFrequency);
           } catch (InterruptedException e) {
+            // continue
           }
         }
         if (closed) {
@@ -337,28 +423,26 @@ public class HMaster implements HConstants, HMasterInterface,
                 HGlobals.rootRegionInfo.regionName, null));
           }
           break;
-
         } catch (IOException e) {
           if (e instanceof RemoteException) {
             try {
               e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-
             } catch (IOException ex) {
               e = ex;
             }
           }
           tries += 1;
           if (tries == 1) {
-            LOG.warn(e);
-
+            LOG.warn("Scan ROOT region", e);
           } else {
-            LOG.error(e);
+            LOG.error("Scan ROOT region", e);
           }
         }
         if (!closed) {
           try {
             Thread.sleep(threadWakeFrequency);
           } catch (InterruptedException e) {
+            // continue
           }
         }
       }      
@@ -451,7 +535,7 @@ public class HMaster implements HConstants, HMasterInterface,
   class MetaScanner extends BaseScanner {
     /** Constructor */
     public MetaScanner() {
-      rootRegion = false;
+      super(HConstants.META_TABLE_NAME);
     }
     
     private void scanOneMetaRegion(MetaRegion region) {
@@ -461,6 +545,7 @@ public class HMaster implements HConstants, HMasterInterface,
           try {
             Thread.sleep(threadWakeFrequency);
           } catch (InterruptedException e) {
+            // continue
           }
         }
         if (closed) {
@@ -480,23 +565,22 @@ public class HMaster implements HConstants, HMasterInterface,
             try {
               e = RemoteExceptionHandler.decodeRemoteException(
                   (RemoteException) e);
-
             } catch (IOException ex) {
               e = ex;
             }
           }
           tries += 1;
           if (tries == 1) {
-            LOG.warn(e);
-
+            LOG.warn("Scan one META region", e);
           } else {
-            LOG.error(e);
+            LOG.error("Scan one META region", e);
           }
         }
         if (!closed) {
           try {
             Thread.sleep(threadWakeFrequency);                  
           } catch (InterruptedException e) {
+            //continue
           }
         }
       }
@@ -558,6 +642,7 @@ public class HMaster implements HConstants, HMasterInterface,
         try {
           wait(threadWakeFrequency);
         } catch (InterruptedException e) {
+          // continue
         }
       }
       return closed;
@@ -643,7 +728,7 @@ public class HMaster implements HConstants, HMasterInterface,
     }
 
     Path rootRegionDir =
-      HStoreFile.getHRegionDir(dir, HGlobals.rootRegionInfo.regionName);
+      HRegion.getRegionDir(dir, HGlobals.rootRegionInfo.regionName);
     LOG.info("Root region dir: " + rootRegionDir.toString());
     if(! fs.exists(rootRegionDir)) {
       LOG.info("bootstrap: creating ROOT and first META regions");
@@ -662,7 +747,7 @@ public class HMaster implements HConstants, HMasterInterface,
         if (e instanceof RemoteException) {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
         }
-        LOG.error(e);
+        LOG.error("", e);
       }
     }
 
@@ -757,14 +842,13 @@ public class HMaster implements HConstants, HMasterInterface,
       if (e instanceof RemoteException) {
         try {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          
         } catch (IOException ex) {
-          LOG.warn(ex);
+          LOG.warn("", ex);
         }
       }
       // Something happened during startup. Shut things down.
       this.closed = true;
-      LOG.error(e);
+      LOG.error("Failed startup", e);
     }
 
     // Main processing loop
@@ -779,7 +863,7 @@ public class HMaster implements HConstants, HMasterInterface,
       }
       try {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Processing " + op.toString());
+          LOG.debug("Main processing loop: " + op.toString());
         }
         if (!op.process()) {
           // Operation would have blocked because not all meta regions are
@@ -787,33 +871,34 @@ public class HMaster implements HConstants, HMasterInterface,
           // for the missing meta region(s) to come back online, but since it
           // is waiting, it cannot process the meta region online operation it
           // is waiting for. So put this operation back on the queue for now.
-          
           if (msgQueue.size() == 0) {
             // The queue is currently empty so wait for a while to see if what
             // we need comes in first
-            
             try {
               Thread.sleep(threadWakeFrequency);
             } catch (InterruptedException e) {
+              // continue
             }
           }
           try {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Put " + op.toString() + " back on queue");
+            }
             msgQueue.put(op);
           } catch (InterruptedException e) {
-            throw new RuntimeException("Putting into msgQueue was interrupted.", e);
+            throw new RuntimeException("Putting into msgQueue was " +
+              "interrupted.", e);
           }
         }
-        
       } catch (Exception ex) {
         if (ex instanceof RemoteException) {
           try {
             ex = RemoteExceptionHandler.decodeRemoteException((RemoteException) ex);
-            
           } catch (IOException e) {
-            LOG.warn(e);
+            LOG.warn("", e);
           }
         }
-        LOG.warn(ex);
+        LOG.warn("Processing pending operations: " + op.toString(), ex);
         try {
           msgQueue.put(op);
         } catch (InterruptedException e) {
@@ -846,7 +931,7 @@ public class HMaster implements HConstants, HMasterInterface,
     } catch (Exception iex) {
       // Print if ever there is an interrupt (Just for kicks. Remove if it
       // ever happens).
-      LOG.warn(iex);
+      LOG.warn("root scanner", iex);
     }
     try {
       // Join the thread till it finishes.
@@ -854,7 +939,7 @@ public class HMaster implements HConstants, HMasterInterface,
     } catch(Exception iex) {
       // Print if ever there is an interrupt (Just for kicks. Remove if it
       // ever happens).
-      LOG.warn(iex);
+      LOG.warn("meta scanner", iex);
     }
     try {
       // Join until its finished.  TODO: Maybe do in parallel in its own thread
@@ -863,7 +948,7 @@ public class HMaster implements HConstants, HMasterInterface,
     } catch(InterruptedException iex) {
       // Print if ever there is an interrupt (Just for kicks. Remove if it
       // ever happens).
-      LOG.warn(iex);
+      LOG.warn("server", iex);
     }
     
     LOG.info("HMaster main thread exiting");
@@ -941,11 +1026,9 @@ public class HMaster implements HConstants, HMasterInterface,
     if (msgs.length > 0 && msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
       
       // HRegionServer is shutting down. Cancel the server's lease.
-      
       if (cancelLease(s, serverLabel)) {
         // Only process the exit message if the server still has a lease.
         // Otherwise we could end up processing the server exit twice.
-
         LOG.info("Region server " + s + ": MSG_REPORT_EXITING");
       
         // Get all the regions the server was serving reassigned
@@ -1073,25 +1156,19 @@ public class HMaster implements HConstants, HMasterInterface,
               region.regionName);
 
           // Remove from unassigned list so we don't assign it to someone else
-
           unassignedRegions.remove(region.regionName);
           assignAttempts.remove(region.regionName);
-
           if(region.regionName.compareTo(HGlobals.rootRegionInfo.regionName) == 0) {
-
             // Store the Root Region location (in memory)
-
             rootRegionLocation = new HServerAddress(info.getServerAddress());
             break;
           }
 
           // Note that the table has been assigned and is waiting for the meta
           // table to be updated.
-          
           pendingRegions.add(region.regionName);
           
           // Queue up an update to note the region location.
-
           try {
             msgQueue.put(new PendingOpenReport(info, region));
           } catch (InterruptedException e) {
@@ -1138,28 +1215,22 @@ public class HMaster implements HConstants, HMasterInterface,
         break;
 
       case HMsg.MSG_REPORT_SPLIT:
-        // A region has split and the old server is serving the two new regions.
-
+        // A region has split.
         HRegionInfo newRegionA = incomingMsgs[++i].getRegionInfo();
         HRegionInfo newRegionB = incomingMsgs[++i].getRegionInfo();
-        
         LOG.info("region " + region.regionName + " split. New regions are: "
               + newRegionA.regionName + ", " + newRegionB.regionName);
-        
         if(region.tableDesc.getName().equals(META_TABLE_NAME)) {
           // A meta region has split.
-
           onlineMetaRegions.remove(region.getStartKey());
           onlineMetaRegions.put(newRegionA.getStartKey(),
-              new MetaRegion(info.getServerAddress(), newRegionA.getRegionName(),
-                  newRegionA.getStartKey()));
+            new MetaRegion(info.getServerAddress(), newRegionA.getRegionName(),
+            newRegionA.getStartKey()));
           onlineMetaRegions.put(newRegionB.getStartKey(),
-              new MetaRegion(info.getServerAddress(), newRegionB.getRegionName(),
-                  newRegionB.getStartKey()));
-          
+            new MetaRegion(info.getServerAddress(), newRegionB.getRegionName(),
+            newRegionB.getStartKey()));
           numberOfMetaRegions.incrementAndGet();
         }
-        
         break;
 
       default:
@@ -1170,7 +1241,6 @@ public class HMaster implements HConstants, HMasterInterface,
     }
 
     // Process the kill list
-    
     if(regionsToKill != null) {
       for(HRegionInfo i: regionsToKill.values()) {
         returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE, i));
@@ -1217,7 +1287,9 @@ public class HMaster implements HConstants, HMasterInterface,
     };
     protected final Text startRow = new Text();
 
-    PendingOperation() {}
+    PendingOperation() {
+      super();
+    }
     
     abstract boolean process() throws IOException;
   }
@@ -1231,9 +1303,9 @@ public class HMaster implements HConstants, HMasterInterface,
     private HServerAddress deadServer;
     private String deadServerName;
     private long oldStartCode;
-    private boolean logSplit;
-    private boolean rootChecked;
-    private boolean rootRescanned;
+    private transient boolean logSplit;
+    private transient boolean rootChecked;
+    private transient boolean rootRescanned;
     
     private class ToDoEntry {
       boolean deleteRegion;
@@ -1259,27 +1331,28 @@ public class HMaster implements HConstants, HMasterInterface,
       this.rootRescanned = false;
     }
     
+    @Override
+    public String toString() {
+      return "PendingServerShutdown of " + this.deadServer.toString();
+    }
+    
     /** Finds regions that the dead region server was serving */
     private void scanMetaRegion(HRegionInterface server, long scannerId,
-        Text regionName) throws IOException {
-
+        Text regionName)
+    throws IOException {
       ArrayList<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
       TreeMap<Text, HRegionInfo> regions = new TreeMap<Text, HRegionInfo>();
-
       DataInputBuffer inbuf = new DataInputBuffer();
       try {
         while(true) {
           KeyedData[] values = null;
-          
           try {
             values = server.next(scannerId);
-            
           } catch (IOException e) {
             if (e instanceof RemoteException) {
               e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-              
             }
-            LOG.error(e);
+            LOG.error("Shutdown scanning of meta region", e);
             break;
           }
           
@@ -1292,7 +1365,6 @@ public class HMaster implements HConstants, HMasterInterface,
           for(int i = 0; i < values.length; i++) {
             if(row == null) {
               row = values[i].getKey().getRow();
-              
             } else {
               if(!row.equals(values[i].getKey().getRow())) {
                 LOG.error("Multiple rows in same scanner result set. firstRow="
@@ -1301,72 +1373,48 @@ public class HMaster implements HConstants, HMasterInterface,
             }
             results.put(values[i].getKey().getColumn(), values[i].getData());
           }
-          
-          byte [] bytes = results.get(COL_SERVER); 
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("shutdown scanner looking at " + row.toString());
+          }
+
+          // Check server name.  If null, be conservative and treat as though
+          // region had been on shutdown server (could be null because we
+          // missed edits in hlog because hdfs does not do write-append).
           String serverName = null;
-          if(bytes == null || bytes.length == 0) {
-            // No server
-            continue;
-          }
           try {
-            serverName = new String(bytes, UTF8_ENCODING);
-            
+            serverName = Keying.bytesToString(results.get(COL_SERVER));
           } catch(UnsupportedEncodingException e) {
-            LOG.error(e);
+            LOG.error("Server name", e);
             break;
           }
-
-          if(deadServerName.compareTo(serverName) != 0) {
+          if (serverName != null && serverName.length() > 0 &&
+              deadServerName.compareTo(serverName) != 0) {
             // This isn't the server you're looking for - move along
-            continue;
-          }
-
-          bytes = results.get(COL_STARTCODE);
-          if(bytes == null || bytes.length == 0) {
-            // No start code
-            continue;
-          }
-          long startCode = -1L;
-          try {
-            startCode =
-              Long.valueOf(new String(bytes, UTF8_ENCODING)).longValue();
-          } catch(UnsupportedEncodingException e) {
-            LOG.error(e);
-            break;
-          }
-
-          if(oldStartCode != startCode) {
-            // Close but no cigar
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Server name " + serverName + " is not same as " +
+                deadServerName + ": Passing");
+            }
             continue;
           }
 
           // Bingo! Found it.
-
-          bytes = results.get(COL_REGIONINFO);
-          if(bytes == null || bytes.length == 0) {
-            throw new IOException("no value for " + COL_REGIONINFO);
-          }
-          inbuf.reset(bytes, bytes.length);
-          HRegionInfo info = new HRegionInfo();
+          HRegionInfo info = null;
           try {
-            info.readFields(inbuf);
-            
+            info = (HRegionInfo)Writables.
+              getWritable(results.get(COL_REGIONINFO), new HRegionInfo());
           } catch (IOException e) {
-            if (e instanceof RemoteException) {
-              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-            }
-            LOG.error(e);
+            LOG.error("Read fields", e);
             break;
           }
-          LOG.info(serverName + " was serving " + info.toString());
-
-          if(info.tableDesc.getName().equals(META_TABLE_NAME)) {
+          LOG.info(info.getRegionName() + " was on shutdown server <" +
+            serverName + "> (or server is null). Marking unassigned if " +
+            "meta and clearing pendingRegions");
+          if (info.tableDesc.getName().equals(META_TABLE_NAME)) {
             onlineMetaRegions.remove(info.getStartKey());
           }
           
           ToDoEntry todo = new ToDoEntry(row, info);
           toDoList.add(todo);
-          
           if(killList.containsKey(deadServerName)) {
             TreeMap<Text, HRegionInfo> regionsToKill = killList.get(deadServerName);
             if(regionsToKill.containsKey(info.regionName)) {
@@ -1374,23 +1422,21 @@ public class HMaster implements HConstants, HMasterInterface,
               killList.put(deadServerName, regionsToKill);
               unassignedRegions.remove(info.regionName);
               assignAttempts.remove(info.regionName);
-              
               if(regionsToDelete.contains(info.regionName)) {
                 // Delete this region
-                
                 regionsToDelete.remove(info.regionName);
                 todo.deleteRegion = true;
-                
               } else {
                 // Mark region offline
-                
                 todo.regionOffline = true;
               }
             }
           } else {
             // Get region reassigned
-
             regions.put(info.regionName, info);
+            // If was pending, remove otherwise will obstruct its getting
+            // reassigned.
+            pendingRegions.remove(info.getRegionName());
           }
         }
 
@@ -1403,7 +1449,7 @@ public class HMaster implements HConstants, HMasterInterface,
             if (e instanceof RemoteException) {
               e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
             }
-            LOG.error(e);
+            LOG.error("Closing scanner", e);
           }
         }
       }
@@ -1440,21 +1486,22 @@ public class HMaster implements HConstants, HMasterInterface,
 
     @Override
     boolean process() throws IOException {
-      LOG.info("server shutdown: " + deadServerName);
+      LOG.info("process shutdown of server " + deadServer + ": logSplit: " +
+        this.logSplit + ", rootChecked: " + this.rootChecked +
+        ", rootRescanned: " + this.rootRescanned + ", numberOfMetaRegions: " +
+        numberOfMetaRegions.get() + ", onlineMetaRegions.size(): " +
+        onlineMetaRegions.size());
 
       if(!logSplit) {
         // Process the old log file
-
-        HLog.splitLog(dir, new Path(dir, "log" + "_" + deadServer.getBindAddress()
-            + "_" + deadServer.getPort()), fs, conf);
-        
+        HLog.splitLog(dir, new Path(dir, "log" + "_" +
+          deadServer.getBindAddress() + "_" + deadServer.getPort()), fs, conf);
         logSplit = true;
       }
 
       if(!rootChecked) {
         if(rootRegionLocation != null
             && deadServer.equals(rootRegionLocation)) {
-
           rootRegionLocation = null;
           unassignedRegions.put(HGlobals.rootRegionInfo.regionName,
               HGlobals.rootRegionInfo);
@@ -1466,7 +1513,6 @@ public class HMaster implements HConstants, HMasterInterface,
 
       if(!rootRescanned) {
         // Scan the ROOT region
-
         HRegionInterface server = null;
         long scannerId = -1L;
         for(int tries = 0; tries < numRetries; tries ++) {
@@ -1476,6 +1522,10 @@ public class HMaster implements HConstants, HMasterInterface,
           if (rootRegionLocation == null || !rootScanned) {
             // We can't proceed until the root region is online and has been
             // scanned
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("process server shutdown scanning root region " +
+                "cancelled because rootRegionLocation is null");
+            }
             return false;
           }
           server = connection.getHRegionConnection(rootRegionLocation);
@@ -1483,13 +1533,14 @@ public class HMaster implements HConstants, HMasterInterface,
 
           try {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("scanning root region");
+              LOG.debug("process server shutdown scanning root region on " +
+                rootRegionLocation.getBindAddress());
             }
             scannerId = server.openScanner(HGlobals.rootRegionInfo.regionName,
-                columns, startRow, System.currentTimeMillis(), null);
-            scanMetaRegion(server, scannerId, HGlobals.rootRegionInfo.regionName);
+              columns, startRow, System.currentTimeMillis(), null);
+            scanMetaRegion(server, scannerId,
+              HGlobals.rootRegionInfo.regionName);
             break;
-
           } catch (IOException e) {
             if (tries == numRetries - 1) {
               if (e instanceof RemoteException) {
@@ -1499,6 +1550,11 @@ public class HMaster implements HConstants, HMasterInterface,
             }
           }
         }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("process server shutdown scanning root region on " +
+            rootRegionLocation.getBindAddress() + " finished " +
+            Thread.currentThread().getName());
+        }
         rootRescanned = true;
       }
 
@@ -1507,31 +1563,39 @@ public class HMaster implements HConstants, HMasterInterface,
           if (closed) {
             return true;
           }
-          if (!rootScanned
-              || numberOfMetaRegions.get() != onlineMetaRegions.size()) {
-            
+          if (!rootScanned ||
+              numberOfMetaRegions.get() != onlineMetaRegions.size()) {
             // We can't proceed because not all of the meta regions are online.
             // We can't block either because that would prevent the meta region
             // online message from being processed. So return false to have this
             // operation requeued.
-            
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Requeuing shutdown because rootScanned: " +
+                rootScanned + ", numberOfMetaRegions: " +
+                numberOfMetaRegions.get() + ", onlineMetaRegions.size(): " +
+                onlineMetaRegions.size());
+            }
             return false;
           }
-      
+
           for (MetaRegion r: onlineMetaRegions.values()) {
-          
             HRegionInterface server = null;
             long scannerId = -1L;
-
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("process server shutdown scanning " + r.regionName +
+                " on " + r.server + " " + Thread.currentThread().getName());
+            }
             server = connection.getHRegionConnection(r.server);
-          
             scannerId = server.openScanner(r.regionName, columns, startRow,
-                System.currentTimeMillis(), null);
+              System.currentTimeMillis(), null);
             scanMetaRegion(server, scannerId, r.regionName);
-            
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("process server shutdown finished scanning " +
+                r.regionName +
+                " on " + r.server + " " + Thread.currentThread().getName());
+            }
           }
           break;
-            
         } catch (IOException e) {
           if (tries == numRetries - 1) {
             if (e instanceof RemoteException) {
@@ -1576,6 +1640,11 @@ public class HMaster implements HConstants, HMasterInterface,
     }
     
     @Override
+    public String toString() {
+      return "PendingCloseReport of " + this.regionInfo.getRegionName();
+    }
+    
+    @Override
     boolean process() throws IOException {
       for (int tries = 0; tries < numRetries; tries++) {
         LOG.info("region closed: " + regionInfo.regionName);
@@ -1599,14 +1668,18 @@ public class HMaster implements HConstants, HMasterInterface,
           onlineMetaRegions.remove(regionInfo.getStartKey());
 
         } else {
-          if (!rootScanned
-              || numberOfMetaRegions.get() != onlineMetaRegions.size()) {
-            
+          if (!rootScanned ||
+              numberOfMetaRegions.get() != onlineMetaRegions.size()) {
             // We can't proceed because not all of the meta regions are online.
             // We can't block either because that would prevent the meta region
             // online message from being processed. So return false to have this
             // operation requeued.
-            
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Requeuing close because rootScanned=" +
+                rootScanned + ", numberOfMetaRegions=" +
+                numberOfMetaRegions.get() + ", onlineMetaRegions.size()=" +
+                onlineMetaRegions.size());
+            }
             return false;
           }
 
@@ -1671,8 +1744,7 @@ public class HMaster implements HConstants, HMasterInterface,
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
           }
-          LOG.error("failed to delete region " + regionInfo.regionName);
-          LOG.error(e);
+          LOG.error("failed delete region " + regionInfo.regionName, e);
           throw e;
         }
       }
@@ -1706,8 +1778,13 @@ public class HMaster implements HConstants, HMasterInterface,
         this.startCode =
           String.valueOf(info.getStartCode()).getBytes(UTF8_ENCODING);
       } catch(UnsupportedEncodingException e) {
-        LOG.error(e);
+        LOG.error("Start code", e);
       }
+    }
+    
+    @Override
+    public String toString() {
+      return "PendingOpenOperation from " + serverAddress.toString();
     }
     
     @Override
@@ -1715,14 +1792,13 @@ public class HMaster implements HConstants, HMasterInterface,
       for (int tries = 0; tries < numRetries; tries++) {
         LOG.info(region.getRegionName() + " open on " + 
             this.serverAddress.toString());
-
         // Register the newly-available Region's location.
-
         Text metaRegionName;
         HRegionInterface server;
         if (closed) {
           return true;
         }
+        
         if (rootRegion) {
           if (rootRegionLocation == null || !rootScanned) {
             // We can't proceed until the root region is online and has been
@@ -1735,19 +1811,18 @@ public class HMaster implements HConstants, HMasterInterface,
           }
           metaRegionName = HGlobals.rootRegionInfo.regionName;
           server = connection.getHRegionConnection(rootRegionLocation);
-
         } else {
-          if (!rootScanned
-              || numberOfMetaRegions.get() != onlineMetaRegions.size()) {
+          if (!rootScanned ||
+            numberOfMetaRegions.get() != onlineMetaRegions.size()) {
             
             // We can't proceed because not all of the meta regions are online.
             // We can't block either because that would prevent the meta region
             // online message from being processed. So return false to have this
-            // operation requeued.
-            
+            // operation requeue
             if (LOG.isDebugEnabled()) {
-              LOG.debug("rootScanned=" + rootScanned + ", numberOfMetaRegions=" +
-                  numberOfMetaRegions.get() + ", onlineMetaRegions.size()=" +
+              LOG.debug("Requeuing open because rootScanned: " +
+                  rootScanned + ", numberOfMetaRegions: " +
+                  numberOfMetaRegions.get() + ", onlineMetaRegions.size(): " +
                   onlineMetaRegions.size());
             }
             return false;
@@ -1756,7 +1831,6 @@ public class HMaster implements HConstants, HMasterInterface,
           MetaRegion r = null;
           if (onlineMetaRegions.containsKey(region.getRegionName())) {
             r = onlineMetaRegions.get(region.getRegionName());
-
           } else {
             r = onlineMetaRegions.get(
                 onlineMetaRegions.headMap(region.getRegionName()).lastKey());
@@ -1766,7 +1840,6 @@ public class HMaster implements HConstants, HMasterInterface,
         }
         LOG.info("updating row " + region.getRegionName() + " in table " +
             metaRegionName);
-
         long clientId = rand.nextLong();
         try {
           long lockid = server.startUpdate(metaRegionName, clientId,
@@ -1779,13 +1852,10 @@ public class HMaster implements HConstants, HMasterInterface,
           
           if (region.tableDesc.getName().equals(META_TABLE_NAME)) {
             // It's a meta region.
-            
             MetaRegion m =
               new MetaRegion(serverAddress, region.regionName, region.startKey);
-            
             if (!initialMetaScanComplete) {
               // Put it on the queue to be scanned for the first time.
-
               try {
                 metaRegionsToScan.put(m);
               } catch (InterruptedException e) {
@@ -1794,12 +1864,12 @@ public class HMaster implements HConstants, HMasterInterface,
               }
             } else {
               // Add it to the online meta regions
-              
               onlineMetaRegions.put(region.startKey, m);
             }
           }
+          // If updated successfully, remove from pending list.
+          pendingRegions.remove(region.getRegionName());
           break;
-          
         } catch (IOException e) {
           if (tries == numRetries - 1) {
             if (e instanceof RemoteException) {
@@ -1808,7 +1878,6 @@ public class HMaster implements HConstants, HMasterInterface,
             throw e;
           }
         }
-        pendingRegions.remove(region.getRegionName());
       }
       return true;
     }
@@ -2053,8 +2122,7 @@ public class HMaster implements HConstants, HMasterInterface,
                   String serverName = null;
                   long startCode = -1L;
                   
-                  KeyedData[] values = null;
-                  values = server.next(scannerId);
+                  KeyedData[] values = server.next(scannerId);
                   if(values == null || values.length == 0) {
                     break;
                   }
@@ -2111,7 +2179,7 @@ public class HMaster implements HConstants, HMasterInterface,
                     if (e instanceof RemoteException) {
                       e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
                     }
-                    LOG.error(e);
+                    LOG.error("", e);
                   }
                 }
                 scannerId = -1L;
@@ -2157,7 +2225,7 @@ public class HMaster implements HConstants, HMasterInterface,
         HRegionInfo info) throws IOException;
     
     protected abstract void postProcessMeta(MetaRegion m,
-        HRegionInterface server)
+        HRegionInterface srvr)
     throws IOException;
   }
 
@@ -2196,6 +2264,13 @@ public class HMaster implements HConstants, HMasterInterface,
         LOG.debug("processing unserved regions");
       }
       for(HRegionInfo i: unservedRegions) {
+        if (i.offLine && i.isSplit()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Skipping region " + i.toString() + " because it is " +
+              "offline because it has been split");
+          }
+          continue;
+        }
         // Update meta table
         if(LOG.isDebugEnabled()) {
           LOG.debug("updating columns in row: " + i.regionName);
@@ -2221,8 +2296,7 @@ public class HMaster implements HConstants, HMasterInterface,
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
           }
-          LOG.error("column update failed in row: " + i.regionName);
-          LOG.error(e);
+          LOG.error("column update failed in row: " + i.regionName, e);
 
         } finally {
           try {
@@ -2234,7 +2308,7 @@ public class HMaster implements HConstants, HMasterInterface,
             if (iex instanceof RemoteException) {
               iex = RemoteExceptionHandler.decodeRemoteException((RemoteException) iex);
             }
-            LOG.error(iex);
+            LOG.error("", iex);
           }
         }
 
@@ -2243,7 +2317,6 @@ public class HMaster implements HConstants, HMasterInterface,
             unassignedRegions.put(i.regionName, i);
             assignAttempts.put(i.regionName, 0L);
           }
-          
         } else {                                // Prevent region from getting assigned.
           unassignedRegions.remove(i.regionName);
           assignAttempts.remove(i.regionName);
@@ -2251,7 +2324,6 @@ public class HMaster implements HConstants, HMasterInterface,
       }
       
       // Process regions currently being served
-      
       if(LOG.isDebugEnabled()) {
         LOG.debug("processing regions currently being served");
       }
@@ -2284,16 +2356,14 @@ public class HMaster implements HConstants, HMasterInterface,
       servedRegions.clear();
     }
     
-    protected void updateRegionInfo(HRegionInterface server, Text regionName,
-        HRegionInfo i) throws IOException {
-      
+    protected void updateRegionInfo(final HRegionInterface srvr,
+        final Text regionName, final HRegionInfo i)
+    throws IOException {
       i.offLine = !online;
-      
       ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteValue);
       i.write(s);
-
-      server.put(regionName, clientId, lockid, COL_REGIONINFO,
+      srvr.put(regionName, clientId, lockid, COL_REGIONINFO,
         byteValue.toByteArray());
     }
   }
@@ -2310,7 +2380,7 @@ public class HMaster implements HConstants, HMasterInterface,
     }
     
     @Override
-    protected void postProcessMeta(MetaRegion m, HRegionInterface server)
+    protected void postProcessMeta(MetaRegion m, HRegionInterface srvr)
         throws IOException {
       // For regions that are being served, mark them for deletion      
       for (TreeSet<HRegionInfo> s: servedRegions.values()) {
@@ -2328,11 +2398,10 @@ public class HMaster implements HConstants, HMasterInterface,
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
           }
-          LOG.error("failed to delete region " + i.regionName);
-          LOG.error(e);
+          LOG.error("failed to delete region " + i.regionName, e);
         }
       }
-      super.postProcessMeta(m, server);
+      super.postProcessMeta(m, srvr);
     }
     
     @Override
@@ -2381,8 +2450,7 @@ public class HMaster implements HConstants, HMasterInterface,
         if (e instanceof RemoteException) {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
         }
-        LOG.error("column update failed in row: " + i.regionName);
-        LOG.error(e);
+        LOG.error("column update failed in row: " + i.regionName, e);
 
       } finally {
         if(lockid != -1L) {
@@ -2393,7 +2461,7 @@ public class HMaster implements HConstants, HMasterInterface,
             if (iex instanceof RemoteException) {
               iex = RemoteExceptionHandler.decodeRemoteException((RemoteException) iex);
             }
-            LOG.error(iex);
+            LOG.error("", iex);
           }
         }
       }
@@ -2410,15 +2478,15 @@ public class HMaster implements HConstants, HMasterInterface,
     }
     
     @Override
-    protected void postProcessMeta(MetaRegion m, HRegionInterface server)
+    protected void postProcessMeta(MetaRegion m, HRegionInterface srvr)
     throws IOException {
 
       for(HRegionInfo i: unservedRegions) {
         i.tableDesc.families().remove(columnName);
-        updateRegionInfo(server, m.regionName, i);
+        updateRegionInfo(srvr, m.regionName, i);
         
         // Delete the directories used by the column
-
+        
         try {
           fs.delete(HStoreFile.getMapDir(dir, i.regionName, columnName));
           
@@ -2426,7 +2494,7 @@ public class HMaster implements HConstants, HMasterInterface,
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
           }
-          LOG.error(e);
+          LOG.error("", e);
         }
         
         try {
@@ -2436,7 +2504,7 @@ public class HMaster implements HConstants, HMasterInterface,
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
           }
-          LOG.error(e);
+          LOG.error("", e);
         }
         
       }
@@ -2455,7 +2523,7 @@ public class HMaster implements HConstants, HMasterInterface,
     }
    
     @Override
-    protected void postProcessMeta(MetaRegion m, HRegionInterface server)
+    protected void postProcessMeta(MetaRegion m, HRegionInterface srvr)
         throws IOException {
 
       for(HRegionInfo i: unservedRegions) {
@@ -2465,7 +2533,7 @@ public class HMaster implements HConstants, HMasterInterface,
         // and create it.
         
         i.tableDesc.addFamily(newColumn);
-        updateRegionInfo(server, m.regionName, i);
+        updateRegionInfo(srvr, m.regionName, i);
       }
     }
   }
@@ -2488,15 +2556,12 @@ public class HMaster implements HConstants, HMasterInterface,
      */
     public void leaseExpired() {
       LOG.info(server + " lease expired");
-      
       // Remove the server from the known servers list
-      
       HServerInfo storedInfo = serversToServerInfo.remove(server);
       
       // NOTE: If the server was serving the root region, we cannot reassign it
       // here because the new server will start serving the root region before
       // the PendingServerShutdown operation has a chance to split the log file.
-      
       try {
         msgQueue.put(new PendingServerShutdown(storedInfo));
       } catch (InterruptedException e) {
@@ -2539,8 +2604,7 @@ public class HMaster implements HConstants, HMasterInterface,
         try {
           (new Thread(new HMaster(conf))).start();
         } catch (Throwable t) {
-          LOG.error( "Can not start master because "+
-              StringUtils.stringifyException(t) );
+          LOG.error( "Can not start master", t);
           System.exit(-1);
         }
         break;
@@ -2551,8 +2615,7 @@ public class HMaster implements HConstants, HMasterInterface,
           HBaseAdmin adm = new HBaseAdmin(conf);
           adm.shutdown();
         } catch (Throwable t) {
-          LOG.error( "Can not stop master because " +
-              StringUtils.stringifyException(t) );
+          LOG.error( "Can not stop master", t);
           System.exit(-1);
         }
         break;

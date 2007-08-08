@@ -81,7 +81,7 @@ public class HLogEdit implements Writable {
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     this.column.write(out);
-    out.writeShort(this.val.length);
+    out.writeInt(this.val.length);
     out.write(this.val);
     out.writeLong(timestamp);
   }
@@ -89,7 +89,7 @@ public class HLogEdit implements Writable {
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.column.readFields(in);
-    this.val = new byte[in.readShort()];
+    this.val = new byte[in.readInt()];
     in.readFully(this.val);
     this.timestamp = in.readLong();
   }

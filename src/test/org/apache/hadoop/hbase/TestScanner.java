@@ -146,7 +146,7 @@ public class TestScanner extends HBaseTestCase {
       Path dir = new Path("/hbase");
       fs.mkdirs(dir);
       
-      Path regionDir = HStoreFile.getHRegionDir(dir, REGION_INFO.regionName);
+      Path regionDir = HRegion.getRegionDir(dir, REGION_INFO.regionName);
       fs.mkdirs(regionDir);
       
       HLog log = new HLog(fs, new Path(regionDir, "log"), conf);

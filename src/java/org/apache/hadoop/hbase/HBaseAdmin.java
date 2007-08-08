@@ -498,11 +498,8 @@ public class HBaseAdmin implements HConstants {
   private HRegionLocation getFirstMetaServerForTable(Text tableName)
   throws IOException {
     SortedMap<Text, HRegionLocation> metaservers =
-      connection.getTableServers(META_TABLE_NAME);
-    
+      connection.getTableServers(META_TABLE_NAME); 
     return metaservers.get((metaservers.containsKey(tableName)) ?
         tableName : metaservers.headMap(tableName).lastKey());
   }
-  
-
 }

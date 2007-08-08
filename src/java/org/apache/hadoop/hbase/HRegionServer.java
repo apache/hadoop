@@ -113,7 +113,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // regions.
         retiringRegions.put(regionName, onlineRegions.remove(regionName));
         if (LOG.isDebugEnabled()) {
-          LOG.debug(regionName.toString() + "closing (" +
+          LOG.debug(regionName.toString() + " closing (" +
             "Adding to retiringRegions)");
         }
       } finally {
@@ -199,15 +199,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // splitting a 'normal' region, and the ROOT table needs to be
       // updated if we are splitting a META region.
       final Text tableToUpdate =
-        region.getRegionInfo().tableDesc.getName().equals(META_TABLE_NAME) ?
-            ROOT_TABLE_NAME : META_TABLE_NAME;
+        region.getRegionInfo().tableDesc.getName().equals(META_TABLE_NAME)?
+          ROOT_TABLE_NAME : META_TABLE_NAME;
       LOG.info("Updating " + tableToUpdate + " with region split info");
 
       // Remove old region from META
       for (int tries = 0; tries < numRetries; tries++) {
         try {
-          HRegion.removeRegionFromMETA(conf, tableToUpdate,
-              region.getRegionName());
+          HRegion.writeSplitToMETA(conf, tableToUpdate,
+            region.getRegionName(), newRegions[0].getRegionInfo(),
+            newRegions[1].getRegionInfo());
           break;
         } catch (IOException e) {
           if(tries == numRetries - 1) {
@@ -242,18 +243,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.debug("Reporting region split to master");
       }
       reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
-          newRegions[1].getRegionInfo());
+        newRegions[1].getRegionInfo());
       LOG.info("region split, META update, and report to master all" +
-          " successful. Old region=" + oldRegionInfo.getRegionName() +
-          ", new regions: " + newRegions[0].getRegionName() + ", " +
-          newRegions[1].getRegionName());
+        " successful. Old region=" + oldRegionInfo.getRegionName() +
+        ", new regions: " + newRegions[0].getRegionName() + ", " +
+        newRegions[1].getRegionName());
       
       // Finally, start serving the new regions
       lock.writeLock().lock();
       try {
         onlineRegions.put(newRegions[0].getRegionName(), newRegions[0]);
         onlineRegions.put(newRegions[1].getRegionName(), newRegions[1]);
-        
       } finally {
         lock.writeLock().unlock();
       }
@@ -307,7 +307,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   iex = x;
                 }
               }
-              LOG.error(iex);
+              LOG.error("", iex);
             }
           }
         }
@@ -347,10 +347,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
      * {@inheritDoc}
      */
     public void run() {
-      while(! stopRequested) {
+      while(!stopRequested) {
         synchronized(logRollerLock) {
-          // If the number of log entries is high enough, roll the log.  This is a
-          // very fast operation, but should not be done too frequently.
+          // If the number of log entries is high enough, roll the log.  This
+          // is a very fast operation, but should not be done too frequently.
           int nEntries = log.getNumEntries();
           if(nEntries > this.maxLogEntries) {
             try {
@@ -359,17 +359,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             } catch (IOException iex) {
               if (iex instanceof RemoteException) {
                 try {
-                  iex = RemoteExceptionHandler.decodeRemoteException((RemoteException) iex);
-                  
+                  iex = RemoteExceptionHandler.
+                    decodeRemoteException((RemoteException) iex);
                 } catch (IOException x) {
                   iex = x;
                 }
               }
-              LOG.warn(iex);
+              LOG.warn("", iex);
             }
           }
         }
-        
         if(!stopRequested) {
           try {
             Thread.sleep(threadWakeFrequency);
@@ -586,7 +585,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           e = ex;
         }
       }
-      LOG.error(e);
+      LOG.error("", e);
     }
 
     while(! stopRequested) {
@@ -653,9 +652,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 break;
 
               default:
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("Got default message");
-                }
                 try {
                   toDo.put(new ToDoEntry(msgs[i]));
                 } catch (InterruptedException e) {
@@ -678,7 +674,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 e = ex;
               }
             }
-            LOG.error(e);
+            LOG.error("", e);
           }
         }
 
@@ -716,16 +712,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     if (abortRequested) {
       try {
         log.close();
+        LOG.info("On abort, closed hlog");
       } catch (IOException e) {
         if (e instanceof RemoteException) {
           try {
             e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-            
           } catch (IOException ex) {
             e = ex;
           }
         }
-        LOG.warn(e);
+        LOG.warn("Abort close of log", e);
       }
       closeAllRegions(); // Don't leave any open file handles
       LOG.info("aborting server at: " +
@@ -743,7 +739,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             e = ex;
           }
         }
-        LOG.error(e);
+        LOG.error("", e);
       }
       try {
         HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
@@ -767,7 +763,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             e = ex;
           }
         }
-        LOG.warn(e);
+        LOG.warn("", e);
       }
       LOG.info("stopping server at: " +
         serverInfo.getServerAddress().toString());
@@ -1113,7 +1109,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             iex = x;
           }
         }
-        LOG.error(iex);
+        LOG.error("", iex);
       }
     }
   }
@@ -1267,12 +1263,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       if (e instanceof RemoteException) {
         try {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          
         } catch (IOException x) {
           e = x;
         }
       }
-      LOG.error(e);
+      LOG.error("", e);
       throw e;
     }
     return scannerId;

@@ -100,7 +100,8 @@ public interface HConstants {
   // Defines for the column names used in both ROOT and META HBase 'meta' tables.
   
   /** The ROOT and META column family */
-  static final Text COLUMN_FAMILY = new Text("info:");
+  static final String COLUMN_FAMILY_STR = "info:";
+  static final Text COLUMN_FAMILY = new Text(COLUMN_FAMILY_STR);
 
   /** Array of meta column names */
   static final Text [] COLUMN_FAMILY_ARRAY = new Text [] {COLUMN_FAMILY};
