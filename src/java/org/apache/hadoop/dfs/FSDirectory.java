@@ -412,8 +412,6 @@ class FSDirectory implements FSConstants {
 
   FSNamesystem namesystem = null;
   INode rootDir = new INode("");
-  TreeMap<StringBytesWritable, TreeSet<StringBytesWritable>> activeLocks =
-    new TreeMap<StringBytesWritable, TreeSet<StringBytesWritable>>();
   FSImage fsImage;  
   boolean ready = false;
   // Metrics record
@@ -706,40 +704,6 @@ class FSDirectory implements FSConstants {
           return v.toArray(new Block[v.size()]);
         }
       }
-    }
-  }
-
-  /**
-   */
-  public int obtainLock(String src, String holder, boolean exclusive) throws IOException {
-    StringBytesWritable srcSBW = new StringBytesWritable(src);
-    TreeSet<StringBytesWritable> holders = activeLocks.get(srcSBW);
-    if (holders == null) {
-      holders = new TreeSet<StringBytesWritable>();
-      activeLocks.put(srcSBW, holders);
-    }
-    if (exclusive && holders.size() > 0) {
-      return STILL_WAITING;
-    } else {
-      holders.add(new StringBytesWritable(holder));
-      return COMPLETE_SUCCESS;
-    }
-  }
-
-  /**
-   */
-  public int releaseLock(String src, String holder) throws IOException {
-    StringBytesWritable srcSBW = new StringBytesWritable(src);
-    StringBytesWritable holderSBW = new StringBytesWritable(holder);
-    TreeSet<StringBytesWritable> holders = activeLocks.get(srcSBW);
-    if (holders != null && holders.contains(holderSBW)) {
-      holders.remove(holderSBW);
-      if (holders.size() == 0) {
-        activeLocks.remove(srcSBW);
-      }
-      return COMPLETE_SUCCESS;
-    } else {
-      return OPERATION_FAILED;
     }
   }
 

@@ -31,9 +31,9 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Compared to the previous version the following changes have been introduced:
-   * 15: create(...) should only create a file but not return block.
+   * 16 : removed deprecated obtainLock() and releaseLock(). 
    */
-  public static final long versionID = 15L;
+  public static final long versionID = 16L;
   
   ///////////////////////////////////////
   // File contents
@@ -208,24 +208,6 @@ interface ClientProtocol extends VersionedProtocol {
   ///////////////////////////////////////
   // System issues and management
   ///////////////////////////////////////
-  /**
-   * obtainLock() is used for lock managemnet.  It returns true if
-   * the lock has been seized correctly.  It returns false if the
-   * lock could not be obtained, and the client should try again.
-   *
-   * Locking is a part of most filesystems and is useful for a
-   * number of inter-process synchronization tasks.
-   */
-  /** @deprecated */ @Deprecated
-    public boolean obtainLock(String src, String clientName, boolean exclusive) throws IOException;
-
-  /**
-   * releaseLock() is called if the client would like to release
-   * a held lock.  It returns true if the lock is correctly released.
-   * It returns false if the client should wait and try again.
-   */
-  /** @deprecated */ @Deprecated
-    public boolean releaseLock(String src, String clientName) throws IOException;
 
   /**
    * Client programs can cause stateful changes in the NameNode

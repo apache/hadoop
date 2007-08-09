@@ -443,32 +443,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   @Override
-  public void lock(Path f, boolean shared) throws IOException {
-    if (fs.isDirectory(f)) {
-      fs.lock(f, shared);
-    } else {
-      Path checkFile = getChecksumFile(f);
-      if (fs.exists(checkFile)) {
-        fs.lock(checkFile, shared);
-      }
-      fs.lock(f, shared);
-    }
-  }
-
-  @Override
-  public void release(Path f) throws IOException {
-    if (fs.isDirectory(f)) {
-      fs.release(f);
-    } else {
-      Path checkFile = getChecksumFile(f);
-      if (fs.exists(checkFile)) {
-        fs.release(getChecksumFile(f));
-      }
-      fs.release(f);
-    }
-  }
-
-  @Override
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     Configuration conf = getConf();

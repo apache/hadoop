@@ -741,22 +741,6 @@ public abstract class FileSystem extends Configured {
   public abstract boolean mkdirs(Path f) throws IOException;
 
   /**
-   * Obtain a lock on the given Path
-   * 
-   * @deprecated FS does not support file locks anymore.
-   */
-  @Deprecated
-  public void lock(Path f, boolean shared) throws IOException {}
-
-  /**
-   * Release the lock
-   * 
-   * @deprecated FS does not support file locks anymore.     
-   */
-  @Deprecated
-  public void release(Path f) throws IOException {}
-
-  /**
    * The src file is on the local disk.  Add it to FS at
    * the given dst name and the source is kept intact afterwards
    */

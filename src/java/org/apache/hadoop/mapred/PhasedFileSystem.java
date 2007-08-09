@@ -268,22 +268,6 @@ public class PhasedFileSystem extends FilterFileSystem {
     throw new UnsupportedOperationException("Operation not supported");  
   }
 
-  /** @deprecated */ @Deprecated
-    @Override
-    public void lock(
-                     Path f, boolean shared)
-    throws IOException {
-    throw new UnsupportedOperationException("Operation not supported");  
-  }
-
-  /** @deprecated */ @Deprecated
-    @Override
-    public void release(
-                        Path f)
-    throws IOException {
-    throw new UnsupportedOperationException("Operation not supported");  
-  }
-
   @Override
   public void copyFromLocalFile(
                                 boolean delSrc, Path src, Path dst)

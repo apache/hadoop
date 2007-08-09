@@ -9,6 +9,10 @@ Trunk (unreleased changes)
     file creation.  ClientProtocol version changed from 14 to 15.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-932.  File locking interfaces and implementations (that were
+    earlier deprecated) are removed.  Client Protocol version changed 
+    from 15 to 16.  (Raghu Angadi via dhruba)
+
   NEW FEATURES
 
     HADOOP-1636.  Allow configuration of the number of jobs kept in

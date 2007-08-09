@@ -509,43 +509,6 @@ class DFSClient implements FSConstants {
   }
 
   /**
-   */
-  public void lock(UTF8 src, boolean exclusive) throws IOException {
-    long start = System.currentTimeMillis();
-    boolean hasLock = false;
-    while (!hasLock) {
-      hasLock = namenode.obtainLock(src.toString(), clientName, exclusive);
-      if (!hasLock) {
-        try {
-          Thread.sleep(400);
-          if (System.currentTimeMillis() - start > 5000) {
-            LOG.info("Waiting to retry lock for " + (System.currentTimeMillis() - start) + " ms.");
-            Thread.sleep(2000);
-          }
-        } catch (InterruptedException ie) {
-        }
-      }
-    }
-  }
-
-  /**
-   *
-   */
-  public void release(UTF8 src) throws IOException {
-    boolean hasReleased = false;
-    while (!hasReleased) {
-      hasReleased = namenode.releaseLock(src.toString(), clientName);
-      if (!hasReleased) {
-        LOG.info("Could not release.  Retrying...");
-        try {
-          Thread.sleep(2000);
-        } catch (InterruptedException ie) {
-        }
-      }
-    }
-  }
-
-  /**
    * Pick the best node from which to stream the data.
    * Entries in <i>nodes</i> are already in the priority order
    */

@@ -190,26 +190,6 @@ public class FilterFileSystem extends FileSystem {
   }
 
   /**
-   * Obtain a lock on the given Path
-   * 
-   * @deprecated FS does not support file locks anymore.
-   */
-  @Deprecated
-  public void lock(Path f, boolean shared) throws IOException {
-    fs.lock(f, shared);
-  }
-
-  /**
-   * Release the lock
-   * 
-   * @deprecated FS does not support file locks anymore.     
-   */
-  @Deprecated
-  public void release(Path f) throws IOException {
-    fs.release(f);
-  }
-
-  /**
    * The src file is on the local disk.  Add it to FS at
    * the given dst name.
    * delSrc indicates if the source should be removed

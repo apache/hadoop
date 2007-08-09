@@ -434,30 +434,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     return namesystem.mkdirs(src);
   }
 
-  /** @deprecated */ @Deprecated
-    public boolean obtainLock(String src, String clientName, boolean exclusive) throws IOException {
-    int returnCode = namesystem.obtainLock(new UTF8(src), new UTF8(clientName), exclusive);
-    if (returnCode == COMPLETE_SUCCESS) {
-      return true;
-    } else if (returnCode == STILL_WAITING) {
-      return false;
-    } else {
-      throw new IOException("Failure when trying to obtain lock on " + src);
-    }
-  }
-
-  /** @deprecated */ @Deprecated
-    public boolean releaseLock(String src, String clientName) throws IOException {
-    int returnCode = namesystem.releaseLock(new UTF8(src), new UTF8(clientName));
-    if (returnCode == COMPLETE_SUCCESS) {
-      return true;
-    } else if (returnCode == STILL_WAITING) {
-      return false;
-    } else {
-      throw new IOException("Failure when trying to release lock on " + src);
-    }
-  }
-
   /**
    */
   public void renewLease(String clientName) throws IOException {

@@ -1357,8 +1357,6 @@ class FSNamesystem implements FSConstants {
     }
     public void releaseLocks() throws IOException {
       String holderStr = holder.getString();
-      for (Iterator<StringBytesWritable> it = locks.iterator(); it.hasNext();)
-        internalReleaseLock(it.next().getString(), holderStr);
       locks.clear();
       for (Iterator<StringBytesWritable> it = creates.iterator(); it.hasNext();)
         internalReleaseCreate(it.next().getString(), holderStr);
@@ -1456,31 +1454,6 @@ class FSNamesystem implements FSConstants {
   
   private void removeLease(String holder) throws IOException {
     leases.remove(new StringBytesWritable(holder));
-  }
-
-  /**
-   * Get a lock (perhaps exclusive) on the given file
-   */
-  /** @deprecated */
-  @Deprecated
-  public synchronized int obtainLock(UTF8 src, 
-                                     UTF8 holder, 
-                                     boolean exclusive) throws IOException {
-    if (isInSafeMode())
-      throw new SafeModeException("Cannot lock file " + src, safeMode);
-    return OPERATION_FAILED;
-  }
-
-  /**
-   * Release the lock on the given file
-   */
-  /** @deprecated */
-  @Deprecated
-  public synchronized int releaseLock(UTF8 src, UTF8 holder) {
-    return OPERATION_FAILED;
-  }
-  private int internalReleaseLock(String src, String holder) throws IOException {
-    return dir.releaseLock(src, holder);
   }
 
   /**
