@@ -90,6 +90,8 @@ class HStore implements HConstants {
   TreeMap<Long, MapFile.Reader> readers = new TreeMap<Long, MapFile.Reader>();
 
   Random rand = new Random();
+  
+  private long maxSeqId;
 
   /**
    * An HStore is a set of zero or more MapFiles, which stretch backwards over 
@@ -196,6 +198,7 @@ class HStore implements HConstants {
     // If the HSTORE_LOGINFOFILE doesn't contain a number, just ignore it. That
     // means it was built prior to the previous run of HStore, and so it cannot 
     // contain any updates also contained in the log.
+    
     long maxSeqID = -1;
     for (HStoreFile hsf: hstoreFiles) {
       long seqid = hsf.loadInfo(fs);
@@ -205,8 +208,14 @@ class HStore implements HConstants {
         }
       }
     }
-
-    doReconstructionLog(reconstructionLog, maxSeqID);
+    this.maxSeqId = maxSeqID;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("maximum sequence id for hstore " + storeName + " is " +
+          this.maxSeqId);
+    }
+    
+    doReconstructionLog(reconstructionLog, maxSeqId);
+    this.maxSeqId += 1;
 
     // Compact all the MapFiles into a single file.  The resulting MapFile 
     // should be "timeless"; that is, it should not have an associated seq-ID, 
@@ -226,6 +235,10 @@ class HStore implements HConstants {
       this.readers.put(e.getKey(),
         e.getValue().getReader(this.fs, this.bloomFilter));
     }
+  }
+  
+  long getMaxSequenceId() {
+    return this.maxSeqId;
   }
   
   /*
@@ -258,6 +271,11 @@ class HStore implements HConstants {
       while (login.next(key, val)) {
         maxSeqIdInLog = Math.max(maxSeqIdInLog, key.getLogSeqNum());
         if (key.getLogSeqNum() <= maxSeqID) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Skipping edit <" + key.toString() + "=" +
+                val.toString() + "> key sequence: " + key.getLogSeqNum() +
+                " max sequence: " + maxSeqID);
+          }
           continue;
         }
         // Check this edit is for me. Also, guard against writing
@@ -277,7 +295,8 @@ class HStore implements HConstants {
         }
         HStoreKey k = new HStoreKey(key.getRow(), column, val.getTimestamp());
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Applying edit " + k.toString());
+          LOG.debug("Applying edit <" + k.toString() + "=" + val.toString() +
+              ">");
         }
         reconstructedCache.put(k, val.getVal());
       }
@@ -428,16 +447,12 @@ class HStore implements HConstants {
       String name = flushedFile.toString();
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
         this.bloomFilter);
-      int count = 0;
-      int total = 0;
       try {
         for (Map.Entry<HStoreKey, byte []> es: inputCache.entrySet()) {
           HStoreKey curkey = es.getKey();
-          total++;
           if (this.familyName.
               equals(HStoreKey.extractFamily(curkey.getColumn()))) {
             out.append(curkey, new ImmutableBytesWritable(es.getValue()));
-            count++;
           }
         }
       } finally {
@@ -1030,6 +1045,7 @@ class HStore implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
   
   class HStoreScanner extends HAbstractScanner {
+    @SuppressWarnings("hiding")
     private MapFile.Reader[] readers;
     
     HStoreScanner(long timestamp, Text[] targetCols, Text firstRow)

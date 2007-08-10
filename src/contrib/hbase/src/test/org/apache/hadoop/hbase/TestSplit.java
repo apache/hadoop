@@ -46,6 +46,7 @@ public class TestSplit extends HBaseTestCase {
   private static final char FIRST_CHAR = 'a';
   private static final char LAST_CHAR = 'z';
   
+  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -59,6 +60,7 @@ public class TestSplit extends HBaseTestCase {
     conf.setLong("hbase.hregion.max.filesize", 1024 * 128);
   }
   
+  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     try {

@@ -40,7 +40,7 @@ import org.apache.log4j.Logger;
  * HRegions or in the HBaseMaster, so only basic testing is possible.
  */
 public class TestHRegion extends HBaseTestCase implements RegionUnavailableListener {
-  private static final Logger LOG =
+  static final Logger LOG =
     Logger.getLogger(TestHRegion.class.getName());
   
   /** Constructor */

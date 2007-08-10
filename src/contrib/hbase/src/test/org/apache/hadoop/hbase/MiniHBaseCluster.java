@@ -143,33 +143,43 @@ public class MiniHBaseCluster implements HConstants {
     }
   }
   
+  /** runs the master server */
   public static class MasterThread extends Thread {
     private final HMaster master;
     MasterThread(final HMaster m) {
       super(m, "Master:" + m.getMasterAddress().toString());
       this.master = m;
     }
+    
+    /** {@inheritDoc} */
     @Override
     public void run() {
       LOG.info("Starting " + getName());
       super.run();
     }
+    
+    /** @return master server */
     public HMaster getMaster() {
       return this.master;
     }
   }
   
+  /** runs region servers */
   public static class RegionServerThread extends Thread {
     private final HRegionServer regionServer;
     RegionServerThread(final HRegionServer r, final int index) {
       super(r, "RegionServer:" + index);
       this.regionServer = r;
     }
+    
+    /** {@inheritDoc} */
     @Override
     public void run() {
       LOG.info("Starting " + getName());
       super.run();
     }
+    
+    /** @return the region server */
     public HRegionServer getRegionServer() {
       return this.regionServer;
     }
@@ -227,6 +237,11 @@ public class MiniHBaseCluster implements HConstants {
     return threads;
   }
   
+  /**
+   * Starts a region server thread running
+   * 
+   * @throws IOException
+   */
   public void startRegionServer() throws IOException {
     RegionServerThread t =
       startRegionServer(this.conf, this.regionThreads.size());
@@ -275,6 +290,7 @@ public class MiniHBaseCluster implements HConstants {
    * Shut down the specified region server cleanly
    * 
    * @param serverNumber
+   * @return the region server that was stopped
    */
   public HRegionServer stopRegionServer(int serverNumber) {
     HRegionServer server =
