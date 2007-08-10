@@ -145,6 +145,11 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>fs.hftp.impl</name>
+  <value>org.apache.hadoop.dfs.HftpFileSystem</value>
+</property>
+
+<property>
   <name>fs.ramfs.impl</name>
   <value>org.apache.hadoop.fs.InMemoryFileSystem</value>
   <description>The FileSystem for ramfs: uris.</description>

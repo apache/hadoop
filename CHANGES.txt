@@ -509,6 +509,9 @@ Branch 0.14 (unreleased changes)
 149. HADOOP-71.  Allow Text and SequenceFile Map/Reduce inputs from non-default 
      filesystems. (omalley)
 
+150. HADOOP-1568.  Expose HDFS as xml/http filesystem to provide cross-version
+     compatability. (Chris Douglas via omalley)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
