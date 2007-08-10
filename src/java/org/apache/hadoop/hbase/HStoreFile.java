@@ -94,7 +94,17 @@ public class HStoreFile implements HConstants, WritableComparable {
   static final String HSTORE_DATFILE_DIR = "mapfiles";
   static final String HSTORE_INFO_DIR = "info";
   static final String HSTORE_FILTER_DIR = "filter";
-  public static enum Range {top, bottom}
+  
+  /** 
+   * For split HStoreFiles, specifies if the file covers the lower half or
+   * the upper half of the key range
+   */
+  public static enum Range {
+    /** HStoreFile contains upper half of key range */
+    top,
+    /** HStoreFile contains lower half of key range */
+    bottom
+  }
   
   /*
    * Regex that will work for straight filenames and for reference names.
@@ -156,7 +166,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   /*
    * Data structure to hold reference to a store file over in another region.
    */
-  static class Reference {
+  static class Reference implements Writable {
     Text regionName;
     long fileid;
     Range region;
@@ -190,11 +200,15 @@ public class HStoreFile implements HConstants, WritableComparable {
       return this.regionName;
     }
    
+    /** {@inheritDoc} */
+    @Override
     public String toString() {
       return this.regionName + "/" + this.fileid + "/" + this.region;
     }
 
     // Make it serializable.
+
+    /** {@inheritDoc} */
     public void write(DataOutput out) throws IOException {
       this.regionName.write(out);
       out.writeLong(this.fileid);
@@ -203,6 +217,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       this.midkey.write(out);
     }
 
+    /** {@inheritDoc} */
     public void readFields(DataInput in) throws IOException {
       this.regionName = new Text();
       this.regionName.readFields(in);
@@ -417,6 +432,8 @@ public class HStoreFile implements HConstants, WritableComparable {
   private static boolean isReference(final Path p, final Matcher m) {
     if (m == null || !m.matches()) {
       LOG.warn("Failed match of store file name " + p.toString());
+      throw new RuntimeException("Failed match of store file name " +
+          p.toString());
     }
     return m.groupCount() > 1 && m.group(2) != null;
   }
@@ -662,6 +679,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       }
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings({ "unused"})
     @Override
     public synchronized void finalKey(WritableComparable key)
@@ -669,6 +687,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       throw new UnsupportedOperationException("Unsupported");
     }
 
+    /** {@inheritDoc} */
     @Override
     public synchronized Writable get(WritableComparable key, Writable val)
         throws IOException {
@@ -676,6 +695,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       return super.get(key, val);
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override
     public synchronized WritableComparable getClosest(WritableComparable key,
@@ -692,6 +712,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       return super.getClosest(key, val);
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings("unused")
     @Override
     public synchronized WritableComparable midKey() throws IOException {
@@ -699,6 +720,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       return null;
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override
     public synchronized boolean next(WritableComparable key, Writable val)
@@ -727,6 +749,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       return false;
     }
 
+    /** {@inheritDoc} */
     @Override
     public synchronized void reset() throws IOException {
       if (top) {
@@ -737,6 +760,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       super.reset();
     }
 
+    /** {@inheritDoc} */
     @Override
     public synchronized boolean seek(WritableComparable key)
     throws IOException {
@@ -758,6 +782,15 @@ public class HStoreFile implements HConstants, WritableComparable {
     static class Reader extends MapFile.Reader {
       private final Filter bloomFilter;
 
+      /**
+       * Constructor
+       * 
+       * @param fs
+       * @param dirName
+       * @param conf
+       * @param filter
+       * @throws IOException
+       */
       public Reader(FileSystem fs, String dirName, Configuration conf,
           final Filter filter)
       throws IOException {
@@ -810,6 +843,18 @@ public class HStoreFile implements HConstants, WritableComparable {
       private final Filter bloomFilter;
       
 
+      /**
+       * Constructor
+       * 
+       * @param conf
+       * @param fs
+       * @param dirName
+       * @param keyClass
+       * @param valClass
+       * @param compression
+       * @param filter
+       * @throws IOException
+       */
       @SuppressWarnings("unchecked")
       public Writer(Configuration conf, FileSystem fs, String dirName,
           Class keyClass, Class valClass,
@@ -905,6 +950,7 @@ public class HStoreFile implements HConstants, WritableComparable {
     return (isReference())? l / 2: l;
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return this.regionName.toString() + "/" + this.colFamily.toString() +
@@ -912,6 +958,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       (isReference()? "/" + this.reference.toString(): "");
   }
   
+  /** {@inheritDoc} */
   @Override
   public boolean equals(Object o) {
     return this.compareTo(o) == 0;

@@ -488,8 +488,9 @@ public class HBaseAdmin implements HConstants {
    * @throws IllegalArgumentException - if the table name is reserved
    */
   protected void checkReservedTableName(Text tableName) {
-    if(tableName.equals(ROOT_TABLE_NAME)
-        || tableName.equals(META_TABLE_NAME)) {
+    if(tableName.charAt(0) == '-' ||
+        tableName.charAt(0) == '.' ||
+        tableName.find(",") != -1) {
       
       throw new IllegalArgumentException(tableName + " is a reserved table name");
     }

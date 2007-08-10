@@ -41,13 +41,13 @@ public class HTableDescriptor implements WritableComparable {
   
   /*
    * Legal table names can only contain 'word characters':
-   * i.e. <code>[a-zA-Z_0-9]</code>.
+   * i.e. <code>[a-zA-Z_0-9-.]</code>.
    * Lets be restrictive until a reason to be otherwise. One reason to limit
    * characters in table name is to ensure table regions as entries in META
    * regions can be found (See HADOOP-1581 'HBASE: Un-openable tablename bug').
    */
   private static final Pattern LEGAL_TABLE_NAME =
-    Pattern.compile("[\\w-]+");
+    Pattern.compile("^[\\w-.]+$");
 
   /** Constructs an empty object */
   public HTableDescriptor() {

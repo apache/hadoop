@@ -35,8 +35,8 @@ public class TestToString extends TestCase {
     HServerAddress address = new HServerAddress(hostport);
     assertEquals("HServerAddress toString", address.toString(), hostport);
     HServerInfo info = new HServerInfo(address, -1);
-    assertEquals("HServerInfo", info.toString(),
-        "address: " + hostport + ", startcode: " + -1);
+    assertEquals("HServerInfo", "address: " + hostport + ", startcode: -1" +
+        ", load: (requests: 0 regions: 0)", info.toString());
   }
   
   /**

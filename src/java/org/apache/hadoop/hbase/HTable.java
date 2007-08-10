@@ -133,6 +133,7 @@ public class HTable implements HConstants {
   }
   
 
+  /** @return the table name */
   public Text getTableName() {
     return this.tableName;
   }

@@ -275,6 +275,7 @@ public class HRegion implements HConstants {
   int compactionThreshold = 0;
   private final HLocking lock = new HLocking();
   private long desiredMaxFileSize;
+  private final long maxSequenceId;
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -324,12 +325,26 @@ public class HRegion implements HConstants {
     }
 
     // Load in all the HStores.
+
+    long maxSeqId = -1;
     for(Map.Entry<Text, HColumnDescriptor> e :
         this.regionInfo.tableDesc.families().entrySet()) {
       Text colFamily = HStoreKey.extractFamily(e.getKey());
-      stores.put(colFamily,
-        new HStore(rootDir, this.regionInfo.regionName, e.getValue(), fs,
-          oldLogFile, conf));
+      
+      HStore store = new HStore(rootDir, this.regionInfo.regionName, 
+          e.getValue(), fs, oldLogFile, conf); 
+      
+      stores.put(colFamily, store);
+      
+      long storeSeqId = store.getMaxSequenceId();
+      if (storeSeqId > maxSeqId) {
+        maxSeqId = storeSeqId;
+      }
+    }
+    this.maxSequenceId = maxSeqId;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("maximum sequence id for region " + regionInfo.getRegionName() +
+          " is " + this.maxSequenceId);
     }
 
     // Get rid of any splits or merges that were lost in-progress
@@ -360,6 +375,10 @@ public class HRegion implements HConstants {
     // HRegion is ready to go!
     this.writestate.writesOngoing = false;
     LOG.info("region " + this.regionInfo.regionName + " available");
+  }
+  
+  long getMaxSequenceId() {
+    return this.maxSequenceId;
   }
 
   /** Returns a HRegionInfo object for this region */
@@ -464,8 +483,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   HRegion[] closeAndSplit(final Text midKey,
-      final RegionUnavailableListener listener)
-  throws IOException {
+      final RegionUnavailableListener listener) throws IOException {
+    
     checkMidKey(midKey);
     long startTime = System.currentTimeMillis();
     Path splits = getSplitsDir();
@@ -496,6 +515,7 @@ public class HRegion implements HConstants {
     Vector<HStoreFile> hstoreFilesToSplit = close();
     if (hstoreFilesToSplit == null) {
       LOG.warn("Close came back null (Implement abort of close?)");
+      throw new RuntimeException("close returned empty vector of HStoreFiles");
     }
     
     // Tell listener that region is now closed and that they can therefore
@@ -690,8 +710,11 @@ public class HRegion implements HConstants {
           biggest = size;
         }
       }
-      biggest.setSplitable(splitable);
+      if (biggest != null) {
+        biggest.setSplitable(splitable);
+      }
       return biggest;
+      
     } finally {
       lock.releaseReadLock();
     }
@@ -1405,6 +1428,7 @@ public class HRegion implements HConstants {
     }
   }
   
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return getRegionName().toString();
@@ -1842,9 +1866,7 @@ public class HRegion implements HConstants {
     if (bytes == null || bytes.length == 0) {
       return null;
     }
-    return (HRegionInfo)((bytes == null || bytes.length == 0)?
-      null:
-      Writables.getWritable(bytes, new HRegionInfo()));
+    return (HRegionInfo) Writables.getWritable(bytes, new HRegionInfo());
   }
   
   /**
@@ -1905,6 +1927,13 @@ public class HRegion implements HConstants {
     return startCode;
   }
 
+  /**
+   * Computes the Path of the HRegion
+   * 
+   * @param dir parent directory
+   * @param regionName name of the region
+   * @return Path of HRegion directory
+   */
   public static Path getRegionDir(final Path dir, final Text regionName) {
     return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName));
   }

@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * HLog stores all the edits to the HStore.
@@ -73,14 +74,14 @@ public class HLog implements HConstants {
 
   SequenceFile.Writer writer;
   TreeMap<Long, Path> outputfiles = new TreeMap<Long, Path>();
-  boolean insideCacheFlush = false;
+  volatile boolean insideCacheFlush = false;
 
   TreeMap<Text, Long> regionToLastFlush = new TreeMap<Text, Long>();
 
-  boolean closed = false;
-  transient long logSeqNum = 0;
+  volatile boolean closed = false;
+  volatile long logSeqNum = 0;
   long filenum = 0;
-  transient int numEntries = 0;
+  AtomicInteger numEntries = new AtomicInteger(0);
 
   Integer rollLock = new Integer(0);
 
@@ -125,7 +126,7 @@ public class HLog implements HConstants {
               logWriters.put(regionName, w);
             }
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Edit " + key.toString());
+              LOG.debug("Edit " + key.toString() + "=" + val.toString());
             }
             w.append(key, val);
           }
@@ -172,6 +173,16 @@ public class HLog implements HConstants {
     }
     fs.mkdirs(dir);
     rollWriter();
+  }
+  
+  synchronized void setSequenceNumber(long newvalue) {
+    if (newvalue > logSeqNum) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("changing sequence number from " + logSeqNum + " to " +
+            newvalue);
+      }
+      logSeqNum = newvalue;
+    }
   }
 
   /**
@@ -266,7 +277,7 @@ public class HLog implements HConstants {
         }
         fs.delete(p);
       }
-      this.numEntries = 0;
+      this.numEntries.set(0);
     }
   }
 
@@ -343,13 +354,13 @@ public class HLog implements HConstants {
         new HLogKey(regionName, tableName, row, seqNum[counter++]);
       HLogEdit logEdit = new HLogEdit(es.getKey(), es.getValue(), timestamp);
       writer.append(logKey, logEdit);
-      numEntries++;
+      numEntries.getAndIncrement();
     }
   }
 
   /** @return How many items have been added to the log */
   int getNumEntries() {
-    return numEntries;
+    return numEntries.get();
   }
 
   /**
@@ -418,7 +429,7 @@ public class HLog implements HConstants {
     writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
       new HLogEdit(HLog.METACOLUMN, COMPLETE_CACHEFLUSH.get(),
         System.currentTimeMillis()));
-    numEntries++;
+    numEntries.getAndIncrement();
 
     // Remember the most-recent flush for each region.
     // This is used to delete obsolete log files.

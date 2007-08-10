@@ -84,7 +84,7 @@ public class HLogKey implements WritableComparable {
    */
   @Override
   public String toString() {
-    return tablename + "," + regionName + "," + row + "," + logSeqNum;
+    return tablename + "/" + regionName + "/" + row + "/" + logSeqNum;
   }
   
   /**

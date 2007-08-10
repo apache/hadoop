@@ -72,8 +72,14 @@ public class HLogEdit implements Writable {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return getColumn().toString() + " " + this.getTimestamp() + " " +
-      new String(getVal()).trim();
+    String value = "";
+    try {
+      value = new String(getVal(), HConstants.UTF8_ENCODING);
+      
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException("UTF8 encoding not present?", e);
+    }
+    return "(" + getColumn().toString() + "/" + getTimestamp() + "/" + value + ")";
   }
   
   // Writable

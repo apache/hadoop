@@ -92,15 +92,17 @@ public interface HConstants {
   // Do we ever need to know all the information that we are storing?
 
   /** The root table's name. */
-  static final Text ROOT_TABLE_NAME = new Text("--ROOT--");
+  static final Text ROOT_TABLE_NAME = new Text("-ROOT-");
 
   /** The META table's name. */
-  static final Text META_TABLE_NAME = new Text("--META--");
+  static final Text META_TABLE_NAME = new Text(".META.");
 
   // Defines for the column names used in both ROOT and META HBase 'meta' tables.
   
-  /** The ROOT and META column family */
+  /** The ROOT and META column family (string) */
   static final String COLUMN_FAMILY_STR = "info:";
+
+  /** The ROOT and META column family (Text) */
   static final Text COLUMN_FAMILY = new Text(COLUMN_FAMILY_STR);
 
   /** Array of meta column names */

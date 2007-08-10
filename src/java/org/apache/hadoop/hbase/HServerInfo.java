@@ -33,21 +33,24 @@ import java.io.*;
 public class HServerInfo implements Writable {
   private HServerAddress serverAddress;
   private long startCode;
+  private HServerLoad load;
 
   /** default constructor - used by Writable */
   public HServerInfo() {
     this.serverAddress = new HServerAddress();
     this.startCode = 0;
+    this.load = new HServerLoad();
   }
   
   /**
-   * Constructs a fully initialized object
+   * Constructor
    * @param serverAddress
    * @param startCode
    */
   public HServerInfo(HServerAddress serverAddress, long startCode) {
     this.serverAddress = new HServerAddress(serverAddress);
     this.startCode = startCode;
+    this.load = new HServerLoad();
   }
   
   /**
@@ -57,6 +60,21 @@ public class HServerInfo implements Writable {
   public HServerInfo(HServerInfo other) {
     this.serverAddress = new HServerAddress(other.getServerAddress());
     this.startCode = other.getStartCode();
+    this.load = other.getLoad();
+  }
+  
+  /**
+   * @return the load
+   */
+  public HServerLoad getLoad() {
+    return load;
+  }
+
+  /**
+   * @param load the load to set
+   */
+  public void setLoad(HServerLoad load) {
+    this.load = load;
   }
 
   /** @return the server address */
@@ -72,7 +90,8 @@ public class HServerInfo implements Writable {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "address: " + this.serverAddress + ", startcode: " + this.startCode;
+    return "address: " + this.serverAddress + ", startcode: " + this.startCode
+    + ", load: (" + this.load.toString() + ")";
   }
 
   // Writable
@@ -81,11 +100,13 @@ public class HServerInfo implements Writable {
   public void readFields(DataInput in) throws IOException {
     this.serverAddress.readFields(in);
     this.startCode = in.readLong();
+    this.load.readFields(in);
   }
 
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     this.serverAddress.write(out);
     out.writeLong(this.startCode);
+    this.load.write(out);
   }
 }
