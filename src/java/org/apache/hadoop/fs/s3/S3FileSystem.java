@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -161,17 +162,20 @@ public class S3FileSystem extends FileSystem {
   }
 
   @Override
-  public Path[] listPaths(Path path) throws IOException {
-    Path absolutePath = makeAbsolute(path);
+  public FileStatus[] listStatus(Path f) throws IOException {
+    Path absolutePath = makeAbsolute(f);
     INode inode = store.retrieveINode(absolutePath);
     if (inode == null) {
       return null;
-    } else if (inode.isFile()) {
-      return new Path[] { absolutePath };
-    } else { // directory
-      Set<Path> paths = store.listSubPaths(absolutePath);
-      return paths.toArray(new Path[0]);
     }
+    if (inode.isFile()) {
+      return new FileStatus[] { new S3FileStatus(f, inode) };
+    }
+    ArrayList<FileStatus> ret = new ArrayList<FileStatus>();
+    for (Path p : store.listSubPaths(absolutePath)) {
+      ret.add(getFileStatus(p));
+    }
+    return ret.toArray(new FileStatus[0]);
   }
 
   @Override
@@ -288,7 +292,7 @@ public class S3FileSystem extends FileSystem {
     if (inode == null) {
       throw new IOException(f.toString() + ": No such file or directory.");
     }
-    return new S3FileStatus(inode);
+    return new S3FileStatus(f, inode);
   }
 
   // diagnostic methods
@@ -301,35 +305,27 @@ public class S3FileSystem extends FileSystem {
     store.purge();
   }
 
-  private static class S3FileStatus implements FileStatus {
-    private long length = 0, blockSize = 0;
-    private boolean isDir;
+  private static class S3FileStatus extends FileStatus {
 
-    S3FileStatus(INode inode) throws IOException {
-      isDir = inode.isDirectory();
-      if (!isDir) {
+    S3FileStatus(Path f, INode inode) throws IOException {
+      super(findLength(inode), inode.isDirectory(), 1,
+            findBlocksize(inode), 0, f);
+    }
+
+    private static long findLength(INode inode) {
+      if (!inode.isDirectory()) {
+        long length = 0L;
         for (Block block : inode.getBlocks()) {
           length += block.getLength();
-          if (blockSize == 0) {
-            blockSize = block.getLength();
-          }
         }
+        return length;
       }
+      return 0;
     }
-    public long getLen() {
-      return length;
-    }
-    public boolean isDir() {
-      return isDir;
-    }
-    public long getBlockSize() {
-      return blockSize;
-    }
-    public short getReplication() {
-      return 1;
-    }
-    public long getModificationTime() {
-      return 0;  // not supported yet
+
+    private static long findBlocksize(INode inode) {
+      final Block[] ret = inode.getBlocks();
+      return ret == null ? 0L : ret[0].getLength();
     }
   }
 }

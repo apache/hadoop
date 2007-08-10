@@ -21,8 +21,6 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 
-import java.io.*;
-
 /******************************************************
  * DFSFileInfo tracks info about remote files, including
  * name, size, etc.
@@ -31,7 +29,7 @@ import java.io.*;
  * Block locations are sorted by the distance to the current client.
  * 
  ******************************************************/
-class DFSFileInfo implements Writable, FileStatus {
+class DFSFileInfo extends FileStatus {
   static {                                      // register a ctor
     WritableFactories.setFactory
       (DFSFileInfo.class,
@@ -39,13 +37,6 @@ class DFSFileInfo implements Writable, FileStatus {
          public Writable newInstance() { return new DFSFileInfo(); }
        });
   }
-
-  Path path;
-  long len;
-  boolean isDir;
-  short blockReplication;
-  long blockSize;
-  long modificationTime;
 
   /**
    */
@@ -56,36 +47,22 @@ class DFSFileInfo implements Writable, FileStatus {
    * Create DFSFileInfo by file INode 
    */
   public DFSFileInfo(FSDirectory.INode node) {
-    this.path = new Path(node.getAbsoluteName());
-    this.isDir = node.isDir();
-    this.len = isDir ? node.computeContentsLength() : node.computeFileLength();
-    this.blockReplication = node.getReplication();
-    blockSize = node.getBlockSize();
-    modificationTime = node.getModificationTime();
-  }
-
-  /**
-   */
-  public String getPath() {
-    return path.toString();
+    // XXX This should probably let length == 0 for directories
+    super(node.isDir() ? node.computeContentsLength() : node.computeFileLength(),
+          node.isDir(), node.getReplication(), node.getBlockSize(),
+          node.getModificationTime(), new Path(node.getAbsoluteName()));
   }
 
   /**
    */
   public String getName() {
-    return path.getName();
+    return getPath().getName();
   }
   
   /**
    */
   public String getParent() {
-    return path.getParent().toString();
-  }
-
-  /**
-   */
-  public long getLen() {
-    return len;
+    return getPath().getParent().toString();
   }
 
   /**
@@ -93,56 +70,6 @@ class DFSFileInfo implements Writable, FileStatus {
    */
   public long getContentsLen() {
     assert isDir() : "Must be a directory";
-    return len;
-  }
-
-  /**
-   */
-  public boolean isDir() {
-    return isDir;
-  }
-
-  /**
-   */
-  public short getReplication() {
-    return this.blockReplication;
-  }
-
-  /**
-   * Get the block size of the file.
-   * @return the number of bytes
-   */
-  public long getBlockSize() {
-    return blockSize;
-  }
-
-  /**
-   * Get the last modification time of the file.
-   * @return the number of milliseconds since January 1, 1970 UTC.
-   */
-  public long getModificationTime() {
-    return modificationTime;
-  }
-    
-  //////////////////////////////////////////////////
-  // Writable
-  //////////////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    Text.writeString(out, getPath());
-    out.writeLong(len);
-    out.writeBoolean(isDir);
-    out.writeShort(blockReplication);
-    out.writeLong(blockSize);
-    out.writeLong(modificationTime);
-  }
-  
-  public void readFields(DataInput in) throws IOException {
-    String strPath = Text.readString(in);
-    this.path = new Path(strPath);
-    this.len = in.readLong();
-    this.isDir = in.readBoolean();
-    this.blockReplication = in.readShort();
-    blockSize = in.readLong();
-    modificationTime = in.readLong();
+    return getLen();
   }
 }

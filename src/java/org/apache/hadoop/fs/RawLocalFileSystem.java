@@ -191,30 +191,29 @@ public class RawLocalFileSystem extends FileSystem {
   public boolean exists(Path f) throws IOException {
     return pathToFile(f).exists();
   }
-  
-  public Path[] listPaths(Path f) throws IOException {
+
+  public FileStatus[] listStatus(Path f) throws IOException {
     File localf = pathToFile(f);
-    Path[] results;
-    
-    if (!localf.exists())
+    FileStatus[] results;
+
+    if (!localf.exists()) {
       return null;
-    else if (localf.isFile()) {
-      results = new Path[1];
-      results[0] = f;
-      return results;
-    } else { // directory
-      String[] names = localf.list();
-      if (names == null) {
-        return null;
-      }
-      results = new Path[names.length];
-      for (int i = 0; i < names.length; i++) {
-        results[i] = new Path(f, names[i]);
-      }
-      return results;
     }
+    if (localf.isFile()) {
+      return new FileStatus[] { new RawLocalFileStatus(localf) };
+    }
+
+    String[] names = localf.list();
+    if (names == null) {
+      return null;
+    }
+    results = new FileStatus[names.length];
+    for (int i = 0; i < names.length; i++) {
+      results[i] = getFileStatus(new Path(f, names[i]));
+    }
+    return results;
   }
-  
+
   /**
    * Creates the specified directory hierarchy. Does not
    * treat existence as an error.
@@ -319,30 +318,10 @@ public class RawLocalFileSystem extends FileSystem {
     return new RawLocalFileStatus(pathToFile(f));
   }
 
-  private class RawLocalFileStatus implements FileStatus {
-    private long length;
-    private boolean isDir;
-    private long mtime;
-
+  private class RawLocalFileStatus extends FileStatus {
     RawLocalFileStatus(File f) throws IOException {
-      length = f.length();
-      isDir = f.isDirectory();
-      mtime = f.lastModified();
-    }
-    public long getLen() {
-      return length;
-    }
-    public boolean isDir() {
-      return isDir;
-    }
-    public long getBlockSize() {
-      return getDefaultBlockSize();
-    }
-    public short getReplication() {
-      return 1;
-    }
-    public long getModificationTime() {
-      return mtime;
+      super(f.length(), f.isDirectory(), 1, getDefaultBlockSize(),
+            f.lastModified(), new Path(f.toURI().toString()));
     }
   }
 }

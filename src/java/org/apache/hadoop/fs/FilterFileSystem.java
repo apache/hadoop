@@ -157,8 +157,8 @@ public class FilterFileSystem extends FileSystem {
   }
 
   /** List files in a directory. */
-  public Path[] listPaths(Path f) throws IOException {
-    return fs.listPaths(f);
+  public FileStatus[] listStatus(Path f) throws IOException {
+    return fs.listStatus(f);
   }
   
   /**

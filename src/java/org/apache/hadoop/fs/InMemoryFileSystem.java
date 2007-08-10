@@ -262,7 +262,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
     /**
      * Directory operations are not supported
      */
-    public Path[] listPaths(Path f) throws IOException {
+    public FileStatus[] listStatus(Path f) throws IOException {
       return null;
     }
 
@@ -280,7 +280,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
   
     public FileStatus getFileStatus(Path f) throws IOException {
       synchronized (this) {
-        return new InMemoryFileStatus(pathToFileAttribs.get(getPath(f)));
+        return new InMemoryFileStatus(f, pathToFileAttribs.get(getPath(f)));
       }
     }
   
@@ -373,26 +373,9 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       }
     }
 
-    private class InMemoryFileStatus implements FileStatus {
-      private long length;
-
-      InMemoryFileStatus(FileAttributes attr) throws IOException {
-        length = attr.size;
-      }
-      public long getLen() {
-        return length;
-      }
-      public boolean isDir() {
-        return false;
-      }
-      public long getBlockSize() {
-        return getDefaultBlockSize();
-      }
-      public short getReplication() {
-        return 1;
-      }
-      public long getModificationTime() {
-        return 0;  // not supported yet
+    private class InMemoryFileStatus extends FileStatus {
+      InMemoryFileStatus(Path f, FileAttributes attr) throws IOException {
+        super(attr.size, false, 1, getDefaultBlockSize(), 0, f);
       }
     }
   }

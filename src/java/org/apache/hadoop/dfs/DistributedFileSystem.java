@@ -171,6 +171,10 @@ public class DistributedFileSystem extends FileSystem {
     return (info == null) ? 0 : info[0].getLen();
   }
 
+  public FileStatus[] listStatus(Path f) throws IOException {
+    return dfs.listPaths(getPath(f));
+  }
+
   public Path[] listPaths(Path f) throws IOException {
     DFSFileInfo info[] = dfs.listPaths(getPath(f));
     if (info == null) {

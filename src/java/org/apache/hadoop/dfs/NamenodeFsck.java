@@ -139,10 +139,10 @@ public class NamenodeFsck {
   private void check(DFSFileInfo file, FsckResult res) throws IOException {
     if (file.isDir()) {
       if (showFiles) {
-        out.println(file.getPath() + " <dir>");
+        out.println(file.getPath().toString() + " <dir>");
       }
       res.totalDirs++;
-      DFSFileInfo[] files = nn.getListing(file.getPath());
+      DFSFileInfo[] files = nn.getListing(file.getPath().toString());
       for (int i = 0; i < files.length; i++) {
         check(files[i], res);
       }
@@ -151,10 +151,12 @@ public class NamenodeFsck {
     res.totalFiles++;
     long fileLen = file.getLen();
     res.totalSize += fileLen;
-    LocatedBlocks blocks = nn.getBlockLocations(file.getPath(), 0, fileLen);
+    LocatedBlocks blocks = nn.getBlockLocations(file.getPath().toString(),
+        0, fileLen);
     res.totalBlocks += blocks.locatedBlockCount();
     if (showFiles) {
-      out.print(file.getPath() + " " + fileLen + ", " + res.totalBlocks + " block(s): ");
+      out.print(file.getPath().toString() + " " + fileLen + ", " +
+          res.totalBlocks + " block(s): ");
     }  else {
       out.print('.');
       out.flush();
@@ -179,7 +181,7 @@ public class NamenodeFsck {
         res.numUnderReplicatedBlocks += 1;
         under++;
         if (!showFiles) {
-          out.print("\n" + file.getPath() + ": ");
+          out.print("\n" + file.getPath().toString() + ": ");
         }
         out.println(" Under replicated " + block.getBlockName() +
                     ". Target Replicas is " +
@@ -209,7 +211,7 @@ public class NamenodeFsck {
     }
     if (missing > 0) {
       if (!showFiles) {
-        out.println("\n" + file.getPath() + ": " +
+        out.println("\n" + file.getPath().toString() + ": " +
                     "MISSING " + missing + " blocks of total size " + 
                     missize + " B.");
       }
@@ -221,7 +223,7 @@ public class NamenodeFsck {
         lostFoundMove(file, blocks);
         break;
       case FIXING_DELETE:
-        nn.delete(file.getPath());
+        nn.delete(file.getPath().toString());
       }
     }
     if (showFiles) {
@@ -292,7 +294,7 @@ public class NamenodeFsck {
       }
       if (fos != null) fos.close();
       LOG.warn("\n - moved corrupted file " + file.getPath() + " to /lost+found");
-      dfs.delete(new UTF8(file.getPath()));
+      dfs.delete(new UTF8(file.getPath().toString()));
     }  catch (Exception e) {
       e.printStackTrace();
       LOG.warn(errmsg + ": " + e.getMessage());

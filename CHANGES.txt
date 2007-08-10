@@ -13,6 +13,9 @@ Trunk (unreleased changes)
     earlier deprecated) are removed.  Client Protocol version changed 
     from 15 to 16.  (Raghu Angadi via dhruba)
 
+    HADOOP-1621.  FileStatus is now a concrete class and FileSystem.listPaths
+    is deprecated and replaced with listStatus. (Chris Douglas via omalley)
+
   NEW FEATURES
 
     HADOOP-1636.  Allow configuration of the number of jobs kept in

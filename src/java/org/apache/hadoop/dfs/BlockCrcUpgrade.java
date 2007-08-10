@@ -1956,13 +1956,13 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
     
     for (DFSFileInfo file:fileArr) {
       if (file.isDir()) {
-        updateBlockLevelStats(file.getPath(), stats);
+        updateBlockLevelStats(file.getPath().toString(), stats);
       } else {
         // Get the all the blocks.
         LocatedBlocks blockLoc = null;
         try {
-          blockLoc = getFSNamesystem().getBlockLocations(null, file.getPath(), 0, 
-                                                  file.getLen());
+          blockLoc = getFSNamesystem().getBlockLocations(null,
+              file.getPath().toString(), 0, file.getLen());
           int numBlocks = blockLoc.locatedBlockCount();
           for (int i=0; i<numBlocks; i++) {
             LocatedBlock loc = blockLoc.get(i);
@@ -1990,7 +1990,8 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
           }
         } catch (IOException e) {
           LOG.error("BlockCrcUpgrade: could not get block locations for " +
-                    file.getPath() + " : " + StringUtils.stringifyException(e));
+                    file.getPath().toString() + " : " +
+                    StringUtils.stringifyException(e));
           stats.errors++;
         }
       }
@@ -2069,7 +2070,7 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
     
     for ( DFSFileInfo file:fileArr ) {
       if ( file.isDir() ) {
-        numFilesDeleted += deleteCrcFiles(file.getPath());
+        numFilesDeleted += deleteCrcFiles(file.getPath().toString());
       }
     }
     

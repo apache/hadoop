@@ -32,7 +32,7 @@ class DfsPath extends Path {
    * DfsPaths are fully qualified with scheme and authority.
    */
   public DfsPath(DFSFileInfo info, FileSystem fs) {
-    super((new Path(info.getPath())).makeQualified(fs).toString());
+    super((new Path(info.getPath().toString())).makeQualified(fs).toString());
     this.info = info;
   }
 

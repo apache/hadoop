@@ -96,16 +96,16 @@
         String cols [] = new String[6];
         for (int i = 0; i < files.length; i++) {
           //Get the location of the first block of the file
-          if (files[i].getPath().endsWith(".crc")) continue;
+          if (files[i].getPath().toString().endsWith(".crc")) continue;
           if (!files[i].isDir()) {
             List<LocatedBlock> blocks = 
-              dfs.namenode.getBlockLocations(files[i].getPath(), 0, 1).getLocatedBlocks();
+              dfs.namenode.getBlockLocations(files[i].getPath().toString(), 0, 1).getLocatedBlocks();
             DatanodeInfo [] locations = blocks.get(0).getLocations();
             if (locations.length == 0) {
               cols[0] = files[i].getName();
             } else {
               String datanodeUrl = req.getRequestURL()+"?dir="+
-                URLEncoder.encode(files[i].getPath(), "UTF-8") + 
+                URLEncoder.encode(files[i].getPath().toString(), "UTF-8") + 
                 "&namenodeInfoPort=" + namenodeInfoPort;
 		            
               cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getName()+"</a>";
@@ -118,7 +118,7 @@
           }
           else {
             String datanodeUrl = req.getRequestURL()+"?dir="+
-              URLEncoder.encode(files[i].getPath(), "UTF-8") + 
+              URLEncoder.encode(files[i].getPath().toString(), "UTF-8") + 
               "&namenodeInfoPort=" + namenodeInfoPort;
             cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getName()+"</a>";
             cols[1] = "dir";

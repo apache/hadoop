@@ -475,7 +475,19 @@ public abstract class FileSystem extends Configured {
     };
     
   /** List files in a directory. */
-  public abstract Path[] listPaths(Path f) throws IOException;
+  @Deprecated
+  public Path[] listPaths(Path f) throws IOException {
+    FileStatus[] stat = listStatus(f);
+    if (stat == null) return null;
+    Path[] ret = new Path[stat.length];
+    for (int i = 0; i < stat.length; ++i) {
+      ret[i] = stat[i].getPath();
+    }
+    return ret;
+  }
+
+  /** */
+  public abstract FileStatus[] listStatus(Path f) throws IOException;
     
   /** 
    * Filter files in the given pathes using the default checksum filter. 
@@ -504,7 +516,7 @@ public abstract class FileSystem extends Configured {
   public Path[] listPaths(Path f, PathFilter filter) throws IOException {
     ArrayList<Path> results = new ArrayList<Path>();
     listPaths(results, f, filter);
-    return (Path[]) results.toArray(new Path[results.size()]);
+    return results.toArray(new Path[results.size()]);
   }
     
   /** 
