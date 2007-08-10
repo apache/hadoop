@@ -39,9 +39,6 @@ Trunk (unreleased changes)
     HADOOP-1463.  HDFS report correct usage statistics for disk space
     used by HDFS.  (Hairong Kuang via dhruba)
 
-    HADOOP-71.  Allow Text and SequenceFile Map/Reduce inputs from non-default 
-    filesystems. (omalley)
-
   IMPROVEMENTS
 
     HADOOP-1651.  Improve progress reporting.
@@ -508,6 +505,9 @@ Branch 0.14 (unreleased changes)
 
 148. HADOOP-1680.  Improvements to Block CRC upgrade messages.
      (Raghu Angadi via dhruba)
+
+149. HADOOP-71.  Allow Text and SequenceFile Map/Reduce inputs from non-default 
+     filesystems. (omalley)
 
 Release 0.13.0 - 2007-06-08
 
