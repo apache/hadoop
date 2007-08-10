@@ -288,21 +288,6 @@ public class FileUtil {
     return dst;
   }
 
-  private static File checkDest(String srcName, File dst)
-    throws IOException {
-    if (dst.exists()) {
-      if (!dst.isDirectory()) {
-        throw new IOException("Target " + dst + " already exists");
-      } else {
-        dst = new File(dst, srcName);
-        if (dst.exists()) {
-          throw new IOException("Target " + dst + " already exists");
-        }
-      }
-    }
-    return dst;
-  }
-  
   /**
    * This class is only used on windows to invoke the cygpath command.
    */
@@ -541,6 +526,17 @@ public class FileUtil {
     }
   }
   
+  public static void skipFully( InputStream in, long len ) throws IOException {
+    long toSkip = len;
+    while ( toSkip > 0 ) {
+      long ret = in.skip( toSkip );
+      if ( ret < 0 ) {
+        throw new IOException( "Premeture EOF from inputStream");
+      }
+      toSkip -= ret;
+    }
+  }
+  
   public static void closeSocket( Socket sock ) {
     // avoids try { close() } dance
     if ( sock != null ) {
@@ -550,20 +546,12 @@ public class FileUtil {
       }
     }
   }
-  public static void closeStream( InputStream in ) {
+
+  public static void closeStream(Closeable closeable ) {
     // avoids try { close() } dance
-    if ( in != null ) {
+    if ( closeable != null ) {
       try {
-        in.close();
-      } catch ( IOException ignored ) {
-      }
-    }
-  }
-  public static void closeStream( OutputStream out ) {
-    // avoids try { close() } dance
-    if ( out != null ) {
-      try {
-        out.close();
+        closeable.close();
       } catch ( IOException ignored ) {
       }
     }

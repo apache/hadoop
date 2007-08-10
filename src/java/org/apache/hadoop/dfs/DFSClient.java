@@ -1588,8 +1588,12 @@ class DFSClient implements FSConstants {
         int checksumSize = checksum.getChecksumSize(); 
         byte buf[] = new byte[ bytesPerChecksum + checksumSize ];
 
-        InputStream in = (bytesLeft > 0) ? 
-                         new FileInputStream(backupFile) : null;    
+        InputStream in = null;
+        if ( bytesLeft > 0 ) { 
+          in = new BufferedInputStream(new FileInputStream(backupFile),
+                                       buffersize);
+        }
+        
         try {
 
           while ( bytesLeft >= 0 ) {

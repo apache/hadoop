@@ -497,6 +497,9 @@ Branch 0.14 (unreleased changes)
 146. HADOOP-1666.  FsShell object can be used for multiple fs commands.
      (Dhruba Borthakur via dhruba)
 
+146. HADOOP-1654.  Remove performance regression introduced by Block CRC.
+     (Raghu Angadi via dhruba)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
