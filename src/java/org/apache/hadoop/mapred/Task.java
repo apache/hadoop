@@ -180,7 +180,8 @@ abstract class Task implements Writable, Configurable {
   private Path getTaskOutputPath(JobConf conf) {
     Path p = new Path(conf.getOutputPath(), ("_" + taskId));
     try {
-      return p.makeQualified(FileSystem.get(conf));
+      FileSystem fs = p.getFileSystem(conf);
+      return p.makeQualified(fs);
     } catch (IOException ie) {
       LOG.warn(StringUtils.stringifyException(ie));
       return p;
@@ -398,21 +399,23 @@ abstract class Task implements Writable, Configurable {
    * @throws IOException
    */
   void saveTaskOutput() throws IOException {
-    FileSystem fs = FileSystem.get(conf);
 
-    if (taskOutputPath != null && fs.exists(taskOutputPath)) {
-      Path jobOutputPath = taskOutputPath.getParent();
+    if (taskOutputPath != null) {
+      FileSystem fs = taskOutputPath.getFileSystem(conf);
+      if (fs.exists(taskOutputPath)) {
+        Path jobOutputPath = taskOutputPath.getParent();
 
-      // Move the task outputs to their final place
-      moveTaskOutputs(fs, jobOutputPath, taskOutputPath);
+        // Move the task outputs to their final place
+        moveTaskOutputs(fs, jobOutputPath, taskOutputPath);
 
-      // Delete the temporary task-specific output directory
-      if (!fs.delete(taskOutputPath)) {
-        LOG.info("Failed to delete the temporary output directory of task: " + 
-                getTaskId() + " - " + taskOutputPath);
+        // Delete the temporary task-specific output directory
+        if (!fs.delete(taskOutputPath)) {
+          LOG.info("Failed to delete the temporary output directory of task: " + 
+                  getTaskId() + " - " + taskOutputPath);
+        }
+        
+        LOG.info("Saved output of task '" + getTaskId() + "' to " + jobOutputPath);
       }
-      
-      LOG.info("Saved output of task '" + getTaskId() + "' to " + jobOutputPath);
     }
   }
   
@@ -447,13 +450,14 @@ abstract class Task implements Writable, Configurable {
    * @throws IOException
    */
   void discardTaskOutput() throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-
-    if (taskOutputPath != null && fs.exists(taskOutputPath)) {
-      // Delete the temporary task-specific output directory
-      FileUtil.fullyDelete(fs, taskOutputPath);
-      LOG.info("Discarded output of task '" + getTaskId() + "' - " 
-              + taskOutputPath);
+    if (taskOutputPath != null) {
+      FileSystem fs = taskOutputPath.getFileSystem(conf);
+      if (fs.exists(taskOutputPath)) {
+        // Delete the temporary task-specific output directory
+        FileUtil.fullyDelete(fs, taskOutputPath);
+        LOG.info("Discarded output of task '" + getTaskId() + "' - " 
+                + taskOutputPath);
+      }
     }
   }
 

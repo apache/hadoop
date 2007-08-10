@@ -39,6 +39,9 @@ Trunk (unreleased changes)
     HADOOP-1463.  HDFS report correct usage statistics for disk space
     used by HDFS.  (Hairong Kuang via dhruba)
 
+    HADOOP-71.  Allow Text and SequenceFile Map/Reduce inputs from non-default 
+    filesystems. (omalley)
+
   IMPROVEMENTS
 
     HADOOP-1651.  Improve progress reporting.
