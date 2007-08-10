@@ -3286,7 +3286,8 @@ class FSNamesystem implements FSConstants {
     String getTurnOffTip() {
       return (isManual() ?  getDistributedUpgradeState() ?
         "Safe mode will be turned off automatically upon completion of " + 
-        "the distributed upgrade: status = " + getDistributedUpgradeStatus() + "%" :
+        "the distributed upgrade: upgrade progress = " + 
+        getDistributedUpgradeStatus() + "%" :
         "Use \"hadoop dfs -safemode leave\" to turn safe mode off." :
         "Safe mode will be turned off automatically.");
     }

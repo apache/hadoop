@@ -135,7 +135,7 @@ class DNBlockUpgradeInfo {
   
   /** Returns string that has block id and the associated file */
   public String toString() {
-    return block + " (file: " +
+    return block + " (filename: " +
            ( (crcInfo == null || crcInfo.fileName == null) ? 
              "Unknown" : crcInfo.fileName ) + ")";
   }
@@ -650,8 +650,9 @@ class BlockCrcUpgradeUtils {
           
           info.numMatches++;
           if (info.numMatches >= (replication/2 + replication%2)) {
-            LOG.info("readCrcBuf: " + info.numMatches + 
-                     " out of " + replication + " matched for " + blockInfo);
+            LOG.info("At least " + info.numMatches + 
+                     " of the " + replication + 
+                     " replicated CRC files agree for " + blockInfo);
             return buf;
           }
 
@@ -670,9 +671,11 @@ class BlockCrcUpgradeUtils {
      * absolute majority.
      * Try to pick the buffer that that has max number of matches.
      */
+    int replicasFetched = 0;
     CrcBufInfo selectedBuf = null;
     for (int i=0; i<numBufs; i++) {
       CrcBufInfo info = bufInfoArr[i];
+      replicasFetched += info.numMatches;
       if (selectedBuf == null || selectedBuf.numMatches < info.numMatches) {
         selectedBuf = info;
       }
@@ -682,8 +685,8 @@ class BlockCrcUpgradeUtils {
       throw new IOException("Could not fetch any crc data for " + block);
     }
 
-    LOG.info("readCrcBuf: " + selectedBuf.numMatches + 
-             " out of " + replication + " matched for " + blockInfo);
+    LOG.info(selectedBuf.numMatches + " of the " + replicasFetched + 
+             " CRC replicas fetched agree for " + blockInfo);
     
     //Print a warning if numMatches is 1?
     return  selectedBuf.buf;      
@@ -926,7 +929,7 @@ class BlockCrcUpgradeUtils {
     
     for (DatanodeInfo dnInfo : dnArr) {
       if ( dnInfo.getName().equals(myName) ) {
-        LOG.info("XXX skipping crcInfo fetch from " + dnInfo.getName());
+        LOG.info("skipping crcInfo fetch from " + dnInfo.getName());
       } else {
         try {
           byte[] crcBuf = readCrcFromReplica(blockInfo, dnInfo, checksumArr);
@@ -1816,15 +1819,15 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
     
     avgDatanodeCompletionPct = totalCompletion/(dnMap.size() + 1e-20);
     
-    String msg = "Avg completion on Datanodes: " +              
+    String msg = "Avg completion of all Datanodes: " +              
                  String.format("%.2f%%", avgDatanodeCompletionPct) +
                  " with " + errors + " errors. " +
                  ((unfinishedDnMap.size() > 0) ? spacing + 
                    unfinishedDnMap.size() + " out of " + dnMap.size() +
                    " nodes are not done." : "");
                  
-    LOG.info("Upgrade " + (isUpgradeDone() ? 
-             "completed. " : "still running. ") + spacing + msg);
+    LOG.info("Block CRC Upgrade is " + (isUpgradeDone() ? 
+             "complete. " : "still running. ") + spacing + msg);
     return msg;
   }
   
@@ -1849,8 +1852,8 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
         inactivityExtension) || forceDnCompletion ;
                  
       if ( datanodesDone ) {
-        LOG.info(((forceDnCompletion) ? "Forcing " : "Marking ") +
-                 "Datanode Upgrade done");
+        LOG.info("Upgrade of DataNode blocks is complete. " +
+                 ((forceDnCompletion) ? "(ForceDnCompletion is on.)" : ""));
         upgradeStatus = UpgradeStatus.DATANODES_DONE;
       }
     }
@@ -2082,9 +2085,9 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
      * if fname exists in the directory.
      */
     while (true) {
-      LOG.info("Deleting \".crc\" files. This can take few minutes ... ");
+      LOG.info("Deleting \".crc\" files. This may take a few minutes ... ");
       int numFilesDeleted = deleteCrcFiles("/");
-      LOG.info("Deleted " + numFilesDeleted + " files");
+      LOG.info("Deleted " + numFilesDeleted + " \".crc\" files");
       break;
       // Should we iterate again? No need for now!
     }
