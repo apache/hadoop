@@ -20,10 +20,11 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.FileSystem;
 
-import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** An {@link RecordReader} for {@link SequenceFile}s. */
@@ -36,8 +37,9 @@ public class SequenceFileRecordReader implements RecordReader {
 
   public SequenceFileRecordReader(Configuration conf, FileSplit split)
     throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    this.in = new SequenceFile.Reader(fs, split.getPath(), conf);
+    Path path = split.getPath();
+    FileSystem fs = path.getFileSystem(conf);
+    this.in = new SequenceFile.Reader(fs, path, conf);
     this.end = split.getStart() + split.getLength();
     this.conf = conf;
 

@@ -51,18 +51,19 @@ public class TestMiniMRWithDFS extends TestCase {
     }
   }
   public static TestResult launchWordCount(JobConf conf,
+                                           Path inDir,
+                                           Path outDir,
                                            String input,
                                            int numMaps,
                                            int numReduces) throws IOException {
-    final Path inDir = new Path("/testing/wc/input");
-    final Path outDir = new Path("/testing/wc/output");
-    FileSystem fs = FileSystem.get(conf);
-    fs.delete(outDir);
-    if (!fs.mkdirs(inDir)) {
+    FileSystem inFs = inDir.getFileSystem(conf);
+    FileSystem outFs = outDir.getFileSystem(conf);
+    outFs.delete(outDir);
+    if (!inFs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
     {
-      DataOutputStream file = fs.create(new Path(inDir, "part-0"));
+      DataOutputStream file = inFs.create(new Path(inDir, "part-0"));
       file.writeBytes(input);
       file.close();
     }
@@ -177,7 +178,9 @@ public class TestMiniMRWithDFS extends TestCase {
       // Keeping tasks that match this pattern
       jobConf.setKeepTaskFilesPattern("task_[^_]*_[0-9]*_m_000001_.*");
       TestResult result;
-      result = launchWordCount(jobConf, 
+      final Path inDir = new Path("/testing/wc/input");
+      final Path outDir = new Path("/testing/wc/output");
+      result = launchWordCount(jobConf, inDir, outDir,
                                "The quick brown fox\nhas many silly\n" + 
                                "red fox sox\n",
                                3, 1);
@@ -188,8 +191,25 @@ public class TestMiniMRWithDFS extends TestCase {
       checkTaskDirectories(mr, new String[]{jobid}, new String[]{taskid});
       // test with maps=0
       jobConf = mr.createJobConf();
-      result = launchWordCount(jobConf, "owen is oom", 0, 1);
+      result = launchWordCount(jobConf, inDir, outDir, "owen is oom", 0, 1);
       assertEquals("is\t1\noom\t1\nowen\t1\n", result.output);
+      // Run a job with input and output going to localfs even though the 
+      // default fs is hdfs.
+      {
+        FileSystem localfs = FileSystem.getLocal(jobConf);
+        String TEST_ROOT_DIR =
+          new File(System.getProperty("test.build.data","/tmp"))
+          .toString().replace(' ', '+');
+        Path localIn = localfs.makeQualified
+                          (new Path(TEST_ROOT_DIR + "/local/in"));
+        Path localOut = localfs.makeQualified
+                          (new Path(TEST_ROOT_DIR + "/local/out"));
+        result = launchWordCount(jobConf, localIn, localOut,
+                                 "all your base belong to us", 1, 1);
+        assertEquals("all\t1\nbase\t1\nbelong\t1\nto\t1\nus\t1\nyour\t1\n", 
+                     result.output);
+        assertTrue("outputs on localfs", localfs.exists(localOut));
+      }
     } finally {
       if (fileSys != null) { fileSys.close(); }
       if (dfs != null) { dfs.shutdown(); }

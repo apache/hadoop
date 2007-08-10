@@ -69,7 +69,7 @@ public class LineRecordReader implements RecordReader {
     final CompressionCodec codec = compressionCodecs.getCodec(file);
 
     // open the file and seek to the start of the split
-    FileSystem fs = FileSystem.get(job);
+    FileSystem fs = file.getFileSystem(job);
     FSDataInputStream fileIn = fs.open(split.getPath());
     InputStream in = fileIn;
     boolean skipFirstLine = false;

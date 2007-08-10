@@ -463,6 +463,9 @@ Branch 0.14 (unreleased changes)
 148. HADOOP-1680.  Improvements to Block CRC upgrade messages.
      (Raghu Angadi via dhruba)
 
+149. HADOOP-71.  Allow Text and SequenceFile Map/Reduce inputs from non-default 
+     filesystems. (omalley)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

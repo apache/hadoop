@@ -210,14 +210,11 @@ class MapTask extends Task {
 
     private Reporter reporter = null;
 
-    private JobConf job;
-
     public DirectMapOutputCollector(TaskUmbilicalProtocol umbilical,
         JobConf job, Reporter reporter) throws IOException {
-      this.job = job;
       this.reporter = reporter;
       String finalName = getOutputName(getPartition());
-      FileSystem fs = FileSystem.get(this.job);
+      FileSystem fs = FileSystem.get(job);
 
       out = job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);
     }
