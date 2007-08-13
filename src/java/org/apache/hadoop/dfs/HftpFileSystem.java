@@ -22,7 +22,6 @@ import java.io.InputStream;
 import java.io.IOException;
 
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -31,12 +30,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.TimeZone;
 
 import org.xml.sax.Attributes;
-import org.xml.sax.ContentHandler;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
@@ -56,7 +51,7 @@ import org.apache.hadoop.util.Progressable;
  * The following implementation provides a limited, read-only interface
  * to a filesystem over HTTP.
  * @see org.apache.hadoop.dfs.ListPathsServlet
- * @see org.apache.hadoop.dfs.FileDataServet;
+ * @see org.apache.hadoop.dfs.FileDataServlet
  */
 public class HftpFileSystem extends FileSystem {
   static {

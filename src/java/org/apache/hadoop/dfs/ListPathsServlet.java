@@ -41,7 +41,7 @@ import javax.servlet.http.HttpServletResponse;
 
 /**
  * Obtain meta-information about a filesystem.
- * @see org.apache.hadoop.fs.HftpFileSystem
+ * @see org.apache.hadoop.dfs.HftpFileSystem
  */
 public class ListPathsServlet extends HttpServlet {
 

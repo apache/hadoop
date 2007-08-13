@@ -31,7 +31,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /** Redirect queries about the hosted filesystem to an appropriate datanode.
- * @see org.apache.hadoop.fs.HftpFileSystem
+ * @see org.apache.hadoop.dfs.HftpFileSystem
  */
 public class FileDataServlet extends HttpServlet {
 
