@@ -37,6 +37,10 @@ Branch 0.14 (unreleased changes)
      CLI/API - Job, TIP, and Task id formats have changed and are now unique
        across job tracker restarts.
 
+  9. HADOOP-1400
+     API - JobClient constructor now takes a JobConf object instead of a
+       Configuration object.
+
   NEW FEATURES and BUG FIXES
 
   1. HADOOP-1197.  In Configuration, deprecate getObject() and add
