@@ -95,7 +95,9 @@ public class HftpFileSystem extends FileSystem {
       connection.setRequestMethod("GET");
       connection.connect();
     } catch (URISyntaxException e) {
-      throw new IOException(e);
+      IOException ie = new IOException("invalid url");
+      ie.initCause(e);
+      throw ie;
     }
     final InputStream in = connection.getInputStream();
     return new FSDataInputStream(new FSInputStream() {
@@ -162,8 +164,14 @@ public class HftpFileSystem extends FileSystem {
 
         InputStream resp = connection.getInputStream();
         xr.parse(new InputSource(resp));
-      } catch (Exception e) {
-        throw new IOException(e);
+      } catch (SAXException e) { 
+        IOException ie = new IOException("invalid xml directory content");
+        ie.initCause(e);
+        throw ie;
+      } catch (URISyntaxException e) {
+        IOException ie = new IOException("invalid url");
+        ie.initCause(e);
+        throw ie;
       }
     }
 
