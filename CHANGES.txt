@@ -3,6 +3,42 @@ Hadoop Change Log
 
 Branch 0.14 (unreleased changes)
 
+  INCOMPATIBLE CHANGES
+
+  1. HADOOP-1134.
+     CONFIG/API - dfs.block.size must now be a multiple of
+       io.byte.per.checksum, otherwise new files can not be written.
+     LAYOUT - DFS layout version changed from -6 to -7, which will require an
+       upgrade from previous versions.
+     PROTOCOL - Datanode RPC protocol version changed from 7 to 8.
+
+  2. HADOOP-1283
+     API - deprecated file locking API.
+
+  3. HADOOP-894
+     PROTOCOL - changed ClientProtocol to fetch parts of block locations.
+
+  4. HADOOP-1336
+     CONFIG - Enable speculative execution by default.
+
+  5. HADOOP-1197
+     API - deprecated method for Configuration.getObject, because
+       Configurations should only contain strings.
+
+  6. HADOOP-1343
+     API - deprecate Configuration.set(String,Object) so that only strings are
+       put in Configrations.
+
+  7. HADOOP-1207
+     CLI - Fix FsShell 'rm' command to continue when a non-existent file is
+       encountered.
+
+  8. HADOOP-1473
+     CLI/API - Job, TIP, and Task id formats have changed and are now unique
+       across job tracker restarts.
+
+  NEW FEATURES and BUG FIXES
+
   1. HADOOP-1197.  In Configuration, deprecate getObject() and add
      getRaw(), which skips variable expansion. (omalley via cutting)
 
@@ -468,6 +504,8 @@ Branch 0.14 (unreleased changes)
 
 150. HADOOP-1568.  Expose HDFS as xml/http filesystem to provide cross-version
      compatability. (Chris Douglas via omalley)
+
+151. HADOOP-1668.  Added an INCOMPATIBILITY section to CHANGES.txt. (nigel)
 
 Release 0.13.0 - 2007-06-08
 
