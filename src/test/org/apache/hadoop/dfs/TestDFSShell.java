@@ -30,11 +30,11 @@ import org.apache.hadoop.util.StringUtils;
  * This class tests commands from DFSShell.
  */
 public class TestDFSShell extends TestCase {
-  private static String TEST_ROOT_DIR =
+  static final String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
     .toString().replace(' ', '+');
 
-  static private Path writeFile(FileSystem fs, Path f) throws IOException {
+  static Path writeFile(FileSystem fs, Path f) throws IOException {
     DataOutputStream out = fs.create(f);
     out.writeBytes("dhruba: " + f);
     out.close();
@@ -42,14 +42,14 @@ public class TestDFSShell extends TestCase {
     return f;
   }
 
-  static private Path mkdir(FileSystem fs, Path p) throws IOException {
+  static Path mkdir(FileSystem fs, Path p) throws IOException {
     assertTrue(fs.mkdirs(p));
     assertTrue(fs.exists(p));
     assertTrue(fs.getFileStatus(p).isDir());
     return p;
   }
 
-  static private File createLocalFile(File f) throws IOException {
+  static File createLocalFile(File f) throws IOException {
     assertTrue(!f.exists());
     PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(f)));
     out.println(f.getAbsolutePath());
@@ -137,6 +137,8 @@ public class TestDFSShell extends TestCase {
       };
       
       //use SecurityManager to pause the copying of f1 and begin copying f2
+      SecurityManager sm = System.getSecurityManager();
+      System.out.println("SecurityManager = " + sm);
       System.setSecurityManager(new SecurityManager() {
         private boolean firstTime = true;
   
@@ -161,7 +163,7 @@ public class TestDFSShell extends TestCase {
       show("done");
   
       try {copy2ndFileThread.join();} catch (InterruptedException e) { }
-      System.setSecurityManager(null);
+      System.setSecurityManager(sm);
       f1.delete();
       f2.delete();
     } finally {

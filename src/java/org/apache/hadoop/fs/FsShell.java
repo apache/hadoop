@@ -35,9 +35,10 @@ public class FsShell extends ToolBase {
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
   protected static final SimpleDateFormat modifFmt =
     new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-  {
+  static {
     modifFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
+  static final String SETREP_SHORT_USAGE="-setrep [-R] [-w] <rep> <path/file>";
   private static final DecimalFormat decimalFormat = 
     new DecimalFormat("#*0.0#*");
 
@@ -225,7 +226,8 @@ public class FsShell extends ToolBase {
           ChecksumFileSystem csfs = (ChecksumFileSystem) srcFS;
           File dstcs = FileSystem.getLocal(srcFS.getConf())
             .pathToFile(csfs.getChecksumFile(new Path(dst.getCanonicalPath())));
-          copyToLocal(srcFS, csfs.getChecksumFile(src), dstcs, false);
+          copyToLocal(csfs.getRawFileSystem(), csfs.getChecksumFile(src),
+                      dstcs, false);
         }
       } else {
         throw new IOException("When copying multiple files, "
@@ -306,37 +308,114 @@ public class FsShell extends ToolBase {
   }
     
   /**
+   * Parse the args of a command and check the format of args.
+   */
+  static class CommandFormat {
+    final String name;
+    final int minPar, maxPar;
+    final Map<String, Boolean> options = new HashMap<String, Boolean>();
+
+    private CommandFormat(String n, int min, int max, String ... possibleOpt) {
+      name = n;
+      minPar = min;
+      maxPar = max;
+      for(String opt : possibleOpt)
+        options.put(opt, Boolean.FALSE);
+    }
+
+    List<String> parse(String[] args, int pos) {
+      List<String> parameters = new ArrayList<String>();
+      for(; pos < args.length; pos++) {
+        if (args[pos].charAt(0) == '-') {
+          String opt = args[pos].substring(1);
+          if (options.containsKey(opt))
+            options.put(opt, Boolean.TRUE);
+          else
+            throw new IllegalArgumentException("Illegal option " + args[pos]);
+        }
+        else
+          parameters.add(args[pos]);
+      }
+      int psize = parameters.size();
+      if (psize < minPar || psize > maxPar)
+        throw new IllegalArgumentException("Illegal number of arguments");
+      return parameters;
+    }
+  }
+
+  /**
    * Parse the incoming command string
    * @param cmd
    * @param pos ignore anything before this pos in cmd
    * @throws IOException 
    */
   private void setReplication(String[] cmd, int pos) throws IOException {
-    if (cmd.length-pos<2 || (cmd.length-pos==2 && cmd[pos].equalsIgnoreCase("-R"))) {
-      System.err.println("Usage: [-R] <repvalue> <path>");
-      throw new RuntimeException("Usage: [-R] <repvalue> <path>");
-    }
-      
-    boolean recursive = false;
-    short rep = 3;
-      
-    if ("-R".equalsIgnoreCase(cmd[pos])) {
-      recursive=true;
-      pos++;
-        
-    }
-      
+    CommandFormat c = new CommandFormat("setrep", 2, 2, "R", "w");
+    String dst = null;
+    short rep = 0;
+
     try {
-      rep = Short.parseShort(cmd[pos]);
-      pos++;
-    } catch (NumberFormatException e) {
-      System.err.println("Cannot set replication to: " + cmd[pos]);
-      throw new RuntimeException("Cannot set replication to: " + cmd[pos]);
+      List<String> parameters = c.parse(cmd, pos);
+      rep = Short.parseShort(parameters.get(0));
+      dst = parameters.get(1);
+    } catch (NumberFormatException nfe) {
+      System.err.println("Illegal replication, a positive integer expected");
+      throw nfe;
     }
-      
-    setReplication(rep, cmd[pos], recursive);
+    catch(IllegalArgumentException iae) {
+      System.err.println("Usage: java FsShell " + SETREP_SHORT_USAGE);
+      throw iae;
+    }
+
+    if (rep < 1) {
+      System.err.println("Cannot set replication to: " + rep);
+      throw new IllegalArgumentException("replication must be >= 1");
+    }
+
+    List<Path> waitList = c.options.get("w")? new ArrayList<Path>(): null;
+    setReplication(rep, dst, c.options.get("R"), waitList);
+
+    if (waitList != null) {
+      waitForReplication(waitList, rep);
+    }
   }
     
+  /**
+   * Wait for all files in waitList to have replication number equal to rep.
+   * @param waitList The files are waited for.
+   * @param rep The new replication number.
+   * @throws IOException IOException
+   */
+  void waitForReplication(List<Path> waitList, int rep) throws IOException {
+    for(Path f : waitList) {
+      System.out.print("Waiting for " + f + " ...");
+      System.out.flush();
+
+      boolean printWarning = false;
+      long len = fs.getFileStatus(f).getLen();
+
+      for(boolean done = false; !done; ) {
+        String[][] locations = fs.getFileCacheHints(f, 0, len);
+        int i = 0;
+        for(; i < locations.length && locations[i].length == rep; i++)
+          if (!printWarning && locations[i].length > rep) {
+            System.out.println("\nWARNING: the waiting time may be long for "
+                + "DECREASING the number of replication.");
+            printWarning = true;
+          }
+        done = i == locations.length;
+
+        if (!done) {
+          System.out.print(".");
+          System.out.flush();
+          try {Thread.sleep(10000);} catch (InterruptedException e) {}
+        }
+      }
+
+      System.out.println(" done");
+    }
+  }
+
   /**
    * Set the replication for files that match file pattern <i>srcf</i>
    * if it's a directory and recursive is true,
@@ -347,22 +426,22 @@ public class FsShell extends ToolBase {
    * @throws IOException  
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
-  void setReplication(short newRep, String srcf, boolean recursive)
+  void setReplication(short newRep, String srcf, boolean recursive,
+                      List<Path> waitingList)
     throws IOException {
     Path[] srcs = fs.globPaths(new Path(srcf));
     for(int i=0; i<srcs.length; i++) {
-      setReplication(newRep, srcs[i], recursive);
+      setReplication(newRep, srcs[i], recursive, waitingList);
     }
   }
-    
-  private void setReplication(short newRep, Path src, boolean recursive)
+
+  private void setReplication(short newRep, Path src, boolean recursive,
+                              List<Path> waitingList)
     throws IOException {
-  	
-    if (!fs.isDirectory(src)) {
-      setFileReplication(src, newRep);
+    if (!fs.getFileStatus(src).isDir()) {
+      setFileReplication(src, newRep, waitingList);
       return;
     }
-    	
     Path items[] = fs.listPaths(src);
     if (items == null) {
       throw new IOException("Could not get listing for " + src);
@@ -370,10 +449,10 @@ public class FsShell extends ToolBase {
 
       for (int i = 0; i < items.length; i++) {
         Path cur = items[i];
-        if (!fs.isDirectory(cur)) {
-          setFileReplication(cur, newRep);
+        if (!fs.getFileStatus(cur).isDir()) {
+          setFileReplication(cur, newRep, waitingList);
         } else if (recursive) {
-          setReplication(newRep, cur, recursive);
+          setReplication(newRep, cur, recursive, waitingList);
         }
       }
     }
@@ -386,9 +465,12 @@ public class FsShell extends ToolBase {
    * @param newRep: new replication factor
    * @throws IOException
    */
-  private void setFileReplication(Path file, short newRep) throws IOException {
-    	
+  private void setFileReplication(Path file, short newRep, List<Path> waitList)
+    throws IOException {
     if (fs.setReplication(file, newRep)) {
+      if (waitList != null) {
+        waitList.add(file);
+      }
       System.out.println("Replication " + newRep + " set: " + file);
     } else {
       System.err.println("Could not set replication for: " + file);
@@ -849,8 +931,8 @@ public class FsShell extends ToolBase {
       "[-moveFromLocal <localsrc> <dst>] [-get <src> <localdst>]\n\t" +
       "[-getmerge <src> <localdst> [addnl]] [-cat <src>]\n\t" +
       "[-copyToLocal <src><localdst>] [-moveToLocal <src> <localdst>]\n\t" +
-      "[-mkdir <path>] [-report] [-setrep [-R] <rep> <path/file>]\n" +
-      "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n" +
+      "[-mkdir <path>] [-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
+      "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n\t" +
       "[-help [cmd]]\n";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
@@ -935,9 +1017,10 @@ public class FsShell extends ToolBase {
         
     String mkdir = "-mkdir <path>: \tCreate a directory in specified location. \n";
 
-    String setrep = "-setrep [-R] <rep> <path/file>:  Set the replication level of a file. \n" +
-      "\t\tThe -R flag requests a recursive change of replication level \n" + 
-      "\t\tfor an entire tree.\n"; 
+    String setrep = SETREP_SHORT_USAGE
+      + ":  Set the replication level of a file. \n"
+      + "\t\tThe -R flag requests a recursive change of replication level \n"
+      + "\t\tfor an entire tree.\n";
 
     String touchz = "-touchz <path>: Write a timestamp in yyyy-MM-dd HH:mm:ss format\n" +
       "\t\tin a file at <path>. An error is returned if the file exists with non-zero length\n";
@@ -1131,8 +1214,7 @@ public class FsShell extends ToolBase {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <src> <localdst> [addnl]]");
     } else if ("-setrep".equals(cmd)) {
-      System.err.println("Usage: java FsShell" + 
-                         " [-setrep [-R] <rep> <path/file>]");
+      System.err.println("Usage: java FsShell [" + SETREP_SHORT_USAGE + "]");
     } else if ("-test".equals(cmd)) {
       System.err.println("Usage: java FsShell" +
                          " [-test -[ezd] <path>]");
@@ -1162,7 +1244,7 @@ public class FsShell extends ToolBase {
       System.err.println("           [-copyToLocal [-crc] <src> <localdst>]");
       System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
       System.err.println("           [-mkdir <path>]");
-      System.err.println("           [-setrep [-R] <rep> <path/file>]");
+      System.err.println("           [" + SETREP_SHORT_USAGE + "]");
       System.err.println("           [-touchz <path>]");
       System.err.println("           [-test -[ezd] <path>]");
       System.err.println("           [-stat [format] <path>]");
@@ -1322,6 +1404,9 @@ public class FsShell extends ToolBase {
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + 
                          e.getLocalizedMessage());  
+    } catch (RuntimeException re) {
+      exitCode = -1;
+      System.err.println(cmd.substring(1) + ": " + re.getLocalizedMessage());  
     } finally {
     }
     return exitCode;

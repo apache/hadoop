@@ -44,6 +44,9 @@ Trunk (unreleased changes)
     HADOOP-1651.  Improve progress reporting.
     (Devaraj Das via tomwhite)
 
+    HADOOP-1595.  dfsshell can wait for a file to achieve its intended
+    replication target. (Tsz Wo (Nicholas), SZE via dhruba)
+
 Branch 0.14 (unreleased changes)
 
   1. HADOOP-1197.  In Configuration, deprecate getObject() and add
