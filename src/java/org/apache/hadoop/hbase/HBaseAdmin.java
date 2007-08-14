@@ -28,9 +28,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.KeyedData;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
+
+import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Provides administrative functions for HBase
@@ -170,7 +171,6 @@ public class HBaseAdmin implements HConstants {
     // Wait until first region is deleted
     HRegionInterface server =
       connection.getHRegionConnection(firstMetaServer.getServerAddress());
-    DataInputBuffer inbuf = new DataInputBuffer();
     HRegionInfo info = new HRegionInfo();
     for (int tries = 0; tries < numRetries; tries++) {
       long scannerId = -1L;
@@ -185,8 +185,8 @@ public class HBaseAdmin implements HConstants {
         boolean found = false;
         for (int j = 0; j < values.length; j++) {
           if (values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
-            inbuf.reset(values[j].getData(), values[j].getData().length);
-            info.readFields(inbuf);
+            info =
+              (HRegionInfo) Writables.getWritable(values[j].getData(), info);
             if (info.tableDesc.getName().equals(tableName)) {
               found = true;
             }
@@ -249,7 +249,6 @@ public class HBaseAdmin implements HConstants {
     HRegionInterface server =
       connection.getHRegionConnection(firstMetaServer.getServerAddress());
 
-    DataInputBuffer inbuf = new DataInputBuffer();
     HRegionInfo info = new HRegionInfo();
     for (int tries = 0; tries < numRetries; tries++) {
       int valuesfound = 0;
@@ -272,8 +271,8 @@ public class HBaseAdmin implements HConstants {
           valuesfound += 1;
           for (int j = 0; j < values.length; j++) {
             if (values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
-              inbuf.reset(values[j].getData(), values[j].getData().length);
-              info.readFields(inbuf);
+              info =
+                (HRegionInfo) Writables.getWritable(values[j].getData(), info);
               isenabled = !info.offLine;
               break;
             }
@@ -349,7 +348,6 @@ public class HBaseAdmin implements HConstants {
     HRegionInterface server =
       connection.getHRegionConnection(firstMetaServer.getServerAddress());
 
-    DataInputBuffer inbuf = new DataInputBuffer();
     HRegionInfo info = new HRegionInfo();
     for(int tries = 0; tries < numRetries; tries++) {
       int valuesfound = 0;
@@ -371,8 +369,8 @@ public class HBaseAdmin implements HConstants {
           valuesfound += 1;
           for (int j = 0; j < values.length; j++) {
             if (values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
-              inbuf.reset(values[j].getData(), values[j].getData().length);
-              info.readFields(inbuf);
+              info =
+                (HRegionInfo) Writables.getWritable(values[j].getData(), info);
               disabled = info.offLine;
               break;
             }

@@ -97,7 +97,7 @@ public class HLog implements HConstants {
    */
   static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
     Configuration conf) throws IOException {
-    Path logfiles[] = fs.listPaths(srcDir);
+    Path logfiles[] = fs.listPaths(new Path[] {srcDir});
     LOG.info("splitting " + logfiles.length + " log(s) in " +
       srcDir.toString());
     HashMap<Text, SequenceFile.Writer> logWriters =

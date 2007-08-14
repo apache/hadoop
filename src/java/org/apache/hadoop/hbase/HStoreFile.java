@@ -380,7 +380,7 @@ public class HStoreFile implements HConstants, WritableComparable {
     // Look first at info files.  If a reference, these contain info we need
     // to create the HStoreFile.
     Path infodir = HStoreFile.getInfoDir(dir, regionName, colFamily);
-    Path infofiles[] = fs.listPaths(infodir);
+    Path infofiles[] = fs.listPaths(new Path[] {infodir});
     Vector<HStoreFile> results = new Vector<HStoreFile>(infofiles.length);
     Vector<Path> mapfiles = new Vector<Path>(infofiles.length);
     for (int i = 0; i < infofiles.length; i++) {
@@ -411,7 +411,7 @@ public class HStoreFile implements HConstants, WritableComparable {
     Path mapdir = HStoreFile.getMapDir(dir, regionName, colFamily);
     // List paths by experience returns fully qualified names -- at least when
     // running on a mini hdfs cluster.
-    Path datfiles[] = fs.listPaths(mapdir);
+    Path datfiles[] = fs.listPaths(new Path[] {mapdir});
     for (int i = 0; i < datfiles.length; i++) {
       // If does not have sympathetic info file, delete.
       if (!mapfiles.contains(fs.makeQualified(datfiles[i]))) {

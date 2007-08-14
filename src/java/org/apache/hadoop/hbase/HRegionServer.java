@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
@@ -79,7 +80,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // Go down hard.  Used debugging and in unit tests.
   protected volatile boolean abortRequested;
   
-  private final Path rootDir;
+  final Path rootDir;
   protected final HServerInfo serverInfo;
   protected final Configuration conf;
   private final Random rand;
@@ -103,6 +104,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   /** Runs periodically to determine if regions need to be compacted or split */
   class SplitOrCompactChecker implements Runnable, RegionUnavailableListener {
+    private HTable root = null;
+    private HTable meta = null;
   
     /**
      * {@inheritDoc}
@@ -199,65 +202,67 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // When a region is split, the META table needs to updated if we're
       // splitting a 'normal' region, and the ROOT table needs to be
       // updated if we are splitting a META region.
-      final Text tableToUpdate =
-        region.getRegionInfo().tableDesc.getName().equals(META_TABLE_NAME)?
-          ROOT_TABLE_NAME : META_TABLE_NAME;
-      LOG.info("Updating " + tableToUpdate + " with region split info");
+
+      HTable t = null;
+      if (region.getRegionInfo().tableDesc.getName().equals(META_TABLE_NAME)) {
+        // We need to update the root region
+        
+        if (root == null) {
+          root = new HTable(conf, ROOT_TABLE_NAME);
+        }
+        t = root;
+        
+      } else {
+        // For normal regions we need to update the meta region
+        
+        if (meta == null) {
+          meta = new HTable(conf, META_TABLE_NAME);
+        }
+        t = meta;
+      }
+      LOG.info("Updating " + t.getTableName() + " with region split info");
 
       // Remove old region from META
-      for (int tries = 0; tries < numRetries; tries++) {
-        try {
-          HRegion.writeSplitToMETA(conf, tableToUpdate,
-            region.getRegionName(), newRegions[0].getRegionInfo(),
-            newRegions[1].getRegionInfo());
-          break;
-        } catch (IOException e) {
-          if(tries == numRetries - 1) {
-            if(e instanceof RemoteException) {
-              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-            }
-            throw e;
-          }
-        }
-      }
+      // NOTE: there is no need for retry logic here. HTable does it for us.
+      
+      long lockid = t.startBatchUpdate(oldRegionInfo.getRegionName());
+      oldRegionInfo.offLine = true;
+      oldRegionInfo.split = true;
+      t.put(lockid, COL_REGIONINFO, Writables.getBytes(oldRegionInfo));
+
+      t.put(lockid, COL_SPLITA, Writables.getBytes(
+          newRegions[0].getRegionInfo()));
+
+      t.put(lockid, COL_SPLITB, Writables.getBytes(
+          newRegions[1].getRegionInfo()));
+      t.commitBatch(lockid);
       
       // Add new regions to META
+
       for (int i = 0; i < newRegions.length; i++) {
-        for (int tries = 0; tries < numRetries; tries ++) {
-          try {
-            HRegion.addRegionToMETA(conf, tableToUpdate, newRegions[i],
-                serverInfo.getServerAddress(), serverInfo.getStartCode());
-            break;
-          } catch(IOException e) {
-            if(tries == numRetries - 1) {
-              if(e instanceof RemoteException) {
-                e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-              }
-              throw e;
-            }
-          }
-        }
+        lockid = t.startBatchUpdate(newRegions[i].getRegionName());
+
+        t.put(lockid, COL_REGIONINFO, Writables.getBytes(
+            newRegions[i].getRegionInfo()));
+        
+        t.commitBatch(lockid);
       }
           
       // Now tell the master about the new regions
+      
       if (LOG.isDebugEnabled()) {
         LOG.debug("Reporting region split to master");
       }
       reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
         newRegions[1].getRegionInfo());
+      
       LOG.info("region split, META update, and report to master all" +
         " successful. Old region=" + oldRegionInfo.getRegionName() +
         ", new regions: " + newRegions[0].getRegionName() + ", " +
         newRegions[1].getRegionName());
       
-      // Finally, start serving the new regions
-      lock.writeLock().lock();
-      try {
-        onlineRegions.put(newRegions[0].getRegionName(), newRegions[0]);
-        onlineRegions.put(newRegions[1].getRegionName(), newRegions[1]);
-      } finally {
-        lock.writeLock().unlock();
-      }
+      // Do not serve the new regions. Let the Master assign them.
+      
     }
   }
 

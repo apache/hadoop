@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 
+import org.apache.hadoop.hbase.util.Writables;
+
 /** Test case for get */
 public class TestGet extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(TestGet.class.getName());
@@ -59,8 +61,7 @@ public class TestGet extends HBaseTestCase {
     for(Iterator<Text> i = values.keySet().iterator(); i.hasNext(); ) {
       Text column = i.next();
       if (column.equals(HConstants.COL_SERVER)) {
-        byte [] val = values.get(column);
-        String server = new String(val, HConstants.UTF8_ENCODING);
+        String server = Writables.bytesToString(values.get(column));
         assertEquals(expectedServer, server);
         LOG.info(server);
       }
@@ -106,20 +107,17 @@ public class TestGet extends HBaseTestCase {
       bytes.reset();
       HGlobals.rootRegionInfo.write(s);
       
-      r.put(lockid, HConstants.COL_REGIONINFO, bytes.toByteArray());
+      r.put(lockid, HConstants.COL_REGIONINFO, 
+          Writables.getBytes(HGlobals.rootRegionInfo));
       
       r.commit(lockid, System.currentTimeMillis());
       
       lockid = r.startUpdate(ROW_KEY);
 
       r.put(lockid, HConstants.COL_SERVER, 
-        new HServerAddress(SERVER_ADDRESS).toString().
-          getBytes(HConstants.UTF8_ENCODING)
-      );
+        Writables.stringToBytes(new HServerAddress(SERVER_ADDRESS).toString()));
       
-      r.put(lockid, HConstants.COL_STARTCODE, 
-        String.valueOf(lockid).getBytes(HConstants.UTF8_ENCODING)
-      );
+      r.put(lockid, HConstants.COL_STARTCODE, Writables.longToBytes(lockid));
       
       r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "region"), 
         "region".getBytes(HConstants.UTF8_ENCODING));
@@ -150,8 +148,7 @@ public class TestGet extends HBaseTestCase {
 
       String otherServerName = "bar.foo.com:4321";
       r.put(lockid, HConstants.COL_SERVER, 
-        new HServerAddress(otherServerName).toString().
-          getBytes(HConstants.UTF8_ENCODING));
+        Writables.stringToBytes(new HServerAddress(otherServerName).toString()));
       
       r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "junk"),
         "junk".getBytes());

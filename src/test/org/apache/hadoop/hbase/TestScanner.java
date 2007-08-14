@@ -28,8 +28,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Test of a long-lived scanner validating as we go.
@@ -52,13 +53,11 @@ public class TestScanner extends HBaseTestCase {
   private static final long START_CODE = Long.MAX_VALUE;
 
   private HRegion region;
-  private DataInputBuffer in = new DataInputBuffer();
 
   /** Compare the HRegionInfo we read from HBase to what we stored */
   private void validateRegionInfo(byte [] regionBytes) throws IOException {
-    in.reset(regionBytes, regionBytes.length);
-    HRegionInfo info = new HRegionInfo();
-    info.readFields(in);
+    HRegionInfo info =
+      (HRegionInfo) Writables.getWritable(regionBytes, new HRegionInfo());
     
     assertEquals(REGION_INFO.regionId, info.regionId);
     assertEquals(0, info.startKey.getLength());
@@ -94,8 +93,7 @@ public class TestScanner extends HBaseTestCase {
             val = results.get(HConstants.COL_STARTCODE);
             assertNotNull(val);
             assertFalse(val.length == 0);
-            long startCode = 
-              Long.valueOf(new String(val, HConstants.UTF8_ENCODING));
+            long startCode = Writables.bytesToLong(val);
             assertEquals(START_CODE, startCode);
           }
           
@@ -104,7 +102,7 @@ public class TestScanner extends HBaseTestCase {
             val = results.get(HConstants.COL_SERVER);
             assertNotNull(val);
             assertFalse(val.length == 0);
-            String server = new String(val, HConstants.UTF8_ENCODING);
+            String server = Writables.bytesToString(val);
             assertEquals(0, server.compareTo(serverName));
           }
           results.clear();
@@ -187,10 +185,10 @@ public class TestScanner extends HBaseTestCase {
       lockid = region.startUpdate(ROW_KEY);
 
       region.put(lockid, HConstants.COL_SERVER, 
-        address.toString().getBytes(HConstants.UTF8_ENCODING));
+        Writables.stringToBytes(address.toString()));
 
-      region.put(lockid, HConstants.COL_STARTCODE, 
-        String.valueOf(START_CODE).getBytes(HConstants.UTF8_ENCODING));
+      region.put(lockid, HConstants.COL_STARTCODE,
+          Writables.longToBytes(START_CODE));
 
       region.commit(lockid, System.currentTimeMillis());
       
@@ -227,7 +225,7 @@ public class TestScanner extends HBaseTestCase {
       lockid = region.startUpdate(ROW_KEY);
 
       region.put(lockid, HConstants.COL_SERVER, 
-        address.toString().getBytes(HConstants.UTF8_ENCODING));
+        Writables.stringToBytes(address.toString()));
 
       region.commit(lockid, System.currentTimeMillis());
       

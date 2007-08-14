@@ -120,6 +120,11 @@ public interface HConstants {
   /** ROOT/META column family member - contains server start code (a long) */
   static final Text COL_STARTCODE = new Text(COLUMN_FAMILY + "serverstartcode");
 
+  /** the lower half of a split region */
+  static final Text COL_SPLITA = new Text(COLUMN_FAMILY_STR + "splitA");
+  
+  /** the upper half of a split region */
+  static final Text COL_SPLITB = new Text(COLUMN_FAMILY_STR + "splitB");
   // Other constants
 
   /** used by scanners, etc when they want to start at the beginning of a region */

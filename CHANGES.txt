@@ -89,3 +89,7 @@ Trunk (unreleased changes)
  56. HADOOP-1678 On region split, master should designate which host should 
      serve daughter splits. Phase 1: Master balances load for new regions and
      when a region server fails.
+ 57. HADOOP-1678 On region split, master should designate which host should 
+     serve daughter splits. Phase 2: Master assigns children of split region
+     instead of HRegionServer serving both children.
+

@@ -19,10 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -36,7 +33,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
@@ -81,8 +77,6 @@ public class HRegion implements HConstants {
   static final Log LOG = LogFactory.getLog(HRegion.class);
   final AtomicBoolean closed = new AtomicBoolean(false);
   private long noFlushCount = 0;
-  static final Text COL_SPLITA = new Text(COLUMN_FAMILY_STR + "splitA");
-  static final Text COL_SPLITB = new Text(COLUMN_FAMILY_STR + "splitB");
   
   /**
    * Merge two HRegions.  They must be available on the current
@@ -1667,26 +1661,6 @@ public class HRegion implements HConstants {
   }
   
   // Utility methods
-  
-  /**
-   * Convenience method creating new HRegions.
-   * Note, this method creates an {@link HLog} for the created region. It
-   * needs to be closed explicitly.  Use {@link HRegion#getLog()} to get
-   * access.
-   * @param regionId ID to use
-   * @param tableDesc Descriptor
-   * @param rootDir Root directory of HBase instance
-   * @param conf
-   * @return New META region (ROOT or META).
-   * @throws IOException
-   */
-  static HRegion createHRegion(final long regionId,
-    final HTableDescriptor tableDesc, final Path rootDir,
-    final Configuration conf)
-  throws IOException {
-    return createHRegion(new HRegionInfo(regionId, tableDesc, null, null),
-      rootDir, conf, null);
-  }
 
   /**
    * Convenience method creating new HRegions. Used by createTable and by the
@@ -1727,218 +1701,10 @@ public class HRegion implements HConstants {
   throws IOException {  
     // The row key is the region name
     long writeid = meta.startUpdate(r.getRegionName());
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    DataOutputStream s = new DataOutputStream(bytes);
-    r.getRegionInfo().write(s);
-    meta.put(writeid, COL_REGIONINFO, bytes.toByteArray());
+    meta.put(writeid, COL_REGIONINFO, Writables.getBytes(r.getRegionInfo()));
     meta.commit(writeid, System.currentTimeMillis());
   }
   
-  static void addRegionToMETA(final Configuration conf,
-      final Text table, final HRegion region,
-      final HServerAddress serverAddress,
-      final long startCode)
-  throws IOException {
-    HTable t = new HTable(conf, table);
-    try {
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      DataOutputStream out = new DataOutputStream(bytes);
-      region.getRegionInfo().write(out);
-      long lockid = t.startUpdate(region.getRegionName());
-      t.put(lockid, COL_REGIONINFO, bytes.toByteArray());
-      t.put(lockid, COL_SERVER,
-        serverAddress.toString().getBytes(UTF8_ENCODING));
-      t.put(lockid, COL_STARTCODE,
-        String.valueOf(startCode).getBytes(UTF8_ENCODING));
-      t.commit(lockid);
-      if (LOG.isDebugEnabled()) {
-        LOG.info("Added region " + region.getRegionName() + " to table " +
-            table);
-      }
-    } finally {
-      t.close();
-    }
-  }
-  
-  /**
-   * Delete <code>region</code> from META <code>table</code>.
-   * @param conf Configuration object
-   * @param table META table we are to delete region from.
-   * @param regionName Region to remove.
-   * @throws IOException
-   */
-  static void removeRegionFromMETA(final Configuration conf,
-      final Text table, final Text regionName)
-  throws IOException {
-    HTable t = new HTable(conf, table);
-    try {
-      removeRegionFromMETA(t, regionName);
-    } finally {
-      t.close();
-    }
-  }
-  
-  /**
-   * Delete <code>region</code> from META <code>table</code>.
-   * @param conf Configuration object
-   * @param table META table we are to delete region from.
-   * @param regionName Region to remove.
-   * @throws IOException
-   */
-  static void removeRegionFromMETA(final HTable t, final Text regionName)
-  throws IOException {
-    long lockid = t.startBatchUpdate(regionName);
-    t.delete(lockid, COL_REGIONINFO);
-    t.delete(lockid, COL_SERVER);
-    t.delete(lockid, COL_STARTCODE);
-    t.commit(lockid);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removed " + regionName + " from table " + t.getTableName());
-    }
-  }
-
-  /**
-   * Delete <code>split</code> column from META <code>table</code>.
-   * @param t
-   * @param split
-   * @param regionName Region to remove.
-   * @throws IOException
-   */
-  static void removeSplitFromMETA(final HTable t, final Text regionName,
-    final Text split)
-  throws IOException {
-    long lockid = t.startBatchUpdate(regionName);
-    t.delete(lockid, split);
-    t.commit(lockid);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removed " + split + " from " + regionName +
-        " from table " + t.getTableName());
-    }
-  }
-  
-  /**
-   * <code>region</code> has split.  Update META <code>table</code>.
-   * @param client Client to use running update.
-   * @param table META table we are to delete region from.
-   * @param regionName Region to remove.
-   * @throws IOException
-   */
-  static void writeSplitToMETA(final Configuration conf,
-      final Text table, final Text regionName, final HRegionInfo splitA,
-      final HRegionInfo splitB)
-  throws IOException {
-    HTable t = new HTable(conf, table);
-    try {
-      HRegionInfo hri = getRegionInfo(t.get(regionName, COL_REGIONINFO));
-      hri.offLine = true;
-      hri.split = true;
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      DataOutputStream dos = new DataOutputStream(bytes);
-      hri.write(dos);
-      dos.close();
-      long lockid = t.startBatchUpdate(regionName);
-      t.put(lockid, COL_REGIONINFO, bytes.toByteArray());
-      t.put(lockid, COL_SPLITA, Writables.getBytes(splitA));
-      t.put(lockid, COL_SPLITB, Writables.getBytes(splitB));
-      t.commitBatch(lockid);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Updated " + regionName + " in table " + table +
-        " on its being split");
-      }
-    } finally {
-      t.close();
-    }
-  }
-  
-  /**
-   * @param whichSplit COL_SPLITA or COL_SPLITB?
-   * @param data Map of META row labelled column data.
-   * @return HRegionInfo or null if not found.
-   * @throws IOException 
-   */
-  static HRegionInfo getSplit(final TreeMap<Text, byte[]> data,
-      final Text whichSplit)
-  throws IOException {
-    if (!(whichSplit.equals(COL_SPLITA) || whichSplit.equals(COL_SPLITB))) {
-      throw new IOException("Illegal Argument: " + whichSplit);
-    }
-    byte []  bytes = data.get(whichSplit);
-    if (bytes == null || bytes.length == 0) {
-      return null;
-    }
-    return (HRegionInfo) Writables.getWritable(bytes, new HRegionInfo());
-  }
-  
-  /**
-   * @param data Map of META row labelled column data.
-   * @return An HRegionInfo instance.
-   * @throws IOException 
-   */
-  static HRegionInfo getRegionInfo(final TreeMap<Text, byte[]> data)
-  throws IOException {
-    return getRegionInfo(data.get(COL_REGIONINFO));
-  }
-  
-  /**
-   * @param bytes Bytes of a HRegionInfo.
-   * @return An HRegionInfo instance.
-   * @throws IOException
-   */
-  static HRegionInfo getRegionInfo(final byte[] bytes) throws IOException {
-    if (bytes == null || bytes.length == 0) {
-      throw new IOException("no value for " + COL_REGIONINFO);
-    }
-    return (HRegionInfo)Writables.getWritable(bytes, new HRegionInfo());
-  }
-  
-  /**
-   * @param data Map of META row labelled column data.
-   * @return Server
-   */
-  static String getServerName(final TreeMap<Text, byte[]> data) {
-    byte [] bytes = data.get(COL_SERVER);
-    String name = null;
-    try {
-      name = (bytes != null && bytes.length != 0) ?
-          new String(bytes, UTF8_ENCODING): null;
-
-    } catch(UnsupportedEncodingException e) {
-      assert(false);
-    }
-    return (name != null)? name.trim(): name;
-  }
-
-  /**
-   * @param data Map of META row labelled column data.
-   * @return Start code.
-   */
-  static long getStartCode(final TreeMap<Text, byte[]> data) {
-    long startCode = -1L;
-    byte [] bytes = data.get(COL_STARTCODE);
-    if(bytes != null && bytes.length != 0) {
-      try {
-        startCode = Long.parseLong(new String(bytes, UTF8_ENCODING).trim());
-      } catch(NumberFormatException e) {
-        LOG.error("Failed getting " + COL_STARTCODE, e);
-      } catch(UnsupportedEncodingException e) {
-        LOG.error("Failed getting " + COL_STARTCODE, e);
-      }
-    }
-    return startCode;
-  }
-
-  /**
-   * Computes the Path of the HRegion
-   * 
-   * @param dir parent directory
-   * @param regionName name of the region
-   * @return Path of HRegion directory
-   */
-  public static Path getRegionDir(final Path dir, final Text regionName) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName));
-  }
-  
-
   /**
    * Deletes all the files for a HRegion
    * 
@@ -1953,32 +1719,15 @@ public class HRegion implements HConstants {
     Path p = HRegion.getRegionDir(fs.makeQualified(baseDirectory), regionName);
     return fs.delete(p);
   }
- 
+
   /**
-   * Look for HStoreFile references in passed region.
-   * @param fs
-   * @param baseDirectory
-   * @param hri
-   * @return True if we found references.
-   * @throws IOException 
+   * Computes the Path of the HRegion
+   * 
+   * @param dir parent directory
+   * @param regionName name of the region
+   * @return Path of HRegion directory
    */
-  static boolean hasReferences(final FileSystem fs, final Path baseDirectory,
-      final HRegionInfo hri)
-  throws IOException {
-    boolean result = false;
-    for (Text family: hri.getTableDesc().families().keySet()) {
-      Path p = HStoreFile.getMapDir(baseDirectory, hri.getRegionName(),
-        HStoreKey.extractFamily(family));
-      // Look for reference files.
-      Path [] ps = fs.listPaths(p, new PathFilter () {
-        public boolean accept(Path path) {
-          return HStoreFile.isReference(path);
-        }});
-      if (ps != null && ps.length > 0) {
-        result = true;
-        break;
-      }
-    }
-    return result;
+  public static Path getRegionDir(final Path dir, final Text regionName) {
+    return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName));
   }
 }

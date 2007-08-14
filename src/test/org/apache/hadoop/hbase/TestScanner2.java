@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -57,7 +58,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
   final char LAST_COLKEY = '3';
   final byte[] GOOD_BYTES = "goodstuff".getBytes();
   final byte[] BAD_BYTES = "badstuff".getBytes();
-  
+
   /**
    * Test the scanner's handling of various filters.  
    * 
@@ -170,7 +171,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
       region.regionName.toString().startsWith(getName()));
     // Now do what happens at split time; remove old region and then add two
     // new ones in its place.
-    HRegion.removeRegionFromMETA(conf, HConstants.META_TABLE_NAME,
+    removeRegionFromMETA(new HTable(conf, HConstants.META_TABLE_NAME),
       region.regionName);
     HTableDescriptor desc = region.tableDesc;
     Path homedir = new Path(getName());
@@ -183,7 +184,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
         homedir, this.conf, null));
     try {
       for (HRegion r : newRegions) {
-        HRegion.addRegionToMETA(conf, HConstants.META_TABLE_NAME, r,
+        addRegionToMETA(conf, HConstants.META_TABLE_NAME, r,
             this.cluster.getHMasterAddress(), -1L);
       }
       regions = scan(conf, HConstants.META_TABLE_NAME);
@@ -219,9 +220,15 @@ public class TestScanner2 extends HBaseClusterTestCase {
           results.put(values[i].getKey().getColumn(), values[i].getData());
         }
 
-        HRegionInfo info = HRegion.getRegionInfo(results);
-        String serverName = HRegion.getServerName(results);
-        long startCode = HRegion.getStartCode(results);
+        HRegionInfo info = (HRegionInfo) Writables.getWritable(
+            results.get(HConstants.COL_REGIONINFO), new HRegionInfo());
+
+        byte[] bytes = results.get(HConstants.COL_SERVER);
+        String serverName = Writables.bytesToString(bytes);
+
+        long startCode =
+          Writables.bytesToLong(results.get(HConstants.COL_STARTCODE));
+
         LOG.info(Thread.currentThread().getName() + " scanner: "
             + Long.valueOf(scannerId) + ": regioninfo: {" + info.toString()
             + "}, server: " + serverName + ", startCode: " + startCode);
@@ -239,5 +246,50 @@ public class TestScanner2 extends HBaseClusterTestCase {
       }
     }
     return regions;
+  }
+  
+  private void addRegionToMETA(final Configuration conf,
+      final Text table, final HRegion region,
+      final HServerAddress serverAddress,
+      final long startCode)
+  throws IOException {
+    HTable t = new HTable(conf, table);
+    try {
+      long lockid = t.startUpdate(region.getRegionName());
+      t.put(lockid, HConstants.COL_REGIONINFO, Writables.getBytes(region.getRegionInfo()));
+      t.put(lockid, HConstants.COL_SERVER,
+        Writables.stringToBytes(serverAddress.toString()));
+      t.put(lockid, HConstants.COL_STARTCODE, Writables.longToBytes(startCode));
+      t.commit(lockid);
+      if (LOG.isDebugEnabled()) {
+        LOG.info("Added region " + region.getRegionName() + " to table " +
+            table);
+      }
+    } finally {
+      t.close();
+    }
+  }
+  
+  /*
+   * Delete <code>region</code> from META <code>table</code>.
+   * @param conf Configuration object
+   * @param table META table we are to delete region from.
+   * @param regionName Region to remove.
+   * @throws IOException
+   */
+  private void removeRegionFromMETA(final HTable t, final Text regionName)
+  throws IOException {
+    try {
+      long lockid = t.startBatchUpdate(regionName);
+      t.delete(lockid, HConstants.COL_REGIONINFO);
+      t.delete(lockid, HConstants.COL_SERVER);
+      t.delete(lockid, HConstants.COL_STARTCODE);
+      t.commit(lockid);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Removed " + regionName + " from table " + t.getTableName());
+      }
+    } finally {
+      t.close();
+    }
   }
 }

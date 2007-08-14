@@ -91,6 +91,19 @@ public class HStoreKey implements WritableComparable {
     return offset;
   }
 
+  /**
+   * Returns row and column bytes out of an HStoreKey.
+   * @param hsk Store key.
+   * @return byte array encoding of HStoreKey
+   * @throws UnsupportedEncodingException
+   */
+  public static byte[] getBytes(final HStoreKey hsk)
+  throws UnsupportedEncodingException {
+    StringBuilder s = new StringBuilder(hsk.getRow().toString());
+    s.append(hsk.getColumn().toString());
+    return s.toString().getBytes(HConstants.UTF8_ENCODING);
+  }
+
   Text row;
   Text column;
   long timestamp;

@@ -34,10 +34,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
@@ -237,7 +237,6 @@ public class HConnectionManager implements HConstants {
               COLUMN_FAMILY_ARRAY, EMPTY_START_ROW, System.currentTimeMillis(),
               null);
 
-          DataInputBuffer inbuf = new DataInputBuffer();
           while (true) {
             KeyedData[] values = server.next(scannerId);
             if (values.length == 0) {
@@ -245,9 +244,9 @@ public class HConnectionManager implements HConstants {
             }
             for (int i = 0; i < values.length; i++) {
               if (values[i].getKey().getColumn().equals(COL_REGIONINFO)) {
-                inbuf.reset(values[i].getData(), values[i].getData().length);
-                HRegionInfo info = new HRegionInfo();
-                info.readFields(inbuf);
+                HRegionInfo info =
+                  (HRegionInfo) Writables.getWritable(values[i].getData(),
+                      new HRegionInfo());
 
                 // Only examine the rows where the startKey is zero length   
                 if (info.startKey.getLength() == 0) {
@@ -658,7 +657,6 @@ public class HConnectionManager implements HConstants {
             server.openScanner(t.getRegionInfo().getRegionName(),
                 COLUMN_FAMILY_ARRAY, tableName, System.currentTimeMillis(), null);
 
-          DataInputBuffer inbuf = new DataInputBuffer();
           while (true) {
             HRegionInfo regionInfo = null;
             String serverAddress = null;
@@ -684,9 +682,8 @@ public class HConnectionManager implements HConstants {
               results.put(values[i].getKey().getColumn(), values[i].getData());
             }
             regionInfo = new HRegionInfo();
-            bytes = results.get(COL_REGIONINFO);
-            inbuf.reset(bytes, bytes.length);
-            regionInfo.readFields(inbuf);
+            regionInfo = (HRegionInfo) Writables.getWritable(
+                results.get(COL_REGIONINFO), regionInfo);
 
             if (!regionInfo.tableDesc.getName().equals(tableName)) {
               // We're done
@@ -697,7 +694,7 @@ public class HConnectionManager implements HConstants {
               break;
             }
 
-            if (regionInfo.offLine) {
+            if (regionInfo.isOffline() && !regionInfo.isSplit()) {
               throw new IllegalStateException("table offline: " + tableName);
             }
 
@@ -710,7 +707,7 @@ public class HConnectionManager implements HConstants {
               servers.clear();
               break;
             }
-            serverAddress = new String(bytes, UTF8_ENCODING);
+            serverAddress = Writables.bytesToString(bytes);
             servers.put(regionInfo.startKey, new HRegionLocation(
                 regionInfo, new HServerAddress(serverAddress)));
           }
