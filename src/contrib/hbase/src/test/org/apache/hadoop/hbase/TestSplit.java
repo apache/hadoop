@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.ConcurrentModificationException;
-import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -31,6 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * {@Link TestHRegion} does a split but this TestCase adds testing of fast
@@ -45,7 +46,13 @@ public class TestSplit extends HBaseTestCase {
   private FileSystem fs = null;
   private static final char FIRST_CHAR = 'a';
   private static final char LAST_CHAR = 'z';
-  
+
+  /** constructor */
+  public TestSplit() {
+    Logger.getRootLogger().setLevel(Level.WARN);
+    Logger.getLogger(this.getClass().getPackage().getName()).setLevel(Level.DEBUG);
+  }
+
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
@@ -63,12 +70,14 @@ public class TestSplit extends HBaseTestCase {
   /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
-    try {
-      if (this.fs.exists(testDir)) {
-        this.fs.delete(testDir);
+    if (fs != null) {
+      try {
+        if (this.fs.exists(testDir)) {
+          this.fs.delete(testDir);
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
       }
-    } catch (Exception e) {
-      e.printStackTrace();
     }
     super.tearDown();
   }
@@ -175,13 +184,13 @@ public class TestSplit extends HBaseTestCase {
    * @throws Exception
    */
   public void testSplitRegionIsDeleted() throws Exception {
-    final int timeout = 60;
+    final int retries = 10;
+    this.testDir = null;
+    this.fs = null;
     // Start up a hbase cluster
-    this.conf.set(HConstants.HBASE_DIR, this.testDir.toString());
-    MiniHBaseCluster.MasterThread masterThread =
-      MiniHBaseCluster.startMaster(this.conf);
-    List<MiniHBaseCluster.RegionServerThread> regionServerThreads =
-      MiniHBaseCluster.startRegionServers(this.conf, 1);
+    MiniHBaseCluster cluster = new MiniHBaseCluster(conf, 1);
+    Path testDir = cluster.regionThreads.get(0).getRegionServer().rootDir;
+    FileSystem fs = cluster.getDFSCluster().getFileSystem();
     HTable meta = null;
     HTable t = null;
     try {
@@ -197,17 +206,15 @@ public class TestSplit extends HBaseTestCase {
       // region instance and bring on a split.
       HRegionInfo hri =
         t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
-      HRegion r = null;
-      synchronized(regionServerThreads) {
-        r = regionServerThreads.get(0).getRegionServer().onlineRegions.
-          get(hri.getRegionName());
-      }
+      HRegion r =
+        cluster.regionThreads.get(0).getRegionServer().onlineRegions.get(
+            hri.getRegionName());
       // Flush will provoke a split next time the split-checker thread runs.
       r.flushcache(false);
       // Now, wait until split makes it into the meta table.
-      for (int i = 0; i < timeout &&
-        (count(meta, HConstants.COLUMN_FAMILY_STR) <= count); i++) {
-        Thread.sleep(1000);
+      for (int i = 0; i < retries &&
+      (count(meta, HConstants.COLUMN_FAMILY_STR) <= count); i++) {
+        Thread.sleep(5000);
       }
       int oldCount = count;
       count = count(meta, HConstants.COLUMN_FAMILY_STR);
@@ -217,47 +224,72 @@ public class TestSplit extends HBaseTestCase {
       HRegionInfo parent = getSplitParent(meta);
       assertTrue(parent.isOffline());
       Path parentDir =
-        HRegion.getRegionDir(this.testDir, parent.getRegionName());
-      assertTrue(this.fs.exists(parentDir));
+        HRegion.getRegionDir(testDir, parent.getRegionName());
+      assertTrue(fs.exists(parentDir));
       LOG.info("Split happened and parent " + parent.getRegionName() + " is " +
-        "offline");
+      "offline");
+      for (int i = 0; i < retries; i++) {
+        // Now open a scanner on the table. This will force HTable to recalibrate
+        // and in doing so, will force us to wait until the new child regions
+        // come on-line (since they are no longer automatically served by the 
+        // HRegionServer that was serving the parent. In this test they will
+        // end up on the same server (since there is only one), but we have to
+        // wait until the master assigns them.
+        try {
+          HScannerInterface s =
+            t.obtainScanner(new Text[] {new Text(COLFAMILY_NAME3)},
+                HConstants.EMPTY_START_ROW);
+          try {
+            HStoreKey key = new HStoreKey();
+            TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+            s.next(key, results);
+            break;
+
+          } finally {
+            s.close();
+          }
+        } catch (NotServingRegionException x) {
+          Thread.sleep(5000);
+        }
+      }
       // Now, force a compaction.  This will rewrite references and make it
       // so the parent region becomes deletable.
       LOG.info("Starting compaction");
-      synchronized(regionServerThreads) {
-        for (MiniHBaseCluster.RegionServerThread thread: regionServerThreads) {
-          SortedMap<Text, HRegion> regions =
-            thread.getRegionServer().onlineRegions;
-          // Retry if ConcurrentModification... alternative of sync'ing is not
-          // worth it for sake of unit test.
-          for (int i = 0; i < 10; i++) {
-            try {
-              for (HRegion online: regions.values()) {
-                if (online.getRegionName().toString().startsWith(getName())) {
-                  online.compactStores();
-                }
+      for (MiniHBaseCluster.RegionServerThread thread: cluster.regionThreads) {
+        SortedMap<Text, HRegion> regions =
+          thread.getRegionServer().onlineRegions;
+        // Retry if ConcurrentModification... alternative of sync'ing is not
+        // worth it for sake of unit test.
+        for (int i = 0; i < 10; i++) {
+          try {
+            for (HRegion online: regions.values()) {
+              if (online.getRegionName().toString().startsWith(getName())) {
+                online.compactStores();
               }
-              break;
-            } catch (ConcurrentModificationException e) {
-              LOG.warn("Retrying because ..." + e.toString() + " -- one or " +
-                "two should be fine");
-              continue;
             }
+            break;
+          } catch (ConcurrentModificationException e) {
+            LOG.warn("Retrying because ..." + e.toString() + " -- one or " +
+            "two should be fine");
+            continue;
           }
         }
       }
-      
+
       // Now wait until parent disappears.
       LOG.info("Waiting on parent " + parent.getRegionName() +
-        " to disappear");
-      for (int i = 0; i < timeout && getSplitParent(meta) != null; i++) {
-        Thread.sleep(1000);
+      " to disappear");
+      for (int i = 0; i < retries && getSplitParent(meta) != null; i++) {
+        Thread.sleep(5000);
       }
       assertTrue(getSplitParent(meta) == null);
       // Assert cleaned up.
-      assertFalse(this.fs.exists(parentDir));
+      for (int i = 0; i < retries && fs.exists(parentDir); i++) {
+        Thread.sleep(5000);
+      }
+      assertFalse(fs.exists(parentDir));
     } finally {
-      MiniHBaseCluster.shutdown(masterThread, regionServerThreads);
+      cluster.shutdown();
     }
   }
   
@@ -282,8 +314,13 @@ public class TestSplit extends HBaseTestCase {
       HStoreKey curKey = new HStoreKey();
       TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
       while(s.next(curKey, curVals)) {
-        HRegionInfo hri = (HRegionInfo)Writables.
-          getWritable(curVals.get(HConstants.COL_REGIONINFO), new HRegionInfo());
+        byte[] bytes = curVals.get(HConstants.COL_REGIONINFO);
+        if (bytes == null || bytes.length == 0) {
+          continue;
+        }
+        HRegionInfo hri =
+          (HRegionInfo) Writables.getWritable(bytes, new HRegionInfo());
+        
         // Assert that if region is a split region, that it is also offline.
         // Otherwise, if not a split region, assert that it is online.
         if (hri.isSplit() && hri.isOffline()) {

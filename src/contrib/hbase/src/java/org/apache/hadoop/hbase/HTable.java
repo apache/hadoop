@@ -886,7 +886,17 @@ public class HTable implements HConstants {
     public void close() throws IOException {
       checkClosed();
       if (this.scannerId != -1L) {
-        this.server.close(this.scannerId);
+        try {
+          this.server.close(this.scannerId);
+          
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          }
+          if (!(e instanceof NotServingRegionException)) {
+            throw e;
+          }
+        }
         this.scannerId = -1L;
       }
       this.server = null;

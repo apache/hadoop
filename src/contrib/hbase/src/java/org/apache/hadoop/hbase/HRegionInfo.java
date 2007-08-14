@@ -19,9 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.ByteArrayInputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -78,17 +76,6 @@ public class HRegionInfo implements WritableComparable {
     this.regionName = new Text();
     this.offLine = false;
     this.split = false;
-  }
-  
-  /**
-   * Construct a HRegionInfo object from byte array
-   * 
-   * @param serializedBytes
-   * @throws IOException
-   */
-  public HRegionInfo(final byte [] serializedBytes) throws IOException {
-    this();
-    readFields(new DataInputStream(new ByteArrayInputStream(serializedBytes)));
   }
   
   /**

@@ -94,9 +94,8 @@ public class Leases {
    * without any cancellation calls.
    */
   public void close() {
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("closing leases");
-    }
+    LOG.info("closing leases");
+
     this.running = false;
     try {
       this.leaseMonitorThread.interrupt();
@@ -110,9 +109,7 @@ public class Leases {
         sortedLeases.clear();
       }
     }
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("leases closed");
-    }
+    LOG.info("leases closed");
   }
 
   /* A client obtains a lease... */
@@ -139,9 +136,9 @@ public class Leases {
         sortedLeases.add(lease);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Created lease " + name);
-    }
+//    if (LOG.isDebugEnabled()) {
+//      LOG.debug("Created lease " + name);
+//    }
   }
   
   /* A client renews a lease... */
@@ -170,9 +167,9 @@ public class Leases {
         sortedLeases.add(lease);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Renewed lease " + name);
-    }
+//    if (LOG.isDebugEnabled()) {
+//      LOG.debug("Renewed lease " + name);
+//    }
   }
 
   /**
@@ -196,9 +193,9 @@ public class Leases {
         leases.remove(name);
       }
     }     
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Cancel lease " + name);
-    }
+//    if (LOG.isDebugEnabled()) {
+//      LOG.debug("Cancel lease " + name);
+//    }
   }
 
   /** LeaseMonitor is a thread that expires Leases that go on too long. */
@@ -327,9 +324,8 @@ public class Leases {
     }
     
     void expired() {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Lease expired " + getLeaseName());
-      }
+      LOG.info("Lease expired " + getLeaseName());
+
       listener.leaseExpired();
     }
     

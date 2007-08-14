@@ -22,11 +22,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
+import org.apache.hadoop.hbase.HConstants;
 
+/**
+ * Utility class with methods for manipulating Writable objects
+ */
 public class Writables {
   /**
    * @param w
@@ -36,6 +42,9 @@ public class Writables {
    * @see #getWritable(byte[], Writable)
    */
   public static byte [] getBytes(final Writable w) throws IOException {
+    if (w == null) {
+      throw new IllegalArgumentException("Writable cannot be null");
+    }
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(byteStream);
     try {
@@ -64,7 +73,11 @@ public class Writables {
   public static Writable getWritable(final byte [] bytes, final Writable w)
   throws IOException {
     if (bytes == null || bytes.length == 0) {
-      throw new IOException("Con't build a writable with empty bytes array");
+      throw new IllegalArgumentException(
+          "Con't build a writable with empty bytes array");
+    }
+    if (w == null) {
+      throw new IllegalArgumentException("Writable cannot be null");
     }
     DataInputBuffer in = new DataInputBuffer();
     try {
@@ -85,14 +98,67 @@ public class Writables {
    */
   public static Writable copyWritable(final Writable src, final Writable tgt)
   throws IOException {
+    if (src == null || tgt == null) {
+      throw new IllegalArgumentException("Writables cannot be null");
+    }
     byte [] bytes = getBytes(src);
-    DataInputStream dis = null;
+    DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
     try {
-      dis = new DataInputStream(new ByteArrayInputStream(bytes));
       tgt.readFields(dis);
     } finally {
       dis.close();
     }
     return tgt;
+  }
+  
+  /**
+   * Convert a long value to a byte array
+   * @param val
+   * @return the byte array
+   * @throws IOException
+   */
+  public static byte[] longToBytes(long val) throws IOException {
+    return getBytes(new LongWritable(val));
+  }
+  
+  /**
+   * Converts a byte array to a long value
+   * @param bytes
+   * @return the long value
+   * @throws IOException
+   */
+  public static long bytesToLong(byte[] bytes) throws IOException {
+    if (bytes == null || bytes.length == 0) {
+      return -1L;
+    }
+    return ((LongWritable) getWritable(bytes, new LongWritable())).get();
+  }
+  
+  /**
+   * Converts a string to a byte array in a consistent manner.
+   * @param s
+   * @return the byte array
+   * @throws UnsupportedEncodingException
+   */
+  public static byte[] stringToBytes(String s)
+  throws UnsupportedEncodingException {
+    if (s == null) {
+      throw new IllegalArgumentException("string cannot be null");
+    }
+    return s.getBytes(HConstants.UTF8_ENCODING);
+  }
+  
+  /**
+   * Converts a byte array to a string in a consistent manner.
+   * @param bytes
+   * @return the string
+   * @throws UnsupportedEncodingException
+   */
+  public static String bytesToString(byte[] bytes)
+  throws UnsupportedEncodingException {
+    if (bytes == null || bytes.length == 0) {
+      return "";
+    }
+    return new String(bytes, HConstants.UTF8_ENCODING);
   }
 }

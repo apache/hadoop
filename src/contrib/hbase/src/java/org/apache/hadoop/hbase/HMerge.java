@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 
+import org.apache.hadoop.hbase.util.Writables;
+
 /** 
  * A non-instantiable class that has a static method capable of compacting
  * a table by merging adjacent regions that have grown too small.
@@ -220,7 +222,9 @@ class HMerge implements HConstants {
           throw new NoSuchElementException("meta region entry missing "
               + COL_REGIONINFO);
         }
-        HRegionInfo region = new HRegionInfo(bytes);
+        HRegionInfo region =
+          (HRegionInfo) Writables.getWritable(bytes, new HRegionInfo());
+
         if(!region.offLine) {
           throw new TableNotDisabledException("region " + region.regionName
               + " is not disabled");

@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -46,14 +44,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.io.KeyedData;
-import org.apache.hadoop.hbase.util.Keying;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
+
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 
 /**
@@ -208,9 +207,11 @@ HMasterRegionInterface, Runnable {
             results.put(values[i].getKey().getColumn(), values[i].getData());
           }
 
-          HRegionInfo info = HRegion.getRegionInfo(results);
-          String serverName = HRegion.getServerName(results);
-          long startCode = HRegion.getStartCode(results);
+          HRegionInfo info = (HRegionInfo) Writables.getWritable(
+              results.get(COL_REGIONINFO), new HRegionInfo());
+
+          String serverName = Writables.bytesToString(results.get(COL_SERVER));
+          long startCode = Writables.bytesToLong(results.get(COL_STARTCODE));
 
           if (LOG.isDebugEnabled()) {
             LOG.debug(Thread.currentThread().getName() + " scanner: " +
@@ -263,9 +264,11 @@ HMasterRegionInterface, Runnable {
           splitParents.entrySet()) {
           
           TreeMap<Text, byte[]> results = e.getValue();
-          cleanupSplits(e.getKey(),
-              HRegion.getSplit(results, HRegion.COL_SPLITA),
-              HRegion.getSplit(results, HRegion.COL_SPLITB));
+          cleanupSplits(region.regionName, regionServer, e.getKey(), 
+              (HRegionInfo) Writables.getWritable(results.get(COL_SPLITA),
+                  new HRegionInfo()),
+              (HRegionInfo) Writables.getWritable(results.get(COL_SPLITB),
+                  new HRegionInfo()));
         }
       }
       LOG.info(Thread.currentThread().getName() + " scan of meta region " +
@@ -286,17 +289,19 @@ HMasterRegionInterface, Runnable {
       return true;
     }
 
-    /* 
-     * @param info
-     * @param splitA
-     * @param splitB
+    /**
+     * @param metaRegionName
+     * @param server HRegionInterface of meta server to talk to 
+     * @param info HRegionInfo of split parent
+     * @param splitA low key range child region 
+     * @param splitB upper key range child region
      * @return True if we removed <code>info</code> and this region has
      * been cleaned up.
      * @throws IOException
      */
-    private boolean cleanupSplits(final HRegionInfo info,
-        final HRegionInfo splitA, final HRegionInfo splitB)
-    throws IOException {
+    private boolean cleanupSplits(final Text metaRegionName, 
+        final HRegionInterface server, final HRegionInfo info,
+        final HRegionInfo splitA, final HRegionInfo splitB) throws IOException {
     
       boolean result = false;
       if (LOG.isDebugEnabled()) {
@@ -308,11 +313,11 @@ HMasterRegionInterface, Runnable {
       
       if (!noReferencesA) {
         noReferencesA =
-          hasReferences(info.getRegionName(), splitA, HRegion.COL_SPLITA);
+          hasReferences(metaRegionName, server, info.getRegionName(), splitA, COL_SPLITA);
       }
       if (!noReferencesB) {
         noReferencesB =
-          hasReferences(info.getRegionName(), splitB, HRegion.COL_SPLITB);
+          hasReferences(metaRegionName, server, info.getRegionName(), splitB, COL_SPLITB);
       }
       if (!(noReferencesA && noReferencesB)) {
         
@@ -322,9 +327,16 @@ HMasterRegionInterface, Runnable {
         LOG.info("Deleting region " + info.getRegionName() +
         " because daughter splits no longer hold references");
         
-        HRegion.deleteRegion(fs, dir, info.getRegionName());
-        HRegion.removeRegionFromMETA(conf, this.tableName,
-            info.getRegionName());
+        if (!HRegion.deleteRegion(fs, dir, info.getRegionName())) {
+          LOG.warn("Deletion of " + info.getRegionName() + " failed");
+        }
+        
+        BatchUpdate b = new BatchUpdate();
+        long lockid = b.startUpdate(info.getRegionName());
+        b.delete(lockid, COL_REGIONINFO);
+        b.delete(lockid, COL_SERVER);
+        b.delete(lockid, COL_STARTCODE);
+        server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
         
         result = true;
       }
@@ -336,11 +348,30 @@ HMasterRegionInterface, Runnable {
       return result;
     }
 
-    protected boolean hasReferences(final Text regionName,
+    protected boolean hasReferences(final Text metaRegionName, 
+        final HRegionInterface server, final Text regionName,
         final HRegionInfo split, final Text column) throws IOException {
       
-      boolean result =
-        HRegion.hasReferences(fs, fs.makeQualified(dir), split);
+      boolean result = false;
+      for (Text family: split.getTableDesc().families().keySet()) {
+        Path p = HStoreFile.getMapDir(fs.makeQualified(dir),
+            split.getRegionName(), HStoreKey.extractFamily(family));
+        
+        // Look for reference files.
+        
+        Path [] ps = fs.listPaths(p,
+            new PathFilter () {
+              public boolean accept(Path path) {
+                return HStoreFile.isReference(path);
+              }
+            }
+        );
+        
+        if (ps != null && ps.length > 0) {
+          result = true;
+          break;
+        }
+      }
       
       if (result) {
         return result;
@@ -351,12 +382,11 @@ HMasterRegionInterface, Runnable {
             +" no longer has references to " + regionName.toString());
       }
       
-      HTable t = new HTable(conf, this.tableName);
-      try {
-        HRegion.removeSplitFromMETA(t, regionName, column);
-      } finally {
-        t.close();
-      }
+      BatchUpdate b = new BatchUpdate();
+      long lockid = b.startUpdate(regionName);
+      b.delete(lockid, column);
+      server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+        
       return result;
     }
 
@@ -380,7 +410,7 @@ HMasterRegionInterface, Runnable {
       }
 
       HServerInfo storedInfo = null;
-      if (serverName != null) {
+      if (serverName.length() != 0) {
         Map<Text, HRegionInfo> regionsToKill = killList.get(serverName);
         if (regionsToKill != null &&
             regionsToKill.containsKey(info.regionName)) {
@@ -691,7 +721,7 @@ HMasterRegionInterface, Runnable {
    * We fill 'unassignedRecords' by scanning ROOT and META tables, learning the
    * set of all known valid regions.
    */
-  Map<Text, HRegionInfo> unassignedRegions;
+  SortedMap<Text, HRegionInfo> unassignedRegions;
 
   /**
    * The 'assignAttempts' table maps from regions to a timestamp that indicates
@@ -775,10 +805,12 @@ HMasterRegionInterface, Runnable {
     if (!fs.exists(rootRegionDir)) {
       LOG.info("bootstrap: creating ROOT and first META regions");
       try {
-        HRegion root = HRegion.createHRegion(0L, HGlobals.rootTableDesc,
-            this.dir, this.conf);
-        HRegion meta = HRegion.createHRegion(1L, HGlobals.metaTableDesc,
-            this.dir, this.conf);
+        HRegion root = HRegion.createHRegion(HGlobals.rootRegionInfo, this.dir,
+            this.conf, null);
+        
+        HRegion meta =
+          HRegion.createHRegion(new HRegionInfo(1L, HGlobals.metaTableDesc,
+              null, null), this.dir, this.conf, null);
         
         // Add first region from the META table to the ROOT region.
         
@@ -842,7 +874,7 @@ HMasterRegionInterface, Runnable {
     this.metaScannerThread = new Thread(metaScanner, "HMaster.metaScanner");
 
     this.unassignedRegions = 
-      Collections.synchronizedMap(new HashMap<Text, HRegionInfo>());
+      Collections.synchronizedSortedMap(new TreeMap<Text, HRegionInfo>());
 
     this.unassignedRegions.put(HGlobals.rootRegionInfo.regionName,
         HGlobals.rootRegionInfo);
@@ -1372,7 +1404,12 @@ HMasterRegionInterface, Runnable {
         // A region has split.
         
         HRegionInfo newRegionA = incomingMsgs[++i].getRegionInfo();
+        unassignedRegions.put(newRegionA.getRegionName(), newRegionA);
+        assignAttempts.put(newRegionA.getRegionName(), Long.valueOf(0L));
+
         HRegionInfo newRegionB = incomingMsgs[++i].getRegionInfo();
+        unassignedRegions.put(newRegionB.getRegionName(), newRegionB);
+        assignAttempts.put(newRegionB.getRegionName(), Long.valueOf(0L));
 
         LOG.info("region " + region.regionName + " split. New regions are: "
             + newRegionA.regionName + ", " + newRegionB.regionName);
@@ -1381,14 +1418,6 @@ HMasterRegionInterface, Runnable {
           // A meta region has split.
 
           onlineMetaRegions.remove(region.getStartKey());
-          onlineMetaRegions.put(newRegionA.getStartKey(),
-              new MetaRegion(info.getServerAddress(),
-                  newRegionA.getRegionName(), newRegionA.getStartKey()));
-          
-          onlineMetaRegions.put(newRegionB.getStartKey(),
-              new MetaRegion(info.getServerAddress(),
-                  newRegionB.getRegionName(), newRegionB.getStartKey()));
-
           numberOfMetaRegions.incrementAndGet();
         }
         break;
@@ -1673,15 +1702,15 @@ HMasterRegionInterface, Runnable {
           // region had been on shutdown server (could be null because we
           // missed edits in hlog because hdfs does not do write-append).
 
-          String serverName = null;
+          String serverName;
           try {
-            serverName = Keying.bytesToString(results.get(COL_SERVER));
+            serverName = Writables.bytesToString(results.get(COL_SERVER));
 
           } catch(UnsupportedEncodingException e) {
             LOG.error("Server name", e);
             break;
           }
-          if (serverName != null && serverName.length() > 0 &&
+          if (serverName.length() > 0 &&
               deadServerName.compareTo(serverName) != 0) {
           
             // This isn't the server you're looking for - move along
@@ -1776,11 +1805,8 @@ HMasterRegionInterface, Runnable {
         
         } else if (e.regionOffline) {
           e.info.offLine = true;
-          ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
-          DataOutputStream s = new DataOutputStream(byteValue);
-          e.info.write(s);
           server.put(regionName, clientId, lockid, COL_REGIONINFO,
-              byteValue.toByteArray());
+              Writables.getBytes(e.info));
         }
         server.delete(regionName, clientId, lockid, COL_SERVER);
         server.delete(regionName, clientId, lockid, COL_STARTCODE);
@@ -2037,12 +2063,8 @@ HMasterRegionInterface, Runnable {
 
           } else if (!reassignRegion ) {
             regionInfo.offLine = true;
-            ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
-            DataOutputStream s = new DataOutputStream(byteValue);
-            regionInfo.write(s);
-
             server.put(metaRegionName, clientId, lockid, COL_REGIONINFO,
-                byteValue.toByteArray());
+                Writables.getBytes(regionInfo));
           }
           server.delete(metaRegionName, clientId, lockid, COL_SERVER);
           server.delete(metaRegionName, clientId, lockid, COL_STARTCODE);
@@ -2097,7 +2119,7 @@ HMasterRegionInterface, Runnable {
     private HServerAddress serverAddress;
     private byte [] startCode;
 
-    PendingOpenReport(HServerInfo info, HRegionInfo region) {
+    PendingOpenReport(HServerInfo info, HRegionInfo region) throws IOException {
       if (region.tableDesc.getName().equals(META_TABLE_NAME)) {
         // The region which just came on-line is a META region.
         // We need to look in the ROOT region for its information.
@@ -2111,12 +2133,7 @@ HMasterRegionInterface, Runnable {
       }
       this.region = region;
       this.serverAddress = info.getServerAddress();
-      try {
-        this.startCode =
-          String.valueOf(info.getStartCode()).getBytes(UTF8_ENCODING);
-      } catch(UnsupportedEncodingException e) {
-        LOG.error("Start code", e);
-      }
+      this.startCode = Writables.longToBytes(info.getStartCode());
     }
 
     /** {@inheritDoc} */
@@ -2188,7 +2205,7 @@ HMasterRegionInterface, Runnable {
               region.getRegionName());
           
           server.put(metaRegionName, clientId, lockid, COL_SERVER,
-              serverAddress.toString().getBytes(UTF8_ENCODING));
+              Writables.stringToBytes(serverAddress.toString()));
           
           server.put(metaRegionName, clientId, lockid, COL_STARTCODE, startCode);
           
@@ -2343,21 +2360,18 @@ HMasterRegionInterface, Runnable {
 
       // 2. Create the HRegion
           
-      HRegion region = HRegion.createHRegion(newRegion.regionId,
-          newRegion.getTableDesc(), this.dir, this.conf);
+      HRegion region =
+        HRegion.createHRegion(newRegion, this.dir, this.conf, null);
 
       // 3. Insert into meta
           
       HRegionInfo info = region.getRegionInfo();
       Text regionName = region.getRegionName();
-      ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
-      DataOutputStream s = new DataOutputStream(byteValue);
-      info.write(s);
       long clientId = rand.nextLong();
       long lockid = r.startUpdate(metaRegionName, clientId, regionName);
       
       r.put(metaRegionName, clientId, lockid, COL_REGIONINFO,
-          byteValue.toByteArray());
+          Writables.getBytes(info));
       
       r.commit(metaRegionName, clientId, lockid, System.currentTimeMillis());
 
@@ -2468,7 +2482,6 @@ HMasterRegionInterface, Runnable {
                     System.currentTimeMillis(), null);
 
               try {
-                DataInputBuffer inbuf = new DataInputBuffer();
                 while (true) {
                   HRegionInfo info = new HRegionInfo();
                   String serverName = null;
@@ -2486,14 +2499,13 @@ HMasterRegionInterface, Runnable {
                     Text column = values[i].getKey().getColumn();
                     if (column.equals(COL_REGIONINFO)) {
                       haveRegionInfo = true;
-                      inbuf.reset(values[i].getData(),
-                          values[i].getData().length);
-                      info.readFields(inbuf);
+                      info = (HRegionInfo) Writables.getWritable(
+                          values[i].getData(), info);
                     
                     } else if (column.equals(COL_SERVER)) {
                       try {
                         serverName =
-                          new String(values[i].getData(), UTF8_ENCODING);
+                          Writables.bytesToString(values[i].getData());
                     
                       } catch (UnsupportedEncodingException e) {
                         assert(false);
@@ -2501,8 +2513,7 @@ HMasterRegionInterface, Runnable {
                     
                     } else if (column.equals(COL_STARTCODE)) {
                       try {
-                        startCode = Long.valueOf(new String(values[i].getData(),
-                            UTF8_ENCODING)).longValue();
+                        startCode = Writables.bytesToLong(values[i].getData());
                       
                       } catch (UnsupportedEncodingException e) {
                         assert(false);
@@ -2568,7 +2579,7 @@ HMasterRegionInterface, Runnable {
 
     protected boolean isBeingServed(String serverName, long startCode) {
       boolean result = false;
-      if (serverName != null && startCode != -1L) {
+      if (serverName != null && serverName.length() > 0 && startCode != -1L) {
         HServerInfo s;
         synchronized (serversToServerInfo) {
           s = serversToServerInfo.get(serverName);
@@ -2731,13 +2742,8 @@ HMasterRegionInterface, Runnable {
         final Text regionName, final HRegionInfo i) throws IOException {
       
       i.offLine = !online;
-
-      ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
-      DataOutputStream s = new DataOutputStream(byteValue);
-      i.write(s);
-
       server.put(regionName, clientId, lockid, COL_REGIONINFO,
-          byteValue.toByteArray());
+          Writables.getBytes(i));
     }
   }
 
@@ -2811,15 +2817,12 @@ HMasterRegionInterface, Runnable {
     protected void updateRegionInfo(HRegionInterface server, Text regionName,
         HRegionInfo i) throws IOException {
       
-      ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
-      DataOutputStream s = new DataOutputStream(byteValue);
-      i.write(s);
       long lockid = -1L;
       long clientId = rand.nextLong();
       try {
         lockid = server.startUpdate(regionName, clientId, i.regionName);
         server.put(regionName, clientId, lockid, COL_REGIONINFO,
-            byteValue.toByteArray());
+            Writables.getBytes(i));
       
         server.commit(regionName, clientId, lockid, System.currentTimeMillis());
         lockid = -1L;

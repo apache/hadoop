@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.Text;
 
+import org.apache.hadoop.hbase.util.Writables;
+
 /**
  * A standalone HRegion directory reader.  Currently reads content on
  * file system only.
@@ -194,7 +196,7 @@ class HRegiondirReader {
         byte [] colvalue = es.getValue();
         Object value = null;
         if (colname.toString().equals("info:regioninfo")) {
-          value = new HRegionInfo(colvalue);
+          value = Writables.getWritable(colvalue, new HRegionInfo());
         } else {
           value = new String(colvalue, HConstants.UTF8_ENCODING);
         }
