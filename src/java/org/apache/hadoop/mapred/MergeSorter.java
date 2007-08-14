@@ -58,4 +58,12 @@ implements Comparator<IntWritable> {
   public int compare (IntWritable i, IntWritable j) {
     return super.compare(i.get(), j.get());
   }
+  
+  /** Add the extra memory that will be utilized by the sort method */
+  public long getMemoryUtilized() {
+    //this is memory that will be actually utilized (considering the temp
+    //array that will be allocated by the sort() method (mergesort))
+    return super.getMemoryUtilized() + super.count * 4; 
+  }
+
 }
