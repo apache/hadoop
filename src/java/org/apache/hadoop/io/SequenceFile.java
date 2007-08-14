@@ -648,9 +648,10 @@ public class SequenceFile {
     long lastSyncPos;                     // position of last sync
     byte[] sync;                          // 16 random bytes
     {
-      try {                                       // use hash of uid + host
+      try {                                       
         MessageDigest digester = MessageDigest.getInstance("MD5");
-        digester.update((new UID()+"@"+InetAddress.getLocalHost()).getBytes());
+        long time = System.currentTimeMillis();
+        digester.update((new UID()+"@"+time).getBytes());
         sync = digester.digest();
       } catch (Exception e) {
         throw new RuntimeException(e);

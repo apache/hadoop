@@ -520,6 +520,9 @@ Branch 0.14 (unreleased changes)
 152. HADOOP-1629.  Added a upgrade test for HADOOP-1134.
      (Raghu Angadi via nigel)
 
+153. HADOOP-1698.  Fix performance problems on map output sorting for jobs
+     with large numbers of reduces. (Devaraj Das via omalley)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

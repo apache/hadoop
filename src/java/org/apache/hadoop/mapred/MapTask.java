@@ -330,6 +330,9 @@ class MapTask extends Task {
       }
       
       synchronized (this) {
+        if (keyValBuffer == null) {
+          keyValBuffer = new DataOutputBuffer();
+        }
         //dump the key/value to buffer
         int keyOffset = keyValBuffer.getLength(); 
         key.write(keyValBuffer);
@@ -350,7 +353,9 @@ class MapTask extends Task {
           totalMem += sortImpl[i].getMemoryUtilized();
         if ((keyValBuffer.getLength() + totalMem) >= maxBufferSize) {
           sortAndSpillToDisk();
-          keyValBuffer.reset();
+          //we don't reuse the keyValBuffer. We want to maintain consistency
+          //in the memory model (for negligible performance loss).
+          keyValBuffer = null;
           for (int i = 0; i < partitions; i++) {
             sortImpl[i].close();
           }
