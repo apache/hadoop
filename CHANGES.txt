@@ -523,6 +523,10 @@ Branch 0.14 (unreleased changes)
 153. HADOOP-1698.  Fix performance problems on map output sorting for jobs
      with large numbers of reduces. (Devaraj Das via omalley)
 
+154. HADOOP-1716.  Fix a Pipes wordcount example to remove the 'file:'
+     schema from its output path.  (omalley via cutting)
+
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.

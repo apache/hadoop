@@ -35,7 +35,7 @@ public class WordCountInputFormat implements InputFormat {
     private String filename;
     WordCountInputSplit() { }
     WordCountInputSplit(Path filename) {
-      this.filename = filename.toString();
+      this.filename = filename.toUri().getPath();
     }
     public void write(DataOutput out) throws IOException { 
       Text.writeString(out, filename); 

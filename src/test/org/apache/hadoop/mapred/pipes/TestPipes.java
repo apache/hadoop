@@ -150,7 +150,8 @@ public class TestPipes extends TestCase {
     JobConf job = mr.createJobConf();
     job.setInputFormat(WordCountInputFormat.class);
     FileSystem local = FileSystem.getLocal(job);
-    Path testDir = new Path(System.getProperty("test.build.data"), "pipes");
+    Path testDir = new Path("file:" + System.getProperty("test.build.data"), 
+                            "pipes");
     Path inDir = new Path(testDir, "input");
     Path outDir = new Path(testDir, "output");
     Path wordExec = new Path("/testing/bin/application");
