@@ -49,4 +49,44 @@ abstract public class Command {
   /** Parse the execution result */
   protected abstract void parseExecResult(BufferedReader lines)
   throws IOException;
+
+  /// A simple implementation of Command
+  private static class SimpleCommandExecutor extends Command {
+    
+    private String[] command;
+    private StringBuffer reply;
+    
+    SimpleCommandExecutor(String[] execString) {
+      command = execString;
+    }
+
+    @Override
+    protected String[] getExecString() {
+      return command;
+    }
+
+    @Override
+    protected void parseExecResult(BufferedReader lines) throws IOException {
+      reply = new StringBuffer();
+      char[] buf = new char[512];
+      int nRead;
+      while ( (nRead = lines.read(buf, 0, buf.length)) > 0 ) {
+        reply.append(buf, 0, nRead);
+      }
+    }
+    
+    String getReply() {
+      return (reply == null) ? "" : reply.toString();
+    }
   }
+  
+  /** 
+   * Static method to execute a command. Covers most of the simple cases 
+   * without requiring the user to implement Command interface.
+   */
+  public static String execCommand(String[] cmd) throws IOException {
+    SimpleCommandExecutor exec = new SimpleCommandExecutor(cmd);
+    exec.run();
+    return exec.getReply();
+  }
+}

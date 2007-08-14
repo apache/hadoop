@@ -178,8 +178,9 @@ public class MiniDFSCluster {
     String[] args = (operation == null ||
                      operation == StartupOption.FORMAT ||
                      operation == StartupOption.REGULAR) ?
-      new String[] {} : new String[] {"-"+operation.toString()};
-        
+                    null : new String[] {"-"+operation.toString()};
+    String [] dnArgs = (operation == StartupOption.UPGRADE) ? null : args;
+    
     for (int i = 0; i < numDataNodes; i++) {
       Configuration dnConf = new Configuration(conf);
       if (manageDfsDirs) {
@@ -198,7 +199,7 @@ public class MiniDFSCluster {
       }
       System.out.println("Starting DataNode " + i + " with dfs.data.dir: " 
                          + dnConf.get("dfs.data.dir"));
-      dataNodes.add(DataNode.createDataNode(args, dnConf));
+      dataNodes.add(DataNode.createDataNode(dnArgs, dnConf));
     }
   }
   

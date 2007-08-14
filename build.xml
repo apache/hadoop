@@ -448,6 +448,8 @@
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.txt" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.jar" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/dfs/hadoop-12-dfs-dir.tgz" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/dfs/hadoop-12-dfs-dir.txt" todir="${test.cache.data}"/>
   </target>
 
   <!-- ================================================================== -->
@@ -463,6 +465,7 @@
            fork="yes" maxmemory="256m" dir="${basedir}" timeout="${test.timeout}"
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
+      <sysproperty key="test.cache.data" value="${test.cache.data}"/>    	
       <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
       <sysproperty key="java.library.path"
