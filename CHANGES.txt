@@ -529,6 +529,8 @@ Branch 0.14 (unreleased changes)
 155. HADOOP-1714.  Fix TestDFSUpgradeFromImage to work on Windows.
      (Raghu Angadi via nigel)
 
+156. HADOOP-1663.  Return a non-zero exit code if streaming fails. (Lohit Renu
+     via omalley)
 
 Release 0.13.0 - 2007-06-08
 

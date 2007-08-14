@@ -28,7 +28,12 @@ public class HadoopStreaming {
 
   public static void main(String[] args) throws IOException {
     boolean mayExit = true;
+    int returnStatus = 0;
     StreamJob job = new StreamJob(args, mayExit);
-    job.go();
+    returnStatus = job.go();
+    if (returnStatus != 0) {
+      System.err.println("Streaming Job Failed!");
+      System.exit(returnStatus);
+    }
   }
 }
