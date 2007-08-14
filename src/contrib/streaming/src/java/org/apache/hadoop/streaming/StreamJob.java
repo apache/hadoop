@@ -98,7 +98,7 @@ public class StreamJob {
    * to the jobtracker
    * @throws IOException
    */
-  public void go() throws IOException {
+  public int go() throws IOException {
     init();
 
     preProcessArgs();
@@ -106,7 +106,7 @@ public class StreamJob {
     postProcessArgs();
 
     setJobConf();
-    submitAndMonitorJob();
+    return submitAndMonitorJob();
   }
   
   protected void init() {
@@ -868,7 +868,7 @@ public class StreamJob {
   }
 
   // Based on JobClient
-  public void submitAndMonitorJob() throws IOException {
+  public int submitAndMonitorJob() throws IOException {
 
     if (jar_ != null && isLocalHadoop()) {
       // getAbs became required when shell and subvm have different working dirs...
@@ -906,28 +906,33 @@ public class StreamJob {
       }
       if (!running_.isSuccessful()) {
         jobInfo();
-        throw new IOException("Job not Successful!");
+	LOG.error("Job not Successful!");
+	return 1;
       }
       LOG.info("Job complete: " + jobId_);
       LOG.info("Output: " + output_);
       error = false;
-    } catch(FileNotFoundException fe){
+    } catch(FileNotFoundException fe) {
       LOG.error("Error launching job , bad input path : " + fe.getMessage());
-    }catch(InvalidJobConfException je){
+      return 2;
+    } catch(InvalidJobConfException je) {
       LOG.error("Error launching job , Invalid job conf : " + je.getMessage());
-    }catch(FileAlreadyExistsException fae){
+      return 3;
+    } catch(FileAlreadyExistsException fae) {
       LOG.error("Error launching job , Output path already exists : " 
                 + fae.getMessage());
-    }catch(IOException ioe){
+      return 4;
+    } catch(IOException ioe) {
       LOG.error("Error Launching job : " + ioe.getMessage());
-    }
-    finally {
+      return 5;
+    } finally {
       if (error && (running_ != null)) {
         LOG.info("killJob...");
         running_.killJob();
       }
       jc_.close();
     }
+    return 0;
   }
   /** Support -jobconf x=y x1=y1 type options **/
   class MultiPropertyOption extends PropertyOption{
