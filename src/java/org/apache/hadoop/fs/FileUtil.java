@@ -316,16 +316,26 @@ public class FileUtil {
 
   /**
    * Convert a os-native filename to a path that works for the shell.
+   * @param filename The filename to convert
+   * @return The unix pathname
+   * @throws IOException on windows, there can be problems with the subprocess
+   */
+  public static String makeShellPath(String filename) throws IOException {
+    if (Path.WINDOWS) {
+      return new CygPathCommand(filename).getResult();
+    } else {
+      return filename;
+    }    
+  }
+  
+  /**
+   * Convert a os-native filename to a path that works for the shell.
    * @param file The filename to convert
    * @return The unix pathname
    * @throws IOException on windows, there can be problems with the subprocess
    */
   public static String makeShellPath(File file) throws IOException {
-    if (Path.WINDOWS) {
-      return new CygPathCommand(file.toString()).getResult();
-    } else {
-      return file.toString();
-    }
+    return makeShellPath(file.toString());
   }
 
   /**

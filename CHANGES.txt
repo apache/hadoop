@@ -526,6 +526,9 @@ Branch 0.14 (unreleased changes)
 154. HADOOP-1716.  Fix a Pipes wordcount example to remove the 'file:'
      schema from its output path.  (omalley via cutting)
 
+155. HADOOP-1714.  Fix TestDFSUpgradeFromImage to work on Windows.
+     (Raghu Angadi via nigel)
+
 
 Release 0.13.0 - 2007-06-08
 

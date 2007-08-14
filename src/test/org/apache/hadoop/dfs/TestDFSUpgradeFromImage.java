@@ -70,7 +70,8 @@ public class TestDFSUpgradeFromImage extends TestCase {
     }
     
     LOG.info("Unpacking the tar file " + tarFile);
-    String[] cmd = { "tar", "-zxf", tarFile, "-C", dataDir };
+    String[] cmd = { "tar", "-zxf", FileUtil.makeShellPath(tarFile), 
+                     "-C", FileUtil.makeShellPath(dataDir) };
     Command.execCommand(cmd);
     
     //Now read the reference info
