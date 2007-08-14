@@ -515,6 +515,11 @@ Branch 0.14 (unreleased changes)
 150. HADOOP-1568.  Expose HDFS as xml/http filesystem to provide cross-version
      compatability. (Chris Douglas via omalley)
 
+151. HADOOP-1668.  Added an INCOMPATIBILITY section to CHANGES.txt. (nigel)
+
+152. HADOOP-1629.  Added a upgrade test for HADOOP-1134.
+     (Raghu Angadi via nigel)
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
