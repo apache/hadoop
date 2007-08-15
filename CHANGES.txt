@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Branch 0.14 (unreleased changes)
+Release 0.14.0 - 2007-08-17
 
   INCOMPATIBLE CHANGES
 
