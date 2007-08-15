@@ -93,4 +93,5 @@ Trunk (unreleased changes)
      serve daughter splits. Phase 2: Master assigns children of split region
      instead of HRegionServer serving both children.
  58. HADOOP-1710 All updates should be batch updates
-
+ 59. HADOOP-1711 HTable API should use interfaces instead of concrete classes as
+     method parameters and return values
