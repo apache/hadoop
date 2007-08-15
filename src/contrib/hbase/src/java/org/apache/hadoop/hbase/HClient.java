@@ -412,7 +412,7 @@ public class HClient implements HConstants {
     if(this.table.get() == null) {
       throw new IllegalStateException("Must open table first");
     }
-    return this.table.get().startBatchUpdate(row);
+    return this.table.get().startUpdate(row);
   }
   
   /** 
@@ -423,7 +423,7 @@ public class HClient implements HConstants {
     if(this.table.get() == null) {
       throw new IllegalStateException("Must open table first");
     }
-    this.table.get().abortBatch(lockid);
+    this.table.get().abort(lockid);
   }
   
   /** 
@@ -448,7 +448,7 @@ public class HClient implements HConstants {
     if(this.table.get() == null) {
       throw new IllegalStateException("Must open table first");
     }
-    this.table.get().commitBatch(lockid, timestamp);
+    this.table.get().commit(lockid, timestamp);
   }
   
   /** 
@@ -464,9 +464,8 @@ public class HClient implements HConstants {
    * 
    * @param row Name of row to start update against.
    * @return Row lockid.
-   * @throws IOException
    */
-  public long startUpdate(final Text row) throws IOException {
+  public long startUpdate(final Text row) {
     if(this.table.get() == null) {
       throw new IllegalStateException("Must open table first");
     }
@@ -480,9 +479,8 @@ public class HClient implements HConstants {
    * @param lockid lock id returned from startUpdate
    * @param column column whose value is being set
    * @param val new value for column
-   * @throws IOException
    */
-  public void put(long lockid, Text column, byte val[]) throws IOException {
+  public void put(long lockid, Text column, byte val[]) {
     if(this.table.get() == null) {
       throw new IllegalStateException("Must open table first");
     }
@@ -494,9 +492,8 @@ public class HClient implements HConstants {
    *
    * @param lockid              - lock id returned from startUpdate
    * @param column              - name of column whose value is to be deleted
-   * @throws IOException
    */
-  public void delete(long lockid, Text column) throws IOException {
+  public void delete(long lockid, Text column) {
     if(this.table.get() == null) {
       throw new IllegalStateException("Must open table first");
     }
@@ -507,9 +504,8 @@ public class HClient implements HConstants {
    * Abort a row mutation
    *
    * @param lockid              - lock id returned from startUpdate
-   * @throws IOException
    */
-  public void abort(long lockid) throws IOException {
+  public void abort(long lockid) {
     if(this.table.get() == null) {
       throw new IllegalStateException("Must open table first");
     }
@@ -544,13 +540,11 @@ public class HClient implements HConstants {
    * Renew lease on update
    * 
    * @param lockid              - lock id returned from startUpdate
-   * @throws IOException
    */
-  public void renewLease(long lockid) throws IOException {
+  public void renewLease(@SuppressWarnings("unused") long lockid) {
     if(this.table.get() == null) {
       throw new IllegalStateException("Must open table first");
     }
-    this.table.get().renewLease(lockid);
   }
 
   private void printUsage() {

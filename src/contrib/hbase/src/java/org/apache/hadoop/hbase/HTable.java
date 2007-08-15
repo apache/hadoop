@@ -52,11 +52,6 @@ public class HTable implements HConstants {
   
   // For row mutation operations
   
-  protected volatile long currentLockId;
-  protected volatile Text currentRegion;
-  protected volatile HRegionInterface currentServer;
-  protected volatile long clientid;
-  
   protected volatile boolean closed;
 
   protected void checkClosed() {
@@ -81,7 +76,6 @@ public class HTable implements HConstants {
     this.rand = new Random();
     tableServers = connection.getTableServers(tableName);
     this.batch = null;
-    this.currentLockId = -1L;
     closed = false;
   }
 
@@ -116,10 +110,6 @@ public class HTable implements HConstants {
     closed = true;
     tableServers = null;
     batch = null;
-    currentLockId = -1L;
-    currentRegion = null;
-    currentServer = null;
-    clientid = -1L;
     connection.close(tableName);
   }
   
@@ -127,8 +117,28 @@ public class HTable implements HConstants {
    * Verifies that no update is in progress
    */
   public synchronized void checkUpdateInProgress() {
-    if (batch != null || currentLockId != -1L) {
-      throw new IllegalStateException("update in progress");
+    updateInProgress(false);
+  }
+  
+  /*
+   * Checks to see if an update is in progress
+   * 
+   * @param updateMustBeInProgress
+   *    If true, an update must be in progress. An IllegalStateException will be
+   *    thrown if not.
+   *    
+   *    If false, an update must not be in progress. An IllegalStateException
+   *    will be thrown if an update is in progress.
+   */
+  private void updateInProgress(boolean updateMustBeInProgress) {
+    if (updateMustBeInProgress) {
+      if (batch == null) {
+        throw new IllegalStateException("no update in progress");
+      }
+    } else {
+      if (batch != null) {
+        throw new IllegalStateException("update in progress");
+      }
     }
   }
   
@@ -415,27 +425,25 @@ public class HTable implements HConstants {
    *
    * @param row name of row to be updated
    * @return lockid to be used in subsequent put, delete and commit calls
+   * 
+   * Deprecated. Batch operations are now the default. startBatchUpdate is now
+   * implemented by @see {@link #startUpdate(Text)} 
    */
+  @Deprecated
   public synchronized long startBatchUpdate(final Text row) {
-    checkClosed();
-    checkUpdateInProgress();
-    batch = new BatchUpdate();
-    return batch.startUpdate(row);
+    return startUpdate(row);
   }
   
   /** 
    * Abort a batch mutation
    * @param lockid lock id returned by startBatchUpdate
+   * 
+   * Deprecated. Batch operations are now the default. abortBatch is now 
+   * implemented by @see {@link #abort(long)}
    */
+  @Deprecated
   public synchronized void abortBatch(final long lockid) {
-    checkClosed();
-    if (batch == null) {
-      throw new IllegalStateException("no batch update in progress");
-    }
-    if (batch.getLockid() != lockid) {
-      throw new IllegalArgumentException("invalid lock id " + lockid);
-    }
-    batch = null;
+    abort(lockid);
   }
   
   /** 
@@ -443,9 +451,13 @@ public class HTable implements HConstants {
    *
    * @param lockid lock id returned by startBatchUpdate
    * @throws IOException
+   * 
+   * Deprecated. Batch operations are now the default. commitBatch(long) is now
+   * implemented by @see {@link #commit(long)}
    */
+  @Deprecated
   public void commitBatch(final long lockid) throws IOException {
-    commitBatch(lockid, System.currentTimeMillis());
+    commit(lockid, System.currentTimeMillis());
   }
 
   /** 
@@ -454,14 +466,99 @@ public class HTable implements HConstants {
    * @param lockid lock id returned by startBatchUpdate
    * @param timestamp time to associate with all the changes
    * @throws IOException
+   * 
+   * Deprecated. Batch operations are now the default. commitBatch(long, long)
+   * is now implemented by @see {@link #commit(long, long)}
    */
+  @Deprecated
   public synchronized void commitBatch(final long lockid, final long timestamp)
   throws IOException {
 
+    commit(lockid, timestamp);
+  }
+  
+  /** 
+   * Start an atomic row insertion/update.  No changes are committed until the 
+   * call to commit() returns.
+   * 
+   * A call to abort() will abandon any updates in progress.
+   *
+   * 
+   * @param row Name of row to start update against.
+   * @return Row lockid.
+   */
+  public synchronized long startUpdate(final Text row) {
     checkClosed();
-    if (batch == null) {
-      throw new IllegalStateException("no batch update in progress");
+    updateInProgress(false);
+    batch = new BatchUpdate();
+    return batch.startUpdate(row);
+  }
+  
+  /** 
+   * Change a value for the specified column.
+   * Runs {@link #abort(long)} if exception thrown.
+   *
+   * @param lockid lock id returned from startUpdate
+   * @param column column whose value is being set
+   * @param val new value for column
+   */
+  public void put(long lockid, Text column, byte val[]) {
+    checkClosed();
+    if (val == null) {
+      throw new IllegalArgumentException("value cannot be null");
     }
+    updateInProgress(true);
+    batch.put(lockid, column, val);
+  }
+  
+  /** 
+   * Delete the value for a column
+   *
+   * @param lockid              - lock id returned from startUpdate
+   * @param column              - name of column whose value is to be deleted
+   */
+  public void delete(long lockid, Text column) {
+    checkClosed();
+    updateInProgress(true);
+    batch.delete(lockid, column);
+  }
+  
+  /** 
+   * Abort a row mutation
+   *
+   * @param lockid              - lock id returned from startUpdate
+   */
+  public synchronized void abort(long lockid) {
+    checkClosed();
+    updateInProgress(true);
+    if (batch.getLockid() != lockid) {
+      throw new IllegalArgumentException("invalid lock id " + lockid);
+    }
+    batch = null;
+  }
+  
+  /** 
+   * Finalize a row mutation
+   *
+   * @param lockid              - lock id returned from startUpdate
+   * @throws IOException
+   */
+  public void commit(long lockid) throws IOException {
+    commit(lockid, System.currentTimeMillis());
+  }
+
+  /** 
+   * Finalize a row mutation
+   *
+   * @param lockid              - lock id returned from startUpdate
+   * @param timestamp           - time to associate with the change
+   * @throws IOException
+   */
+  public synchronized void commit(long lockid, long timestamp)
+  throws IOException {
+    
+    checkClosed();
+    updateInProgress(true);
     if (batch.getLockid() != lockid) {
       throw new IllegalArgumentException("invalid lock id " + lockid);
     }
@@ -482,7 +579,8 @@ public class HTable implements HConstants {
 
           } else {
             if (e instanceof RemoteException) {
-              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+              e = RemoteExceptionHandler.decodeRemoteException(
+                  (RemoteException) e);
             }
             throw e;
           }
@@ -498,246 +596,16 @@ public class HTable implements HConstants {
     }
   }
   
-  /** 
-   * Start an atomic row insertion/update.  No changes are committed until the 
-   * call to commit() returns. A call to abort() will abandon any updates in progress.
-   *
-   * Callers to this method are given a lease for each unique lockid; before the
-   * lease expires, either abort() or commit() must be called. If it is not 
-   * called, the system will automatically call abort() on the client's behalf.
-   *
-   * The client can gain extra time with a call to renewLease().
-   * Start an atomic row insertion or update
-   * 
-   * @param row Name of row to start update against.
-   * @return Row lockid.
-   * @throws IOException
-   */
-  public synchronized long startUpdate(final Text row) throws IOException {
-    checkClosed();
-    checkUpdateInProgress();
-    for (int tries = 0; tries < numRetries; tries++) {
-      IOException e = null;
-      HRegionLocation info = getRegionLocation(row);
-      try {
-        currentServer =
-          connection.getHRegionConnection(info.getServerAddress());
-
-        currentRegion = info.getRegionInfo().getRegionName();
-        clientid = rand.nextLong();
-        currentLockId = currentServer.startUpdate(currentRegion, clientid, row);
-
-        break;
-
-      } catch (IOException ex) {
-        e = ex;
-      }
-      if (tries < numRetries - 1) {
-        try {
-          Thread.sleep(this.pause);
-
-        } catch (InterruptedException ex) {
-        }
-        try {
-          tableServers = connection.reloadTableServers(tableName);
-
-        } catch (IOException ex) {
-          e = ex;
-        }
-      } else {
-        if (e instanceof RemoteException) {
-          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-        }
-        throw e;
-      }
-    }
-    return currentLockId;
-  }
-  
-  /** 
-   * Change a value for the specified column.
-   * Runs {@link #abort(long)} if exception thrown.
-   *
-   * @param lockid lock id returned from startUpdate
-   * @param column column whose value is being set
-   * @param val new value for column
-   * @throws IOException
-   */
-  public void put(long lockid, Text column, byte val[]) throws IOException {
-    checkClosed();
-    if (val == null) {
-      throw new IllegalArgumentException("value cannot be null");
-    }
-    if (batch != null) {
-      batch.put(lockid, column, val);
-      return;
-    }
-    
-    if (lockid != currentLockId) {
-      throw new IllegalArgumentException("invalid lockid");
-    }
-    try {
-      this.currentServer.put(this.currentRegion, this.clientid, lockid, column,
-        val);
-    } catch (IOException e) {
-      try {
-        this.currentServer.abort(this.currentRegion, this.clientid, lockid);
-      } catch (IOException e2) {
-        LOG.warn(e2);
-      }
-      this.currentServer = null;
-      this.currentRegion = null;
-      if (e instanceof RemoteException) {
-        e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-      }
-      throw e;
-    }
-  }
-  
-  /** 
-   * Delete the value for a column
-   *
-   * @param lockid              - lock id returned from startUpdate
-   * @param column              - name of column whose value is to be deleted
-   * @throws IOException
-   */
-  public void delete(long lockid, Text column) throws IOException {
-    checkClosed();
-    if (batch != null) {
-      batch.delete(lockid, column);
-      return;
-    }
-    
-    if (lockid != currentLockId) {
-      throw new IllegalArgumentException("invalid lockid");
-    }
-    try {
-      this.currentServer.delete(this.currentRegion, this.clientid, lockid,
-        column);
-    } catch (IOException e) {
-      try {
-        this.currentServer.abort(this.currentRegion, this.clientid, lockid);
-      } catch(IOException e2) {
-        LOG.warn(e2);
-      }
-      this.currentServer = null;
-      this.currentRegion = null;
-      if (e instanceof RemoteException) {
-        e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-      }
-      throw e;
-    }
-  }
-  
-  /** 
-   * Abort a row mutation
-   *
-   * @param lockid              - lock id returned from startUpdate
-   * @throws IOException
-   */
-  public synchronized void abort(long lockid) throws IOException {
-    checkClosed();
-    if (batch != null) {
-      abortBatch(lockid);
-      return;
-    }
-
-    if (lockid != currentLockId) {
-      throw new IllegalArgumentException("invalid lockid");
-    }
-    
-    try {
-      try {
-        this.currentServer.abort(this.currentRegion, this.clientid, lockid);
-      } catch (IOException e) {
-        this.currentServer = null;
-        this.currentRegion = null;
-        if (e instanceof RemoteException) {
-          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-        }
-        throw e;
-      }
-    } finally {
-      currentLockId = -1L;
-    }
-  }
-  
-  /** 
-   * Finalize a row mutation
-   *
-   * @param lockid              - lock id returned from startUpdate
-   * @throws IOException
-   */
-  public void commit(long lockid) throws IOException {
-    commit(lockid, System.currentTimeMillis());
-  }
-
-  /** 
-   * Finalize a row mutation
-   *
-   * @param lockid              - lock id returned from startUpdate
-   * @param timestamp           - time to associate with the change
-   * @throws IOException
-   */
-  public synchronized void commit(long lockid, long timestamp) throws IOException {
-    checkClosed();
-    if (batch != null) {
-      commitBatch(lockid, timestamp);
-      return;
-    }
-
-    if (lockid != currentLockId) {
-      throw new IllegalArgumentException("invalid lockid");
-    }
-
-    try {
-      try {
-        this.currentServer.commit(this.currentRegion, this.clientid, lockid,
-            timestamp);
-
-      } catch (IOException e) {
-        this.currentServer = null;
-        this.currentRegion = null;
-        if(e instanceof RemoteException) {
-          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-        }
-        throw e;
-      }
-    } finally {
-      currentLockId = -1L;
-    }
-  }
-  
   /**
    * Renew lease on update
    * 
    * @param lockid              - lock id returned from startUpdate
-   * @throws IOException
+   * 
+   * Deprecated. Batch updates are now the default. Consequently this method
+   * does nothing.
    */
-  public synchronized void renewLease(long lockid) throws IOException {
-    checkClosed();
-    if (batch != null) {
-      return;
-    }
-
-    if (lockid != currentLockId) {
-      throw new IllegalArgumentException("invalid lockid");
-    }
-    try {
-      this.currentServer.renewLease(lockid, this.clientid);
-    } catch (IOException e) {
-      try {
-        this.currentServer.abort(this.currentRegion, this.clientid, lockid);
-      } catch (IOException e2) {
-        LOG.warn(e2);
-      }
-      this.currentServer = null;
-      this.currentRegion = null;
-      if (e instanceof RemoteException) {
-        e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-      }
-      throw e;
-    }
+  @Deprecated
+  public synchronized void renewLease(@SuppressWarnings("unused") long lockid) {
   }
 
   /**

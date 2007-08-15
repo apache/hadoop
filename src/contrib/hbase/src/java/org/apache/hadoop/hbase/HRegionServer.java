@@ -225,7 +225,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // Remove old region from META
       // NOTE: there is no need for retry logic here. HTable does it for us.
       
-      long lockid = t.startBatchUpdate(oldRegionInfo.getRegionName());
+      long lockid = t.startUpdate(oldRegionInfo.getRegionName());
       oldRegionInfo.offLine = true;
       oldRegionInfo.split = true;
       t.put(lockid, COL_REGIONINFO, Writables.getBytes(oldRegionInfo));
@@ -235,17 +235,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
       t.put(lockid, COL_SPLITB, Writables.getBytes(
           newRegions[1].getRegionInfo()));
-      t.commitBatch(lockid);
+      t.commit(lockid);
       
       // Add new regions to META
 
       for (int i = 0; i < newRegions.length; i++) {
-        lockid = t.startBatchUpdate(newRegions[i].getRegionName());
+        lockid = t.startUpdate(newRegions[i].getRegionName());
 
         t.put(lockid, COL_REGIONINFO, Writables.getBytes(
             newRegions[i].getRegionInfo()));
         
-        t.commitBatch(lockid);
+        t.commit(lockid);
       }
           
       // Now tell the master about the new regions
@@ -975,18 +975,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // HRegionInterface
   //////////////////////////////////////////////////////////////////////////////
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public HRegionInfo getRegionInfo(final Text regionName)
   throws NotServingRegionException {
     requestCount.incrementAndGet();
     return getRegion(regionName).getRegionInfo();
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
   throws IOException {
     requestCount.incrementAndGet();
@@ -1006,9 +1002,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     commit(regionName, clientid, lockid, timestamp);
   }
   
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public byte [] get(final Text regionName, final Text row,
       final Text column)
   throws IOException {
@@ -1016,9 +1010,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return getRegion(regionName).get(row, column);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public byte [][] get(final Text regionName, final Text row,
       final Text column, final int numVersions)
   throws IOException {  
@@ -1026,18 +1018,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return getRegion(regionName).get(row, column, numVersions);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public byte [][] get(final Text regionName, final Text row, final Text column, 
       final long timestamp, final int numVersions) throws IOException {
     requestCount.incrementAndGet();
     return getRegion(regionName).get(row, column, timestamp, numVersions);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public KeyedData[] getRow(final Text regionName, final Text row)
   throws IOException {
     requestCount.incrementAndGet();
@@ -1052,9 +1040,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return result;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public KeyedData[] next(final long scannerId)
   throws IOException {
     requestCount.incrementAndGet();
@@ -1096,18 +1082,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return values.toArray(new KeyedData[values.size()]);
   }
 
-  /**
-   * {@inheritDoc}
+  /*
+   * NOTE: When startUpdate, put, delete, abort, commit and renewLease are
+   * removed from HRegionInterface, these methods (with the exception of
+   * renewLease) must remain, as they are called by batchUpdate (renewLease
+   * can just be removed)
+   * 
+   * However, the remaining methods can become protected instead of public
+   * at that point.
    */
-  public long startUpdate(Text regionName, long clientid, Text row) 
-      throws IOException {
-    requestCount.incrementAndGet();
-    HRegion region = getRegion(regionName);
-    long lockid = region.startUpdate(row);
-    this.leases.createLease(clientid, lockid,
-      new RegionListener(region, lockid));
-    return lockid;
-  }
 
   /** Create a lease for an update. If it times out, the update is aborted */
   private static class RegionListener implements LeaseListener {
@@ -1119,9 +1102,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.localLockId = lockId;
     }
     
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public void leaseExpired() {
       try {
         localRegion.abort(localLockId);
@@ -1139,9 +1120,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
   
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
+  public long startUpdate(Text regionName, long clientid, Text row) 
+      throws IOException {
+    requestCount.incrementAndGet();
+    HRegion region = getRegion(regionName);
+    long lockid = region.startUpdate(row);
+    this.leases.createLease(clientid, lockid,
+      new RegionListener(region, lockid));
+    return lockid;
+  }
+
+  /** {@inheritDoc} */
   public void put(final Text regionName, final long clientid,
       final long lockid, final Text column, final byte [] val)
   throws IOException {
@@ -1151,9 +1141,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.put(lockid, column, val);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void delete(Text regionName, long clientid, long lockid, Text column) 
   throws IOException {
     requestCount.incrementAndGet();
@@ -1162,9 +1150,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.delete(lockid, column);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void abort(Text regionName, long clientid, long lockid) 
   throws IOException {
     requestCount.incrementAndGet();
@@ -1173,9 +1159,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.abort(lockid);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void commit(Text regionName, final long clientid, final long lockid,
       final long timestamp) throws IOException {
     requestCount.incrementAndGet();
@@ -1184,9 +1168,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.commit(lockid, timestamp);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public void renewLease(long lockid, long clientid) throws IOException {
     requestCount.incrementAndGet();
     leases.renewLease(clientid, lockid);

@@ -280,7 +280,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
   private void removeRegionFromMETA(final HTable t, final Text regionName)
   throws IOException {
     try {
-      long lockid = t.startBatchUpdate(regionName);
+      long lockid = t.startUpdate(regionName);
       t.delete(lockid, HConstants.COL_REGIONINFO);
       t.delete(lockid, HConstants.COL_SERVER);
       t.delete(lockid, HConstants.COL_STARTCODE);

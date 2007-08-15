@@ -1796,21 +1796,20 @@ HMasterRegionInterface, Runnable {
 
       // Remove server from root/meta entries
       
-      long clientId = rand.nextLong();
       for (ToDoEntry e: toDoList) {
-        long lockid = server.startUpdate(regionName, clientId, e.row);
+        BatchUpdate b = new BatchUpdate();
+        long lockid = b.startUpdate(e.row);
       
         if (e.deleteRegion) {
-          server.delete(regionName, clientId, lockid, COL_REGIONINFO);
+          b.delete(lockid, COL_REGIONINFO);
         
         } else if (e.regionOffline) {
           e.info.offLine = true;
-          server.put(regionName, clientId, lockid, COL_REGIONINFO,
-              Writables.getBytes(e.info));
+          b.put(lockid, COL_REGIONINFO, Writables.getBytes(e.info));
         }
-        server.delete(regionName, clientId, lockid, COL_SERVER);
-        server.delete(regionName, clientId, lockid, COL_STARTCODE);
-        server.commit(regionName, clientId, lockid, System.currentTimeMillis());
+        b.delete(lockid, COL_SERVER);
+        b.delete(lockid, COL_STARTCODE);
+        server.batchUpdate(regionName, System.currentTimeMillis(), b);
       }
 
       // Get regions reassigned
@@ -2053,23 +2052,20 @@ HMasterRegionInterface, Runnable {
           server = connection.getHRegionConnection(r.server);
         }
 
-        long clientId = rand.nextLong();
         try {
-          long lockid = server.startUpdate(metaRegionName, clientId,
-              regionInfo.regionName);
+          BatchUpdate b = new BatchUpdate();
+          long lockid = b.startUpdate(regionInfo.regionName);
 
           if (deleteRegion) {
-            server.delete(metaRegionName, clientId, lockid, COL_REGIONINFO);
+            b.delete(lockid, COL_REGIONINFO);
 
           } else if (!reassignRegion ) {
             regionInfo.offLine = true;
-            server.put(metaRegionName, clientId, lockid, COL_REGIONINFO,
-                Writables.getBytes(regionInfo));
+            b.put(lockid, COL_REGIONINFO, Writables.getBytes(regionInfo));
           }
-          server.delete(metaRegionName, clientId, lockid, COL_SERVER);
-          server.delete(metaRegionName, clientId, lockid, COL_STARTCODE);
-          server.commit(metaRegionName, clientId, lockid,
-              System.currentTimeMillis());
+          b.delete(lockid, COL_SERVER);
+          b.delete(lockid, COL_STARTCODE);
+          server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
 
           break;
 
@@ -2199,18 +2195,15 @@ HMasterRegionInterface, Runnable {
         LOG.info("updating row " + region.getRegionName() + " in table " +
             metaRegionName);
 
-        long clientId = rand.nextLong();
         try {
-          long lockid = server.startUpdate(metaRegionName, clientId,
-              region.getRegionName());
+          BatchUpdate b = new BatchUpdate();
+          long lockid = b.startUpdate(region.getRegionName());
           
-          server.put(metaRegionName, clientId, lockid, COL_SERVER,
+          b.put(lockid, COL_SERVER,
               Writables.stringToBytes(serverAddress.toString()));
           
-          server.put(metaRegionName, clientId, lockid, COL_STARTCODE, startCode);
-          
-          server.commit(metaRegionName, clientId, lockid,
-              System.currentTimeMillis());
+          b.put(lockid, COL_STARTCODE, startCode);
+          server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
 
           if (region.tableDesc.getName().equals(META_TABLE_NAME)) {
             // It's a meta region.
@@ -2335,11 +2328,11 @@ HMasterRegionInterface, Runnable {
                 newRegion.getTableDesc().getName()).lastKey()));
           
       Text metaRegionName = m.regionName;
-      HRegionInterface r = connection.getHRegionConnection(m.server);
-      long scannerid = r.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
+      HRegionInterface server = connection.getHRegionConnection(m.server);
+      long scannerid = server.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
           tableName, System.currentTimeMillis(), null);
       try {
-        KeyedData[] data = r.next(scannerid);
+        KeyedData[] data = server.next(scannerid);
             
         // Test data and that the row for the data is for our table. If table
         // does not exist, scanner will return row after where our table would
@@ -2355,7 +2348,7 @@ HMasterRegionInterface, Runnable {
         }
             
       } finally {
-        r.close(scannerid);
+        server.close(scannerid);
       }
 
       // 2. Create the HRegion
@@ -2367,13 +2360,10 @@ HMasterRegionInterface, Runnable {
           
       HRegionInfo info = region.getRegionInfo();
       Text regionName = region.getRegionName();
-      long clientId = rand.nextLong();
-      long lockid = r.startUpdate(metaRegionName, clientId, regionName);
-      
-      r.put(metaRegionName, clientId, lockid, COL_REGIONINFO,
-          Writables.getBytes(info));
-      
-      r.commit(metaRegionName, clientId, lockid, System.currentTimeMillis());
+      BatchUpdate b = new BatchUpdate();
+      long lockid = b.startUpdate(regionName);
+      b.put(lockid, COL_REGIONINFO, Writables.getBytes(info));
+      server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
 
       // 4. Close the new region to flush it to disk.  Close its log file too.
       
@@ -2608,7 +2598,6 @@ HMasterRegionInterface, Runnable {
       new HashMap<String, HashSet<HRegionInfo>>();
     
     protected long lockid;
-    protected long clientId;
 
     ChangeTableState(Text tableName, boolean onLine) throws IOException {
       super(tableName);
@@ -2653,41 +2642,36 @@ HMasterRegionInterface, Runnable {
           LOG.debug("updating columns in row: " + i.regionName);
         }
 
-        lockid = -1L;
-        clientId = rand.nextLong();
-        try {
-          lockid = server.startUpdate(m.regionName, clientId, i.regionName);
-          updateRegionInfo(server, m.regionName, i);
-          server.delete(m.regionName, clientId, lockid, COL_SERVER);
-          server.delete(m.regionName, clientId, lockid, COL_STARTCODE);
-          server.commit(m.regionName, clientId, lockid,
-              System.currentTimeMillis());
+        BatchUpdate b = new BatchUpdate();
+        lockid = b.startUpdate(i.regionName);
+        updateRegionInfo(b, i);
+        b.delete(lockid, COL_SERVER);
+        b.delete(lockid, COL_STARTCODE);
 
-          lockid = -1L;
-
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("updated columns in row: " + i.regionName);
-          }
-
-        } catch (IOException e) {
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException(
-                (RemoteException) e);
-          }
-          LOG.error("column update failed in row: " + i.regionName, e);
-
-        } finally {
+        for (int tries = 0; tries < numRetries; tries++) {
           try {
-            if (lockid != -1L) {
-              server.abort(m.regionName, clientId, lockid);
+            server.batchUpdate(m.regionName, System.currentTimeMillis(), b);
+            
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("updated columns in row: " + i.regionName);
             }
+            break;
 
-          } catch (IOException iex) {
-            if (iex instanceof RemoteException) {
-              iex = RemoteExceptionHandler.decodeRemoteException(
-                  (RemoteException) iex);
+          } catch (IOException e) {
+            if (tries == numRetries - 1) {
+              if (e instanceof RemoteException) {
+                e = RemoteExceptionHandler.decodeRemoteException(
+                    (RemoteException) e);
+              }
+              LOG.error("column update failed in row: " + i.regionName, e);
+              break;
             }
-            LOG.error("", iex);
+          }
+          try {
+            Thread.sleep(threadWakeFrequency);
+
+          } catch (InterruptedException e) {
+            // continue
           }
         }
 
@@ -2738,12 +2722,11 @@ HMasterRegionInterface, Runnable {
       servedRegions.clear();
     }
 
-    protected void updateRegionInfo(final HRegionInterface server,
-        final Text regionName, final HRegionInfo i) throws IOException {
+    protected void updateRegionInfo(final BatchUpdate b, final HRegionInfo i)
+    throws IOException {
       
       i.offLine = !online;
-      server.put(regionName, clientId, lockid, COL_REGIONINFO,
-          Writables.getBytes(i));
+      b.put(lockid, COL_REGIONINFO, Writables.getBytes(i));
     }
   }
 
@@ -2790,11 +2773,10 @@ HMasterRegionInterface, Runnable {
     }
 
     @Override
-    protected void updateRegionInfo(
-        @SuppressWarnings("hiding") HRegionInterface server, Text regionName,
-        @SuppressWarnings("unused") HRegionInfo i) throws IOException {
+    protected void updateRegionInfo(BatchUpdate b,
+        @SuppressWarnings("unused") HRegionInfo i) {
       
-      server.delete(regionName, clientId, lockid, COL_REGIONINFO);
+      b.delete(lockid, COL_REGIONINFO);
     }
   }
 
@@ -2816,39 +2798,34 @@ HMasterRegionInterface, Runnable {
 
     protected void updateRegionInfo(HRegionInterface server, Text regionName,
         HRegionInfo i) throws IOException {
-      
-      long lockid = -1L;
-      long clientId = rand.nextLong();
-      try {
-        lockid = server.startUpdate(regionName, clientId, i.regionName);
-        server.put(regionName, clientId, lockid, COL_REGIONINFO,
-            Writables.getBytes(i));
-      
-        server.commit(regionName, clientId, lockid, System.currentTimeMillis());
-        lockid = -1L;
-        
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: " + i.regionName);
-        }
-        
-      } catch (Exception e) {
-        if (e instanceof RemoteException) {
-          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-        }
-        LOG.error("column update failed in row: " + i.regionName, e);
 
-      } finally {
-        if (lockid != -1L) {
-          try {
-            server.abort(regionName, clientId, lockid);
-
-          } catch (IOException iex) {
-            if (iex instanceof RemoteException) {
-              iex = RemoteExceptionHandler.decodeRemoteException(
-                  (RemoteException) iex);
-            }
-            LOG.error("", iex);
+      BatchUpdate b = new BatchUpdate();
+      long lockid = b.startUpdate(i.regionName);
+      b.put(lockid, COL_REGIONINFO, Writables.getBytes(i));
+      
+      for (int tries = 0; tries < numRetries; tries++) {
+        try {
+          server.batchUpdate(regionName, System.currentTimeMillis(), b);
+        
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("updated columns in row: " + i.regionName);
           }
+          break;
+        
+        } catch (IOException e) {
+          if (tries == numRetries - 1) {
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            }
+            LOG.error("column update failed in row: " + i.regionName, e);
+            break;
+          }
+        }
+        try {
+          Thread.sleep(threadWakeFrequency);
+          
+        } catch (InterruptedException e) {
+          // continue
         }
       }
     }

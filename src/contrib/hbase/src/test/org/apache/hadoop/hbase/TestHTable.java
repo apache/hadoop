@@ -59,7 +59,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     byte[] value = "value".getBytes(UTF8_ENCODING);
     
     HTable a = new HTable(conf, tableAname);
-    long lockid = a.startBatchUpdate(row);
+    long lockid = a.startUpdate(row);
     a.put(lockid, COLUMN_FAMILY, value);
     a.commit(lockid);
     
@@ -77,7 +77,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       while(s.next(key, results)) {
-        lockid = b.startBatchUpdate(key.getRow());
+        lockid = b.startUpdate(key.getRow());
         for(Map.Entry<Text, byte[]> e: results.entrySet()) {
           b.put(lockid, e.getKey(), e.getValue());
         }
