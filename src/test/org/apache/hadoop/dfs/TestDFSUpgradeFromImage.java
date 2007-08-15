@@ -68,10 +68,10 @@ public class TestDFSUpgradeFromImage extends TestCase {
     if ( dfsDir.exists() && !FileUtil.fullyDelete(dfsDir) ) {
       throw new IOException("Could not delete dfs directory '" + dfsDir + "'");
     }
-    String cmd = "bash -c \"gzip -dc '" + FileUtil.makeShellPath(tarFile) + "' | (cd '" +
-                 FileUtil.makeShellPath(dataDir) + "' ; tar -xf -)\"";
+    String cmd = "gzip -dc '" + FileUtil.makeShellPath(tarFile) + "' | (cd '" +
+                 FileUtil.makeShellPath(dataDir) + "' ; tar -xf -)";
     LOG.info("Unpacking the tar file. Cmd : " + cmd);
-    String[] shellCmd = { "sh", "-c", cmd };
+    String[] shellCmd = { "bash", "-c", cmd };
     Command.execCommand(shellCmd);
     
     //Now read the reference info
