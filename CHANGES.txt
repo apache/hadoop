@@ -47,7 +47,8 @@ Trunk (unreleased changes)
     HADOOP-1595.  dfsshell can wait for a file to achieve its intended
     replication target. (Tsz Wo (Nicholas), SZE via dhruba)
 
-Branch 0.14 (unreleased changes)
+
+Release 0.14.0 - 2007-08-17
 
   1. HADOOP-1197.  In Configuration, deprecate getObject() and add
      getRaw(), which skips variable expansion. (omalley via cutting)
