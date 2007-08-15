@@ -19,10 +19,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.Text;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.SortedMap;
 
 /**
  * HScannerInterface iterates through a set of rows.  It's implemented by
@@ -36,7 +36,7 @@ public interface HScannerInterface {
    * @return true if data was returned
    * @throws IOException
    */
-  public boolean next(HStoreKey key, TreeMap<Text, byte[]> results)
+  public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
   throws IOException;
   
   /**

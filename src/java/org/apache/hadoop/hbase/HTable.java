@@ -727,7 +727,7 @@ public class HTable implements HConstants {
     /**
      * {@inheritDoc}
      */
-    public boolean next(HStoreKey key, TreeMap<Text, byte[]> results) throws IOException {
+    public boolean next(HStoreKey key, SortedMap<Text, byte[]> results) throws IOException {
       checkClosed();
       if (this.closed) {
         return false;
