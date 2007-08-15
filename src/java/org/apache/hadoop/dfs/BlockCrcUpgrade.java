@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.HashSet;
-import java.util.Random;
 
 /* This containtains information about CRC file and blocks created by
  * ChecksumFileSystem for a given block.
@@ -1377,6 +1376,10 @@ class BlockCrcUpgradeObjectDatanode extends UpgradeObjectDatanode {
   }
   
   void doUpgrade() throws IOException {
+    doUpgradeInternal();
+  }
+  
+  private void doUpgradeInternal() {
     
     if ( upgradeCompleted ) {
       assert offlineUpgrade : 
@@ -1410,13 +1413,23 @@ class BlockCrcUpgradeObjectDatanode extends UpgradeObjectDatanode {
     
     LOG.info("Starting Block CRC upgrade.");
     
-    namenode = (DatanodeProtocol) RetryProxy.create(
-                    DatanodeProtocol.class,
-                    RPC.waitForProxy(DatanodeProtocol.class,
-                                     DatanodeProtocol.versionID,
-                                     getDatanode().getNameNodeAddr(),
-                                     conf),
-                    methodNameToPolicyMap);
+    for (;;) {
+      try {
+        namenode = (DatanodeProtocol) RetryProxy.create(
+                            DatanodeProtocol.class,
+                            RPC.waitForProxy(DatanodeProtocol.class,
+                                             DatanodeProtocol.versionID,
+                                             getDatanode().getNameNodeAddr(),
+                                             conf),
+                            methodNameToPolicyMap);
+        break;
+      } catch (IOException e) {
+        LOG.warn("Exception while trying to connect to NameNode at " +
+                 getDatanode().getNameNodeAddr().toString() + " : " + 
+                 StringUtils.stringifyException(e));
+        BlockCrcUpgradeUtils.sleep(10, "will retry connecting to NameNode");
+      }
+    }
                                   
     conf = null;
    
@@ -1428,7 +1441,17 @@ class BlockCrcUpgradeObjectDatanode extends UpgradeObjectDatanode {
     Block [] blockArr = dataset.getBlockReport();
     
     for ( Block b : blockArr ) {
-      File blockFile = dataset.getBlockFile( b );
+      File blockFile = null;
+      try {
+        blockFile = dataset.getBlockFile( b );
+      } catch (IOException e) {
+        //The block might just be deleted. ignore it.
+        LOG.warn("Could not find file location for " + b + 
+                 ". It might already be deleted. Exception : " +
+                 StringUtils.stringifyException(e));
+        errors++;
+        continue;
+      }
       if (!blockFile.exists()) {
         LOG.error("could not find block file " + blockFile);
         errors++;
