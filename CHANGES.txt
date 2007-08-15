@@ -532,6 +532,10 @@ Branch 0.14 (unreleased changes)
 156. HADOOP-1663.  Return a non-zero exit code if streaming fails. (Lohit Renu
      via omalley)
 
+157. HADOOP-1712.  Fix an unhandled exception on datanode during block
+     CRC upgrade. (Raghu Angadi via cutting)
+
+
 Release 0.13.0 - 2007-06-08
 
  1. HADOOP-1047.  Fix TestReplication to succeed more reliably.
