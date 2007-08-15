@@ -283,13 +283,8 @@ class HMerge implements HConstants {
             LOG.debug("updated columns in row: " + regionsToDelete[r]);
           }
         } finally {
-          try {
-            if(lockid != -1L) {
-              table.abort(lockid);
-            }
-
-          } catch(IOException iex) {
-            LOG.error(iex);
+          if(lockid != -1L) {
+            table.abort(lockid);
           }
         }
       }
@@ -309,13 +304,8 @@ class HMerge implements HConstants {
               + newRegion.getRegionName());
         }
       } finally {
-        try {
-          if(lockid != -1L) {
-            table.abort(lockid);
-          }
-
-        } catch(IOException iex) {
-          LOG.error(iex);
+        if(lockid != -1L) {
+          table.abort(lockid);
         }
       }
     }

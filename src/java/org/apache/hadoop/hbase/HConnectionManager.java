@@ -502,7 +502,7 @@ public class HConnectionManager implements HConstants {
 
                 } catch (IOException e) {
                   if (tries < numRetries - 1) {
-                    findServersForTable(META_TABLE_NAME);
+                    metaServers = findServersForTable(META_TABLE_NAME);
                     success = false;
                     break;
                   }

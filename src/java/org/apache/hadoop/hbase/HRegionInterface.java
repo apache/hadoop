@@ -97,7 +97,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @throws IOException
    */
   public KeyedData[] getRow(final Text regionName, final Text row)
-  throws IOException;
+  throws IOException; //TODO
 
   //////////////////////////////////////////////////////////////////////////////
   // Start an atomic row insertion/update.  No changes are committed until the 
@@ -126,7 +126,10 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param row Name of row to start update against.
    * @return Row lockid.
    * @throws IOException
+   * 
+   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
    */
+  @Deprecated
   public long startUpdate(final Text regionName, final long clientid,
       final Text row)
   throws IOException;
@@ -140,7 +143,10 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param column column whose value is being set
    * @param val new value for column
    * @throws IOException
+   * 
+   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
    */
+  @Deprecated
   public void put(final Text regionName, final long clientid, final long lockid,
       final Text column, final byte [] val)
   throws IOException;
@@ -153,7 +159,10 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param lockid lock id returned from startUpdate
    * @param column name of column whose value is to be deleted
    * @throws IOException
+   * 
+   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
    */
+  @Deprecated
   public void delete(final Text regionName, final long clientid,
       final long lockid, final Text column)
   throws IOException;
@@ -165,7 +174,10 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param clientid a unique value to identify the client
    * @param lockid lock id returned from startUpdate
    * @throws IOException
+   * 
+   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
    */
+  @Deprecated
   public void abort(final Text regionName, final long clientid, 
       final long lockid)
   throws IOException;
@@ -178,7 +190,10 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param lockid lock id returned from startUpdate
    * @param timestamp the time (in milliseconds to associate with this change)
    * @throws IOException
+   * 
+   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
    */
+  @Deprecated
   public void commit(final Text regionName, final long clientid,
       final long lockid, final long timestamp)
   throws IOException;
@@ -189,7 +204,10 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param lockid lock id returned from startUpdate
    * @param clientid a unique value to identify the client
    * @throws IOException
+   * 
+   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
    */
+  @Deprecated
   public void renewLease(long lockid, long clientid) throws IOException;
 
   //////////////////////////////////////////////////////////////////////////////
@@ -229,7 +247,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return array of values
    * @throws IOException
    */
-  public KeyedData[] next(long scannerId) throws IOException;
+  public KeyedData[] next(long scannerId) throws IOException; //TODO
   
   /**
    * Close a scanner

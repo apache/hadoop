@@ -63,7 +63,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
   /** the test case */
   public void testBatchUpdate() {
     try {
-      table.commitBatch(-1L);
+      table.commit(-1L);
       
     } catch (IllegalStateException e) {
       // expected
@@ -72,7 +72,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       fail();
     }
 
-    long lockid = table.startBatchUpdate(new Text("row1"));
+    long lockid = table.startUpdate(new Text("row1"));
     
     try {
       try {
@@ -86,9 +86,9 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       }
       table.put(lockid, CONTENTS, value);
       table.delete(lockid, CONTENTS);
-      table.commitBatch(lockid);
+      table.commit(lockid);
       
-      lockid = table.startBatchUpdate(new Text("row2"));
+      lockid = table.startUpdate(new Text("row2"));
       table.put(lockid, CONTENTS, value);
       table.commit(lockid);
  

@@ -461,7 +461,7 @@ public class TestSplit extends HBaseTestCase {
         for (char e = thirdCharStart; e <= LAST_CHAR; e++) {
           byte [] bytes = new byte [] {(byte)c, (byte)d, (byte)e};
           Text t = new Text(new String(bytes));
-          long lockid = table.startBatchUpdate(t);
+          long lockid = table.startUpdate(t);
           try {
             table.put(lockid, new Text(column), bytes);
             table.commit(lockid, System.currentTimeMillis());
