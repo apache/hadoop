@@ -535,6 +535,9 @@ Branch 0.14 (unreleased changes)
 157. HADOOP-1712.  Fix an unhandled exception on datanode during block
      CRC upgrade. (Raghu Angadi via cutting)
 
+158. HADOOP-1717.  Fix TestDFSUpgradeFromImage to work on Solaris.
+     (nigel via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 
