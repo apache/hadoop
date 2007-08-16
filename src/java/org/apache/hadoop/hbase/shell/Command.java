@@ -19,12 +19,14 @@
  */
 package org.apache.hadoop.hbase.shell;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
 
 public interface Command {
+  
   /** family indicator */
   public static final String FAMILY_INDICATOR = ":";
 
   /** Execute a command */
-  public ReturnMsg execute(HClient client);
+  public ReturnMsg execute(Configuration conf);
+  
 }

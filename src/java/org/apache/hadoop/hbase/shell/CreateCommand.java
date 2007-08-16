@@ -22,36 +22,41 @@ package org.apache.hadoop.hbase.shell;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConnection;
+import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.io.Text;
 
 public class CreateCommand extends BasicCommand {
-  String table;
+  
+  private Text table;
+  private List<String> columnfamilies;
+  @SuppressWarnings("unused")
+  private int limit;
 
-  List<String> columnfamilies;
-
-  int limit;
-
-  public ReturnMsg execute(HClient client) {
+  public ReturnMsg execute(Configuration conf) {
     if (this.table == null || this.columnfamilies == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Create' syntax.");
 
     try {
-      HTableDescriptor desc = new HTableDescriptor(this.table);
-
+      HConnection conn = HConnectionManager.getConnection(conf);
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      
+      if (conn.tableExists(this.table)) {
+        return new ReturnMsg(0, "Table was already exsits.");
+      }
+      HTableDescriptor desc = new HTableDescriptor(this.table.toString());
       for (int i = 0; i < this.columnfamilies.size(); i++) {
-
         String columnFamily = columnfamilies.get(i);
         if (columnFamily.lastIndexOf(':') == (columnFamily.length() - 1)) {
           columnFamily = columnFamily.substring(0, columnFamily.length() - 1);
         }
         desc.addFamily(new HColumnDescriptor(columnFamily + FAMILY_INDICATOR));
-
       }
-
-      client.createTable(desc);
-
+      admin.createTable(desc);
       return new ReturnMsg(1, "Table created successfully.");
     } catch (IOException e) {
       return new ReturnMsg(0, "error msg : " + e.toString());
@@ -59,7 +64,7 @@ public class CreateCommand extends BasicCommand {
   }
 
   public void setTable(String table) {
-    this.table = table;
+    this.table = new Text(table);
   }
 
   public void setColumnfamilies(List<String> columnfamilies) {
@@ -69,4 +74,5 @@ public class CreateCommand extends BasicCommand {
   public void setLimit(int limit) {
     this.limit = limit;
   }
+  
 }

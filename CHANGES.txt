@@ -96,3 +96,5 @@ Trunk (unreleased changes)
  59. HADOOP-1711 HTable API should use interfaces instead of concrete classes as
      method parameters and return values
  60. HADOOP-1644 Compactions should not block updates
+ 60. HADOOP-1672 HBase Shell should use new client classes
+     (Edward Yoon via Stack).

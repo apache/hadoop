@@ -21,29 +21,34 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConnection;
+import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Text;
 
 public class DescCommand extends BasicCommand {
-  String argument;
+  
+  private Text table;
 
-  public ReturnMsg execute(HClient client) {
-    if (this.argument == null) 
+  public ReturnMsg execute(Configuration conf) {
+    if (this.table == null) 
       return new ReturnMsg(0, "Syntax error : Please check 'Describe' syntax.");
 
     try {
-      HTableDescriptor[] tables = client.listTables();
+      HConnection conn = HConnectionManager.getConnection(conf);
+      
+      if (!conn.tableExists(this.table)) {
+        return new ReturnMsg(0, "Table not found.");
+      }
+
+      HTableDescriptor[] tables = conn.listTables();
       Text[] columns = null;
 
       for (int i = 0; i < tables.length; i++) {
-        if (tables[i].getName().toString().equals(this.argument)) {
+        if (tables[i].getName().equals(this.table)) {
           columns = tables[i].families().keySet().toArray(new Text[] {});
         }
-      }
-
-      if (columns == null) {
-        return new ReturnMsg(0, "Table not found.");
       }
 
       ConsoleTable.printHead("ColumnFamily Name");
@@ -59,7 +64,8 @@ public class DescCommand extends BasicCommand {
     }
   }
 
-  public void setArgument(String argument) {
-    this.argument = argument;
+  public void setArgument(String table) {
+    this.table = new Text(table);
   }
+  
 }

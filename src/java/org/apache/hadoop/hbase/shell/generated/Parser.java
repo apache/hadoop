@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.shell.*;
  * Parsing command line.
  */
 public class Parser implements ParserConstants {
-  private static String QueryString;
+  private String QueryString;
 
   public Parser(String query) {
     this((Reader)(new StringReader(query)));

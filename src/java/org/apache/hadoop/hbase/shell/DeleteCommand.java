@@ -24,36 +24,35 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
 
 public class DeleteCommand extends BasicCommand {
-  String table;
+  
+  private Text table;
+  private Map<String, List<String>> condition;
 
-  Map<String, List<String>> condition;
-
-  public ReturnMsg execute(HClient client) {
+  public ReturnMsg execute(Configuration conf) {
     if (this.table == null || condition == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Delete' syntax.");
 
     try {
-      client.openTable(new Text(this.table));
-      long lockId = client.startUpdate(getRow());
+      HTable table = new HTable(conf, this.table);
+      long lockId = table.startUpdate(getRow());
 
       if (getColumn() != null) {
-
-        client.delete(lockId, getColumn());
-
+        table.delete(lockId, getColumn());
       } else {
-        Set<Text> keySet = client.getRow(getRow()).keySet();
+        Set<Text> keySet = table.getRow(getRow()).keySet();
         Text[] columnKey = keySet.toArray(new Text[keySet.size()]);
 
         for (int i = 0; i < columnKey.length; i++) {
-          client.delete(lockId, columnKey[i]);
+          table.delete(lockId, columnKey[i]);
         }
       }
 
-      client.commit(lockId);
+      table.commit(lockId);
 
       return new ReturnMsg(1, "1 deleted successfully. ");
     } catch (IOException e) {
@@ -62,7 +61,7 @@ public class DeleteCommand extends BasicCommand {
   }
 
   public void setTable(String table) {
-    this.table = table;
+    this.table = new Text(table);
   }
 
   public void setCondition(Map<String, List<String>> cond) {
@@ -80,4 +79,5 @@ public class DeleteCommand extends BasicCommand {
       return null;
     }
   }
+  
 }

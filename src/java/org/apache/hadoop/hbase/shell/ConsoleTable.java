@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.shell;
  * Manufactures console table, but stupid.
  */
 public class ConsoleTable {
+  
   public static void printHead(String name) {
     System.out.println("+------+----------------------+");
     System.out.print("| No.  | ");
@@ -187,4 +188,5 @@ public class ConsoleTable {
       "----------------------+----------------------+");
     System.out.println();
   }
+  
 }
