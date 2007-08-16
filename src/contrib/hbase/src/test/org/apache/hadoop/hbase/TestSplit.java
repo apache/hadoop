@@ -38,48 +38,22 @@ import org.apache.log4j.Logger;
  * split and manufactures odd-ball split scenarios.
  */
 public class TestSplit extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(TestSplit.class);
-  private final static String COLFAMILY_NAME1 = "colfamily1:";
-  private final static String COLFAMILY_NAME2 = "colfamily2:";
-  private final static String COLFAMILY_NAME3 = "colfamily3:";
-  private Path testDir = null;
-  private FileSystem fs = null;
-  private static final char FIRST_CHAR = 'a';
-  private static final char LAST_CHAR = 'z';
-
+  static final Log LOG = LogFactory.getLog(TestSplit.class.getName());
+  
   /** constructor */
   public TestSplit() {
     Logger.getRootLogger().setLevel(Level.WARN);
-    Logger.getLogger(this.getClass().getPackage().getName()).setLevel(Level.DEBUG);
+    Logger.getLogger(this.getClass().getPackage().getName()).
+      setLevel(Level.DEBUG);
   }
 
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.testDir = getUnitTestdir(getName());
-    this.fs = FileSystem.getLocal(this.conf);
-    if (fs.exists(testDir)) {
-      fs.delete(testDir);
-    }
     // This size should make it so we always split using the addContent
     // below.  After adding all data, the first region is 1.3M
     conf.setLong("hbase.hregion.max.filesize", 1024 * 128);
-  }
-  
-  /** {@inheritDoc} */
-  @Override
-  public void tearDown() throws Exception {
-    if (fs != null) {
-      try {
-        if (this.fs.exists(testDir)) {
-          this.fs.delete(testDir);
-        }
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    }
-    super.tearDown();
   }
   
   /**
@@ -88,11 +62,11 @@ public class TestSplit extends HBaseTestCase {
    */
   public void testBasicSplit() throws Exception {
     HRegion region = null;
-    HLog hlog = new HLog(this.fs, this.testDir, this.conf);
+    HLog hlog = new HLog(this.localFs, this.testDir, this.conf);
     try {
       HTableDescriptor htd = createTableDescriptor(getName());
       HRegionInfo hri = new HRegionInfo(1, htd, null, null);
-      region = new HRegion(testDir, hlog, fs, this.conf, hri, null);
+      region = new HRegion(testDir, hlog, this.localFs, this.conf, hri, null);
       basicSplit(region);
     } finally {
       if (region != null) {
@@ -100,14 +74,6 @@ public class TestSplit extends HBaseTestCase {
       }
       hlog.closeAndDelete();
     }
-  }
-  
-  private HTableDescriptor createTableDescriptor(final String name) {
-    HTableDescriptor htd = new HTableDescriptor(name);
-    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME1));
-    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME2));
-    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME3));
-    return htd;
   }
   
   private void basicSplit(final HRegion region) throws Exception {
@@ -184,13 +150,13 @@ public class TestSplit extends HBaseTestCase {
    * @throws Exception
    */
   public void testSplitRegionIsDeleted() throws Exception {
-    final int retries = 10;
-    this.testDir = null;
-    this.fs = null;
+    final int retries = 10; 
     // Start up a hbase cluster
-    MiniHBaseCluster cluster = new MiniHBaseCluster(conf, 1);
-    Path testDir = cluster.regionThreads.get(0).getRegionServer().rootDir;
-    FileSystem fs = cluster.getDFSCluster().getFileSystem();
+    MiniHBaseCluster cluster = new MiniHBaseCluster(conf, 1, true);
+    Path d = cluster.regionThreads.get(0).getRegionServer().rootDir;
+    FileSystem fs = (cluster.getDFSCluster() == null)?
+      this.localFs:
+      cluster.getDFSCluster().getFileSystem();
     HTable meta = null;
     HTable t = null;
     try {
@@ -201,7 +167,7 @@ public class TestSplit extends HBaseTestCase {
       meta = new HTable(this.conf, HConstants.META_TABLE_NAME);
       int count = count(meta, HConstants.COLUMN_FAMILY_STR);
       t = new HTable(this.conf, new Text(getName()));
-      addContent(t, COLFAMILY_NAME3);
+      addContent(new HTableLoader(t), COLFAMILY_NAME3);
       // All is running in the one JVM so I should be able to get the
       // region instance and bring on a split.
       HRegionInfo hri =
@@ -223,8 +189,7 @@ public class TestSplit extends HBaseTestCase {
       }
       HRegionInfo parent = getSplitParent(meta);
       assertTrue(parent.isOffline());
-      Path parentDir =
-        HRegion.getRegionDir(testDir, parent.getRegionName());
+      Path parentDir = HRegion.getRegionDir(d, parent.getRegionName());
       assertTrue(fs.exists(parentDir));
       LOG.info("Split happened and parent " + parent.getRegionName() + " is " +
       "offline");
@@ -263,7 +228,7 @@ public class TestSplit extends HBaseTestCase {
         for (int i = 0; i < 10; i++) {
           try {
             for (HRegion online: regions.values()) {
-              if (online.getRegionName().toString().startsWith(getName())) {
+              if (online.getTableDesc().getName().toString().equals(getName())) {
                 online.compactStores();
               }
             }
@@ -402,80 +367,5 @@ public class TestSplit extends HBaseTestCase {
     HRegion [] regions = r.closeAndSplit(midKey, null);
     assertEquals(regions.length, 2);
     return regions;
-  }
-  
-  private void addContent(final HRegion r, final String column)
-  throws IOException {
-    Text startKey = r.getRegionInfo().getStartKey();
-    Text endKey = r.getRegionInfo().getEndKey();
-    byte [] startKeyBytes = startKey.getBytes();
-    if (startKeyBytes == null || startKeyBytes.length == 0) {
-      startKeyBytes = new byte [] {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
-    }
-    // Add rows of three characters.  The first character starts with the
-    // 'a' character and runs up to 'z'.  Per first character, we run the
-    // second character over same range.  And same for the third so rows
-    // (and values) look like this: 'aaa', 'aab', 'aac', etc.
-    char secondCharStart = (char)startKeyBytes[1];
-    char thirdCharStart = (char)startKeyBytes[2];
-    EXIT_ALL_LOOPS: for (char c = (char)startKeyBytes[0]; c <= LAST_CHAR; c++) {
-      for (char d = secondCharStart; d <= LAST_CHAR; d++) {
-        for (char e = thirdCharStart; e <= LAST_CHAR; e++) {
-          byte [] bytes = new byte [] {(byte)c, (byte)d, (byte)e};
-          Text t = new Text(new String(bytes));
-          if (endKey != null && endKey.getLength() > 0
-              && endKey.compareTo(t) <= 0) {
-            break EXIT_ALL_LOOPS;
-          }
-          long lockid = r.startUpdate(t);
-          try {
-            r.put(lockid, new Text(column), bytes);
-            r.commit(lockid, System.currentTimeMillis());
-            lockid = -1;
-          } finally {
-            if (lockid != -1) {
-              r.abort(lockid);
-            }
-          }
-        }
-        // Set start character back to FIRST_CHAR after we've done first loop.
-        thirdCharStart = FIRST_CHAR;
-      }
-      secondCharStart = FIRST_CHAR;
-    }
-  }
-  
-  // TODO: Have HTable and HRegion implement interface that has in it
-  // startUpdate, put, delete, commit, abort, etc.
-  private void addContent(final HTable table, final String column)
-  throws IOException {
-    byte [] startKeyBytes = new byte [] {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
-    // Add rows of three characters.  The first character starts with the
-    // 'a' character and runs up to 'z'.  Per first character, we run the
-    // second character over same range.  And same for the third so rows
-    // (and values) look like this: 'aaa', 'aab', 'aac', etc.
-    char secondCharStart = (char)startKeyBytes[1];
-    char thirdCharStart = (char)startKeyBytes[2];
-    for (char c = (char)startKeyBytes[0]; c <= LAST_CHAR; c++) {
-      for (char d = secondCharStart; d <= LAST_CHAR; d++) {
-        for (char e = thirdCharStart; e <= LAST_CHAR; e++) {
-          byte [] bytes = new byte [] {(byte)c, (byte)d, (byte)e};
-          Text t = new Text(new String(bytes));
-          long lockid = table.startUpdate(t);
-          try {
-            table.put(lockid, new Text(column), bytes);
-            table.commit(lockid, System.currentTimeMillis());
-            lockid = -1;
-          } finally {
-            if (lockid != -1) {
-              table.abort(lockid);
-            }
-          }
-        }
-        // Set start character back to FIRST_CHAR after we've done first loop.
-        thirdCharStart = FIRST_CHAR;
-      }
-      secondCharStart = FIRST_CHAR;
-    }
   }
 }

@@ -365,7 +365,9 @@ public class MiniHBaseCluster implements HConstants {
     shutdown(this.masterThread, this.regionThreads);
     // Close the file system.  Will complain if files open so helps w/ leaks.
     try {
-      this.cluster.getFileSystem().close();
+      if (this.cluster != null && this.cluster.getFileSystem() != null) {
+        this.cluster.getFileSystem().close();
+      }
     } catch (IOException e) {
       LOG.error("Closing down dfs", e);
     }

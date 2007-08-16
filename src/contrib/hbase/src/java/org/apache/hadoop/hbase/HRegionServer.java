@@ -158,7 +158,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           try {
             for(HRegion cur: regionsToCheck) {
               if(cur.isClosed()) {
-                continue;                               // Skip if closed
+                // Skip if closed
+                continue;
               }
               if (cur.needsCompaction()) {
                 cur.compactStores();
@@ -272,10 +273,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   protected final Integer cacheFlusherLock = new Integer(0);
   
   /* Runs periodically to flush memcache.
-   * 
-   * Memcache flush is also called just before compaction and just before
-   * split so memcache is best prepared for the the long trip across
-   * compactions/splits during which it will not be able to flush to disk.
    */
   class Flusher implements Runnable {
     /**
@@ -286,9 +283,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         long startTime = System.currentTimeMillis();
 
         synchronized(cacheFlusherLock) {
-
           // Grab a list of items to flush
-
           Vector<HRegion> toFlush = new Vector<HRegion>();
           lock.readLock().lock();
           try {
@@ -837,6 +832,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   BlockingQueue<ToDoEntry> toDo;
   private Worker worker;
   private Thread workerThread;
+  
   /** Thread that performs long running requests from the master */
   class Worker implements Runnable {
     void stop() {
@@ -910,7 +906,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     HRegion region = onlineRegions.get(regionInfo.regionName);
     if(region == null) {
       region = new HRegion(rootDir, log, fs, conf, regionInfo, null);
-
       this.lock.writeLock().lock();
       try {
         this.log.setSequenceNumber(region.getMaxSequenceId());
@@ -1193,7 +1188,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @return {@link HRegion} for <code>regionName</code>
    * @throws NotServingRegionException
    */
-  protected HRegion getRegion(final Text regionName,
+  protected HRegion getRegion(final Text regionName, 
       final boolean checkRetiringRegions)
   throws NotServingRegionException {
     HRegion region = null;

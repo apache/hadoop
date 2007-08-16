@@ -34,6 +34,7 @@ public class HLogEdit implements Writable {
   private Text column = new Text();
   private byte [] val;
   private long timestamp;
+  private final int MAX_VALUE_LEN = 128;
 
   /**
    * Default constructor used by Writable
@@ -69,17 +70,23 @@ public class HLogEdit implements Writable {
     return this.timestamp;
   }
 
-  /** {@inheritDoc} */
+  /**
+   * @return First column name, timestamp, and first 128 bytes of the value
+   * bytes as a String.
+   */
   @Override
   public String toString() {
     String value = "";
     try {
-      value = new String(getVal(), HConstants.UTF8_ENCODING);
-      
+      value = (this.val.length > MAX_VALUE_LEN)?
+        new String(this.val, 0, MAX_VALUE_LEN, HConstants.UTF8_ENCODING) +
+          "...":
+        new String(getVal(), HConstants.UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException("UTF8 encoding not present?", e);
     }
-    return "(" + getColumn().toString() + "/" + getTimestamp() + "/" + value + ")";
+    return "(" + getColumn().toString() + "/" + getTimestamp() + "/" +
+      value + ")";
   }
   
   // Writable

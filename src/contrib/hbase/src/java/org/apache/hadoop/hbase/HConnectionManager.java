@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Writables;
  * multiple HBase instances
  */
 public class HConnectionManager implements HConstants {
-  private HConnectionManager(){}                        // Not instantiable
+  private HConnectionManager() {}                        // Not instantiable
   
   // A Map of master HServerAddress -> connection information for that instance
   // Note that although the Map is synchronized, the objects it contains
@@ -209,15 +209,19 @@ public class HConnectionManager implements HConstants {
 
     /** {@inheritDoc} */
     public boolean tableExists(final Text tableName) {
-      boolean exists = true;
+      if (tableName == null) {
+        throw new IllegalArgumentException("Table name cannot be null");
+      }
+      boolean exists = false;
       try {
-        SortedMap<Text, HRegionLocation> servers = getTableServers(tableName);
-        if (servers == null || servers.size() == 0) {
-          exists = false;
+        HTableDescriptor[] tables = listTables();
+        for (int i = 0; i < tables.length; i++) {
+          if (tables[i].getName().equals(tableName)) {
+            exists = true;
+          }
         }
-
       } catch (IOException e) {
-        exists = false;
+        LOG.warn("Testing for table existence threw exception", e);
       }
       return exists;
     }
@@ -400,7 +404,6 @@ public class HConnectionManager implements HConstants {
     throws IOException {
       
       // Wipe out everything we know about this table
-
       if (this.tablesToServers.remove(tableName) != null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Wiping out all we know of " + tableName);
@@ -524,9 +527,10 @@ public class HConnectionManager implements HConstants {
       }
       this.tablesToServers.put(tableName, servers);
       if (LOG.isDebugEnabled()) {
+        int count = 0;
         for (Map.Entry<Text, HRegionLocation> e: servers.entrySet()) {
-          LOG.debug("Server " + e.getKey() + " is serving: " + e.getValue() +
-              " for table " + tableName);
+          LOG.debug("Region " + (1 + count++) + " of " + servers.size() +
+            ": " + e.getValue());
         }
       }
       return servers;
@@ -650,40 +654,47 @@ public class HConnectionManager implements HConstants {
         new TreeMap<Text, HRegionLocation>();
       
       for (int tries = 0; servers.size() == 0 && tries < numRetries; tries++) {
-
         long scannerId = -1L;
         try {
-          scannerId =
-            server.openScanner(t.getRegionInfo().getRegionName(),
-                COLUMN_FAMILY_ARRAY, tableName, System.currentTimeMillis(), null);
+          scannerId = server.openScanner(t.getRegionInfo().getRegionName(),
+            COLUMN_FAMILY_ARRAY, tableName, System.currentTimeMillis(), null);
 
           while (true) {
-            HRegionInfo regionInfo = null;
-            String serverAddress = null;
             KeyedData[] values = server.next(scannerId);
             if (values.length == 0) {
               if (servers.size() == 0) {
                 // If we didn't find any servers then the table does not exist
                 throw new TableNotFoundException("table '" + tableName +
-                    "' does not exist in " + t);
+                  "' does not exist in " + t);
               }
 
               // We found at least one server for the table and now we're done.
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Found " + servers.size() + " server(s) for " +
-                    "location: " + t + " for tablename " + tableName);
+                  tableName + " at " + t);
               }
               break;
             }
 
-            byte[] bytes = null;
             TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
             for (int i = 0; i < values.length; i++) {
               results.put(values[i].getKey().getColumn(), values[i].getData());
             }
-            regionInfo = new HRegionInfo();
-            regionInfo = (HRegionInfo) Writables.getWritable(
-                results.get(COL_REGIONINFO), regionInfo);
+            
+            byte[] bytes = results.get(COL_REGIONINFO);
+            if (bytes == null || bytes.length == 0) {
+              // This can be null.  Looks like an info:splitA or info:splitB
+              // is only item in the row.
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(COL_REGIONINFO.toString() + " came back empty: " +
+                  results.toString());
+              }
+              servers.clear();
+              break;
+            }
+            
+            HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
+              results.get(COL_REGIONINFO), new HRegionInfo());
 
             if (!regionInfo.tableDesc.getName().equals(tableName)) {
               // We're done
@@ -707,7 +718,8 @@ public class HConnectionManager implements HConstants {
               servers.clear();
               break;
             }
-            serverAddress = Writables.bytesToString(bytes);
+            
+            String serverAddress = Writables.bytesToString(bytes);
             servers.put(regionInfo.startKey, new HRegionLocation(
                 regionInfo, new HServerAddress(serverAddress)));
           }

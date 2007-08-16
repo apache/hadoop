@@ -66,15 +66,16 @@ public class Writables {
    * @param w An empty Writable (usually made by calling the null-arg
    * constructor).
    * @return The passed Writable after its readFields has been called fed
-   * by the passed <code>bytes</code> array or null if passed null or
-   * empty <code>bytes</code>.
+   * by the passed <code>bytes</code> array or IllegalArgumentException
+   * if passed null or an empty <code>bytes</code> array.
    * @throws IOException
+   * @throws IllegalArgumentException
    */
   public static Writable getWritable(final byte [] bytes, final Writable w)
   throws IOException {
     if (bytes == null || bytes.length == 0) {
-      throw new IllegalArgumentException(
-          "Con't build a writable with empty bytes array");
+      throw new IllegalArgumentException("Can't build a writable with empty " +
+        "bytes array");
     }
     if (w == null) {
       throw new IllegalArgumentException("Writable cannot be null");

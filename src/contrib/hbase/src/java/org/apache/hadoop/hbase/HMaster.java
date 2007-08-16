@@ -312,18 +312,16 @@ HMasterRegionInterface, Runnable {
       boolean noReferencesB = splitB == null;
       
       if (!noReferencesA) {
-        noReferencesA =
-          hasReferences(metaRegionName, server, info.getRegionName(), splitA, COL_SPLITA);
+        noReferencesA = hasReferences(metaRegionName, server,
+          info.getRegionName(), splitA, COL_SPLITA);
       }
       if (!noReferencesB) {
-        noReferencesB =
-          hasReferences(metaRegionName, server, info.getRegionName(), splitB, COL_SPLITB);
+        noReferencesB = hasReferences(metaRegionName, server,
+          info.getRegionName(), splitB, COL_SPLITB);
       }
-      if (!(noReferencesA && noReferencesB)) {
-        
+      if (!noReferencesA && !noReferencesB) {
         // No references.  Remove this item from table and deleted region on
         // disk.
-        
         LOG.info("Deleting region " + info.getRegionName() +
         " because daughter splits no longer hold references");
         
@@ -337,7 +335,6 @@ HMasterRegionInterface, Runnable {
         b.delete(lockid, COL_SERVER);
         b.delete(lockid, COL_STARTCODE);
         server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
-        
         result = true;
       }
       
@@ -361,8 +358,8 @@ HMasterRegionInterface, Runnable {
         
         Path [] ps = fs.listPaths(p,
             new PathFilter () {
-              public boolean accept(Path path) {
-                return HStoreFile.isReference(path);
+              public boolean accept(Path p) {
+                return HStoreFile.isReference(p);
               }
             }
         );
@@ -394,18 +391,11 @@ HMasterRegionInterface, Runnable {
         final String serverName, final long startCode) {
       
       // Skip region - if ...
-      
-      if(info.offLine                                       // offline
-          || killedRegions.contains(info.regionName)        // queued for offline
-          || regionsToDelete.contains(info.regionName)) {   // queued for delete
-
+      if(info.offLine                                     // offline
+          || killedRegions.contains(info.regionName)      // queued for offline
+          || regionsToDelete.contains(info.regionName)) { // queued for delete
         unassignedRegions.remove(info.regionName);
         assignAttempts.remove(info.regionName);
-
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("not assigning region: " + info.regionName + " (offline: " +
-              info.isOffline() + ", split: " + info.isSplit() + ")");
-        }
         return;
       }
 
@@ -416,7 +406,6 @@ HMasterRegionInterface, Runnable {
             regionsToKill.containsKey(info.regionName)) {
           
           // Skip if region is on kill list
-
           if(LOG.isDebugEnabled()) {
             LOG.debug("not assigning region (on kill list): " + info.regionName);
           }
@@ -431,14 +420,8 @@ HMasterRegionInterface, Runnable {
           && (storedInfo == null || storedInfo.getStartCode() != startCode)) {
         
         // The current assignment is no good; load the region.
-
         unassignedRegions.put(info.regionName, info);
         assignAttempts.put(info.regionName, Long.valueOf(0L));
-      
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug("Finished if " + info.getRegionName() + " is assigned: " +
-            "unassigned: " + unassignedRegions.containsKey(info.regionName) +
-            ", pending: " + pendingRegions.contains(info.regionName));
       }
     }
   }
@@ -2155,8 +2138,10 @@ HMasterRegionInterface, Runnable {
           if (rootRegionLocation.get() == null || !rootScanned) {
             // We can't proceed until the root region is online and has been scanned
             if (LOG.isDebugEnabled()) {
-              LOG.debug("root region=" + rootRegionLocation.get().toString() +
-                  ", rootScanned=" + rootScanned);
+              LOG.debug("root region: " + 
+                ((rootRegionLocation != null)?
+                  rootRegionLocation.toString(): "null") +
+                ", rootScanned: " + rootScanned);
             }
             return false;
           }
