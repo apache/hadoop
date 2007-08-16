@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<project default="jar" name="eclipse-plugin">
+
+  <import file="../build-contrib.xml"/>
+
+  <path id="eclipse-sdk-jars">
+    <fileset dir="${eclipse.home}/plugins/">
+      <include name="org.eclipse.ui*.jar"/>
+      <include name="org.eclipse.jdt*.jar"/>
+      <include name="org.eclipse.core*.jar"/>
+      <include name="org.eclipse.equinox*.jar"/>
+      <include name="org.eclipse.debug*.jar"/>
+      <include name="org.eclipse.osgi*.jar"/>
+      <include name="org.eclipse.swt*.jar"/>
+      <include name="org.eclipse.jface*.jar"/>
+
+      <include name="org.eclipse.team.cvs.ssh2*.jar"/>
+      <include name="com.jcraft.jsch*.jar"/>
+    </fileset> 
+  </path>
+
+  <!-- Override classpath to include Eclipse SDK jars -->
+  <path id="classpath">
+    <pathelement location="${build.classes}"/>
+    <path refid="eclipse-sdk-jars"/>
+  </path>
+
+  <!-- Skip building if eclipse.home is unset. -->
+  <target name="check-contrib" unless="eclipse.home">
+    <property name="skip.contrib" value="yes"/>
+    <echo message="eclipse.home unset: skipping eclipse plugin"/>
+  </target>
+
+  <!-- Override jar target to specify manifest -->
+  <target name="jar" depends="compile" unless="skip.contrib">
+    <jar
+      jarfile="${build.dir}/hadoop-${name}.jar"
+      basedir="${build.classes}"
+      manifest="META-INF/MANIFEST.MF"
+    />
+  </target>
+
+</project>

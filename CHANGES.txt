@@ -28,6 +28,9 @@ Trunk (unreleased changes)
     HADOOP-1610.  Add metrics for failed tasks.
     (Devaraj Das via tomwhite)
 
+    HADOOP-1437.  Add Eclipse plugin in contrib.
+    (Eugene Hung and Christophe Taton via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-1565.  Reduce memory usage of NameNode by replacing 
