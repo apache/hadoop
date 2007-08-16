@@ -39,6 +39,9 @@ Trunk (unreleased changes)
     HADOOP-1463.  HDFS report correct usage statistics for disk space
     used by HDFS.  (Hairong Kuang via dhruba)
 
+    HADOOP-1692.  In DFS ant task, don't cache the Configuration.
+    (Chris Douglas via cutting)
+
   IMPROVEMENTS
 
     HADOOP-1651.  Improve progress reporting.

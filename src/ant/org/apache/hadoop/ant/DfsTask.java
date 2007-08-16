@@ -23,8 +23,6 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 
 import java.util.LinkedList;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
@@ -48,8 +46,6 @@ public class DfsTask extends Task {
       public void write(int b)    { /* ignore */ }
       public String toString()    { return ""; }
   };
-  private static final Map<Project, AntClassLoader> clCache =
-    new WeakHashMap<Project, AntClassLoader>();
 
   protected AntClassLoader confloader;
   protected OutputStream out = nullOut;
@@ -154,8 +150,6 @@ public class DfsTask extends Task {
 
     System.setErr(antErr);
     System.setOut(antOut);
-    // permit conf ClassLoader to be garbage collected when last ref to
-    // Project disappears
     confloader.cleanup();
     confloader.setParent(null);
   }
@@ -177,12 +171,7 @@ public class DfsTask extends Task {
     argv.add(0, cmd);
 
     if (null == confloader) {
-      if (null == clCache.get(getProject())) {
-        setConf(getProject().getProperty("hadoop.conf.dir"));
-        clCache.put(getProject(), confloader);
-      } else {
-        confloader = clCache.get(getProject());
-      }
+      setConf(getProject().getProperty("hadoop.conf.dir"));
     }
 
     int exit_code = 0;
