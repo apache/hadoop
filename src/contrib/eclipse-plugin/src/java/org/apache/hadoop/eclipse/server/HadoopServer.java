@@ -101,8 +101,6 @@ public class HadoopServer {
    */
   private String name;
 
-  // the machine that we are tunneling through to get to the Hadoop server
-
   /**
    * Host name of the tunneling machine
    */
@@ -169,7 +167,7 @@ public class HadoopServer {
       session.setUserInfo(new SWTUserInfo() {
         @Override
         public String getPassword() {
-          return password;
+          return HadoopServer.this.password;
         }
 
         @Override
@@ -182,6 +180,7 @@ public class HadoopServer {
         try {
           session.connect();
         } catch (JSchException jse) {
+          // Reset password in case the authentication failed
           if (jse.getMessage().equals("Auth fail"))
             this.password = null;
           throw jse;
@@ -210,6 +209,7 @@ public class HadoopServer {
         try {
           session.connect();
         } catch (JSchException jse) {
+          // Reset password in case the authentication failed
           if (jse.getMessage().equals("Auth fail"))
             this.password = null;
           throw jse;
@@ -246,20 +246,23 @@ public class HadoopServer {
             tunnelHostName, 22);
     tunnel.setTimeout(0);
     tunnel.setPortForwardingL(tunnelPort, hostName, port);
+
     tunnel.setUserInfo(new SWTUserInfo() {
       @Override
       public String getPassword() {
-        return tunnelPassword;
+        return HadoopServer.this.tunnelPassword;
       }
 
       @Override
       public void setPassword(String password) {
-        tunnelPassword = password;
+        HadoopServer.this.tunnelPassword = password;
       }
     });
+
     try {
       tunnel.connect();
     } catch (JSchException jse) {
+      // Reset password in case the authentication failed
       if (jse.getMessage().equals("Auth fail"))
         this.tunnelPassword = null;
       throw jse;
@@ -282,12 +285,22 @@ public class HadoopServer {
     }
   }
 
-  public String getHostName() {
+  /**
+   * Return the effective host name to use to contact the server. The
+   * effective host name might be "localhost" if we setup a tunnel.
+   * 
+   * @return the effective host name to use contact the server
+   */
+  public String getEffectiveHostName() {
     if ((tunnelHostName != null) && (tunnelHostName.length() > 0)) {
       return "localhost";
     }
 
-    return hostName;
+    return this.hostName;
+  }
+  
+  public String getHostName() {
+    return this.hostName;
   }
 
   public void setHostname(String hostname) {
@@ -346,8 +359,8 @@ public class HadoopServer {
    */
   public URL getJobTrackerUrl() throws MalformedURLException {
     if (tunnelHostName == null) {
-      return new URL("http://" + getHostName() + ":" + JOB_TRACKER_PORT
-          + "/jobtracker.jsp");
+      return new URL("http://" + getEffectiveHostName() + ":"
+          + JOB_TRACKER_PORT + "/jobtracker.jsp");
     } else {
       try {
         createHttpTunnel(JOB_TRACKER_PORT);
@@ -461,7 +474,7 @@ public class HadoopServer {
       // jar.buildJar(monitor).toString());
 
       copy.setAttribute("hadoop.jarrable", jar.toMemento());
-      copy.setAttribute("hadoop.host", this.getHostName());
+      copy.setAttribute("hadoop.host", this.getEffectiveHostName());
       copy.setAttribute("hadoop.user", this.getUserName());
       copy.setAttribute("hadoop.serverid", this.id);
       copy.setAttribute("hadoop.path", this.getInstallPath());

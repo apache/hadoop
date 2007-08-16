@@ -36,9 +36,10 @@
   <target name="jar" depends="compile" unless="skip.contrib">
     <jar
       jarfile="${build.dir}/hadoop-${name}.jar"
-      basedir="${build.classes}"
-      manifest="META-INF/MANIFEST.MF"
-    />
+      manifest="${root}/META-INF/MANIFEST.MF">
+      <fileset dir="${build.dir}" includes="classes/"/>
+      <fileset dir="${root}" includes="resources/ plugin.xml"/>
+    </jar>
   </target>
 
 </project>

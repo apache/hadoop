@@ -24,5 +24,5 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.team.cvs.ssh2,
  com.jcraft.jsch
 Eclipse-LazyStart: true
-Bundle-ClassPath: bin/
+Bundle-ClassPath: classes/
 Bundle-Vendor: Apache Hadoop

@@ -34,17 +34,26 @@ import com.jcraft.jsch.UIKeyboardInteractive;
 import com.jcraft.jsch.UserInfo;
 
 /**
- * Data structure for retaining user login information
+ * SWT Forms to prompt for passwords or for keyboard interactive
+ * authentication
  */
 public abstract class SWTUserInfo implements UserInfo, UIKeyboardInteractive {
+
+  /**
+   * Password that was last tried; this to prevent sending many times the
+   * "saved" password if it does not work
+   */
+  private String triedPassword = null;
 
   public SWTUserInfo() {
   }
 
+  /* @inheritDoc */
   public String getPassphrase() {
     return this.getPassword();
   }
 
+  /* @inheritDoc */
   public abstract String getPassword();
 
   public abstract void setPassword(String pass);
@@ -53,6 +62,7 @@ public abstract class SWTUserInfo implements UserInfo, UIKeyboardInteractive {
     this.setPassword(pass);
   }
 
+  /* @inheritDoc */
   public boolean promptPassphrase(final String arg0) {
     Display.getDefault().syncExec(new Runnable() {
       public void run() {
@@ -64,37 +74,46 @@ public abstract class SWTUserInfo implements UserInfo, UIKeyboardInteractive {
   }
 
   public boolean promptPassword(final String arg0) {
-    // check if password is already set to prevent the second session from
-    // querying again -- eyhung
-    // how to prevent bad passwords?
-    if (this.getPassword() == null) {
+    /*
+     * Ask the user for the password if we don't know it, or if we now it but
+     * already tried it
+     */
+    if ((this.getPassword() == null)
+        || this.getPassword().equals(this.triedPassword)) {
       Display.getDefault().syncExec(new Runnable() {
         public void run() {
           Shell parent = Display.getDefault().getActiveShell();
           String password = new PasswordDialog(parent).prompt(arg0);
+          SWTUserInfo.this.triedPassword = password;
           SWTUserInfo.this.setPassword(password);
         }
       });
     }
+
     return this.getPassword() != null;
   }
 
-  private boolean result;
+  /**
+   * To store the result of the Yes/No message dialog
+   */
+  private boolean yesNoResult;
 
+  /* @inheritDoc */
   public boolean promptYesNo(final String arg0) {
 
     Display.getDefault().syncExec(new Runnable() {
       public void run() {
-        result =
+        yesNoResult =
             MessageDialog.openQuestion(
                 Display.getDefault().getActiveShell(),
                 "SSH Question Dialog", arg0);
       }
     });
 
-    return result;
+    return yesNoResult;
   }
 
+  /* @inheritDoc */
   public void showMessage(final String arg0) {
     Display.getDefault().syncExec(new Runnable() {
       public void run() {
@@ -103,6 +122,9 @@ public abstract class SWTUserInfo implements UserInfo, UIKeyboardInteractive {
     });
   }
 
+  /**
+   * To store the answers from the keyboard interactive dialog
+   */
   private String[] interactiveAnswers;
 
   /* @inheritDoc */
@@ -124,11 +146,10 @@ public abstract class SWTUserInfo implements UserInfo, UIKeyboardInteractive {
    * Simple password prompting dialog
    */
   public static class PasswordDialog extends Dialog {
+
     private Text text;
 
     private String password;
-
-    private Label title;
 
     private String message;
 
@@ -159,7 +180,7 @@ public abstract class SWTUserInfo implements UserInfo, UIKeyboardInteractive {
       panel.setLayout(new GridLayout(2, false));
       panel.setLayoutData(new GridData(GridData.FILL_BOTH));
 
-      title = new Label(panel, SWT.NONE);
+      Label title = new Label(panel, SWT.NONE);
       GridData span2 = new GridData(GridData.FILL_HORIZONTAL);
       span2.horizontalSpan = 2;
       title.setLayoutData(span2);

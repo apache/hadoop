@@ -28,9 +28,6 @@ Trunk (unreleased changes)
     HADOOP-1610.  Add metrics for failed tasks.
     (Devaraj Das via tomwhite)
 
-    HADOOP-1437.  Add Eclipse plugin in contrib.
-    (Eugene Hung and Christophe Taton via cutting)
-
   OPTIMIZATIONS
 
     HADOOP-1565.  Reduce memory usage of NameNode by replacing 
@@ -592,6 +589,9 @@ Release 0.14.0 - 2007-08-17
 
 158. HADOOP-1717.  Fix TestDFSUpgradeFromImage to work on Solaris.
      (nigel via cutting)
+
+159. HADOOP-1437.  Add Eclipse plugin in contrib.
+     (Eugene Hung and Christophe Taton via cutting)
 
 
 Release 0.13.0 - 2007-06-08
