@@ -532,6 +532,9 @@ Release 0.14.0 - 2007-08-17
 158. HADOOP-1717.  Fix TestDFSUpgradeFromImage to work on Solaris.
      (nigel via cutting)
 
+159. HADOOP-1437.  Add Eclipse plugin in contrib.
+     (Eugene Hung and Christophe Taton via cutting)
+
 
 Release 0.13.0 - 2007-06-08
 

@@ -64,12 +64,13 @@
 
 
   <!-- to be overridden by sub-projects -->
+  <target name="check-contrib"/>
   <target name="init-contrib"/>
 
   <!-- ====================================================== -->
   <!-- Stuff needed by all targets                            -->
   <!-- ====================================================== -->
-  <target name="init">
+  <target name="init" depends="check-contrib" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
@@ -83,7 +84,7 @@
   <!-- ====================================================== -->
   <!-- Compile a Hadoop contrib's files                       -->
   <!-- ====================================================== -->
-  <target name="compile" depends="init">
+  <target name="compile" depends="init" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <javac
      encoding="${build.encoding}"
@@ -132,7 +133,7 @@
   <!-- ====================================================== -->
   <!-- Make a Hadoop contrib's jar                            -->
   <!-- ====================================================== -->
-  <target name="jar" depends="compile">
+  <target name="jar" depends="compile" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <jar
       jarfile="${build.dir}/hadoop-${name}.jar"
@@ -144,7 +145,8 @@
   <!-- ====================================================== -->
   <!-- Make a Hadoop contrib's examples jar                   -->
   <!-- ====================================================== -->
-  <target name="jar-examples" depends="compile-examples">
+  <target name="jar-examples" depends="compile-examples"
+          if="examples.available" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <jar jarfile="${build.dir}/hadoop-${name}-examples.jar">
       <fileset dir="${build.classes}">
@@ -154,7 +156,7 @@
     </jar>
   </target>
   
-  <target name="deploy" depends="jar, jar-examples">
+  <target name="deploy" depends="jar, jar-examples" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <mkdir dir="${deploy.dir}"/>
     <copy file="${build.dir}/hadoop-${name}.jar" todir="${deploy.dir}"/>

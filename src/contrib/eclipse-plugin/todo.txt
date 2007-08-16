@@ -1,0 +1,149 @@
+-- DONE --------------------------
+	* Pref wizard page for hadoop libraries (eugene) -- DONE
+	* running wrong jar bug (julz) -- not using WTP any more DONE
+	* DFS only for hadoop servers (julz) -- DONE
+	* allow per-project hadoop dir, moved selection of hadoop path to first page of wizard (julz) -- DONE
+	* allow creation of new driver as part of new project wizard (julz) -- DONE
+	* BUG: ssh console sometimes drops (eugene) -- DONE
+	* Server Selection wizard - finish button should not be clickable if radio is on create server (eugene) -- DONE
+	* module icons for jar and job (dennis) -- DONE (sort of)
+	
+			 
+--- Bugs ---
+
+	* Server Selection wizard has identical name and location -- 
+	
+--- Features ----
+
+	* Limit type searches in driver wizard to current project (eugene) 
+	
+	* new.. dialogs on mapred perspective (julz) 
+	
+	* show cheat sheet, more wizardy goodness (julz) 
+
+
+--- Documentation ---
+
+	* cheat sheets (dennis)
+
+
+--- Testing ---
+
+	* test on mac osx (julz)
+
+
+--- Everything ------------------
+
+* Run/Debug.. on Hadoop runs the project on a local hadoop cloud, this will involve finding
+	the appropriate Map/Reduce classes, as a first pass I suggest we have the user specify these in the Run.. dialog
+	therefore this task breaks down to at least:
+	
+	* hadoop new proj. size
+	
+	* generate mapper/reducer screen on new project wizard
+	* title bar, titles on new X wizards
+	* hadoop perspective show cheat sheet
+	* status on server view
+	* double click on jobs, go to associated console
+	* icons for jobs
+	
+	* copy resources directory or similar to dfs, allow configurable resources directory
+	
+	* test installation directory on new server screen (i.e. ssh in and check files are present)
+	
+	* (Eugene) if server has user:pass@hostname in location, ssh file and run it on remote hadoop client
+	
+	* (Daniel) make launch on local hadoop scenario properly work, deploy jar to the server when run
+	
+	* (Julz) read info from 50030 to show jobs running on server
+
+	* contribute Format action for fs, suggest this when a server if first created
+	
+	* Possibly DFS navigator view?
+
+	*	(and to specify input and output? - how should we handle this?)
+	
+	* Restrict browse classes dialog above to subclass of Mapper, Reducer etc., add proposals to text fields
+	
+	* Make launch dialog look pretty
+	
+	* Run the specified Mapper and Reducer on a local server
+	
+	* Allow the user to Run on a server defined in a servers view (i.e. so you can run locally, and on cloud A or B with the same settings)
+	
+	* Allow the user to configure the hadoop server from this view as appropriate
+	
+	* When the job runs, keep the tracker interface and put it into a view in the perspective (see next task!) so the user
+	can track the state
+
+* Add a Hadouken perspective with
+	* the Hadoop targets view (analogous to servers view in WTP project)
+	
+	* the running jobs view which shows the status of running jobs
+	
+	* a Current Lesson/API panel showing html text from the lecturer?
+	
+	* any jazz stuff?
+	
+* JUnit support, specify expected inputs and outputs and run on server, collecting results and presenting a unified view
+ similar to the junit component.
+-- DONE --------------------------
+
+-- Current priorities ------------
+
+ ... Dennis, maybe you could move stuff from below up here?
+
+--- Everything ------------------
+
+* Run/Debug.. on Hadoop runs the project on a local hadoop cloud, this will involve finding
+	the appropriate Map/Reduce classes, as a first pass I suggest we have the user specify these in the Run.. dialog
+	therefore this task breaks down to at least:
+	
+	* hadoop new proj. size
+	
+	* generate mapper/reducer screen on new project wizard
+	* title bar, titles on new X wizards
+	* auto-focus on main on X wizards, auto show newly created stuff
+	* on new driver screen, specify mapper (allow creation for bonus points)
+	* hadoop perspective show cheat sheet
+	* remove browse button
+	* status on server view
+	* double click on jobs, go to associated console
+	* icons for jobs
+	
+	* (Eugene) if server has user:pass@hostname in location, ssh file and run it on remote hadoop client
+	
+	* (Daniel) make launch on local hadoop scenario properly work, deploy jar to the server when run
+	
+	* (Julz) read info from 50030 to show jobs running on server
+
+	* contribute Format action for fs, suggest this when a server if first created
+	
+	* Possibly DFS navigator view?
+
+	*	(and to specify input and output? - how should we handle this?)
+	
+	* Restrict browse classes dialog above to subclass of Mapper, Reducer etc., add proposals to text fields
+	
+	* Make launch dialog look pretty
+	
+	* Run the specified Mapper and Reducer on a local server
+	
+	* Allow the user to Run on a server defined in a servers view (i.e. so you can run locally, and on cloud A or B with the same settings)
+	
+	* Allow the user to configure the hadoop server from this view as appropriate
+	
+	* When the job runs, keep the tracker interface and put it into a view in the perspective (see next task!) so the user
+	can track the state
+
+* Add a Hadouken perspective with
+	* the Hadoop targets view (analogous to servers view in WTP project)
+	
+	* the running jobs view which shows the status of running jobs
+	
+	* a Current Lesson/API panel showing html text from the lecturer?
+	
+	* any jazz stuff?
+	
+* JUnit support, specify expected inputs and outputs and run on server, collecting results and presenting a unified view
+ similar to the junit component.
