@@ -149,6 +149,7 @@ public class PerformanceEvaluation implements HConstants {
   /**
    * MapReduce job that runs a performance evaluation client in each map task.
    */
+  @SuppressWarnings("unchecked")
   public static class EvaluationMapTask extends MapReduceBase
   implements Mapper {
     /** configuration parameter name that contains the command */

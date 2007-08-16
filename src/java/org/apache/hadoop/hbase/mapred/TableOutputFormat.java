@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Text;
@@ -34,8 +35,8 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
 
 import org.apache.hadoop.hbase.HTable;
-import org.apache.hadoop.hbase.io.KeyedData;
-import org.apache.hadoop.hbase.io.KeyedDataArrayWritable;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 
 import org.apache.log4j.Logger;
 
@@ -43,7 +44,7 @@ import org.apache.log4j.Logger;
  * Convert Map/Reduce output and write it to an HBase table
  */
 public class TableOutputFormat
-  extends OutputFormatBase<Text, KeyedDataArrayWritable> {
+  extends OutputFormatBase<Text, MapWritable> {
 
   /** JobConf parameter that specifies the output table */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
@@ -58,8 +59,7 @@ public class TableOutputFormat
    * and write to an HBase table
    */
   protected class TableRecordWriter
-    implements RecordWriter<Text, KeyedDataArrayWritable> {
-    
+    implements RecordWriter<Text, MapWritable> {
     private HTable m_table;
 
     /**
@@ -74,25 +74,17 @@ public class TableOutputFormat
     /** {@inheritDoc} */
     public void close(@SuppressWarnings("unused") Reporter reporter) {}
 
-    /**
-     * Expect key to be of type Text
-     * Expect value to be of type KeyedDataArrayWritable
-     *
-     * @see org.apache.hadoop.mapred.RecordWriter#write(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable)
-     */
-    public void write(Text key, KeyedDataArrayWritable value) throws IOException {
+    /** {@inheritDoc} */
+    public void write(Text key, MapWritable value) throws IOException {
       LOG.debug("start write");
-      Text tKey = key;
-      KeyedDataArrayWritable tValue = value;
-      KeyedData[] columns = tValue.get();
 
       // start transaction
       
-      long xid = m_table.startUpdate(tKey);
-      
-      for(int i = 0; i < columns.length; i++) {
-        KeyedData column = columns[i];
-        m_table.put(xid, column.getKey().getColumn(), column.getData());
+      long xid = m_table.startUpdate(key);
+
+      for (Map.Entry<WritableComparable, Writable> e: value.entrySet()) {
+        m_table.put(xid, (Text)e.getKey(),
+            ((ImmutableBytesWritable)e.getValue()).get());
       }
       
       // end transaction
@@ -103,14 +95,14 @@ public class TableOutputFormat
     }
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.mapred.OutputFormatBase#getRecordWriter(org.apache.hadoop.fs.FileSystem, org.apache.hadoop.mapred.JobConf, java.lang.String, org.apache.hadoop.util.Progressable)
-   */
   /** {@inheritDoc} */
   @Override
-  @SuppressWarnings("unused")
-  public RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
-      String name, Progressable progress) throws IOException {
+  @SuppressWarnings("unchecked")
+  public RecordWriter getRecordWriter(
+      @SuppressWarnings("unused") FileSystem ignored,
+      JobConf job,
+      @SuppressWarnings("unused") String name,
+      @SuppressWarnings("unused") Progressable progress) throws IOException {
     
     // expecting exactly one path
     
@@ -119,8 +111,9 @@ public class TableOutputFormat
     HTable table = null;
     try {
       table = new HTable(job, tableName);
-    } catch(Exception e) {
+    } catch(IOException e) {
       LOG.error(e);
+      throw e;
     }
     LOG.debug("end get writer");
     return new TableRecordWriter(table);

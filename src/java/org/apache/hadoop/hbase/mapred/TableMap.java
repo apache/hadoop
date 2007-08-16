@@ -28,7 +28,7 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.hbase.io.KeyedDataArrayWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.io.Text;
@@ -39,6 +39,7 @@ import org.apache.log4j.Logger;
  * If the column does not exist, the record is not passed to Reduce.
  *
  */
+@SuppressWarnings("unchecked")
 public abstract class TableMap extends MapReduceBase implements Mapper {
 
   private static final Logger LOG = Logger.getLogger(TableMap.class.getName());
@@ -64,7 +65,7 @@ public abstract class TableMap extends MapReduceBase implements Mapper {
     
     job.setInputFormat(TableInputFormat.class);
     job.setOutputKeyClass(Text.class);
-    job.setOutputValueClass(KeyedDataArrayWritable.class);
+    job.setOutputValueClass(MapWritable.class);
     job.setMapperClass(mapper);
     job.setInputPath(new Path(table));
     job.set(TableInputFormat.COLUMN_LIST, columns);
@@ -95,7 +96,7 @@ public abstract class TableMap extends MapReduceBase implements Mapper {
     if(m_collector.collector == null) {
       m_collector.collector = output;
     }
-    map((HStoreKey)key, (KeyedDataArrayWritable)value, m_collector, reporter);
+    map((HStoreKey)key, (MapWritable)value, m_collector, reporter);
     LOG.debug("end map");
   }
 
@@ -109,6 +110,6 @@ public abstract class TableMap extends MapReduceBase implements Mapper {
    * @param reporter
    * @throws IOException
    */
-  public abstract void map(HStoreKey key, KeyedDataArrayWritable value, 
+  public abstract void map(HStoreKey key, MapWritable value, 
       TableOutputCollector output, Reporter reporter) throws IOException;
 }

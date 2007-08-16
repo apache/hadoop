@@ -870,15 +870,6 @@ public class HRegion implements HConstants {
     }
   }
   
-  private Vector<HStoreFile> getAllStoreFiles() {
-    Vector<HStoreFile> allHStoreFiles = new Vector<HStoreFile>();
-    for(HStore hstore: stores.values()) {
-      Vector<HStoreFile> hstoreFiles = hstore.getAllStoreFiles();
-      allHStoreFiles.addAll(0, hstoreFiles);
-    }
-    return allHStoreFiles;
-  }
-
   //////////////////////////////////////////////////////////////////////////////
   // get() methods for client use.
   //////////////////////////////////////////////////////////////////////////////

@@ -45,9 +45,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
@@ -187,8 +190,8 @@ HMasterRegionInterface, Runnable {
       // Array to hold list of split parents found.  Scan adds to list.  After
       // scan we go check if parents can be removed.
 
-      Map<HRegionInfo, TreeMap<Text, byte[]>> splitParents =
-        new HashMap<HRegionInfo, TreeMap<Text, byte[]>>();
+      Map<HRegionInfo, SortedMap<Text, byte[]>> splitParents =
+        new HashMap<HRegionInfo, SortedMap<Text, byte[]>>();
       try {
         regionServer = connection.getHRegionConnection(region.server);
         scannerId =
@@ -197,14 +200,16 @@ HMasterRegionInterface, Runnable {
 
         int numberOfRegionsFound = 0;
         while (true) {
-          TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-          KeyedData[] values = regionServer.next(scannerId);
-          if (values.length == 0) {
+          SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+          MapWritable values = regionServer.next(scannerId);
+          if (values == null || values.size() == 0) {
             break;
           }
 
-          for (int i = 0; i < values.length; i++) {
-            results.put(values[i].getKey().getColumn(), values[i].getData());
+          for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+            HStoreKey key = (HStoreKey) e.getKey();
+            results.put(key.getColumn(),
+                ((ImmutableBytesWritable) e.getValue()).get());
           }
 
           HRegionInfo info = (HRegionInfo) Writables.getWritable(
@@ -260,10 +265,10 @@ HMasterRegionInterface, Runnable {
       // Scan is finished.  Take a look at split parents to see if any we can clean up.
 
       if (splitParents.size() > 0) {
-        for (Map.Entry<HRegionInfo, TreeMap<Text, byte[]>> e:
+        for (Map.Entry<HRegionInfo, SortedMap<Text, byte[]>> e:
           splitParents.entrySet()) {
           
-          TreeMap<Text, byte[]> results = e.getValue();
+          SortedMap<Text, byte[]> results = e.getValue();
           cleanupSplits(region.regionName, regionServer, e.getKey(), 
               (HRegionInfo) Writables.getWritable(results.get(COL_SPLITA),
                   new HRegionInfo()),
@@ -1643,7 +1648,7 @@ HMasterRegionInterface, Runnable {
 
       try {
         while (true) {
-          KeyedData[] values = null;
+          MapWritable values = null;
 
           try {
             values = server.next(scannerId);
@@ -1658,23 +1663,25 @@ HMasterRegionInterface, Runnable {
             break;
           }
 
-          if (values == null || values.length == 0) {
+          if (values == null || values.size() == 0) {
             break;
           }
 
-          TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+          SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
           Text row = null;
-          for (int i = 0; i < values.length; i++) {
-            if(row == null) {
-              row = values[i].getKey().getRow();
-
+          for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+            HStoreKey key = (HStoreKey) e.getKey();
+            Text thisRow = key.getRow();
+            if (row == null) {
+              row = thisRow;
             } else {
-              if (!row.equals(values[i].getKey().getRow())) {
+              if (!row.equals(thisRow)) {
                 LOG.error("Multiple rows in same scanner result set. firstRow="
-                    + row + ", currentRow=" + values[i].getKey().getRow());
+                    + row + ", currentRow=" + thisRow);
               }
             }
-            results.put(values[i].getKey().getColumn(), values[i].getData());
+            results.put(key.getColumn(),
+                ((ImmutableBytesWritable) e.getValue()).get());
           }
 
           if (LOG.isDebugEnabled() && row != null) {
@@ -2317,19 +2324,22 @@ HMasterRegionInterface, Runnable {
       long scannerid = server.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
           tableName, System.currentTimeMillis(), null);
       try {
-        KeyedData[] data = server.next(scannerid);
+        MapWritable data = server.next(scannerid);
             
         // Test data and that the row for the data is for our table. If table
         // does not exist, scanner will return row after where our table would
         // be inserted if it exists so look for exact match on table name.
             
-        if (data != null && data.length > 0 &&
-            HRegionInfo.getTableNameFromRegionName(
-                data[0].getKey().getRow()).equals(tableName)) {
-              
-          // Then a region for this table already exists. Ergo table exists.
-              
-          throw new TableExistsException(tableName.toString());
+        if (data != null && data.size() > 0) {
+          for (WritableComparable k: data.keySet()) {
+            if (HRegionInfo.getTableNameFromRegionName(
+                ((HStoreKey) k).getRow()).equals(tableName)) {
+          
+              // Then a region for this table already exists. Ergo table exists.
+                  
+              throw new TableExistsException(tableName.toString());
+            }
+          }
         }
             
       } finally {
@@ -2462,35 +2472,38 @@ HMasterRegionInterface, Runnable {
                   String serverName = null;
                   long startCode = -1L;
 
-                  KeyedData[] values = server.next(scannerId);
-                  if(values == null || values.length == 0) {
+                  MapWritable values = server.next(scannerId);
+                  if(values == null || values.size() == 0) {
                     break;
                   }
                   boolean haveRegionInfo = false;
-                  for (int i = 0; i < values.length; i++) {
-                    if (values[i].getData().length == 0) {
+                  for (Map.Entry<WritableComparable, Writable> e:
+                    values.entrySet()) {
+
+                    byte[] value = ((ImmutableBytesWritable) e.getValue()).get();
+                    if (value == null || value.length == 0) {
                       break;
                     }
-                    Text column = values[i].getKey().getColumn();
+                    HStoreKey key = (HStoreKey) e.getKey();
+                    Text column = key.getColumn();
                     if (column.equals(COL_REGIONINFO)) {
                       haveRegionInfo = true;
-                      info = (HRegionInfo) Writables.getWritable(
-                          values[i].getData(), info);
+                      info = (HRegionInfo) Writables.getWritable(value, info);
                     
                     } else if (column.equals(COL_SERVER)) {
                       try {
                         serverName =
-                          Writables.bytesToString(values[i].getData());
+                          Writables.bytesToString(value);
                     
-                      } catch (UnsupportedEncodingException e) {
+                      } catch (UnsupportedEncodingException ex) {
                         assert(false);
                       }
                     
                     } else if (column.equals(COL_STARTCODE)) {
                       try {
-                        startCode = Writables.bytesToLong(values[i].getData());
+                        startCode = Writables.bytesToLong(value);
                       
-                      } catch (UnsupportedEncodingException e) {
+                      } catch (UnsupportedEncodingException ex) {
                         assert(false);
                       }
                     }

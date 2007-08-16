@@ -38,8 +38,8 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.Reporter;
 
-import org.apache.hadoop.hbase.io.KeyedData;
-import org.apache.hadoop.hbase.io.KeyedDataArrayWritable;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 
 import org.apache.hadoop.hbase.mapred.TableMap;
 import org.apache.hadoop.hbase.mapred.TableOutputCollector;
@@ -150,44 +150,44 @@ public class TestTableMapReduce extends HBaseTestCase {
     /**
      * Pass the key, and reversed value to reduce
      *
-     * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.hbase.io.KeyedDataArrayWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
+     * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.hbase.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
      */
+    @SuppressWarnings("unchecked")
     @Override
-    public void map(HStoreKey key, KeyedDataArrayWritable value,
+    public void map(HStoreKey key, MapWritable value,
         TableOutputCollector output,
         @SuppressWarnings("unused") Reporter reporter) throws IOException {
       
       Text tKey = key.getRow();
-      KeyedData[] columns = value.get();
       
-      if(columns.length != 1) {
+      if(value.size() != 1) {
         throw new IOException("There should only be one input column");
       }
-      
-      if(!columns[0].getKey().getColumn().equals(TEXT_INPUT_COLUMN)) {
+
+      Text[] keys = value.keySet().toArray(new Text[value.size()]);
+      if(!keys[0].equals(TEXT_INPUT_COLUMN)) {
         throw new IOException("Wrong input column. Expected: " + INPUT_COLUMN
-            + " but got: " + columns[0].getKey().getColumn());
+            + " but got: " + keys[0]);
       }
 
-      // Get the input column key and change it to the output column key
-      
-      HStoreKey column = columns[0].getKey();
-      column.setColumn(TEXT_OUTPUT_COLUMN);
-      
       // Get the original value and reverse it
       
-      String originalValue = new String(columns[0].getData());
+      String originalValue =
+        new String(((ImmutableBytesWritable)value.get(keys[0])).get());
       StringBuilder newValue = new StringBuilder();
       for(int i = originalValue.length() - 1; i >= 0; i--) {
         newValue.append(originalValue.charAt(i));
       }
       
       // Now set the value to be collected
+
+      MapWritable outval = new MapWritable((Class) Text.class,
+          (Class) ImmutableBytesWritable.class,
+          (Map) new TreeMap<Text, ImmutableBytesWritable>());
+      outval.put(TEXT_OUTPUT_COLUMN,
+          new ImmutableBytesWritable(newValue.toString().getBytes()));
       
-      columns[0] = new KeyedData(column, newValue.toString().getBytes());
-      value.set(columns);
-      
-      output.collect(tKey, value);
+      output.collect(tKey, outval);
     }
   }
 

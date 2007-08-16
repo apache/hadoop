@@ -572,6 +572,7 @@ class HStore implements HConstants {
    */
   void compactHelper(final boolean deleteSequenceInfo, long maxSeenSeqID)
   throws IOException {
+    long maxId = maxSeenSeqID;
     synchronized(compactLock) {
       Path curCompactStore =
         HStoreFile.getHStoreDir(compactdir, regionName, familyName);
@@ -607,12 +608,12 @@ class HStore implements HConstants {
         
         // Compute the max-sequenceID seen in any of the to-be-compacted
         // TreeMaps if it hasn't been passed in to us.
-        if (maxSeenSeqID == -1) {
+        if (maxId == -1) {
           for (HStoreFile hsf: toCompactFiles) {
             long seqid = hsf.loadInfo(fs);
             if(seqid > 0) {
-              if(seqid > maxSeenSeqID) {
-                maxSeenSeqID = seqid;
+              if(seqid > maxId) {
+                maxId = seqid;
               }
             }
           }
@@ -629,8 +630,8 @@ class HStore implements HConstants {
         }
 
         // Now, write out an HSTORE_LOGINFOFILE for the brand-new TreeMap.
-        if((! deleteSequenceInfo) && maxSeenSeqID >= 0) {
-          compactedOutputFile.writeInfo(fs, maxSeenSeqID);
+        if((! deleteSequenceInfo) && maxId >= 0) {
+          compactedOutputFile.writeInfo(fs, maxId);
         } else {
           compactedOutputFile.writeInfo(fs, -1);
         }
@@ -710,14 +711,35 @@ class HStore implements HConstants {
       }
     }
   }
-  
+
+  /** Interface for generic reader for compactions */
   interface CompactionReader {
+    
+    /**
+     * Closes the reader
+     * @throws IOException
+     */
     public void close() throws IOException;
+    
+    /**
+     * Get the next key/value pair
+     * 
+     * @param key
+     * @param val
+     * @return true if more data was returned
+     * @throws IOException
+     */
     public boolean next(WritableComparable key, Writable val)
-      throws IOException;
+    throws IOException;
+    
+    /**
+     * Resets the reader
+     * @throws IOException
+     */
     public void reset() throws IOException;
   }
-  
+
+  /** A compaction reader for MapFile */
   class MapFileCompactionReader implements CompactionReader {
     final MapFile.Reader reader;
     
@@ -725,15 +747,18 @@ class HStore implements HConstants {
       this.reader = r;
     }
     
+    /** {@inheritDoc} */
     public void close() throws IOException {
       this.reader.close();
     }
 
+    /** {@inheritDoc} */
     public boolean next(WritableComparable key, Writable val)
     throws IOException {
       return this.reader.next(key, val);
     }
 
+    /** {@inheritDoc} */
     public void reset() throws IOException {
       this.reader.reset();
     }
@@ -1217,6 +1242,7 @@ class HStore implements HConstants {
     return new HStoreScanner(timestamp, targetCols, firstRow);
   }
   
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return this.storeName;

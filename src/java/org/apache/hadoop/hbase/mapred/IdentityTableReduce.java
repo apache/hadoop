@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.hadoop.hbase.io.KeyedDataArrayWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Reporter;
 
@@ -48,7 +48,7 @@ public class IdentityTableReduce extends TableReduce {
       @SuppressWarnings("unused") Reporter reporter) throws IOException {
     
     while(values.hasNext()) {
-      KeyedDataArrayWritable r = (KeyedDataArrayWritable)values.next();
+      MapWritable r = (MapWritable)values.next();
       output.collect(key, r);
     }
   }

@@ -40,17 +40,21 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.BatchOperation;
-import org.apache.hadoop.hbase.io.KeyedData;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.BatchOperation;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
+import org.apache.hadoop.hbase.util.Writables;
 
 /*******************************************************************************
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -1021,22 +1025,24 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public KeyedData[] getRow(final Text regionName, final Text row)
+  public MapWritable getRow(final Text regionName, final Text row)
   throws IOException {
     requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
+    MapWritable result = new MapWritable(HStoreKey.class,
+        ImmutableBytesWritable.class,
+        new TreeMap<WritableComparable, Writable>());
+    
     TreeMap<Text, byte[]> map = region.getFull(row);
-    KeyedData result[] = new KeyedData[map.size()];
-    int counter = 0;
     for (Map.Entry<Text, byte []> es: map.entrySet()) {
-      result[counter++] =
-        new KeyedData(new HStoreKey(row, es.getKey()), es.getValue());
+      result.put(new HStoreKey(row, es.getKey()),
+          new ImmutableBytesWritable(es.getValue()));
     }
     return result;
   }
 
   /** {@inheritDoc} */
-  public KeyedData[] next(final long scannerId)
+  public MapWritable next(final long scannerId)
   throws IOException {
     requestCount.incrementAndGet();
     String scannerName = String.valueOf(scannerId);
@@ -1048,13 +1054,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     
     // Collect values to be returned here
     
-    ArrayList<KeyedData> values = new ArrayList<KeyedData>();
-    
-    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
+    MapWritable values = new MapWritable(HStoreKey.class,
+        ImmutableBytesWritable.class,
+        new TreeMap<WritableComparable, Writable>());
     
     // Keep getting rows until we find one that has at least one non-deleted column value
     
     HStoreKey key = new HStoreKey();
+    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
     while (s.next(key, results)) {
       for(Map.Entry<Text, byte []> e: results.entrySet()) {
         HStoreKey k = new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp());
@@ -1063,8 +1070,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           // Column value is deleted. Don't return it.
           continue;
         }
-        values.add(new KeyedData(k, val));
+        values.put(k, new ImmutableBytesWritable(val));
       }
+      
       if(values.size() > 0) {
         // Row has something in it. Return the value.
         break;
@@ -1074,7 +1082,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       
       results.clear();
     }
-    return values.toArray(new KeyedData[values.size()]);
+    return values;
   }
 
   /*

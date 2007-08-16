@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
@@ -93,11 +93,11 @@ public interface HRegionInterface extends VersionedProtocol {
    * 
    * @param regionName region name
    * @param row row key
-   * @return array of values
+   * @return map of values
    * @throws IOException
    */
-  public KeyedData[] getRow(final Text regionName, final Text row)
-  throws IOException; //TODO
+  public MapWritable getRow(final Text regionName, final Text row)
+  throws IOException;
 
   //////////////////////////////////////////////////////////////////////////////
   // Start an atomic row insertion/update.  No changes are committed until the 
@@ -244,10 +244,10 @@ public interface HRegionInterface extends VersionedProtocol {
    * Get the next set of values
    * 
    * @param scannerId clientId passed to openScanner
-   * @return array of values
+   * @return map of values
    * @throws IOException
    */
-  public KeyedData[] next(long scannerId) throws IOException; //TODO
+  public MapWritable next(long scannerId) throws IOException;
   
   /**
    * Close a scanner

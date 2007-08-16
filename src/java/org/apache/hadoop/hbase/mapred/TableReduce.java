@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 /**
  * Write a table, sorting by the input key
  */
+@SuppressWarnings("unchecked")
 public abstract class TableReduce extends MapReduceBase implements Reducer {
   private static final Logger LOG =
     Logger.getLogger(TableReduce.class.getName());
