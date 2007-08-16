@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,8 +34,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
-import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -228,7 +230,7 @@ public class HConnectionManager implements HConstants {
 
     /** {@inheritDoc} */
     public HTableDescriptor[] listTables() throws IOException {
-      TreeSet<HTableDescriptor> uniqueTables = new TreeSet<HTableDescriptor>();
+      HashSet<HTableDescriptor> uniqueTables = new HashSet<HTableDescriptor>();
 
       SortedMap<Text, HRegionLocation> metaTables =
         getTableServers(META_TABLE_NAME);
@@ -241,16 +243,17 @@ public class HConnectionManager implements HConstants {
               COLUMN_FAMILY_ARRAY, EMPTY_START_ROW, System.currentTimeMillis(),
               null);
 
+          HRegionInfo info = new HRegionInfo();
           while (true) {
-            KeyedData[] values = server.next(scannerId);
-            if (values.length == 0) {
+            MapWritable values = server.next(scannerId);
+            if (values == null || values.size() == 0) {
               break;
             }
-            for (int i = 0; i < values.length; i++) {
-              if (values[i].getKey().getColumn().equals(COL_REGIONINFO)) {
-                HRegionInfo info =
-                  (HRegionInfo) Writables.getWritable(values[i].getData(),
-                      new HRegionInfo());
+            for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+              HStoreKey key = (HStoreKey) e.getKey();
+              if (key.getColumn().equals(COL_REGIONINFO)) {
+                info = (HRegionInfo) Writables.getWritable(
+                    ((ImmutableBytesWritable) e.getValue()).get(), info);
 
                 // Only examine the rows where the startKey is zero length   
                 if (info.startKey.getLength() == 0) {
@@ -272,9 +275,9 @@ public class HConnectionManager implements HConstants {
     }
 
     /** {@inheritDoc} */
-    public SortedMap<Text, HRegionLocation>
-      getTableServers(Text tableName)
-    throws IOException {  
+    public SortedMap<Text, HRegionLocation> getTableServers(Text tableName)
+    throws IOException {
+      
       if (tableName == null || tableName.getLength() == 0) {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");
@@ -542,7 +545,7 @@ public class HConnectionManager implements HConstants {
      * @return map of first row to TableInfo for all meta regions
      * @throws IOException
      */
-    private TreeMap<Text, HRegionLocation> loadMetaFromRoot()
+    private SortedMap<Text, HRegionLocation> loadMetaFromRoot()
     throws IOException {
       
       SortedMap<Text, HRegionLocation> rootRegion =
@@ -646,7 +649,7 @@ public class HConnectionManager implements HConstants {
      * @throws NoServerForRegionException - if table can not be found after retrying
      * @throws IOException 
      */
-    private TreeMap<Text, HRegionLocation> scanOneMetaRegion(
+    private SortedMap<Text, HRegionLocation> scanOneMetaRegion(
         final HRegionLocation t, final Text tableName) throws IOException {
       
       HRegionInterface server = getHRegionConnection(t.getServerAddress());
@@ -660,8 +663,8 @@ public class HConnectionManager implements HConstants {
             COLUMN_FAMILY_ARRAY, tableName, System.currentTimeMillis(), null);
 
           while (true) {
-            KeyedData[] values = server.next(scannerId);
-            if (values.length == 0) {
+            MapWritable values = server.next(scannerId);
+            if (values == null || values.size() == 0) {
               if (servers.size() == 0) {
                 // If we didn't find any servers then the table does not exist
                 throw new TableNotFoundException("table '" + tableName +
@@ -676,9 +679,11 @@ public class HConnectionManager implements HConstants {
               break;
             }
 
-            TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-            for (int i = 0; i < values.length; i++) {
-              results.put(values[i].getKey().getColumn(), values[i].getData());
+            SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+            for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+              HStoreKey key = (HStoreKey) e.getKey();
+              results.put(key.getColumn(),
+                  ((ImmutableBytesWritable) e.getValue()).get());
             }
             
             byte[] bytes = results.get(COL_REGIONINFO);
@@ -704,8 +709,13 @@ public class HConnectionManager implements HConstants {
               }
               break;
             }
+            
+            if (regionInfo.isSplit()) {
+              // Region is a split parent. Skip it.
+              continue;
+            }
 
-            if (regionInfo.isOffline() && !regionInfo.isSplit()) {
+            if (regionInfo.isOffline()) {
               throw new IllegalStateException("table offline: " + tableName);
             }
 

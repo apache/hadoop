@@ -21,11 +21,15 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.KeyedData;
-import org.apache.hadoop.hbase.io.KeyedDataArrayWritable;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
+
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
 
@@ -55,7 +59,8 @@ public class GroupingTableMap extends TableMap {
    *
    * @param table table to be processed
    * @param columns space separated list of columns to fetch
-   * @param groupColumns space separated list of columns used to form the key used in collect
+   * @param groupColumns space separated list of columns used to form the key
+   * used in collect
    * @param mapper map class
    * @param job job configuration object
    */
@@ -83,11 +88,11 @@ public class GroupingTableMap extends TableMap {
    * Pass the new key and value to reduce.
    * If any of the grouping columns are not found in the value, the record is skipped.
    *
-   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.hbase.io.KeyedDataArrayWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
+   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.hbase.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
   public void map(@SuppressWarnings("unused") HStoreKey key,
-      KeyedDataArrayWritable value, TableOutputCollector output,
+      MapWritable value, TableOutputCollector output,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {
     
     byte[][] keyVals = extractKeyValues(value);
@@ -106,20 +111,16 @@ public class GroupingTableMap extends TableMap {
    * @param r
    * @return array of byte values
    */
-  protected byte[][] extractKeyValues(KeyedDataArrayWritable r) {
+  protected byte[][] extractKeyValues(MapWritable r) {
     byte[][] keyVals = null;
     ArrayList<byte[]> foundList = new ArrayList<byte[]>();
     int numCols = m_columns.length;
     if(numCols > 0) {
-      KeyedData[] recVals = r.get();
-      boolean found = true;
-      for(int i = 0; i < numCols && found; i++) {
-        found = false;
-        for(int j = 0; j < recVals.length; j++) {
-          if(recVals[j].getKey().getColumn().equals(m_columns[i])) {
-            found = true;
-            byte[] val = recVals[j].getData();
-            foundList.add(val);
+      for (Map.Entry<WritableComparable, Writable> e: r.entrySet()) {
+        Text column = (Text) e.getKey();
+        for (int i = 0; i < numCols; i++) {
+          if (column.equals(m_columns[i])) {
+            foundList.add(((ImmutableBytesWritable) e.getValue()).get());
             break;
           }
         }

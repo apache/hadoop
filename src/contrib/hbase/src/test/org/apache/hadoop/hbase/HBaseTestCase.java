@@ -32,13 +32,13 @@ import org.apache.hadoop.io.Text;
  * Abstract base class for test cases. Performs all static initialization
  */
 public abstract class HBaseTestCase extends TestCase {
-  public final static String COLFAMILY_NAME1 = "colfamily1:";
-  public final static String COLFAMILY_NAME2 = "colfamily2:";
-  public final static String COLFAMILY_NAME3 = "colfamily3:";
+  protected final static String COLFAMILY_NAME1 = "colfamily1:";
+  protected final static String COLFAMILY_NAME2 = "colfamily2:";
+  protected final static String COLFAMILY_NAME3 = "colfamily3:";
   protected Path testDir = null;
   protected FileSystem localFs = null;
-  public static final char FIRST_CHAR = 'a';
-  public static final char LAST_CHAR = 'z';
+  protected static final char FIRST_CHAR = 'a';
+  protected static final char LAST_CHAR = 'z';
   
   static {
     StaticTestEnvironment.initialize();

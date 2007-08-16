@@ -21,13 +21,11 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.ArrayList;
 
 import org.apache.hadoop.fs.Path;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.mapred.InputFormat;
@@ -40,8 +38,8 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.KeyedData;
-import org.apache.hadoop.hbase.io.KeyedDataArrayWritable;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 
 import org.apache.log4j.Logger;
 
@@ -49,7 +47,7 @@ import org.apache.log4j.Logger;
  * Convert HBase tabular data into a format that is consumable by Map/Reduce
  */
 public class TableInputFormat
-  implements InputFormat<HStoreKey, KeyedDataArrayWritable>, JobConfigurable {
+implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
   
   static final Logger LOG = Logger.getLogger(TableInputFormat.class.getName());
 
@@ -64,11 +62,12 @@ public class TableInputFormat
   HTable m_table;
 
   /**
-   * Iterate over an HBase table data, return (HStoreKey, KeyedDataArrayWritable) pairs
+   * Iterate over an HBase table data,
+   * return (HStoreKey, MapWritable<Text, ImmutableBytesWritable>) pairs
    */
-  class TableRecordReader implements RecordReader<HStoreKey, KeyedDataArrayWritable> {
+  class TableRecordReader implements RecordReader<HStoreKey, MapWritable> {
     private HScannerInterface m_scanner;
-    private TreeMap<Text, byte[]> m_row; // current buffer
+    private SortedMap<Text, byte[]> m_row; // current buffer
     private Text m_endRow;
 
     /**
@@ -102,12 +101,15 @@ public class TableInputFormat
     }
 
     /**
-     * @return KeyedDataArrayWritable of KeyedData
+     * @return MapWritable
      *
      * @see org.apache.hadoop.mapred.RecordReader#createValue()
      */
-    public KeyedDataArrayWritable createValue() {
-      return new KeyedDataArrayWritable();
+    @SuppressWarnings("unchecked")
+    public MapWritable createValue() {
+      return new MapWritable((Class) Text.class,
+          (Class) ImmutableBytesWritable.class,
+          (Map) new TreeMap<Text, ImmutableBytesWritable>());
     }
 
     /** {@inheritDoc} */
@@ -125,34 +127,31 @@ public class TableInputFormat
 
     /**
      * @param key HStoreKey as input key.
-     * @param value KeyedDataArrayWritable as input value
+     * @param value MapWritable as input value
      * 
-     * Converts HScannerInterface.next(HStoreKey, TreeMap(Text, byte[])) to
-     *                                (HStoreKey, KeyedDataArrayWritable)
+     * Converts HScannerInterface.next(HStoreKey, SortedMap<Text, byte[]>) to
+     * HStoreKey, MapWritable<Text, ImmutableBytesWritable>
+     * 
      * @return true if there was more data
      * @throws IOException
      */
-    public boolean next(HStoreKey key, KeyedDataArrayWritable value) throws IOException {
+    @SuppressWarnings("unchecked")
+    public boolean next(HStoreKey key, MapWritable value) throws IOException {
       LOG.debug("start next");
       m_row.clear();
       HStoreKey tKey = key;
       boolean hasMore = m_scanner.next(tKey, m_row);
 
       if(hasMore) {
-        if(m_endRow.getLength() > 0 && (tKey.getRow().compareTo(m_endRow) < 0)) {
+        if(m_endRow.getLength() > 0 &&
+            (tKey.getRow().compareTo(m_endRow) < 0)) {
+          
           hasMore = false;
+          
         } else {
-          KeyedDataArrayWritable rowVal = value;
-          ArrayList<KeyedData> columns = new ArrayList<KeyedData>();
-
           for(Map.Entry<Text, byte[]> e: m_row.entrySet()) {
-            HStoreKey keyCol = new HStoreKey(tKey);
-            keyCol.setColumn(e.getKey());
-            columns.add(new KeyedData(keyCol, e.getValue()));
+            value.put(e.getKey(), new ImmutableBytesWritable(e.getValue()));
           }
-
-          // set the output
-          rowVal.set(columns.toArray(new KeyedData[columns.size()]));
         }
       }
       LOG.debug("end next");
@@ -161,7 +160,8 @@ public class TableInputFormat
 
   }
 
-  public RecordReader<HStoreKey, KeyedDataArrayWritable> getRecordReader(
+  /** {@inheritDoc} */
+  public RecordReader<HStoreKey, MapWritable> getRecordReader(
       InputSplit split,
       @SuppressWarnings("unused") JobConf job,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {

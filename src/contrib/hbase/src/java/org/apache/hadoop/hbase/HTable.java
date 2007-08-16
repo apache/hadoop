@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -32,8 +33,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -183,11 +187,14 @@ public class HTable implements HConstants {
         break;
         
       } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        }
         if (tries == numRetries - 1) {
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          }
           throw e;
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("reloading table servers because: " + e.getMessage());
         }
         tableServers = connection.reloadTableServers(tableName);
       }
@@ -225,12 +232,15 @@ public class HTable implements HConstants {
         break;
         
       } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        }
         if (tries == numRetries - 1) {
           // No more tries
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          }
           throw e;
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("reloading table servers because: " + e.getMessage());
         }
         tableServers = connection.reloadTableServers(tableName);
       }
@@ -279,12 +289,15 @@ public class HTable implements HConstants {
         break;
     
       } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        }
         if (tries == numRetries - 1) {
           // No more tries
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          }
           throw e;
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("reloading table servers because: " + e.getMessage());
         }
         tableServers = connection.reloadTableServers(tableName);
       }
@@ -315,7 +328,7 @@ public class HTable implements HConstants {
    */
   public SortedMap<Text, byte[]> getRow(Text row) throws IOException {
     checkClosed();
-    KeyedData[] value = null;
+    MapWritable value = null;
     for (int tries = 0; tries < numRetries; tries++) {
       HRegionLocation r = getRegionLocation(row);
       HRegionInterface server =
@@ -326,12 +339,15 @@ public class HTable implements HConstants {
         break;
         
       } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        }
         if (tries == numRetries - 1) {
           // No more tries
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          }
           throw e;
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("reloading table servers because: " + e.getMessage());
         }
         tableServers = connection.reloadTableServers(tableName);
       }
@@ -342,10 +358,12 @@ public class HTable implements HConstants {
         // continue
       }
     }
-    TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-    if (value != null && value.length != 0) {
-      for (int i = 0; i < value.length; i++) {
-        results.put(value[i].getKey().getColumn(), value[i].getData());
+    SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+    if (value != null && value.size() != 0) {
+      for (Map.Entry<WritableComparable, Writable> e: value.entrySet()) {
+        HStoreKey key = (HStoreKey) e.getKey();
+        results.put(key.getColumn(),
+            ((ImmutableBytesWritable) e.getValue()).get());
       }
     }
     return results;
@@ -574,14 +592,17 @@ public class HTable implements HConstants {
           break;
 
         } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException(
+                (RemoteException) e);
+          }
           if (tries < numRetries -1) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("reloading table servers because: " + e.getMessage());
+            }
             tableServers = connection.reloadTableServers(tableName);
 
           } else {
-            if (e instanceof RemoteException) {
-              e = RemoteExceptionHandler.decodeRemoteException(
-                  (RemoteException) e);
-            }
             throw e;
           }
         }
@@ -589,6 +610,7 @@ public class HTable implements HConstants {
           Thread.sleep(pause);
 
         } catch (InterruptedException e) {
+          // continue
         }
       }
     } finally {
@@ -702,12 +724,16 @@ public class HTable implements HConstants {
             break;
         
           } catch (IOException e) {
+            if (e instanceof RemoteException) {
+              e = RemoteExceptionHandler.decodeRemoteException(
+                  (RemoteException) e);
+            }
             if (tries == numRetries - 1) {
               // No more tries
-              if (e instanceof RemoteException) {
-                e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-              }
               throw e;
+            }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("reloading table servers because: " + e.getMessage());
             }
             tableServers = connection.reloadTableServers(tableName);
             loadRegions();
@@ -732,20 +758,22 @@ public class HTable implements HConstants {
       if (this.closed) {
         return false;
       }
-      KeyedData[] values = null;
+      MapWritable values = null;
       do {
         values = this.server.next(this.scannerId);
-      } while (values != null && values.length == 0 && nextScanner());
+      } while (values != null && values.size() == 0 && nextScanner());
 
-      if (values != null && values.length != 0) {
-        for (int i = 0; i < values.length; i++) {
-          key.setRow(values[i].getKey().getRow());
-          key.setVersion(values[i].getKey().getTimestamp());
+      if (values != null && values.size() != 0) {
+        for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+          HStoreKey k = (HStoreKey) e.getKey();
+          key.setRow(k.getRow());
+          key.setVersion(k.getTimestamp());
           key.setColumn(EMPTY_COLUMN);
-          results.put(values[i].getKey().getColumn(), values[i].getData());
+          results.put(k.getColumn(),
+              ((ImmutableBytesWritable) e.getValue()).get());
         }
       }
-      return values == null ? false : values.length != 0;
+      return values == null ? false : values.size() != 0;
     }
 
     /**

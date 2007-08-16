@@ -24,13 +24,14 @@ import java.io.IOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.OutputCollector;
 
-import org.apache.hadoop.hbase.io.KeyedDataArrayWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 
 /**
  * Refine the types that can be collected from a Table Map/Reduce jobs.
  */
 public class TableOutputCollector {
   /** The collector object */
+  @SuppressWarnings("unchecked")
   public OutputCollector collector;
 
   /**
@@ -40,8 +41,8 @@ public class TableOutputCollector {
    * @param value
    * @throws IOException
    */
-  public void collect(Text key, KeyedDataArrayWritable value)
-  throws IOException {
+  @SuppressWarnings("unchecked")
+  public void collect(Text key, MapWritable value) throws IOException {
     collector.collect(key, value);
   }
 }

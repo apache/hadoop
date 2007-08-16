@@ -79,7 +79,7 @@ Trunk (unreleased changes)
      10 concurrent clients
  50. HADOOP-1468 Add HBase batch update to reduce RPC overhead (restrict batches
      to a single row at a time)
- 51. HADOOP-1528 HClient for multiple tables (phase 1)
+ 51. HADOOP-1528 HClient for multiple tables (phase 1) (James Kennedy & JimK)
  52. HADOOP-1528 HClient for multiple tables (phase 2) all HBase client side code
      (except TestHClient and HBaseShell) have been converted to use the new client
      side objects (HTable/HBaseAdmin/HConnection) instead of HClient.
@@ -98,3 +98,6 @@ Trunk (unreleased changes)
  60. HADOOP-1644 Compactions should not block updates
  60. HADOOP-1672 HBase Shell should use new client classes
      (Edward Yoon via Stack).
+ 61. HADOOP-1709 Make HRegionInterface more like that of HTable
+     HADOOP-1725 Client find of table regions should not include offlined, split parents
+

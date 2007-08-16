@@ -32,12 +32,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.hbase.filter.RegExpRowFilter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
-import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
@@ -211,13 +214,15 @@ public class TestScanner2 extends HBaseClusterTestCase {
           System.currentTimeMillis(), null);
       while (true) {
         TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-        KeyedData[] values = regionServer.next(scannerId);
-        if (values.length == 0) {
+        MapWritable values = regionServer.next(scannerId);
+        if (values == null || values.size() == 0) {
           break;
         }
-
-        for (int i = 0; i < values.length; i++) {
-          results.put(values[i].getKey().getColumn(), values[i].getData());
+        
+        for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+          HStoreKey k = (HStoreKey) e.getKey();
+          results.put(k.getColumn(),
+              ((ImmutableBytesWritable) e.getValue()).get());
         }
 
         HRegionInfo info = (HRegionInfo) Writables.getWritable(

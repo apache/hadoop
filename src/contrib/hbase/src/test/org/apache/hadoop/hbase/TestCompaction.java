@@ -30,10 +30,12 @@ import org.apache.commons.logging.LogFactory;
 public class TestCompaction extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
 
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
   }
   
+  @Override
   protected void tearDown() throws Exception {
     super.tearDown();
   }

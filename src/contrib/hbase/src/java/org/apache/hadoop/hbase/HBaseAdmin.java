@@ -21,16 +21,20 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.SortedMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.io.KeyedData;
+import org.apache.hadoop.hbase.io.MapWritable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RemoteException;
 
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -178,15 +182,17 @@ public class HBaseAdmin implements HConstants {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
             COL_REGIONINFO_ARRAY, tableName, System.currentTimeMillis(), null);
-        KeyedData[] values = server.next(scannerId);
-        if (values == null || values.length == 0) {
+        MapWritable values = server.next(scannerId);
+        if (values == null || values.size() == 0) {
           break;
         }
         boolean found = false;
-        for (int j = 0; j < values.length; j++) {
-          if (values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
-            info =
-              (HRegionInfo) Writables.getWritable(values[j].getData(), info);
+        for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+          HStoreKey key = (HStoreKey) e.getKey();
+          if (key.getColumn().equals(COL_REGIONINFO)) {
+            info = (HRegionInfo) Writables.getWritable(
+                  ((ImmutableBytesWritable) e.getValue()).get(), info);
+            
             if (info.tableDesc.getName().equals(tableName)) {
               found = true;
             }
@@ -260,8 +266,8 @@ public class HBaseAdmin implements HConstants {
         boolean isenabled = false;
         
         while (true) {
-          KeyedData[] values = server.next(scannerId);
-          if (values == null || values.length == 0) {
+          MapWritable values = server.next(scannerId);
+          if (values == null || values.size() == 0) {
             if (valuesfound == 0) {
               throw new NoSuchElementException(
                   "table " + tableName + " not found");
@@ -269,10 +275,12 @@ public class HBaseAdmin implements HConstants {
             break;
           }
           valuesfound += 1;
-          for (int j = 0; j < values.length; j++) {
-            if (values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
-              info =
-                (HRegionInfo) Writables.getWritable(values[j].getData(), info);
+          for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+            HStoreKey key = (HStoreKey) e.getKey();
+            if (key.getColumn().equals(COL_REGIONINFO)) {
+              info = (HRegionInfo) Writables.getWritable(
+                    ((ImmutableBytesWritable) e.getValue()).get(), info);
+            
               isenabled = !info.offLine;
               break;
             }
@@ -359,18 +367,20 @@ public class HBaseAdmin implements HConstants {
         
         boolean disabled = false;
         while (true) {
-          KeyedData[] values = server.next(scannerId);
-          if (values == null || values.length == 0) {
+          MapWritable values = server.next(scannerId);
+          if (values == null || values.size() == 0) {
             if (valuesfound == 0) {
               throw new NoSuchElementException("table " + tableName + " not found");
             }
             break;
           }
           valuesfound += 1;
-          for (int j = 0; j < values.length; j++) {
-            if (values[j].getKey().getColumn().equals(COL_REGIONINFO)) {
-              info =
-                (HRegionInfo) Writables.getWritable(values[j].getData(), info);
+          for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+            HStoreKey key = (HStoreKey) e.getKey();
+            if (key.getColumn().equals(COL_REGIONINFO)) {
+              info = (HRegionInfo) Writables.getWritable(
+                    ((ImmutableBytesWritable) e.getValue()).get(), info);
+            
               disabled = info.offLine;
               break;
             }
