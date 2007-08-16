@@ -43,7 +43,6 @@ public class Shell {
   /** Main method */
   public static void main(String args[]) throws IOException {
     Configuration conf = new HBaseConfiguration();
-    HClient client = new HClient(conf);
     ConsoleReader reader = new ConsoleReader();
     reader.setBellEnabled(conf.getBoolean("hbaseshell.jline.bell.enabled",
         DEFAULT_BELL_ENABLED));
@@ -60,7 +59,7 @@ public class Shell {
         try {
           Command cmd = parser.terminatedCommand();
           if (cmd != null) {
-            rs = cmd.execute(client);
+            rs = cmd.execute(conf);
           }
         } catch (ParseException pe) {
           String[] msg = pe.getMessage().split("[\n]");

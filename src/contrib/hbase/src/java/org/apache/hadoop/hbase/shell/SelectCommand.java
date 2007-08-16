@@ -24,47 +24,49 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 
 public class SelectCommand extends BasicCommand {
-  String table;
+  
+  private Text table;
+  private int limit;
+  private Map<String, List<String>> condition;
 
-  int limit;
-
-  Map<String, List<String>> condition;
-
-  public ReturnMsg execute(HClient client) {
+  public ReturnMsg execute(Configuration conf) {
     if (this.condition != null && this.condition.containsKey("error"))
       return new ReturnMsg(0, "Syntax error : Please check 'Select' syntax.");
 
     try {
-      client.openTable(new Text(this.table));
-
+      HTable table = new HTable(conf, this.table);
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      
       switch (getCondition()) {
       case 0:
 
-        HTableDescriptor[] tables = client.listTables();
+        HTableDescriptor[] tables = admin.listTables();
         Text[] columns = null;
 
-        if (this.table.equals(HConstants.ROOT_TABLE_NAME.toString())
-            || this.table.equals(HConstants.META_TABLE_NAME.toString())) {
+        if (this.table.equals(HConstants.ROOT_TABLE_NAME)
+            || this.table.equals(HConstants.META_TABLE_NAME)) {
           columns = HConstants.COLUMN_FAMILY_ARRAY;
         } else {
           for (int i = 0; i < tables.length; i++) {
-            if (tables[i].getName().toString().equals(this.table)) {
+            if (tables[i].getName().equals(this.table)) {
               columns = tables[i].families().keySet().toArray(new Text[] {});
             }
           }
         }
 
-        HScannerInterface scan = client.obtainScanner(columns, new Text(""));
+        HScannerInterface scan = table.obtainScanner(columns, new Text(""));
         HStoreKey key = new HStoreKey();
         TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
 
@@ -100,7 +102,7 @@ public class SelectCommand extends BasicCommand {
 
         count = 0;
         ConsoleTable.selectHead();
-        for (Map.Entry<Text, byte[]> entry : client.getRow(new Text(getRow())).entrySet()) {
+        for (Map.Entry<Text, byte[]> entry : table.getRow(new Text(getRow())).entrySet()) {
 
           byte[] value = entry.getValue();
           String cellData = new String(value);
@@ -125,7 +127,7 @@ public class SelectCommand extends BasicCommand {
 
         Text[] column = new Text[] { new Text(getColumn()) };
 
-        HScannerInterface scanner = client.obtainScanner(column, new Text(""));
+        HScannerInterface scanner = table.obtainScanner(column, new Text(""));
         HStoreKey k = new HStoreKey();
         TreeMap<Text, byte[]> r = new TreeMap<Text, byte[]>();
 
@@ -150,7 +152,7 @@ public class SelectCommand extends BasicCommand {
 
       case 3:
 
-        byte[] rs1 = client.get(new Text(getRow()), new Text(getColumn()));
+        byte[] rs1 = table.get(new Text(getRow()), new Text(getColumn()));
 
         ConsoleTable.selectHead();
         ConsoleTable.printLine(0, getRow(), getColumn(),
@@ -161,7 +163,7 @@ public class SelectCommand extends BasicCommand {
 
       case 4:
 
-        byte[][] rs2 = client.get(new Text(getRow()), new Text(getColumn()), this.limit);
+        byte[][] rs2 = table.get(new Text(getRow()), new Text(getColumn()), this.limit);
 
         ConsoleTable.selectHead();
         for (int i = 0; i < rs2.length; i++) {
@@ -174,7 +176,7 @@ public class SelectCommand extends BasicCommand {
 
       case 5:
 
-        byte[][] rs3 = client.get(new Text(getRow()), new Text(getColumn()), getTime(), this.limit);
+        byte[][] rs3 = table.get(new Text(getRow()), new Text(getColumn()), getTime(), this.limit);
 
         ConsoleTable.selectHead();
         for (int i = 0; i < rs3.length; i++) {
@@ -194,7 +196,7 @@ public class SelectCommand extends BasicCommand {
   }
 
   public void setTable(String table) {
-    this.table = table;
+    this.table = new Text(table);
   }
 
   public void setLimit(int limit) {

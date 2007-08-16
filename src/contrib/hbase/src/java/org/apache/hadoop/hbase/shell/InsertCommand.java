@@ -23,19 +23,18 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
 
 public class InsertCommand extends BasicCommand {
-  String table;
+  
+  private Text table;
+  private List<String> columnfamilies;
+  private List<String> values;
+  private Map<String, List<String>> condition;
 
-  List<String> columnfamilies;
-
-  List<String> values;
-
-  Map<String, List<String>> condition;
-
-  public ReturnMsg execute(HClient client) {
+  public ReturnMsg execute(Configuration conf) {
     if (this.table == null || this.values == null || this.condition == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Insert' syntax.");
 
@@ -44,14 +43,14 @@ public class InsertCommand extends BasicCommand {
           "Mismatch between values list and columnfamilies list");
 
     try {
-      client.openTable(new Text(this.table));
-      long lockId = client.startUpdate(new Text(getRow()));
+      HTable table = new HTable(conf, this.table);
+      long lockId = table.startUpdate(getRow());
 
       for (int i = 0; i < this.values.size(); i++) {
-        client.put(lockId, getColumn(i), getValue(i));
+        table.put(lockId, getColumn(i), getValue(i));
+        
       }
-
-      client.commit(lockId);
+      table.commit(lockId);
 
       return new ReturnMsg(1, "1 row inserted successfully.");
     } catch (IOException e) {
@@ -61,7 +60,7 @@ public class InsertCommand extends BasicCommand {
   }
 
   public void setTable(String table) {
-    this.table = table;
+    this.table = new Text(table);
   }
 
   public void setColumnfamilies(List<String> columnfamilies) {

@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
 
 public class ClearCommand extends BasicCommand {
 
-  public ReturnMsg execute(HClient client) {
+  public ReturnMsg execute(Configuration conf) {
     clear();
     return null;
   }
@@ -34,7 +34,7 @@ public class ClearCommand extends BasicCommand {
     String osName = System.getProperty("os.name");
     if (osName.length() > 7 && osName.subSequence(0, 7).equals("Windows")) {
       try {
-        Runtime.getRuntime().exec("cls");
+        Runtime.getRuntime().exec("cmd /C cls");
       } catch (IOException e) {
         System.out.println("Can't clear." + e.toString());
       }

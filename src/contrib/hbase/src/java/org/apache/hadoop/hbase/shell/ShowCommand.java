@@ -21,21 +21,24 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
 public class ShowCommand extends BasicCommand {
-  String argument;
+  
+  private String command;
 
-  public ReturnMsg execute(HClient client) {
-    if (this.argument == null)
+  public ReturnMsg execute(Configuration conf) {
+    if (this.command == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Show' syntax.");
 
     try {
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      
       int tableLength = 0;
-
-      if ("tables".equals(this.argument)) {
-        HTableDescriptor[] tables = client.listTables();
+      if ("tables".equals(this.command)) {
+        HTableDescriptor[] tables = admin.listTables();
         tableLength = tables.length;
         if (tableLength == 0) {
           return new ReturnMsg(0, "Table not found.");
@@ -57,6 +60,7 @@ public class ShowCommand extends BasicCommand {
   }
 
   public void setArgument(String argument) {
-    this.argument = argument;
+    this.command = argument;
   }
+  
 }

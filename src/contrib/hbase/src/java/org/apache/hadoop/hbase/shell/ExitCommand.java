@@ -19,11 +19,11 @@
  */
 package org.apache.hadoop.hbase.shell;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
 
 public class ExitCommand extends BasicCommand {
 
-  public ReturnMsg execute(HClient client) {
+  public ReturnMsg execute(Configuration conf) {
     System.exit(1);
     return null;
   }

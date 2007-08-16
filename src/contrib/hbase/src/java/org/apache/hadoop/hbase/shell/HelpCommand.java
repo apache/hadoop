@@ -19,12 +19,13 @@
  */
 package org.apache.hadoop.hbase.shell;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
 
 public class HelpCommand extends BasicCommand {
-  String argument;
+  
+  private String argument;
 
-  public ReturnMsg execute(HClient client) {
+  public ReturnMsg execute(Configuration conf) {
     HelpManager.printHelp(this.argument);
     return null;
   }
@@ -32,4 +33,5 @@ public class HelpCommand extends BasicCommand {
   public void setArgument(String argument) {
     this.argument = argument;
   }
+  
 }

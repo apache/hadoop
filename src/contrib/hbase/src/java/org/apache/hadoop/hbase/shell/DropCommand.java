@@ -21,18 +21,21 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HClient;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.io.Text;
 
 public class DropCommand extends BasicCommand {
-  String argument;
+  
+  private Text table;
 
-  public ReturnMsg execute(HClient client) {
-    if (this.argument == null) 
+  public ReturnMsg execute(Configuration conf) {
+    if (this.table == null) 
       return new ReturnMsg(0, "Syntax error : Please check 'Drop' syntax.");
 
     try {
-      client.deleteTable(new Text(this.argument));
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      admin.deleteTable(this.table);
       
       return new ReturnMsg(1, "Table droped successfully.");
     } catch (IOException e) {
@@ -40,7 +43,8 @@ public class DropCommand extends BasicCommand {
     }
   }
 
-  public void setArgument(String argument) {
-    this.argument = argument;
+  public void setArgument(String table) {
+    this.table = new Text(table);
   }
+  
 }

@@ -20,8 +20,8 @@
 package org.apache.hadoop.hbase.shell;
 
 public class ReturnMsg {
+  
   private String msg;
-
   private int type;
 
   public ReturnMsg(int i, String string) {
@@ -41,4 +41,5 @@ public class ReturnMsg {
   public int getType() {
     return this.type;
   }
+  
 }
