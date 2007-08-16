@@ -38,6 +38,7 @@ public interface HConnection {
   public boolean isMasterRunning();
   
   /**
+   * Checks if <code>tableName</code> exists.
    * @param tableName Table to check.
    * @return True if table exists already.
    */

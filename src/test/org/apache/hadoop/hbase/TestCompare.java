@@ -26,7 +26,27 @@ import junit.framework.TestCase;
  * Test comparing HBase objects.
  */
 public class TestCompare extends TestCase {
-  /** test case */
+  
+  /**
+   * HStoreKey sorts as you would expect in the row and column portions but
+   * for the timestamps, it sorts in reverse with the newest sorting before
+   * the oldest (This is intentional so we trip over the latest first when
+   * iterating or looking in store files).
+   */
+  public void testHStoreKey() {
+    long timestamp = System.currentTimeMillis();
+    Text a = new Text("a");
+    HStoreKey past = new HStoreKey(a, a, timestamp - 10);
+    HStoreKey now = new HStoreKey(a, a, timestamp);
+    HStoreKey future = new HStoreKey(a, a, timestamp + 10);
+    assertTrue(past.compareTo(now) > 0);
+    assertTrue(now.compareTo(now) == 0);
+    assertTrue(future.compareTo(now) < 0);
+  }
+  
+  /**
+   * Sort of HRegionInfo.
+   */
   public void testHRegionInfo() {
     HRegionInfo a = new HRegionInfo(1, new HTableDescriptor("a"), null, null);
     HRegionInfo b = new HRegionInfo(2, new HTableDescriptor("b"), null, null);

@@ -147,7 +147,7 @@
     </description>
   </property>
   <property>
-    <name>hbase.hregion.compactionThreshold</name>
+    <name>hbase.hstore.compactionThreshold</name>
     <value>3</value>
     <description>
     If more than this number of HStoreFiles in any one HStore

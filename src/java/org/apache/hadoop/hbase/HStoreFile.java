@@ -399,7 +399,13 @@ public class HStoreFile implements HConstants, WritableComparable {
       Path mapfile = curfile.getMapFilePath();
       if (!fs.exists(mapfile)) {
         fs.delete(curfile.getInfoFilePath());
+        LOG.warn("Mapfile " + mapfile.toString() + " does not exist. " +
+          "Cleaned up info file.  Continuing...");
+        continue;
       }
+      
+      // TODO: Confirm referent exists.
+      
       // Found map and sympathetic info file.  Add this hstorefile to result.
       results.add(curfile);
       // Keep list of sympathetic data mapfiles for cleaning info dir in next
@@ -537,8 +543,7 @@ public class HStoreFile implements HConstants, WritableComparable {
     
     try {
       for(HStoreFile src: srcFiles) {
-        MapFile.Reader in =
-          new MapFile.Reader(fs, src.getMapFilePath().toString(), conf);
+        MapFile.Reader in = src.getReader(fs, null);
         try {
           HStoreKey readkey = new HStoreKey();
           ImmutableBytesWritable readval = new ImmutableBytesWritable();
@@ -627,12 +632,23 @@ public class HStoreFile implements HConstants, WritableComparable {
    * <code>hsf</code> directory.
    * @param fs
    * @param hsf
+   * @return True if succeeded.
    * @throws IOException
    */
-  public void rename(final FileSystem fs, final HStoreFile hsf)
+  public boolean rename(final FileSystem fs, final HStoreFile hsf)
   throws IOException {
-    fs.rename(getMapFilePath(), hsf.getMapFilePath());
-    fs.rename(getInfoFilePath(), hsf.getInfoFilePath());
+    boolean success = fs.rename(getMapFilePath(), hsf.getMapFilePath());
+    if (!success) {
+      LOG.warn("Failed rename of " + getMapFilePath() + " to " +
+        hsf.getMapFilePath());
+      return success;
+    }
+    success = fs.rename(getInfoFilePath(), hsf.getInfoFilePath());
+    if (!success) {
+      LOG.warn("Failed rename of " + getInfoFilePath() + " to " +
+        hsf.getInfoFilePath());
+    }
+    return success;
   }
   
   /**

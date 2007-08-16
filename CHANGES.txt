@@ -95,3 +95,4 @@ Trunk (unreleased changes)
  58. HADOOP-1710 All updates should be batch updates
  59. HADOOP-1711 HTable API should use interfaces instead of concrete classes as
      method parameters and return values
+ 60. HADOOP-1644 Compactions should not block updates

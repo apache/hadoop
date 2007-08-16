@@ -243,6 +243,7 @@ public class HMemcache {
    *
    * TODO - This is kinda slow.  We need a data structure that allows for 
    * proximity-searches, not just precise-matches.
+   * 
    * @param map
    * @param key
    * @param numVersions
@@ -251,13 +252,19 @@ public class HMemcache {
   ArrayList<byte []> get(final TreeMap<HStoreKey, byte []> map,
       final HStoreKey key, final int numVersions) {
     ArrayList<byte []> result = new ArrayList<byte []>();
-    HStoreKey curKey =
-      new HStoreKey(key.getRow(), key.getColumn(), key.getTimestamp());
+    // TODO: If get is of a particular version -- numVersions == 1 -- we
+    // should be able to avoid all of the tailmap creations and iterations
+    // below.
+    HStoreKey curKey = new HStoreKey(key);
     SortedMap<HStoreKey, byte []> tailMap = map.tailMap(curKey);
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       if (itKey.matchesRowCol(curKey)) {
         if(HConstants.DELETE_BYTES.compareTo(es.getValue()) == 0) {
+          // TODO: Shouldn't this be a continue rather than a break?  Perhaps
+          // the intent is that this DELETE_BYTES is meant to suppress older
+          // info -- see 5.4 Compactions in BigTable -- but how does this jibe
+          // with being able to remove one version only?
           break;
         }
         result.add(tailMap.get(itKey));

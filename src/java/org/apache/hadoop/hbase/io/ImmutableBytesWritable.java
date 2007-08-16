@@ -88,6 +88,13 @@ public class ImmutableBytesWritable implements WritableComparable {
   }
   
   /**
+   * @param b Use passed bytes as backing array for this instance.
+   */
+  public void set(final byte [] b) {
+    this.bytes = b;
+  }
+  
+  /**
    * @return the current size of the buffer.
    */
   public int getSize() {

@@ -92,15 +92,13 @@ public class HRegion implements HConstants {
     // Make sure that srcA comes first; important for key-ordering during
     // write of the merged file.
     FileSystem fs = srcA.getFilesystem();
-    if(srcA.getStartKey() == null) {
-      if(srcB.getStartKey() == null) {
+    if (srcA.getStartKey() == null) {
+      if (srcB.getStartKey() == null) {
         throw new IOException("Cannot merge two regions with null start key");
       }
       // A's start key is null but B's isn't. Assume A comes before B
-      
-    } else if((srcB.getStartKey() == null)         // A is not null but B is
+    } else if ((srcB.getStartKey() == null)         // A is not null but B is
         || (srcA.getStartKey().compareTo(srcB.getStartKey()) > 0)) { // A > B
-      
       a = srcB;
       b = srcA;
     }
@@ -113,10 +111,8 @@ public class HRegion implements HConstants {
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
     Path rootDir = a.getRootDir();
-
     Text startKey = a.getStartKey();
     Text endKey = b.getEndKey();
-
     Path merges = new Path(a.getRegionDir(), MERGEDIR);
     if(! fs.exists(merges)) {
       fs.mkdirs(merges);
@@ -124,95 +120,20 @@ public class HRegion implements HConstants {
     
     HRegionInfo newRegionInfo
       = new HRegionInfo(Math.abs(rand.nextLong()), tabledesc, startKey, endKey);
-    
     Path newRegionDir = HRegion.getRegionDir(merges, newRegionInfo.regionName);
-
     if(fs.exists(newRegionDir)) {
-      throw new IOException("Cannot merge; target file collision at " + newRegionDir);
+      throw new IOException("Cannot merge; target file collision at " +
+        newRegionDir);
     }
 
     LOG.info("starting merge of regions: " + a.getRegionName() + " and " +
       b.getRegionName() + " into new region " + newRegionInfo.toString());
-    
-    // Flush each of the sources, and merge their files into a single 
-    // target for each column family.    
-    TreeSet<HStoreFile> alreadyMerged = new TreeSet<HStoreFile>();
-    TreeMap<Text, Vector<HStoreFile>> filesToMerge =
+
+    Map<Text, Vector<HStoreFile>> byFamily =
       new TreeMap<Text, Vector<HStoreFile>>();
-    
-    for(HStoreFile src: a.flushcache(true)) {
-      Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
-      if(v == null) {
-        v = new Vector<HStoreFile>();
-        filesToMerge.put(src.getColFamily(), v);
-      }
-      v.add(src);
-    }
-    
-    for(HStoreFile src: b.flushcache(true)) {
-      Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
-      if(v == null) {
-        v = new Vector<HStoreFile>();
-        filesToMerge.put(src.getColFamily(), v);
-      }
-      v.add(src);
-    }
-    
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("merging stores");
-    }
-    
-    for (Map.Entry<Text, Vector<HStoreFile>> es: filesToMerge.entrySet()) {
-      Text colFamily = es.getKey();
-      Vector<HStoreFile> srcFiles = es.getValue();
-      HStoreFile dst = new HStoreFile(conf, merges, newRegionInfo.regionName, 
-        colFamily, Math.abs(rand.nextLong()));
-      dst.mergeStoreFiles(srcFiles, fs, conf);
-      alreadyMerged.addAll(srcFiles);
-    }
-
-    // That should have taken care of the bulk of the data.
-    // Now close the source HRegions for good, and repeat the above to take care
-    // of any last-minute inserts
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("flushing changes since start of merge for region " 
-          + a.getRegionName());
-    }
-
-    filesToMerge.clear();
-    
-    for(HStoreFile src: a.close()) {
-      if(! alreadyMerged.contains(src)) {
-        Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
-        if(v == null) {
-          v = new Vector<HStoreFile>();
-          filesToMerge.put(src.getColFamily(), v);
-        }
-        v.add(src);
-      }
-    }
-    
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("flushing changes since start of merge for region " 
-          + b.getRegionName());
-    }
-    
-    for(HStoreFile src: b.close()) {
-      if(! alreadyMerged.contains(src)) {
-        Vector<HStoreFile> v = filesToMerge.get(src.getColFamily());
-        if(v == null) {
-          v = new Vector<HStoreFile>();
-          filesToMerge.put(src.getColFamily(), v);
-        }
-        v.add(src);
-      }
-    }
-    
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("merging changes since start of merge");
-    }
-    
-    for (Map.Entry<Text, Vector<HStoreFile>> es : filesToMerge.entrySet()) {
+    byFamily = filesByFamily(byFamily, a.close());
+    byFamily = filesByFamily(byFamily, b.close());
+    for (Map.Entry<Text, Vector<HStoreFile>> es : byFamily.entrySet()) {
       Text colFamily = es.getKey();
       Vector<HStoreFile> srcFiles = es.getValue();
       HStoreFile dst = new HStoreFile(conf, merges, newRegionInfo.regionName,
@@ -232,6 +153,25 @@ public class HRegion implements HConstants {
     LOG.info("merge completed. New region is " + dstRegion.getRegionName());
     
     return dstRegion;
+  }
+  
+  /*
+   * Fills a map with a vector of store files keyed by column family. 
+   * @param byFamily Map to fill.
+   * @param storeFiles Store files to process.
+   * @return Returns <code>byFamily</code>
+   */
+  private static Map<Text, Vector<HStoreFile>> filesByFamily(
+      Map<Text, Vector<HStoreFile>> byFamily, Vector<HStoreFile> storeFiles) {
+    for(HStoreFile src: storeFiles) {
+      Vector<HStoreFile> v = byFamily.get(src.getColFamily());
+      if(v == null) {
+        v = new Vector<HStoreFile>();
+        byFamily.put(src.getColFamily(), v);
+      }
+      v.add(src);
+    }
+    return byFamily;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -254,19 +194,19 @@ public class HRegion implements HConstants {
   Path regiondir;
 
   static class WriteState {
-    volatile boolean writesOngoing;
-    volatile boolean writesEnabled;
-    WriteState() {
-      this.writesOngoing = true;
-      this.writesEnabled = true;
-    }
+    // Set while a memcache flush is happening.
+    volatile boolean flushing = false;
+    // Set while a compaction is running.
+    volatile boolean compacting = false;
+    // Gets set by last flush before close.  If set, cannot compact or flush
+    // again.
+    volatile boolean writesEnabled = true;
   }
   
   volatile WriteState writestate = new WriteState();
 
   final int memcacheFlushSize;
   final int blockingMemcacheSize;
-  int compactionThreshold = 0;
   private final HLocking lock = new HLocking();
   private long desiredMaxFileSize;
   private final long maxSequenceId;
@@ -297,15 +237,12 @@ public class HRegion implements HConstants {
   public HRegion(Path rootDir, HLog log, FileSystem fs, Configuration conf, 
       HRegionInfo regionInfo, Path initialFiles)
   throws IOException {
-    
     this.rootDir = rootDir;
     this.log = log;
     this.fs = fs;
     this.conf = conf;
     this.regionInfo = regionInfo;
     this.memcache = new HMemcache();
-    this.writestate.writesOngoing = true;
-    this.writestate.writesEnabled = true;
 
     // Declare the regionName.  This is a unique string for the region, used to 
     // build a unique filename.
@@ -319,7 +256,6 @@ public class HRegion implements HConstants {
     }
 
     // Load in all the HStores.
-
     long maxSeqId = -1;
     for(Map.Entry<Text, HColumnDescriptor> e :
         this.regionInfo.tableDesc.families().entrySet()) {
@@ -357,17 +293,12 @@ public class HRegion implements HConstants {
     this.blockingMemcacheSize = this.memcacheFlushSize *
       conf.getInt("hbase.hregion.memcache.block.multiplier", 2);
     
-    // By default, we compact the region if an HStore has more than
-    // MIN_COMMITS_FOR_COMPACTION map files
-    this.compactionThreshold =
-      conf.getInt("hbase.hregion.compactionThreshold", 3);
-    
     // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
     this.desiredMaxFileSize =
       conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);
 
     // HRegion is ready to go!
-    this.writestate.writesOngoing = false;
+    this.writestate.compacting = false;
     LOG.info("region " + this.regionInfo.regionName + " available");
   }
   
@@ -411,56 +342,48 @@ public class HRegion implements HConstants {
    * 
    * @param abort true if server is aborting (only during testing)
    * @return Vector of all the storage files that the HRegion's component 
-   * HStores make use of.  It's a list of HStoreFile objects.
+   * HStores make use of.  It's a list of HStoreFile objects.  Can be null if
+   * we are not to close at this time or we are already closed.
    * 
    * @throws IOException
    */
   Vector<HStoreFile> close(boolean abort) throws IOException {
     if (isClosed()) {
       LOG.info("region " + this.regionInfo.regionName + " already closed");
-      return new Vector<HStoreFile>();
+      return null;
     }
     lock.obtainWriteLock();
     try {
-      boolean shouldClose = false;
       synchronized(writestate) {
-        while(writestate.writesOngoing) {
+        while(writestate.compacting || writestate.flushing) {
           try {
             writestate.wait();
           } catch (InterruptedException iex) {
             // continue
           }
         }
-        writestate.writesOngoing = true;
-        shouldClose = true;
-      }
-
-      if(!shouldClose) {
-        return null;
+        // Disable compacting and flushing by background threads for this
+        // region.
+        writestate.writesEnabled = false;
       }
       
       // Write lock means no more row locks can be given out.  Wait on
       // outstanding row locks to come in before we close so we do not drop
       // outstanding updates.
       waitOnRowLocks();
-
-      Vector<HStoreFile> allHStoreFiles = null;
+      
       if (!abort) {
         // Don't flush the cache if we are aborting during a test.
-        allHStoreFiles = internalFlushcache();
+        internalFlushcache();
       }
+      
+      Vector<HStoreFile> result = new Vector<HStoreFile>();
       for (HStore store: stores.values()) {
-        store.close();
+        result.addAll(store.close());
       }
-      try {
-        return allHStoreFiles;
-      } finally {
-        synchronized (writestate) {
-          writestate.writesOngoing = false;
-        }
-        this.closed.set(true);
-        LOG.info("closed " + this.regionInfo.regionName);
-      }
+      this.closed.set(true);
+      LOG.info("closed " + this.regionInfo.regionName);
+      return result;
     } finally {
       lock.releaseWriteLock();
     }
@@ -527,6 +450,7 @@ public class HRegion implements HConstants {
       HStoreFile a = new HStoreFile(this.conf, splits,
         regionAInfo.regionName, h.getColFamily(), Math.abs(rand.nextLong()),
         aReference);
+      // Reference to top half of the hsf store file.
       HStoreFile.Reference bReference = new HStoreFile.Reference(
         getRegionName(), h.getFileId(), new HStoreKey(midKey),
         HStoreFile.Range.top);
@@ -721,12 +645,10 @@ public class HRegion implements HConstants {
     boolean needsCompaction = false;
     this.lock.obtainReadLock();
     try {
-      for(HStore store: stores.values()) {
-        if(store.getNMaps() > this.compactionThreshold) {
+      for (HStore store: stores.values()) {
+        if (store.needsCompaction()) {
           needsCompaction = true;
-          LOG.info(getRegionName().toString() + " needs compaction because " +
-            store.getNMaps() + " store files present and threshold is " +
-            this.compactionThreshold);
+          LOG.info(store.toString() + " needs compaction");
           break;
         }
       }
@@ -756,9 +678,9 @@ public class HRegion implements HConstants {
     lock.obtainReadLock();
     try {
       synchronized (writestate) {
-        if ((!writestate.writesOngoing) &&
+        if ((!writestate.compacting) &&
             writestate.writesEnabled) {
-          writestate.writesOngoing = true;
+          writestate.compacting = true;
           shouldCompact = true;
         }
       }
@@ -783,7 +705,7 @@ public class HRegion implements HConstants {
     } finally {
       lock.releaseReadLock();
       synchronized (writestate) {
-        writestate.writesOngoing = false;
+        writestate.compacting = false;
         writestate.notifyAll();
       }
     }
@@ -825,23 +747,17 @@ public class HRegion implements HConstants {
    * close() the HRegion shortly, so the HRegion should not take on any new and 
    * potentially long-lasting disk operations. This flush() should be the final
    * pre-close() disk operation.
-   * 
-   * @return List of store files including new flushes, if any.  If no flushes
-   * because  memcache is null, returns all current store files.  Returns
-   * null if no flush (Writes are going on elsewhere -- concurrently we are
-   * compacting or splitting).
    */
-  Vector<HStoreFile> flushcache(boolean disableFutureWrites)
+  void flushcache(boolean disableFutureWrites)
   throws IOException {
     if (this.closed.get()) {
-      return null;
+      return;
     }
     this.noFlushCount = 0;
     boolean shouldFlush = false;
     synchronized(writestate) {
-      if((!writestate.writesOngoing) &&
-          writestate.writesEnabled) {
-        writestate.writesOngoing = true;
+      if((!writestate.flushing) && writestate.writesEnabled) {
+        writestate.flushing = true;
         shouldFlush = true;
         if(disableFutureWrites) {
           writestate.writesEnabled = false;
@@ -854,14 +770,14 @@ public class HRegion implements HConstants {
         LOG.debug("NOT flushing memcache for region " +
           this.regionInfo.regionName);
       }
-      return null;  
+      return;  
     }
     
     try {
-      return internalFlushcache();
+      internalFlushcache();
     } finally {
       synchronized (writestate) {
-        writestate.writesOngoing = false;
+        writestate.flushing = false;
         writestate.notifyAll();
       }
     }
@@ -892,11 +808,8 @@ public class HRegion implements HConstants {
    * routes.
    * 
    * <p> This method may block for some time.
-   * 
-   * @return List of store files including just-made new flushes per-store. If
-   * not flush, returns list of all store files.
    */
-  Vector<HStoreFile> internalFlushcache() throws IOException {
+  void internalFlushcache() throws IOException {
     long startTime = -1;
     if(LOG.isDebugEnabled()) {
       startTime = System.currentTimeMillis();
@@ -917,7 +830,7 @@ public class HRegion implements HConstants {
     HMemcache.Snapshot retval = memcache.snapshotMemcacheForLog(log);
     if(retval == null || retval.memcacheSnapshot == null) {
       LOG.debug("Finished memcache flush; empty snapshot");
-      return getAllStoreFiles();
+      return;
     }
     long logCacheFlushId = retval.sequenceId;
     if(LOG.isDebugEnabled()) {
@@ -929,11 +842,8 @@ public class HRegion implements HConstants {
     // A.  Flush memcache to all the HStores.
     // Keep running vector of all store files that includes both old and the
     // just-made new flush store file.
-    Vector<HStoreFile> allHStoreFiles = new Vector<HStoreFile>();
     for(HStore hstore: stores.values()) {
-      Vector<HStoreFile> hstoreFiles
-        = hstore.flushCache(retval.memcacheSnapshot, retval.sequenceId);
-      allHStoreFiles.addAll(0, hstoreFiles);
+      hstore.flushCache(retval.memcacheSnapshot, retval.sequenceId);
     }
 
     // B.  Write a FLUSHCACHE-COMPLETE message to the log.
@@ -958,13 +868,12 @@ public class HRegion implements HConstants {
         this.regionInfo.regionName + " in " +
           (System.currentTimeMillis() - startTime) + "ms");
     }
-    return allHStoreFiles;
   }
   
   private Vector<HStoreFile> getAllStoreFiles() {
     Vector<HStoreFile> allHStoreFiles = new Vector<HStoreFile>();
     for(HStore hstore: stores.values()) {
-      Vector<HStoreFile> hstoreFiles = hstore.getAllMapFiles();
+      Vector<HStoreFile> hstoreFiles = hstore.getAllStoreFiles();
       allHStoreFiles.addAll(0, hstoreFiles);
     }
     return allHStoreFiles;
@@ -1020,7 +929,6 @@ public class HRegion implements HConstants {
       }
 
       // If unavailable in memcache, check the appropriate HStore
-
       Text colFamily = HStoreKey.extractFamily(key.getColumn());
       HStore targetStore = stores.get(colFamily);
       if(targetStore == null) {
