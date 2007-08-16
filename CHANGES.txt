@@ -28,6 +28,9 @@ Trunk (unreleased changes)
     HADOOP-1610.  Add metrics for failed tasks.
     (Devaraj Das via tomwhite)
 
+    HADOOP-1708.  Make files appear in namespace as soon as they are
+    created.  (Dhruba Borthakur via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1565.  Reduce memory usage of NameNode by replacing 

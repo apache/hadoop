@@ -174,6 +174,14 @@ class FSDirectory implements FSConstants {
     }
 
     /**
+     * Set file blocks 
+     * @return file blocks
+     */
+    void setBlocks(Block[] blockList) {
+      this.blocks = blockList;
+    }
+
+    /**
      * Get children iterator
      * @return Iterator of children
      */
@@ -539,6 +547,43 @@ class FSDirectory implements FSConstants {
                               new INode(path, blocks, replication,
                                         modificationTime),
                               modificationTime);
+  }
+
+  /**
+   * Add blocks to the file.
+   */
+  boolean addBlocks(String path, Block[] blocks) throws IOException {
+    waitForReady();
+
+    synchronized (rootDir) {
+      INode fileNode = rootDir.getNode(path);
+      if (fileNode == null) {
+        throw new IOException("Unknown file: " + path);
+      }
+      if (fileNode.getBlocks() != null &&
+          fileNode.getBlocks().length != 0) {
+        throw new IOException("Cannot add new blocks to " +
+                              "already existing file.");
+      }
+
+      // associate the new list of blocks with this file
+      fileNode.setBlocks(blocks);
+      for (int i = 0; i < blocks.length; i++) {
+        namesystem.blocksMap.addINode(blocks[i], fileNode);
+      }
+
+      // create two transactions. The first one deletes the empty
+      // file and the second transaction recreates the same file
+      // with the appropriate set of blocks.
+      fsImage.getEditLog().logDelete(path, fileNode.getModificationTime());
+
+      // re-add create file record to log
+      fsImage.getEditLog().logCreateFile(fileNode);
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
+                                    +path+" with "+blocks.length
+                                    +" blocks is added to the file system");
+    }
+    return true;
   }
 
   /**

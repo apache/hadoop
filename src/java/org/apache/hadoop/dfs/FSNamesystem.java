@@ -820,6 +820,15 @@ class FSNamesystem implements FSConstants {
                                    +ie.getMessage());
       throw ie;
     }
+
+    //
+    // Now we can add the name to the filesystem. This file has no
+    // blocks associated with it.
+    //
+    if (!dir.addFile(src, new Block[0], replication)) {
+      throw new IOException("DIR* NameSystem.startFile: " +
+                            "Unable to add file to namespace.");
+    }
   }
 
   /**
@@ -953,11 +962,13 @@ class FSNamesystem implements FSConstants {
     FileUnderConstruction pendingFile = pendingCreates.get(src);
 
     Block[] fileBlocks =  dir.getFileBlocks(src);
-    if (fileBlocks!= null || pendingFile == null) {    
+    if ((fileBlocks != null && fileBlocks.length > 0) ||
+         pendingFile == null) {    
       NameNode.stateChangeLog.warn("DIR* NameSystem.completeFile: "
                                    + "failed to complete " + src
                                    + " because dir.getFileBlocks() is " + 
-                                   ((fileBlocks == null) ? "null":"non-null") + 
+                                   ((fileBlocks == null) ? 
+                                    "null":fileBlocks.length) + 
                                    " and pendingFile is " + 
                                    ((pendingFile == null) ? "null" : 
                                      ("from " + pendingFile.getClientMachine()))
@@ -986,9 +997,9 @@ class FSNamesystem implements FSConstants {
     }
         
     //
-    // Now we can add the (name,blocks) tuple to the filesystem
+    // add blocks to the file
     //
-    if (!dir.addFile(src, pendingBlocks, pendingFile.getReplication())) {
+    if (!dir.addBlocks(src, pendingBlocks)) {
       return OPERATION_FAILED;
     }
 
