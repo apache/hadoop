@@ -112,6 +112,7 @@ class MapTask extends Task {
     return instantiatedSplit;
   }
 
+  @SuppressWarnings("unchecked")
   public void run(final JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
 
@@ -163,7 +164,7 @@ class MapTask extends Task {
           return rawIn.createValue();
         }
          
-        public synchronized boolean next(Writable key, Writable value)
+        public synchronized boolean next(WritableComparable key, Writable value)
           throws IOException {
 
           setProgress(getProgress());
@@ -196,7 +197,9 @@ class MapTask extends Task {
     done(umbilical);
   }
 
-  interface MapOutputCollector extends OutputCollector {
+  interface MapOutputCollector<K extends WritableComparable,
+                               V extends Writable>
+    extends OutputCollector<K, V> {
 
     public void close() throws IOException;
     
@@ -204,12 +207,15 @@ class MapTask extends Task {
         
   }
 
-  class DirectMapOutputCollector implements MapOutputCollector {
-
-    private RecordWriter out = null;
+  class DirectMapOutputCollector<K extends WritableComparable,
+                                 V extends Writable>
+    implements MapOutputCollector<K, V> {
+ 
+    private RecordWriter<K, V> out = null;
 
     private Reporter reporter = null;
 
+    @SuppressWarnings("unchecked")
     public DirectMapOutputCollector(TaskUmbilicalProtocol umbilical,
         JobConf job, Reporter reporter) throws IOException {
       this.reporter = reporter;
@@ -231,7 +237,7 @@ class MapTask extends Task {
       
     }
 
-    public void collect(WritableComparable key, Writable value) throws IOException {
+    public void collect(K key, V value) throws IOException {
       this.out.write(key, value);
     }
     
@@ -315,6 +321,7 @@ class MapTask extends Task {
       indexOut.writeLong(out.getPos()-segmentStart);
     }
     
+    @SuppressWarnings("unchecked")
     public void collect(WritableComparable key,
                         Writable value) throws IOException {
       
@@ -420,6 +427,7 @@ class MapTask extends Task {
       }
     }
     
+    @SuppressWarnings("unchecked")
     private void combineAndSpill(RawKeyValueIterator resultIter, 
                                  Reducer combiner, OutputCollector combineCollector) throws IOException {
       //combine the key/value obtained from the offset & indices arrays.

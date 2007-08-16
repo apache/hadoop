@@ -31,6 +31,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.RecordStatsWritable;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
 import org.apache.hadoop.fs.*;
 
@@ -129,10 +130,13 @@ public class SortValidator {
       public int getChecksum() { return checksum; }
     }
     
-    public static class Map extends MapReduceBase implements Mapper {
+    public static class Map extends MapReduceBase
+      implements Mapper<BytesWritable, BytesWritable,
+                        IntWritable, RecordStatsWritable> {
+      
       private IntWritable key = null;
       private BytesWritable prevKey = null;
-      private Partitioner partitioner = null;
+      private Partitioner<BytesWritable, BytesWritable> partitioner = null;
       private int partition = -1;
       private int noSortReducers = -1;
       private long recordId = -1;
@@ -142,7 +146,7 @@ public class SortValidator {
         key = deduceInputFile(job);
         
         if (key == sortOutput) {
-          partitioner = new HashPartitioner();
+          partitioner = new HashPartitioner<BytesWritable, BytesWritable>();
           
           // Figure the 'current' partition and no. of reduces of the 'sort'
           try {
@@ -159,12 +163,12 @@ public class SortValidator {
         }
       }
       
-      public void map(WritableComparable key, 
-                      Writable value,
-                      OutputCollector output, 
+      public void map(BytesWritable key, 
+                      BytesWritable value,
+                      OutputCollector<IntWritable, RecordStatsWritable> output, 
                       Reporter reporter) throws IOException {
-        BytesWritable bwKey = (BytesWritable)key;
-        BytesWritable bwValue = (BytesWritable)value;
+        BytesWritable bwKey = key;
+        BytesWritable bwValue = value;
         ++recordId;
         
         if (this.key == sortOutput) {
@@ -201,15 +205,19 @@ public class SortValidator {
       }
     }
     
-    public static class Reduce extends MapReduceBase implements Reducer {
-      public void reduce(WritableComparable key, Iterator values,
-                         OutputCollector output, 
+    public static class Reduce extends MapReduceBase
+      implements Reducer<IntWritable, RecordStatsWritable,
+                         IntWritable, RecordStatsWritable> {
+      
+      public void reduce(IntWritable key, Iterator<RecordStatsWritable> values,
+                         OutputCollector<IntWritable,
+                                         RecordStatsWritable> output, 
                          Reporter reporter) throws IOException {
         long bytes = 0;
         long records = 0;
         int xor = 0;
         while (values.hasNext()) {
-          RecordStatsWritable stats = ((RecordStatsWritable)values.next());
+          RecordStatsWritable stats = values.next();
           bytes += stats.getBytes();
           records += stats.getRecords();
           xor ^= stats.getChecksum(); 
@@ -308,7 +316,10 @@ public class SortValidator {
    */
   public static class RecordChecker {
     
-    public static class Map extends MapReduceBase implements Mapper {
+    public static class Map extends MapReduceBase
+      implements Mapper<BytesWritable, BytesWritable,
+                        BytesWritable, IntWritable> {
+      
       private IntWritable value = null;
       
       public void configure(JobConf job) {
@@ -316,27 +327,29 @@ public class SortValidator {
         value = deduceInputFile(job);
       }
       
-      public void map(WritableComparable key, 
-                      Writable value,
-                      OutputCollector output, 
+      public void map(BytesWritable key, 
+                      BytesWritable value,
+                      OutputCollector<BytesWritable, IntWritable> output, 
                       Reporter reporter) throws IOException {
         // newKey = (key, value)
-        BytesWritable keyValue = 
-          new BytesWritable(pair((BytesWritable)key, (BytesWritable)value));
+        BytesWritable keyValue = new BytesWritable(pair(key, value));
     
         // output (newKey, value)
         output.collect(keyValue, this.value);
       }
     }
     
-    public static class Reduce extends MapReduceBase implements Reducer {
-      public void reduce(WritableComparable key, Iterator values,
-                         OutputCollector output, 
+    public static class Reduce extends MapReduceBase
+      implements Reducer<BytesWritable, IntWritable,
+                        BytesWritable, IntWritable> {
+      
+      public void reduce(BytesWritable key, Iterator<IntWritable> values,
+                         OutputCollector<BytesWritable, IntWritable> output,
                          Reporter reporter) throws IOException {
         int ones = 0;
         int twos = 0;
         while (values.hasNext()) {
-          IntWritable count = ((IntWritable) values.next()); 
+          IntWritable count = values.next(); 
           if (count.equals(sortInput)) {
             ++ones;
           } else if (count.equals(sortOutput)) {

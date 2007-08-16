@@ -27,7 +27,6 @@ import org.apache.hadoop.mapred.JobConf;
 import java.io.IOException;
 
 import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.lib.aggregate.*;
 
 /**
@@ -43,13 +42,14 @@ public class AggregateWordCount {
 
   public static class WordCountPlugInClass extends
       ValueAggregatorBaseDescriptor {
-    public ArrayList<Entry> generateKeyValPairs(Object key, Object val) {
+    public ArrayList<Entry<Text, Text>> generateKeyValPairs(Object key,
+                                                            Object val) {
       String countType = LONG_VALUE_SUM;
-      ArrayList<Entry> retv = new ArrayList<Entry>();
+      ArrayList<Entry<Text, Text>> retv = new ArrayList<Entry<Text, Text>>();
       String line = val.toString();
       StringTokenizer itr = new StringTokenizer(line);
       while (itr.hasMoreTokens()) {
-        Entry e = generateEntry(countType, itr.nextToken(), ONE);
+        Entry<Text, Text> e = generateEntry(countType, itr.nextToken(), ONE);
         if (e != null) {
           retv.add(e);
         }

@@ -44,7 +44,9 @@ import org.apache.hadoop.mapred.TaskTracker;
  * </ul>
  * 
  */
-public class AccumulatingReducer extends MapReduceBase implements Reducer {
+public class AccumulatingReducer extends MapReduceBase
+    implements Reducer<UTF8, UTF8, UTF8, UTF8> {
+  
   protected String hostName;
   
   public AccumulatingReducer () {
@@ -57,12 +59,12 @@ public class AccumulatingReducer extends MapReduceBase implements Reducer {
     TaskTracker.LOG.info("Starting AccumulatingReducer on " + hostName);
   }
   
-  public void reduce(WritableComparable key, 
-                     Iterator values,
-                     OutputCollector output, 
+  public void reduce(UTF8 key, 
+                     Iterator<UTF8> values,
+                     OutputCollector<UTF8, UTF8> output, 
                      Reporter reporter
                      ) throws IOException {
-    String field = ((UTF8) key).toString();
+    String field = key.toString();
 
     reporter.setStatus("starting " + field + " ::host = " + hostName);
 
@@ -70,7 +72,7 @@ public class AccumulatingReducer extends MapReduceBase implements Reducer {
     if (field.startsWith("s:")) {
       String sSum = "";
       while (values.hasNext())
-        sSum += ((UTF8) values.next()).toString() + ";";
+        sSum += values.next().toString() + ";";
       output.collect(key, new UTF8(sSum));
       reporter.setStatus("finished " + field + " ::host = " + hostName);
       return;
@@ -79,7 +81,7 @@ public class AccumulatingReducer extends MapReduceBase implements Reducer {
     if (field.startsWith("f:")) {
       float fSum = 0;
       while (values.hasNext())
-        fSum += Float.parseFloat(((UTF8) values.next()).toString());
+        fSum += Float.parseFloat(values.next().toString());
       output.collect(key, new UTF8(String.valueOf(fSum)));
       reporter.setStatus("finished " + field + " ::host = " + hostName);
       return;
@@ -88,7 +90,7 @@ public class AccumulatingReducer extends MapReduceBase implements Reducer {
     if (field.startsWith("l:")) {
       long lSum = 0;
       while (values.hasNext()) {
-        lSum += Long.parseLong(((UTF8) values.next()).toString());
+        lSum += Long.parseLong(values.next().toString());
       }
       output.collect(key, new UTF8(String.valueOf(lSum)));
     }

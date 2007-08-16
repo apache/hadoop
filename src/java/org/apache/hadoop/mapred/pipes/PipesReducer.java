@@ -33,11 +33,13 @@ import java.util.Iterator;
 /**
  * This class is used to talk to a C++ reduce task.
  */
-class PipesReducer implements Reducer {
+class PipesReducer<K2 extends WritableComparable, V2 extends Writable,
+    K3 extends WritableComparable, V3 extends Writable>
+    implements Reducer<K2, V2, K3, V3> {
   private static final Log LOG= LogFactory.getLog(PipesReducer.class.getName());
   private JobConf job;
-  private Application application = null;
-  private DownwardProtocol downlink = null;
+  private Application<K2, V2, K3, V3> application = null;
+  private DownwardProtocol<K2, V2> downlink = null;
   private boolean isOk = true;
 
   public void configure(JobConf job) {
@@ -48,23 +50,23 @@ class PipesReducer implements Reducer {
    * Process all of the keys and values. Start up the application if we haven't
    * started it yet.
    */
-  public void reduce(WritableComparable key, Iterator values, 
-                     OutputCollector output, Reporter reporter
+  public void reduce(K2 key, Iterator<V2> values, 
+                     OutputCollector<K3, V3> output, Reporter reporter
                      ) throws IOException {
     isOk = false;
     startApplication(output, reporter);
     downlink.reduceKey(key);
     while (values.hasNext()) {
-      downlink.reduceValue((Writable) values.next());
+      downlink.reduceValue(values.next());
     }
     isOk = true;
   }
 
-  private void startApplication(OutputCollector output, Reporter reporter) throws IOException {
+  private void startApplication(OutputCollector<K3, V3> output, Reporter reporter) throws IOException {
     if (application == null) {
       try {
         LOG.info("starting application");
-        application = new Application(job, output, reporter, 
+        application = new Application<K2, V2, K3, V3>(job, output, reporter, 
                                       job.getOutputKeyClass(), 
                                       job.getOutputValueClass());
         downlink = application.getDownlink();
@@ -82,9 +84,9 @@ class PipesReducer implements Reducer {
   public void close() throws IOException {
     // if we haven't started the application, we have nothing to do
     if (isOk) {
-      OutputCollector nullCollector = new OutputCollector() {
-        public void collect(WritableComparable key, 
-                            Writable value) throws IOException {
+      OutputCollector<K3, V3> nullCollector = new OutputCollector<K3, V3>() {
+        public void collect(K3 key, 
+                            V3 value) throws IOException {
           // NULL
         }
       };

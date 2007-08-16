@@ -29,12 +29,13 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /** Implements the identity function, mapping inputs directly to outputs. */
-public class IdentityMapper extends MapReduceBase implements Mapper {
+public class IdentityMapper<K extends WritableComparable, V extends Writable>
+    extends MapReduceBase implements Mapper<K, V, K, V> {
 
   /** The identify function.  Input key/value pair is written directly to
    * output.*/
-  public void map(WritableComparable key, Writable val,
-                  OutputCollector output, Reporter reporter)
+  public void map(K key, V val,
+                  OutputCollector<K, V> output, Reporter reporter)
     throws IOException {
     output.collect(key, val);
   }

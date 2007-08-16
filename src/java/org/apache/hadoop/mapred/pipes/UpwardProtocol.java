@@ -26,14 +26,14 @@ import org.apache.hadoop.io.WritableComparable;
  * The interface for the messages that can come up from the child. All of these
  * calls are asynchronous and return before the message has been processed.
  */
-interface UpwardProtocol {
+interface UpwardProtocol<K extends WritableComparable, V extends Writable> {
   /**
    * Output a record from the child.
    * @param key the record's key
    * @param value the record's value
    * @throws IOException
    */
-  void output(WritableComparable key, Writable value) throws IOException;
+  void output(K key, V value) throws IOException;
   
   /**
    * Map functions where the application has defined a partition function
@@ -43,8 +43,8 @@ interface UpwardProtocol {
    * @param value the record's value
    * @throws IOException
    */
-  void partitionedOutput(int reduce, WritableComparable key, 
-                         Writable value) throws IOException;
+  void partitionedOutput(int reduce, K key, 
+                         V value) throws IOException;
   
   /**
    * Update the task's status message

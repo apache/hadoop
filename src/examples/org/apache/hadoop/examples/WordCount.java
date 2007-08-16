@@ -23,9 +23,8 @@ import java.util.*;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
@@ -50,15 +49,16 @@ public class WordCount {
    * For each line of input, break the line into words and emit them as
    * (<b>word</b>, <b>1</b>).
    */
-  public static class MapClass extends MapReduceBase implements Mapper {
+  public static class MapClass extends MapReduceBase
+    implements Mapper<LongWritable, Text, Text, IntWritable> {
     
     private final static IntWritable one = new IntWritable(1);
     private Text word = new Text();
     
-    public void map(WritableComparable key, Writable value, 
-                    OutputCollector output, 
+    public void map(LongWritable key, Text value, 
+                    OutputCollector<Text, IntWritable> output, 
                     Reporter reporter) throws IOException {
-      String line = ((Text)value).toString();
+      String line = value.toString();
       StringTokenizer itr = new StringTokenizer(line);
       while (itr.hasMoreTokens()) {
         word.set(itr.nextToken());
@@ -70,14 +70,15 @@ public class WordCount {
   /**
    * A reducer class that just emits the sum of the input values.
    */
-  public static class Reduce extends MapReduceBase implements Reducer {
+  public static class Reduce extends MapReduceBase
+    implements Reducer<Text, IntWritable, Text, IntWritable> {
     
-    public void reduce(WritableComparable key, Iterator values,
-                       OutputCollector output, 
+    public void reduce(Text key, Iterator<IntWritable> values,
+                       OutputCollector<Text, IntWritable> output, 
                        Reporter reporter) throws IOException {
       int sum = 0;
       while (values.hasNext()) {
-        sum += ((IntWritable) values.next()).get();
+        sum += values.next().get();
       }
       output.collect(key, new IntWritable(sum));
     }

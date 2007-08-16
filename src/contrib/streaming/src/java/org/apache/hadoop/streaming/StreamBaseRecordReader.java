@@ -39,7 +39,7 @@ import org.apache.commons.logging.*;
  * @see StreamLineRecordReader
  * @see StreamXmlRecordReader 
  */
-public abstract class StreamBaseRecordReader implements RecordReader {
+public abstract class StreamBaseRecordReader implements RecordReader<Text, Text> {
 
   protected static final Log LOG = LogFactory.getLog(StreamBaseRecordReader.class.getName());
 
@@ -65,7 +65,7 @@ public abstract class StreamBaseRecordReader implements RecordReader {
 
   /** Read a record. Implementation should call numRecStats at the end
    */
-  public abstract boolean next(Writable key, Writable value) throws IOException;
+  public abstract boolean next(Text key, Text value) throws IOException;
 
   /** This implementation always returns true. */
   public void validateInput(JobConf job) throws IOException {
@@ -89,11 +89,11 @@ public abstract class StreamBaseRecordReader implements RecordReader {
     }
   }
   
-  public WritableComparable createKey() {
+  public Text createKey() {
     return new Text();
   }
 
-  public Writable createValue() {
+  public Text createValue() {
     return new Text();
   }
 

@@ -28,7 +28,10 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** An {@link RecordReader} for {@link SequenceFile}s. */
-public class SequenceFileRecordReader implements RecordReader {
+public class SequenceFileRecordReader<K extends WritableComparable,
+                                      V extends Writable>
+  implements RecordReader<K, V> {
+  
   private SequenceFile.Reader in;
   private long start;
   private long end;
@@ -52,24 +55,25 @@ public class SequenceFileRecordReader implements RecordReader {
 
 
   /** The class of key that must be passed to {@link
-   * #next(Writable,Writable)}.. */
+   * #next(WritableComparable,Writable)}.. */
   public Class getKeyClass() { return in.getKeyClass(); }
 
   /** The class of value that must be passed to {@link
-   * #next(Writable,Writable)}.. */
+   * #next(WritableComparable,Writable)}.. */
   public Class getValueClass() { return in.getValueClass(); }
   
-  public WritableComparable createKey() {
-    return (WritableComparable) ReflectionUtils.newInstance(getKeyClass(), 
+  @SuppressWarnings("unchecked")
+  public K createKey() {
+    return (K) ReflectionUtils.newInstance(getKeyClass(), 
                                                             conf);
   }
   
-  public Writable createValue() {
-    return (Writable) ReflectionUtils.newInstance(getValueClass(), conf);
+  @SuppressWarnings("unchecked")
+  public V createValue() {
+    return (V) ReflectionUtils.newInstance(getValueClass(), conf);
   }
     
-  public synchronized boolean next(Writable key, Writable value)
-    throws IOException {
+  public synchronized boolean next(K key, V value) throws IOException {
     if (!more) return false;
     long pos = in.getPosition();
     boolean eof = in.next(key, value);
@@ -81,7 +85,7 @@ public class SequenceFileRecordReader implements RecordReader {
     return more;
   }
   
-  protected synchronized boolean next(Writable key)
+  protected synchronized boolean next(K key)
     throws IOException {
     if (!more) return false;
     long pos = in.getPosition();
@@ -94,7 +98,7 @@ public class SequenceFileRecordReader implements RecordReader {
     return more;
   }
   
-  protected synchronized void getCurrentValue(Writable value)
+  protected synchronized void getCurrentValue(V value)
     throws IOException {
     in.getCurrentValue(value);
   }

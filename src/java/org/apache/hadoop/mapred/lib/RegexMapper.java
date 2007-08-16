@@ -19,25 +19,23 @@
 package org.apache.hadoop.mapred.lib;
 
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.MapReduceBase;
-
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-
-
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reporter;
 
 
 /** A {@link Mapper} that extracts text matching a regular expression. */
-public class RegexMapper extends MapReduceBase implements Mapper {
+public class RegexMapper<K extends WritableComparable>
+    extends MapReduceBase
+    implements Mapper<K, Text, Text, LongWritable> {
 
   private Pattern pattern;
   private int group;
@@ -47,10 +45,11 @@ public class RegexMapper extends MapReduceBase implements Mapper {
     group = job.getInt("mapred.mapper.regex.group", 0);
   }
 
-  public void map(WritableComparable key, Writable value,
-                  OutputCollector output, Reporter reporter)
+  public void map(K key, Text value,
+                  OutputCollector<Text, LongWritable> output,
+                  Reporter reporter)
     throws IOException {
-    String text = ((Text)value).toString();
+    String text = value.toString();
     Matcher matcher = pattern.matcher(text);
     while (matcher.find()) {
       output.collect(new Text(matcher.group(group)), new LongWritable(1));

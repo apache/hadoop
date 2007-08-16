@@ -49,25 +49,25 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
   
   public String inputFile = null;
 
-  private static class MyEntry implements Entry {
-    Object key;
+  private static class MyEntry implements Entry<Text, Text> {
+    Text key;
 
-    Object val;
+    Text val;
 
-    public Object getKey() {
+    public Text getKey() {
       return key;
     }
 
-    public Object getValue() {
+    public Text getValue() {
       return val;
     }
 
-    public Object setValue(Object val) {
+    public Text setValue(Text val) {
       this.val = val;
       return val;
     }
 
-    public MyEntry(Object key, Object val) {
+    public MyEntry(Text key, Text val) {
       this.key = key;
       this.val = val;
     }
@@ -81,7 +81,7 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
    * @return an Entry whose key is the aggregation id prefixed with 
    * the aggregation type.
    */
-  public static Entry generateEntry(String type, String id, Object val) {
+  public static Entry<Text, Text> generateEntry(String type, String id, Text val) {
     Text key = new Text(type + TYPE_SEPARATOR + id);
     return new MyEntry(key, val);
   }
@@ -129,11 +129,12 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
    *         aggregation type which is used to guide the way to aggregate the
    *         value in the reduce/combiner phrase of an Aggregate based job.
    */
-  public ArrayList<Entry> generateKeyValPairs(Object key, Object val) {
-    ArrayList<Entry> retv = new ArrayList<Entry>();
+  public ArrayList<Entry<Text, Text>> generateKeyValPairs(Object key,
+                                                          Object val) {
+    ArrayList<Entry<Text, Text>> retv = new ArrayList<Entry<Text, Text>>();
     String countType = LONG_VALUE_SUM;
     String id = "record_count";
-    Entry e = generateEntry(countType, id, ONE);
+    Entry<Text, Text> e = generateEntry(countType, id, ONE);
     if (e != null) {
       retv.add(e);
     }
@@ -153,6 +154,7 @@ public class ValueAggregatorBaseDescriptor implements ValueAggregatorDescriptor 
    */
   public void configure(JobConf job) {
     this.inputFile = job.get("map.input.file");
-    maxNumItems = job.getLong("aggregate.max.num.unique.values", Long.MAX_VALUE);
+    maxNumItems = job.getLong("aggregate.max.num.unique.values",
+                              Long.MAX_VALUE);
   }
 }

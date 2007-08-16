@@ -18,30 +18,32 @@
 
 package org.apache.hadoop.tools;
 
-import java.io.*;
-
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.fs.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.CopyFiles;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.Writable;
-
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
+import org.apache.hadoop.util.CopyFiles;
 
 /**
  * Logalyzer: A utility tool for archiving and analyzing hadoop logs.
@@ -62,7 +64,9 @@ public class Logalyzer {
   private static Configuration fsConfig = new Configuration();
   
   /** A {@link Mapper} that extracts text matching a regular expression. */
-  public static class LogRegexMapper extends MapReduceBase implements Mapper {
+  public static class LogRegexMapper<K extends WritableComparable>
+    extends MapReduceBase
+    implements Mapper<K, Text, Text, LongWritable> {
     
     private Pattern pattern;
     
@@ -70,13 +74,14 @@ public class Logalyzer {
       pattern = Pattern.compile(job.get("mapred.mapper.regex"));
     }
     
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector output, Reporter reporter)
+    public void map(K key, Text value,
+                    OutputCollector<Text, LongWritable> output,
+                    Reporter reporter)
       throws IOException {
-      String text = ((Text)value).toString();
+      String text = value.toString();
       Matcher matcher = pattern.matcher(text);
       while (matcher.find()) {
-        output.collect((Text)value, new LongWritable(1));
+        output.collect(value, new LongWritable(1));
       }
     }
     

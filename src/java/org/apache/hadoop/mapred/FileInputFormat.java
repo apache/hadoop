@@ -28,12 +28,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /** 
  * A base class for {@link InputFormat}. 
  * 
  */
-public abstract class FileInputFormat implements InputFormat {
+public abstract class FileInputFormat<K extends WritableComparable,
+                                      V extends Writable>
+  implements InputFormat<K, V> {
 
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.mapred.FileInputFormat");
@@ -62,7 +66,7 @@ public abstract class FileInputFormat implements InputFormat {
     return true;
   }
   
-  public abstract RecordReader getRecordReader(InputSplit split,
+  public abstract RecordReader<K, V> getRecordReader(InputSplit split,
                                                JobConf job,
                                                Reporter reporter)
     throws IOException;

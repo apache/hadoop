@@ -159,7 +159,7 @@ public class DFSCIOTest extends TestCase {
       super(fsConfig);
     }
     
-    void collectStats(OutputCollector output, 
+    void collectStats(OutputCollector<UTF8, UTF8> output, 
                       String name,
                       long execTime, 
                       Object objSize) throws IOException {

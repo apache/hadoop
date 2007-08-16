@@ -51,9 +51,12 @@ public class MRBench {
    * Takes input format as text lines, runs some processing on it and 
    * writes out data as text again. 
    */
-  public static class Map extends MapReduceBase implements Mapper {
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector output, Reporter reporter) throws IOException 
+  public static class Map extends MapReduceBase
+    implements Mapper<WritableComparable, UTF8, UTF8, UTF8> {
+    
+    public void map(WritableComparable key, UTF8 value,
+                    OutputCollector<UTF8, UTF8> output,
+                    Reporter reporter) throws IOException 
     {
       String line = value.toString();
       output.collect(new UTF8(process(line)), new UTF8(""));		
@@ -66,9 +69,11 @@ public class MRBench {
   /**
    * Ignores the key and writes values to the output. 
    */
-  public static class Reduce extends MapReduceBase implements Reducer {
-    public void reduce(WritableComparable key, Iterator values,
-                       OutputCollector output, Reporter reporter) throws IOException 
+  public static class Reduce extends MapReduceBase
+    implements Reducer<UTF8, UTF8, UTF8, UTF8> {
+    
+    public void reduce(UTF8 key, Iterator<UTF8> values,
+                       OutputCollector<UTF8, UTF8> output, Reporter reporter) throws IOException 
     {
       while(values.hasNext()) {
         output.collect(key, new UTF8(values.next().toString()));

@@ -50,15 +50,21 @@ import java.util.concurrent.TimeUnit;
  * <b>mapred.map.multithreadedrunner.threads</b> property).
  * <p>
  */
-public class MultithreadedMapRunner implements MapRunnable {
+public class MultithreadedMapRunner<K1 extends WritableComparable,
+                                    V1 extends Writable,
+                                    K2 extends WritableComparable,
+                                    V2 extends Writable>
+    implements MapRunnable<K1, V1, K2, V2> {
+
   private static final Log LOG =
     LogFactory.getLog(MultithreadedMapRunner.class.getName());
 
   private JobConf job;
-  private Mapper mapper;
+  private Mapper<K1, V1, K2, V2> mapper;
   private ExecutorService executorService;
   private volatile IOException ioException;
 
+  @SuppressWarnings("unchecked")
   public void configure(JobConf job) {
     int numberOfThreads =
       job.getInt("mapred.map.multithreadedrunner.threads", 10);
@@ -76,14 +82,14 @@ public class MultithreadedMapRunner implements MapRunnable {
     executorService = Executors.newFixedThreadPool(numberOfThreads);
   }
 
-  public void run(RecordReader input, OutputCollector output,
+  public void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,
                   Reporter reporter)
     throws IOException {
     try {
       // allocate key & value instances these objects will not be reused
       // because execution of Mapper.map is not serialized.
-      WritableComparable key = input.createKey();
-      Writable value = input.createValue();
+      K1 key = input.createKey();
+      V1 value = input.createValue();
 
       while (input.next(key, value)) {
 
@@ -166,9 +172,9 @@ public class MultithreadedMapRunner implements MapRunnable {
    * Runnable to execute a single Mapper.map call from a forked thread.
    */
   private class MapperInvokeRunable implements Runnable {
-    private WritableComparable key;
-    private Writable value;
-    private OutputCollector output;
+    private K1 key;
+    private V1 value;
+    private OutputCollector<K2, V2> output;
     private Reporter reporter;
 
     /**
@@ -180,8 +186,9 @@ public class MultithreadedMapRunner implements MapRunnable {
      * @param output
      * @param reporter
      */
-    public MapperInvokeRunable(WritableComparable key, Writable value,
-                               OutputCollector output, Reporter reporter) {
+    public MapperInvokeRunable(K1 key, V1 value,
+                               OutputCollector<K2, V2> output,
+                               Reporter reporter) {
       this.key = key;
       this.value = value;
       this.output = output;

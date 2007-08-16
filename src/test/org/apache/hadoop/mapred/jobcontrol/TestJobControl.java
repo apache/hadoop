@@ -82,15 +82,18 @@ public class TestJobControl extends junit.framework.TestCase {
     out.close();
   }
 
-  public static class DataCopy extends MapReduceBase implements Mapper,
-                                                                Reducer {
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector output, Reporter reporter) throws IOException {
+  public static class DataCopy extends MapReduceBase
+    implements Mapper<WritableComparable, Text, Text, Text>,
+               Reducer<Text, Text, Text, Text> {
+    public void map(WritableComparable key, Text value,
+                    OutputCollector<Text, Text> output,
+                    Reporter reporter) throws IOException {
       output.collect(new Text(key.toString()), value);
     }
 
-    public void reduce(WritableComparable key, Iterator values,
-                       OutputCollector output, Reporter reporter) throws IOException {
+    public void reduce(Text key, Iterator<Text> values,
+                       OutputCollector<Text, Text> output,
+                       Reporter reporter) throws IOException {
       Text dumbKey = new Text("");
       while (values.hasNext()) {
         Text data = (Text) values.next();

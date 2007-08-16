@@ -54,9 +54,10 @@ public class TestTextOutputFormat extends TestCase {
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
 
-    TextOutputFormat theOutputFormat = new TextOutputFormat();
-    RecordWriter theRecodWriter = theOutputFormat.getRecordWriter(localFs, job,
-                                                                  file, reporter);
+    TextOutputFormat<Text, Text> theOutputFormat =
+      new TextOutputFormat<Text, Text>();
+    RecordWriter<Text, Text> theRecordWriter =
+      theOutputFormat.getRecordWriter(localFs, job, file, reporter);
 
     Text key1 = new Text("key1");
     Text key2 = new Text("key2");
@@ -64,14 +65,14 @@ public class TestTextOutputFormat extends TestCase {
     Text val2 = new Text("val2");
 
     try {
-      theRecodWriter.write(key1, val1);
-      theRecodWriter.write(null, val1);
-      theRecodWriter.write(key1, null);
-      theRecodWriter.write(null, null);
-      theRecodWriter.write(key2, val2);
+      theRecordWriter.write(key1, val1);
+      theRecordWriter.write(null, val1);
+      theRecordWriter.write(key1, null);
+      theRecordWriter.write(null, null);
+      theRecordWriter.write(key2, val2);
 
     } finally {
-      theRecodWriter.close(reporter);
+      theRecordWriter.close(reporter);
     }
     File expectedFile = new File(new Path(workDir, file).toString()); 
     StringBuffer expectedOutput = new StringBuffer();

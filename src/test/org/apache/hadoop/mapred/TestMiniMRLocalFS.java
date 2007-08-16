@@ -111,7 +111,9 @@ public class TestMiniMRLocalFS extends TestCase {
     
   }
   
-  private static class MyInputFormat implements InputFormat {
+  private static class MyInputFormat
+    implements InputFormat<IntWritable, Text> {
+    
     static final String[] data = new String[]{
       "crocodile pants", 
       "aunt annie", 
@@ -151,7 +153,7 @@ public class TestMiniMRLocalFS extends TestCase {
       }
     }
 
-    static class MyRecordReader implements RecordReader {
+    static class MyRecordReader implements RecordReader<IntWritable, Text> {
       int index;
       int past;
       int length;
@@ -162,21 +164,21 @@ public class TestMiniMRLocalFS extends TestCase {
         this.length = length;
       }
 
-      public boolean next(Writable key, Writable value) throws IOException {
+      public boolean next(IntWritable key, Text value) throws IOException {
         if (index < past) {
-          ((IntWritable) key).set(index);
-          ((Text) value).set(data[index]);
+          key.set(index);
+          value.set(data[index]);
           index += 1;
           return true;
         }
         return false;
       }
       
-      public WritableComparable createKey() {
+      public IntWritable createKey() {
         return new IntWritable();
       }
       
-      public Writable createValue() {
+      public Text createValue() {
         return new Text();
       }
 
@@ -200,18 +202,23 @@ public class TestMiniMRLocalFS extends TestCase {
                            new MySplit(4, 2)};
     }
 
-    public RecordReader getRecordReader(InputSplit split,
-                                        JobConf job, 
-                                        Reporter reporter) throws IOException {
+    public RecordReader<IntWritable, Text> getRecordReader(InputSplit split,
+                                                           JobConf job, 
+                                                           Reporter reporter)
+                                                           throws IOException {
       MySplit sp = (MySplit) split;
       return new MyRecordReader(sp.first, sp.length);
     }
     
   }
   
-  static class MyMapper extends MapReduceBase implements Mapper {
+  static class MyMapper extends MapReduceBase
+    implements Mapper<WritableComparable, Writable,
+                      WritableComparable, Writable> {
+    
     public void map(WritableComparable key, Writable value, 
-                    OutputCollector out, Reporter reporter) throws IOException {
+                    OutputCollector<WritableComparable, Writable> out,
+                    Reporter reporter) throws IOException {
       System.out.println("map: " + key + ", " + value);
       out.collect((WritableComparable) value, key);
       InputSplit split = reporter.getInputSplit();
@@ -222,10 +229,12 @@ public class TestMiniMRLocalFS extends TestCase {
     }
   }
 
-  static class MyReducer extends MapReduceBase implements Reducer {
-    public void reduce(WritableComparable key, Iterator values, 
-                       OutputCollector output, Reporter reporter
-                       ) throws IOException {
+  static class MyReducer extends MapReduceBase
+    implements Reducer<WritableComparable, Writable,
+                      WritableComparable, Writable> {
+    public void reduce(WritableComparable key, Iterator<Writable> values, 
+                       OutputCollector<WritableComparable, Writable> output,
+                       Reporter reporter) throws IOException {
       try {
         InputSplit split = reporter.getInputSplit();
         throw new IOException("Got an input split of " + split);

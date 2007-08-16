@@ -77,7 +77,8 @@ public class TestRecordWritable extends TestCase {
       }
 
       // try splitting the file in a variety of sizes
-      InputFormat format = new SequenceFileInputFormat();
+      InputFormat<RecInt, RecBuffer> format =
+        new SequenceFileInputFormat<RecInt, RecBuffer>();
       RecInt key = new RecInt();
       RecBuffer value = new RecBuffer();
       for (int i = 0; i < 3; i++) {
@@ -88,7 +89,7 @@ public class TestRecordWritable extends TestCase {
         // check each split
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
-          RecordReader reader =
+          RecordReader<RecInt, RecBuffer> reader =
             format.getRecordReader(splits[j], job, Reporter.NULL);
           try {
             int count = 0;

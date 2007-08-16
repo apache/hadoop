@@ -21,11 +21,14 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 
 /** An output data format.  Output files are stored in a {@link
  * FileSystem}. */
-public interface OutputFormat {
+public interface OutputFormat<K extends WritableComparable,
+                              V extends Writable> {
 
   /** Construct a {@link RecordWriter} with Progressable.
    *
@@ -34,8 +37,8 @@ public interface OutputFormat {
    * @param progress mechanism for reporting progress while writing to file
    * @return a {@link RecordWriter}
    */
-  RecordWriter getRecordWriter(FileSystem ignored, JobConf job, String name,
-                               Progressable progress)
+  RecordWriter<K, V> getRecordWriter(FileSystem ignored, JobConf job,
+                                     String name, Progressable progress)
     throws IOException;
 
   /** Check whether the output specification for a job is appropriate.  Called

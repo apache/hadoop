@@ -38,16 +38,16 @@ public class TestMapOutputType extends TestCase
    * type specified in conf will be anything but.
    */
    
-  static class TextGen implements Mapper {
+  static class TextGen
+    implements Mapper<WritableComparable, Writable, Text, Text> {
+    
     public void configure(JobConf job) {
     }
     
-    public void map(WritableComparable key, Writable val, OutputCollector out,
+    public void map(WritableComparable key, Writable val,
+                    OutputCollector<Text, Text> out,
                     Reporter reporter) throws IOException {
-      key = new Text("Hello");
-      val = new Text("World");
-      
-      out.collect(key, val);
+      out.collect(new Text("Hello"), new Text("World"));
     }
     
     public void close() {
@@ -57,14 +57,15 @@ public class TestMapOutputType extends TestCase
   /** A do-nothing reducer class. We won't get this far, really.
    *
    */
-  static class TextReduce implements Reducer {
+  static class TextReduce
+    implements Reducer<Text, Text, Text, Text> {
     
     public void configure(JobConf job) {
     }
 
-    public void reduce(WritableComparable key,
-                       Iterator values,
-                       OutputCollector out,
+    public void reduce(Text key,
+                       Iterator<Text> values,
+                       OutputCollector<Text, Text> out,
                        Reporter reporter) throws IOException {
       out.collect(new Text("Test"), new Text("Me"));
     }

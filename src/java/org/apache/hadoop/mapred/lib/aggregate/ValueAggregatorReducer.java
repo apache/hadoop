@@ -32,7 +32,9 @@ import org.apache.hadoop.mapred.Reporter;
  * 
  * 
  */
-public class ValueAggregatorReducer extends ValueAggregatorJobBase {
+public class ValueAggregatorReducer<K1 extends WritableComparable,
+                                    V1 extends Writable>
+  extends ValueAggregatorJobBase<K1, V1> {
 
   /**
    * @param key
@@ -43,8 +45,8 @@ public class ValueAggregatorReducer extends ValueAggregatorJobBase {
    *          may be further customiized.
    * @value the values to be aggregated
    */
-  public void reduce(WritableComparable key, Iterator values,
-                     OutputCollector output, Reporter reporter) throws IOException {
+  public void reduce(Text key, Iterator<Text> values,
+                     OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
     String keyStr = key.toString();
     int pos = keyStr.indexOf(ValueAggregatorDescriptor.TYPE_SEPARATOR);
     String type = keyStr.substring(0, pos);
@@ -65,7 +67,7 @@ public class ValueAggregatorReducer extends ValueAggregatorJobBase {
   /**
    * Do nothing. Should not be called
    */
-  public void map(WritableComparable arg0, Writable arg1, OutputCollector arg2,
+  public void map(K1 arg0, V1 arg1, OutputCollector<Text, Text> arg2,
                   Reporter arg3) throws IOException {
     throw new IOException ("should not be called\n");
   }

@@ -163,7 +163,7 @@ public class DistributedFSCheck extends TestCase {
       return new Long(actualSize);
     }
     
-    void collectStats(OutputCollector output, 
+    void collectStats(OutputCollector<UTF8, UTF8> output, 
                       String name, 
                       long execTime, 
                       Object corruptedBlock) throws IOException {

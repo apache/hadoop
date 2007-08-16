@@ -42,7 +42,8 @@ import org.apache.log4j.Logger;
 /**
  * Convert Map/Reduce output and write it to an HBase table
  */
-public class TableOutputFormat extends OutputFormatBase {
+public class TableOutputFormat
+  extends OutputFormatBase<Text, KeyedDataArrayWritable> {
 
   /** JobConf parameter that specifies the output table */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
@@ -56,7 +57,9 @@ public class TableOutputFormat extends OutputFormatBase {
    * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable) 
    * and write to an HBase table
    */
-  protected class TableRecordWriter implements RecordWriter {
+  protected class TableRecordWriter
+    implements RecordWriter<Text, KeyedDataArrayWritable> {
+    
     private HTable m_table;
 
     /**
@@ -77,10 +80,10 @@ public class TableOutputFormat extends OutputFormatBase {
      *
      * @see org.apache.hadoop.mapred.RecordWriter#write(org.apache.hadoop.io.WritableComparable, org.apache.hadoop.io.Writable)
      */
-    public void write(WritableComparable key, Writable value) throws IOException {
+    public void write(Text key, KeyedDataArrayWritable value) throws IOException {
       LOG.debug("start write");
-      Text tKey = (Text)key;
-      KeyedDataArrayWritable tValue = (KeyedDataArrayWritable) value;
+      Text tKey = key;
+      KeyedDataArrayWritable tValue = value;
       KeyedData[] columns = tValue.get();
 
       // start transaction

@@ -22,6 +22,7 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 
 /**
@@ -87,8 +88,9 @@ public class UserDefinedValueAggregatorDescriptor implements
    *         aggregation type which is used to guide the way to aggregate the
    *         value in the reduce/combiner phrase of an Aggregate based job.
    */
-  public ArrayList<Entry> generateKeyValPairs(Object key, Object val) {
-    ArrayList<Entry> retv = new ArrayList<Entry>();
+  public ArrayList<Entry<Text, Text>> generateKeyValPairs(Object key,
+                                                          Object val) {
+    ArrayList<Entry<Text, Text>> retv = new ArrayList<Entry<Text, Text>>();
     if (this.theAggregatorDescriptor != null) {
       retv = this.theAggregatorDescriptor.generateKeyValPairs(key, val);
     }

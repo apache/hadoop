@@ -20,13 +20,20 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
 /** Expert: Permits greater control of map processing. For example,
  * implementations might perform multi-threaded, asynchronous mappings. */
-public interface MapRunnable extends JobConfigurable {
+public interface MapRunnable<K1 extends WritableComparable, V1 extends Writable,
+                             K2 extends WritableComparable, V2 extends Writable>
+    extends JobConfigurable {
+  
   /** Called to execute mapping.  Mapping is complete when this returns.
    * @param input the {@link RecordReader} with input key/value pairs.
    * @param output the {@link OutputCollector} for mapped key/value pairs.
    */
-  void run(RecordReader input, OutputCollector output, Reporter reporter)
+  void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,
+           Reporter reporter)
     throws IOException;
 }

@@ -75,7 +75,7 @@ public class RandomWriter extends ToolBase {
    * A custom input format that creates virtual inputs of a single string
    * for each map.
    */
-  static class RandomInputFormat implements InputFormat {
+  static class RandomInputFormat implements InputFormat<Text, Text> {
     
     /** Accept all job confs */
     public void validateInput(JobConf job) throws IOException {
@@ -99,23 +99,23 @@ public class RandomWriter extends ToolBase {
      * Return a single record (filename, "") where the filename is taken from
      * the file split.
      */
-    static class RandomRecordReader implements RecordReader {
+    static class RandomRecordReader implements RecordReader<Text, Text> {
       Path name;
       public RandomRecordReader(Path p) {
         name = p;
       }
-      public boolean next(Writable key, Writable value) {
+      public boolean next(Text key, Text value) {
         if (name != null) {
-          ((Text) key).set(name.getName());
+          key.set(name.getName());
           name = null;
           return true;
         }
         return false;
       }
-      public WritableComparable createKey() {
+      public Text createKey() {
         return new Text();
       }
-      public Writable createValue() {
+      public Text createValue() {
         return new Text();
       }
       public long getPos() {
@@ -127,14 +127,17 @@ public class RandomWriter extends ToolBase {
       }
     }
 
-    public RecordReader getRecordReader(InputSplit split,
+    public RecordReader<Text, Text> getRecordReader(InputSplit split,
                                         JobConf job, 
                                         Reporter reporter) throws IOException {
       return new RandomRecordReader(((FileSplit) split).getPath());
     }
   }
 
-  static class Map extends MapReduceBase implements Mapper {
+  static class Map extends MapReduceBase
+    implements Mapper<WritableComparable, Writable,
+                      BytesWritable, BytesWritable> {
+    
     private long numBytesToWrite;
     private int minKeySize;
     private int keySizeRange;
@@ -155,7 +158,7 @@ public class RandomWriter extends ToolBase {
      */
     public void map(WritableComparable key, 
                     Writable value,
-                    OutputCollector output, 
+                    OutputCollector<BytesWritable, BytesWritable> output, 
                     Reporter reporter) throws IOException {
       int itemCount = 0;
       while (numBytesToWrite > 0) {

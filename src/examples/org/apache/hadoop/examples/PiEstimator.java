@@ -41,7 +41,8 @@ public class PiEstimator {
    * Mappper class for Pi estimation.
    */
   
-  public static class PiMapper extends MapReduceBase implements Mapper {
+  public static class PiMapper extends MapReduceBase
+    implements Mapper<LongWritable, Writable, LongWritable, LongWritable> {
     
     /** Mapper configuration.
      *
@@ -60,11 +61,11 @@ public class PiEstimator {
      * @param out
      * @param reporter
      */
-    public void map(WritableComparable key,
+    public void map(LongWritable key,
                     Writable val,
-                    OutputCollector out,
+                    OutputCollector<LongWritable, LongWritable> out,
                     Reporter reporter) throws IOException {
-      long nSamples = ((LongWritable) key).get();
+      long nSamples = key.get();
       for(long idx = 0; idx < nSamples; idx++) {
         double x = r.nextDouble();
         double y = r.nextDouble();
@@ -87,7 +88,9 @@ public class PiEstimator {
     }
   }
   
-  public static class PiReducer extends MapReduceBase implements Reducer {
+  public static class PiReducer extends MapReduceBase
+    implements Reducer<LongWritable, LongWritable, WritableComparable, Writable> {
+    
     long numInside = 0;
     long numOutside = 0;
     JobConf conf;
@@ -104,18 +107,18 @@ public class PiEstimator {
      * @param output
      * @param reporter
      */
-    public void reduce(WritableComparable key,
-                       Iterator values,
-                       OutputCollector output,
+    public void reduce(LongWritable key,
+                       Iterator<LongWritable> values,
+                       OutputCollector<WritableComparable, Writable> output,
                        Reporter reporter) throws IOException {
-      if (((LongWritable)key).get() == 1) {
+      if (key.get() == 1) {
         while (values.hasNext()) {
-          long num = ((LongWritable)values.next()).get();
+          long num = values.next().get();
           numInside += num;
         }
       } else {
         while (values.hasNext()) {
-          long num = ((LongWritable)values.next()).get();
+          long num = values.next().get();
           numOutside += num;
         }
       }

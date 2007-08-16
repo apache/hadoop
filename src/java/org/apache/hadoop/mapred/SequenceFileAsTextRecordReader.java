@@ -30,34 +30,53 @@ import org.apache.hadoop.io.WritableComparable;
  * method. This class to SequenceFileAsTextInputFormat class is as LineRecordReader
  * class to TextInputFormat class.
  */
-public class SequenceFileAsTextRecordReader extends SequenceFileRecordReader {
+public class SequenceFileAsTextRecordReader
+  implements RecordReader<Text, Text> {
+  
+  private final SequenceFileRecordReader<WritableComparable, Writable>
+  sequenceFileRecordReader;
 
-  private Writable innerKey = super.createKey();
-  private Writable innerValue = super.createValue();
+  private WritableComparable innerKey;
+  private Writable innerValue;
 
   public SequenceFileAsTextRecordReader(Configuration conf, FileSplit split)
     throws IOException {
-    super(conf, split);
+    sequenceFileRecordReader =
+      new SequenceFileRecordReader<WritableComparable, Writable>(conf, split);
+    innerKey = sequenceFileRecordReader.createKey();
+    innerValue = sequenceFileRecordReader.createValue();
   }
 
-  public WritableComparable createKey() {
+  public Text createKey() {
     return new Text();
   }
   
-  public Writable createValue() {
+  public Text createValue() {
     return new Text();
   }
 
   /** Read key/value pair in a line. */
-  public synchronized boolean next(Writable key, Writable value)
-    throws IOException {
-    Text tKey = (Text) key;
-    Text tValue = (Text) value;
-    if (!super.next(innerKey, innerValue)) {
+  public synchronized boolean next(Text key, Text value) throws IOException {
+    Text tKey = key;
+    Text tValue = value;
+    if (!sequenceFileRecordReader.next(innerKey, innerValue)) {
       return false;
     }
     tKey.set(innerKey.toString());
     tValue.set(innerValue.toString());
     return true;
   }
+  
+  public float getProgress() throws IOException {
+    return sequenceFileRecordReader.getProgress();
+  }
+  
+  public synchronized long getPos() throws IOException {
+    return sequenceFileRecordReader.getPos();
+  }
+  
+  public synchronized void close() throws IOException {
+    sequenceFileRecordReader.close();
+  }
+  
 }

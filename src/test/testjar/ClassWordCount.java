@@ -23,6 +23,7 @@ import java.util.*;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -46,12 +47,14 @@ public class ClassWordCount {
    * For each line of input, break the line into words and emit them as
    * (<b>word</b>, <b>1</b>).
    */
-  public static class MapClass extends WordCount.MapClass implements Mapper {
+  public static class MapClass extends WordCount.MapClass
+    implements Mapper<LongWritable, Text, Text, IntWritable> {
   }
   
   /**
    * A reducer class that just emits the sum of the input values.
    */
-  public static class Reduce extends WordCount.Reduce implements Reducer {
+  public static class Reduce extends WordCount.Reduce
+    implements Reducer<Text, IntWritable, Text, IntWritable> {
   }
 }

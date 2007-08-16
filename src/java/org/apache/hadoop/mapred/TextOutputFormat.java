@@ -32,16 +32,21 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes plain text files. */
-public class TextOutputFormat extends OutputFormatBase {
+public class TextOutputFormat<K extends WritableComparable,
+                              V extends Writable>
+  extends OutputFormatBase<K, V> {
 
-  protected static class LineRecordWriter implements RecordWriter {
+  protected static class LineRecordWriter<K extends WritableComparable,
+                                          V extends Writable>
+    implements RecordWriter<K, V> {
+    
     private DataOutputStream out;
     
     public LineRecordWriter(DataOutputStream out) {
       this.out = out;
     }
     
-    public synchronized void write(WritableComparable key, Writable value)
+    public synchronized void write(K key, V value)
       throws IOException {
 
       if (key == null && value == null) {
@@ -64,8 +69,10 @@ public class TextOutputFormat extends OutputFormatBase {
     }
   }
   
-  public RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
-                                      String name, Progressable progress)
+  public RecordWriter<K, V> getRecordWriter(FileSystem ignored,
+                                                  JobConf job,
+                                                  String name,
+                                                  Progressable progress)
     throws IOException {
 
     Path dir = job.getOutputPath();
@@ -73,7 +80,7 @@ public class TextOutputFormat extends OutputFormatBase {
     boolean isCompressed = getCompressOutput(job);
     if (!isCompressed) {
       FSDataOutputStream fileOut = fs.create(new Path(dir, name), progress);
-      return new LineRecordWriter(fileOut);
+      return new LineRecordWriter<K, V>(fileOut);
     } else {
       Class codecClass = getOutputCompressorClass(job, GzipCodec.class);
       // create the named codec
@@ -82,8 +89,8 @@ public class TextOutputFormat extends OutputFormatBase {
       // build the filename including the extension
       Path filename = new Path(dir, name + codec.getDefaultExtension());
       FSDataOutputStream fileOut = fs.create(filename, progress);
-      return new LineRecordWriter(new DataOutputStream
-                                  (codec.createOutputStream(fileOut)));
+      return new LineRecordWriter<K, V>(new DataOutputStream
+                                        (codec.createOutputStream(fileOut)));
     }
   }      
 }

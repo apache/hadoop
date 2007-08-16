@@ -71,7 +71,8 @@ public class TestSequenceFileAsTextInputFormat extends TestCase {
       }
 
       // try splitting the file in a variety of sizes
-      InputFormat format = new SequenceFileAsTextInputFormat();
+      InputFormat<Text, Text> format =
+        new SequenceFileAsTextInputFormat();
       
       for (int i = 0; i < 3; i++) {
         int numSplits =
@@ -83,12 +84,12 @@ public class TestSequenceFileAsTextInputFormat extends TestCase {
         // check each split
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
-          RecordReader reader =
+          RecordReader<Text, Text> reader =
             format.getRecordReader(splits[j], job, reporter);
           Class readerClass = reader.getClass();
           assertEquals("reader class is SequenceFileAsTextRecordReader.", SequenceFileAsTextRecordReader.class, readerClass);        
-          Text value = (Text)reader.createValue();
-          Text key = (Text)reader.createKey();
+          Text value = reader.createValue();
+          Text key = reader.createKey();
           try {
             int count = 0;
             while (reader.next(key, value)) {

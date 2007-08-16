@@ -30,11 +30,14 @@ import org.apache.hadoop.util.Progressable;
 /**
  * Consume all outputs and put them in /dev/null. 
  */
-public class NullOutputFormat implements OutputFormat {
-  public RecordWriter getRecordWriter(FileSystem ignored, JobConf job, 
+public class NullOutputFormat<K extends WritableComparable,
+                              V extends Writable>
+  implements OutputFormat<K, V> {
+  
+  public RecordWriter<K, V> getRecordWriter(FileSystem ignored, JobConf job, 
                                       String name, Progressable progress) {
-    return new RecordWriter(){
-        public void write(WritableComparable key, Writable value) { }
+    return new RecordWriter<K, V>(){
+        public void write(K key, V value) { }
         public void close(Reporter reporter) { }
       };
   }

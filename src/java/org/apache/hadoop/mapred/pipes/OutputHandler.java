@@ -28,9 +28,12 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Handles the upward (C++ to Java) messages from the application.
  */
-class OutputHandler implements UpwardProtocol {
+class OutputHandler<K extends WritableComparable,
+                    V extends Writable>
+  implements UpwardProtocol<K, V> {
+  
   private Reporter reporter;
-  private OutputCollector collector;
+  private OutputCollector<K, V> collector;
   private float progressValue = 0.0f;
   private boolean done = false;
   private Throwable exception = null;
@@ -40,7 +43,7 @@ class OutputHandler implements UpwardProtocol {
    * @param collector the "real" collector that takes the output
    * @param reporter the reporter for reporting progress
    */
-  public OutputHandler(OutputCollector collector, Reporter reporter) {
+  public OutputHandler(OutputCollector<K, V> collector, Reporter reporter) {
     this.reporter = reporter;
     this.collector = collector;
   }
@@ -48,16 +51,15 @@ class OutputHandler implements UpwardProtocol {
   /**
    * The task output a normal record.
    */
-  public void output(WritableComparable key, 
-                     Writable value) throws IOException {
+  public void output(K key, V value) throws IOException {
     collector.collect(key, value);
   }
 
   /**
    * The task output a record with a partition number attached.
    */
-  public void partitionedOutput(int reduce, WritableComparable key, 
-                                Writable value) throws IOException {
+  public void partitionedOutput(int reduce, K key, 
+                                V value) throws IOException {
     PipesPartitioner.setNextPartition(reduce);
     collector.collect(key, value);
   }

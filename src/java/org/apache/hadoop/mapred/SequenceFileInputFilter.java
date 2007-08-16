@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -41,7 +42,10 @@ import org.apache.hadoop.util.ReflectionUtils;
  * 
  */
 
-public class SequenceFileInputFilter extends SequenceFileInputFormat {
+public class SequenceFileInputFilter<K extends WritableComparable,
+                                     V extends Writable>
+  extends SequenceFileInputFormat<K, V> {
+  
   final private static String FILTER_CLASS = "sequencefile.filter.class";
   final private static String FILTER_FREQUENCY
     = "sequencefile.filter.frequency";
@@ -56,13 +60,13 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
    * @param reporter reporter who sends report to task tracker
    * @return RecordReader
    */
-  public RecordReader getRecordReader(InputSplit split,
+  public RecordReader<K, V> getRecordReader(InputSplit split,
                                       JobConf job, Reporter reporter)
     throws IOException {
         
     reporter.setStatus(split.toString());
         
-    return new FilterRecordReader(job, (FileSplit) split);
+    return new FilterRecordReader<K, V>(job, (FileSplit) split);
   }
 
 
@@ -278,7 +282,10 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
     }
   }
     
-  private static class FilterRecordReader extends SequenceFileRecordReader {
+  private static class FilterRecordReader<K extends WritableComparable,
+                                          V extends Writable>
+    extends SequenceFileRecordReader<K, V> {
+    
     private Filter filter;
         
     public FilterRecordReader(Configuration conf, FileSplit split)
@@ -290,8 +297,7 @@ public class SequenceFileInputFilter extends SequenceFileInputFormat {
                                                    conf);
     }
         
-    public synchronized boolean next(Writable key, Writable value)
-      throws IOException {
+    public synchronized boolean next(K key, V value) throws IOException {
       while (next(key)) {
         if (filter.accept(key)) {
           getCurrentValue(value);

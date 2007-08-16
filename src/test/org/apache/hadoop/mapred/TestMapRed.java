@@ -83,13 +83,17 @@ public class TestMapRed extends TestCase {
    * of numbers in random order, but where each number appears
    * as many times as we were instructed.
    */
-  static class RandomGenMapper implements Mapper {
+  static class RandomGenMapper
+    implements Mapper<IntWritable, IntWritable, IntWritable, IntWritable> {
+    
     public void configure(JobConf job) {
     }
 
-    public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-      int randomVal = ((IntWritable) key).get();
-      int randomCount = ((IntWritable) val).get();
+    public void map(IntWritable key, IntWritable val,
+                    OutputCollector<IntWritable, IntWritable> out,
+                    Reporter reporter) throws IOException {
+      int randomVal = key.get();
+      int randomCount = key.get();
 
       for (int i = 0; i < randomCount; i++) {
         out.collect(new IntWritable(Math.abs(r.nextInt())), new IntWritable(randomVal));
@@ -100,13 +104,17 @@ public class TestMapRed extends TestCase {
   }
   /**
    */
-  static class RandomGenReducer implements Reducer {
+  static class RandomGenReducer
+    implements Reducer<IntWritable, IntWritable, Text, Text> {
+    
     public void configure(JobConf job) {
     }
 
-    public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
+    public void reduce(IntWritable key, Iterator<IntWritable> it,
+                       OutputCollector<Text, Text> out,
+                       Reporter reporter) throws IOException {
       while (it.hasNext()) {
-        int val = ((IntWritable) it.next()).get();
+        int val = it.next().get();
         out.collect(new Text("" + val), new Text(""));
       }
     }
@@ -130,26 +138,31 @@ public class TestMapRed extends TestCase {
    * Each key here is a random number, and the count is the
    * number of times the number was emitted.
    */
-  static class RandomCheckMapper implements Mapper {
+  static class RandomCheckMapper
+    implements Mapper<WritableComparable, Text, IntWritable, IntWritable> {
+    
     public void configure(JobConf job) {
     }
 
-    public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-      Text str = (Text) val;
-
-      out.collect(new IntWritable(Integer.parseInt(str.toString().trim())), new IntWritable(1));
+    public void map(WritableComparable key, Text val,
+                    OutputCollector<IntWritable, IntWritable> out,
+                    Reporter reporter) throws IOException {
+      out.collect(new IntWritable(Integer.parseInt(val.toString().trim())), new IntWritable(1));
     }
     public void close() {
     }
   }
   /**
    */
-  static class RandomCheckReducer implements Reducer {
+  static class RandomCheckReducer
+      implements Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
     public void configure(JobConf job) {
     }
         
-    public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
-      int keyint = ((IntWritable) key).get();
+    public void reduce(IntWritable key, Iterator<IntWritable> it,
+                       OutputCollector<IntWritable, IntWritable> out,
+                       Reporter reporter) throws IOException {
+      int keyint = key.get();
       int count = 0;
       while (it.hasNext()) {
         it.next();
@@ -169,28 +182,35 @@ public class TestMapRed extends TestCase {
    * Thus, the map() function is just the identity function
    * and reduce() just sums.  Nothing to see here!
    */
-  static class MergeMapper implements Mapper {
+  static class MergeMapper
+    implements Mapper<IntWritable, IntWritable, IntWritable, IntWritable> {
+    
     public void configure(JobConf job) {
     }
 
-    public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-      int keyint = ((IntWritable) key).get();
-      int valint = ((IntWritable) val).get();
+    public void map(IntWritable key, IntWritable val,
+                    OutputCollector<IntWritable, IntWritable> out,
+                    Reporter reporter) throws IOException {
+      int keyint = key.get();
+      int valint = val.get();
 
       out.collect(new IntWritable(keyint), new IntWritable(valint));
     }
     public void close() {
     }
   }
-  static class MergeReducer implements Reducer {
+  static class MergeReducer
+    implements Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
     public void configure(JobConf job) {
     }
         
-    public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
-      int keyint = ((IntWritable) key).get();
+    public void reduce(IntWritable key, Iterator<IntWritable> it,
+                       OutputCollector<IntWritable, IntWritable> out,
+                       Reporter reporter) throws IOException {
+      int keyint = key.get();
       int total = 0;
       while (it.hasNext()) {
-        total += ((IntWritable) it.next()).get();
+        total += it.next().get();
       }
       out.collect(new IntWritable(keyint), new IntWritable(total));
     }
@@ -214,15 +234,16 @@ public class TestMapRed extends TestCase {
     launch();
   }
 
-  private static class MyMap implements Mapper {
+  private static class MyMap
+    implements Mapper<WritableComparable, Text, Text, Text> {
       
     public void configure(JobConf conf) {
     }
       
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector output, Reporter reporter
-                    ) throws IOException {
-      String str = ((Text) value).toString().toLowerCase();
+    public void map(WritableComparable key, Text value,
+                    OutputCollector<Text, Text> output,
+                    Reporter reporter) throws IOException {
+      String str = value.toString().toLowerCase();
       output.collect(new Text(str), value);
     }
 

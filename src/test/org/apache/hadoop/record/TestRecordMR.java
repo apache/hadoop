@@ -86,14 +86,18 @@ public class TestRecordMR extends TestCase {
    * of numbers in random order, but where each number appears
    * as many times as we were instructed.
    */
-  static public class RandomGenMapper implements Mapper {
+  static public class RandomGenMapper implements Mapper<RecInt, RecInt,
+                                                        RecInt, RecString> {
     Random r = new Random();
     public void configure(JobConf job) {
     }
 
-    public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-      int randomVal = ((RecInt) key).getData();
-      int randomCount = ((RecInt) val).getData();
+    public void map(RecInt key,
+                    RecInt val,
+                    OutputCollector<RecInt, RecString> out,
+                    Reporter reporter) throws IOException {
+      int randomVal = key.getData();
+      int randomCount = val.getData();
 
       for (int i = 0; i < randomCount; i++) {
         out.collect(new RecInt(Math.abs(r.nextInt())),
@@ -105,18 +109,18 @@ public class TestRecordMR extends TestCase {
   }
   /**
    */
-  static public class RandomGenReducer implements Reducer {
+  static public class RandomGenReducer implements Reducer<RecInt, RecString,
+                                                          RecInt, RecString> {
     public void configure(JobConf job) {
     }
 
-    public void reduce(WritableComparable key,
-                       Iterator it,
-                       OutputCollector out,
-                       Reporter reporter)
-      throws IOException {
-      int keyint = ((RecInt) key).getData();
+    public void reduce(RecInt key,
+                       Iterator<RecString> it,
+                       OutputCollector<RecInt, RecString> out,
+                       Reporter reporter) throws IOException {
+      int keyint = key.getData();
       while (it.hasNext()) {
-        String val = ((RecString) it.next()).getData();
+        String val = it.next().getData();
         out.collect(new RecInt(Integer.parseInt(val)),
                     new RecString(""));
       }
@@ -141,13 +145,17 @@ public class TestRecordMR extends TestCase {
    * Each key here is a random number, and the count is the
    * number of times the number was emitted.
    */
-  static public class RandomCheckMapper implements Mapper {
+  static public class RandomCheckMapper implements Mapper<RecInt, RecString,
+                                                          RecInt, RecString> {
     public void configure(JobConf job) {
     }
 
-    public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-      int pos = ((RecInt) key).getData();
-      String str = ((RecString) val).getData();
+    public void map(RecInt key,
+                    RecString val,
+                    OutputCollector<RecInt, RecString> out,
+                    Reporter reporter) throws IOException {
+      int pos = key.getData();
+      String str = val.getData();
       out.collect(new RecInt(pos), new RecString("1"));
     }
     public void close() {
@@ -155,12 +163,16 @@ public class TestRecordMR extends TestCase {
   }
   /**
    */
-  static public class RandomCheckReducer implements Reducer {
+  static public class RandomCheckReducer implements Reducer<RecInt, RecString,
+                                                            RecInt, RecString> {
     public void configure(JobConf job) {
     }
         
-    public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
-      int keyint = ((RecInt) key).getData();
+    public void reduce(RecInt key,
+                       Iterator<RecString> it,
+                       OutputCollector<RecInt, RecString> out,
+                       Reporter reporter) throws IOException {
+      int keyint = key.getData();
       int count = 0;
       while (it.hasNext()) {
         it.next();
@@ -180,27 +192,35 @@ public class TestRecordMR extends TestCase {
    * Thus, the map() function is just the identity function
    * and reduce() just sums.  Nothing to see here!
    */
-  static public class MergeMapper implements Mapper {
+  static public class MergeMapper implements Mapper<RecInt, RecString,
+                                                    RecInt, RecInt> {
     public void configure(JobConf job) {
     }
 
-    public void map(WritableComparable key, Writable val, OutputCollector out, Reporter reporter) throws IOException {
-      int keyint = ((RecInt) key).getData();
-      String valstr = ((RecString) val).getData();
+    public void map(RecInt key,
+                    RecString val,
+                    OutputCollector<RecInt, RecInt> out,
+                    Reporter reporter) throws IOException {
+      int keyint = key.getData();
+      String valstr = val.getData();
       out.collect(new RecInt(keyint), new RecInt(Integer.parseInt(valstr)));
     }
     public void close() {
     }
   }
-  static public class MergeReducer implements Reducer {
+  static public class MergeReducer implements Reducer<RecInt, RecInt,
+                                                      RecInt, RecInt> {
     public void configure(JobConf job) {
     }
         
-    public void reduce(WritableComparable key, Iterator it, OutputCollector out, Reporter reporter) throws IOException {
-      int keyint = ((RecInt) key).getData();
+    public void reduce(RecInt key,
+                       Iterator<RecInt> it,
+                       OutputCollector<RecInt, RecInt> out,
+                       Reporter reporter) throws IOException {
+      int keyint = key.getData();
       int total = 0;
       while (it.hasNext()) {
-        total += ((RecInt) it.next()).getData();
+        total += it.next().getData();
       }
       out.collect(new RecInt(keyint), new RecInt(total));
     }

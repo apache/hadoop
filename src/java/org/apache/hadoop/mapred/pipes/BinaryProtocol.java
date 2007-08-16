@@ -39,7 +39,10 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * This protocol is a binary implementation of the Pipes protocol.
  */
-class BinaryProtocol implements DownwardProtocol {
+class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
+                     K2 extends WritableComparable, V2 extends Writable>
+  implements DownwardProtocol<K1, V1> {
+  
   public static final int CURRENT_PROTOCOL_VERSION = 0;
   private DataOutputStream stream;
   private DataOutputBuffer buffer = new DataOutputBuffer();
@@ -72,15 +75,18 @@ class BinaryProtocol implements DownwardProtocol {
     }
   }
 
-  private static class UplinkReaderThread extends Thread {
-    private DataInputStream inStream;
-    private UpwardProtocol handler;
-    private WritableComparable key;
-    private Writable value;
+  private static class UplinkReaderThread<K2 extends WritableComparable,
+                                          V2 extends Writable>  
+    extends Thread {
     
-    public UplinkReaderThread(InputStream stream, UpwardProtocol handler, 
-                              WritableComparable key, Writable value
-                              ) throws IOException{
+    private DataInputStream inStream;
+    private UpwardProtocol<K2, V2> handler;
+    private K2 key;
+    private V2 value;
+    
+    public UplinkReaderThread(InputStream stream,
+                              UpwardProtocol<K2, V2> handler, 
+                              K2 key, V2 value) throws IOException{
       inStream = new DataInputStream(stream);
       this.handler = handler;
       this.key = key;
@@ -192,9 +198,9 @@ class BinaryProtocol implements DownwardProtocol {
    * @throws IOException
    */
   public BinaryProtocol(Socket sock, 
-                        UpwardProtocol handler,
-                        WritableComparable key,
-                        Writable value,
+                        UpwardProtocol<K2, V2> handler,
+                        K2 key,
+                        V2 value,
                         JobConf config) throws IOException {
     OutputStream raw = sock.getOutputStream();
     // If we are debugging, save a copy of the downlink commands to a file
@@ -202,7 +208,8 @@ class BinaryProtocol implements DownwardProtocol {
       raw = new TeeOutputStream("downlink.data", raw);
     }
     stream = new DataOutputStream(raw);
-    uplink = new UplinkReaderThread(sock.getInputStream(), handler, key, value);
+    uplink = new UplinkReaderThread<K2, V2>(sock.getInputStream(),
+                                            handler, key, value);
     uplink.setName("pipe-uplink-handler");
     uplink.start();
   }

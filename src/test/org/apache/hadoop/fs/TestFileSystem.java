@@ -106,7 +106,9 @@ public class TestFileSystem extends TestCase {
     LOG.info("created control file for: "+totalSize+" bytes");
   }
 
-  public static class WriteMapper extends Configured implements Mapper {
+  public static class WriteMapper extends Configured
+      implements Mapper<UTF8, LongWritable, UTF8, LongWritable> {
+    
     private Random random = new Random();
     private byte[] buffer = new byte[BUFFER_SIZE];
     private FileSystem fs;
@@ -132,11 +134,13 @@ public class TestFileSystem extends TestCase {
       fastCheck = job.getBoolean("fs.test.fastCheck", false);
     }
 
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector collector, Reporter reporter)
+    public void map(UTF8 key, LongWritable value,
+                    OutputCollector<UTF8, LongWritable> collector,
+                    Reporter reporter)
       throws IOException {
-      String name = ((UTF8)key).toString();
-      long size = ((LongWritable)value).get();
+      
+      String name = key.toString();
+      long size = value.get();
       long seed = Long.parseLong(name);
 
       random.setSeed(seed);
@@ -200,7 +204,9 @@ public class TestFileSystem extends TestCase {
     JobClient.runJob(job);
   }
 
-  public static class ReadMapper extends Configured implements Mapper {
+  public static class ReadMapper extends Configured
+      implements Mapper<UTF8, LongWritable, UTF8, LongWritable> {
+    
     private Random random = new Random();
     private byte[] buffer = new byte[BUFFER_SIZE];
     private byte[] check  = new byte[BUFFER_SIZE];
@@ -224,11 +230,13 @@ public class TestFileSystem extends TestCase {
       fastCheck = job.getBoolean("fs.test.fastCheck", false);
     }
 
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector collector, Reporter reporter)
+    public void map(UTF8 key, LongWritable value,
+                    OutputCollector<UTF8, LongWritable> collector,
+                    Reporter reporter)
       throws IOException {
-      String name = ((UTF8)key).toString();
-      long size = ((LongWritable)value).get();
+      
+      String name = key.toString();
+      long size = value.get();
       long seed = Long.parseLong(name);
 
       random.setSeed(seed);

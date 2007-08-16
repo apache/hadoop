@@ -81,7 +81,7 @@ public class TestKeyValueTextInputFormat extends TestCase {
       }
 
       // try splitting the file in a variety of sizes
-      TextInputFormat format = new KeyValueTextInputFormat();
+      KeyValueTextInputFormat format = new KeyValueTextInputFormat();
       format.configure(job);
       for (int i = 0; i < 3; i++) {
         int numSplits = random.nextInt(MAX_LENGTH/20)+1;
@@ -93,14 +93,14 @@ public class TestKeyValueTextInputFormat extends TestCase {
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
           LOG.debug("split["+j+"]= " + splits[j]);
-          RecordReader reader =
+          RecordReader<Text, Text> reader =
             format.getRecordReader(splits[j], job, reporter);
           Class readerClass = reader.getClass();
           assertEquals("reader class is KeyValueLineRecordReader.", KeyValueLineRecordReader.class, readerClass);        
 
-          Writable key = reader.createKey();
+          Text key = reader.createKey();
           Class keyClass = key.getClass();
-          Writable value = reader.createValue();
+          Text value = reader.createValue();
           Class valueClass = value.getClass();
           assertEquals("Key class is Text.", Text.class, keyClass);
           assertEquals("Value class is Text.", Text.class, valueClass);
@@ -187,14 +187,14 @@ public class TestKeyValueTextInputFormat extends TestCase {
   
   private static final Reporter voidReporter = Reporter.NULL;
   
-  private static List<Text> readSplit(InputFormat format, 
+  private static List<Text> readSplit(KeyValueTextInputFormat format, 
                                       InputSplit split, 
                                       JobConf job) throws IOException {
     List<Text> result = new ArrayList<Text>();
-    RecordReader reader = format.getRecordReader(split, job,
+    RecordReader<Text, Text> reader = format.getRecordReader(split, job,
                                                  voidReporter);
-    Text key = (Text) reader.createKey();
-    Text value = (Text) reader.createValue();
+    Text key = reader.createKey();
+    Text value = reader.createValue();
     while (reader.next(key, value)) {
       result.add(value);
       value = (Text) reader.createValue();

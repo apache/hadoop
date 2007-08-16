@@ -23,7 +23,9 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Partitioner;
 
-public class KeyFieldBasedPartitioner implements Partitioner {
+public class KeyFieldBasedPartitioner<K2 extends WritableComparable,
+                                      V2 extends Writable>
+    implements Partitioner<K2, V2> {
 
   private int numOfPartitionFields;
 
@@ -35,7 +37,7 @@ public class KeyFieldBasedPartitioner implements Partitioner {
   }
 
   /** Use {@link Object#hashCode()} to partition. */
-  public int getPartition(WritableComparable key, Writable value,
+  public int getPartition(K2 key, V2 value,
       int numReduceTasks) {
     String partitionKeyStr = key.toString();
     String[] fields = partitionKeyStr.split(this.keyFieldSeparator);

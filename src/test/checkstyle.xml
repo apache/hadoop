@@ -52,6 +52,7 @@
         <!-- See http://checkstyle.sf.net/config_javadoc.html -->
         <module name="JavadocType">
           <property name="scope" value="public"/>
+          <property name="allowMissingParamTags" value="true"/>
         </module>
         <module name="JavadocStyle"/>
 

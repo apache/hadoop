@@ -39,7 +39,9 @@ import org.apache.hadoop.mapred.Reporter;
  * statistics data to be collected by subsequent reducers.
  * 
  */
-public abstract class IOMapperBase extends Configured implements Mapper {
+public abstract class IOMapperBase extends Configured
+    implements Mapper<UTF8, LongWritable, UTF8, UTF8> {
+  
   protected byte[] buffer;
   protected int bufferSize;
   protected FileSystem fs;
@@ -91,7 +93,7 @@ public abstract class IOMapperBase extends Configured implements Mapper {
    * @param doIOReturnValue value returned by {@link #doIO(Reporter,String,long)}
    * @throws IOException
    */
-  abstract void collectStats(OutputCollector output, 
+  abstract void collectStats(OutputCollector<UTF8, UTF8> output, 
                              String name, 
                              long execTime, 
                              Object doIOReturnValue) throws IOException;
@@ -109,12 +111,12 @@ public abstract class IOMapperBase extends Configured implements Mapper {
    * {@link #collectStats(OutputCollector,String,long,Object)} 
    * is called to prepare stat data for a subsequent reducer.
    */
-  public void map(WritableComparable key, 
-                  Writable value,
-                  OutputCollector output, 
+  public void map(UTF8 key, 
+                  LongWritable value,
+                  OutputCollector<UTF8, UTF8> output, 
                   Reporter reporter) throws IOException {
-    String name = ((UTF8)key).toString();
-    long longValue = ((LongWritable)value).get();
+    String name = key.toString();
+    long longValue = value.get();
     
     reporter.setStatus("starting " + name + " ::host = " + hostName);
     

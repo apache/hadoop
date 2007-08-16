@@ -24,13 +24,13 @@ import java.util.Map.Entry;
 
 public class AggregatorTests extends ValueAggregatorBaseDescriptor {
   
-  public ArrayList<Entry> generateKeyValPairs(Object key, Object val) {
-    ArrayList<Entry> retv = new ArrayList<Entry>();
+  public ArrayList<Entry<Text, Text>> generateKeyValPairs(Object key, Object val) {
+    ArrayList<Entry<Text, Text>> retv = new ArrayList<Entry<Text, Text>>();
     String [] words = val.toString().split(" ");
     
     String countType;
     String id;
-    Entry e;
+    Entry<Text, Text> e;
     
     for (String word: words) {
       long numVal = Long.parseLong(word);

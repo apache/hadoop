@@ -30,7 +30,9 @@ import org.apache.hadoop.mapred.*;
  * It defines an InputFormat with InputSplits that are just strings. The
  * RecordReaders are not implemented in Java, naturally...
  */
-public class WordCountInputFormat implements InputFormat {
+public class WordCountInputFormat
+  implements InputFormat<IntWritable, Text> {
+  
   static class WordCountInputSplit implements InputSplit  {
     private String filename;
     WordCountInputSplit() { }
@@ -59,16 +61,17 @@ public class WordCountInputFormat implements InputFormat {
     return result.toArray(new InputSplit[result.size()]);
   }
   public void validateInput(JobConf conf) { }
-  public RecordReader getRecordReader(InputSplit split, JobConf conf, 
-                                      Reporter reporter) {
-    return new RecordReader(){
-      public boolean next(Writable key, Writable value) throws IOException {
+  public RecordReader<IntWritable, Text> getRecordReader(InputSplit split,
+                                                         JobConf conf, 
+                                                         Reporter reporter) {
+    return new RecordReader<IntWritable, Text>(){
+      public boolean next(IntWritable key, Text value) throws IOException {
         return false;
       }
-      public WritableComparable createKey() {
+      public IntWritable createKey() {
         return new IntWritable();
       }
-      public Writable createValue() {
+      public Text createValue() {
         return new Text();
       }
       public long getPos() {

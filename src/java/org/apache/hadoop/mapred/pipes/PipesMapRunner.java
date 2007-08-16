@@ -31,7 +31,9 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * An adaptor to run a C++ mapper.
  */
-class PipesMapRunner extends MapRunner {
+class PipesMapRunner<K1 extends WritableComparable, V1 extends Writable,
+    K2 extends WritableComparable, V2 extends Writable>
+    extends MapRunner<K1, V1, K2, V2> {
   private JobConf job;
 
   /**
@@ -48,26 +50,25 @@ class PipesMapRunner extends MapRunner {
    * @param output the object to collect the outputs of the map
    * @param reporter the object to update with status
    */
-  public void run(RecordReader input, OutputCollector output,
-                  Reporter reporter
-                  ) throws IOException {
-    Application application = null;
+  public void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,
+                  Reporter reporter) throws IOException {
+    Application<K1, V1, K2, V2> application = null;
     try {
-      application = new Application(job, output, reporter,
+      application = new Application<K1, V1, K2, V2>(job, output, reporter,
                                     job.getMapOutputKeyClass(),
                                     job.getMapOutputValueClass());
     } catch (InterruptedException ie) {
       throw new RuntimeException("interrupted", ie);
     }
-    DownwardProtocol downlink = application.getDownlink();
+    DownwardProtocol<K1, V1> downlink = application.getDownlink();
     boolean isJavaInput = Submitter.getIsJavaRecordReader(job);
     downlink.runMap(reporter.getInputSplit(), 
                     job.getNumReduceTasks(), isJavaInput);
     try {
       if (isJavaInput) {
         // allocate key & value instances that are re-used for all entries
-        WritableComparable key = input.createKey();
-        Writable value = input.createValue();
+        K1 key = input.createKey();
+        V1 value = input.createValue();
         downlink.setInputTypes(key.getClass().getName(),
                                value.getClass().getName());
         

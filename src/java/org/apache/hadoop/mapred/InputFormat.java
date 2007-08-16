@@ -22,12 +22,15 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /** An input data format.  Input files are stored in a {@link FileSystem}.
  * The processing of an input file may be split across multiple machines.
  * Files are processed as sequences of records, implementing {@link
  * RecordReader}.  Files must thus be split on record boundaries. */
-public interface InputFormat {
+public interface InputFormat<K extends WritableComparable,
+                             V extends Writable> {
 
   /**
    * Are the input directories valid? This method is used to test the input
@@ -52,8 +55,8 @@ public interface InputFormat {
    * @param job the job that this split belongs to
    * @return a {@link RecordReader}
    */
-  RecordReader getRecordReader(InputSplit split,
-                               JobConf job, 
-                               Reporter reporter) throws IOException;
+  RecordReader<K, V> getRecordReader(InputSplit split,
+                                     JobConf job, 
+                                     Reporter reporter) throws IOException;
 }
 

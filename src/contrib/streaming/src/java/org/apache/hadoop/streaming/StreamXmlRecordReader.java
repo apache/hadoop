@@ -24,6 +24,7 @@ import java.util.regex.*;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.mapred.Reporter;
@@ -75,7 +76,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   
   int numNext = 0;
 
-  public synchronized boolean next(Writable key, Writable value) throws IOException {
+  public synchronized boolean next(Text key, Text value) throws IOException {
     long pos = in_.getPos();
     numNext++;
     if (pos >= end_) {
@@ -96,8 +97,8 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
 
     numRecStats(record, 0, record.length);
 
-    ((Text) key).set(record);
-    ((Text) value).set("");
+    key.set(record);
+    value.set("");
 
     /*if (numNext < 5) {
       System.out.println("@@@ " + numNext + ". true next k=|" + key.toString().replaceAll("[\\r\\n]", " ")

@@ -24,9 +24,13 @@ import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.MapFile;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /** An {@link InputFormat} for {@link SequenceFile}s. */
-public class SequenceFileInputFormat extends FileInputFormat {
+public class SequenceFileInputFormat<K extends WritableComparable,
+                                     V extends Writable>
+  extends FileInputFormat<K, V> {
 
   public SequenceFileInputFormat() {
     setMinSplitSize(SequenceFile.SYNC_INTERVAL);
@@ -45,13 +49,13 @@ public class SequenceFileInputFormat extends FileInputFormat {
     return files;
   }
 
-  public RecordReader getRecordReader(InputSplit split,
+  public RecordReader<K, V> getRecordReader(InputSplit split,
                                       JobConf job, Reporter reporter)
     throws IOException {
 
     reporter.setStatus(split.toString());
 
-    return new SequenceFileRecordReader(job, (FileSplit) split);
+    return new SequenceFileRecordReader<K, V>(job, (FileSplit) split);
   }
 
 }

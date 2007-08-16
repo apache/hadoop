@@ -30,16 +30,19 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.LongWritable;
 
 /** A {@link Reducer} that sums long values. */
-public class LongSumReducer extends MapReduceBase implements Reducer {
+public class LongSumReducer<K extends WritableComparable>
+    extends MapReduceBase
+    implements Reducer<K, LongWritable, K, LongWritable> {
 
-  public void reduce(WritableComparable key, Iterator values,
-                     OutputCollector output, Reporter reporter)
+  public void reduce(K key, Iterator<LongWritable> values,
+                     OutputCollector<K, LongWritable> output,
+                     Reporter reporter)
     throws IOException {
 
     // sum all values for this key
     long sum = 0;
     while (values.hasNext()) {
-      sum += ((LongWritable)values.next()).get();
+      sum += values.next().get();
     }
 
     // output sum

@@ -21,12 +21,15 @@ package org.apache.hadoop.mapred;
 import java.io.*;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.*;
 
 /** An {@link InputFormat} for plain text files.  Files are broken into lines.
  * Either linefeed or carriage-return are used to signal end of line.  Keys are
  * the position in the file, and values are the line of text.. */
-public class TextInputFormat extends FileInputFormat implements JobConfigurable {
+public class TextInputFormat extends FileInputFormat<LongWritable, Text>
+  implements JobConfigurable {
 
   private CompressionCodecFactory compressionCodecs = null;
   
@@ -38,8 +41,11 @@ public class TextInputFormat extends FileInputFormat implements JobConfigurable 
     return compressionCodecs.getCodec(file) == null;
   }
 
-  public RecordReader getRecordReader(InputSplit genericSplit, JobConf job,
-                                      Reporter reporter) throws IOException {
+  public RecordReader<LongWritable, Text> getRecordReader(
+                                          InputSplit genericSplit, JobConf job,
+                                          Reporter reporter)
+    throws IOException {
+    
     reporter.setStatus(genericSplit.toString());
     return new LineRecordReader(job, (FileSplit) genericSplit);
   }

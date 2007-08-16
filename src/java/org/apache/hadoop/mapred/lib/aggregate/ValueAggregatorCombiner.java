@@ -31,7 +31,9 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * This class implements the generic combiner of Aggregate.
  */
-public class ValueAggregatorCombiner extends ValueAggregatorJobBase {
+public class ValueAggregatorCombiner<K1 extends WritableComparable,
+                                     V1 extends Writable>
+  extends ValueAggregatorJobBase<K1, V1> {
 
   /**
    * Combiner does not need to configure.
@@ -46,8 +48,8 @@ public class ValueAggregatorCombiner extends ValueAggregatorJobBase {
    * @param values the values to combine
    * @param output to collect combined values
    */
-  public void reduce(WritableComparable key, Iterator values,
-                     OutputCollector output, Reporter reporter) throws IOException {
+  public void reduce(Text key, Iterator<Text> values,
+                     OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
     String keyStr = key.toString();
     int pos = keyStr.indexOf(ValueAggregatorDescriptor.TYPE_SEPARATOR);
     String type = keyStr.substring(0, pos);
@@ -80,7 +82,7 @@ public class ValueAggregatorCombiner extends ValueAggregatorJobBase {
    * Do nothing. Should not be called. 
    *
    */
-  public void map(WritableComparable arg0, Writable arg1, OutputCollector arg2,
+  public void map(K1 arg0, V1 arg1, OutputCollector<Text, Text> arg2,
                   Reporter arg3) throws IOException {
     throw new IOException ("should not be called\n");
   }

@@ -30,15 +30,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 
 /**
  * Treats keys as offset in file and value as line. 
  */
-public class LineRecordReader implements RecordReader {
+public class LineRecordReader implements RecordReader<LongWritable, Text> {
   private CompressionCodecFactory compressionCodecs = null;
   private long start; 
   private long pos;
@@ -100,28 +98,28 @@ public class LineRecordReader implements RecordReader {
     //    readLine(in, null); 
   }
   
-  public WritableComparable createKey() {
+  public LongWritable createKey() {
     return new LongWritable();
   }
   
-  public Writable createValue() {
+  public Text createValue() {
     return new Text();
   }
   
   /** Read a line. */
-  public synchronized boolean next(Writable key, Writable value)
+  public synchronized boolean next(LongWritable key, Text value)
     throws IOException {
     if (pos >= end)
       return false;
 
-    ((LongWritable)key).set(pos);           // key is position
+    key.set(pos);           // key is position
     buffer.reset();
     long bytesRead = readLine();
     if (bytesRead == 0) {
       return false;
     }
     pos += bytesRead;
-    bridge.target = (Text) value;
+    bridge.target = value;
     buffer.writeTo(bridge);
     return true;
   }

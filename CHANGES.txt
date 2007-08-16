@@ -53,6 +53,9 @@ Trunk (unreleased changes)
     HADOOP-1693.  Remove un-needed log fields in DFS replication classes,
     since the log may be accessed statically. (Konstantin Shvachko via cutting)
 
+    HADOOP-1231.  Add generics to Mapper and Reducer interfaces.
+    (tomwhite via cutting)
+
 
 Release 0.14.0 - 2007-08-17
 

@@ -30,7 +30,7 @@ import org.apache.hadoop.mapred.JobConf;
  * All of these calls are asynchronous and return before the message has been 
  * processed.
  */
-interface DownwardProtocol {
+interface DownwardProtocol<K extends WritableComparable, V extends Writable> {
   /**
    * Start communication
    * @throws IOException
@@ -68,7 +68,7 @@ interface DownwardProtocol {
    * @param value The record's value
    * @throws IOException
    */
-  void mapItem(WritableComparable key, Writable value) throws IOException;
+  void mapItem(K key, V value) throws IOException;
   
   /**
    * Run a reduce task in the child
@@ -83,14 +83,14 @@ interface DownwardProtocol {
    * @param key the new key
    * @throws IOException
    */
-  void reduceKey(WritableComparable key) throws IOException;
+  void reduceKey(K key) throws IOException;
   
   /**
    * The reduce should be given a new value
    * @param value the new value
    * @throws IOException
    */
-  void reduceValue(Writable value) throws IOException;
+  void reduceValue(V value) throws IOException;
   
   /**
    * The task has no more input coming, but it should finish processing it's 

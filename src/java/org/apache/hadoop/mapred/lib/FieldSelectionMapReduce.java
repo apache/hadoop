@@ -63,7 +63,9 @@ import org.apache.hadoop.mapred.TextInputFormat;
  * the key is never ignored.
  * 
  */
-public class FieldSelectionMapReduce implements Mapper, Reducer {
+public class FieldSelectionMapReduce<K extends WritableComparable,
+                                     V extends Writable>
+    implements Mapper<K, V, Text, Text>, Reducer<Text, Text, Text, Text> {
 
   private String mapOutputKeyValueSpec;
 
@@ -133,8 +135,8 @@ public class FieldSelectionMapReduce implements Mapper, Reducer {
   /**
    * The identify function. Input key/value pair is written directly to output.
    */
-  public void map(WritableComparable key, Writable val, OutputCollector output,
-      Reporter reporter) throws IOException {
+  public void map(K key, V val,
+                  OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
     String valStr = val.toString();
     String[] inputValFields = valStr.split(this.fieldSeparator);
     String[] inputKeyFields = null;
@@ -180,7 +182,8 @@ public class FieldSelectionMapReduce implements Mapper, Reducer {
    * @param fieldList an array of field numbers extracted from the specs.
    * @return number n if some field spec is in the form of "n-", -1 otherwise.
    */
-  private int extractFields(String[] fieldListSpec, ArrayList<Integer> fieldList) {
+  private int extractFields(String[] fieldListSpec,
+                            ArrayList<Integer> fieldList) {
     int allFieldsFrom = -1;
     int i = 0;
     int j = 0;
@@ -310,8 +313,9 @@ public class FieldSelectionMapReduce implements Mapper, Reducer {
     return retv;
   }
 
-  public void reduce(WritableComparable key, Iterator values,
-      OutputCollector output, Reporter reporter) throws IOException {
+  public void reduce(Text key, Iterator<Text> values,
+                     OutputCollector<Text, Text> output, Reporter reporter)
+    throws IOException {
 
     String keyStr = key.toString() + this.fieldSeparator;
     while (values.hasNext()) {

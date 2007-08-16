@@ -21,9 +21,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * This class treats a line in the input as a key/value pair separated by a 
@@ -31,23 +30,32 @@ import org.apache.hadoop.io.WritableComparable;
  * under the attribute name key.value.separator.in.input.line. The default
  * separator is the tab character ('\t').
  */
-public class KeyValueLineRecordReader extends LineRecordReader {
+public class KeyValueLineRecordReader implements RecordReader<Text, Text> {
+  
+  private final LineRecordReader lineRecordReader;
 
   private byte separator = (byte) '\t';
 
-  private WritableComparable dummyKey = super.createKey();
+  private LongWritable dummyKey;
 
-  private Text innerValue = (Text) super.createValue();
+  private Text innerValue;
 
   public Class getKeyClass() { return Text.class; }
   
   public Text createKey() {
     return new Text();
   }
+  
+  public Text createValue() {
+    return new Text();
+  }
 
   public KeyValueLineRecordReader(Configuration job, FileSplit split)
     throws IOException {
-    super(job, split);
+    
+    lineRecordReader = new LineRecordReader(job, split);
+    dummyKey = lineRecordReader.createKey();
+    innerValue = lineRecordReader.createValue();
     String sepStr = job.get("key.value.separator.in.input.line", "\t");
     this.separator = (byte) sepStr.charAt(0);
   }
@@ -62,13 +70,13 @@ public class KeyValueLineRecordReader extends LineRecordReader {
   }
 
   /** Read key/value pair in a line. */
-  public synchronized boolean next(Writable key, Writable value)
+  public synchronized boolean next(Text key, Text value)
     throws IOException {
-    Text tKey = (Text) key;
-    Text tValue = (Text) value;
+    Text tKey = key;
+    Text tValue = value;
     byte[] line = null;
     int lineLen = -1;
-    if (super.next(dummyKey, innerValue)) {
+    if (lineRecordReader.next(dummyKey, innerValue)) {
       line = innerValue.getBytes();
       lineLen = innerValue.getLength();
     } else {
@@ -91,5 +99,17 @@ public class KeyValueLineRecordReader extends LineRecordReader {
       tValue.set(valBytes);
     }
     return true;
+  }
+  
+  public float getProgress() {
+    return lineRecordReader.getProgress();
+  }
+  
+  public synchronized long getPos() throws IOException {
+    return lineRecordReader.getPos();
+  }
+
+  public synchronized void close() throws IOException { 
+    lineRecordReader.close();
   }
 }

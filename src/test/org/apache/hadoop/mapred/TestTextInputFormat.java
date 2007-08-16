@@ -99,7 +99,7 @@ public class TestTextInputFormat extends TestCase {
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
           LOG.debug("split["+j+"]= " + splits[j]);
-          RecordReader reader =
+          RecordReader<LongWritable, Text> reader =
             format.getRecordReader(splits[j], job, reporter);
           try {
             int count = 0;
@@ -184,14 +184,14 @@ public class TestTextInputFormat extends TestCase {
   
   private static final Reporter voidReporter = Reporter.NULL;
   
-  private static List<Text> readSplit(InputFormat format, 
+  private static List<Text> readSplit(TextInputFormat format, 
                                       InputSplit split, 
                                       JobConf job) throws IOException {
     List<Text> result = new ArrayList<Text>();
-    RecordReader reader = format.getRecordReader(split, job,
-                                                 voidReporter);
-    LongWritable key = (LongWritable) reader.createKey();
-    Text value = (Text) reader.createValue();
+    RecordReader<LongWritable, Text> reader =
+      format.getRecordReader(split, job, voidReporter);
+    LongWritable key = reader.createKey();
+    Text value = reader.createValue();
     while (reader.next(key, value)) {
       result.add(value);
       value = (Text) reader.createValue();

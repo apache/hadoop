@@ -235,6 +235,7 @@ class ReduceTask extends Task {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
     Reducer reducer = (Reducer)ReflectionUtils.newInstance(
@@ -299,6 +300,7 @@ class ReduceTask extends Task {
       job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);  
     
     OutputCollector collector = new OutputCollector() {
+        @SuppressWarnings("unchecked")
         public void collect(WritableComparable key, Writable value)
           throws IOException {
           out.write(key, value);

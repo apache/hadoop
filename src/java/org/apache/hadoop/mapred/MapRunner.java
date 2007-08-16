@@ -25,21 +25,25 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** Default {@link MapRunnable} implementation.*/
-public class MapRunner implements MapRunnable {
-  private Mapper mapper;
+public class MapRunner<K1 extends WritableComparable, V1 extends Writable,
+                       K2 extends WritableComparable, V2 extends Writable>
+    implements MapRunnable<K1, V1, K2, V2> {
+  
+  private Mapper<K1, V1, K2, V2> mapper;
 
+  @SuppressWarnings("unchecked")
   public void configure(JobConf job) {
     this.mapper = (Mapper)ReflectionUtils.newInstance(job.getMapperClass(),
                                                       job);
   }
 
-  public void run(RecordReader input, OutputCollector output,
+  public void run(RecordReader<K1, V1> input, OutputCollector<K2, V2> output,
                   Reporter reporter)
     throws IOException {
     try {
       // allocate key & value instances that are re-used for all entries
-      WritableComparable key = input.createKey();
-      Writable value = input.createValue();
+      K1 key = input.createKey();
+      V1 value = input.createValue();
       
       while (input.next(key, value)) {
         // map pair to output

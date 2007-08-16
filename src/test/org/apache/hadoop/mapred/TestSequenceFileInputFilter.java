@@ -70,7 +70,8 @@ public class TestSequenceFileInputFilter extends TestCase {
 
 
   private int countRecords(int numSplits) throws IOException {
-    InputFormat format = new SequenceFileInputFilter();
+    InputFormat<Text, BytesWritable> format =
+      new SequenceFileInputFilter<Text, BytesWritable>();
     Text key = new Text();
     BytesWritable value = new BytesWritable();
     if (numSplits==0) {
@@ -83,7 +84,7 @@ public class TestSequenceFileInputFilter extends TestCase {
     int count = 0;
     LOG.info("Generated " + splits.length + " splits.");
     for (int j = 0; j < splits.length; j++) {
-      RecordReader reader =
+      RecordReader<Text, BytesWritable> reader =
         format.getRecordReader(splits[j], job, reporter);
       try {
         while (reader.next(key, value)) {

@@ -32,7 +32,10 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 
 public class ExternalMapperReducer
-  implements Mapper, Reducer {
+  implements Mapper<WritableComparable, Writable,
+                    ExternalWritable, IntWritable>,
+             Reducer<WritableComparable, Writable,
+                     WritableComparable, IntWritable> {
 
   public void configure(JobConf job) {
 
@@ -44,7 +47,8 @@ public class ExternalMapperReducer
   }
 
   public void map(WritableComparable key, Writable value,
-                  OutputCollector output, Reporter reporter)
+                  OutputCollector<ExternalWritable, IntWritable> output,
+                  Reporter reporter)
     throws IOException {
     
     if (value instanceof Text) {
@@ -54,8 +58,9 @@ public class ExternalMapperReducer
     }
   }
 
-  public void reduce(WritableComparable key, Iterator values,
-                     OutputCollector output, Reporter reporter)
+  public void reduce(WritableComparable key, Iterator<Writable> values,
+                     OutputCollector<WritableComparable, IntWritable> output,
+                     Reporter reporter)
     throws IOException {
     
     int count = 0;

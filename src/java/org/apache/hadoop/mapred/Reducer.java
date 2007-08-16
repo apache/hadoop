@@ -28,7 +28,10 @@ import org.apache.hadoop.io.WritableComparable;
 
 /** Reduces a set of intermediate values which share a key to a smaller set of
  * values.  Input values are the grouped output of a {@link Mapper}. */
-public interface Reducer extends JobConfigurable, Closeable {
+public interface Reducer<K2 extends WritableComparable, V2 extends Writable,
+                         K3 extends WritableComparable, V3 extends Writable>
+    extends JobConfigurable, Closeable {
+  
   /** Combines values for a given key.  Output values must be of the same type
    * as input values.  Input keys must not be altered.  Typically all values
    * are combined into zero or one value.  Output pairs are collected with
@@ -38,8 +41,8 @@ public interface Reducer extends JobConfigurable, Closeable {
    * @param values the values to combine
    * @param output to collect combined values
    */
-  void reduce(WritableComparable key, Iterator values,
-              OutputCollector output, Reporter reporter)
+  void reduce(K2 key, Iterator<V2> values,
+              OutputCollector<K3, V3> output, Reporter reporter)
     throws IOException;
 
 }

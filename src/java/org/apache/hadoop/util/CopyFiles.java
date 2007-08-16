@@ -182,7 +182,7 @@ public class CopyFiles extends ToolBase {
    * DFSCopyFilesMapper: The mapper for copying files from the DFS.
    */
   public static class FSCopyFilesMapper extends CopyFilesMapper 
-    implements Mapper 
+    implements Mapper<Text, Writable, WritableComparable, Text> 
   {
     private int sizeBuf = 4096;
     private FileSystem srcFileSys = null;
@@ -397,11 +397,11 @@ public class CopyFiles extends ToolBase {
      * @param out not-used.
      * @param reporter
      */
-    public void map(WritableComparable key,
+    public void map(Text key,
                     Writable value,
-                    OutputCollector out,
+                    OutputCollector<WritableComparable, Text> out,
                     Reporter reporter) throws IOException {
-      String src = ((Text) key).toString();
+      String src = key.toString();
       try {
         copy(src, reporter);
       } catch (IOException except) {

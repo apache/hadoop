@@ -44,13 +44,14 @@ import org.apache.hadoop.util.StringUtils;
  * This class is responsible for launching and communicating with the child 
  * process.
  */
-class Application {
+class Application<K1 extends WritableComparable, V1 extends Writable,
+                  K2 extends WritableComparable, V2 extends Writable> {
   private static final Log LOG = LogFactory.getLog(Application.class.getName());
   private ServerSocket serverSocket;
   private Process process;
   private Socket clientSocket;
-  private OutputHandler handler;
-  private BinaryProtocol downlink;
+  private OutputHandler<K2, V2> handler;
+  private BinaryProtocol<K1, V1, K2, V2> downlink;
 
   /**
    * Start the child process to handle the task for us.
@@ -62,7 +63,8 @@ class Application {
    * @throws IOException
    * @throws InterruptedException
    */
-  Application(JobConf conf, OutputCollector output, Reporter reporter,
+  @SuppressWarnings("unchecked")
+  Application(JobConf conf, OutputCollector<K2, V2> output, Reporter reporter,
               Class outputKeyClass, Class outputValueClass
               ) throws IOException, InterruptedException {
     serverSocket = new ServerSocket(0);
@@ -81,12 +83,12 @@ class Application {
     cmd = TaskLog.captureOutAndError(cmd, stdout, stderr, logLength);
     process = runClient(cmd, env);
     clientSocket = serverSocket.accept();
-    handler = new OutputHandler(output, reporter);
-    WritableComparable outputKey = (WritableComparable)
+    handler = new OutputHandler<K2, V2>(output, reporter);
+    K2 outputKey = (K2)
       ReflectionUtils.newInstance(outputKeyClass, conf);
-    Writable outputValue = (Writable) 
+    V2 outputValue = (V2) 
       ReflectionUtils.newInstance(outputValueClass, conf);
-    downlink = new BinaryProtocol(clientSocket, handler, 
+    downlink = new BinaryProtocol<K1, V1, K2, V2>(clientSocket, handler, 
                                   outputKey, outputValue, conf);
     downlink.start();
     downlink.setJobConf(conf);
@@ -97,7 +99,7 @@ class Application {
    * application.
    * @return the downlink proxy
    */
-  DownwardProtocol getDownlink() {
+  DownwardProtocol<K1, V1> getDownlink() {
     return downlink;
   }
 

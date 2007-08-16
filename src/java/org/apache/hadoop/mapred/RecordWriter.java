@@ -26,7 +26,8 @@ import org.apache.hadoop.io.Writable;
 
 /** Writes key/value pairs to an output file.  Implemented by {@link
  * OutputFormat} implementations. */
-public interface RecordWriter {
+public interface RecordWriter<K extends WritableComparable,
+                              V extends Writable> {
   /** Writes a key/value pair.
    *
    * @param key the key to write
@@ -34,7 +35,7 @@ public interface RecordWriter {
    *
    * @see Writable#write(DataOutput)
    */      
-  void write(WritableComparable key, Writable value) throws IOException;
+  void write(K key, V value) throws IOException;
 
   /** Close this to future operations.*/ 
   void close(Reporter reporter) throws IOException;

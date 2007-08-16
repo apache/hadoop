@@ -23,6 +23,7 @@ import java.lang.reflect.*;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.mapred.*;
 
@@ -33,7 +34,8 @@ import org.apache.hadoop.mapred.*;
  */
 public class StreamInputFormat extends KeyValueTextInputFormat {
 
-  public RecordReader getRecordReader(final InputSplit genericSplit,
+  @SuppressWarnings("unchecked")
+  public RecordReader<Text, Text> getRecordReader(final InputSplit genericSplit,
                                       JobConf job, Reporter reporter) throws IOException {
     String c = job.get("stream.recordreader.class");
     if (c == null || c.indexOf("LineRecordReader") >= 0) {
@@ -67,9 +69,9 @@ public class StreamInputFormat extends KeyValueTextInputFormat {
       throw new RuntimeException(nsm);
     }
 
-    RecordReader reader;
+    RecordReader<Text, Text> reader;
     try {
-      reader = (RecordReader) ctor.newInstance(new Object[] { in, split,
+      reader = (RecordReader<Text, Text>) ctor.newInstance(new Object[] { in, split,
                                                               reporter, job, fs });
     } catch (Exception nsm) {
       throw new RuntimeException(nsm);

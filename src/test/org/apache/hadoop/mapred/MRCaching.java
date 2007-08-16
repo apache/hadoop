@@ -21,9 +21,9 @@ package org.apache.hadoop.mapred;
 import java.io.*;
 import java.util.*;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -48,7 +48,9 @@ public class MRCaching {
    * archives/files are set and then are checked in the map if they have been
    * localized or not.
    */
-  public static class MapClass extends MapReduceBase implements Mapper {
+  public static class MapClass extends MapReduceBase
+    implements Mapper<LongWritable, Text, Text, IntWritable> {
+    
     JobConf conf;
 
     private final static IntWritable one = new IntWritable(1);
@@ -97,9 +99,10 @@ public class MRCaching {
       }
     }
 
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector output, Reporter reporter) throws IOException {
-      String line = ((Text) value).toString();
+    public void map(LongWritable key, Text value,
+                    OutputCollector<Text, IntWritable> output,
+                    Reporter reporter) throws IOException {
+      String line = value.toString();
       StringTokenizer itr = new StringTokenizer(line);
       while (itr.hasMoreTokens()) {
         word.set(itr.nextToken());
@@ -112,13 +115,15 @@ public class MRCaching {
   /**
    * A reducer class that just emits the sum of the input values.
    */
-  public static class ReduceClass extends MapReduceBase implements Reducer {
+  public static class ReduceClass extends MapReduceBase
+    implements Reducer<Text, IntWritable, Text, IntWritable> {
 
-    public void reduce(WritableComparable key, Iterator values,
-                       OutputCollector output, Reporter reporter) throws IOException {
+    public void reduce(Text key, Iterator<IntWritable> values,
+                       OutputCollector<Text, IntWritable> output,
+                       Reporter reporter) throws IOException {
       int sum = 0;
       while (values.hasNext()) {
-        sum += ((IntWritable) values.next()).get();
+        sum += values.next().get();
       }
       output.collect(key, new IntWritable(sum));
     }

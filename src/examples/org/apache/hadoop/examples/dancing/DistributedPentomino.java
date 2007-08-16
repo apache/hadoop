@@ -24,7 +24,6 @@ import java.util.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
@@ -46,13 +45,15 @@ public class DistributedPentomino {
    * the solutions that start with that prefix. The output is the prefix as
    * the key and the solution as the value.
    */
-  public static class PentMap extends MapReduceBase implements Mapper {
+  public static class PentMap extends MapReduceBase
+    implements Mapper<WritableComparable, Text, Text, Text> {
+    
     private int width;
     private int height;
     private int depth;
     private Pentomino pent;
     private Text prefixString;
-    private OutputCollector output;
+    private OutputCollector<Text, Text> output;
     private Reporter reporter;
     
     /**
@@ -81,12 +82,12 @@ public class DistributedPentomino {
      * will be selected for each column in order). Find all solutions with
      * that prefix.
      */
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector output, Reporter reporter
+    public void map(WritableComparable key, Text value,
+                    OutputCollector<Text, Text> output, Reporter reporter
                     ) throws IOException {
       this.output = output;
       this.reporter = reporter;
-      prefixString = (Text) value;
+      prefixString = value;
       StringTokenizer itr = new StringTokenizer(prefixString.toString(), ",");
       int[] prefix = new int[depth];
       int idx = 0;

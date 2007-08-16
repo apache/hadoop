@@ -24,6 +24,7 @@ import java.util.Random;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -39,7 +40,8 @@ public class PiEstimator {
    * Mappper class for Pi estimation.
    */
   
-  public static class PiMapper extends MapReduceBase implements Mapper {
+  public static class PiMapper extends MapReduceBase
+    implements Mapper<IntWritable, Writable, IntWritable, IntWritable> {
     
     static Random r = new Random();
     
@@ -49,11 +51,11 @@ public class PiEstimator {
      * @param out
      * @param reporter
      */
-    public void map(WritableComparable key,
+    public void map(IntWritable key,
                     Writable val,
-                    OutputCollector out,
+                    OutputCollector<IntWritable, IntWritable> out,
                     Reporter reporter) throws IOException {
-      int nSamples = ((IntWritable) key).get();
+      int nSamples = key.get();
       for(int idx = 0; idx < nSamples; idx++) {
         double x = r.nextDouble();
         double y = r.nextDouble();
@@ -74,7 +76,9 @@ public class PiEstimator {
     }
   }
   
-  public static class PiReducer extends MapReduceBase implements Reducer {
+  public static class PiReducer extends MapReduceBase 
+    implements Reducer<IntWritable, IntWritable, WritableComparable, Writable> {
+    
     int numInside = 0;
     int numOutside = 0;
     JobConf conf;
@@ -91,18 +95,18 @@ public class PiEstimator {
      * @param output
      * @param reporter
      */
-    public void reduce(WritableComparable key,
-                       Iterator values,
-                       OutputCollector output,
+    public void reduce(IntWritable key,
+                       Iterator<IntWritable> values,
+                       OutputCollector<WritableComparable, Writable> output,
                        Reporter reporter) throws IOException {
-      if (((IntWritable)key).get() == 1) {
+      if (key.get() == 1) {
         while (values.hasNext()) {
-          int num = ((IntWritable)values.next()).get();
+          int num = values.next().get();
           numInside += num;
         }
       } else {
         while (values.hasNext()) {
-          int num = ((IntWritable)values.next()).get();
+          int num = values.next().get();
           numOutside += num;
         }
       }

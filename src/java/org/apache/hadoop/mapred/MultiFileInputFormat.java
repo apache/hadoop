@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * An abstract {@link InputFormat} that returns {@link MultiFileSplit}'s
@@ -32,7 +34,9 @@ import org.apache.hadoop.fs.Path;
  * to construct <code>RecordReader</code>'s for <code>MultiFileSplit</code>'s.
  * @see MultiFileSplit
  */
-public abstract class MultiFileInputFormat extends FileInputFormat {
+public abstract class MultiFileInputFormat<K extends WritableComparable,
+                                           V extends Writable>
+  extends FileInputFormat<K, V> {
 
   @Override
   public InputSplit[] getSplits(JobConf job, int numSplits) 
@@ -87,7 +91,7 @@ public abstract class MultiFileInputFormat extends FileInputFormat {
     return lengths.length - startIndex;
   }
   
-  public abstract RecordReader getRecordReader(InputSplit split,
+  public abstract RecordReader<K, V> getRecordReader(InputSplit split,
       JobConf job, Reporter reporter)
       throws IOException;
 }

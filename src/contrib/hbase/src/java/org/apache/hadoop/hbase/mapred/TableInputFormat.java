@@ -48,7 +48,9 @@ import org.apache.log4j.Logger;
 /**
  * Convert HBase tabular data into a format that is consumable by Map/Reduce
  */
-public class TableInputFormat implements InputFormat, JobConfigurable {
+public class TableInputFormat
+  implements InputFormat<HStoreKey, KeyedDataArrayWritable>, JobConfigurable {
+  
   static final Logger LOG = Logger.getLogger(TableInputFormat.class.getName());
 
   /**
@@ -64,7 +66,7 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
   /**
    * Iterate over an HBase table data, return (HStoreKey, KeyedDataArrayWritable) pairs
    */
-  class TableRecordReader implements RecordReader {
+  class TableRecordReader implements RecordReader<HStoreKey, KeyedDataArrayWritable> {
     private HScannerInterface m_scanner;
     private TreeMap<Text, byte[]> m_row; // current buffer
     private Text m_endRow;
@@ -95,7 +97,7 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
      *
      * @see org.apache.hadoop.mapred.RecordReader#createKey()
      */
-    public WritableComparable createKey() {
+    public HStoreKey createKey() {
       return new HStoreKey();
     }
 
@@ -104,7 +106,7 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
      *
      * @see org.apache.hadoop.mapred.RecordReader#createValue()
      */
-    public Writable createValue() {
+    public KeyedDataArrayWritable createValue() {
       return new KeyedDataArrayWritable();
     }
 
@@ -130,17 +132,17 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
      * @return true if there was more data
      * @throws IOException
      */
-    public boolean next(Writable key, Writable value) throws IOException {
+    public boolean next(HStoreKey key, KeyedDataArrayWritable value) throws IOException {
       LOG.debug("start next");
       m_row.clear();
-      HStoreKey tKey = (HStoreKey)key;
+      HStoreKey tKey = key;
       boolean hasMore = m_scanner.next(tKey, m_row);
 
       if(hasMore) {
         if(m_endRow.getLength() > 0 && (tKey.getRow().compareTo(m_endRow) < 0)) {
           hasMore = false;
         } else {
-          KeyedDataArrayWritable rowVal = (KeyedDataArrayWritable) value;
+          KeyedDataArrayWritable rowVal = value;
           ArrayList<KeyedData> columns = new ArrayList<KeyedData>();
 
           for(Map.Entry<Text, byte[]> e: m_row.entrySet()) {
@@ -159,8 +161,8 @@ public class TableInputFormat implements InputFormat, JobConfigurable {
 
   }
 
-  /** {@inheritDoc} */
-  public RecordReader getRecordReader(InputSplit split,
+  public RecordReader<HStoreKey, KeyedDataArrayWritable> getRecordReader(
+      InputSplit split,
       @SuppressWarnings("unused") JobConf job,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {
     

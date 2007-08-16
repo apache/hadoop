@@ -28,7 +28,10 @@ import org.apache.hadoop.io.WritableComparable;
  * intermediate values associated with a given output key are subsequently
  * grouped by the map/reduce system, and passed to a {@link Reducer} to
  * determine the final output.. */
-public interface Mapper extends JobConfigurable, Closeable {
+public interface Mapper<K1 extends WritableComparable, V1 extends Writable,
+                        K2 extends WritableComparable, V2 extends Writable>
+  extends JobConfigurable, Closeable {
+  
   /** Maps a single input key/value pair into intermediate key/value pairs.
    * Output pairs need not be of the same types as input pairs.  A given input
    * pair may map to zero or many output pairs.  Output pairs are collected
@@ -39,7 +42,7 @@ public interface Mapper extends JobConfigurable, Closeable {
    * @param value the values
    * @param output collects mapped keys and values
    */
-  void map(WritableComparable key, Writable value,
-           OutputCollector output, Reporter reporter)
+  void map(K1 key, V1 value,
+           OutputCollector<K2, V2> output, Reporter reporter)
     throws IOException;
 }
