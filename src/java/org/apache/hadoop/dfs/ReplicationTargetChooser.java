@@ -33,15 +33,13 @@ import java.util.*;
 class ReplicationTargetChooser {
   private final boolean considerLoad; 
   private NetworkTopology clusterMap;
-  private Log logr;
   private FSNamesystem fs;
     
   ReplicationTargetChooser(boolean considerLoad,  FSNamesystem fs,
-                           NetworkTopology clusterMap, Log logr) {
+                           NetworkTopology clusterMap) {
     this.considerLoad = considerLoad;
     this.fs = fs;
     this.clusterMap = clusterMap;
-    this.logr = logr;
   }
     
   private static class NotEnoughReplicasException extends Exception {
@@ -175,7 +173,7 @@ class ReplicationTargetChooser {
                      blocksize, maxNodesPerRack, results);
       }
     } catch (NotEnoughReplicasException e) {
-      logr.warn("Not able to place enough replicas, still in need of "
+      FSNamesystem.LOG.warn("Not able to place enough replicas, still in need of "
                + numOfReplicas);
     }
     return writer;
@@ -386,7 +384,7 @@ class ReplicationTargetChooser {
                                long blockSize, int maxTargetPerLoc,
                                boolean considerLoad,
                                List<DatanodeDescriptor> results) {
-      
+    Log logr = FSNamesystem.LOG;
     // check if the node is (being) decommissed
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
       logr.debug("Node "+node.getPath()+

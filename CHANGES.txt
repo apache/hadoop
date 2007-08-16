@@ -47,6 +47,9 @@ Trunk (unreleased changes)
     HADOOP-1595.  dfsshell can wait for a file to achieve its intended
     replication target. (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-1693.  Remove un-needed log fields in DFS replication classes,
+    since the log may be accessed statically. (Konstantin Shvachko via cutting)
+
 
 Release 0.14.0 - 2007-08-17
 

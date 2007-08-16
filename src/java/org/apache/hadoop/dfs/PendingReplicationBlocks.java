@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.dfs;
 
-import org.apache.commons.logging.*;
 import org.apache.hadoop.util.*;
 import java.io.*;
 import java.util.*;
@@ -35,7 +34,6 @@ import java.sql.Time;
  *
  ***************************************************/
 class PendingReplicationBlocks {
-  private Log LOG = null;
   private Map<Block, PendingBlockInfo> pendingReplications;
   private ArrayList<Block> timedOutItems;
   Daemon timerThread = null;
@@ -53,8 +51,7 @@ class PendingReplicationBlocks {
     init();
   }
 
-  PendingReplicationBlocks(Log log) {
-    this.LOG = log;
+  PendingReplicationBlocks() {
     init();
   }
 
@@ -184,10 +181,8 @@ class PendingReplicationBlocks {
           pendingReplicationCheck();
           Thread.sleep(period);
         } catch (InterruptedException ie) {
-          if (LOG != null) {
-            LOG.warn("PendingReplicationMonitor thread received exception. " 
-                     + ie);
-          }
+          FSNamesystem.LOG.warn(
+                "PendingReplicationMonitor thread received exception. " + ie);
         }
       }
     }
@@ -207,9 +202,8 @@ class PendingReplicationBlocks {
             synchronized (timedOutItems) {
               timedOutItems.add(block);
             }
-            if (LOG != null) {
-              LOG.warn("PendingReplicationMonitor timed out block " + block);
-            }
+            FSNamesystem.LOG.warn(
+                "PendingReplicationMonitor timed out block " + block);
             iter.remove();
           }
         }

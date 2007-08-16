@@ -217,7 +217,7 @@ class FSNamesystem implements FSConstants {
     this.dir.loadFSImage(getNamespaceDirs(conf), startOpt);
     this.safeMode = new SafeModeInfo(conf);
     setBlockTotal();
-    pendingReplications = new PendingReplicationBlocks(LOG);
+    pendingReplications = new PendingReplicationBlocks();
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(new LeaseMonitor());
     this.replthread = new Daemon(new ReplicationMonitor());
@@ -277,10 +277,9 @@ class FSNamesystem implements FSConstants {
   private void setConfigurationParameters(Configuration conf) 
                                           throws IOException {
     this.replicator = new ReplicationTargetChooser(
-                                                   conf.getBoolean("dfs.replication.considerLoad", true),
-                                                   this,
-                                                   clusterMap,
-                                                   LOG);
+                         conf.getBoolean("dfs.replication.considerLoad", true),
+                         this,
+                         clusterMap);
     this.defaultReplication = conf.getInt("dfs.replication", 3);
     this.maxReplication = conf.getInt("dfs.replication.max", 512);
     this.minReplication = conf.getInt("dfs.replication.min", 1);
