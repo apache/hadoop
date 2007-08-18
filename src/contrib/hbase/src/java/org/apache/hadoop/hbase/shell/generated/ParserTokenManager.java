@@ -41,7 +41,7 @@ private final int jjStopStringLiteralDfa_0(int pos, long active0)
             jjmatchedKind = 31;
             return 13;
          }
-         if ((active0 & 0x40000000L) != 0L)
+         if ((active0 & 0x42000000L) != 0L)
             return 1;
          return -1;
       case 1:
@@ -190,7 +190,7 @@ private final int jjMoveStringLiteralDfa0_0()
       case 45:
          return jjStartNfaWithStates_0(0, 30, 1);
       case 46:
-         return jjStopAtPos(0, 25);
+         return jjStartNfaWithStates_0(0, 25, 1);
       case 59:
          return jjStopAtPos(0, 36);
       case 60:
@@ -688,16 +688,16 @@ private final int jjMoveNfa_0(int startState, int curPos)
                         kind = 33;
                      jjCheckNAdd(3);
                   }
-                  else if (curChar == 39)
-                     jjCheckNAddStates(0, 2);
-                  else if (curChar == 34)
-                     jjCheckNAdd(5);
-                  else if (curChar == 45)
+                  else if ((0x600000000000L & l) != 0L)
                   {
                      if (kind > 31)
                         kind = 31;
                      jjCheckNAdd(1);
                   }
+                  else if (curChar == 39)
+                     jjCheckNAddStates(0, 2);
+                  else if (curChar == 34)
+                     jjCheckNAdd(5);
                   if ((0x3ff000000000000L & l) != 0L)
                   {
                      if (kind > 32)
@@ -706,7 +706,7 @@ private final int jjMoveNfa_0(int startState, int curPos)
                   }
                   break;
                case 13:
-                  if ((0x3ff200000000000L & l) != 0L)
+                  if ((0x3ff600000000000L & l) != 0L)
                   {
                      if (kind > 31)
                         kind = 31;
@@ -720,7 +720,7 @@ private final int jjMoveNfa_0(int startState, int curPos)
                   }
                   break;
                case 1:
-                  if ((0x3ff200000000000L & l) == 0L)
+                  if ((0x3ff600000000000L & l) == 0L)
                      break;
                   if (kind > 31)
                      kind = 31;

@@ -3,6 +3,20 @@ HBase Change Log
 
 Trunk (unreleased changes)
 
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+    HADOOP-1729 Recent renaming or META tables breaks hbase shell
+
+  IMPROVEMENTS
+
+
+Below are the list of changes before 2007-08-18
+
   1. HADOOP-1384. HBase omnibus patch. (jimk, Vuk Ercegovac, and Michael Stack)
   2. HADOOP-1402. Fix javadoc warnings in hbase contrib. (Michael Stack)
   3. HADOOP-1404. HBase command-line shutdown failing (Michael Stack)
