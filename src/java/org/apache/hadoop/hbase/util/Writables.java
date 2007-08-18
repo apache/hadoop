@@ -29,6 +29,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * Utility class with methods for manipulating Writable objects
@@ -88,6 +89,28 @@ public class Writables {
     } finally {
       in.close();
     }
+  }
+  
+  /**
+   * @param bytes
+   * @return A HRegionInfo instance built out of passed <code>bytes</code>.
+   * @throws IOException
+   */
+  public static HRegionInfo getHRegionInfo(final byte [] bytes)
+  throws IOException {
+    return (HRegionInfo)getWritable(bytes, new HRegionInfo());
+  }
+ 
+  /**
+   * @param bytes
+   * @return A HRegionInfo instance built out of passed <code>bytes</code>
+   * or <code>null</code> if passed bytes are null or an empty array.
+   * @throws IOException
+   */
+  public static HRegionInfo getHRegionInfoOrNull(final byte [] bytes)
+  throws IOException {
+    return (bytes == null || bytes.length <= 0)?
+      (HRegionInfo)null: getHRegionInfo(bytes);
   }
 
   /**

@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
@@ -971,7 +973,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public HInternalScannerInterface getScanner(Text[] cols, Text firstRow,
-      long timestamp, RowFilterInterface filter) throws IOException {
+      long timestamp, RowFilterInterface filter)
+  throws IOException {
     lock.obtainReadLock();
     try {
       TreeSet<Text> families = new TreeSet<Text>();
@@ -979,12 +982,16 @@ public class HRegion implements HConstants {
         families.add(HStoreKey.extractFamily(cols[i]));
       }
 
-      HStore[] storelist = new HStore[families.size()];
-      int i = 0;
+      List<HStore> storelist = new ArrayList<HStore>();
       for (Text family: families) {
-        storelist[i++] = stores.get(family);
+        HStore s = stores.get(family);
+        if (s == null) {
+          continue;
+        }
+        storelist.add(stores.get(family));
       }
-      return new HScanner(cols, firstRow, timestamp, memcache, storelist, filter);
+      return new HScanner(cols, firstRow, timestamp, memcache,
+        storelist.toArray(new HStore [] {}), filter);
     } finally {
       lock.releaseReadLock();
     }

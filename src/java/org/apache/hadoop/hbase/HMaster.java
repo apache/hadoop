@@ -262,31 +262,26 @@ HMasterRegionInterface, Runnable {
         }
       }
 
-      // Scan is finished.  Take a look at split parents to see if any we can clean up.
-
+      // Scan is finished.  Take a look at split parents to see if any we can
+      // clean up.
       if (splitParents.size() > 0) {
         for (Map.Entry<HRegionInfo, SortedMap<Text, byte[]>> e:
-          splitParents.entrySet()) {
-          
-          SortedMap<Text, byte[]> results = e.getValue();
-          cleanupSplits(region.regionName, regionServer, e.getKey(), 
-              (HRegionInfo) Writables.getWritable(results.get(COL_SPLITA),
-                  new HRegionInfo()),
-              (HRegionInfo) Writables.getWritable(results.get(COL_SPLITB),
-                  new HRegionInfo()));
+            splitParents.entrySet()) {
+          HRegionInfo hri = e.getKey();
+          cleanupSplits(region.regionName, regionServer, hri, e.getValue());
         }
       }
       LOG.info(Thread.currentThread().getName() + " scan of meta region " +
           region.regionName + " complete");
     }
 
+    /*
+     * @param info Region to check.
+     * @return True if this is a split parent.
+     */
     private boolean isSplitParent(final HRegionInfo info) {
-      boolean result = false;
-
-      // Skip if not a split region.
-      
       if (!info.isSplit()) {
-        return result;
+        return false;
       }
       if (!info.isOffline()) {
         LOG.warn("Region is split but not offline: " + info.regionName);
@@ -294,77 +289,87 @@ HMasterRegionInterface, Runnable {
       return true;
     }
 
-    /**
-     * @param metaRegionName
+    /*
+     * If daughters no longer hold reference to the parents, delete the parent.
+     * @param metaRegionName Meta region name.
      * @param server HRegionInterface of meta server to talk to 
-     * @param info HRegionInfo of split parent
-     * @param splitA low key range child region 
-     * @param splitB upper key range child region
-     * @return True if we removed <code>info</code> and this region has
-     * been cleaned up.
+     * @param parent HRegionInfo of split parent
+     * @param rowContent Content of <code>parent</code> row in
+     * <code>metaRegionName</code>
+     * @return True if we removed <code>parent</code> from meta table and from
+     * the filesystem.
      * @throws IOException
      */
     private boolean cleanupSplits(final Text metaRegionName, 
-        final HRegionInterface server, final HRegionInfo info,
-        final HRegionInfo splitA, final HRegionInfo splitB) throws IOException {
-    
+        final HRegionInterface srvr, final HRegionInfo parent,
+        SortedMap<Text, byte[]> rowContent)
+    throws IOException {
       boolean result = false;
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Checking " + info.getRegionName() + " to see if daughter " +
-        "splits still hold references");
+        LOG.debug("Checking " + parent.getRegionName() +
+          " to see if daughter splits still hold references");
       }
-      boolean noReferencesA = splitA == null;
-      boolean noReferencesB = splitB == null;
+
+      boolean hasReferencesA = hasReferences(metaRegionName, srvr,
+          parent.getRegionName(), rowContent, COL_SPLITA);
+      boolean hasReferencesB = hasReferences(metaRegionName, srvr,
+          parent.getRegionName(), rowContent, COL_SPLITB);
       
-      if (!noReferencesA) {
-        noReferencesA = hasReferences(metaRegionName, server,
-          info.getRegionName(), splitA, COL_SPLITA);
-      }
-      if (!noReferencesB) {
-        noReferencesB = hasReferences(metaRegionName, server,
-          info.getRegionName(), splitB, COL_SPLITB);
-      }
-      if (!noReferencesA && !noReferencesB) {
-        // No references.  Remove this item from table and deleted region on
-        // disk.
-        LOG.info("Deleting region " + info.getRegionName() +
+      if (!hasReferencesA && !hasReferencesB) {
+        LOG.info("Deleting region " + parent.getRegionName() +
         " because daughter splits no longer hold references");
-        
-        if (!HRegion.deleteRegion(fs, dir, info.getRegionName())) {
-          LOG.warn("Deletion of " + info.getRegionName() + " failed");
+
+        if (!HRegion.deleteRegion(fs, dir, parent.getRegionName())) {
+          LOG.warn("Deletion of " + parent.getRegionName() + " failed");
         }
         
         BatchUpdate b = new BatchUpdate();
-        long lockid = b.startUpdate(info.getRegionName());
+        long lockid = b.startUpdate(parent.getRegionName());
         b.delete(lockid, COL_REGIONINFO);
         b.delete(lockid, COL_SERVER);
         b.delete(lockid, COL_STARTCODE);
-        server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+        srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
         result = true;
       }
       
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Done checking " + info.getRegionName() + ": splitA: " +
-            noReferencesA + ", splitB: "+ noReferencesB);
+        LOG.debug("Done checking " + parent.getRegionName() + ": splitA: " +
+            hasReferencesA + ", splitB: "+ hasReferencesB);
       }
       return result;
     }
-
+    
+    /* 
+     * Checks if a daughter region -- either splitA or splitB -- still holds
+     * references to parent.  If not, removes reference to the split from
+     * the parent meta region row.
+     * @param metaRegionName Name of meta region to look in.
+     * @param srvr Where region resides.
+     * @param parent Parent region name. 
+     * @param rowContent Keyed content of the parent row in meta region.
+     * @param splitColumn Column name of daughter split to examine
+     * @return True if still has references to parent.
+     * @throws IOException
+     */
     protected boolean hasReferences(final Text metaRegionName, 
-        final HRegionInterface server, final Text regionName,
-        final HRegionInfo split, final Text column) throws IOException {
-      
+      final HRegionInterface srvr, final Text parent,
+      SortedMap<Text, byte[]> rowContent, final Text splitColumn)
+    throws IOException {
       boolean result = false;
+      HRegionInfo split =
+        Writables.getHRegionInfoOrNull(rowContent.get(splitColumn));
+      if (split == null) {
+        return result;
+      }
       for (Text family: split.getTableDesc().families().keySet()) {
         Path p = HStoreFile.getMapDir(fs.makeQualified(dir),
             split.getRegionName(), HStoreKey.extractFamily(family));
-        
-        // Look for reference files.
-        
+        // Look for reference files.  Call listPaths with an anonymous
+        // instance of PathFilter.
         Path [] ps = fs.listPaths(p,
             new PathFilter () {
-              public boolean accept(Path p) {
-                return HStoreFile.isReference(p);
+              public boolean accept(Path path) {
+                return HStoreFile.isReference(path);
               }
             }
         );
@@ -381,13 +386,13 @@ HMasterRegionInterface, Runnable {
       
       if (LOG.isDebugEnabled()) {
         LOG.debug(split.getRegionName().toString()
-            +" no longer has references to " + regionName.toString());
+            +" no longer has references to " + parent.toString());
       }
       
       BatchUpdate b = new BatchUpdate();
-      long lockid = b.startUpdate(regionName);
-      b.delete(lockid, column);
-      server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+      long lockid = b.startUpdate(parent);
+      b.delete(lockid, splitColumn);
+      srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
         
       return result;
     }
@@ -468,7 +473,6 @@ HMasterRegionInterface, Runnable {
                 HGlobals.rootRegionInfo.regionName, null));
           }
           break;
-
         } catch (IOException e) {
           if (e instanceof RemoteException) {
             try {
@@ -485,6 +489,10 @@ HMasterRegionInterface, Runnable {
           } else {
             LOG.error("Scan ROOT region", e);
           }
+        } catch (Exception e) {
+          // If for some reason we get some other kind of exception, 
+          // at least log it rather than go out silently.
+          LOG.error("Unexpected exception", e);
         }
         if (!closed) {
           // sleep before retry
@@ -597,19 +605,16 @@ HMasterRegionInterface, Runnable {
 
         try {
           // Don't interrupt us while we're working
-
           synchronized (metaScannerLock) {
             scanRegion(region);
             onlineMetaRegions.put(region.startKey, region);
           }
           break;
-
         } catch (IOException e) {
           if (e instanceof RemoteException) {
             try {
               e = RemoteExceptionHandler.decodeRemoteException(
                   (RemoteException) e);
-
             } catch (IOException ex) {
               e = ex;
             }
@@ -620,10 +625,14 @@ HMasterRegionInterface, Runnable {
           } else {
             LOG.error("Scan one META region", e);
           }
+        } catch (Exception e) {
+          // If for some reason we get some other kind of exception, 
+          // at least log it rather than go out silently.
+          LOG.error("Unexpected exception", e);
         }
+        
         if (!closed) {
           // sleep before retry
-
           try {
             Thread.sleep(threadWakeFrequency);                  
           } catch (InterruptedException e) {
