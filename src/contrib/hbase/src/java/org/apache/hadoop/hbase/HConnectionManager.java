@@ -46,7 +46,12 @@ import org.apache.hadoop.hbase.util.Writables;
  * multiple HBase instances
  */
 public class HConnectionManager implements HConstants {
-  private HConnectionManager() {}                        // Not instantiable
+  /*
+   * Private. Not instantiable.
+   */
+  private HConnectionManager() {
+    super();
+  }
   
   // A Map of master HServerAddress -> connection information for that instance
   // Note that although the Map is synchronized, the objects it contains
@@ -298,7 +303,6 @@ public class HConnectionManager implements HConstants {
       }
       SortedMap<Text, HRegionLocation> servers =
         new TreeMap<Text, HRegionLocation>();
-
       servers.putAll(tableServers);
       return servers;
     }
@@ -306,20 +310,30 @@ public class HConnectionManager implements HConstants {
     /** {@inheritDoc} */
     public SortedMap<Text, HRegionLocation>
     reloadTableServers(final Text tableName) throws IOException {
-      
       closedTables.remove(tableName);
-
-      SortedMap<Text, HRegionLocation> servers =
+      SortedMap<Text, HRegionLocation> tableServers =
         new TreeMap<Text, HRegionLocation>();
-      
       // Reload information for the whole table
-
-      servers.putAll(findServersForTable(tableName));
+      tableServers.putAll(findServersForTable(tableName));
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Result of findTable: " + servers.toString());
+        StringBuilder sb = new StringBuilder();
+        int count = 0;
+        for (HRegionLocation location: tableServers.values()) {
+          if (sb.length() > 0) {
+            sb.append(" ");
+          }
+          sb.append(count++);
+          sb.append(". ");
+          sb.append("address=");
+          sb.append(location.getServerAddress());
+          sb.append(", ");
+          sb.append(location.getRegionInfo().getRegionName());
+        }
+        LOG.debug("Result of findTable on " + tableName.toString() +
+          ": " + sb.toString());
       }
       
-      return servers;
+      return tableServers;
     }
 
     /** {@inheritDoc} */
@@ -413,7 +427,7 @@ public class HConnectionManager implements HConstants {
         }
       }
       
-      SortedMap<Text, HRegionLocation> servers =
+      SortedMap<Text, HRegionLocation> srvrs =
         new TreeMap<Text, HRegionLocation>();
       
       if (tableName.equals(ROOT_TABLE_NAME)) {
@@ -428,7 +442,7 @@ public class HConnectionManager implements HConstants {
           if (tableServers == null) {
             tableServers = locateRootRegion();
           }
-          servers.putAll(tableServers);
+          srvrs.putAll(tableServers);
         }
         
       } else if (tableName.equals(META_TABLE_NAME)) {
@@ -459,7 +473,7 @@ public class HConnectionManager implements HConstants {
               }
             }
           }
-          servers.putAll(tableServers);
+          srvrs.putAll(tableServers);
         }
       } else {
         boolean waited = false;
@@ -486,7 +500,7 @@ public class HConnectionManager implements HConstants {
             if (tableServers == null) {
               throw new TableNotFoundException("table not found: " + tableName);
             }
-            servers.putAll(tableServers);
+            srvrs.putAll(tableServers);
           }
         }
         if (!waited) {
@@ -504,7 +518,7 @@ public class HConnectionManager implements HConstants {
 
               for (HRegionLocation t: metaServers.values()) {
                 try {
-                  servers.putAll(scanOneMetaRegion(t, tableName));
+                  srvrs.putAll(scanOneMetaRegion(t, tableName));
 
                 } catch (IOException e) {
                   if (tries < numRetries - 1) {
@@ -528,15 +542,8 @@ public class HConnectionManager implements HConstants {
           }
         }
       }
-      this.tablesToServers.put(tableName, servers);
-      if (LOG.isDebugEnabled()) {
-        int count = 0;
-        for (Map.Entry<Text, HRegionLocation> e: servers.entrySet()) {
-          LOG.debug("Region " + (1 + count++) + " of " + servers.size() +
-            ": " + e.getValue());
-        }
-      }
-      return servers;
+      this.tablesToServers.put(tableName, srvrs);
+      return srvrs;
     }
 
     /*
@@ -598,7 +605,6 @@ public class HConnectionManager implements HConstants {
         try {
           rootRegion.getRegionInfo(HGlobals.rootRegionInfo.regionName);
           break;
-          
         } catch (IOException e) {
           if (tries == numRetries - 1) {
             // Don't bother sleeping. We've run out of retries.

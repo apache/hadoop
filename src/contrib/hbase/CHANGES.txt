@@ -11,6 +11,7 @@ Trunk (unreleased changes)
 
   BUG FIXES
     HADOOP-1729 Recent renaming or META tables breaks hbase shell
+    HADOOP-1730 unexpected null value causes META scanner to exit (silently)
 
   IMPROVEMENTS
 

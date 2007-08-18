@@ -586,11 +586,10 @@ public class HTable implements HConstants {
         HRegionLocation r = getRegionLocation(batch.getRow());
         HRegionInterface server =
           connection.getHRegionConnection(r.getServerAddress());
-
         try {
-          server.batchUpdate(r.getRegionInfo().getRegionName(), timestamp, batch);
+          server.batchUpdate(r.getRegionInfo().getRegionName(), timestamp,
+            batch);
           break;
-
         } catch (IOException e) {
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException(
@@ -601,7 +600,6 @@ public class HTable implements HConstants {
               LOG.debug("reloading table servers because: " + e.getMessage());
             }
             tableServers = connection.reloadTableServers(tableName);
-
           } else {
             throw e;
           }
@@ -628,6 +626,7 @@ public class HTable implements HConstants {
    */
   @Deprecated
   public synchronized void renewLease(@SuppressWarnings("unused") long lockid) {
+    // noop
   }
 
   /**
