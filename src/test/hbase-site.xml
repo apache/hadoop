@@ -60,7 +60,7 @@
   </property>
   <property>
     <name>hbase.master.lease.period</name>
-    <value>5000</value>
+    <value>6000</value>
     <description>Length of time the master will wait before timing out a region
     server lease. Since region servers report in every second (see above), this
     value has been reduced so that the master will notice a dead region server
@@ -69,7 +69,7 @@
   </property>
   <property>
     <name>hbase.master.lease.thread.wakefrequency</name>
-    <value>2500</value>
+    <value>3000</value>
     <description>The interval between checks for expired region server leases.
     This value has been reduced due to the other reduced values above so that
     the master will notice a dead region server sooner. The default is 15 seconds.

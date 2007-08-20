@@ -10,6 +10,8 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
+    HADOOP-1723 If master asks region server to shut down, by-pass return of
+    shutdown message
     HADOOP-1729 Recent renaming or META tables breaks hbase shell
     HADOOP-1730 unexpected null value causes META scanner to exit (silently)
 

@@ -579,7 +579,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         3 * 60 * 1000), threadWakeFrequency);
     
     // Server
-
+    
+    boolean masterRequestedStop = false;
     try {
       this.server.start();
       LOG.info("HRegionServer started at: " +
@@ -663,6 +664,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 if (LOG.isDebugEnabled()) {
                   LOG.debug("Got regionserver stop message");
                 }
+                masterRequestedStop = true;
                 stopRequested = true;
                 break;
 
@@ -757,18 +759,20 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.error("", e);
       }
       try {
-        HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
-        exitMsg[0] = new HMsg(HMsg.MSG_REPORT_EXITING);
-        // Tell the master what regions we are/were serving
-        int i = 1;
-        for(HRegion region: closedRegions) {
-          exitMsg[i++] = new HMsg(HMsg.MSG_REPORT_CLOSE,
-            region.getRegionInfo());
-        }
+        if (!masterRequestedStop) {
+          HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
+          exitMsg[0] = new HMsg(HMsg.MSG_REPORT_EXITING);
+          // Tell the master what regions we are/were serving
+          int i = 1;
+          for(HRegion region: closedRegions) {
+            exitMsg[i++] = new HMsg(HMsg.MSG_REPORT_CLOSE,
+                region.getRegionInfo());
+          }
 
-        LOG.info("telling master that region server is shutting down at: " +
-          serverInfo.getServerAddress().toString());
-        hbaseMaster.regionServerReport(serverInfo, exitMsg);
+          LOG.info("telling master that region server is shutting down at: " +
+              serverInfo.getServerAddress().toString());
+          hbaseMaster.regionServerReport(serverInfo, exitMsg);
+        }
       } catch (IOException e) {
         if (e instanceof RemoteException) {
           try {
@@ -1124,6 +1128,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
   
   /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   public long startUpdate(Text regionName, long clientid, Text row) 
       throws IOException {
     requestCount.incrementAndGet();
@@ -1135,6 +1140,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   public void put(final Text regionName, final long clientid,
       final long lockid, final Text column, final byte [] val)
   throws IOException {
@@ -1145,6 +1151,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   public void delete(Text regionName, long clientid, long lockid, Text column) 
   throws IOException {
     requestCount.incrementAndGet();
@@ -1154,6 +1161,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   public void abort(Text regionName, long clientid, long lockid) 
   throws IOException {
     requestCount.incrementAndGet();
@@ -1163,6 +1171,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   public void commit(Text regionName, final long clientid, final long lockid,
       final long timestamp) throws IOException {
     requestCount.incrementAndGet();
@@ -1172,6 +1181,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   public void renewLease(long lockid, long clientid) throws IOException {
     requestCount.incrementAndGet();
     leases.renewLease(clientid, lockid);
