@@ -37,13 +37,11 @@ public class DistributedFileSystem extends FileSystem {
   private Path workingDir =
     new Path("/user", System.getProperty("user.name")); 
   private URI uri;
-  private FileSystem localFs;
 
   DFSClient dfs;
 
   public DistributedFileSystem() {
   }
-
 
   /** @deprecated */
   public DistributedFileSystem(InetSocketAddress namenode,
@@ -65,7 +63,6 @@ public class DistributedFileSystem extends FileSystem {
     int port = uri.getPort();
     this.dfs = new DFSClient(new InetSocketAddress(host, port), conf);
     this.uri = URI.create("hdfs://"+host+":"+port);
-    this.localFs = getLocal(conf);
   }
 
   public Path getWorkingDirectory() {
@@ -114,7 +111,8 @@ public class DistributedFileSystem extends FileSystem {
     return result;
   }
 
-  public String[][] getFileCacheHints(Path f, long start, long len) throws IOException {
+  public String[][] getFileCacheHints(Path f, long start, long len)
+      throws IOException {
     return dfs.getHints(getPathName(f), start, len);
   }
 
@@ -133,7 +131,7 @@ public class DistributedFileSystem extends FileSystem {
       throw new IOException("Mkdirs failed to create " + parent);
     }
 
-    return new FSDataOutputStream( dfs.create(getPath(f), overwrite, 
+    return new FSDataOutputStream( dfs.create(getPathName(f), overwrite, 
                                               replication, blockSize, 
                                               progress, bufferSize) );
   }
@@ -141,7 +139,7 @@ public class DistributedFileSystem extends FileSystem {
   public boolean setReplication(Path src, 
                                 short replication
                                ) throws IOException {
-    return dfs.setReplication(getPath(src), replication);
+    return dfs.setReplication(getPathName(src), replication);
   }
 
   /**
@@ -167,16 +165,16 @@ public class DistributedFileSystem extends FileSystem {
       return ((DfsPath)f).getContentsLength();
     }
 
-    DFSFileInfo info[] = dfs.listPaths(getPath(f));
+    DFSFileInfo info[] = dfs.listPaths(getPathName(f));
     return (info == null) ? 0 : info[0].getLen();
   }
 
   public FileStatus[] listStatus(Path f) throws IOException {
-    return dfs.listPaths(getPath(f));
+    return dfs.listPaths(getPathName(f));
   }
 
   public Path[] listPaths(Path f) throws IOException {
-    DFSFileInfo info[] = dfs.listPaths(getPath(f));
+    DFSFileInfo info[] = dfs.listPaths(getPathName(f));
     if (info == null) {
       return new Path[0];
     } else {
@@ -253,7 +251,8 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Enter, leave or get safe mode.
    *  
-   * @see org.apache.hadoop.dfs.ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
+   * @see org.apache.hadoop.dfs.ClientProtocol#setSafeMode(
+   *    FSConstants.SafeModeAction)
    */
   public boolean setSafeMode(FSConstants.SafeModeAction action) 
   throws IOException {
@@ -309,8 +308,9 @@ public class DistributedFileSystem extends FileSystem {
     }
     DatanodeInfo[] dataNode = {dfsIn.getCurrentDatanode()}; 
     lblocks[0] = new LocatedBlock(dataBlock, dataNode);
-    LOG.info("Found checksum error in data stream at block=" + dataBlock.getBlockName() + 
-             " on datanode=" + dataNode[0].getName());
+    LOG.info("Found checksum error in data stream at block="
+        + dataBlock.getBlockName() + " on datanode="
+        + dataNode[0].getName());
 
     // Find block in checksum stream
     DFSClient.DFSDataInputStream dfsSums = (DFSClient.DFSDataInputStream) sums;
@@ -321,8 +321,9 @@ public class DistributedFileSystem extends FileSystem {
     }
     DatanodeInfo[] sumsNode = {dfsSums.getCurrentDatanode()}; 
     lblocks[1] = new LocatedBlock(sumsBlock, sumsNode);
-    LOG.info("Found checksum error in checksum stream at block=" + sumsBlock.getBlockName() + 
-             " on datanode=" + sumsNode[0].getName());
+    LOG.info("Found checksum error in checksum stream at block="
+        + sumsBlock.getBlockName() + " on datanode="
+        + sumsNode[0].getName());
 
     // Ask client to delete blocks.
     dfs.reportChecksumFailure(f.toString(), lblocks);
@@ -339,7 +340,7 @@ public class DistributedFileSystem extends FileSystem {
       return p.info;
     }
     else {
-      DFSFileInfo p = dfs.getFileInfo(getPath(f));
+      DFSFileInfo p = dfs.getFileInfo(getPathName(f));
       return p;
     }
   }

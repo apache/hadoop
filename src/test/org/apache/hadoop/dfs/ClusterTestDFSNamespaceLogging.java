@@ -223,7 +223,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     byte[] buffer = new byte[BUFFER_SIZE];
     UTF8 testFileName = new UTF8(filename); // hardcode filename
     OutputStream nos;
-    nos = dfsClient.create(testFileName, false);
+    nos = dfsClient.create(testFileName.toString(), false);
     try {
       for (long nBytesWritten = 0L;
            nBytesWritten < fileSize;

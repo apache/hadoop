@@ -209,9 +209,9 @@ class DFSClient implements FSConstants {
     return defaultBlockSize;
   }
     
-  public long getBlockSize(UTF8 f) throws IOException {
+  public long getBlockSize(String f) throws IOException {
     try {
-      return namenode.getBlockSize(f.toString());
+      return namenode.getBlockSize(f);
     } catch (IOException ie) {
       LOG.warn("Problem getting block size: " + 
           StringUtils.stringifyException(ie));
@@ -286,7 +286,7 @@ class DFSClient implements FSConstants {
    * @return output stream
    * @throws IOException
    */
-  public OutputStream create(UTF8 src, 
+  public OutputStream create(String src, 
                              boolean overwrite
                              ) throws IOException {
     return create(src, overwrite, defaultReplication, defaultBlockSize, null);
@@ -301,7 +301,7 @@ class DFSClient implements FSConstants {
    * @return output stream
    * @throws IOException
    */
-  public OutputStream create(UTF8 src, 
+  public OutputStream create(String src, 
                              boolean overwrite,
                              Progressable progress
                              ) throws IOException {
@@ -318,7 +318,7 @@ class DFSClient implements FSConstants {
    * @return output stream
    * @throws IOException
    */
-  public OutputStream create(UTF8 src, 
+  public OutputStream create(String src, 
                              boolean overwrite, 
                              short replication,
                              long blockSize
@@ -338,7 +338,7 @@ class DFSClient implements FSConstants {
    * @return output stream
    * @throws IOException
    */
-  public OutputStream create(UTF8 src, 
+  public OutputStream create(String src, 
                              boolean overwrite, 
                              short replication,
                              long blockSize,
@@ -358,7 +358,7 @@ class DFSClient implements FSConstants {
    * @return output stream
    * @throws IOException
    */
-  public OutputStream create(UTF8 src, 
+  public OutputStream create(String src, 
                              boolean overwrite, 
                              short replication,
                              long blockSize,
@@ -381,10 +381,10 @@ class DFSClient implements FSConstants {
    * @throws IOException
    * @return true is successful or false if file does not exist 
    */
-  public boolean setReplication(UTF8 src, 
+  public boolean setReplication(String src, 
                                 short replication
                                 ) throws IOException {
-    return namenode.setReplication(src.toString(), replication);
+    return namenode.setReplication(src, replication);
   }
 
   /**
@@ -421,14 +421,14 @@ class DFSClient implements FSConstants {
 
   /**
    */
-  public DFSFileInfo[] listPaths(UTF8 src) throws IOException {
+  public DFSFileInfo[] listPaths(String src) throws IOException {
     checkOpen();
-    return namenode.getListing(src.toString());
+    return namenode.getListing(src);
   }
 
-  public DFSFileInfo getFileInfo(UTF8 src) throws IOException {
+  public DFSFileInfo getFileInfo(String src) throws IOException {
     checkOpen();
-    return namenode.getFileInfo(src.toString());
+    return namenode.getFileInfo(src);
   }
 
   public DiskStatus getDiskStatus() throws IOException {
@@ -1358,7 +1358,7 @@ class DFSClient implements FSConstants {
     private Socket s;
     boolean closed = false;
 
-    private UTF8 src;
+    private String src;
     private short replication;
     private DataOutputStream blockStream;
     private DataInputStream blockReplyStream;
@@ -1375,7 +1375,7 @@ class DFSClient implements FSConstants {
     /**
      * Create a new output stream to the given DataNode.
      */
-    public DFSOutputStream(UTF8 src, boolean overwrite, 
+    public DFSOutputStream(String src, boolean overwrite, 
                            short replication, long blockSize,
                            Progressable progress,
                            int buffersize

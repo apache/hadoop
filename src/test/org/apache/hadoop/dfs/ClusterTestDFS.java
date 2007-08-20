@@ -258,7 +258,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
         for (int iFileNumber = 0; iFileNumber < numFiles; iFileNumber++) {
           testFileName = new UTF8("/f" + iFileNumber);
           testfilesList.add(testFileName);
-          OutputStream nos = dfsClient.create(testFileName, false);
+          OutputStream nos = dfsClient.create(testFileName.toString(), false);
           try {
             for (long nBytesWritten = 0L;
                  nBytesWritten < nBytes;

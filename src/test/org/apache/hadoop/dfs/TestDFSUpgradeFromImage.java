@@ -130,7 +130,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
   private void verifyDir(DFSClient client, String dir) 
                                            throws IOException {
     
-    DFSFileInfo[] fileArr = client.listPaths(new UTF8(dir));
+    DFSFileInfo[] fileArr = client.listPaths(dir);
     TreeMap<String, Boolean> fileMap = new TreeMap<String, Boolean>();
     
     for(DFSFileInfo file : fileArr) {

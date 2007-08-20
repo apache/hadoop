@@ -67,7 +67,7 @@
         return;
       }
       // directory
-      DFSFileInfo[] files = dfs.listPaths(target);
+      DFSFileInfo[] files = dfs.listPaths(target.toString());
       //generate a table and dump the info
       String [] headings = new String[6];
       headings[0] = "Name"; headings[1] = "Type"; headings[2] = "Size";

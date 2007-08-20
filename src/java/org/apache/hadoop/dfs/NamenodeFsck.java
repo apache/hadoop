@@ -270,7 +270,7 @@ public class NamenodeFsck {
           continue;
         }
         if (fos == null) {
-          fos = dfs.create(new UTF8(target + "/" + chain), true);
+          fos = dfs.create(target + "/" + chain, true);
           if (fos != null) chain++;
         }
         if (fos == null) {
