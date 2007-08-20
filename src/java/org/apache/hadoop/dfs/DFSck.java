@@ -25,10 +25,12 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 
-import org.apache.commons.logging.*;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ToolBase;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -53,7 +55,7 @@ import org.apache.hadoop.util.ToolBase;
  *  factors of each file.
  *  
  */
-public class DFSck extends ToolBase {
+public class DFSck extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(DFSck.class.getName());
 
   DFSck() {}
@@ -64,13 +66,13 @@ public class DFSck extends ToolBase {
    * @throws Exception
    */
   public DFSck(Configuration conf) throws Exception {
-    setConf(conf);
+    super(conf);
   }
   
   private String getInfoServer() throws IOException {
     InetSocketAddress addr = 
-      DataNode.createSocketAddr(conf.get("fs.default.name"));
-    int infoPort = conf.getInt("dfs.info.port", 50070);
+      DataNode.createSocketAddr(getConf().get("fs.default.name"));
+    int infoPort = getConf().getInt("dfs.info.port", 50070);
     return addr.getHostName() + ":" + infoPort;
   }
   
@@ -121,7 +123,7 @@ public class DFSck extends ToolBase {
   }
 
   public static void main(String[] args) throws Exception {
-    int res = new DFSck().doMain(new Configuration(), args);
+    int res = ToolRunner.run(new DFSck(new Configuration()), args);
     System.exit(res);
   }
 }

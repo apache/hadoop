@@ -24,6 +24,11 @@ public class Configured implements Configurable {
   private Configuration conf;
 
   /** Construct a Configured. */
+  public Configured() {
+    this(null);
+  }
+  
+  /** Construct a Configured. */
   public Configured(Configuration conf) {
     setConf(conf);
   }

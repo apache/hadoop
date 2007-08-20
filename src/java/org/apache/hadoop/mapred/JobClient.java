@@ -17,18 +17,46 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.io.retry.*;
-import org.apache.hadoop.ipc.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.*;
-import org.apache.hadoop.filecache.*;
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /*******************************************************
  * JobClient interacts with the JobTracker network interface.
@@ -37,7 +65,7 @@ import java.util.*;
  * with the networked job system.
  *
  *******************************************************/
-public class JobClient extends ToolBase implements MRConstants  {
+public class JobClient extends Configured implements MRConstants, Tool  {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");
   public static enum TaskStatusFilter { NONE, FAILED, SUCCEEDED, ALL }
   private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
@@ -171,6 +199,7 @@ public class JobClient extends ToolBase implements MRConstants  {
     /**
      * Dump stats to screen
      */
+    @Override
     public String toString() {
       try {
         ensureFreshStatus();
@@ -261,7 +290,7 @@ public class JobClient extends ToolBase implements MRConstants  {
   public synchronized FileSystem getFs() throws IOException {
     if (this.fs == null) {
       String fsName = jobSubmitClient.getFilesystemName();
-      this.fs = FileSystem.getNamed(fsName, this.conf);
+      this.fs = FileSystem.getNamed(fsName, getConf());
     }
     return fs;
   }
@@ -824,7 +853,7 @@ public class JobClient extends ToolBase implements MRConstants  {
   /**
    */
   public static void main(String argv[]) throws Exception {
-    int res = new JobClient().doMain(new Configuration(), argv);
+    int res = ToolRunner.run(new JobClient(), argv);
     System.exit(res);
   }
 }

@@ -19,12 +19,13 @@ package org.apache.hadoop.dfs;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.dfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class provides some DFS administrative access.
@@ -35,9 +36,16 @@ public class DFSAdmin extends FsShell {
    * Construct a DFSAdmin object.
    */
   public DFSAdmin() {
-    super();
+    this(null);
   }
 
+  /**
+   * Construct a DFSAdmin object.
+   */
+  public DFSAdmin(Configuration conf) {
+    super(conf);
+  }
+  
   /**
    * Gives a report on how the FileSystem is doing.
    * @exception IOException if the filesystem does not exist.
@@ -325,6 +333,7 @@ public class DFSAdmin extends FsShell {
    * @exception Exception if the filesystem does not exist.
    * @return 0 on success, non zero on error.
    */
+  @Override
   public int run(String[] argv) throws Exception {
 
     if (argv.length < 1) {
@@ -442,7 +451,7 @@ public class DFSAdmin extends FsShell {
    * @exception Exception if the filesystem does not exist.
    */
   public static void main(String[] argv) throws Exception {
-    int res = new DFSAdmin().doMain(new Configuration(), argv);
+    int res = ToolRunner.run(new DFSAdmin(), argv);
     System.exit(res);
   }
 }

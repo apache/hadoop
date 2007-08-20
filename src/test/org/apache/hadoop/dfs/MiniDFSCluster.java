@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.dfs;
 
-import java.io.*;
-import java.net.*;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -215,7 +218,7 @@ public class MiniDFSCluster {
       throw new IllegalStateException("Attempting to finalize "
                                       + "Namenode but it is not running");
     }
-    new DFSAdmin().doMain(conf, new String[] {"-finalizeUpgrade"});
+    ToolRunner.run(new DFSAdmin(conf), new String[] {"-finalizeUpgrade"});
   }
   
   /**

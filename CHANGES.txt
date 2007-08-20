@@ -61,6 +61,10 @@ Trunk (unreleased changes)
     HADOOP-1231.  Add generics to Mapper and Reducer interfaces.
     (tomwhite via cutting)
 
+    HADOOP-1436.  Improved command-line APIs, so that all tools need
+    not subclass ToolBase, and generic parameter parser is public.
+    (Enis Soztutar via cutting)
+
 
 Release 0.14.0 - 2007-08-17
 

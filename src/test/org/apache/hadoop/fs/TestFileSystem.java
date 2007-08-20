@@ -18,17 +18,31 @@
 
 package org.apache.hadoop.fs;
 
-import java.io.*;
-import java.util.*;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Random;
+
 import junit.framework.TestCase;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.mapred.lib.*;
-import org.apache.hadoop.io.*;
+import org.apache.commons.logging.Log;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.conf.*;
+import org.apache.hadoop.mapred.InputFormatBase;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapred.lib.LongSumReducer;
 
 public class TestFileSystem extends TestCase {
   private static final Log LOG = InputFormatBase.LOG;

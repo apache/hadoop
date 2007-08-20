@@ -25,11 +25,10 @@ import java.io.PrintWriter;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.dfs.DataNode;
-import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.ToolRunner;
 
 public class TestDFSShellGenericOptions extends TestCase {
 
@@ -99,7 +98,7 @@ public class TestDFSShellGenericOptions extends TestCase {
     FsShell shell=new FsShell();
     FileSystem fs=null;
     try {
-      shell.doMain(new Configuration(), args);
+      ToolRunner.run(shell, args);
       fs = new DistributedFileSystem(
                                      DataNode.createSocketAddr(namenode), 
                                      shell.getConf());

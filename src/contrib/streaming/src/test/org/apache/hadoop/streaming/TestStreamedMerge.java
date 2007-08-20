@@ -22,7 +22,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.LineNumberInputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -32,10 +31,11 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This JUnit test is not pure-Java and is not run as 
@@ -105,7 +105,7 @@ public class TestStreamedMerge extends TestCase {
   void lsr() {
     try {
       System.out.println("lsr /");
-      new FsShell().doMain(conf_, new String[]{ "-lsr", "/" });
+      ToolRunner.run(conf_, new FsShell(), new String[]{ "-lsr", "/" });
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -156,6 +156,7 @@ public class TestStreamedMerge extends TestCase {
         Socket client;
         InputStream in;
       
+        @Override
         InputStream connectInputStream() throws IOException {
           listen = new ServerSocket(SOC_PORT);
           client = listen.accept();
@@ -163,6 +164,7 @@ public class TestStreamedMerge extends TestCase {
           return in;
         }
       
+        @Override
         void close() throws IOException
         {
           listen.close();
@@ -184,6 +186,7 @@ public class TestStreamedMerge extends TestCase {
     
     abstract void close() throws IOException;
     
+    @Override
     public void run() {
       try {
         in_ = connectInputStream();

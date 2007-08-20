@@ -19,12 +19,15 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
-import java.util.Random;
 import java.net.URI;
-import junit.framework.*;
+import java.util.Random;
+
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.util.CopyFiles;
+import org.apache.hadoop.util.ToolRunner;
 
 
 /**
@@ -83,9 +86,11 @@ public class TestCopyFiles extends TestCase {
 
   
   
+  @Override
   protected void setUp() throws Exception {
   }
 
+  @Override
   protected void tearDown() throws Exception {
   }
   
@@ -163,7 +168,7 @@ public class TestCopyFiles extends TestCase {
   /** copy files from local file system to local file system */
   public void testCopyFromLocalToLocal() throws Exception {
     MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
-    new CopyFiles().doMain(new Configuration(),
+    ToolRunner.run(new CopyFiles(new Configuration()),
                            new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
                                          "file://"+TEST_ROOT_DIR+"/destdat"});
     assertTrue("Source and destination directories do not match.",
@@ -182,7 +187,7 @@ public class TestCopyFiles extends TestCase {
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
-        new CopyFiles().doMain(conf, new String[] {"hdfs://"+namenode+"/srcdat",
+        ToolRunner.run(new CopyFiles(conf), new String[] {"hdfs://"+namenode+"/srcdat",
                                                    "hdfs://"+namenode+"/destdat",
                                                    "-log",
                                                    "hdfs://"+namenode+"/logs"});
@@ -210,7 +215,7 @@ public class TestCopyFiles extends TestCase {
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
-        new CopyFiles().doMain(conf, new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
+        ToolRunner.run(new CopyFiles(conf), new String[] {"file://"+TEST_ROOT_DIR+"/srcdat",
                                                    "hdfs://"+namenode+"/destdat",
                                                    "-log",
                                                    "hdfs://"+namenode+"/logs"});
@@ -238,7 +243,7 @@ public class TestCopyFiles extends TestCase {
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
         MyFile[] files = createFiles(namenode, "/srcdat");
-        new CopyFiles().doMain(conf, new String[] {"hdfs://"+namenode+"/srcdat",
+        ToolRunner.run(new CopyFiles(conf), new String[] {"hdfs://"+namenode+"/srcdat",
                                                    "file://"+TEST_ROOT_DIR+"/destdat",
                                                    "-log",
                                                    "/logs"});

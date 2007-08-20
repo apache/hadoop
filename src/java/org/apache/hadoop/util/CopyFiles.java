@@ -60,7 +60,7 @@ import org.apache.hadoop.mapred.SequenceFileInputFormat;
  * A Map-reduce program to recursively copy directories between
  * different file-systems.
  */
-public class CopyFiles extends ToolBase {
+public class CopyFiles implements Tool {
   private static final String HDFS = "hdfs";
   private static final String S3 = "s3";
   
@@ -74,12 +74,25 @@ public class CopyFiles extends ToolBase {
   private static final String readFailuresAttribute = 
     "distcp.ignore.read.failures";
   
+  private JobConf conf;
+  
   public void setConf(Configuration conf) {
     if (conf instanceof JobConf) {
       this.conf = (JobConf) conf;
     } else {
       this.conf = new JobConf(conf);
     }
+  }
+  
+  public Configuration getConf() {
+    return conf;
+  }
+  
+  public CopyFiles() {
+  }
+  
+  public CopyFiles(Configuration conf) {
+    setConf(conf);
   }
   
   /**
@@ -250,6 +263,7 @@ public class CopyFiles extends ToolBase {
      * @param logPath : The log Path.
      * @param ignoreReadFailures : Ignore read failures?
      */
+    @Override
     public void setup(Configuration conf, JobConf jobConf, 
                       String[] srcPaths, String destPath, 
                       Path logPath, boolean ignoreReadFailures) 
@@ -354,6 +368,7 @@ public class CopyFiles extends ToolBase {
       
     }
     
+    @Override
     public void cleanup(Configuration conf, JobConf jobConf, 
                         String srcPath, String destPath) 
       throws IOException
@@ -372,6 +387,7 @@ public class CopyFiles extends ToolBase {
      * top-level paths on source and destination directories.
      * Gets the named file systems, to be used later in map.
      */
+    @Override
     public void configure(JobConf job) 
     {
       String srcfs = job.get("copy.src.fs", "local");
@@ -421,6 +437,7 @@ public class CopyFiles extends ToolBase {
       }
     }
     
+    @Override
     public void close() {
       // nothing
     }
@@ -445,6 +462,7 @@ public class CopyFiles extends ToolBase {
      * @param logPath : The log Path.
      * @param ignoreReadFailures : Ignore read failures?
      */
+    @Override
     public void setup(Configuration conf, JobConf jobConf, 
                       String[] srcPaths, String destPath, 
                       Path logPath, boolean ignoreReadFailures) 
@@ -491,6 +509,7 @@ public class CopyFiles extends ToolBase {
       }
     }	
     
+    @Override
     public void cleanup(Configuration conf, JobConf jobConf, 
                         String srcPath, String destPath) 
       throws IOException
@@ -504,6 +523,7 @@ public class CopyFiles extends ToolBase {
       }
     }
     
+    @Override
     public void configure(JobConf job)
     {
       //Save jobConf
@@ -861,9 +881,10 @@ public class CopyFiles extends ToolBase {
   }
   
   public static void main(String[] args) throws Exception {
-    int res = new CopyFiles().doMain(
-                                     new JobConf(new Configuration(), CopyFiles.class), 
-                                     args);
+    JobConf job = new JobConf(new Configuration(), CopyFiles.class);
+    CopyFiles distcp = new CopyFiles();
+    distcp.setConf(job);
+    int res = ToolRunner.run(distcp, args);
     System.exit(res);
   }
 }

@@ -18,16 +18,19 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
-import java.util.*;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.*;
 
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.ipc.*;
-import org.apache.hadoop.util.ToolBase;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /** Provide command line access to a FileSystem. */
-public class FsShell extends ToolBase {
+public class FsShell extends Configured implements Tool {
 
   protected FileSystem fs;
   private Trash trash;
@@ -45,17 +48,22 @@ public class FsShell extends ToolBase {
   /**
    */
   public FsShell() {
+    this(null);
+  }
+
+  public FsShell(Configuration conf) {
+    super(conf);
     fs = null;
     trash = null;
   }
-
+  
   protected void init() throws IOException {
-    conf.setQuietMode(true);
+    getConf().setQuietMode(true);
     if (this.fs == null) {
-      this.fs = FileSystem.get(conf);
+      this.fs = FileSystem.get(getConf());
     }
     if (this.trash == null) {
-      this.trash = new Trash(conf);
+      this.trash = new Trash(getConf());
     }
   }
 
@@ -64,7 +72,7 @@ public class FsShell extends ToolBase {
    */
   private void copyBytes(InputStream in, OutputStream out) throws IOException {
     PrintStream ps = out instanceof PrintStream ? (PrintStream)out : null;
-    byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
+    byte buf[] = new byte[getConf().getInt("io.file.buffer.size", 4096)];
     int bytesRead = in.read(buf);
     while (bytesRead >= 0) {
       out.write(buf, 0, bytesRead);
@@ -268,10 +276,10 @@ public class FsShell extends ToolBase {
     for(int i=0; i<srcs.length; i++) {
       if (endline) {
         FileUtil.copyMerge(fs, srcs[i], 
-                           FileSystem.getLocal(conf), dst, false, conf, "\n");
+                           FileSystem.getLocal(getConf()), dst, false, getConf(), "\n");
       } else {
         FileUtil.copyMerge(fs, srcs[i], 
-                           FileSystem.getLocal(conf), dst, false, conf, null);
+                           FileSystem.getLocal(getConf()), dst, false, getConf(), null);
       }
     }
   }      
@@ -301,6 +309,7 @@ public class FsShell extends ToolBase {
     //  zzz
 
     new DelayedExceptionThrowing() {
+      @Override
       void process(Path p) throws IOException {
         printToStdout(p);
       }
@@ -851,6 +860,7 @@ public class FsShell extends ToolBase {
     //  rm: cannot remove `y.txt': No such file or directory
 
     new DelayedExceptionThrowing() {
+      @Override
       void process(Path p) throws IOException {
         delete(p, recursive);
       }
@@ -1321,49 +1331,49 @@ public class FsShell extends ToolBase {
         else
           copyMergeToLocal(argv[i++], new Path(argv[i++]));
       } else if ("-cat".equals(cmd)) {
-        exitCode = doall(cmd, argv, conf, i);
+        exitCode = doall(cmd, argv, getConf(), i);
       } else if ("-moveToLocal".equals(cmd)) {
         moveToLocal(argv[i++], new Path(argv[i++]));
       } else if ("-setrep".equals(cmd)) {
         setReplication(argv, i);           
       } else if ("-ls".equals(cmd)) {
         if (i < argv.length) {
-          exitCode = doall(cmd, argv, conf, i);
+          exitCode = doall(cmd, argv, getConf(), i);
         } else {
           ls(Path.CUR_DIR, false);
         } 
       } else if ("-lsr".equals(cmd)) {
         if (i < argv.length) {
-          exitCode = doall(cmd, argv, conf, i);
+          exitCode = doall(cmd, argv, getConf(), i);
         } else {
           ls(Path.CUR_DIR, true);
         } 
       } else if ("-mv".equals(cmd)) {
-        exitCode = rename(argv, conf);
+        exitCode = rename(argv, getConf());
       } else if ("-cp".equals(cmd)) {
-        exitCode = copy(argv, conf);
+        exitCode = copy(argv, getConf());
       } else if ("-rm".equals(cmd)) {
-        exitCode = doall(cmd, argv, conf, i);
+        exitCode = doall(cmd, argv, getConf(), i);
       } else if ("-rmr".equals(cmd)) {
-        exitCode = doall(cmd, argv, conf, i);
+        exitCode = doall(cmd, argv, getConf(), i);
       } else if ("-expunge".equals(cmd)) {
         expunge();
       } else if ("-du".equals(cmd)) {
         if (i < argv.length) {
-          exitCode = doall(cmd, argv, conf, i);
+          exitCode = doall(cmd, argv, getConf(), i);
         } else {
           du("");
         }
       } else if ("-dus".equals(cmd)) {
         if (i < argv.length) {
-          exitCode = doall(cmd, argv, conf, i);
+          exitCode = doall(cmd, argv, getConf(), i);
         } else {
           dus("");
         }         
       } else if ("-mkdir".equals(cmd)) {
-        exitCode = doall(cmd, argv, conf, i);
+        exitCode = doall(cmd, argv, getConf(), i);
       } else if ("-touchz".equals(cmd)) {
-        exitCode = doall(cmd, argv, conf, i);
+        exitCode = doall(cmd, argv, getConf(), i);
       } else if ("-test".equals(cmd)) {
         exitCode = test(argv, i);
       } else if ("-stat".equals(cmd)) {
@@ -1426,7 +1436,7 @@ public class FsShell extends ToolBase {
     FsShell shell = new FsShell();
     int res;
     try {
-      res = shell.doMain(new Configuration(), argv);
+      res = ToolRunner.run(shell, argv);
     } finally {
       shell.close();
     }

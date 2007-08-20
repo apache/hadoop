@@ -26,9 +26,10 @@ import java.net.URLEncoder;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.ToolBase;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.jets3t.service.S3Service;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -46,13 +47,13 @@ import org.jets3t.service.security.AWSCredentials;
  * - no datafiles are touched.
  * </p>
  */
-public class MigrationTool extends ToolBase {
+public class MigrationTool extends Configured implements Tool {
   
   private S3Service s3Service;
   private S3Bucket bucket;
   
   public static void main(String[] args) throws Exception {
-    int res = new MigrationTool().doMain(new Configuration(), args);
+    int res = ToolRunner.run(new MigrationTool(), args);
     System.exit(res);
   }
   
@@ -66,10 +67,10 @@ public class MigrationTool extends ToolBase {
     
     URI uri = URI.create(args[0]);
     
-    initialize(uri, conf);
+    initialize(uri);
     
     FileSystemStore newStore = new Jets3tFileSystemStore();
-    newStore.initialize(uri, conf);
+    newStore.initialize(uri, getConf());
     
     if (get("%2F") != null) { 
       System.err.println("Current version number is [unversioned].");
@@ -105,9 +106,9 @@ public class MigrationTool extends ToolBase {
     
   }
   
-  public void initialize(URI uri, Configuration conf) throws IOException {
+  public void initialize(URI uri) throws IOException {
     
-    this.conf = conf;
+    
     
     try {
       String accessKey = null;
@@ -123,10 +124,10 @@ public class MigrationTool extends ToolBase {
         }
       }
       if (accessKey == null) {
-        accessKey = conf.get("fs.s3.awsAccessKeyId");
+        accessKey = getConf().get("fs.s3.awsAccessKeyId");
       }
       if (secretAccessKey == null) {
-        secretAccessKey = conf.get("fs.s3.awsSecretAccessKey");
+        secretAccessKey = getConf().get("fs.s3.awsSecretAccessKey");
       }
       if (accessKey == null && secretAccessKey == null) {
         throw new IllegalArgumentException("AWS " +

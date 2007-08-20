@@ -20,9 +20,12 @@ package org.apache.hadoop.dfs;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import junit.framework.*;
+
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A JUnit test for doing fsck
@@ -35,9 +38,11 @@ public class TestFsck extends TestCase {
 
   
   
+  @Override
   protected void setUp() throws Exception {
   }
 
+  @Override
   protected void tearDown() throws Exception {
   }
   
@@ -54,7 +59,7 @@ public class TestFsck extends TestCase {
       ByteArrayOutputStream bStream = new ByteArrayOutputStream();
       PrintStream newOut = new PrintStream(bStream, true);
       System.setOut(newOut);
-      assertEquals(0, new DFSck().doMain(conf, new String[] {"/"}));
+      assertEquals(0, ToolRunner.run(new DFSck(conf), new String[] {"/"}));
       System.setOut(oldOut);
       String outStr = bStream.toString();
       assertTrue(-1 != outStr.indexOf("HEALTHY"));
@@ -67,7 +72,7 @@ public class TestFsck extends TestCase {
       bStream = new ByteArrayOutputStream();
       newOut = new PrintStream(bStream, true);
       System.setOut(newOut);
-      assertEquals(0, new DFSck().doMain(conf, new String[] {"/"}));
+      assertEquals(0, ToolRunner.run(new DFSck(conf), new String[] {"/"}));
       System.setOut(oldOut);
       outStr = bStream.toString();
       // expect the result is corrupt
@@ -95,7 +100,7 @@ public class TestFsck extends TestCase {
       ByteArrayOutputStream bStream = new ByteArrayOutputStream();
       PrintStream newOut = new PrintStream(bStream, true);
       System.setOut(newOut);
-      assertEquals(0, new DFSck().doMain(conf, new String[] {"/non-existent"}));
+      assertEquals(0, ToolRunner.run(new DFSck(conf), new String[] {"/non-existent"}));
       System.setOut(oldOut);
       String outStr = bStream.toString();
       assertEquals(-1, outStr.indexOf("HEALTHY"));
