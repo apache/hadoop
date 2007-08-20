@@ -611,6 +611,7 @@
           <fileset dir="src/contrib/">
             <include name="*/lib/*.jar" />
           </fileset>
+          <pathelement path="${java.class.path}"/>
         </classpath>
 
     	<group title="Core" packages="org.apache.*"/>
