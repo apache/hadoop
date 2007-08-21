@@ -19,8 +19,8 @@ package org.apache.hadoop.dfs;
 
 import java.io.*;
 import java.util.*;
-import org.apache.hadoop.conf.Configuration;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -37,389 +37,8 @@ import org.apache.hadoop.metrics.MetricsContext;
  *************************************************/
 class FSDirectory implements FSConstants {
 
-  /******************************************************
-   * We keep an in-memory representation of the file/block
-   * hierarchy.
-   * 
-   * TODO: Factor out INode to a standalone class.
-   ******************************************************/
-  static class INode {
-
-    private String name;
-    private INode parent;
-    private List<INode> children = null;
-    private Block blocks[] = null;
-    private short blockReplication;
-    private long modificationTime;
-    private static final int DEFAULT_FILES_PER_DIRECTORY = 5;
-
-    /**
-     */
-    INode(String name) {
-      this.name = name;
-      this.parent = null;
-      this.blocks = null;
-      this.blockReplication = 0;
-      this.modificationTime = 0;
-    }
-
-    INode(String name, long modifictionTime) {
-      this.name = name;
-      this.parent = null;
-      this.blocks = null;
-      this.blockReplication = 0;
-      this.modificationTime = modifictionTime;
-    }
-
-    /**
-     */
-    INode(String name, Block blocks[], short replication,
-          long modificationTime) {
-      this.name = name;
-      this.parent = null;
-      this.blocks = blocks;
-      this.blockReplication = replication;
-      this.modificationTime = modificationTime;
-    }
-
-    /**
-     * Check whether it's a directory
-     */
-    synchronized public boolean isDir() {
-      return (blocks == null);
-    }
-        
-    /**
-     * Get block replication for the file 
-     * @return block replication
-     */
-    public short getReplication() {
-      return this.blockReplication;
-    }
-        
-    /**
-     * Get local file name
-     * @return local file name
-     */
-    String getLocalName() {
-      return name;
-    }
-
-    /**
-     * Set local file name
-     */
-    void setLocalName(String name) {
-      this.name = name;
-    }
-
-    /**
-     * Get the full absolute path name of this file (recursively computed).
-     * 
-     * @return the string representation of the absolute path of this file
-     */
-    String getAbsoluteName() {
-      if (this.parent == null) {    
-        return Path.SEPARATOR;       // root directory is "/"
-      }
-      return internalGetAbsolutePathName().toString();
-    }
-
-    /**
-     * Recursive computation of the absolute path name of this INode using a
-     * StringBuffer. This relies on the root INode name being "".
-     * 
-     * @return the StringBuffer containing the absolute path name.
-     */
-    private StringBuffer internalGetAbsolutePathName() {
-      if (parent == null) {
-        return new StringBuffer(name);
-      } else {
-        return parent.internalGetAbsolutePathName().append(
-            Path.SEPARATOR_CHAR).append(name);
-      }
-    }
-
-    /**
-     * Get file blocks 
-     * @return file blocks
-     */
-    Block[] getBlocks() {
-      return this.blocks;
-    }
-        
-    /**
-     * Get parent directory 
-     * @return parent INode
-     */
-    INode getParent() {
-      return this.parent;
-    }
-
-    /**
-     * Get last modification time of inode.
-     * @return access time
-     */
-    long getModificationTime() {
-      return this.modificationTime;
-    }
-
-    /**
-     * Set last modification time of inode.
-     */
-    void setModificationTime(long modtime) {
-      assert isDir();
-      if (this.modificationTime <= modtime) {
-        this.modificationTime = modtime;
-      }
-    }
-
-    /**
-     * Set file blocks 
-     * @return file blocks
-     */
-    void setBlocks(Block[] blockList) {
-      this.blocks = blockList;
-    }
-
-    /**
-     * Get children iterator
-     * @return Iterator of children
-     */
-    Iterator<INode> getChildIterator() {
-      return (children != null) ?  children.iterator() : null;
-      // instead of null, we could return a static empty iterator.
-    }
-        
-    private void addChild(String name, INode node) {
-      if (children == null) {
-        children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
-      }
-      int low = Collections.binarySearch(children, node, comp);
-      assert low < 0;
-      children.add(-low - 1, node);
-    }
-
-    private void removeChild(INode node) {
-      assert children != null;
-      int low = Collections.binarySearch(children, node, comp);
-      if (low >= 0) {
-        children.remove(low);
-      }
-    }
-
-    /**
-     * This is the external interface
-     */
-    INode getNode(String target) {
-      if (target == null || 
-          !target.startsWith("/") || target.length() == 0) {
-        return null;
-      } else if (parent == null && "/".equals(target)) {
-        return this;
-      } else {
-        Vector<String> components = new Vector<String>();
-        int start = 0;
-        int slashid = 0;
-        while (start < target.length() && (slashid = target.indexOf('/', start)) >= 0) {
-          components.add(target.substring(start, slashid));
-          start = slashid + 1;
-        }
-        if (start < target.length()) {
-          components.add(target.substring(start));
-        }
-        return getNode(components, 0);
-      }
-    }
-
-    /**
-     */
-    INode getNode(Vector<String> components, int index) {
-      if (!name.equals(components.elementAt(index))) {
-        return null;
-      }
-      if (index == components.size()-1) {
-        return this;
-      }
-
-      // Check with children
-      INode child = this.getChild(components.elementAt(index+1));
-      if (child == null) {
-        return null;
-      } else {
-        return child.getNode(components, index+1);
-      }
-    }
-        
-    INode getChild(String name) {
-      return getChild(new INode(name));
-    }
-
-    private INode getChild(INode node) {
-      if (children == null) {
-        return null;
-      }
-      int low = Collections.binarySearch(children, node, comp);
-      if (low >= 0) {
-        return children.get(low);
-      }
-      return null;
-    }
-
-    //
-    // Prints out the children along with their hash codes.
-    // Useful for debugging.
-    //
-    private void printChildTree(List<INode> children) {
-      System.out.print("Names: ");
-      for (int i = 0; i < children.size(); i++) {
-        INode inode = children.get(i);
-        System.out.print(" " + inode.name);
-      }
-      System.out.println("");
-      System.out.print("Hashcodes: ");
-      for (int i = 0; i < children.size(); i++) {
-        INode inode = children.get(i);
-        System.out.print(" " + inode.name.hashCode());
-      }
-      System.out.println("");
-    }
-
-    /**
-     * Add new INode to the file tree.
-     * Find the parent and insert 
-     * 
-     * @param path file path
-     * @param newNode INode to be added
-     * @return null if the node already exists; inserted INode, otherwise
-     * @throws FileNotFoundException 
-     */
-    INode addNode(String path, INode newNode) throws FileNotFoundException {
-      File target = new File(path);
-      // find parent
-      Path parent = new Path(path).getParent();
-      if (parent == null) { // add root
-        return null;
-      }
-      INode parentNode = getNode(parent.toString());
-      if (parentNode == null) {
-        throw new FileNotFoundException(
-                                        "Parent path does not exist: "+path);
-      }
-      if (!parentNode.isDir()) {
-        throw new FileNotFoundException(
-                                        "Parent path is not a directory: "+path);
-      }
-      // check whether the parent already has a node with that name
-      String name =  target.getName();
-      newNode.setLocalName(name);
-      if (parentNode.getChild(newNode) != null) {
-        return null;
-      }
-      // insert into the parent children list
-      parentNode.addChild(name, newNode);
-      newNode.parent = parentNode;
-      return newNode;
-    }
-
-    /**
-     */
-    boolean removeNode() {
-      if (parent == null) {
-        return false;
-      } else {
-        parent.removeChild(this);
-        return true;
-      }
-    }
-
-    /**
-     * Collect all the blocks at this INode and all its children.
-     * This operation is performed after a node is removed from the tree,
-     * and we want to GC all the blocks at this node and below.
-     */
-    void collectSubtreeBlocks(FSDirectory fsDir, Vector<Block> v) {
-      if (blocks != null) {
-        for (int i = 0; i < blocks.length; i++) {
-          v.add(blocks[i]);
-        }
-      }
-      fsDir.incrDeletedFileCount();
-      for (Iterator<INode> it = getChildIterator(); it != null &&
-             it.hasNext();) {
-        it.next().collectSubtreeBlocks(fsDir, v);
-      }
-    }
-
-    /**
-     */
-    int numItemsInTree() {
-      int total = 0;
-      for (Iterator<INode> it = getChildIterator(); it != null && 
-             it.hasNext();) {
-        total += it.next().numItemsInTree();
-      }
-      return total + 1;
-    }
-
-    long computeFileLength() {
-      long total = 0;
-      if (blocks != null) {
-        for (int i = 0; i < blocks.length; i++) {
-          total += blocks[i].getNumBytes();
-        }
-      }
-      return total;
-    }
-
-    /**
-     */
-    long computeContentsLength() {
-      long total = computeFileLength();
-      for (Iterator<INode> it = getChildIterator(); it != null && 
-             it.hasNext();) {
-        total += it.next().computeContentsLength();
-      }
-      return total;
-    }
-
-    /**
-     * Get the block size of the first block
-     * @return the number of bytes
-     */
-    public long getBlockSize() {
-      if (blocks == null || blocks.length == 0) {
-        return 0;
-      } else {
-        return blocks[0].getNumBytes();
-      }
-    }
-        
-    /**
-     */
-    void listContents(Vector<INode> v) {
-      if (parent != null && blocks != null) {
-        v.add(this);
-      }
-
-      for (Iterator<INode> it = getChildIterator(); it != null && 
-             it.hasNext();) {
-        v.add(it.next());
-      }
-    }
-
-    //
-    // Use the name of the INode to implement a natural order 
-    //
-    static private final Comparator<INode> comp =
-      new Comparator<INode>() {
-        public int compare(INode a, INode b) {
-          return a.getLocalName().compareTo(b.getLocalName());
-        }
-      };
-  }
-
   FSNamesystem namesystem = null;
-  INode rootDir = new INode("");
+  INodeDirectory rootDir = new INodeDirectory(INodeDirectory.ROOT_NAME);
   FSImage fsImage;  
   boolean ready = false;
   // Metrics record
@@ -464,8 +83,8 @@ class FSDirectory implements FSConstants {
     }
   }
 
-  private void incrDeletedFileCount() {
-    directoryMetrics.incrMetric("files_deleted", 1);
+  private void incrDeletedFileCount(int count) {
+    directoryMetrics.incrMetric("files_deleted", count);
     directoryMetrics.update();
   }
     
@@ -503,16 +122,15 @@ class FSDirectory implements FSConstants {
     if (!mkdirs(new Path(path).getParent().toString(), modTime)) {
       return false;
     }
-    INode newNode = new INode(new File(path).getName(), blocks, 
-                              replication, modTime);
-    if (!unprotectedAddFile(path, newNode, modTime)) {
+    INodeFile newNode = (INodeFile)unprotectedAddFile(path, blocks, replication, modTime);
+    if (newNode == null) {
       NameNode.stateChangeLog.info("DIR* FSDirectory.addFile: "
                                    +"failed to add "+path+" with "
                                    +blocks.length+" blocks to the file system");
       return false;
     }
     // add create file record to log
-    fsImage.getEditLog().logCreateFile(newNode);
+    fsImage.getEditLog().logCreateFile(path, newNode);
     NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
                                   +path+" with "+blocks.length+" blocks is added to the file system");
     return true;
@@ -520,33 +138,30 @@ class FSDirectory implements FSConstants {
     
   /**
    */
-  private boolean unprotectedAddFile(String path, INode newNode, long parentModTime) {
+  INode unprotectedAddFile( String path, 
+                            Block[] blocks, 
+                            short replication,
+                            long modificationTime) {
+    INode newNode;
+    if (blocks == null)
+      newNode = new INodeDirectory(modificationTime);
+    else
+      newNode = new INodeFile(blocks, replication, modificationTime);
     synchronized (rootDir) {
       try {
-        if (rootDir.addNode(path, newNode) != null) {
-          int nrBlocks = (newNode.blocks == null) ? 0 : newNode.blocks.length;
+        newNode = rootDir.addNode(path, newNode);
+        if(newNode != null) {
+          int nrBlocks = (blocks == null) ? 0 : blocks.length;
           // Add file->block mapping
           for (int i = 0; i < nrBlocks; i++) {
-            namesystem.blocksMap.addINode(newNode.blocks[i], newNode);
+            namesystem.blocksMap.addINode(blocks[i], (INodeFile)newNode);
           }
-          // update modification time of parent directory
-          newNode.getParent().setModificationTime(parentModTime);
-          return true;
-        } else {
-          return false;
         }
       } catch (FileNotFoundException e) {
-        return false;
+        return null;
       }
+      return newNode;
     }
-  }
-    
-  boolean unprotectedAddFile(String path, Block[] blocks, short replication,
-                             long modificationTime) {
-    return unprotectedAddFile(path,  
-                              new INode(path, blocks, replication,
-                                        modificationTime),
-                              modificationTime);
   }
 
   /**
@@ -556,7 +171,7 @@ class FSDirectory implements FSConstants {
     waitForReady();
 
     synchronized (rootDir) {
-      INode fileNode = rootDir.getNode(path);
+      INodeFile fileNode = this.getFileINode(path);
       if (fileNode == null) {
         throw new IOException("Unknown file: " + path);
       }
@@ -578,7 +193,7 @@ class FSDirectory implements FSConstants {
       fsImage.getEditLog().logDelete(path, fileNode.getModificationTime());
 
       // re-add create file record to log
-      fsImage.getEditLog().logCreateFile(fileNode);
+      fsImage.getEditLog().logCreateFile(path, fileNode);
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
                                     +path+" with "+blocks.length
                                     +" blocks is added to the file system");
@@ -593,7 +208,7 @@ class FSDirectory implements FSConstants {
     NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
                                   +src+" to "+dst);
     waitForReady();
-    long now = namesystem.now();
+    long now = FSNamesystem.now();
     if (!unprotectedRenameTo(src, dst, now))
       return false;
     fsImage.getEditLog().logRename(src, dst, now);
@@ -618,8 +233,8 @@ class FSDirectory implements FSConstants {
                                      +"failed to rename "+src+" to "+dst+ " because destination exists");
         return false;
       }
-      INode oldParent = renamedNode.getParent();
-      renamedNode.removeNode();
+      INodeDirectory oldParent = renamedNode.getParent();
+      oldParent.removeChild(renamedNode);
             
       // the renamed node can be reused now
       try {
@@ -673,14 +288,15 @@ class FSDirectory implements FSConstants {
     oldReplication[0] = -1;
     Block[] fileBlocks = null;
     synchronized(rootDir) {
-      INode fileNode = rootDir.getNode(src);
-      if (fileNode == null)
+      INode inode = rootDir.getNode(src);
+      if (inode == null)
         return null;
-      if (fileNode.isDir())
+      if (inode.isDirectory())
         return null;
-      oldReplication[0] = fileNode.blockReplication;
-      fileNode.blockReplication = replication;
-      fileBlocks = fileNode.blocks;
+      INodeFile fileNode = (INodeFile)inode;
+      oldReplication[0] = fileNode.getReplication();
+      fileNode.setReplication(replication);
+      fileBlocks = fileNode.getBlocks();
     }
     return fileBlocks;
   }
@@ -697,11 +313,11 @@ class FSDirectory implements FSConstants {
       if (fileNode == null) {
         throw new IOException("Unknown file: " + filename);
       }
-      if (fileNode.isDir()) {
+      if (fileNode.isDirectory()) {
         throw new IOException("Getting block size of a directory: " + 
                               filename);
       }
-      return fileNode.getBlockSize();
+      return ((INodeFile)fileNode).getBlockSize();
     }
   }
     
@@ -712,7 +328,7 @@ class FSDirectory implements FSConstants {
     NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "
                                   +src);
     waitForReady();
-    long now = namesystem.now();
+    long now = FSNamesystem.now();
     Block[] blocks = unprotectedDelete(src, now); 
     if (blocks != null)
       fsImage.getEditLog().logDelete(src, now);
@@ -741,8 +357,9 @@ class FSDirectory implements FSConstants {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
                                         +src+" is removed");
           targetNode.getParent().setModificationTime(modificationTime);
-          Vector<Block> v = new Vector<Block>();
-          targetNode.collectSubtreeBlocks(this, v);
+          ArrayList<Block> v = new ArrayList<Block>();
+          int filesRemoved = targetNode.collectSubtreeBlocks(v);
+          incrDeletedFileCount(filesRemoved);
           for (Block b : v) {
             namesystem.blocksMap.removeINode(b);
           }
@@ -763,19 +380,21 @@ class FSDirectory implements FSConstants {
 
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs);
-      if (targetNode == null) {
+      if (targetNode == null)
         return null;
-      } else {
-        Vector<INode> contents = new Vector<INode>();
-        targetNode.listContents(contents);
-
-        DFSFileInfo listing[] = new DFSFileInfo[contents.size()];
-        int i = 0;
-        for (Iterator<INode> it = contents.iterator(); it.hasNext(); i++) {
-          listing[i] = new DFSFileInfo(it.next());
-        }
-        return listing;
+      if (!targetNode.isDirectory()) {
+        return new DFSFileInfo[]{new DFSFileInfo(srcs, targetNode)};
       }
+      List<INode> contents = ((INodeDirectory)targetNode).getChildren();
+      DFSFileInfo listing[] = new DFSFileInfo[contents.size()];
+      if(! srcs.endsWith(Path.SEPARATOR))
+        srcs += Path.SEPARATOR;
+      int i = 0;
+      for (INode cur : contents) {
+        listing[i] = new DFSFileInfo(srcs+cur.getLocalName(), cur);
+        i++;
+      }
+      return listing;
     }
   }
 
@@ -792,7 +411,7 @@ class FSDirectory implements FSConstants {
         throw new IOException("File does not exist");
       }
       else {
-        return new DFSFileInfo(targetNode);
+        return new DFSFileInfo(srcs, targetNode);
       }
     }
   }
@@ -804,21 +423,24 @@ class FSDirectory implements FSConstants {
     waitForReady();
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(src);
-      if (targetNode == null) {
+      if (targetNode == null)
         return null;
-      } else {
-        return targetNode.blocks;
-      }
+      if(targetNode.isDirectory())
+        return null;
+      return ((INodeFile)targetNode).getBlocks();
     }
   }
 
   /**
    * Get {@link INode} associated with the file.
    */
-  INode getFileINode(String src) {
+  INodeFile getFileINode(String src) {
     waitForReady();
     synchronized (rootDir) {
-      return rootDir.getNode(src);
+      INode inode = rootDir.getNode(src);
+      if (inode == null || inode.isDirectory())
+        return null;
+      return (INodeFile)inode;
     }
   }
 
@@ -844,7 +466,7 @@ class FSDirectory implements FSConstants {
   public boolean isDir(String src) {
     synchronized (rootDir) {
       INode node = rootDir.getNode(normalizePath(src));
-      return node != null && node.isDir();
+      return node != null && node.isDirectory();
     }
   }
 
@@ -855,7 +477,7 @@ class FSDirectory implements FSConstants {
     src = normalizePath(src);
 
     // Use this to collect all the dirs we need to construct
-    Vector<String> v = new Vector<String>();
+    List<String> v = new ArrayList<String>();
 
     // The dir itself
     v.add(src);
@@ -871,13 +493,13 @@ class FSDirectory implements FSConstants {
     // the way
     int numElts = v.size();
     for (int i = numElts - 1; i >= 0; i--) {
-      String cur = v.elementAt(i);
+      String cur = v.get(i);
       try {
         INode inserted = unprotectedMkdir(cur, now);
         if (inserted != null) {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
                                         +"created directory "+cur);
-          fsImage.getEditLog().logMkDir(inserted);
+          fsImage.getEditLog().logMkDir(cur, inserted);
         } else { // otherwise cur exists, verify that it is a directory
           if (!isDir(cur)) {
             NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
@@ -898,8 +520,7 @@ class FSDirectory implements FSConstants {
    */
   INode unprotectedMkdir(String src, long timestamp) throws FileNotFoundException {
     synchronized (rootDir) {
-      return rootDir.addNode(src, new INode(new File(src).getName(),
-                                            timestamp));
+      return rootDir.addNode(src, new INodeDirectory(timestamp));
     }
   }
 

@@ -19,7 +19,6 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 
-import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.StatusHttpServer;
@@ -406,12 +405,12 @@ class FSNamesystem implements FSConstants {
     
   /* get replication factor of a block */
   private int getReplication(Block block) {
-    FSDirectory.INode fileINode = blocksMap.getINode(block);
+    INodeFile fileINode = blocksMap.getINode(block);
     if (fileINode == null) { // block does not belong to any file
       return 0;
-    } else {
-      return fileINode.getReplication();
     }
+    assert !fileINode.isDirectory() : "Block cannot belong to a directory.";
+    return fileINode.getReplication();
   }
 
   /* updates a block in under replication queue */
@@ -441,8 +440,8 @@ class FSNamesystem implements FSConstants {
     BlockCrcInfo crcInfo = new BlockCrcInfo();
     crcInfo.status = BlockCrcInfo.STATUS_ERROR;
     
-    FSDirectory.INode fileINode = blocksMap.getINode(block);
-    if ( fileINode == null || fileINode.isDir() ) {
+    INodeFile fileINode = blocksMap.getINode(block);
+    if ( fileINode == null || fileINode.isDirectory() ) {
       // Most probably reason is that this block does not exist
       if (blocksMap.getStoredBlock(block) == null) {
         crcInfo.status = BlockCrcInfo.STATUS_UNKNOWN_BLOCK;
@@ -496,9 +495,9 @@ class FSNamesystem implements FSConstants {
 
       //Find CRC file
       String crcName = "." + fileName + ".crc";
-      FSDirectory.INode crcINode = fileINode.getParent().getChild(crcName);
+      INodeFile crcINode = (INodeFile)fileINode.getParent().getChild(crcName);
 
-      if ( crcINode == null ) {
+      if (crcINode == null ) {
         // Should we log this?
         crcInfo.status = BlockCrcInfo.STATUS_NO_CRC_DATA;
         return crcInfo;
@@ -569,11 +568,11 @@ class FSNamesystem implements FSConstants {
     return blocks;
   }
   
-  private synchronized LocatedBlocks getBlockLocations(FSDirectory.INode inode, 
+  private synchronized LocatedBlocks getBlockLocations(INodeFile inode, 
                                                        long offset, 
                                                        long length,
                                                        int nrBlocksToReturn) {
-    if(inode == null || inode.isDir()) {
+    if(inode == null) {
       return null;
     }
     Block[] blocks = inode.getBlocks();
@@ -2177,7 +2176,7 @@ class FSNamesystem implements FSConstants {
    */
   synchronized Block addStoredBlock(Block block, DatanodeDescriptor node) {
         
-    FSDirectory.INode fileINode = blocksMap.getINode(block);
+    INodeFile fileINode = blocksMap.getINode(block);
     int replication = (fileINode != null) ?  fileINode.getReplication() : 
       defaultReplication;
     boolean added = blocksMap.addNode(block, node, replication);
@@ -2388,7 +2387,7 @@ class FSNamesystem implements FSConstants {
     // necessary.  In that case, put block on a possibly-will-
     // be-replicated list.
     //
-    FSDirectory.INode fileINode = blocksMap.getINode(block);
+    INode fileINode = blocksMap.getINode(block);
     if (fileINode != null) {
       updateNeededReplications(block, -1, 0);
     }
@@ -2712,7 +2711,7 @@ class FSNamesystem implements FSConstants {
     boolean status = false;
     for (int i = 0; i < decommissionBlocks.length; i++) {
       Block block = decommissionBlocks[i];
-      FSDirectory.INode fileINode = blocksMap.getINode(block);
+      INode fileINode = blocksMap.getINode(block);
 
       if (fileINode != null) {
         NumberReplicas num = countNodes(block);
@@ -2797,7 +2796,7 @@ class FSNamesystem implements FSConstants {
           }
           Block block = it.next();
           long blockSize = block.getNumBytes();
-          FSDirectory.INode fileINode = blocksMap.getINode(block);
+          INodeFile fileINode = blocksMap.getINode(block);
           if (fileINode == null) { // block does not belong to any file
             it.remove();
           } else {

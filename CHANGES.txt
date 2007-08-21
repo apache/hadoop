@@ -68,6 +68,10 @@ Trunk (unreleased changes)
     HADOOP-1703.  DFS-internal code cleanups, removing several uses of
     the obsolete UTF8.  (Christophe Taton via cutting)
 
+    HADOOP-1743.  Change DFS INode from a nested class to standalone
+    class, with specialized subclasses for directories and files, to
+    save memory on the namenode.  (Konstantin Shvachko via cutting)
+
 
 Release 0.14.0 - 2007-08-17
 

@@ -41,8 +41,8 @@ public class LocatedBlocks implements Writable {
     blocks = null;
   }
   
-  LocatedBlocks(FSDirectory.INode inode, List<LocatedBlock> blks) {
-    fileLength = inode.computeFileLength();
+  LocatedBlocks(INodeFile inode, List<LocatedBlock> blks) {
+    fileLength = inode.computeContentsLength();
     blocks = blks;
   }
   

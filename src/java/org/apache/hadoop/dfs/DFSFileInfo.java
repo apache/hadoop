@@ -46,11 +46,13 @@ class DFSFileInfo extends FileStatus {
   /**
    * Create DFSFileInfo by file INode 
    */
-  public DFSFileInfo(FSDirectory.INode node) {
+  public DFSFileInfo(String path, INode node) {
     // XXX This should probably let length == 0 for directories
-    super(node.isDir() ? node.computeContentsLength() : node.computeFileLength(),
-          node.isDir(), node.getReplication(), node.getBlockSize(),
-          node.getModificationTime(), new Path(node.getAbsoluteName()));
+    super(node.computeContentsLength(),
+          node.isDirectory(), 
+          node.isDirectory() ? 0 : ((INodeFile)node).getReplication(), 
+          node.isDirectory() ? 0 : ((INodeFile)node).getBlockSize(),
+          node.getModificationTime(), new Path(path));
   }
 
   /**

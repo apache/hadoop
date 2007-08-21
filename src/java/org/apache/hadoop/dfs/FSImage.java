@@ -38,7 +38,6 @@ import java.util.Random;
 
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.dfs.FSConstants.NodeType;
-import org.apache.hadoop.dfs.FSDirectory.INode;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -638,7 +637,6 @@ class FSImage extends Storage {
     // Load in bits
     //
     boolean needToSave = true;
-    int imgVersion;
     DataInputStream in = new DataInputStream(
                                              new BufferedInputStream(
                                                                      new FileInputStream(curFile)));
@@ -648,7 +646,7 @@ class FSImage extends Storage {
        * it should not contain version and namespace fields
        */
       // read image version: first appeared in version -1
-      imgVersion = in.readInt();
+      int imgVersion = in.readInt();
       // read namespaceID: first appeared in version -2
       if (imgVersion <= -2)
         this.namespaceID = in.readInt();
@@ -806,26 +804,29 @@ class FSImage extends Storage {
    * Save file tree image starting from the given root.
    */
   private static void saveImage(String parentPrefix, 
-                                FSDirectory.INode root, 
+                                INode inode, 
                                 DataOutputStream out) throws IOException {
     String fullName = "";
-    if (root.getParent() != null) {
-      fullName = parentPrefix + "/" + root.getLocalName();
+    if (inode.getParent() != null) {
+      fullName = parentPrefix + "/" + inode.getLocalName();
       new UTF8(fullName).write(out);
-      out.writeShort(root.getReplication());
-      out.writeLong(root.getModificationTime());
-      if (root.isDir()) {
-        out.writeInt(0);
-      } else {
-        int nrBlocks = root.getBlocks().length;
-        out.writeInt(nrBlocks);
-        for (int i = 0; i < nrBlocks; i++)
-          root.getBlocks()[i].write(out);
+      if (!inode.isDirectory()) {  // write file inode
+        INodeFile fileINode = (INodeFile)inode;
+        out.writeShort(fileINode.getReplication());
+        out.writeLong(inode.getModificationTime());
+        Block[] blocks = fileINode.getBlocks();
+        out.writeInt(blocks.length);
+        for (Block blk : blocks)
+          blk.write(out);
+        return;
       }
+      // write directory inode
+      out.writeShort(0);  // replication
+      out.writeLong(inode.getModificationTime());
+      out.writeInt(0);    // # of blocks
     }
-    for(Iterator<INode> it = root.getChildIterator(); it != null &&
-          it.hasNext();) {
-      saveImage(fullName, it.next(), out);
+    for(INode child : ((INodeDirectory)inode).getChildren()) {
+      saveImage(fullName, child, out);
     }
   }
 

@@ -178,4 +178,8 @@ public class TestModTime extends TestCase {
       cluster.shutdown();
     }
   }
+
+  public static void main(String[] args) throws Exception {
+    new TestModTime().testModTime();
+  }
 }

@@ -30,7 +30,7 @@ class BlocksMap {
    * Internal class for block metadata.
    */
   static class BlockInfo {
-    private FSDirectory.INode              inode;
+    private INodeFile          inode;
       
     /** nodes could contain some null entries at the end, so 
      *  nodes.legth >= number of datanodes. 
@@ -73,12 +73,12 @@ class BlocksMap {
     return info;
   }
       
-  public FSDirectory.INode getINode(Block b) {
+  public INodeFile getINode(Block b) {
     BlockInfo info = map.get(b);
     return (info != null) ? info.inode : null;
   }
           
-  public void addINode(Block b, FSDirectory.INode iNode) {
+  public void addINode(Block b, INodeFile iNode) {
     BlockInfo info = checkBlockInfo(b);
     info.inode = iNode;
   }
