@@ -157,7 +157,7 @@ class HStore implements HConstants {
     fs.mkdirs(mapdir);
     this.loginfodir = HStoreFile.getInfoDir(dir, regionName, familyName);
     fs.mkdirs(loginfodir);
-    if(family.bloomFilter == null) {
+    if(family.getBloomFilter() == null) {
       this.filterDir = null;
       this.bloomFilter = null;
     } else {
@@ -329,7 +329,7 @@ class HStore implements HConstants {
         LOG.debug("loading bloom filter for " + this.storeName);
       }
 
-      switch(family.bloomFilter.filterType) {
+      switch(family.getBloomFilter().filterType) {
       
       case BloomFilterDescriptor.BLOOMFILTER:
         bloomFilter = new BloomFilter();
@@ -351,21 +351,23 @@ class HStore implements HConstants {
         LOG.debug("creating bloom filter for " + this.storeName);
       }
 
-      switch(family.bloomFilter.filterType) {
+      switch(family.getBloomFilter().filterType) {
       
       case BloomFilterDescriptor.BLOOMFILTER:
-        bloomFilter = new BloomFilter(family.bloomFilter.vectorSize,
-            family.bloomFilter.nbHash);
+        bloomFilter = new BloomFilter(family.getBloomFilter().vectorSize,
+            family.getBloomFilter().nbHash);
         break;
         
       case BloomFilterDescriptor.COUNTING_BLOOMFILTER:
-        bloomFilter = new CountingBloomFilter(family.bloomFilter.vectorSize,
-            family.bloomFilter.nbHash);
+        bloomFilter =
+          new CountingBloomFilter(family.getBloomFilter().vectorSize,
+            family.getBloomFilter().nbHash);
         break;
         
       case BloomFilterDescriptor.RETOUCHED_BLOOMFILTER:
-        bloomFilter = new RetouchedBloomFilter(family.bloomFilter.vectorSize,
-            family.bloomFilter.nbHash);
+        bloomFilter =
+          new RetouchedBloomFilter(family.getBloomFilter().vectorSize,
+            family.getBloomFilter().nbHash);
       }
     }
   }

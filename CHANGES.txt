@@ -16,6 +16,7 @@ Trunk (unreleased changes)
     HADOOP-1730 unexpected null value causes META scanner to exit (silently)
 
   IMPROVEMENTS
+    HADOOP-1737 Make HColumnDescriptor data publically members settable
 
 
 Below are the list of changes before 2007-08-18
