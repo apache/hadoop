@@ -48,20 +48,21 @@ public class TestToString extends TestCase {
     htd.addFamily(new HColumnDescriptor("hankfamily:"));
     htd.addFamily(new HColumnDescriptor(new Text("hankotherfamily:"), 10,
         HColumnDescriptor.CompressionType.BLOCK, true, 1000, null));
+    System. out.println(htd.toString());
     assertEquals("Table descriptor", "name: hank, families: "
-        + "{hankfamily:=(hankfamily:, max versions: 3, compression: none, "
+        + "{hankfamily:=(hankfamily:, max versions: 3, compression: NONE, "
         + "in memory: false, max value length: 2147483647, bloom filter: none), "
         + "hankotherfamily:=(hankotherfamily:, max versions: 10, "
-        + "compression: block, in memory: true, max value length: 1000, "
+        + "compression: BLOCK, in memory: true, max value length: 1000, "
         + "bloom filter: none)}", htd.toString());
     HRegionInfo hri = new HRegionInfo(-1, htd, new Text(), new Text("10"));
     System.out.println(hri.toString());
     assertEquals("HRegionInfo", 
         "regionname: hank,,-1, startKey: <>, tableDesc: {" + "name: hank, "
         + "families: {hankfamily:=(hankfamily:, max versions: 3, "
-        + "compression: none, in memory: false, max value length: 2147483647, "
+        + "compression: NONE, in memory: false, max value length: 2147483647, "
         + "bloom filter: none), hankotherfamily:=(hankotherfamily:, "
-        + "max versions: 10, compression: block, in memory: true, max value "
+        + "max versions: 10, compression: BLOCK, in memory: true, max value "
         + "length: 1000, bloom filter: none)}}",
         hri.toString());
   }
