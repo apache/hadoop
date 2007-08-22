@@ -83,7 +83,7 @@ public class HLog implements HConstants {
   long filenum = 0;
   AtomicInteger numEntries = new AtomicInteger(0);
 
-  Integer rollLock = new Integer(0);
+  Integer rollLock = Integer.valueOf(0);
 
   /**
    * Split up a bunch of log files, that are no longer being written to,
@@ -439,35 +439,61 @@ public class HLog implements HConstants {
     notifyAll();
   }
 
+  private static void usage() {
+    System.err.println("Usage: java org.apache.hbase.HLog" +
+        " {--dump <logfile>... | --split <logdir>...}");
+  }
+  
   /**
-   * Pass a log file and it will dump out a text version on
-   * <code>stdout</code>.
+   * Pass one or more log file names and it will either dump out a text version
+   * on <code>stdout</code> or split the specified log files.
    * @param args
    * @throws IOException
    */
   public static void main(String[] args) throws IOException {
-    if (args.length < 1) {
-      System.err.println("Usage: java org.apache.hbase.HLog <logfile>");
+    if (args.length < 2) {
+      usage();
       System.exit(-1);
+    }
+    boolean dump = true;
+    if (args[0].compareTo("--dump") != 0) {
+      if (args[0].compareTo("--split") == 0) {
+        dump = false;
+        
+      } else {
+        usage();
+        System.exit(-1);
+      }
     }
     Configuration conf = new HBaseConfiguration();
     FileSystem fs = FileSystem.get(conf);
-    Path logfile = new Path(args[0]);
-    if (!fs.exists(logfile)) {
-      throw new FileNotFoundException(args[0] + " does not exist");
-    }
-    if (!fs.isFile(logfile)) {
-      throw new IOException(args[0] + " is not a file");
-    }
-    Reader log = new SequenceFile.Reader(fs, logfile, conf);
-    try {
-      HLogKey key = new HLogKey();
-      HLogEdit val = new HLogEdit();
-      while(log.next(key, val)) {
-        System.out.println(key.toString() + " " + val.toString());
+    Path baseDir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
+    
+    for (int i = 1; i < args.length; i++) {
+      Path logPath = new Path(args[i]);
+      if (!fs.exists(logPath)) {
+        throw new FileNotFoundException(args[i] + " does not exist");
       }
-    } finally {
-      log.close();
+      if (dump) {
+        if (!fs.isFile(logPath)) {
+          throw new IOException(args[i] + " is not a file");
+        }
+        Reader log = new SequenceFile.Reader(fs, logPath, conf);
+        try {
+          HLogKey key = new HLogKey();
+          HLogEdit val = new HLogEdit();
+          while(log.next(key, val)) {
+            System.out.println(key.toString() + " " + val.toString());
+          }
+        } finally {
+          log.close();
+        }
+      } else {
+        if (!fs.getFileStatus(logPath).isDir()) {
+          throw new IOException(args[i] + " is not a directory");
+        }
+        splitLog(baseDir, logPath, fs, conf);
+      }
     }
   }
 }
