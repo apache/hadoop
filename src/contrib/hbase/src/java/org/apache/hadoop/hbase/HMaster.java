@@ -38,6 +38,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -101,6 +103,8 @@ HMasterRegionInterface, Runnable {
   long metaRescanInterval;
 
   final AtomicReference<HServerAddress> rootRegionLocation;
+  
+  Lock splitLogLock = new ReentrantLock();
 
   /**
    * Base HRegion scanner class. Holds utilty common to <code>ROOT</code> and
@@ -424,7 +428,32 @@ HMasterRegionInterface, Runnable {
           pendingRegions.contains(info.regionName))
           && (storedInfo == null || storedInfo.getStartCode() != startCode)) {
         
-        // The current assignment is no good; load the region.
+        // The current assignment is no good
+        
+        // Recover the region server's log if there is one.
+        
+        if (serverName.length() != 0) {
+          StringBuilder dirName = new StringBuilder("log_");
+          dirName.append(serverName.replace(":", "_"));
+          Path logDir = new Path(dir, dirName.toString());
+          try {
+            if (fs.exists(logDir)) {
+              splitLogLock.lock();
+              try {
+                HLog.splitLog(dir, logDir, fs, conf);
+
+              } finally {
+                splitLogLock.unlock();
+              }
+            }
+            
+          } catch (IOException e) {
+            LOG.warn("unable to split region server log because: ", e);
+          }
+        }
+        
+        // Now get the region assigned
+        
         unassignedRegions.put(info.regionName, info);
         assignAttempts.put(info.regionName, Long.valueOf(0L));
       }
@@ -513,7 +542,7 @@ HMasterRegionInterface, Runnable {
 
   private RootScanner rootScanner;
   private Thread rootScannerThread;
-  Integer rootScannerLock = new Integer(0);
+  Integer rootScannerLock = Integer.valueOf(0);
 
   @SuppressWarnings("unchecked")
   static class MetaRegion implements Comparable {
@@ -702,7 +731,7 @@ HMasterRegionInterface, Runnable {
 
   MetaScanner metaScanner;
   private Thread metaScannerThread;
-  Integer metaScannerLock = new Integer(0);
+  Integer metaScannerLock = Integer.valueOf(0);
 
   /**
    * The 'unassignedRegions' table maps from a region name to a HRegionInfo 
@@ -1832,9 +1861,23 @@ HMasterRegionInterface, Runnable {
       if (!logSplit) {
         // Process the old log file
 
-        HLog.splitLog(dir, new Path(dir, "log" + "_" +
-            deadServer.getBindAddress() + "_" + deadServer.getPort()), fs, conf);
+        StringBuilder dirName = new StringBuilder("log_");
+        dirName.append(deadServer.getBindAddress());
+        dirName.append("_");
+        dirName.append(deadServer.getPort());
+        Path logdir = new Path(dir, dirName.toString());
 
+        if (fs.exists(logdir)) {
+          if (!splitLogLock.tryLock()) {
+            return false;
+          }
+          try {
+            HLog.splitLog(dir, logdir, fs, conf);
+
+          } finally {
+            splitLogLock.unlock();
+          }
+        }
         logSplit = true;
       }
 
@@ -2154,8 +2197,8 @@ HMasterRegionInterface, Runnable {
             // We can't proceed until the root region is online and has been scanned
             if (LOG.isDebugEnabled()) {
               LOG.debug("root region: " + 
-                ((rootRegionLocation != null)?
-                  rootRegionLocation.toString(): "null") +
+                ((rootRegionLocation.get() != null)?
+                  rootRegionLocation.get().toString(): "null") +
                 ", rootScanned: " + rootScanned);
             }
             return false;
@@ -2946,7 +2989,9 @@ HMasterRegionInterface, Runnable {
       // the PendingServerShutdown operation has a chance to split the log file.
 
       try {
-        msgQueue.put(new PendingServerShutdown(info));
+        if (info != null) {
+          msgQueue.put(new PendingServerShutdown(info));
+        }
       } catch (InterruptedException e) {
         throw new RuntimeException("Putting into msgQueue was interrupted.", e);
       }
