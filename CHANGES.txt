@@ -14,6 +14,7 @@ Trunk (unreleased changes)
     shutdown message
     HADOOP-1729 Recent renaming or META tables breaks hbase shell
     HADOOP-1730 unexpected null value causes META scanner to exit (silently)
+    HADOOP-1747 On a cluster, on restart, regions multiply assigned
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
