@@ -577,6 +577,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     logRollerThread.start();
     leases = new Leases(conf.getLong("hbase.regionserver.lease.period", 
         3 * 60 * 1000), threadWakeFrequency);
+    leases.start();
     
     // Server
     
@@ -1310,7 +1311,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       s = scanners.remove(scannerName);
     }
     if(s == null) {
-      throw new UnknownScannerException(scannerName.toString());
+      throw new UnknownScannerException(scannerName);
     }
     s.close();
     leases.cancelLease(scannerId, scannerId);

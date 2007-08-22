@@ -34,7 +34,7 @@ public class HLogEdit implements Writable {
   private Text column = new Text();
   private byte [] val;
   private long timestamp;
-  private final int MAX_VALUE_LEN = 128;
+  private static final int MAX_VALUE_LEN = 128;
 
   /**
    * Default constructor used by Writable

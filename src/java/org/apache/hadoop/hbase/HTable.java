@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.apache.commons.logging.Log;
@@ -52,7 +53,7 @@ public class HTable implements HConstants {
   protected final int numRetries;
   protected Random rand;
   protected volatile SortedMap<Text, HRegionLocation> tableServers;
-  protected BatchUpdate batch;
+  protected AtomicReference<BatchUpdate> batch;
   
   // For row mutation operations
   
@@ -79,7 +80,7 @@ public class HTable implements HConstants {
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
     this.rand = new Random();
     tableServers = connection.getTableServers(tableName);
-    this.batch = null;
+    this.batch = new AtomicReference<BatchUpdate>();
     closed = false;
   }
 
@@ -113,7 +114,7 @@ public class HTable implements HConstants {
   public synchronized void close() {
     closed = true;
     tableServers = null;
-    batch = null;
+    batch.set(null);
     connection.close(tableName);
   }
   
@@ -136,11 +137,11 @@ public class HTable implements HConstants {
    */
   private void updateInProgress(boolean updateMustBeInProgress) {
     if (updateMustBeInProgress) {
-      if (batch == null) {
+      if (batch.get() == null) {
         throw new IllegalStateException("no update in progress");
       }
     } else {
-      if (batch != null) {
+      if (batch.get() != null) {
         throw new IllegalStateException("update in progress");
       }
     }
@@ -508,8 +509,8 @@ public class HTable implements HConstants {
   public synchronized long startUpdate(final Text row) {
     checkClosed();
     updateInProgress(false);
-    batch = new BatchUpdate();
-    return batch.startUpdate(row);
+    batch.set(new BatchUpdate(rand.nextLong()));
+    return batch.get().startUpdate(row);
   }
   
   /** 
@@ -526,7 +527,7 @@ public class HTable implements HConstants {
       throw new IllegalArgumentException("value cannot be null");
     }
     updateInProgress(true);
-    batch.put(lockid, column, val);
+    batch.get().put(lockid, column, val);
   }
   
   /** 
@@ -538,7 +539,7 @@ public class HTable implements HConstants {
   public void delete(long lockid, Text column) {
     checkClosed();
     updateInProgress(true);
-    batch.delete(lockid, column);
+    batch.get().delete(lockid, column);
   }
   
   /** 
@@ -549,10 +550,10 @@ public class HTable implements HConstants {
   public synchronized void abort(long lockid) {
     checkClosed();
     updateInProgress(true);
-    if (batch.getLockid() != lockid) {
+    if (batch.get().getLockid() != lockid) {
       throw new IllegalArgumentException("invalid lock id " + lockid);
     }
-    batch = null;
+    batch.set(null);
   }
   
   /** 
@@ -577,18 +578,18 @@ public class HTable implements HConstants {
     
     checkClosed();
     updateInProgress(true);
-    if (batch.getLockid() != lockid) {
+    if (batch.get().getLockid() != lockid) {
       throw new IllegalArgumentException("invalid lock id " + lockid);
     }
     
     try {
       for (int tries = 0; tries < numRetries; tries++) {
-        HRegionLocation r = getRegionLocation(batch.getRow());
+        HRegionLocation r = getRegionLocation(batch.get().getRow());
         HRegionInterface server =
           connection.getHRegionConnection(r.getServerAddress());
         try {
           server.batchUpdate(r.getRegionInfo().getRegionName(), timestamp,
-            batch);
+            batch.get());
           break;
         } catch (IOException e) {
           if (e instanceof RemoteException) {
@@ -612,7 +613,7 @@ public class HTable implements HConstants {
         }
       }
     } finally {
-      batch = null;
+      batch.set(null);
     }
   }
   

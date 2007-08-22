@@ -63,6 +63,10 @@ public class Leases {
     this.leaseMonitor = new LeaseMonitor();
     this.leaseMonitorThread = new Thread(leaseMonitor);
     this.leaseMonitorThread.setName("Lease.monitor");
+  }
+  
+  /** Starts the lease monitor */
+  public void start() {
     leaseMonitorThread.start();
   }
 

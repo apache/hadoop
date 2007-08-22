@@ -742,7 +742,7 @@ class HStore implements HConstants {
   }
 
   /** A compaction reader for MapFile */
-  class MapFileCompactionReader implements CompactionReader {
+  static class MapFileCompactionReader implements CompactionReader {
     final MapFile.Reader reader;
     
     MapFileCompactionReader(final MapFile.Reader r) {
@@ -1114,7 +1114,7 @@ class HStore implements HConstants {
   /*
    * Data structure to hold result of a look at store file sizes.
    */
-  class HStoreSize {
+  static class HStoreSize {
     final long aggregate;
     final long largest;
     boolean splitable;
@@ -1361,7 +1361,6 @@ class HStore implements HConstants {
     }
 
     /** Shut it down! */
-    @Override
     public void close() {
       if(! scannerClosed) {
         try {

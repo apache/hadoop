@@ -74,7 +74,6 @@ import org.apache.hadoop.util.StringUtils;
 public class HRegion implements HConstants {
   static String SPLITDIR = "splits";
   static String MERGEDIR = "merges";
-  static String TMPREGION_PREFIX = "tmpregion_";
   static final Random rand = new Random();
   static final Log LOG = LogFactory.getLog(HRegion.class);
   final AtomicBoolean closed = new AtomicBoolean(false);
@@ -991,7 +990,7 @@ public class HRegion implements HConstants {
         storelist.add(stores.get(family));
       }
       return new HScanner(cols, firstRow, timestamp, memcache,
-        storelist.toArray(new HStore [] {}), filter);
+        storelist.toArray(new HStore [storelist.size()]), filter);
     } finally {
       lock.releaseReadLock();
     }

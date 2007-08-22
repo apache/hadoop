@@ -185,9 +185,6 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   /** Mechanism used by concrete implementation to shut down a particular scanner */
   abstract void closeSubScanner(int i);
   
-  /** Mechanism used to shut down the whole scan */
-  public abstract void close();
-
   /** {@inheritDoc} */
   public boolean isWildcardScanner() {
     return this.wildcardMatch;

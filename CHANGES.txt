@@ -19,6 +19,7 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
+    HADOOP-1746 Clean up findbugs warnings
 
 
 Below are the list of changes before 2007-08-18
