@@ -49,6 +49,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-1727.  New classes: MapWritable and SortedMapWritable.
+    (Jim Kellerman via ab)
+
     HADOOP-1651.  Improve progress reporting.
     (Devaraj Das via tomwhite)
 
