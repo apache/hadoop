@@ -35,7 +35,7 @@
   <!-- Override jar target to specify manifest -->
   <target name="jar" depends="compile" unless="skip.contrib">
     <jar
-      jarfile="${build.dir}/hadoop-${name}.jar"
+      jarfile="${build.dir}/hadoop-${version}-${name}.jar"
       manifest="${root}/META-INF/MANIFEST.MF">
       <fileset dir="${build.dir}" includes="classes/"/>
       <fileset dir="${root}" includes="resources/ plugin.xml"/>

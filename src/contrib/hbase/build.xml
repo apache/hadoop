@@ -55,7 +55,7 @@ to call at top-level: ant deploy-contrib compile-core-test
   <!-- Override jar target to specify main class -->
   <target name="jar" depends="compile">
     <jar
-      jarfile="${build.dir}/hadoop-${name}.jar"
+      jarfile="${build.dir}/hadoop-${version}-${name}.jar"
       basedir="${build.classes}"      
     />
   </target>
@@ -73,7 +73,7 @@ to call at top-level: ant deploy-contrib compile-core-test
      debug="${javac.debug}"> 
       <classpath refid="test.classpath"/> 
     </javac>
-    <jar jarfile="${build.dir}/hadoop-${name}-test.jar" >
+    <jar jarfile="${build.dir}/hadoop-${version}-${name}-test.jar" >
       <fileset dir="${build.test}" includes="org/**" />
       <fileset dir="${build.classes}" />
       <fileset dir="${src.test}" includes="**/*.properties" />

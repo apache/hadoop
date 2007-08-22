@@ -75,6 +75,9 @@ Trunk (unreleased changes)
     class, with specialized subclasses for directories and files, to
     save memory on the namenode.  (Konstantin Shvachko via cutting)
 
+    HADOOP-1731.  Add Hadoop's version to contrib jar file names.
+    (cutting)
+
 
 Release 0.14.0 - 2007-08-17
 
