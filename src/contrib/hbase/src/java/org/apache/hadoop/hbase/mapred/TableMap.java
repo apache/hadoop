@@ -71,12 +71,6 @@ public abstract class TableMap extends MapReduceBase implements Mapper {
     job.set(TableInputFormat.COLUMN_LIST, columns);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void configure(JobConf job) {
-    super.configure(job);
-  }
-
   /**
    * Input:
    * @param key is of type HStoreKey

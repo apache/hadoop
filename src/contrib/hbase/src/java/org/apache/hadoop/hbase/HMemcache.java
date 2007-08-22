@@ -380,7 +380,6 @@ public class HMemcache {
     }
 
     /** Shut down map iterators, and release the lock */
-    @Override
     public void close() {
       if(! scannerClosed) {
         try {

@@ -24,7 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Random;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -38,23 +37,31 @@ import org.apache.hadoop.io.Writable;
  */
 public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   
-  // used to generate lock ids
-  private Random rand;
-
   // the row being updated
   private Text row;
   
-  // the lockid
-  private long lockid;
+  // the lockid - not used on server side
+  private transient long lockid;
   
   // the batched operations
   private ArrayList<BatchOperation> operations;
   
-  /** constructor */
+  /** Default constructor - used by Writable. */
   public BatchUpdate() {
-    this.rand = new Random();
     this.row = new Text();
     this.lockid = -1L;
+    this.operations = new ArrayList<BatchOperation>();
+  }
+  
+  /**
+   * Client side constructor. Clients need to provide the lockid by some means
+   * such as Random.nextLong()
+   * 
+   * @param lockid
+   */
+  public BatchUpdate(long lockid) {
+    this.row = new Text();
+    this.lockid = Long.valueOf(Math.abs(lockid));
     this.operations = new ArrayList<BatchOperation>();
   }
 
@@ -84,7 +91,6 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    */
   public synchronized long startUpdate(final Text row) {
     this.row = row;
-    this.lockid = Long.valueOf(Math.abs(rand.nextLong()));
     return this.lockid;
   }
   

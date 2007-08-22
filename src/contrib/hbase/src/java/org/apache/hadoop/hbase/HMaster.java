@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 public class HMaster implements HConstants, HMasterInterface, 
 HMasterRegionInterface, Runnable {
 
+  /** {@inheritDoc} */
   public long getProtocolVersion(String protocol,
       @SuppressWarnings("unused") long clientVersion) throws IOException {
 
@@ -322,7 +323,7 @@ HMasterRegionInterface, Runnable {
           LOG.warn("Deletion of " + parent.getRegionName() + " failed");
         }
         
-        BatchUpdate b = new BatchUpdate();
+        BatchUpdate b = new BatchUpdate(rand.nextLong());
         long lockid = b.startUpdate(parent.getRegionName());
         b.delete(lockid, COL_REGIONINFO);
         b.delete(lockid, COL_SERVER);
@@ -388,7 +389,7 @@ HMasterRegionInterface, Runnable {
             +" no longer has references to " + parent.toString());
       }
       
-      BatchUpdate b = new BatchUpdate();
+      BatchUpdate b = new BatchUpdate(rand.nextLong());
       long lockid = b.startUpdate(parent);
       b.delete(lockid, splitColumn);
       srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
@@ -542,7 +543,7 @@ HMasterRegionInterface, Runnable {
 
   private RootScanner rootScanner;
   private Thread rootScannerThread;
-  Integer rootScannerLock = Integer.valueOf(0);
+  Integer rootScannerLock = new Integer(0);
 
   @SuppressWarnings("unchecked")
   static class MetaRegion implements Comparable {
@@ -731,7 +732,7 @@ HMasterRegionInterface, Runnable {
 
   MetaScanner metaScanner;
   private Thread metaScannerThread;
-  Integer metaScannerLock = Integer.valueOf(0);
+  Integer metaScannerLock = new Integer(0);
 
   /**
    * The 'unassignedRegions' table maps from a region name to a HRegionInfo 
@@ -938,6 +939,7 @@ HMasterRegionInterface, Runnable {
     Thread.currentThread().setName("HMaster");
     try { 
       // Start things up
+      this.serverLeases.start();
       this.rootScannerThread.start();
       this.metaScannerThread.start();
 
@@ -1824,7 +1826,7 @@ HMasterRegionInterface, Runnable {
       // Remove server from root/meta entries
       
       for (ToDoEntry e: toDoList) {
-        BatchUpdate b = new BatchUpdate();
+        BatchUpdate b = new BatchUpdate(rand.nextLong());
         long lockid = b.startUpdate(e.row);
       
         if (e.deleteRegion) {
@@ -2094,7 +2096,7 @@ HMasterRegionInterface, Runnable {
         }
 
         try {
-          BatchUpdate b = new BatchUpdate();
+          BatchUpdate b = new BatchUpdate(rand.nextLong());
           long lockid = b.startUpdate(regionInfo.regionName);
 
           if (deleteRegion) {
@@ -2239,7 +2241,7 @@ HMasterRegionInterface, Runnable {
           serverAddress.toString());
 
         try {
-          BatchUpdate b = new BatchUpdate();
+          BatchUpdate b = new BatchUpdate(rand.nextLong());
           long lockid = b.startUpdate(region.getRegionName());
           b.put(lockid, COL_SERVER,
             Writables.stringToBytes(serverAddress.toString()));
@@ -2404,7 +2406,7 @@ HMasterRegionInterface, Runnable {
           
       HRegionInfo info = region.getRegionInfo();
       Text regionName = region.getRegionName();
-      BatchUpdate b = new BatchUpdate();
+      BatchUpdate b = new BatchUpdate(rand.nextLong());
       long lockid = b.startUpdate(regionName);
       b.put(lockid, COL_REGIONINFO, Writables.getBytes(info));
       server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
@@ -2689,7 +2691,7 @@ HMasterRegionInterface, Runnable {
           LOG.debug("updating columns in row: " + i.regionName);
         }
 
-        BatchUpdate b = new BatchUpdate();
+        BatchUpdate b = new BatchUpdate(rand.nextLong());
         lockid = b.startUpdate(i.regionName);
         updateRegionInfo(b, i);
         b.delete(lockid, COL_SERVER);
@@ -2846,7 +2848,7 @@ HMasterRegionInterface, Runnable {
     protected void updateRegionInfo(HRegionInterface server, Text regionName,
         HRegionInfo i) throws IOException {
 
-      BatchUpdate b = new BatchUpdate();
+      BatchUpdate b = new BatchUpdate(rand.nextLong());
       long lockid = b.startUpdate(i.regionName);
       b.put(lockid, COL_REGIONINFO, Writables.getBytes(i));
       

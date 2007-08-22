@@ -37,7 +37,7 @@ public class HColumnDescriptor implements WritableComparable {
   // For future backward compatibility
   private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)1;
   
-  // Legal family names can only contain 'word characters' and end in a colon.
+  /** Legal family names can only contain 'word characters' and end in a colon. */
   public static final Pattern LEGAL_FAMILY_NAME = Pattern.compile("\\w+:");
 
   /** 

@@ -141,14 +141,14 @@ class HRegiondirReader {
       Text family = new Text(d.getName() + ":");
       families.add(family);
     }
-    return families.toArray(new Text [] {});
+    return families.toArray(new Text [families.size()]);
   }
   
   List <HRegionInfo> getRegions() {
     return this.infos;
   }
   
-  HRegionInfo getRegionInfo(final String tableName) {
+  HRegionInfo getRegionInfo(final Text tableName) {
     HRegionInfo result = null;
     for(HRegionInfo i: getRegions()) {
       if(i.tableDesc.getName().equals(tableName)) {
@@ -163,14 +163,15 @@ class HRegiondirReader {
     return result;
   }
   
-  private void dump(final String tableName) throws IOException {
+  private void dump(final Text tableName) throws IOException {
     dump(getRegionInfo(tableName));
   }
   
   private void dump(final HRegionInfo info) throws IOException {
     HRegion r = new HRegion(this.parentdir, null,
         FileSystem.get(this.conf), conf, info, null);
-    Text [] families = info.tableDesc.families().keySet().toArray(new Text [] {});
+    Text [] families = info.tableDesc.families().keySet().toArray(
+        new Text [info.tableDesc.families.size()]);
     HInternalScannerInterface scanner =
       r.getScanner(families, new Text(), System.currentTimeMillis(), null);
     
@@ -224,7 +225,7 @@ class HRegiondirReader {
       }
     } else {
       for (int i = 1; i < args.length; i++) {
-        reader.dump(args[i]);
+        reader.dump(new Text(args[i]));
       }
     }
   }

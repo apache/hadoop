@@ -83,7 +83,7 @@ public class HLog implements HConstants {
   long filenum = 0;
   AtomicInteger numEntries = new AtomicInteger(0);
 
-  Integer rollLock = Integer.valueOf(0);
+  Integer rollLock = new Integer(0);
 
   /**
    * Split up a bunch of log files, that are no longer being written to,
