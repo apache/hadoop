@@ -18,7 +18,6 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
-import java.util.*;
 import org.apache.hadoop.io.*;
 
 /**************************************************
@@ -63,6 +62,13 @@ class Block implements Writable, Comparable {
   public Block(long blkid, long len) {
     this.blkid = blkid;
     this.len = len;
+  }
+
+  /**
+   */
+  public Block(Block blk) {
+    this.blkid = blk.blkid;
+    this.len = blk.len;
   }
 
   /**

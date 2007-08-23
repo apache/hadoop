@@ -44,6 +44,10 @@ Trunk (unreleased changes)
     HADOOP-1759.  Change file name in INode from String to byte[],
     saving memory on the namenode. (Konstantin Shvachko via cutting)
 
+    HADOOP-1766.  Save memory in namenode by having BlockInfo extend
+    Block, and replace many uses of Block with BlockInfo.
+    (Konstantin Shvachko via cutting)
+
   BUG FIXES
 
     HADOOP-1463.  HDFS report correct usage statistics for disk space

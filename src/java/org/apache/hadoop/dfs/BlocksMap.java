@@ -29,7 +29,7 @@ class BlocksMap {
   /**
    * Internal class for block metadata.
    */
-  static class BlockInfo {
+  private static class BlockInfo extends Block {
     private INodeFile          inode;
       
     /** nodes could contain some null entries at the end, so 
@@ -37,7 +37,10 @@ class BlocksMap {
      *  if nodes != null then nodes[0] != null.
      */
     private DatanodeDescriptor[]           nodes;
-    private Block                          block; //block that was inserted.   
+
+    BlockInfo(Block blk) {
+      super(blk);
+    }
   }
       
   private static class NodeIterator implements Iterator<DatanodeDescriptor> {
@@ -66,8 +69,7 @@ class BlocksMap {
   private BlockInfo checkBlockInfo(Block b) {
     BlockInfo info = map.get(b);
     if (info == null) {
-      info = new BlockInfo();
-      info.block = b;
+      info = new BlockInfo(b);
       map.put(b, info);
     }
     return info;
@@ -96,7 +98,7 @@ class BlocksMap {
   /** Returns the block object it it exists in the map. */
   public Block getStoredBlock(Block b) {
     BlockInfo info = map.get(b);
-    return (info != null) ? info.block : null;
+    return (info != null) ? info : null;
   }
     
   /** Returned Iterator does not support. */
