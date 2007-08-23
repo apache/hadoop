@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.dfs.DFSClient.DFSDataInputStream;
 import org.apache.commons.logging.Log;
@@ -95,7 +95,7 @@ public class TestDataTransferProtocol extends TestCase {
         assertEquals("checking byte[" + i + "]", recvBuf[i], retBuf[i]);
       }
     } finally {
-      FileUtil.closeSocket(sock);
+      IOUtils.closeSocket(sock);
     }
   }
   

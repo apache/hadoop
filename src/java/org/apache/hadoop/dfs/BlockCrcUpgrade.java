@@ -22,7 +22,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.retry.*;
@@ -133,6 +132,7 @@ class DNBlockUpgradeInfo {
   boolean offlineUpgrade;
   
   /** Returns string that has block id and the associated file */
+  @Override
   public String toString() {
     return block + " (filename: " +
            ( (crcInfo == null || crcInfo.fileName == null) ? 
@@ -186,7 +186,7 @@ class BlockCrcUpgradeUtils {
         DFSClient.BlockReader reader = DFSClient.BlockReader.newBlockReader
                     (dnSock, crcFile, blk.getBlockId(), offset, len, 
                      (int)Math.min(len, 4096));
-        FileUtil.readFully(reader, buf, bufOffset, (int)len);
+        IOUtils.readFully(reader, buf, bufOffset, (int)len);
         return;
       } catch (IOException ioe) {
         LOG.warn("Could not read " + blk + " from " + dn.getName() + " : " +
@@ -243,7 +243,7 @@ class BlockCrcUpgradeUtils {
       }
       in.readFully(buf, bufOffset, len);
     } finally {
-      FileUtil.closeStream(in);
+      IOUtils.closeStream(in);
     }
   }
   
@@ -353,12 +353,12 @@ class BlockCrcUpgradeUtils {
         in = new FileInputStream( metaFile );
         in.skip(7); //should be skipFully().
         byte[] storedChecksum = new byte[ crcBuf.length ];
-        FileUtil.readFully(in, storedChecksum, 0, storedChecksum.length);
+        IOUtils.readFully(in, storedChecksum, 0, storedChecksum.length);
         if ( !Arrays.equals(crcBuf, storedChecksum) ) {
           throw new IOException("CRC does not match");
         }
       } finally {
-        FileUtil.closeStream(in);
+        IOUtils.closeStream(in);
       }
       return;
     }
@@ -390,7 +390,7 @@ class BlockCrcUpgradeUtils {
                               metaFile);
       }
     } finally {
-      FileUtil.closeStream(out);
+      IOUtils.closeStream(out);
       if ( tmpBlockFile != null ) {
         tmpBlockFile.delete();
       }
@@ -475,7 +475,7 @@ class BlockCrcUpgradeUtils {
          * But we are not optimizing for this case.
          */
         if ( toRead > 0 ) {
-          FileUtil.readFully(in, blockBuf, 0, toRead);
+          IOUtils.readFully(in, blockBuf, 0, toRead);
         }
 
         if ( (toRead == 0 && bytesAfter.length > 0) || toRead >= verifyLen ) {
@@ -533,7 +533,7 @@ class BlockCrcUpgradeUtils {
       assert newCrcBuf.length == newCrcOffset : "something is wrong"; 
       return newCrcBuf;
     } finally {
-      FileUtil.closeStream(in);
+      IOUtils.closeStream(in);
     }
   }
 
@@ -811,7 +811,7 @@ class BlockCrcUpgradeUtils {
       
       while (totalRead < blockLen) {
         int toRead = Math.min((int)(blockLen - totalRead), bytesPerChecksum);
-        FileUtil.readFully(in, dataBuf, 0, toRead );
+        IOUtils.readFully(in, dataBuf, 0, toRead );
         
         checksum.update(dataBuf, 0, toRead);
         crcBufPos += checksum.writeValue(crcBuf, crcBufPos, true);
@@ -820,7 +820,7 @@ class BlockCrcUpgradeUtils {
         totalRead += toRead;
       }
     } finally {
-      FileUtil.closeStream(in);
+      IOUtils.closeStream(in);
     }
     
     writeCrcData(blockInfo, bytesPerChecksum, crcBuf);
@@ -902,7 +902,7 @@ class BlockCrcUpgradeUtils {
         }
       } while (false);
     } finally {
-      FileUtil.closeSocket( dnSock );
+      IOUtils.closeSocket( dnSock );
     }
     
     throw new IOException("Error while fetching CRC from replica on " +
@@ -1139,6 +1139,7 @@ class BlockCrcUpgradeUtils {
       this.errors = errors;
     }
 
+    @Override
     public void readFields(DataInput in) throws IOException {
       super.readFields(in);
       datanodeId.readFields(in);
@@ -1147,6 +1148,7 @@ class BlockCrcUpgradeUtils {
       errors = in.readInt();
     }
 
+    @Override
     public void write(DataOutput out) throws IOException {
       super.write(out);
       datanodeId.write(out);
@@ -1170,11 +1172,13 @@ class BlockCrcUpgradeUtils {
       block = blk;
     }
 
+    @Override
     public void readFields(DataInput in) throws IOException {
       super.readFields(in);
       block.readFields(in);
     }
 
+    @Override
     public void write(DataOutput out) throws IOException {
       super.write(out);
       block.write(out);
@@ -1194,11 +1198,13 @@ class BlockCrcUpgradeUtils {
       crcInfo = info;
     }
 
+    @Override
     public void readFields(DataInput in) throws IOException {
       super.readFields(in);
       crcInfo.readFields(in);
     }
 
+    @Override
     public void write(DataOutput out) throws IOException {
       super.write(out);
       crcInfo.write(out);
@@ -1305,6 +1311,7 @@ class BlockCrcUpgradeObjectDatanode extends UpgradeObjectDatanode {
       (short) Math.floor(blocksUpgraded*100.0/blocksToUpgrade);
   }
 
+  @Override
   public UpgradeCommand completeUpgrade() throws IOException {
     // return latest stats command.
     assert getUpgradeStatus() == 100;
@@ -1375,6 +1382,7 @@ class BlockCrcUpgradeObjectDatanode extends UpgradeObjectDatanode {
     }
   }
   
+  @Override
   void doUpgrade() throws IOException {
     doUpgradeInternal();
   }
@@ -1661,6 +1669,7 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
     return (short) Math.floor(avgDatanodeCompletionPct * 0.9);
   }
 
+  @Override
   public UpgradeCommand startUpgrade() throws IOException {
     
     assert monitorThread == null;

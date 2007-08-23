@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     HADOOP-1744.  Remove many uses of the deprecated UTF8 class from
     the HDFS namenode.  (Christophe Taton via cutting)
 
+    HADOOP-1654.  Add IOUtils class, containing generic io-related
+    utility methods.   (Enis Soztutar via cutting)
+
 
 Release 0.14.0 - 2007-08-17
 

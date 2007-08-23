@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -32,8 +33,6 @@ import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.dfs.BlockCommand;
 import org.apache.hadoop.dfs.DatanodeProtocol;
-import org.apache.hadoop.fs.FileUtil;
-
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -449,6 +448,7 @@ public class DataNode implements FSConstants, Runnable {
     Count(int init) { value = init; }
     synchronized void incr() { value++; }
     synchronized void decr() { value--; }
+    @Override
     public String toString() { return Integer.toString(value); }
     public int getValue() { return value; }
   }
@@ -1063,7 +1063,7 @@ public class DataNode implements FSConstants, Runnable {
         }
 
         byte [] buf = new byte[(int)fileSize];
-        FileUtil.readFully(checksumIn, buf, 0, buf.length);
+        IOUtils.readFully(checksumIn, buf, 0, buf.length);
         
         out = new DataOutputStream(s.getOutputStream());
         
@@ -1074,7 +1074,7 @@ public class DataNode implements FSConstants, Runnable {
         //last DATA_CHUNK
         out.writeInt(0);
       } finally {
-        FileUtil.closeStream(checksumIn);
+        IOUtils.closeStream(checksumIn);
       }
     }
   }
@@ -1171,7 +1171,7 @@ public class DataNode implements FSConstants, Runnable {
         blockInFile.seek(offset);
         if (checksumSkip > 0) {
           //Should we use seek() for checksum file as well?
-          FileUtil.skipFully(checksumIn, checksumSkip);
+          IOUtils.skipFully(checksumIn, checksumSkip);
         }
       }
       
@@ -1215,7 +1215,7 @@ public class DataNode implements FSConstants, Runnable {
               LOG.warn( " Could not read checksum for data at offset " +
                         offset + " for block " + block + " got : " + 
                         StringUtils.stringifyException(e) );
-              FileUtil.closeStream( checksumIn );
+              IOUtils.closeStream( checksumIn );
               checksumIn = null;
               if ( corruptChecksumOk ) {
                 // Just fill the array with zeros.
@@ -1238,10 +1238,10 @@ public class DataNode implements FSConstants, Runnable {
         offset += len;
       }
     } finally {
-      FileUtil.closeStream( blockInFile );
-      FileUtil.closeStream( checksumIn );
-      FileUtil.closeStream( blockIn );
-      FileUtil.closeStream( out );
+      IOUtils.closeStream( blockInFile );
+      IOUtils.closeStream( checksumIn );
+      IOUtils.closeStream( blockIn );
+      IOUtils.closeStream( out );
     }
     
     return totalRead;
@@ -1285,7 +1285,7 @@ public class DataNode implements FSConstants, Runnable {
                   targets[0].getName() + " got " + 
                   StringUtils.stringifyException( ie ) );
       } finally {
-        FileUtil.closeSocket(sock);
+        IOUtils.closeSocket(sock);
         xmitsInProgress--;
       }
     }
@@ -1393,6 +1393,7 @@ public class DataNode implements FSConstants, Runnable {
     return null;
   }
 
+  @Override
   public String toString() {
     return "DataNode{" +
       "data=" + data +
@@ -1465,6 +1466,7 @@ public class DataNode implements FSConstants, Runnable {
 
     // read & log any error messages from the running script
     Thread errThread = new Thread() {
+        @Override
         public void start() {
           try {
             String errLine = errR.readLine();

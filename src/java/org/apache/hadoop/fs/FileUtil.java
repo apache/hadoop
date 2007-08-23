@@ -22,9 +22,8 @@ import java.io.*;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.net.Socket;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -137,12 +136,8 @@ public class FileUtil {
       }
     } else if (srcFS.isFile(src)) {
       InputStream in = srcFS.open(src);
-      try {
-        OutputStream out = dstFS.create(dst, overwrite);
-        copyContent(in, out, conf);
-      } finally {
-        in.close();
-      }
+      OutputStream out = dstFS.create(dst, overwrite);
+      IOUtils.copyBytes(in, out, conf, true);
     } else {
       throw new IOException(src.toString() + ": No such file or directory");
     }
@@ -172,7 +167,7 @@ public class FileUtil {
         if (srcFS.isFile(contents[i])) {
           InputStream in = srcFS.open(contents[i]);
           try {
-            copyContent(in, out, conf, false);
+            IOUtils.copyBytes(in, out, conf, false);
             if (addString!=null)
               out.write(addString.getBytes("UTF-8"));
                 
@@ -211,11 +206,7 @@ public class FileUtil {
       }
     } else if (src.isFile()) {
       InputStream in = new FileInputStream(src);
-      try {
-        copyContent(in, dstFS.create(dst), conf);
-      } finally {
-        in.close();
-      } 
+      IOUtils.copyBytes(in, dstFS.create(dst), conf);
     }
     if (deleteSource) {
       return FileUtil.fullyDelete(src);
@@ -239,37 +230,12 @@ public class FileUtil {
       }
     } else if (srcFS.isFile(src)) {
       InputStream in = srcFS.open(src);
-      try {
-        copyContent(in, new FileOutputStream(dst), conf);
-      } finally {
-        in.close();
-      } 
+      IOUtils.copyBytes(in, new FileOutputStream(dst), conf);
     }
     if (deleteSource) {
       return srcFS.delete(src);
     } else {
       return true;
-    }
-  }
-
-  private static void copyContent(InputStream in, OutputStream out,
-                                  Configuration conf) throws IOException {
-    copyContent(in, out, conf, true);
-  }
-
-  
-  private static void copyContent(InputStream in, OutputStream out,
-                                  Configuration conf, boolean close) throws IOException {
-    byte buf[] = new byte[conf.getInt("io.file.buffer.size", 4096)];
-    try {
-      int bytesRead = in.read(buf);
-      while (bytesRead >= 0) {
-        out.write(buf, 0, bytesRead);
-        bytesRead = in.read(buf);
-      }
-    } finally {
-      if (close)
-        out.close();
     }
   }
 
@@ -519,51 +485,5 @@ public class FileUtil {
       tmp.deleteOnExit();
     }
     return tmp;
-  }
-  
-  //XXX These functions should be in IO Utils rather than FileUtil
-  // Reads len bytes in a loop.
-  public static void readFully( InputStream in, byte buf[],
-                                int off, int len ) throws IOException {
-    int toRead = len;
-    while ( toRead > 0 ) {
-      int ret = in.read( buf, off, toRead );
-      if ( ret < 0 ) {
-        throw new IOException( "Premeture EOF from inputStream");
-      }
-      toRead -= ret;
-      off += ret;
-    }
-  }
-  
-  public static void skipFully( InputStream in, long len ) throws IOException {
-    long toSkip = len;
-    while ( toSkip > 0 ) {
-      long ret = in.skip( toSkip );
-      if ( ret < 0 ) {
-        throw new IOException( "Premeture EOF from inputStream");
-      }
-      toSkip -= ret;
-    }
-  }
-  
-  public static void closeSocket( Socket sock ) {
-    // avoids try { close() } dance
-    if ( sock != null ) {
-      try {
-       sock.close();
-      } catch ( IOException ignored ) {
-      }
-    }
-  }
-
-  public static void closeStream(Closeable closeable ) {
-    // avoids try { close() } dance
-    if ( closeable != null ) {
-      try {
-        closeable.close();
-      } catch ( IOException ignored ) {
-      }
-    }
   }
 }

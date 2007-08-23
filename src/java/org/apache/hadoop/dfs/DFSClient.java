@@ -79,6 +79,7 @@ class DFSClient implements FSConstants {
       clients.add(client);
     }
 
+    @Override
     public synchronized void run() {
       for (DFSClient client : clients) {
         if (client.running) {
@@ -591,6 +592,7 @@ class DFSClient implements FSConstants {
      * because it first reads the data to user buffer and then checks
      * the checksum.
      */
+    @Override
     public synchronized int read(byte[] buf, int off, int len) 
                                  throws IOException {
       
@@ -610,6 +612,7 @@ class DFSClient implements FSConstants {
       return super.read(buf, off, len);
     }
 
+    @Override
     public synchronized long skip(long n) throws IOException {
       /* How can we make sure we don't throw a ChecksumException, at least
        * in majority of the cases?. This one throws. */  
@@ -629,11 +632,13 @@ class DFSClient implements FSConstants {
       return nSkipped;
     }
 
+    @Override
     public int read() throws IOException {
       throw new IOException("read() is not expected to be invoked. " +
                             "Use read(buf, off, len) instead.");
     }
     
+    @Override
     public boolean seekToNewSource(long targetPos) throws IOException {
       /* Checksum errors are handled outside the BlockReader. 
        * DFSInputStream does not always call 'seekToNewSource'. In the 
@@ -642,15 +647,18 @@ class DFSClient implements FSConstants {
       return false;
     }
     
+    @Override
     public void seek(long pos) throws IOException {
       throw new IOException("Seek() is not supported in BlockInputChecker");
     }
 
+    @Override
     protected long getChunkPosition(long pos) {
       throw new RuntimeException("getChunkPosition() is not supported, " +
                                  "since seek is not required");
     }
     
+    @Override
     protected synchronized int readChunk(long pos, byte[] buf, int offset, 
                                          int len, byte[] checksumBuf) 
                                          throws IOException {
@@ -690,11 +698,11 @@ class DFSClient implements FSConstants {
 
       if ( chunkLen > 0 ) {
         // len should be >= chunkLen
-        FileUtil.readFully(in, buf, offset, chunkLen);
+        IOUtils.readFully(in, buf, offset, chunkLen);
       }
       
       if ( checksumSize > 0 ) {
-        FileUtil.readFully(in, checksumBuf, 0, checksumSize);
+        IOUtils.readFully(in, checksumBuf, 0, checksumSize);
       }
 
       lastChunkOffset = chunkOffset;
@@ -773,6 +781,7 @@ class DFSClient implements FSConstants {
                               startOffset, firstChunkOffset );
     }
 
+    @Override
     public synchronized void close() throws IOException {
       startOffset = -1;
       checksum = null;
@@ -1005,6 +1014,7 @@ class DFSClient implements FSConstants {
     /**
      * Close it down!
      */
+    @Override
     public synchronized void close() throws IOException {
       checkOpen();
       if (closed) {
@@ -1024,6 +1034,7 @@ class DFSClient implements FSConstants {
       closed = true;
     }
 
+    @Override
     public synchronized int read() throws IOException {
       int ret = read( oneByteBuf, 0, 1 );
       return ( ret <= 0 ) ? -1 : (oneByteBuf[0] & 0xff);
@@ -1062,6 +1073,7 @@ class DFSClient implements FSConstants {
     /**
      * Read the entire buffer.
      */
+    @Override
     public synchronized int read(byte buf[], int off, int len) throws IOException {
       checkOpen();
       if (closed) {
@@ -1197,6 +1209,7 @@ class DFSClient implements FSConstants {
      * 
      * @return actual number of bytes read
      */
+    @Override
     public int read(long position, byte[] buffer, int offset, int length)
       throws IOException {
       // sanity checks
@@ -1230,6 +1243,7 @@ class DFSClient implements FSConstants {
       return realLen;
     }
      
+    @Override
     public long skip(long n) throws IOException {
       if ( n > 0 ) {
         long curPos = getPos();
@@ -1246,6 +1260,7 @@ class DFSClient implements FSConstants {
     /**
      * Seek to a new arbitrary location
      */
+    @Override
     public synchronized void seek(long targetPos) throws IOException {
       if (targetPos > getFileLength()) {
         throw new IOException("Cannot seek after EOF");
@@ -1276,6 +1291,7 @@ class DFSClient implements FSConstants {
      * a node other than the current node is found, then returns true. 
      * If another node could not be found, then returns false.
      */
+    @Override
     public synchronized boolean seekToNewSource(long targetPos) throws IOException {
       boolean markedDead = deadNodes.containsKey(currentNode);
       addToDeadNodes(currentNode);
@@ -1296,12 +1312,14 @@ class DFSClient implements FSConstants {
         
     /**
      */
+    @Override
     public synchronized long getPos() throws IOException {
       return pos;
     }
 
     /**
      */
+    @Override
     public synchronized int available() throws IOException {
       if (closed) {
         throw new IOException("Stream closed");
@@ -1312,11 +1330,14 @@ class DFSClient implements FSConstants {
     /**
      * We definitely don't support marks
      */
+    @Override
     public boolean markSupported() {
       return false;
     }
+    @Override
     public void mark(int readLimit) {
     }
+    @Override
     public void reset() throws IOException {
       throw new IOException("Mark/reset not supported");
     }
@@ -1537,6 +1558,7 @@ class DFSClient implements FSConstants {
     }
 
     // @see FSOutputSummer#writeChunk()
+    @Override
     protected void writeChunk(byte[] b, int offset, int len, byte[] checksum) 
                                                           throws IOException {
       checkOpen();
@@ -1599,7 +1621,7 @@ class DFSClient implements FSConstants {
           while ( bytesLeft >= 0 ) {
             int len = (int) Math.min( bytesLeft, bytesPerChecksum );
             if ( len > 0 ) {
-              FileUtil.readFully( in, buf, 0, len + checksumSize);
+              IOUtils.readFully( in, buf, 0, len + checksumSize);
             }
 
             blockStream.writeInt( len );
@@ -1680,6 +1702,7 @@ class DFSClient implements FSConstants {
      * Closes this output stream and releases any system 
      * resources associated with this stream.
      */
+    @Override
     public synchronized void close() throws IOException {
       checkOpen();
       if (closed) {
