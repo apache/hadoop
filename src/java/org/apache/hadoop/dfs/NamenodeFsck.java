@@ -71,7 +71,7 @@ public class NamenodeFsck {
   public static final int FIXING_DELETE = 2;
   
   private NameNode nn;
-  private UTF8 lostFound = null;
+  private String lostFound = null;
   private boolean lfInited = false;
   private boolean lfInitedOk = false;
   private boolean showFiles = false;
@@ -248,7 +248,7 @@ public class NamenodeFsck {
     if (!lfInitedOk) {
       return;
     }
-    String target = lostFound.toString() + file.getPath();
+    String target = lostFound + file.getPath();
     String errmsg = "Failed to move " + file.getPath() + " to /lost+found";
     try {
       if (!nn.mkdirs(target)) {
@@ -294,7 +294,7 @@ public class NamenodeFsck {
       }
       if (fos != null) fos.close();
       LOG.warn("\n - moved corrupted file " + file.getPath() + " to /lost+found");
-      dfs.delete(new UTF8(file.getPath().toString()));
+      dfs.delete(file.getPath().toString());
     }  catch (Exception e) {
       e.printStackTrace();
       LOG.warn(errmsg + ": " + e.getMessage());
@@ -419,7 +419,7 @@ public class NamenodeFsck {
   private void lostFoundInit(DFSClient dfs) {
     lfInited = true;
     try {
-      UTF8 lfName = new UTF8("/lost+found");
+      String lfName = "/lost+found";
       // check that /lost+found exists
       if (!dfs.exists(lfName)) {
         lfInitedOk = dfs.mkdirs(lfName);

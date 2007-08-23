@@ -135,14 +135,14 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     
       // create a directory
       try {
-        assertTrue(dfsClient.mkdirs(new UTF8("/data")));
+        assertTrue(dfsClient.mkdirs("/data"));
         assertMkdirs("/data", false);
       } catch (IOException ioe) {
       	ioe.printStackTrace();
       }
        
       try {
-        assertTrue(dfsClient.mkdirs(new UTF8("data")));
+        assertTrue(dfsClient.mkdirs("data"));
         assertMkdirs("data", true);
       } catch (IOException ioe) {
        	ioe.printStackTrace();
@@ -175,7 +175,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     
       // delete the file
       try {
-        dfsClient.delete(new UTF8("/data/yy"));
+        dfsClient.delete("/data/yy");
         assertDelete("/data/yy", false);
       } catch(IOException ioe) {
         ioe.printStackTrace();
@@ -184,21 +184,21 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     
       // rename the file
       try {
-        dfsClient.rename(new UTF8("/data/xx"), new UTF8("/data/yy"));
+        dfsClient.rename("/data/xx", "/data/yy");
         assertRename("/data/xx", "/data/yy", false);
       } catch(IOException ioe) {
       	ioe.printStackTrace();
       }
 
       try {
-        dfsClient.delete(new UTF8("/data/xx"));
+        dfsClient.delete("/data/xx");
         assertDelete("/data/xx", true);
       } catch(IOException ioe) {
     	ioe.printStackTrace();
       }
       
       try {
-        dfsClient.rename(new UTF8("/data/xx"), new UTF8("/data/yy"));    
+        dfsClient.rename("/data/xx", "/data/yy");    
         assertRename("/data/xx", "/data/yy", true);
       } catch(IOException ioe) {
     	ioe.printStackTrace();

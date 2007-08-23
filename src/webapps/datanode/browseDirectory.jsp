@@ -31,10 +31,10 @@
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
     
     DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
-    UTF8 target = new UTF8(dir);
+    String target = dir;
     if (!dfs.exists(target)) {
       out.print("<h3>File or directory : " + target + " does not exists</h3>");
-      JspHelper.printGotoForm(out, namenodeInfoPort, target.toString());
+      JspHelper.printGotoForm(out, namenodeInfoPort, target);
     }
     else {
       if( !dfs.isDirectory(target) ) { // a file
@@ -67,7 +67,7 @@
         return;
       }
       // directory
-      DFSFileInfo[] files = dfs.listPaths(target.toString());
+      DFSFileInfo[] files = dfs.listPaths(target);
       //generate a table and dump the info
       String [] headings = new String[6];
       headings[0] = "Name"; headings[1] = "Type"; headings[2] = "Size";

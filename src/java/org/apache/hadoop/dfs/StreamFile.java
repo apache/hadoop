@@ -17,17 +17,13 @@
  */
 package org.apache.hadoop.dfs;
 
-
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
 import java.util.*;
 import java.net.*;
-import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
-import java.text.DateFormat;
 
 public class StreamFile extends HttpServlet {
 
@@ -50,7 +46,7 @@ public class StreamFile extends HttpServlet {
       return;
     }
     DFSClient dfs = new DFSClient(nameNodeAddr, conf);
-    FSInputStream in = dfs.open(new UTF8(filename));
+    FSInputStream in = dfs.open(filename);
     OutputStream os = response.getOutputStream();
     response.setHeader("Content-Disposition", "attachment; filename=\"" + 
                        filename + "\"");

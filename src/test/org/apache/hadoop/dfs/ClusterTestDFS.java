@@ -307,7 +307,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
         ListIterator li = testfilesList.listIterator();
         while (li.hasNext()) {
           testFileName = (UTF8) li.next();
-          FSInputStream nis = dfsClient.open(testFileName);
+          FSInputStream nis = dfsClient.open(testFileName.toString());
           byte[] bufferGolden = new byte[bufferSize];
           int m = 42;
           try {
@@ -337,7 +337,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
         li = testfilesList.listIterator();
         while (li.hasNext()) {
           testFileName = (UTF8) li.next();
-          assertTrue(dfsClient.delete(testFileName));
+          assertTrue(dfsClient.delete(testFileName.toString()));
         }
 
         //

@@ -149,7 +149,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
       } else {
         // this is not a directory. Checksum the file data.
         CRC32 fileCRC = new CRC32();
-        FSInputStream in = client.open(new UTF8(path));
+        FSInputStream in = client.open(path);
         byte[] buf = new byte[4096];
         int nRead = 0;
         while ( (nRead = in.read(buf, 0, buf.length)) > 0 ) {

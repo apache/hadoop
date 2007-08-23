@@ -85,6 +85,9 @@ Trunk (unreleased changes)
     installed in a particular location, as long as it is on $PATH.
     (cutting)
 
+    HADOOP-1744.  Remove many uses of the deprecated UTF8 class from
+    the HDFS namenode.  (Christophe Taton via cutting)
+
 
 Release 0.14.0 - 2007-08-17
 

@@ -94,13 +94,6 @@ public class DistributedFileSystem extends FileSystem {
     workingDir = makeAbsolute(dir);
   }
 
-  /**
-   * @deprecated use {@link #getPathName(Path)} instead.
-   */
-  private UTF8 getPath(Path file) {
-    return new UTF8(getPathName(file));
-  }
-
   private String getPathName(Path file) {
     checkPath(file);
     String result = makeAbsolute(file).toUri().getPath();
@@ -117,7 +110,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-    return new DFSClient.DFSDataInputStream(dfs.open(getPath(f),bufferSize));
+    return new DFSClient.DFSDataInputStream(dfs.open(getPathName(f),bufferSize));
   }
 
   public FSDataOutputStream create(Path f, boolean overwrite,
@@ -146,18 +139,18 @@ public class DistributedFileSystem extends FileSystem {
    * Rename files/dirs
    */
   public boolean rename(Path src, Path dst) throws IOException {
-    return dfs.rename(getPath(src), getPath(dst));
+    return dfs.rename(getPathName(src), getPathName(dst));
   }
 
   /**
    * Get rid of Path f, whether a true file or dir.
    */
   public boolean delete(Path f) throws IOException {
-    return dfs.delete(getPath(f));
+    return dfs.delete(getPathName(f));
   }
 
   public boolean exists(Path f) throws IOException {
-    return dfs.exists(getPath(f));
+    return dfs.exists(getPathName(f));
   }
 
   public long getContentLength(Path f) throws IOException {
@@ -187,7 +180,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   public boolean mkdirs(Path f) throws IOException {
-    return dfs.mkdirs(getPath(f));
+    return dfs.mkdirs(getPathName(f));
   }
 
   public void close() throws IOException {

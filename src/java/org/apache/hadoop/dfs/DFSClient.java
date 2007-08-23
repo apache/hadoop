@@ -263,7 +263,7 @@ class DFSClient implements FSConstants {
     return hints;
   }
 
-  public DFSInputStream open(UTF8 src) throws IOException {
+  public DFSInputStream open(String src) throws IOException {
     return open(src, conf.getInt("io.file.buffer.size", 4096));
   }
   /**
@@ -272,10 +272,10 @@ class DFSClient implements FSConstants {
    * inner subclass of InputStream that does the right out-of-band
    * work.
    */
-  public DFSInputStream open(UTF8 src, int buffersize) throws IOException {
+  public DFSInputStream open(String src, int buffersize) throws IOException {
     checkOpen();
     //    Get block info from namenode
-    return new DFSInputStream(src.toString(), buffersize);
+    return new DFSInputStream(src, buffersize);
   }
 
   /**
@@ -391,32 +391,32 @@ class DFSClient implements FSConstants {
    * Make a direct connection to namenode and manipulate structures
    * there.
    */
-  public boolean rename(UTF8 src, UTF8 dst) throws IOException {
+  public boolean rename(String src, String dst) throws IOException {
     checkOpen();
-    return namenode.rename(src.toString(), dst.toString());
+    return namenode.rename(src, dst);
   }
 
   /**
    * Make a direct connection to namenode and manipulate structures
    * there.
    */
-  public boolean delete(UTF8 src) throws IOException {
+  public boolean delete(String src) throws IOException {
     checkOpen();
-    return namenode.delete(src.toString());
+    return namenode.delete(src);
   }
 
   /**
    */
-  public boolean exists(UTF8 src) throws IOException {
+  public boolean exists(String src) throws IOException {
     checkOpen();
-    return namenode.exists(src.toString());
+    return namenode.exists(src);
   }
 
   /**
    */
-  public boolean isDirectory(UTF8 src) throws IOException {
+  public boolean isDirectory(String src) throws IOException {
     checkOpen();
-    return namenode.isDir(src.toString());
+    return namenode.isDir(src);
   }
 
   /**
@@ -503,9 +503,9 @@ class DFSClient implements FSConstants {
 
   /**
    */
-  public boolean mkdirs(UTF8 src) throws IOException {
+  public boolean mkdirs(String src) throws IOException {
     checkOpen();
-    return namenode.mkdirs(src.toString());
+    return namenode.mkdirs(src);
   }
 
   /**
