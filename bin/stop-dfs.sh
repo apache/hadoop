@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # Stop hadoop DFS daemons.  Run this on master node.
 

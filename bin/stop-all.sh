@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # Stop all hadoop daemons.  Run this on master node.
 

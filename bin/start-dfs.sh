@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # Start hadoop dfs daemons.
 # Optinally upgrade or rollback dfs state.

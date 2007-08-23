@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # Start hadoop map reduce daemons.  Run this on master node.
 

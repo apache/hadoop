@@ -78,6 +78,11 @@ Trunk (unreleased changes)
     HADOOP-1731.  Add Hadoop's version to contrib jar file names.
     (cutting)
 
+    HADOOP-1689.  Make shell scripts more portable.  All shell scripts
+    now explicitly depend on bash, but do not require that bash be
+    installed in a particular location, as long as it is on $PATH.
+    (cutting)
+
 
 Release 0.14.0 - 2007-08-17
 

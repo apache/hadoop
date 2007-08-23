@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Launch an EC2 cluster of Hadoop instances.
 
 # Import variables

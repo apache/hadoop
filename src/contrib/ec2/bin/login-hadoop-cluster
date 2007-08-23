@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Login to the master node of a running Hadoop EC2 cluster.
 
 # Import variables
