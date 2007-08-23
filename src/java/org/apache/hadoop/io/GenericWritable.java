@@ -96,6 +96,11 @@ public abstract class GenericWritable implements Writable {
   public Writable get() {
     return instance;
   }
+  
+  public String toString() {
+    return "GW[" + (instance != null ? ("class=" + instance.getClass().getName() +
+        ",value=" + instance.toString()) : "(null)") + "]";
+  }
 
   public void readFields(DataInput in) throws IOException {
     type = in.readByte();

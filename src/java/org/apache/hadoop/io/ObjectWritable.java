@@ -57,6 +57,11 @@ public class ObjectWritable implements Writable, Configurable {
     this.instance = instance;
   }
   
+  public String toString() {
+    return "OW[class=" + declaredClass + ",value=" + instance + "]";
+  }
+
+  
   public void readFields(DataInput in) throws IOException {
     readObject(in, this, this.conf);
   }

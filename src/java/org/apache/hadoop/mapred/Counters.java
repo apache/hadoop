@@ -367,6 +367,22 @@ public class Counters implements Writable {
       }
     }
   }
-
+  
+  /**
+   * Return textual representation of the counter values.
+   */
+  public String toString() {
+    StringBuilder sb = new StringBuilder("Counters: " + size());
+    Collection<String> groupNames = getGroupNames();
+    for (String groupName : groupNames) {
+      Group group = getGroup(groupName);
+      sb.append("\n\t" + group.getDisplayName());
+      for (String counterName : group.getCounterNames()) {
+        sb.append("\n\t\t" + group.getDisplayName(counterName) + "=" + 
+                 group.getCounter(counterName));
+      }
+    }
+    return sb.toString();
+  }
   
 }

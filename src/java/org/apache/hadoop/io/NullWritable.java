@@ -29,6 +29,10 @@ public class NullWritable implements Writable {
 
   /** Returns the single instance of this class. */
   public static NullWritable get() { return THIS; }
+  
+  public String toString() {
+    return "(null)";
+  }
 
   public void readFields(DataInput in) throws IOException {}
   public void write(DataOutput out) throws IOException {}

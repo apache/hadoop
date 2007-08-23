@@ -49,6 +49,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-1756. Add toString() to some Writable-s. (ab)
+
     HADOOP-1727.  New classes: MapWritable and SortedMapWritable.
     (Jim Kellerman via ab)
 

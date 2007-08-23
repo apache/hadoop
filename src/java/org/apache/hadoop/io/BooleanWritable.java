@@ -85,6 +85,10 @@ public class BooleanWritable implements WritableComparable {
     boolean b = ((BooleanWritable) o).value;
     return ((a == b) ? 0 : (a == false) ? -1 : 1);
   }
+  
+  public String toString() {
+    return Boolean.toString(get());
+  }
 
   /** 
    * A Comparator optimized for BooleanWritable. 
