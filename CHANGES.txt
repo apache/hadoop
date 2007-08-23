@@ -41,6 +41,9 @@ Trunk (unreleased changes)
     class, with specialized subclasses for directories and files, to
     save memory on the namenode.  (Konstantin Shvachko via cutting)
 
+    HADOOP-1759.  Change file name in INode from String to byte[],
+    saving memory on the namenode. (Konstantin Shvachko via cutting)
+
   BUG FIXES
 
     HADOOP-1463.  HDFS report correct usage statistics for disk space
