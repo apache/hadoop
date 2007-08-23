@@ -37,6 +37,10 @@ Trunk (unreleased changes)
     TreeMap in HDFS Namespace with ArrayList.  
     (Dhruba Borthakur via dhruba)
 
+    HADOOP-1743.  Change DFS INode from a nested class to standalone
+    class, with specialized subclasses for directories and files, to
+    save memory on the namenode.  (Konstantin Shvachko via cutting)
+
   BUG FIXES
 
     HADOOP-1463.  HDFS report correct usage statistics for disk space
@@ -72,10 +76,6 @@ Trunk (unreleased changes)
 
     HADOOP-1703.  DFS-internal code cleanups, removing several uses of
     the obsolete UTF8.  (Christophe Taton via cutting)
-
-    HADOOP-1743.  Change DFS INode from a nested class to standalone
-    class, with specialized subclasses for directories and files, to
-    save memory on the namenode.  (Konstantin Shvachko via cutting)
 
     HADOOP-1731.  Add Hadoop's version to contrib jar file names.
     (cutting)
