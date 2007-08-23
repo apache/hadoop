@@ -28,6 +28,7 @@ import java.net.URLClassLoader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -36,7 +37,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -90,7 +90,9 @@ class ReduceTask extends Task {
   private Progress sortPhase  = getProgress().addPhase("sort");
   private Progress reducePhase = getProgress().addPhase("reduce");
 
-  public ReduceTask() {}
+  public ReduceTask() {
+    super();
+  }
 
   public ReduceTask(String jobId, String jobFile, String tipId, String taskId,
                     int partition, int numMaps) {
@@ -466,6 +468,30 @@ class ReduceTask extends Task {
      */
     private long ramfsMergeOutputSize;
     
+    /**
+     * Maximum no. of fetch-retries per-map.
+     */
+    private static final int MAX_FETCH_RETRIES_PER_MAP = 5;
+    
+    /**
+     * Maximum no. of unique maps from which we failed to fetch map-outputs
+     * even after {@link #MAX_FETCH_RETRIES_PER_MAP} retries; after this the
+     * reduce task is failed.
+     */
+    private static final int MAX_FAILED_UNIQUE_FETCHES = 5;
+
+    /**
+     * The maps from which we fail to fetch map-outputs 
+     * even after {@link #MAX_FETCH_RETRIES_PER_MAP} retries.
+     */
+    Set<Integer> fetchFailedMaps = new TreeSet<Integer>(); 
+    
+    /**
+     * A map of taskId -> no. of failed fetches
+     */
+    Map<String, Integer> mapTaskToFailedFetchesMap = 
+      new HashMap<String, Integer>();    
+
     /**
      * This class contains the methods that should be used for metrics-reporting
      * the specific metrics for shuffle. This class actually reports the
@@ -958,7 +984,11 @@ class ReduceTask extends Task {
                 copyPhase.startNextPhase();
                 copyPhase.setStatus("copy (" + numCopied + " of " + numOutputs 
                                     + " at " +
-                                    mbpsFormat.format(transferRate) +  " MB/s)");          
+                                    mbpsFormat.format(transferRate) +  " MB/s)");
+                
+                // Note successfull fetch for this mapId to invalidate
+                // (possibly) old fetch-failures
+                fetchFailedMaps.remove(cr.getLocation().getMapId());
               } else if (cr.isObsolete()) {
                 //ignore
                 LOG.info(reduceTask.getTaskId() + 
@@ -968,10 +998,46 @@ class ReduceTask extends Task {
               } else {
                 retryFetches.add(cr.getLocation());
                 
+                // note the failed-fetch
+                String mapTaskId = cr.getLocation().getMapTaskId();
+                Integer mapId = cr.getLocation().getMapId();
+                
+                Integer noFailedFetches = 
+                  mapTaskToFailedFetchesMap.get(mapTaskId);
+                noFailedFetches = 
+                  (noFailedFetches == null) ? 1 : (noFailedFetches + 1);
+                mapTaskToFailedFetchesMap.put(mapTaskId, noFailedFetches);
+                LOG.info("Task " + getTaskId() + ": Failed fetch #" + 
+                         noFailedFetches + " from " + mapTaskId);
+                
+                // did the fetch fail too many times?
+                if ((noFailedFetches % MAX_FETCH_RETRIES_PER_MAP) == 0) {
+                  synchronized (ReduceTask.this) {
+                    taskStatus.addFetchFailedMap(mapTaskId);
+                    LOG.info("Failed to fetch map-output from " + mapTaskId + 
+                             " even after MAX_FETCH_RETRIES_PER_MAP retries... "
+                             + " reporting to the JobTracker");
+                  }
+                }
+
+                // note unique failed-fetch maps
+                if (noFailedFetches == MAX_FETCH_RETRIES_PER_MAP) {
+                  fetchFailedMaps.add(mapId);
+                  
+                  // did we have too many unique failed-fetch maps?
+                  if (fetchFailedMaps.size() >= MAX_FAILED_UNIQUE_FETCHES) {
+                    LOG.fatal("Shuffle failed with too many fetch failures! " +
+                             "Killing task " + getTaskId() + ".");
+                    umbilical.shuffleError(getTaskId(), 
+                                           "Exceeded MAX_FAILED_UNIQUE_FETCHES;"
+                                           + " bailing-out.");
+                  }
+                }
+                
                 // wait a random amount of time for next contact
                 currentTime = System.currentTimeMillis();
-                long nextContact = currentTime + 60 * 1000 +
-                  backoff.nextInt(maxBackoff*1000);
+                long nextContact = currentTime + 60 * 1000 + 
+                                   backoff.nextInt(maxBackoff*1000);
                 penaltyBox.put(cr.getHost(), nextContact);          
                 LOG.warn(reduceTask.getTaskId() + " adding host " +
                          cr.getHost() + " to penalty box, next contact in " +

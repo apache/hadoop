@@ -51,6 +51,10 @@ public class IsolationRunner {
       LOG.info("Task " + taskId + " reporting file system error: " + message);
     }
 
+    public void shuffleError(String taskId, String message) throws IOException {
+      LOG.info("Task " + taskId + " reporting shuffle error: " + message);
+    }
+
     public Task getTask(String taskid) throws IOException {
       return null;
     }
@@ -59,14 +63,13 @@ public class IsolationRunner {
       return true;
     }
 
-    public boolean progress(String taskid, float progress, String state,
-                         TaskStatus.Phase phase, Counters counters) 
-      throws IOException 
-    {
+    public boolean statusUpdate(String taskId, TaskStatus taskStatus) 
+    throws IOException, InterruptedException {
       StringBuffer buf = new StringBuffer("Task ");
-      buf.append(taskid);
+      buf.append(taskId);
       buf.append(" making progress to ");
-      buf.append(progress);
+      buf.append(taskStatus.getProgress());
+      String state = taskStatus.getStateString();
       if (state != null) {
         buf.append(" and state of ");
         buf.append(state);

@@ -67,7 +67,9 @@ class MapTask extends Task {
     setPhase(TaskStatus.Phase.MAP); 
   }
 
-  public MapTask() {}
+  public MapTask() {
+    super();
+  }
 
   public MapTask(String jobId, String jobFile, String tipId, String taskId, 
                  int partition, String splitClass, BytesWritable split

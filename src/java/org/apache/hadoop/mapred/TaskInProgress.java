@@ -302,8 +302,7 @@ class TaskInProgress {
                !tasksReportedClosed.contains(taskid)){
       tasksReportedClosed.add(taskid);
       return true; 
-    }
-    else {
+    } else {
       return false;
     }
   }

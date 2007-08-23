@@ -20,7 +20,10 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -29,7 +32,10 @@ import org.apache.hadoop.io.WritableUtils;
  * not intended to be a comprehensive piece of data.
  *
  **************************************************/
-class TaskStatus implements Writable {
+abstract class TaskStatus implements Writable, Cloneable {
+  static final Log LOG =
+    LogFactory.getLog(TaskStatus.class.getName());
+  
   //enumeration for reporting current phase of a task. 
   public static enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE}
 
@@ -37,7 +43,6 @@ class TaskStatus implements Writable {
   public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED}
     
   private String taskid;
-  private boolean isMap;
   private float progress;
   private State runState;
   private String diagnosticInfo;
@@ -47,21 +52,16 @@ class TaskStatus implements Writable {
   private long startTime; 
   private long finishTime; 
     
-  // only for reduce tasks
-  private long shuffleFinishTime; 
-  private long sortFinishTime; 
-    
   private Phase phase = Phase.STARTING; 
   private Counters counters;
 
   public TaskStatus() {}
 
-  public TaskStatus(String taskid, boolean isMap, float progress,
+  public TaskStatus(String taskid, float progress,
                     State runState, String diagnosticInfo,
                     String stateString, String taskTracker,
                     Phase phase, Counters counters) {
     this.taskid = taskid;
-    this.isMap = isMap;
     this.progress = progress;
     this.runState = runState;
     this.diagnosticInfo = diagnosticInfo;
@@ -70,9 +70,9 @@ class TaskStatus implements Writable {
     this.phase = phase;
     this.counters = counters;
   }
-    
+  
   public String getTaskId() { return taskid; }
-  public boolean getIsMap() { return isMap; }
+  public abstract boolean getIsMap();
   public float getProgress() { return progress; }
   public void setProgress(float progress) { this.progress = progress; } 
   public State getRunState() { return runState; }
@@ -100,12 +100,6 @@ class TaskStatus implements Writable {
    * @param finishTime finish time of task.
    */
   void setFinishTime(long finishTime) {
-    if (shuffleFinishTime == 0) {
-      this.shuffleFinishTime = finishTime; 
-    }
-    if (sortFinishTime == 0){
-      this.sortFinishTime = finishTime;
-    }
     this.finishTime = finishTime;
   }
   /**
@@ -117,16 +111,14 @@ class TaskStatus implements Writable {
    * it returns approximate shuffle finish time.  
    */
   public long getShuffleFinishTime() {
-    return shuffleFinishTime;
+    return 0;
   }
 
   /**
    * Set shuffle finish time. 
    * @param shuffleFinishTime 
    */
-  void setShuffleFinishTime(long shuffleFinishTime) {
-    this.shuffleFinishTime = shuffleFinishTime;
-  }
+  void setShuffleFinishTime(long shuffleFinishTime) {}
 
   /**
    * Get sort finish time for the task,. If sort finish time was not set 
@@ -136,7 +128,7 @@ class TaskStatus implements Writable {
    * finish time if that is set, else it returns finish time. 
    */
   public long getSortFinishTime() {
-    return sortFinishTime;
+    return 0;
   }
 
   /**
@@ -144,12 +136,7 @@ class TaskStatus implements Writable {
    * then its set to sortFinishTime.  
    * @param sortFinishTime
    */
-  void setSortFinishTime(long sortFinishTime) {
-    this.sortFinishTime = sortFinishTime;
-    if (0 == this.shuffleFinishTime){
-      this.shuffleFinishTime = sortFinishTime;
-    }
-  }
+  void setSortFinishTime(long sortFinishTime) {}
 
   /**
    * Get start time of the task. 
@@ -176,10 +163,19 @@ class TaskStatus implements Writable {
   }
   /**
    * Set current phase of this task.  
-   * @param p
+   * @param phase phase of this task
    */
-  void setPhase(Phase p){
-    this.phase = p; 
+  void setPhase(Phase phase){
+    TaskStatus.Phase oldPhase = getPhase();
+    if (oldPhase != phase){
+      // sort phase started
+      if (phase == TaskStatus.Phase.SORT){
+        setShuffleFinishTime(System.currentTimeMillis());
+      }else if (phase == TaskStatus.Phase.REDUCE){
+        setSortFinishTime(System.currentTimeMillis());
+      }
+    }
+    this.phase = phase; 
   }
   /**
    * Get task's counters.
@@ -194,13 +190,81 @@ class TaskStatus implements Writable {
   public void setCounters(Counters counters) {
     this.counters = counters;
   }
+  
+  /**
+   * Get the list of maps from which output-fetches failed.
+   * 
+   * @return the list of maps from which output-fetches failed.
+   */
+  public List<String> getFetchFailedMaps() {
+    return null;
+  }
+  
+  /**
+   * Add to the list of maps from which output-fetches failed.
+   *  
+   * @param mapTaskId map from which fetch failed
+   */
+  synchronized void addFetchFailedMap(String mapTaskId) {}
+
+  /**
+   * Update the status of the task.
+   * 
+   * @param progress
+   * @param state
+   * @param phase
+   * @param counters
+   */
+  synchronized void statusUpdate(float progress, String state, 
+                                 Counters counters) {
+    setRunState(TaskStatus.State.RUNNING);
+    setProgress(progress);
+    setStateString(state);
+    setCounters(counters);
+  }
+  
+  /**
+   * Update the status of the task.
+   * 
+   * @param status updated status
+   */
+  synchronized void statusUpdate(TaskStatus status) {
+    this.progress = status.getProgress();
+    this.runState = status.getRunState();
+    this.diagnosticInfo = status.getDiagnosticInfo();
+    this.stateString = status.getStateString();
+      
+    if (status.getStartTime() != 0) {
+      this.startTime = status.getStartTime(); 
+    }
+    if (status.getFinishTime() != 0) {
+      this.finishTime = status.getFinishTime(); 
+    }
     
+    this.phase = status.getPhase();
+    this.counters = status.getCounters();
+  }
+  
+  /**
+   * Clear out transient information after sending out a status update
+   * to the {@link TaskTracker}.
+   */
+  synchronized void clearStatus() {}
+
+  public Object clone() {
+    try {
+      return super.clone();
+    } catch (CloneNotSupportedException cnse) {
+      // Shouldn't happen since we do implement Clonable
+      throw new InternalError(cnse.toString());
+    }
+  }
+  
   //////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
     UTF8.writeString(out, taskid);
-    out.writeBoolean(isMap);
     out.writeFloat(progress);
     WritableUtils.writeEnum(out, runState);
     UTF8.writeString(out, diagnosticInfo);
@@ -208,16 +272,11 @@ class TaskStatus implements Writable {
     WritableUtils.writeEnum(out, phase);
     out.writeLong(startTime);
     out.writeLong(finishTime);
-    if (!isMap){
-      out.writeLong(shuffleFinishTime);
-      out.writeLong(sortFinishTime);
-    }
     counters.write(out);
   }
 
   public void readFields(DataInput in) throws IOException {
     this.taskid = UTF8.readString(in);
-    this.isMap = in.readBoolean();
     this.progress = in.readFloat();
     this.runState = WritableUtils.readEnum(in, State.class);
     this.diagnosticInfo = UTF8.readString(in);
@@ -225,12 +284,51 @@ class TaskStatus implements Writable {
     this.phase = WritableUtils.readEnum(in, Phase.class); 
     this.startTime = in.readLong(); 
     this.finishTime = in.readLong(); 
-    if (!this.isMap){
-      shuffleFinishTime = in.readLong(); 
-      sortFinishTime = in.readLong(); 
-    }
     counters = new Counters();
     counters.readFields(in);
+  }
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // Factory-like methods to create/read/write appropriate TaskStatus objects
+  //////////////////////////////////////////////////////////////////////////////
+  
+  static TaskStatus createTaskStatus(DataInput in, String taskId, float progress,
+                                     State runState, String diagnosticInfo,
+                                     String stateString, String taskTracker,
+                                     Phase phase, Counters counters) 
+  throws IOException {
+    boolean isMap = in.readBoolean();
+    return createTaskStatus(isMap, taskId, progress, runState, diagnosticInfo, 
+                          stateString, taskTracker, phase, counters);
+  }
+  
+  static TaskStatus createTaskStatus(boolean isMap, String taskId, float progress,
+                                   State runState, String diagnosticInfo,
+                                   String stateString, String taskTracker,
+                                   Phase phase, Counters counters) { 
+    return (isMap) ? new MapTaskStatus(taskId, progress, runState, 
+                                       diagnosticInfo, stateString, taskTracker, 
+                                       phase, counters) :
+                     new ReduceTaskStatus(taskId, progress, runState, 
+                                          diagnosticInfo, stateString, 
+                                          taskTracker, phase, counters);
+  }
+  
+  static TaskStatus createTaskStatus(boolean isMap) {
+    return (isMap) ? new MapTaskStatus() : new ReduceTaskStatus();
+  }
+
+  static TaskStatus readTaskStatus(DataInput in) throws IOException {
+    boolean isMap = in.readBoolean();
+    TaskStatus taskStatus = createTaskStatus(isMap);
+    taskStatus.readFields(in);
+    return taskStatus;
+  }
+  
+  static void writeTaskStatus(DataOutput out, TaskStatus taskStatus) 
+  throws IOException {
+    out.writeBoolean(taskStatus.getIsMap());
+    taskStatus.write(out);
   }
 }
 

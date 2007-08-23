@@ -1708,8 +1708,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * jobs that might be affected.
    */
   void updateTaskStatuses(TaskTrackerStatus status) {
+    String trackerName = status.getTrackerName();
     for (TaskStatus report : status.getTaskReports()) {
-      report.setTaskTracker(status.getTrackerName());
+      report.setTaskTracker(trackerName);
       String taskId = report.getTaskId();
       TaskInProgress tip = taskidToTIPMap.get(taskId);
       if (tip == null) {
@@ -1717,6 +1718,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       } else {
         expireLaunchingTasks.removeTask(taskId);
         tip.getJob().updateTaskStatus(tip, report, myMetrics);
+      }
+      
+      // Process 'failed fetch' notifications 
+      List<String> failedFetchMaps = report.getFetchFailedMaps();
+      if (failedFetchMaps != null) {
+        for (String mapTaskId : failedFetchMaps) {
+          TaskInProgress failedFetchMap = taskidToTIPMap.get(mapTaskId);
+          if (failedFetchMap != null) {
+            failedFetchMap.getJob().fetchFailureNotification(failedFetchMap, 
+                                                             mapTaskId, 
+                                                             status.getHost(), 
+                                                             trackerName, 
+                                                             myMetrics);
+          }
+        }
       }
     }
   }

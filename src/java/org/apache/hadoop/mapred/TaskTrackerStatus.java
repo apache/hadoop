@@ -156,29 +156,24 @@ class TaskTrackerStatus implements Writable {
     UTF8.writeString(out, trackerName);
     UTF8.writeString(out, host);
     out.writeInt(httpPort);
+    out.writeInt(failures);
 
     out.writeInt(taskReports.size());
-    out.writeInt(failures);
-    for (Iterator it = taskReports.iterator(); it.hasNext();) {
-      ((TaskStatus) it.next()).write(out);
+    for (TaskStatus taskStatus : taskReports) {
+      TaskStatus.writeTaskStatus(out, taskStatus);
     }
   }
 
-  /**
-   */     
   public void readFields(DataInput in) throws IOException {
     this.trackerName = UTF8.readString(in);
     this.host = UTF8.readString(in);
     this.httpPort = in.readInt();
+    this.failures = in.readInt();
 
     taskReports.clear();
-
     int numTasks = in.readInt();
-    this.failures = in.readInt();
     for (int i = 0; i < numTasks; i++) {
-      TaskStatus tmp = new TaskStatus();
-      tmp.readFields(in);
-      taskReports.add(tmp);
+      taskReports.add(TaskStatus.readTaskStatus(in));
     }
   }
 }

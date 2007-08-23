@@ -110,6 +110,14 @@ class JobInProgress {
   
   private MetricsRecord jobMetrics;
   
+  // Maximum no. of fetch-failure notifications after which
+  // the map task is killed
+  private static final int MAX_FETCH_FAILURES_NOTIFICATIONS = 3;
+  
+  // Map of mapTaskId -> no. of fetch failures
+  private Map<String, Integer> mapTaskIdToFetchFailuresMap =
+    new TreeMap<String, Integer>();
+  
   /**
    * Create a JobInProgress with the given job file, plus a handle
    * to the tracker.
@@ -1034,14 +1042,14 @@ class JobInProgress {
                          TaskStatus.Phase phase, TaskStatus.State state, 
                          String hostname, String trackerName,
                          JobTrackerMetrics metrics) {
-    TaskStatus status = new TaskStatus(taskid,
-                                       tip.isMapTask(),
-                                       0.0f,
-                                       state,
-                                       reason,
-                                       reason,
-                                       trackerName, phase,
-                                       tip.getCounters());
+    TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), 
+                                                    taskid,
+                                                    0.0f,
+                                                    state,
+                                                    reason,
+                                                    reason,
+                                                    trackerName, phase,
+                                                    tip.getCounters());
     updateTaskStatus(tip, status, metrics);
     JobHistory.Task.logFailed(profile.getJobId(), tip.getTIPId(), 
                               tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(), 
@@ -1131,5 +1139,28 @@ class JobInProgress {
                                                                    fromEventId, actualMax + fromEventId).toArray(events);        
     }
     return events; 
+  }
+  
+  synchronized void fetchFailureNotification(TaskInProgress tip, 
+                                             String mapTaskId, 
+                                             String hostname, String trackerName, 
+                                             JobTrackerMetrics metrics) {
+    Integer fetchFailures = mapTaskIdToFetchFailuresMap.get(mapTaskId);
+    fetchFailures = (fetchFailures == null) ? 1 : (fetchFailures+1);
+    mapTaskIdToFetchFailuresMap.put(mapTaskId, fetchFailures);
+    LOG.info("Failed fetch notification #" + fetchFailures + " for task " + 
+            mapTaskId);
+    
+    if (fetchFailures == MAX_FETCH_FAILURES_NOTIFICATIONS) {
+      LOG.info("Too many fetch-failures for output of task: " + mapTaskId 
+               + " ... killing it");
+      
+      failedTask(tip, mapTaskId, "Too many fetch-failures",                            
+                 (tip.isMapTask() ? TaskStatus.Phase.MAP : 
+                                    TaskStatus.Phase.REDUCE), 
+                 TaskStatus.State.FAILED, hostname, trackerName, metrics);
+      
+      mapTaskIdToFetchFailuresMap.remove(mapTaskId);
+    }
   }
 }

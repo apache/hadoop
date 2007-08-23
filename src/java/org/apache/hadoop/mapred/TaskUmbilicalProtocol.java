@@ -29,26 +29,31 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * and parent is via this protocol. */ 
 interface TaskUmbilicalProtocol extends VersionedProtocol {
 
-  /** Changed the version to 2, since we have a new method getMapOutputs 
+  /** 
+   * Changed the version to 2, since we have a new method getMapOutputs 
    * Changed version to 3 to have progress() return a boolean
+   * Changed the version to 4, since we have replaced 
+   *         TaskUmbilicalProtocol.progress(String, float, String, 
+   *         org.apache.hadoop.mapred.TaskStatus.Phase, Counters) 
+   *         with {@link #statusUpdate(String, TaskStatus)}
    * */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
   
   /** Called when a child task process starts, to get its task.*/
   Task getTask(String taskid) throws IOException;
 
-  /** Report child's progress to parent.
-   * @param taskid the id of the task
-   * @param progress value between zero and one
-   * @param state description of task's current state
-   * @param phase current phase of the task.
-   * @param counters the counters for this task.
+  /**
+   * Report child's progress to parent.
+   * 
+   * @param taskId task-id of the child
+   * @param taskStatus status of the child
+   * @throws IOException
+   * @throws InterruptedException
    * @return True if the task is known
    */
-  boolean progress(String taskid, float progress, String state, 
-                TaskStatus.Phase phase, Counters counters)
-    throws IOException, InterruptedException;
-
+  boolean statusUpdate(String taskId, TaskStatus taskStatus) 
+  throws IOException, InterruptedException;
+  
   /** Report error messages back to parent.  Calls should be sparing, since all
    *  such messages are held in the job tracker.
    *  @param taskid the id of the task involved
@@ -65,6 +70,9 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * the task process exits without calling this. */
   void done(String taskid) throws IOException;
 
+  /** Report that a reduce-task couldn't shuffle map-outputs.*/
+  void shuffleError(String taskId, String message) throws IOException;
+  
   /** Report that the task encounted a local filesystem error.*/
   void fsError(String taskId, String message) throws IOException;
 

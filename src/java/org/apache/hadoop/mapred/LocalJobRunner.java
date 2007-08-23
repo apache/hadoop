@@ -203,23 +203,23 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
     public Task getTask(String taskid) { return null; }
 
-    public boolean progress(String taskId, float progress, String state, 
-                         TaskStatus.Phase phase, Counters taskCounters) {
-      LOG.info(state);
+    public boolean statusUpdate(String taskId, TaskStatus taskStatus) 
+    throws IOException, InterruptedException {
+      LOG.info(taskStatus.getStateString());
       float taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
         float numTasks = mapIds.size();
-        status.setMapProgress(taskIndex/numTasks + progress/numTasks);
+        status.setMapProgress(taskIndex/numTasks + taskStatus.getProgress()/numTasks);
       } else {
-        status.setReduceProgress(progress);
+        status.setReduceProgress(taskStatus.getProgress());
       }
-      currentCounters = Counters.sum(completedTaskCounters, taskCounters);
+      currentCounters = Counters.sum(completedTaskCounters, taskStatus.getCounters());
       
       // ignore phase
       
       return true;
     }
-    
+
     /**
      * Updates counters corresponding to completed tasks.
      * @param task A map or reduce task which has just been 
@@ -251,6 +251,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
       LOG.fatal("FSError: "+ message + "from task: " + taskId);
     }
 
+    public void shuffleError(String taskId, String message) throws IOException {
+      LOG.fatal("shuffleError: "+ message + "from task: " + taskId);
+    }
+    
     public TaskCompletionEvent[] getMapCompletionEvents(
                                                         String jobId, int fromEventId, int maxLocs) throws IOException {
       return TaskCompletionEvent.EMPTY_ARRAY;

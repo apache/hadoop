@@ -83,7 +83,7 @@ abstract class Task implements Writable, Configurable {
   private String jobId;                           // unique jobid
   private String tipId;
   private int partition;                          // id within job
-  private TaskStatus.Phase phase ;                // current phase of the task
+  TaskStatus taskStatus; 										      // current status of the task
   private Path taskOutputPath;                    // task-specific output dir
   
   protected JobConf conf;
@@ -94,7 +94,9 @@ abstract class Task implements Writable, Configurable {
   // Constructors
   ////////////////////////////////////////////
 
-  public Task() {}
+  public Task() {
+    taskStatus = TaskStatus.createTaskStatus(isMapTask());
+  }
 
   public Task(String jobId, String jobFile, String tipId, 
               String taskId, int partition) {
@@ -103,6 +105,14 @@ abstract class Task implements Writable, Configurable {
     this.jobId = jobId;
     this.tipId = tipId; 
     this.partition = partition;
+    this.taskStatus = TaskStatus.createTaskStatus(isMapTask(), this.taskId, 
+                                                  0.0f, 
+                                                  TaskStatus.State.UNASSIGNED, 
+                                                  "", "", "", 
+                                                  isMapTask() ? 
+                                                    TaskStatus.Phase.MAP : 
+                                                    TaskStatus.Phase.SHUFFLE, 
+                                                  counters);
   }
 
   ////////////////////////////////////////////
@@ -135,14 +145,14 @@ abstract class Task implements Writable, Configurable {
    * @return
    */
   public synchronized TaskStatus.Phase getPhase(){
-    return this.phase; 
+    return this.taskStatus.getPhase(); 
   }
   /**
    * Set current phase of the task. 
    * @param p
    */
-  protected synchronized void setPhase(TaskStatus.Phase p){
-    this.phase = p; 
+  protected synchronized void setPhase(TaskStatus.Phase phase){
+    this.taskStatus.setPhase(phase); 
   }
 
   ////////////////////////////////////////////
@@ -160,6 +170,7 @@ abstract class Task implements Writable, Configurable {
     } else {
       Text.writeString(out, "");
     }
+    taskStatus.write(out);
   }
   public void readFields(DataInput in) throws IOException {
     jobFile = UTF8.readString(in);
@@ -173,6 +184,7 @@ abstract class Task implements Writable, Configurable {
     } else {
       taskOutputPath = null;
     }
+    taskStatus.readFields(in);
   }
 
   public String toString() { return taskId; }
@@ -276,8 +288,10 @@ abstract class Task implements Writable, Configurable {
               
               if (sendProgress) {
                 // we need to send progress update
-                taskFound = umbilical.progress(taskId, taskProgress.get(), 
-                    taskProgress.toString(), getPhase(), counters);
+                taskStatus.statusUpdate(taskProgress.get(), taskProgress.toString(), 
+                        counters);
+                taskFound = umbilical.statusUpdate(taskId, taskStatus);
+                taskStatus.clearStatus();
               }
               else {
                 // send ping 
@@ -351,18 +365,21 @@ abstract class Task implements Writable, Configurable {
       try {
         if (needProgress) {
           // send a final status report
+          taskStatus.statusUpdate(taskProgress.get(), taskProgress.toString(), 
+                                  counters);
           try {
-            if (!umbilical.progress(taskId, taskProgress.get(),
-                taskProgress.toString(), getPhase(), counters)) {
+            if (!umbilical.statusUpdate(getTaskId(), taskStatus)) {
               LOG.warn("Parent died.  Exiting "+taskId);
               System.exit(66);
             }
+            taskStatus.clearStatus();
             needProgress = false;
           } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();       // interrupt ourself
           }
         }
         umbilical.done(taskId);
+        LOG.info("Task '" + getTaskId() + "' done.");
         return;
       } catch (IOException ie) {
         LOG.warn("Failure signalling completion: " + 

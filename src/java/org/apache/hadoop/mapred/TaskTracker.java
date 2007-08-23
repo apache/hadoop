@@ -669,7 +669,7 @@ public class TaskTracker
         tip.setJobConf(jobConf);
         tip.launchTask();
       } catch (Throwable ie) {
-        tip.runstate = TaskStatus.State.FAILED;
+        tip.taskStatus.setRunState(TaskStatus.State.FAILED);
         try {
           tip.cleanup();
         } catch (Throwable ie2) {
@@ -906,15 +906,9 @@ public class TaskTracker
     //
     if (status == null) {
       synchronized (this) {
-        List<TaskStatus> taskReports = 
-          new ArrayList<TaskStatus>(runningTasks.size());
-        for (TaskInProgress tip: runningTasks.values()) {
-          taskReports.add(tip.createStatus());
-        }
-        status = 
-          new TaskTrackerStatus(taskTrackerName, localHostname, 
-                                httpPort, taskReports, 
-                                failures); 
+        status = new TaskTrackerStatus(taskTrackerName, localHostname, 
+                                       httpPort, cloneAndResetRunningTaskStatuses(), 
+                                       failures); 
       }
     } else {
       LOG.info("Resending 'status' to '" + jobTrackAddr.getHostName() +
@@ -962,6 +956,12 @@ public class TaskTracker
           }
           runningTasks.remove(taskStatus.getTaskId());
         }
+      }
+      
+      // Clear transient status information which should only
+      // be sent once to the JobTracker
+      for (TaskInProgress tip: runningTasks.values()) {
+        tip.getStatus().clearStatus();
       }
     }
 
@@ -1265,8 +1265,6 @@ public class TaskTracker
   ///////////////////////////////////////////////////////
   class TaskInProgress {
     Task task;
-    float progress;
-    volatile TaskStatus.State runstate;
     long lastProgressReport;
     StringBuffer diagnosticInfo = new StringBuffer();
     private TaskRunner runner;
@@ -1283,19 +1281,18 @@ public class TaskTracker
      */
     public TaskInProgress(Task task, JobConf conf) {
       this.task = task;
-      this.progress = 0.0f;
-      this.runstate = TaskStatus.State.UNASSIGNED;
       this.lastProgressReport = System.currentTimeMillis();
       this.defaultJobConf = conf;
       localJobConf = null;
-      taskStatus = new TaskStatus(task.getTaskId(), 
-                                  task.isMapTask(),
-                                  progress, runstate, 
-                                  diagnosticInfo.toString(), 
-                                  "initializing",  
-                                  getName(), task.isMapTask()? TaskStatus.Phase.MAP:
-                                  TaskStatus.Phase.SHUFFLE,
-                                  task.getCounters()); 
+      taskStatus = TaskStatus.createTaskStatus(task.isMapTask(), task.getTaskId(), 
+                                               0.0f, 
+                                               TaskStatus.State.UNASSIGNED, 
+                                               diagnosticInfo.toString(), 
+                                               "initializing",  
+                                               getName(), 
+                                               task.isMapTask()? TaskStatus.Phase.MAP:
+                                               TaskStatus.Phase.SHUFFLE,
+                                               task.getCounters()); 
       taskTimeout = (10 * 60 * 1000);
     }
         
@@ -1350,14 +1347,12 @@ public class TaskTracker
         
     /**
      */
-    public synchronized TaskStatus createStatus() {
-      taskStatus.setProgress(progress);
-      taskStatus.setRunState(runstate);
+    public synchronized TaskStatus getStatus() {
       taskStatus.setDiagnosticInfo(diagnosticInfo.toString());
-          
       if (diagnosticInfo.length() > 0) {
         diagnosticInfo = new StringBuffer();
       }
+      
       return taskStatus;
     }
 
@@ -1366,7 +1361,7 @@ public class TaskTracker
      */
     public synchronized void launchTask() throws IOException {
       localizeTask(task);
-      this.runstate = TaskStatus.State.RUNNING;
+      this.taskStatus.setRunState(TaskStatus.State.RUNNING);
       this.runner = task.createRunner(TaskTracker.this);
       this.runner.start();
       this.taskStatus.setStartTime(System.currentTimeMillis());
@@ -1375,31 +1370,18 @@ public class TaskTracker
     /**
      * The task is reporting its progress
      */
-    public synchronized void reportProgress(float p, String state, 
-                                            TaskStatus.Phase newPhase,
-                                            Counters counters) 
+    public synchronized void reportProgress(TaskStatus taskStatus) 
     {
       if (this.done) {
         //make sure we ignore progress messages after a task has 
         //invoked TaskUmbilicalProtocol.done()
         return;
       }
-      LOG.info(task.getTaskId()+" "+p+"% "+state);
-      this.progress = p;
-      this.runstate = TaskStatus.State.RUNNING;
+      
+      LOG.info(task.getTaskId() + " " + taskStatus.getProgress() + 
+               "% " + taskStatus.getStateString());
+      this.taskStatus.statusUpdate(taskStatus);
       this.lastProgressReport = System.currentTimeMillis();
-      TaskStatus.Phase oldPhase = taskStatus.getPhase();
-      if (oldPhase != newPhase){
-        // sort phase started
-        if (newPhase == TaskStatus.Phase.SORT){
-          this.taskStatus.setShuffleFinishTime(System.currentTimeMillis());
-        }else if (newPhase == TaskStatus.Phase.REDUCE){
-          this.taskStatus.setSortFinishTime(System.currentTimeMillis());
-        }
-        this.taskStatus.setPhase(newPhase);
-      }
-      this.taskStatus.setStateString(state);
-      this.taskStatus.setCounters(counters);
     }
 
     /**
@@ -1411,7 +1393,7 @@ public class TaskTracker
     /**
      */
     public TaskStatus.State getRunState() {
-      return runstate;
+      return taskStatus.getRunState();
     }
 
     /**
@@ -1434,10 +1416,12 @@ public class TaskTracker
      * The task is reporting that it's done running
      */
     public synchronized void reportDone() {
-      LOG.info("Task " + task.getTaskId() + " is done.");
-      this.progress = 1.0f;
+      this.taskStatus.setRunState(TaskStatus.State.SUCCEEDED);
+      this.taskStatus.setProgress(1.0f);
       this.taskStatus.setFinishTime(System.currentTimeMillis());
       this.done = true;
+      
+      LOG.info("Task " + task.getTaskId() + " is done.");
     }
 
     /**
@@ -1464,19 +1448,19 @@ public class TaskTracker
       boolean needCleanup = false;
       synchronized (this) {
         if (done) {
-          runstate = TaskStatus.State.SUCCEEDED;
+          taskStatus.setRunState(TaskStatus.State.SUCCEEDED);
         } else {
           if (!wasKilled) {
             failures += 1;
-            runstate = TaskStatus.State.FAILED;
+            taskStatus.setRunState(TaskStatus.State.FAILED);
           } else {
-            runstate = TaskStatus.State.KILLED;
+            taskStatus.setRunState(TaskStatus.State.KILLED);
           }
-          progress = 0.0f;
+          taskStatus.setProgress(0.0f);
         }
         this.taskStatus.setFinishTime(System.currentTimeMillis());
-        needCleanup = (runstate == TaskStatus.State.FAILED) |
-          (runstate == TaskStatus.State.KILLED);
+        needCleanup = (taskStatus.getRunState() == TaskStatus.State.FAILED || 
+                       taskStatus.getRunState() == TaskStatus.State.KILLED);
       }
 
       //
@@ -1517,20 +1501,21 @@ public class TaskTracker
      * @param wasFailure was it a failure (versus a kill request)?
      */
     public synchronized void kill(boolean wasFailure) throws IOException {
-      if (runstate == TaskStatus.State.RUNNING) {
+      if (taskStatus.getRunState() == TaskStatus.State.RUNNING) {
         wasKilled = true;
         if (wasFailure) {
           failures += 1;
         }
         runner.kill();
-        runstate = 
-          (wasFailure) ? TaskStatus.State.FAILED : TaskStatus.State.KILLED;
-      } else if (runstate == TaskStatus.State.UNASSIGNED) {
+        taskStatus.setRunState((wasFailure) ? 
+                                  TaskStatus.State.FAILED : 
+                                  TaskStatus.State.KILLED);
+      } else if (taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
         if (wasFailure) {
           failures += 1;
-          runstate = TaskStatus.State.FAILED;
+          taskStatus.setRunState(TaskStatus.State.FAILED);
         } else {
-          runstate = TaskStatus.State.KILLED;
+          taskStatus.setRunState(TaskStatus.State.KILLED);
         }
       }
     }
@@ -1540,10 +1525,11 @@ public class TaskTracker
      */
     private synchronized void mapOutputLost(String failure
                                            ) throws IOException {
-      if (runstate == TaskStatus.State.SUCCEEDED) {
+      if (taskStatus.getRunState() == TaskStatus.State.SUCCEEDED) {
+        // change status to failure
         LOG.info("Reporting output lost:"+task.getTaskId());
-        runstate = TaskStatus.State.FAILED;    // change status to failure
-        progress = 0.0f;
+        taskStatus.setRunState(TaskStatus.State.FAILED);
+        taskStatus.setProgress(0.0f);
         reportDiagnosticInfo("Map output lost, rescheduling: " + 
                              failure);
         runningTasks.put(task.getTaskId(), this);
@@ -1567,7 +1553,7 @@ public class TaskTracker
       synchronized (TaskTracker.this) {
         tasks.remove(taskId);
         if (alwaysKeepTaskFiles ||
-            (runstate == TaskStatus.State.FAILED && 
+            (taskStatus.getRunState() == TaskStatus.State.FAILED && 
              keepFailedTaskFiles)) {
           return;
         }
@@ -1618,14 +1604,12 @@ public class TaskTracker
   /**
    * Called periodically to report Task progress, from 0.0 to 1.0.
    */
-  public synchronized boolean progress(String taskid, float progress, 
-                                    String state, 
-                                    TaskStatus.Phase phase,
-                                    Counters counters
-                                    ) throws IOException {
+  public synchronized boolean statusUpdate(String taskid, 
+                                              TaskStatus taskStatus) 
+  throws IOException {
     TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
     if (tip != null) {
-      tip.reportProgress(progress, state, phase, counters);
+      tip.reportProgress(taskStatus);
       return true;
     } else {
       LOG.warn("Progress from unknown child task: "+taskid);
@@ -1661,6 +1645,18 @@ public class TaskTracker
     } else {
       LOG.warn("Unknown child task done: "+taskid+". Ignored.");
     }
+  }
+
+
+  /** 
+   * A reduce-task failed to shuffle the map-outputs. Kill the task.
+   */  
+  public synchronized void shuffleError(String taskId, String message) 
+  throws IOException { 
+    LOG.fatal("Task: " + taskId + " - Killed due to Shuffle Failure: " + message);
+    TaskInProgress tip = runningTasks.get(taskId);
+    tip.reportDiagnosticInfo("Shuffle Error: " + message);
+    purgeTask(tip, true);
   }
 
   /** 
@@ -1826,6 +1822,15 @@ public class TaskTracker
     return taskTrackerName;
   }
     
+  private synchronized List<TaskStatus> cloneAndResetRunningTaskStatuses() {
+    List<TaskStatus> result = new ArrayList<TaskStatus>(runningTasks.size());
+    for(TaskInProgress tip: runningTasks.values()) {
+      TaskStatus status = tip.getStatus();
+      result.add((TaskStatus)status.clone());
+      status.clearStatus();
+    }
+    return result;
+  }
   /**
    * Get the list of tasks that will be reported back to the 
    * job tracker in the next heartbeat cycle.
@@ -1834,7 +1839,7 @@ public class TaskTracker
   synchronized List<TaskStatus> getRunningTaskStatuses() {
     List<TaskStatus> result = new ArrayList<TaskStatus>(runningTasks.size());
     for(TaskInProgress tip: runningTasks.values()) {
-      result.add(tip.createStatus());
+      result.add(tip.getStatus());
     }
     return result;
   }
@@ -1847,7 +1852,7 @@ public class TaskTracker
     List<TaskStatus> result = new ArrayList<TaskStatus>(tasks.size());
     for(Map.Entry<String, TaskInProgress> task: tasks.entrySet()) {
       if (!runningTasks.containsKey(task.getKey())) {
-        result.add(task.getValue().createStatus());
+        result.add(task.getValue().getStatus());
       }
     }
     return result;

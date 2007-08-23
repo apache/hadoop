@@ -98,6 +98,10 @@ Trunk (unreleased changes)
     HADOOP-1654.  Add IOUtils class, containing generic io-related
     utility methods.   (Enis Soztutar via cutting)
 
+    HADOOP-1158.  Change JobTracker to record map-output transmission
+    errors and use them to trigger speculative re-execution of tasks.
+    (Arun C Murthy via cutting)
+
 
 Release 0.14.0 - 2007-08-17
 
