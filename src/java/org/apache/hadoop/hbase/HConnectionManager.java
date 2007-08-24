@@ -679,7 +679,7 @@ public class HConnectionManager implements HConstants {
 
               // We found at least one server for the table and now we're done.
               if (LOG.isDebugEnabled()) {
-                LOG.debug("Found " + servers.size() + " server(s) for " +
+                LOG.debug("Found " + servers.size() + " region(s) for " +
                   tableName + " at " + t);
               }
               break;

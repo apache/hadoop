@@ -305,10 +305,6 @@ HMasterRegionInterface, Runnable {
         SortedMap<Text, byte[]> rowContent)
     throws IOException {
       boolean result = false;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Checking " + parent.getRegionName() +
-          " to see if daughter splits still hold references");
-      }
 
       boolean hasReferencesA = hasReferences(metaRegionName, srvr,
           parent.getRegionName(), rowContent, COL_SPLITA);
@@ -318,7 +314,6 @@ HMasterRegionInterface, Runnable {
       if (!hasReferencesA && !hasReferencesB) {
         LOG.info("Deleting region " + parent.getRegionName() +
         " because daughter splits no longer hold references");
-
         if (!HRegion.deleteRegion(fs, dir, parent.getRegionName())) {
           LOG.warn("Deletion of " + parent.getRegionName() + " failed");
         }
@@ -330,11 +325,11 @@ HMasterRegionInterface, Runnable {
         b.delete(lockid, COL_STARTCODE);
         srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
         result = true;
-      }
-      
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Done checking " + parent.getRegionName() + ": splitA: " +
-            hasReferencesA + ", splitB: "+ hasReferencesB);
+      } else if (LOG.isDebugEnabled()) {
+        // If debug, note we checked and current state of daughters.
+        LOG.debug("Checked " + parent.getRegionName() +
+          " for references: splitA: " + hasReferencesA + ", splitB: "+
+          hasReferencesB);
       }
       return result;
     }

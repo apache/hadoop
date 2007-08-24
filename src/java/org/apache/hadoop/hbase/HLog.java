@@ -40,8 +40,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 
  * <p>Each HRegion is identified by a unique long <code>int</code>. HRegions do
  * not need to declare themselves before using the HLog; they simply include
- * their HRegion-id in the {@link #append(Text, Text, Text, TreeMap, long)} or 
- * {@link #completeCacheFlush(Text, Text, long)} calls.
+ * their HRegion-id in the <code>append</code> or 
+ * <code>completeCacheFlush</code> calls.
  *
  * <p>An HLog consists of multiple on-disk files, which have a chronological
  * order. As data is flushed to other (better) on-disk structures, the log
@@ -106,6 +106,12 @@ public class HLog implements HConstants {
       for(int i = 0; i < logfiles.length; i++) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Splitting " + logfiles[i]);
+        }
+        // Check for empty file.
+        if (fs.getFileStatus(logfiles[i]).getLen() <= 0) {
+          LOG.warn("Skipping " + logfiles[i].toString() +
+            " because zero length");
+          continue;
         }
         SequenceFile.Reader in =
           new SequenceFile.Reader(fs, logfiles[i], conf);

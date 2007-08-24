@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Random;
@@ -608,7 +609,6 @@ public class HStoreFile implements HConstants, WritableComparable {
     try {
       out.writeByte(INFO_SEQ_NUM);
       out.writeLong(infonum);
-      
     } finally {
       out.close();
     }
@@ -637,16 +637,22 @@ public class HStoreFile implements HConstants, WritableComparable {
    */
   public boolean rename(final FileSystem fs, final HStoreFile hsf)
   throws IOException {
-    boolean success = fs.rename(getMapFilePath(), hsf.getMapFilePath());
+    Path src = getMapFilePath();
+    if (!fs.exists(src)) {
+      throw new FileNotFoundException(src.toString());
+    }
+    boolean success = fs.rename(src, hsf.getMapFilePath());
     if (!success) {
-      LOG.warn("Failed rename of " + getMapFilePath() + " to " +
-        hsf.getMapFilePath());
+      LOG.warn("Failed rename of " + src + " to " + hsf.getMapFilePath());
       return success;
     }
-    success = fs.rename(getInfoFilePath(), hsf.getInfoFilePath());
+    src = getInfoFilePath();
+    if (!fs.exists(src)) {
+      throw new FileNotFoundException(src.toString());
+    }
+    success = fs.rename(src, hsf.getInfoFilePath());
     if (!success) {
-      LOG.warn("Failed rename of " + getInfoFilePath() + " to " +
-        hsf.getInfoFilePath());
+      LOG.warn("Failed rename of " + src + " to " + hsf.getInfoFilePath());
     }
     return success;
   }
