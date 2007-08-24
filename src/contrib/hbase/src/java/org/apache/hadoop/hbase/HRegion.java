@@ -649,7 +649,7 @@ public class HRegion implements HConstants {
       for (HStore store: stores.values()) {
         if (store.needsCompaction()) {
           needsCompaction = true;
-          LOG.info(store.toString() + " needs compaction");
+          LOG.debug(store.toString() + " needs compaction");
           break;
         }
       }
@@ -1628,7 +1628,7 @@ public class HRegion implements HConstants {
   /**
    * Computes the Path of the HRegion
    * 
-   * @param dir parent directory
+   * @param dir hbase home directory
    * @param regionName name of the region
    * @return Path of HRegion directory
    */
