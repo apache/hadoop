@@ -68,6 +68,7 @@ TOKEN:
  | <DESCRIBE: "describe">
  | <CREATE: "create">	
  | <DROP: "drop">
+ | <FS: "fs">
  | <EXIT: "exit">
  | <INSERT: "insert">
  | <DELETE: "delete">
@@ -92,7 +93,7 @@ TOKEN:
 
 TOKEN :
 {
-   <ID: ["a"-"z","A"-"Z","_","-","."] ( ["a"-"z","A"-"Z","_","0"-"9","-","."] )* >
+   <ID: ["a"-"z","A"-"Z","_","-",".","/"] ( ["a"-"z","A"-"Z","_","0"-"9","-",".","/"] )* >
  | <NUM: ( ["0"-"9"] )+ >
  | <STRING: (["A"-"Z","a"-"z","0"-"9"])+ >
  | <QUOTED_STRING: "\"" (~["\""])+ "\"" >
@@ -129,6 +130,7 @@ Command cmdStatement() :
      | cmd = deleteCommand()
      | cmd = selectCommand()
      | cmd = clearCommand()
+     | cmd = fsCommand()
   )
    {
        return cmd;
@@ -141,6 +143,25 @@ ExitCommand exitCommand() :
 }
 {
    <EXIT>  { return exit; }
+}
+
+FsCommand fsCommand() :
+{
+  Token t = null;
+  FsCommand fs = new FsCommand();
+  List<String> query = new ArrayList<String>();
+}
+{
+  <FS>
+  (
+      t = <ID>
+      { query.add(t.image.toString()); }
+  )*
+  
+  {
+    fs.setQuery(query);
+    return fs;
+  }
 }
 
 HelpCommand helpCommand() :
@@ -162,6 +183,7 @@ HelpCommand helpCommand() :
        | t=<DELETE>
        | t=<SELECT>
        | t=<CLEAR>
+       | t=<FS>
        | t=<ID>
      ) { argument = t.image.toString(); }
    ]

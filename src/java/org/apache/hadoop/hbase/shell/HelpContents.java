@@ -31,6 +31,8 @@ public class HelpContents {
     Map<String, String[]> load = new HashMap<String, String[]>();
 
     load.put("SHOW", new String[] { "List all tables.", "SHOW TABLES;" });
+    load.put("FS", new String[] { "Hadoop FsShell operations.",
+      "FS -copyFromLocal /home/user/backup.dat fs/user/backup;" });
     load.put("CLEAR", new String[] {"Clear the screen.", "CLEAR;"} );
     load.put("DESCRIBE", new String[] { "Describe a table's columnfamilies.",
         "DESCRIBE <table_name>;" });

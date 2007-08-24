@@ -6,6 +6,8 @@ Trunk (unreleased changes)
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    HADOOP-1768 FS command using Hadoop FsShell operations
+    (Edward Yoon via Stack)
 
   OPTIMIZATIONS
 

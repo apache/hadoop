@@ -29,31 +29,32 @@ public interface ParserConstants {
   int DESCRIBE = 8;
   int CREATE = 9;
   int DROP = 10;
-  int EXIT = 11;
-  int INSERT = 12;
-  int DELETE = 13;
-  int SELECT = 14;
-  int ROW = 15;
-  int COLUMN = 16;
-  int TIME = 17;
-  int VALUES = 18;
-  int COLUMNFAMILIES = 19;
-  int WHERE = 20;
-  int LIMIT = 21;
-  int AND = 22;
-  int OR = 23;
-  int COMMA = 24;
-  int DOT = 25;
-  int LPAREN = 26;
-  int RPAREN = 27;
-  int EQUALS = 28;
-  int NOTEQUAL = 29;
-  int OPTIONS = 30;
-  int ID = 31;
-  int NUM = 32;
-  int STRING = 33;
-  int QUOTED_STRING = 34;
-  int STRING_LITERAL = 35;
+  int FS = 11;
+  int EXIT = 12;
+  int INSERT = 13;
+  int DELETE = 14;
+  int SELECT = 15;
+  int ROW = 16;
+  int COLUMN = 17;
+  int TIME = 18;
+  int VALUES = 19;
+  int COLUMNFAMILIES = 20;
+  int WHERE = 21;
+  int LIMIT = 22;
+  int AND = 23;
+  int OR = 24;
+  int COMMA = 25;
+  int DOT = 26;
+  int LPAREN = 27;
+  int RPAREN = 28;
+  int EQUALS = 29;
+  int NOTEQUAL = 30;
+  int OPTIONS = 31;
+  int ID = 32;
+  int NUM = 33;
+  int STRING = 34;
+  int QUOTED_STRING = 35;
+  int STRING_LITERAL = 36;
 
   int DEFAULT = 0;
 
@@ -69,6 +70,7 @@ public interface ParserConstants {
     "\"describe\"",
     "\"create\"",
     "\"drop\"",
+    "\"fs\"",
     "\"exit\"",
     "\"insert\"",
     "\"delete\"",

@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
 public class ShowCommand extends BasicCommand {
-  
+
   private String command;
 
   public ReturnMsg execute(Configuration conf) {
@@ -35,7 +35,7 @@ public class ShowCommand extends BasicCommand {
 
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
-      
+
       int tableLength = 0;
       if ("tables".equals(this.command)) {
         HTableDescriptor[] tables = admin.listTables();
@@ -62,5 +62,5 @@ public class ShowCommand extends BasicCommand {
   public void setArgument(String argument) {
     this.command = argument;
   }
-  
+
 }
