@@ -50,15 +50,13 @@ public class HelpManager {
 
   public static void printHelp(String cmd) {
     if (cmd.equals("")) {
-      System.out.println("\nType 'help <command>;' to see command-specific "
+      System.out.println("Type 'help <command>;' to see command-specific "
           + "usage.\n");
       for (Map.Entry<String, String[]> helpMap : help.entrySet()) {
         wrapping(helpMap.getKey(), helpMap.getValue(), false);
       }
-      System.out.println();
     } else {
       if (help.containsKey(cmd.toUpperCase())) {
-        System.out.println();
         String[] msg = help.get(cmd.toUpperCase());
         wrapping(cmd.toUpperCase(), msg, true);
       } else {
@@ -78,6 +76,6 @@ public class HelpManager {
     }
 
     if (example)
-      System.out.println("\n>>> " + cmdType[1] + "\n");
+      System.out.println("\n>>> " + cmdType[1]);
   }
 }
