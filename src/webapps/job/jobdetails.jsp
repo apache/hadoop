@@ -154,7 +154,7 @@
     if (runState == JobStatus.RUNNING) {
       out.print("<b>Status:</b> Running<br>\n");
       out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
-      out.print("<b>Runnning for:</b> " + StringUtils.formatTimeDiff(
+      out.print("<b>Running for:</b> " + StringUtils.formatTimeDiff(
           System.currentTimeMillis(), job.getStartTime()) + "<br>\n");
     } else {
       if (runState == JobStatus.SUCCEEDED) {
