@@ -58,6 +58,10 @@ Trunk (unreleased changes)
 
     HADOOP-1726.  Remove lib/jetty-ext/ant.jar. (omalley)
 
+    HADOOP-1772.  Fix hadoop-daemon.sh script to get correct hostname
+    under Cygwin.  (Tsz Wo (Nicholas), SZE via cutting)
+
+
   IMPROVEMENTS
 
     HADOOP-1756. Add toString() to some Writable-s. (ab)
