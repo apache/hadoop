@@ -644,15 +644,15 @@ public class HStoreFile implements HConstants, WritableComparable {
     boolean success = fs.rename(src, hsf.getMapFilePath());
     if (!success) {
       LOG.warn("Failed rename of " + src + " to " + hsf.getMapFilePath());
-      return success;
-    }
-    src = getInfoFilePath();
-    if (!fs.exists(src)) {
-      throw new FileNotFoundException(src.toString());
-    }
-    success = fs.rename(src, hsf.getInfoFilePath());
-    if (!success) {
-      LOG.warn("Failed rename of " + src + " to " + hsf.getInfoFilePath());
+    } else {
+      src = getInfoFilePath();
+      if (!fs.exists(src)) {
+        throw new FileNotFoundException(src.toString());
+      }
+      success = fs.rename(src, hsf.getInfoFilePath());
+      if (!success) {
+        LOG.warn("Failed rename of " + src + " to " + hsf.getInfoFilePath());
+      }
     }
     return success;
   }

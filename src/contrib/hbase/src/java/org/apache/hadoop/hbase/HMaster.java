@@ -1468,7 +1468,7 @@ HMasterRegionInterface, Runnable {
    * @param serverName
    * @param returnMsgs
    */
-  private void assignRegions(HServerInfo info, String serverName,
+  private synchronized void assignRegions(HServerInfo info, String serverName,
       ArrayList<HMsg> returnMsgs) {
     
     TreeSet<Text> regionsToAssign = getRegionsToAssign();
