@@ -923,7 +923,7 @@ class HStore implements HConstants {
       if (!fs.exists(doneFile)) {
         // The last execution didn't finish the compaction, so there's nothing 
         // we can do.  We'll just have to redo it. Abandon it and return.
-        LOG.warn("Redoing a failed compaction");
+        LOG.warn("Redo failed compaction (missing 'done' file)");
         return;
       }
 
@@ -986,10 +986,11 @@ class HStore implements HConstants {
         this.readers.put(orderVal,
             finalCompactedFile.getReader(this.fs, this.bloomFilter));
         this.storefiles.put(orderVal, finalCompactedFile);
-      } finally {
-        LOG.warn("Failed replacing compacted files.  Compacted fle is " +
+      } catch (IOException e) {
+        LOG.error("Failed replacing compacted files. Compacted file is " +
           finalCompactedFile.toString() + ".  Files replaced are " +
-          toCompactFiles.toString() + " some of which may have been removed");
+          toCompactFiles.toString() +
+          " some of which may have been already removed", e);
       }
     } finally {
       // 7. Releasing the write-lock
