@@ -31,6 +31,11 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * An HColumnDescriptor contains information about a column family such as the
  * number of versions, compression settings, etc.
+ * 
+ * It is used as input when creating a table or adding a column. Once set, the
+ * parameters that specify a column cannot be changed without deleting the
+ * column and recreating it. If there is data stored in the column, it will be
+ * deleted when the column is deleted.
  */
 public class HColumnDescriptor implements WritableComparable {
   

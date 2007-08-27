@@ -27,28 +27,46 @@ import org.apache.hadoop.io.WritableComparable;
 
 /** 
  * Supplied as a parameter to HColumnDescriptor to specify what kind of
- * bloom filter to use for a column, and its configuration parameters
+ * bloom filter to use for a column, and its configuration parameters.
+ * 
+ * There is no way to automatically determine the vector size and the number of
+ * hash functions to use. In particular, bloom filters are very sensitive to the
+ * number of elements inserted into them. For HBase, the number of entries
+ * depends on the size of the data stored in the column. Currently the default
+ * region size is 64MB, so the number of entries is approximately 
+ * 64MB / (average value size for column).
+ * 
+ * If m denotes the number of bits in the Bloom filter (vectorSize),
+ * n denotes the number of elements inserted into the Bloom filter and
+ * k represents the number of hash functions used (nbHash), then according to
+ * Broder and Mitzenmacher,
+ * 
+ * ( http://www.eecs.harvard.edu/~michaelm/NEWWORK/postscripts/BloomFilterSurvey.pdf )
+ * 
+ * the probability of false positives is minimized when k is approximately
+ * m/n ln(2).
+ * 
  */
 public class BloomFilterDescriptor implements WritableComparable {
+  private static final double DEFAULT_NUMBER_OF_HASH_FUNCTIONS = 4.0;
   
   /*
    * Specify the kind of bloom filter that will be instantiated
    */
 
-  /**
-   * <i>Bloom filter</i>, as defined by Bloom in 1970.
-   */
-  public static final int BLOOMFILTER = 1;
-
-  /**
-   * <i>counting Bloom filter</i>, as defined by Fan et al. in a ToN 2000 paper.
-   */
-  public static final int COUNTING_BLOOMFILTER = 2;
-
-  /**
-   * <i>retouched Bloom filter</i>, as defined in the CoNEXT 2006 paper.
-   */
-  public static final int RETOUCHED_BLOOMFILTER = 3;
+  /** The type of bloom filter */
+  public static enum BloomFilterType {
+    /** <i>Bloom filter</i>, as defined by Bloom in 1970. */
+    BLOOMFILTER,
+    /**
+     * <i>Counting Bloom filter</i>, as defined by Fan et al. in a ToN 2000 paper.
+     */
+    COUNTING_BLOOMFILTER,
+    /**
+     * <i>Retouched Bloom filter</i>, as defined in the CoNEXT 2006 paper.
+     */
+    RETOUCHED_BLOOMFILTER
+  }
 
   /** Default constructor - used in conjunction with Writable */
   public BloomFilterDescriptor() {
@@ -56,11 +74,41 @@ public class BloomFilterDescriptor implements WritableComparable {
   }
   
   /**
+   * Creates a BloomFilterDescriptor for the specified type of filter, fixes
+   * the number of hash functions to 4 and computes a vector size using:
+   * 
+   * vectorSize = ceil((4 * n) / ln(2))
+   * 
+   * @param type
+   * @param numberOfEntries
+   */
+  public BloomFilterDescriptor(final BloomFilterType type,
+      final int numberOfEntries) {
+    
+    switch(type) {
+    case BLOOMFILTER:
+    case COUNTING_BLOOMFILTER:
+    case RETOUCHED_BLOOMFILTER:
+      this.filterType = type;
+      break;
+
+    default:
+      throw new IllegalArgumentException("Invalid bloom filter type: " + type);
+    }
+    this.nbHash = (int) DEFAULT_NUMBER_OF_HASH_FUNCTIONS;
+    this.vectorSize = (int) Math.ceil(
+        (DEFAULT_NUMBER_OF_HASH_FUNCTIONS * (1.0 * numberOfEntries)) /
+        Math.log(2.0));
+  }
+  
+  /**
    * @param type The kind of bloom filter to use.
    * @param vectorSize The vector size of <i>this</i> filter.
    * @param nbHash The number of hash functions to consider.
    */
-  public BloomFilterDescriptor(int type, int vectorSize, int nbHash) {
+  public BloomFilterDescriptor(final BloomFilterType type, final int vectorSize,
+      final int nbHash) {
+    
     switch(type) {
     case BLOOMFILTER:
     case COUNTING_BLOOMFILTER:
@@ -75,7 +123,7 @@ public class BloomFilterDescriptor implements WritableComparable {
     this.nbHash = nbHash;
   }
   
-  int filterType;
+  BloomFilterType filterType;
   int vectorSize;
   int nbHash;
 
@@ -113,7 +161,7 @@ public class BloomFilterDescriptor implements WritableComparable {
   /** {@inheritDoc} */
   @Override
   public int hashCode() {
-    int result = Integer.valueOf(this.filterType).hashCode();
+    int result = this.filterType.hashCode();
     result ^= Integer.valueOf(this.vectorSize).hashCode();
     result ^= Integer.valueOf(this.nbHash).hashCode();
     return result;
@@ -123,14 +171,15 @@ public class BloomFilterDescriptor implements WritableComparable {
   
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
-    filterType = in.readInt();
+    int ordinal = in.readInt();
+    this.filterType = BloomFilterType.values()[ordinal];
     vectorSize = in.readInt();
     nbHash = in.readInt();
   }
   
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
-    out.writeInt(filterType);
+    out.writeInt(filterType.ordinal());
     out.writeInt(vectorSize);
     out.writeInt(nbHash);
   }
@@ -140,7 +189,7 @@ public class BloomFilterDescriptor implements WritableComparable {
   /** {@inheritDoc} */
   public int compareTo(Object o) {
     BloomFilterDescriptor other = (BloomFilterDescriptor)o;
-    int result = this.filterType - other.filterType;
+    int result = this.filterType.ordinal() - other.filterType.ordinal();
 
     if(result == 0) {
       result = this.vectorSize - other.vectorSize;

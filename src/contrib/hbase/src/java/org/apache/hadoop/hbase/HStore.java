@@ -316,18 +316,21 @@ class HStore implements HConstants {
       if (LOG.isDebugEnabled()) {
         LOG.debug("loading bloom filter for " + this.storeName);
       }
-
-      switch(family.getBloomFilter().filterType) {
       
-      case BloomFilterDescriptor.BLOOMFILTER:
+      BloomFilterDescriptor.BloomFilterType type =
+        family.getBloomFilter().filterType;
+
+      switch(type) {
+      
+      case BLOOMFILTER:
         bloomFilter = new BloomFilter();
         break;
         
-      case BloomFilterDescriptor.COUNTING_BLOOMFILTER:
+      case COUNTING_BLOOMFILTER:
         bloomFilter = new CountingBloomFilter();
         break;
         
-      case BloomFilterDescriptor.RETOUCHED_BLOOMFILTER:
+      case RETOUCHED_BLOOMFILTER:
         bloomFilter = new RetouchedBloomFilter();
       }
       FSDataInputStream in = fs.open(filterFile);
@@ -339,20 +342,23 @@ class HStore implements HConstants {
         LOG.debug("creating bloom filter for " + this.storeName);
       }
 
-      switch(family.getBloomFilter().filterType) {
+      BloomFilterDescriptor.BloomFilterType type =
+        family.getBloomFilter().filterType;
+
+      switch(type) {
       
-      case BloomFilterDescriptor.BLOOMFILTER:
+      case BLOOMFILTER:
         bloomFilter = new BloomFilter(family.getBloomFilter().vectorSize,
             family.getBloomFilter().nbHash);
         break;
         
-      case BloomFilterDescriptor.COUNTING_BLOOMFILTER:
+      case COUNTING_BLOOMFILTER:
         bloomFilter =
           new CountingBloomFilter(family.getBloomFilter().vectorSize,
             family.getBloomFilter().nbHash);
         break;
         
-      case BloomFilterDescriptor.RETOUCHED_BLOOMFILTER:
+      case RETOUCHED_BLOOMFILTER:
         bloomFilter =
           new RetouchedBloomFilter(family.getBloomFilter().vectorSize,
             family.getBloomFilter().nbHash);
