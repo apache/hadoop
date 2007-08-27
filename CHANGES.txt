@@ -113,11 +113,6 @@ Release 0.14.1 - (unreleased)
     HADOOP-1740.  Fix null pointer exception in sorting map outputs. (Devaraj
     Das via omalley)
 
-    HADOOP-1739.  Fix task tracker report server to use a port
-    selected by the operating system by default rather than specifying
-    a port, which can fail when that port is not free.
-    (Arun C Murthy via cutting)
-
 
 Release 0.14.0 - 2007-08-17
 

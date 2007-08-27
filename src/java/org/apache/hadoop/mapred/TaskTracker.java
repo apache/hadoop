@@ -407,17 +407,22 @@ public class TaskTracker
     this.myMetrics = new TaskTrackerMetrics();
     
     // port numbers
-    this.taskReportPort = this.fConf.getInt("mapred.task.tracker.report.port", 0);
+    this.taskReportPort = this.fConf.getInt("mapred.task.tracker.report.port", 50050);
     // bind address
-    this.taskReportBindAddress = this.fConf.get("mapred.task.tracker.report.bindAddress", 
-                                                "0.0.0.0");
+    this.taskReportBindAddress = this.fConf.get("mapred.task.tracker.report.bindAddress", "0.0.0.0");
 
     // RPC initialization
-    this.taskReportServer = RPC.getServer(this, this.taskReportBindAddress, 
-                                          this.taskReportPort, maxCurrentTasks, 
-                                          false, this.fConf);
-    this.taskReportServer.start();
+    while (true) {
+      try {
+        this.taskReportServer = RPC.getServer(this, this.taskReportBindAddress, this.taskReportPort, maxCurrentTasks, false, this.fConf);
+        this.taskReportServer.start();
+        break;
+      } catch (BindException e) {
+        LOG.info("Could not open report server at " + this.taskReportPort + ", trying new port");
+        this.taskReportPort++;
+      }
         
+    }
     // The rpc-server port can be ephemeral... 
     // ... ensure we have the correct info
     this.taskReportPort = taskReportServer.getListenerAddress().getPort();
