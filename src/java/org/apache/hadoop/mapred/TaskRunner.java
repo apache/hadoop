@@ -243,7 +243,7 @@ abstract class TaskRunner extends Thread {
                                                    conf.get("mapred.child.java.opts", "-Xmx200m"),
                                                    conf.get("mapred.child.heap.size"));
         javaOpts = replaceAll(javaOpts, "@taskid@", taskid);
-        int port = conf.getInt("mapred.task.tracker.report.port", 50050) + 1;
+        int port = tracker.getTaskTrackerReportPort() + 1;
         javaOpts = replaceAll(javaOpts, "@port@", Integer.toString(port));
         String [] javaOptsSplit = javaOpts.split(" ");
         //Add java.library.path; necessary for native-hadoop libraries
