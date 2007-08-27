@@ -476,9 +476,9 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>mapred.task.tracker.report.port</name>
-  <value>50050</value>
-  <description>The port number that the MapReduce task tracker report server uses as a starting
-               point to look for a free port to listen on.
+  <value>0</value>
+  <description>The port number that the MapReduce task tracker report server uses.
+  By default we set it to zero to let the operating system pick an ephemeral port.
   </description>
 </property>
 
