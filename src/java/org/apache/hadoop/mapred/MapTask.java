@@ -599,8 +599,10 @@ class MapTask extends Task {
       //check whether the length of the key/value buffer is 0. If not, then
       //we need to spill that to disk. Note that we reset the key/val buffer
       //upon each spill (so a length > 0 means that we have not spilled yet)
-      if (keyValBuffer.getLength() > 0) {
-        sortAndSpillToDisk();
+      synchronized (this) {
+        if (keyValBuffer != null && keyValBuffer.getLength() > 0) {
+          sortAndSpillToDisk();
+        }
       }
       mergeParts();
     }

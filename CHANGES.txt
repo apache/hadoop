@@ -61,6 +61,8 @@ Trunk (unreleased changes)
     HADOOP-1772.  Fix hadoop-daemon.sh script to get correct hostname
     under Cygwin.  (Tsz Wo (Nicholas), SZE via cutting)
 
+    HADOOP-1740.  Fix null pointer exception in sorting map outputs. (Devaraj
+    Das via omalley)
 
   IMPROVEMENTS
 
