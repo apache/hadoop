@@ -535,6 +535,8 @@ Release 0.14.0 - 2007-08-17
 159. HADOOP-1437.  Add Eclipse plugin in contrib.
      (Eugene Hung and Christophe Taton via cutting)
 
+160. HADOOP-1740.  Fix null pointer exception in sorting map outputs. (Devaraj
+     Das via omalley)
 
 Release 0.13.0 - 2007-06-08
 
