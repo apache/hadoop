@@ -189,16 +189,16 @@ HMasterRegionInterface, Runnable {
       HRegionInterface regionServer = null;
       long scannerId = -1L;
       LOG.info(Thread.currentThread().getName() + " scanning meta region " +
-          region.regionName + " on " + region.server.toString());
+          region.getRegionName() + " on " + region.getServer().toString());
 
       // Array to hold list of split parents found.  Scan adds to list.  After
       // scan we go check if parents can be removed.
       Map<HRegionInfo, SortedMap<Text, byte[]>> splitParents =
         new HashMap<HRegionInfo, SortedMap<Text, byte[]>>();
       try {
-        regionServer = connection.getHRegionConnection(region.server);
+        regionServer = connection.getHRegionConnection(region.getServer());
         scannerId =
-          regionServer.openScanner(region.regionName, COLUMN_FAMILY_ARRAY,
+          regionServer.openScanner(region.getRegionName(), COLUMN_FAMILY_ARRAY,
               EMPTY_START_ROW, System.currentTimeMillis(), null);
 
         int numberOfRegionsFound = 0;
@@ -256,7 +256,8 @@ HMasterRegionInterface, Runnable {
           }
         } catch (IOException e) {
           if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            e = RemoteExceptionHandler.decodeRemoteException(
+                (RemoteException) e);
           }
           LOG.error("Closing scanner", e);
         }
@@ -268,11 +269,11 @@ HMasterRegionInterface, Runnable {
         for (Map.Entry<HRegionInfo, SortedMap<Text, byte[]>> e:
             splitParents.entrySet()) {
           HRegionInfo hri = e.getKey();
-          cleanupSplits(region.regionName, regionServer, hri, e.getValue());
+          cleanupSplits(region.getRegionName(), regionServer, hri, e.getValue());
         }
       }
       LOG.info(Thread.currentThread().getName() + " scan of meta region " +
-          region.regionName + " complete");
+          region.getRegionName() + " complete");
     }
 
     /*
@@ -542,14 +543,40 @@ HMasterRegionInterface, Runnable {
 
   @SuppressWarnings("unchecked")
   static class MetaRegion implements Comparable {
-    HServerAddress server;
-    Text regionName;
-    Text startKey;
+    private HServerAddress server;
+    private Text regionName;
+    private Text startKey;
 
     MetaRegion(HServerAddress server, Text regionName, Text startKey) {
+      if (server == null) {
+        throw new IllegalArgumentException("server cannot be null");
+      }
       this.server = server;
-      this.regionName = regionName;
-      this.startKey = startKey;
+      
+      if (regionName == null) {
+        throw new IllegalArgumentException("regionName cannot be null");
+      }
+      this.regionName = new Text(regionName);
+      
+      this.startKey = new Text();
+      if (startKey != null) {
+        this.startKey.set(startKey);
+      }
+    }
+
+    /** @return the regionName */
+    public Text getRegionName() {
+      return regionName;
+    }
+
+    /** @return the server */
+    public HServerAddress getServer() {
+      return server;
+    }
+
+    /** @return the startKey */
+    public Text getStartKey() {
+      return startKey;
     }
 
     /** {@inheritDoc} */
@@ -572,9 +599,9 @@ HMasterRegionInterface, Runnable {
     public int compareTo(Object o) {
       MetaRegion other = (MetaRegion)o;
 
-      int result = this.regionName.compareTo(other.regionName);
+      int result = this.regionName.compareTo(other.getRegionName());
       if(result == 0) {
-        result = this.startKey.compareTo(other.startKey);
+        result = this.startKey.compareTo(other.getStartKey());
       }
       return result;
     }
@@ -625,7 +652,7 @@ HMasterRegionInterface, Runnable {
           // Don't interrupt us while we're working
           synchronized (metaScannerLock) {
             scanRegion(region);
-            onlineMetaRegions.put(region.startKey, region);
+            onlineMetaRegions.put(region.getStartKey(), region);
           }
           break;
         } catch (IOException e) {
@@ -1970,19 +1997,21 @@ HMasterRegionInterface, Runnable {
             long scannerId = -1L;
 
             if (LOG.isDebugEnabled()) {
-              LOG.debug("process server shutdown scanning " + r.regionName +
-                  " on " + r.server + " " + Thread.currentThread().getName());
+              LOG.debug("process server shutdown scanning " +
+                  r.getRegionName() + " on " + r.getServer() + " " +
+                  Thread.currentThread().getName());
             }
-            server = connection.getHRegionConnection(r.server);
+            server = connection.getHRegionConnection(r.getServer());
 
-            scannerId = server.openScanner(r.regionName, COLUMN_FAMILY_ARRAY,
-                EMPTY_START_ROW, System.currentTimeMillis(), null);
+            scannerId =
+              server.openScanner(r.getRegionName(), COLUMN_FAMILY_ARRAY,
+                  EMPTY_START_ROW, System.currentTimeMillis(), null);
             
-            scanMetaRegion(server, scannerId, r.regionName);
+            scanMetaRegion(server, scannerId, r.getRegionName());
             
             if (LOG.isDebugEnabled()) {
               LOG.debug("process server shutdown finished scanning " +
-                  r.regionName + " on " + r.server + " " +
+                  r.getRegionName() + " on " + r.getServer() + " " +
                   Thread.currentThread().getName());
             }
           }
@@ -2086,8 +2115,8 @@ HMasterRegionInterface, Runnable {
             r = onlineMetaRegions.get(onlineMetaRegions.headMap(
                 regionInfo.getRegionName()).lastKey());
           }
-          metaRegionName = r.regionName;
-          server = connection.getHRegionConnection(r.server);
+          metaRegionName = r.getRegionName();
+          server = connection.getHRegionConnection(r.getServer());
         }
 
         try {
@@ -2227,8 +2256,8 @@ HMasterRegionInterface, Runnable {
             r = onlineMetaRegions.get(onlineMetaRegions.headMap(
                 region.getRegionName()).lastKey());
           }
-          metaRegionName = r.regionName;
-          server = connection.getHRegionConnection(r.server);
+          metaRegionName = r.getRegionName();
+          server = connection.getHRegionConnection(r.getServer());
         }
         LOG.info("updating row " + region.getRegionName() + " in table " +
           metaRegionName + " with startcode " +
@@ -2365,8 +2394,8 @@ HMasterRegionInterface, Runnable {
             onlineMetaRegions.get(onlineMetaRegions.headMap(
                 newRegion.getTableDesc().getName()).lastKey()));
           
-      Text metaRegionName = m.regionName;
-      HRegionInterface server = connection.getHRegionConnection(m.server);
+      Text metaRegionName = m.getRegionName();
+      HRegionInterface server = connection.getHRegionConnection(m.getServer());
       long scannerid = server.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
           tableName, System.currentTimeMillis(), null);
       try {
@@ -2504,13 +2533,14 @@ HMasterRegionInterface, Runnable {
 
               // Get a connection to a meta server
 
-              HRegionInterface server = connection.getHRegionConnection(m.server);
+              HRegionInterface server =
+                connection.getHRegionConnection(m.getServer());
 
               // Open a scanner on the meta region
 
               long scannerId =
-                server.openScanner(m.regionName, COLUMN_FAMILY_ARRAY, tableName,
-                    System.currentTimeMillis(), null);
+                server.openScanner(m.getRegionName(), COLUMN_FAMILY_ARRAY,
+                    tableName, System.currentTimeMillis(), null);
 
               try {
                 while (true) {
@@ -2694,7 +2724,7 @@ HMasterRegionInterface, Runnable {
 
         for (int tries = 0; tries < numRetries; tries++) {
           try {
-            server.batchUpdate(m.regionName, System.currentTimeMillis(), b);
+            server.batchUpdate(m.getRegionName(), System.currentTimeMillis(), b);
             
             if (LOG.isDebugEnabled()) {
               LOG.debug("updated columns in row: " + i.regionName);
@@ -2890,7 +2920,7 @@ HMasterRegionInterface, Runnable {
 
       for (HRegionInfo i: unservedRegions) {
         i.tableDesc.families().remove(columnName);
-        updateRegionInfo(server, m.regionName, i);
+        updateRegionInfo(server, m.getRegionName(), i);
 
         // Delete the directories used by the column
 
@@ -2939,7 +2969,7 @@ HMasterRegionInterface, Runnable {
         // and create it.
 
         i.tableDesc.addFamily(newColumn);
-        updateRegionInfo(server, m.regionName, i);
+        updateRegionInfo(server, m.getRegionName(), i);
       }
     }
   }
