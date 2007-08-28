@@ -17,13 +17,9 @@
  */
  package org.apache.hadoop.mapred;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.BindException;
@@ -1771,13 +1767,16 @@ public class TaskTracker
 
       JobConf defaultConf = new JobConf();
       int port = Integer.parseInt(args[0]);
+      InetSocketAddress address = new InetSocketAddress
+        (defaultConf.get("mapred.task.tracker.report.bindAddress","0.0.0.0"),
+         port);
       String taskid = args[1];
       //set a very high idle timeout so that the connection is never closed
       defaultConf.setInt("ipc.client.connection.maxidletime", 60*60*1000);
       TaskUmbilicalProtocol umbilical =
         (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
                                             TaskUmbilicalProtocol.versionID,
-                                            new InetSocketAddress(port), 
+                                            address,
                                             defaultConf);
             
       Task task = umbilical.getTask(taskid);
