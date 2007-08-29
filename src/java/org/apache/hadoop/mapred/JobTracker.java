@@ -1226,7 +1226,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           // If not first contact, there should be some record of the tracker
           if (!seenBefore) {
             LOG.warn("Status from unknown Tracker : " + trackerName);
-            taskTrackers.remove(trackerName); 
+            updateTaskTrackerStatus(trackerName, null);
             return false;
           }
         }

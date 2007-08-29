@@ -137,6 +137,9 @@ Release 0.14.1 - (unreleased)
     HADOOP-1790.  Fix tasktracker to work correctly on multi-homed
     boxes.  (Torsten Curdt via cutting)
 
+    HADOOP-1798.  Fix jobtracker to correctly account for failed
+    tasks.  (omalley via cutting)
+
 
 Release 0.14.0 - 2007-08-17
 
