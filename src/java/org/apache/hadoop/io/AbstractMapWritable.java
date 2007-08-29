@@ -19,10 +19,11 @@
  */
 package org.apache.hadoop.io;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configurable;
@@ -49,20 +50,25 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   @SuppressWarnings("unchecked")
   private Map<Byte, Class> idToClassMap = new ConcurrentHashMap<Byte, Class>();
   
-  /* The number of known classes (established by the constructor) */
-  private AtomicInteger newClasses = new AtomicInteger(0);
+  /* The number of new classes (those not established by the constructor) */
+  private volatile byte newClasses = 0;
   
   /** @return the number of known classes */
-  protected int getNewClasses() {
-    return newClasses.get();
+  byte getNewClasses() {
+    return newClasses;
   }
 
-  /** used to add "predefined" classes */
+  /**
+   * Used to add "predefined" classes and by Writable to copy "new" classes.
+   */
   @SuppressWarnings("unchecked")
-  protected void addToMap(Class clazz, byte id) {
+  private synchronized void addToMap(Class clazz, byte id) {
     if (classToIdMap.containsKey(clazz)) {
-      throw new IllegalArgumentException ("Class " + clazz.getName() +
-          " already registered");
+      byte b = classToIdMap.get(clazz);
+      if (b != id) {
+        throw new IllegalArgumentException ("Class " + clazz.getName() +
+          " already registered but maps to " + b + " and not " + id);
+      }
     }
     if (idToClassMap.containsKey(id)) {
       Class c = idToClassMap.get(id);
@@ -77,15 +83,15 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   
   /** Add a Class to the maps if it is not already present. */ 
   @SuppressWarnings("unchecked")
-  protected void addToMap(Class clazz) {
+  protected synchronized void addToMap(Class clazz) {
     if (classToIdMap.containsKey(clazz)) {
       return;
     }
-    byte id = Integer.valueOf((newClasses.incrementAndGet())).byteValue();
-    if (id > Byte.MAX_VALUE) {
+    if (newClasses + 1 > Byte.MAX_VALUE) {
       throw new IndexOutOfBoundsException("adding an additional class would" +
       " exceed the maximum number allowed");
     }
+    byte id = ++newClasses;
     addToMap(clazz, id);
   }
 
@@ -102,7 +108,7 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   }
 
   /** Used by child copy constructors. */
-  protected void copy(Writable other) {
+  protected synchronized void copy(Writable other) {
     if (other != null) {
       try {
         DataOutputBuffer out = new DataOutputBuffer();
@@ -161,17 +167,49 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
 
   }
 
-  /**
-   * @return the conf
-   */
+  /** @return the conf */
   public Configuration getConf() {
     return conf.get();
   }
 
-  /**
-   * @param conf the conf to set
-   */
+  /** @param conf the conf to set */
   public void setConf(Configuration conf) {
     this.conf.set(conf);
   }
+  
+  /** {@inheritDoc} */
+  public void write(DataOutput out) throws IOException {
+    
+    // First write out the size of the class table and any classes that are
+    // "unknown" classes
+    
+    out.writeByte(newClasses);
+
+    for (byte i = 1; i <= newClasses; i++) {
+      out.writeByte(i);
+      out.writeUTF(getClass(i).getName());
+    }
+  }
+  
+  /** {@inheritDoc} */
+  public void readFields(DataInput in) throws IOException {
+    
+    // Get the number of "unknown" classes
+    
+    newClasses = in.readByte();
+    
+    // Then read in the class names and add them to our tables
+    
+    for (int i = 0; i < newClasses; i++) {
+      byte id = in.readByte();
+      String className = in.readUTF();
+      try {
+        addToMap(Class.forName(className), id);
+        
+      } catch (ClassNotFoundException e) {
+        throw new IOException("can't find class: " + className + " because "+
+            e.getMessage());
+      }
+    }
+  }    
 }

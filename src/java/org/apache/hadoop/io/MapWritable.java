@@ -121,22 +121,14 @@ public class MapWritable extends AbstractMapWritable
   // Writable
   
   /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
-    
-    // First write out the size of the class table and any classes that are
-    // not "known" classes
-    
-    byte newClasses = Integer.valueOf(getNewClasses()).byteValue();
-    out.writeByte(newClasses);
-    for (byte i = 1; i <= newClasses; i++) {
-      out.writeByte(i);
-      out.writeUTF(getClass(i).getName());
-    }
+    super.write(out);
     
     // Write out the number of entries in the map
     
     out.writeInt(instance.size());
-    
+
     // Then write out each key/value pair
     
     for (Map.Entry<Writable, Writable> e: instance.entrySet()) {
@@ -148,26 +140,9 @@ public class MapWritable extends AbstractMapWritable
   }
 
   /** {@inheritDoc} */
-  @SuppressWarnings("unchecked")
+  @Override
   public void readFields(DataInput in) throws IOException {
-    
-    // Get the number of "unknown" classes
-    
-    byte newClasses = in.readByte();
-    
-    // Then read in the class names and add them to our parent's class tables
-    
-    for (int i = 0; i < newClasses; i++) {
-      byte id = in.readByte();
-      String className = in.readUTF();
-      try {
-        addToMap(Class.forName(className), id);
-        
-      } catch (ClassNotFoundException e) {
-        throw new IOException("can't find class: " + className + " because "+
-            e.getMessage());
-      }
-    }
+    super.readFields(in);
     
     // Read the number of entries in the map
     

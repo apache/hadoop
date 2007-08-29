@@ -84,4 +84,17 @@ public class TestMapWritable extends TestCase {
       }
     }
   }
+
+  /**
+   * Test that number of "unknown" classes is propagated across multiple copies.
+   */
+  @SuppressWarnings("deprecation")
+  public void testForeignClass() {
+    MapWritable inMap = new MapWritable();
+    inMap.put(new Text("key"), new UTF8("value"));
+    inMap.put(new Text("key2"), new UTF8("value2"));
+    MapWritable outMap = new MapWritable(inMap);
+    MapWritable copyOfCopy = new MapWritable(outMap);
+    assertEquals(1, copyOfCopy.getNewClasses());
+  }
 }

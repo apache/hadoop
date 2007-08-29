@@ -88,4 +88,17 @@ public class TestSortedMapWritable extends TestCase {
       }
     }
   }
+  
+  /**
+   * Test that number of "unknown" classes is propagated across multiple copies.
+   */
+  @SuppressWarnings("deprecation")
+  public void testForeignClass() {
+    SortedMapWritable inMap = new SortedMapWritable();
+    inMap.put(new Text("key"), new UTF8("value"));
+    inMap.put(new Text("key2"), new UTF8("value2"));
+    SortedMapWritable outMap = new SortedMapWritable(inMap);
+    SortedMapWritable copyOfCopy = new SortedMapWritable(outMap);
+    assertEquals(1, copyOfCopy.getNewClasses());
+  }
 }
