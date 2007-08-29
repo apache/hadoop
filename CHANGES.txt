@@ -22,6 +22,7 @@ Trunk (unreleased changes)
     compaction result
     HADOOP-1780 Regions are still being doubly assigned
     HADOOP-1797 Fix NPEs in MetaScanner constructor
+    HADOOP-1799 Incorrect classpath in binary version of Hadoop
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
