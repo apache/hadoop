@@ -20,16 +20,10 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.ConcurrentModificationException;
-import java.util.Map;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -148,155 +142,21 @@ public class TestSplit extends HBaseTestCase {
   /**
    * Test that a region is cleaned up after its daughter splits release all
    * references.
-   * @throws Exception
+   * @throws IOException
    */
-  public void testSplitRegionIsDeleted() throws Exception {
-    final int retries = 10; 
+  public void testSplitRegionIsDeleted() throws IOException {
     // Start up a hbase cluster
     MiniHBaseCluster cluster = new MiniHBaseCluster(conf, 1, true);
-    Path d = cluster.regionThreads.get(0).getRegionServer().rootDir;
-    FileSystem fs = (cluster.getDFSCluster() == null)?
-      this.localFs:
-      cluster.getDFSCluster().getFileSystem();
-    HTable meta = null;
-    HTable t = null;
     try {
       // Create a table.
       HBaseAdmin admin = new HBaseAdmin(this.conf);
       admin.createTable(createTableDescriptor(getName()));
-      // Get connection on the meta table and get count of rows.
-      meta = new HTable(this.conf, HConstants.META_TABLE_NAME);
-      int count = count(meta, HConstants.COLUMN_FAMILY_STR);
-      t = new HTable(this.conf, new Text(getName()));
-      addContent(new HTableLoader(t), COLFAMILY_NAME3);
-      // All is running in the one JVM so I should be able to get the single
-      // region instance and bring on a split.
-      HRegionInfo hri =
-        t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
-      HRegion r = cluster.regionThreads.get(0).getRegionServer().
-        onlineRegions.get(hri.getRegionName());
-      // Flush will provoke a split next time the split-checker thread runs.
-      r.flushcache(false);
-      // Now, wait until split makes it into the meta table.
-      for (int i = 0; i < retries &&
-          (count(meta, HConstants.COLUMN_FAMILY_STR) <= count); i++) {
-        Thread.sleep(5000);
-      }
-      int oldCount = count;
-      count = count(meta, HConstants.COLUMN_FAMILY_STR);
-      if (count <= oldCount) {
-        throw new IOException("Failed waiting on splits to show up");
-      }
-      // Get info on the parent from the meta table.  Pass in 'hri'. Its the
-      // region we have been dealing with up to this. Its the parent of the
-      // region split.
-      Map<Text, byte []> data = getSplitParentInfo(meta, hri);
-      HRegionInfo parent =
-        Writables.getHRegionInfoOrNull(data.get(HConstants.COL_REGIONINFO));
-      assertTrue(parent.isOffline());
-      assertTrue(parent.isSplit());
-      HRegionInfo splitA =
-        Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITA));
-      HRegionInfo splitB =
-        Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITB));
-      Path parentDir = HRegion.getRegionDir(d, parent.getRegionName());
-      assertTrue(fs.exists(parentDir));
-      LOG.info("Split happened. Parent is " + parent.getRegionName() +
-        " and daughters are " + splitA.getRegionName() + ", " +
-        splitB.getRegionName());
-      // Recalibrate will cause us to wait on new regions' deployment
-      recalibrate(t, new Text(COLFAMILY_NAME3), retries);
-      // Compact a region at a time so we can test case where one region has
-      // no references but the other still has some
-      compact(cluster, splitA);
-      // Wait till the parent only has reference to remaining split, one that
-      // still has references.
-      while (getSplitParentInfo(meta, parent).size() == 3) {
-        Thread.sleep(5000);
-      }
-      LOG.info("Parent split returned " +
-          getSplitParentInfo(meta, parent).keySet().toString());
-      // Call second split.
-      compact(cluster, splitB);
-      // Now wait until parent disappears.
-      LOG.info("Waiting on parent " + parent.getRegionName() +
-      " to disappear");
-      for (int i = 0; i < retries &&
-          getSplitParentInfo(meta, parent) != null; i++) {
-        Thread.sleep(5000);
-      }
-      assertTrue(getSplitParentInfo(meta, parent) == null);
-      // Assert cleaned up.
-      for (int i = 0; i < retries && fs.exists(parentDir); i++) {
-        Thread.sleep(5000);
-      }
-      assertFalse(fs.exists(parentDir));
+      // This builds a multi-region table by splitting.  It will assert
+      // the parent region gets cleaned-up.
+      MultiRegionTable.makeMultiRegionTable(conf, cluster,
+        this.localFs, getName(), COLFAMILY_NAME3);
     } finally {
       cluster.shutdown();
-    }
-  }
-  
-  /*
-   * Compact the passed in region <code>r</code>. 
-   * @param cluster
-   * @param r
-   * @throws IOException
-   */
-  private void compact(final MiniHBaseCluster cluster, final HRegionInfo r)
-  throws IOException {
-    LOG.info("Starting compaction");
-    for (MiniHBaseCluster.RegionServerThread thread: cluster.regionThreads) {
-      SortedMap<Text, HRegion> regions =
-        thread.getRegionServer().onlineRegions;
-      // Retry if ConcurrentModification... alternative of sync'ing is not
-      // worth it for sake of unit test.
-      for (int i = 0; i < 10; i++) {
-        try {
-          for (HRegion online: regions.values()) {
-            if (online.getRegionName().toString().
-                equals(r.getRegionName().toString())) {
-              online.compactStores();
-            }
-          }
-          break;
-        } catch (ConcurrentModificationException e) {
-          LOG.warn("Retrying because ..." + e.toString() + " -- one or " +
-          "two should be fine");
-          continue;
-        }
-      }
-    }
-  }
-  
-  /*
-   * Recalibrate passed in HTable.  Run after change in region geography.
-   * Open a scanner on the table. This will force HTable to recalibrate
-   * and in doing so, will force us to wait until the new child regions
-   * come on-line (since they are no longer automatically served by the 
-   * HRegionServer that was serving the parent. In this test they will
-   * end up on the same server (since there is only one), but we have to
-   * wait until the master assigns them. 
-   * @param t
-   * @param retries
-   */
-  private void recalibrate(final HTable t, final Text column,
-      final int retries)
-  throws IOException, InterruptedException {
-    for (int i = 0; i < retries; i++) {
-      try {
-        HScannerInterface s =
-          t.obtainScanner(new Text[] {column}, HConstants.EMPTY_START_ROW);
-        try {
-          HStoreKey key = new HStoreKey();
-          TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-          s.next(key, results);
-          break;
-        } finally {
-          s.close();
-        }
-      } catch (NotServingRegionException x) {
-        Thread.sleep(5000);
-      }
     }
   }
   
@@ -309,59 +169,6 @@ public class TestSplit extends HBaseTestCase {
       Text tmp = new Text(results[j]);
       // Row should be equal to value every time.
       assertEquals(k.toString(), tmp.toString());
-    }
-  }
-  
-  /*
-   * @return Return row info for passed in region or null if not found in scan.
-   */
-  private Map<Text, byte []> getSplitParentInfo(final HTable t,
-    final HRegionInfo parent)
-  throws IOException {
-    HScannerInterface s = t.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
-      HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
-    try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
-      while(s.next(curKey, curVals)) {
-        HRegionInfo hri = Writables.
-          getHRegionInfoOrNull(curVals.get(HConstants.COL_REGIONINFO));
-        if (hri == null) {
-          continue;
-        }
-        if (hri.getRegionName().toString().
-            equals(parent.getRegionName().toString())) {
-          return curVals;
-        }
-      }
-      return null;
-    } finally {
-      s.close();
-    }   
-  }
-  
-  /*
-   * Count of rows in table for given column. 
-   * @param t
-   * @param column
-   * @return
-   * @throws IOException
-   */
-  private int count(final HTable t, final String column)
-  throws IOException {
-    int size = 0;
-    Text [] cols = new Text[] {new Text(column)};
-    HScannerInterface s = t.obtainScanner(cols, HConstants.EMPTY_START_ROW,
-      System.currentTimeMillis(), null);
-    try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
-      while(s.next(curKey, curVals)) {
-        size++;
-      }
-      return size;
-    } finally {
-      s.close();
     }
   }
   

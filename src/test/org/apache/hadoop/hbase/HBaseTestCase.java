@@ -103,7 +103,15 @@ public abstract class HBaseTestCase extends TestCase {
     return htd;
   }
   
-  protected void addContent(final HRegion r, final String column)
+  /**
+   * Add content to region <code>r</code> on the passed column
+   * <code>column</code>.
+   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
+   * @param r
+   * @param column
+   * @throws IOException
+   */
+  protected static void addContent(final HRegion r, final String column)
   throws IOException {
     Text startKey = r.getRegionInfo().getStartKey();
     Text endKey = r.getRegionInfo().getEndKey();
@@ -113,14 +121,32 @@ public abstract class HBaseTestCase extends TestCase {
     }
     addContent(new HRegionLoader(r), column, startKeyBytes, endKey);
   }
-  
-  protected void addContent(final Loader updater, final String column)
+
+  /**
+   * Add content to region <code>r</code> on the passed column
+   * <code>column</code>.
+   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
+   * @param updater  An instance of {@link Loader}.
+   * @param column
+   * @throws IOException
+   */
+  protected static void addContent(final Loader updater, final String column)
   throws IOException {
     addContent(updater, column,
       new byte [] {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR}, null);
   }
-  
-  protected void addContent(final Loader updater, final String column,
+
+  /**
+   * Add content to region <code>r</code> on the passed column
+   * <code>column</code>.
+   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
+   * @param updater  An instance of {@link Loader}.
+   * @param column
+   * @param startKeyBytes Where to start the rows inserted
+   * @param endKey Where to stop inserting rows.
+   * @throws IOException
+   */
+  protected static void addContent(final Loader updater, final String column,
       final byte [] startKeyBytes, final Text endKey)
   throws IOException {
     // Add rows of three characters.  The first character starts with the
@@ -156,14 +182,21 @@ public abstract class HBaseTestCase extends TestCase {
     }
   }
   
-  public interface Loader {
+  /**
+   * Interface used by the addContent methods so either a HTable or a HRegion
+   * can be passed to the methods.
+   */
+  public static interface Loader {
     public long startBatchUpdate(final Text row) throws IOException;
     public void put(long lockid, Text column, byte val[]) throws IOException;
     public void commit(long lockid) throws IOException;
     public void abort(long lockid) throws IOException;
   }
   
-  public class HRegionLoader implements Loader {
+  /**
+   * A class that makes a {@link Loader} out of a {@link HRegion}
+   */
+  public static class HRegionLoader implements Loader {
     final HRegion region;
     public HRegionLoader(final HRegion HRegion) {
       super();
@@ -182,8 +215,11 @@ public abstract class HBaseTestCase extends TestCase {
       return this.region.startUpdate(row);
     }
   }
-  
-  public class HTableLoader implements Loader {
+
+  /**
+   * A class that makes a {@link Loader} out of a {@link HTable}
+   */
+  public static class HTableLoader implements Loader {
     final HTable table;
     public HTableLoader(final HTable table) {
       super();
@@ -199,7 +235,7 @@ public abstract class HBaseTestCase extends TestCase {
       this.table.put(lockid, column, val);
     }
     public long startBatchUpdate(Text row) {
-      return this.table.startBatchUpdate(row);
+      return this.table.startUpdate(row);
     }
   }
 }
