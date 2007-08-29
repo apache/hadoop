@@ -109,7 +109,11 @@ Trunk (unreleased changes)
     errors and use them to trigger speculative re-execution of tasks.
     (Arun C Murthy via cutting)
 
-    
+    HADOOP-1601.  Change GenericWritable to use ReflectionUtils for
+    instance creation, avoiding classloader issues, and to implement
+    Configurable.  (Enis Soztutar via cutting)
+
+
 Release 0.14.1 - (unreleased)
 
   BUG FIXES

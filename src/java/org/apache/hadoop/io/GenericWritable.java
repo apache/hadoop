@@ -22,6 +22,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
+
 /**
  * A wrapper for Writable instances.
  * <p>
@@ -34,6 +38,12 @@ import java.io.IOException;
  * Compared with <code>ObjectWritable</code>, this class is much more effective,
  * because <code>ObjectWritable</code> will append the class declaration as a String 
  * into the output file in every Key-Value pair.
+ * </p>
+ * 
+ * <p>
+ * Generic Writable implements {@link Configurable} interface, so that it will be 
+ * configured by the framework. The configuration is passed to the wrapped objects
+ * implementing {@link Configurable} interface <i>before deserialization</i>. 
  * </p>
  * 
  * how to use it: <br>
@@ -63,7 +73,7 @@ import java.io.IOException;
  * 
  * @since Nov 8, 2006
  */
-public abstract class GenericWritable implements Writable {
+public abstract class GenericWritable implements Writable, Configurable {
 
   private static final byte NOT_SET = -1;
 
@@ -71,6 +81,8 @@ public abstract class GenericWritable implements Writable {
 
   private Writable instance;
 
+  private Configuration conf = null;
+  
   /**
    * Set the instance that is wrapped.
    * 
@@ -78,10 +90,11 @@ public abstract class GenericWritable implements Writable {
    */
   public void set(Writable obj) {
     instance = obj;
-    Class[] clazzes = getTypes();
+    Class<? extends Writable> instanceClazz = instance.getClass();
+    Class<? extends Writable>[] clazzes = getTypes();
     for (int i = 0; i < clazzes.length; i++) {
-      Class clazz = clazzes[i];
-      if (clazz.isInstance(instance)) {
+      Class<? extends Writable> clazz = clazzes[i];
+      if (clazz.equals(instanceClazz)) {
         type = (byte) i;
         return;
       }
@@ -106,7 +119,7 @@ public abstract class GenericWritable implements Writable {
     type = in.readByte();
     Class<? extends Writable> clazz = getTypes()[type & 0xff];
     try {
-      instance = clazz.newInstance();
+      instance = (Writable)ReflectionUtils.newInstance(clazz, conf);
     } catch (Exception e) {
       e.printStackTrace();
       throw new IOException("Cannot initialize the class: " + clazz);
@@ -128,4 +141,12 @@ public abstract class GenericWritable implements Writable {
    */
   abstract protected Class<? extends Writable>[] getTypes();
 
+  public Configuration getConf() {
+    return conf;
+  }
+
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+  
 }

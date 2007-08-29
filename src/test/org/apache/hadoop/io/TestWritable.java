@@ -20,6 +20,11 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.Random;
+
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
+
 import junit.framework.TestCase;
 
 /** Unit tests for Writable. */
@@ -61,17 +66,26 @@ public class TestWritable extends TestCase {
   }
 
   /** Utility method for testing writables. */
-  public static void testWritable(Writable before) throws Exception {
+  public static Writable testWritable(Writable before) 
+  	throws Exception {
+  	return testWritable(before, null);
+  }
+  
+  /** Utility method for testing writables. */
+  public static Writable testWritable(Writable before
+  		, Configuration conf) throws Exception {
     DataOutputBuffer dob = new DataOutputBuffer();
     before.write(dob);
 
     DataInputBuffer dib = new DataInputBuffer();
     dib.reset(dob.getData(), dob.getLength());
     
-    Writable after = (Writable)before.getClass().newInstance();
+    Writable after = (Writable)ReflectionUtils.newInstance(
+    		before.getClass(), conf);
     after.readFields(dib);
 
     assertEquals(before, after);
+    return after;
   }
 	
 }
