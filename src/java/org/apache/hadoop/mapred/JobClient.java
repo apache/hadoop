@@ -757,39 +757,59 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   public TaskStatusFilter getTaskOutputFilter(){
     return this.taskOutputFilter; 
   }
+
+  /**
+   * Display usage of the command-line tool and terminate execution
+   */
+  private void displayUsage() {
+    System.out.printf("JobClient <command> <args>\n");
+    System.out.printf("\t-submit\t<job-file>\n");
+    System.out.printf("\t-status\t<job-id>\n");
+    System.out.printf("\t-kill\t<job-id>\n");
+    System.out.printf("\t-events\t<job-id> <from-event-#> <#-of-events>\n");
+    System.out.printf("\t-list\n\n");
+    throw new RuntimeException("JobClient: bad command-line arguments");
+  }
     
   public int run(String[] argv) throws Exception {
-    if (argv.length < 2) {
-      String cmd = "JobClient -submit <job> | -status <id> |" + 
-                   " -events <id> |" +
-                   " -kill <id> [-jt <jobtracker:port>|<config>]";
-      System.out.println(cmd);
-      throw new RuntimeException("JobClient:" + cmd);
-    }
-
-    // Process args
+    // process arguments
     String submitJobFile = null;
     String jobid = null;
+    int fromEvent = 0;
+    int nEvents = 0;
     boolean getStatus = false;
     boolean killJob = false;
+    boolean listEvents = false;
+    boolean listJobs = false;
 
-    for (int i = 0; i < argv.length; i++) {
-      if ("-submit".equals(argv[i])) {
-        submitJobFile = argv[i+1];
-        i++;
-      } else if ("-status".equals(argv[i])) {
-        jobid = argv[i+1];
-        getStatus = true;
-        i++;
-      } else if ("-kill".equals(argv[i])) {
-        jobid = argv[i+1];
-        killJob = true;
-        i++;
-      } else if ("-events".equals(argv[i])) {
-        listEvents(argv[i+1], Integer.parseInt(argv[i+2]), 
-                   Integer.parseInt(argv[i+3]));
-        i += 3;
-      }
+    if (argv.length < 1)
+      displayUsage();
+
+    if ("-submit".equals(argv[0])) {
+      if (argv.length != 2)
+        displayUsage();
+      submitJobFile = argv[1];
+    } else if ("-status".equals(argv[0])) {
+      if (argv.length != 2)
+        displayUsage();
+      jobid = argv[1];
+      getStatus = true;
+    } else if ("-kill".equals(argv[0])) {
+      if (argv.length != 2)
+        displayUsage();
+      jobid = argv[1];
+      killJob = true;
+    } else if ("-events".equals(argv[0])) {
+      if (argv.length != 4)
+        displayUsage();
+      jobid = argv[1];
+      fromEvent = Integer.parseInt(argv[2]);
+      nEvents = Integer.parseInt(argv[3]);
+      listEvents = true;
+    } else if ("-list".equals(argv[0])) {
+      listJobs = true;
+    } else {
+      displayUsage();
     }
 
     // initialize JobClient
@@ -807,6 +827,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       if (submitJobFile != null) {
         RunningJob job = submitJob(conf);
         System.out.println("Created job " + job.getJobID());
+        exitCode = 0;
       } else if (getStatus) {
         RunningJob job = getJob(jobid);
         if (job == null) {
@@ -825,13 +846,19 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           System.out.println("Killed job " + jobid);
           exitCode = 0;
         }
+      } else if (listEvents) {
+        listEvents(jobid, fromEvent, nEvents);
+        exitCode = 0;
+      } else if (listJobs) {
+        listJobs();
+        exitCode = 0;
       }
     } finally {
       close();
     }
     return exitCode;
   }
-    
+
   /**
    * List the events for the given job
    * @param jobId the job id for the job's events to list
@@ -847,6 +874,23 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     for(TaskCompletionEvent event: events) {
       System.out.println(event.getTaskStatus() + " " + event.getTaskId() + 
                          " " + event.getTaskTrackerHttp());
+    }
+  }
+
+  /**
+   * Dump a list of currently running jobs
+   * @throws IOException
+   */
+  private void listJobs() throws IOException {
+    JobStatus[] jobs = jobsToComplete();
+    if (jobs == null)
+      jobs = new JobStatus[0];
+
+    System.out.printf("%d jobs currently running\n", jobs.length);
+    System.out.printf("JobId\tState\tStartTime\tUserName\n");
+    for (JobStatus job : jobs) {
+      System.out.printf("%s\t%d\t%d\t%s\n", job.getJobId(), job.getRunState(),
+          job.getStartTime(), job.getUsername());
     }
   }
     

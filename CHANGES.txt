@@ -31,6 +31,8 @@ Trunk (unreleased changes)
     HADOOP-1708.  Make files appear in namespace as soon as they are
     created.  (Dhruba Borthakur via dhruba)
 
+    HADOOP-1767.  Add "hadoop job -list" command. (taton via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-1565.  Reduce memory usage of NameNode by replacing 
