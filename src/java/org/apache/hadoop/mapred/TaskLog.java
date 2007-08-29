@@ -35,7 +35,8 @@ public class TaskLog {
     LogFactory.getLog(TaskLog.class.getName());
 
   private static final File LOG_DIR = 
-    new File(System.getProperty("hadoop.log.dir"), "userlogs");
+    new File(System.getProperty("hadoop.log.dir"), 
+             "userlogs").getAbsoluteFile();
   
   static {
     if (!LOG_DIR.exists()) {

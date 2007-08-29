@@ -270,7 +270,9 @@ abstract class TaskRunner extends Thread {
 
         // Setup the log4j prop
         long logSize = TaskLog.getTaskLogLength(conf);
-        vargs.add("-Dhadoop.log.dir=" + System.getProperty("hadoop.log.dir"));
+        vargs.add("-Dhadoop.log.dir=" + 
+                  new File(System.getProperty("hadoop.log.dir")
+                           ).getAbsolutePath());
         vargs.add("-Dhadoop.root.logger=INFO,TLA");
         vargs.add("-Dhadoop.tasklog.taskid=" + taskid);
         vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + logSize);

@@ -31,7 +31,7 @@ Trunk (unreleased changes)
     HADOOP-1708.  Make files appear in namespace as soon as they are
     created.  (Dhruba Borthakur via dhruba)
 
-    HADOOP-1767.  Add "hadoop job -list" command. (taton via cutting)
+    HADOOP-1767.  Add "bin/hadoop job -list" sub-command. (taton via cutting)
 
   OPTIMIZATIONS
 
@@ -66,6 +66,8 @@ Trunk (unreleased changes)
     HADOOP-1749.  Change TestDFSUpgrade to sort files, fixing sporadic
     test failures.  (Enis Soztutar via cutting)
 
+    HADOOP-1748.  Fix tasktracker to be able to launch tasks when log
+    directory is relative.  (omalley via cutting)
 
   IMPROVEMENTS
 
