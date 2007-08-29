@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.zip.CRC32;
 import org.apache.hadoop.conf.Configuration;
@@ -200,6 +201,7 @@ public class UpgradeUtilities {
                                          "Given argument is not a directory:" + dir);
     }
     File[] list = dir.listFiles();
+    Arrays.sort(list);
     CRC32 checksum = new CRC32();
     for (int i = 0; i < list.length; i++) {
       if (list[i].isFile()) {
