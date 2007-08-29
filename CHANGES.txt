@@ -121,6 +121,8 @@ Trunk (unreleased changes)
     instance creation, avoiding classloader issues, and to implement
     Configurable.  (Enis Soztutar via cutting)
 
+    HADOOP-1750.  Log standard output and standard error when forking
+    task processes.  (omalley via cutting)
 
 Release 0.14.1 - (unreleased)
 

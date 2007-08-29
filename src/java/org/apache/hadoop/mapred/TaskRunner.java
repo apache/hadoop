@@ -290,7 +290,7 @@ abstract class TaskRunner extends Thread {
 
         List<String> wrappedCommand = 
           TaskLog.captureOutAndError(vargs, stdout, stderr, logSize);
-        runChild(wrappedCommand, workDir);
+        runChild(wrappedCommand, workDir, taskid);
                  
     } catch (FSError e) {
       LOG.fatal("FSError", e);
@@ -390,9 +390,35 @@ abstract class TaskRunner extends Thread {
   }
 
   /**
+   * Append the contents of the input stream to the output file. Both streams 
+   * are closed upon exit.
+   * @param in the stream to read
+   * @param outName the filename to append the data to
+   * @throws IOException if something goes wrong
+   */
+  private void copyStream(InputStream in, File outName) throws IOException {
+    try {
+      OutputStream out = new FileOutputStream(outName, true);
+      try {
+        byte[] buffer = new byte[1024];
+        int len = in.read(buffer);
+        while (len > 0) {
+          out.write(buffer, 0, len);
+          len = in.read(buffer);
+        }
+      } finally {
+        out.close();
+      }
+    } finally {
+      in.close();
+    }
+  }
+
+  /**
    * Run the child process
    */
-  private void runChild(List<String> args, File dir) throws IOException {
+  private void runChild(List<String> args, File dir,
+                        String taskid) throws IOException {
     ProcessBuilder builder = new ProcessBuilder(args);
     builder.directory(dir);
     process = builder.start();
@@ -404,6 +430,10 @@ abstract class TaskRunner extends Thread {
         if (exit_code == 65) {
           tracker.getTaskTrackerMetrics().taskFailedPing();
         }
+        copyStream(process.getInputStream(), 
+                   TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT));
+        copyStream(process.getErrorStream(), 
+                   TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR));
         throw new IOException("Task process exit with nonzero status of " +
                               exit_code + ".");
       }
