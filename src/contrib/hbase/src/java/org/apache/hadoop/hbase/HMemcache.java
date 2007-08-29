@@ -332,8 +332,13 @@ public class HMemcache {
             }
           }
         }
+      } catch (RuntimeException ex) {
+        LOG.error("error initializing HMemcache scanner: ", ex);
+        close();
+        throw ex;
+        
       } catch(IOException ex) {
-        LOG.error(ex);
+        LOG.error("error initializing HMemcache scanner: ", ex);
         close();
         throw ex;
       }
