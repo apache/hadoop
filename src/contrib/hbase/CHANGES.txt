@@ -7,23 +7,25 @@ Trunk (unreleased changes)
 
   NEW FEATURES
     HADOOP-1768 FS command using Hadoop FsShell operations
-    (Edward Yoon via Stack)
+                (Edward Yoon via Stack)
 
   OPTIMIZATIONS
 
   BUG FIXES
     HADOOP-1527 Region server won't start because logdir exists
     HADOOP-1723 If master asks region server to shut down, by-pass return of
-    shutdown message
+                shutdown message
     HADOOP-1729 Recent renaming or META tables breaks hbase shell
     HADOOP-1730 unexpected null value causes META scanner to exit (silently)
     HADOOP-1747 On a cluster, on restart, regions multiply assigned
     HADOOP-1776 Fix for sporadic compaction failures closing and moving
-    compaction result
+                compaction result
     HADOOP-1780 Regions are still being doubly assigned
     HADOOP-1797 Fix NPEs in MetaScanner constructor
     HADOOP-1799 Incorrect classpath in binary version of Hadoop
     HADOOP-1805 Region server hang on exit
+    HADOOP-1785 TableInputFormat.TableRecordReader.next has a bug
+                (Ning Li via Stack)
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable

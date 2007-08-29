@@ -445,7 +445,7 @@ public class HTable implements HConstants {
    * @param row name of row to be updated
    * @return lockid to be used in subsequent put, delete and commit calls
    * 
-   * Deprecated. Batch operations are now the default. startBatchUpdate is now
+   * @deprecated Batch operations are now the default. startBatchUpdate is now
    * implemented by @see {@link #startUpdate(Text)} 
    */
   @Deprecated
@@ -457,7 +457,7 @@ public class HTable implements HConstants {
    * Abort a batch mutation
    * @param lockid lock id returned by startBatchUpdate
    * 
-   * Deprecated. Batch operations are now the default. abortBatch is now 
+   * @deprecated Batch operations are now the default. abortBatch is now 
    * implemented by @see {@link #abort(long)}
    */
   @Deprecated
@@ -471,7 +471,7 @@ public class HTable implements HConstants {
    * @param lockid lock id returned by startBatchUpdate
    * @throws IOException
    * 
-   * Deprecated. Batch operations are now the default. commitBatch(long) is now
+   * @deprecated Batch operations are now the default. commitBatch(long) is now
    * implemented by @see {@link #commit(long)}
    */
   @Deprecated
@@ -486,7 +486,7 @@ public class HTable implements HConstants {
    * @param timestamp time to associate with all the changes
    * @throws IOException
    * 
-   * Deprecated. Batch operations are now the default. commitBatch(long, long)
+   * @deprecated Batch operations are now the default. commitBatch(long, long)
    * is now implemented by @see {@link #commit(long, long)}
    */
   @Deprecated
@@ -622,7 +622,7 @@ public class HTable implements HConstants {
    * 
    * @param lockid              - lock id returned from startUpdate
    * 
-   * Deprecated. Batch updates are now the default. Consequently this method
+   * @deprecated Batch updates are now the default. Consequently this method
    * does nothing.
    */
   @Deprecated

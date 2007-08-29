@@ -3014,13 +3014,16 @@ HMasterRegionInterface, Runnable {
       // NOTE: If the server was serving the root region, we cannot reassign it
       // here because the new server will start serving the root region before
       // the PendingServerShutdown operation has a chance to split the log file.
-
       try {
         if (info != null) {
           msgQueue.put(new PendingServerShutdown(info));
         }
       } catch (InterruptedException e) {
-        throw new RuntimeException("Putting into msgQueue was interrupted.", e);
+        // continue.  We used to throw a RuntimeException here but on exit
+        // this put is often interrupted.  For now, just log these iterrupts
+        // rather than throw an exception
+        LOG.warn("MsgQueue.put was interrupted (If we are exiting, this msg " +
+          "can be ignored");
       }
     }
   }

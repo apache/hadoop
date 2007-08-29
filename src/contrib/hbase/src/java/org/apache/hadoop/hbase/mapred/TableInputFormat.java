@@ -144,7 +144,7 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
 
       if(hasMore) {
         if(m_endRow.getLength() > 0 &&
-            (tKey.getRow().compareTo(m_endRow) < 0)) {
+            (tKey.getRow().compareTo(m_endRow) >= 0)) {
           
           hasMore = false;
           
