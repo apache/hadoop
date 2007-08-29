@@ -127,12 +127,9 @@ fi
 IFS=
 
 # for releases, add core hbase, hadoop jar & webapps to CLASSPATH
-for f in  "$HBASE_HOME/hadoop-hbase-*.jar"; do
+for f in $HADOOP_HOME/contrib/hadoop-*-hbase*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
-if [ -f "$HADOOP_HOME/contrib/hadoop-hbase.jar" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/contrib/hadoop-hbase.jar
-fi
 if [ -d "$HADOOP_HOME/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME
 fi
