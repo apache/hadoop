@@ -705,7 +705,9 @@
 
     <chmod perm="ugo+x" type="file">
         <fileset dir="${dist.dir}/bin"/>
-        <fileset dir="${dist.dir}/src/contrib/ec2/bin"/>
+        <fileset dir="${dist.dir}/src/contrib/">
+          <include name="*/bin/*" />
+        </fileset>
         <fileset dir="${dist.dir}/src/contrib/ec2/bin/image"/>
     </chmod>
 

@@ -124,6 +124,9 @@ Trunk (unreleased changes)
     HADOOP-1750.  Log standard output and standard error when forking
     task processes.  (omalley via cutting)
 
+    HADOOP-1803.  Generalize build.xml to make files in all
+    src/contrib/*/bin directories executable.  (stack via cutting)
+
 Release 0.14.1 - (unreleased)
 
   BUG FIXES
