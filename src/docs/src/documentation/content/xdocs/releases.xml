@@ -44,51 +44,58 @@
       <title>News</title>
 
       <section>
-      <title>25 July, 2007: release 0.13.1 available</title>
-      <p>This fixes critical bugs in the 0.13.0 release.</p>
+        <title> 4 September, 2007: release 0.14.1 available </title>
+	<p>New features in release 0.14 include:</p>
+
+	<ul>
+	  <li>Better checksums in HDFS.  Checksums are no longer
+	  stored in parallel HDFS files, but are stored directly by
+	  datanodes alongside blocks.  This is more efficient for the
+	  namenode and also improves data integrity.</li>
+
+	  <li>Pipes: A C++ API for MapReduce</li>
+
+	  <li>Eclipse Plugin, including HDFS browsing, job
+	  monitoring, etc.</li>
+
+	  <li>File modification times in HDFS.</li>
+	</ul>
+
+	<p>There are many other improvements, bug fixes, optimizations
+	and new features.  Performance and reliability are better than
+	ever.</p>
+
+	<note>When upgrading an existing HDFS filesystem to this
+	release, you should first start HDFS with 'bin/start-dfs.sh
+	-upgrade'.  See the <a
+	href="http://wiki.apache.org/lucene-hadoop/Hadoop_0.14_Upgrade">Hadoop
+	0.14 Upgrade</a> page for details.</note>
+
       </section>
 
       <section>
-        <title> 8 June, 2007: release 0.13.0 available </title>
+      <title>25 July, 2007: release 0.13.1 available</title>
         <p>
-        In addition to new features, this release contains significant performance and reliability improvements.
-        For example, MapReduce sort performance on large clusters has <a href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">doubled</a>.
+        In addition to new features, release 0.13 contains significant
+        performance and reliability improvements.  For example,
+        MapReduce sort performance on large clusters has <a
+        href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">doubled</a>.
         </p>
+
         <note>
-        When upgrading an existing <acronym title="Hadoop Distributed File System">HDFS</acronym> filesystem to this release, you should first start HDFS with <code>bin/start-dfs.sh -upgrade</code>
-        which makes it possible to revert the upgrade. For more information on this issue, see <a href="https://issues.apache.org/jira/browse/HADOOP-702#action_12482953">HADOOP-702</a>. 
-        </note>
+        When upgrading an existing <acronym title="Hadoop Distributed
+	File System">HDFS</acronym> filesystem to this release, you
+	should first start HDFS with <code>bin/start-dfs.sh
+	-upgrade</code>. See the <a
+	href="http://wiki.apache.org/lucene-hadoop/Hadoop_Upgrade">Hadoop
+	Upgrade</a> page for details.  </note>
+
       </section>
 
       <section>
         <title> 8 June, 2006: <acronym title="Frequently Asked Questions">FAQ</acronym> added to Wiki </title>
         <p>
         Hadoop now has a <a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>. Please help make this more complete!
-        </p>
-      </section>
-
-      <section>
-        <title> 5 May, 2006: release 0.2.0 available </title>
-        <p>
-        We are now aiming for monthly releases. There have been many bug fixes and improvements in the past month.
-        MapReduce and DFS are now fairly reliable on clusters with up to 200 nodes.
-        </p>
-      </section>
-
-      <section>
-        <title> 6 February, 2006: nightly builds </title>
-        <p>
-        Hadoop now has nightly builds. This automatically creates a <a href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/">downloadable version of Hadoop every night</a>.
-        All unit tests must pass, or a message is sent to the developers mailing list and no new version is created.
-        This also updates the <a href="http://lucene.apache.org/hadoop/api/index.html">javadoc</a>.
-        </p>
-      </section>
-
-      <section>
-        <title> 3 February, 2006: Hadoop code moved out of Nutch </title>
-        <p>
-        The Hadoop code has now been moved into its own Subversion tree, renamed into packages under org.apache.hadoop.
-        All unit tests pass, but little else has yet been tested.
         </p>
       </section>
      

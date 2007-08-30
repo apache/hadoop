@@ -182,22 +182,13 @@ document.write("Last Published: " + document.lastModified);
 <a href="#News">News</a>
 <ul class="minitoc">
 <li>
+<a href="#4+September%2C+2007%3A+release+0.14.1+available"> 4 September, 2007: release 0.14.1 available </a>
+</li>
+<li>
 <a href="#25+July%2C+2007%3A+release+0.13.1+available">25 July, 2007: release 0.13.1 available</a>
 </li>
 <li>
-<a href="#8+June%2C+2007%3A+release+0.13.0+available"> 8 June, 2007: release 0.13.0 available </a>
-</li>
-<li>
 <a href="#8+June%2C+2006%3A"> 8 June, 2006: FAQ added to Wiki </a>
-</li>
-<li>
-<a href="#5+May%2C+2006%3A+release+0.2.0+available"> 5 May, 2006: release 0.2.0 available </a>
-</li>
-<li>
-<a href="#6+February%2C+2006%3A+nightly+builds"> 6 February, 2006: nightly builds </a>
-</li>
-<li>
-<a href="#3+February%2C+2006%3A+Hadoop+code+moved+out+of+Nutch"> 3 February, 2006: Hadoop code moved out of Nutch </a>
 </li>
 </ul>
 </li>
@@ -238,45 +229,56 @@ document.write("Last Published: " + document.lastModified);
 <a name="N10037"></a><a name="News"></a>
 <h2 class="h3">News</h2>
 <div class="section">
-<a name="N1003D"></a><a name="25+July%2C+2007%3A+release+0.13.1+available"></a>
+<a name="N1003D"></a><a name="4+September%2C+2007%3A+release+0.14.1+available"></a>
+<h3 class="h4"> 4 September, 2007: release 0.14.1 available </h3>
+<p>New features in release 0.14 include:</p>
+<ul>
+	  
+<li>Better checksums in HDFS.  Checksums are no longer
+	  stored in parallel HDFS files, but are stored directly by
+	  datanodes alongside blocks.  This is more efficient for the
+	  namenode and also improves data integrity.</li>
+
+	  
+<li>Pipes: A C++ API for MapReduce</li>
+
+	  
+<li>Eclipse Plugin, including HDFS browsing, job
+	  monitoring, etc.</li>
+
+	  
+<li>File modification times in HDFS.</li>
+	
+</ul>
+<p>There are many other improvements, bug fixes, optimizations
+	and new features.  Performance and reliability are better than
+	ever.</p>
+<div class="note">
+<div class="label">Note</div>
+<div class="content">When upgrading an existing HDFS filesystem to this
+	release, you should first start HDFS with 'bin/start-dfs.sh
+	-upgrade'.  See the <a href="http://wiki.apache.org/lucene-hadoop/Hadoop_0.14_Upgrade">Hadoop
+	0.14 Upgrade</a> page for details.</div>
+</div>
+<a name="N10060"></a><a name="25+July%2C+2007%3A+release+0.13.1+available"></a>
 <h3 class="h4">25 July, 2007: release 0.13.1 available</h3>
-<p>This fixes critical bugs in the 0.13.0 release.</p>
-<a name="N10047"></a><a name="8+June%2C+2007%3A+release+0.13.0+available"></a>
-<h3 class="h4"> 8 June, 2007: release 0.13.0 available </h3>
 <p>
-        In addition to new features, this release contains significant performance and reliability improvements.
-        For example, MapReduce sort performance on large clusters has <a href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">doubled</a>.
+        In addition to new features, release 0.13 contains significant
+        performance and reliability improvements.  For example,
+        MapReduce sort performance on large clusters has <a href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">doubled</a>.
         </p>
 <div class="note">
 <div class="label">Note</div>
 <div class="content">
-        When upgrading an existing <acronym title="Hadoop Distributed File System">HDFS</acronym> filesystem to this release, you should first start HDFS with <span class="codefrag">bin/start-dfs.sh -upgrade</span>
-        which makes it possible to revert the upgrade. For more information on this issue, see <a href="https://issues.apache.org/jira/browse/HADOOP-702#action_12482953">HADOOP-702</a>. 
-        </div>
+        When upgrading an existing <acronym title="Hadoop Distributed File System">HDFS</acronym> filesystem to this release, you
+	should first start HDFS with <span class="codefrag">bin/start-dfs.sh
+	-upgrade</span>. See the <a href="http://wiki.apache.org/lucene-hadoop/Hadoop_Upgrade">Hadoop
+	Upgrade</a> page for details.  </div>
 </div>
-<a name="N10063"></a><a name="8+June%2C+2006%3A"></a>
+<a name="N1007C"></a><a name="8+June%2C+2006%3A"></a>
 <h3 class="h4"> 8 June, 2006: FAQ added to Wiki </h3>
 <p>
         Hadoop now has a <a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>. Please help make this more complete!
-        </p>
-<a name="N10075"></a><a name="5+May%2C+2006%3A+release+0.2.0+available"></a>
-<h3 class="h4"> 5 May, 2006: release 0.2.0 available </h3>
-<p>
-        We are now aiming for monthly releases. There have been many bug fixes and improvements in the past month.
-        MapReduce and DFS are now fairly reliable on clusters with up to 200 nodes.
-        </p>
-<a name="N1007F"></a><a name="6+February%2C+2006%3A+nightly+builds"></a>
-<h3 class="h4"> 6 February, 2006: nightly builds </h3>
-<p>
-        Hadoop now has nightly builds. This automatically creates a <a href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/">downloadable version of Hadoop every night</a>.
-        All unit tests must pass, or a message is sent to the developers mailing list and no new version is created.
-        This also updates the <a href="http://lucene.apache.org/hadoop/api/index.html">javadoc</a>.
-        </p>
-<a name="N10091"></a><a name="3+February%2C+2006%3A+Hadoop+code+moved+out+of+Nutch"></a>
-<h3 class="h4"> 3 February, 2006: Hadoop code moved out of Nutch </h3>
-<p>
-        The Hadoop code has now been moved into its own Subversion tree, renamed into packages under org.apache.hadoop.
-        All unit tests pass, but little else has yet been tested.
         </p>
 </div>
 
