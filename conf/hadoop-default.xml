@@ -468,18 +468,9 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>mapred.task.tracker.report.bindAddress</name>
-  <value>0.0.0.0</value>
-  <description>
-    the address where the maperd tracker report server will be binded on.
-  </description>
-</property>
-
-<property>
-  <name>mapred.task.tracker.report.port</name>
-  <value>50050</value>
-  <description>The port number that the MapReduce task tracker report server uses as a starting
-               point to look for a free port to listen on.
-  </description>
+  <value>127.0.0.1</value>
+  <description>The interface that task processes use to communicate
+  with their parent tasktracker process.</description>
 </property>
 
 <property>
@@ -617,14 +608,11 @@ creations/deletions), or "all".</description>
   <description>Java opts for the task tracker child processes.  Subsumes
   'mapred.child.heap.size' (If a mapred.child.heap.size value is found
   in a configuration, its maximum heap size will be used and a warning
-  emitted that heap.size has been deprecated). Also, the following symbols,
-  if present, will be interpolated: @taskid@ is replaced by current TaskID;
-  and @port@ will be replaced by mapred.task.tracker.report.port + 1 (A second
-  child will fail with a port-in-use if mapred.tasktracker.tasks.maximum is
-  greater than one). Any other occurrences of '@' will go unchanged. For
+  emitted that heap.size has been deprecated). Also, the following symbol,
+  if present, will be interpolated: @taskid@ is replaced by current TaskID.
+  Any other occurrences of '@' will go unchanged. For
   example, to enable verbose gc logging to a file named for the taskid in
   /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
-
         -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
   </description>
 </property>

@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.filecache.*;
 import org.apache.hadoop.util.*;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Vector;
 import java.net.URI;
@@ -224,7 +225,6 @@ abstract class TaskRunner extends Thread {
       // The following symbols if present in mapred.child.java.opts value are
       // replaced:
       // + @taskid@ is interpolated with value of TaskID.
-      // + Replaces @port@ with mapred.task.tracker.report.port + 1.
       // Other occurrences of @ will not be altered.
       //
       // Example with multiple arguments and substitutions, showing
@@ -236,15 +236,12 @@ abstract class TaskRunner extends Thread {
       //     <value>-verbose:gc -Xloggc:/tmp/@taskid@.gc \
         //     -Dcom.sun.management.jmxremote.authenticate=false \
         //     -Dcom.sun.management.jmxremote.ssl=false \
-        //     -Dcom.sun.management.jmxremote.port=@port@
         //     </value>
         //
         String javaOpts = handleDeprecatedHeapSize(
                                                    conf.get("mapred.child.java.opts", "-Xmx200m"),
                                                    conf.get("mapred.child.heap.size"));
         javaOpts = replaceAll(javaOpts, "@taskid@", taskid);
-        int port = conf.getInt("mapred.task.tracker.report.port", 50050) + 1;
-        javaOpts = replaceAll(javaOpts, "@port@", Integer.toString(port));
         String [] javaOptsSplit = javaOpts.split(" ");
         //Add java.library.path; necessary for native-hadoop libraries
         String libraryPath = System.getProperty("java.library.path");
@@ -279,8 +276,10 @@ abstract class TaskRunner extends Thread {
 
         // Add main class and its arguments 
         vargs.add(TaskTracker.Child.class.getName());  // main of Child
-        // pass umbilical port
-        vargs.add(Integer.toString(tracker.getTaskTrackerReportPort())); 
+        // pass umbilical address
+        InetSocketAddress address = tracker.getTaskTrackerReportAddress();
+        vargs.add(address.getAddress().getHostAddress()); 
+        vargs.add(Integer.toString(address.getPort())); 
         vargs.add(taskid);                      // pass task identifier
 
         // Run java

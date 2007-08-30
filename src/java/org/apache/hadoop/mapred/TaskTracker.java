@@ -93,8 +93,7 @@ public class TaskTracker
   String localHostname;
   InetSocketAddress jobTrackAddr;
     
-  String taskReportBindAddress;
-  private int taskReportPort;
+  InetSocketAddress taskReportAddress;
 
   Server taskReportServer = null;
   InterTrackerProtocol jobClient;
@@ -402,31 +401,22 @@ public class TaskTracker
     
     this.myMetrics = new TaskTrackerMetrics();
     
-    // port numbers
-    this.taskReportPort = this.fConf.getInt("mapred.task.tracker.report.port", 50050);
     // bind address
-    this.taskReportBindAddress = this.fConf.get("mapred.task.tracker.report.bindAddress", "0.0.0.0");
+    String bindAddress =
+      this.fConf.get("mapred.task.tracker.report.bindAddress", "127.0.0.1");
 
     // RPC initialization
-    while (true) {
-      try {
-        this.taskReportServer = RPC.getServer(this, this.taskReportBindAddress, this.taskReportPort, maxCurrentTasks, false, this.fConf);
-        this.taskReportServer.start();
-        break;
-      } catch (BindException e) {
-        LOG.info("Could not open report server at " + this.taskReportPort + ", trying new port");
-        this.taskReportPort++;
-      }
-        
-    }
-    // The rpc-server port can be ephemeral... 
-    // ... ensure we have the correct info
-    this.taskReportPort = taskReportServer.getListenerAddress().getPort();
-    this.fConf.setInt("mapred.task.tracker.report.port", this.taskReportPort);
-    LOG.info("TaskTracker up at: " + this.taskReportPort);
+    this.taskReportServer =
+      RPC.getServer(this, bindAddress, 0, maxCurrentTasks, false, this.fConf);
+    this.taskReportServer.start();
 
-    this.taskTrackerName = "tracker_" + 
-      localHostname + ":" + taskReportPort;
+    // get the assigned address
+    this.taskReportAddress = taskReportServer.getListenerAddress();
+    this.fConf.set("mapred.task.tracker.report.address",
+                   taskReportAddress.toString());
+    LOG.info("TaskTracker up at: " + this.taskReportAddress);
+
+    this.taskTrackerName = "tracker_" + localHostname + ":" + taskReportAddress;
     LOG.info("Starting tracker " + taskTrackerName);
 
     // Clear out temporary files that might be lying around
@@ -777,8 +767,8 @@ public class TaskTracker
   }
   
   /** Return the port at which the tasktracker bound to */
-  public synchronized int getTaskTrackerReportPort() {
-    return taskReportPort;
+  public synchronized InetSocketAddress getTaskTrackerReportAddress() {
+    return taskReportAddress;
   }
     
   /** Queries the job tracker for a set of outputs ready to be copied
@@ -1766,11 +1756,10 @@ public class TaskTracker
       LOG.debug("Child starting");
 
       JobConf defaultConf = new JobConf();
-      int port = Integer.parseInt(args[0]);
-      InetSocketAddress address = new InetSocketAddress
-        (defaultConf.get("mapred.task.tracker.report.bindAddress","0.0.0.0"),
-         port);
-      String taskid = args[1];
+      String host = args[0];
+      int port = Integer.parseInt(args[1]);
+      InetSocketAddress address = new InetSocketAddress(host, port);
+      String taskid = args[2];
       //set a very high idle timeout so that the connection is never closed
       defaultConf.setInt("ipc.client.connection.maxidletime", 60*60*1000);
       TaskUmbilicalProtocol umbilical =
