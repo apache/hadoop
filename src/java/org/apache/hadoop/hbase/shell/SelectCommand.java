@@ -77,7 +77,7 @@ public class SelectCommand extends BasicCommand {
 
           for (Text columnKey : results.keySet()) {
             byte[] value = results.get(columnKey);
-            String cellData = new String(value);
+            String cellData = new String(value, HConstants.UTF8_ENCODING);
 
             if (columnKey.equals(HConstants.COL_REGIONINFO)) {
               DataInputBuffer inbuf = new DataInputBuffer();
@@ -105,7 +105,7 @@ public class SelectCommand extends BasicCommand {
         for (Map.Entry<Text, byte[]> entry : table.getRow(new Text(getRow())).entrySet()) {
 
           byte[] value = entry.getValue();
-          String cellData = new String(value);
+          String cellData = new String(value, HConstants.UTF8_ENCODING);
 
           if (entry.getKey().equals(HConstants.COL_REGIONINFO)) {
             DataInputBuffer inbuf = new DataInputBuffer();
@@ -138,7 +138,7 @@ public class SelectCommand extends BasicCommand {
 
           for (Text columnKey : r.keySet()) {
             byte[] value = r.get(columnKey);
-            String cellData = new String(value);
+            String cellData = new String(value, HConstants.UTF8_ENCODING);
             ConsoleTable.printLine(count, rowKey.toString(), columnKey.toString(),
                 cellData);
             count++;
@@ -180,7 +180,7 @@ public class SelectCommand extends BasicCommand {
 
         ConsoleTable.selectHead();
         for (int i = 0; i < rs3.length; i++) {
-          ConsoleTable.printLine(i, getRow(), getColumn(), new String(rs3[i]));
+          ConsoleTable.printLine(i, getRow(), getColumn(), new String(rs3[i], HConstants.UTF8_ENCODING));
         }
         ConsoleTable.selectFoot();
 

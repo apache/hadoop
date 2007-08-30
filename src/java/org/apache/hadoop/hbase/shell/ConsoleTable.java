@@ -19,157 +19,168 @@
  */
 package org.apache.hadoop.hbase.shell;
 
+import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
+
 /**
  * Manufactures console table, but stupid.
  */
 public class ConsoleTable {
+  private static PrintStream out;
+  static {
+    try {
+      out = new PrintStream(System.out, true, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      e.printStackTrace();
+    }
+  }
   
   public static void printHead(String name) {
-    System.out.println("+------+----------------------+");
-    System.out.print("| No.  | ");
-    System.out.printf("%-20s", name);
-    System.out.println(" |");
+    out.println("+------+----------------------+");
+    out.print("| No.  | ");
+    out.printf("%-20s", name);
+    out.println(" |");
   }
 
   public static void printFoot() {
-    System.out.println("+------+----------------------+");
-    System.out.println();
+    out.println("+------+----------------------+");
+    out.println();
   }
 
   public static void printTable(int count, String name) {
-    System.out.println("+------+----------------------+");
+    out.println("+------+----------------------+");
 
     if (name.length() > 20) {
       int interval = 20;
 
-      System.out.print("| ");
-      System.out.printf("%-4s", count + 1);
-      System.out.print(" | ");
-      System.out.printf("%-20s", name.substring(0, interval));
-      System.out.println(" |");
+      out.print("| ");
+      out.printf("%-4s", count + 1);
+      out.print(" | ");
+      out.printf("%-20s", name.substring(0, interval));
+      out.println(" |");
 
       for (int i = 0; i < name.length() / interval; i++) {
-        System.out.print("| ");
-        System.out.printf("%-4s", "");
-        System.out.print(" | ");
+        out.print("| ");
+        out.printf("%-4s", "");
+        out.print(" | ");
 
         int end = ((interval * i) + interval + interval);
         if (end > name.length()) {
-          System.out.printf("%-20s", name.substring(end - interval,
+          out.printf("%-20s", name.substring(end - interval,
             name.length()));
         } else {
-          System.out.printf("%-20s", name.substring(end - interval, end));
+          out.printf("%-20s", name.substring(end - interval, end));
         }
-        System.out.println(" |");
+        out.println(" |");
       }
 
     } else {
-      System.out.print("| ");
-      System.out.printf("%-4s", count + 1);
-      System.out.print(" | ");
-      System.out.printf("%-20s", name);
-      System.out.println(" |");
+      out.print("| ");
+      out.printf("%-4s", count + 1);
+      out.print(" | ");
+      out.printf("%-20s", name);
+      out.println(" |");
     }
   }
 
   public static void selectHead() {
-    System.out.println("+------+----------------------+" +
+    out.println("+------+----------------------+" +
       "----------------------+----------------------+");
-    System.out.print("| No.  | ");
-    System.out.printf("%-20s", "Row");
-    System.out.printf(" | ");
-    System.out.printf("%-20s", "Column");
-    System.out.printf(" | ");
-    System.out.printf("%-20s", "Cell");
-    System.out.println(" | ");
+    out.print("| No.  | ");
+    out.printf("%-20s", "Row");
+    out.printf(" | ");
+    out.printf("%-20s", "Column");
+    out.printf(" | ");
+    out.printf("%-20s", "Cell");
+    out.println(" | ");
   }
 
   public static void printLine(int count, String key, String column,
       String cellData) {
-    System.out.println("+------+----------------------+" +
+    out.println("+------+----------------------+" +
       "----------------------+----------------------+");
 
     if (key.length() > 20 || column.length() > 20 || cellData.length() > 20) {
       int interval = 20;
-      System.out.print("| ");
-      System.out.printf("%-4s", count + 1);
-      System.out.print(" | ");
+      out.print("| ");
+      out.printf("%-4s", count + 1);
+      out.print(" | ");
       if (key.length() > 20)
-        System.out.printf("%-20s", key.substring(0, interval));
+        out.printf("%-20s", key.substring(0, interval));
       else
-        System.out.printf("%-20s", key);
-      System.out.print(" | ");
+        out.printf("%-20s", key);
+      out.print(" | ");
       if (column.length() > 20)
-        System.out.printf("%-20s", column.substring(0, interval));
+        out.printf("%-20s", column.substring(0, interval));
       else
-        System.out.printf("%-20s", column);
-      System.out.print(" | ");
+        out.printf("%-20s", column);
+      out.print(" | ");
       if (cellData.length() > 20)
-        System.out.printf("%-20s", cellData.substring(0, interval));
+        out.printf("%-20s", cellData.substring(0, interval));
       else
-        System.out.printf("%-20s", cellData);
-      System.out.println(" |");
+        out.printf("%-20s", cellData);
+      out.println(" |");
 
-      // System.out.println(getBiggerInt(new int[]{ 3, 1, 9}));
+      // out.println(getBiggerInt(new int[]{ 3, 1, 9}));
       int biggerStrLength = getBiggerInt(new int[] { key.length(),
         column.length(), cellData.length() });
 
       for (int i = 0; i < (biggerStrLength / interval); i++) {
-        System.out.print("| ");
-        System.out.printf("%-4s", "");
-        System.out.print(" | ");
+        out.print("| ");
+        out.printf("%-4s", "");
+        out.print(" | ");
 
         int end = ((interval * i) + interval + interval);
 
         if (end > key.length()) {
           if (key.length() > interval && end - interval < key.length()) {
-            System.out.printf("%-20s", key.substring(end - interval,
+            out.printf("%-20s", key.substring(end - interval,
               key.length()));
           } else {
-            System.out.printf("%-20s", "");
+            out.printf("%-20s", "");
           }
         } else {
-          System.out.printf("%-20s", key.substring(end - interval, end));
+          out.printf("%-20s", key.substring(end - interval, end));
         }
 
-        System.out.print(" | ");
+        out.print(" | ");
 
         if (end > column.length()) {
           if (column.length() > interval && end - interval < column.length()) {
-            System.out.printf("%-20s", column.substring(end - interval,
+            out.printf("%-20s", column.substring(end - interval,
               column.length()));
           } else {
-            System.out.printf("%-20s", "");
+            out.printf("%-20s", "");
           }
         } else {
-          System.out.printf("%-20s", column.substring(end - interval, end));
+          out.printf("%-20s", column.substring(end - interval, end));
         }
 
-        System.out.print(" | ");
+        out.print(" | ");
         if (end > cellData.length()) {
           if (cellData.length() > interval &&
               end - interval < cellData.length()) {
-            System.out.printf("%-20s",
+            out.printf("%-20s",
               cellData.substring(end - interval, cellData.length()));
           } else {
-            System.out.printf("%-20s", "");
+            out.printf("%-20s", "");
           }
         } else {
-          System.out.printf("%-20s", cellData.substring(end - interval, end));
+          out.printf("%-20s", cellData.substring(end - interval, end));
         }
-        System.out.println(" |");
+        out.println(" |");
       }
 
     } else {
-      System.out.print("| ");
-      System.out.printf("%-4s", count + 1);
-      System.out.print(" | ");
-      System.out.printf("%-20s", key);
-      System.out.print(" | ");
-      System.out.printf("%-20s", column);
-      System.out.print(" | ");
-      System.out.printf("%-20s", cellData);
-      System.out.println(" |");
+      out.print("| ");
+      out.printf("%-4s", count + 1);
+      out.print(" | ");
+      out.printf("%-20s", key);
+      out.print(" | ");
+      out.printf("%-20s", column);
+      out.print(" | ");
+      out.printf("%-20s", cellData);
+      out.println(" |");
     }
   }
 
@@ -184,9 +195,9 @@ public class ConsoleTable {
   }
 
   public static void selectFoot() {
-    System.out.println("+------+----------------------+" +
+    out.println("+------+----------------------+" +
       "----------------------+----------------------+");
-    System.out.println();
+    out.println();
   }
   
 }

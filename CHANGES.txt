@@ -26,6 +26,7 @@ Trunk (unreleased changes)
     HADOOP-1805 Region server hang on exit
     HADOOP-1785 TableInputFormat.TableRecordReader.next has a bug
                 (Ning Li via Stack)
+    HADOOP-1800 output should default utf8 encoding
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
