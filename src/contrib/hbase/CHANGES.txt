@@ -32,6 +32,7 @@ Trunk (unreleased changes)
     HADOOP-1746 Clean up findbugs warnings
     HADOOP-1757 Bloomfilters: single argument constructor, use enum for bloom
                 filter types
+    HADOOP-1802 Startup scripts should wait until hdfs as cleared 'safe mode'
 
 
 Below are the list of changes before 2007-08-18
