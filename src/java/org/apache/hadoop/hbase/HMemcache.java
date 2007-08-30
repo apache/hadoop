@@ -58,9 +58,7 @@ public class HMemcache {
   /**
    * Constructor
    */
-  public HMemcache() {
-    super();
-  }
+  public HMemcache() {}
 
   /** represents the state of the memcache at a specified point in time */
   static class Snapshot {
@@ -320,7 +318,7 @@ public class HMemcache {
         // Generate list of iterators
         HStoreKey firstKey = new HStoreKey(firstRow);
         for(int i = 0; i < backingMaps.length; i++) {
-          keyIterators[i] = (firstRow.getLength() != 0)?
+          keyIterators[i] = (/*firstRow != null &&*/ firstRow.getLength() != 0)?
             backingMaps[i].tailMap(firstKey).keySet().iterator():
             backingMaps[i].keySet().iterator();
           while(getNext(i)) {
