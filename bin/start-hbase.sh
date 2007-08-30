@@ -32,5 +32,11 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hbase-config.sh
 
 # start hbase daemons
+"${HADOOP_HOME}"/bin/hadoop dfsadmin -safemode wait
+errCode=$?
+if [ $errCode -ne 0 ]
+then
+  exit $errCode
+fi
 "$bin"/hbase-daemon.sh --config="${HADOOP_CONF_DIR}" --hbaseconfig="${HBASE_CONF_DIR}" master start
 "$bin"/hbase-daemons.sh --config="${HADOOP_CONF_DIR}" --hbaseconfig="${HBASE_CONF_DIR}" regionserver start
