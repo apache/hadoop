@@ -76,6 +76,9 @@ Trunk (unreleased changes)
     IllegalArgumentException in MapWritable.
     (Jim Kellerman via cutting)
 
+    HADOOP-1795.  Fix so that jobs can generate output file names with
+    special characters.  (Frédéric Bertin via cutting)
+
   IMPROVEMENTS
 
     HADOOP-1779. Replace INodeDirectory.getINode() by a getExistingPathINodes()

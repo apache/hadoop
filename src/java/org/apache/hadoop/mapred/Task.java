@@ -438,7 +438,7 @@ abstract class Task implements Writable, Configurable {
   
   private Path getFinalPath(Path jobOutputDir, Path taskOutput) {
     URI relativePath = taskOutputPath.toUri().relativize(taskOutput.toUri());
-    return new Path(jobOutputDir, relativePath.toString());
+    return new Path(jobOutputDir, relativePath.getPath());
   }
   
   private void moveTaskOutputs(FileSystem fs, Path jobOutputDir, Path taskOutput) 
