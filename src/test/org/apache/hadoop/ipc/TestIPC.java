@@ -42,15 +42,14 @@ public class TestIPC extends TestCase {
 
   private static final Random RANDOM = new Random();
 
-  private static final int PORT = 1234;
   private static final String ADDRESS = "0.0.0.0";
 
   private static class TestServer extends Server {
     private boolean sleep;
 
-    public TestServer(String bindAddress, int port, int handlerCount, boolean sleep) 
+    public TestServer(int handlerCount, boolean sleep) 
       throws IOException {
-      super(bindAddress, port, LongWritable.class, handlerCount, conf);
+      super(ADDRESS, 0, LongWritable.class, handlerCount, conf);
       this.setTimeout(1000);
       this.sleep = sleep;
     }
@@ -67,11 +66,13 @@ public class TestIPC extends TestCase {
 
   private static class SerialCaller extends Thread {
     private Client client;
+    private InetSocketAddress server;
     private int count;
     private boolean failed;
 
-    public SerialCaller(Client client, int count) {
+    public SerialCaller(Client client, InetSocketAddress server, int count) {
       this.client = client;
+      this.server = server;
       this.count = count;
       client.setTimeout(1000);
     }
@@ -81,7 +82,7 @@ public class TestIPC extends TestCase {
         try {
           LongWritable param = new LongWritable(RANDOM.nextLong());
           LongWritable value =
-            (LongWritable)client.call(param, new InetSocketAddress(PORT));
+            (LongWritable)client.call(param, server);
           if (!param.equals(value)) {
             LOG.fatal("Call failed!");
             failed = true;
@@ -138,7 +139,8 @@ public class TestIPC extends TestCase {
   public void testSerial(int handlerCount, boolean handlerSleep, 
                          int clientCount, int callerCount, int callCount)
     throws Exception {
-    Server server = new TestServer(ADDRESS, PORT, handlerCount, handlerSleep);
+    Server server = new TestServer(handlerCount, handlerSleep);
+    InetSocketAddress addr = server.getListenerAddress();
     server.start();
 
     Client[] clients = new Client[clientCount];
@@ -148,7 +150,7 @@ public class TestIPC extends TestCase {
     
     SerialCaller[] callers = new SerialCaller[callerCount];
     for (int i = 0; i < callerCount; i++) {
-      callers[i] = new SerialCaller(clients[i%clientCount], callCount);
+      callers[i] = new SerialCaller(clients[i%clientCount], addr, callCount);
       callers[i].start();
     }
     for (int i = 0; i < callerCount; i++) {
@@ -171,13 +173,13 @@ public class TestIPC extends TestCase {
     throws Exception {
     Server[] servers = new Server[serverCount];
     for (int i = 0; i < serverCount; i++) {
-      servers[i] = new TestServer(ADDRESS, PORT+i+1, handlerCount, handlerSleep);
+      servers[i] = new TestServer(handlerCount, handlerSleep);
       servers[i].start();
     }
 
     InetSocketAddress[] addresses = new InetSocketAddress[addressCount];
     for (int i = 0; i < addressCount; i++) {
-      addresses[i] = new InetSocketAddress(PORT+1+(i%serverCount));
+      addresses[i] = servers[i%serverCount].getListenerAddress();
     }
 
     Client[] clients = new Client[clientCount];

@@ -142,6 +142,8 @@ Trunk (unreleased changes)
     port.  Also switch default address for umbilical connections to
     loopback.  (cutting)
 
+    HADOOP-1812. Let OS choose ports for IPC and RPC unit tests. (cutting)
+
 
 Release 0.14.1 - 2007-09-04
 
