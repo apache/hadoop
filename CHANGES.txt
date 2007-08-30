@@ -1,7 +1,8 @@
 Hadoop Change Log
 
 
-Release 0.14.1 - (unreleased)
+
+Release 0.14.1 - 2007-09-04
 
   BUG FIXES
 
