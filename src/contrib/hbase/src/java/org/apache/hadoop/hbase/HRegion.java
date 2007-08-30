@@ -208,6 +208,7 @@ public class HRegion implements HConstants {
 
   final int memcacheFlushSize;
   final int blockingMemcacheSize;
+  protected final long threadWakeFrequency;
   private final HLocking lock = new HLocking();
   private long desiredMaxFileSize;
   private final long maxSequenceId;
@@ -244,6 +245,7 @@ public class HRegion implements HConstants {
     this.conf = conf;
     this.regionInfo = regionInfo;
     this.memcache = new HMemcache();
+    this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
 
     // Declare the regionName.  This is a unique string for the region, used to 
     // build a unique filename.
@@ -1055,24 +1057,28 @@ public class HRegion implements HConstants {
    * the notify.
    */
   private synchronized void checkResources() {
-    if (checkCommitsSinceFlush()) {
-      return;
-    }
+    boolean blocked = false;
     
-    LOG.warn("Blocking updates for '" + Thread.currentThread().getName() +
-      "': Memcache size " +
-      StringUtils.humanReadableInt(this.memcache.getSize()) +
-      " is >= than blocking " +
-      StringUtils.humanReadableInt(this.blockingMemcacheSize) + " size");
     while (!checkCommitsSinceFlush()) {
+      if (!blocked) {
+        LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
+            "': Memcache size " +
+            StringUtils.humanReadableInt(this.memcache.getSize()) +
+            " is >= than blocking " +
+            StringUtils.humanReadableInt(this.blockingMemcacheSize) + " size");
+      }
+
+      blocked = true;
       try {
-        wait();
+        wait(threadWakeFrequency);
       } catch (InterruptedException e) {
         // continue;
       }
     }
-    LOG.warn("Unblocking updates for '" + Thread.currentThread().getName() +
-      "'");
+    if (blocked) {
+      LOG.info("Unblocking updates for '" + Thread.currentThread().getName() +
+          "'");
+    }
   }
   
   /*
