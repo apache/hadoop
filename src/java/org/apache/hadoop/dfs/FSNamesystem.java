@@ -673,8 +673,8 @@ class FSNamesystem implements FSConstants {
     return true;
   }
     
-  public long getBlockSize(String filename) throws IOException {
-    return dir.getBlockSize(filename);
+  public long getPreferredBlockSize(String filename) throws IOException {
+    return dir.getPreferredBlockSize(filename);
   }
     
   /**
@@ -824,7 +824,7 @@ class FSNamesystem implements FSConstants {
     // Now we can add the name to the filesystem. This file has no
     // blocks associated with it.
     //
-    if (!dir.addFile(src, new Block[0], replication)) {
+    if (!dir.addFile(src, new Block[0], replication, blockSize)) {
       throw new IOException("DIR* NameSystem.startFile: " +
                             "Unable to add file to namespace.");
     }

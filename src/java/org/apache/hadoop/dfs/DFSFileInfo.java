@@ -51,7 +51,7 @@ class DFSFileInfo extends FileStatus {
     super(node.computeContentsLength(),
           node.isDirectory(), 
           node.isDirectory() ? 0 : ((INodeFile)node).getReplication(), 
-          node.isDirectory() ? 0 : ((INodeFile)node).getBlockSize(),
+          node.isDirectory() ? 0 : ((INodeFile)node).getPreferredBlockSize(),
           node.getModificationTime(), new Path(path));
   }
 

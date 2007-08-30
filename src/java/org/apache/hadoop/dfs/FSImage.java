@@ -669,6 +669,7 @@ class FSImage extends Storage {
       for (int i = 0; i < numFiles; i++) {
         UTF8 name = new UTF8();
         long modificationTime = 0;
+        long blockSize = 0;
         name.readFields(in);
         // version 0 does not support per file replication
         if (!(imgVersion >= 0)) {
@@ -677,6 +678,9 @@ class FSImage extends Storage {
         }
         if (imgVersion <= -5) {
           modificationTime = in.readLong();
+        }
+        if (imgVersion <= -8) {
+          blockSize = in.readLong();
         }
         int numBlocks = in.readInt();
         Block blocks[] = null;
@@ -687,8 +691,19 @@ class FSImage extends Storage {
             blocks[j].readFields(in);
           }
         }
+        // Older versions of HDFS does not store the block size in inode.
+        // If the file has more than one block, use the size of the 
+        // first block as the blocksize. Otherwise leave the blockSize as 0
+        // to indicate that we do not really know the "true" blocksize of this
+        // file.
+        if (-7 <= imgVersion) {
+          assert blockSize == 0;
+          if (numBlocks > 1) {
+            blockSize = blocks[0].getNumBytes();
+          }
+        }
         fsDir.unprotectedAddFile(name.toString(), blocks, replication,
-                                 modificationTime);
+                                 modificationTime, blockSize);
       }
       
       // load datanode info
@@ -814,6 +829,7 @@ class FSImage extends Storage {
         INodeFile fileINode = (INodeFile)inode;
         out.writeShort(fileINode.getReplication());
         out.writeLong(inode.getModificationTime());
+        out.writeLong(fileINode.getPreferredBlockSize());
         Block[] blocks = fileINode.getBlocks();
         out.writeInt(blocks.length);
         for (Block blk : blocks)
@@ -823,6 +839,7 @@ class FSImage extends Storage {
       // write directory inode
       out.writeShort(0);  // replication
       out.writeLong(inode.getModificationTime());
+      out.writeLong(0);   // preferred block size
       out.writeInt(0);    // # of blocks
     }
     for(INode child : ((INodeDirectory)inode).getChildren()) {

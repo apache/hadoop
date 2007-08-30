@@ -32,8 +32,9 @@ interface ClientProtocol extends VersionedProtocol {
   /**
    * Compared to the previous version the following changes have been introduced:
    * 16 : removed deprecated obtainLock() and releaseLock(). 
+   * 17 : getBlockSize replaced by getPreferredBlockSize
    */
-  public static final long versionID = 16L;
+  public static final long versionID = 17L;
   
   ///////////////////////////////////////
   // File contents
@@ -248,7 +249,7 @@ interface ClientProtocol extends VersionedProtocol {
    * @return The number of bytes in each block
    * @throws IOException
    */
-  public long getBlockSize(String filename) throws IOException;
+  public long getPreferredBlockSize(String filename) throws IOException;
 
   /**
    * Enter, leave or get safe mode.

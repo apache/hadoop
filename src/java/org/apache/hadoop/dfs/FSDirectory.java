@@ -114,7 +114,8 @@ class FSDirectory implements FSConstants {
   /**
    * Add the given filename to the fs.
    */
-  public boolean addFile(String path, Block[] blocks, short replication) {
+  public boolean addFile(String path, Block[] blocks, short replication,
+                         long preferredBlockSize) {
     waitForReady();
 
     // Always do an implicit mkdirs for parent directory tree.
@@ -122,7 +123,9 @@ class FSDirectory implements FSConstants {
     if (!mkdirs(new Path(path).getParent().toString(), modTime)) {
       return false;
     }
-    INodeFile newNode = (INodeFile)unprotectedAddFile(path, blocks, replication, modTime);
+    INodeFile newNode = (INodeFile)unprotectedAddFile(path, blocks, replication,
+                                                      modTime, 
+                                                      preferredBlockSize);
     if (newNode == null) {
       NameNode.stateChangeLog.info("DIR* FSDirectory.addFile: "
                                    +"failed to add "+path+" with "
@@ -141,12 +144,14 @@ class FSDirectory implements FSConstants {
   INode unprotectedAddFile( String path, 
                             Block[] blocks, 
                             short replication,
-                            long modificationTime) {
+                            long modificationTime,
+                            long preferredBlockSize) {
     INode newNode;
     if (blocks == null)
       newNode = new INodeDirectory(modificationTime);
     else
-      newNode = new INodeFile(blocks, replication, modificationTime);
+      newNode = new INodeFile(blocks, replication, modificationTime,
+                              preferredBlockSize);
     synchronized (rootDir) {
       try {
         newNode = rootDir.addNode(path, newNode);
@@ -304,10 +309,10 @@ class FSDirectory implements FSConstants {
   /**
    * Get the blocksize of a file
    * @param filename the filename
-   * @return the number of bytes in the first block
+   * @return the number of bytes 
    * @throws IOException if it is a directory or does not exist.
    */
-  public long getBlockSize(String filename) throws IOException {
+  public long getPreferredBlockSize(String filename) throws IOException {
     synchronized (rootDir) {
       INode fileNode = rootDir.getNode(filename);
       if (fileNode == null) {
@@ -317,7 +322,7 @@ class FSDirectory implements FSConstants {
         throw new IOException("Getting block size of a directory: " + 
                               filename);
       }
-      return ((INodeFile)fileNode).getBlockSize();
+      return ((INodeFile)fileNode).getPreferredBlockSize();
     }
   }
     

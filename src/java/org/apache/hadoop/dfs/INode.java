@@ -404,13 +404,16 @@ class INodeDirectory extends INode {
 class INodeFile extends INode {
   private Block blocks[] = null;
   protected short blockReplication;
+  protected long preferredBlockSize;
 
   /**
    */
-  INodeFile(Block blocks[], short replication, long modificationTime) {
+  INodeFile(Block blocks[], short replication, long modificationTime,
+            long preferredBlockSize) {
     super(modificationTime);
     this.blocks = blocks;
     this.blockReplication = replication;
+    this.preferredBlockSize = preferredBlockSize;
   }
 
   boolean isDirectory() {
@@ -464,14 +467,10 @@ class INodeFile extends INode {
   }
 
   /**
-   * Get the block size of the first block
+   * Get the preferred block size of the file.
    * @return the number of bytes
    */
-  long getBlockSize() {
-    if (blocks == null || blocks.length == 0) {
-      return 0;
-    } else {
-      return blocks[0].getNumBytes();
-    }
+  long getPreferredBlockSize() {
+    return preferredBlockSize;
   }
 }

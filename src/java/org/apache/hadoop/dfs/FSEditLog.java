@@ -233,6 +233,7 @@ class FSEditLog {
         while (true) {
           long timestamp = 0;
           long mtime = 0;
+          long blockSize = 0;
           byte opcode = -1;
           try {
             opcode = in.readByte();
@@ -253,10 +254,13 @@ class FSEditLog {
               aw = new ArrayWritable(UTF8.class);
               aw.readFields(in);
               writables = aw.get(); 
-              if (logVersion >= -4 && writables.length != 2 ||
-                  logVersion < -4 && writables.length != 3) {
-                  throw new IOException("Incorrect data fortmat. " 
-                                        + "Name & replication pair expected");
+              if (-4 <= logVersion && writables.length != 2 ||
+                  -7 <= logVersion && logVersion < -4 && writables.length != 3||
+                  logVersion < -7 && writables.length != 4) {
+                  throw new IOException("Incorrect data format."  +
+                                        " logVersion is " + logVersion +
+                                        " but writables.length is " +
+                                        writables.length + ". ");
               }
               name = (UTF8) writables[0];
               replication = Short.parseShort(
@@ -265,6 +269,9 @@ class FSEditLog {
               if (logVersion < -4) {
                 mtime = Long.parseLong(((UTF8)writables[2]).toString());
               }
+              if (logVersion < -7) {
+                blockSize = Long.parseLong(((UTF8)writables[3]).toString());
+              }
             }
             // get blocks
             aw = new ArrayWritable(Block.class);
@@ -272,8 +279,21 @@ class FSEditLog {
             writables = aw.get();
             Block blocks[] = new Block[writables.length];
             System.arraycopy(writables, 0, blocks, 0, blocks.length);
+
+            // Older versions of HDFS does not store the block size in inode.
+            // If the file has more than one block, use the size of the
+            // first block as the blocksize. Otherwise leave the blockSize as 0
+            // to indicate that we do not really know the "true" blocksize of 
+            // this file.
+            if (-7 <= logVersion) {
+              assert blockSize == 0;
+              if (blocks.length > 1) {
+                blockSize = blocks[0].getNumBytes();
+              }
+            }
             // add to the file tree
-            fsDir.unprotectedAddFile(name.toString(), blocks, replication, mtime);
+            fsDir.unprotectedAddFile(name.toString(), blocks, replication, 
+                                     mtime, blockSize);
             break;
           }
           case OP_SET_REPLICATION: {
@@ -302,7 +322,7 @@ class FSEditLog {
               aw.readFields(in);
               writables = aw.get(); 
               if (writables.length != 3) {
-                throw new IOException("Incorrect data fortmat. " 
+                throw new IOException("Incorrect data format. " 
                                       + "Mkdir operation.");
               }
               src = (UTF8) writables[0];
@@ -324,7 +344,7 @@ class FSEditLog {
               aw.readFields(in);
               writables = aw.get(); 
               if (writables.length != 2) {
-                throw new IOException("Incorrect data fortmat. " 
+                throw new IOException("Incorrect data format. " 
                                       + "delete operation.");
               }
               src = (UTF8) writables[0];
@@ -345,7 +365,7 @@ class FSEditLog {
               aw.readFields(in);
               writables = aw.get(); 
               if (writables.length != 2) {
-                throw new IOException("Incorrect data fortmat. " 
+                throw new IOException("Incorrect data format. " 
                                       + "Mkdir operation.");
               }
               src = (UTF8) writables[0];
@@ -480,7 +500,8 @@ class FSEditLog {
     UTF8 nameReplicationPair[] = new UTF8[] { 
       new UTF8(path), 
       FSEditLog.toLogReplication(newNode.getReplication()),
-      FSEditLog.toLogTimeStamp(newNode.getModificationTime())};
+      FSEditLog.toLogLong(newNode.getModificationTime()),
+      FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
     logEdit(OP_ADD,
             new ArrayWritable(UTF8.class, nameReplicationPair), 
             new ArrayWritable(Block.class, newNode.getBlocks()));
@@ -492,7 +513,7 @@ class FSEditLog {
   void logMkDir(String path, INode newNode) {
     UTF8 info[] = new UTF8[] {
       new UTF8(path),
-      FSEditLog.toLogTimeStamp(newNode.getModificationTime())
+      FSEditLog.toLogLong(newNode.getModificationTime())
     };
     logEdit(OP_MKDIR, new ArrayWritable(UTF8.class, info), null);
   }
@@ -505,7 +526,7 @@ class FSEditLog {
     UTF8 info[] = new UTF8[] { 
       new UTF8(src),
       new UTF8(dst),
-      FSEditLog.toLogTimeStamp(timestamp)};
+      FSEditLog.toLogLong(timestamp)};
     logEdit(OP_RENAME, new ArrayWritable(UTF8.class, info), null);
   }
   
@@ -524,7 +545,7 @@ class FSEditLog {
   void logDelete(String src, long timestamp) {
     UTF8 info[] = new UTF8[] { 
       new UTF8(src),
-      FSEditLog.toLogTimeStamp(timestamp)};
+      FSEditLog.toLogLong(timestamp)};
     logEdit(OP_DELETE, new ArrayWritable(UTF8.class, info), null);
   }
   
@@ -552,7 +573,7 @@ class FSEditLog {
     return Short.parseShort(replication.toString());
   }
 
-  static UTF8 toLogTimeStamp(long timestamp) {
+  static UTF8 toLogLong(long timestamp) {
     return new UTF8(Long.toString(timestamp));
   }
 

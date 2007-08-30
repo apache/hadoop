@@ -373,8 +373,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
     }
   }
 
-  public long getBlockSize(String filename) throws IOException {
-    return namesystem.getBlockSize(filename);
+  public long getPreferredBlockSize(String filename) throws IOException {
+    return namesystem.getPreferredBlockSize(filename);
   }
     
   /**

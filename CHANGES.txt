@@ -16,6 +16,9 @@ Trunk (unreleased changes)
     HADOOP-1621.  FileStatus is now a concrete class and FileSystem.listPaths
     is deprecated and replaced with listStatus. (Chris Douglas via omalley)
 
+    HADOOP-1656.  The blockSize of a file is stored persistently in the file
+    inode. (Dhruba Borthakur via dhruba)
+
   NEW FEATURES
 
     HADOOP-1636.  Allow configuration of the number of jobs kept in

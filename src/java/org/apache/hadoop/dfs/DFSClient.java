@@ -134,7 +134,7 @@ class DFSClient implements FSConstants {
     methodNameToPolicyMap.put("renewLease", methodPolicy);
     methodNameToPolicyMap.put("getStats", methodPolicy);
     methodNameToPolicyMap.put("getDatanodeReport", methodPolicy);
-    methodNameToPolicyMap.put("getBlockSize", methodPolicy);
+    methodNameToPolicyMap.put("getPreferredBlockSize", methodPolicy);
     methodNameToPolicyMap.put("getEditLogSize", methodPolicy);
     methodNameToPolicyMap.put("complete", methodPolicy);
     methodNameToPolicyMap.put("getEditLogSize", methodPolicy);
@@ -212,7 +212,7 @@ class DFSClient implements FSConstants {
     
   public long getBlockSize(String f) throws IOException {
     try {
-      return namenode.getBlockSize(f);
+      return namenode.getPreferredBlockSize(f);
     } catch (IOException ie) {
       LOG.warn("Problem getting block size: " + 
           StringUtils.stringifyException(ie));

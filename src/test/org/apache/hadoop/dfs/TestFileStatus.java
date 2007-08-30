@@ -40,7 +40,8 @@ public class TestFileStatus extends TestCase {
     new Path(System.getProperty("test.build.data","/tmp"))
     .toString().replace(' ', '+');
   
-  private void writeFile(FileSystem fileSys, Path name, int repl)
+  private void writeFile(FileSystem fileSys, Path name, int repl,
+                         int fileSize, int blockSize)
     throws IOException {
     // create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, true,
@@ -94,12 +95,14 @@ public class TestFileStatus extends TestCase {
       // create a file in home directory
       //
       Path file1 = new Path("filestatus.dat");
-      writeFile(fs, file1, 1);
+      writeFile(fs, file1, 1, fileSize, blockSize);
       System.out.println("Created file filestatus.dat with one "
                          + " replicas.");
       checkFile(fs, file1, 1);
       assertTrue(file1 + " should be a file", 
                   fs.getFileStatus(file1).isDir() == false);
+      assertTrue(fs.getFileStatus(file1).getBlockSize() == blockSize);
+      assertTrue(fs.getFileStatus(file1).getReplication() == 1);
       System.out.println("Path : \"" + file1 + "\"");
 
       // create a directory
@@ -110,7 +113,20 @@ public class TestFileStatus extends TestCase {
       assertTrue(dir + " should be a directory", 
                  fs.getFileStatus(path).isDir() == true);
       System.out.println("Dir : \"" + dir + "\"");
-    
+
+      // create another file that is smaller than a block.
+      //
+      Path file2 = new Path("filestatus2.dat");
+      writeFile(fs, file2, 1, blockSize/4, blockSize);
+      System.out.println("Created file filestatus2.dat with one "
+                         + " replicas.");
+      checkFile(fs, file2, 1);
+      System.out.println("Path : \"" + file2 + "\"");
+
+      // verify file attributes
+      assertTrue(fs.getFileStatus(file2).getBlockSize() == blockSize);
+      assertTrue(fs.getFileStatus(file2).getReplication() == 1);
+
     } finally {
       fs.close();
       cluster.shutdown();
