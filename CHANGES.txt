@@ -72,7 +72,7 @@ Trunk (unreleased changes)
     HADOOP-1748.  Fix tasktracker to be able to launch tasks when log
     directory is relative.  (omalley via cutting)
 
-    HADOOP-1775 Fix a NullPointerException and an
+    HADOOP-1775.  Fix a NullPointerException and an
     IllegalArgumentException in MapWritable.
     (Jim Kellerman via cutting)
 
