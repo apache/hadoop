@@ -265,33 +265,9 @@ class INodeDirectory extends INode {
   /**
    */
   private INode getNode(byte[][] components) {
-    return getINode(components, components.length-1);
-  }
-
-  /**
-   * Find INode in the directory tree.
-   * 
-   * @param components array of path name components
-   * @param end the end component of the path
-   * @return found INode or null otherwise 
-   */
-  private INode getINode(byte[][] components, int end) {
-    assert compareBytes(this.name, components[0]) == 0 :
-      "Incorrect name " + getLocalName() + " expected " + components[0];
-    if (end >= components.length)
-      end = components.length-1;
-    if (end < 0)
-      return null;
-    INode curNode = this;
-    for(int start = 0; start < end; start++) {
-      if(!curNode.isDirectory())  // file is not expected here
-        return null;        // because there is more components in the path
-      INodeDirectory parentDir = (INodeDirectory)curNode;
-      curNode = parentDir.getChildINode(components[start+1]);
-      if(curNode == null)  // not found
-        return null;
-    }
-    return curNode;
+    INode[] inode  = new INode[1];
+    getExistingPathINodes(components, inode);
+    return inode[0];
   }
 
   /**
@@ -299,6 +275,82 @@ class INodeDirectory extends INode {
    */
   INode getNode(String path) {
     return getNode(getPathComponents(path));
+  }
+
+  /**
+   * Retrieve existing INodes from a path. If existing is big enough to store
+   * all path components (existing and non-existing), then existing INodes
+   * will be stored starting from the root INode into existing[0]; if
+   * existing is not big enough to store all path components, then only the
+   * last existing and non existing INodes will be stored so that
+   * existing[existing.length-1] refers to the target INode.
+   * 
+   * <p>
+   * Example: <br>
+   * Given the path /c1/c2/c3 where only /c1/c2 exists, resulting in the
+   * following path components: ["","c1","c2","c3"],
+   * 
+   * <p>
+   * {@link #getExistingPathINodes(["","c1","c2"], [?])} should fill the
+   * array with [c2] <br>
+   * {@link #getExistingPathINodes(["","c1","c2","c3"], [?])} should fill the
+   * array with [null]
+   * 
+   * <p>
+   * {@link #getExistingPathINodes(["","c1","c2"], [?,?])} should fill the
+   * array with [c1,c2] <br>
+   * {@link #getExistingPathINodes(["","c1","c2","c3"], [?,?])} should fill
+   * the array with [c2,null]
+   * 
+   * <p>
+   * {@link #getExistingPathINodes(["","c1","c2"], [?,?,?,?])} should fill
+   * the array with [rootINode,c1,c2,null], <br>
+   * {@link #getExistingPathINodes(["","c1","c2","c3"], [?,?,?,?])} should
+   * fill the array with [rootINode,c1,c2,null]
+   * @param components array of path component name
+   * @param existing INode array to fill with existing INodes
+   * @return number of existing INodes in the path
+   */
+  private int getExistingPathINodes(byte[][] components, INode[] existing) {
+    assert compareBytes(this.name, components[0]) == 0 :
+      "Incorrect name " + getLocalName() + " expected " + components[0];
+
+    INode curNode = this;
+    int count = 0;
+    int index = existing.length - components.length;
+    if (index > 0)
+      index = 0;
+    while ((count < components.length) && (curNode != null)) {
+      if (index >= 0)
+        existing[index] = curNode;
+      if (!curNode.isDirectory() || (count == components.length - 1))
+        break; // no more child, stop here
+      INodeDirectory parentDir = (INodeDirectory) curNode;
+      curNode = parentDir.getChildINode(components[count + 1]);
+      count += 1;
+      index += 1;
+    }
+    return count;
+  }
+
+  /**
+   * Retrieve the existing INodes along the given path. The first INode
+   * always exist and is this INode.
+   * 
+   * @param path the path to explore
+   * @return INodes array containing the existing INodes in the order they
+   *         appear when following the path from the root INode to the
+   *         deepest INodes. The array size will be the number of expected
+   *         components in the path, and non existing components will be
+   *         filled with null
+   */
+  INode[] getExistingPathINodes(String path) {
+    byte[][] components = getPathComponents(path);
+    INode[] inodes = new INode[components.length];
+
+    this.getExistingPathINodes(components, inodes);
+    
+    return inodes;
   }
 
   /**
@@ -337,7 +389,10 @@ class INodeDirectory extends INode {
     int pathLen = pathComponents.length;
     if (pathLen < 2)  // add root
       return null;
-    INode node = getINode(pathComponents, pathLen-2);
+    // Gets the parent INode
+    INode[] inode  = new INode[2];
+    getExistingPathINodes(pathComponents, inode);
+    INode node = inode[0];
     if (node == null) {
       throw new FileNotFoundException("Parent path does not exist: "+path);
     }

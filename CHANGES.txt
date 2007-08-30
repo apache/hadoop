@@ -78,6 +78,11 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-1779. Replace INodeDirectory.getINode() by a getExistingPathINodes()
+    to allow the retrieval of all existing INodes along a given path in a
+    single lookup. This facilitates removal of the 'parent' field in the
+    inode. (Christophe Taton via dhruba)
+
     HADOOP-1756. Add toString() to some Writable-s. (ab)
 
     HADOOP-1727.  New classes: MapWritable and SortedMapWritable.
