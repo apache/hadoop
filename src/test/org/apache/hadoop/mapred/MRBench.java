@@ -33,6 +33,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.Text;
 
 /**
  * Runs a job multiple times and takes average of all runs.
@@ -52,9 +53,9 @@ public class MRBench {
    * writes out data as text again. 
    */
   public static class Map extends MapReduceBase
-    implements Mapper<WritableComparable, UTF8, UTF8, UTF8> {
+    implements Mapper<WritableComparable, Text, UTF8, UTF8> {
     
-    public void map(WritableComparable key, UTF8 value,
+    public void map(WritableComparable key, Text value,
                     OutputCollector<UTF8, UTF8> output,
                     Reporter reporter) throws IOException 
     {
