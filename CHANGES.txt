@@ -34,6 +34,8 @@ Trunk (unreleased changes)
     HADOOP-1746 Clean up findbugs warnings
     HADOOP-1757 Bloomfilters: single argument constructor, use enum for bloom
                 filter types
+    HADOOP-1760 Use new MapWritable and SortedMapWritable classes from
+                org.apache.hadoop.io
     HADOOP-1802 Startup scripts should wait until hdfs as cleared 'safe mode'
 
 

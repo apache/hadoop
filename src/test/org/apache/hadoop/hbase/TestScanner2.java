@@ -32,17 +32,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.hbase.filter.RegExpRowFilter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 
 /**
  * Additional scanner tests.
@@ -219,7 +218,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
           break;
         }
         
-        for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+        for (Map.Entry<Writable, Writable> e: values.entrySet()) {
           HStoreKey k = (HStoreKey) e.getKey();
           results.put(k.getColumn(),
               ((ImmutableBytesWritable) e.getValue()).get());

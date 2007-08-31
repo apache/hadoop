@@ -40,9 +40,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 
 /*******************************************************************************
@@ -1034,10 +1032,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   throws IOException {
     requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
-    MapWritable result = new MapWritable(HStoreKey.class,
-        ImmutableBytesWritable.class,
-        new TreeMap<WritableComparable, Writable>());
-    
+    MapWritable result = new MapWritable();
     TreeMap<Text, byte[]> map = region.getFull(row);
     for (Map.Entry<Text, byte []> es: map.entrySet()) {
       result.put(new HStoreKey(row, es.getKey()),
@@ -1059,9 +1054,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     
     // Collect values to be returned here
     
-    MapWritable values = new MapWritable(HStoreKey.class,
-        ImmutableBytesWritable.class,
-        new TreeMap<WritableComparable, Writable>());
+    MapWritable values = new MapWritable();
     
     // Keep getting rows until we find one that has at least one non-deleted column value
     

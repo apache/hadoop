@@ -47,17 +47,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.MapWritable;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Writables;
 
 
 /**
@@ -209,7 +208,7 @@ HMasterRegionInterface, Runnable {
             break;
           }
 
-          for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
             HStoreKey key = (HStoreKey) e.getKey();
             results.put(key.getColumn(),
                 ((ImmutableBytesWritable) e.getValue()).get());
@@ -1730,7 +1729,7 @@ HMasterRegionInterface, Runnable {
 
           SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
           Text row = null;
-          for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
             HStoreKey key = (HStoreKey) e.getKey();
             Text thisRow = key.getRow();
             if (row == null) {
@@ -2406,7 +2405,7 @@ HMasterRegionInterface, Runnable {
         // be inserted if it exists so look for exact match on table name.
             
         if (data != null && data.size() > 0) {
-          for (WritableComparable k: data.keySet()) {
+          for (Writable k: data.keySet()) {
             if (HRegionInfo.getTableNameFromRegionName(
                 ((HStoreKey) k).getRow()).equals(tableName)) {
           
@@ -2553,8 +2552,7 @@ HMasterRegionInterface, Runnable {
                     break;
                   }
                   boolean haveRegionInfo = false;
-                  for (Map.Entry<WritableComparable, Writable> e:
-                    values.entrySet()) {
+                  for (Map.Entry<Writable, Writable> e: values.entrySet()) {
 
                     byte[] value = ((ImmutableBytesWritable) e.getValue()).get();
                     if (value == null || value.length == 0) {

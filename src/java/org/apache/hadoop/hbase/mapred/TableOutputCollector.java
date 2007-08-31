@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.OutputCollector;
-
-import org.apache.hadoop.hbase.io.MapWritable;
 
 /**
  * Refine the types that can be collected from a Table Map/Reduce jobs.
