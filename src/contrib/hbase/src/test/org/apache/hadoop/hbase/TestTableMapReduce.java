@@ -29,15 +29,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.hbase.mapred.TableMap;
 import org.apache.hadoop.hbase.mapred.TableOutputCollector;
+import org.apache.hadoop.hbase.mapred.TableReduce;
 import org.apache.hadoop.hbase.mapred.IdentityTableReduce;
 
 /**
@@ -120,7 +121,7 @@ public class TestTableMapReduce extends HBaseTestCase {
     /**
      * Pass the key, and reversed value to reduce
      *
-     * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.hbase.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
+     * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -151,9 +152,7 @@ public class TestTableMapReduce extends HBaseTestCase {
       
       // Now set the value to be collected
 
-      MapWritable outval = new MapWritable((Class) Text.class,
-          (Class) ImmutableBytesWritable.class,
-          (Map) new TreeMap<Text, ImmutableBytesWritable>());
+      MapWritable outval = new MapWritable();
       outval.put(TEXT_OUTPUT_COLUMN,
           new ImmutableBytesWritable(newValue.toString().getBytes()));
       
@@ -163,6 +162,7 @@ public class TestTableMapReduce extends HBaseTestCase {
   
   /**
    * Test hbase mapreduce jobs against single region and multi-region tables.
+   * @throws IOException
    */
   public void testTableMapReduce() throws IOException {
     localTestSingleRegionTable();
@@ -214,7 +214,7 @@ public class TestTableMapReduce extends HBaseTestCase {
       TableMap.initJob(SINGLE_REGION_TABLE_NAME, INPUT_COLUMN, 
           ProcessContentsMapper.class, jobConf);
 
-      IdentityTableReduce.initJob(SINGLE_REGION_TABLE_NAME,
+      TableReduce.initJob(SINGLE_REGION_TABLE_NAME,
           IdentityTableReduce.class, jobConf);
 
       JobClient.runJob(jobConf);
@@ -264,7 +264,7 @@ public class TestTableMapReduce extends HBaseTestCase {
       TableMap.initJob(MULTI_REGION_TABLE_NAME, INPUT_COLUMN, 
           ProcessContentsMapper.class, jobConf);
 
-      IdentityTableReduce.initJob(MULTI_REGION_TABLE_NAME,
+      TableReduce.initJob(MULTI_REGION_TABLE_NAME,
           IdentityTableReduce.class, jobConf);
 
       JobClient.runJob(jobConf);
@@ -306,6 +306,7 @@ public class TestTableMapReduce extends HBaseTestCase {
     }
   }
 
+  @SuppressWarnings("null")
   private void verify(Configuration conf, String tableName) throws IOException {
     HTable table = new HTable(conf, new Text(tableName));
     
@@ -334,6 +335,8 @@ public class TestTableMapReduce extends HBaseTestCase {
         }
         
         // verify second value is the reverse of the first
+        assertNotNull(firstValue);
+        assertNotNull(secondValue);
         assertEquals(firstValue.length, secondValue.length);
         for (int i=0; i<firstValue.length; i++) {
           assertEquals(firstValue[i], secondValue[firstValue.length-i-1]);

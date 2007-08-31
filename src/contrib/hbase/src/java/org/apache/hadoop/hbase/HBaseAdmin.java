@@ -26,12 +26,11 @@ import java.util.SortedMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.io.MapWritable;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RemoteException;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -187,7 +186,7 @@ public class HBaseAdmin implements HConstants {
           break;
         }
         boolean found = false;
-        for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+        for (Map.Entry<Writable, Writable> e: values.entrySet()) {
           HStoreKey key = (HStoreKey) e.getKey();
           if (key.getColumn().equals(COL_REGIONINFO)) {
             info = (HRegionInfo) Writables.getWritable(
@@ -275,7 +274,7 @@ public class HBaseAdmin implements HConstants {
             break;
           }
           valuesfound += 1;
-          for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
             HStoreKey key = (HStoreKey) e.getKey();
             if (key.getColumn().equals(COL_REGIONINFO)) {
               info = (HRegionInfo) Writables.getWritable(
@@ -375,7 +374,7 @@ public class HBaseAdmin implements HConstants {
             break;
           }
           valuesfound += 1;
-          for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
             HStoreKey key = (HStoreKey) e.getKey();
             if (key.getColumn().equals(COL_REGIONINFO)) {
               info = (HRegionInfo) Writables.getWritable(

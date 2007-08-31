@@ -35,10 +35,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.MapWritable;
+
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -361,7 +361,7 @@ public class HTable implements HConstants {
     }
     SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
     if (value != null && value.size() != 0) {
-      for (Map.Entry<WritableComparable, Writable> e: value.entrySet()) {
+      for (Map.Entry<Writable, Writable> e: value.entrySet()) {
         HStoreKey key = (HStoreKey) e.getKey();
         results.put(key.getColumn(),
             ((ImmutableBytesWritable) e.getValue()).get());
@@ -764,7 +764,7 @@ public class HTable implements HConstants {
       } while (values != null && values.size() == 0 && nextScanner());
 
       if (values != null && values.size() != 0) {
-        for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+        for (Map.Entry<Writable, Writable> e: values.entrySet()) {
           HStoreKey k = (HStoreKey) e.getKey();
           key.setRow(k.getRow());
           key.setVersion(k.getTimestamp());

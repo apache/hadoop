@@ -25,11 +25,10 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.MapWritable;
 
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
 
@@ -88,7 +87,7 @@ public class GroupingTableMap extends TableMap {
    * Pass the new key and value to reduce.
    * If any of the grouping columns are not found in the value, the record is skipped.
    *
-   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.hbase.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
+   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
   public void map(@SuppressWarnings("unused") HStoreKey key,
@@ -116,7 +115,7 @@ public class GroupingTableMap extends TableMap {
     ArrayList<byte[]> foundList = new ArrayList<byte[]>();
     int numCols = m_columns.length;
     if(numCols > 0) {
-      for (Map.Entry<WritableComparable, Writable> e: r.entrySet()) {
+      for (Map.Entry<Writable, Writable> e: r.entrySet()) {
         Text column = (Text) e.getKey();
         for (int i = 0; i < numCols; i++) {
           if (column.equals(m_columns[i])) {

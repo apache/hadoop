@@ -26,6 +26,7 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.mapred.InputFormat;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.MapWritable;
 
 import org.apache.log4j.Logger;
 
@@ -107,9 +107,7 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
      */
     @SuppressWarnings("unchecked")
     public MapWritable createValue() {
-      return new MapWritable((Class) Text.class,
-          (Class) ImmutableBytesWritable.class,
-          (Map) new TreeMap<Text, ImmutableBytesWritable>());
+      return new MapWritable();
     }
 
     /** {@inheritDoc} */

@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.hadoop.hbase.io.MapWritable;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Reporter;
 

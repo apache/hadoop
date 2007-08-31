@@ -23,9 +23,9 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
@@ -36,7 +36,6 @@ import org.apache.hadoop.util.Progressable;
 
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.MapWritable;
 
 import org.apache.log4j.Logger;
 
@@ -82,7 +81,7 @@ public class TableOutputFormat
       
       long xid = m_table.startUpdate(key);
 
-      for (Map.Entry<WritableComparable, Writable> e: value.entrySet()) {
+      for (Map.Entry<Writable, Writable> e: value.entrySet()) {
         m_table.put(xid, (Text)e.getKey(),
             ((ImmutableBytesWritable)e.getValue()).get());
       }

@@ -33,12 +33,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.MapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -254,7 +253,7 @@ public class HConnectionManager implements HConstants {
             if (values == null || values.size() == 0) {
               break;
             }
-            for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+            for (Map.Entry<Writable, Writable> e: values.entrySet()) {
               HStoreKey key = (HStoreKey) e.getKey();
               if (key.getColumn().equals(COL_REGIONINFO)) {
                 info = (HRegionInfo) Writables.getWritable(
@@ -686,7 +685,7 @@ public class HConnectionManager implements HConstants {
             }
 
             SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-            for (Map.Entry<WritableComparable, Writable> e: values.entrySet()) {
+            for (Map.Entry<Writable, Writable> e: values.entrySet()) {
               HStoreKey key = (HStoreKey) e.getKey();
               results.put(key.getColumn(),
                   ((ImmutableBytesWritable) e.getValue()).get());
