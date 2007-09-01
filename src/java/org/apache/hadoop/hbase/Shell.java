@@ -40,8 +40,12 @@ public class Shell {
   /** audible keyboard bells */
   public static final boolean DEFAULT_BELL_ENABLED = true;
 
-  /** Main method */
-  public static void main(String args[]) throws IOException {
+  /** Main method
+   * 
+   * @param args not used
+   * @throws IOException
+   */
+  public static void main(@SuppressWarnings("unused") String args[]) throws IOException {
     Configuration conf = new HBaseConfiguration();
     ConsoleReader reader = new ConsoleReader();
     reader.setBellEnabled(conf.getBoolean("hbaseshell.jline.bell.enabled",
@@ -91,8 +95,14 @@ public class Shell {
     return (queryStr.toString().equals("")) ? "HBase > " : "    --> ";
   }
 
-  /** return a string of code execution time. */
+  /**
+   * @param watch true if execution time should be computed and returned
+   * @param start start of time interval
+   * @param end end of time interval
+   * @return a string of code execution time. */
   public static String executeTime(boolean watch, long start, long end) {
-    return (watch) ? "(" + String.format("%.2f", (end - start) * 0.001) + " sec)" : "";
+    return (watch) ?
+        "(" + String.format("%.2f", (end - start) * 0.001) + " sec)" :
+          "";
   }
 }

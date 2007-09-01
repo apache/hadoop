@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -85,7 +86,11 @@ public class TestHMemcache extends TestCase {
       TreeMap<Text, byte []> columns = new TreeMap<Text, byte []>();
       for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
         Text k = getColumnName(i, ii);
-        columns.put(k, k.toString().getBytes());
+        try {
+          columns.put(k, k.toString().getBytes(HConstants.UTF8_ENCODING));
+        } catch (UnsupportedEncodingException e) {
+          fail();
+        }
       }
       hmc.add(getRowName(i), columns, System.currentTimeMillis());
     }
@@ -147,7 +152,7 @@ public class TestHMemcache extends TestCase {
   }
   
   private void isExpectedRow(final int rowIndex,
-      TreeMap<Text, byte []> row) {
+      TreeMap<Text, byte []> row) throws UnsupportedEncodingException {
     int i = 0;
     for (Text colname: row.keySet()) {
       String expectedColname =
@@ -159,13 +164,15 @@ public class TestHMemcache extends TestCase {
       // for BytesWriteable.  For comparison, comvert bytes to
       // String and trim to remove trailing null bytes.
       byte [] value = row.get(colname);
-      String colvalueStr = new String(value).trim();
+      String colvalueStr = new String(value, HConstants.UTF8_ENCODING).trim();
       assertEquals("Content", colnameStr, colvalueStr);
     }
   }
 
-  /** Test getFull from memcache */
-  public void testGetFull() {
+  /** Test getFull from memcache
+   * @throws UnsupportedEncodingException
+   */
+  public void testGetFull() throws UnsupportedEncodingException {
     addRows(this.hmemcache);
     for (int i = 0; i < ROW_COUNT; i++) {
       HStoreKey hsk = new HStoreKey(getRowName(i));

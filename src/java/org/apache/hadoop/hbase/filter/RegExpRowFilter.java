@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HGlobals;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -176,7 +176,7 @@ public class RegExpRowFilter implements RowFilterInterface {
       }
     }
     if (nullColumns.contains(colKey)) {
-      if (data != null && !Arrays.equals(HConstants.DELETE_BYTES.get(), data)) {
+      if (data != null && !Arrays.equals(HGlobals.deleteBytes.get(), data)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("filter returning true for rowKey: " + rowKey + 
             " colKey: " + colKey);
@@ -198,7 +198,7 @@ public class RegExpRowFilter implements RowFilterInterface {
   public boolean filterNotNull(final TreeMap<Text, byte[]> columns) {
     for (Entry<Text, byte[]> col : columns.entrySet()) {
       if (nullColumns.contains(col.getKey())
-          && !Arrays.equals(HConstants.DELETE_BYTES.get(), col.getValue())) {
+          && !Arrays.equals(HGlobals.deleteBytes.get(), col.getValue())) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("filterNotNull returning true for colKey: " + col.getKey()
             + ", column should be null.");

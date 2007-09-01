@@ -99,7 +99,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
       while(scanner.next(key, results)) {
         for(Map.Entry<Text, byte[]> e: results.entrySet()) {
           System.out.println(key + ": row: " + e.getKey() + " value: " + 
-              new String(e.getValue()));
+              new String(e.getValue(), HConstants.UTF8_ENCODING));
         }
       }
     } catch (Exception e) {

@@ -121,8 +121,10 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
       long writeid = region.startUpdate(new Text("row_" + k));
-      region.put(writeid, CONTENTS_BASIC, (CONTENTSTR + k).getBytes());
-      region.put(writeid, new Text(ANCHORNUM + k), (ANCHORSTR + k).getBytes());
+      region.put(writeid, CONTENTS_BASIC,
+          (CONTENTSTR + k).getBytes(HConstants.UTF8_ENCODING));
+      region.put(writeid, new Text(ANCHORNUM + k),
+          (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
       region.commit(writeid, System.currentTimeMillis());
     }
     System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
@@ -147,14 +149,14 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
       byte [] bodydata = region.get(rowlabel, CONTENTS_BASIC);
       assertNotNull(bodydata);
-      String bodystr = new String(bodydata).toString().trim();
+      String bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       String teststr = CONTENTSTR + k;
       assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
           + "), expected: '" + teststr + "' got: '" + bodystr + "'",
           bodystr, teststr);
       collabel = new Text(ANCHORNUM + k);
       bodydata = region.get(rowlabel, collabel);
-      bodystr = new String(bodydata).toString().trim();
+      bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       teststr = ANCHORSTR + k;
       assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
           + "), expected: '" + teststr + "' got: '" + bodystr + "'",
@@ -170,7 +172,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     // Try put with bad lockid.
     boolean exceptionThrown = false;
     try {
-      region.put(-1, CONTENTS_BASIC, "bad input".getBytes());
+      region.put(-1, CONTENTS_BASIC,
+          "bad input".getBytes(HConstants.UTF8_ENCODING));
     } catch (LockException e) {
       exceptionThrown = true;
     }
@@ -183,7 +186,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       lockid = region.startUpdate(new Text("Some old key"));
       String unregisteredColName = "FamilyGroup:FamilyLabel";
       region.put(lockid, new Text(unregisteredColName),
-        unregisteredColName.getBytes());
+        unregisteredColName.getBytes(HConstants.UTF8_ENCODING));
     } catch (IOException e) {
       exceptionThrown = true;
     } finally {
@@ -276,8 +279,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       String kLabel = String.format("%1$03d", k);
 
       long lockid = region.startUpdate(new Text("row_vals1_" + kLabel));
-      region.put(lockid, cols[0], vals1[k].getBytes());
-      region.put(lockid, cols[1], vals1[k].getBytes());
+      region.put(lockid, cols[0], vals1[k].getBytes(HConstants.UTF8_ENCODING));
+      region.put(lockid, cols[1], vals1[k].getBytes(HConstants.UTF8_ENCODING));
       region.commit(lockid, System.currentTimeMillis());
       numInserted += 2;
     }
@@ -300,10 +303,12 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
           byte [] val = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          int curval =
+            Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
             if(col.compareTo(cols[j]) == 0) {
-              assertEquals("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
+              assertEquals("Error at:" + curKey.getRow() + "/"
+                  + curKey.getTimestamp()
                   + ", Value for " + col + " should be: " + k
                   + ", but was fetched as: " + curval, k, curval);
               numFetched++;
@@ -345,10 +350,12 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
           byte [] val = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          int curval =
+            Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
             if(col.compareTo(cols[j]) == 0) {
-              assertEquals("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
+              assertEquals("Error at:" + curKey.getRow() + "/"
+                  + curKey.getTimestamp()
                   + ", Value for " + col + " should be: " + k
                   + ", but was fetched as: " + curval, k, curval);
               numFetched++;
@@ -375,8 +382,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       String kLabel = String.format("%1$03d", k);
       
       long lockid = region.startUpdate(new Text("row_vals1_" + kLabel));
-      region.put(lockid, cols[0], vals1[k].getBytes());
-      region.put(lockid, cols[1], vals1[k].getBytes());
+      region.put(lockid, cols[0], vals1[k].getBytes(HConstants.UTF8_ENCODING));
+      region.put(lockid, cols[1], vals1[k].getBytes(HConstants.UTF8_ENCODING));
       region.commit(lockid, System.currentTimeMillis());
       numInserted += 2;
     }
@@ -398,10 +405,12 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
           byte [] val = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          int curval =
+            Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
             if(col.compareTo(cols[j]) == 0) {
-              assertEquals("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
+              assertEquals("Error at:" + curKey.getRow() + "/"
+                  + curKey.getTimestamp()
                   + ", Value for " + col + " should be: " + k
                   + ", but was fetched as: " + curval, k, curval);
               numFetched++;
@@ -443,7 +452,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
           byte [] val = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          int curval =
+            Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
             if (col.compareTo(cols[j]) == 0) {
               assertEquals("Value for " + col + " should be: " + k
@@ -480,7 +490,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
           byte [] val = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          int curval =
+            Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
             if (col.compareTo(cols[j]) == 0) {
               assertEquals("Value for " + col + " should be: " + k
@@ -529,7 +540,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
       // Write to the HRegion
       long writeid = region.startUpdate(new Text("row_" + k));
-      region.put(writeid, CONTENTS_BODY, buf1.toString().getBytes());
+      region.put(writeid, CONTENTS_BODY,
+          buf1.toString().getBytes(HConstants.UTF8_ENCODING));
       region.commit(writeid, System.currentTimeMillis());
       if (k > 0 && k % (N_ROWS / 100) == 0) {
         System.out.println("Flushing write #" + k);
@@ -656,7 +668,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
           byte [] val = curVals.get(col);
-          String curval = new String(val).trim();
+          String curval = new String(val, HConstants.UTF8_ENCODING).trim();
 
           if(col.compareTo(CONTENTS_BASIC) == 0) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
@@ -709,7 +721,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
           byte [] val = curVals.get(col);
-          int curval = Integer.parseInt(new String(val).trim());
+          int curval =
+            Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
 
           for (int j = 0; j < cols.length; j++) {
             if (col.compareTo(cols[j]) == 0) {

@@ -1103,7 +1103,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public void put(long lockid, Text targetCol, byte [] val) throws IOException {
-    if (DELETE_BYTES.compareTo(val) == 0) {
+    if (HGlobals.deleteBytes.compareTo(val) == 0) {
       throw new IOException("Cannot insert value: " + val);
     }
     localput(lockid, targetCol, val);
@@ -1117,7 +1117,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public void delete(long lockid, Text targetCol) throws IOException {
-    localput(lockid, targetCol, DELETE_BYTES.get());
+    localput(lockid, targetCol, HGlobals.deleteBytes.get());
   }
 
   /**

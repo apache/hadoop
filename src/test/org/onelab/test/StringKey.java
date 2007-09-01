@@ -48,6 +48,8 @@
  */
 package org.onelab.test;
 
+import java.io.UnsupportedEncodingException;
+import org.apache.hadoop.hbase.HConstants;
 import org.onelab.filter.Key;
 
 /**
@@ -70,9 +72,10 @@ public class StringKey extends Key {
    * Construct a Key using the specified String and default weight
    * 
    * @param key String key value
+   * @throws UnsupportedEncodingException
    */
-  public StringKey(String key){
-    super(key.getBytes());
+  public StringKey(String key) throws UnsupportedEncodingException {
+    super(key.getBytes(HConstants.UTF8_ENCODING));
   }
 
   /**
@@ -80,9 +83,12 @@ public class StringKey extends Key {
    * 
    * @param key - String key value
    * @param weight key weight
+   * @throws UnsupportedEncodingException
    */
-  public StringKey(String key, double weight){
-    super(key.getBytes(), weight);
+  public StringKey(String key, double weight)
+    throws UnsupportedEncodingException {
+    
+    super(key.getBytes(HConstants.UTF8_ENCODING), weight);
   }
 
 }

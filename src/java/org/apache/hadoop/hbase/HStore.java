@@ -1033,7 +1033,7 @@ class HStore implements HConstants {
             Text readcol = readkey.getColumn();
             if (results.get(readcol) == null
                 && key.matchesWithoutColumn(readkey)) {
-              if(readval.equals(HConstants.DELETE_BYTES)) {
+              if(readval.equals(HGlobals.deleteBytes)) {
                 break;
               }
               results.put(new Text(readcol), readval.get());
@@ -1086,14 +1086,14 @@ class HStore implements HConstants {
             continue;
           }
           if (readkey.matchesRowCol(key)) {
-            if(readval.equals(HConstants.DELETE_BYTES)) {
+            if(readval.equals(HGlobals.deleteBytes)) {
               break;
             }
             results.add(readval.get());
             readval = new ImmutableBytesWritable();
             while(map.next(readkey, readval) && readkey.matchesRowCol(key)) {
               if ((numVersions > 0 && (results.size() >= numVersions))
-                  || readval.equals(HConstants.DELETE_BYTES)) {
+                  || readval.equals(HGlobals.deleteBytes)) {
                 break;
               }
               results.add(readval.get());

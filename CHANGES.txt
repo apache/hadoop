@@ -28,6 +28,7 @@ Trunk (unreleased changes)
                 (Ning Li via Stack)
     HADOOP-1800 output should default utf8 encoding
     HADOOP-1814	TestCleanRegionServerExit fails too often on Hudson
+    HADOOP-1821 Replace all String.getBytes() with String.getBytes("UTF-8")
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable

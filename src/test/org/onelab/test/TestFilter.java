@@ -48,6 +48,7 @@
  */
 package org.onelab.test;
 
+import java.io.UnsupportedEncodingException;
 import junit.framework.TestCase;
 
 import org.onelab.filter.*;
@@ -61,8 +62,10 @@ import org.onelab.filter.*;
  */
 public class TestFilter extends TestCase {
   
-  /** Test a BloomFilter */
-  public void testBloomFilter() {
+  /** Test a BloomFilter
+   * @throws UnsupportedEncodingException
+   */
+  public void testBloomFilter() throws UnsupportedEncodingException {
     Filter bf = new BloomFilter(8, 2);
     Key key = new StringKey("toto");
     Key k2 = new StringKey("lulu");
@@ -76,8 +79,10 @@ public class TestFilter extends TestCase {
     assertTrue(bf.membershipTest(new StringKey("abcd")));       // False positive
   }
   
-  /** Test a CountingBloomFilter */
-  public void testCountingBloomFilter() {
+  /** Test a CountingBloomFilter
+   * @throws UnsupportedEncodingException
+   */
+  public void testCountingBloomFilter() throws UnsupportedEncodingException {
     Filter bf = new CountingBloomFilter(8, 2);
     Key key = new StringKey("toto");
     Key k2 = new StringKey("lulu");
@@ -91,8 +96,10 @@ public class TestFilter extends TestCase {
     assertTrue(bf.membershipTest(new StringKey("abcd")));       // False positive
   }
   
-  /** Test a DynamicBloomFilter */
-  public void testDynamicBloomFilter() {
+  /** Test a DynamicBloomFilter
+   * @throws UnsupportedEncodingException
+   */
+  public void testDynamicBloomFilter() throws UnsupportedEncodingException {
     Filter bf = new DynamicBloomFilter(8, 2, 2);
     Key key = new StringKey("toto");
     Key k2 = new StringKey("lulu");

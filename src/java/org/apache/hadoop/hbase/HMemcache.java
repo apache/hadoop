@@ -258,7 +258,7 @@ public class HMemcache {
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       if (itKey.matchesRowCol(curKey)) {
-        if(HConstants.DELETE_BYTES.compareTo(es.getValue()) == 0) {
+        if(HGlobals.deleteBytes.compareTo(es.getValue()) == 0) {
           // TODO: Shouldn't this be a continue rather than a break?  Perhaps
           // the intent is that this DELETE_BYTES is meant to suppress older
           // info -- see 5.4 Compactions in BigTable -- but how does this jibe

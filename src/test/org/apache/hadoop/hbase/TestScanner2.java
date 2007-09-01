@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -58,9 +59,18 @@ public class TestScanner2 extends HBaseClusterTestCase {
   final char LAST_ROWKEY = 'z';
   final char FIRST_COLKEY = '0';
   final char LAST_COLKEY = '3';
-  final byte[] GOOD_BYTES = "goodstuff".getBytes();
-  final byte[] BAD_BYTES = "badstuff".getBytes();
+  static byte[] GOOD_BYTES = null;
+  static byte[] BAD_BYTES = null;
 
+  static {
+    try {
+      GOOD_BYTES = "goodstuff".getBytes(HConstants.UTF8_ENCODING);
+      BAD_BYTES = "badstuff".getBytes(HConstants.UTF8_ENCODING);
+    } catch (UnsupportedEncodingException e) {
+      fail();
+    }
+  }
+  
   /**
    * Test the scanner's handling of various filters.  
    * 
@@ -260,7 +270,8 @@ public class TestScanner2 extends HBaseClusterTestCase {
     HTable t = new HTable(conf, table);
     try {
       long lockid = t.startUpdate(region.getRegionName());
-      t.put(lockid, HConstants.COL_REGIONINFO, Writables.getBytes(region.getRegionInfo()));
+      t.put(lockid, HConstants.COL_REGIONINFO,
+          Writables.getBytes(region.getRegionInfo()));
       t.put(lockid, HConstants.COL_SERVER,
         Writables.stringToBytes(serverAddress.toString()));
       t.put(lockid, HConstants.COL_STARTCODE, Writables.longToBytes(startCode));

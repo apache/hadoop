@@ -79,7 +79,7 @@ public class TestHStoreFile extends TestCase {
     try {
       for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
         byte[] b = new byte[] {(byte)d};
-        Text t = new Text(new String(b));
+        Text t = new Text(new String(b, HConstants.UTF8_ENCODING));
         writer.append(new HStoreKey(t, t, System.currentTimeMillis()),
             new ImmutableBytesWritable(t.getBytes()));
       }
@@ -101,7 +101,7 @@ public class TestHStoreFile extends TestCase {
       for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
         for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
           byte[] b = new byte[] { (byte) d, (byte) e };
-          Text t = new Text(new String(b));
+          Text t = new Text(new String(b, HConstants.UTF8_ENCODING));
           writer.append(new HStoreKey(t, t, System.currentTimeMillis()),
             new ImmutableBytesWritable(t.getBytes()));
         }
@@ -248,7 +248,7 @@ public class TestHStoreFile extends TestCase {
       LOG.info("Last in top: " + key.toString());
       top.getClosest(midkey, value);
       // Assert value is same as key.
-      assertEquals(new String(value.get()),
+      assertEquals(new String(value.get(), HConstants.UTF8_ENCODING),
         ((HStoreKey) midkey).getRow().toString());
 
       // Next test using a midkey that does not exist in the file.

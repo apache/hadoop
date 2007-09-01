@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -60,12 +61,20 @@ public class TestTableMapReduce extends HBaseTestCase {
   private Path dir;
   private MiniHBaseCluster hCluster = null;
   
-  private byte[][] values = {
-      "0123".getBytes(),
-      "abcd".getBytes(),
-      "wxyz".getBytes(),
-      "6789".getBytes()
-  };
+  private static byte[][] values = null;
+  
+  static {
+    try {
+      values = new byte[][] {
+          "0123".getBytes(HConstants.UTF8_ENCODING),
+          "abcd".getBytes(HConstants.UTF8_ENCODING),
+          "wxyz".getBytes(HConstants.UTF8_ENCODING),
+          "6789".getBytes(HConstants.UTF8_ENCODING)
+      };
+    } catch (UnsupportedEncodingException e) {
+      fail();
+    }
+  }
 
   /**
    * {@inheritDoc}
@@ -144,7 +153,8 @@ public class TestTableMapReduce extends HBaseTestCase {
       // Get the original value and reverse it
       
       String originalValue =
-        new String(((ImmutableBytesWritable)value.get(keys[0])).get());
+        new String(((ImmutableBytesWritable)value.get(keys[0])).get(),
+            HConstants.UTF8_ENCODING);
       StringBuilder newValue = new StringBuilder();
       for(int i = originalValue.length() - 1; i >= 0; i--) {
         newValue.append(originalValue.charAt(i));
@@ -153,8 +163,8 @@ public class TestTableMapReduce extends HBaseTestCase {
       // Now set the value to be collected
 
       MapWritable outval = new MapWritable();
-      outval.put(TEXT_OUTPUT_COLUMN,
-          new ImmutableBytesWritable(newValue.toString().getBytes()));
+      outval.put(TEXT_OUTPUT_COLUMN, new ImmutableBytesWritable(
+          newValue.toString().getBytes(HConstants.UTF8_ENCODING)));
       
       output.collect(tKey, outval);
     }
@@ -297,7 +307,7 @@ public class TestTableMapReduce extends HBaseTestCase {
         
         for(Map.Entry<Text, byte[]> e: results.entrySet()) {
           LOG.info(" column: " + e.getKey() + " value: "
-              + new String(e.getValue()));
+              + new String(e.getValue(), HConstants.UTF8_ENCODING));
         }
       }
       

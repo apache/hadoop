@@ -23,12 +23,14 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.TreeMap;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HGlobals;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -39,9 +41,16 @@ public class TestRegExpRowFilter extends TestCase {
   RowFilterInterface mainFilter;
   final char FIRST_CHAR = 'a';
   final char LAST_CHAR = 'e';
-  byte [] GOOD_BYTES = "abc".getBytes();
   final String HOST_PREFIX = "org.apache.site-";
-  
+  static byte [] GOOD_BYTES = null;
+
+  static {
+    try {
+      GOOD_BYTES = "abc".getBytes(HConstants.UTF8_ENCODING);
+    } catch (UnsupportedEncodingException e) {
+      fail();
+    }
+  }
   /** {@inheritDoc} */
   @Override
   protected void setUp() throws Exception {
@@ -112,7 +121,9 @@ public class TestRegExpRowFilter extends TestCase {
       yahooSite, filter.filter(new Text(yahooSite)));
   }
   
-  private void regexRowColumnTests(RowFilterInterface filter) {
+  private void regexRowColumnTests(RowFilterInterface filter)
+    throws UnsupportedEncodingException {
+    
     for (char c = FIRST_CHAR; c <= LAST_CHAR; c++) {
       Text t = createRow(c);
       for (Map.Entry<Text, byte []> e: this.colvalues.entrySet()) {
@@ -129,7 +140,7 @@ public class TestRegExpRowFilter extends TestCase {
     
     // Do same but with bad bytes.
     assertTrue("Failed with character " + c,
-      filter.filter(r, col, "badbytes".getBytes()));
+      filter.filter(r, col, "badbytes".getBytes(HConstants.UTF8_ENCODING)));
     
     // Do with good bytes but bad column name.  Should not filter out.
     assertFalse("Failed with character " + c,
@@ -175,7 +186,7 @@ public class TestRegExpRowFilter extends TestCase {
     // that maps to a null value.
     // Testing row with columnKeys: a-e, e maps to null
     colvalues.put(new Text(new String(new char[] { LAST_CHAR })), 
-      HConstants.DELETE_BYTES.get());
+      HGlobals.deleteBytes.get());
     assertFalse("Failed with last columnKey " + LAST_CHAR + " mapping to null.", 
       filter.filterNotNull(colvalues));
   }

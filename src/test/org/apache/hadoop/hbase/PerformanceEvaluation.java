@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -312,7 +313,13 @@ public class PerformanceEvaluation implements HConstants {
       while(val.length() < ROW_LENGTH) {
         val.append(Long.toString(this.rand.nextLong()));
       }
-      return val.toString().getBytes();
+      byte[] value = null;
+      try {
+        value = val.toString().getBytes(HConstants.UTF8_ENCODING);
+      } catch (UnsupportedEncodingException e) {
+        assert(false);
+      }
+      return value;
     }
     
     private String generateStatus(final int sr, final int i, final int lr) {
