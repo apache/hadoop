@@ -20,9 +20,11 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 
@@ -147,7 +149,11 @@ public class GroupingTableMap extends TableMap {
       if(i > 0) {
         sb.append(" ");
       }
-      sb.append(new String(vals[i]));
+      try {
+        sb.append(new String(vals[i], HConstants.UTF8_ENCODING));
+      } catch (UnsupportedEncodingException e) {
+        throw new RuntimeException(e);
+      }
     }
     return new Text(sb.toString());
   }

@@ -90,8 +90,10 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
 
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
       long writeid = table.startUpdate(new Text("row_" + k));
-      table.put(writeid, CONTENTS_BASIC, (CONTENTSTR + k).getBytes());
-      table.put(writeid, new Text(ANCHORNUM + k), (ANCHORSTR + k).getBytes());
+      table.put(writeid, CONTENTS_BASIC,
+          (CONTENTSTR + k).getBytes(HConstants.UTF8_ENCODING));
+      table.put(writeid, new Text(ANCHORNUM + k),
+          (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
       table.commit(writeid);
     }
     System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
@@ -107,14 +109,14 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
 
       byte bodydata[] = table.get(rowlabel, CONTENTS_BASIC);
       assertNotNull(bodydata);
-      String bodystr = new String(bodydata).toString().trim();
+      String bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       String teststr = CONTENTSTR + k;
       assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
           + "), expected: '" + teststr + "' got: '" + bodystr + "'",
           bodystr, teststr);
       collabel = new Text(ANCHORNUM + k);
       bodydata = table.get(rowlabel, collabel);
-      bodystr = new String(bodydata).toString().trim();
+      bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       teststr = ANCHORSTR + k;
       assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
           + "), expected: '" + teststr + "' got: '" + bodystr + "'",
@@ -145,7 +147,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
           byte val[] = curVals.get(col);
-          String curval = new String(val).trim();
+          String curval = new String(val, HConstants.UTF8_ENCODING).trim();
 
           if(col.compareTo(CONTENTS_BASIC) == 0) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()

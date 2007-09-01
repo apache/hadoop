@@ -19,14 +19,28 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.UnsupportedEncodingException;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+
 /**
- * Global values used for finding and scanning the root and meta tables.
+ * Global values that require initialization that cannot be done in HConstants
  */
 public class HGlobals implements HConstants {
+
+  /** table descriptor for root table */
+  public static HTableDescriptor rootTableDesc = null;
   
-  static HTableDescriptor rootTableDesc = null;
-  static HRegionInfo rootRegionInfo = null;
-  static HTableDescriptor metaTableDesc = null;
+  /** region info for the root region */
+  public static HRegionInfo rootRegionInfo = null;
+  
+  /** table descriptor for meta table */
+  public static HTableDescriptor metaTableDesc = null;
+  
+  /** Value stored for a deleted item */
+  public static ImmutableBytesWritable deleteBytes = null;
+
+  /** Value written to HLog on a complete cache flush */
+  public static ImmutableBytesWritable completeCacheFlush = null;
 
   static {
     rootTableDesc = new HTableDescriptor(ROOT_TABLE_NAME.toString());
@@ -38,5 +52,17 @@ public class HGlobals implements HConstants {
     metaTableDesc = new HTableDescriptor(META_TABLE_NAME.toString());
     metaTableDesc.addFamily(new HColumnDescriptor(COLUMN_FAMILY, 1,
         HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE, null));
+
+    try {
+      deleteBytes =
+        new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes(UTF8_ENCODING));
+    
+      completeCacheFlush =
+        new ImmutableBytesWritable("HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING));
+      
+    } catch (UnsupportedEncodingException e) {
+      assert(false);
+    }
+ 
   }
 }

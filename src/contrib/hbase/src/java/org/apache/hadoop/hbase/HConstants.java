@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -86,10 +85,23 @@ public interface HConstants {
 
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
-
+  
   // region name = table + startkey + regionid. This is the row key.
   // each row in the root and meta tables describes exactly 1 region
   // Do we ever need to know all the information that we are storing?
+
+  // Note that the name of the root table starts with "-" and the name of the
+  // meta table starts with "." Why? it's a trick. It turns out that when we
+  // store region names in memory, we use a SortedMap. Since "-" sorts before
+  // "." (and since no other table name can start with either of these
+  // characters, the root region will always be the first entry in such a Map,
+  // followed by all the meta regions (which will be ordered by their starting
+  // row key as well), followed by all user tables. So when the Master is 
+  // choosing regions to assign, it will always choose the root region first,
+  // followed by the meta regions, followed by user regions. Since the root
+  // and meta regions always need to be on-line, this ensures that they will
+  // be the first to be reassigned if the server(s) they are being served by
+  // should go down.
 
   /** The root table's name. */
   static final Text ROOT_TABLE_NAME = new Text("-ROOT-");
@@ -133,11 +145,4 @@ public interface HConstants {
   /** When we encode strings, we always specify UTF8 encoding */
   static final String UTF8_ENCODING = "UTF-8";
 
-  /** Value stored for a deleted item */
-  static final ImmutableBytesWritable DELETE_BYTES =
-    new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes());
-
-  /** Value written to HLog on a complete cache flush */
-  static final ImmutableBytesWritable COMPLETE_CACHEFLUSH =
-    new ImmutableBytesWritable("HBASE::CACHEFLUSH".getBytes());
 }

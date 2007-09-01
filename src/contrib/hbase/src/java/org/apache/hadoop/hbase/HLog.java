@@ -433,7 +433,7 @@ public class HLog implements HConstants {
     }
     
     writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
-      new HLogEdit(HLog.METACOLUMN, COMPLETE_CACHEFLUSH.get(),
+      new HLogEdit(HLog.METACOLUMN, HGlobals.completeCacheFlush.get(),
         System.currentTimeMillis()));
     numEntries.getAndIncrement();
 

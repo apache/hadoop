@@ -23,10 +23,12 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.io.Text;
 
 
@@ -42,10 +44,19 @@ public class TestRowFilterSet extends TestCase {
   static final int MAX_PAGES = 5;
   final char FIRST_CHAR = 'a';
   final char LAST_CHAR = 'e';
-  final byte[] GOOD_BYTES = "abc".getBytes();
-  final byte[] BAD_BYTES = "def".getBytes();
   TreeMap<Text, byte[]> colvalues;
+  static byte[] GOOD_BYTES = null;
+  static byte[] BAD_BYTES = null;
 
+  static {
+    try {
+      GOOD_BYTES = "abc".getBytes(HConstants.UTF8_ENCODING);
+      BAD_BYTES = "def".getBytes(HConstants.UTF8_ENCODING);
+    } catch (UnsupportedEncodingException e) {
+      fail();
+    }
+  }
+  
   /** {@inheritDoc} */
   @Override
   protected void setUp() throws Exception {

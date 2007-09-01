@@ -69,7 +69,7 @@ public class TestGet extends HBaseTestCase {
   }
   
   /** 
-   * Constructor
+   * the test
    * @throws IOException
    */
   public void testGet() throws IOException {
@@ -144,14 +144,14 @@ public class TestGet extends HBaseTestCase {
       lockid = r.startUpdate(ROW_KEY);
 
       r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "region"),
-        "region2".getBytes());
+        "region2".getBytes(HConstants.UTF8_ENCODING));
 
       String otherServerName = "bar.foo.com:4321";
       r.put(lockid, HConstants.COL_SERVER, 
         Writables.stringToBytes(new HServerAddress(otherServerName).toString()));
       
       r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "junk"),
-        "junk".getBytes());
+        "junk".getBytes(HConstants.UTF8_ENCODING));
       
       r.commit(lockid, System.currentTimeMillis());
 

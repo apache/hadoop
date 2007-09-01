@@ -1064,7 +1064,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       for(Map.Entry<Text, byte []> e: results.entrySet()) {
         HStoreKey k = new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp());
         byte [] val = e.getValue();
-        if (DELETE_BYTES.compareTo(val) == 0) {
+        if (HGlobals.deleteBytes.compareTo(val) == 0) {
           // Column value is deleted. Don't return it.
           continue;
         }

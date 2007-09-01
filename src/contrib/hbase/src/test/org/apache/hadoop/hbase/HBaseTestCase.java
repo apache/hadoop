@@ -159,7 +159,7 @@ public abstract class HBaseTestCase extends TestCase {
       for (char d = secondCharStart; d <= LAST_CHAR; d++) {
         for (char e = thirdCharStart; e <= LAST_CHAR; e++) {
           byte [] bytes = new byte [] {(byte)c, (byte)d, (byte)e};
-          Text t = new Text(new String(bytes));
+          Text t = new Text(new String(bytes, HConstants.UTF8_ENCODING));
           if (endKey != null && endKey.getLength() > 0
               && endKey.compareTo(t) <= 0) {
             break EXIT;

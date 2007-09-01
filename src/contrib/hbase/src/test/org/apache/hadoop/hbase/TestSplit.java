@@ -134,7 +134,8 @@ public class TestSplit extends HBaseTestCase {
     // of each.
     int interval = (LAST_CHAR - FIRST_CHAR) / 3;
     for (HRegion r: sortedMap.values()) {
-      assertGet(r, COLFAMILY_NAME3, new Text(new String(b)));
+      assertGet(r, COLFAMILY_NAME3,
+          new Text(new String(b, HConstants.UTF8_ENCODING)));
       b[0] += interval;
     }
   }
