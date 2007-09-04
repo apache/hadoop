@@ -55,6 +55,10 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-1763. Too many lost task trackers on large clusters due to
+    insufficient number of RPC handler threads on the JobTracker.
+    (Devaraj Das)
+
     HADOOP-1463.  HDFS report correct usage statistics for disk space
     used by HDFS.  (Hairong Kuang via dhruba)
 

@@ -467,6 +467,15 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.job.tracker.handler.count</name>
+  <value>10</value>
+  <description>
+    The number of server threads for the JobTracker. This should be roughly
+    4% of the number of tasktracker nodes.
+  </description>
+</property>
+
+<property>
   <name>mapred.task.tracker.report.bindAddress</name>
   <value>127.0.0.1</value>
   <description>The interface that task processes use to communicate

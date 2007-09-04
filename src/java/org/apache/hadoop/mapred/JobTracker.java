@@ -645,7 +645,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     InetSocketAddress addr = getAddress(conf);
     this.localMachine = addr.getHostName();
     this.port = addr.getPort();
-    this.interTrackerServer = RPC.getServer(this, addr.getHostName(), addr.getPort(), 10, false, conf);
+    int handlerCount = conf.getInt("mapred.job.tracker.handler.count", 10);
+    this.interTrackerServer = RPC.getServer(this, addr.getHostName(), addr.getPort(), handlerCount, false, conf);
     this.interTrackerServer.start();
     Properties p = System.getProperties();
     for (Iterator it = p.keySet().iterator(); it.hasNext();) {
