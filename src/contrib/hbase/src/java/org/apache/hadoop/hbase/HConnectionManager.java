@@ -247,7 +247,6 @@ public class HConnectionManager implements HConstants {
               COLUMN_FAMILY_ARRAY, EMPTY_START_ROW, System.currentTimeMillis(),
               null);
 
-          HRegionInfo info = new HRegionInfo();
           while (true) {
             MapWritable values = server.next(scannerId);
             if (values == null || values.size() == 0) {
@@ -256,6 +255,7 @@ public class HConnectionManager implements HConstants {
             for (Map.Entry<Writable, Writable> e: values.entrySet()) {
               HStoreKey key = (HStoreKey) e.getKey();
               if (key.getColumn().equals(COL_REGIONINFO)) {
+                HRegionInfo info = new HRegionInfo();
                 info = (HRegionInfo) Writables.getWritable(
                     ((ImmutableBytesWritable) e.getValue()).get(), info);
 
