@@ -151,6 +151,9 @@ Trunk (unreleased changes)
 
     HADOOP-1812. Let OS choose ports for IPC and RPC unit tests. (cutting)
 
+    HADOOP-1825.  Create $HADOOP_PID_DIR when it does not exist.
+    (Michael Bieniosek via cutting)
+
 
 Release 0.14.1 - 2007-09-04
 
