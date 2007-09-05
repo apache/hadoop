@@ -39,6 +39,7 @@ Trunk (unreleased changes)
                 filter types
     HADOOP-1760 Use new MapWritable and SortedMapWritable classes from
                 org.apache.hadoop.io
+    HADOOP-1794 Remove deprecated APIs
     HADOOP-1802 Startup scripts should wait until hdfs as cleared 'safe mode'
     HADOOP-1835 Updated Documentation for HBase setup/installation
            (Izaak Rubin via Stack)
