@@ -528,7 +528,7 @@ class HStore implements HConstants {
    */
   public boolean needsCompaction() {
     return this.storefiles != null &&
-    this.storefiles.size() >= this.compactionThreshold;
+      this.storefiles.size() >= this.compactionThreshold;
   }
 
   /**
@@ -1334,13 +1334,20 @@ class HStore implements HConstants {
      */
     @Override
     boolean getNext(int i) throws IOException {
+      boolean result = false;
       ImmutableBytesWritable ibw = new ImmutableBytesWritable();
-      if (!readers[i].next(keys[i], ibw)) {
-        closeSubScanner(i);
-        return false;
+      while (true) {
+        if (!readers[i].next(keys[i], ibw)) {
+          closeSubScanner(i);
+          break;
+        }
+        if (keys[i].getTimestamp() <= this.timestamp) {
+          vals[i] = ibw.get();
+          result = true;
+          break;
+        }
       }
-      vals[i] = ibw.get();
-      return true;
+      return result;
     }
     
     /** Close down the indicated reader. */

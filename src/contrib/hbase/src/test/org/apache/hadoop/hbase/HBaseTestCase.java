@@ -39,6 +39,8 @@ public abstract class HBaseTestCase extends TestCase {
   protected FileSystem localFs = null;
   protected static final char FIRST_CHAR = 'a';
   protected static final char LAST_CHAR = 'z';
+  protected static final byte [] START_KEY_BYTES =
+    {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
   
   static {
     StaticTestEnvironment.initialize();
@@ -117,9 +119,9 @@ public abstract class HBaseTestCase extends TestCase {
     Text endKey = r.getRegionInfo().getEndKey();
     byte [] startKeyBytes = startKey.getBytes();
     if (startKeyBytes == null || startKeyBytes.length == 0) {
-      startKeyBytes = new byte [] {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
+      startKeyBytes = START_KEY_BYTES;
     }
-    addContent(new HRegionLoader(r), column, startKeyBytes, endKey);
+    addContent(new HRegionLoader(r), column, startKeyBytes, endKey, -1);
   }
 
   /**
@@ -132,8 +134,7 @@ public abstract class HBaseTestCase extends TestCase {
    */
   protected static void addContent(final Loader updater, final String column)
   throws IOException {
-    addContent(updater, column,
-      new byte [] {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR}, null);
+    addContent(updater, column, START_KEY_BYTES, null);
   }
 
   /**
@@ -148,6 +149,23 @@ public abstract class HBaseTestCase extends TestCase {
    */
   protected static void addContent(final Loader updater, final String column,
       final byte [] startKeyBytes, final Text endKey)
+  throws IOException {
+    addContent(updater, column, startKeyBytes, endKey, -1);
+  }
+  
+  /**
+   * Add content to region <code>r</code> on the passed column
+   * <code>column</code>.
+   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
+   * @param updater  An instance of {@link Loader}.
+   * @param column
+   * @param startKeyBytes Where to start the rows inserted
+   * @param endKey Where to stop inserting rows.
+   * @param ts Timestamp to write the content with.
+   * @throws IOException
+   */
+  protected static void addContent(final Loader updater, final String column,
+      final byte [] startKeyBytes, final Text endKey, final long ts)
   throws IOException {
     // Add rows of three characters.  The first character starts with the
     // 'a' character and runs up to 'z'.  Per first character, we run the
@@ -167,7 +185,11 @@ public abstract class HBaseTestCase extends TestCase {
           long lockid = updater.startBatchUpdate(t);
           try {
             updater.put(lockid, new Text(column), bytes);
-            updater.commit(lockid);
+            if (ts == -1) {
+              updater.commit(lockid);
+            } else {
+              updater.commit(lockid, ts);
+            }
             lockid = -1;
           } finally {
             if (lockid != -1) {
@@ -190,6 +212,7 @@ public abstract class HBaseTestCase extends TestCase {
     public long startBatchUpdate(final Text row) throws IOException;
     public void put(long lockid, Text column, byte val[]) throws IOException;
     public void commit(long lockid) throws IOException;
+    public void commit(long lockid, long ts) throws IOException;
     public void abort(long lockid) throws IOException;
   }
   
@@ -207,6 +230,9 @@ public abstract class HBaseTestCase extends TestCase {
     }
     public void commit(long lockid) throws IOException {
       this.region.commit(lockid, System.currentTimeMillis());
+    }
+    public void commit(long lockid, final long ts) throws IOException {
+      this.region.commit(lockid, ts);
     }
     public void put(long lockid, Text column, byte[] val) throws IOException {
       this.region.put(lockid, column, val);
@@ -230,6 +256,9 @@ public abstract class HBaseTestCase extends TestCase {
     }
     public void commit(long lockid) throws IOException {
       this.table.commit(lockid);
+    }
+    public void commit(long lockid, final long ts) throws IOException {
+      this.table.commit(lockid, ts);
     }
     public void put(long lockid, Text column, byte[] val) throws IOException {
       this.table.put(lockid, column, val);

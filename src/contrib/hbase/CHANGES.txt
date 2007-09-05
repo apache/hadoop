@@ -30,6 +30,7 @@ Trunk (unreleased changes)
     HADOOP-1814	TestCleanRegionServerExit fails too often on Hudson
     HADOOP-1821 Replace all String.getBytes() with String.getBytes("UTF-8")
     HADOOP-1832 listTables() returns duplicate tables
+    HADOOP-1834 Scanners ignore timestamp passed on creation
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
